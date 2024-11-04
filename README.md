@@ -1,10 +1,14 @@
-# G2 Editor
+# G2 Edit
 
 Work in-progress. So far implements basic USB comms. in 'C'.
 Init sequence followed, with reponse values output to console.
 
 Very much a work-in progress and experiment with MacOS user
 level IOKit.
+
+If anyone's interested in helping, especially with the GUI side of things,
+Please drop me a line.
+
 
 To do:
 
