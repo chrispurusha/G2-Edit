@@ -124,9 +124,8 @@ static int parse_patch(uint8_t * buff, int length)
 {
     int      retVal      = EXIT_FAILURE;
     int      i           = 0;
-    int      size        = 0;
     uint8_t  type        = 0;
-    uint16_t count       = 0;
+    int16_t  count       = 0;
     uint32_t bitPos      = 0;
     uint32_t subBitPos   = 0;
     uint32_t moduleCount = 0;
@@ -137,29 +136,6 @@ static int parse_patch(uint8_t * buff, int length)
     if (buff == NULL)
     {
         return retVal;
-    }
-    
-    size = read_bit_stream(buff, &bitPos, 16);
-    
-    subBitPos = bitPos;
-    
-    // Not sure what the chunk data is for
-    printf("Chunk Data len=%d  ", size);
-    for (i = 0; i < size; i++)
-    {
-        printf("%02x ", read_bit_stream(buff, &subBitPos, 8));
-    }
-    printf("\n");
-    
-    bitPos += BYTE_TO_BIT(size);
-    
-    if (read_bit_stream(buff, &bitPos, 8) == 0x2d)
-    {
-        read_bit_stream(buff, &bitPos, 8);
-    }
-    else
-    {
-        bitPos -= BYTE_TO_BIT(8); // Backtrack by a byte, ready to read type in loop
     }
     
     while (BIT_TO_BYTE(bitPos) < length)
@@ -239,6 +215,11 @@ static int parse_patch(uint8_t * buff, int length)
                     printf("'%s'\n", &buff[BIT_TO_BYTE(subBitPos)]);
                     subBitPos += BYTE_TO_BIT((strlen((char *)&buff[BIT_TO_BYTE(subBitPos)]))+1);
                 }
+                break;
+            case 0x2d:
+                // This 0x2d 0x00 sequence reportedly only appears on USB comms, not in files
+                // so ignore as a size by moving back a byte
+                count = -1;
                 break;
             default:
                 printf("Unprocess type 0x%02x\n", type);
@@ -419,7 +400,10 @@ static int parse_incoming(uint8_t * buff, int length)
                                 break;
                             case 0x21:
                                 printf("Got Patch info\n");
-                                retVal = parse_patch(&buff[BIT_TO_BYTE(bitPos)], length-(BIT_TO_BYTE(bitPos))-CRC_BYTES);
+                                // Note this one is a special case. Include the sub-command
+                                // for parsing via -1 on pointer to first byte and +1 to
+                                // length
+                                retVal = parse_patch(&buff[BIT_TO_BYTE(bitPos)-1], (length-(BIT_TO_BYTE(bitPos))-CRC_BYTES)+1);
                                 break;
                             case 0x27:
                                 printf("Got Patch name '");
