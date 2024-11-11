@@ -497,7 +497,9 @@ static int int_rec(void)
     int      readLength                   = 0;
     int      dataLength                   = 0;
     int      type                         = 0;
+    int      i                            = 0;
     int      tries                        = 0;
+    bool     foundNoneZero                = false;
     
     for (tries = 0; tries < 5; tries++)
     {
@@ -516,10 +518,25 @@ static int int_rec(void)
         
         if (type == RESPONSE_TYPE_EXTENDED)
         {
-            // Extended message expected
-            dataLength = read_bit_stream(buff, &bitPos, 16);
+            // Work-around for what looks like a bug on Apple silicon only - int response looks like a
+            // ext response, so check if anything other than 0s from 4th byte and don't process
+            // if it's not all 0
+            for (i=3; i<readLength; i++)
+            {
+                if (buff[i] != 0)
+                {
+                    foundNoneZero = true;
+                    break;
+                }
+            }
             
-            retVal = rcv_extended(dataLength);
+            if (foundNoneZero == false)
+            {
+                // Extended message expected
+                dataLength = read_bit_stream(buff, &bitPos, 16);
+                
+                retVal = rcv_extended(dataLength);
+            }
         }
         else if (type == RESPONSE_TYPE_EMBEDDED)
         {
