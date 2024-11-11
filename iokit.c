@@ -54,7 +54,7 @@ IOUSBDeviceInterface ** find_usb_device(void)
                     IOCreatePlugInInterfaceForService(usbDevice, kIOUSBDeviceUserClientTypeID, kIOCFPlugInInterfaceID, &pluginInterface, &score);
                     IOObjectRelease(usbDevice);
                     
-                    if (*pluginInterface != NULL)
+                    if ((pluginInterface != NULL) && (*pluginInterface != NULL))
                     {
                         (*pluginInterface)->QueryInterface(pluginInterface, CFUUIDGetUUIDBytes(kIOUSBDeviceInterfaceID245), (LPVOID)&deviceInterface);
                         IODestroyPlugInInterface(pluginInterface);
