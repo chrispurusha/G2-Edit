@@ -17,15 +17,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <errno.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdbool.h>
-#include <pthread.h>
-#include <semaphore.h>
+
+#ifndef __IOKIT_H__
+#define __IOKIT_H__
+
+#include "sysIncludes.h"
 
 #include <CoreFoundation/CoreFoundation.h>
 
@@ -42,6 +38,8 @@ int open_usb(void);
 void close_usb(void);
 int32_t write_usb(uint8_t * buff, uint32_t length);
 int32_t read_usb_extended(uint8_t * buff, uint32_t buffLength);
-void read_usb_complete(void *refCon, IOReturn result, void * arg0);
+void read_usb_complete(void * refCon, IOReturn result, void * arg0);
 void timeout_callback(CFRunLoopTimerRef timer, void * info);
 int32_t read_usb_interrupt(uint8_t * buff, uint32_t buffLength);
+
+#endif // __IOKIT_H__

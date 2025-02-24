@@ -1,0 +1,427 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		832FC5D32D01F6190084A230 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 832FC5D22D01F6190084A230 /* OpenGL.framework */; };
+		832FC5D92D01F6C20084A230 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 832FC5D82D01F6C20084A230 /* Cocoa.framework */; };
+		832FC5DC2D01F70A0084A230 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 832FC5D62D01F68C0084A230 /* IOKit.framework */; };
+		832FC5DE2D01F7840084A230 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 832FC5DD2D01F7840084A230 /* Quartz.framework */; };
+		8352A5752D4BE22300CD5AD9 /* dataBase.c in Sources */ = {isa = PBXBuildFile; fileRef = 8352A5742D4BE22300CD5AD9 /* dataBase.c */; };
+		83673D922D5A4C660077A0B2 /* graphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83673D912D5A4C660077A0B2 /* graphics.cpp */; };
+		83673D942D5A50F90077A0B2 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 83673D932D5A50F90077A0B2 /* main.c */; };
+		8376ECAB2D48FB52008D1608 /* iokit.c in Sources */ = {isa = PBXBuildFile; fileRef = 8376ECAA2D48FB52008D1608 /* iokit.c */; };
+		8376ECAE2D48FB6E008D1608 /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = 8376ECAD2D48FB6E008D1608 /* utils.c */; };
+		8397E1362D2FE00000DDD420 /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8397E1352D2FE00000DDD420 /* libglfw3.a */; };
+		8397E14A2D2FEF1700DDD420 /* libGLEW.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8397E1492D2FEF1700DDD420 /* libGLEW.a */; };
+		8397E14D2D2FEF9300DDD420 /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8397E14C2D2FEF9300DDD420 /* libfreetype.a */; };
+		83B5655E2D4A71CF001BC997 /* usbComms.c in Sources */ = {isa = PBXBuildFile; fileRef = 83B5655D2D4A71CF001BC997 /* usbComms.c */; };
+		83BE0C692D6C86D6007E9CD8 /* moduleGraphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83BE0C682D6C86D6007E9CD8 /* moduleGraphics.cpp */; };
+		83BE0C6E2D6C8BAE007E9CD8 /* utilsGraphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83BE0C6D2D6C8BAE007E9CD8 /* utilsGraphics.cpp */; };
+		83EDF68E2D64D84C0052CE9F /* msgQueue.c in Sources */ = {isa = PBXBuildFile; fileRef = 83EDF68D2D64D84C0052CE9F /* msgQueue.c */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		83C145302CFF6E5F004E572A /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		832FC5D22D01F6190084A230 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		832FC5D62D01F68C0084A230 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
+		832FC5D82D01F6C20084A230 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		832FC5DD2D01F7840084A230 /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
+		833423482D5A613B00AA2AC9 /* sysIncludes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sysIncludes.h; sourceTree = "<group>"; };
+		8352A5732D4BE21D00CD5AD9 /* dataBase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dataBase.h; sourceTree = "<group>"; };
+		8352A5742D4BE22300CD5AD9 /* dataBase.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = dataBase.c; sourceTree = "<group>"; };
+		83673D8E2D5A461E0077A0B2 /* graphics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = graphics.h; sourceTree = "<group>"; };
+		83673D912D5A4C660077A0B2 /* graphics.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = graphics.cpp; sourceTree = "<group>"; };
+		83673D932D5A50F90077A0B2 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		8376ECA82D48FB41008D1608 /* defs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = defs.h; sourceTree = "<group>"; };
+		8376ECA92D48FB52008D1608 /* iokit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iokit.h; sourceTree = "<group>"; };
+		8376ECAA2D48FB52008D1608 /* iokit.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = iokit.c; sourceTree = "<group>"; };
+		8376ECAC2D48FB6E008D1608 /* utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
+		8376ECAD2D48FB6E008D1608 /* utils.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = utils.c; sourceTree = "<group>"; };
+		8397E1352D2FE00000DDD420 /* libglfw3.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libglfw3.a; path = /opt/homebrew/Cellar/glfw/3.4/lib/libglfw3.a; sourceTree = "<absolute>"; };
+		8397E1492D2FEF1700DDD420 /* libGLEW.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libGLEW.a; path = /opt/homebrew/Cellar/glew/2.2.0_1/lib/libGLEW.a; sourceTree = "<absolute>"; };
+		8397E14B2D2FEF4500DDD420 /* G2 Gui.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "G2 Gui.entitlements"; sourceTree = "<group>"; };
+		8397E14C2D2FEF9300DDD420 /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = /opt/homebrew/Cellar/freetype/2.13.3/lib/libfreetype.a; sourceTree = "<absolute>"; };
+		83B5655D2D4A71CF001BC997 /* usbComms.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = usbComms.c; sourceTree = "<group>"; };
+		83B5655F2D4A7243001BC997 /* usbComms.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = usbComms.h; sourceTree = "<group>"; };
+		83B565602D4A73B9001BC997 /* main.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = main.h; sourceTree = "<group>"; };
+		83BE0C682D6C86D6007E9CD8 /* moduleGraphics.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = moduleGraphics.cpp; sourceTree = "<group>"; };
+		83BE0C6A2D6C86DF007E9CD8 /* moduleGraphics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = moduleGraphics.h; sourceTree = "<group>"; };
+		83BE0C6C2D6C8A8D007E9CD8 /* moduleResources.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = moduleResources.h; sourceTree = "<group>"; };
+		83BE0C6D2D6C8BAE007E9CD8 /* utilsGraphics.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = utilsGraphics.cpp; sourceTree = "<group>"; };
+		83BE0C712D6C8BD0007E9CD8 /* utilsGraphics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utilsGraphics.h; sourceTree = "<group>"; };
+		83C145322CFF6E5F004E572A /* G2 Gui */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "G2 Gui"; sourceTree = BUILT_PRODUCTS_DIR; };
+		83EDF68D2D64D84C0052CE9F /* msgQueue.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = msgQueue.c; sourceTree = "<group>"; };
+		83EDF68F2D64D8550052CE9F /* msgQueue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = msgQueue.h; sourceTree = "<group>"; };
+		83F363872D5BD96E00F5F627 /* types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		83C1452F2CFF6E5F004E572A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				832FC5DE2D01F7840084A230 /* Quartz.framework in Frameworks */,
+				8397E1362D2FE00000DDD420 /* libglfw3.a in Frameworks */,
+				8397E14A2D2FEF1700DDD420 /* libGLEW.a in Frameworks */,
+				832FC5DC2D01F70A0084A230 /* IOKit.framework in Frameworks */,
+				8397E14D2D2FEF9300DDD420 /* libfreetype.a in Frameworks */,
+				832FC5D92D01F6C20084A230 /* Cocoa.framework in Frameworks */,
+				832FC5D32D01F6190084A230 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		83C145292CFF6E5F004E572A = {
+			isa = PBXGroup;
+			children = (
+				83FF21B72D01F95300BB5253 /* G2 Gui */,
+				83C1453C2CFF7104004E572A /* Frameworks */,
+				83C145332CFF6E5F004E572A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		83C145332CFF6E5F004E572A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				83C145322CFF6E5F004E572A /* G2 Gui */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		83C1453C2CFF7104004E572A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				832FC5DD2D01F7840084A230 /* Quartz.framework */,
+				832FC5D82D01F6C20084A230 /* Cocoa.framework */,
+				832FC5D62D01F68C0084A230 /* IOKit.framework */,
+				832FC5D22D01F6190084A230 /* OpenGL.framework */,
+				8397E14C2D2FEF9300DDD420 /* libfreetype.a */,
+				8397E1492D2FEF1700DDD420 /* libGLEW.a */,
+				8397E1352D2FE00000DDD420 /* libglfw3.a */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		83FF21B72D01F95300BB5253 /* G2 Gui */ = {
+			isa = PBXGroup;
+			children = (
+				8397E14B2D2FEF4500DDD420 /* G2 Gui.entitlements */,
+				833423482D5A613B00AA2AC9 /* sysIncludes.h */,
+				83F363872D5BD96E00F5F627 /* types.h */,
+				8376ECA82D48FB41008D1608 /* defs.h */,
+				8376ECA92D48FB52008D1608 /* iokit.h */,
+				8376ECAA2D48FB52008D1608 /* iokit.c */,
+				8376ECAC2D48FB6E008D1608 /* utils.h */,
+				8376ECAD2D48FB6E008D1608 /* utils.c */,
+				83EDF68F2D64D8550052CE9F /* msgQueue.h */,
+				83EDF68D2D64D84C0052CE9F /* msgQueue.c */,
+				83B5655F2D4A7243001BC997 /* usbComms.h */,
+				83B5655D2D4A71CF001BC997 /* usbComms.c */,
+				8352A5732D4BE21D00CD5AD9 /* dataBase.h */,
+				8352A5742D4BE22300CD5AD9 /* dataBase.c */,
+				83BE0C712D6C8BD0007E9CD8 /* utilsGraphics.h */,
+				83BE0C6D2D6C8BAE007E9CD8 /* utilsGraphics.cpp */,
+				83BE0C6C2D6C8A8D007E9CD8 /* moduleResources.h */,
+				83BE0C6A2D6C86DF007E9CD8 /* moduleGraphics.h */,
+				83BE0C682D6C86D6007E9CD8 /* moduleGraphics.cpp */,
+				83673D8E2D5A461E0077A0B2 /* graphics.h */,
+				83673D912D5A4C660077A0B2 /* graphics.cpp */,
+				83B565602D4A73B9001BC997 /* main.h */,
+				83673D932D5A50F90077A0B2 /* main.c */,
+			);
+			path = "G2 Gui";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		83C145312CFF6E5F004E572A /* G2 Gui */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 83C145392CFF6E5F004E572A /* Build configuration list for PBXNativeTarget "G2 Gui" */;
+			buildPhases = (
+				83C1452E2CFF6E5F004E572A /* Sources */,
+				83C1452F2CFF6E5F004E572A /* Frameworks */,
+				83C145302CFF6E5F004E572A /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "G2 Gui";
+			packageProductDependencies = (
+			);
+			productName = "blfw test";
+			productReference = 83C145322CFF6E5F004E572A /* G2 Gui */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		83C1452A2CFF6E5F004E572A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					83C145312CFF6E5F004E572A = {
+						CreatedOnToolsVersion = 16.1;
+					};
+				};
+			};
+			buildConfigurationList = 83C1452D2CFF6E5F004E572A /* Build configuration list for PBXProject "G2 Gui" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 83C145292CFF6E5F004E572A;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 83C145332CFF6E5F004E572A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				83C145312CFF6E5F004E572A /* G2 Gui */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		83C1452E2CFF6E5F004E572A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				83B5655E2D4A71CF001BC997 /* usbComms.c in Sources */,
+				83BE0C6E2D6C8BAE007E9CD8 /* utilsGraphics.cpp in Sources */,
+				8376ECAE2D48FB6E008D1608 /* utils.c in Sources */,
+				83673D942D5A50F90077A0B2 /* main.c in Sources */,
+				83BE0C692D6C86D6007E9CD8 /* moduleGraphics.cpp in Sources */,
+				83673D922D5A4C660077A0B2 /* graphics.cpp in Sources */,
+				8376ECAB2D48FB52008D1608 /* iokit.c in Sources */,
+				8352A5752D4BE22300CD5AD9 /* dataBase.c in Sources */,
+				83EDF68E2D64D84C0052CE9F /* msgQueue.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		83C145372CFF6E5F004E572A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				RUN_CLANG_STATIC_ANALYZER = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		83C145382CFF6E5F004E572A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.1;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				RUN_CLANG_STATIC_ANALYZER = YES;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		83C1453A2CFF6E5F004E572A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "G2 Gui/G2 Gui.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = JG2YGB6M4T;
+				ENABLE_HARDENED_RUNTIME = YES;
+				HEADER_SEARCH_PATHS = "";
+				"HEADER_SEARCH_PATHS[arch=arm64]" = (
+					/opt/homebrew/Cellar/glfw/3.4/include,
+					/opt/homebrew/Cellar/freetype/2.13.3/include/freetype2,
+					/opt/homebrew/Cellar/glew/2.2.0_1/include,
+				);
+				"HEADER_SEARCH_PATHS[arch=x86_64]" = (
+					/usr/local/Cellar/glfw/3.4/include,
+					/usr/local/Cellar/freetype/2.13.3/include/freetype2,
+					/usr/local/Cellar/glew/2.2.0_1/include,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(PROJECT_DIR)",
+					/opt/homebrew/Cellar/freetype/2.13.3/lib,
+					/opt/homebrew/Cellar/glew/2.2.0_1/lib,
+				);
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = (
+					/opt/homebrew/Cellar/glew/2.2.0_1/lib,
+					/opt/homebrew/Cellar/glfw/3.4/lib,
+					/opt/homebrew/Cellar/freetype/2.13.3/lib,
+				);
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
+					/usr/local/Cellar/glew/2.2.0_1/lib,
+					/usr/local/Cellar/glfw/3.4/lib,
+					/usr/local/Cellar/freetype/2.13.3/lib,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		83C1453B2CFF6E5F004E572A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "G2 Gui/G2 Gui.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = JG2YGB6M4T;
+				ENABLE_HARDENED_RUNTIME = YES;
+				HEADER_SEARCH_PATHS = "";
+				LIBRARY_SEARCH_PATHS = (
+					"$(PROJECT_DIR)",
+					/opt/homebrew/Cellar/freetype/2.13.3/lib,
+					/opt/homebrew/Cellar/glew/2.2.0_1/lib,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		83C1452D2CFF6E5F004E572A /* Build configuration list for PBXProject "G2 Gui" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				83C145372CFF6E5F004E572A /* Debug */,
+				83C145382CFF6E5F004E572A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		83C145392CFF6E5F004E572A /* Build configuration list for PBXNativeTarget "G2 Gui" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				83C1453A2CFF6E5F004E572A /* Debug */,
+				83C1453B2CFF6E5F004E572A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 83C1452A2CFF6E5F004E572A /* Project object */;
+}

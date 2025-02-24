@@ -1,0 +1,355 @@
+/*
+ * The G2 Editor application.
+ *
+ * Copyright (C) 2024 Chris Turner <chris_purusha@icloud.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "dataBase.h"
+
+static pthread_mutex_t dbMutex = {0};
+
+static tModule * firstModule = NULL;
+static tModule * walkModule  = NULL;
+static tCable *  firstCable  = NULL;
+static tCable *  walkCable   = NULL;
+
+static void mutex_lock(void) {
+    if (pthread_mutex_lock(&dbMutex) != 0) {
+        pthread_mutexattr_t attr = {0};
+
+        pthread_mutexattr_init(&attr);
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+        pthread_mutex_init(&dbMutex, &attr);
+        pthread_mutexattr_destroy(&attr);
+
+        pthread_mutex_lock(&dbMutex);
+    }
+}
+
+static void mutex_unlock(void) {
+    pthread_mutex_unlock(&dbMutex);
+}
+
+void dump_modules(void) {
+    tModule * module = NULL;
+
+    mutex_lock();
+
+    module = firstModule;
+
+    printf("\n\n\nDump modules\n");
+
+    while (module != NULL) {
+        printf("Location %u\n", module->key.location);
+        printf("Index %u\n", module->key.index);
+        printf(" Type %u\n", module->type);
+        printf(" Name %s\n", module->name);
+        printf(" Row %d\n", module->row);
+        printf(" Column %d\n", module->column);
+        module = module->next;
+    }
+    printf("\n\n\n");
+
+    mutex_unlock();
+}
+
+static tModule * find_module(tModuleKey key) { // todo - use tModuleKey instead of location and index
+    tModule * module = NULL;
+
+    mutex_lock();
+
+    module = firstModule;
+
+    while (module != NULL) {
+        if ((module->key.location == key.location) && (module->key.index == key.index)) {
+            break;
+        }
+        module = module->next;
+    }
+
+    mutex_unlock();
+
+    return module;
+}
+
+bool read_module(tModuleKey key, tModule * module) {
+    bool      retVal      = false;
+    tModule * foundModule = NULL;
+
+    memset(module, 0, sizeof(*module));
+
+    mutex_lock();
+
+    foundModule = find_module(key);
+
+    if (foundModule != NULL) {
+        memcpy(module, foundModule, sizeof(*module));
+        retVal = true;
+    }
+
+    mutex_unlock();
+
+    return retVal;
+}
+
+void write_module(tModuleKey key, tModule * module) {
+    tModule * dbModule      = NULL;
+    tModule * iterateModule = NULL;
+
+
+    module->key.location = key.location;
+    module->key.index    = key.index;
+
+    mutex_lock();
+
+    dbModule = find_module(key);
+
+    if (dbModule == NULL) {
+        dbModule = (tModule *)malloc(sizeof(tModule));
+        if (dbModule == NULL) {
+            printf("Malloc fail\n");
+            exit(1);
+        }
+
+        if (firstModule == NULL) {
+            firstModule = dbModule;
+        }
+        else {
+            iterateModule = firstModule;
+            while (iterateModule->next != NULL) {
+                iterateModule = iterateModule->next;
+            }
+            iterateModule->next = dbModule;
+        }
+    }
+
+    if (dbModule != NULL) {
+        memcpy(dbModule, module, sizeof(*dbModule));
+    }
+    else {
+        printf("Module generation or update failed\n");
+        exit(1);
+    }
+
+    //TODO - possibly have local copy of the db's model of next,rather than using incoming
+
+    mutex_unlock();
+}
+
+void reset_walk_module(void) {
+    walkModule = NULL;
+}
+
+bool walk_next_module(tModule * module) {
+    bool validModule = false;
+
+    memset(module, 0, sizeof(*module));
+
+    mutex_lock();
+
+    if (walkModule == NULL) {
+        walkModule = firstModule;
+    }
+    else {
+        walkModule = walkModule->next;
+    }
+
+    if (walkModule != NULL) {
+        memcpy(module, walkModule, sizeof(*module));
+        validModule = true;
+    }
+
+    mutex_unlock();
+
+    return validModule;
+}
+
+void dump_cables(void) {
+    tCable * cable = NULL;
+
+    mutex_lock();
+
+    cable = firstCable;
+
+    printf("\n\n\nDump cables\n");
+
+    while (cable != NULL) {
+        printf("Cable\n");
+        printf("Location %u\n", cable->key.location);
+        printf(" Colour %u\n", cable->colour);
+        printf(" Module from %u\n", cable->key.moduleFrom);
+        printf(" Connector from %u\n", cable->key.connectorFrom);
+        printf(" Link type %u\n", cable->linkType);
+        printf(" Module to %u\n", cable->key.moduleTo);
+        printf(" Connector to %u\n", cable->key.connectorTo);
+        cable = cable->next;
+    }
+    printf("\n\n\n");
+
+    mutex_unlock();
+}
+
+static tCable * find_cable(tCableKey key) {
+    tCable * cable = NULL;
+
+    mutex_lock();
+
+    cable = firstCable;
+
+    while (cable != NULL) {
+        if (memcmp(&cable->key, &key, sizeof(tCableKey)) == 0) {
+            break;
+        }
+        cable = cable->next;
+    }
+
+    mutex_unlock();
+
+    return cable;
+}
+
+bool read_cable(tCableKey key, tCable * cable) {
+    bool     retVal     = false;
+    tCable * foundCable = NULL;
+
+    memset(cable, 0, sizeof(*cable));
+
+    mutex_lock();
+
+    foundCable = find_cable(key);
+
+    if (foundCable != NULL) {
+        memcpy(cable, foundCable, sizeof(*cable));
+        retVal = true;
+    }
+
+    mutex_unlock();
+
+    return retVal;
+}
+
+void write_cable(tCableKey key, tCable * cable) {
+    tCable * dbCable      = NULL;
+    tCable * iterateCable = NULL;
+
+    cable->key = key;
+
+    mutex_lock();
+
+    dbCable = find_cable(key);
+
+    if (dbCable == NULL) {
+        dbCable = (tCable *)malloc(sizeof(tCable));
+        if (dbCable == NULL) {
+            printf("Malloc fail\n");
+            exit(1);
+        }
+
+        if (firstCable == NULL) {
+            firstCable = dbCable;
+        }
+        else {
+            iterateCable = firstCable;
+            while (iterateCable->next != NULL) {
+                iterateCable = iterateCable->next;
+            }
+            iterateCable->next = dbCable;
+        }
+    }
+
+    if (dbCable != NULL) {
+        memcpy(dbCable, cable, sizeof(*dbCable));
+    }
+    else {
+        printf("Cable generation or update failed\n");
+        exit(1);
+    }
+
+    //TODO - possibly have local copy of the db's model of next,rather than using incoming
+
+    mutex_unlock();
+}
+
+void reset_walk_cable(void) {
+    walkCable = NULL;
+}
+
+bool walk_next_cable(tCable * cable) {
+    bool validCable = false;
+
+    memset(cable, 0, sizeof(*cable));
+
+    mutex_lock();
+
+    if (walkCable == NULL) {
+        walkCable = firstCable;
+    }
+    else {
+        walkCable = walkCable->next;
+    }
+
+    if (walkCable != NULL) {
+        memcpy(cable, walkCable, sizeof(*cable));
+        validCable = true;
+    }
+
+    mutex_unlock();
+
+    return validCable;
+}
+
+void database_clear_modules(void) {
+    tModule * module     = NULL;
+    tModule * nextModule = NULL;
+
+    mutex_lock();
+
+    module = firstModule;
+    while (module != NULL) {
+        nextModule = module->next;
+        free(module);
+        module = nextModule;
+    }
+    firstModule = NULL;
+
+    mutex_unlock();
+}
+
+void database_clear_cables(void) {
+    tCable * cable     = NULL;
+    tCable * nextCable = NULL;
+
+    mutex_lock();
+
+    cable = firstCable;
+    while (cable != NULL) {
+        nextCable = cable->next;
+        free(cable);
+        cable = nextCable;
+    }
+    firstCable = NULL;
+
+    mutex_unlock();
+}
+
+#ifdef __cplusplus
+}
+#endif

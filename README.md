@@ -1,26 +1,19 @@
 # G2 Edit
 
-Work in-progress. So far implements basic USB comms. in 'C'.
-Init sequence followed, with reponse values output to console.
-
-Very much a work-in progress and experiment with MacOS user
-level IOKit.
+Very much a work in-progress.
 
 If anyone's interested in helping, especially with the GUI side of things,
 Please drop me a line.
 
 
-To do:
+This application has a dependency on 2 libraries: glfw and freetype2.
 
-Storage of values in structures.
+To add these to the host build system, here is an example of the commands I used:
 
-GUI work and programming language to be decided - possibly Swift.
+// Only required if Homebrew not installed (or not up-to-date)
 
-Write commands to be implemented.
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-Possible wholesale conversion to Swift, Objective C or C++ (possibly using JUCE).
+brew install --build-from-source glfw
 
-Patch file reading and writing.
-
-Deliberately implemented using polling/synchronous access. Possible shift to
-asynchronous, depending on eventual GUI events mechanism.
+brew install --build-from-source freetype2

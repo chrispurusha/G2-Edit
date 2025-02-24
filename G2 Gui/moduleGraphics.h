@@ -17,19 +17,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <errno.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdbool.h>
 
+#ifndef __MODULE_GRAPHICS_H__
+#define __MODULE_GRAPHICS_H__
 
-#define BIT_TO_BYTE(x) ((x) >> 3)  // Divide by 8
-#define BYTE_TO_BIT(x) ((x) << 3)  // Multiply by 8
+#include "sysIncludes.h"
+#include "types.h"
 
-uint16_t crc_iterator(int32_t seed, int32_t val);
-uint16_t calc_crc16(uint8_t * buff, int length);
-void write_uint16(uint8_t * buff, uint16_t val);
-uint32_t read_bit_stream(uint8_t * buff, uint32_t * bitPos, uint32_t numBits);
+void render_modules(void);
+void render_cables(void);
+tRectangle module_area(void);
+        
+#endif // __MODULE_GRAPHICS_H__
