@@ -48,6 +48,7 @@ extern "C" {
 int           gRenderWidth  = 0;
 int           gRenderHeight = 0;
 tScrollState  gScrollState  = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
+double        gZoomFactor   = 1.0;
 
 static FT_Library    gLibrary      = {0};
 static FT_Face       gFace         = {0};
@@ -216,8 +217,43 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     }
 }
 
-void scroll_event(GLFWwindow * window, double x, double y) {
-    printf("scroll x=%f y=%f\n", x, y);
+double set_scroll_bar_percent(double percent, double renderSize) {
+    double half_length = SCROLLBAR_LENGTH / 2.0;
+    double low         = half_length + SCROLLBAR_MARGIN;
+    double high        = renderSize - (half_length + SCROLLBAR_MARGIN);
+
+    return low + ((percent / 100.0) * (high - low));
+}
+
+void scroll_event(GLFWwindow *window, double x, double y) {
+    const double zoomIncrement = 0.005;
+    const double scrollLerpFactor = 0.2; // Adjust for smoother or faster transitions
+
+    tCoord mouseCoord = {0};
+    tRectangle moduleArea = module_area();
+
+    glfwGetCursorPos(window, &mouseCoord.x, &mouseCoord.y);
+
+    if (within_rectangle(mouseCoord, moduleArea)) {
+        // Smoothly adjust zoom while clamping
+        gZoomFactor = fmax(0.5, fmin(2.0, gZoomFactor + (y * zoomIncrement)));
+
+        // Get target percentage positions
+        double targetXPercent = (mouseCoord.x - moduleArea.coord.x) / moduleArea.size.w * 100.0;
+        double targetYPercent = (mouseCoord.y - moduleArea.coord.y) / moduleArea.size.h * 100.0;
+
+        // Compute target scrollbar positions
+        double targetXScroll = set_scroll_bar_percent(targetXPercent, gRenderWidth);
+        double targetYScroll = set_scroll_bar_percent(targetYPercent, gRenderHeight);
+
+        // Smoothly move scrollbars using lerp
+        gScrollState.xBar += (targetXScroll - gScrollState.xBar) * scrollLerpFactor;
+        gScrollState.yBar += (targetYScroll - gScrollState.yBar) * scrollLerpFactor;
+
+        // Apply smoothed scroll positions
+        set_xScrollBar(gScrollState.xBar);
+        set_yScrollBar(gScrollState.yBar);
+    }
 }
 
 void char_event(GLFWwindow * window, unsigned int value) {
