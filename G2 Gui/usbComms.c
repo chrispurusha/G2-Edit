@@ -315,24 +315,27 @@ static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
     uint32_t items = read_bit_stream(buff, subOffset, 8);
     printf("Items %u\n", items);
 
-    reset_walk_module();
+    //reset_walk_module();
 
     for (i = 0; i < items; i++) {
         key.index = read_bit_stream(buff, subOffset, 8);
-        printf("Module Name Index %u\n", key.index);
-
-        uint8_t * strPtr    = &buff[BIT_TO_BYTE(*subOffset)];
-        uint64_t  strLength = strlen((char *)strPtr);
-
+        printf(" Module Name Index %u\n", key.index);
+        
         if (walk_next_module(&module) == true) {
-            memcpy(module.name, strPtr, strLength + 1);
+            printf(" Module loc %u index %u\n", module.key.location, module.key.index);
+            for (int k = 0; k<MODULE_NAME_SIZE; k++) {
+                module.name[k] = read_bit_stream(buff, subOffset, 8);
+                if (module.name[k] == '\0') {
+                    break;
+                }
+            }
+            module.name[sizeof(module.name)-1] = '\0'; // Make sure we're null terminated
+            printf("%s\n", module.name);
 
-            if (module.key.location == key.location) {
+            if (read_module(key, &module) == true) {
                 write_module(key, &module);
             }
         }
-
-        *subOffset += BYTE_TO_BIT(strLength + 1);
     }
 }
 

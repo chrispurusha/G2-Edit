@@ -261,19 +261,19 @@ void render_FltMulti_GV(tCoord coord, uint32_t param, tModule * module) {
 void render_FltMulti(tRectangle rectangle, tModule * module) {
     uint32_t param = 0;
 
-    render_FltClassic_freq({rectangle.coord.x + 105.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
-    render_FltClassic_pitch({rectangle.coord.x + 15.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
-    render_FltClassic_keyboard_track({rectangle.coord.x + 75.0, rectangle.coord.y + 80.0}, param++, module);
-    render_FltClassic_resonance({rectangle.coord.x + 160.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
-    render_FltMulti_db({rectangle.coord.x + 210.0, rectangle.coord.y + 20.0}, param++, module);
-    render_FltClassic_bypass({rectangle.coord.x + 230, rectangle.coord.y + 80.0}, param++, module);
+    render_FltClassic_freq({rectangle.coord.x + (105.0 + FILTER_FREQ_RADIUS) * gZoomFactor, rectangle.coord.y + (80.0 * gZoomFactor)}, param++, module);
+    render_FltClassic_pitch({rectangle.coord.x + (15.0 + FILTER_FREQ_RADIUS) * gZoomFactor, rectangle.coord.y + (80.0 * gZoomFactor)}, param++, module);
+    render_FltClassic_keyboard_track({rectangle.coord.x + (75.0 * gZoomFactor), rectangle.coord.y + (80.0 * gZoomFactor)}, param++, module);
+    render_FltClassic_resonance({rectangle.coord.x + (160.0 + FILTER_FREQ_RADIUS) * gZoomFactor, rectangle.coord.y + (80.0 * gZoomFactor)}, param++, module);
+    render_FltMulti_db({rectangle.coord.x + (210.0 * gZoomFactor), rectangle.coord.y + (20.0 * gZoomFactor)}, param++, module);
+    render_FltClassic_bypass({rectangle.coord.x + (230 * gZoomFactor), rectangle.coord.y + (80.0 * gZoomFactor)}, param++, module);
 
-    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0}, 0, connectorTypeAudioIn, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 40.0}, 0, connectorTypeAudioOut, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 60.0}, 0, connectorTypeAudioOut, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0}, 0, connectorTypeAudioOut, module);
-    render_connector({rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 20.0}, 1, connectorTypeControlIn, module);
-    render_connector({rectangle.coord.x + 15.0, rectangle.coord.y + 50.0}, 0, connectorTypeControlIn, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - (10.0 * gZoomFactor), rectangle.coord.y + (20.0 * gZoomFactor)}, 0, connectorTypeAudioIn, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - (10.0 * gZoomFactor), rectangle.coord.y + (40.0 * gZoomFactor)}, 0, connectorTypeAudioOut, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - (10.0 * gZoomFactor), rectangle.coord.y + (60.0 * gZoomFactor)}, 0, connectorTypeAudioOut, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - (10.0 * gZoomFactor), rectangle.coord.y + rectangle.size.h - (20.0 * gZoomFactor)}, 0, connectorTypeAudioOut, module);
+    render_connector({rectangle.coord.x + (15.0 * gZoomFactor), rectangle.coord.y + rectangle.size.h - (20.0 * gZoomFactor)}, 1, connectorTypeControlIn, module);
+    render_connector({rectangle.coord.x + (15.0 * gZoomFactor), rectangle.coord.y + (50.0 * gZoomFactor)}, 0, connectorTypeControlIn, module);
 }
 
 void render_param_EnvAdsr_attack(tCoord coord, uint32_t param, tModule * module) {
