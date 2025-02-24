@@ -37,6 +37,7 @@ void render_circle_part(tCoord coord, double radius, int segments, int startSeg,
 void render_circle_part_angle(tCoord coord, double radius, double startAngle, double endAngle, int numSteps);
 void render_radial_line(tCoord coord, double radius, double angleDegrees, double thickness);
 void draw_power_button(tRectangle rectangle, bool active);
+void draw_text_button(tRectangle rectangle, char * text, bool active);
 void render_bezier_curve(tCoord start, tCoord control, tCoord end, double thickness, int segments);
 bool preload_glyph_textures(const char * fontPath, double fontSize);
 void render_text(tRectangle rectangle, char * text);

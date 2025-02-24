@@ -26,6 +26,7 @@
 // mapping of values to strings etc.
 
 const char * filterDbMap[] = {"12db", "18db", "24db"};
+const char * fltMultiDbMap[] = {"6db", "12db"};
 const char * filterKbMap[] = {"Off", "25%", "50%", "75%", "100%"};
 
 
