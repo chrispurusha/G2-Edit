@@ -310,6 +310,20 @@ void draw_power_button(tRectangle rectangle, bool active) {
     render_line({circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05)}, {circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05) + (rectangle.size.h * 0.5)}, rectangle.size.w * 0.1);
 }
 
+// Draw a toggle button with text
+void draw_text_button(tRectangle rectangle, char * text, bool active) {
+    if (active) {
+        set_rbg_colour({0.3, 0.7, 0.3});         // Green when ON
+    }
+    else {
+        set_rbg_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
+    }
+    render_rectangle(rectangle);
+    set_rbg_colour(RGB_BLACK);
+    render_text(rectangle, text);
+}
+
+
 bool preload_glyph_textures(const char * fontPath, double fontSize) {
     FT_Library  ftLibrary  = {0};
     FT_Face     face       = {0};
