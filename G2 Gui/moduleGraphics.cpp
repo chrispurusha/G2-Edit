@@ -57,8 +57,8 @@ tSize scale_size(tSize size) {
 tRectangle module_area(void) {
     double left   = MODULE_MARGIN;
     double top    = TOP_BAR_HEIGHT + MODULE_MARGIN;
-    double width  = gRenderWidth - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0); // Might not need the *2
-    double height = gRenderHeight - TOP_BAR_HEIGHT - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0); // Might not need the *2
+    double width  = gRenderWidth - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
+    double height = gRenderHeight - TOP_BAR_HEIGHT - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
 
     return {{left, top}, {width, height}};
 }
