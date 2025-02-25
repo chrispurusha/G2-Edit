@@ -30,7 +30,7 @@ void set_rbga_colour(tRgba rgba);
 
 void render_line(tCoord start, tCoord end, double thickness);
 void render_rectangle(tRectangle rectangle);
-void render_rectangle_with_border(tRectangle rectangle);
+void render_rectangle_with_border(tRectangle rectangle, double zoomFactor);
 void render_triangle(tTriangle triangle);
 void render_circle_line(tCoord coord, double radius, int segments, double thickness);
 void render_circle_part(tCoord coord, double radius, int segments, int startSeg, int numSegs);
@@ -44,6 +44,7 @@ void render_text(tRectangle rectangle, char * text);
 void free_textures(void);
 double value_to_angle(uint32_t value);
 double get_scroll_bar_percent(double scrollBar, double renderSize);
+double set_scroll_bar_percent(double percent, double renderSize);
 uint32_t angle_to_value(double angle);
 double calculate_mouse_angle(tCoord mouseCoord, tRectangle rectangle);
 bool within_rectangle(tCoord coord, tRectangle rectangle);

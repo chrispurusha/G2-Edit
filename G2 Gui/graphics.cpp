@@ -217,42 +217,58 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     }
 }
 
-double set_scroll_bar_percent(double percent, double renderSize) {
-    double half_length = SCROLLBAR_LENGTH / 2.0;
-    double low         = half_length + SCROLLBAR_MARGIN;
-    double high        = renderSize - (half_length + SCROLLBAR_MARGIN);
-
-    return low + ((percent / 100.0) * (high - low));
-}
 
 void scroll_event(GLFWwindow *window, double x, double y) {
-    const double zoomIncrement = 0.005;
-    const double scrollLerpFactor = 0.2; // Adjust for smoother or faster transitions
+    const double zoomIncrement = 0.05;  // Zoom sensitivity
+    //double     xEndMax = 0.0, yEndMax = 0.0;
 
     tCoord mouseCoord = {0};
-    tRectangle moduleArea = module_area();
-
+    tRectangle moduleArea = module_area(); // Get the module display area
+    
     glfwGetCursorPos(window, &mouseCoord.x, &mouseCoord.y);
 
+    //printf("Zoom = %f yEndMax = %f module area size = %f percent = %f\n", gZoomFactor, yEndMax, moduleArea.size.h, get_scroll_bar_percent(gScrollState.yBar, gRenderHeight));
+
     if (within_rectangle(mouseCoord, moduleArea)) {
-        // Smoothly adjust zoom while clamping
-        gZoomFactor = fmax(0.5, fmin(2.0, gZoomFactor + (y * zoomIncrement)));
+        //calculate_module_bounds(&xEndMax, &yEndMax, moduleArea);
+        
+        //printf("end minus area %f %f %f\n", moduleArea.size.w, xEndMax, (xEndMax - moduleArea.size.w));
+        //double scrollXPercent = (get_scroll_bar_percent(gScrollState.xBar, gRenderWidth) * (xEndMax - moduleArea.size.w)) / moduleArea.size.w;
+        //double scrollYPercent = (get_scroll_bar_percent(gScrollState.yBar, gRenderHeight) * (yEndMax - moduleArea.size.h)) / moduleArea.size.h;
+        
+        // Convert mouse coordinates to percentages relative to moduleArea
+        //double mouseXPercent = ((mouseCoord.x - moduleArea.coord.x) / moduleArea.size.w) * 100.0;
+        //double mouseYPercent = ((mouseCoord.y - moduleArea.coord.y) / moduleArea.size.h) * 100.0;
+        
+        // Compute world-space position BEFORE zooming
+        //double worldMouseXPercent = (mouseXPercent/gZoomFactor)+(scrollXPercent/gZoomFactor);
+        //double worldMouseYPercent = (mouseXPercent/gZoomFactor)+(scrollYPercent/gZoomFactor);
 
-        // Get target percentage positions
-        double targetXPercent = (mouseCoord.x - moduleArea.coord.x) / moduleArea.size.w * 100.0;
-        double targetYPercent = (mouseCoord.y - moduleArea.coord.y) / moduleArea.size.h * 100.0;
+        // Apply zoom
+        //double gZoomFactor = fmax(minZoom, fmin(maxZoom, gZoomFactor + (y * zoomIncrement)));
+        gZoomFactor += y * zoomIncrement;
+        if (gZoomFactor<0.5)
+        {
+            gZoomFactor = 0.5;
+        } else if (gZoomFactor>2.0)
+        {
+            gZoomFactor = 2.0;
+        }
 
-        // Compute target scrollbar positions
-        double targetXScroll = set_scroll_bar_percent(targetXPercent, gRenderWidth);
-        double targetYScroll = set_scroll_bar_percent(targetYPercent, gRenderHeight);
+        //double newXScroll = mouseXPercent;
+        //double newYScroll = mouseYPercent;
+        //double newXScroll = worldMouseXPercent;
+        //double newYScroll = worldMouseYPercent;
+        //double newXScroll = mouseXPercent/gZoomFactor;
+        //double newYScroll = mouseYPercent/gZoomFactor;
 
-        // Smoothly move scrollbars using lerp
-        gScrollState.xBar += (targetXScroll - gScrollState.xBar) * scrollLerpFactor;
-        gScrollState.yBar += (targetYScroll - gScrollState.yBar) * scrollLerpFactor;
+        //printf("gZoomFactor = %f worldMouseXPercent %f mouseXPercent %f newXScroll %f scrollXPercent %f\n", gZoomFactor, worldMouseXPercent, mouseXPercent, newXScroll, scrollXPercent);
+        //printf("worldMouseYPercent %f mouseYPercent %f newYScroll %f scrollYPercent %f\n", worldMouseYPercent, mouseYPercent, newYScroll, scrollYPercent);
 
-        // Apply smoothed scroll positions
-        set_xScrollBar(gScrollState.xBar);
-        set_yScrollBar(gScrollState.yBar);
+        // Update the scrollbars
+        //printf("Set %f\n", set_scroll_bar_percent(newXScroll, gRenderWidth));
+        //set_xScrollBar(set_scroll_bar_percent(newXScroll, gRenderWidth));
+        //set_yScrollBar(set_scroll_bar_percent(newYScroll, gRenderHeight));
     }
 }
 
@@ -285,7 +301,7 @@ void render_scrollbars(GLFWwindow * window) {
 
 void render_top_bar(void) {
     set_rbg_colour({0.5, 0.5, 0.5});
-    render_rectangle_with_border({{0.0, 0.0}, {gRenderWidth - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
+    render_rectangle_with_border({{0.0, 0.0}, {gRenderWidth - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}}, 1.0);
 }
 
 void wake_glfw(void) {

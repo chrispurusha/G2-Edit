@@ -26,6 +26,7 @@
 
 void render_modules(void);
 void render_cables(void);
+void calculate_module_bounds(double * xEndMax, double * yEndMax, tRectangle moduleArea);
 tRectangle module_area(void);
         
 #endif // __MODULE_GRAPHICS_H__

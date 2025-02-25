@@ -94,23 +94,23 @@ void render_rectangle(tRectangle rectangle) {
     glEnd();
 }
 
-void render_rectangle_with_border(tRectangle rectangle) {
+void render_rectangle_with_border(tRectangle rectangle, double zoomFactor) {
     tRectangle line = {0};
-
+    double borderLineWidth = BORDER_LINE_WIDTH * zoomFactor;
 
     render_rectangle(rectangle);
 
     set_rbg_colour(RGB_BLACK);
-    line = {{rectangle.coord.x, rectangle.coord.y + rectangle.size.h - BORDER_LINE_WIDTH}, {rectangle.size.w, BORDER_LINE_WIDTH}};
+    line = {{rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth}, {rectangle.size.w, borderLineWidth}};
     render_rectangle(line); //Bottom
     set_rbg_colour(RGB_WHITE);
-    line = {{rectangle.coord.x, rectangle.coord.y}, {BORDER_LINE_WIDTH, rectangle.size.h}};
+    line = {{rectangle.coord.x, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
     render_rectangle(line); //Left
     set_rbg_colour(RGB_WHITE);
-    line = {{rectangle.coord.x, rectangle.coord.y}, {rectangle.size.w, BORDER_LINE_WIDTH}};
+    line = {{rectangle.coord.x, rectangle.coord.y}, {rectangle.size.w, borderLineWidth}};
     render_rectangle(line); // Top
     set_rbg_colour(RGB_BLACK);
-    line = {{rectangle.coord.x + rectangle.size.w - BORDER_LINE_WIDTH, rectangle.coord.y}, {BORDER_LINE_WIDTH, rectangle.size.h}};
+    line = {{rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
     render_rectangle(line); // Right
 }
 
@@ -518,6 +518,15 @@ double get_scroll_bar_percent(double scrollBar, double renderSize) {
     double high        = renderSize - (half_length + SCROLLBAR_MARGIN);
 
     return ((scrollBar - low) / (high - low)) * 100.0;
+}
+
+double set_scroll_bar_percent(double percent, double renderSize) {
+    double half_length = SCROLLBAR_LENGTH / 2.0;
+    double low         = half_length + SCROLLBAR_MARGIN;
+    double high        = renderSize - (half_length + SCROLLBAR_MARGIN);
+
+    // Convert percentage back to actual position on the scrollbar
+    return low + (percent / 100.0) * (high - low);
 }
 
 // Converts angle (-135° to 135°) to normalized value [0,127]

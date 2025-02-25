@@ -242,7 +242,8 @@ void render_FltMulti_db(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = 2;
     module->param[0][param].rectangle = {{coord.x, coord.y}, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}};
-    snprintf(buff, sizeof(buff), "%s", fltMultiDbMap[module->param[0][param].value]);
+    //snprintf(buff, sizeof(buff), "%s", fltMultiDbMap[module->param[0][param].value]);
+    snprintf(buff, sizeof(buff), "%u", module->param[0][param].value);
     set_rbg_colour(RGB_BLACK);
     render_text({{coord.x, coord.y - 15.0}, {10.0, 10.0}}, buff);
     render_text({{coord.x, coord.y - 30.0}, {10.0, 10.0}}, "dB/Oct");
@@ -265,7 +266,7 @@ void render_FltMulti(tRectangle rectangle, tModule * module) {
     render_FltClassic_pitch({rectangle.coord.x + (15.0 + FILTER_FREQ_RADIUS) * gZoomFactor, rectangle.coord.y + (80.0 * gZoomFactor)}, param++, module);
     render_FltClassic_keyboard_track({rectangle.coord.x + (75.0 * gZoomFactor), rectangle.coord.y + (80.0 * gZoomFactor)}, param++, module);
     render_FltClassic_resonance({rectangle.coord.x + (160.0 + FILTER_FREQ_RADIUS) * gZoomFactor, rectangle.coord.y + (80.0 * gZoomFactor)}, param++, module);
-    render_FltMulti_db({rectangle.coord.x + (210.0 * gZoomFactor), rectangle.coord.y + (80.0 * gZoomFactor)}, param++, module);
+    render_FltMulti_db({rectangle.coord.x + (210.0 * gZoomFactor), rectangle.coord.y + (80.0 * gZoomFactor)}, param++, module); // Todo - this param num isn't db!!!
     render_FltClassic_bypass({rectangle.coord.x + (230 * gZoomFactor), rectangle.coord.y + (80.0 * gZoomFactor)}, param++, module);
 
     render_connector({rectangle.coord.x + rectangle.size.w - (10.0 * gZoomFactor), rectangle.coord.y + (20.0 * gZoomFactor)}, 0, connectorTypeAudioIn, module);
@@ -366,16 +367,16 @@ void calculate_module_bounds(double * xEndMax, double * yEndMax, tRectangle modu
 
 void render_module(tModule * module, tRectangle moduleArea, double xScrollAmount, double yScrollAmount) {
     double moduleHeight = gModuleProperties[module->type].height;
-    double xPos         = ((module->column * MODULE_X_SPAN) - xScrollAmount);
-    double yPos         = ((module->row * MODULE_Y_SPAN) - yScrollAmount);
-    double xWidth       = MODULE_WIDTH;
-    double yHeight      = (moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP;
+    double xPos         = ((module->column * (MODULE_X_SPAN*gZoomFactor)) - xScrollAmount);
+    double yPos         = ((module->row * (MODULE_Y_SPAN*gZoomFactor)) - yScrollAmount);
+    double xWidth       = MODULE_WIDTH * gZoomFactor;
+    double yHeight      = (moduleHeight * (MODULE_Y_SPAN*gZoomFactor)) - (MODULE_Y_GAP*gZoomFactor);
     char   buff[MODULE_NAME_SIZE + 1] = {0};
 
-    tRectangle moduleRectangle = {{moduleArea.coord.x * gZoomFactor + (xPos * gZoomFactor), moduleArea.coord.y * gZoomFactor + (yPos * gZoomFactor)}, {xWidth * gZoomFactor, yHeight * gZoomFactor}};
+    tRectangle moduleRectangle = {{moduleArea.coord.x + xPos, moduleArea.coord.y + yPos}, {xWidth, yHeight}};
 
     set_module_colour(module->colour);
-    render_rectangle_with_border(moduleRectangle);
+    render_rectangle_with_border(moduleRectangle, gZoomFactor); // Add zoom factor for border!!!!
     render_parameters(moduleRectangle, module);
     write_module(module->key, module);  // Save calculated coords
 
@@ -398,6 +399,7 @@ void render_modules(void) {
     calculate_module_bounds(&xEndMax, &yEndMax, moduleArea);
 
     //printf("Zoom = %f yEndMax = %f module area size = %f percent = %f\n", gZoomFactor, yEndMax, moduleArea.size.h, get_scroll_bar_percent(gScrollState.yBar, gRenderHeight));
+    // I think These are actually maximum levels, not actual scroll amounts - may want to rethink names
     double xScrollAmount = (get_scroll_bar_percent(gScrollState.xBar, gRenderWidth) * (xEndMax - moduleArea.size.w)) / 100.0;
     double yScrollAmount = (get_scroll_bar_percent(gScrollState.yBar, gRenderHeight) * (yEndMax - moduleArea.size.h)) / 100.0;
 
