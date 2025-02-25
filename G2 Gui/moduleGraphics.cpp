@@ -265,7 +265,7 @@ void render_FltMulti(tRectangle rectangle, tModule * module) {
     render_FltClassic_pitch({rectangle.coord.x + (15.0 + FILTER_FREQ_RADIUS) * gZoomFactor, rectangle.coord.y + (80.0 * gZoomFactor)}, param++, module);
     render_FltClassic_keyboard_track({rectangle.coord.x + (75.0 * gZoomFactor), rectangle.coord.y + (80.0 * gZoomFactor)}, param++, module);
     render_FltClassic_resonance({rectangle.coord.x + (160.0 + FILTER_FREQ_RADIUS) * gZoomFactor, rectangle.coord.y + (80.0 * gZoomFactor)}, param++, module);
-    render_FltMulti_db({rectangle.coord.x + (210.0 * gZoomFactor), rectangle.coord.y + (20.0 * gZoomFactor)}, param++, module);
+    render_FltMulti_db({rectangle.coord.x + (210.0 * gZoomFactor), rectangle.coord.y + (80.0 * gZoomFactor)}, param++, module);
     render_FltClassic_bypass({rectangle.coord.x + (230 * gZoomFactor), rectangle.coord.y + (80.0 * gZoomFactor)}, param++, module);
 
     render_connector({rectangle.coord.x + rectangle.size.w - (10.0 * gZoomFactor), rectangle.coord.y + (20.0 * gZoomFactor)}, 0, connectorTypeAudioIn, module);
@@ -328,7 +328,7 @@ void render_Compress(tRectangle rectangle, tModule * module) {
     
 void render_parameters(tRectangle rectangle, tModule * module) {
     module->numConnectors = 0; // Ultimately, we might want to pre-calculate this per module
-    
+
     if (gModuleProperties[module->type].renderFunction != NULL) {
         gModuleProperties[module->type].renderFunction(rectangle, module);
     }

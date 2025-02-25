@@ -73,6 +73,7 @@ tRgb gModuleColourMap[] =
 
 void render_OscShpB(tRectangle, tModule *);
 void render_EnvAdsr(tRectangle, tModule *);
+void render_FltMulti(tRectangle, tModule *);
 void render_FltClassic(tRectangle, tModule *);
 void render_StChorus(tRectangle, tModule *);
 void render_Mix4to1c(tRectangle, tModule *);
@@ -136,7 +137,7 @@ tModuleProperties gModuleProperties[] =
     {"EnvAHD",       4, NULL},
     {"Pan",          2, NULL},
     {"MixStereo",    5, NULL},
-    {"FltMulti",     4, NULL},
+    {"FltMulti",     4, render_FltMulti},
     {"ConstSwT",     2, NULL},
     {"FltNord",      5, NULL},
     {"EnvMulti",     6, NULL},
