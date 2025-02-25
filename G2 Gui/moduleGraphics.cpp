@@ -95,7 +95,7 @@ void render_param_common_dial(tCoord coord, uint32_t param, tModule * module, ch
     snprintf(buff, sizeof(buff), "%u", module->param[0][param].value);
     module->param[0][param].type = paramTypeDial;
     module->param[0][param].range = range;
-    module->param[0][param].rectangle = {{coord.x, coord.y}, {scale(FILTER_FREQ_RADIUS * 2.0), scale(FILTER_FREQ_RADIUS * 2.0)}};
+    module->param[0][param].rectangle = {coord, scale_size({FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0})};
 
     set_rbg_colour(RGB_BLACK);
     render_text({{coord.x, coord.y - scale(15.0)}, {0.0, scale(10.0)}}, buff);
