@@ -50,13 +50,17 @@ inline double scale(double value) {
     return value * gZoomFactor;
 }
 
+tSize scale_size(tSize size) {
+    return {scale(size.w), scale(size.h)};
+}
+
 tRectangle module_area(void) {
     double left   = MODULE_MARGIN;
     double top    = TOP_BAR_HEIGHT + MODULE_MARGIN;
-    double width  = gRenderWidth - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
-    double height = gRenderHeight - TOP_BAR_HEIGHT - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
+    double width  = gRenderWidth - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0); // Might not need the *2
+    double height = gRenderHeight - TOP_BAR_HEIGHT - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0); // Might not need the *2
 
-    return (tRectangle){{left, top}, {width, height}};
+    return {{left, top}, {width, height}};
 }
 
 void render_dial(tRectangle rectangle, uint32_t value) {
@@ -104,7 +108,7 @@ void render_param_common_dial(tCoord coord, uint32_t param, tModule * module, ch
 void render_FltClassic_bypass(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = 2;
-    module->param[0][param].rectangle = {{coord.x, coord.y}, {scale(BYPASS_BUTTON_WIDTH), scale(BYPASS_BUTTON_HEIGHT)}};
+    module->param[0][param].rectangle = {coord, scale_size({BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT})};
 
     draw_power_button(module->param[0][param].rectangle, module->param[0][param].value != 0);
 }
@@ -114,7 +118,7 @@ void render_FltClassic_keyboard_track(tCoord coord, uint32_t param, tModule * mo
 
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = 5;
-    module->param[0][param].rectangle = {{coord.x, coord.y}, {scale(BYPASS_BUTTON_WIDTH), scale(BYPASS_BUTTON_HEIGHT)}};
+    module->param[0][param].rectangle = {coord, scale_size({BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT})};
     snprintf(buff, sizeof(buff), "%s", filterKbMap[module->param[0][param].value]);
     set_rbg_colour(RGB_BLACK);
     render_text({{coord.x, coord.y - scale(15.0)}, {0.0, scale(10.0)}}, buff);
@@ -128,7 +132,7 @@ void render_FltClassic_db(tCoord coord, uint32_t param, tModule * module) {
 
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = 3;
-    module->param[0][param].rectangle = {{coord.x, coord.y}, {scale(BYPASS_BUTTON_WIDTH), scale(BYPASS_BUTTON_HEIGHT)}};
+    module->param[0][param].rectangle = {coord, scale_size({BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT})};
     snprintf(buff, sizeof(buff), "%s", filterDbMap[module->param[0][param].value]);
     set_rbg_colour(RGB_BLACK);
     render_text({{coord.x, coord.y - scale(15.0)}, {0.0, scale(10.0)}}, buff);
@@ -158,7 +162,7 @@ void render_FltClassic_freq(tCoord coord, uint32_t param, tModule * module) {
 
     module->param[0][param].type      = paramTypeDial;
     module->param[0][param].range     = 128;
-    module->param[0][param].rectangle = {{coord.x, coord.y}, {scale(FILTER_FREQ_RADIUS * 2.0), scale(FILTER_FREQ_RADIUS * 2.0)}};
+    module->param[0][param].rectangle = {coord, scale_size({FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0})};
     set_rbg_colour(RGB_BLACK);
     render_text({{coord.x, coord.y - scale(15.0)}, {0.0, scale(10.0)}}, buff);
     render_text({{coord.x, coord.y - scale(30.0)}, {0.0, scale(10.0)}}, "Freq");
@@ -179,7 +183,7 @@ void render_FltClassic_pitch(tCoord coord, uint32_t param, tModule * module) {
     }
     module->param[0][param].type      = paramTypeDial;
     module->param[0][param].range     = 128;
-    module->param[0][param].rectangle = {{coord.x, coord.y}, {scale(FILTER_FREQ_RADIUS * 2.0), scale(FILTER_FREQ_RADIUS * 2.0)}};
+    module->param[0][param].rectangle = {coord, scale_size({FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0})};
     snprintf(buff, sizeof(buff), "%.1f%%", percent);
     set_rbg_colour(RGB_BLACK);
     render_text({{coord.x, coord.y - scale(15.0)}, {0.0, scale(10.0)}}, buff);
@@ -201,7 +205,7 @@ void render_FltClassic_resonance(tCoord coord, uint32_t param, tModule * module)
     }
     module->param[0][param].type      = paramTypeDial;
     module->param[0][param].range     = 128;
-    module->param[0][param].rectangle = {{coord.x, coord.y}, {scale(FILTER_FREQ_RADIUS * 2.0), scale(FILTER_FREQ_RADIUS * 2.0)}};
+    module->param[0][param].rectangle = {coord, scale_size({FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0})};
     snprintf(buff, sizeof(buff), "%.1f", res);
     set_rbg_colour(RGB_BLACK);
     render_text({{coord.x, coord.y - scale(15.0)}, {0.0, scale(10.0)}}, buff);
@@ -244,7 +248,7 @@ void render_FltMulti_db(tCoord coord, uint32_t param, tModule * module) {
 
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = 2;
-    module->param[0][param].rectangle = {{coord.x, coord.y}, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}};
+    module->param[0][param].rectangle = {coord, scale_size({BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT})};
     //snprintf(buff, sizeof(buff), "%s", fltMultiDbMap[module->param[0][param].value]);
     snprintf(buff, sizeof(buff), "%u", module->param[0][param].value);
     set_rbg_colour(RGB_BLACK);
@@ -258,7 +262,7 @@ void render_FltMulti_db(tCoord coord, uint32_t param, tModule * module) {
 void render_FltMulti_GV(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = 2;
-    module->param[0][param].rectangle = {{coord.x, coord.y}, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}};
+    module->param[0][param].rectangle = {coord, scale_size({BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT})};
     draw_text_button(module->param[0][param].rectangle, "GC", module->param[0][param].value != 0);
 }
 
