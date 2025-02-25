@@ -46,12 +46,8 @@ extern int           gRenderHeight;
 extern tScrollState  gScrollState;
 extern double        gZoomFactor;
 
-double scale(double value) {
+inline double scale(double value) {
     return value * gZoomFactor;
-}
-
-tCoord scale_coord(tCoord coord) {
-    return {scale(coord.x), scale(coord.y)};
 }
 
 tRectangle module_area(void) {
