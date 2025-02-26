@@ -41,6 +41,8 @@ void draw_toggle_button(tRectangle rectangle, char * text);
 void render_bezier_curve(tCoord start, tCoord control, tCoord end, double thickness, int segments);
 bool preload_glyph_textures(const char * fontPath, double fontSize);
 void render_text(tRectangle rectangle, char * text);
+double get_text_width_scaled(char *text, double target_height, double zoomFactor);
+double largest_text_width(int numItems, char ** text, double target_height, double zoomFactor);
 void free_textures(void);
 double value_to_angle(uint32_t value);
 double get_scroll_bar_percent(double scrollBar, double renderSize);

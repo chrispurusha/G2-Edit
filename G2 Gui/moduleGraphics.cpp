@@ -98,8 +98,8 @@ void render_param_common_dial(tCoord coord, uint32_t param, tModule * module, ch
     module->param[0][param].rectangle = {coord, scale_size({FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0})};
 
     set_rbg_colour(RGB_BLACK);
-    render_text({{coord.x, coord.y - scale(15.0)}, {0.0, scale(10.0)}}, buff);
-    render_text({{coord.x, coord.y - scale(30.0)}, {0.0, scale(10.0)}}, label);
+    render_text({{coord.x, coord.y - scale(15.0)}, {BLANK_SIZE, scale(12.0)}}, buff);
+    render_text({{coord.x, coord.y - scale(30.0)}, {BLANK_SIZE, scale(12.0)}}, label);
     set_rbg_colour({0.2, 0.2, 0.2});
     render_dial(module->param[0][param].rectangle, module->param[0][param].value);
 }
@@ -114,20 +114,25 @@ void render_common_bypass(tCoord coord, uint32_t param, tModule * module) {
 }
 
 void render_common_keyboard_track(tCoord coord, uint32_t param, tModule * module) {
+    uint32_t range     = MAP_NUM_ITEMS(filterKbMap);
+    char *   valString = filterKbMap[module->param[0][param].value];
+    
     module->param[0][param].type      = paramTypeToggle;
-    module->param[0][param].range     = 5;
-    module->param[0][param].rectangle = {coord, scale_size({30.0, 12.0})};
+    module->param[0][param].range     = range;
+    module->param[0][param].rectangle = {coord, scale_size({BLANK_SIZE, 12.0})};
     set_rbg_colour(RGB_BLACK);
-    render_text({{coord.x, coord.y - scale(15.0)}, {0.0, scale(10.0)}}, "Kbt");
+    render_text({{coord.x, coord.y - scale(15.0)}, {BLANK_SIZE, scale(12.0)}}, "Kbt");
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    draw_toggle_button(module->param[0][param].rectangle, filterKbMap[module->param[0][param].value]);
+    module->param[0][param].rectangle.size.w = largest_text_width(range, filterKbMap, 12.0, gZoomFactor);
+    draw_toggle_button(module->param[0][param].rectangle, valString);
 }
 
 void render_FltClassic_db(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type      = paramTypeToggle;
-    module->param[0][param].range     = 3;
-    module->param[0][param].rectangle = {coord, scale_size({30.0, 12.0})};  // Should have a DB WIDTH
+    module->param[0][param].range     = MAP_NUM_ITEMS(filterDbMap);
+    module->param[0][param].rectangle = {coord, scale_size({BLANK_SIZE, 12.0})};  // Should have a DB WIDTH
     set_rbg_colour(RGB_BACKGROUND_GREY);
+    module->param[0][param].rectangle.size.w = largest_text_width(MAP_NUM_ITEMS(filterDbMap), filterDbMap, 12.0, gZoomFactor);
     draw_toggle_button(module->param[0][param].rectangle, filterDbMap[module->param[0][param].value]);
 }
 
@@ -154,8 +159,8 @@ void render_common_freq(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].range     = 128;
     module->param[0][param].rectangle = {coord, scale_size({FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0})};
     set_rbg_colour(RGB_BLACK);
-    render_text({{coord.x, coord.y - scale(15.0)}, {0.0, scale(10.0)}}, buff);
-    render_text({{coord.x, coord.y - scale(30.0)}, {0.0, scale(10.0)}}, "Freq");
+    render_text({{coord.x, coord.y - scale(15.0)}, {BLANK_SIZE, scale(12.0)}}, buff);
+    render_text({{coord.x, coord.y - scale(30.0)}, {BLANK_SIZE, scale(12.0)}}, "Freq");
     set_rbg_colour({0.2, 0.2, 0.2});
     render_dial(module->param[0][param].rectangle, module->param[0][param].value);
 }
@@ -176,8 +181,8 @@ void render_common_pitch(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].rectangle = {coord, scale_size({FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0})};
     snprintf(buff, sizeof(buff), "%.1f%%", percent);
     set_rbg_colour(RGB_BLACK);
-    render_text({{coord.x, coord.y - scale(15.0)}, {0.0, scale(10.0)}}, buff);
-    render_text({{coord.x, coord.y - scale(30.0)}, {0.0, scale(10.0)}}, "Env");
+    render_text({{coord.x, coord.y - scale(15.0)}, {BLANK_SIZE, scale(12.0)}}, buff);
+    render_text({{coord.x, coord.y - scale(30.0)}, {BLANK_SIZE, scale(12.0)}}, "Env");
     set_rbg_colour({0.2, 0.2, 0.2});
     render_dial(module->param[0][param].rectangle, module->param[0][param].value);
 }
@@ -198,8 +203,8 @@ void render_common_resonance(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].rectangle = {coord, scale_size({FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0})};
     snprintf(buff, sizeof(buff), "%.1f", res);
     set_rbg_colour(RGB_BLACK);
-    render_text({{coord.x, coord.y - scale(15.0)}, {0.0, scale(10.0)}}, buff);
-    render_text({{coord.x, coord.y - scale(30.0)}, {0.0, scale(10.0)}}, "Res");
+    render_text({{coord.x, coord.y - scale(15.0)}, {BLANK_SIZE, scale(12.0)}}, buff);
+    render_text({{coord.x, coord.y - scale(30.0)}, {BLANK_SIZE, scale(12.0)}}, "Res");
     set_rbg_colour({0.2, 0.2, 0.2});
     render_dial(module->param[0][param].rectangle, module->param[0][param].value);
 }
@@ -232,14 +237,12 @@ void render_FltClassic(tRectangle rectangle, tModule * module) {
 }
 
 // fltMulti -- builds on fltClassic components
-
 void render_FltMulti_db(tCoord coord, uint32_t param, tModule * module) {
-    char buff[16] = {0};
-
     module->param[0][param].type      = paramTypeToggle;
-    module->param[0][param].range     = 2;
-    module->param[0][param].rectangle = {coord, scale_size({30.0, 12.0})};  // Should have a DB WIDTH
+    module->param[0][param].range     = MAP_NUM_ITEMS(fltMultiDbMap);
+    module->param[0][param].rectangle = {coord, scale_size({BLANK_SIZE, 12.0})};  // Should have a DB WIDTH
     set_rbg_colour(RGB_BACKGROUND_GREY);
+    module->param[0][param].rectangle.size.w = largest_text_width(MAP_NUM_ITEMS(fltMultiDbMap), fltMultiDbMap, 12.0, gZoomFactor);
     draw_toggle_button(module->param[0][param].rectangle, fltMultiDbMap[module->param[0][param].value]);
 }
 
@@ -247,13 +250,15 @@ void render_FltMulti_db(tCoord coord, uint32_t param, tModule * module) {
 void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = 2;
-    module->param[0][param].rectangle = {coord, scale_size({20.0, 12.0})};
+    module->param[0][param].rectangle = {coord, scale_size({BLANK_SIZE, 12.0})};
     if (module->param[0][param].value != 0) {
         set_rbg_colour({0.3, 0.7, 0.3});         // Green when ON
     }
     else {
         set_rbg_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
     }
+    
+    module->param[0][param].rectangle.size.w = get_text_width_scaled("GC", 12.0, gZoomFactor);
     draw_toggle_button(module->param[0][param].rectangle, "GC");
 }
 
@@ -367,7 +372,7 @@ void render_module(tModule * module, tRectangle moduleArea, double xScrollAmount
     double xPos         = scale(module->column * MODULE_X_SPAN) - xScrollAmount;
     double yPos         = scale(module->row * MODULE_Y_SPAN) - yScrollAmount;
     double xWidth       = scale(MODULE_WIDTH);
-    double yHeight      = scale(moduleHeight * MODULE_Y_SPAN) - scale(MODULE_Y_GAP);
+    double yHeight      = scale((moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP);
     char   buff[MODULE_NAME_SIZE + 1] = {0};
 
     tRectangle moduleRectangle = {{moduleArea.coord.x + xPos, moduleArea.coord.y + yPos}, {xWidth, yHeight}};
@@ -379,12 +384,13 @@ void render_module(tModule * module, tRectangle moduleArea, double xScrollAmount
 
     snprintf(buff, sizeof(buff), "%s", module->name);
     set_rbga_colour(RGBA_BLACK_ON_TRANSPARENT);
-    render_text({{moduleRectangle.coord.x + scale(5.0), moduleRectangle.coord.y + scale(5.0)}, {0.0, scale(10.0)}}, buff);
+    render_text({{moduleRectangle.coord.x + scale(5.0), moduleRectangle.coord.y + scale(5.0)}, {BLANK_SIZE, scale(12.0)}}, buff);
     // Temporary items purely for development debug
     snprintf(buff, sizeof(buff), "(%s)", gModuleProperties[module->type].name);
-    render_text({{moduleRectangle.coord.x + scale(120.0), moduleRectangle.coord.y + scale(5.0)}, {0.0, scale(10.0)}}, buff);
+    
+    render_text({{moduleRectangle.coord.x + scale(120.0), moduleRectangle.coord.y + scale(5.0)}, {BLANK_SIZE, scale(12.0)}}, buff);
     snprintf(buff, sizeof(buff), "%u", module->key.index);
-    render_text({{moduleRectangle.coord.x + moduleRectangle.size.w - scale(30.0), moduleRectangle.coord.y + scale(5.0)}, {0.0, scale(10.0)}}, buff);
+    render_text({{moduleRectangle.coord.x + moduleRectangle.size.w - scale(30.0), moduleRectangle.coord.y + scale(5.0)}, {BLANK_SIZE, scale(12.0)}}, buff);
 }
 
 void render_modules(void) {
@@ -427,7 +433,7 @@ void render_cable_from_to(tCoord from, tCoord to) {
             control.y = fmax(from.y, to.y) + scale(40.0);
         }
 
-        render_bezier_curve(from, control, to, scale(4.0), 20);
+        render_bezier_curve(from, control, to, scale(4.0), 15);
     }
 }
 

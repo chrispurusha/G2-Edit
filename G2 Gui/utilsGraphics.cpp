@@ -57,7 +57,7 @@ GLuint    textureAtlas = 0;                      // OpenGL texture handle
 int       atlasWidth   = 1024 * 8;               // Initial atlas width
 int       atlasHeight  = 1024 * 8;               // Initial atlas height
 double    gMaxAscent   = 0.0;                    // Used for dealing with preloaded text character height
-
+double    gMaxDescent  = 0.0;
 
 void render_line(tCoord start, tCoord end, double thickness) {
     double half_thickness = thickness * 0.5;
@@ -314,12 +314,12 @@ void draw_power_button(tRectangle rectangle, bool active) {
 void draw_toggle_button(tRectangle rectangle, char * text) {
     render_rectangle(rectangle);
     set_rbg_colour(RGB_BLACK);
-    rectangle.size.h *= 0.75;
-    rectangle.coord.y += 0.1;
-    rectangle.coord.x += 0.1;
+    //rectangle.size.h *= 0.75;
+    //rectangle.coord.y += 0.1;
+    //rectangle.coord.x += 0.1;
+
     render_text(rectangle, text);
 }
-
 
 bool preload_glyph_textures(const char * fontPath, double fontSize) {
     FT_Library  ftLibrary  = {0};
@@ -362,6 +362,10 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
+    // Initialize max ascent and descent
+    gMaxAscent = 0.0;
+    gMaxDescent = 0.0;
+
     for (charCode = 32; charCode < MAX_GLYPH_CHAR; charCode++) {
         glyphIndex = FT_Get_Char_Index(face, charCode);
         if (glyphIndex == 0) {
@@ -379,9 +383,15 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
             continue;
         }
 
-        // Track the highest ascent
+        // Track the highest ascent and lowest descent
         if (face->glyph->bitmap_top > gMaxAscent) {
             gMaxAscent = face->glyph->bitmap_top;
+        }
+        
+        // Calculate descent as the distance from baseline to the bottom of the glyph
+        double glyphDescent = (double)(face->glyph->bitmap_top - face->glyph->bitmap.rows);
+        if ((gMaxDescent == 0.0) || (glyphDescent < gMaxDescent)) {
+            gMaxDescent = glyphDescent;
         }
 
         bitmap = &face->glyph->bitmap;
@@ -438,7 +448,6 @@ void render_text(tRectangle rectangle, char * text) {
     double scale = 0.0;
     char * ch    = NULL;
 
-
     if (text == NULL) {
         printf("render_text text=NULL\n");
         return;
@@ -450,14 +459,12 @@ void render_text(tRectangle rectangle, char * text) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    //glColor4f(rgba);  // Set color for text
-    //set_rbga_colour(rgba);  // Move outside of this function?
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
     glPushMatrix();
 
     // Calculate scale factor based on target height
-    scale = rectangle.size.h / gMaxAscent;
+    scale = rectangle.size.h / (gMaxAscent+gMaxDescent);
     glTranslatef(rectangle.coord.x, rectangle.coord.y, 0);
     glScalef(scale, scale, 1.0f);
 
@@ -474,8 +481,6 @@ void render_text(tRectangle rectangle, char * text) {
 
         // Character position and size
         double xPos = glyph->offset_x;
-        //double yPos = -(glyph->offset_y);  // Negative because OpenGL's Y-axis is inverted
-        //double yPos = glyph->offset_y - glyph->height;
         double yPos = (gMaxAscent - glyph->offset_y);
         double w    = glyph->width;
         double h    = glyph->height;
@@ -498,6 +503,42 @@ void render_text(tRectangle rectangle, char * text) {
 
     glDisable(GL_TEXTURE_2D);
     glDisable(GL_BLEND);
+}
+
+double get_text_width_scaled(char * text, double target_height, double zoomFactor) {
+    if (text == NULL) {
+        return 0.0;
+    }
+
+    double width = 0.0;
+    const char *ch = text;
+
+    while (*ch) {
+        char character = *ch;
+        GlyphInfo *glyph = &glyphInfo[character];
+
+        width += glyph->advance_x + 1.0; // Include spacing
+
+        ch++;
+    }
+
+    // Apply the same scaling factor as in render_text()
+    double scale = target_height / (gMaxAscent+gMaxDescent);
+    return width * scale * zoomFactor;
+}
+
+double largest_text_width(int numItems, char ** text, double target_height, double zoomFactor) {
+    int i = 0;
+    double size = 0;
+    double maxSize = 0;
+    
+    for(i=0; i<numItems; i++) {
+        size = get_text_width_scaled(text[i], target_height, zoomFactor);
+        if (size > maxSize) {
+            maxSize = size;
+        }
+    }
+    return maxSize;
 }
 
 void free_textures(void) {

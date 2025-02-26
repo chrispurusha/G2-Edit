@@ -29,8 +29,10 @@
 #define GC_BUTTON_HEIGHT                 (15.0)
 #define FILTER_FREQ_RADIUS               (12.0)
 #define FILTER_RESONANCE_RADIUS          (12.0)
+#define BLANK_SIZE                       (0.0)    // Not used directly by calling function, or needs calculation in following calls
 
 // mapping of values to strings etc.
+#define MAP_NUM_ITEMS(map) (sizeof(map) / sizeof(map[0]))
 
 char * filterDbMap[] = {"12db", "18db", "24db"};
 char * fltMultiDbMap[] = {"6db", "12db"};
@@ -39,6 +41,7 @@ char * filterKbMap[] = {"Off", "25%", "50%", "75%", "100%"};
 
 tRgb cableColourMap[] =
 {
+    {0.0, 0.0, 0.0},     // zero index not used
     {0.7, 0.1, 0.1},     // red
     {0.8, 0.3, 0.2},     // orange
     {0.1, 0.1, 0.7},     // blue
