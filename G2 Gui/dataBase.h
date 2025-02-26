@@ -55,7 +55,7 @@ typedef struct _struct_cable {
 } tCable;
 
 typedef enum {
-    connectorTypeAudioIn,
+    connectorTypeAudioIn,   // Might just be in/out, since there examples of control connected to audio
     connectorTypeAudioOut,
     connectorTypeControlIn,
     connectorTypeControlOut,

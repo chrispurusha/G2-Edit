@@ -74,12 +74,12 @@ void render_dial(tRectangle rectangle, uint32_t value) {
     y      = rectangle.coord.y + radius;
     angle  = value_to_angle(value);
 
-    set_rbg_colour({0.0, 0.5, 0.0});
+    set_rbg_colour({0.5, 0.5, 0.5});
     render_circle_part_angle({x, y}, radius, 0.0, 360.0, 25);
     set_rbg_colour({0.0, 0.0, 0.0});
-    render_radial_line({x, y}, radius, angle, 2.0);
+    render_radial_line({x, y}, radius, angle, scale(2.0));
     set_rbg_colour({0.0, 0.0, 0.0});
-    render_circle_line({x, y}, radius, 25, 1.0);
+    render_circle_line({x, y}, radius, 25, scale(1.0));
 }
 
 void set_module_colour(uint32_t colour) {
@@ -105,7 +105,7 @@ void render_param_common_dial(tCoord coord, uint32_t param, tModule * module, ch
 }
 
 // This might become a common function for any modules with a bypes
-void render_FltClassic_bypass(tCoord coord, uint32_t param, tModule * module) {
+void render_common_bypass(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = 2;
     module->param[0][param].rectangle = {coord, scale_size({BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT})};
@@ -113,35 +113,25 @@ void render_FltClassic_bypass(tCoord coord, uint32_t param, tModule * module) {
     draw_power_button(module->param[0][param].rectangle, module->param[0][param].value != 0);
 }
 
-void render_FltClassic_keyboard_track(tCoord coord, uint32_t param, tModule * module) {
-    char buff[16] = {0};
-
+void render_common_keyboard_track(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = 5;
-    module->param[0][param].rectangle = {coord, scale_size({BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT})};
-    snprintf(buff, sizeof(buff), "%s", filterKbMap[module->param[0][param].value]);
+    module->param[0][param].rectangle = {coord, scale_size({30.0, 12.0})};
     set_rbg_colour(RGB_BLACK);
-    render_text({{coord.x, coord.y - scale(15.0)}, {0.0, scale(10.0)}}, buff);
-    render_text({{coord.x, coord.y - scale(30.0)}, {0.0, scale(10.0)}}, "Kb");
-    set_rbg_colour({0.0, 0.0, 0.7});
-    render_rectangle(module->param[0][param].rectangle);
+    render_text({{coord.x, coord.y - scale(15.0)}, {0.0, scale(10.0)}}, "Kbt");
+    set_rbg_colour(RGB_BACKGROUND_GREY);
+    draw_toggle_button(module->param[0][param].rectangle, filterKbMap[module->param[0][param].value]);
 }
 
 void render_FltClassic_db(tCoord coord, uint32_t param, tModule * module) {
-    char buff[16] = {0};
-
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = 3;
-    module->param[0][param].rectangle = {coord, scale_size({BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT})};
-    snprintf(buff, sizeof(buff), "%s", filterDbMap[module->param[0][param].value]);
-    set_rbg_colour(RGB_BLACK);
-    render_text({{coord.x, coord.y - scale(15.0)}, {0.0, scale(10.0)}}, buff);
-    render_text({{coord.x, coord.y - scale(30.0)}, {0.0, scale(10.0)}}, "dB");
-    set_rbg_colour({0.0, 0.0, 0.7});
-    render_rectangle(module->param[0][param].rectangle);
+    module->param[0][param].rectangle = {coord, scale_size({30.0, 12.0})};  // Should have a DB WIDTH
+    set_rbg_colour(RGB_BACKGROUND_GREY);
+    draw_toggle_button(module->param[0][param].rectangle, filterDbMap[module->param[0][param].value]);
 }
 
-void render_FltClassic_freq(tCoord coord, uint32_t param, tModule * module) {
+void render_common_freq(tCoord coord, uint32_t param, tModule * module) {
     double freq     = 0.0;
     char   buff[16] = {0};
 
@@ -170,7 +160,7 @@ void render_FltClassic_freq(tCoord coord, uint32_t param, tModule * module) {
     render_dial(module->param[0][param].rectangle, module->param[0][param].value);
 }
 
-void render_FltClassic_pitch(tCoord coord, uint32_t param, tModule * module) {
+void render_common_pitch(tCoord coord, uint32_t param, tModule * module) {
     double percent  = 0.0;
     double maxVal   = 200.0;
     char   buff[16] = {0};
@@ -192,7 +182,7 @@ void render_FltClassic_pitch(tCoord coord, uint32_t param, tModule * module) {
     render_dial(module->param[0][param].rectangle, module->param[0][param].value);
 }
 
-void render_FltClassic_resonance(tCoord coord, uint32_t param, tModule * module) {
+void render_common_resonance(tCoord coord, uint32_t param, tModule * module) {
     double res      = 0.0;
     double maxVal   = 100.0;
     char   buff[16] = {0};
@@ -228,12 +218,12 @@ void render_connector(tCoord coord, uint32_t connector, tConnectorType connector
 void render_FltClassic(tRectangle rectangle, tModule * module) {
     uint32_t param = 0;
 
-    render_FltClassic_freq({rectangle.coord.x + scale(105.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_FltClassic_pitch({rectangle.coord.x + scale(15.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_FltClassic_keyboard_track({rectangle.coord.x + scale(75.0), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_FltClassic_resonance({rectangle.coord.x + scale(160.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
+    render_common_freq({rectangle.coord.x + scale(105.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
+    render_common_pitch({rectangle.coord.x + scale(15.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
+    render_common_keyboard_track({rectangle.coord.x + scale(75.0), rectangle.coord.y + scale(80.0)}, param++, module);
+    render_common_resonance({rectangle.coord.x + scale(160.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
     render_FltClassic_db({rectangle.coord.x + scale(210.0), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_FltClassic_bypass({rectangle.coord.x + scale(250), rectangle.coord.y + scale(50.0)}, param++, module);
+    render_common_bypass({rectangle.coord.x + scale(250), rectangle.coord.y + scale(50.0)}, param++, module);
 
     render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + scale(20.0)}, 0, connectorTypeAudioIn, module);
     render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + rectangle.size.h - scale(20.0)}, 0, connectorTypeAudioOut, module);
@@ -248,38 +238,40 @@ void render_FltMulti_db(tCoord coord, uint32_t param, tModule * module) {
 
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = 2;
-    module->param[0][param].rectangle = {coord, scale_size({BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT})};
-    //snprintf(buff, sizeof(buff), "%s", fltMultiDbMap[module->param[0][param].value]);
-    snprintf(buff, sizeof(buff), "%u", module->param[0][param].value);
-    set_rbg_colour(RGB_BLACK);
-    render_text({{coord.x, coord.y - 15.0}, {10.0, 10.0}}, buff);
-    render_text({{coord.x, coord.y - 30.0}, {10.0, 10.0}}, "dB/Oct");
-    set_rbg_colour({0.0, 0.0, 0.7});
-    render_rectangle(module->param[0][param].rectangle);
+    module->param[0][param].rectangle = {coord, scale_size({30.0, 12.0})};  // Should have a DB WIDTH
+    set_rbg_colour(RGB_BACKGROUND_GREY);
+    draw_toggle_button(module->param[0][param].rectangle, fltMultiDbMap[module->param[0][param].value]);
 }
 
 // Gain control
-void render_FltMulti_GV(tCoord coord, uint32_t param, tModule * module) {
+void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = 2;
-    module->param[0][param].rectangle = {coord, scale_size({BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT})};
-    draw_text_button(module->param[0][param].rectangle, "GC", module->param[0][param].value != 0);
+    module->param[0][param].rectangle = {coord, scale_size({20.0, 12.0})};
+    if (module->param[0][param].value != 0) {
+        set_rbg_colour({0.3, 0.7, 0.3});         // Green when ON
+    }
+    else {
+        set_rbg_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
+    }
+    draw_toggle_button(module->param[0][param].rectangle, "GC");
 }
 
 void render_FltMulti(tRectangle rectangle, tModule * module) {
     uint32_t param = 0;
 
-    render_FltClassic_freq({rectangle.coord.x + scale(105.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_FltClassic_pitch({rectangle.coord.x + scale(15.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_FltClassic_keyboard_track({rectangle.coord.x + scale(75.0), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_FltClassic_resonance({rectangle.coord.x + scale(160.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_FltMulti_db({rectangle.coord.x + scale(210.0), rectangle.coord.y + scale(80.0)}, param++, module); // Todo - this param num isn't db!!!
-    render_FltClassic_bypass({rectangle.coord.x + scale(230.0), rectangle.coord.y + scale(80.0)}, param++, module);
+    render_common_freq({rectangle.coord.x + scale(125.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
+    render_common_pitch({rectangle.coord.x + scale(15.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
+    render_common_keyboard_track({rectangle.coord.x + scale(75.0), rectangle.coord.y + scale(80.0)}, param++, module);
+    render_common_gc({rectangle.coord.x + scale(110.0), rectangle.coord.y + scale(80.0)}, param++, module);
+    render_common_resonance({rectangle.coord.x + scale(185.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
+    render_FltMulti_db({rectangle.coord.x + scale(210.0), rectangle.coord.y + scale(25.0)}, param++, module); // Todo - this param num isn't db!!!
+    render_common_bypass({rectangle.coord.x + scale(230.0), rectangle.coord.y + scale(80.0)}, param++, module);
 
     render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + scale(20.0)}, 0, connectorTypeAudioIn, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + scale(40.0)}, 0, connectorTypeAudioOut, module);
     render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + scale(60.0)}, 0, connectorTypeAudioOut, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + rectangle.size.h - scale(20.0)}, 0, connectorTypeAudioOut, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + scale(80.0)}, 0, connectorTypeAudioOut, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + scale(100.0)}, 0, connectorTypeAudioOut, module);
     render_connector({rectangle.coord.x + scale(15.0), rectangle.coord.y + rectangle.size.h - scale(20.0)}, 1, connectorTypeControlIn, module);
     render_connector({rectangle.coord.x + scale(15.0), rectangle.coord.y + scale(50.0)}, 0, connectorTypeControlIn, module);
 }

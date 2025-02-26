@@ -23,11 +23,18 @@
 
 #include "sysIncludes.h"
 
+#define BYPASS_BUTTON_WIDTH              (15.0)
+#define BYPASS_BUTTON_HEIGHT             (15.0)
+#define GC_BUTTON_WIDTH                  (25.0)
+#define GC_BUTTON_HEIGHT                 (15.0)
+#define FILTER_FREQ_RADIUS               (12.0)
+#define FILTER_RESONANCE_RADIUS          (12.0)
+
 // mapping of values to strings etc.
 
-const char * filterDbMap[] = {"12db", "18db", "24db"};
-const char * fltMultiDbMap[] = {"6db", "12db"};
-const char * filterKbMap[] = {"Off", "25%", "50%", "75%", "100%"};
+char * filterDbMap[] = {"12db", "18db", "24db"};
+char * fltMultiDbMap[] = {"6db", "12db"};
+char * filterKbMap[] = {"Off", "25%", "50%", "75%", "100%"};
 
 
 tRgb cableColourMap[] =

@@ -83,9 +83,5 @@
 #define MODULE_AREA_Y_HEIGHT             ((double)renderHeight - (MODULE_AREA_Y_MARGINS))
 
 #define COMP_MARGIN                      (5.0)
-#define BYPASS_BUTTON_WIDTH              (15.0)
-#define BYPASS_BUTTON_HEIGHT             (15.0)
-#define FILTER_FREQ_RADIUS               (12.0)
-#define FILTER_RESONANCE_RADIUS          (12.0)
 
 #endif // #define __DEFS_H__

@@ -311,15 +311,12 @@ void draw_power_button(tRectangle rectangle, bool active) {
 }
 
 // Draw a toggle button with text
-void draw_text_button(tRectangle rectangle, char * text, bool active) {
-    if (active) {
-        set_rbg_colour({0.3, 0.7, 0.3});         // Green when ON
-    }
-    else {
-        set_rbg_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
-    }
+void draw_toggle_button(tRectangle rectangle, char * text) {
     render_rectangle(rectangle);
     set_rbg_colour(RGB_BLACK);
+    rectangle.size.h *= 0.75;
+    rectangle.coord.y += 0.1;
+    rectangle.coord.x += 0.1;
     render_text(rectangle, text);
 }
 
