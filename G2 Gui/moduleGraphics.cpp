@@ -46,12 +46,12 @@ extern int           gRenderHeight;
 extern tScrollState  gScrollState;
 extern double        gZoomFactor;
 
-inline double scale(double value) {
+static inline double scale(double value) {
     return value * gZoomFactor;
 }
 
-tSize scale_size(tSize size) {
-    return {scale(size.w), scale(size.h)};
+static inline double descale(double value) {
+    return value / gZoomFactor;
 }
 
 tRectangle module_area(void) {
@@ -63,7 +63,7 @@ tRectangle module_area(void) {
     return {{left, top}, {width, height}};
 }
 
-void render_dial(tRectangle rectangle, uint32_t value) {
+void render_dial(tRectangle rectangle, uint32_t value, double zoomFactor) {  // Drop down into utilsGraphics?
     double angle  = 0.0;
     double radius = 0.0;
     double x      = 0;
@@ -75,11 +75,11 @@ void render_dial(tRectangle rectangle, uint32_t value) {
     angle  = value_to_angle(value);
 
     set_rbg_colour({0.5, 0.5, 0.5});
-    render_circle_part_angle({x, y}, radius, 0.0, 360.0, 25);
+    render_circle_part_angle({x, y}, radius, 0.0, 360.0, 25, gZoomFactor);
     set_rbg_colour({0.0, 0.0, 0.0});
-    render_radial_line({x, y}, radius, angle, scale(2.0));
+    render_radial_line({x, y}, radius, angle, 2.0, gZoomFactor);
     set_rbg_colour({0.0, 0.0, 0.0});
-    render_circle_line({x, y}, radius, 25, scale(1.0));
+    render_circle_line({x, y}, radius, 25, 1.0, gZoomFactor);
 }
 
 void set_module_colour(uint32_t colour) {
@@ -95,22 +95,22 @@ void render_param_common_dial(tCoord coord, uint32_t param, tModule * module, ch
     snprintf(buff, sizeof(buff), "%u", module->param[0][param].value);
     module->param[0][param].type = paramTypeDial;
     module->param[0][param].range = range;
-    module->param[0][param].rectangle = {coord, scale_size({FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0})};
+    module->param[0][param].rectangle = {coord, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}};
 
     set_rbg_colour(RGB_BLACK);
-    render_text({{coord.x, coord.y - scale(15.0)}, {BLANK_SIZE, scale(12.0)}}, buff);
-    render_text({{coord.x, coord.y - scale(30.0)}, {BLANK_SIZE, scale(12.0)}}, label);
+    render_text({{coord.x, coord.y - 15.0}, {BLANK_SIZE, 12.0}}, buff, gZoomFactor);
+    render_text({{coord.x, coord.y - 30.0}, {BLANK_SIZE, 12.0}}, label, gZoomFactor);
     set_rbg_colour({0.2, 0.2, 0.2});
-    render_dial(module->param[0][param].rectangle, module->param[0][param].value);
+    render_dial(module->param[0][param].rectangle, module->param[0][param].value, gZoomFactor);
 }
 
 // This might become a common function for any modules with a bypes
 void render_common_bypass(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = 2;
-    module->param[0][param].rectangle = {coord, scale_size({BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT})};
+    module->param[0][param].rectangle = {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}};
 
-    draw_power_button(module->param[0][param].rectangle, module->param[0][param].value != 0);
+    draw_power_button(module->param[0][param].rectangle, module->param[0][param].value != 0, gZoomFactor);
 }
 
 void render_common_keyboard_track(tCoord coord, uint32_t param, tModule * module) {
@@ -119,12 +119,12 @@ void render_common_keyboard_track(tCoord coord, uint32_t param, tModule * module
     
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = range;
-    module->param[0][param].rectangle = {coord, scale_size({BLANK_SIZE, 12.0})};
+    module->param[0][param].rectangle = {coord, {BLANK_SIZE, 12.0}};
     set_rbg_colour(RGB_BLACK);
-    render_text({{coord.x, coord.y - scale(15.0)}, {BLANK_SIZE, scale(12.0)}}, "Kbt");
+    render_text({{coord.x, coord.y - 15.0}, {BLANK_SIZE, 12.0}}, "Kbt", gZoomFactor);
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle.size.w = largest_text_width(range, filterKbMap, 12.0, gZoomFactor);
-    draw_toggle_button(module->param[0][param].rectangle, valString);
+    module->param[0][param].rectangle.size.w = largest_text_width(range, filterKbMap, 12.0, 1.0);
+    draw_toggle_button(module->param[0][param].rectangle, valString, gZoomFactor);
 }
 
 void render_FltClassic_db(tCoord coord, uint32_t param, tModule * module) {
@@ -133,10 +133,10 @@ void render_FltClassic_db(tCoord coord, uint32_t param, tModule * module) {
     
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = MAP_NUM_ITEMS(filterDbMap);
-    module->param[0][param].rectangle = {coord, scale_size({BLANK_SIZE, 12.0})};  // Should have a DB WIDTH
+    module->param[0][param].rectangle = {coord, {BLANK_SIZE, 12.0}};  // Should have a DB WIDTH
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle.size.w = largest_text_width(range, filterDbMap, 12.0, gZoomFactor);
-    draw_toggle_button(module->param[0][param].rectangle, valString);
+    module->param[0][param].rectangle.size.w = largest_text_width(range, filterDbMap, 12.0, 1.0);
+    draw_toggle_button(module->param[0][param].rectangle, valString, gZoomFactor);
 }
 
 void render_common_freq(tCoord coord, uint32_t param, tModule * module) {
@@ -160,12 +160,12 @@ void render_common_freq(tCoord coord, uint32_t param, tModule * module) {
 
     module->param[0][param].type      = paramTypeDial;
     module->param[0][param].range     = 128;
-    module->param[0][param].rectangle = {coord, scale_size({FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0})};
+    module->param[0][param].rectangle = {coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0};
     set_rbg_colour(RGB_BLACK);
-    render_text({{coord.x, coord.y - scale(15.0)}, {BLANK_SIZE, scale(12.0)}}, buff);
-    render_text({{coord.x, coord.y - scale(30.0)}, {BLANK_SIZE, scale(12.0)}}, "Freq");
+    render_text({{coord.x, coord.y - 15.0}, {BLANK_SIZE, 12.0}}, buff, gZoomFactor);
+    render_text({{coord.x, coord.y - 30.0}, {BLANK_SIZE, 12.0}}, "Freq", gZoomFactor);
     set_rbg_colour({0.2, 0.2, 0.2});
-    render_dial(module->param[0][param].rectangle, module->param[0][param].value);
+    render_dial(module->param[0][param].rectangle, module->param[0][param].value, gZoomFactor);
 }
 
 void render_common_pitch(tCoord coord, uint32_t param, tModule * module) {
@@ -181,13 +181,13 @@ void render_common_pitch(tCoord coord, uint32_t param, tModule * module) {
     }
     module->param[0][param].type      = paramTypeDial;
     module->param[0][param].range     = 128;
-    module->param[0][param].rectangle = {coord, scale_size({FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0})};
+    module->param[0][param].rectangle = {coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0};
     snprintf(buff, sizeof(buff), "%.1f%%", percent);
     set_rbg_colour(RGB_BLACK);
-    render_text({{coord.x, coord.y - scale(15.0)}, {BLANK_SIZE, scale(12.0)}}, buff);
-    render_text({{coord.x, coord.y - scale(30.0)}, {BLANK_SIZE, scale(12.0)}}, "Env");
+    render_text({{coord.x, coord.y - 15.0}, {BLANK_SIZE, 12.0}}, buff, gZoomFactor);
+    render_text({{coord.x, coord.y - 30.0}, {BLANK_SIZE, 12.0}}, "Env", gZoomFactor);
     set_rbg_colour({0.2, 0.2, 0.2});
-    render_dial(module->param[0][param].rectangle, module->param[0][param].value);
+    render_dial(module->param[0][param].rectangle, module->param[0][param].value, gZoomFactor);
 }
 
 void render_common_resonance(tCoord coord, uint32_t param, tModule * module) {
@@ -203,22 +203,23 @@ void render_common_resonance(tCoord coord, uint32_t param, tModule * module) {
     }
     module->param[0][param].type      = paramTypeDial;
     module->param[0][param].range     = 128;
-    module->param[0][param].rectangle = {coord, scale_size({FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0})};
+    module->param[0][param].rectangle = {coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0};
     snprintf(buff, sizeof(buff), "%.1f", res);
     set_rbg_colour(RGB_BLACK);
-    render_text({{coord.x, coord.y - scale(15.0)}, {BLANK_SIZE, scale(12.0)}}, buff);
-    render_text({{coord.x, coord.y - scale(30.0)}, {BLANK_SIZE, scale(12.0)}}, "Res");
+    render_text({{coord.x, coord.y - 15.0}, {BLANK_SIZE, 12.0}}, buff, gZoomFactor);
+    render_text({{coord.x, coord.y - 30.0}, {BLANK_SIZE, 12.0}}, "Res", gZoomFactor);
     set_rbg_colour({0.2, 0.2, 0.2});
-    render_dial(module->param[0][param].rectangle, module->param[0][param].value);
+    render_dial(module->param[0][param].rectangle, module->param[0][param].value, gZoomFactor);
 }
 
 void render_connector(tCoord coord, uint32_t connector, tConnectorType connectorType, tModule * module) {
+
     module->connector[connector][connectorType] = coord;  // Register where we're rendering this connector, for cable connecting
     
     set_rbg_colour(connectorColourMap[connectorType]);
-    render_circle_part(coord, scale(6.0), 10.0, 0.0, 10.0);
+    render_circle_part(coord, 6.0, 10.0, 0.0, 10.0, gZoomFactor);  // Should be zoomfactored
     set_rbg_colour(RGB_BLACK);
-    render_circle_part(coord, scale(3.0), 10.0, 0.0, 10.0);
+    render_circle_part(coord, 3.0, 10.0, 0.0, 10.0, gZoomFactor);
     
     module->numConnectors++; // Ultimately, we might want to pre-calculate this per module
 }
@@ -226,17 +227,17 @@ void render_connector(tCoord coord, uint32_t connector, tConnectorType connector
 void render_FltClassic(tRectangle rectangle, tModule * module) {
     uint32_t param = 0;
 
-    render_common_freq({rectangle.coord.x + scale(105.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_common_pitch({rectangle.coord.x + scale(15.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_common_keyboard_track({rectangle.coord.x + scale(75.0), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_common_resonance({rectangle.coord.x + scale(160.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_FltClassic_db({rectangle.coord.x + scale(210.0), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_common_bypass({rectangle.coord.x + scale(250), rectangle.coord.y + scale(50.0)}, param++, module);
+    render_common_freq({rectangle.coord.x + 105.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
+    render_common_pitch({rectangle.coord.x + 15.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
+    render_common_keyboard_track({rectangle.coord.x + 75.0, rectangle.coord.y + 80.0}, param++, module);
+    render_common_resonance({rectangle.coord.x + 160.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
+    render_FltClassic_db({rectangle.coord.x + 210.0, rectangle.coord.y + 80.0}, param++, module);
+    render_common_bypass({rectangle.coord.x + 250, rectangle.coord.y + 50.0}, param++, module);
 
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + scale(20.0)}, 0, connectorTypeAudioIn, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + rectangle.size.h - scale(20.0)}, 0, connectorTypeAudioOut, module);
-    render_connector({rectangle.coord.x + scale(15.0), rectangle.coord.y + rectangle.size.h - scale(20.0)}, 1, connectorTypeControlIn, module);
-    render_connector({rectangle.coord.x + scale(15.0), rectangle.coord.y + scale(50.0)}, 0, connectorTypeControlIn, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0}, 0, connectorTypeAudioIn, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0}, 0, connectorTypeAudioOut, module);
+    render_connector({rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 20.0}, 1, connectorTypeControlIn, module);
+    render_connector({rectangle.coord.x + 15.0, rectangle.coord.y + 50.0}, 0, connectorTypeControlIn, module);
 }
 
 // fltMulti -- builds on fltClassic components
@@ -246,10 +247,10 @@ void render_FltMulti_db(tCoord coord, uint32_t param, tModule * module) {
     
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = range;
-    module->param[0][param].rectangle = {coord, scale_size({BLANK_SIZE, 12.0})};  // Should have a DB WIDTH
+    module->param[0][param].rectangle = {coord, BLANK_SIZE, 12.0};
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle.size.w = largest_text_width(range, fltMultiDbMap, 12.0, gZoomFactor);
-    draw_toggle_button(module->param[0][param].rectangle, valString);
+    module->param[0][param].rectangle.size.w = largest_text_width(range, fltMultiDbMap, 12.0, 1.0);
+    draw_toggle_button(module->param[0][param].rectangle, valString, gZoomFactor);
 }
 
 // Gain control
@@ -258,7 +259,7 @@ void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
     
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = 2;
-    module->param[0][param].rectangle = {coord, scale_size({BLANK_SIZE, 12.0})};
+    module->param[0][param].rectangle = {coord, BLANK_SIZE, 12.0};
     if (module->param[0][param].value != 0) {
         set_rbg_colour({0.3, 0.7, 0.3});         // Green when ON
     }
@@ -266,27 +267,27 @@ void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
         set_rbg_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
     }
     
-    module->param[0][param].rectangle.size.w = get_text_width_scaled(valString, 12.0, gZoomFactor);
-    draw_toggle_button(module->param[0][param].rectangle, valString);
+    module->param[0][param].rectangle.size.w = get_text_width_scaled(valString, 12.0, 1.0);
+    draw_toggle_button(module->param[0][param].rectangle, valString, gZoomFactor);
 }
 
 void render_FltMulti(tRectangle rectangle, tModule * module) {
     uint32_t param = 0;
 
-    render_common_freq({rectangle.coord.x + scale(125.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_common_pitch({rectangle.coord.x + scale(15.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_common_keyboard_track({rectangle.coord.x + scale(75.0), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_common_gc({rectangle.coord.x + scale(110.0), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_common_resonance({rectangle.coord.x + scale(185.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, param++, module);
-    render_FltMulti_db({rectangle.coord.x + scale(210.0), rectangle.coord.y + scale(25.0)}, param++, module); // Todo - this param num isn't db!!!
-    render_common_bypass({rectangle.coord.x + scale(230.0), rectangle.coord.y + scale(80.0)}, param++, module);
+    render_common_freq({rectangle.coord.x + 125.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
+    render_common_pitch({rectangle.coord.x + 15.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
+    render_common_keyboard_track({rectangle.coord.x + 75.0, rectangle.coord.y + 80.0}, param++, module);
+    render_common_gc({rectangle.coord.x + 110.0, rectangle.coord.y + 80.0}, param++, module);
+    render_common_resonance({rectangle.coord.x + 185.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
+    render_FltMulti_db({rectangle.coord.x + 210.0, rectangle.coord.y + 25.0}, param++, module); // Todo - this param num isn't db!!!
+    render_common_bypass({rectangle.coord.x + 230.0, rectangle.coord.y + 80.0}, param++, module);
 
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + scale(20.0)}, 0, connectorTypeAudioIn, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + scale(60.0)}, 0, connectorTypeAudioOut, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + scale(80.0)}, 0, connectorTypeAudioOut, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + scale(100.0)}, 0, connectorTypeAudioOut, module);
-    render_connector({rectangle.coord.x + scale(15.0), rectangle.coord.y + rectangle.size.h - scale(20.0)}, 1, connectorTypeControlIn, module);
-    render_connector({rectangle.coord.x + scale(15.0), rectangle.coord.y + scale(50.0)}, 0, connectorTypeControlIn, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0}, 0, connectorTypeAudioIn, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 60.0}, 0, connectorTypeAudioOut, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 80.0}, 0, connectorTypeAudioOut, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 100.0}, 0, connectorTypeAudioOut, module);
+    render_connector({rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 20.0}, 1, connectorTypeControlIn, module);
+    render_connector({rectangle.coord.x + 15.0, rectangle.coord.y + 50.0}, 0, connectorTypeControlIn, module);
 }
 
 void render_param_EnvAdsr_attack(tCoord coord, uint32_t param, tModule * module) {
@@ -306,37 +307,39 @@ void render_param_EnvAdsr_release(tCoord coord, uint32_t param, tModule * module
 }
 
 void render_EnvAdsr(tRectangle rectangle, tModule * module) {
-    render_param_EnvAdsr_attack({rectangle.coord.x + scale(20.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, 1, module);
-    render_param_EnvAdsr_delay({rectangle.coord.x + scale(60.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, 2, module);
-    render_param_EnvAdsr_sustain({rectangle.coord.x + scale(100.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, 3, module);
-    render_param_EnvAdsr_release({rectangle.coord.x + scale(140.0 + FILTER_FREQ_RADIUS), rectangle.coord.y + scale(80.0)}, 4, module);
+    uint32_t param = 0;
+    
+    render_param_EnvAdsr_attack({rectangle.coord.x + 20.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
+    render_param_EnvAdsr_delay({rectangle.coord.x + 60.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
+    render_param_EnvAdsr_sustain({rectangle.coord.x + 100.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
+    render_param_EnvAdsr_release({rectangle.coord.x + 140.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
 
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(30.0), rectangle.coord.y + rectangle.size.h - scale(20.0)}, 0, connectorTypeControlOut, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + rectangle.size.h - scale(20.0)}, 1, connectorTypeAudioOut, module);   // Don't know if 1 is correct
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + scale(20.0)}, 0, connectorTypeAudioIn, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + rectangle.size.h - 20.0}, 0, connectorTypeControlOut, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0}, 1, connectorTypeAudioOut, module);   // Don't know if 1 is correct
+    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0}, 0, connectorTypeAudioIn, module);
 }
 
 void render_Mix4to1c(tRectangle rectangle, tModule * module) {
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + rectangle.size.h - scale(20.0)}, 0, connectorTypeAudioOut, module);
-    render_connector({rectangle.coord.x + scale(60), rectangle.coord.y + scale(80.0)}, 0, connectorTypeAudioIn, module);
-    render_connector({rectangle.coord.x + scale(80), rectangle.coord.y + scale(80.0)}, 1, connectorTypeAudioIn, module);
-    render_connector({rectangle.coord.x + scale(100), rectangle.coord.y + scale(80.0)}, 2, connectorTypeAudioIn, module);
-    render_connector({rectangle.coord.x + scale(120), rectangle.coord.y + scale(80.0)}, 3, connectorTypeAudioIn, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0}, 0, connectorTypeAudioOut, module);
+    render_connector({rectangle.coord.x + 60, rectangle.coord.y + 80.0}, 0, connectorTypeAudioIn, module);
+    render_connector({rectangle.coord.x + 80, rectangle.coord.y + 80.0}, 1, connectorTypeAudioIn, module);
+    render_connector({rectangle.coord.x + 100, rectangle.coord.y + 80.0}, 2, connectorTypeAudioIn, module);
+    render_connector({rectangle.coord.x + 120, rectangle.coord.y + 80.0}, 3, connectorTypeAudioIn, module);
 }
 
 void render_OscShpB(tRectangle rectangle, tModule * module) {
-    render_connector({rectangle.coord.x + scale(150.0), rectangle.coord.y + scale(80.0)}, 0, connectorTypeAudioOut, module);
+    render_connector({rectangle.coord.x + 150.0, rectangle.coord.y + 80.0}, 0, connectorTypeAudioOut, module);
 }
 
 void render_StChorus(tRectangle rectangle, tModule * module) {
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + scale(20.0)}, 0, connectorTypeAudioIn, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(30.0), rectangle.coord.y + rectangle.size.h - scale(20.0)}, 0, connectorTypeAudioOut, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + rectangle.size.h - scale(20.0)}, 1, connectorTypeAudioOut, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0}, 0, connectorTypeAudioIn, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + rectangle.size.h - 20.0}, 0, connectorTypeAudioOut, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0}, 1, connectorTypeAudioOut, module);
 }
 
 void render_Compress(tRectangle rectangle, tModule * module) {
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(30.0), rectangle.coord.y + scale(20.0)}, 0, connectorTypeAudioIn, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - scale(10.0), rectangle.coord.y + scale(20.0)}, 1, connectorTypeAudioIn, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + 20.0}, 0, connectorTypeAudioIn, module);
+    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0}, 1, connectorTypeAudioIn, module);
 }
     
 void render_parameters(tRectangle rectangle, tModule * module) {
@@ -362,8 +365,10 @@ void calculate_module_bounds(double * xEndMax, double * yEndMax, tRectangle modu
         validModule = walk_next_module(&module);
         if (validModule && module.key.location == 1 && module.type != moduleTypeUnknown0) {
             moduleHeight = (double)gModuleProperties[module.type].height;
-            xEnd         = scale(module.column * MODULE_X_SPAN) + scale(MODULE_X_SPAN - MODULE_X_GAP);
-            yEnd         = scale(module.row * MODULE_Y_SPAN) + scale((moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP);
+            xEnd         = module.column * MODULE_X_SPAN + MODULE_X_SPAN - MODULE_X_GAP;
+            yEnd         = module.row * MODULE_Y_SPAN + (moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP;
+            //xEnd         = scale(module.column * MODULE_X_SPAN) + scale(MODULE_X_SPAN - MODULE_X_GAP);
+            //yEnd         = scale(module.row * MODULE_Y_SPAN) + scale((moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP);
 
             if (xEnd > *xEndMax) {
                 *xEndMax = xEnd;
@@ -377,28 +382,32 @@ void calculate_module_bounds(double * xEndMax, double * yEndMax, tRectangle modu
 
 void render_module(tModule * module, tRectangle moduleArea, double xScrollAmount, double yScrollAmount) {
     double moduleHeight = gModuleProperties[module->type].height;
-    double xPos         = scale(module->column * MODULE_X_SPAN) - xScrollAmount;
-    double yPos         = scale(module->row * MODULE_Y_SPAN) - yScrollAmount;
-    double xWidth       = scale(MODULE_WIDTH);
-    double yHeight      = scale((moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP);
+    //double xPos         = scale(module->column * MODULE_X_SPAN) - xScrollAmount;   // Might want to push scaling down the call stack, for consistency
+    //double yPos         = scale(module->row * MODULE_Y_SPAN) - yScrollAmount;
+    //double xWidth       = scale(MODULE_WIDTH);
+    //double yHeight      = scale((moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP);
+    double xPos         = (module->column * MODULE_X_SPAN) - xScrollAmount;
+    double yPos         = (module->row * MODULE_Y_SPAN) - yScrollAmount;
+    double xWidth       = MODULE_WIDTH;
+    double yHeight      = (moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP;
     char   buff[MODULE_NAME_SIZE + 1] = {0};
 
     tRectangle moduleRectangle = {{moduleArea.coord.x + xPos, moduleArea.coord.y + yPos}, {xWidth, yHeight}};
 
     set_module_colour(module->colour);
-    render_rectangle_with_border(moduleRectangle, gZoomFactor); // Add zoom factor for border!!!!
+    render_rectangle_with_border(moduleRectangle, gZoomFactor); // Add zoom factor for border - really needs to scale the whole thing!
     render_parameters(moduleRectangle, module);
     write_module(module->key, module);  // Save calculated coords
 
     snprintf(buff, sizeof(buff), "%s", module->name);
     set_rbga_colour(RGBA_BLACK_ON_TRANSPARENT);
-    render_text({{moduleRectangle.coord.x + scale(5.0), moduleRectangle.coord.y + scale(5.0)}, {BLANK_SIZE, scale(12.0)}}, buff);
+    render_text({{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, 12.0}}, buff, gZoomFactor);
     // Temporary items purely for development debug
     snprintf(buff, sizeof(buff), "(%s)", gModuleProperties[module->type].name);
     
-    render_text({{moduleRectangle.coord.x + scale(120.0), moduleRectangle.coord.y + scale(5.0)}, {BLANK_SIZE, scale(12.0)}}, buff);
+    render_text({{moduleRectangle.coord.x + 120.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, 12.0}}, buff, gZoomFactor);
     snprintf(buff, sizeof(buff), "%u", module->key.index);
-    render_text({{moduleRectangle.coord.x + moduleRectangle.size.w - scale(30.0), moduleRectangle.coord.y + scale(5.0)}, {BLANK_SIZE, scale(12.0)}}, buff);
+    render_text({{moduleRectangle.coord.x + moduleRectangle.size.w - 30.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, 12.0}}, buff, gZoomFactor);
 }
 
 void render_modules(void) {
@@ -408,11 +417,14 @@ void render_modules(void) {
     double     xEndMax = 0.0, yEndMax = 0.0;
 
     calculate_module_bounds(&xEndMax, &yEndMax, moduleArea);
-
+    
     // I think These are actually maximum levels, not actual scroll amounts - may want to rethink names
     double xScrollAmount = (get_scroll_bar_percent(gScrollState.xBar, gRenderWidth) * (xEndMax - moduleArea.size.w)) / 100.0;
     double yScrollAmount = (get_scroll_bar_percent(gScrollState.yBar, gRenderHeight) * (yEndMax - moduleArea.size.h)) / 100.0;
-
+    
+    printf("yScrollAmount = %f  getsbpercent = %f yendmax-area height = %f yendmax = %f area height = %f\n", yScrollAmount, get_scroll_bar_percent(gScrollState.yBar, gRenderHeight), (yEndMax - moduleArea.size.h), yEndMax, moduleArea.size.h);
+    
+    
     reset_walk_module();
     do{
         validModule = walk_next_module(&module);
@@ -423,10 +435,10 @@ void render_modules(void) {
 
     // Draw background areas
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    render_rectangle({{0.0, moduleArea.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, moduleArea.size.h + (MODULE_MARGIN * 2.0)}});
-    render_rectangle({{0.0, moduleArea.coord.y - MODULE_MARGIN}, {moduleArea.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
-    render_rectangle({{moduleArea.coord.x + moduleArea.size.w, moduleArea.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, moduleArea.size.h + (MODULE_MARGIN * 2.0)}});
-    render_rectangle({{0.0, moduleArea.coord.y + moduleArea.size.h}, {moduleArea.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
+    render_rectangle({{0.0, moduleArea.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, moduleArea.size.h + (MODULE_MARGIN * 2.0)}}, NO_ZOOM);
+    render_rectangle({{0.0, moduleArea.coord.y - MODULE_MARGIN}, {moduleArea.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}}, NO_ZOOM);
+    render_rectangle({{moduleArea.coord.x + moduleArea.size.w, moduleArea.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, moduleArea.size.h + (MODULE_MARGIN * 2.0)}}, NO_ZOOM);
+    render_rectangle({{0.0, moduleArea.coord.y + moduleArea.size.h}, {moduleArea.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}}, NO_ZOOM);
 }
 
 void render_cable_from_to(tCoord from, tCoord to) {
@@ -438,10 +450,10 @@ void render_cable_from_to(tCoord from, tCoord to) {
             control.y = fmin(from.y, to.y);
         } else {
             control.x = ((from.x + to.x) / 2.0);
-            control.y = fmax(from.y, to.y) + scale(40.0);
+            control.y = fmax(from.y, to.y) + 40.0;
         }
 
-        render_bezier_curve(from, control, to, scale(4.0), 15);
+        render_bezier_curve(from, control, to, 4.0, 15, gZoomFactor);
     }
 }
 

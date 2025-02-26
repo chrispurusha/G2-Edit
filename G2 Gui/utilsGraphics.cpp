@@ -59,7 +59,27 @@ int       atlasHeight  = 1024 * 8;               // Initial atlas height
 double    gMaxAscent   = 0.0;                    // Used for dealing with preloaded text character height
 double    gMaxDescent  = 0.0;
 
-void render_line(tCoord start, tCoord end, double thickness) {
+
+static inline double scale(double value, double zoomFactor) {
+    return value * zoomFactor;
+}
+
+tCoord scale_coord(tCoord coord, double zoomFactor) {
+    return {scale(coord.x,zoomFactor), scale(coord.y, zoomFactor)};
+}
+    
+tSize scale_size(tSize size, double zoomFactor) {
+    return {scale(size.w,zoomFactor), scale(size.h, zoomFactor)};
+}
+
+tRectangle scale_rectangle(tRectangle rectangle, double zoomFactor) {
+    return {scale_coord(rectangle.coord, zoomFactor), scale_size(rectangle.size, zoomFactor)};
+}
+
+void render_line(tCoord start, tCoord end, double thickness, double zoomFactor) {
+    start = scale_coord(start, zoomFactor);
+    end = scale_coord(end, zoomFactor);
+    thickness = scale(thickness, zoomFactor);
     double half_thickness = thickness * 0.5;
     double dx             = end.x - start.x;
     double dy             = end.y - start.y;
@@ -85,7 +105,12 @@ void render_line(tCoord start, tCoord end, double thickness) {
     glEnd();
 }
 
-void render_rectangle(tRectangle rectangle) {
+void render_rectangle(tRectangle rectangle, double zoomFactor) {
+    rectangle.coord.x = scale(rectangle.coord.x, zoomFactor);
+    rectangle.coord.y = scale(rectangle.coord.y, zoomFactor);
+    rectangle.size.w = scale(rectangle.size.w, zoomFactor);
+    rectangle.size.h = scale(rectangle.size.h, zoomFactor);
+    
     glBegin(GL_QUADS);
     glVertex2f(rectangle.coord.x, rectangle.coord.y);
     glVertex2f(rectangle.coord.x + rectangle.size.w, rectangle.coord.y);
@@ -95,26 +120,34 @@ void render_rectangle(tRectangle rectangle) {
 }
 
 void render_rectangle_with_border(tRectangle rectangle, double zoomFactor) {
+    rectangle.coord.x = scale(rectangle.coord.x, zoomFactor);
+    rectangle.coord.y = scale(rectangle.coord.y, zoomFactor);
+    rectangle.size.w = scale(rectangle.size.w, zoomFactor);
+    rectangle.size.h = scale(rectangle.size.h, zoomFactor);
+    double borderLineWidth = scale(BORDER_LINE_WIDTH, zoomFactor);
     tRectangle line = {0};
-    double borderLineWidth = BORDER_LINE_WIDTH * zoomFactor;
 
-    render_rectangle(rectangle);
+    render_rectangle(rectangle, NO_ZOOM);
 
     set_rbg_colour(RGB_BLACK);
     line = {{rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth}, {rectangle.size.w, borderLineWidth}};
-    render_rectangle(line); //Bottom
+    render_rectangle(line, NO_ZOOM); //Bottom
     set_rbg_colour(RGB_WHITE);
     line = {{rectangle.coord.x, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
-    render_rectangle(line); //Left
+    render_rectangle(line, NO_ZOOM); //Left
     set_rbg_colour(RGB_WHITE);
     line = {{rectangle.coord.x, rectangle.coord.y}, {rectangle.size.w, borderLineWidth}};
-    render_rectangle(line); // Top
+    render_rectangle(line, NO_ZOOM); // Top
     set_rbg_colour(RGB_BLACK);
     line = {{rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
-    render_rectangle(line); // Right
+    render_rectangle(line, NO_ZOOM); // Right
 }
 
-void render_triangle(tTriangle triangle) {
+void render_triangle(tTriangle triangle, double zoomFactor) {
+    triangle.coord1.x = scale(triangle.coord1.x, zoomFactor);
+    triangle.coord2rel.x = scale(triangle.coord2rel.x, zoomFactor);
+    triangle.coord3rel.x = scale(triangle.coord3rel.x, zoomFactor);
+    
     glBegin(GL_POLYGON);
     glVertex2f(triangle.coord1.x, triangle.coord1.y);
     glVertex2f(triangle.coord1.x + triangle.coord2rel.x, triangle.coord1.y + triangle.coord2rel.y);
@@ -122,7 +155,11 @@ void render_triangle(tTriangle triangle) {
     glEnd();
 }
 
-void render_circle_line_part_angle(tCoord coord, double radius, double startAngle, double endAngle, double thickness, int numSteps) {
+void render_circle_line_part_angle(tCoord coord, double radius, double startAngle, double endAngle, double thickness, int numSteps, double zoomFactor) {
+    coord.x = scale(coord.x, zoomFactor);
+    coord.y = scale(coord.y, zoomFactor);
+    radius = scale(radius, zoomFactor);
+    thickness = scale(thickness, zoomFactor);
     const double DEG_TO_RAD = M_PI / 180.0;
     double       angle, x_inner, y_inner, x_outer, y_outer;
     double       half_thickness = thickness * 0.5;
@@ -155,7 +192,11 @@ void render_circle_line_part_angle(tCoord coord, double radius, double startAngl
     glEnd();
 }
 
-void render_circle_line(tCoord coord, double radius, int segments, double thickness) {
+void render_circle_line(tCoord coord, double radius, int segments, double thickness, double zoomFactor) {
+    coord.x = scale(coord.x, zoomFactor);
+    coord.y = scale(coord.y, zoomFactor);
+    radius = scale(radius, zoomFactor);
+    thickness = scale(thickness, zoomFactor);
     const double DEG_TO_RAD     = 2.0 * M_PI / (double)segments;
     double       half_thickness = thickness * 0.5;
 
@@ -178,7 +219,10 @@ void render_circle_line(tCoord coord, double radius, int segments, double thickn
     glEnd();
 }
 
-void render_circle_part(tCoord coord, double radius, int segments, int startSeg, int numSegs) {
+void render_circle_part(tCoord coord, double radius, int segments, int startSeg, int numSegs, double zoomFactor) {
+    coord.x = scale(coord.x, zoomFactor);
+    coord.y = scale(coord.y, zoomFactor);
+    radius = scale(radius, zoomFactor);
     double angle = 0.0;
     double x     = 0.0;
     double y     = 0.0;
@@ -197,7 +241,10 @@ void render_circle_part(tCoord coord, double radius, int segments, int startSeg,
     glEnd();
 }
 
-void render_circle_part_angle(tCoord coord, double radius, double startAngle, double endAngle, int numSteps) {
+void render_circle_part_angle(tCoord coord, double radius, double startAngle, double endAngle, int numSteps, double zoomFactor) {
+    coord.x = scale(coord.x, zoomFactor);
+    coord.y = scale(coord.y, zoomFactor);
+    radius = scale(radius, zoomFactor);
     double angle = 0.0;
     double x     = 0.0;
     double y     = 0.0;
@@ -231,7 +278,11 @@ void render_circle_part_angle(tCoord coord, double radius, double startAngle, do
     glEnd();
 }
 
-void render_radial_line(tCoord coord, double radius, double angleDegrees, double thickness) {
+void render_radial_line(tCoord coord, double radius, double angleDegrees, double thickness, double zoomFactor) {
+    coord.x = scale(coord.x, zoomFactor);
+    coord.y = scale(coord.y, zoomFactor);
+    radius = scale(radius, zoomFactor);
+    thickness = scale(thickness, zoomFactor);
     double angle = 0.0;
     double x     = 0.0;
     double y     = 0.0;
@@ -246,7 +297,7 @@ void render_radial_line(tCoord coord, double radius, double angleDegrees, double
 
     // Draw the line
     //render_line(xPos, yPos, x, y, thickness);
-    render_line({coord.x, coord.y}, {x, y}, thickness);
+    render_line({coord.x, coord.y}, {x, y}, thickness, NO_ZOOM);
 }
 
 void set_rbg_colour(tRgb rgb) {
@@ -257,7 +308,14 @@ void set_rbga_colour(tRgba rgba) {
     glColor4f(rgba.red, rgba.green, rgba.blue, rgba.alpha);
 }
 
-void render_bezier_curve(tCoord start, tCoord control, tCoord end, double thickness, int segments) {
+void render_bezier_curve(tCoord start, tCoord control, tCoord end, double thickness, int segments, double zoomFactor) {
+    control.x = scale(control.x, zoomFactor);
+    control.y = scale(control.y, zoomFactor);
+    start.x = scale(start.x, zoomFactor);
+    start.y = scale(start.y, zoomFactor);
+    end.x = scale(end.x, zoomFactor);
+    end.y = scale(end.y, zoomFactor);
+    thickness = scale(thickness, zoomFactor);
     glBegin(GL_TRIANGLE_STRIP);
     
     for (int i = 0; i <= segments; i++) {
@@ -287,38 +345,47 @@ void render_bezier_curve(tCoord start, tCoord control, tCoord end, double thickn
 
     glEnd();
     
-    render_circle_part(start, thickness / 2.0, 10, 0, 10);
-    render_circle_part(end, thickness / 2.0, 10, 0, 10);
+    render_circle_part(start, thickness / 2.0, 10, 0, 10, NO_ZOOM);
+    render_circle_part(end, thickness / 2.0, 10, 0, 10, NO_ZOOM);
 }
 
 // Draw the power button symbol
-void draw_power_button(tRectangle rectangle, bool active) {
+void draw_power_button(tRectangle rectangle, bool active, double zoomFactor) {
+    rectangle.coord.x = scale(rectangle.coord.x, zoomFactor);
+    rectangle.coord.y = scale(rectangle.coord.y, zoomFactor);
+    rectangle.size.w = scale(rectangle.size.w, zoomFactor);
+    rectangle.size.h = scale(rectangle.size.h, zoomFactor);
+    
     if (active) {
         set_rbg_colour({0.3, 0.7, 0.3});         // Green when ON
     }
     else {
         set_rbg_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
     }
-    render_rectangle(rectangle);
+    render_rectangle(rectangle, NO_ZOOM);
 
     set_rbg_colour(RGB_BLACK);
     tCoord circleCentre = {rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)};
     double circleRadius = (rectangle.size.h / 2.0);
     circleRadius *= 0.75;
 
-    render_circle_line_part_angle(circleCentre, circleRadius, 30.0, 330.0, rectangle.size.w * 0.1, 10);
-    render_line({circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05)}, {circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05) + (rectangle.size.h * 0.5)}, rectangle.size.w * 0.1);
+    render_circle_line_part_angle(circleCentre, circleRadius, 30.0, 330.0, rectangle.size.w * 0.1, 10, NO_ZOOM);
+    render_line({circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05)}, {circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05) + (rectangle.size.h * 0.5)}, rectangle.size.w * 0.1, NO_ZOOM);
 }
 
 // Draw a toggle button with text
-void draw_toggle_button(tRectangle rectangle, char * text) {
-    render_rectangle(rectangle);
+void draw_toggle_button(tRectangle rectangle, char * text, double zoomFactor) {
+    rectangle.coord.x = scale(rectangle.coord.x, zoomFactor);
+    rectangle.coord.y = scale(rectangle.coord.y, zoomFactor);
+    rectangle.size.w = scale(rectangle.size.w, zoomFactor);
+    rectangle.size.h = scale(rectangle.size.h, zoomFactor);
+    render_rectangle(rectangle, 1.0);
     set_rbg_colour(RGB_BLACK);
     //rectangle.size.h *= 0.75;
     //rectangle.coord.y += 0.1;
     //rectangle.coord.x += 0.1;
 
-    render_text(rectangle, text);
+    render_text(rectangle, text, NO_ZOOM);  // No zoom. Already zoomed
 }
 
 bool preload_glyph_textures(const char * fontPath, double fontSize) {
@@ -444,8 +511,8 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
     return true;
 }
 
-void render_text(tRectangle rectangle, char * text) {
-    double scale = 0.0;
+void render_text(tRectangle rectangle, char * text, double zoomFactor) {
+    double scaleFactor = 0.0;
     char * ch    = NULL;
 
     if (text == NULL) {
@@ -453,6 +520,9 @@ void render_text(tRectangle rectangle, char * text) {
         return;
     }
 
+    rectangle.coord.x = scale(rectangle.coord.x, zoomFactor);
+    rectangle.coord.y = scale(rectangle.coord.y, zoomFactor);
+    
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, textureAtlas);
 
@@ -464,9 +534,10 @@ void render_text(tRectangle rectangle, char * text) {
     glPushMatrix();
 
     // Calculate scale factor based on target height
-    scale = rectangle.size.h / (gMaxAscent+gMaxDescent);
+    scaleFactor = rectangle.size.h / (gMaxAscent+gMaxDescent);
+    scaleFactor = scale(scaleFactor, zoomFactor);
     glTranslatef(rectangle.coord.x, rectangle.coord.y, 0);
-    glScalef(scale, scale, 1.0f);
+    glScalef(scaleFactor, scaleFactor, 1.0f);
 
     ch = text;
     while (*ch) {

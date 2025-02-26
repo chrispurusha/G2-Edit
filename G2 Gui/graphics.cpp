@@ -286,17 +286,17 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 void render_scrollbars(GLFWwindow * window) {
     // Scrollbar background
     set_rbg_colour({0.7, 0.7, 0.7});
-    render_rectangle({{(double)gRenderWidth - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, (double)gRenderHeight - SCROLLBAR_MARGIN}});
-    render_rectangle({{0.0, (double)gRenderHeight - SCROLLBAR_WIDTH}, {(double)gRenderWidth - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH}});
+    render_rectangle({{(double)gRenderWidth - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, (double)gRenderHeight - SCROLLBAR_MARGIN}}, 1.0);
+    render_rectangle({{0.0, (double)gRenderHeight - SCROLLBAR_WIDTH}, {(double)gRenderWidth - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH}}, 1.0);
 
     // Bottom right box
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    render_rectangle({{(double)gRenderWidth - SCROLLBAR_WIDTH, (double)gRenderHeight - SCROLLBAR_WIDTH}, {SCROLLBAR_WIDTH, SCROLLBAR_WIDTH}});
+    render_rectangle({{(double)gRenderWidth - SCROLLBAR_WIDTH, (double)gRenderHeight - SCROLLBAR_WIDTH}, {SCROLLBAR_WIDTH, SCROLLBAR_WIDTH}}, 1.0);
 
     // Scroll indicator blocks
     set_rbg_colour({0.9, 0.9, 0.9});
-    render_rectangle({{(double)gRenderWidth - SCROLLBAR_WIDTH, gScrollState.yBar - (SCROLLBAR_LENGTH / 2.0)}, {SCROLLBAR_WIDTH, SCROLLBAR_LENGTH}});
-    render_rectangle({{gScrollState.xBar - (SCROLLBAR_LENGTH / 2.0), (double)gRenderHeight - SCROLLBAR_WIDTH}, {SCROLLBAR_LENGTH, SCROLLBAR_WIDTH}});
+    render_rectangle({{(double)gRenderWidth - SCROLLBAR_WIDTH, gScrollState.yBar - (SCROLLBAR_LENGTH / 2.0)}, {SCROLLBAR_WIDTH, SCROLLBAR_LENGTH}}, 1.0);
+    render_rectangle({{gScrollState.xBar - (SCROLLBAR_LENGTH / 2.0), (double)gRenderHeight - SCROLLBAR_WIDTH}, {SCROLLBAR_LENGTH, SCROLLBAR_WIDTH}}, 1.0);
 }
 
 void render_top_bar(void) {

@@ -24,23 +24,24 @@
 #include "sysIncludes.h"
 #include "types.h"
 
+#define NO_ZOOM (1.0)
 
 void set_rbg_colour(tRgb rgb);
 void set_rbga_colour(tRgba rgba);
 
-void render_line(tCoord start, tCoord end, double thickness);
-void render_rectangle(tRectangle rectangle);
+void render_line(tCoord start, tCoord end, double thickness, double zoomFactor);
+void render_rectangle(tRectangle rectangle, double zoomFactor);
 void render_rectangle_with_border(tRectangle rectangle, double zoomFactor);
-void render_triangle(tTriangle triangle);
-void render_circle_line(tCoord coord, double radius, int segments, double thickness);
-void render_circle_part(tCoord coord, double radius, int segments, int startSeg, int numSegs);
-void render_circle_part_angle(tCoord coord, double radius, double startAngle, double endAngle, int numSteps);
-void render_radial_line(tCoord coord, double radius, double angleDegrees, double thickness);
-void draw_power_button(tRectangle rectangle, bool active);
-void draw_toggle_button(tRectangle rectangle, char * text);
-void render_bezier_curve(tCoord start, tCoord control, tCoord end, double thickness, int segments);
+void render_triangle(tTriangle triangle, double zoomFactor);
+void render_circle_line(tCoord coord, double radius, int segments, double thickness, double zoomFactor);
+void render_circle_part(tCoord coord, double radius, int segments, int startSeg, int numSegs, double zoomFactor);
+void render_circle_part_angle(tCoord coord, double radius, double startAngle, double endAngle, int numSteps, double zoomFactor);
+void render_radial_line(tCoord coord, double radius, double angleDegrees, double thickness, double zoomFactor);
+void draw_power_button(tRectangle rectangle, bool active, double zoomFactor);
+void draw_toggle_button(tRectangle rectangle, char * text, double zoomFactor);
+void render_bezier_curve(tCoord start, tCoord control, tCoord end, double thickness, int segments, double zoomFactor);
 bool preload_glyph_textures(const char * fontPath, double fontSize);
-void render_text(tRectangle rectangle, char * text);
+void render_text(tRectangle rectangle, char * text, double zoomFactor);
 double get_text_width_scaled(char *text, double target_height, double zoomFactor);
 double largest_text_width(int numItems, char ** text, double target_height, double zoomFactor);
 void free_textures(void);
