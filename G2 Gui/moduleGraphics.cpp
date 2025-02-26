@@ -128,12 +128,15 @@ void render_common_keyboard_track(tCoord coord, uint32_t param, tModule * module
 }
 
 void render_FltClassic_db(tCoord coord, uint32_t param, tModule * module) {
+    uint32_t range     = MAP_NUM_ITEMS(filterDbMap);
+    char *   valString = filterDbMap[module->param[0][param].value];
+    
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = MAP_NUM_ITEMS(filterDbMap);
     module->param[0][param].rectangle = {coord, scale_size({BLANK_SIZE, 12.0})};  // Should have a DB WIDTH
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle.size.w = largest_text_width(MAP_NUM_ITEMS(filterDbMap), filterDbMap, 12.0, gZoomFactor);
-    draw_toggle_button(module->param[0][param].rectangle, filterDbMap[module->param[0][param].value]);
+    module->param[0][param].rectangle.size.w = largest_text_width(range, filterDbMap, 12.0, gZoomFactor);
+    draw_toggle_button(module->param[0][param].rectangle, valString);
 }
 
 void render_common_freq(tCoord coord, uint32_t param, tModule * module) {
@@ -238,16 +241,21 @@ void render_FltClassic(tRectangle rectangle, tModule * module) {
 
 // fltMulti -- builds on fltClassic components
 void render_FltMulti_db(tCoord coord, uint32_t param, tModule * module) {
+    uint32_t range     = MAP_NUM_ITEMS(fltMultiDbMap);
+    char *   valString = fltMultiDbMap[module->param[0][param].value];
+    
     module->param[0][param].type      = paramTypeToggle;
-    module->param[0][param].range     = MAP_NUM_ITEMS(fltMultiDbMap);
+    module->param[0][param].range     = range;
     module->param[0][param].rectangle = {coord, scale_size({BLANK_SIZE, 12.0})};  // Should have a DB WIDTH
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle.size.w = largest_text_width(MAP_NUM_ITEMS(fltMultiDbMap), fltMultiDbMap, 12.0, gZoomFactor);
-    draw_toggle_button(module->param[0][param].rectangle, fltMultiDbMap[module->param[0][param].value]);
+    module->param[0][param].rectangle.size.w = largest_text_width(range, fltMultiDbMap, 12.0, gZoomFactor);
+    draw_toggle_button(module->param[0][param].rectangle, valString);
 }
 
 // Gain control
 void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
+    char * valString = "GC";
+    
     module->param[0][param].type      = paramTypeToggle;
     module->param[0][param].range     = 2;
     module->param[0][param].rectangle = {coord, scale_size({BLANK_SIZE, 12.0})};
@@ -258,8 +266,8 @@ void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
         set_rbg_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
     }
     
-    module->param[0][param].rectangle.size.w = get_text_width_scaled("GC", 12.0, gZoomFactor);
-    draw_toggle_button(module->param[0][param].rectangle, "GC");
+    module->param[0][param].rectangle.size.w = get_text_width_scaled(valString, 12.0, gZoomFactor);
+    draw_toggle_button(module->param[0][param].rectangle, valString);
 }
 
 void render_FltMulti(tRectangle rectangle, tModule * module) {
