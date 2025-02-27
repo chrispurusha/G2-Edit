@@ -72,15 +72,15 @@ static inline double scale(double value) {
     return value * gZoomFactor;
 }
 
-tCoord scale_coord(tCoord coord) {
+static tCoord scale_coord(tCoord coord) {
     return {scale(coord.x), scale(coord.y)};
 }
     
-tSize scale_size(tSize size) {
+static tSize scale_size(tSize size) {
     return {scale(size.w), scale(size.h)};
 }
 
-tRectangle scale_rectangle(tRectangle rectangle) {
+static tRectangle scale_rectangle(tRectangle rectangle) {
     return {scale_coord(rectangle.coord), scale_size(rectangle.size)};
 }
 
@@ -143,8 +143,15 @@ void render_rectangle(tArea area, tRectangle rectangle) {
         rectangle.coord.y = scale(rectangle.coord.y);
         rectangle.size.w = scale(rectangle.size.w);
         rectangle.size.h = scale(rectangle.size.h);
-        rectangle.coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
-        rectangle.coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        double scrollX = (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        double scrollY = (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        printf("Scrolly %f\n", scrollY);
+        if (scrollX > 0.0) {
+            rectangle.coord.x -= scrollX;
+        }
+        if (scrollY > 0.0) {
+            rectangle.coord.y -= scrollY;
+        }
         rectangle.coord.x += moduleArea.coord.x;
         rectangle.coord.y += moduleArea.coord.y;
     }
@@ -165,8 +172,14 @@ void render_rectangle_with_border(tArea area, tRectangle rectangle) {
         rectangle.coord.y = scale(rectangle.coord.y);
         rectangle.size.w = scale(rectangle.size.w);
         rectangle.size.h = scale(rectangle.size.h);
-        rectangle.coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
-        rectangle.coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        double scrollX = (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        double scrollY = (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        if (scrollX > 0.0) {
+            rectangle.coord.x -= scrollX;
+        }
+        if (scrollY > 0.0) {
+            rectangle.coord.y -= scrollY;
+        }
         rectangle.coord.x += moduleArea.coord.x;
         rectangle.coord.y += moduleArea.coord.y;
         borderLineWidth = scale(borderLineWidth);
@@ -198,6 +211,18 @@ void render_triangle(tArea area, tTriangle triangle) {
         triangle.coord1.y = scale(triangle.coord1.y);
         triangle.coord2rel.y = scale(triangle.coord2rel.y);
         triangle.coord3rel.y = scale(triangle.coord3rel.y);
+        double scrollX = (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        double scrollY = (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        if (scrollX > 0.0) {
+            triangle.coord1.x -= scrollX;
+            triangle.coord2rel.x -= scrollX;
+            triangle.coord3rel.x -= scrollX;
+        }
+        if (scrollY > 0.0) {
+            triangle.coord1.y -= scrollY;
+            triangle.coord2rel.y -= scrollY;
+            triangle.coord3rel.y -= scrollY;
+        }
         triangle.coord1.x += moduleArea.coord.x;
         triangle.coord2rel.x += moduleArea.coord.x;
         triangle.coord3rel.x += moduleArea.coord.x;
@@ -205,9 +230,6 @@ void render_triangle(tArea area, tTriangle triangle) {
         triangle.coord2rel.y += moduleArea.coord.y;
         triangle.coord3rel.y += moduleArea.coord.y;
     }
-    triangle.coord1.x = scale(triangle.coord1.x);
-    triangle.coord2rel.x = scale(triangle.coord2rel.x);
-    triangle.coord3rel.x = scale(triangle.coord3rel.x);
     
     glBegin(GL_POLYGON);
     glVertex2f(triangle.coord1.x, triangle.coord1.y);
@@ -222,8 +244,14 @@ void render_circle_line_part_angle(tArea area, tCoord coord, double radius, doub
         tRectangle moduleArea  = module_area();
         coord.x = scale(coord.x);
         coord.y = scale(coord.y);
-        coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
-        coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        double scrollX = (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        double scrollY = (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        if (scrollX > 0.0) {
+            coord.x -= scrollX;
+        }
+        if (scrollY > 0.0) {
+            coord.y -= scrollY;
+        }
         coord.x += moduleArea.coord.x;
         coord.y += moduleArea.coord.y;
         thickness = scale(thickness);
@@ -266,8 +294,14 @@ void render_circle_line(tArea area, tCoord coord, double radius, int segments, d
         tRectangle moduleArea  = module_area();
         coord.x = scale(coord.x);
         coord.y = scale(coord.y);
-        coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
-        coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        double scrollX = (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        double scrollY = (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        if (scrollX > 0.0) {
+            coord.x -= scrollX;
+        }
+        if (scrollY > 0.0) {
+            coord.y -= scrollY;
+        }
         coord.x += moduleArea.coord.x;
         coord.y += moduleArea.coord.y;
         radius = scale(radius);
@@ -301,8 +335,14 @@ void render_circle_part(tArea area, tCoord coord, double radius, int segments, i
         tRectangle moduleArea  = module_area();
         coord.x = scale(coord.x);
         coord.y = scale(coord.y);
-        coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
-        coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        double scrollX = (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        double scrollY = (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        if (scrollX > 0.0) {
+            coord.x -= scrollX;
+        }
+        if (scrollY > 0.0) {
+            coord.y -= scrollY;
+        }
         coord.x += moduleArea.coord.x;
         coord.y += moduleArea.coord.y;
         radius = scale(radius);
@@ -331,8 +371,14 @@ void render_circle_part_angle(tArea area, tCoord coord, double radius, double st
         tRectangle moduleArea  = module_area();
         coord.x = scale(coord.x);
         coord.y = scale(coord.y);
-        coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
-        coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        double scrollX = (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        double scrollY = (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        if (scrollX > 0.0) {
+            coord.x -= scrollX;
+        }
+        if (scrollY > 0.0) {
+            coord.y -= scrollY;
+        }
         coord.x += moduleArea.coord.x;
         coord.y += moduleArea.coord.y;
         radius = scale(radius);
@@ -376,8 +422,14 @@ void render_radial_line(tArea area, tCoord coord, double radius, double angleDeg
         tRectangle moduleArea  = module_area();
         coord.x = scale(coord.x);
         coord.y = scale(coord.y);
-        coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
-        coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        double scrollX = (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        double scrollY = (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        if (scrollX > 0.0) {
+            coord.x -= scrollX;
+        }
+        if (scrollY > 0.0) {
+            coord.y -= scrollY;
+        }
         coord.x += moduleArea.coord.x;
         coord.y += moduleArea.coord.y;
         radius = scale(radius);
@@ -417,12 +469,18 @@ void render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord end, d
         end.y = scale(end.y);
         control.x = scale(control.x);
         control.y = scale(control.y);
-        start.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
-        start.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
-        end.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
-        end.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
-        control.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
-        control.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        double scrollX = (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        double scrollY = (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        if (scrollX > 0.0) {
+            start.x -= scrollX;
+            end.x -= scrollX;
+            control.x -= scrollX;
+        }
+        if (scrollY > 0.0) {
+            start.y -= scrollY;
+            end.y -= scrollY;
+            control.y -= scrollY;
+        }
         start.x += moduleArea.coord.x;
         start.y += moduleArea.coord.y;
         end.x += moduleArea.coord.x;
@@ -473,8 +531,14 @@ void draw_power_button(tArea area, tRectangle rectangle, bool active) {
         rectangle.coord.y = scale(rectangle.coord.y);
         rectangle.size.w = scale(rectangle.size.w);
         rectangle.size.h = scale(rectangle.size.h);
-        rectangle.coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
-        rectangle.coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        double scrollX = (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        double scrollY = (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        if (scrollX > 0.0) {
+            rectangle.coord.x -= scrollX;
+        }
+        if (scrollY > 0.0) {
+            rectangle.coord.y -= scrollY;
+        }
         rectangle.coord.x += moduleArea.coord.x;
         rectangle.coord.y += moduleArea.coord.y;
     }
@@ -504,8 +568,14 @@ void draw_toggle_button(tArea area, tRectangle rectangle, char * text) {
         rectangle.coord.y = scale(rectangle.coord.y);
         rectangle.size.w = scale(rectangle.size.w);
         rectangle.size.h = scale(rectangle.size.h);
-        rectangle.coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
-        rectangle.coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        double scrollX = (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        double scrollY = (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        if (scrollX > 0.0) {
+            rectangle.coord.x -= scrollX;
+        }
+        if (scrollY > 0.0) {
+            rectangle.coord.y -= scrollY;
+        }
         rectangle.coord.x += moduleArea.coord.x;
         rectangle.coord.y += moduleArea.coord.y;
     }
@@ -648,8 +718,14 @@ void render_text(tArea area, tRectangle rectangle, char * text) {
         rectangle.coord.y = scale(rectangle.coord.y);
         rectangle.size.w = scale(rectangle.size.w);
         rectangle.size.h = scale(rectangle.size.h);
-        rectangle.coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
-        rectangle.coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        double scrollX = (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        double scrollY = (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        if (scrollX > 0.0) {
+            rectangle.coord.x -= scrollX;
+        }
+        if (scrollY > 0.0) {
+            rectangle.coord.y -= scrollY;
+        }
         rectangle.coord.x += moduleArea.coord.x;
         rectangle.coord.y += moduleArea.coord.y;
     }
@@ -844,12 +920,10 @@ void setRenderParams(tRectangle workingArea, double xScrollAmount, double yScrol
 
 void set_x_scroll_percent(double percent) {
     gXScrollPercent = percent;
-    printf("x scroll percent = %f\n", gXScrollPercent);
 }
 
 void set_y_scroll_percent(double percent) {
     gYScrollPercent = percent;
-    printf("y scroll percent = %f\n", gYScrollPercent);
 }
 
 void set_x_end_max(double xEndMax) {
