@@ -47,14 +47,15 @@ extern "C" {
 
 //static int           gRenderWidth  = 0;
 //static int           gRenderHeight = 0;
-static tScrollState  gScrollState  = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
+static tScrollState gScrollState = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false
+};
 //static double        gZoomFactor   = 1.0;
 
-static FT_Library    gLibrary      = {0};
-static FT_Face       gFace         = {0};
-static GLFWwindow *  gWindow       = NULL;
+static FT_Library   gLibrary = {0};
+static FT_Face      gFace    = {0};
+static GLFWwindow * gWindow  = NULL;
 
-static tDragging     gDragging     = {0};
+static tDragging     gDragging = {0};
 extern tMessageQueue gCommandQueue;
 
 void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
@@ -77,13 +78,13 @@ void set_yScrollBar(double y) {
 
 bool handle_scrollbar_click(tCoord coord) {
     tRectangle yScrollBar = {
-        {(double)get_render_width() - SCROLLBAR_WIDTH,                   0.0},
-        {SCROLLBAR_WIDTH,                        (double)get_render_height()}
+        {(double)get_render_width() - SCROLLBAR_WIDTH,                         0.0},
+        {SCROLLBAR_WIDTH,                              (double)get_render_height()}
     };
 
     tRectangle xScrollBar = {
-        {                 0.0, (double)get_render_height() - SCROLLBAR_WIDTH},
-        {(double)get_render_width(), SCROLLBAR_WIDTH                        }
+        {                       0.0, (double)get_render_height() - SCROLLBAR_WIDTH},
+        {(double)get_render_width(), SCROLLBAR_WIDTH                              }
     };
 
     if (within_rectangle(coord, yScrollBar)) {
@@ -219,27 +220,25 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     }
 }
 
-
-void scroll_event(GLFWwindow *window, double x, double y) {
+void scroll_event(GLFWwindow * window, double x, double y) {
     const double zoomIncrement = 0.05;  // Zoom sensitivity
-    double zoomFactor = 0.0;
+    double       zoomFactor    = 0.0;
     //double     xEndMax = 0.0, yEndMax = 0.0;
 
-    tCoord mouseCoord = {0};
+    tCoord     mouseCoord = {0};
     tRectangle moduleArea = module_area(); // Get the module display area
-    
+
     glfwGetCursorPos(window, &mouseCoord.x, &mouseCoord.y);
 
     //printf("Zoom = %f yEndMax = %f module area size = %f percent = %f\n", gZoomFactor, yEndMax, moduleArea.size.h, get_scroll_bar_percent(gScrollState.yBar, gRenderHeight));
 
     if (within_rectangle(mouseCoord, moduleArea)) {
-        zoomFactor = get_zoom_factor();
+        zoomFactor  = get_zoom_factor();
         zoomFactor += y * zoomIncrement;
-        if (zoomFactor<0.5)
-        {
+        if (zoomFactor < 0.5) {
             zoomFactor = 0.5;
-        } else if (zoomFactor>2.0)
-        {
+        }
+        else if (zoomFactor > 2.0) {
             zoomFactor = 2.0;
         }
         set_zoom_factor(zoomFactor);
@@ -341,7 +340,7 @@ void init_graphics(void) {
         printf("Failed to preload glyph textures.\n");
     }
 
-    int renderWidth = 0;
+    int renderWidth  = 0;
     int renderHeight = 0;
     glfwGetWindowSize(gWindow, &renderWidth, &renderHeight);
     set_render_width(renderWidth);

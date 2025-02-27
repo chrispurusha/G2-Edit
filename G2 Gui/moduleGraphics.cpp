@@ -41,7 +41,7 @@ extern "C" {
 #include "moduleResources.h"
 #include "moduleGraphics.h"
 
-void render_dial(tRectangle rectangle, uint32_t value) {  // Drop down into utilsGraphics?
+tRectangle render_dial(tRectangle rectangle, uint32_t value) {  // Drop down into utilsGraphics?
     double angle  = 0.0;
     double radius = 0.0;
     double x      = 0;
@@ -57,7 +57,7 @@ void render_dial(tRectangle rectangle, uint32_t value) {  // Drop down into util
     set_rbg_colour({0.0, 0.0, 0.0});
     render_radial_line(moduleArea, {x, y}, radius, angle, 2.0);
     set_rbg_colour({0.0, 0.0, 0.0});
-    render_circle_line(moduleArea, {x, y}, radius, 25, 1.0);
+    return render_circle_line(moduleArea, {x, y}, radius, 25, 1.0);
 }
 
 void set_module_colour(uint32_t colour) {
@@ -70,51 +70,47 @@ void set_module_colour(uint32_t colour) {
 // This might be too generic and won't be able to use, or we add extra params!
 void render_param_common_dial(tCoord coord, uint32_t param, tModule * module, char * label, uint32_t range) {
     char buff[16] = {0};
+
     snprintf(buff, sizeof(buff), "%u", module->param[0][param].value);
-    module->param[0][param].type = paramTypeDial;
+    module->param[0][param].type  = paramTypeDial;
     module->param[0][param].range = range;
-    module->param[0][param].rectangle = {coord, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}};
+    //module->param[0][param].rectangle = ;
 
     set_rbg_colour(RGB_BLACK);
     render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, 12.0}}, buff);
     render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, 12.0}}, label);
     set_rbg_colour({0.2, 0.2, 0.2});
-    render_dial(module->param[0][param].rectangle, module->param[0][param].value);
+    module->param[0][param].rectangle = render_dial({coord, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, module->param[0][param].value);
 }
 
 // This might become a common function for any modules with a bypes
 void render_common_bypass(tCoord coord, uint32_t param, tModule * module) {
-    module->param[0][param].type      = paramTypeToggle;
-    module->param[0][param].range     = 2;
-    module->param[0][param].rectangle = {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}};
+    module->param[0][param].type  = paramTypeToggle;
+    module->param[0][param].range = 2;
 
-    draw_power_button(moduleArea, module->param[0][param].rectangle, module->param[0][param].value != 0);
+    module->param[0][param].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, module->param[0][param].value != 0);
 }
 
 void render_common_keyboard_track(tCoord coord, uint32_t param, tModule * module) {
     uint32_t range     = MAP_NUM_ITEMS(filterKbMap);
     char *   valString = filterKbMap[module->param[0][param].value];
-    
-    module->param[0][param].type      = paramTypeToggle;
-    module->param[0][param].range     = range;
-    module->param[0][param].rectangle = {coord, {BLANK_SIZE, 12.0}};
+
+    module->param[0][param].type  = paramTypeToggle;
+    module->param[0][param].range = range;
     set_rbg_colour(RGB_BLACK);
     render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, 12.0}}, "Kbt");
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle.size.w = largest_text_width(range, filterKbMap, 12.0);
-    draw_toggle_button(moduleArea, module->param[0][param].rectangle, valString);
+    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, {largest_text_width(range, filterKbMap, 12.0), 12.0}}, valString);
 }
 
 void render_FltClassic_db(tCoord coord, uint32_t param, tModule * module) {
     uint32_t range     = MAP_NUM_ITEMS(filterDbMap);
     char *   valString = filterDbMap[module->param[0][param].value];
-    
-    module->param[0][param].type      = paramTypeToggle;
-    module->param[0][param].range     = MAP_NUM_ITEMS(filterDbMap);
-    module->param[0][param].rectangle = {coord, {BLANK_SIZE, 12.0}};  // Should have a DB WIDTH
+
+    module->param[0][param].type  = paramTypeToggle;
+    module->param[0][param].range = MAP_NUM_ITEMS(filterDbMap);
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle.size.w = largest_text_width(range, filterDbMap, 12.0);
-    draw_toggle_button(moduleArea, module->param[0][param].rectangle, valString);
+    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, {largest_text_width(range, filterDbMap, 12.0), 12.0}}, valString);
 }
 
 void render_common_freq(tCoord coord, uint32_t param, tModule * module) {
@@ -136,14 +132,13 @@ void render_common_freq(tCoord coord, uint32_t param, tModule * module) {
         snprintf(buff, sizeof(buff), "%.1fkHz", freq / 1000.0);
     }
 
-    module->param[0][param].type      = paramTypeDial;
-    module->param[0][param].range     = 128;
-    module->param[0][param].rectangle = {coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0};
+    module->param[0][param].type  = paramTypeDial;
+    module->param[0][param].range = 128;
     set_rbg_colour(RGB_BLACK);
     render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, 12.0}}, buff);
     render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, 12.0}}, "Freq");
     set_rbg_colour({0.2, 0.2, 0.2});
-    render_dial(module->param[0][param].rectangle, module->param[0][param].value);
+    module->param[0][param].rectangle = render_dial({coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}, module->param[0][param].value);
 }
 
 void render_common_pitch(tCoord coord, uint32_t param, tModule * module) {
@@ -157,15 +152,14 @@ void render_common_pitch(tCoord coord, uint32_t param, tModule * module) {
     else {
         percent = maxVal;     // Clip
     }
-    module->param[0][param].type      = paramTypeDial;
-    module->param[0][param].range     = 128;
-    module->param[0][param].rectangle = {coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0};
+    module->param[0][param].type  = paramTypeDial;
+    module->param[0][param].range = 128;
     snprintf(buff, sizeof(buff), "%.1f%%", percent);
     set_rbg_colour(RGB_BLACK);
     render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, 12.0}}, buff);
     render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, 12.0}}, "Env");
     set_rbg_colour({0.2, 0.2, 0.2});
-    render_dial(module->param[0][param].rectangle, module->param[0][param].value);
+    module->param[0][param].rectangle = render_dial({coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}, module->param[0][param].value);
 }
 
 void render_common_resonance(tCoord coord, uint32_t param, tModule * module) {
@@ -179,26 +173,24 @@ void render_common_resonance(tCoord coord, uint32_t param, tModule * module) {
     else {
         res = maxVal;     // Clip
     }
-    module->param[0][param].type      = paramTypeDial;
-    module->param[0][param].range     = 128;
-    module->param[0][param].rectangle = {coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0};
+    module->param[0][param].type  = paramTypeDial;
+    module->param[0][param].range = 128;
     snprintf(buff, sizeof(buff), "%.1f", res);
     set_rbg_colour(RGB_BLACK);
     render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, 12.0}}, buff);
     render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, 12.0}}, "Res");
     set_rbg_colour({0.2, 0.2, 0.2});
-    render_dial(module->param[0][param].rectangle, module->param[0][param].value);
+    module->param[0][param].rectangle = render_dial({coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}, module->param[0][param].value);
 }
 
 void render_connector(tCoord coord, uint32_t connector, tConnectorType connectorType, tModule * module) {
-
     module->connector[connector][connectorType] = coord;  // Register where we're rendering this connector, for cable connecting
-    
+
     set_rbg_colour(connectorColourMap[connectorType]);
     render_circle_part(moduleArea, coord, 6.0, 10.0, 0.0, 10.0);  // Should be zoomfactored
     set_rbg_colour(RGB_BLACK);
     render_circle_part(moduleArea, coord, 3.0, 10.0, 0.0, 10.0);
-    
+
     module->numConnectors++; // Ultimately, we might want to pre-calculate this per module
 }
 
@@ -222,31 +214,27 @@ void render_FltClassic(tRectangle rectangle, tModule * module) {
 void render_FltMulti_db(tCoord coord, uint32_t param, tModule * module) {
     uint32_t range     = MAP_NUM_ITEMS(fltMultiDbMap);
     char *   valString = fltMultiDbMap[module->param[0][param].value];
-    
-    module->param[0][param].type      = paramTypeToggle;
-    module->param[0][param].range     = range;
-    module->param[0][param].rectangle = {coord, BLANK_SIZE, 12.0};
+
+    module->param[0][param].type  = paramTypeToggle;
+    module->param[0][param].range = range;
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle.size.w = largest_text_width(range, fltMultiDbMap, 12.0);
-    draw_toggle_button(moduleArea, module->param[0][param].rectangle, valString);
+    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, largest_text_width(range, fltMultiDbMap, 12.0), 12.0}, valString);
 }
 
 // Gain control
 void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
     char * valString = "GC";
-    
-    module->param[0][param].type      = paramTypeToggle;
-    module->param[0][param].range     = 2;
-    module->param[0][param].rectangle = {coord, BLANK_SIZE, 12.0};
+
+    module->param[0][param].type  = paramTypeToggle;
+    module->param[0][param].range = 2;
     if (module->param[0][param].value != 0) {
         set_rbg_colour({0.3, 0.7, 0.3});         // Green when ON
     }
     else {
         set_rbg_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
     }
-    
-    module->param[0][param].rectangle.size.w = get_text_width(valString, 12.0);
-    draw_toggle_button(moduleArea, module->param[0][param].rectangle, valString);
+
+    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, get_text_width(valString, 12.0), 12.0}, valString);
 }
 
 void render_FltMulti(tRectangle rectangle, tModule * module) {
@@ -286,7 +274,7 @@ void render_param_EnvAdsr_release(tCoord coord, uint32_t param, tModule * module
 
 void render_EnvAdsr(tRectangle rectangle, tModule * module) {
     uint32_t param = 0;
-    
+
     render_param_EnvAdsr_attack({rectangle.coord.x + 20.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_param_EnvAdsr_delay({rectangle.coord.x + 60.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_param_EnvAdsr_sustain({rectangle.coord.x + 100.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
@@ -319,7 +307,7 @@ void render_Compress(tRectangle rectangle, tModule * module) {
     render_connector({rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + 20.0}, 0, connectorTypeAudioIn, module);
     render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0}, 1, connectorTypeAudioIn, module);
 }
-    
+
 void render_parameters(tRectangle rectangle, tModule * module) {
     module->numConnectors = 0; // Ultimately, we might want to pre-calculate this per module
 
@@ -329,34 +317,32 @@ void render_parameters(tRectangle rectangle, tModule * module) {
 }
 
 double calculate_x_end_max(void) {
-    double xEndMax = MODULE_X_SPAN; // Set a minumum
-    tRectangle area  = module_area();
-    tModule module       = {0};
-    bool    validModule  = false;
-    double  xEnd = 0.0;
+    double  xEndMax     = MODULE_X_SPAN; // Set a minumum
+    tModule module      = {0};
+    bool    validModule = false;
+    double  xEnd        = 0.0;
 
     reset_walk_module();
     do{
         validModule = walk_next_module(&module);
         if (validModule && module.key.location == 1 && module.type != moduleTypeUnknown0) {
             xEnd = module.column * MODULE_X_SPAN + MODULE_X_SPAN - MODULE_X_GAP;
-            
+
             if (xEnd > xEndMax) {
                 xEndMax = xEnd;
             }
         }
     } while (validModule);
-    
-    return(xEndMax);
+
+    return xEndMax;
 }
 
 double calculate_y_end_max(void) {
-    double yEndMax = MODULE_Y_SPAN; // Set a minumum
-    tRectangle area  = module_area();
+    double  yEndMax      = MODULE_Y_SPAN; // Set a minumum
     tModule module       = {0};
     bool    validModule  = false;
     double  moduleHeight = 0.0;
-    double  yEnd = 0.0;
+    double  yEnd         = 0.0;
 
     reset_walk_module();
     do{
@@ -364,14 +350,14 @@ double calculate_y_end_max(void) {
         if (validModule && module.key.location == 1 && module.type != moduleTypeUnknown0) {
             moduleHeight = (double)gModuleProperties[module.type].height;
             yEnd         = module.row * MODULE_Y_SPAN + (moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP;
-            
+
             if (yEnd > yEndMax) {
                 yEndMax = yEnd;
             }
         }
     } while (validModule);
-    
-    return(yEndMax);
+
+    return yEndMax;
 }
 
 void render_module(tModule * module) {
@@ -387,14 +373,14 @@ void render_module(tModule * module) {
     set_module_colour(module->colour);
     render_rectangle_with_border(moduleArea, moduleRectangle); // Add zoom factor for border - really needs to scale the whole thing!
     render_parameters(moduleRectangle, module);
-    write_module(module->key, module);  // Save calculated coords
+    write_module(module->key, module);                         // Save calculated coords
 
     snprintf(buff, sizeof(buff), "%s", module->name);
     set_rbga_colour(RGBA_BLACK_ON_TRANSPARENT);
     render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, 12.0}}, buff);
     // Temporary items purely for development debug
     snprintf(buff, sizeof(buff), "(%s)", gModuleProperties[module->type].name);
-    
+
     render_text(moduleArea, {{moduleRectangle.coord.x + 120.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, 12.0}}, buff);
     snprintf(buff, sizeof(buff), "%u", module->key.index);
     render_text(moduleArea, {{moduleRectangle.coord.x + moduleRectangle.size.w - 30.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, 12.0}}, buff);
@@ -403,11 +389,11 @@ void render_module(tModule * module) {
 void render_modules(void) {
     tModule    module      = {0};
     bool       validModule = false;
-    tRectangle area  = module_area();
-    
+    tRectangle area        = module_area();
+
     set_x_end_max(calculate_x_end_max());
     set_y_end_max(calculate_y_end_max());
-    
+
     reset_walk_module();
     do{
         validModule = walk_next_module(&module);
@@ -415,7 +401,7 @@ void render_modules(void) {
             render_module(&module);
         }
     } while (validModule);
-    
+
     // Draw background areas
     set_rbg_colour(RGB_BACKGROUND_GREY);
     render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
@@ -425,13 +411,14 @@ void render_modules(void) {
 }
 
 void render_cable_from_to(tCoord from, tCoord to) {
-    tCoord  control = {0};
-    
+    tCoord control = {0};
+
     if ((from.x != 0.0) && (from.y != 0.0) && (to.y != 0.0) && (to.y != 0.0)) {
         if (from.x == to.x) {
             control.x = from.x;
             control.y = fmin(from.y, to.y);
-        } else {
+        }
+        else {
             control.x = ((from.x + to.x) / 2.0);
             control.y = fmax(from.y, to.y) + 40.0;
         }
@@ -454,16 +441,16 @@ void render_cable(tCable * cable) {
     }
 
     set_rbg_colour(cableColourMap[cable->colour]);
-    
+
     // Could be control or audio cable, but cable struct doesn't give us that info, so try both. Might be a better way of dealing with this
     render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeControlOut], moduleTo.connector[cable->key.connectorTo][connectorTypeControlIn]);
     render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeAudioOut], moduleTo.connector[cable->key.connectorTo][connectorTypeAudioIn]);
 }
 
 void render_cables(void) {
-    tCable     cable      = {0};
-    bool       validCable = false;
-    
+    tCable cable      = {0};
+    bool   validCable = false;
+
     reset_walk_cable();
     do{
         validCable = walk_next_cable(&cable);

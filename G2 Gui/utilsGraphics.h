@@ -24,26 +24,26 @@
 #include "sysIncludes.h"
 #include "types.h"
 
-#define NO_ZOOM (1.0)
+#define NO_ZOOM    (1.0)
 
 void set_rbg_colour(tRgb rgb);
 void set_rbga_colour(tRgba rgba);
 
 tRectangle module_area(void);
-void render_line(tArea area, tCoord start, tCoord end, double thickness);
-void render_rectangle(tArea area, tRectangle rectangle);
-void render_rectangle_with_border(tArea area, tRectangle rectangle);
-void render_triangle(tArea area, tTriangle triangle);
-void render_circle_line(tArea area, tCoord coord, double radius, int segments, double thickness);
-void render_circle_part(tArea area,tCoord coord, double radius, int segments, int startSeg, int numSegs);
-void render_circle_part_angle(tArea area,tCoord coord, double radius, double startAngle, double endAngle, int numSteps);
-void render_radial_line(tArea area, tCoord coord, double radius, double angleDegrees, double thickness);
-void draw_power_button(tArea area, tRectangle rectangle, bool active);
-void draw_toggle_button(tArea area, tRectangle rectangle, char * text);
-void render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord end, double thickness, int segments);
+tRectangle render_line(tArea area, tCoord start, tCoord end, double thickness);
+tRectangle render_rectangle(tArea area, tRectangle rectangle);
+tRectangle render_rectangle_with_border(tArea area, tRectangle rectangle);
+tRectangle render_triangle(tArea area, tTriangle triangle);
+tRectangle render_circle_line(tArea area, tCoord coord, double radius, int segments, double thickness);
+tRectangle render_circle_part(tArea area, tCoord coord, double radius, int segments, int startSeg, int numSegs);
+tRectangle render_circle_part_angle(tArea area, tCoord coord, double radius, double startAngle, double endAngle, int numSteps);
+tRectangle render_radial_line(tArea area, tCoord coord, double radius, double angleDegrees, double thickness);
+tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active);
+tRectangle draw_toggle_button(tArea area, tRectangle rectangle, char * text);
+tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord end, double thickness, int segments);
+tRectangle render_text(tArea area, tRectangle rectangle, char * text);
 bool preload_glyph_textures(const char * fontPath, double fontSize);
-void render_text(tArea area, tRectangle rectangle, char * text);
-double get_text_width(char *text, double target_height);
+double get_text_width(char * text, double target_height);
 double largest_text_width(int numItems, char ** text, double target_height);
 void free_textures(void);
 double value_to_angle(uint32_t value);

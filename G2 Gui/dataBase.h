@@ -78,8 +78,8 @@ typedef struct _struct_module {
     uint32_t                unknown1;                                         // Guess we should store this, to write back if necessary
     uint32_t                modeCount;
     char                    name[MODULE_NAME_SIZE + 1];
-    uint32_t                numParams;                                        // Relates to tComp array below
-    tParam                  param[VARIATIONS][MAX_PARAMS_PER_MODULE];         // Going to need to allocate this per module, depending on numParams to save memory
+    uint32_t                numParams;                                              // Relates to tComp array below
+    tParam                  param[VARIATIONS][MAX_PARAMS_PER_MODULE];               // Going to need to allocate this per module, depending on numParams to save memory
     uint32_t                numConnectors;
     tCoord                  connector[MAX_CONNECTORS_PER_MODULE][connectorTypeMax]; // Going to need to allocate this per module to save memory
     struct _struct_module * next;
@@ -91,6 +91,7 @@ void dump_modules(void);
 void reset_walk_module(void);
 bool walk_next_module(tModule * module);
 uint32_t module_height(uint32_t type);
+
 //tRgb module_colour_map_to_rbg(uint32_t colour);
 char * module_type_name(uint32_t type);
 bool read_cable(tCableKey key, tCable * cable);

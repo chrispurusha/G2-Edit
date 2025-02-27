@@ -61,11 +61,11 @@ static double    gMaxDescent  = 0.0;
 
 static double gXScrollPercent = 0.0;
 static double gYScrollPercent = 0.0;
-static double gZoomFactor = NO_ZOOM;
-static double gXEndMax = 0.0;
-static double gYEndMax = 0.0;
-static int    gRenderWidth  = 0;
-static int    gRenderHeight = 0;
+static double gZoomFactor     = NO_ZOOM;
+static double gXEndMax        = 0.0;
+static double gYEndMax        = 0.0;
+static int    gRenderWidth    = 0;
+static int    gRenderHeight   = 0;
 
 static inline double scale(double value) {
     return value * gZoomFactor;
@@ -73,8 +73,8 @@ static inline double scale(double value) {
 
 static double calc_scroll_x(void) {
     tRectangle area  = module_area();
-    double value = 0.0;
-    
+    double     value = 0.0;
+
     value = (gXScrollPercent * (scale(gXEndMax) - area.size.w)) / 100.0;
     if (value < 0.0) {
         value = 0.0;
@@ -84,8 +84,8 @@ static double calc_scroll_x(void) {
 
 static double calc_scroll_y(void) {
     tRectangle area  = module_area();
-    double value = 0.0;
-    
+    double     value = 0.0;
+
     value = (gYScrollPercent * (scale(gYEndMax) - area.size.h)) / 100.0;
     if (value < 0.0) {
         value = 0.0;
@@ -96,7 +96,7 @@ static double calc_scroll_y(void) {
 static tCoord scale_coord(tCoord coord) {
     return {scale(coord.x), scale(coord.y)};
 }
-    
+
 static tSize scale_size(tSize size) {
     return {scale(size.w), scale(size.h)};
 }
@@ -106,7 +106,8 @@ static tRectangle scale_rectangle(tRectangle rectangle) {
 }
 
 static tCoord adjust_to_module_area_coord(tCoord coord) {
-    tRectangle area  = module_area();
+    tRectangle area = module_area();
+
     coord.x += area.coord.x;
     coord.y += area.coord.y;
     return {coord};
@@ -149,20 +150,20 @@ tRectangle module_area(void) {
     return {{left, top}, {width, height}};
 }
 
-void render_line(tArea area, tCoord start, tCoord end, double thickness) {
+tRectangle render_line(tArea area, tCoord start, tCoord end, double thickness) {
     if (area == moduleArea) {
-        start = scale_scroll_adjust_coord(start);
-        end = scale_scroll_adjust_coord(end);
+        start     = scale_scroll_adjust_coord(start);
+        end       = scale_scroll_adjust_coord(end);
         thickness = scale(thickness);
     }
-    
+
     double half_thickness = thickness * 0.5;
     double dx             = end.x - start.x;
     double dy             = end.y - start.y;
     double length         = sqrt(dx * dx + dy * dy);
 
     if (length == 0.0) {
-        return;                // Avoid division by zero
+        return{{0.0, 0.0}, {0.0, 0.0}};                // Avoid division by zero
     }
     // Normalize direction
     double nx = dx / length;
@@ -179,9 +180,11 @@ void render_line(tArea area, tCoord start, tCoord end, double thickness) {
     glVertex2f(end.x - px, end.y - py);
     glVertex2f(end.x + px, end.y + py);
     glEnd();
+
+    return {{0.0, 0.0}, {0.0, 0.0}};
 }
 
-void render_rectangle(tArea area, tRectangle rectangle) {
+tRectangle render_rectangle(tArea area, tRectangle rectangle) {
     if (area == moduleArea) {
         rectangle = scale_scroll_adjust_rectangle(rectangle);
     }
@@ -192,12 +195,15 @@ void render_rectangle(tArea area, tRectangle rectangle) {
     glVertex2f(rectangle.coord.x + rectangle.size.w, rectangle.coord.y + rectangle.size.h);
     glVertex2f(rectangle.coord.x, rectangle.coord.y + rectangle.size.h);
     glEnd();
+
+    return {rectangle};
 }
 
-void render_rectangle_with_border(tArea area, tRectangle rectangle) {
+tRectangle render_rectangle_with_border(tArea area, tRectangle rectangle) {
     double borderLineWidth = BORDER_LINE_WIDTH;
+
     if (area == moduleArea) {
-        rectangle = scale_scroll_adjust_rectangle(rectangle);
+        rectangle       = scale_scroll_adjust_rectangle(rectangle);
         borderLineWidth = scale(borderLineWidth);
     }
     tRectangle line = {0};
@@ -216,26 +222,29 @@ void render_rectangle_with_border(tArea area, tRectangle rectangle) {
     set_rbg_colour(RGB_BLACK);
     line = {{rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
     render_rectangle(mainArea, line); // Right
+
+    return {rectangle};
 }
 
-void render_triangle(tArea area, tTriangle triangle) {
+tRectangle render_triangle(tArea area, tTriangle triangle) {
     if (area == moduleArea) {
-        triangle.coord1 = scale_scroll_adjust_coord(triangle.coord1);
+        triangle.coord1    = scale_scroll_adjust_coord(triangle.coord1);
         triangle.coord2rel = scale_scroll_adjust_coord(triangle.coord2rel);
         triangle.coord3rel = scale_scroll_adjust_coord(triangle.coord3rel);
     }
-    
+
     glBegin(GL_POLYGON);
     glVertex2f(triangle.coord1.x, triangle.coord1.y);
     glVertex2f(triangle.coord1.x + triangle.coord2rel.x, triangle.coord1.y + triangle.coord2rel.y);
     glVertex2f(triangle.coord1.x + triangle.coord3rel.x, triangle.coord1.y + triangle.coord3rel.y);
     glEnd();
+
+    return {{0.0, 0.0}, {0.0, 0.0}};
 }
 
-void render_circle_line_part_angle(tArea area, tCoord coord, double radius, double startAngle, double endAngle, double thickness, int numSteps) {
-    double borderLineWidth = BORDER_LINE_WIDTH;
+tRectangle render_circle_line_part_angle(tArea area, tCoord coord, double radius, double startAngle, double endAngle, double thickness, int numSteps) {
     if (area == moduleArea) {
-        coord = scale_scroll_adjust_coord(coord);
+        coord     = scale_scroll_adjust_coord(coord);
         thickness = scale(thickness);
     }
 
@@ -247,7 +256,7 @@ void render_circle_line_part_angle(tArea area, tCoord coord, double radius, doub
     double sweep = fmod((endAngle - startAngle + 360.0), 360.0);
 
     if (sweep == 0) {
-        return;             // Avoid rendering nothing
+        return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};            // Avoid rendering nothing
     }
     glEnable(GL_LINE_SMOOTH);
     glBegin(GL_TRIANGLE_STRIP);
@@ -269,11 +278,13 @@ void render_circle_line_part_angle(tArea area, tCoord coord, double radius, doub
     }
 
     glEnd();
+
+    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
 }
 
-void render_circle_line(tArea area, tCoord coord, double radius, int segments, double thickness) {
+tRectangle render_circle_line(tArea area, tCoord coord, double radius, int segments, double thickness) {
     if (area == moduleArea) {
-        coord = scale_scroll_adjust_coord(coord);
+        coord  = scale_scroll_adjust_coord(coord);
         radius = scale(radius);
     }
 
@@ -298,14 +309,16 @@ void render_circle_line(tArea area, tCoord coord, double radius, int segments, d
     }
 
     glEnd();
+
+    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
 }
 
-void render_circle_part(tArea area, tCoord coord, double radius, int segments, int startSeg, int numSegs) {
+tRectangle render_circle_part(tArea area, tCoord coord, double radius, int segments, int startSeg, int numSegs) {
     if (area == moduleArea) {
-        coord = scale_scroll_adjust_coord(coord);
+        coord  = scale_scroll_adjust_coord(coord);
         radius = scale(radius);
     }
-    
+
     double angle = 0.0;
     double x     = 0.0;
     double y     = 0.0;
@@ -322,19 +335,20 @@ void render_circle_part(tArea area, tCoord coord, double radius, int segments, i
         glVertex2f(x, y);
     }
     glEnd();
+
+    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
 }
 
-void render_circle_part_angle(tArea area, tCoord coord, double radius, double startAngle, double endAngle, int numSteps) {
+tRectangle render_circle_part_angle(tArea area, tCoord coord, double radius, double startAngle, double endAngle, int numSteps) {
     if (area == moduleArea) {
-        coord = scale_scroll_adjust_coord(coord);
+        coord  = scale_scroll_adjust_coord(coord);
         radius = scale(radius);
     }
-    
+
     double angle = 0.0;
     double x     = 0.0;
     double y     = 0.0;
     int    i     = 0;
-
 
     glBegin(GL_TRIANGLE_FAN);
     glVertex2f(coord.x, coord.y);  // Center of the circle
@@ -361,12 +375,14 @@ void render_circle_part_angle(tArea area, tCoord coord, double radius, double st
     }
 
     glEnd();
+
+    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
 }
 
-void render_radial_line(tArea area, tCoord coord, double radius, double angleDegrees, double thickness) {
+tRectangle render_radial_line(tArea area, tCoord coord, double radius, double angleDegrees, double thickness) {
     if (area == moduleArea) {
-        coord = scale_scroll_adjust_coord(coord);
-        radius = scale(radius);
+        coord     = scale_scroll_adjust_coord(coord);
+        radius    = scale(radius);
         thickness = scale(thickness);
     }
 
@@ -384,6 +400,8 @@ void render_radial_line(tArea area, tCoord coord, double radius, double angleDeg
     // Draw the line
     //render_line(xPos, yPos, x, y, thickness);
     render_line(mainArea, {coord.x, coord.y}, {x, y}, thickness);
+
+    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
 }
 
 void set_rbg_colour(tRgb rgb) {
@@ -394,27 +412,27 @@ void set_rbga_colour(tRgba rgba) {
     glColor4f(rgba.red, rgba.green, rgba.blue, rgba.alpha);
 }
 
-void render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord end, double thickness, int segments) {
+tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord end, double thickness, int segments) {
     if (area == moduleArea) {
-        start = scale_scroll_adjust_coord(start);
-        control = scale_scroll_adjust_coord(control);
-        end = scale_scroll_adjust_coord(end);
+        start     = scale_scroll_adjust_coord(start);
+        control   = scale_scroll_adjust_coord(control);
+        end       = scale_scroll_adjust_coord(end);
         thickness = scale(thickness);
     }
-    
+
     glBegin(GL_TRIANGLE_STRIP);
-    
+
     for (int i = 0; i <= segments; i++) {
         double t = (double)i / (double)segments;
-        
+
         // Compute Bezier point
         double x = (1 - t) * (1 - t) * start.x + 2 * (1 - t) * t * control.x + t * t * end.x;
         double y = (1 - t) * (1 - t) * start.y + 2 * (1 - t) * t * control.y + t * t * end.y;
-        
+
         // Compute tangent vector (approximate derivative)
         double tx = 2 * (1 - t) * (control.x - start.x) + 2 * t * (end.x - control.x);
         double ty = 2 * (1 - t) * (control.y - start.y) + 2 * t * (end.y - control.y);
-        
+
         // Normalize tangent to get perpendicular direction
         double length = sqrt(tx * tx + ty * ty);
         tx /= length;
@@ -430,17 +448,19 @@ void render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord end, d
     }
 
     glEnd();
-    
+
     render_circle_part(mainArea, start, thickness / 2.0, 10, 0, 10);
     render_circle_part(mainArea, end, thickness / 2.0, 10, 0, 10);
+
+    return {{0.0, 0.0}, {0.0, 0.0}};
 }
 
 // Draw the power button symbol
-void draw_power_button(tArea area, tRectangle rectangle, bool active) {
+tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active) {
     if (area == moduleArea) {
         rectangle = scale_scroll_adjust_rectangle(rectangle);
     }
-    
+
     if (active) {
         set_rbg_colour({0.3, 0.7, 0.3});         // Green when ON
     }
@@ -456,10 +476,12 @@ void draw_power_button(tArea area, tRectangle rectangle, bool active) {
 
     render_circle_line_part_angle(mainArea, circleCentre, circleRadius, 30.0, 330.0, rectangle.size.w * 0.1, 10);
     render_line(mainArea, {circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05)}, {circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05) + (rectangle.size.h * 0.5)}, rectangle.size.w * 0.1);
+
+    return {rectangle};
 }
 
 // Draw a toggle button with text
-void draw_toggle_button(tArea area, tRectangle rectangle, char * text) {
+tRectangle draw_toggle_button(tArea area, tRectangle rectangle, char * text) {
     if (area == moduleArea) {
         rectangle = scale_scroll_adjust_rectangle(rectangle);
     }
@@ -467,6 +489,75 @@ void draw_toggle_button(tArea area, tRectangle rectangle, char * text) {
     set_rbg_colour(RGB_BLACK);
 
     render_text(mainArea, rectangle, text);  // No zoom. Already zoomed
+
+    return {rectangle};
+}
+
+tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
+    if (area == moduleArea) {
+        rectangle = scale_scroll_adjust_rectangle(rectangle);
+    }
+
+    double scaleFactor = 0.0;
+    char * ch          = NULL;
+
+    if (text == NULL) {
+        printf("render_text text=NULL\n");
+        return {{0.0, 0.0}, {0.0, 0.0}};;
+    }
+
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, textureAtlas);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+    glPushMatrix();
+
+    // Calculate scale factor based on target height
+    scaleFactor = rectangle.size.h / (gMaxAscent + gMaxDescent);
+    glTranslatef(rectangle.coord.x, rectangle.coord.y, 0);
+    glScalef(scaleFactor, scaleFactor, 1.0f);
+
+    ch = text;
+    while (*ch) {
+        char        character = *ch;
+        GlyphInfo * glyph     = &glyphInfo[character];
+
+        // Texture coordinates for the glyph
+        double u1 = glyph->u1;
+        double v1 = glyph->v1;
+        double u2 = glyph->u2;
+        double v2 = glyph->v2;
+
+        // Character position and size
+        double xPos = glyph->offset_x;
+        double yPos = (gMaxAscent - glyph->offset_y);
+        double w    = glyph->width;
+        double h    = glyph->height;
+
+        // Render the character quad
+        glBegin(GL_QUADS);
+        glTexCoord2f(u1, v1); glVertex2f(xPos, yPos);               // Bottom-left
+        glTexCoord2f(u2, v1); glVertex2f(xPos + w, yPos);           // Bottom-right
+        glTexCoord2f(u2, v2); glVertex2f(xPos + w, yPos + h);       // Top-right
+        glTexCoord2f(u1, v2); glVertex2f(xPos, yPos + h);           // Top-left
+        glEnd();
+
+        // Adjust the position for the next character (add some space between them)
+        glTranslatef(glyph->advance_x + 1.0f, 0, 0);     // Add slight spacing between characters
+
+        ch++;
+    }
+
+    glPopMatrix();
+
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_BLEND);
+
+    return {rectangle};
 }
 
 bool preload_glyph_textures(const char * fontPath, double fontSize) {
@@ -511,7 +602,7 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     // Initialize max ascent and descent
-    gMaxAscent = 0.0;
+    gMaxAscent  = 0.0;
     gMaxDescent = 0.0;
 
     for (charCode = 32; charCode < MAX_GLYPH_CHAR; charCode++) {
@@ -535,7 +626,7 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
         if (face->glyph->bitmap_top > gMaxAscent) {
             gMaxAscent = face->glyph->bitmap_top;
         }
-        
+
         // Calculate descent as the distance from baseline to the bottom of the glyph
         double glyphDescent = (double)(face->glyph->bitmap_top - face->glyph->bitmap.rows);
         if ((gMaxDescent == 0.0) || (glyphDescent < gMaxDescent)) {
@@ -592,82 +683,17 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
     return true;
 }
 
-void render_text(tArea area, tRectangle rectangle, char * text) {
-    if (area == moduleArea) {
-        rectangle = scale_scroll_adjust_rectangle(rectangle);
-    }
-    
-    double scaleFactor = 0.0;
-    char * ch    = NULL;
-
-    if (text == NULL) {
-        printf("render_text text=NULL\n");
-        return;
-    }
-    
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, textureAtlas);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-
-    glPushMatrix();
-
-    // Calculate scale factor based on target height
-    scaleFactor = rectangle.size.h / (gMaxAscent+gMaxDescent);
-    glTranslatef(rectangle.coord.x, rectangle.coord.y, 0);
-    glScalef(scaleFactor, scaleFactor, 1.0f);
-
-    ch = text;
-    while (*ch) {
-        char        character = *ch;
-        GlyphInfo * glyph     = &glyphInfo[character];
-
-        // Texture coordinates for the glyph
-        double u1 = glyph->u1;
-        double v1 = glyph->v1;
-        double u2 = glyph->u2;
-        double v2 = glyph->v2;
-
-        // Character position and size
-        double xPos = glyph->offset_x;
-        double yPos = (gMaxAscent - glyph->offset_y);
-        double w    = glyph->width;
-        double h    = glyph->height;
-
-        // Render the character quad
-        glBegin(GL_QUADS);
-        glTexCoord2f(u1, v1); glVertex2f(xPos, yPos);               // Bottom-left
-        glTexCoord2f(u2, v1); glVertex2f(xPos + w, yPos);           // Bottom-right
-        glTexCoord2f(u2, v2); glVertex2f(xPos + w, yPos + h);       // Top-right
-        glTexCoord2f(u1, v2); glVertex2f(xPos, yPos + h);           // Top-left
-        glEnd();
-
-        // Adjust the position for the next character (add some space between them)
-        glTranslatef(glyph->advance_x + 1.0f, 0, 0);     // Add slight spacing between characters
-
-        ch++;
-    }
-
-    glPopMatrix();
-
-    glDisable(GL_TEXTURE_2D);
-    glDisable(GL_BLEND);
-}
-
 double get_text_width(char * text, double target_height) {
     if (text == NULL) {
         return 0.0;
     }
 
-    double width = 0.0;
-    const char *ch = text;
+    double       width = 0.0;
+    const char * ch    = text;
 
     while (*ch) {
-        char character = *ch;
-        GlyphInfo *glyph = &glyphInfo[character];
+        char        character = *ch;
+        GlyphInfo * glyph     = &glyphInfo[character];
 
         width += glyph->advance_x + 1.0; // Include spacing
 
@@ -675,16 +701,16 @@ double get_text_width(char * text, double target_height) {
     }
 
     // Apply the same scaling factor as in render_text()
-    double scaleVal = target_height / (gMaxAscent+gMaxDescent);
+    double scaleVal = target_height / (gMaxAscent + gMaxDescent);
     return width * scaleVal;
 }
 
 double largest_text_width(int numItems, char ** text, double target_height) {
-    int i = 0;
-    double size = 0;
+    int    i       = 0;
+    double size    = 0;
     double maxSize = 0;
-    
-    for(i=0; i<numItems; i++) {
+
+    for (i = 0; i < numItems; i++) {
         size = get_text_width(text[i], target_height);
         if (size > maxSize) {
             maxSize = size;
@@ -802,6 +828,7 @@ double get_zoom_factor(void) {
 void set_render_width(int width) {
     gRenderWidth = width;
 }
+
 void set_render_height(int height) {
     gRenderHeight = height;
 }

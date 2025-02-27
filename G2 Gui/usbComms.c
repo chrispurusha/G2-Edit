@@ -301,11 +301,11 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
 }
 
 static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
-    tModule module = {0};
-    tModuleKey key = {0};
-    uint32_t i = 0;
-    char name[MODULE_NAME_SIZE + 1];
-    
+    tModule    module = {0};
+    tModuleKey key    = {0};
+    uint32_t   i      = 0;
+    char       name[MODULE_NAME_SIZE + 1];
+
 
     printf("Module names\n");
 
@@ -320,15 +320,15 @@ static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
     for (i = 0; i < items; i++) {
         key.index = read_bit_stream(buff, subOffset, 8);
         printf(" Module Name Index %u\n", key.index);
-        
+
         printf(" Module loc %u index %u\n", module.key.location, module.key.index);
-        for (int k = 0; k<MODULE_NAME_SIZE; k++) {
+        for (int k = 0; k < MODULE_NAME_SIZE; k++) {
             name[k] = read_bit_stream(buff, subOffset, 8);
             if (name[k] == '\0') {
                 break;
             }
         }
-        name[sizeof(name)-1] = '\0'; // Make sure we're null terminated
+        name[sizeof(name) - 1] = '\0'; // Make sure we're null terminated
         printf("%s\n", name);
 
         if (read_module(key, &module) == true) {
