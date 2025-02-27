@@ -329,40 +329,34 @@ void render_parameters(tRectangle rectangle, tModule * module) {
 }
 
 double calculate_x_end_max(void) {
-    double xEndMax = 0.0;
-    tRectangle moduleArea  = module_area();
+    double xEndMax = MODULE_X_SPAN; // Set a minumum
+    tRectangle area  = module_area();
     tModule module       = {0};
     bool    validModule  = false;
     double  xEnd = 0.0;
-
-    xEndMax = moduleArea.size.w;
 
     reset_walk_module();
     do{
         validModule = walk_next_module(&module);
         if (validModule && module.key.location == 1 && module.type != moduleTypeUnknown0) {
             xEnd = module.column * MODULE_X_SPAN + MODULE_X_SPAN - MODULE_X_GAP;
-
+            
             if (xEnd > xEndMax) {
                 xEndMax = xEnd;
             }
         }
     } while (validModule);
     
-    //double xScrollAmount = (get_scroll_bar_percent(gScrollState.xBar, gRenderWidth) * (xEndMax - moduleArea.size.w)) / 100.0;
-    
     return(xEndMax);
 }
 
 double calculate_y_end_max(void) {
-    double yEndMax = 0.0;
-    tRectangle moduleArea  = module_area();
+    double yEndMax = MODULE_Y_SPAN; // Set a minumum
+    tRectangle area  = module_area();
     tModule module       = {0};
     bool    validModule  = false;
     double  moduleHeight = 0.0;
     double  yEnd = 0.0;
-
-    yEndMax = moduleArea.size.h;
 
     reset_walk_module();
     do{
@@ -370,14 +364,12 @@ double calculate_y_end_max(void) {
         if (validModule && module.key.location == 1 && module.type != moduleTypeUnknown0) {
             moduleHeight = (double)gModuleProperties[module.type].height;
             yEnd         = module.row * MODULE_Y_SPAN + (moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP;
-
+            
             if (yEnd > yEndMax) {
                 yEndMax = yEnd;
             }
         }
     } while (validModule);
-    
-    //double yScrollAmount = (get_scroll_bar_percent(gScrollState.yBar, gRenderHeight) * (yEndMax - moduleArea.size.h)) / 100.0;
     
     return(yEndMax);
 }
@@ -411,7 +403,7 @@ void render_module(tModule * module) {
 void render_modules(void) {
     tModule    module      = {0};
     bool       validModule = false;
-    tRectangle moduleArea  = module_area();
+    tRectangle area  = module_area();
     
     set_x_end_max(calculate_x_end_max());
     set_y_end_max(calculate_y_end_max());
@@ -426,10 +418,10 @@ void render_modules(void) {
     
     // Draw background areas
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    render_rectangle(mainArea, {{0.0, moduleArea.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, moduleArea.size.h + (MODULE_MARGIN * 2.0)}});
-    render_rectangle(mainArea, {{0.0, moduleArea.coord.y - MODULE_MARGIN}, {moduleArea.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
-    render_rectangle(mainArea, {{moduleArea.coord.x + moduleArea.size.w, moduleArea.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, moduleArea.size.h + (MODULE_MARGIN * 2.0)}});
-    render_rectangle(mainArea, {{0.0, moduleArea.coord.y + moduleArea.size.h}, {moduleArea.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
+    render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
+    render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
+    render_rectangle(mainArea, {{area.coord.x + area.size.w, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
+    render_rectangle(mainArea, {{0.0, area.coord.y + area.size.h}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
 }
 
 void render_cable_from_to(tCoord from, tCoord to) {
