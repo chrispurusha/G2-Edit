@@ -441,20 +441,25 @@ void render_cable(tCable * cable) {
         exit(1);
     }
 
-    printf("Connecting %u %u to %u %u\n", cable->key.moduleFrom, cable->key.connectorFrom, cable->key.moduleTo, cable->key.connectorTo);
+    if (cable->key.connectorFrom >= moduleFrom.numConnectors) {
+        printf("From connector of %u >= %u\n", cable->key.connectorFrom, moduleTo.numConnectors);
+    }
+    if (cable->key.connectorTo >= moduleTo.numConnectors) {
+        printf("To connector of %u >= %u\n", cable->key.connectorTo, moduleTo.numConnectors);
+    }
+    //printf("Connecting %u %u to %u %u\n", cable->key.moduleFrom, cable->key.connectorFrom, cable->key.moduleTo, cable->key.connectorTo);
+    
     set_rbg_colour(cableColourMap[cable->colour]);
 
     switch(cable->linkType)
     {
         case cableLinkTypeFromOutput:
-            printf("From output\n");
             render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeControlOut], moduleTo.connector[cable->key.connectorTo][connectorTypeControlIn]);
             render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeAudioOut], moduleTo.connector[cable->key.connectorTo][connectorTypeAudioIn]);
             render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeAudioOut], moduleTo.connector[cable->key.connectorTo][connectorTypeControlIn]);
             render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeControlOut], moduleTo.connector[cable->key.connectorTo][connectorTypeAudioIn]);
             break;
         case cableLinkTypeFromInput:
-            printf("From input\n");
             render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeControlIn], moduleTo.connector[cable->key.connectorTo][connectorTypeControlIn]);
             render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeAudioIn], moduleTo.connector[cable->key.connectorTo][connectorTypeAudioIn]);
             break;
