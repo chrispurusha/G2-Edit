@@ -45,10 +45,10 @@ extern "C" {
 #include "moduleGraphics.h"
 
 
-int           gRenderWidth  = 0;
-int           gRenderHeight = 0;
-tScrollState  gScrollState  = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
-double        gZoomFactor   = 1.0;
+//static int           gRenderWidth  = 0;
+//static int           gRenderHeight = 0;
+static tScrollState  gScrollState  = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
+//static double        gZoomFactor   = 1.0;
 
 static FT_Library    gLibrary      = {0};
 static FT_Face       gFace         = {0};
@@ -65,23 +65,25 @@ void error_callback(int error, const char * description) {
     fprintf(stderr, "Error [%d]: %s\n", error, description);
 }
 
-void set_yScrollBar(double y) {
-    gScrollState.yBar = clamp_scroll_bar(y, gRenderHeight);
+void set_xScrollBar(double x) {
+    gScrollState.xBar = clamp_scroll_bar(x, get_render_width());
+    set_x_scroll_percent(get_scroll_bar_percent(gScrollState.xBar, get_render_width()));
 }
 
-void set_xScrollBar(double x) {
-    gScrollState.xBar = clamp_scroll_bar(x, gRenderWidth);
+void set_yScrollBar(double y) {
+    gScrollState.yBar = clamp_scroll_bar(y, get_render_height());
+    set_y_scroll_percent(get_scroll_bar_percent(gScrollState.yBar, get_render_height()));
 }
 
 bool handle_scrollbar_click(tCoord coord) {
     tRectangle yScrollBar = {
-        {(double)gRenderWidth - SCROLLBAR_WIDTH,                   0.0},
-        {SCROLLBAR_WIDTH,                        (double)gRenderHeight}
+        {(double)get_render_width() - SCROLLBAR_WIDTH,                   0.0},
+        {SCROLLBAR_WIDTH,                        (double)get_render_height()}
     };
 
     tRectangle xScrollBar = {
-        {                 0.0, (double)gRenderHeight - SCROLLBAR_WIDTH},
-        {(double)gRenderWidth, SCROLLBAR_WIDTH                        }
+        {                 0.0, (double)get_render_height() - SCROLLBAR_WIDTH},
+        {(double)get_render_width(), SCROLLBAR_WIDTH                        }
     };
 
     if (within_rectangle(coord, yScrollBar)) {
@@ -154,8 +156,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     glfwGetCursorPos(window, &coord.x, &coord.y);
 
     // Scale coordinates
-    coord.x = (coord.x * (double)gRenderWidth) / (double)width;
-    coord.y = (coord.y * (double)gRenderHeight) / (double)height;
+    coord.x = (coord.x * (double)get_render_width()) / (double)width;
+    coord.y = (coord.y * (double)get_render_height()) / (double)height;
 
     printf("button=%d action=%d mods=%d\n", button, action, mods);
 
@@ -182,8 +184,8 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
 
     // Scale x and y to match intended rendering window
     glfwGetWindowSize(window, &width, &height);
-    x = (x * (double)gRenderWidth) / (double)width;
-    y = (y * (double)gRenderHeight) / (double)height;
+    x = (x * (double)width) / (double)width;
+    y = (y * (double)height) / (double)height;
 
     if (gScrollState.yBarDragging == true) {
         set_yScrollBar(y);
@@ -220,6 +222,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
 
 void scroll_event(GLFWwindow *window, double x, double y) {
     const double zoomIncrement = 0.05;  // Zoom sensitivity
+    double zoomFactor = 0.0;
     //double     xEndMax = 0.0, yEndMax = 0.0;
 
     tCoord mouseCoord = {0};
@@ -230,45 +233,16 @@ void scroll_event(GLFWwindow *window, double x, double y) {
     //printf("Zoom = %f yEndMax = %f module area size = %f percent = %f\n", gZoomFactor, yEndMax, moduleArea.size.h, get_scroll_bar_percent(gScrollState.yBar, gRenderHeight));
 
     if (within_rectangle(mouseCoord, moduleArea)) {
-        //calculate_module_bounds(&xEndMax, &yEndMax, moduleArea);
-        
-        //printf("end minus area %f %f %f\n", moduleArea.size.w, xEndMax, (xEndMax - moduleArea.size.w));
-        //double scrollXPercent = (get_scroll_bar_percent(gScrollState.xBar, gRenderWidth) * (xEndMax - moduleArea.size.w)) / moduleArea.size.w;
-        //double scrollYPercent = (get_scroll_bar_percent(gScrollState.yBar, gRenderHeight) * (yEndMax - moduleArea.size.h)) / moduleArea.size.h;
-        
-        // Convert mouse coordinates to percentages relative to moduleArea
-        //double mouseXPercent = ((mouseCoord.x - moduleArea.coord.x) / moduleArea.size.w) * 100.0;
-        //double mouseYPercent = ((mouseCoord.y - moduleArea.coord.y) / moduleArea.size.h) * 100.0;
-        
-        // Compute world-space position BEFORE zooming
-        //double worldMouseXPercent = (mouseXPercent/gZoomFactor)+(scrollXPercent/gZoomFactor);
-        //double worldMouseYPercent = (mouseXPercent/gZoomFactor)+(scrollYPercent/gZoomFactor);
-
-        // Apply zoom
-        //double gZoomFactor = fmax(minZoom, fmin(maxZoom, gZoomFactor + (y * zoomIncrement)));
-        gZoomFactor += y * zoomIncrement;
-        if (gZoomFactor<0.5)
+        zoomFactor = get_zoom_factor();
+        zoomFactor += y * zoomIncrement;
+        if (zoomFactor<0.5)
         {
-            gZoomFactor = 0.5;
-        } else if (gZoomFactor>2.0)
+            zoomFactor = 0.5;
+        } else if (zoomFactor>2.0)
         {
-            gZoomFactor = 2.0;
+            zoomFactor = 2.0;
         }
-
-        //double newXScroll = mouseXPercent;
-        //double newYScroll = mouseYPercent;
-        //double newXScroll = worldMouseXPercent;
-        //double newYScroll = worldMouseYPercent;
-        //double newXScroll = mouseXPercent/gZoomFactor;
-        //double newYScroll = mouseYPercent/gZoomFactor;
-
-        //printf("gZoomFactor = %f worldMouseXPercent %f mouseXPercent %f newXScroll %f scrollXPercent %f\n", gZoomFactor, worldMouseXPercent, mouseXPercent, newXScroll, scrollXPercent);
-        //printf("worldMouseYPercent %f mouseYPercent %f newYScroll %f scrollYPercent %f\n", worldMouseYPercent, mouseYPercent, newYScroll, scrollYPercent);
-
-        // Update the scrollbars
-        //printf("Set %f\n", set_scroll_bar_percent(newXScroll, gRenderWidth));
-        //set_xScrollBar(set_scroll_bar_percent(newXScroll, gRenderWidth));
-        //set_yScrollBar(set_scroll_bar_percent(newYScroll, gRenderHeight));
+        set_zoom_factor(zoomFactor);
     }
 }
 
@@ -286,22 +260,22 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 void render_scrollbars(GLFWwindow * window) {
     // Scrollbar background
     set_rbg_colour({0.7, 0.7, 0.7});
-    render_rectangle({{(double)gRenderWidth - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, (double)gRenderHeight - SCROLLBAR_MARGIN}}, 1.0);
-    render_rectangle({{0.0, (double)gRenderHeight - SCROLLBAR_WIDTH}, {(double)gRenderWidth - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH}}, 1.0);
+    render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, (double)get_render_height() - SCROLLBAR_MARGIN}});
+    render_rectangle(mainArea, {{0.0, (double)get_render_height() - SCROLLBAR_WIDTH}, {(double)get_render_width() - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH}});
 
     // Bottom right box
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    render_rectangle({{(double)gRenderWidth - SCROLLBAR_WIDTH, (double)gRenderHeight - SCROLLBAR_WIDTH}, {SCROLLBAR_WIDTH, SCROLLBAR_WIDTH}}, 1.0);
+    render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, (double)get_render_height() - SCROLLBAR_WIDTH}, {SCROLLBAR_WIDTH, SCROLLBAR_WIDTH}});
 
     // Scroll indicator blocks
     set_rbg_colour({0.9, 0.9, 0.9});
-    render_rectangle({{(double)gRenderWidth - SCROLLBAR_WIDTH, gScrollState.yBar - (SCROLLBAR_LENGTH / 2.0)}, {SCROLLBAR_WIDTH, SCROLLBAR_LENGTH}}, 1.0);
-    render_rectangle({{gScrollState.xBar - (SCROLLBAR_LENGTH / 2.0), (double)gRenderHeight - SCROLLBAR_WIDTH}, {SCROLLBAR_LENGTH, SCROLLBAR_WIDTH}}, 1.0);
+    render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, gScrollState.yBar - (SCROLLBAR_LENGTH / 2.0)}, {SCROLLBAR_WIDTH, SCROLLBAR_LENGTH}});
+    render_rectangle(mainArea, {{gScrollState.xBar - (SCROLLBAR_LENGTH / 2.0), (double)get_render_height() - SCROLLBAR_WIDTH}, {SCROLLBAR_LENGTH, SCROLLBAR_WIDTH}});
 }
 
 void render_top_bar(void) {
     set_rbg_colour({0.5, 0.5, 0.5});
-    render_rectangle_with_border({{0.0, 0.0}, {gRenderWidth - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}}, 1.0);
+    render_rectangle_with_border(mainArea, {{0.0, 0.0}, {get_render_width() - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
 }
 
 void wake_glfw(void) {
@@ -312,7 +286,7 @@ void setup_render_context(void) {
     glDisable(GL_DEPTH_TEST);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0, gRenderWidth, gRenderHeight, 0, -1, 1);
+    glOrtho(0, get_render_width(), get_render_height(), 0, -1, 1);
     glMatrixMode(GL_MODELVIEW);
 }
 
@@ -367,7 +341,11 @@ void init_graphics(void) {
         printf("Failed to preload glyph textures.\n");
     }
 
-    glfwGetWindowSize(gWindow, &gRenderWidth, &gRenderHeight);
+    int renderWidth = 0;
+    int renderHeight = 0;
+    glfwGetWindowSize(gWindow, &renderWidth, &renderHeight);
+    set_render_width(renderWidth);
+    set_render_height(renderHeight);
 
     setup_render_context();
 }

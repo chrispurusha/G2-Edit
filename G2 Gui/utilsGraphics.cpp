@@ -52,34 +52,65 @@ typedef struct {
     int    offset_y;
 } GlyphInfo;
 
-GlyphInfo glyphInfo[MAX_GLYPH_CHAR] = {0};       // Array to store glyph metadata TODO: Not being freed!?
-GLuint    textureAtlas = 0;                      // OpenGL texture handle
-int       atlasWidth   = 1024 * 8;               // Initial atlas width
-int       atlasHeight  = 1024 * 8;               // Initial atlas height
-double    gMaxAscent   = 0.0;                    // Used for dealing with preloaded text character height
-double    gMaxDescent  = 0.0;
+static GlyphInfo glyphInfo[MAX_GLYPH_CHAR] = {0};       // Array to store glyph metadata TODO: Not being freed!?
+static GLuint    textureAtlas = 0;                      // OpenGL texture handle
+static int       atlasWidth   = 1024 * 8;               // Initial atlas width
+static int       atlasHeight  = 1024 * 8;               // Initial atlas height
+static double    gMaxAscent   = 0.0;                    // Used for dealing with preloaded text character height
+static double    gMaxDescent  = 0.0;
+
+static double gXScrollPercent = 0.0;
+static double gYScrollPercent = 0.0;
+static double gZoomFactor = NO_ZOOM;
+static double gXEndMax = 0.0;
+static double gYEndMax = 0.0;
+static int    gRenderWidth  = 0;
+static int    gRenderHeight = 0;
 
 
-static inline double scale(double value, double zoomFactor) {
-    return value * zoomFactor;
+static inline double scale(double value) {
+    return value * gZoomFactor;
 }
 
-tCoord scale_coord(tCoord coord, double zoomFactor) {
-    return {scale(coord.x,zoomFactor), scale(coord.y, zoomFactor)};
+tCoord scale_coord(tCoord coord) {
+    return {scale(coord.x), scale(coord.y)};
 }
     
-tSize scale_size(tSize size, double zoomFactor) {
-    return {scale(size.w,zoomFactor), scale(size.h, zoomFactor)};
+tSize scale_size(tSize size) {
+    return {scale(size.w), scale(size.h)};
 }
 
-tRectangle scale_rectangle(tRectangle rectangle, double zoomFactor) {
-    return {scale_coord(rectangle.coord, zoomFactor), scale_size(rectangle.size, zoomFactor)};
+tRectangle scale_rectangle(tRectangle rectangle) {
+    return {scale_coord(rectangle.coord), scale_size(rectangle.size)};
 }
 
-void render_line(tCoord start, tCoord end, double thickness, double zoomFactor) {
-    start = scale_coord(start, zoomFactor);
-    end = scale_coord(end, zoomFactor);
-    thickness = scale(thickness, zoomFactor);
+tRectangle module_area(void) {
+    double left   = MODULE_MARGIN;
+    double top    = TOP_BAR_HEIGHT + MODULE_MARGIN;
+    double width  = gRenderWidth - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
+    double height = gRenderHeight - TOP_BAR_HEIGHT - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
+
+    return {{left, top}, {width, height}};
+}
+
+void render_line(tArea area, tCoord start, tCoord end, double thickness) {
+    if (area == moduleArea) {
+        tRectangle moduleArea  = module_area();
+        start.x = scale(start.x);
+        start.y = scale(start.y);
+        end.x = scale(end.x);
+        end.y = scale(end.y);
+        start.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        start.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        end.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        end.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        start.x += moduleArea.coord.x;
+        start.y += moduleArea.coord.y;
+        end.x += moduleArea.coord.x;
+        end.y += moduleArea.coord.y;
+        thickness = scale(thickness);
+    }
+    
     double half_thickness = thickness * 0.5;
     double dx             = end.x - start.x;
     double dy             = end.y - start.y;
@@ -105,12 +136,19 @@ void render_line(tCoord start, tCoord end, double thickness, double zoomFactor) 
     glEnd();
 }
 
-void render_rectangle(tRectangle rectangle, double zoomFactor) {
-    rectangle.coord.x = scale(rectangle.coord.x, zoomFactor);
-    rectangle.coord.y = scale(rectangle.coord.y, zoomFactor);
-    rectangle.size.w = scale(rectangle.size.w, zoomFactor);
-    rectangle.size.h = scale(rectangle.size.h, zoomFactor);
-    
+void render_rectangle(tArea area, tRectangle rectangle) {
+    if (area == moduleArea) {
+        tRectangle moduleArea  = module_area();
+        rectangle.coord.x = scale(rectangle.coord.x);
+        rectangle.coord.y = scale(rectangle.coord.y);
+        rectangle.size.w = scale(rectangle.size.w);
+        rectangle.size.h = scale(rectangle.size.h);
+        rectangle.coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        rectangle.coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        rectangle.coord.x += moduleArea.coord.x;
+        rectangle.coord.y += moduleArea.coord.y;
+    }
+
     glBegin(GL_QUADS);
     glVertex2f(rectangle.coord.x, rectangle.coord.y);
     glVertex2f(rectangle.coord.x + rectangle.size.w, rectangle.coord.y);
@@ -119,34 +157,57 @@ void render_rectangle(tRectangle rectangle, double zoomFactor) {
     glEnd();
 }
 
-void render_rectangle_with_border(tRectangle rectangle, double zoomFactor) {
-    rectangle.coord.x = scale(rectangle.coord.x, zoomFactor);
-    rectangle.coord.y = scale(rectangle.coord.y, zoomFactor);
-    rectangle.size.w = scale(rectangle.size.w, zoomFactor);
-    rectangle.size.h = scale(rectangle.size.h, zoomFactor);
-    double borderLineWidth = scale(BORDER_LINE_WIDTH, zoomFactor);
+void render_rectangle_with_border(tArea area, tRectangle rectangle) {
+    double borderLineWidth = BORDER_LINE_WIDTH;
+    if (area == moduleArea) {
+        tRectangle moduleArea  = module_area();
+        rectangle.coord.x = scale(rectangle.coord.x);
+        rectangle.coord.y = scale(rectangle.coord.y);
+        rectangle.size.w = scale(rectangle.size.w);
+        rectangle.size.h = scale(rectangle.size.h);
+        rectangle.coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        rectangle.coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        rectangle.coord.x += moduleArea.coord.x;
+        rectangle.coord.y += moduleArea.coord.y;
+        borderLineWidth = scale(borderLineWidth);
+    }
     tRectangle line = {0};
 
-    render_rectangle(rectangle, NO_ZOOM);
+    render_rectangle(mainArea, rectangle);
 
     set_rbg_colour(RGB_BLACK);
     line = {{rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth}, {rectangle.size.w, borderLineWidth}};
-    render_rectangle(line, NO_ZOOM); //Bottom
+    render_rectangle(mainArea, line); //Bottom
     set_rbg_colour(RGB_WHITE);
     line = {{rectangle.coord.x, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
-    render_rectangle(line, NO_ZOOM); //Left
+    render_rectangle(mainArea, line); //Left
     set_rbg_colour(RGB_WHITE);
     line = {{rectangle.coord.x, rectangle.coord.y}, {rectangle.size.w, borderLineWidth}};
-    render_rectangle(line, NO_ZOOM); // Top
+    render_rectangle(mainArea, line); // Top
     set_rbg_colour(RGB_BLACK);
     line = {{rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
-    render_rectangle(line, NO_ZOOM); // Right
+    render_rectangle(mainArea, line); // Right
 }
 
-void render_triangle(tTriangle triangle, double zoomFactor) {
-    triangle.coord1.x = scale(triangle.coord1.x, zoomFactor);
-    triangle.coord2rel.x = scale(triangle.coord2rel.x, zoomFactor);
-    triangle.coord3rel.x = scale(triangle.coord3rel.x, zoomFactor);
+void render_triangle(tArea area, tTriangle triangle) {
+    if (area == moduleArea) {
+        tRectangle moduleArea  = module_area();
+        triangle.coord1.x = scale(triangle.coord1.x);
+        triangle.coord2rel.x = scale(triangle.coord2rel.x);
+        triangle.coord3rel.x = scale(triangle.coord3rel.x);
+        triangle.coord1.y = scale(triangle.coord1.y);
+        triangle.coord2rel.y = scale(triangle.coord2rel.y);
+        triangle.coord3rel.y = scale(triangle.coord3rel.y);
+        triangle.coord1.x += moduleArea.coord.x;
+        triangle.coord2rel.x += moduleArea.coord.x;
+        triangle.coord3rel.x += moduleArea.coord.x;
+        triangle.coord1.y += moduleArea.coord.y;
+        triangle.coord2rel.y += moduleArea.coord.y;
+        triangle.coord3rel.y += moduleArea.coord.y;
+    }
+    triangle.coord1.x = scale(triangle.coord1.x);
+    triangle.coord2rel.x = scale(triangle.coord2rel.x);
+    triangle.coord3rel.x = scale(triangle.coord3rel.x);
     
     glBegin(GL_POLYGON);
     glVertex2f(triangle.coord1.x, triangle.coord1.y);
@@ -155,11 +216,19 @@ void render_triangle(tTriangle triangle, double zoomFactor) {
     glEnd();
 }
 
-void render_circle_line_part_angle(tCoord coord, double radius, double startAngle, double endAngle, double thickness, int numSteps, double zoomFactor) {
-    coord.x = scale(coord.x, zoomFactor);
-    coord.y = scale(coord.y, zoomFactor);
-    radius = scale(radius, zoomFactor);
-    thickness = scale(thickness, zoomFactor);
+void render_circle_line_part_angle(tArea area, tCoord coord, double radius, double startAngle, double endAngle, double thickness, int numSteps) {
+    double borderLineWidth = BORDER_LINE_WIDTH;
+    if (area == moduleArea) {
+        tRectangle moduleArea  = module_area();
+        coord.x = scale(coord.x);
+        coord.y = scale(coord.y);
+        coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        coord.x += moduleArea.coord.x;
+        coord.y += moduleArea.coord.y;
+        thickness = scale(thickness);
+    }
+
     const double DEG_TO_RAD = M_PI / 180.0;
     double       angle, x_inner, y_inner, x_outer, y_outer;
     double       half_thickness = thickness * 0.5;
@@ -192,11 +261,19 @@ void render_circle_line_part_angle(tCoord coord, double radius, double startAngl
     glEnd();
 }
 
-void render_circle_line(tCoord coord, double radius, int segments, double thickness, double zoomFactor) {
-    coord.x = scale(coord.x, zoomFactor);
-    coord.y = scale(coord.y, zoomFactor);
-    radius = scale(radius, zoomFactor);
-    thickness = scale(thickness, zoomFactor);
+void render_circle_line(tArea area, tCoord coord, double radius, int segments, double thickness) {
+    if (area == moduleArea) {
+        tRectangle moduleArea  = module_area();
+        coord.x = scale(coord.x);
+        coord.y = scale(coord.y);
+        coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        coord.x += moduleArea.coord.x;
+        coord.y += moduleArea.coord.y;
+        radius = scale(radius);
+    }
+
+    thickness = scale(thickness);
     const double DEG_TO_RAD     = 2.0 * M_PI / (double)segments;
     double       half_thickness = thickness * 0.5;
 
@@ -219,10 +296,18 @@ void render_circle_line(tCoord coord, double radius, int segments, double thickn
     glEnd();
 }
 
-void render_circle_part(tCoord coord, double radius, int segments, int startSeg, int numSegs, double zoomFactor) {
-    coord.x = scale(coord.x, zoomFactor);
-    coord.y = scale(coord.y, zoomFactor);
-    radius = scale(radius, zoomFactor);
+void render_circle_part(tArea area, tCoord coord, double radius, int segments, int startSeg, int numSegs) {
+    if (area == moduleArea) {
+        tRectangle moduleArea  = module_area();
+        coord.x = scale(coord.x);
+        coord.y = scale(coord.y);
+        coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        coord.x += moduleArea.coord.x;
+        coord.y += moduleArea.coord.y;
+        radius = scale(radius);
+    }
+    
     double angle = 0.0;
     double x     = 0.0;
     double y     = 0.0;
@@ -241,10 +326,18 @@ void render_circle_part(tCoord coord, double radius, int segments, int startSeg,
     glEnd();
 }
 
-void render_circle_part_angle(tCoord coord, double radius, double startAngle, double endAngle, int numSteps, double zoomFactor) {
-    coord.x = scale(coord.x, zoomFactor);
-    coord.y = scale(coord.y, zoomFactor);
-    radius = scale(radius, zoomFactor);
+void render_circle_part_angle(tArea area, tCoord coord, double radius, double startAngle, double endAngle, int numSteps) {
+    if (area == moduleArea) {
+        tRectangle moduleArea  = module_area();
+        coord.x = scale(coord.x);
+        coord.y = scale(coord.y);
+        coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        coord.x += moduleArea.coord.x;
+        coord.y += moduleArea.coord.y;
+        radius = scale(radius);
+    }
+    
     double angle = 0.0;
     double x     = 0.0;
     double y     = 0.0;
@@ -278,15 +371,22 @@ void render_circle_part_angle(tCoord coord, double radius, double startAngle, do
     glEnd();
 }
 
-void render_radial_line(tCoord coord, double radius, double angleDegrees, double thickness, double zoomFactor) {
-    coord.x = scale(coord.x, zoomFactor);
-    coord.y = scale(coord.y, zoomFactor);
-    radius = scale(radius, zoomFactor);
-    thickness = scale(thickness, zoomFactor);
+void render_radial_line(tArea area, tCoord coord, double radius, double angleDegrees, double thickness) {
+    if (area == moduleArea) {
+        tRectangle moduleArea  = module_area();
+        coord.x = scale(coord.x);
+        coord.y = scale(coord.y);
+        coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        coord.x += moduleArea.coord.x;
+        coord.y += moduleArea.coord.y;
+        radius = scale(radius);
+        thickness = scale(thickness);
+    }
+
     double angle = 0.0;
     double x     = 0.0;
     double y     = 0.0;
-
 
     // Adjust so 0° is at the top
     angle = (angleDegrees - 90.0) * (M_PI / 180.0);
@@ -297,7 +397,7 @@ void render_radial_line(tCoord coord, double radius, double angleDegrees, double
 
     // Draw the line
     //render_line(xPos, yPos, x, y, thickness);
-    render_line({coord.x, coord.y}, {x, y}, thickness, NO_ZOOM);
+    render_line(mainArea, {coord.x, coord.y}, {x, y}, thickness);
 }
 
 void set_rbg_colour(tRgb rgb) {
@@ -308,14 +408,30 @@ void set_rbga_colour(tRgba rgba) {
     glColor4f(rgba.red, rgba.green, rgba.blue, rgba.alpha);
 }
 
-void render_bezier_curve(tCoord start, tCoord control, tCoord end, double thickness, int segments, double zoomFactor) {
-    control.x = scale(control.x, zoomFactor);
-    control.y = scale(control.y, zoomFactor);
-    start.x = scale(start.x, zoomFactor);
-    start.y = scale(start.y, zoomFactor);
-    end.x = scale(end.x, zoomFactor);
-    end.y = scale(end.y, zoomFactor);
-    thickness = scale(thickness, zoomFactor);
+void render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord end, double thickness, int segments) {
+    if (area == moduleArea) {
+        tRectangle moduleArea  = module_area();
+        start.x = scale(start.x);
+        start.y = scale(start.y);
+        end.x = scale(end.x);
+        end.y = scale(end.y);
+        control.x = scale(control.x);
+        control.y = scale(control.y);
+        start.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        start.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        end.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        end.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        control.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        control.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        start.x += moduleArea.coord.x;
+        start.y += moduleArea.coord.y;
+        end.x += moduleArea.coord.x;
+        end.y += moduleArea.coord.y;
+        control.x += moduleArea.coord.x;
+        control.y += moduleArea.coord.y;
+        thickness = scale(thickness);
+    }
+    
     glBegin(GL_TRIANGLE_STRIP);
     
     for (int i = 0; i <= segments; i++) {
@@ -345,16 +461,23 @@ void render_bezier_curve(tCoord start, tCoord control, tCoord end, double thickn
 
     glEnd();
     
-    render_circle_part(start, thickness / 2.0, 10, 0, 10, NO_ZOOM);
-    render_circle_part(end, thickness / 2.0, 10, 0, 10, NO_ZOOM);
+    render_circle_part(mainArea, start, thickness / 2.0, 10, 0, 10);
+    render_circle_part(mainArea, end, thickness / 2.0, 10, 0, 10);
 }
 
 // Draw the power button symbol
-void draw_power_button(tRectangle rectangle, bool active, double zoomFactor) {
-    rectangle.coord.x = scale(rectangle.coord.x, zoomFactor);
-    rectangle.coord.y = scale(rectangle.coord.y, zoomFactor);
-    rectangle.size.w = scale(rectangle.size.w, zoomFactor);
-    rectangle.size.h = scale(rectangle.size.h, zoomFactor);
+void draw_power_button(tArea area, tRectangle rectangle, bool active) {
+    if (area == moduleArea) {
+        tRectangle moduleArea  = module_area();
+        rectangle.coord.x = scale(rectangle.coord.x);
+        rectangle.coord.y = scale(rectangle.coord.y);
+        rectangle.size.w = scale(rectangle.size.w);
+        rectangle.size.h = scale(rectangle.size.h);
+        rectangle.coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        rectangle.coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        rectangle.coord.x += moduleArea.coord.x;
+        rectangle.coord.y += moduleArea.coord.y;
+    }
     
     if (active) {
         set_rbg_colour({0.3, 0.7, 0.3});         // Green when ON
@@ -362,30 +485,37 @@ void draw_power_button(tRectangle rectangle, bool active, double zoomFactor) {
     else {
         set_rbg_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
     }
-    render_rectangle(rectangle, NO_ZOOM);
+    render_rectangle(mainArea, rectangle);
 
     set_rbg_colour(RGB_BLACK);
     tCoord circleCentre = {rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)};
     double circleRadius = (rectangle.size.h / 2.0);
     circleRadius *= 0.75;
 
-    render_circle_line_part_angle(circleCentre, circleRadius, 30.0, 330.0, rectangle.size.w * 0.1, 10, NO_ZOOM);
-    render_line({circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05)}, {circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05) + (rectangle.size.h * 0.5)}, rectangle.size.w * 0.1, NO_ZOOM);
+    render_circle_line_part_angle(mainArea, circleCentre, circleRadius, 30.0, 330.0, rectangle.size.w * 0.1, 10);
+    render_line(mainArea, {circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05)}, {circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05) + (rectangle.size.h * 0.5)}, rectangle.size.w * 0.1);
 }
 
 // Draw a toggle button with text
-void draw_toggle_button(tRectangle rectangle, char * text, double zoomFactor) {
-    rectangle.coord.x = scale(rectangle.coord.x, zoomFactor);
-    rectangle.coord.y = scale(rectangle.coord.y, zoomFactor);
-    rectangle.size.w = scale(rectangle.size.w, zoomFactor);
-    rectangle.size.h = scale(rectangle.size.h, zoomFactor);
-    render_rectangle(rectangle, 1.0);
+void draw_toggle_button(tArea area, tRectangle rectangle, char * text) {
+    if (area == moduleArea) {
+        tRectangle moduleArea  = module_area();
+        rectangle.coord.x = scale(rectangle.coord.x);
+        rectangle.coord.y = scale(rectangle.coord.y);
+        rectangle.size.w = scale(rectangle.size.w);
+        rectangle.size.h = scale(rectangle.size.h);
+        rectangle.coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        rectangle.coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        rectangle.coord.x += moduleArea.coord.x;
+        rectangle.coord.y += moduleArea.coord.y;
+    }
+    render_rectangle(mainArea, rectangle);
     set_rbg_colour(RGB_BLACK);
     //rectangle.size.h *= 0.75;
     //rectangle.coord.y += 0.1;
     //rectangle.coord.x += 0.1;
 
-    render_text(rectangle, text, NO_ZOOM);  // No zoom. Already zoomed
+    render_text(mainArea, rectangle, text);  // No zoom. Already zoomed
 }
 
 bool preload_glyph_textures(const char * fontPath, double fontSize) {
@@ -511,7 +641,19 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
     return true;
 }
 
-void render_text(tRectangle rectangle, char * text, double zoomFactor) {
+void render_text(tArea area, tRectangle rectangle, char * text) {
+    if (area == moduleArea) {
+        tRectangle moduleArea  = module_area();
+        rectangle.coord.x = scale(rectangle.coord.x);
+        rectangle.coord.y = scale(rectangle.coord.y);
+        rectangle.size.w = scale(rectangle.size.w);
+        rectangle.size.h = scale(rectangle.size.h);
+        rectangle.coord.x -= (gXScrollPercent * (scale(gXEndMax) - moduleArea.size.w)) / 100.0;
+        rectangle.coord.y -= (gYScrollPercent * (scale(gYEndMax) - moduleArea.size.h)) / 100.0;
+        rectangle.coord.x += moduleArea.coord.x;
+        rectangle.coord.y += moduleArea.coord.y;
+    }
+    
     double scaleFactor = 0.0;
     char * ch    = NULL;
 
@@ -519,9 +661,6 @@ void render_text(tRectangle rectangle, char * text, double zoomFactor) {
         printf("render_text text=NULL\n");
         return;
     }
-
-    rectangle.coord.x = scale(rectangle.coord.x, zoomFactor);
-    rectangle.coord.y = scale(rectangle.coord.y, zoomFactor);
     
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, textureAtlas);
@@ -535,7 +674,6 @@ void render_text(tRectangle rectangle, char * text, double zoomFactor) {
 
     // Calculate scale factor based on target height
     scaleFactor = rectangle.size.h / (gMaxAscent+gMaxDescent);
-    scaleFactor = scale(scaleFactor, zoomFactor);
     glTranslatef(rectangle.coord.x, rectangle.coord.y, 0);
     glScalef(scaleFactor, scaleFactor, 1.0f);
 
@@ -576,7 +714,7 @@ void render_text(tRectangle rectangle, char * text, double zoomFactor) {
     glDisable(GL_BLEND);
 }
 
-double get_text_width_scaled(char * text, double target_height, double zoomFactor) {
+double get_text_width(char * text, double target_height) {
     if (text == NULL) {
         return 0.0;
     }
@@ -594,17 +732,17 @@ double get_text_width_scaled(char * text, double target_height, double zoomFacto
     }
 
     // Apply the same scaling factor as in render_text()
-    double scale = target_height / (gMaxAscent+gMaxDescent);
-    return width * scale * zoomFactor;
+    double scaleVal = target_height / (gMaxAscent+gMaxDescent);
+    return width * scaleVal;
 }
 
-double largest_text_width(int numItems, char ** text, double target_height, double zoomFactor) {
+double largest_text_width(int numItems, char ** text, double target_height) {
     int i = 0;
     double size = 0;
     double maxSize = 0;
     
     for(i=0; i<numItems; i++) {
-        size = get_text_width_scaled(text[i], target_height, zoomFactor);
+        size = get_text_width(text[i], target_height);
         if (size > maxSize) {
             maxSize = size;
         }
@@ -692,6 +830,57 @@ double clamp_scroll_bar(double value, double max_value) {
         return max_limit;
     }
     return value;
+}
+
+#if 0
+void setRenderParams(tRectangle workingArea, double xScrollAmount, double yScrollAmount, double zoomFactor)
+{
+    gWorkingArea = workingArea;
+    gXScrollAmount = xScrollAmount;
+    gYScrollAmount = yScrollAmount;
+    gZoomFactor = zoomFactor;
+}
+#endif
+
+void set_x_scroll_percent(double percent) {
+    gXScrollPercent = percent;
+    printf("x scroll percent = %f\n", gXScrollPercent);
+}
+
+void set_y_scroll_percent(double percent) {
+    gYScrollPercent = percent;
+    printf("y scroll percent = %f\n", gYScrollPercent);
+}
+
+void set_x_end_max(double xEndMax) {
+    gXEndMax = xEndMax;
+}
+
+void set_y_end_max(double yEndMax) {
+    gYEndMax = yEndMax;
+}
+
+void set_zoom_factor(double zoomFactor) {
+    gZoomFactor = zoomFactor;
+}
+
+double get_zoom_factor(void) {
+    return gZoomFactor;
+}
+
+void set_render_width(int width) {
+    gRenderWidth = width;
+}
+void set_render_height(int height) {
+    gRenderHeight = height;
+}
+
+int get_render_width(void) {
+    return gRenderWidth;
+}
+
+int get_render_height(void) {
+    return gRenderHeight;
 }
 
 #ifdef __cplusplus

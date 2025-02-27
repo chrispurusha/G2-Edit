@@ -305,4 +305,9 @@ typedef enum {
     moduleTypeMax
 } tmoduleType;
 
+typedef enum {
+    mainArea,
+    moduleArea
+} tArea;
+
 #endif // __TYPES_H__
