@@ -310,4 +310,9 @@ typedef enum {
     moduleArea
 } tArea;
 
+typedef enum {
+    cableLinkTypeFromInput,
+    cableLinkTypeFromOutput
+} tCableLinkType;
+
 #endif // __TYPES_H__

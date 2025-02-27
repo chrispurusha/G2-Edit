@@ -23,7 +23,7 @@
 
 #define VARIATIONS                       (10) // 10 variations per patch, but only fist 8 presented on the GUI
 #define MAX_PARAMS_PER_MODULE            (38)
-#define MAX_CONNECTORS_PER_MODULE        (6)
+#define MAX_CONNECTORS_PER_MODULE        (10)
 #define MAX_SLOTS                        (4)
 
 #define INTERRUPT_MESSAGE_SIZE           (16)

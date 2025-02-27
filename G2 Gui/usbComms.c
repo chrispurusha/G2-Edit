@@ -189,7 +189,7 @@ static void parse_cable_list(uint8_t * buff, uint32_t * subOffset) {
         printf(" Module From    %d\n", key.moduleFrom);
         key.connectorFrom = read_bit_stream(buff, subOffset, 6);
         printf(" Connector From %d\n", key.connectorFrom);
-        cable.linkType = read_bit_stream(buff, subOffset, 1);
+        cable.linkType = read_bit_stream(buff, subOffset, 1);   // 1 = output to input, 0 = input to input
         printf(" Link Type      0x%x\n", cable.linkType);
         key.moduleTo = read_bit_stream(buff, subOffset, 8);
         printf(" Module To      %d\n", key.moduleTo);
@@ -234,11 +234,12 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
         module.numParams = paramCount;
 
         for (j = 0; j < variationCount; j++) {                                                          // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
-            printf("   Variation %02d Variation %u\n", j, read_bit_stream(buff, subOffset, 8));         // Should match!!!
+            uint32_t variation = read_bit_stream(buff, subOffset, 8);
+            //printf("   Variation %02d Variation %u\n", j, variation);         // Should match!!!
 
             for (k = 0; k < paramCount; k++) {
                 paramValue = read_bit_stream(buff, subOffset, 7);
-                printf("   Param number %02d param value %02d\n", k, paramValue);
+                //printf("   Param number %02d param value %02d\n", k, paramValue);
                 module.param[j][k].value = paramValue;
             }
         }

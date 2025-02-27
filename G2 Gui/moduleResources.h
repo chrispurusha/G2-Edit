@@ -42,13 +42,12 @@ char * filterKbMap[]   = {"Off", "25%", "50%", "75%", "100%"};
 tRgb cableColourMap[] =
 {
     {0.7, 0.1, 0.1},     // red
-    {0.8, 0.3, 0.2},     // orange
     {0.1, 0.1, 0.7},     // blue
     {0.7, 0.7, 0.1},     // yellow
     {0.8, 0.3, 0.2},     // orange
     {0.1, 0.7, 0.1},     // green
     {0.7, 0.1, 0.7},     // purple
-    {0.7, 0.7, 0.7}      // white
+    {0.9, 0.9, 0.9}      // white
 };
 
 tRgb gModuleColourMap[] =

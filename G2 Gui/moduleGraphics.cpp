@@ -207,7 +207,7 @@ void render_FltClassic(tRectangle rectangle, tModule * module) {
     render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0}, 0, connectorTypeAudioIn, module);
     render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0}, 0, connectorTypeAudioOut, module);
     render_connector({rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 20.0}, 1, connectorTypeControlIn, module);
-    render_connector({rectangle.coord.x + 15.0, rectangle.coord.y + 50.0}, 0, connectorTypeControlIn, module);
+    render_connector({rectangle.coord.x + 15.0, rectangle.coord.y + 50.0}, 2, connectorTypeControlIn, module);
 }
 
 // fltMulti -- builds on fltClassic components
@@ -280,6 +280,7 @@ void render_EnvAdsr(tRectangle rectangle, tModule * module) {
     render_param_EnvAdsr_sustain({rectangle.coord.x + 100.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_param_EnvAdsr_release({rectangle.coord.x + 140.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
 
+    render_connector({rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 20.0}, 2, connectorTypeControlIn, module);
     render_connector({rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + rectangle.size.h - 20.0}, 0, connectorTypeControlOut, module);
     render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0}, 1, connectorTypeAudioOut, module);   // Don't know if 1 is correct
     render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0}, 0, connectorTypeAudioIn, module);
@@ -440,11 +441,24 @@ void render_cable(tCable * cable) {
         exit(1);
     }
 
+    printf("Connecting %u %u to %u %u\n", cable->key.moduleFrom, cable->key.connectorFrom, cable->key.moduleTo, cable->key.connectorTo);
     set_rbg_colour(cableColourMap[cable->colour]);
 
-    // Could be control or audio cable, but cable struct doesn't give us that info, so try both. Might be a better way of dealing with this
-    render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeControlOut], moduleTo.connector[cable->key.connectorTo][connectorTypeControlIn]);
-    render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeAudioOut], moduleTo.connector[cable->key.connectorTo][connectorTypeAudioIn]);
+    switch(cable->linkType)
+    {
+        case cableLinkTypeFromOutput:
+            printf("From output\n");
+            render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeControlOut], moduleTo.connector[cable->key.connectorTo][connectorTypeControlIn]);
+            render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeAudioOut], moduleTo.connector[cable->key.connectorTo][connectorTypeAudioIn]);
+            render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeAudioOut], moduleTo.connector[cable->key.connectorTo][connectorTypeControlIn]);
+            render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeControlOut], moduleTo.connector[cable->key.connectorTo][connectorTypeAudioIn]);
+            break;
+        case cableLinkTypeFromInput:
+            printf("From input\n");
+            render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeControlIn], moduleTo.connector[cable->key.connectorTo][connectorTypeControlIn]);
+            render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeAudioIn], moduleTo.connector[cable->key.connectorTo][connectorTypeAudioIn]);
+            break;
+    }
 }
 
 void render_cables(void) {
