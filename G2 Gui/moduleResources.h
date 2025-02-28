@@ -89,7 +89,10 @@ void render_Compress(tRectangle, tModule *);
 
 typedef struct {
     const char *   name;
+    //const char *   fileName;  // From the reverse engineering effort - might be required for file access?
     const uint32_t height;
+    //uint32_t       isLed;
+    //uint32_t       upRate;
     void (*renderFunction)(tRectangle, tModule *);
 } tModuleProperties;
 
@@ -307,6 +310,56 @@ tModuleProperties gModuleProperties[] =
     {"RndPattern",   3, NULL             },
     {"MaxVal", 0}
 };
+
+// Not yet used. May need to expand on this
+typedef struct {
+    uint32_t ModuleID;
+    uint32_t ParamIndex;
+    uint32_t ParamID;
+    char * ParamName;
+    uint32_t DefaultValue;
+    int32_t DefaultKnob;
+    int32_t ButtonParam;
+    char * slParamLabel;
+} TG2ModuleParamDef;
+
+TG2ModuleParamDef ModuleParams[] = {
+    {3, 0, 27, "Dest", 0, -1, -1, ""},
+    {3, 1, 106, "On/Off", 1, -1, -1, ""},
+    {3, 2, 126, "Pad", 0, -1, -1, ""},
+    {4, 0, 26, "Dest", 0, 0, 0, ""},
+    {4, 1, 106, "On/OFF", 1, -1, -1, ""}
+};
+
+TG2ModuleParamDef ModuleModes[] = {
+    {8,  0, 123, "Wave", 0, -1, -1, ""},
+    {9,  0, 122, "Wave", 0, -1, -1, ""},
+    {12, 0, 154, "RoomType", 0, -1, -1, ""},
+    {24, 0, 0, "", 0, 0, 0, ""} // Placeholder for the rest
+};
+
+typedef struct {
+    uint32_t ModuleID;
+    uint32_t ConnectorIndex;
+    const char * ConnectorName;
+    uint32_t ID;
+    uint32_t XPos;
+    uint32_t YPos;
+    uint32_t CodeRef;
+    uint32_t InfoFunc;
+    //ConnectorType ConnectorType;
+    //BandWidth BandWidth;
+} TG2ConnectorDef;
+
+TG2ConnectorDef ModuleInputs[] = {
+    {3, 0, "In1", 1, 162, 13, 0, 0/*, ctAudio, btStatic*/},
+    {3, 1, "In2", 0, 188, 13, 1, 0/*, ctAudio, btStatic*/},
+    {3, 2, "In3", 3, 214, 13, 2, 0/*, ctAudio, btStatic*/},
+    {3, 3, "In4", 2, 240, 13, 3, 0/*, ctAudio, btStatic*/},
+    {4, 0, "InL", 0, 0, 0, 0, 0/*, ctAudio, btStatic*/}
+};
+
+// End of unused stuff
 
 tRgb connectorColourMap[] = {
     {0.5, 0.1, 0.1},  // Audio In

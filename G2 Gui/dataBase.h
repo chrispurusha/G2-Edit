@@ -55,7 +55,7 @@ typedef struct _struct_cable {
 } tCable;
 
 typedef enum {
-    connectorTypeAudioIn,   // Might just be in/out, since there examples of control connected to audio
+    connectorTypeAudioIn,   // Todo: Needs splitting into 2 types: input/output and control/audio
     connectorTypeAudioOut,
     connectorTypeControlIn,
     connectorTypeControlOut,
@@ -69,19 +69,19 @@ typedef struct {
 
 typedef struct _struct_module {
     tModuleKey              key;
-    uint32_t                type;
+    uint32_t                type;              // Review this. Is it used!?
     uint32_t                row;
     uint32_t                column;
     uint32_t                colour;
-    uint32_t                upRate;
-    uint32_t                isLed;
-    uint32_t                unknown1;                                         // Guess we should store this, to write back if necessary
-    uint32_t                modeCount;
+    uint32_t                upRate;            // Probably needs to be permanent in tModuleProperties
+    uint32_t                isLed;             // Probably needs to be permanent in tModuleProperties
+    uint32_t                unknown1;                                         // Guess we should store this, to write back if necessary. Might not be needed
+    uint32_t                modeCount;                                        // Don't yet know what this is for. Might need modes array adding
     char                    name[MODULE_NAME_SIZE + 1];
-    uint32_t                numParams;                                              // Relates to tComp array below
+    uint32_t                numParams;                                              // Relates to tComp array below - Todo: only refer to this in the permanent tModuleProperties
     tParam                  param[VARIATIONS][MAX_PARAMS_PER_MODULE];               // Going to need to allocate this per module, depending on numParams to save memory
-    uint32_t                numConnectors;
-    tCoord                  connector[MAX_CONNECTORS_PER_MODULE][connectorTypeMax]; // Going to need to allocate this per module to save memory
+    uint32_t                numConnectors;                                         // Todo: only refer to this in the permanent tModuleProperties - todo: might need to be num inputs connectors and num output connectors, but that would make direct array referencing not possible. Better to add up input and output connectors to check against protocol?
+    tCoord                  connector[MAX_CONNECTORS_PER_MODULE][connectorTypeMax]; // Going to need to allocate this per module to save memory - Todo: this should be array of input connectors and output connectors or one array of connectors, marked as input or output
     struct _struct_module * next;
 } tModule;
 
