@@ -36,6 +36,7 @@ extern "C" {
 #include FT_FREETYPE_H
 #pragma clang diagnostic pop
 
+#include "constData.h"
 #include "dataBase.h"
 #include "utilsGraphics.h"
 #include "moduleResources.h"
