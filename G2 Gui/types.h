@@ -77,6 +77,68 @@ typedef struct {
     tCoord coord3rel;
 } tTriangle;
 
+
+typedef enum {
+    paramTypeNone,
+    paramTypeDial,
+    paramTypeToggle,
+} tParamType;
+
+typedef struct _struct_param {
+    tParamType type;
+    tRectangle rectangle;
+    uint32_t   range;
+    uint32_t   value;
+} tParam;
+
+typedef struct {
+    uint32_t location;
+    uint32_t moduleFrom;
+    uint32_t connectorFrom;
+    uint32_t moduleTo;
+    uint32_t connectorTo;
+} tCableKey;
+
+typedef struct _struct_cable {
+    tCableKey              key;
+    uint32_t               colour;
+    uint32_t               linkType;
+    struct _struct_cable * next;       // This can go, when we attach to modules rather than separate linked list
+} tCable;
+
+typedef enum {
+    connectorTypeAudioIn,   // Todo: Needs splitting into 2 types: input/output and control/audio
+    connectorTypeAudioOut,
+    connectorTypeControlIn,
+    connectorTypeControlOut,
+    connectorTypeMax
+} tConnectorType;
+
+typedef struct {
+    uint32_t location;
+    uint32_t index;
+} tModuleKey;
+
+typedef struct _struct_module {
+    tModuleKey              key;
+    uint32_t                type;              // Review this. Is it used!?
+    uint32_t                row;
+    uint32_t                column;
+    tRectangle              rectangle;         // Purely for mouse-click recognition
+    uint32_t                colour;
+    uint32_t                upRate;            // Probably needs to be permanent in tModuleProperties
+    uint32_t                isLed;             // Probably needs to be permanent in tModuleProperties
+    uint32_t                unknown1;                                         // Guess we should store this, to write back if necessary. Might not be needed
+    uint32_t                modeCount;                                        // Don't yet know what this is for. Might need modes array adding
+    char                    name[MODULE_NAME_SIZE + 1];
+    uint32_t                numParams;                                              // Relates to tComp array below - Todo: only refer to this in the permanent tModuleProperties
+    tParam                  param[VARIATIONS][MAX_PARAMS_PER_MODULE];               // Going to need to allocate this per module, depending on numParams to save memory
+    uint32_t                numConnectors;                                         // Todo: only refer to this in the permanent tModuleProperties - todo: might need to be num inputs connectors and num output connectors, but that would make direct array referencing not possible. Better to add up input and output connectors to check against protocol?
+    tCoord                  connector[MAX_CONNECTORS_PER_MODULE][connectorTypeMax]; // Going to need to allocate this per module to save memory - Todo: this should be array of input connectors and output connectors or one array of connectors, marked as input or output
+    struct _struct_module * prev;
+    struct _struct_module * next;
+} tModule;
+
 typedef struct {
     double xBar;
     bool   xBarDragging;
@@ -86,11 +148,26 @@ typedef struct {
 
 typedef struct {
     bool     active;
+    tModuleKey moduleKey;
+} tModuleDragging;     // Parameter value dragging - Todo: rename
+
+typedef struct {
+    bool     active;
     uint32_t location;     //Todo = replace location and index with tModuleKey
     uint32_t index;
     uint32_t variation;
     uint32_t param;
-} tDragging;
+} tDragging;     // Parameter value dragging - Todo: rename
+
+typedef struct {
+    bool active;      // True if the user is dragging a cable
+    tCoord startPos;      // Starting connector position
+    tCoord currentPos;    // Current mouse position while dragging
+    uint32_t startModule; // Index of the starting module
+    uint32_t startConnector; // Index of the starting connector
+    //tConnectorType startType; // Type of the connector (Audio/Control)
+} tCableDragState;
+
 
 typedef enum {
     moduleTypeUnknown0,
@@ -303,6 +380,15 @@ typedef enum {
     moduleTypeUnknown207,
     moduleTypeRndPattern
 } tmoduleType;
+
+typedef struct {
+    const char *   name;
+    //const char *   fileName;  // From the reverse engineering effort - might be required for file access?
+    const uint32_t height;
+    //uint32_t       isLed;
+    //uint32_t       upRate;
+    void (*renderFunction)(tRectangle, tModule *);
+} tModuleProperties;
 
 typedef enum {
     mainArea,

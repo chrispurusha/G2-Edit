@@ -55,8 +55,13 @@ static FT_Library   gLibrary = {0};
 static FT_Face      gFace    = {0};
 static GLFWwindow * gWindow  = NULL;
 
-static tDragging     gDragging = {0};
+static tDragging     gDragging = {0};   // Todo - rename to parameter value drag or similar
+static tModuleDragging gModuleDrag = {0};;
+
+static tCableDragState gCableDrag = {0};
+
 extern tMessageQueue gCommandQueue;
+extern tModuleProperties gModuleProperties[];
 
 void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
     glViewport(0, 0, width, height);
@@ -113,37 +118,91 @@ bool handle_module_click(tCoord coord) {
         for (int i = 0; i < module.numParams; i++) {
             tParam * param = &module.param[0][i];
 
-            if (!within_rectangle(coord, param->rectangle)) {
-                continue;
-            }
-
-            if (param->type == paramTypeDial) {
-                gDragging.index     = module.key.index;
-                gDragging.location  = module.key.location;
-                gDragging.variation = 0;
-                gDragging.param     = i;
-                gDragging.active    = true;
-                return true;
-            }
-            else if (param->type == paramTypeToggle) {
-                param->value = (param->value + 1) % param->range;
-                write_module(module.key, &module);
-
-                tMessageContent messageContent;
-                messageContent.cmd       = eMsgCmdSetValue;
-                messageContent.location  = module.key.location;
-                messageContent.index     = module.key.index;
-                messageContent.param     = i;
-                messageContent.variation = 0;
-                messageContent.value     = param->value;
-
-                msg_send(&gCommandQueue, &messageContent);
-                return true;
+            if (within_rectangle(coord, param->rectangle)) {
+                
+                if (param->type == paramTypeDial) {
+                    gDragging.index     = module.key.index;
+                    gDragging.location  = module.key.location;
+                    gDragging.variation = 0;
+                    gDragging.param     = i;
+                    gDragging.active    = true;
+                    return true;
+                }
+                else if (param->type == paramTypeToggle) {
+                    param->value = (param->value + 1) % param->range;
+                    write_module(module.key, &module);
+                    
+                    tMessageContent messageContent;
+                    messageContent.cmd       = eMsgCmdSetValue;
+                    messageContent.location  = module.key.location;
+                    messageContent.index     = module.key.index;
+                    messageContent.param     = i;
+                    messageContent.variation = 0;
+                    messageContent.value     = param->value;
+                    
+                    msg_send(&gCommandQueue, &messageContent);
+                    return true;
+                }
             }
         }
+        
+        if (within_rectangle(coord, module.rectangle)) {
+            gModuleDrag.active = true;
+            gModuleDrag.moduleKey = module.key;
+            return true;
+        }
+
     }
 
     return false;
+}
+
+void shift_modules_down(tModuleKey key) {
+    tModule module = {0};
+    tModule walk = {0};
+    bool doDrop = false;
+    uint32_t rowAndBelowToMove = 0;
+    uint32_t dropAmount = 0;
+    
+    if (read_module(key, &module) == false) {
+        return;
+    }
+    
+    // First step - if moved module lands on exisitng module after first row, drop it down
+    reset_walk_module();
+    while (walk_next_module(&walk)) {
+        if (!((walk.key.location == key.location) && (walk.key.index == key.index)) && (walk.column == module.column)) {
+            if ((module.row > walk.row) && (module.row < walk.row+gModuleProperties[walk.type].height)) {
+                module.row = walk.row+gModuleProperties[walk.type].height;
+                write_module(module.key, &module);
+                break;
+            }
+        }
+    }
+    
+    reset_walk_module();
+    while (walk_next_module(&walk)) {
+        if (!((walk.key.location == key.location) && (walk.key.index == key.index)) && (walk.column == module.column)) {
+            if ((walk.row >= module.row) && (walk.row < module.row+gModuleProperties[module.type].height)) {
+                rowAndBelowToMove = walk.row;
+                dropAmount = (module.row+gModuleProperties[module.type].height)-walk.row;
+                doDrop = true;
+                break;
+            }
+        }
+    }
+    
+    if (doDrop == true) {
+        reset_walk_module();
+        while (walk_next_module(&walk)) {
+            if (!((walk.key.location == key.location) && (walk.key.index == key.index)) && (walk.column == module.column)) {
+                if (walk.row >= rowAndBelowToMove) {
+                    walk.row += dropAmount;
+                    write_module(walk.key, &walk);
+                }
+            }
+        }
+    }
 }
 
 void mouse_button(GLFWwindow * window, int button, int action, int mods) {
@@ -170,7 +229,18 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     else if (action == GLFW_RELEASE) {
         gScrollState.yBarDragging = false;
         gScrollState.xBarDragging = false;
+
+
+        if (gModuleDrag.active == true) {
+            shift_modules_down(gModuleDrag.moduleKey);
+            // If on top of existing module on this column, move everything else down
+            
+            // Todo - write new modules positions to device
+        }
+        
+        memset(&gModuleDrag, 0, sizeof(gModuleDrag));     // Reset dragging state
         memset(&gDragging, 0, sizeof(gDragging));     // Reset dragging state
+        memset(&gCableDrag, 0, sizeof(gCableDrag));     // Reset dragging state
     }
 }
 
@@ -217,6 +287,13 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         messageContent.variation = gDragging.variation;
         messageContent.value     = value;
         msg_send(&gCommandQueue, &messageContent);
+    } else if (gModuleDrag.active == true) {
+        tRectangle area = module_area();
+        read_module(gModuleDrag.moduleKey, &module);
+        printf("x coord %f, y coord %f\n", area.coord.x, area.coord.y);
+        module.column = floor(((x - area.coord.x) / MODULE_X_SPAN)/ get_zoom_factor());
+        module.row = floor(((y - area.coord.y) / MODULE_Y_SPAN) / get_zoom_factor());
+        write_module(gModuleDrag.moduleKey, &module);
     }
 }
 

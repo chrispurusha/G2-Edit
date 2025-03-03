@@ -50,12 +50,13 @@ static void mutex_unlock(void) {
 
 void dump_modules(void) {
     tModule * module = NULL;
+    uint32_t count = 0;
 
     mutex_lock();
 
     module = firstModule;
 
-    printf("\n\n\nDump modules\n");
+    printf("\n\nDump modules\n");
 
     while (module != NULL) {
         printf("Location %u\n", module->key.location);
@@ -64,9 +65,14 @@ void dump_modules(void) {
         printf(" Name %s\n", module->name);
         printf(" Row %d\n", module->row);
         printf(" Column %d\n", module->column);
+        printf(" Prev %p\n", module->prev);
+        printf(" Next %p\n", module->next);
+        
+        count++;
         module = module->next;
     }
-    printf("\n\n\n");
+    printf("\nModule Count=%u\n", count);
+    printf("\n\n");
 
     mutex_unlock();
 }
@@ -114,9 +120,7 @@ void write_module(tModuleKey key, tModule * module) {
     tModule * dbModule      = NULL;
     tModule * iterateModule = NULL;
 
-
-    module->key.location = key.location;
-    module->key.index    = key.index;
+    module->key = key;  // Ensure key is set
 
     mutex_lock();
 
@@ -128,6 +132,7 @@ void write_module(tModuleKey key, tModule * module) {
             printf("Malloc fail\n");
             exit(1);
         }
+        memset(dbModule, 0, sizeof(*dbModule));
 
         if (firstModule == NULL) {
             firstModule = dbModule;
@@ -138,22 +143,45 @@ void write_module(tModuleKey key, tModule * module) {
                 iterateModule = iterateModule->next;
             }
             iterateModule->next = dbModule;
+            dbModule->prev = iterateModule;
         }
     }
 
-    if (dbModule != NULL) {
-        memcpy(dbModule, module, sizeof(*dbModule));
-    }
-    else {
-        printf("Module generation or update failed\n");
-        exit(1);
-    }
-
-    //TODO - possibly have local copy of the db's model of next,rather than using incoming
+    // Preserve prev and next pointers before memcpy
+    tModule *prev = dbModule->prev;
+    tModule *next = dbModule->next;
+    memcpy(dbModule, module, sizeof(*dbModule));
+    // Restore prev and next pointers
+    dbModule->prev = prev;
+    dbModule->next = next;
 
     mutex_unlock();
 }
 
+void delete_module(tModuleKey key, tModule * module) {
+    tModule * dbModule      = NULL;
+
+    mutex_lock();
+
+    dbModule = find_module(key);
+
+    if (dbModule != NULL) {
+        if (dbModule->prev != NULL) {
+            dbModule->prev->next = dbModule->next;
+        } else {
+            firstModule = dbModule->next;
+        }
+        
+        if (dbModule->next != NULL) {
+            dbModule->next->prev = dbModule->prev;
+        }
+        memset(dbModule, 0, sizeof(*dbModule));  // Protection against using stale data
+        free(dbModule);
+    }
+
+    mutex_unlock();
+}
+    
 void reset_walk_module(void) {
     walkModule = NULL;
 }

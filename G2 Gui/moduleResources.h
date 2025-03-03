@@ -87,15 +87,6 @@ void render_StChorus(tRectangle, tModule *);
 void render_Mix4to1c(tRectangle, tModule *);
 void render_Compress(tRectangle, tModule *);
 
-typedef struct {
-    const char *   name;
-    //const char *   fileName;  // From the reverse engineering effort - might be required for file access?
-    const uint32_t height;
-    //uint32_t       isLed;
-    //uint32_t       upRate;
-    void (*renderFunction)(tRectangle, tModule *);
-} tModuleProperties;
-
 tModuleProperties gModuleProperties[] =
 {
     // Array index = module type for access speed

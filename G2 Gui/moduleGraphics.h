@@ -24,6 +24,7 @@
 #include "sysIncludes.h"
 #include "types.h"
 
+void render_module(tModule * module);
 void render_modules(void);
 void render_cables(void);
 void calculate_module_bounds(double * xEndMax, double * yEndMax, tRectangle moduleArea);

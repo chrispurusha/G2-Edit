@@ -373,7 +373,7 @@ void render_module(tModule * module) {
     tRectangle moduleRectangle = {{xPos, yPos}, {xWidth, yHeight}};
 
     set_module_colour(module->colour);
-    render_rectangle_with_border(moduleArea, moduleRectangle); // Add zoom factor for border - really needs to scale the whole thing!
+    module->rectangle = render_rectangle_with_border(moduleArea, moduleRectangle); // Add zoom factor for border - really needs to scale the whole thing!
     render_parameters(moduleRectangle, module);
     write_module(module->key, module);                         // Save calculated coords
 
@@ -434,12 +434,10 @@ void render_cable(tCable * cable) {
     tModule moduleTo   = {0};
 
     if (read_module({cable->key.location, cable->key.moduleFrom}, &moduleFrom) == false) {
-        printf("Couldn't find from module relating to cable\n");
-        exit(1);
+        return;
     }
     if (read_module({cable->key.location, cable->key.moduleTo}, &moduleTo) == false) {
-        printf("Couldn't find to module relating to cable\n");
-        exit(1);
+        return;
     }
 
     if (cable->key.connectorFrom >= moduleFrom.numConnectors) {
@@ -452,6 +450,7 @@ void render_cable(tCable * cable) {
     
     set_rbg_colour(cableColourMap[cable->colour]);
 
+    // Todo - we have a new reference structure in constData.h for dealing with some of this
     switch(cable->linkType)
     {
         case cableLinkTypeFromOutput:
