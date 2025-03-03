@@ -301,8 +301,7 @@ typedef enum {
     moduleTypeRndTrig,
     moduleTypeRndClkB,
     moduleTypeUnknown207,
-    moduleTypeRndPattern,
-    moduleTypeMax
+    moduleTypeRndPattern
 } tmoduleType;
 
 typedef enum {

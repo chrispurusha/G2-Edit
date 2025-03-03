@@ -308,7 +308,6 @@ tModuleProperties gModuleProperties[] =
     {"RndClkB",      3, NULL             },
     {"Unknown",      0, NULL             },
     {"RndPattern",   3, NULL             },
-    {"MaxVal", 0}
 };
 
 tRgb connectorColourMap[] = {
