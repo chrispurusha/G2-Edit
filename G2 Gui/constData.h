@@ -29,55 +29,58 @@
 #ifndef __CONST_DATA_H__
 #define __CONST_DATA_H__
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
+
 typedef struct {
-    int ModuleID;
-    char ModuleName[50];
-    char FileName[50];
-    char Tooltip[100];
-    int Height;
-    int XPos;
-    int YPos;
-    int Version;
-    int IsLed;
-    int Uprate;
-    char Page[20];
-    int PageIndex;
+    int id;
+    char * name;
+    char * fileName;
+    char * tooltip;
+    int height;
+    int xPos;
+    int yPos;
+    int version;
+    int isLed;
+    int uprate;
+    char * page;
+    int pageIndex;
 } tModuleDef;
 
 typedef struct {
-    int ParamID;
-    int ParamType;
-    int RangeType;
-    int LowValue;
-    int HighValue;
-    int DefaultValue;
-    char Definitions[256];
-    char Comments[256];
-    char slButtonText[100];
+    int paramId;
+    int paramType;
+    int rangeType;
+    int lowValue;
+    int highValue;
+    int defaultValue;
+    char * definitions;
+    char * comments;
+    char * slButtonText;
 } tParamDef;
 
 typedef struct {
-    int ModuleID;
-    int ParamIndex;
-    int ParamID;
-    char ParamName[50];
-    int DefaultValue;
-    int DefaultKnob;
-    int ButtonParam;
-    char slParamLabel[100];
+    int moduleID;
+    int paramIndex;
+    int paramID;
+    char * paramName;
+    int defaultValue;
+    int defaultKnob;
+    int buttonParam;
+    char * slParamLabel;
 } tModuleParamDef;
 
 typedef struct {
-    int ModuleID;
-    int ConnectorIndex;
-    char ConnectorName[256];
-    int ID;
-    int XPos;
-    int YPos;
-    int CodeRef;
-    int InfoFunc;
-    int ConnectorType;  // 0 = audio, 1 = control
-    int BandWidth;  // 0 = static, 1 = dynamic
+    int moduleID;
+    int connectorIndex;
+    char * connectorName;
+    int id;
+    int xPos;
+    int yPos;
+    int codeRef;
+    int infoFunc;
+    int connectorType;  // 0 = audio, 1 = control
+    int bandWidth;  // 0 = static, 1 = dynamic
 } tConnectorDef;
 
 tModuleDef constModules[] = {
@@ -2209,5 +2212,7 @@ tConnectorDef constConnectors[] = {
     {206, 0, "Out", 1, 240, 30, 0, 0, 0, 0},
     {208, 0, "Out", 3, 240, 30, 0, 0, 0, 0},
 };
+
+#pragma clang diagnostic pop
 
 #endif // __CONST_DATA_H__
