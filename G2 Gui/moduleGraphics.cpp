@@ -184,19 +184,22 @@ void render_common_resonance(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].rectangle = render_dial({coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}, module->param[0][param].value);
 }
 
-void render_connector(tCoord coord, uint32_t connector, tConnectorType connectorType, tModule * module) {
-    module->connector[connector][connectorType] = coord;  // Register where we're rendering this connector, for cable connecting
+void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir dir, tConnectorType type, tCoord coord) {
+    module->connector[connectorIndex].coord = coord;  // Register where we're rendering this connector, for cable connecting
+    module->connector[connectorIndex].dir = dir;      // Ultimately, should be constant in the structures, we shouldn't have to do this here
+    module->connector[connectorIndex].type = type;
 
-    set_rbg_colour(connectorColourMap[connectorType]);
+    set_rbg_colour(connectorColourMap[module->connector[connectorIndex].dir][module->connector[connectorIndex].type]);
     render_circle_part(moduleArea, coord, 6.0, 10.0, 0.0, 10.0);  // Should be zoomfactored
     set_rbg_colour(RGB_BLACK);
     render_circle_part(moduleArea, coord, 3.0, 10.0, 0.0, 10.0);
 
-    module->numConnectors++; // Ultimately, we might want to pre-calculate this per module
+    //module->numConnectors++; // Ultimately, we might want to pre-calculate this per module - set when module is created!!!!
 }
 
 void render_FltClassic(tRectangle rectangle, tModule * module) {
     uint32_t param = 0;
+    uint32_t connector = 0;
 
     render_common_freq({rectangle.coord.x + 105.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_common_pitch({rectangle.coord.x + 15.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
@@ -205,10 +208,15 @@ void render_FltClassic(tRectangle rectangle, tModule * module) {
     render_FltClassic_db({rectangle.coord.x + 210.0, rectangle.coord.y + 80.0}, param++, module);
     render_common_bypass({rectangle.coord.x + 250, rectangle.coord.y + 50.0}, param++, module);
 
-    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0}, 0, connectorTypeAudioIn, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0}, 0, connectorTypeAudioOut, module);
-    render_connector({rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 20.0}, 1, connectorTypeControlIn, module);
-    render_connector({rectangle.coord.x + 15.0, rectangle.coord.y + 50.0}, 2, connectorTypeControlIn, module);
+    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 20.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 50.0});
+    
+    if (connector != gModuleProperties[module->type].numConnectors){
+        printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
+        exit(1);
+    }
 }
 
 // fltMulti -- builds on fltClassic components
@@ -240,6 +248,7 @@ void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
 
 void render_FltMulti(tRectangle rectangle, tModule * module) {
     uint32_t param = 0;
+    uint32_t connector = 0;
 
     render_common_freq({rectangle.coord.x + 125.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_common_pitch({rectangle.coord.x + 15.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
@@ -249,12 +258,16 @@ void render_FltMulti(tRectangle rectangle, tModule * module) {
     render_FltMulti_db({rectangle.coord.x + 210.0, rectangle.coord.y + 25.0}, param++, module); // Todo - this param num isn't db!!!
     render_common_bypass({rectangle.coord.x + 230.0, rectangle.coord.y + 80.0}, param++, module);
 
-    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0}, 0, connectorTypeAudioIn, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 60.0}, 0, connectorTypeAudioOut, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 80.0}, 0, connectorTypeAudioOut, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 100.0}, 0, connectorTypeAudioOut, module);
-    render_connector({rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 20.0}, 1, connectorTypeControlIn, module);
-    render_connector({rectangle.coord.x + 15.0, rectangle.coord.y + 50.0}, 0, connectorTypeControlIn, module);
+    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 60.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 80.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 100.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 20.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 50.0});
+    if (connector != gModuleProperties[module->type].numConnectors){
+        printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
+        exit(1);
+    }
 }
 
 void render_param_EnvAdsr_attack(tCoord coord, uint32_t param, tModule * module) {
@@ -275,43 +288,73 @@ void render_param_EnvAdsr_release(tCoord coord, uint32_t param, tModule * module
 
 void render_EnvAdsr(tRectangle rectangle, tModule * module) {
     uint32_t param = 0;
+    uint32_t connector = 0;
 
     render_param_EnvAdsr_attack({rectangle.coord.x + 20.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_param_EnvAdsr_delay({rectangle.coord.x + 60.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_param_EnvAdsr_sustain({rectangle.coord.x + 100.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_param_EnvAdsr_release({rectangle.coord.x + 140.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
 
-    render_connector({rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 20.0}, 2, connectorTypeControlIn, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + rectangle.size.h - 20.0}, 0, connectorTypeControlOut, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0}, 1, connectorTypeAudioOut, module);   // Don't know if 1 is correct
-    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0}, 0, connectorTypeAudioIn, module);
+    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 40.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 20.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeControl, {rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + rectangle.size.h - 20.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0});   // Don't know if 1 is correct
+    if (connector != gModuleProperties[module->type].numConnectors){
+        printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
+        exit(1);
+    }
 }
 
 void render_Mix4to1c(tRectangle rectangle, tModule * module) {
-    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0}, 0, connectorTypeAudioOut, module);
-    render_connector({rectangle.coord.x + 60, rectangle.coord.y + 80.0}, 0, connectorTypeAudioIn, module);
-    render_connector({rectangle.coord.x + 80, rectangle.coord.y + 80.0}, 1, connectorTypeAudioIn, module);
-    render_connector({rectangle.coord.x + 100, rectangle.coord.y + 80.0}, 2, connectorTypeAudioIn, module);
-    render_connector({rectangle.coord.x + 120, rectangle.coord.y + 80.0}, 3, connectorTypeAudioIn, module);
+    uint32_t connector = 0;
+    
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 60, rectangle.coord.y + 80.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 80, rectangle.coord.y + 80.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 100, rectangle.coord.y + 80.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 120, rectangle.coord.y + 80.0});
+    if (connector != gModuleProperties[module->type].numConnectors){
+        printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
+        exit(1);
+    }
 }
 
 void render_OscShpB(tRectangle rectangle, tModule * module) {
-    render_connector({rectangle.coord.x + 150.0, rectangle.coord.y + 80.0}, 0, connectorTypeAudioOut, module);
+    uint32_t connector = 0;
+    
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 150.0, rectangle.coord.y + 80.0});
+    if (connector != gModuleProperties[module->type].numConnectors){
+        printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
+        exit(1);
+    }
 }
 
 void render_StChorus(tRectangle rectangle, tModule * module) {
-    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0}, 0, connectorTypeAudioIn, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + rectangle.size.h - 20.0}, 0, connectorTypeAudioOut, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0}, 1, connectorTypeAudioOut, module);
+    uint32_t connector = 0;
+    
+    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + rectangle.size.h - 20.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0});
+    if (connector != gModuleProperties[module->type].numConnectors){
+        printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
+        exit(1);
+    }
 }
 
 void render_Compress(tRectangle rectangle, tModule * module) {
-    render_connector({rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + 20.0}, 0, connectorTypeAudioIn, module);
-    render_connector({rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0}, 1, connectorTypeAudioIn, module);
+    uint32_t connector = 0;
+    
+    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + 20.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0});
+    if (connector != gModuleProperties[module->type].numConnectors){
+        printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
+        exit(1);
+    }
 }
 
 void render_parameters(tRectangle rectangle, tModule * module) {
-    module->numConnectors = 0; // Ultimately, we might want to pre-calculate this per module
+    //module->numConnectors = 0; // Ultimately, we might want to pre-calculate this per module
 
     if (gModuleProperties[module->type].renderFunction != NULL) {
         gModuleProperties[module->type].renderFunction(rectangle, module);
@@ -429,6 +472,22 @@ void render_cable_from_to(tCoord from, tCoord to) {
     }
 }
 
+int find_connector_index(tModule *module, tConnectorDir dir, int targetCount) {
+    int count = 0;
+
+    //printf("%s find index num connectors %u\n", gModuleProperties[module->type].name, gModuleProperties[module->type].numConnectors);
+    for (int index = 0; index < gModuleProperties[module->type].numConnectors; index++) {
+        if (module->connector[index].dir == dir) {
+            if (count == targetCount) {
+                return index;
+            }
+            count++;
+        }
+    }
+
+    return -1;  // Not found
+}
+
 void render_cable(tCable * cable) {
     tModule moduleFrom = {0};
     tModule moduleTo   = {0};
@@ -440,32 +499,29 @@ void render_cable(tCable * cable) {
         return;
     }
 
-    if (cable->key.connectorFrom >= moduleFrom.numConnectors) {
-        //printf("From connector of %u >= %u\n", cable->key.connectorFrom, moduleTo.numConnectors);
-        return;
-    }
-    if (cable->key.connectorTo >= moduleTo.numConnectors) {
-        //printf("To connector of %u >= %u\n", cable->key.connectorTo, moduleTo.numConnectors);
-        return;
-    }
-    //printf("Connecting %u %u to %u %u\n", cable->key.moduleFrom, cable->key.connectorFrom, cable->key.moduleTo, cable->key.connectorTo);
-    
     set_rbg_colour(cableColourMap[cable->colour]);
 
-    // Todo - we have a new reference structure in constData.h for dealing with some of this
-    switch(cable->linkType)
-    {
-        case cableLinkTypeFromOutput:
-            render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeControlOut], moduleTo.connector[cable->key.connectorTo][connectorTypeControlIn]);
-            render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeAudioOut], moduleTo.connector[cable->key.connectorTo][connectorTypeAudioIn]);
-            render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeAudioOut], moduleTo.connector[cable->key.connectorTo][connectorTypeControlIn]);
-            render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeControlOut], moduleTo.connector[cable->key.connectorTo][connectorTypeAudioIn]);
-            break;
+    int fromConnectorIndex = -1;
+    int toConnectorIndex = -1;
+
+    switch (cable->linkType) {
         case cableLinkTypeFromInput:
-            render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeControlIn], moduleTo.connector[cable->key.connectorTo][connectorTypeControlIn]);
-            render_cable_from_to(moduleFrom.connector[cable->key.connectorFrom][connectorTypeAudioIn], moduleTo.connector[cable->key.connectorTo][connectorTypeAudioIn]);
+            fromConnectorIndex = find_connector_index(&moduleFrom, connectorDirIn, cable->key.connectorFrom);
+            break;
+        case cableLinkTypeFromOutput:
+            fromConnectorIndex = find_connector_index(&moduleFrom, connectorDirOut, cable->key.connectorFrom);
             break;
     }
+
+    toConnectorIndex = find_connector_index(&moduleTo, connectorDirIn, cable->key.connectorTo);
+    
+    if (fromConnectorIndex != -1 && toConnectorIndex != -1) {
+        render_cable_from_to(moduleFrom.connector[fromConnectorIndex].coord, moduleTo.connector[toConnectorIndex].coord);
+    }
+    
+    // Todo - see if there's any corruption on fltmulti's final 2 connector items on the array
+
+    printf("\n");
 }
 
 void render_cables(void) {

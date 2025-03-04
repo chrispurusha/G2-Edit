@@ -63,6 +63,8 @@ tMessageQueue gCommandQueue = {0};
 
 unsigned int volData[1024] = {0};    //Temporary for testing. Will ultimately have a better mechanism for passing data
 static void  (* wake_glfw_func_ptr)(void) = NULL;
+    
+extern tModuleProperties gModuleProperties[];
 
 void register_glfw_wake_cb(void (* func_ptr)(void)) {
     wake_glfw_func_ptr = func_ptr;
@@ -165,7 +167,19 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
         for (j = 0; j < module.modeCount; j++) {
             mode = read_bit_stream(buff, subOffset, 6);             // Not sure what to do with this yet
         }
+        
+        // Ultimately do through a database function, so we're not mallocing here.
+        if (gModuleProperties[type].numConnectors > 0) {
+            //module.numConnectors = gModuleProperties[type].numConnectors;  //
+            printf("Type = %s connectors %u\n", gModuleProperties[type].name, gModuleProperties[type].numConnectors);
+            module.connector = malloc(gModuleProperties[type].numConnectors * sizeof(tConnector));
+            if (module.connector == NULL) {
+                memset(module.connector, 0, gModuleProperties[type].numConnectors * sizeof(tConnector));
+                //module.numConnectors = 0;
+            }
+        }
 
+        printf("Number connectors for module %u\n", gModuleProperties[type].numConnectors);
         write_module(key, &module);
     }
 }

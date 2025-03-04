@@ -106,13 +106,29 @@ typedef struct _struct_cable {
     struct _struct_cable * next;       // This can go, when we attach to modules rather than separate linked list
 } tCable;
 
+//typedef enum {
+//    connectorTypeAudioIn,   // Todo: Needs splitting into 2 types: input/output and control/audio
+//    connectorTypeAudioOut,
+//    connectorTypeControlIn,
+//    connectorTypeControlOut,
+ //   connectorTypeMax
+//} tConnectorType;
+
 typedef enum {
-    connectorTypeAudioIn,   // Todo: Needs splitting into 2 types: input/output and control/audio
-    connectorTypeAudioOut,
-    connectorTypeControlIn,
-    connectorTypeControlOut,
-    connectorTypeMax
+    connectorTypeAudio,
+    connectorTypeControl
 } tConnectorType;
+
+typedef enum {
+    connectorDirIn,
+    connectorDirOut
+} tConnectorDir;
+
+typedef struct {
+    tConnectorDir       dir;
+    tConnectorType      type;
+    tCoord              coord;
+} tConnector;
 
 typedef struct {
     uint32_t location;
@@ -133,8 +149,8 @@ typedef struct _struct_module {
     char                    name[MODULE_NAME_SIZE + 1];
     uint32_t                numParams;                                              // Relates to tComp array below - Todo: only refer to this in the permanent tModuleProperties
     tParam                  param[VARIATIONS][MAX_PARAMS_PER_MODULE];               // Going to need to allocate this per module, depending on numParams to save memory
-    uint32_t                numConnectors;                                         // Todo: only refer to this in the permanent tModuleProperties - todo: might need to be num inputs connectors and num output connectors, but that would make direct array referencing not possible. Better to add up input and output connectors to check against protocol?
-    tCoord                  connector[MAX_CONNECTORS_PER_MODULE][connectorTypeMax]; // Going to need to allocate this per module to save memory - Todo: this should be array of input connectors and output connectors or one array of connectors, marked as input or output
+    //uint32_t                numConnectors;                                         // Todo: only refer to this in the permanent tModuleProperties - todo: might need to be num inputs connectors and num output connectors, but that would make direct array referencing not possible. Better to add up input and output connectors to check against protocol?
+    tConnector *            connector; // Going to need to allocate this per module to save memory - Todo: this should be array of input connectors and output connectors or one array of connectors, marked as input or output
     struct _struct_module * prev;
     struct _struct_module * next;
 } tModule;
@@ -387,6 +403,7 @@ typedef struct {
     const uint32_t height;
     //uint32_t       isLed;
     //uint32_t       upRate;
+    const uint32_t numConnectors;
     void (*renderFunction)(tRectangle, tModule *);
 } tModuleProperties;
 
