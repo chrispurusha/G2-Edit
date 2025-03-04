@@ -175,6 +175,11 @@ void delete_module(tModuleKey key) {
         if (dbModule->next != NULL) {
             dbModule->next->prev = dbModule->prev;
         }
+        
+        if (dbModule->connector != NULL) {
+            free (dbModule->connector);
+        }
+        
         memset(dbModule, 0, sizeof(*dbModule));  // Protection against using stale data
         free(dbModule);
     }
@@ -353,6 +358,11 @@ void database_clear_modules(void) {
     module = firstModule;
     while (module != NULL) {
         nextModule = module->next;
+        
+        if (module->connector != NULL) {
+            free (module->connector);
+        }
+        
         free(module);
         module = nextModule;
     }
