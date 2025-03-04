@@ -28,6 +28,7 @@ void render_module(tModule * module);
 void render_modules(void);
 void render_cables(void);
 void calculate_module_bounds(double * xEndMax, double * yEndMax, tRectangle moduleArea);
+void render_cable_from_to(tConnector from, tConnector to);
 tRectangle module_area(void);
 
 #endif // __MODULE_GRAPHICS_H__

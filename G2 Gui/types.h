@@ -120,6 +120,7 @@ typedef struct {
     tConnectorDir       dir;
     tConnectorType      type;
     tCoord              coord;
+    tRectangle          rectangle;
 } tConnector;
 
 typedef struct {
@@ -168,13 +169,12 @@ typedef struct {
 } tDragging;     // Parameter value dragging - Todo: rename
 
 typedef struct {
-    bool active;      // True if the user is dragging a cable
-    tCoord startPos;      // Starting connector position
-    tCoord currentPos;    // Current mouse position while dragging
-    uint32_t startModule; // Index of the starting module
-    uint32_t startConnector; // Index of the starting connector
-    //tConnectorType startType; // Type of the connector (Audio/Control)
-} tCableDragState;
+    bool active;
+    tModuleKey fromModuleKey;
+    uint32_t fromConnectorIndex;
+    //tConnector fromConnector;
+    tConnector toConnector;
+} tCableDragging;
 
 
 typedef enum {

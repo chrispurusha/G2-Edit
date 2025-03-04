@@ -57,8 +57,7 @@ static GLFWwindow * gWindow  = NULL;
 
 static tDragging     gDragging = {0};   // Todo - rename to parameter value drag or similar
 static tModuleDragging gModuleDrag = {0};;
-
-static tCableDragState gCableDrag = {0};
+static tCableDragging gCableDrag = {0};
 
 extern tMessageQueue gCommandQueue;
 extern tModuleProperties gModuleProperties[];
@@ -146,6 +145,31 @@ bool handle_module_click(tCoord coord) {
             }
         }
         
+        for (int i = 0; i < gModuleProperties[module.type].numConnectors; i++) {
+            if (within_rectangle(coord, module.connector[i].rectangle)) {
+                double val = 0;
+                tRectangle area = module_area();
+                
+                printf("On connector!\n");
+                
+                gCableDrag.fromModuleKey = module.key;
+                gCableDrag.fromConnectorIndex = i;
+                
+                // Todo: Use a function for this scaling etc.
+                val = coord.x - area.coord.x;
+                val += calc_scroll_x();
+                val /= get_zoom_factor();
+                gCableDrag.toConnector.coord.x = val;
+                val = coord.y - area.coord.y;
+                val += calc_scroll_y();
+                val /= get_zoom_factor();
+                gCableDrag.toConnector.coord.y = val;
+                
+                gCableDrag.active = true;
+                return true;
+            }
+        }
+        
         if (within_rectangle(coord, module.rectangle)) {
             // Take the module off the linked list and put on the end, which makes it render last and so render on the top
             tModule tmpModule = {0};
@@ -158,6 +182,7 @@ bool handle_module_click(tCoord coord) {
         }
 
     }
+
 
     return false;
 }
@@ -216,6 +241,21 @@ void shift_modules_down(tModuleKey key) {
     }
 }
 
+int find_target_count_from_index(tModule *module, tConnectorDir dir, int index) {
+    int count = 0;
+
+    for (int i = 0; i <= index; i++) {
+        if (module->connector[i].dir == dir) {
+            if (i == index) {
+                return count;  // Found the target count at this index
+            }
+            count++;
+        }
+    }
+
+    return -1;  // Index does not match the direction
+}
+
 void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     if (button != GLFW_MOUSE_BUTTON_LEFT) {
         return;                                   // Ignore non-left clicks for now
@@ -249,6 +289,39 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             // Todo - write new modules positions to device
         }
         
+        if (gCableDrag.active == true) {
+            tRectangle area = module_area();
+            tModule module = {0};
+            double val = 0;
+
+            reset_walk_module();
+            while (walk_next_module(&module)) {
+                for (int i = 0; i < gModuleProperties[module.type].numConnectors; i++) {
+                    if (within_rectangle(coord, module.connector[i].rectangle)) {
+                        printf("Within a target connector\n");
+                        // maybe mark found, might need to act on it
+                        tCableKey key   = {0};
+                        tCable    cable = {0};
+                        tModule   fromModule = {0};
+                        
+                        read_module(gCableDrag.fromModuleKey, &fromModule);
+                        
+                        key.location = fromModule.key.location;
+                        key.moduleFrom = fromModule.key.index;
+                        key.connectorFrom = find_target_count_from_index(&module, connectorDirOut, gCableDrag.fromConnectorIndex); // Direction needs to come from the *from* type
+                        key.moduleTo = module.key.location;
+                        key.connectorTo = find_target_count_from_index(&module, connectorDirIn, i);
+                        cable.colour = 0;  // for now
+                        cable.linkType = 1; // for now
+                        
+                        write_cable(key, &cable);
+                        
+                        break;
+                    }
+                }
+            }
+        }
+        
         memset(&gModuleDrag, 0, sizeof(gModuleDrag));     // Reset dragging state
         memset(&gDragging, 0, sizeof(gDragging));     // Reset dragging state
         memset(&gCableDrag, 0, sizeof(gCableDrag));     // Reset dragging state
@@ -262,8 +335,10 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     uint32_t        value          = 0;
     tModule         module         = {0};
     tMessageContent messageContent = {0};
+    double val = 0;
 
-
+    tRectangle area = module_area();
+    
     // Scale x and y to match intended rendering window
     glfwGetWindowSize(window, &width, &height);
     x = (x * (double)width) / (double)width;
@@ -299,12 +374,37 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         messageContent.value     = value;
         msg_send(&gCommandQueue, &messageContent);
     } else if (gModuleDrag.active == true) {
-        tRectangle area = module_area();
         read_module(gModuleDrag.moduleKey, &module);
         printf("x coord %f, y coord %f\n", area.coord.x, area.coord.y);
-        module.column = floor(((x - area.coord.x) / MODULE_X_SPAN)/ get_zoom_factor());
-        module.row = floor(((y - area.coord.y) / MODULE_Y_SPAN) / get_zoom_factor());
+        
+        // Todo: Use a function for this scaling etc.
+        
+        val = x - area.coord.x;
+        val += calc_scroll_x();
+        val /= MODULE_X_SPAN;
+        val /= get_zoom_factor();
+        module.column = floor(val);
+        val = y - area.coord.y;
+        val += calc_scroll_y();
+        val /= MODULE_Y_SPAN;
+        val /= get_zoom_factor();
+        module.row = floor(val);
         write_module(gModuleDrag.moduleKey, &module);
+    } else if (gCableDrag.active == true) {
+        tConnector toConnector;
+        
+        // Todo: Use a function for this scaling etc.
+        val = x - area.coord.x;
+        val += calc_scroll_x();
+        val /= get_zoom_factor();
+        gCableDrag.toConnector.coord.x = val;
+        val = y - area.coord.y;
+        val += calc_scroll_y();
+        val /= get_zoom_factor();
+        gCableDrag.toConnector.coord.y = val;
+        
+        //gCableDrag.fromModule = module;
+        //gCableDrag.fromConnectorIndex = i;
     }
 }
 
@@ -444,6 +544,11 @@ void do_graphics_loop(void) {
 
         render_modules();
         render_cables();
+        if (gCableDrag.active == true) {
+            tModule module = {0};
+            read_module(gCableDrag.fromModuleKey, &module);
+            render_cable_from_to(module.connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector);
+        }
         render_top_bar();
         render_scrollbars(gWindow);
 

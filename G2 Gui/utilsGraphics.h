@@ -63,5 +63,7 @@ void set_render_height(int height);
 double get_zoom_factor(void);
 int get_render_width(void);
 int get_render_height(void);
+double calc_scroll_x(void);
+double calc_scroll_y(void);
 
 #endif // __UTILS_GRAPHICS_H__

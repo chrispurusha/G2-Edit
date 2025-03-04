@@ -190,11 +190,9 @@ void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir d
     module->connector[connectorIndex].type = type;
 
     set_rbg_colour(connectorColourMap[module->connector[connectorIndex].dir][module->connector[connectorIndex].type]);
-    render_circle_part(moduleArea, coord, 6.0, 10.0, 0.0, 10.0);  // Should be zoomfactored
+    render_circle_part(moduleArea, coord, 8.0, 10.0, 0.0, 10.0);  // Should be zoomfactored
     set_rbg_colour(RGB_BLACK);
-    render_circle_part(moduleArea, coord, 3.0, 10.0, 0.0, 10.0);
-
-    //module->numConnectors++; // Ultimately, we might want to pre-calculate this per module - set when module is created!!!!
+    module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, coord, 4.0, 10.0, 0.0, 10.0);
 }
 
 void render_FltClassic(tRectangle rectangle, tModule * module) {
@@ -455,21 +453,19 @@ void render_modules(void) {
     render_rectangle(mainArea, {{0.0, area.coord.y + area.size.h}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
 }
 
-void render_cable_from_to(tCoord from, tCoord to) {
+void render_cable_from_to(tConnector from, tConnector to) {
     tCoord control = {0};
 
-    if ((from.x != 0.0) && (from.y != 0.0) && (to.y != 0.0) && (to.y != 0.0)) {
-        if (from.x == to.x) {
-            control.x = from.x;
-            control.y = fmin(from.y, to.y);
-        }
-        else {
-            control.x = ((from.x + to.x) / 2.0);
-            control.y = fmax(from.y, to.y) + 40.0;
-        }
-
-        render_bezier_curve(moduleArea, from, control, to, 4.0, 15);
+    if (from.coord.x == to.coord.x) {
+        control.x = from.coord.x;
+        control.y = fmin(from.coord.y, to.coord.y);
     }
+    else {
+        control.x = ((from.coord.x + to.coord.x) / 2.0);
+        control.y = fmax(from.coord.y, to.coord.y) + 40.0;
+    }
+
+    render_bezier_curve(moduleArea, from.coord, control, to.coord, 4.0, 15);
 }
 
 int find_connector_index(tModule *module, tConnectorDir dir, int targetCount) {
@@ -516,7 +512,7 @@ void render_cable(tCable * cable) {
     toConnectorIndex = find_connector_index(&moduleTo, connectorDirIn, cable->key.connectorTo);
     
     if (fromConnectorIndex != -1 && toConnectorIndex != -1) {
-        render_cable_from_to(moduleFrom.connector[fromConnectorIndex].coord, moduleTo.connector[toConnectorIndex].coord);
+        render_cable_from_to(moduleFrom.connector[fromConnectorIndex], moduleTo.connector[toConnectorIndex]);
     }
     
     // Todo - see if there's any corruption on fltmulti's final 2 connector items on the array
@@ -524,7 +520,7 @@ void render_cable(tCable * cable) {
     //    printf("%d to dir and type %u %u\n", i, moduleTo.connector[i].dir, moduleTo.connector[i].type);
     //}
 
-    printf("\n");
+    //printf("\n");
 }
 
 void render_cables(void) {

@@ -71,7 +71,7 @@ static inline double scale(double value) {
     return value * gZoomFactor;
 }
 
-static double calc_scroll_x(void) {
+double calc_scroll_x(void) {
     tRectangle area  = module_area();
     double     value = 0.0;
 
@@ -82,7 +82,7 @@ static double calc_scroll_x(void) {
     return value;
 }
 
-static double calc_scroll_y(void) {
+double calc_scroll_y(void) {
     tRectangle area  = module_area();
     double     value = 0.0;
 
