@@ -441,10 +441,12 @@ void render_cable(tCable * cable) {
     }
 
     if (cable->key.connectorFrom >= moduleFrom.numConnectors) {
-        printf("From connector of %u >= %u\n", cable->key.connectorFrom, moduleTo.numConnectors);
+        //printf("From connector of %u >= %u\n", cable->key.connectorFrom, moduleTo.numConnectors);
+        return;
     }
     if (cable->key.connectorTo >= moduleTo.numConnectors) {
-        printf("To connector of %u >= %u\n", cable->key.connectorTo, moduleTo.numConnectors);
+        //printf("To connector of %u >= %u\n", cable->key.connectorTo, moduleTo.numConnectors);
+        return;
     }
     //printf("Connecting %u %u to %u %u\n", cable->key.moduleFrom, cable->key.connectorFrom, cable->key.moduleTo, cable->key.connectorTo);
     

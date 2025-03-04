@@ -27,7 +27,7 @@
 
 bool read_module(tModuleKey key, tModule * module);
 void write_module(tModuleKey key, tModule * module);
-void delete_module(tModuleKey key, tModule * module);
+void delete_module(tModuleKey key);
 void dump_modules(void);
 void reset_walk_module(void);
 bool walk_next_module(tModule * module);

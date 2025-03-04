@@ -158,7 +158,7 @@ void write_module(tModuleKey key, tModule * module) {
     mutex_unlock();
 }
 
-void delete_module(tModuleKey key, tModule * module) {
+void delete_module(tModuleKey key) {
     tModule * dbModule      = NULL;
 
     mutex_lock();

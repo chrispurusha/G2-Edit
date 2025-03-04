@@ -147,8 +147,13 @@ bool handle_module_click(tCoord coord) {
         }
         
         if (within_rectangle(coord, module.rectangle)) {
+            // Take the module off the linked list and put on the end, which makes it render last and so render on the top
+            tModule tmpModule = {0};
+            read_module(module.key, &tmpModule);
+            delete_module(module.key);
+            write_module(tmpModule.key, &tmpModule);
+            gModuleDrag.moduleKey = tmpModule.key;
             gModuleDrag.active = true;
-            gModuleDrag.moduleKey = module.key;
             return true;
         }
 
@@ -161,7 +166,7 @@ void shift_modules_down(tModuleKey key) {
     tModule module = {0};
     tModule walk = {0};
     bool doDrop = false;
-    uint32_t rowAndBelowToMove = 0;
+    uint32_t rowAndBelowToDrop = 0;
     uint32_t dropAmount = 0;
     
     if (read_module(key, &module) == false) {
@@ -171,23 +176,27 @@ void shift_modules_down(tModuleKey key) {
     // First step - if moved module lands on exisitng module after first row, drop it down
     reset_walk_module();
     while (walk_next_module(&walk)) {
-        if (!((walk.key.location == key.location) && (walk.key.index == key.index)) && (walk.column == module.column)) {
-            if ((module.row > walk.row) && (module.row < walk.row+gModuleProperties[walk.type].height)) {
-                module.row = walk.row+gModuleProperties[walk.type].height;
-                write_module(module.key, &module);
-                break;
+        if ((walk.column == module.column) && (walk.key.location == key.location)) {
+            if (walk.key.index != key.index) {
+                if ((module.row > walk.row) && (module.row < walk.row+gModuleProperties[walk.type].height)) {
+                    module.row = walk.row+gModuleProperties[walk.type].height;
+                    write_module(module.key, &module);
+                    break;
+                }
             }
         }
     }
     
     reset_walk_module();
     while (walk_next_module(&walk)) {
-        if (!((walk.key.location == key.location) && (walk.key.index == key.index)) && (walk.column == module.column)) {
-            if ((walk.row >= module.row) && (walk.row < module.row+gModuleProperties[module.type].height)) {
-                rowAndBelowToMove = walk.row;
-                dropAmount = (module.row+gModuleProperties[module.type].height)-walk.row;
-                doDrop = true;
-                break;
+        if ((walk.column == module.column) && (walk.key.location == key.location)) {
+            if (walk.key.index != key.index) {
+                if ((walk.row >= module.row) && (walk.row < module.row+gModuleProperties[module.type].height)) {
+                    rowAndBelowToDrop = walk.row;
+                    dropAmount = (module.row+gModuleProperties[module.type].height)-walk.row;
+                    doDrop = true;
+                    break;
+                }
             }
         }
     }
@@ -195,10 +204,12 @@ void shift_modules_down(tModuleKey key) {
     if (doDrop == true) {
         reset_walk_module();
         while (walk_next_module(&walk)) {
-            if (!((walk.key.location == key.location) && (walk.key.index == key.index)) && (walk.column == module.column)) {
-                if (walk.row >= rowAndBelowToMove) {
-                    walk.row += dropAmount;
-                    write_module(walk.key, &walk);
+            if ((walk.column == module.column) && (walk.key.location == key.location)) {
+                if (walk.key.index != key.index) {
+                    if (walk.row >= rowAndBelowToDrop) {
+                        walk.row += dropAmount;
+                        write_module(walk.key, &walk);
+                    }
                 }
             }
         }
