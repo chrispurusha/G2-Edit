@@ -158,7 +158,7 @@ void write_module(tModuleKey key, tModule * module) {
     mutex_unlock();
 }
 
-void delete_module(tModuleKey key) {
+void delete_module(tModuleKey key, bool freeConnectors) {
     tModule * dbModule      = NULL;
 
     mutex_lock();
@@ -176,8 +176,10 @@ void delete_module(tModuleKey key) {
             dbModule->next->prev = dbModule->prev;
         }
         
-        if (dbModule->connector != NULL) {
-            free (dbModule->connector);
+        if (freeConnectors == true) {
+            if (dbModule->connector != NULL) {
+                free (dbModule->connector);
+            }
         }
         
         memset(dbModule, 0, sizeof(*dbModule));  // Protection against using stale data

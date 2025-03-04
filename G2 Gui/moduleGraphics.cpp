@@ -520,6 +520,9 @@ void render_cable(tCable * cable) {
     }
     
     // Todo - see if there's any corruption on fltmulti's final 2 connector items on the array
+    //for (int i=0; i<gModuleProperties[moduleTo.type].numConnectors; i++) {
+    //    printf("%d to dir and type %u %u\n", i, moduleTo.connector[i].dir, moduleTo.connector[i].type);
+    //}
 
     printf("\n");
 }

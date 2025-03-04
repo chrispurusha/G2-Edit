@@ -150,7 +150,7 @@ bool handle_module_click(tCoord coord) {
             // Take the module off the linked list and put on the end, which makes it render last and so render on the top
             tModule tmpModule = {0};
             read_module(module.key, &tmpModule);
-            delete_module(module.key);
+            delete_module(module.key, false);
             write_module(tmpModule.key, &tmpModule);
             gModuleDrag.moduleKey = tmpModule.key;
             gModuleDrag.active = true;

@@ -106,15 +106,7 @@ typedef struct _struct_cable {
     struct _struct_cable * next;       // This can go, when we attach to modules rather than separate linked list
 } tCable;
 
-//typedef enum {
-//    connectorTypeAudioIn,   // Todo: Needs splitting into 2 types: input/output and control/audio
-//    connectorTypeAudioOut,
-//    connectorTypeControlIn,
-//    connectorTypeControlOut,
- //   connectorTypeMax
-//} tConnectorType;
-
-typedef enum {
+typedef enum {   // Todo: add a new type for e.g. yellow gate
     connectorTypeAudio,
     connectorTypeControl
 } tConnectorType;
