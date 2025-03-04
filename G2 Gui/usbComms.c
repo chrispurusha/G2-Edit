@@ -173,9 +173,8 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
             //module.numConnectors = gModuleProperties[type].numConnectors;  //
             printf("Type = %s connectors %u\n", gModuleProperties[type].name, gModuleProperties[type].numConnectors);
             module.connector = malloc(gModuleProperties[type].numConnectors * sizeof(tConnector));
-            if (module.connector == NULL) {
+            if (module.connector != NULL) {
                 memset(module.connector, 0, gModuleProperties[type].numConnectors * sizeof(tConnector));
-                //module.numConnectors = 0;
             }
         }
 
