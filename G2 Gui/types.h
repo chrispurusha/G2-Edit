@@ -117,10 +117,10 @@ typedef enum {
 } tConnectorDir;
 
 typedef struct {
-    tConnectorDir       dir;
-    tConnectorType      type;
-    tCoord              coord;
-    tRectangle          rectangle;
+    tConnectorDir  dir;
+    tConnectorType type;
+    tCoord         coord;
+    tRectangle     rectangle;
 } tConnector;
 
 typedef struct {
@@ -133,17 +133,17 @@ typedef struct _struct_module {
     uint32_t                type;              // Review this. Is it used!?
     uint32_t                row;
     uint32_t                column;
-    tRectangle              rectangle;         // Purely for mouse-click recognition
+    tRectangle              rectangle;                                // Purely for mouse-click recognition
     uint32_t                colour;
-    uint32_t                upRate;            // Probably needs to be permanent in tModuleProperties
-    uint32_t                isLed;             // Probably needs to be permanent in tModuleProperties
-    uint32_t                unknown1;                                         // Guess we should store this, to write back if necessary. Might not be needed
-    uint32_t                modeCount;                                        // Don't yet know what this is for. Might need modes array adding
+    uint32_t                upRate;                                   // Probably needs to be permanent in tModuleProperties
+    uint32_t                isLed;                                    // Probably needs to be permanent in tModuleProperties
+    uint32_t                unknown1;                                 // Guess we should store this, to write back if necessary. Might not be needed
+    uint32_t                modeCount;                                // Don't yet know what this is for. Might need modes array adding
     char                    name[MODULE_NAME_SIZE + 1];
-    uint32_t                numParams;                                              // Relates to tComp array below - Todo: only refer to this in the permanent tModuleProperties
-    tParam                  param[VARIATIONS][MAX_PARAMS_PER_MODULE];               // Going to need to allocate this per module, depending on numParams to save memory
+    uint32_t                numParams;                                // Relates to tComp array below - Todo: only refer to this in the permanent tModuleProperties
+    tParam                  param[VARIATIONS][MAX_PARAMS_PER_MODULE]; // Going to need to allocate this per module, depending on numParams to save memory
     //uint32_t                numConnectors;                                         // Todo: only refer to this in the permanent tModuleProperties - todo: might need to be num inputs connectors and num output connectors, but that would make direct array referencing not possible. Better to add up input and output connectors to check against protocol?
-    tConnector *            connector; // Going to need to allocate this per module to save memory - Todo: this should be array of input connectors and output connectors or one array of connectors, marked as input or output
+    tConnector *            connector;                                // Going to need to allocate this per module to save memory - Todo: this should be array of input connectors and output connectors or one array of connectors, marked as input or output
     struct _struct_module * prev;
     struct _struct_module * next;
 } tModule;
@@ -156,7 +156,7 @@ typedef struct {
 } tScrollState;
 
 typedef struct {
-    bool     active;
+    bool       active;
     tModuleKey moduleKey;
 } tModuleDragging;     // Parameter value dragging - Todo: rename
 
@@ -169,9 +169,9 @@ typedef struct {
 } tDragging;     // Parameter value dragging - Todo: rename
 
 typedef struct {
-    bool active;
+    bool       active;
     tModuleKey fromModuleKey;
-    uint32_t fromConnectorIndex;
+    uint32_t   fromConnectorIndex;
     //tConnector fromConnector;
     tConnector toConnector;
 } tCableDragging;

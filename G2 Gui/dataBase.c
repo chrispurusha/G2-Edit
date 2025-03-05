@@ -31,6 +31,8 @@ static tModule * walkModule  = NULL;
 static tCable *  firstCable  = NULL;
 static tCable *  walkCable   = NULL;
 
+extern tModuleProperties gModuleProperties[];
+
 static void mutex_lock(void) {
     if (pthread_mutex_lock(&dbMutex) != 0) {
         pthread_mutexattr_t attr = {0};
@@ -50,7 +52,7 @@ static void mutex_unlock(void) {
 
 void dump_modules(void) {
     tModule * module = NULL;
-    uint32_t count = 0;
+    uint32_t  count  = 0;
 
     mutex_lock();
 
@@ -67,7 +69,7 @@ void dump_modules(void) {
         printf(" Column %d\n", module->column);
         printf(" Prev %p\n", module->prev);
         printf(" Next %p\n", module->next);
-        
+
         count++;
         module = module->next;
     }
@@ -143,13 +145,13 @@ void write_module(tModuleKey key, tModule * module) {
                 iterateModule = iterateModule->next;
             }
             iterateModule->next = dbModule;
-            dbModule->prev = iterateModule;
+            dbModule->prev      = iterateModule;
         }
     }
 
     // Preserve prev and next pointers before memcpy
-    tModule *prev = dbModule->prev;
-    tModule *next = dbModule->next;
+    tModule * prev = dbModule->prev;
+    tModule * next = dbModule->next;
     memcpy(dbModule, module, sizeof(*dbModule));
     // Restore prev and next pointers
     dbModule->prev = prev;
@@ -159,7 +161,7 @@ void write_module(tModuleKey key, tModule * module) {
 }
 
 void delete_module(tModuleKey key, bool freeConnectors) {
-    tModule * dbModule      = NULL;
+    tModule * dbModule = NULL;
 
     mutex_lock();
 
@@ -168,27 +170,28 @@ void delete_module(tModuleKey key, bool freeConnectors) {
     if (dbModule != NULL) {
         if (dbModule->prev != NULL) {
             dbModule->prev->next = dbModule->next;
-        } else {
+        }
+        else {
             firstModule = dbModule->next;
         }
-        
+
         if (dbModule->next != NULL) {
             dbModule->next->prev = dbModule->prev;
         }
-        
+
         if (freeConnectors == true) {
             if (dbModule->connector != NULL) {
-                free (dbModule->connector);
+                free(dbModule->connector);
             }
         }
-        
+
         memset(dbModule, 0, sizeof(*dbModule));  // Protection against using stale data
         free(dbModule);
     }
 
     mutex_unlock();
 }
-    
+
 void reset_walk_module(void) {
     walkModule = NULL;
 }
@@ -360,11 +363,11 @@ void database_clear_modules(void) {
     module = firstModule;
     while (module != NULL) {
         nextModule = module->next;
-        
+
         if (module->connector != NULL) {
-            free (module->connector);
+            free(module->connector);
         }
-        
+
         free(module);
         module = nextModule;
     }
@@ -388,6 +391,36 @@ void database_clear_cables(void) {
     firstCable = NULL;
 
     mutex_unlock();
+}
+
+int find_io_count_from_index(tModule * module, tConnectorDir dir, int index) {
+    int ioCount = -1;
+
+    printf("Searching dir %d\n", dir);
+    for (int i = 0; i <= index; i++) {
+        //printf("%d is type %d\n", i, module->connector[i].dir);
+        if (module->connector[i].dir == dir) {
+            ioCount++;
+        }
+    }
+
+    return ioCount;  // Index does not match the direction
+}
+
+int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCount) {   // Todo: have an instance of this in graphics too! Needs moving to one place
+    int count = 0;
+
+    //printf("%s find index num connectors %u\n", gModuleProperties[module->type].name, gModuleProperties[module->type].numConnectors);
+    for (int index = 0; index < gModuleProperties[module->type].numConnectors; index++) {
+        if (module->connector[index].dir == dir) {
+            if (count == targetCount) {
+                return index;
+            }
+            count++;
+        }
+    }
+
+    return -1;  // Not found
 }
 
 #ifdef __cplusplus

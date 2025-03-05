@@ -55,11 +55,11 @@ static FT_Library   gLibrary = {0};
 static FT_Face      gFace    = {0};
 static GLFWwindow * gWindow  = NULL;
 
-static tDragging     gDragging = {0};   // Todo - rename to parameter value drag or similar
+static tDragging       gDragging   = {0}; // Todo - rename to parameter value drag or similar
 static tModuleDragging gModuleDrag = {0};;
-static tCableDragging gCableDrag = {0};
+static tCableDragging  gCableDrag  = {0};
 
-extern tMessageQueue gCommandQueue;
+extern tMessageQueue     gCommandQueue;
 extern tModuleProperties gModuleProperties[];
 
 void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
@@ -105,37 +105,6 @@ bool handle_scrollbar_click(tCoord coord) {
     return false;
 }
 
-int find_io_count_from_index(tModule *module, tConnectorDir dir, int index) {
-    int ioCount = -1;
-
-    printf("Searching dir %d\n", dir);
-    for (int i = 0; i <= index; i++) {
-        //printf("%d is type %d\n", i, module->connector[i].dir);
-        if (module->connector[i].dir == dir) {
-            ioCount++;
-        }
-    }
-
-    return ioCount;  // Index does not match the direction
-}
-
-#if 0
-int find_index_from_io_count(tModule *module, tConnectorDir dir, int targetCount) {
-    int count = 0;
-
-    for (int i = 0; i < gModuleProperties[module->type].numConnectors; i++) {
-        if (module->connector[i].dir == dir) {
-            if (count == targetCount) {
-                return i;  // Found the index corresponding to the target count
-            }
-            count++;
-        }
-    }
-
-    return -1;  // Target count exceeds the number of matching connectors
-}
-#endif
-
 bool handle_module_click(tCoord coord) {
     if (!within_rectangle(coord, module_area())) {
         return false;
@@ -149,7 +118,6 @@ bool handle_module_click(tCoord coord) {
             tParam * param = &module.param[0][i];
 
             if (within_rectangle(coord, param->rectangle)) {
-                
                 if (param->type == paramTypeDial) {
                     gDragging.index     = module.key.index;
                     gDragging.location  = module.key.location;
@@ -161,7 +129,7 @@ bool handle_module_click(tCoord coord) {
                 else if (param->type == paramTypeToggle) {
                     param->value = (param->value + 1) % param->range;
                     write_module(module.key, &module);
-                    
+
                     tMessageContent messageContent;
                     messageContent.cmd       = eMsgCmdSetValue;
                     messageContent.location  = module.key.location;
@@ -169,39 +137,39 @@ bool handle_module_click(tCoord coord) {
                     messageContent.param     = i;
                     messageContent.variation = 0;
                     messageContent.value     = param->value;
-                    
+
                     msg_send(&gCommandQueue, &messageContent);
                     return true;
                 }
             }
         }
-        
+
         for (int i = 0; i < gModuleProperties[module.type].numConnectors; i++) {
             if (within_rectangle(coord, module.connector[i].rectangle)) {
-                double val = 0;
+                double     val  = 0;
                 tRectangle area = module_area();
-                
+
                 printf("On connector!\n");
-                
+
                 printf("!!!!!!From module key index %d %s connector index = %d\n\n", module.key.index, gModuleProperties[module.type].name, i);
-                gCableDrag.fromModuleKey = module.key;
+                gCableDrag.fromModuleKey      = module.key;
                 gCableDrag.fromConnectorIndex = i;   // Index into array of connectors
-                
+
                 // Todo: Use a function for this scaling etc.
-                val = coord.x - area.coord.x;
+                val  = coord.x - area.coord.x;
                 val += calc_scroll_x();
                 val /= get_zoom_factor();
                 gCableDrag.toConnector.coord.x = val;
-                val = coord.y - area.coord.y;
+                val  = coord.y - area.coord.y;
                 val += calc_scroll_y();
                 val /= get_zoom_factor();
                 gCableDrag.toConnector.coord.y = val;
-                
+
                 gCableDrag.active = true;
                 return true;
             }
         }
-        
+
         if (within_rectangle(coord, module.rectangle)) {
             // Take the module off the linked list and put on the end, which makes it render last and so render on the top
             tModule tmpModule = {0};
@@ -209,10 +177,9 @@ bool handle_module_click(tCoord coord) {
             delete_module(module.key, false);
             write_module(tmpModule.key, &tmpModule);
             gModuleDrag.moduleKey = tmpModule.key;
-            gModuleDrag.active = true;
+            gModuleDrag.active    = true;
             return true;
         }
-
     }
 
 
@@ -220,44 +187,44 @@ bool handle_module_click(tCoord coord) {
 }
 
 void shift_modules_down(tModuleKey key) {
-    tModule module = {0};
-    tModule walk = {0};
-    bool doDrop = false;
+    tModule  module            = {0};
+    tModule  walk              = {0};
+    bool     doDrop            = false;
     uint32_t rowAndBelowToDrop = 0;
-    uint32_t dropAmount = 0;
-    
+    uint32_t dropAmount        = 0;
+
     if (read_module(key, &module) == false) {
         return;
     }
-    
+
     // First step - if moved module lands on exisitng module after first row, drop it down
     reset_walk_module();
     while (walk_next_module(&walk)) {
         if ((walk.column == module.column) && (walk.key.location == key.location)) {
             if (walk.key.index != key.index) {
-                if ((module.row > walk.row) && (module.row < walk.row+gModuleProperties[walk.type].height)) {
-                    module.row = walk.row+gModuleProperties[walk.type].height;
+                if ((module.row > walk.row) && (module.row < walk.row + gModuleProperties[walk.type].height)) {
+                    module.row = walk.row + gModuleProperties[walk.type].height;
                     write_module(module.key, &module);
                     break;
                 }
             }
         }
     }
-    
+
     reset_walk_module();
     while (walk_next_module(&walk)) {
         if ((walk.column == module.column) && (walk.key.location == key.location)) {
             if (walk.key.index != key.index) {
-                if ((walk.row >= module.row) && (walk.row < module.row+gModuleProperties[module.type].height)) {
+                if ((walk.row >= module.row) && (walk.row < module.row + gModuleProperties[module.type].height)) {
                     rowAndBelowToDrop = walk.row;
-                    dropAmount = (module.row+gModuleProperties[module.type].height)-walk.row;
-                    doDrop = true;
+                    dropAmount        = (module.row + gModuleProperties[module.type].height) - walk.row;
+                    doDrop            = true;
                     break;
                 }
             }
         }
     }
-    
+
     if (doDrop == true) {
         reset_walk_module();
         while (walk_next_module(&walk)) {
@@ -278,7 +245,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         return;                                   // Ignore non-left clicks for now
     }
     int    width, height;
-    tCoord coord = {0};
+    tCoord coord    = {0};
     bool   quitLoop = false;
 
     glfwGetWindowSize(window, &width, &height);
@@ -303,61 +270,61 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         if (gModuleDrag.active == true) {
             shift_modules_down(gModuleDrag.moduleKey);
             // If on top of existing module on this column, move everything else down
-            
+
             // Todo - write new modules positions to device
         }
-        
+
         if (gCableDrag.active == true) {
             printf("Cable drag is active\n");
-            
+
             //tRectangle area = module_area();
-            
+
             tModule toModule = {0};
-            double val = 0;
+            double  val      = 0;
 
             reset_walk_module();
 
             while (walk_next_module(&toModule) && quitLoop == false) {
-
                 for (int i = 0; i < gModuleProperties[toModule.type].numConnectors; i++) {
                     if (within_rectangle(coord, toModule.connector[i].rectangle)) {
-                        
                         // Todo - check we're not connecting to ourselves!!!!!!!
-                        
+
                         tCableKey cableKey   = {0};
-                        tCable    cable = {0};
+                        tCable    cable      = {0};
                         tModule   fromModule = {0};
-                        
+
                         read_module(gCableDrag.fromModuleKey, &fromModule);
 
-                        cableKey.location = fromModule.key.location;
-                        cableKey.moduleFromIndex = fromModule.key.index;
+                        cableKey.location             = fromModule.key.location;
+                        cableKey.moduleFromIndex      = fromModule.key.index;
                         cableKey.connectorFromIoCount = find_io_count_from_index(&fromModule, fromModule.connector[gCableDrag.fromConnectorIndex].dir, gCableDrag.fromConnectorIndex);
-                        cableKey.moduleToIndex = toModule.key.index;
-                        cableKey.connectorToIoCount = find_io_count_from_index(&toModule, toModule.connector[i].dir, i);
+                        cableKey.moduleToIndex        = toModule.key.index;
+                        cableKey.connectorToIoCount   = find_io_count_from_index(&toModule, toModule.connector[i].dir, i);
                         //printf("From dir = %d\n", fromModule.connector[gCableDrag.fromConnectorIndex].dir);
                         cableKey.linkType = fromModule.connector[gCableDrag.fromConnectorIndex].dir; // // Linktype 1 = from output 0 = from input
                         //printf("Linktype %d (1=fromout 0=fromin)\n", cableKey.linkType);
-                        cable.colour = 0;  // for now
+                        cable.colour = 0;                                                            // for now
 
                         if (fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirIn && toModule.connector[i].dir == connectorDirOut) {
                             printf("Wrong direction - from in to out\n");
-                            uint32_t tmpModuleIndex = cableKey.moduleFromIndex;
+                            uint32_t tmpModuleIndex    = cableKey.moduleFromIndex;
                             uint32_t tmpConnectorIndex = cableKey.connectorFromIoCount;
-                            
-                            cableKey.moduleFromIndex = cableKey.moduleToIndex;
+
+                            cableKey.moduleFromIndex      = cableKey.moduleToIndex;
                             cableKey.connectorFromIoCount = cableKey.connectorToIoCount;
-                            cableKey.moduleToIndex = tmpModuleIndex;
-                            cableKey.connectorToIoCount = tmpConnectorIndex;
-                            cableKey.linkType = toModule.connector[i].dir;
+                            cableKey.moduleToIndex        = tmpModuleIndex;
+                            cableKey.connectorToIoCount   = tmpConnectorIndex;
+                            cableKey.linkType             = toModule.connector[i].dir;
                         }
-                        
+
                         //printf("\n!!! from dir = %d to dir = %d (0=in 1=out)\n", fromModule.connector[gCableDrag.fromConnectorIndex].dir, toModule.connector[i].dir);
                         if ((cableKey.moduleFromIndex == cableKey.moduleToIndex) && (gCableDrag.fromConnectorIndex == i)) {
                             break;
-                        } else if (fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut && toModule.connector[i].dir == connectorDirOut){
+                        }
+                        else if (fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut && toModule.connector[i].dir == connectorDirOut) {
                             break;
-                        } else {
+                        }
+                        else {
                             write_cable(cableKey, &cable);
                         }
 
@@ -368,9 +335,9 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
         }
 
-        memset(&gModuleDrag, 0, sizeof(gModuleDrag));     // Reset dragging state
+        memset(&gModuleDrag, 0, sizeof(gModuleDrag)); // Reset dragging state
         memset(&gDragging, 0, sizeof(gDragging));     // Reset dragging state
-        memset(&gCableDrag, 0, sizeof(gCableDrag));     // Reset dragging state
+        memset(&gCableDrag, 0, sizeof(gCableDrag));   // Reset dragging state
     }
 }
 
@@ -381,10 +348,10 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     uint32_t        value          = 0;
     tModule         module         = {0};
     tMessageContent messageContent = {0};
-    double val = 0;
+    double          val            = 0;
 
     tRectangle area = module_area();
-    
+
     // Scale x and y to match intended rendering window
     glfwGetWindowSize(window, &width, &height);
     x = (x * (double)width) / (double)width;
@@ -419,32 +386,34 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         messageContent.variation = gDragging.variation;
         messageContent.value     = value;
         msg_send(&gCommandQueue, &messageContent);
-    } else if (gModuleDrag.active == true) {
+    }
+    else if (gModuleDrag.active == true) {
         read_module(gModuleDrag.moduleKey, &module);
         printf("x coord %f, y coord %f\n", area.coord.x, area.coord.y);
-        
+
         // Todo: Use a function for this scaling etc.
-        
-        val = x - area.coord.x;
-        val += calc_scroll_x();
-        val /= MODULE_X_SPAN;
-        val /= get_zoom_factor();
+
+        val           = x - area.coord.x;
+        val          += calc_scroll_x();
+        val          /= MODULE_X_SPAN;
+        val          /= get_zoom_factor();
         module.column = floor(val);
-        val = y - area.coord.y;
-        val += calc_scroll_y();
-        val /= MODULE_Y_SPAN;
-        val /= get_zoom_factor();
-        module.row = floor(val);
+        val           = y - area.coord.y;
+        val          += calc_scroll_y();
+        val          /= MODULE_Y_SPAN;
+        val          /= get_zoom_factor();
+        module.row    = floor(val);
         write_module(gModuleDrag.moduleKey, &module);
-    } else if (gCableDrag.active == true) {
+    }
+    else if (gCableDrag.active == true) {
         tConnector toConnector;
-        
+
         // Todo: Use a function for this scaling etc.
-        val = x - area.coord.x;
+        val  = x - area.coord.x;
         val += calc_scroll_x();
         val /= get_zoom_factor();
         gCableDrag.toConnector.coord.x = val;
-        val = y - area.coord.y;
+        val  = y - area.coord.y;
         val += calc_scroll_y();
         val /= get_zoom_factor();
         gCableDrag.toConnector.coord.y = val;

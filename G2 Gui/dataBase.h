@@ -42,5 +42,7 @@ void reset_walk_cable(void);
 bool walk_next_cable(tCable * cable);
 void database_clear_modules(void);
 void database_clear_cables(void);
+int find_io_count_from_index(tModule * module, tConnectorDir dir, int index);
+int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCount);
 
 #endif // __DATABASE_H__
