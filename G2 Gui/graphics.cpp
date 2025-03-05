@@ -240,6 +240,32 @@ void shift_modules_down(tModuleKey key) {
     }
 }
 
+void set_up_cable_key(tCableKey * cableKey, tModule * fromModule, tModule * toModule, int toConnectorIndex) {
+    cableKey->location             = fromModule->key.location;
+    cableKey->moduleFromIndex      = fromModule->key.index;
+    cableKey->connectorFromIoCount = find_io_count_from_index(fromModule, fromModule->connector[gCableDrag.fromConnectorIndex].dir, gCableDrag.fromConnectorIndex);
+    cableKey->moduleToIndex        = toModule->key.index;
+    cableKey->connectorToIoCount   = find_io_count_from_index(toModule, toModule->connector[toConnectorIndex].dir, toConnectorIndex);
+    cableKey->linkType             = fromModule->connector[gCableDrag.fromConnectorIndex].dir; // 1 = from output, 0 = from input
+}
+
+bool swap_cable_to_from_if_needed(tCableKey * cableKey, tModule * fromModule, tModule * toModule, int toConnectorIndex) {
+    if (fromModule->connector[gCableDrag.fromConnectorIndex].dir == connectorDirIn &&
+        toModule->connector[toConnectorIndex].dir == connectorDirOut) {
+        uint32_t tmpModuleIndex    = cableKey->moduleFromIndex;
+        uint32_t tmpConnectorIndex = cableKey->connectorFromIoCount;
+
+        cableKey->moduleFromIndex      = cableKey->moduleToIndex;
+        cableKey->connectorFromIoCount = cableKey->connectorToIoCount;
+        cableKey->moduleToIndex        = tmpModuleIndex;
+        cableKey->connectorToIoCount   = tmpConnectorIndex;
+        cableKey->linkType             = toModule->connector[toConnectorIndex].dir;
+
+        return true; // Indicates swap occurred
+    }
+    return false;
+}
+
 void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     if (button != GLFW_MOUSE_BUTTON_LEFT) {
         return;                                   // Ignore non-left clicks for now
@@ -274,67 +300,43 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             // Todo - write new modules positions to device
         }
 
-        if (gCableDrag.active == true) {
+        if (gCableDrag.active) {
             printf("Cable drag is active\n");
 
-            //tRectangle area = module_area();
-
             tModule toModule = {0};
-            double  val      = 0;
-
             reset_walk_module();
 
-            while (walk_next_module(&toModule) && quitLoop == false) {
+            while (walk_next_module(&toModule) && !quitLoop) {
                 for (int i = 0; i < gModuleProperties[toModule.type].numConnectors; i++) {
-                    if (within_rectangle(coord, toModule.connector[i].rectangle)) {
-                        // Todo - check we're not connecting to ourselves!!!!!!!
+                    if (!within_rectangle(coord, toModule.connector[i].rectangle)) {
+                        continue;
+                    }
 
-                        tCableKey cableKey   = {0};
-                        tCable    cable      = {0};
-                        tModule   fromModule = {0};
+                    // TODO: Ensure we are not connecting to ourselves
+                    tCableKey cableKey   = {0};
+                    tCable    cable      = {0};
+                    tModule   fromModule = {0};
 
-                        read_module(gCableDrag.fromModuleKey, &fromModule);
+                    read_module(gCableDrag.fromModuleKey, &fromModule);
+                    set_up_cable_key(&cableKey, &fromModule, &toModule, i);
 
-                        cableKey.location             = fromModule.key.location;
-                        cableKey.moduleFromIndex      = fromModule.key.index;
-                        cableKey.connectorFromIoCount = find_io_count_from_index(&fromModule, fromModule.connector[gCableDrag.fromConnectorIndex].dir, gCableDrag.fromConnectorIndex);
-                        cableKey.moduleToIndex        = toModule.key.index;
-                        cableKey.connectorToIoCount   = find_io_count_from_index(&toModule, toModule.connector[i].dir, i);
-                        //printf("From dir = %d\n", fromModule.connector[gCableDrag.fromConnectorIndex].dir);
-                        cableKey.linkType = fromModule.connector[gCableDrag.fromConnectorIndex].dir; // // Linktype 1 = from output 0 = from input
-                        //printf("Linktype %d (1=fromout 0=fromin)\n", cableKey.linkType);
-                        cable.colour = 0;                                                            // for now
+                    swap_cable_to_from_if_needed(&cableKey, &fromModule, &toModule, i);
 
-                        if (fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirIn && toModule.connector[i].dir == connectorDirOut) {
-                            printf("Wrong direction - from in to out\n");
-                            uint32_t tmpModuleIndex    = cableKey.moduleFromIndex;
-                            uint32_t tmpConnectorIndex = cableKey.connectorFromIoCount;
-
-                            cableKey.moduleFromIndex      = cableKey.moduleToIndex;
-                            cableKey.connectorFromIoCount = cableKey.connectorToIoCount;
-                            cableKey.moduleToIndex        = tmpModuleIndex;
-                            cableKey.connectorToIoCount   = tmpConnectorIndex;
-                            cableKey.linkType             = toModule.connector[i].dir;
-                        }
-
-                        //printf("\n!!! from dir = %d to dir = %d (0=in 1=out)\n", fromModule.connector[gCableDrag.fromConnectorIndex].dir, toModule.connector[i].dir);
-                        if ((cableKey.moduleFromIndex == cableKey.moduleToIndex) && (gCableDrag.fromConnectorIndex == i)) {
-                            break;
-                        }
-                        else if (fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut && toModule.connector[i].dir == connectorDirOut) {
-                            break;
-                        }
-                        else {
-                            write_cable(cableKey, &cable);
-                        }
-
+                    // Prevent self-connections and invalid connections
+                    if ((cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i) ||
+                        (fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut &&
+                         toModule.connector[i].dir == connectorDirOut)) {
                         quitLoop = true;
                         break;
                     }
+
+                    cable.colour = 0; // Assign a default color (if needed)
+                    write_cable(cableKey, &cable);
+                    quitLoop = true;
+                    break;
                 }
             }
         }
-
         memset(&gModuleDrag, 0, sizeof(gModuleDrag)); // Reset dragging state
         memset(&gDragging, 0, sizeof(gDragging));     // Reset dragging state
         memset(&gCableDrag, 0, sizeof(gCableDrag));   // Reset dragging state
