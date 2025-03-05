@@ -105,6 +105,37 @@ bool handle_scrollbar_click(tCoord coord) {
     return false;
 }
 
+int find_io_count_from_index(tModule *module, tConnectorDir dir, int index) {
+    int ioCount = -1;
+
+    printf("Searching dir %d\n", dir);
+    for (int i = 0; i <= index; i++) {
+        //printf("%d is type %d\n", i, module->connector[i].dir);
+        if (module->connector[i].dir == dir) {
+            ioCount++;
+        }
+    }
+
+    return ioCount;  // Index does not match the direction
+}
+
+#if 0
+int find_index_from_io_count(tModule *module, tConnectorDir dir, int targetCount) {
+    int count = 0;
+
+    for (int i = 0; i < gModuleProperties[module->type].numConnectors; i++) {
+        if (module->connector[i].dir == dir) {
+            if (count == targetCount) {
+                return i;  // Found the index corresponding to the target count
+            }
+            count++;
+        }
+    }
+
+    return -1;  // Target count exceeds the number of matching connectors
+}
+#endif
+
 bool handle_module_click(tCoord coord) {
     if (!within_rectangle(coord, module_area())) {
         return false;
@@ -152,8 +183,9 @@ bool handle_module_click(tCoord coord) {
                 
                 printf("On connector!\n");
                 
+                printf("!!!!!!From module key index %d %s connector index = %d\n\n", module.key.index, gModuleProperties[module.type].name, i);
                 gCableDrag.fromModuleKey = module.key;
-                gCableDrag.fromConnectorIndex = i;
+                gCableDrag.fromConnectorIndex = i;   // Index into array of connectors
                 
                 // Todo: Use a function for this scaling etc.
                 val = coord.x - area.coord.x;
@@ -241,27 +273,13 @@ void shift_modules_down(tModuleKey key) {
     }
 }
 
-int find_target_count_from_index(tModule *module, tConnectorDir dir, int index) {
-    int count = 0;
-
-    for (int i = 0; i <= index; i++) {
-        if (module->connector[i].dir == dir) {
-            if (i == index) {
-                return count;  // Found the target count at this index
-            }
-            count++;
-        }
-    }
-
-    return -1;  // Index does not match the direction
-}
-
 void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     if (button != GLFW_MOUSE_BUTTON_LEFT) {
         return;                                   // Ignore non-left clicks for now
     }
     int    width, height;
     tCoord coord = {0};
+    bool   quitLoop = false;
 
     glfwGetWindowSize(window, &width, &height);
     glfwGetCursorPos(window, &coord.x, &coord.y);
@@ -290,38 +308,66 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         }
         
         if (gCableDrag.active == true) {
-            tRectangle area = module_area();
-            tModule module = {0};
+            printf("Cable drag is active\n");
+            
+            //tRectangle area = module_area();
+            
+            tModule toModule = {0};
             double val = 0;
 
             reset_walk_module();
-            while (walk_next_module(&module)) {
-                for (int i = 0; i < gModuleProperties[module.type].numConnectors; i++) {
-                    if (within_rectangle(coord, module.connector[i].rectangle)) {
-                        printf("Within a target connector\n");
-                        // maybe mark found, might need to act on it
-                        tCableKey key   = {0};
+
+            while (walk_next_module(&toModule) && quitLoop == false) {
+
+                for (int i = 0; i < gModuleProperties[toModule.type].numConnectors; i++) {
+                    if (within_rectangle(coord, toModule.connector[i].rectangle)) {
+                        
+                        // Todo - check we're not connecting to ourselves!!!!!!!
+                        
+                        tCableKey cableKey   = {0};
                         tCable    cable = {0};
                         tModule   fromModule = {0};
                         
                         read_module(gCableDrag.fromModuleKey, &fromModule);
-                        
-                        key.location = fromModule.key.location;
-                        key.moduleFrom = fromModule.key.index;
-                        key.connectorFrom = find_target_count_from_index(&module, connectorDirOut, gCableDrag.fromConnectorIndex); // Direction needs to come from the *from* type
-                        key.moduleTo = module.key.location;
-                        key.connectorTo = find_target_count_from_index(&module, connectorDirIn, i);
+
+                        cableKey.location = fromModule.key.location;
+                        cableKey.moduleFromIndex = fromModule.key.index;
+                        cableKey.connectorFromIoCount = find_io_count_from_index(&fromModule, fromModule.connector[gCableDrag.fromConnectorIndex].dir, gCableDrag.fromConnectorIndex);
+                        cableKey.moduleToIndex = toModule.key.index;
+                        cableKey.connectorToIoCount = find_io_count_from_index(&toModule, toModule.connector[i].dir, i);
+                        //printf("From dir = %d\n", fromModule.connector[gCableDrag.fromConnectorIndex].dir);
+                        cableKey.linkType = fromModule.connector[gCableDrag.fromConnectorIndex].dir; // // Linktype 1 = from output 0 = from input
+                        //printf("Linktype %d (1=fromout 0=fromin)\n", cableKey.linkType);
                         cable.colour = 0;  // for now
-                        cable.linkType = 1; // for now
+
+                        if (fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirIn && toModule.connector[i].dir == connectorDirOut) {
+                            printf("Wrong direction - from in to out\n");
+                            uint32_t tmpModuleIndex = cableKey.moduleFromIndex;
+                            uint32_t tmpConnectorIndex = cableKey.connectorFromIoCount;
+                            
+                            cableKey.moduleFromIndex = cableKey.moduleToIndex;
+                            cableKey.connectorFromIoCount = cableKey.connectorToIoCount;
+                            cableKey.moduleToIndex = tmpModuleIndex;
+                            cableKey.connectorToIoCount = tmpConnectorIndex;
+                            cableKey.linkType = toModule.connector[i].dir;
+                        }
                         
-                        write_cable(key, &cable);
-                        
+                        //printf("\n!!! from dir = %d to dir = %d (0=in 1=out)\n", fromModule.connector[gCableDrag.fromConnectorIndex].dir, toModule.connector[i].dir);
+                        if ((cableKey.moduleFromIndex == cableKey.moduleToIndex) && (gCableDrag.fromConnectorIndex == i)) {
+                            break;
+                        } else if (fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut && toModule.connector[i].dir == connectorDirOut){
+                            break;
+                        } else {
+                            write_cable(cableKey, &cable);
+                        }
+
+                        quitLoop = true;
                         break;
                     }
                 }
             }
         }
-        
+
         memset(&gModuleDrag, 0, sizeof(gModuleDrag));     // Reset dragging state
         memset(&gDragging, 0, sizeof(gDragging));     // Reset dragging state
         memset(&gCableDrag, 0, sizeof(gCableDrag));     // Reset dragging state
@@ -402,9 +448,6 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         val += calc_scroll_y();
         val /= get_zoom_factor();
         gCableDrag.toConnector.coord.y = val;
-        
-        //gCableDrag.fromModule = module;
-        //gCableDrag.fromConnectorIndex = i;
     }
 }
 
@@ -547,6 +590,7 @@ void do_graphics_loop(void) {
         if (gCableDrag.active == true) {
             tModule module = {0};
             read_module(gCableDrag.fromModuleKey, &module);
+            set_rbg_colour(RGB_WHITE);
             render_cable_from_to(module.connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector);
         }
         render_top_bar();

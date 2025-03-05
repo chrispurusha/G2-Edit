@@ -230,11 +230,11 @@ void dump_cables(void) {
         printf("Cable\n");
         printf("Location %u\n", cable->key.location);
         printf(" Colour %u\n", cable->colour);
-        printf(" Module from %u\n", cable->key.moduleFrom);
-        printf(" Connector from %u\n", cable->key.connectorFrom);
-        printf(" Link type %u\n", cable->linkType);
-        printf(" Module to %u\n", cable->key.moduleTo);
-        printf(" Connector to %u\n", cable->key.connectorTo);
+        printf(" Module from %u\n", cable->key.moduleFromIndex);
+        printf(" Connector from %u\n", cable->key.connectorFromIoCount);
+        printf(" Link type %u\n", cable->key.linkType);
+        printf(" Module to %u\n", cable->key.moduleToIndex);
+        printf(" Connector to %u (depends on link type)\n", cable->key.connectorToIoCount);
         cable = cable->next;
     }
     printf("\n\n\n");

@@ -93,16 +93,16 @@ typedef struct _struct_param {
 
 typedef struct {
     uint32_t location;
-    uint32_t moduleFrom;
-    uint32_t connectorFrom;
-    uint32_t moduleTo;
-    uint32_t connectorTo;
+    uint32_t moduleFromIndex;
+    uint32_t connectorFromIoCount;
+    uint32_t linkType;
+    uint32_t moduleToIndex;
+    uint32_t connectorToIoCount;
 } tCableKey;
 
 typedef struct _struct_cable {
     tCableKey              key;
     uint32_t               colour;
-    uint32_t               linkType;
     struct _struct_cable * next;       // This can go, when we attach to modules rather than separate linked list
 } tCable;
 

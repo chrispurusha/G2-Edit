@@ -190,9 +190,9 @@ void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir d
     module->connector[connectorIndex].type = type;
 
     set_rbg_colour(connectorColourMap[module->connector[connectorIndex].dir][module->connector[connectorIndex].type]);
-    render_circle_part(moduleArea, coord, 8.0, 10.0, 0.0, 10.0);  // Should be zoomfactored
+    module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, coord, 8.0, 10.0, 0.0, 10.0);  // Should be zoomfactored
     set_rbg_colour(RGB_BLACK);
-    module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, coord, 4.0, 10.0, 0.0, 10.0);
+    render_circle_part(moduleArea, coord, 4.0, 10.0, 0.0, 10.0);
 }
 
 void render_FltClassic(tRectangle rectangle, tModule * module) {
@@ -468,7 +468,7 @@ void render_cable_from_to(tConnector from, tConnector to) {
     render_bezier_curve(moduleArea, from.coord, control, to.coord, 4.0, 15);
 }
 
-int find_connector_index(tModule *module, tConnectorDir dir, int targetCount) {
+int find_connector_index(tModule *module, tConnectorDir dir, int targetCount) {   // Todo: have an instance of this in graphics too! Needs moving to one place
     int count = 0;
 
     //printf("%s find index num connectors %u\n", gModuleProperties[module->type].name, gModuleProperties[module->type].numConnectors);
@@ -488,28 +488,18 @@ void render_cable(tCable * cable) {
     tModule moduleFrom = {0};
     tModule moduleTo   = {0};
 
-    if (read_module({cable->key.location, cable->key.moduleFrom}, &moduleFrom) == false) {
+    if (read_module({cable->key.location, cable->key.moduleFromIndex}, &moduleFrom) == false) {
         return;
     }
-    if (read_module({cable->key.location, cable->key.moduleTo}, &moduleTo) == false) {
+    if (read_module({cable->key.location, cable->key.moduleToIndex}, &moduleTo) == false) {
         return;
     }
 
     set_rbg_colour(cableColourMap[cable->colour]);
 
-    int fromConnectorIndex = -1;
-    int toConnectorIndex = -1;
+    int fromConnectorIndex = find_connector_index(&moduleFrom, (tConnectorDir)cable->key.linkType, cable->key.connectorFromIoCount);
 
-    switch (cable->linkType) {
-        case cableLinkTypeFromInput:
-            fromConnectorIndex = find_connector_index(&moduleFrom, connectorDirIn, cable->key.connectorFrom);
-            break;
-        case cableLinkTypeFromOutput:
-            fromConnectorIndex = find_connector_index(&moduleFrom, connectorDirOut, cable->key.connectorFrom);
-            break;
-    }
-
-    toConnectorIndex = find_connector_index(&moduleTo, connectorDirIn, cable->key.connectorTo);
+    int toConnectorIndex = find_connector_index(&moduleTo, connectorDirIn, cable->key.connectorToIoCount);
     
     if (fromConnectorIndex != -1 && toConnectorIndex != -1) {
         render_cable_from_to(moduleFrom.connector[fromConnectorIndex], moduleTo.connector[toConnectorIndex]);

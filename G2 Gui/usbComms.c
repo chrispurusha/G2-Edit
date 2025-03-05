@@ -198,16 +198,16 @@ static void parse_cable_list(uint8_t * buff, uint32_t * subOffset) {
     for (uint32_t i = 0; i < cableCount; i++) {
         cable.colour = read_bit_stream(buff, subOffset, 3);
         printf(" Colour         0x%x\n", cable.colour);
-        key.moduleFrom = read_bit_stream(buff, subOffset, 8);         // key will get written into struct on write
-        printf(" Module From    %d\n", key.moduleFrom);
-        key.connectorFrom = read_bit_stream(buff, subOffset, 6);
-        printf(" Connector From %d\n", key.connectorFrom);
-        cable.linkType = read_bit_stream(buff, subOffset, 1);   // 1 = output to input, 0 = input to input
-        printf(" Link Type      0x%x\n", cable.linkType);
-        key.moduleTo = read_bit_stream(buff, subOffset, 8);
-        printf(" Module To      %d\n", key.moduleTo);
-        key.connectorTo = read_bit_stream(buff, subOffset, 6);
-        printf(" Connector To   %d\n", key.connectorTo);
+        key.moduleFromIndex = read_bit_stream(buff, subOffset, 8);         // key will get written into struct on write
+        printf(" Module From    %d\n", key.moduleFromIndex);
+        key.connectorFromIoCount = read_bit_stream(buff, subOffset, 6);
+        printf(" Connector From %d\n", key.connectorFromIoCount);
+        key.linkType = read_bit_stream(buff, subOffset, 1);   // 1 = output to input, 0 = input to input
+        printf(" Link Type      0x%x\n", key.linkType);
+        key.moduleToIndex = read_bit_stream(buff, subOffset, 8);
+        printf(" Module To      %d\n", key.moduleToIndex);
+        key.connectorToIoCount = read_bit_stream(buff, subOffset, 6);
+        printf(" Connector To   %d\n", key.connectorToIoCount);
 
         write_cable(key, &cable);
     }
