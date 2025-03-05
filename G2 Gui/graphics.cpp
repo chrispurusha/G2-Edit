@@ -149,9 +149,6 @@ bool handle_module_click(tCoord coord) {
                 double     val  = 0;
                 tRectangle area = module_area();
 
-                printf("On connector!\n");
-
-                printf("!!!!!!From module key index %d %s connector index = %d\n\n", module.key.index, gModuleProperties[module.type].name, i);
                 gCableDrag.fromModuleKey      = module.key;
                 gCableDrag.fromConnectorIndex = i;   // Index into array of connectors
 
@@ -174,7 +171,7 @@ bool handle_module_click(tCoord coord) {
             // Take the module off the linked list and put on the end, which makes it render last and so render on the top
             tModule tmpModule = {0};
             read_module(module.key, &tmpModule);
-            delete_module(module.key, false);
+            delete_module(module.key, freeConnectorNo);
             write_module(tmpModule.key, &tmpModule);
             gModuleDrag.moduleKey = tmpModule.key;
             gModuleDrag.active    = true;
@@ -241,12 +238,13 @@ void shift_modules_down(tModuleKey key) {
 }
 
 void set_up_cable_key(tCableKey * cableKey, tModule * fromModule, tModule * toModule, int toConnectorIndex) {
+    // This logic is pretty horrible - sorry
     cableKey->location             = fromModule->key.location;
     cableKey->moduleFromIndex      = fromModule->key.index;
     cableKey->connectorFromIoCount = find_io_count_from_index(fromModule, fromModule->connector[gCableDrag.fromConnectorIndex].dir, gCableDrag.fromConnectorIndex);
     cableKey->moduleToIndex        = toModule->key.index;
     cableKey->connectorToIoCount   = find_io_count_from_index(toModule, toModule->connector[toConnectorIndex].dir, toConnectorIndex);
-    cableKey->linkType             = fromModule->connector[gCableDrag.fromConnectorIndex].dir; // 1 = from output, 0 = from input
+    cableKey->linkType             = fromModule->connector[gCableDrag.fromConnectorIndex].dir;
 }
 
 bool swap_cable_to_from_if_needed(tCableKey * cableKey, tModule * fromModule, tModule * toModule, int toConnectorIndex) {
@@ -270,6 +268,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     if (button != GLFW_MOUSE_BUTTON_LEFT) {
         return;                                   // Ignore non-left clicks for now
     }
+
     int    width, height;
     tCoord coord    = {0};
     bool   quitLoop = false;
@@ -277,11 +276,10 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     glfwGetWindowSize(window, &width, &height);
     glfwGetCursorPos(window, &coord.x, &coord.y);
 
-    // Scale coordinates
     coord.x = (coord.x * (double)get_render_width()) / (double)width;
     coord.y = (coord.y * (double)get_render_height()) / (double)height;
 
-    printf("button=%d action=%d mods=%d\n", button, action, mods);
+    //printf("button=%d action=%d mods=%d\n", button, action, mods);
 
     if (action == GLFW_PRESS) {
         if (!handle_scrollbar_click(coord)) {
@@ -289,21 +287,17 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         }
     }
     else if (action == GLFW_RELEASE) {
-        gScrollState.yBarDragging = false;
-        gScrollState.xBarDragging = false;
-
-
         if (gModuleDrag.active == true) {
             shift_modules_down(gModuleDrag.moduleKey);
-            // If on top of existing module on this column, move everything else down
-
             // Todo - write new modules positions to device
         }
 
         if (gCableDrag.active) {
-            printf("Cable drag is active\n");
+            tModule   fromModule = {0};
+            tModule   toModule   = {0};
+            tCableKey cableKey   = {0};
+            tCable    cable      = {0};
 
-            tModule toModule = {0};
             reset_walk_module();
 
             while (walk_next_module(&toModule) && !quitLoop) {
@@ -311,11 +305,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     if (!within_rectangle(coord, toModule.connector[i].rectangle)) {
                         continue;
                     }
-
-                    // TODO: Ensure we are not connecting to ourselves
-                    tCableKey cableKey   = {0};
-                    tCable    cable      = {0};
-                    tModule   fromModule = {0};
 
                     read_module(gCableDrag.fromModuleKey, &fromModule);
                     set_up_cable_key(&cableKey, &fromModule, &toModule, i);
@@ -330,13 +319,16 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                         break;
                     }
 
-                    cable.colour = 0; // Assign a default color (if needed)
+                    cable.colour = 0; // Todo: choose colour from menu
                     write_cable(cableKey, &cable);
                     quitLoop = true;
                     break;
                 }
             }
         }
+
+        gScrollState.yBarDragging = false;
+        gScrollState.xBarDragging = false;
         memset(&gModuleDrag, 0, sizeof(gModuleDrag)); // Reset dragging state
         memset(&gDragging, 0, sizeof(gDragging));     // Reset dragging state
         memset(&gCableDrag, 0, sizeof(gCableDrag));   // Reset dragging state
@@ -383,7 +375,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
 
         messageContent.cmd       = eMsgCmdSetValue;
         messageContent.location  = gDragging.location;
-        messageContent.index     = gDragging.index;     // module index (6?)
+        messageContent.index     = gDragging.index;
         messageContent.param     = gDragging.param;
         messageContent.variation = gDragging.variation;
         messageContent.value     = value;

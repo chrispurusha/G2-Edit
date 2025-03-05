@@ -409,4 +409,9 @@ typedef enum {
     cableLinkTypeFromOutput
 } tCableLinkType;
 
+typedef enum {
+    freeConnectorYes,
+    freeConnectorNo
+} tFreeConnector;
+
 #endif // __TYPES_H__

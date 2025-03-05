@@ -160,7 +160,7 @@ void write_module(tModuleKey key, tModule * module) {
     mutex_unlock();
 }
 
-void delete_module(tModuleKey key, bool freeConnectors) {
+void delete_module(tModuleKey key, tFreeConnector freeConnector) {
     tModule * dbModule = NULL;
 
     mutex_lock();
@@ -179,7 +179,7 @@ void delete_module(tModuleKey key, bool freeConnectors) {
             dbModule->next->prev = dbModule->prev;
         }
 
-        if (freeConnectors == true) {
+        if (freeConnector == freeConnectorYes) {
             if (dbModule->connector != NULL) {
                 free(dbModule->connector);
             }
@@ -396,7 +396,6 @@ void database_clear_cables(void) {
 int find_io_count_from_index(tModule * module, tConnectorDir dir, int index) {
     int ioCount = -1;
 
-    printf("Searching dir %d\n", dir);
     for (int i = 0; i <= index; i++) {
         //printf("%d is type %d\n", i, module->connector[i].dir);
         if (module->connector[i].dir == dir) {
