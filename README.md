@@ -1,6 +1,6 @@
 # G2 Edit
 
-Very much a work in-progress.
+Very much a work in-progress. Not yet tidied or rationalised.
 
 If anyone's interested in helping, especially with the GUI side of things,
 Please drop me a line.
