@@ -830,7 +830,7 @@ static int send_command(int state) {
     return retVal;
 }
 
-static int send_write_value_command(tMessageContent * messageContent) {
+static int send_write_data(tMessageContent * messageContent) {
     int      retVal = EXIT_FAILURE;
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint16_t crc       = 0;
@@ -838,15 +838,45 @@ static int send_write_value_command(tMessageContent * messageContent) {
     int      pos       = COMMAND_OFFSET;
     uint32_t slot      = 0;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | slot; //+slot
-    buff[pos++] = slotVersion[slot];                           // needs to be slot ultimately
-    buff[pos++] = SUB_COMMAND_SET_PARAM;
-    buff[pos++] = messageContent->location;
-    buff[pos++] = messageContent->index;
-    buff[pos++] = messageContent->param;
-    buff[pos++] = messageContent->value;
-    buff[pos++] = messageContent->variation;     // variation
+    switch (messageContent->cmd)
+    {
+        case eMsgCmdSetValue:
+            buff[pos++] = 0x01;
+            buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | slot; //+slot
+            buff[pos++] = slotVersion[slot];                           // needs to be slot ultimately
+            buff[pos++] = SUB_COMMAND_SET_PARAM;
+            buff[pos++] = messageContent->paramData.location;
+            buff[pos++] = messageContent->paramData.index;
+            buff[pos++] = messageContent->paramData.param;
+            buff[pos++] = messageContent->paramData.value;
+            buff[pos++] = messageContent->paramData.variation;     // variation
+            break;
+        case eMsgCmdWriteCable:
+            buff[pos++] = 0x01;
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot; //+slot
+            buff[pos++] = slotVersion[slot];                           // needs to be slot ultimately
+            buff[pos++] = SUB_COMMAND_WRITE_CABLE;
+            
+        //4 Bits    Unknown value = 1
+        //1 Bit    Location 0 - FX, 1 - VA
+        //3 Bits    Color 000 - Red, 001 - Blue etc.
+            
+        //1 Byte    From module ID
+            
+        //2 Bits    From connector type 00 - input, 01 - output
+        //6 Bits    From connector ID
+            
+        //1 Byte    To module ID
+            
+        //2 Bits    To connector type 00 - input, 01 - output
+        //6 Bits    To connector ID
+            buff[pos++] = 0x10 | 0x08 | 0x00;  // unknown, location so 0x00 = fx and 0x08 = va, then 3 bits for colour
+            buff[pos++] = messageContent->cableData.moduleFromIndex;
+            buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIndex; // top 2 bits = from type, 01 = output
+            buff[pos++] = messageContent->cableData.moduleToIndex;
+            buff[pos++] = messageContent->cableData.connectorToIndex; // top 2 bits = to type, 01 = output - always an input in our case if we've done things right!?
+            break;
+    }
 
     msgLength = pos - COMMAND_OFFSET;
 
@@ -900,7 +930,7 @@ static void state_handler(void) {
         case eStatePoll:
             // if got a command in queue, do that, otherwise do the int_rec();
             if (msg_receive(&gCommandQueue, eRcvPoll, &messageContent) == EXIT_SUCCESS) {
-                send_write_value_command(&messageContent);
+                send_write_data(&messageContent);
             }
             else {
                 int_rec();

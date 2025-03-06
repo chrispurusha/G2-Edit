@@ -39,6 +39,7 @@
 #define SUB_COMMAND_LED_DATA             (0x39)
 #define SUB_COMMAND_VOLUME_INDICATOR     (0x3a)
 #define SUB_COMMAND_SET_PARAM            (0x40)
+#define SUB_COMMAND_WRITE_CABLE          (0x50)
 
 #define COMMAND_REQ                      (0x20) // High nibble, expects response
 #define COMMAND_WRITE_NO_RESP            (0x30) // High nibble, expects response

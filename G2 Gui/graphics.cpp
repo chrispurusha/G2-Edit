@@ -132,11 +132,11 @@ bool handle_module_click(tCoord coord) {
 
                     tMessageContent messageContent;
                     messageContent.cmd       = eMsgCmdSetValue;
-                    messageContent.location  = module.key.location;
-                    messageContent.index     = module.key.index;
-                    messageContent.param     = i;
-                    messageContent.variation = 0;
-                    messageContent.value     = param->value;
+                    messageContent.paramData.location  = module.key.location;
+                    messageContent.paramData.index     = module.key.index;
+                    messageContent.paramData.param     = i;
+                    messageContent.paramData.variation = 0;
+                    messageContent.paramData.value     = param->value;
 
                     msg_send(&gCommandQueue, &messageContent);
                     return true;
@@ -321,6 +321,18 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
                     cable.colour = 0; // Todo: choose colour from menu
                     write_cable(cableKey, &cable);
+                    
+                    tMessageContent messageContent = {0};
+                    
+                    messageContent.cmd       = eMsgCmdWriteCable;
+                    messageContent.cableData.moduleFromIndex  = cableKey.moduleFromIndex;
+                    messageContent.cableData.connectorFromIndex  = cableKey.connectorFromIoCount;
+                    messageContent.cableData.moduleToIndex  = cableKey.moduleToIndex;
+                    messageContent.cableData.connectorToIndex  = cableKey.connectorToIoCount;
+                    messageContent.cableData.linkType  = cableKey.linkType;
+                    messageContent.cableData.colour  = cable.colour;
+                    msg_send(&gCommandQueue, &messageContent);
+                    
                     quitLoop = true;
                     break;
                 }
@@ -374,11 +386,11 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         write_module({gDragging.location, gDragging.index}, &module);       // Write new value into parameter
 
         messageContent.cmd       = eMsgCmdSetValue;
-        messageContent.location  = gDragging.location;
-        messageContent.index     = gDragging.index;
-        messageContent.param     = gDragging.param;
-        messageContent.variation = gDragging.variation;
-        messageContent.value     = value;
+        messageContent.paramData.location  = gDragging.location;
+        messageContent.paramData.index     = gDragging.index;
+        messageContent.paramData.param     = gDragging.param;
+        messageContent.paramData.variation = gDragging.variation;
+        messageContent.paramData.value     = value;
         msg_send(&gCommandQueue, &messageContent);
     }
     else if (gModuleDrag.active == true) {
@@ -400,8 +412,6 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         write_module(gModuleDrag.moduleKey, &module);
     }
     else if (gCableDrag.active == true) {
-        tConnector toConnector;
-
         // Todo: Use a function for this scaling etc.
         val  = x - area.coord.x;
         val += calc_scroll_x();

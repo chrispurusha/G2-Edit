@@ -36,16 +36,37 @@ typedef enum {
 } eRcv;
 
 typedef enum {
-    eMsgCmdSetValue
+    eMsgCmdSetValue,
+    eMsgCmdWriteModule,
+    eMsgCmdWriteCable
 } eMsgCmd;
 
 typedef struct {
-    uint32_t cmd;
     uint32_t location;
     uint32_t index;
     uint32_t variation;
     uint32_t param;
     uint32_t value;
+} tParamData;
+
+typedef struct {
+    uint32_t location;
+    // cable count!?
+    uint32_t colour;
+    uint32_t moduleFromIndex;
+    uint32_t connectorFromIndex;  // Might be IO count instead
+    uint32_t linkType;
+    uint32_t moduleToIndex;
+    uint32_t connectorToIndex;
+} tCableData;
+
+typedef struct {
+    uint32_t cmd;
+    union {
+        tParamData paramData;
+        tCableData cableData;
+    };
+    //tMessageData data;
 } tMessageContent;
 
 typedef struct _message {
