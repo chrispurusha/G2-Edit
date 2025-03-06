@@ -38,6 +38,7 @@ typedef enum {
 typedef enum {
     eMsgCmdSetValue,
     eMsgCmdWriteModule,
+    eMsgCmdMoveModule,
     eMsgCmdWriteCable
 } eMsgCmd;
 
@@ -51,22 +52,43 @@ typedef struct {
 
 typedef struct {
     uint32_t location;
-    // cable count!?
+    uint32_t index;
+    uint32_t type;
+    uint32_t row;
+    uint32_t column;
+    uint32_t colour;
+    uint32_t upRate;
+    uint32_t isLed;
+    uint32_t unknown1;
+    uint32_t modeCount;
+    char     name[MODULE_NAME_SIZE + 1];
+} tModuleData;
+
+typedef struct {
+    uint32_t location;
+    uint32_t index;
+    uint32_t row;
+    uint32_t column;
+} tModuleMoveData;
+
+typedef struct {
+    uint32_t location;
     uint32_t colour;
     uint32_t moduleFromIndex;
-    uint32_t connectorFromIndex;  // Might be IO count instead
+    uint32_t connectorFromIoIndex;
     uint32_t linkType;
     uint32_t moduleToIndex;
-    uint32_t connectorToIndex;
+    uint32_t connectorToIoIndex;
 } tCableData;
 
 typedef struct {
     uint32_t cmd;
     union {
         tParamData paramData;
+        tModuleData moduleData;
+        tModuleData moduleMoveData;
         tCableData cableData;
     };
-    //tMessageData data;
 } tMessageContent;
 
 typedef struct _message {

@@ -21,6 +21,7 @@
 extern "C" {
 #endif
 
+#include "defs.h"
 #include "msgQueue.h"
 
 

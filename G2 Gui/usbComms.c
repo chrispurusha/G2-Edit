@@ -583,7 +583,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     return EXIT_SUCCESS;
 
                 case 0x7F:
-                    printf("Got OK\n");
+                    //printf("Got OK\n");
                     return EXIT_SUCCESS;
 
                 default:
@@ -856,25 +856,25 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot; //+slot
             buff[pos++] = slotVersion[slot];                           // needs to be slot ultimately
             buff[pos++] = SUB_COMMAND_WRITE_CABLE;
-            
-        //4 Bits    Unknown value = 1
-        //1 Bit    Location 0 - FX, 1 - VA
-        //3 Bits    Color 000 - Red, 001 - Blue etc.
-            
-        //1 Byte    From module ID
-            
-        //2 Bits    From connector type 00 - input, 01 - output
-        //6 Bits    From connector ID
-            
-        //1 Byte    To module ID
-            
-        //2 Bits    To connector type 00 - input, 01 - output
-        //6 Bits    To connector ID
             buff[pos++] = 0x10 | 0x08 | 0x00;  // unknown, location so 0x00 = fx and 0x08 = va, then 3 bits for colour
             buff[pos++] = messageContent->cableData.moduleFromIndex;
-            buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIndex; // top 2 bits = from type, 01 = output
+            buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex; // top 2 bits = from type, 01 = output
             buff[pos++] = messageContent->cableData.moduleToIndex;
-            buff[pos++] = messageContent->cableData.connectorToIndex; // top 2 bits = to type, 01 = output - always an input in our case if we've done things right!?
+            buff[pos++] = messageContent->cableData.connectorToIoIndex; // top 2 bits = to type, 01 = output - always an input in our case if we've done things right!?
+            
+            // + extra data for potential module updates etc!?
+            break;
+        case eMsgCmdMoveModule:
+            buff[pos++] = 0x01;
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot; //+slot
+            buff[pos++] = slotVersion[slot];                           // needs to be slot ultimately
+            buff[pos++] = SUB_COMMAND_MOVE_MODULE;
+            buff[pos++] = messageContent->moduleMoveData.location;
+            buff[pos++] = messageContent->moduleMoveData.index;
+            buff[pos++] = messageContent->moduleMoveData.column;
+            buff[pos++] =messageContent->moduleMoveData.row;
+            break;
+        default:
             break;
     }
 

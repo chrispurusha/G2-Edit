@@ -105,6 +105,16 @@ bool handle_scrollbar_click(tCoord coord) {
     return false;
 }
 
+void send_module_move_msg(tModule * module) {
+    tMessageContent messageContent = {0};
+    messageContent.cmd       = eMsgCmdMoveModule;
+    messageContent.moduleData.location  = module->key.location;
+    messageContent.moduleData.index     = module->key.index;
+    messageContent.moduleData.row = module->row;
+    messageContent.moduleData.column =  module->column;
+    msg_send(&gCommandQueue, &messageContent);
+}
+
 bool handle_module_click(tCoord coord) {
     if (!within_rectangle(coord, module_area())) {
         return false;
@@ -130,7 +140,7 @@ bool handle_module_click(tCoord coord) {
                     param->value = (param->value + 1) % param->range;
                     write_module(module.key, &module);
 
-                    tMessageContent messageContent;
+                    tMessageContent messageContent = {0};
                     messageContent.cmd       = eMsgCmdSetValue;
                     messageContent.paramData.location  = module.key.location;
                     messageContent.paramData.index     = module.key.index;
@@ -189,11 +199,12 @@ void shift_modules_down(tModuleKey key) {
     bool     doDrop            = false;
     uint32_t rowAndBelowToDrop = 0;
     uint32_t dropAmount        = 0;
+    bool     moduleRePosition  = false;
 
     if (read_module(key, &module) == false) {
         return;
     }
-
+    
     // First step - if moved module lands on exisitng module after first row, drop it down
     reset_walk_module();
     while (walk_next_module(&walk)) {
@@ -202,10 +213,16 @@ void shift_modules_down(tModuleKey key) {
                 if ((module.row > walk.row) && (module.row < walk.row + gModuleProperties[walk.type].height)) {
                     module.row = walk.row + gModuleProperties[walk.type].height;
                     write_module(module.key, &module);
+                    send_module_move_msg(&module);
+                    moduleRePosition = true;
                     break;
                 }
             }
         }
+    }
+    
+    if (moduleRePosition == false) {
+        send_module_move_msg(&module);
     }
 
     reset_walk_module();
@@ -230,6 +247,7 @@ void shift_modules_down(tModuleKey key) {
                     if (walk.row >= rowAndBelowToDrop) {
                         walk.row += dropAmount;
                         write_module(walk.key, &walk);
+                        send_module_move_msg(&module);
                     }
                 }
             }
@@ -326,9 +344,9 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     
                     messageContent.cmd       = eMsgCmdWriteCable;
                     messageContent.cableData.moduleFromIndex  = cableKey.moduleFromIndex;
-                    messageContent.cableData.connectorFromIndex  = cableKey.connectorFromIoCount;
+                    messageContent.cableData.connectorFromIoIndex  = cableKey.connectorFromIoCount;
                     messageContent.cableData.moduleToIndex  = cableKey.moduleToIndex;
-                    messageContent.cableData.connectorToIndex  = cableKey.connectorToIoCount;
+                    messageContent.cableData.connectorToIoIndex  = cableKey.connectorToIoCount;
                     messageContent.cableData.linkType  = cableKey.linkType;
                     messageContent.cableData.colour  = cable.colour;
                     msg_send(&gCommandQueue, &messageContent);
@@ -395,7 +413,6 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     }
     else if (gModuleDrag.active == true) {
         read_module(gModuleDrag.moduleKey, &module);
-        printf("x coord %f, y coord %f\n", area.coord.x, area.coord.y);
 
         // Todo: Use a function for this scaling etc.
 
