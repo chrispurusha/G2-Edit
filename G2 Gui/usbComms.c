@@ -413,7 +413,6 @@ static int parse_patch(uint8_t * buff, int length) {
                 printf("Unprocessed type 0x%02x\n", type);
                 break;
         }
-
         bitOffset += SIGNED_BYTE_TO_BIT(count);
     }
 
@@ -467,6 +466,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
         case 0x01:
         case 0x02:
         case 0x03:
+
             switch (subCommand) {
                 case SUB_COMMAND_VOLUME_INDICATOR:
                     //printf("Got Volume ");
@@ -504,8 +504,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     printf("Got 0x00 Unknown sub-command 0x%02x\n", subCommand);
                     return EXIT_SUCCESS;
             }
-
         case 0x0C:
+
             switch (subCommand) {
                 case SUB_COMMAND_OK:
                     printf("Got 0x0c  OK\n");
@@ -531,8 +531,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     printf("Got 0x0C Unknown sub-command 0x%02x\n", subCommand);
                     return EXIT_FAILURE;
             }
-
         case 0x04:
+
             switch (subCommand) {
                 case 0x38:
                     printf("Got Patch load\n");
@@ -555,8 +555,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     printf("Got 0x04 Unknown sub-command 0x%02x\n", subCommand);
                     return EXIT_FAILURE;
             }
-
         case 0x08:
+
             switch (subCommand) {
                 case 0x36:
                     printf("Got Patch Version\n");
@@ -590,7 +590,6 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     printf("Got 0x08 Unknown sub-command 0x%02x\n", subCommand);
                     return EXIT_FAILURE;
             }
-
         default:
             printf("Got Unknown command response 0x%02x\n", commandResponse);
             return EXIT_FAILURE;
@@ -610,7 +609,8 @@ static int parse_incoming(uint8_t * buff, int length) {
             printf("Got Response init\n");
             return EXIT_SUCCESS;
 
-        case RESPONSE_TYPE_COMMAND: {
+        case RESPONSE_TYPE_COMMAND:
+        {
             uint8_t commandResponse = read_bit_stream(buff, &bitPos, 8);
             uint8_t version         = read_bit_stream(buff, &bitPos, 8);
             uint8_t subCommand      = read_bit_stream(buff, &bitPos, 8);
@@ -739,6 +739,7 @@ static int send_command(int state) {
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x41;
                     buff[pos++] = 0x7d;
+
                     switch (state) {
                         case eStateStop:
                             buff[pos++] = 0x01;
@@ -808,7 +809,6 @@ static int send_command(int state) {
             printf("Unknown state %d\n", state);
             break;
     }
-
     msgLength = pos - COMMAND_OFFSET;
 
     if (msgLength > 0) {
@@ -846,6 +846,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->paramData.value;
             buff[pos++] = messageContent->paramData.variation;     // variation
             break;
+
         case eMsgCmdWriteCable:
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;                                                          //+slot
@@ -859,6 +860,7 @@ static int send_write_data(tMessageContent * messageContent) {
 
             // + extra data for potential module updates etc!?
             break;
+
         case eMsgCmdMoveModule:
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot; //+slot
@@ -869,10 +871,10 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleMoveData.column;
             buff[pos++] = messageContent->moduleMoveData.row;
             break;
+
         default:
             break;
     }
-
     msgLength = pos - COMMAND_OFFSET;
 
     if (msgLength > 0) {
@@ -935,7 +937,6 @@ static void state_handler(void) {
             usleep(1000);
             break;
     }
-
     if (gotBadConnectionIndication == true) {
         state = eStateFindDevice;
         gotBadConnectionIndication = false;

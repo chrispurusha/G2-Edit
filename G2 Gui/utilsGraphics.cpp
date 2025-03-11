@@ -164,8 +164,9 @@ tRectangle render_line(tArea area, tCoord start, tCoord end, double thickness) {
     double length         = sqrt(dx * dx + dy * dy);
 
     if (length == 0.0) {
-        return{{0.0, 0.0}, {0.0, 0.0}};                // Avoid division by zero
+        return{{0.0, 0.0}, {0.0, 0.0}};
     }
+
     // Normalize direction
     double nx = dx / length;
     double ny = dy / length;
@@ -480,7 +481,6 @@ tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active) {
     return {rectangle};
 }
 
-// Draw a toggle button with text
 tRectangle draw_toggle_button(tArea area, tRectangle rectangle, char * text) {
     if (area == moduleArea) {
         rectangle = scale_scroll_adjust_rectangle(rectangle);
@@ -519,9 +519,9 @@ tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
     // Calculate scale factor based on target height
     scaleFactor = rectangle.size.h / (gMaxAscent + gMaxDescent);
     glTranslatef(rectangle.coord.x, rectangle.coord.y, 0);
-    glScalef(scaleFactor, scaleFactor, 1.0f);
+    glScalef(scaleFactor, scaleFactor, 1.0);
 
-    double xCharOffset = 0;
+    double xCharOffset = 0.0;
 
     ch = text;
     while (*ch) {
@@ -704,7 +704,7 @@ double get_char_width(char ch, double targetHeight) {
     return width * scaleVal;
 }
 
-double get_text_width(char * text, double target_height) {
+double get_text_width(char * text, double targetHeight) {
     if (text == NULL) {
         return 0.0;
     }
@@ -713,24 +713,24 @@ double get_text_width(char * text, double target_height) {
     const char * ch    = text;
 
     while (*ch) {
-        char        character = *ch;
-        GlyphInfo * glyph     = &glyphInfo[character];
-
-        width += glyph->advance_x;
+        width += get_char_width(*ch, targetHeight);
         ch++;
     }
 
-    double scaleVal = target_height / (gMaxAscent + gMaxDescent);
-    return width * scaleVal;
+    return width;
 }
 
-double largest_text_width(int numItems, char ** text, double target_height) {
+double largest_text_width(int numItems, char ** text, double targetHeight) {
+    if (text == NULL) {
+        return 0.0;
+    }
+
     int    i       = 0;
     double size    = 0;
     double maxSize = 0;
 
     for (i = 0; i < numItems; i++) {
-        size = get_text_width(text[i], target_height);
+        size = get_text_width(text[i], targetHeight);
         if (size > maxSize) {
             maxSize = size;
         }

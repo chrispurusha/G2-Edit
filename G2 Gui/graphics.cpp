@@ -487,6 +487,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         set_xScrollBar(x);
     } else if (gDragging.active == true) {
         read_module({gDragging.location, gDragging.index}, &module);
+
         switch (module.param[gDragging.variation][gDragging.param].type) {
             case paramTypeDial:
                 angle = calculate_mouse_angle({x, y}, module.param[gDragging.variation][gDragging.param].rectangle);       // possible add half size
@@ -498,7 +499,6 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                 printf("Unknown module type %u\n", module.param[gDragging.variation][gDragging.param].type);
                 exit(1);
         }
-
         write_module({gDragging.location, gDragging.index}, &module);       // Write new value into parameter
 
         messageContent.cmd = eMsgCmdSetValue;

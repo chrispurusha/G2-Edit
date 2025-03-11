@@ -75,7 +75,6 @@ int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageCon
             }
             break;
     }
-
     pthread_mutex_lock(&msgQueue->mutex);
     if (msgQueue->head != NULL) {
         // Copy the content from the head message to the provided messageContent
