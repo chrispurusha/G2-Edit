@@ -172,19 +172,18 @@ typedef struct {
     bool       active;
     tModuleKey fromModuleKey;
     uint32_t   fromConnectorIndex;
-    //tConnector fromConnector;
     tConnector toConnector;
 } tCableDragging;
 
 typedef struct {
-    char *label;
+    char * label;
     void (*action)(void);
 } tMenuItem;
 
 typedef struct {
-    bool active;        // Is the menu currently visible?
-    tCoord coord;       // Position of the menu
-    tMenuItem *items;   // Pointer to an array of menu items
+    bool        active; // Is the menu currently visible?
+    tCoord      coord;  // Position of the menu
+    tMenuItem * items;  // Pointer to an array of menu items
 } tContextMenu;
 
 typedef enum {

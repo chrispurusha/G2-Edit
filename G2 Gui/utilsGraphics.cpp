@@ -53,11 +53,11 @@ typedef struct {
 } GlyphInfo;
 
 static GlyphInfo glyphInfo[MAX_GLYPH_CHAR] = {0};       // Array to store glyph metadata TODO: Not being freed!?
-static GLuint    textureAtlas = 0;                      // OpenGL texture handle
-static int       atlasWidth   = 1024 * 8;               // Initial atlas width
-static int       atlasHeight  = 1024 * 8;               // Initial atlas height
-static double    gMaxAscent   = 0.0;                    // Used for dealing with preloaded text character height
-static double    gMaxDescent  = 0.0;
+static GLuint    textureAtlas   = 0;                    // OpenGL texture handle
+static int       atlasWidth     = 1024 * 8;             // Initial atlas width
+static int       atlasHeight    = 1024 * 8;             // Initial atlas height
+static double    gMaxAscent     = 0.0;                  // Used for dealing with preloaded text character height
+static double    gMaxDescent    = 0.0;
 static double    gMetricsHeight = 0.0;
 
 static double gXScrollPercent = 0.0;
@@ -523,7 +523,7 @@ tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
     glScalef(scaleFactor, scaleFactor, 1.0f);
 
     double xCharOffset = 0;
-    
+
     ch = text;
     while (*ch) {
         char        character = *ch;
@@ -644,7 +644,7 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
         }
 
         gMetricsHeight = (double)face->size->metrics.height / 64.0;
-        
+
         bitmap = &face->glyph->bitmap;
         int texWidth  = bitmap->width;
         int texHeight = bitmap->rows;
@@ -696,11 +696,11 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
 }
 
 double get_char_width(char ch, double targetHeight) {
-    double       width = 0.0;
-    GlyphInfo * glyph     = &glyphInfo[ch];
+    double      width = 0.0;
+    GlyphInfo * glyph = &glyphInfo[ch];
 
     width = glyph->advance_x;
-    
+
     double scaleVal = targetHeight / (gMaxAscent + gMaxDescent);
     return width * scaleVal;
 }

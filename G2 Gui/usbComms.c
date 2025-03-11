@@ -838,8 +838,7 @@ static int send_write_data(tMessageContent * messageContent) {
     int      pos       = COMMAND_OFFSET;
     uint32_t slot      = 0;
 
-    switch (messageContent->cmd)
-    {
+    switch (messageContent->cmd) {
         case eMsgCmdSetValue:
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | slot; //+slot
@@ -853,26 +852,26 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
         case eMsgCmdWriteCable:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot; //+slot
-            buff[pos++] = slotVersion[slot];                           // needs to be slot ultimately
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;                                                          //+slot
+            buff[pos++] = slotVersion[slot];                                                                          // needs to be slot ultimately
             buff[pos++] = SUB_COMMAND_WRITE_CABLE;
-            buff[pos++] = 0x10 | 0x08 | 0x00;  // unknown, location so 0x00 = fx and 0x08 = va, then 3 bits for colour
+            buff[pos++] = 0x10 | 0x08 | 0x00;                                                                         // unknown, location so 0x00 = fx and 0x08 = va, then 3 bits for colour
             buff[pos++] = messageContent->cableData.moduleFromIndex;
             buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex; // top 2 bits = from type, 01 = output
             buff[pos++] = messageContent->cableData.moduleToIndex;
-            buff[pos++] = messageContent->cableData.connectorToIoIndex; // top 2 bits = to type, 01 = output - always an input in our case if we've done things right!?
-            
+            buff[pos++] = messageContent->cableData.connectorToIoIndex;                                               // top 2 bits = to type, 01 = output - always an input in our case if we've done things right!?
+
             // + extra data for potential module updates etc!?
             break;
         case eMsgCmdMoveModule:
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot; //+slot
-            buff[pos++] = slotVersion[slot];                           // needs to be slot ultimately
+            buff[pos++] = slotVersion[slot];                 // needs to be slot ultimately
             buff[pos++] = SUB_COMMAND_MOVE_MODULE;
             buff[pos++] = messageContent->moduleMoveData.location;
             buff[pos++] = messageContent->moduleMoveData.index;
             buff[pos++] = messageContent->moduleMoveData.column;
-            buff[pos++] =messageContent->moduleMoveData.row;
+            buff[pos++] = messageContent->moduleMoveData.row;
             break;
         default:
             break;

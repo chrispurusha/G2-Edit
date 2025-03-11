@@ -230,7 +230,8 @@ int32_t read_usb_interrupt(uint8_t * buff, uint32_t buffLength) {
 
     if (timedOut == true) {
         readLength = 0;
-    } else if (result == kIOReturnSuccess) {   // Unless there's a way to detect aborted pipe read
+    }
+    else if (result == kIOReturnSuccess) {     // Unless there's a way to detect aborted pipe read
         if ((buff[0] != 0)) {
             readLength = buffLength;
         }

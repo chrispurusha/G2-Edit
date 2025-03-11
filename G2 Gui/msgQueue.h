@@ -84,10 +84,10 @@ typedef struct {
 typedef struct {
     uint32_t cmd;
     union {
-        tParamData paramData;
+        tParamData  paramData;
         tModuleData moduleData;
         tModuleData moduleMoveData;
-        tCableData cableData;
+        tCableData  cableData;
     };
 } tMessageContent;
 
