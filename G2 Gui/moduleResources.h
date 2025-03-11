@@ -23,14 +23,6 @@
 
 #include "sysIncludes.h"
 
-#define BYPASS_BUTTON_WIDTH        (15.0)
-#define BYPASS_BUTTON_HEIGHT       (15.0)
-#define GC_BUTTON_WIDTH            (25.0)
-#define GC_BUTTON_HEIGHT           (15.0)
-#define FILTER_FREQ_RADIUS         (12.0)
-#define FILTER_RESONANCE_RADIUS    (12.0)
-#define BLANK_SIZE                 (0.0)          // Not used directly by calling function, or needs calculation in following calls
-
 // mapping of values to strings etc.
 #define MAP_NUM_ITEMS(map)    (sizeof(map) / sizeof(map[0]))
 

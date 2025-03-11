@@ -58,6 +58,7 @@ static int       atlasWidth   = 1024 * 8;               // Initial atlas width
 static int       atlasHeight  = 1024 * 8;               // Initial atlas height
 static double    gMaxAscent   = 0.0;                    // Used for dealing with preloaded text character height
 static double    gMaxDescent  = 0.0;
+static double    gMetricsHeight = 0.0;
 
 static double gXScrollPercent = 0.0;
 static double gYScrollPercent = 0.0;
@@ -521,6 +522,8 @@ tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
     glTranslatef(rectangle.coord.x, rectangle.coord.y, 0);
     glScalef(scaleFactor, scaleFactor, 1.0f);
 
+    double xCharOffset = 0;
+    
     ch = text;
     while (*ch) {
         char        character = *ch;
@@ -533,7 +536,7 @@ tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
         double v2 = glyph->v2;
 
         // Character position and size
-        double xPos = glyph->offset_x;
+        double xPos = glyph->offset_x + xCharOffset;
         double yPos = (gMaxAscent - glyph->offset_y);
         double w    = glyph->width;
         double h    = glyph->height;
@@ -547,7 +550,8 @@ tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
         glEnd();
 
         // Adjust the position for the next character (add some space between them)
-        glTranslatef(glyph->advance_x + 1.0f, 0, 0);     // Add slight spacing between characters
+        //glTranslatef(glyph->advance_x /*+ 1.0f*/, 0, 0);
+        xCharOffset += glyph->advance_x;
 
         ch++;
     }
@@ -623,16 +627,24 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
         }
 
         // Track the highest ascent and lowest descent
-        if (face->glyph->bitmap_top > gMaxAscent) {
-            gMaxAscent = face->glyph->bitmap_top;
+        double glyphAscent = face->glyph->bitmap_top;
+        if (glyphAscent < 0.0) {
+            glyphAscent = 0.0;
+        }
+        if (glyphAscent > gMaxAscent) {
+            gMaxAscent = glyphAscent;
         }
 
-        // Calculate descent as the distance from baseline to the bottom of the glyph
-        double glyphDescent = (double)(face->glyph->bitmap_top - face->glyph->bitmap.rows);
-        if ((gMaxDescent == 0.0) || (glyphDescent < gMaxDescent)) {
+        double glyphDescent = (double)face->glyph->bitmap.rows - (double)face->glyph->bitmap_top;
+        if (glyphDescent < 0.0) {
+            glyphDescent = 0.0;
+        }
+        if (glyphDescent > gMaxDescent) {
             gMaxDescent = glyphDescent;
         }
 
+        gMetricsHeight = (double)face->size->metrics.height / 64.0;
+        
         bitmap = &face->glyph->bitmap;
         int texWidth  = bitmap->width;
         int texHeight = bitmap->rows;
@@ -665,7 +677,7 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
         glyphInfo[charCode].v1        = (double)(atlasY + padding) / (double)atlasHeight;
         glyphInfo[charCode].u2        = (double)(atlasX + texWidth + padding) / (double)atlasWidth;
         glyphInfo[charCode].v2        = (double)(atlasY + texHeight + padding) / (double)atlasHeight;
-        glyphInfo[charCode].advance_x = (double)face->glyph->advance.x / 64.0f;
+        glyphInfo[charCode].advance_x = ((double)face->glyph->advance.x / 64.0f) + 1.0;  // Add a small amount of extra spacing
         glyphInfo[charCode].width     = texWidth;
         glyphInfo[charCode].height    = texHeight;
         glyphInfo[charCode].offset_x  = face->glyph->bitmap_left;
@@ -683,6 +695,16 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
     return true;
 }
 
+double get_char_width(char ch, double targetHeight) {
+    double       width = 0.0;
+    GlyphInfo * glyph     = &glyphInfo[ch];
+
+    width = glyph->advance_x;
+    
+    double scaleVal = targetHeight / (gMaxAscent + gMaxDescent);
+    return width * scaleVal;
+}
+
 double get_text_width(char * text, double target_height) {
     if (text == NULL) {
         return 0.0;
@@ -695,12 +717,10 @@ double get_text_width(char * text, double target_height) {
         char        character = *ch;
         GlyphInfo * glyph     = &glyphInfo[character];
 
-        width += glyph->advance_x + 1.0; // Include spacing
-
+        width += glyph->advance_x;
         ch++;
     }
 
-    // Apply the same scaling factor as in render_text()
     double scaleVal = target_height / (gMaxAscent + gMaxDescent);
     return width * scaleVal;
 }

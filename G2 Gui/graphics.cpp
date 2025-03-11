@@ -45,11 +45,8 @@ extern "C" {
 #include "moduleGraphics.h"
 
 
-//static int           gRenderWidth  = 0;
-//static int           gRenderHeight = 0;
-static tScrollState gScrollState = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false
-};
-//static double        gZoomFactor   = 1.0;
+static tContextMenu gContextMenu = {false, {0, 0}, NULL};
+static tScrollState gScrollState = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
 
 static FT_Library   gLibrary = {0};
 static FT_Face      gFace    = {0};
@@ -68,6 +65,106 @@ void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
 
 void error_callback(int error, const char * description) {
     fprintf(stderr, "Error [%d]: %s\n", error, description);
+}
+
+void menu_action_delete_module(void) {
+    printf("Delete Module\n");
+    // Implement module deletion logic
+}
+
+void menu_action_duplicate_module(void) {
+    printf("Duplicate Module\n");
+    // Implement duplication logic
+}
+
+void open_context_menu(tCoord coord) {
+    static tMenuItem menuItems[] = {
+        {"Delete Module", menu_action_delete_module},
+        {"Duplicate Module", menu_action_duplicate_module},
+        {"Fake", NULL},
+        {NULL, NULL} // End of menu
+    };
+
+    // Store menu position
+    gContextMenu.active = true;
+    gContextMenu.coord = coord;
+    gContextMenu.items = menuItems;
+}
+
+void render_context_menu(void) {
+    if (!gContextMenu.active) return;
+        
+    double size = 0.0;
+    double largestSize = 0.0;
+    tCoord mouseCoord = {0};
+    tRectangle menuItem = {0};
+    double itemHeight = STANDARD_TEXT_HEIGHT;
+    
+    int    width, height;
+    glfwGetWindowSize(gWindow, &width, &height);
+    glfwGetCursorPos(gWindow, &mouseCoord.x, &mouseCoord.y);
+
+    mouseCoord.x = (mouseCoord.x * (double)get_render_width()) / (double)width;
+    mouseCoord.y = (mouseCoord.y * (double)get_render_height()) / (double)height;
+
+        
+    for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
+        size = get_text_width(gContextMenu.items[i].label, itemHeight);
+        if (size > largestSize) {
+            largestSize = size;
+        }
+    }
+    
+    int yOffset = 0;
+    for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
+        menuItem = {{gContextMenu.coord.x, gContextMenu.coord.y + yOffset}, {largestSize+(5*2), itemHeight+(5*2)}};
+        if (within_rectangle(mouseCoord, menuItem)) {
+            set_rbg_colour({0.2, 0.6, 0.2});
+        } else {
+            set_rbg_colour({0.3, 0.3, 0.3});  // Background
+        }
+        render_rectangle(mainArea, menuItem);
+        
+        set_rbg_colour({0.9, 0.9, 0.9});  // White text
+        render_text(mainArea, {{gContextMenu.coord.x + 5, gContextMenu.coord.y + 5 + yOffset},{BLANK_SIZE,itemHeight}}, gContextMenu.items[i].label);
+        yOffset += itemHeight + (5*2);
+    }
+}
+
+bool handle_context_menu_click(tCoord coord) {
+    if (!gContextMenu.active) return false;
+    
+    double size = 0.0;
+    double largestSize = 0.0;
+    double itemHeight = STANDARD_TEXT_HEIGHT;
+
+    for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
+        size = get_text_width(gContextMenu.items[i].label, itemHeight);
+        if (size > largestSize) {
+            largestSize = size;
+        }
+    }
+    
+    int yOffset = 0;
+    for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
+        tRectangle itemRect = {
+            {gContextMenu.coord.x, gContextMenu.coord.y + yOffset},
+            {largestSize, itemHeight+5}
+        };
+
+        if (within_rectangle(coord, itemRect)) {
+            if (gContextMenu.items[i].action != NULL) {
+                gContextMenu.items[i].action();  // Call the selected action
+            }
+            gContextMenu.active = false;     // Close the menu
+            return true;
+        }
+
+        yOffset += itemHeight+(5*2);
+    }
+
+    gContextMenu.active = false;  // Close if clicked outside
+    return false;
 }
 
 void set_xScrollBar(double x) {
@@ -283,10 +380,6 @@ bool swap_cable_to_from_if_needed(tCableKey * cableKey, tModule * fromModule, tM
 }
 
 void mouse_button(GLFWwindow * window, int button, int action, int mods) {
-    if (button != GLFW_MOUSE_BUTTON_LEFT) {
-        return;                                   // Ignore non-left clicks for now
-    }
-
     int    width, height;
     tCoord coord    = {0};
     bool   quitLoop = false;
@@ -298,16 +391,25 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     coord.y = (coord.y * (double)get_render_height()) / (double)height;
 
     //printf("button=%d action=%d mods=%d\n", button, action, mods);
-
+    
     if (action == GLFW_PRESS) {
-        if (!handle_scrollbar_click(coord)) {
-            handle_module_click(coord);
+        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+            if (gContextMenu.active) {
+                if (!handle_context_menu_click(coord)) {
+                    gContextMenu.active = false;  // Close if clicked outside
+                }
+            } else {
+                if (!handle_scrollbar_click(coord)) {
+                    handle_module_click(coord);
+                }
+            }
+        } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+            open_context_menu(coord);
         }
     }
     else if (action == GLFW_RELEASE) {
         if (gModuleDrag.active == true) {
             shift_modules_down(gModuleDrag.moduleKey);
-            // Todo - write new modules positions to device
         }
 
         if (gCableDrag.active) {
@@ -378,8 +480,8 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
 
     // Scale x and y to match intended rendering window
     glfwGetWindowSize(window, &width, &height);
-    x = (x * (double)width) / (double)width;
-    y = (y * (double)height) / (double)height;
+    x = (x * (double)get_render_width()) / (double)width;
+    y = (y * (double)get_render_height()) / (double)height;
 
     if (gScrollState.yBarDragging == true) {
         set_yScrollBar(y);
@@ -449,7 +551,11 @@ void scroll_event(GLFWwindow * window, double x, double y) {
     tCoord     mouseCoord = {0};
     tRectangle moduleArea = module_area(); // Get the module display area
 
+    int    width, height;
+    glfwGetWindowSize(window, &width, &height);
     glfwGetCursorPos(window, &mouseCoord.x, &mouseCoord.y);
+    mouseCoord.x = (mouseCoord.x * (double)get_render_width()) / (double)width;
+    mouseCoord.y = (mouseCoord.y * (double)get_render_height()) / (double)height;
 
     //printf("Zoom = %f yEndMax = %f module area size = %f percent = %f\n", gZoomFactor, yEndMax, moduleArea.size.h, get_scroll_bar_percent(gScrollState.yBar, gRenderHeight));
 
@@ -585,6 +691,7 @@ void do_graphics_loop(void) {
         }
         render_top_bar();
         render_scrollbars(gWindow);
+        render_context_menu();
 
         // Swap buffers and look for events
         glfwSwapBuffers(gWindow);

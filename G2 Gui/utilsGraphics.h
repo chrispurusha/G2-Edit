@@ -58,6 +58,7 @@ void set_y_scroll_percent(double percent);
 void set_zoom_factor(double zoomFactor);
 void set_x_end_max(double xEndMax);
 void set_y_end_max(double yEndMax);
+double get_char_width(char ch, double targetHeight);
 void set_render_width(int width);
 void set_render_height(int height);
 double get_zoom_factor(void);
