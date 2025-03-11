@@ -67,14 +67,12 @@ IOUSBDeviceInterface ** find_usb_device(void) {
                             if ((vendor == G2_VENDOR_ID) && (product == G2_PRODUCT_ID)) {
                                 //printf("found device (vendor = 0x%x, product = %d)\n", vendor, product);
                                 quitLoop = true;
-                            }
-                            else {
+                            } else {
                                 deviceInterface = NULL;
                             }
                         }
                     }
-                }
-                else {
+                } else {
                     quitLoop = true;
                 }
             } while (quitLoop == false);
@@ -230,13 +228,11 @@ int32_t read_usb_interrupt(uint8_t * buff, uint32_t buffLength) {
 
     if (timedOut == true) {
         readLength = 0;
-    }
-    else if (result == kIOReturnSuccess) {     // Unless there's a way to detect aborted pipe read
+    } else if (result == kIOReturnSuccess) {   // Unless there's a way to detect aborted pipe read
         if ((buff[0] != 0)) {
             readLength = buffLength;
         }
-    }
-    else if (result == kIOReturnNoDevice) {
+    } else if (result == kIOReturnNoDevice) {
         readLength = -1;
     }
 

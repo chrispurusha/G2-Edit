@@ -647,13 +647,11 @@ static int rcv_extended(int dataLength) {
         bitPos = SIGNED_BYTE_TO_BIT(dataLength - 2);
         if (calc_crc16(buff, dataLength - 2) == read_bit_stream(buff, &bitPos, 16)) {
             retVal = parse_incoming(buff, dataLength);
-        }
-        else {
+        } else {
             printf("Bad CRC on ext message\n");
             retVal = -1;
         }
-    }
-    else {
+    } else {
         printf("Read ext problem! Read length = %d, data length = %d\n", readLength, dataLength);
     }
 
@@ -700,13 +698,11 @@ static int int_rec(void) {
 
                 retVal = rcv_extended(dataLength);
             }
-        }
-        else if (type == RESPONSE_TYPE_EMBEDDED) {
+        } else if (type == RESPONSE_TYPE_EMBEDDED) {
             // If Embedded, can call the process incoming, but skip the first byte
             retVal = parse_incoming(buff + 1, dataLength);
         }
-    }
-    else if (readLength < 0) {
+    } else if (readLength < 0) {
         gotBadConnectionIndication = true;
     }
 
@@ -902,8 +898,7 @@ static void state_handler(void) {
         case eStateFindDevice:
             if (open_usb() == EXIT_SUCCESS) {
                 state = eStateInit;
-            }
-            else {
+            } else {
                 usleep(100000);
             }
             break;
@@ -930,8 +925,7 @@ static void state_handler(void) {
             // if got a command in queue, do that, otherwise do the int_rec();
             if (msg_receive(&gCommandQueue, eRcvPoll, &messageContent) == EXIT_SUCCESS) {
                 send_write_data(&messageContent);
-            }
-            else {
+            } else {
                 int_rec();
             }
             break;

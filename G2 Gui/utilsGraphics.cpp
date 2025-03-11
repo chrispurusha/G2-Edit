@@ -464,8 +464,7 @@ tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active) {
 
     if (active) {
         set_rbg_colour({0.3, 0.7, 0.3});         // Green when ON
-    }
-    else {
+    } else {
         set_rbg_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
     }
     render_rectangle(mainArea, rectangle);
@@ -770,8 +769,7 @@ uint32_t angle_to_value(double angle) {
     // Clamp angle within [-135, 135] range
     if (angle > 135.0 && angle < 180.0) {
         angle = 135.0;
-    }
-    else if (angle >= 180.0 && angle < 360.0 - 135.0) {
+    } else if (angle >= 180.0 && angle < 360.0 - 135.0) {
         angle = 360.0 - 135.0;
     }
 

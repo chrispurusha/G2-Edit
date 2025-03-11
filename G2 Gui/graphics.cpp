@@ -45,13 +45,12 @@ extern "C" {
 #include "moduleGraphics.h"
 
 
-static tContextMenu gContextMenu = {false, {0, 0}, NULL
-};
-static tScrollState gScrollState = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
 
-static FT_Library   gLibrary = {0};
-static FT_Face      gFace    = {0};
-static GLFWwindow * gWindow  = NULL;
+static tScrollState gScrollState = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
+static tContextMenu gContextMenu = {0};
+static FT_Library   gLibrary     = {0};
+static FT_Face      gFace        = {0};
+static GLFWwindow * gWindow      = NULL;
 
 static tDragging       gDragging   = {0}; // Todo - rename to parameter value drag or similar
 static tModuleDragging gModuleDrag = {0};;
@@ -68,22 +67,16 @@ void error_callback(int error, const char * description) {
     fprintf(stderr, "Error [%d]: %s\n", error, description);
 }
 
-void menu_action_delete_module(void) {
-    printf("Delete Module\n");
+void menu_action_delete_cable(void) {
+    printf("Delete cable\n");
     // Implement module deletion logic
-}
-
-void menu_action_duplicate_module(void) {
-    printf("Duplicate Module\n");
-    // Implement duplication logic
 }
 
 void open_context_menu(tCoord coord) {
     static tMenuItem menuItems[] = {
-        {"Delete Module",    menu_action_delete_module   },
-        {"Duplicate Module", menu_action_duplicate_module},
-        {"Fake",             NULL                        },
-        {NULL,               NULL                        } // End of menu
+        {"Delete cable", menu_action_delete_cable},
+        {"Dummy option", NULL                    },
+        {NULL,           NULL                    }         // End of menu
     };
 
     // Store menu position
@@ -123,8 +116,7 @@ void render_context_menu(void) {
         menuItem = {{gContextMenu.coord.x, gContextMenu.coord.y + yOffset}, {largestSize + (5 * 2), itemHeight + (5 * 2)}};
         if (within_rectangle(mouseCoord, menuItem)) {
             set_rbg_colour({0.2, 0.6, 0.2});
-        }
-        else {
+        } else {
             set_rbg_colour({0.3, 0.3, 0.3});  // Background
         }
         render_rectangle(mainArea, menuItem);
@@ -155,8 +147,7 @@ bool handle_context_menu_click(tCoord coord) {
     for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
         tRectangle itemRect = {
             {gContextMenu.coord.x, gContextMenu.coord.y + yOffset},
-            {largestSize,          itemHeight + 5                }
-        };
+            {largestSize,          itemHeight + 5                }};
 
         if (within_rectangle(coord, itemRect)) {
             if (gContextMenu.items[i].action != NULL) {
@@ -186,13 +177,11 @@ void set_yScrollBar(double y) {
 bool handle_scrollbar_click(tCoord coord) {
     tRectangle yScrollBar = {
         {(double)get_render_width() - SCROLLBAR_WIDTH,                         0.0},
-        {SCROLLBAR_WIDTH,                              (double)get_render_height()}
-    };
+        {SCROLLBAR_WIDTH,                              (double)get_render_height()}};
 
     tRectangle xScrollBar = {
         {                       0.0, (double)get_render_height() - SCROLLBAR_WIDTH},
-        {(double)get_render_width(), SCROLLBAR_WIDTH                              }
-    };
+        {(double)get_render_width(), SCROLLBAR_WIDTH                              }};
 
     if (within_rectangle(coord, yScrollBar)) {
         set_yScrollBar(coord.y);
@@ -219,7 +208,7 @@ void send_module_move_msg(tModule * module) {
     msg_send(&gCommandQueue, &messageContent);
 }
 
-bool handle_module_click(tCoord coord) {
+bool handle_module_click(tCoord coord, int button) {
     if (!within_rectangle(coord, module_area())) {
         return false;
     }
@@ -239,8 +228,7 @@ bool handle_module_click(tCoord coord) {
                     gDragging.param     = i;
                     gDragging.active    = true;
                     return true;
-                }
-                else if (param->type == paramTypeToggle) {
+                } else if (param->type == paramTypeToggle) {
                     param->value = (param->value + 1) % param->range;
                     write_module(module.key, &module);
 
@@ -260,24 +248,28 @@ bool handle_module_click(tCoord coord) {
 
         for (int i = 0; i < gModuleProperties[module.type].numConnectors; i++) {
             if (within_rectangle(coord, module.connector[i].rectangle)) {
-                double     val  = 0;
-                tRectangle area = module_area();
+                if (button == GLFW_MOUSE_BUTTON_LEFT) {
+                    double     val  = 0;
+                    tRectangle area = module_area();
 
-                gCableDrag.fromModuleKey      = module.key;
-                gCableDrag.fromConnectorIndex = i;   // Index into array of connectors
+                    gCableDrag.fromModuleKey      = module.key;
+                    gCableDrag.fromConnectorIndex = i;   // Index into array of connectors
 
-                // Todo: Use a function for this scaling etc.
-                val  = coord.x - area.coord.x;
-                val += calc_scroll_x();
-                val /= get_zoom_factor();
-                gCableDrag.toConnector.coord.x = val;
-                val  = coord.y - area.coord.y;
-                val += calc_scroll_y();
-                val /= get_zoom_factor();
-                gCableDrag.toConnector.coord.y = val;
+                    // Todo: Use a function for this scaling etc.
+                    val  = coord.x - area.coord.x;
+                    val += calc_scroll_x();
+                    val /= get_zoom_factor();
+                    gCableDrag.toConnector.coord.x = val;
+                    val  = coord.y - area.coord.y;
+                    val += calc_scroll_y();
+                    val /= get_zoom_factor();
+                    gCableDrag.toConnector.coord.y = val;
 
-                gCableDrag.active = true;
-                return true;
+                    gCableDrag.active = true;
+                    return true;
+                } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+                    open_context_menu(coord);
+                }
             }
         }
 
@@ -405,18 +397,15 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 if (!handle_context_menu_click(coord)) {
                     gContextMenu.active = false;  // Close if clicked outside
                 }
-            }
-            else {
+            } else {
                 if (!handle_scrollbar_click(coord)) {
-                    handle_module_click(coord);
+                    handle_module_click(coord, button);
                 }
             }
+        } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+            handle_module_click(coord, button);
         }
-        else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-            open_context_menu(coord);
-        }
-    }
-    else if (action == GLFW_RELEASE) {
+    } else if (action == GLFW_RELEASE) {
         if (gModuleDrag.active == true) {
             shift_modules_down(gModuleDrag.moduleKey);
         }
@@ -494,11 +483,9 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
 
     if (gScrollState.yBarDragging == true) {
         set_yScrollBar(y);
-    }
-    else if (gScrollState.xBarDragging == true) {
+    } else if (gScrollState.xBarDragging == true) {
         set_xScrollBar(x);
-    }
-    else if (gDragging.active == true) {
+    } else if (gDragging.active == true) {
         read_module({gDragging.location, gDragging.index}, &module);
         switch (module.param[gDragging.variation][gDragging.param].type) {
             case paramTypeDial:
@@ -521,8 +508,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         messageContent.paramData.variation = gDragging.variation;
         messageContent.paramData.value     = value;
         msg_send(&gCommandQueue, &messageContent);
-    }
-    else if (gModuleDrag.active == true) {
+    } else if (gModuleDrag.active == true) {
         read_module(gModuleDrag.moduleKey, &module);
 
         // Todo: Use a function for this scaling etc.
@@ -538,8 +524,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         val          /= get_zoom_factor();
         module.row    = floor(val);
         write_module(gModuleDrag.moduleKey, &module);
-    }
-    else if (gCableDrag.active == true) {
+    } else if (gCableDrag.active == true) {
         // Todo: Use a function for this scaling etc.
         val  = x - area.coord.x;
         val += calc_scroll_x();
@@ -574,8 +559,7 @@ void scroll_event(GLFWwindow * window, double x, double y) {
         zoomFactor += y * zoomIncrement;
         if (zoomFactor < 0.5) {
             zoomFactor = 0.5;
-        }
-        else if (zoomFactor > 2.0) {
+        } else if (zoomFactor > 2.0) {
             zoomFactor = 2.0;
         }
         set_zoom_factor(zoomFactor);

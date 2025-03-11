@@ -138,8 +138,7 @@ void write_module(tModuleKey key, tModule * module) {
 
         if (firstModule == NULL) {
             firstModule = dbModule;
-        }
-        else {
+        } else {
             iterateModule = firstModule;
             while (iterateModule->next != NULL) {
                 iterateModule = iterateModule->next;
@@ -170,8 +169,7 @@ void delete_module(tModuleKey key, tFreeConnector freeConnector) {
     if (dbModule != NULL) {
         if (dbModule->prev != NULL) {
             dbModule->prev->next = dbModule->next;
-        }
-        else {
+        } else {
             firstModule = dbModule->next;
         }
 
@@ -205,8 +203,7 @@ bool walk_next_module(tModule * module) {
 
     if (walkModule == NULL) {
         walkModule = firstModule;
-    }
-    else {
+    } else {
         walkModule = walkModule->next;
     }
 
@@ -303,8 +300,7 @@ void write_cable(tCableKey key, tCable * cable) {
 
         if (firstCable == NULL) {
             firstCable = dbCable;
-        }
-        else {
+        } else {
             iterateCable = firstCable;
             while (iterateCable->next != NULL) {
                 iterateCable = iterateCable->next;
@@ -315,8 +311,7 @@ void write_cable(tCableKey key, tCable * cable) {
 
     if (dbCable != NULL) {
         memcpy(dbCable, cable, sizeof(*dbCable));
-    }
-    else {
+    } else {
         printf("Cable generation or update failed\n");
         exit(1);
     }
@@ -339,8 +334,7 @@ bool walk_next_cable(tCable * cable) {
 
     if (walkCable == NULL) {
         walkCable = firstCable;
-    }
-    else {
+    } else {
         walkCable = walkCable->next;
     }
 

@@ -35,8 +35,7 @@ uint16_t crc_iterator(int32_t seed, int32_t val) {
     for (i = 0; i < 8; i++) {
         if ((crc ^ k) & 0x8000) {
             crc = (crc << 1) ^ 0x1021;
-        }
-        else {
+        } else {
             crc = crc << 1;
         }
         k = k << 1;

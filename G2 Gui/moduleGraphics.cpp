@@ -121,14 +121,11 @@ void render_common_freq(tCoord coord, uint32_t param, tModule * module) {
 
     if (freq < 100) {
         snprintf(buff, sizeof(buff), "%.2fHz", freq);
-    }
-    else if (freq < 1000) {
+    } else if (freq < 1000) {
         snprintf(buff, sizeof(buff), "%.1fHz", freq);
-    }
-    else if (freq < 10000) {
+    } else if (freq < 10000) {
         snprintf(buff, sizeof(buff), "%.2fkHz", freq / 1000.0);
-    }
-    else {
+    } else {
         snprintf(buff, sizeof(buff), "%.1fkHz", freq / 1000.0);
     }
 
@@ -148,8 +145,7 @@ void render_common_pitch(tCoord coord, uint32_t param, tModule * module) {
 
     if (module->param[0][param].value < 127) {
         percent = round(((double)module->param[0][param].value * maxVal * 10.0) / 128.0) / 10.0;
-    }
-    else {
+    } else {
         percent = maxVal;     // Clip
     }
     module->param[0][param].type  = paramTypeDial;
@@ -169,8 +165,7 @@ void render_common_resonance(tCoord coord, uint32_t param, tModule * module) {
 
     if (module->param[0][param].value < 127) {
         res = round(((double)module->param[0][param].value * maxVal * 10.0) / 128.0) / 10.0;
-    }
-    else {
+    } else {
         res = maxVal;     // Clip
     }
     module->param[0][param].type  = paramTypeDial;
@@ -235,8 +230,7 @@ void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].range = 2;
     if (module->param[0][param].value != 0) {
         set_rbg_colour({0.3, 0.7, 0.3});         // Green when ON
-    }
-    else {
+    } else {
         set_rbg_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
     }
 
@@ -458,8 +452,7 @@ void render_cable_from_to(tConnector from, tConnector to) {
     if (from.coord.x == to.coord.x) {
         control.x = from.coord.x;
         control.y = fmin(from.coord.y, to.coord.y);
-    }
-    else {
+    } else {
         control.x = ((from.coord.x + to.coord.x) / 2.0);
         control.y = fmax(from.coord.y, to.coord.y) + 40.0;
     }

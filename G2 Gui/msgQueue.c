@@ -124,8 +124,7 @@ void msg_send(tMessageQueue * msgQueue, tMessageContent * messageContent) {
     if (msgQueue->tail == NULL) {
         msgQueue->head = message;
         msgQueue->tail = message;
-    }
-    else {
+    } else {
         msgQueue->tail->nextMessage = message;
         msgQueue->tail = message;         // Move the tail pointer to the new last message
     }
