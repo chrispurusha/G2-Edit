@@ -77,10 +77,10 @@ void render_param_common_dial(tCoord coord, uint32_t param, tModule * module, ch
     //module->param[0][param].rectangle = ;
 
     set_rbg_colour(RGB_BLACK);
-    render_text(moduleArea, { {coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, buff);
-    render_text(moduleArea, { {coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, label);
+    render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, label);
     set_rbg_colour({0.2, 0.2, 0.2});
-    module->param[0][param].rectangle = render_dial({coord, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0} }, module->param[0][param].value);
+    module->param[0][param].rectangle = render_dial({coord, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, module->param[0][param].value);
 }
 
 // This might become a common function for any modules with a bypes
@@ -88,7 +88,7 @@ void render_common_bypass(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type  = paramTypeToggle;
     module->param[0][param].range = 2;
 
-    module->param[0][param].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT} }, module->param[0][param].value != 0);
+    module->param[0][param].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, module->param[0][param].value != 0);
 }
 
 void render_common_keyboard_track(tCoord coord, uint32_t param, tModule * module) {
@@ -98,9 +98,9 @@ void render_common_keyboard_track(tCoord coord, uint32_t param, tModule * module
     module->param[0][param].type  = paramTypeToggle;
     module->param[0][param].range = range;
     set_rbg_colour(RGB_BLACK);
-    render_text(moduleArea, { {coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, "Kbt");
+    render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Kbt");
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, {largest_text_width(range, filterKbMap, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT} }, valString);
+    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, {largest_text_width(range, filterKbMap, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, valString);
 }
 
 void render_FltClassic_db(tCoord coord, uint32_t param, tModule * module) {
@@ -110,7 +110,7 @@ void render_FltClassic_db(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type  = paramTypeToggle;
     module->param[0][param].range = MAP_NUM_ITEMS(filterDbMap);
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, {largest_text_width(range, filterDbMap, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT} }, valString);
+    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, {largest_text_width(range, filterDbMap, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, valString);
 }
 
 void render_common_freq(tCoord coord, uint32_t param, tModule * module) {
@@ -131,8 +131,8 @@ void render_common_freq(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type  = paramTypeDial;
     module->param[0][param].range = 128;
     set_rbg_colour(RGB_BLACK);
-    render_text(moduleArea, { {coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, buff);
-    render_text(moduleArea, { {coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, "Freq");
+    render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Freq");
     set_rbg_colour({0.2, 0.2, 0.2});
     module->param[0][param].rectangle = render_dial({coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}, module->param[0][param].value);
 }
@@ -151,8 +151,8 @@ void render_common_pitch(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].range = 128;
     snprintf(buff, sizeof(buff), "%.1f%%", percent);
     set_rbg_colour(RGB_BLACK);
-    render_text(moduleArea, { {coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, buff);
-    render_text(moduleArea, { {coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, "Env");
+    render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Env");
     set_rbg_colour({0.2, 0.2, 0.2});
     module->param[0][param].rectangle = render_dial({coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}, module->param[0][param].value);
 }
@@ -171,8 +171,8 @@ void render_common_resonance(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].range = 128;
     snprintf(buff, sizeof(buff), "%.1f", res);
     set_rbg_colour(RGB_BLACK);
-    render_text(moduleArea, { {coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, buff);
-    render_text(moduleArea, { {coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, "Res");
+    render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Res");
     set_rbg_colour({0.2, 0.2, 0.2});
     module->param[0][param].rectangle = render_dial({coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}, module->param[0][param].value);
 }
@@ -413,7 +413,7 @@ void render_module(tModule * module) {
     double     yHeight                    = (moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP;
     char       buff[MODULE_NAME_SIZE + 1] = {0};
 
-    tRectangle moduleRectangle = { {xPos, yPos}, {xWidth, yHeight} };
+    tRectangle moduleRectangle = {{xPos, yPos}, {xWidth, yHeight}};
 
     set_module_colour(module->colour);
     module->rectangle = render_rectangle_with_border(moduleArea, moduleRectangle); // Add zoom factor for border - really needs to scale the whole thing!
@@ -422,13 +422,13 @@ void render_module(tModule * module) {
 
     snprintf(buff, sizeof(buff), "%s", module->name);
     set_rbga_colour(RGBA_BLACK_ON_TRANSPARENT);
-    render_text(moduleArea, { {moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, buff);
+    render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     // Temporary items purely for development debug
     snprintf(buff, sizeof(buff), "(%s)", gModuleProperties[module->type].name);
 
-    render_text(moduleArea, { {moduleRectangle.coord.x + 120.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, buff);
+    render_text(moduleArea, {{moduleRectangle.coord.x + 120.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     snprintf(buff, sizeof(buff), "%u", module->key.index);
-    render_text(moduleArea, { {moduleRectangle.coord.x + moduleRectangle.size.w - 30.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, buff);
+    render_text(moduleArea, {{moduleRectangle.coord.x + moduleRectangle.size.w - 30.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
 }
 
 void render_modules(void) {
@@ -451,10 +451,10 @@ void render_modules(void) {
 
     // Draw background areas
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    render_rectangle(mainArea, { {0.0, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)} });
-    render_rectangle(mainArea, { {0.0, area.coord.y - MODULE_MARGIN}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN} });
-    render_rectangle(mainArea, { {area.coord.x + area.size.w, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)} });
-    render_rectangle(mainArea, { {0.0, area.coord.y + area.size.h}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN} });
+    render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
+    render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
+    render_rectangle(mainArea, {{area.coord.x + area.size.w, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
+    render_rectangle(mainArea, {{0.0, area.coord.y + area.size.h}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
 }
 
 void render_cable_from_to(tConnector from, tConnector to) {

@@ -112,7 +112,7 @@ void render_context_menu(void) {
     int yOffset = 0;
 
     for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
-        menuItem = { {gContextMenu.coord.x, gContextMenu.coord.y + yOffset}, {largestSize + (5 * 2), itemHeight + (5 * 2)} };
+        menuItem = {{gContextMenu.coord.x, gContextMenu.coord.y + yOffset}, {largestSize + (5 * 2), itemHeight + (5 * 2)}};
 
         if (within_rectangle(mouseCoord, menuItem)) {
             set_rbg_colour({0.2, 0.6, 0.2});
@@ -122,7 +122,7 @@ void render_context_menu(void) {
         render_rectangle(mainArea, menuItem);
 
         set_rbg_colour({0.9, 0.9, 0.9});    // White text
-        render_text(mainArea, { {gContextMenu.coord.x + 5, gContextMenu.coord.y + 5 + yOffset}, {BLANK_SIZE, itemHeight} }, gContextMenu.items[i].label);
+        render_text(mainArea, {{gContextMenu.coord.x + 5, gContextMenu.coord.y + 5 + yOffset}, {BLANK_SIZE, itemHeight}}, gContextMenu.items[i].label);
         yOffset += itemHeight + (5 * 2);
     }
 }
@@ -148,7 +148,7 @@ bool handle_context_menu_click(tCoord coord) {
     for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
         tRectangle itemRect = {
             {gContextMenu.coord.x, gContextMenu.coord.y + yOffset},
-            {largestSize,          itemHeight + 5                } };
+            {largestSize,          itemHeight + 5                }};
 
         if (within_rectangle(coord, itemRect)) {
             if (gContextMenu.items[i].action != NULL) {
@@ -177,11 +177,11 @@ void set_yScrollBar(double y) {
 bool handle_scrollbar_click(tCoord coord) {
     tRectangle yScrollBar = {
         {(double)get_render_width() - SCROLLBAR_WIDTH,                         0.0},
-        {SCROLLBAR_WIDTH,                              (double)get_render_height()} };
+        {SCROLLBAR_WIDTH,                              (double)get_render_height()}};
 
     tRectangle xScrollBar = {
         {                       0.0, (double)get_render_height() - SCROLLBAR_WIDTH},
-        {(double)get_render_width(), SCROLLBAR_WIDTH                              } };
+        {(double)get_render_width(), SCROLLBAR_WIDTH                              }};
 
     if (within_rectangle(coord, yScrollBar)) {
         set_yScrollBar(coord.y);
@@ -576,22 +576,22 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 void render_scrollbars(GLFWwindow * window) {
     // Scrollbar background
     set_rbg_colour({0.7, 0.7, 0.7});
-    render_rectangle(mainArea, { {(double)get_render_width() - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, (double)get_render_height() - SCROLLBAR_MARGIN} });
-    render_rectangle(mainArea, { {0.0, (double)get_render_height() - SCROLLBAR_WIDTH}, {(double)get_render_width() - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH} });
+    render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, (double)get_render_height() - SCROLLBAR_MARGIN}});
+    render_rectangle(mainArea, {{0.0, (double)get_render_height() - SCROLLBAR_WIDTH}, {(double)get_render_width() - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH}});
 
     // Bottom right box
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    render_rectangle(mainArea, { {(double)get_render_width() - SCROLLBAR_WIDTH, (double)get_render_height() - SCROLLBAR_WIDTH}, {SCROLLBAR_WIDTH, SCROLLBAR_WIDTH} });
+    render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, (double)get_render_height() - SCROLLBAR_WIDTH}, {SCROLLBAR_WIDTH, SCROLLBAR_WIDTH}});
 
     // Scroll indicator blocks
     set_rbg_colour({0.9, 0.9, 0.9});
-    render_rectangle(mainArea, { {(double)get_render_width() - SCROLLBAR_WIDTH, gScrollState.yBar - (SCROLLBAR_LENGTH / 2.0)}, {SCROLLBAR_WIDTH, SCROLLBAR_LENGTH} });
-    render_rectangle(mainArea, { {gScrollState.xBar - (SCROLLBAR_LENGTH / 2.0), (double)get_render_height() - SCROLLBAR_WIDTH}, {SCROLLBAR_LENGTH, SCROLLBAR_WIDTH} });
+    render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, gScrollState.yBar - (SCROLLBAR_LENGTH / 2.0)}, {SCROLLBAR_WIDTH, SCROLLBAR_LENGTH}});
+    render_rectangle(mainArea, {{gScrollState.xBar - (SCROLLBAR_LENGTH / 2.0), (double)get_render_height() - SCROLLBAR_WIDTH}, {SCROLLBAR_LENGTH, SCROLLBAR_WIDTH}});
 }
 
 void render_top_bar(void) {
     set_rbg_colour({0.5, 0.5, 0.5});
-    render_rectangle_with_border(mainArea, { {0.0, 0.0}, {get_render_width() - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT} });
+    render_rectangle_with_border(mainArea, {{0.0, 0.0}, {get_render_width() - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
 }
 
 void wake_glfw(void) {

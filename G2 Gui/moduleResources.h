@@ -291,8 +291,8 @@ tModuleProperties gModuleProperties[] = {
 
 tRgb              connectorColourMap[2][2] =  // First index = direction, second = type
 {
-    { {0.5, 0.1, 0.1}, {0.5, 0.1, 0.5} },       // In: { Audio, Control }
-    { {0.7, 0.1, 0.1}, {0.7, 0.1, 0.7} }        // Out: { Audio, Control }
+    {{0.5, 0.1, 0.1}, {0.5, 0.1, 0.5}},         // In: { Audio, Control }
+    {{0.7, 0.1, 0.1}, {0.7, 0.1, 0.7}}          // Out: { Audio, Control }
 };
 
 

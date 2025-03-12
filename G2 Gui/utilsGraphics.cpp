@@ -150,7 +150,7 @@ tRectangle module_area(void) {
     double width  = gRenderWidth - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
     double height = gRenderHeight - TOP_BAR_HEIGHT - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
 
-    return { {left, top}, {width, height} };
+    return {{left, top}, {width, height}};
 }
 
 tRectangle render_line(tArea area, tCoord start, tCoord end, double thickness) {
@@ -165,7 +165,7 @@ tRectangle render_line(tArea area, tCoord start, tCoord end, double thickness) {
     double length         = sqrt(dx * dx + dy * dy);
 
     if (length == 0.0) {
-        return { {0.0, 0.0}, {0.0, 0.0} };
+        return {{0.0, 0.0}, {0.0, 0.0}};
     }
     // Normalize direction
     double nx = dx / length;
@@ -183,7 +183,7 @@ tRectangle render_line(tArea area, tCoord start, tCoord end, double thickness) {
     glVertex2f(end.x + px, end.y + py);
     glEnd();
 
-    return { {0.0, 0.0}, {0.0, 0.0} };
+    return {{0.0, 0.0}, {0.0, 0.0}};
 }
 
 tRectangle render_rectangle(tArea area, tRectangle rectangle) {
@@ -212,16 +212,16 @@ tRectangle render_rectangle_with_border(tArea area, tRectangle rectangle) {
     render_rectangle(mainArea, rectangle);
 
     set_rbg_colour(RGB_BLACK);
-    line = { {rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth}, {rectangle.size.w, borderLineWidth} };
+    line = {{rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth}, {rectangle.size.w, borderLineWidth}};
     render_rectangle(mainArea, line); //Bottom
     set_rbg_colour(RGB_WHITE);
-    line = { {rectangle.coord.x, rectangle.coord.y}, {borderLineWidth, rectangle.size.h} };
+    line = {{rectangle.coord.x, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
     render_rectangle(mainArea, line); //Left
     set_rbg_colour(RGB_WHITE);
-    line = { {rectangle.coord.x, rectangle.coord.y}, {rectangle.size.w, borderLineWidth} };
+    line = {{rectangle.coord.x, rectangle.coord.y}, {rectangle.size.w, borderLineWidth}};
     render_rectangle(mainArea, line); // Top
     set_rbg_colour(RGB_BLACK);
-    line = { {rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y}, {borderLineWidth, rectangle.size.h} };
+    line = {{rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
     render_rectangle(mainArea, line); // Right
 
     return {rectangle};
@@ -239,7 +239,7 @@ tRectangle render_triangle(tArea area, tTriangle triangle) {
     glVertex2f(triangle.coord1.x + triangle.coord3rel.x, triangle.coord1.y + triangle.coord3rel.y);
     glEnd();
 
-    return { {0.0, 0.0}, {0.0, 0.0} };
+    return {{0.0, 0.0}, {0.0, 0.0}};
 }
 
 tRectangle render_circle_line_part_angle(tArea area, tCoord coord, double radius, double startAngle, double endAngle, double thickness, int numSteps) {
@@ -255,7 +255,7 @@ tRectangle render_circle_line_part_angle(tArea area, tCoord coord, double radius
     double sweep = fmod((endAngle - startAngle + 360.0), 360.0);
 
     if (sweep == 0) {
-        return { {coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0} };                  // Avoid rendering nothing
+        return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};                    // Avoid rendering nothing
     }
     glEnable(GL_LINE_SMOOTH);
     glBegin(GL_TRIANGLE_STRIP);
@@ -278,7 +278,7 @@ tRectangle render_circle_line_part_angle(tArea area, tCoord coord, double radius
 
     glEnd();
 
-    return { {coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0} };
+    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
 }
 
 tRectangle render_circle_line(tArea area, tCoord coord, double radius, int segments, double thickness) {
@@ -308,7 +308,7 @@ tRectangle render_circle_line(tArea area, tCoord coord, double radius, int segme
 
     glEnd();
 
-    return { {coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0} };
+    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
 }
 
 tRectangle render_circle_part(tArea area, tCoord coord, double radius, int segments, int startSeg, int numSegs) {
@@ -335,7 +335,7 @@ tRectangle render_circle_part(tArea area, tCoord coord, double radius, int segme
 
     glEnd();
 
-    return { {coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0} };
+    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
 }
 
 tRectangle render_circle_part_angle(tArea area, tCoord coord, double radius, double startAngle, double endAngle, int numSteps) {
@@ -374,7 +374,7 @@ tRectangle render_circle_part_angle(tArea area, tCoord coord, double radius, dou
 
     glEnd();
 
-    return { {coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0} };
+    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
 }
 
 tRectangle render_radial_line(tArea area, tCoord coord, double radius, double angleDegrees, double thickness) {
@@ -398,7 +398,7 @@ tRectangle render_radial_line(tArea area, tCoord coord, double radius, double an
     //render_line(xPos, yPos, x, y, thickness);
     render_line(mainArea, {coord.x, coord.y}, {x, y}, thickness);
 
-    return { {coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0} };
+    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
 }
 
 void set_rbg_colour(tRgb rgb) {
@@ -448,7 +448,7 @@ tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord 
     render_circle_part(mainArea, start, thickness / 2.0, 10, 0, 10);
     render_circle_part(mainArea, end, thickness / 2.0, 10, 0, 10);
 
-    return { {0.0, 0.0}, {0.0, 0.0} };
+    return {{0.0, 0.0}, {0.0, 0.0}};
 }
 
 // Draw the power button symbol
@@ -496,7 +496,7 @@ tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
 
     if (text == NULL) {
         printf("render_text text=NULL\n");
-        return { {0.0, 0.0}, {0.0, 0.0} };
+        return {{0.0, 0.0}, {0.0, 0.0}};
     }
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, textureAtlas);
