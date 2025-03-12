@@ -1,7 +1,7 @@
 /*
  * The G2 Editor application.
  *
- * Copyright (C) 2024 Chris Turner <chris_purusha@icloud.com>
+ * Copyright (C) 2025 Chris Turner <chris_purusha@icloud.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
 #define __MSG_QUEUE_H__
 
 #include "sysIncludes.h"
-
 
 typedef enum {
     eCommandInit,
@@ -102,7 +101,6 @@ typedef struct {
     tMessage *      head;
     tMessage *      tail;
 } tMessageQueue;
-
 
 void msg_init(tMessageQueue * msgQueue, char * semName);
 int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageContent);

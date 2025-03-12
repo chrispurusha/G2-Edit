@@ -1,7 +1,7 @@
 /*
  * The G2 Editor application.
  *
- * Copyright (C) 2024 Chris Turner <chris_purusha@icloud.com>
+ * Copyright (C) 2025 Chris Turner <chris_purusha@icloud.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #ifndef __DATABASE_H__
 #define __DATABASE_H__
 
@@ -32,8 +31,6 @@ void dump_modules(void);
 void reset_walk_module(void);
 bool walk_next_module(tModule * module);
 uint32_t module_height(uint32_t type);
-
-//tRgb module_colour_map_to_rbg(uint32_t colour);
 char * module_type_name(uint32_t type);
 bool read_cable(tCableKey key, tCable * cable);
 void write_cable(tCableKey key, tCable * cable);

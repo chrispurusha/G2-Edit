@@ -1,7 +1,7 @@
 /*
  * The G2 Editor application.
  *
- * Copyright (C) 2024 Chris Turner <chris_purusha@icloud.com>
+ * Copyright (C) 2025 Chris Turner <chris_purusha@icloud.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
 
 #ifndef __MODULE_GRAPHICS_H__
 #define __MODULE_GRAPHICS_H__

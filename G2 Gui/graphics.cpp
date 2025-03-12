@@ -1,7 +1,7 @@
 /*
  * The G2 Editor application.
  *
- * Copyright (C) 2024 Chris Turner <chris_purusha@icloud.com>
+ * Copyright (C) 2025 Chris Turner <chris_purusha@icloud.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,7 +42,6 @@ extern "C" {
 #include "utilsGraphics.h"
 #include "dataBase.h"
 #include "moduleGraphics.h"
-
 
 static tScrollState      gScrollState = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
 static tContextMenu      gContextMenu = {0};

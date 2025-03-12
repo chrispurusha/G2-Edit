@@ -1,7 +1,7 @@
 /*
  * The G2 Editor application.
  *
- * Copyright (C) 2024 Chris Turner <chris_purusha@icloud.com>
+ * Copyright (C) 2025 Chris Turner <chris_purusha@icloud.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,15 +17,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include "dataBase.h"
 
-static pthread_mutex_t   dbMutex = {0};
-
+static pthread_mutex_t   dbMutex     = {0};
 static tModule *         firstModule = NULL;
 static tModule *         walkModule  = NULL;
 static tCable *          firstCable  = NULL;

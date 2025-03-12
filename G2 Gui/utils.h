@@ -1,7 +1,7 @@
 /*
  * The G2 Editor application.
  *
- * Copyright (C) 2024 Chris Turner <chris_purusha@icloud.com>
+ * Copyright (C) 2025 Chris Turner <chris_purusha@icloud.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #ifndef __UTILS_H__
 #define __UTILS_H__
 
 #include "sysIncludes.h"
-
 
 #define BIT_TO_BYTE(x)           ((x) >> 3) // Divide by 8
 #define BYTE_TO_BIT(x)           ((x) << 3) // Multiply by 8

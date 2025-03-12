@@ -1,7 +1,7 @@
 /*
  * The G2 Editor application.
  *
- * Copyright (C) 2024 Chris Turner <chris_purusha@icloud.com>
+ * Copyright (C) 2025 Chris Turner <chris_purusha@icloud.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #ifndef __MODULE_RESOURCES_H__
 #define __MODULE_RESOURCES_H__
 
@@ -26,10 +25,9 @@
 // mapping of values to strings etc.
 #define MAP_NUM_ITEMS(map)    (sizeof(map) / sizeof(map[0]))
 
-char * filterDbMap[]   = {"12db", "18db", "24db"};
-char * fltMultiDbMap[] = {"6db", "12db"};
-char * filterKbMap[]   = {"Off", "25%", "50%", "75%", "100%"};
-
+char *            filterDbMap[]   = {"12db", "18db", "24db"};
+char *            fltMultiDbMap[] = {"6db", "12db"};
+char *            filterKbMap[]   = {"Off", "25%", "50%", "75%", "100%"};
 
 tRgb              cableColourMap[] = {
     {0.7, 0.1, 0.1},       // red
