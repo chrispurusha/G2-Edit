@@ -24,7 +24,6 @@ extern "C" {
 
 #include "utils.h"
 
-
 uint16_t crc_iterator(int32_t seed, int32_t val) {
     int     i   = 0;
     int32_t crc = 0;
@@ -65,7 +64,6 @@ void write_uint16(uint8_t * buff, uint16_t val) {
     if (buff == NULL) {
         return;
     }
-
     buff[0] = (val >> 8) & 0xff;
     buff[1] = val & 0xff;
 }

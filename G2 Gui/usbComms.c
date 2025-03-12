@@ -54,19 +54,19 @@ typedef enum {
     eStateExit
 } eState;
 
-static bool      gotBadConnectionIndication = false;
-static bool      gotPatchChangeIndication   = false;
-static uint8_t   slotVersion[MAX_SLOTS]     = {0};
-static pthread_t usbThread = NULL;
+static bool              gotBadConnectionIndication = false;
+static bool              gotPatchChangeIndication   = false;
+static uint8_t           slotVersion[MAX_SLOTS]     = {0};
+static pthread_t         usbThread                  = NULL;
 
-tMessageQueue gCommandQueue = {0};
+tMessageQueue            gCommandQueue = {0};
 
-unsigned int volData[1024] = {0};    //Temporary for testing. Will ultimately have a better mechanism for passing data
-static void  (* wake_glfw_func_ptr)(void) = NULL;
+unsigned int             volData[1024] = {0}; //Temporary for testing. Will ultimately have a better mechanism for passing data
+static void              (*wake_glfw_func_ptr)(void) = NULL;
 
 extern tModuleProperties gModuleProperties[];
 
-void register_glfw_wake_cb(void (* func_ptr)(void)) {
+void register_glfw_wake_cb(void ( *func_ptr )(void)) {
     wake_glfw_func_ptr = func_ptr;
 }
 
@@ -75,7 +75,6 @@ static void call_wake_glfw(void) {
         printf("Wake GLFW callback function not registered\n");
         exit(1);
     }
-
     wake_glfw_func_ptr();
 }
 
@@ -88,14 +87,16 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     if (buff == NULL) {
         return retVal;
     }
-
     printf("Clavia string '");
+
     for (i = 0; i < 11; i++) {
         ch = read_bit_stream(buff, &bitPos, 8);
+
         if ((ch <= 0x7f) && (ch >= 0x20)) {
             printf("%c", ch);
         }
     }
+
     printf("'\n");
 
     printf("Perf Mode 0x%x\n", read_bit_stream(buff, &bitPos, 8));
@@ -154,7 +155,6 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
         if (read_module(key, &module) == true) {
             printf("Module already created\n");
         }
-
         module.type      = type;
         module.column    = read_bit_stream(buff, subOffset, 7);        // 7
         module.row       = read_bit_stream(buff, subOffset, 7);        // 7
@@ -173,11 +173,11 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
             //module.numConnectors = gModuleProperties[type].numConnectors;  //
             printf("Type = %s connectors %u\n", gModuleProperties[type].name, gModuleProperties[type].numConnectors);
             module.connector = malloc(gModuleProperties[type].numConnectors * sizeof(tConnector));
+
             if (module.connector != NULL) {
                 memset(module.connector, 0, gModuleProperties[type].numConnectors * sizeof(tConnector));
             }
         }
-
         printf("Number connectors for module %u\n", gModuleProperties[type].numConnectors);
         write_module(key, &module);
     }
@@ -221,9 +221,9 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
     uint32_t   paramValue     = 0;
     tModuleKey key            = {0};
     tModule    module         = {0};
-    int        i = 0;
-    int        j = 0;
-    int        k = 0;
+    int        i              = 0;
+    int        j              = 0;
+    int        k              = 0;
 
     printf("Param list\n");
     key.location = read_bit_stream(buff, subOffset, 2);
@@ -234,6 +234,7 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
     printf("Module Count      %u\n", moduleCount);
     variationCount = read_bit_stream(buff, subOffset, 8);     // Should always be 10 (VARIATIONS) - todo: sanity check
     printf("Variation Count      %u\n", variationCount);
+
     for (i = 0; i < moduleCount; i++) {
         key.index = read_bit_stream(buff, subOffset, 8);
         printf(" Module Index        %u\n", key.index);
@@ -263,9 +264,9 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
 
 static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
     //uint32_t location = 0;
-    uint32_t nameCount    = 0;
-    uint32_t paramLength  = 0;
-    uint32_t moduleLength = 0;
+    uint32_t   nameCount    = 0;
+    uint32_t   paramLength  = 0;
+    uint32_t   moduleLength = 0;
     //uint32_t index = 0;
     tModule    module = {0};
     tModuleKey key    = {0};
@@ -290,7 +291,6 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
         if (read_module(key, &module) == false) {
             write_module(key, &module);
         }
-
         moduleLength = read_bit_stream(buff, subOffset, 8);
         printf("Module length     %d\n", moduleLength);         // 5004
 
@@ -301,6 +301,7 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
             printf("Param Index  %d\n", read_bit_stream(buff, subOffset, 8));
             j += 3;
             printf("Param name: ");
+
             for (k = 0; k < paramLength - 1; k++) {
                 uint8_t ch = read_bit_stream(buff, subOffset, 8);
 
@@ -308,6 +309,7 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
                     printf("%c", ch);
                 }
             }
+
             printf("\n");
             j += paramLength - 1;
         }
@@ -336,12 +338,15 @@ static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
         printf(" Module Name Index %u\n", key.index);
 
         printf(" Module loc %u index %u\n", module.key.location, module.key.index);
+
         for (int k = 0; k < MODULE_NAME_SIZE; k++) {
             name[k] = read_bit_stream(buff, subOffset, 8);
+
             if (name[k] == '\0') {
                 break;
             }
         }
+
         name[sizeof(name) - 1] = '\0'; // Make sure we're null terminated
         printf("%s\n", name);
 
@@ -356,7 +361,6 @@ static int parse_patch(uint8_t * buff, int length) {
     if ((buff == NULL) || (length <= 0)) {
         return EXIT_FAILURE;
     }
-
     uint32_t bitOffset = 0;
 
     while (BIT_TO_BYTE(bitOffset) < length) {
@@ -415,7 +419,6 @@ static int parse_patch(uint8_t * buff, int length) {
         }
         bitOffset += SIGNED_BYTE_TO_BIT(count);
     }
-
     return EXIT_SUCCESS;
 }
 
@@ -423,7 +426,6 @@ static int parse_patch_version(uint8_t * buff, int length) {
     if ((buff == NULL) || (length < 2)) {      // Ensure valid buffer and minimum required length
         return EXIT_FAILURE;
     }
-
     uint32_t bitPos  = 0;
     uint8_t  slot    = read_bit_stream(buff, &bitPos, 8);
     uint8_t  version = read_bit_stream(buff, &bitPos, 8);
@@ -431,7 +433,6 @@ static int parse_patch_version(uint8_t * buff, int length) {
     if (slot >= MAX_SLOTS) {     // Prevent out-of-bounds access
         return EXIT_FAILURE;
     }
-
     slotVersion[slot] = version;
     return EXIT_SUCCESS;
 }
@@ -471,11 +472,13 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                 case SUB_COMMAND_VOLUME_INDICATOR:
                     //printf("Got Volume ");
                     j = 0;
+
                     for (i = 4; i < (length - 6); i += 2) {     // Exclude header/footer
                         volData[j] = read_bit_stream(buff, bitPos, 16);
                         //printf("%u ", volData[j]);
                         j++;
                     }
+
                     //printf("\n");
                     call_wake_glfw();
                     return EXIT_SUCCESS;
@@ -572,13 +575,16 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 
                 case 0x27:
                     printf("Got Patch name (length %d)'", length);
+
                     for (int i = 0; i < (length - 6); i++) {
                         uint8_t ch = read_bit_stream(buff, bitPos, 8);
+
                         //printf("<0x%02x> ", ch);
                         if (ch <= 0x7F) {         // Only print valid ASCII characters - should be 16 chars max = length of 22
                             printf("%c", ch);
                         }
                     }
+
                     printf("'\n");
                     return EXIT_SUCCESS;
 
@@ -600,7 +606,6 @@ static int parse_incoming(uint8_t * buff, int length) {
     if ((buff == NULL) || (length <= 0)) {
         return EXIT_FAILURE;
     }
-
     uint32_t bitPos       = 0;
     uint8_t  responseType = read_bit_stream(buff, &bitPos, 8);
 
@@ -625,18 +630,20 @@ static int parse_incoming(uint8_t * buff, int length) {
 }
 
 static int rcv_extended(int dataLength) {
-    int      retVal = EXIT_FAILURE;
-    uint32_t bitPos = 0;
+    int      retVal                      = EXIT_FAILURE;
+    uint32_t bitPos                      = 0;
     uint8_t  buff[EXTENDED_MESSAGE_SIZE] = {0};    // Could malloc this based on dataLength
-    int      readLength   = 0;
-    int      tries        = 0;
-    uint8_t  responseType = 0;
+    int      readLength                  = 0;
+    int      tries                       = 0;
+    uint8_t  responseType                = 0;
 
     for (tries = 0; tries < 5; tries++) {
         memset(buff, 0, sizeof(buff));
         readLength = read_usb_extended(buff, sizeof(buff));
+
         if (readLength > 0) {
             responseType = buff[0];
+
             if ((responseType == RESPONSE_TYPE_INIT) || (responseType == RESPONSE_TYPE_COMMAND)) {
                 break;
             }
@@ -645,6 +652,7 @@ static int rcv_extended(int dataLength) {
 
     if (readLength == dataLength) {
         bitPos = SIGNED_BYTE_TO_BIT(dataLength - 2);
+
         if (calc_crc16(buff, dataLength - 2) == read_bit_stream(buff, &bitPos, 16)) {
             retVal = parse_incoming(buff, dataLength);
         } else {
@@ -654,24 +662,24 @@ static int rcv_extended(int dataLength) {
     } else {
         printf("Read ext problem! Read length = %d, data length = %d\n", readLength, dataLength);
     }
-
     return retVal;
 }
 
 static int int_rec(void) {
-    int      retVal = EXIT_FAILURE;
-    uint32_t bitPos = 0;
+    int      retVal                       = EXIT_FAILURE;
+    uint32_t bitPos                       = 0;
     uint8_t  buff[INTERRUPT_MESSAGE_SIZE] = {0};
-    int      readLength    = 0;
-    int      dataLength    = 0;
-    int      type          = 0;
-    int      i             = 0;
-    int      tries         = 0;
-    bool     foundNoneZero = false;
+    int      readLength                   = 0;
+    int      dataLength                   = 0;
+    int      type                         = 0;
+    int      i                            = 0;
+    int      tries                        = 0;
+    bool     foundNoneZero                = false;
 
     for (tries = 0; tries < 5; tries++) {
         memset(buff, 0, sizeof(buff));
         readLength = read_usb_interrupt(buff, sizeof(buff));
+
         if (readLength > 0) {
             break;
         }
@@ -705,17 +713,16 @@ static int int_rec(void) {
     } else if (readLength < 0) {
         gotBadConnectionIndication = true;
     }
-
     return retVal;
 }
 
 static int send_command(int state) {
-    int      retVal = EXIT_FAILURE;
+    int      retVal                  = EXIT_FAILURE;
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
-    uint16_t crc       = 0;
-    int      msgLength = 0;
-    int      pos       = COMMAND_OFFSET;
-    uint32_t slot      = 0;
+    uint16_t crc                     = 0;
+    int      msgLength               = 0;
+    int      pos                     = COMMAND_OFFSET;
+    uint32_t slot                    = 0;
 
     switch (state) {
         case eStateInit:
@@ -822,17 +829,16 @@ static int send_command(int state) {
             retVal = EXIT_SUCCESS;
         }
     }
-
     return retVal;
 }
 
 static int send_write_data(tMessageContent * messageContent) {
-    int      retVal = EXIT_FAILURE;
+    int      retVal                  = EXIT_FAILURE;
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
-    uint16_t crc       = 0;
-    int      msgLength = 0;
-    int      pos       = COMMAND_OFFSET;
-    uint32_t slot      = 0;
+    uint16_t crc                     = 0;
+    int      msgLength               = 0;
+    int      pos                     = COMMAND_OFFSET;
+    uint32_t slot                    = 0;
 
     switch (messageContent->cmd) {
         case eMsgCmdSetValue:
@@ -888,7 +894,6 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal = EXIT_SUCCESS;
         }
     }
-
     return retVal;
 }
 
@@ -898,6 +903,7 @@ static void state_handler(void) {
 
     switch (state) {
         case eStateFindDevice:
+
             if (open_usb() == EXIT_SUCCESS) {
                 state = eStateInit;
             } else {
@@ -915,6 +921,7 @@ static void state_handler(void) {
         case eStateGetUnknown1:
         case eStateGetUnknown2:
         case eStateStart:
+
             if (send_command(state) == EXIT_SUCCESS) {
                 if (int_rec() == EXIT_SUCCESS) {
                     state += 1;
@@ -924,6 +931,7 @@ static void state_handler(void) {
             break;
 
         case eStatePoll:
+
             // if got a command in queue, do that, otherwise do the int_rec();
             if (msg_receive(&gCommandQueue, eRcvPoll, &messageContent) == EXIT_SUCCESS) {
                 send_write_data(&messageContent);
@@ -937,8 +945,9 @@ static void state_handler(void) {
             usleep(1000);
             break;
     }
+
     if (gotBadConnectionIndication == true) {
-        state = eStateFindDevice;
+        state                      = eStateFindDevice;
         gotBadConnectionIndication = false;
     }
 
@@ -946,7 +955,7 @@ static void state_handler(void) {
         database_clear_cables();
         database_clear_modules();
 
-        state = eStateGetPatchVersion;
+        state                    = eStateGetPatchVersion;
         gotPatchChangeIndication = false;
     }
 }
@@ -956,7 +965,7 @@ static void * usb_thread_loop(void * arg) {
 
     reset_usb();
 
-    for (;;) {
+    for ( ; ;) {
         state_handler();
     }
 }

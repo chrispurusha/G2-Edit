@@ -53,20 +53,20 @@ typedef struct {
 } GlyphInfo;
 
 static GlyphInfo glyphInfo[MAX_GLYPH_CHAR] = {0};       // Array to store glyph metadata TODO: Not being freed!?
-static GLuint    textureAtlas   = 0;                    // OpenGL texture handle
-static int       atlasWidth     = 1024 * 8;             // Initial atlas width
-static int       atlasHeight    = 1024 * 8;             // Initial atlas height
-static double    gMaxAscent     = 0.0;                  // Used for dealing with preloaded text character height
-static double    gMaxDescent    = 0.0;
-static double    gMetricsHeight = 0.0;
+static GLuint    textureAtlas              = 0;         // OpenGL texture handle
+static int       atlasWidth                = 1024 * 8;  // Initial atlas width
+static int       atlasHeight               = 1024 * 8;  // Initial atlas height
+static double    gMaxAscent                = 0.0;       // Used for dealing with preloaded text character height
+static double    gMaxDescent               = 0.0;
+static double    gMetricsHeight            = 0.0;
 
-static double gXScrollPercent = 0.0;
-static double gYScrollPercent = 0.0;
-static double gZoomFactor     = NO_ZOOM;
-static double gXEndMax        = 0.0;
-static double gYEndMax        = 0.0;
-static int    gRenderWidth    = 0;
-static int    gRenderHeight   = 0;
+static double    gXScrollPercent = 0.0;
+static double    gYScrollPercent = 0.0;
+static double    gZoomFactor     = NO_ZOOM;
+static double    gXEndMax        = 0.0;
+static double    gYEndMax        = 0.0;
+static int       gRenderWidth    = 0;
+static int       gRenderHeight   = 0;
 
 static inline double scale(double value) {
     return value * gZoomFactor;
@@ -77,6 +77,7 @@ double calc_scroll_x(void) {
     double     value = 0.0;
 
     value = (gXScrollPercent * (scale(gXEndMax) - area.size.w)) / 100.0;
+
     if (value < 0.0) {
         value = 0.0;
     }
@@ -88,6 +89,7 @@ double calc_scroll_y(void) {
     double     value = 0.0;
 
     value = (gYScrollPercent * (scale(gYEndMax) - area.size.h)) / 100.0;
+
     if (value < 0.0) {
         value = 0.0;
     }
@@ -148,7 +150,7 @@ tRectangle module_area(void) {
     double width  = gRenderWidth - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
     double height = gRenderHeight - TOP_BAR_HEIGHT - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
 
-    return {{left, top}, {width, height}};
+    return { {left, top}, {width, height} };
 }
 
 tRectangle render_line(tArea area, tCoord start, tCoord end, double thickness) {
@@ -157,16 +159,14 @@ tRectangle render_line(tArea area, tCoord start, tCoord end, double thickness) {
         end       = scale_scroll_adjust_coord(end);
         thickness = scale(thickness);
     }
-
     double half_thickness = thickness * 0.5;
     double dx             = end.x - start.x;
     double dy             = end.y - start.y;
     double length         = sqrt(dx * dx + dy * dy);
 
     if (length == 0.0) {
-        return{{0.0, 0.0}, {0.0, 0.0}};
+        return { {0.0, 0.0}, {0.0, 0.0} };
     }
-
     // Normalize direction
     double nx = dx / length;
     double ny = dy / length;
@@ -183,14 +183,13 @@ tRectangle render_line(tArea area, tCoord start, tCoord end, double thickness) {
     glVertex2f(end.x + px, end.y + py);
     glEnd();
 
-    return {{0.0, 0.0}, {0.0, 0.0}};
+    return { {0.0, 0.0}, {0.0, 0.0} };
 }
 
 tRectangle render_rectangle(tArea area, tRectangle rectangle) {
     if (area == moduleArea) {
         rectangle = scale_scroll_adjust_rectangle(rectangle);
     }
-
     glBegin(GL_QUADS);
     glVertex2f(rectangle.coord.x, rectangle.coord.y);
     glVertex2f(rectangle.coord.x + rectangle.size.w, rectangle.coord.y);
@@ -213,16 +212,16 @@ tRectangle render_rectangle_with_border(tArea area, tRectangle rectangle) {
     render_rectangle(mainArea, rectangle);
 
     set_rbg_colour(RGB_BLACK);
-    line = {{rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth}, {rectangle.size.w, borderLineWidth}};
+    line = { {rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth}, {rectangle.size.w, borderLineWidth} };
     render_rectangle(mainArea, line); //Bottom
     set_rbg_colour(RGB_WHITE);
-    line = {{rectangle.coord.x, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
+    line = { {rectangle.coord.x, rectangle.coord.y}, {borderLineWidth, rectangle.size.h} };
     render_rectangle(mainArea, line); //Left
     set_rbg_colour(RGB_WHITE);
-    line = {{rectangle.coord.x, rectangle.coord.y}, {rectangle.size.w, borderLineWidth}};
+    line = { {rectangle.coord.x, rectangle.coord.y}, {rectangle.size.w, borderLineWidth} };
     render_rectangle(mainArea, line); // Top
     set_rbg_colour(RGB_BLACK);
-    line = {{rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
+    line = { {rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y}, {borderLineWidth, rectangle.size.h} };
     render_rectangle(mainArea, line); // Right
 
     return {rectangle};
@@ -234,14 +233,13 @@ tRectangle render_triangle(tArea area, tTriangle triangle) {
         triangle.coord2rel = scale_scroll_adjust_coord(triangle.coord2rel);
         triangle.coord3rel = scale_scroll_adjust_coord(triangle.coord3rel);
     }
-
     glBegin(GL_POLYGON);
     glVertex2f(triangle.coord1.x, triangle.coord1.y);
     glVertex2f(triangle.coord1.x + triangle.coord2rel.x, triangle.coord1.y + triangle.coord2rel.y);
     glVertex2f(triangle.coord1.x + triangle.coord3rel.x, triangle.coord1.y + triangle.coord3rel.y);
     glEnd();
 
-    return {{0.0, 0.0}, {0.0, 0.0}};
+    return { {0.0, 0.0}, {0.0, 0.0} };
 }
 
 tRectangle render_circle_line_part_angle(tArea area, tCoord coord, double radius, double startAngle, double endAngle, double thickness, int numSteps) {
@@ -249,7 +247,6 @@ tRectangle render_circle_line_part_angle(tArea area, tCoord coord, double radius
         coord     = scale_scroll_adjust_coord(coord);
         thickness = scale(thickness);
     }
-
     const double DEG_TO_RAD = M_PI / 180.0;
     double       angle, x_inner, y_inner, x_outer, y_outer;
     double       half_thickness = thickness * 0.5;
@@ -258,7 +255,7 @@ tRectangle render_circle_line_part_angle(tArea area, tCoord coord, double radius
     double sweep = fmod((endAngle - startAngle + 360.0), 360.0);
 
     if (sweep == 0) {
-        return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};            // Avoid rendering nothing
+        return { {coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0} };                  // Avoid rendering nothing
     }
     glEnable(GL_LINE_SMOOTH);
     glBegin(GL_TRIANGLE_STRIP);
@@ -281,7 +278,7 @@ tRectangle render_circle_line_part_angle(tArea area, tCoord coord, double radius
 
     glEnd();
 
-    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
+    return { {coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0} };
 }
 
 tRectangle render_circle_line(tArea area, tCoord coord, double radius, int segments, double thickness) {
@@ -289,7 +286,6 @@ tRectangle render_circle_line(tArea area, tCoord coord, double radius, int segme
         coord  = scale_scroll_adjust_coord(coord);
         radius = scale(radius);
     }
-
     thickness = scale(thickness);
     const double DEG_TO_RAD     = 2.0 * M_PI / (double)segments;
     double       half_thickness = thickness * 0.5;
@@ -312,7 +308,7 @@ tRectangle render_circle_line(tArea area, tCoord coord, double radius, int segme
 
     glEnd();
 
-    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
+    return { {coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0} };
 }
 
 tRectangle render_circle_part(tArea area, tCoord coord, double radius, int segments, int startSeg, int numSegs) {
@@ -320,7 +316,6 @@ tRectangle render_circle_part(tArea area, tCoord coord, double radius, int segme
         coord  = scale_scroll_adjust_coord(coord);
         radius = scale(radius);
     }
-
     double angle = 0.0;
     double x     = 0.0;
     double y     = 0.0;
@@ -330,15 +325,17 @@ tRectangle render_circle_part(tArea area, tCoord coord, double radius, int segme
 
     glBegin(GL_TRIANGLE_FAN);
     glVertex2f(coord.x, coord.y);  // Center
+
     for (i = 0; i <= numSegs; i++) {
         angle = 2.0f * M_PI * (double)(i + startSeg) / (double)segments;
         x     = coord.x + cos(angle) * radius;
         y     = coord.y + sin(angle) * radius;
         glVertex2f(x, y);
     }
+
     glEnd();
 
-    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
+    return { {coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0} };
 }
 
 tRectangle render_circle_part_angle(tArea area, tCoord coord, double radius, double startAngle, double endAngle, int numSteps) {
@@ -346,7 +343,6 @@ tRectangle render_circle_part_angle(tArea area, tCoord coord, double radius, dou
         coord  = scale_scroll_adjust_coord(coord);
         radius = scale(radius);
     }
-
     double angle = 0.0;
     double x     = 0.0;
     double y     = 0.0;
@@ -378,7 +374,7 @@ tRectangle render_circle_part_angle(tArea area, tCoord coord, double radius, dou
 
     glEnd();
 
-    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
+    return { {coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0} };
 }
 
 tRectangle render_radial_line(tArea area, tCoord coord, double radius, double angleDegrees, double thickness) {
@@ -387,7 +383,6 @@ tRectangle render_radial_line(tArea area, tCoord coord, double radius, double an
         radius    = scale(radius);
         thickness = scale(thickness);
     }
-
     double angle = 0.0;
     double x     = 0.0;
     double y     = 0.0;
@@ -403,7 +398,7 @@ tRectangle render_radial_line(tArea area, tCoord coord, double radius, double an
     //render_line(xPos, yPos, x, y, thickness);
     render_line(mainArea, {coord.x, coord.y}, {x, y}, thickness);
 
-    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
+    return { {coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0} };
 }
 
 void set_rbg_colour(tRgb rgb) {
@@ -421,7 +416,6 @@ tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord 
         end       = scale_scroll_adjust_coord(end);
         thickness = scale(thickness);
     }
-
     glBegin(GL_TRIANGLE_STRIP);
 
     for (int i = 0; i <= segments; i++) {
@@ -454,7 +448,7 @@ tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord 
     render_circle_part(mainArea, start, thickness / 2.0, 10, 0, 10);
     render_circle_part(mainArea, end, thickness / 2.0, 10, 0, 10);
 
-    return {{0.0, 0.0}, {0.0, 0.0}};
+    return { {0.0, 0.0}, {0.0, 0.0} };
 }
 
 // Draw the power button symbol
@@ -497,15 +491,13 @@ tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
     if (area == moduleArea) {
         rectangle = scale_scroll_adjust_rectangle(rectangle);
     }
-
     double scaleFactor = 0.0;
     char * ch          = NULL;
 
     if (text == NULL) {
         printf("render_text text=NULL\n");
-        return {{0.0, 0.0}, {0.0, 0.0}};;
+        return { {0.0, 0.0}, {0.0, 0.0} };
     }
-
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, textureAtlas);
 
@@ -524,6 +516,7 @@ tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
     double xCharOffset = 0.0;
 
     ch = text;
+
     while (*ch) {
         char        character = *ch;
         GlyphInfo * glyph     = &glyphInfo[character];
@@ -542,10 +535,14 @@ tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
 
         // Render the character quad
         glBegin(GL_QUADS);
-        glTexCoord2f(u1, v1); glVertex2f(xPos, yPos);               // Bottom-left
-        glTexCoord2f(u2, v1); glVertex2f(xPos + w, yPos);           // Bottom-right
-        glTexCoord2f(u2, v2); glVertex2f(xPos + w, yPos + h);       // Top-right
-        glTexCoord2f(u1, v2); glVertex2f(xPos, yPos + h);           // Top-left
+        glTexCoord2f(u1, v1);
+        glVertex2f(xPos, yPos);                                     // Bottom-left
+        glTexCoord2f(u2, v1);
+        glVertex2f(xPos + w, yPos);                                 // Bottom-right
+        glTexCoord2f(u2, v2);
+        glVertex2f(xPos + w, yPos + h);                             // Top-right
+        glTexCoord2f(u1, v2);
+        glVertex2f(xPos, yPos + h);                                 // Top-left
         glEnd();
 
         // Adjust the position for the next character (add some space between them)
@@ -554,7 +551,6 @@ tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
 
         ch++;
     }
-
     glPopMatrix();
 
     glDisable(GL_TEXTURE_2D);
@@ -594,7 +590,6 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
         FT_Done_FreeType(ftLibrary);
         return false;
     }
-
     // Initialize texture atlas
     glGenTextures(1, &textureAtlas);
     glBindTexture(GL_TEXTURE_2D, textureAtlas);
@@ -610,6 +605,7 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
 
     for (charCode = 32; charCode < MAX_GLYPH_CHAR; charCode++) {
         glyphIndex = FT_Get_Char_Index(face, charCode);
+
         if (glyphIndex == 0) {
             printf("Glyph index not found for character %d %c\n", charCode, charCode);
             continue;
@@ -624,24 +620,25 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
             printf("Failed to render glyph for character %c\n", charCode);
             continue;
         }
-
         // Track the highest ascent and lowest descent
         double glyphAscent = face->glyph->bitmap_top;
+
         if (glyphAscent < 0.0) {
             glyphAscent = 0.0;
         }
+
         if (glyphAscent > gMaxAscent) {
             gMaxAscent = glyphAscent;
         }
-
         double glyphDescent = (double)face->glyph->bitmap.rows - (double)face->glyph->bitmap_top;
+
         if (glyphDescent < 0.0) {
             glyphDescent = 0.0;
         }
+
         if (glyphDescent > gMaxDescent) {
             gMaxDescent = glyphDescent;
         }
-
         gMetricsHeight = (double)face->size->metrics.height / 64.0;
 
         bitmap = &face->glyph->bitmap;
@@ -655,8 +652,8 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
 
             for (y = 0; y < texHeight; ++y) {
                 for (x = 0; x < texWidth; ++x) {
-                    int bufferIndex = y * bitmap->pitch + x;                 // Use pitch for alignment
-                    int rgbaIndex   = (y * texWidth + x) * 4;
+                    int           bufferIndex = y * bitmap->pitch + x;       // Use pitch for alignment
+                    int           rgbaIndex   = (y * texWidth + x) * 4;
 
                     unsigned char value = (x < bitmap->width && y < bitmap->rows) ? bitmap->buffer[bufferIndex] : 0;
                     rgbaBuffer[rgbaIndex + 0] = 255;                   // Red
@@ -670,7 +667,6 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
             glTexSubImage2D(GL_TEXTURE_2D, 0, atlasX + padding, atlasY + padding, texWidth, texHeight, GL_RGBA, GL_UNSIGNED_BYTE, rgbaBuffer);
             free(rgbaBuffer);
         }
-
         // Store glyph information with padding
         glyphInfo[charCode].u1        = (double)(atlasX + padding) / (double)atlasWidth;
         glyphInfo[charCode].v1        = (double)(atlasY + padding) / (double)atlasHeight;
@@ -683,6 +679,7 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
         glyphInfo[charCode].offset_y  = face->glyph->bitmap_top;
 
         atlasX += texWidth + padding;        // Add padding to the X offset
+
         if (texHeight + padding > rowHeight) {
             rowHeight = texHeight + padding; // Add padding to the row height
         }
@@ -708,7 +705,6 @@ double get_text_width(char * text, double targetHeight) {
     if (text == NULL) {
         return 0.0;
     }
-
     double       width = 0.0;
     const char * ch    = text;
 
@@ -716,7 +712,6 @@ double get_text_width(char * text, double targetHeight) {
         width += get_char_width(*ch, targetHeight);
         ch++;
     }
-
     return width;
 }
 
@@ -724,17 +719,18 @@ double largest_text_width(int numItems, char ** text, double targetHeight) {
     if (text == NULL) {
         return 0.0;
     }
-
     int    i       = 0;
     double size    = 0;
     double maxSize = 0;
 
     for (i = 0; i < numItems; i++) {
         size = get_text_width(text[i], targetHeight);
+
         if (size > maxSize) {
             maxSize = size;
         }
     }
+
     return maxSize;
 }
 
@@ -772,7 +768,6 @@ uint32_t angle_to_value(double angle) {
     } else if (angle >= 180.0 && angle < 360.0 - 135.0) {
         angle = 360.0 - 135.0;
     }
-
     // Normalize angle to [0, 270]
     angle = fmod(angle + 135.0, 360.0);
 
@@ -781,7 +776,6 @@ uint32_t angle_to_value(double angle) {
     if (value >= 128) { // If we hit 128, we only just hit it, so decrement
         value = 127;
     }
-
     return value;
 }
 
@@ -799,10 +793,10 @@ double calculate_mouse_angle(tCoord mouseCoord, tRectangle rectangle) {
 }
 
 bool within_rectangle(tCoord coord, tRectangle rectangle) {
-    return coord.x >= rectangle.coord.x &&
-           coord.x <= rectangle.coord.x + rectangle.size.w &&
-           coord.y >= rectangle.coord.y &&
-           coord.y <= rectangle.coord.y + rectangle.size.h;
+    return coord.x >= rectangle.coord.x
+           && coord.x <= rectangle.coord.x + rectangle.size.w
+           && coord.y >= rectangle.coord.y
+           && coord.y <= rectangle.coord.y + rectangle.size.h;
 }
 
 double clamp_scroll_bar(double value, double max_value) {
@@ -813,6 +807,7 @@ double clamp_scroll_bar(double value, double max_value) {
     if (value < min_limit) {
         return min_limit;
     }
+
     if (value > max_limit) {
         return max_limit;
     }

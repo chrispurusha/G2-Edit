@@ -31,56 +31,53 @@ char * fltMultiDbMap[] = {"6db", "12db"};
 char * filterKbMap[]   = {"Off", "25%", "50%", "75%", "100%"};
 
 
-tRgb cableColourMap[] =
-{
-    {0.7, 0.1, 0.1},     // red
-    {0.1, 0.1, 0.7},     // blue
-    {0.7, 0.7, 0.1},     // yellow
-    {0.8, 0.3, 0.2},     // orange
-    {0.1, 0.7, 0.1},     // green
-    {0.7, 0.1, 0.7},     // purple
-    {0.9, 0.9, 0.9}      // white
+tRgb              cableColourMap[] = {
+    {0.7, 0.1, 0.1},       // red
+    {0.1, 0.1, 0.7},       // blue
+    {0.7, 0.7, 0.1},       // yellow
+    {0.8, 0.3, 0.2},       // orange
+    {0.1, 0.7, 0.1},       // green
+    {0.7, 0.1, 0.7},       // purple
+    {0.9, 0.9, 0.9}        // white
 };
 
-tRgb gModuleColourMap[] =
-{
-    {0.7, 0.7, 0.7},     // standard grey
-    {0.8, 0.6, 0.6},     // red 4
-    {0.6, 0.8, 0.6},     // green 4
-    {0.6, 0.6, 0.8},     // blue 4
-    {0.8, 0.8, 0.6},     // yellow 4
-    {0.3, 0.3, 0.8},     // blue 1
-    {0.8, 0.3, 0.3},     // red 1
-    {0.4, 0.8, 0.8},     // cyan 2
-    {0.4, 0.8, 0.4},     // green 2
-    {0.8, 0.8, 0.3},     // yellow 1
-    {0.3, 0.8, 0.3},     // green 1
-    {0.8, 0.8, 0.4},     // yellow 2
-    {0.5, 0.5, 0.8},     // blue 3
-    {0.8, 0.4, 0.4},     // red 2
-    {0.8, 0.5, 0.5},     // red 3
-    {0.8, 0.8, 0.5},     // yellow 3
-    {0.5, 0.8, 0.5},     // green 3
-    {0.3, 0.8, 0.8},     // cyan 1
-    {0.5, 0.8, 0.8},     // cyan 3
-    {0.6, 0.8, 0.8},     // cyan 4
-    {0.4, 0.4, 0.8},     // blue 2
-    {0.8, 0.3, 0.8},     // purple 1
-    {0.8, 0.4, 0.8},     // purple 2
-    {0.8, 0.5, 0.8},     // purple 3
-    {0.8, 0.6, 0.8},     // purple 4
+tRgb              gModuleColourMap[] = {
+    {0.7, 0.7, 0.7},       // standard grey
+    {0.8, 0.6, 0.6},       // red 4
+    {0.6, 0.8, 0.6},       // green 4
+    {0.6, 0.6, 0.8},       // blue 4
+    {0.8, 0.8, 0.6},       // yellow 4
+    {0.3, 0.3, 0.8},       // blue 1
+    {0.8, 0.3, 0.3},       // red 1
+    {0.4, 0.8, 0.8},       // cyan 2
+    {0.4, 0.8, 0.4},       // green 2
+    {0.8, 0.8, 0.3},       // yellow 1
+    {0.3, 0.8, 0.3},       // green 1
+    {0.8, 0.8, 0.4},       // yellow 2
+    {0.5, 0.5, 0.8},       // blue 3
+    {0.8, 0.4, 0.4},       // red 2
+    {0.8, 0.5, 0.5},       // red 3
+    {0.8, 0.8, 0.5},       // yellow 3
+    {0.5, 0.8, 0.5},       // green 3
+    {0.3, 0.8, 0.8},       // cyan 1
+    {0.5, 0.8, 0.8},       // cyan 3
+    {0.6, 0.8, 0.8},       // cyan 4
+    {0.4, 0.4, 0.8},       // blue 2
+    {0.8, 0.3, 0.8},       // purple 1
+    {0.8, 0.4, 0.8},       // purple 2
+    {0.8, 0.5, 0.8},       // purple 3
+    {0.8, 0.6, 0.8},       // purple 4
 };
 
-void render_OscShpB(tRectangle, tModule *);
-void render_EnvAdsr(tRectangle, tModule *);
-void render_FltMulti(tRectangle, tModule *);
-void render_FltClassic(tRectangle, tModule *);
-void render_StChorus(tRectangle, tModule *);
-void render_Mix4to1c(tRectangle, tModule *);
-void render_Compress(tRectangle, tModule *);
+void              render_OscShpB(tRectangle, tModule *);
+void              render_EnvAdsr(tRectangle, tModule *);
+void              render_FltMulti(tRectangle, tModule *);
+void              render_FltClassic(tRectangle, tModule *);
+void              render_StChorus(tRectangle, tModule *);
+void              render_Mix4to1c(tRectangle, tModule *);
+void              render_Compress(tRectangle, tModule *);
 
-tModuleProperties gModuleProperties[] =
-{
+tModuleProperties gModuleProperties[] = {
     // Array index = module type for access speed
     {"Unknown",      0, 0, NULL             },
     {"Keyboard",     2, 0, NULL             },
@@ -292,9 +289,10 @@ tModuleProperties gModuleProperties[] =
     {"Unknown",      0, 0, NULL             },
     {"RndPattern",   3, 0, NULL             }, };
 
-tRgb connectorColourMap[2][2] = {       // First index = direction, second = type
-    {{0.5, 0.1, 0.1}, {0.5, 0.1, 0.5}}, // In: { Audio, Control }
-    {{0.7, 0.1, 0.1}, {0.7, 0.1, 0.7}}  // Out: { Audio, Control }
+tRgb              connectorColourMap[2][2] =  // First index = direction, second = type
+{
+    { {0.5, 0.1, 0.1}, {0.5, 0.1, 0.5} },       // In: { Audio, Control }
+    { {0.7, 0.1, 0.1}, {0.7, 0.1, 0.7} }        // Out: { Audio, Control }
 };
 
 

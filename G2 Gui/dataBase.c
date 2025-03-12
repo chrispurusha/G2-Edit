@@ -24,12 +24,12 @@ extern "C" {
 
 #include "dataBase.h"
 
-static pthread_mutex_t dbMutex = {0};
+static pthread_mutex_t   dbMutex = {0};
 
-static tModule * firstModule = NULL;
-static tModule * walkModule  = NULL;
-static tCable *  firstCable  = NULL;
-static tCable *  walkCable   = NULL;
+static tModule *         firstModule = NULL;
+static tModule *         walkModule  = NULL;
+static tCable *          firstCable  = NULL;
+static tCable *          walkCable   = NULL;
 
 extern tModuleProperties gModuleProperties[];
 
@@ -92,7 +92,6 @@ static tModule * find_module(tModuleKey key) { // todo - use tModuleKey instead 
         }
         module = module->next;
     }
-
     mutex_unlock();
 
     return module;
@@ -112,7 +111,6 @@ bool read_module(tModuleKey key, tModule * module) {
         memcpy(module, foundModule, sizeof(*module));
         retVal = true;
     }
-
     mutex_unlock();
 
     return retVal;
@@ -130,6 +128,7 @@ void write_module(tModuleKey key, tModule * module) {
 
     if (dbModule == NULL) {
         dbModule = (tModule *)malloc(sizeof(tModule));
+
         if (dbModule == NULL) {
             printf("Malloc fail\n");
             exit(1);
@@ -140,6 +139,7 @@ void write_module(tModuleKey key, tModule * module) {
             firstModule = dbModule;
         } else {
             iterateModule = firstModule;
+
             while (iterateModule->next != NULL) {
                 iterateModule = iterateModule->next;
             }
@@ -147,7 +147,6 @@ void write_module(tModuleKey key, tModule * module) {
             dbModule->prev      = iterateModule;
         }
     }
-
     // Preserve prev and next pointers before memcpy
     tModule * prev = dbModule->prev;
     tModule * next = dbModule->next;
@@ -182,11 +181,9 @@ void delete_module(tModuleKey key, tFreeConnector freeConnector) {
                 free(dbModule->connector);
             }
         }
-
         memset(dbModule, 0, sizeof(*dbModule));  // Protection against using stale data
         free(dbModule);
     }
-
     mutex_unlock();
 }
 
@@ -211,7 +208,6 @@ bool walk_next_module(tModule * module) {
         memcpy(module, walkModule, sizeof(*module));
         validModule = true;
     }
-
     mutex_unlock();
 
     return validModule;
@@ -255,7 +251,6 @@ static tCable * find_cable(tCableKey key) {
         }
         cable = cable->next;
     }
-
     mutex_unlock();
 
     return cable;
@@ -275,7 +270,6 @@ bool read_cable(tCableKey key, tCable * cable) {
         memcpy(cable, foundCable, sizeof(*cable));
         retVal = true;
     }
-
     mutex_unlock();
 
     return retVal;
@@ -293,6 +287,7 @@ void write_cable(tCableKey key, tCable * cable) {
 
     if (dbCable == NULL) {
         dbCable = (tCable *)malloc(sizeof(tCable));
+
         if (dbCable == NULL) {
             printf("Malloc fail\n");
             exit(1);
@@ -302,6 +297,7 @@ void write_cable(tCableKey key, tCable * cable) {
             firstCable = dbCable;
         } else {
             iterateCable = firstCable;
+
             while (iterateCable->next != NULL) {
                 iterateCable = iterateCable->next;
             }
@@ -315,7 +311,6 @@ void write_cable(tCableKey key, tCable * cable) {
         printf("Cable generation or update failed\n");
         exit(1);
     }
-
     //TODO - possibly have local copy of the db's model of next,rather than using incoming
 
     mutex_unlock();
@@ -342,7 +337,6 @@ bool walk_next_cable(tCable * cable) {
         memcpy(cable, walkCable, sizeof(*cable));
         validCable = true;
     }
-
     mutex_unlock();
 
     return validCable;
@@ -355,13 +349,13 @@ void database_clear_modules(void) {
     mutex_lock();
 
     module = firstModule;
+
     while (module != NULL) {
         nextModule = module->next;
 
         if (module->connector != NULL) {
             free(module->connector);
         }
-
         free(module);
         module = nextModule;
     }
@@ -377,6 +371,7 @@ void database_clear_cables(void) {
     mutex_lock();
 
     cable = firstCable;
+
     while (cable != NULL) {
         nextCable = cable->next;
         free(cable);

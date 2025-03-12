@@ -77,10 +77,10 @@ void render_param_common_dial(tCoord coord, uint32_t param, tModule * module, ch
     //module->param[0][param].rectangle = ;
 
     set_rbg_colour(RGB_BLACK);
-    render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-    render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, label);
+    render_text(moduleArea, { {coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, buff);
+    render_text(moduleArea, { {coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, label);
     set_rbg_colour({0.2, 0.2, 0.2});
-    module->param[0][param].rectangle = render_dial({coord, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, module->param[0][param].value);
+    module->param[0][param].rectangle = render_dial({coord, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0} }, module->param[0][param].value);
 }
 
 // This might become a common function for any modules with a bypes
@@ -88,7 +88,7 @@ void render_common_bypass(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type  = paramTypeToggle;
     module->param[0][param].range = 2;
 
-    module->param[0][param].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, module->param[0][param].value != 0);
+    module->param[0][param].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT} }, module->param[0][param].value != 0);
 }
 
 void render_common_keyboard_track(tCoord coord, uint32_t param, tModule * module) {
@@ -98,9 +98,9 @@ void render_common_keyboard_track(tCoord coord, uint32_t param, tModule * module
     module->param[0][param].type  = paramTypeToggle;
     module->param[0][param].range = range;
     set_rbg_colour(RGB_BLACK);
-    render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Kbt");
+    render_text(moduleArea, { {coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, "Kbt");
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, {largest_text_width(range, filterKbMap, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, valString);
+    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, {largest_text_width(range, filterKbMap, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT} }, valString);
 }
 
 void render_FltClassic_db(tCoord coord, uint32_t param, tModule * module) {
@@ -110,7 +110,7 @@ void render_FltClassic_db(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type  = paramTypeToggle;
     module->param[0][param].range = MAP_NUM_ITEMS(filterDbMap);
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, {largest_text_width(range, filterDbMap, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, valString);
+    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, {largest_text_width(range, filterDbMap, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT} }, valString);
 }
 
 void render_common_freq(tCoord coord, uint32_t param, tModule * module) {
@@ -128,12 +128,11 @@ void render_common_freq(tCoord coord, uint32_t param, tModule * module) {
     } else {
         snprintf(buff, sizeof(buff), "%.1fkHz", freq / 1000.0);
     }
-
     module->param[0][param].type  = paramTypeDial;
     module->param[0][param].range = 128;
     set_rbg_colour(RGB_BLACK);
-    render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-    render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Freq");
+    render_text(moduleArea, { {coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, buff);
+    render_text(moduleArea, { {coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, "Freq");
     set_rbg_colour({0.2, 0.2, 0.2});
     module->param[0][param].rectangle = render_dial({coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}, module->param[0][param].value);
 }
@@ -152,8 +151,8 @@ void render_common_pitch(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].range = 128;
     snprintf(buff, sizeof(buff), "%.1f%%", percent);
     set_rbg_colour(RGB_BLACK);
-    render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-    render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Env");
+    render_text(moduleArea, { {coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, buff);
+    render_text(moduleArea, { {coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, "Env");
     set_rbg_colour({0.2, 0.2, 0.2});
     module->param[0][param].rectangle = render_dial({coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}, module->param[0][param].value);
 }
@@ -172,8 +171,8 @@ void render_common_resonance(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].range = 128;
     snprintf(buff, sizeof(buff), "%.1f", res);
     set_rbg_colour(RGB_BLACK);
-    render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-    render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Res");
+    render_text(moduleArea, { {coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, buff);
+    render_text(moduleArea, { {coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, "Res");
     set_rbg_colour({0.2, 0.2, 0.2});
     module->param[0][param].rectangle = render_dial({coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}, module->param[0][param].value);
 }
@@ -228,12 +227,12 @@ void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
 
     module->param[0][param].type  = paramTypeToggle;
     module->param[0][param].range = 2;
+
     if (module->param[0][param].value != 0) {
         set_rbg_colour({0.3, 0.7, 0.3});         // Green when ON
     } else {
         set_rbg_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
     }
-
     module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, get_text_width(valString, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}, valString);
 }
 
@@ -246,7 +245,7 @@ void render_FltMulti(tRectangle rectangle, tModule * module) {
     render_common_keyboard_track({rectangle.coord.x + 75.0, rectangle.coord.y + 80.0}, param++, module);
     render_common_gc({rectangle.coord.x + 110.0, rectangle.coord.y + 80.0}, param++, module);
     render_common_resonance({rectangle.coord.x + 185.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
-    render_FltMulti_db({rectangle.coord.x + 210.0, rectangle.coord.y + 25.0}, param++, module); // Todo - this param num isn't db!!!
+    render_FltMulti_db({rectangle.coord.x + 210.0, rectangle.coord.y + 25.0}, param++, module);   // Todo - this param num isn't db!!!
     render_common_bypass({rectangle.coord.x + 230.0, rectangle.coord.y + 80.0}, param++, module);
 
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0});
@@ -255,6 +254,7 @@ void render_FltMulti(tRectangle rectangle, tModule * module) {
     render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 100.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 20.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 50.0});
+
     if (connector != gModuleProperties[module->type].numConnectors) {
         printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
         exit(1);
@@ -290,7 +290,8 @@ void render_EnvAdsr(tRectangle rectangle, tModule * module) {
     render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 40.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 20.0});
     render_connector(module, connector++, connectorDirOut, connectorTypeControl, {rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + rectangle.size.h - 20.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0});   // Don't know if 1 is correct
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0});     // Don't know if 1 is correct
+
     if (connector != gModuleProperties[module->type].numConnectors) {
         printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
         exit(1);
@@ -305,6 +306,7 @@ void render_Mix4to1c(tRectangle rectangle, tModule * module) {
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 80, rectangle.coord.y + 80.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 100, rectangle.coord.y + 80.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 120, rectangle.coord.y + 80.0});
+
     if (connector != gModuleProperties[module->type].numConnectors) {
         printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
         exit(1);
@@ -315,6 +317,7 @@ void render_OscShpB(tRectangle rectangle, tModule * module) {
     uint32_t connector = 0;
 
     render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 150.0, rectangle.coord.y + 80.0});
+
     if (connector != gModuleProperties[module->type].numConnectors) {
         printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
         exit(1);
@@ -327,6 +330,7 @@ void render_StChorus(tRectangle rectangle, tModule * module) {
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0});
     render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + rectangle.size.h - 20.0});
     render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0});
+
     if (connector != gModuleProperties[module->type].numConnectors) {
         printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
         exit(1);
@@ -338,6 +342,7 @@ void render_Compress(tRectangle rectangle, tModule * module) {
 
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + 20.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0});
+
     if (connector != gModuleProperties[module->type].numConnectors) {
         printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
         exit(1);
@@ -359,8 +364,10 @@ double calculate_x_end_max(void) {
     double  xEnd        = 0.0;
 
     reset_walk_module();
-    do{
+
+    do {
         validModule = walk_next_module(&module);
+
         if (validModule && module.key.location == 1 && module.type != moduleTypeUnknown0) {
             xEnd = module.column * MODULE_X_SPAN + MODULE_X_SPAN - MODULE_X_GAP;
 
@@ -381,8 +388,10 @@ double calculate_y_end_max(void) {
     double  yEnd         = 0.0;
 
     reset_walk_module();
-    do{
+
+    do {
         validModule = walk_next_module(&module);
+
         if (validModule && module.key.location == 1 && module.type != moduleTypeUnknown0) {
             moduleHeight = (double)gModuleProperties[module.type].height;
             yEnd         = module.row * MODULE_Y_SPAN + (moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP;
@@ -397,14 +406,14 @@ double calculate_y_end_max(void) {
 }
 
 void render_module(tModule * module) {
-    double moduleHeight = gModuleProperties[module->type].height;
-    double xPos         = module->column * MODULE_X_SPAN;
-    double yPos         = module->row * MODULE_Y_SPAN;
-    double xWidth       = MODULE_WIDTH;
-    double yHeight      = (moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP;
-    char   buff[MODULE_NAME_SIZE + 1] = {0};
+    double     moduleHeight               = gModuleProperties[module->type].height;
+    double     xPos                       = module->column * MODULE_X_SPAN;
+    double     yPos                       = module->row * MODULE_Y_SPAN;
+    double     xWidth                     = MODULE_WIDTH;
+    double     yHeight                    = (moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP;
+    char       buff[MODULE_NAME_SIZE + 1] = {0};
 
-    tRectangle moduleRectangle = {{xPos, yPos}, {xWidth, yHeight}};
+    tRectangle moduleRectangle = { {xPos, yPos}, {xWidth, yHeight} };
 
     set_module_colour(module->colour);
     module->rectangle = render_rectangle_with_border(moduleArea, moduleRectangle); // Add zoom factor for border - really needs to scale the whole thing!
@@ -413,13 +422,13 @@ void render_module(tModule * module) {
 
     snprintf(buff, sizeof(buff), "%s", module->name);
     set_rbga_colour(RGBA_BLACK_ON_TRANSPARENT);
-    render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    render_text(moduleArea, { {moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, buff);
     // Temporary items purely for development debug
     snprintf(buff, sizeof(buff), "(%s)", gModuleProperties[module->type].name);
 
-    render_text(moduleArea, {{moduleRectangle.coord.x + 120.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    render_text(moduleArea, { {moduleRectangle.coord.x + 120.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, buff);
     snprintf(buff, sizeof(buff), "%u", module->key.index);
-    render_text(moduleArea, {{moduleRectangle.coord.x + moduleRectangle.size.w - 30.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    render_text(moduleArea, { {moduleRectangle.coord.x + moduleRectangle.size.w - 30.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT} }, buff);
 }
 
 void render_modules(void) {
@@ -431,8 +440,10 @@ void render_modules(void) {
     set_y_end_max(calculate_y_end_max());
 
     reset_walk_module();
-    do{
+
+    do {
         validModule = walk_next_module(&module);
+
         if (validModule && module.key.location == 1 && module.type != moduleTypeUnknown0) {
             render_module(&module);
         }
@@ -440,10 +451,10 @@ void render_modules(void) {
 
     // Draw background areas
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
-    render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
-    render_rectangle(mainArea, {{area.coord.x + area.size.w, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
-    render_rectangle(mainArea, {{0.0, area.coord.y + area.size.h}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
+    render_rectangle(mainArea, { {0.0, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)} });
+    render_rectangle(mainArea, { {0.0, area.coord.y - MODULE_MARGIN}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN} });
+    render_rectangle(mainArea, { {area.coord.x + area.size.w, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)} });
+    render_rectangle(mainArea, { {0.0, area.coord.y + area.size.h}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN} });
 }
 
 void render_cable_from_to(tConnector from, tConnector to) {
@@ -456,7 +467,6 @@ void render_cable_from_to(tConnector from, tConnector to) {
         control.x = ((from.coord.x + to.coord.x) / 2.0);
         control.y = fmax(from.coord.y, to.coord.y) + 40.0;
     }
-
     render_bezier_curve(moduleArea, from.coord, control, to.coord, 4.0, 15);
 }
 
@@ -467,10 +477,10 @@ void render_cable(tCable * cable) {
     if (read_module({cable->key.location, cable->key.moduleFromIndex}, &moduleFrom) == false) {
         return;
     }
+
     if (read_module({cable->key.location, cable->key.moduleToIndex}, &moduleTo) == false) {
         return;
     }
-
     set_rbg_colour(cableColourMap[cable->colour]);
 
     int fromConnectorIndex = find_index_from_io_count(&moduleFrom, (tConnectorDir)cable->key.linkType, cable->key.connectorFromIoCount);
@@ -480,7 +490,6 @@ void render_cable(tCable * cable) {
     if (fromConnectorIndex != -1 && toConnectorIndex != -1) {
         render_cable_from_to(moduleFrom.connector[fromConnectorIndex], moduleTo.connector[toConnectorIndex]);
     }
-
     // Todo - see if there's any corruption on fltmulti's final 2 connector items on the array
     //for (int i=0; i<gModuleProperties[moduleTo.type].numConnectors; i++) {
     //    printf("%d to dir and type %u %u\n", i, moduleTo.connector[i].dir, moduleTo.connector[i].type);
@@ -494,8 +503,10 @@ void render_cables(void) {
     bool   validCable = false;
 
     reset_walk_cable();
-    do{
+
+    do {
         validCable = walk_next_cable(&cable);
+
         if (validCable && cable.key.location == 1) {
             render_cable(&cable);
         }

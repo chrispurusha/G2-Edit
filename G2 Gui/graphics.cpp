@@ -45,16 +45,15 @@ extern "C" {
 #include "moduleGraphics.h"
 
 
+static tScrollState      gScrollState = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
+static tContextMenu      gContextMenu = {0};
+static FT_Library        gLibrary     = {0};
+static FT_Face           gFace        = {0};
+static GLFWwindow *      gWindow      = NULL;
 
-static tScrollState gScrollState = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
-static tContextMenu gContextMenu = {0};
-static FT_Library   gLibrary     = {0};
-static FT_Face      gFace        = {0};
-static GLFWwindow * gWindow      = NULL;
-
-static tDragging       gDragging   = {0}; // Todo - rename to parameter value drag or similar
-static tModuleDragging gModuleDrag = {0};;
-static tCableDragging  gCableDrag  = {0};
+static tDragging         gDragging   = {0};   // Todo - rename to parameter value drag or similar
+static tModuleDragging   gModuleDrag = {0};
+static tCableDragging    gCableDrag  = {0};
 
 extern tMessageQueue     gCommandQueue;
 extern tModuleProperties gModuleProperties[];
@@ -89,40 +88,41 @@ void render_context_menu(void) {
     if (!gContextMenu.active) {
         return;
     }
-
     double     size        = 0.0;
     double     largestSize = 0.0;
     tCoord     mouseCoord  = {0};
     tRectangle menuItem    = {0};
     double     itemHeight  = STANDARD_TEXT_HEIGHT;
 
-    int width, height;
+    int        width, height;
     glfwGetWindowSize(gWindow, &width, &height);
     glfwGetCursorPos(gWindow, &mouseCoord.x, &mouseCoord.y);
 
     mouseCoord.x = (mouseCoord.x * (double)get_render_width()) / (double)width;
     mouseCoord.y = (mouseCoord.y * (double)get_render_height()) / (double)height;
 
-
     for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
         size = get_text_width(gContextMenu.items[i].label, itemHeight);
+
         if (size > largestSize) {
             largestSize = size;
         }
     }
 
     int yOffset = 0;
+
     for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
-        menuItem = {{gContextMenu.coord.x, gContextMenu.coord.y + yOffset}, {largestSize + (5 * 2), itemHeight + (5 * 2)}};
+        menuItem = { {gContextMenu.coord.x, gContextMenu.coord.y + yOffset}, {largestSize + (5 * 2), itemHeight + (5 * 2)} };
+
         if (within_rectangle(mouseCoord, menuItem)) {
             set_rbg_colour({0.2, 0.6, 0.2});
         } else {
-            set_rbg_colour({0.3, 0.3, 0.3});  // Background
+            set_rbg_colour({0.3, 0.3, 0.3});    // Background
         }
         render_rectangle(mainArea, menuItem);
 
-        set_rbg_colour({0.9, 0.9, 0.9});  // White text
-        render_text(mainArea, {{gContextMenu.coord.x + 5, gContextMenu.coord.y + 5 + yOffset}, {BLANK_SIZE, itemHeight}}, gContextMenu.items[i].label);
+        set_rbg_colour({0.9, 0.9, 0.9});    // White text
+        render_text(mainArea, { {gContextMenu.coord.x + 5, gContextMenu.coord.y + 5 + yOffset}, {BLANK_SIZE, itemHeight} }, gContextMenu.items[i].label);
         yOffset += itemHeight + (5 * 2);
     }
 }
@@ -131,23 +131,24 @@ bool handle_context_menu_click(tCoord coord) {
     if (!gContextMenu.active) {
         return false;
     }
-
     double size        = 0.0;
     double largestSize = 0.0;
     double itemHeight  = STANDARD_TEXT_HEIGHT;
 
     for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
         size = get_text_width(gContextMenu.items[i].label, itemHeight);
+
         if (size > largestSize) {
             largestSize = size;
         }
     }
 
     int yOffset = 0;
+
     for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
         tRectangle itemRect = {
             {gContextMenu.coord.x, gContextMenu.coord.y + yOffset},
-            {largestSize,          itemHeight + 5                }};
+            {largestSize,          itemHeight + 5                } };
 
         if (within_rectangle(coord, itemRect)) {
             if (gContextMenu.items[i].action != NULL) {
@@ -156,7 +157,6 @@ bool handle_context_menu_click(tCoord coord) {
             gContextMenu.active = false;        // Close the menu
             return true;
         }
-
         yOffset += itemHeight + (5 * 2);
     }
 
@@ -177,30 +177,30 @@ void set_yScrollBar(double y) {
 bool handle_scrollbar_click(tCoord coord) {
     tRectangle yScrollBar = {
         {(double)get_render_width() - SCROLLBAR_WIDTH,                         0.0},
-        {SCROLLBAR_WIDTH,                              (double)get_render_height()}};
+        {SCROLLBAR_WIDTH,                              (double)get_render_height()} };
 
     tRectangle xScrollBar = {
         {                       0.0, (double)get_render_height() - SCROLLBAR_WIDTH},
-        {(double)get_render_width(), SCROLLBAR_WIDTH                              }};
+        {(double)get_render_width(), SCROLLBAR_WIDTH                              } };
 
     if (within_rectangle(coord, yScrollBar)) {
         set_yScrollBar(coord.y);
         gScrollState.yBarDragging = true;
         return true;
     }
+
     if (within_rectangle(coord, xScrollBar)) {
         set_xScrollBar(coord.x);
         gScrollState.xBarDragging = true;
         return true;
     }
-
     return false;
 }
 
 void send_module_move_msg(tModule * module) {
     tMessageContent messageContent = {0};
 
-    messageContent.cmd = eMsgCmdMoveModule;
+    messageContent.cmd                 = eMsgCmdMoveModule;
     messageContent.moduleData.location = module->key.location;
     messageContent.moduleData.index    = module->key.index;
     messageContent.moduleData.row      = module->row;
@@ -212,9 +212,8 @@ bool handle_module_click(tCoord coord, int button) {
     if (!within_rectangle(coord, module_area())) {
         return false;
     }
-
     reset_walk_module();
-    tModule module = {0};;
+    tModule module = {0};
 
     while (walk_next_module(&module)) {
         for (int i = 0; i < module.numParams; i++) {
@@ -233,7 +232,7 @@ bool handle_module_click(tCoord coord, int button) {
                     write_module(module.key, &module);
 
                     tMessageContent messageContent = {0};
-                    messageContent.cmd = eMsgCmdSetValue;
+                    messageContent.cmd                 = eMsgCmdSetValue;
                     messageContent.paramData.location  = module.key.location;
                     messageContent.paramData.index     = module.key.index;
                     messageContent.paramData.param     = i;
@@ -256,13 +255,13 @@ bool handle_module_click(tCoord coord, int button) {
                     gCableDrag.fromConnectorIndex = i;   // Index into array of connectors
 
                     // Todo: Use a function for this scaling etc.
-                    val  = coord.x - area.coord.x;
-                    val += calc_scroll_x();
-                    val /= get_zoom_factor();
+                    val                            = coord.x - area.coord.x;
+                    val                           += calc_scroll_x();
+                    val                           /= get_zoom_factor();
                     gCableDrag.toConnector.coord.x = val;
-                    val  = coord.y - area.coord.y;
-                    val += calc_scroll_y();
-                    val /= get_zoom_factor();
+                    val                            = coord.y - area.coord.y;
+                    val                           += calc_scroll_y();
+                    val                           /= get_zoom_factor();
                     gCableDrag.toConnector.coord.y = val;
 
                     gCableDrag.active = true;
@@ -284,8 +283,6 @@ bool handle_module_click(tCoord coord, int button) {
             return true;
         }
     }
-
-
     return false;
 }
 
@@ -300,9 +297,9 @@ void shift_modules_down(tModuleKey key) {
     if (read_module(key, &module) == false) {
         return;
     }
-
     // First step - if moved module lands on exisitng module after first row, drop it down
     reset_walk_module();
+
     while (walk_next_module(&walk)) {
         if ((walk.column == module.column) && (walk.key.location == key.location)) {
             if (walk.key.index != key.index) {
@@ -320,8 +317,8 @@ void shift_modules_down(tModuleKey key) {
     if (moduleRePosition == false) {
         send_module_move_msg(&module);
     }
-
     reset_walk_module();
+
     while (walk_next_module(&walk)) {
         if ((walk.column == module.column) && (walk.key.location == key.location)) {
             if (walk.key.index != key.index) {
@@ -337,6 +334,7 @@ void shift_modules_down(tModuleKey key) {
 
     if (doDrop == true) {
         reset_walk_module();
+
         while (walk_next_module(&walk)) {
             if ((walk.column == module.column) && (walk.key.location == key.location)) {
                 if (walk.key.index != key.index) {
@@ -362,8 +360,8 @@ void set_up_cable_key(tCableKey * cableKey, tModule * fromModule, tModule * toMo
 }
 
 bool swap_cable_to_from_if_needed(tCableKey * cableKey, tModule * fromModule, tModule * toModule, int toConnectorIndex) {
-    if (fromModule->connector[gCableDrag.fromConnectorIndex].dir == connectorDirIn &&
-        toModule->connector[toConnectorIndex].dir == connectorDirOut) {
+    if (  fromModule->connector[gCableDrag.fromConnectorIndex].dir == connectorDirIn
+       && toModule->connector[toConnectorIndex].dir == connectorDirOut) {
         uint32_t tmpModuleIndex    = cableKey->moduleFromIndex;
         uint32_t tmpConnectorIndex = cableKey->connectorFromIoCount;
 
@@ -423,32 +421,30 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     if (!within_rectangle(coord, toModule.connector[i].rectangle)) {
                         continue;
                     }
-
                     read_module(gCableDrag.fromModuleKey, &fromModule);
                     set_up_cable_key(&cableKey, &fromModule, &toModule, i);
 
                     swap_cable_to_from_if_needed(&cableKey, &fromModule, &toModule, i);
 
                     // Prevent self-connections and invalid connections
-                    if ((cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i) ||
-                        (fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut &&
-                         toModule.connector[i].dir == connectorDirOut)) {
+                    if (  (cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i)
+                       || (  fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
+                          && toModule.connector[i].dir == connectorDirOut)) {
                         quitLoop = true;
                         break;
                     }
-
                     cable.colour = 0; // Todo: choose colour from menu
                     write_cable(cableKey, &cable);
 
                     tMessageContent messageContent = {0};
 
-                    messageContent.cmd = eMsgCmdWriteCable;
+                    messageContent.cmd                            = eMsgCmdWriteCable;
                     messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
                     messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
                     messageContent.cableData.moduleToIndex        = cableKey.moduleToIndex;
                     messageContent.cableData.connectorToIoIndex   = cableKey.connectorToIoCount;
                     messageContent.cableData.linkType             = cableKey.linkType;
-                    messageContent.cableData.colour = cable.colour;
+                    messageContent.cableData.colour               = cable.colour;
                     msg_send(&gCommandQueue, &messageContent);
 
                     quitLoop = true;
@@ -456,7 +452,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             }
         }
-
         gScrollState.yBarDragging = false;
         gScrollState.xBarDragging = false;
         memset(&gModuleDrag, 0, sizeof(gModuleDrag)); // Reset dragging state
@@ -474,7 +469,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     tMessageContent messageContent = {0};
     double          val            = 0;
 
-    tRectangle area = module_area();
+    tRectangle      area = module_area();
 
     // Scale x and y to match intended rendering window
     glfwGetWindowSize(window, &width, &height);
@@ -490,8 +485,8 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
 
         switch (module.param[gDragging.variation][gDragging.param].type) {
             case paramTypeDial:
-                angle = calculate_mouse_angle({x, y}, module.param[gDragging.variation][gDragging.param].rectangle);       // possible add half size
-                value = angle_to_value(angle);
+                angle                                                    = calculate_mouse_angle({x, y}, module.param[gDragging.variation][gDragging.param].rectangle);   // possible add half size
+                value                                                    = angle_to_value(angle);
                 module.param[gDragging.variation][gDragging.param].value = value;
                 break;
 
@@ -499,9 +494,9 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                 printf("Unknown module type %u\n", module.param[gDragging.variation][gDragging.param].type);
                 exit(1);
         }
-        write_module({gDragging.location, gDragging.index}, &module);       // Write new value into parameter
+        write_module({gDragging.location, gDragging.index}, &module);         // Write new value into parameter
 
-        messageContent.cmd = eMsgCmdSetValue;
+        messageContent.cmd                 = eMsgCmdSetValue;
         messageContent.paramData.location  = gDragging.location;
         messageContent.paramData.index     = gDragging.index;
         messageContent.paramData.param     = gDragging.param;
@@ -526,13 +521,13 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         write_module(gModuleDrag.moduleKey, &module);
     } else if (gCableDrag.active == true) {
         // Todo: Use a function for this scaling etc.
-        val  = x - area.coord.x;
-        val += calc_scroll_x();
-        val /= get_zoom_factor();
+        val                            = x - area.coord.x;
+        val                           += calc_scroll_x();
+        val                           /= get_zoom_factor();
         gCableDrag.toConnector.coord.x = val;
-        val  = y - area.coord.y;
-        val += calc_scroll_y();
-        val /= get_zoom_factor();
+        val                            = y - area.coord.y;
+        val                           += calc_scroll_y();
+        val                           /= get_zoom_factor();
         gCableDrag.toConnector.coord.y = val;
     }
 }
@@ -545,7 +540,7 @@ void scroll_event(GLFWwindow * window, double x, double y) {
     tCoord     mouseCoord = {0};
     tRectangle moduleArea = module_area(); // Get the module display area
 
-    int width, height;
+    int        width, height;
 
     glfwGetWindowSize(window, &width, &height);
     glfwGetCursorPos(window, &mouseCoord.x, &mouseCoord.y);
@@ -557,6 +552,7 @@ void scroll_event(GLFWwindow * window, double x, double y) {
     if (within_rectangle(mouseCoord, moduleArea)) {
         zoomFactor  = get_zoom_factor();
         zoomFactor += y * zoomIncrement;
+
         if (zoomFactor < 0.5) {
             zoomFactor = 0.5;
         } else if (zoomFactor > 2.0) {
@@ -580,22 +576,22 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 void render_scrollbars(GLFWwindow * window) {
     // Scrollbar background
     set_rbg_colour({0.7, 0.7, 0.7});
-    render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, (double)get_render_height() - SCROLLBAR_MARGIN}});
-    render_rectangle(mainArea, {{0.0, (double)get_render_height() - SCROLLBAR_WIDTH}, {(double)get_render_width() - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH}});
+    render_rectangle(mainArea, { {(double)get_render_width() - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, (double)get_render_height() - SCROLLBAR_MARGIN} });
+    render_rectangle(mainArea, { {0.0, (double)get_render_height() - SCROLLBAR_WIDTH}, {(double)get_render_width() - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH} });
 
     // Bottom right box
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, (double)get_render_height() - SCROLLBAR_WIDTH}, {SCROLLBAR_WIDTH, SCROLLBAR_WIDTH}});
+    render_rectangle(mainArea, { {(double)get_render_width() - SCROLLBAR_WIDTH, (double)get_render_height() - SCROLLBAR_WIDTH}, {SCROLLBAR_WIDTH, SCROLLBAR_WIDTH} });
 
     // Scroll indicator blocks
     set_rbg_colour({0.9, 0.9, 0.9});
-    render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, gScrollState.yBar - (SCROLLBAR_LENGTH / 2.0)}, {SCROLLBAR_WIDTH, SCROLLBAR_LENGTH}});
-    render_rectangle(mainArea, {{gScrollState.xBar - (SCROLLBAR_LENGTH / 2.0), (double)get_render_height() - SCROLLBAR_WIDTH}, {SCROLLBAR_LENGTH, SCROLLBAR_WIDTH}});
+    render_rectangle(mainArea, { {(double)get_render_width() - SCROLLBAR_WIDTH, gScrollState.yBar - (SCROLLBAR_LENGTH / 2.0)}, {SCROLLBAR_WIDTH, SCROLLBAR_LENGTH} });
+    render_rectangle(mainArea, { {gScrollState.xBar - (SCROLLBAR_LENGTH / 2.0), (double)get_render_height() - SCROLLBAR_WIDTH}, {SCROLLBAR_LENGTH, SCROLLBAR_WIDTH} });
 }
 
 void render_top_bar(void) {
     set_rbg_colour({0.5, 0.5, 0.5});
-    render_rectangle_with_border(mainArea, {{0.0, 0.0}, {get_render_width() - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
+    render_rectangle_with_border(mainArea, { {0.0, 0.0}, {get_render_width() - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT} });
 }
 
 void wake_glfw(void) {
@@ -622,7 +618,6 @@ void init_graphics(void) {
     if (!glfwInit()) {
         exit(EXIT_FAILURE);
     }
-
     register_glfw_wake_cb(wake_glfw);   //TODO - possible also register for callback on new module load, then reset scrollbars etc.
 
     glfwGetMonitorWorkarea(glfwGetPrimaryMonitor(), &monitor.coord.x, &monitor.coord.y, &monitor.size.w, &monitor.size.h);
@@ -630,11 +625,11 @@ void init_graphics(void) {
     screenHeight = monitor.coord.y + monitor.size.h;
 
     gWindow = glfwCreateWindow((screenWidth * 3) / 4, (screenHeight * 3) / 4, "G2 Editor", NULL, NULL);
+
     if (!gWindow) {
         glfwTerminate();
         exit(EXIT_FAILURE);
     }
-
     glfwSetWindowSizeLimits(gWindow, (screenWidth * 1) / 4, (screenHeight * 1) / 4, GLFW_DONT_CARE, GLFW_DONT_CARE);
     glfwSetWindowAspectRatio(gWindow, screenWidth, screenHeight);
 
@@ -660,7 +655,6 @@ void init_graphics(void) {
     if (!preload_glyph_textures("/System/Library/Fonts/Supplemental/Arial.ttf", 72.0f)) {
         printf("Failed to preload glyph textures.\n");
     }
-
     int renderWidth  = 0;
     int renderHeight = 0;
     glfwGetWindowSize(gWindow, &renderWidth, &renderHeight);
@@ -677,6 +671,7 @@ void do_graphics_loop(void) {
 
         render_modules();
         render_cables();
+
         if (gCableDrag.active == true) {
             tModule module = {0};
             read_module(gCableDrag.fromModuleKey, &module);

@@ -24,6 +24,6 @@
 #include "sysIncludes.h"
 
 void start_usb_thread(void);
-void register_glfw_wake_cb(void (* func_ptr)(void));
+void register_glfw_wake_cb(void ( *func_ptr )(void));
 
 #endif // __USB_COMMS_H__

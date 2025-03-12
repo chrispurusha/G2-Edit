@@ -24,7 +24,6 @@ extern "C" {
 #include "defs.h"
 #include "msgQueue.h"
 
-
 void msg_init(tMessageQueue * msgQueue, char * semName) {
     pthread_mutex_init(&msgQueue->mutex, NULL);
     msgQueue->head = NULL;
@@ -32,15 +31,16 @@ void msg_init(tMessageQueue * msgQueue, char * semName) {
 
     // Try opening semaphore if it exists, or create a new one
     msgQueue->semaphore = sem_open(semName, O_CREAT | O_EXCL, 0, 0);
+
     if (msgQueue->semaphore == SEM_FAILED) {
         // Handle existing semaphore (retry without O_EXCL)
         msgQueue->semaphore = sem_open(semName, 0);
+
         if (msgQueue->semaphore == SEM_FAILED) {
             fprintf(stderr, "%s() Semaphore '%s' create/open failed\n", __FUNCTION__, semName);
             return;
         }
     }
-
     // Remove semaphore on exit
     sem_unlink(semName);
 }
@@ -65,6 +65,7 @@ int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageCon
             break;
 
         case eRcvPoll:
+
             if (sem_trywait(msgQueue->semaphore) == -1) {
                 if (errno == EAGAIN) {       // Semaphore is not available, no messages
                     return retVal;
@@ -76,6 +77,7 @@ int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageCon
             break;
     }
     pthread_mutex_lock(&msgQueue->mutex);
+
     if (msgQueue->head != NULL) {
         // Copy the content from the head message to the provided messageContent
         memcpy(messageContent, &(msgQueue->head->messageContent), sizeof(*messageContent));
@@ -95,7 +97,6 @@ int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageCon
         memset(oldMsgQueue, 0, sizeof(*oldMsgQueue));     // Clear the memory
         free(oldMsgQueue);                                // Free the message
     }
-
     return retVal;
 }
 
@@ -106,14 +107,13 @@ void msg_send(tMessageQueue * msgQueue, tMessageContent * messageContent) {
         fprintf(stderr, "%s() msgQueue==NULL\n", __FUNCTION__);
         return;
     }
-
     // Allocate memory for the new message
     message = malloc(sizeof(tMessage));
+
     if (message == NULL) {
         fprintf(stderr, "%s() Memory allocation failed for message\n", __FUNCTION__);
         return;         // Memory allocation failure
     }
-
     // Copy the message content to the new message
     memcpy(&(message->messageContent), messageContent, sizeof(message->messageContent));
 
@@ -125,9 +125,8 @@ void msg_send(tMessageQueue * msgQueue, tMessageContent * messageContent) {
         msgQueue->tail = message;
     } else {
         msgQueue->tail->nextMessage = message;
-        msgQueue->tail = message;         // Move the tail pointer to the new last message
+        msgQueue->tail              = message; // Move the tail pointer to the new last message
     }
-
     pthread_mutex_unlock(&msgQueue->mutex);
 
     // Signal that a new message is available

@@ -27,19 +27,19 @@ extern "C" {
 #define G2_VENDOR_ID     (0xffc)
 #define G2_PRODUCT_ID    (2)
 
-static IOUSBInterfaceInterface ** intf = NULL;
-static bool timedOut = false;
+static IOUSBInterfaceInterface ** intf     = NULL;
+static bool                       timedOut = false;
 
 IOUSBDeviceInterface ** find_usb_device(void) {
-    mach_port_t            masterPort      = 0;
-    io_service_t           usbDevice       = {0};
-    io_iterator_t          iterator        = {0};
-    IOCFPlugInInterface ** pluginInterface = NULL;
-    SInt32 score   = 0;
-    UInt16 vendor  = 0;
-    UInt16 product = 0;
+    mach_port_t             masterPort      = 0;
+    io_service_t            usbDevice       = {0};
+    io_iterator_t           iterator        = {0};
+    IOCFPlugInInterface **  pluginInterface = NULL;
+    SInt32                  score           = 0;
+    UInt16                  vendor          = 0;
+    UInt16                  product         = 0;
     IOUSBDeviceInterface ** deviceInterface = NULL;
-    bool quitLoop = false;
+    bool                    quitLoop        = false;
 
 #if (MAC_OS_X_VERSION_MIN_REQUIRED >= 120000)
     if (IOMainPort(MACH_PORT_NULL, &masterPort) == kIOReturnSuccess)
@@ -50,8 +50,9 @@ IOUSBDeviceInterface ** find_usb_device(void) {
         if (masterPort != 0) {
             IORegistryCreateIterator(masterPort, kIOUSBPlane, kIORegistryIterateRecursively, &iterator);
 
-            do{
+            do {
                 usbDevice = IOIteratorNext(iterator);
+
                 if (usbDevice != 0) {
                     IOCreatePlugInInterfaceForService(usbDevice, kIOUSBDeviceUserClientTypeID, kIOCFPlugInInterfaceID, &pluginInterface, &score);
                     IOObjectRelease(usbDevice);
@@ -83,7 +84,6 @@ IOUSBDeviceInterface ** find_usb_device(void) {
         mach_port_deallocate(mach_task_self(), masterPort);
         masterPort = 0;
     }
-
     return deviceInterface;
 }
 
@@ -109,14 +109,14 @@ void reset_usb(void) {
 }
 
 int open_usb(void) {
-    int    retVal = EXIT_FAILURE;
-    SInt32 score  = 0;
-    IOUSBFindInterfaceRequest request          = {0};
-    IOCFPlugInInterface **    plugInInterface  = NULL;
-    io_iterator_t             iterator2        = 0;
-    io_service_t            usbInterface       = 0;
-    IOUSBDeviceInterface ** deviceInterface    = NULL;
-    CFRunLoopSourceRef      asyncRunLoopSource = NULL;
+    int                       retVal             = EXIT_FAILURE;
+    SInt32                    score              = 0;
+    IOUSBFindInterfaceRequest request            = {0};
+    IOCFPlugInInterface **    plugInInterface    = NULL;
+    io_iterator_t             iterator2          = 0;
+    io_service_t              usbInterface       = 0;
+    IOUSBDeviceInterface **   deviceInterface    = NULL;
+    CFRunLoopSourceRef        asyncRunLoopSource = NULL;
 
     deviceInterface = find_usb_device();
 
@@ -140,16 +140,15 @@ int open_usb(void) {
             (*intf)->USBInterfaceOpen(intf);
 
             (*intf)->CreateInterfaceAsyncEventSource(intf, &asyncRunLoopSource);
+
             if (asyncRunLoopSource) {
                 CFRunLoopAddSource(CFRunLoopGetCurrent(), asyncRunLoopSource, kCFRunLoopDefaultMode);
             }
-
             release_usb_device(deviceInterface);
 
             retVal = EXIT_SUCCESS;
         }
     }
-
     return retVal;
 }
 
@@ -171,7 +170,6 @@ int32_t write_usb(uint8_t * buff, uint32_t length) {
     if ((*intf)->WritePipeTO(intf, 3, (void *)buff, length, 1000, 1000) == kIOReturnSuccess) {
         writeLength = length;
     }
-
     return writeLength;
 }
 
@@ -181,14 +179,12 @@ int32_t read_usb_extended(uint8_t * buff, uint32_t buffLength) {
     if (buff == NULL) {
         return readLength;
     }
-
     memset(buff, 0, buffLength);
     readLength = buffLength;
 
     if ((*intf)->ReadPipeTO(intf, 2, (void *)buff, &readLength, 1000, 1000) != kIOReturnSuccess) {
         readLength = 0;
     }
-
     return readLength;
 }
 
@@ -198,6 +194,7 @@ void read_usb_complete(void * refCon, IOReturn result, void * arg0) {
 
 void timeout_callback(CFRunLoopTimerRef timer, void * info) {
     timedOut = true;
+
     if ((*intf)->AbortPipe(intf, 1) != kIOReturnSuccess) {
         CFRunLoopStop(CFRunLoopGetCurrent());
     }
@@ -212,7 +209,6 @@ int32_t read_usb_interrupt(uint8_t * buff, uint32_t buffLength) {
     if (buff == NULL) {
         return readLength;
     }
-
     memset(buff, 0, buffLength);
     timedOut = false;
 
@@ -235,7 +231,6 @@ int32_t read_usb_interrupt(uint8_t * buff, uint32_t buffLength) {
     } else if (result == kIOReturnNoDevice) {
         readLength = -1;
     }
-
     return readLength;
 }
 

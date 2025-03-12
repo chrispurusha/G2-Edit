@@ -49,7 +49,6 @@ static int init_signals(void) {
     if (signal(SIGSEGV, signal_handler) != SIG_ERR) {
         retVal = EXIT_SUCCESS;
     }
-
     return retVal;
 }
 
