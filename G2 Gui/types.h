@@ -422,4 +422,16 @@ typedef enum {
     freeConnectorNo
 } tFreeConnector;
 
+typedef struct {
+    double u1;         // Top-left texture coordinates
+    double v1;
+    double u2;         // Bottom-right texture coordinates
+    double v2;
+    double advance_x;  // Horizontal advance
+    int    width;      // Width and height of the glyph
+    int    height;
+    int    offset_x;   // Offset from the origin
+    int    offset_y;
+} GlyphInfo;
+
 #endif // __TYPES_H__

@@ -38,19 +38,6 @@ extern "C" {
 #include "dataBase.h"
 #include "utilsGraphics.h"
 
-
-typedef struct {
-    double u1;         // Top-left texture coordinates
-    double v1;
-    double u2;         // Bottom-right texture coordinates
-    double v2;
-    double advance_x;  // Horizontal advance
-    int    width;      // Width and height of the glyph
-    int    height;
-    int    offset_x;   // Offset from the origin
-    int    offset_y;
-} GlyphInfo;
-
 static GlyphInfo glyphInfo[MAX_GLYPH_CHAR] = {0};       // Array to store glyph metadata TODO: Not being freed!?
 static GLuint    textureAtlas              = 0;         // OpenGL texture handle
 static int       atlasWidth                = 1024 * 8;  // Initial atlas width
@@ -58,14 +45,13 @@ static int       atlasHeight               = 1024 * 8;  // Initial atlas height
 static double    gMaxAscent                = 0.0;       // Used for dealing with preloaded text character height
 static double    gMaxDescent               = 0.0;
 static double    gMetricsHeight            = 0.0;
-
-static double    gXScrollPercent = 0.0;
-static double    gYScrollPercent = 0.0;
-static double    gZoomFactor     = NO_ZOOM;
-static double    gXEndMax        = 0.0;
-static double    gYEndMax        = 0.0;
-static int       gRenderWidth    = 0;
-static int       gRenderHeight   = 0;
+static double    gXScrollPercent           = 0.0;
+static double    gYScrollPercent           = 0.0;
+static double    gZoomFactor               = NO_ZOOM;
+static double    gXEndMax                  = 0.0;
+static double    gYEndMax                  = 0.0;
+static int       gRenderWidth              = 0;
+static int       gRenderHeight             = 0;
 
 static inline double scale(double value) {
     return value * gZoomFactor;

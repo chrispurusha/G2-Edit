@@ -48,10 +48,9 @@ static tContextMenu      gContextMenu = {0};
 static FT_Library        gLibrary     = {0};
 static FT_Face           gFace        = {0};
 static GLFWwindow *      gWindow      = NULL;
-
-static tDragging         gDragging   = {0};   // Todo - rename to parameter value drag or similar
-static tModuleDragging   gModuleDrag = {0};
-static tCableDragging    gCableDrag  = {0};
+static tDragging         gDragging    = {0};  // Todo - rename to parameter value drag or similar
+static tModuleDragging   gModuleDrag  = {0};
+static tCableDragging    gCableDrag   = {0};
 
 extern tMessageQueue     gCommandQueue;
 extern tModuleProperties gModuleProperties[];
@@ -162,12 +161,12 @@ bool handle_context_menu_click(tCoord coord) {
     return false;
 }
 
-void set_xScrollBar(double x) {
+void set_x_scroll_bar(double x) {
     gScrollState.xBar = clamp_scroll_bar(x, get_render_width());
     set_x_scroll_percent(get_scroll_bar_percent(gScrollState.xBar, get_render_width()));
 }
 
-void set_yScrollBar(double y) {
+void set_y_scroll_bar(double y) {
     gScrollState.yBar = clamp_scroll_bar(y, get_render_height());
     set_y_scroll_percent(get_scroll_bar_percent(gScrollState.yBar, get_render_height()));
 }
@@ -182,13 +181,13 @@ bool handle_scrollbar_click(tCoord coord) {
         {(double)get_render_width(), SCROLLBAR_WIDTH                              }};
 
     if (within_rectangle(coord, yScrollBar)) {
-        set_yScrollBar(coord.y);
+        set_y_scroll_bar(coord.y);
         gScrollState.yBarDragging = true;
         return true;
     }
 
     if (within_rectangle(coord, xScrollBar)) {
-        set_xScrollBar(coord.x);
+        set_x_scroll_bar(coord.x);
         gScrollState.xBarDragging = true;
         return true;
     }
@@ -475,9 +474,9 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     y = (y * (double)get_render_height()) / (double)height;
 
     if (gScrollState.yBarDragging == true) {
-        set_yScrollBar(y);
+        set_y_scroll_bar(y);
     } else if (gScrollState.xBarDragging == true) {
-        set_xScrollBar(x);
+        set_x_scroll_bar(x);
     } else if (gDragging.active == true) {
         read_module({gDragging.location, gDragging.index}, &module);
 

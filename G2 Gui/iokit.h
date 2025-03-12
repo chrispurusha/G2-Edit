@@ -23,11 +23,9 @@
 #include "sysIncludes.h"
 
 #include <CoreFoundation/CoreFoundation.h>
-
 #include <IOKit/IOKitLib.h>
 #include <IOKit/IOCFPlugIn.h>
 #include <IOKit/usb/IOUSBLib.h>
-
 #include <mach/mach.h>
 
 IOUSBDeviceInterface ** find_usb_device(void);
