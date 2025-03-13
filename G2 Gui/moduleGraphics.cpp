@@ -39,7 +39,7 @@ extern "C" {
 #include "utilsGraphics.h"
 #include "moduleResources.h"
 #include "moduleGraphics.h"
-
+    
 tRectangle render_dial(tRectangle rectangle, uint32_t value) {  // Drop down into utilsGraphics?
     double angle  = 0.0;
     double radius = 0.0;
@@ -71,7 +71,7 @@ void render_param_common_dial(tCoord coord, uint32_t param, tModule * module, ch
     char buff[16] = {0};
 
     snprintf(buff, sizeof(buff), "%u", module->param[0][param].value);
-    module->param[0][param].type  = paramTypeDial;
+    module->param[0][param].type  = paramTypeCommonDial;
     module->param[0][param].range = range;
     //module->param[0][param].rectangle = ;
 
@@ -84,7 +84,7 @@ void render_param_common_dial(tCoord coord, uint32_t param, tModule * module, ch
 
 // This might become a common function for any modules with a bypes
 void render_common_bypass(tCoord coord, uint32_t param, tModule * module) {
-    module->param[0][param].type  = paramTypeToggle;
+    module->param[0][param].type  = paramTypeBypass;
     module->param[0][param].range = 2;
 
     module->param[0][param].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, module->param[0][param].value != 0);
@@ -94,7 +94,7 @@ void render_common_keyboard_track(tCoord coord, uint32_t param, tModule * module
     uint32_t range     = MAP_NUM_ITEMS(filterKbMap);
     char *   valString = filterKbMap[module->param[0][param].value];
 
-    module->param[0][param].type  = paramTypeToggle;
+    module->param[0][param].type  = paramTypeKeyboardTrack;
     module->param[0][param].range = range;
     set_rbg_colour(RGB_BLACK);
     render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Kbt");
@@ -106,7 +106,7 @@ void render_FltClassic_db(tCoord coord, uint32_t param, tModule * module) {
     uint32_t range     = MAP_NUM_ITEMS(filterDbMap);
     char *   valString = filterDbMap[module->param[0][param].value];
 
-    module->param[0][param].type  = paramTypeToggle;
+    module->param[0][param].type  = paramTypeFltClassicDb;
     module->param[0][param].range = MAP_NUM_ITEMS(filterDbMap);
     set_rbg_colour(RGB_BACKGROUND_GREY);
     module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, {largest_text_width(range, filterDbMap, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, valString);
@@ -127,7 +127,7 @@ void render_common_freq(tCoord coord, uint32_t param, tModule * module) {
     } else {
         snprintf(buff, sizeof(buff), "%.1fkHz", freq / 1000.0);
     }
-    module->param[0][param].type  = paramTypeDial;
+    module->param[0][param].type  = paramTypeFreq;
     module->param[0][param].range = 128;
     set_rbg_colour(RGB_BLACK);
     render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
@@ -146,7 +146,7 @@ void render_common_pitch(tCoord coord, uint32_t param, tModule * module) {
     } else {
         percent = maxVal;     // Clip
     }
-    module->param[0][param].type  = paramTypeDial;
+    module->param[0][param].type  = paramTypePitch;
     module->param[0][param].range = 128;
     snprintf(buff, sizeof(buff), "%.1f%%", percent);
     set_rbg_colour(RGB_BLACK);
@@ -166,7 +166,7 @@ void render_common_resonance(tCoord coord, uint32_t param, tModule * module) {
     } else {
         res = maxVal;     // Clip
     }
-    module->param[0][param].type  = paramTypeDial;
+    module->param[0][param].type  = paramTypeResonance;
     module->param[0][param].range = 128;
     snprintf(buff, sizeof(buff), "%.1f", res);
     set_rbg_colour(RGB_BLACK);
@@ -196,11 +196,11 @@ void render_FltClassic(tRectangle rectangle, tModule * module) {
     render_common_keyboard_track({rectangle.coord.x + 75.0, rectangle.coord.y + 80.0}, param++, module);
     render_common_resonance({rectangle.coord.x + 160.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_FltClassic_db({rectangle.coord.x + 210.0, rectangle.coord.y + 80.0}, param++, module);
-    render_common_bypass({rectangle.coord.x + 250, rectangle.coord.y + 50.0}, param++, module);
+    render_common_bypass({rectangle.coord.x + 245.0, rectangle.coord.y + 50.0}, param++, module);
 
-    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0});
-    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 20.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 95.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 95.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 50.0});
 
     if (connector != gModuleProperties[module->type].numConnectors) {
@@ -209,22 +209,20 @@ void render_FltClassic(tRectangle rectangle, tModule * module) {
     }
 }
 
-// fltMulti -- builds on fltClassic components
 void render_FltMulti_db(tCoord coord, uint32_t param, tModule * module) {
     uint32_t range     = MAP_NUM_ITEMS(fltMultiDbMap);
     char *   valString = fltMultiDbMap[module->param[0][param].value];
 
-    module->param[0][param].type  = paramTypeToggle;
+    module->param[0][param].type  = paramTypeFltMultiDb;
     module->param[0][param].range = range;
     set_rbg_colour(RGB_BACKGROUND_GREY);
     module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, largest_text_width(range, fltMultiDbMap, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}, valString);
 }
 
-// Gain control
 void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
     char * valString = "GC";
 
-    module->param[0][param].type  = paramTypeToggle;
+    module->param[0][param].type  = paramTypeGainControl;
     module->param[0][param].range = 2;
 
     if (module->param[0][param].value != 0) {
@@ -247,11 +245,11 @@ void render_FltMulti(tRectangle rectangle, tModule * module) {
     render_FltMulti_db({rectangle.coord.x + 210.0, rectangle.coord.y + 25.0}, param++, module);   // Todo - this param num isn't db!!!
     render_common_bypass({rectangle.coord.x + 230.0, rectangle.coord.y + 80.0}, param++, module);
 
-    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 60.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 80.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 100.0});
-    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 20.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 60.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 80.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 100.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 95.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 50.0});
 
     if (connector != gModuleProperties[module->type].numConnectors) {
@@ -285,11 +283,11 @@ void render_EnvAdsr(tRectangle rectangle, tModule * module) {
     render_param_EnvAdsr_sustain({rectangle.coord.x + 100.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_param_EnvAdsr_release({rectangle.coord.x + 140.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
 
-    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0});
-    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 40.0});
-    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + rectangle.size.h - 20.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeControl, {rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + rectangle.size.h - 20.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0});     // Don't know if 1 is correct
+    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 75.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 95.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeControl, {rectangle.coord.x + 255.0, rectangle.coord.y + 95.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 95.0});     // Don't know if 1 is correct
 
     if (connector != gModuleProperties[module->type].numConnectors) {
         printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
@@ -326,9 +324,9 @@ void render_OscShpB(tRectangle rectangle, tModule * module) {
 void render_StChorus(tRectangle rectangle, tModule * module) {
     uint32_t connector = 0;
 
-    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + rectangle.size.h - 20.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + rectangle.size.h - 20.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 235.0, rectangle.coord.y + 65.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 65.0});
 
     if (connector != gModuleProperties[module->type].numConnectors) {
         printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
@@ -339,8 +337,8 @@ void render_StChorus(tRectangle rectangle, tModule * module) {
 void render_Compress(tRectangle rectangle, tModule * module) {
     uint32_t connector = 0;
 
-    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 30.0, rectangle.coord.y + 20.0});
-    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + rectangle.size.w - 10.0, rectangle.coord.y + 20.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 235.0, rectangle.coord.y + 20.0});
+    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
 
     if (connector != gModuleProperties[module->type].numConnectors) {
         printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);

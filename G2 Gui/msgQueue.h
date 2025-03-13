@@ -42,16 +42,14 @@ typedef enum {
 } eMsgCmd;
 
 typedef struct {
-    uint32_t location;
-    uint32_t index;
+    tModuleKey moduleKey;
     uint32_t variation;
     uint32_t param;
     uint32_t value;
 } tParamData;
 
 typedef struct {
-    uint32_t location;
-    uint32_t index;
+    tModuleKey moduleKey;
     uint32_t type;
     uint32_t row;
     uint32_t column;
@@ -64,8 +62,7 @@ typedef struct {
 } tModuleData;
 
 typedef struct {
-    uint32_t location;
-    uint32_t index;
+    tModuleKey moduleKey;
     uint32_t row;
     uint32_t column;
 } tModuleMoveData;

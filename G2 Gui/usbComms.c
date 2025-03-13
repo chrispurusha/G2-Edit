@@ -28,9 +28,10 @@
 extern "C" {
 #endif
 
+#include "defs.h"
+#include "types.h"
 #include "iokit.h"
 #include "utils.h"
-#include "defs.h"
 #include "msgQueue.h"
 #include "usbComms.h"
 #include "main.h"
@@ -844,8 +845,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | slot; //+slot
             buff[pos++] = slotVersion[slot];                           // needs to be slot ultimately
             buff[pos++] = SUB_COMMAND_SET_PARAM;
-            buff[pos++] = messageContent->paramData.location;
-            buff[pos++] = messageContent->paramData.index;
+            buff[pos++] = messageContent->paramData.moduleKey.location;
+            buff[pos++] = messageContent->paramData.moduleKey.index;
             buff[pos++] = messageContent->paramData.param;
             buff[pos++] = messageContent->paramData.value;
             buff[pos++] = messageContent->paramData.variation;     // variation
@@ -870,8 +871,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot; //+slot
             buff[pos++] = slotVersion[slot];                 // needs to be slot ultimately
             buff[pos++] = SUB_COMMAND_MOVE_MODULE;
-            buff[pos++] = messageContent->moduleMoveData.location;
-            buff[pos++] = messageContent->moduleMoveData.index;
+            buff[pos++] = messageContent->moduleMoveData.moduleKey.location;
+            buff[pos++] = messageContent->moduleMoveData.moduleKey.index;
             buff[pos++] = messageContent->moduleMoveData.column;
             buff[pos++] = messageContent->moduleMoveData.row;
             break;

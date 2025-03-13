@@ -201,7 +201,7 @@ void timeout_callback(CFRunLoopTimerRef timer, void * info) {
 
 int32_t read_usb_interrupt(uint8_t * buff, uint32_t buffLength) {
     uint32_t          readLength = 0;
-    CFTimeInterval    interval   = 0.01;  // 10ms = 0.01 seconds
+    CFTimeInterval    interval   = 0.02;  // 20ms
     CFRunLoopTimerRef timer      = NULL;
     IOReturn          result     = kIOReturnError;
 

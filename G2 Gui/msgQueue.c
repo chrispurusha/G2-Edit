@@ -22,6 +22,7 @@ extern "C" {
 #endif
 
 #include "defs.h"
+#include "types.h"
 #include "msgQueue.h"
 
 void msg_init(tMessageQueue * msgQueue, char * semName) {

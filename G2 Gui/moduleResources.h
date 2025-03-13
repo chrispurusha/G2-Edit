@@ -293,5 +293,20 @@ tRgb              connectorColourMap[2][2] =  // First index = direction, second
     {{0.7, 0.1, 0.1}, {0.7, 0.1, 0.7}}          // Out: { Audio, Control }
 };
 
+tConstParameter parameter[] = {   // Experimental method of defining parameter location on a module
+    {moduleTypeFltClassic, paramTypeFreq, {105.0 + FILTER_FREQ_RADIUS, 80.0}},
+    {moduleTypeFltClassic, paramTypePitch, {15.0 + FILTER_FREQ_RADIUS, 80.0}},
+    {moduleTypeFltClassic, paramTypeKeyboardTrack, {75.0, 80.0}},
+    {moduleTypeFltClassic, paramTypeResonance, {160.0 + FILTER_FREQ_RADIUS, 80.0}},
+    {moduleTypeFltClassic, paramTypeFltClassicDb, {210.0 + FILTER_FREQ_RADIUS, 80.0}},
+    {moduleTypeFltClassic, paramTypeBypass, {250.0 + FILTER_FREQ_RADIUS, 50.0}},
+};
+
+tConstConnector connector[] = {    // Experimental method of defining connector location on a module
+    {moduleTypeFltClassic, connectorDirIn, connectorTypeAudio, {250.0 + FILTER_FREQ_RADIUS, 20.0}},
+    {moduleTypeFltClassic, connectorDirIn, connectorTypeAudio, {250.0 + FILTER_FREQ_RADIUS, 80.0}},
+    {moduleTypeFltClassic, connectorDirIn, connectorTypeAudio, {15.0 + FILTER_FREQ_RADIUS, 20.0}},
+    {moduleTypeFltClassic, connectorDirIn, connectorTypeAudio, {15.0 + FILTER_FREQ_RADIUS, 50.0}},
+};
 
 #endif // __MODULE_RESOURCES_H__

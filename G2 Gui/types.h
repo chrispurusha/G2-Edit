@@ -76,11 +76,17 @@ typedef struct {
     tCoord coord3rel;
 } tTriangle;
 
-
 typedef enum {
     paramTypeNone,
-    paramTypeDial,
-    paramTypeToggle,
+    paramTypeFreq,
+    paramTypeResonance,
+    paramTypePitch,
+    paramTypeKeyboardTrack,
+    paramTypeGainControl,
+    paramTypeBypass,
+    paramTypeFltClassicDb,
+    paramTypeFltMultiDb,
+    paramTypeCommonDial,
 } tParamType;
 
 typedef struct _struct_param {
@@ -161,11 +167,10 @@ typedef struct {
 
 typedef struct {
     bool     active;
-    uint32_t location;     //Todo = replace location and index with tModuleKey
-    uint32_t index;
+    tModuleKey moduleKey;
     uint32_t variation;
     uint32_t param;
-} tDragging;     // Parameter value dragging - Todo: rename
+} tDialDragging;     // Parameter value dragging - Todo: rename
 
 typedef struct {
     bool       active;
@@ -395,7 +400,7 @@ typedef enum {
     moduleTypeRndClkB,
     moduleTypeUnknown207,
     moduleTypeRndPattern
-} tmoduleType;
+} tModuleType;
 
 typedef struct {
     const char *   name;
@@ -433,5 +438,18 @@ typedef struct {
     int    offset_x;   // Offset from the origin
     int    offset_y;
 } GlyphInfo;
+
+typedef struct {
+    tModuleType moduleType;
+    tParamType type;
+    tCoord coord;
+} tConstParameter;
+
+typedef struct {
+    tModuleType moduleType;
+    tConnectorDir dir;
+    tConnectorType type;
+    tCoord coord;
+} tConstConnector;
 
 #endif // __TYPES_H__
