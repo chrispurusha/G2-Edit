@@ -168,7 +168,7 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
         }
 
         allocate_module_parameters(&module, gModuleProperties[type].numParameters);
-        allocate_module_connectors(&module, gModuleProperties[type].numConnectors);   // Might need to do this here too!?
+        allocate_module_connectors(&module, gModuleProperties[type].numConnectors);
 
         printf("Number connectors for module %u\n", gModuleProperties[type].numConnectors);
         write_module(key, &module);
