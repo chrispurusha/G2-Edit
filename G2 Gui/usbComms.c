@@ -167,6 +167,7 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
             mode = read_bit_stream(buff, subOffset, 6);             // Not sure what to do with this yet
         }
 
+        allocate_module_parameters(&module, gModuleProperties[type].numParameters);
         allocate_module_connectors(&module, gModuleProperties[type].numConnectors);   // Might need to do this here too!?
 
         printf("Number connectors for module %u\n", gModuleProperties[type].numConnectors);
@@ -663,17 +664,11 @@ static int int_rec(void) {
     int      dataLength                   = 0;
     int      type                         = 0;
     int      i                            = 0;
-    int      tries                        = 0;
     bool     foundNoneZero                = false;
 
-    for (tries = 0; tries < 5; tries++) {
-        memset(buff, 0, sizeof(buff));
-        readLength = read_usb_interrupt(buff, sizeof(buff));
 
-        if (readLength > 0) {
-            break;
-        }
-    }
+    memset(buff, 0, sizeof(buff));
+    readLength = read_usb_interrupt(buff, sizeof(buff));
 
     if (readLength > 0) {
         dataLength = read_bit_stream(buff, &bitPos, 4);

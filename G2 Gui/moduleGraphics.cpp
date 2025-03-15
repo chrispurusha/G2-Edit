@@ -69,7 +69,7 @@ void set_module_colour(uint32_t colour) {
 // This might be too generic and won't be able to use, or we add extra params!
 void render_param_common_dial(tCoord coord, uint32_t param, tModule * module, char * label, uint32_t range) {
     char buff[16] = {0};
-
+        
     snprintf(buff, sizeof(buff), "%u", module->param[0][param].value);
     module->param[0][param].type  = paramTypeCommonDial;
     module->param[0][param].range = range;

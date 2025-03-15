@@ -27,7 +27,6 @@ extern "C" {
 #define G2_PRODUCT_ID    (2)
 
 static IOUSBInterfaceInterface ** intf     = NULL;
-static bool                       timedOut = false;
 
 IOUSBDeviceInterface ** find_usb_device(void) {
     mach_port_t             masterPort      = 0;
@@ -192,7 +191,7 @@ void read_usb_complete(void * refCon, IOReturn result, void * arg0) {
 }
 
 void timeout_callback(CFRunLoopTimerRef timer, void * info) {
-    timedOut = true;
+    //timedOut = true;
 
     if ((*intf)->AbortPipe(intf, 1) != kIOReturnSuccess) {
         CFRunLoopStop(CFRunLoopGetCurrent());
@@ -201,7 +200,7 @@ void timeout_callback(CFRunLoopTimerRef timer, void * info) {
 
 int32_t read_usb_interrupt(uint8_t * buff, uint32_t buffLength) {
     uint32_t          readLength = 0;
-    CFTimeInterval    interval   = 0.02;  // 20ms
+    CFTimeInterval    interval   = 0.01;  // 10ms
     CFRunLoopTimerRef timer      = NULL;
     IOReturn          result     = kIOReturnError;
 
@@ -209,7 +208,6 @@ int32_t read_usb_interrupt(uint8_t * buff, uint32_t buffLength) {
         return readLength;
     }
     memset(buff, 0, buffLength);
-    timedOut = false;
 
     timer = CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + interval, 0, 0, 0, timeout_callback, NULL);
     CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, kCFRunLoopDefaultMode);
@@ -221,9 +219,7 @@ int32_t read_usb_interrupt(uint8_t * buff, uint32_t buffLength) {
     CFRunLoopRemoveTimer(CFRunLoopGetCurrent(), timer, kCFRunLoopDefaultMode);
     CFRelease(timer);
 
-    if (timedOut == true) {
-        readLength = 0;
-    } else if (result == kIOReturnSuccess) {   // Unless there's a way to detect aborted pipe read
+    if (result == kIOReturnSuccess) {   // Unless there's a way to detect aborted pipe read
         if ((buff[0] != 0)) {
             readLength = buffLength;
         }
