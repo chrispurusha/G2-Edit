@@ -37,6 +37,7 @@ extern "C" {
 
 #include "defs.h"
 #include "types.h"
+#include "utils.h"
 #include "msgQueue.h"
 #include "usbComms.h"
 #include "graphics.h"
@@ -443,7 +444,7 @@ void set_up_cable_key(tCableKey * cableKey, tModule * fromModule, tModule * toMo
 }
 
 bool swap_cable_to_from_if_needed(tCableKey * cableKey, tModule * fromModule, tModule * toModule, int toConnectorIndex) {
-    if (  fromModule->connector[gCableDrag.fromConnectorIndex].dir == connectorDirIn
+    if (fromModule->connector[gCableDrag.fromConnectorIndex].dir == connectorDirIn
        && toModule->connector[toConnectorIndex].dir == connectorDirOut) {
         uint32_t tmpModuleIndex    = cableKey->moduleFromIndex;
         uint32_t tmpConnectorIndex = cableKey->connectorFromIoCount;
@@ -543,6 +544,35 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     }
 }
 
+void adjust_scroll_for_drag(void) {
+    double x = 0.0;
+    double y = 0.0;
+    double adjustAmount = 0.1;
+    double timeDelta = get_time_delta();
+    tRectangle      area = module_area();
+    
+    glfwGetCursorPos(gWindow, &x, &y);
+        
+    adjustAmount *= timeDelta;
+    
+    if (x > (area.coord.x+area.size.w)) {
+        gScrollState.xBar+=adjustAmount;
+        set_x_scroll_bar(gScrollState.xBar);
+    }
+    if (x < (area.coord.x)) {
+        gScrollState.xBar-=adjustAmount;
+        set_x_scroll_bar(gScrollState.xBar);
+    }
+    if (y > (area.coord.y+area.size.h)) {
+        gScrollState.yBar+=adjustAmount;
+        set_y_scroll_bar(gScrollState.yBar);
+    }
+    if (y < (area.coord.y)) {
+        gScrollState.yBar-=adjustAmount;
+        set_y_scroll_bar(gScrollState.yBar);
+    }
+}
+
 void cursor_pos(GLFWwindow * window, double x, double y) {
     int             width          = 0;
     int             height         = 0;
@@ -597,8 +627,16 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         val          /= MODULE_Y_SPAN;
         val          /= get_zoom_factor();
         module.row    = floor(val);
+        if (module.row > 127) {
+            module.row = 127;
+        }
+        if (module.column > 127) {
+            module.column = 127;
+        }
         write_module(gModuleDrag.moduleKey, &module);
+        adjust_scroll_for_drag();
     } else if (gCableDrag.active == true) {
+        
         // Todo: Use a function for this scaling etc.
         val                            = x - area.coord.x;
         val                           += calc_scroll_x();
@@ -608,6 +646,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         val                           += calc_scroll_y();
         val                           /= get_zoom_factor();
         gCableDrag.toConnector.coord.y = val;
+        adjust_scroll_for_drag();
     }
 }
 
@@ -691,7 +730,7 @@ void init_graphics(void) {
     int           fbHeight     = 0;
     int           screenWidth  = 0;
     int           screenHeight = 0;
-
+    
     glfwSetErrorCallback(error_callback);
 
     if (!glfwInit()) {
@@ -760,12 +799,19 @@ void do_graphics_loop(void) {
         render_top_bar();
         render_scrollbars(gWindow);
         render_context_menu();
-
+        
         // Swap buffers and look for events
         glfwSwapBuffers(gWindow);
 
-        glfwWaitEvents();
-        //glfwWaitEventsTimeout(0.016); // 60 hz if we wanted to do this way but uses more processing
+        if ((gModuleDrag.active == true) || (gCableDrag.active == true)) {
+            double x = 0.0;
+            double y = 0.0;
+            glfwGetCursorPos(gWindow, &x, &y);
+            cursor_pos(gWindow, x, y);  // Artificially do cursor_pos call for drag scrolling
+            glfwWaitEventsTimeout(0.016);
+        } else {
+            glfwWaitEvents();
+        }
     }
 }
 

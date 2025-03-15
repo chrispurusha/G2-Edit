@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdbool.h>
+#include <time.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <dispatch/dispatch.h>

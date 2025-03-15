@@ -815,6 +815,14 @@ void set_y_end_max(double yEndMax) {
     gYEndMax = yEndMax;
 }
 
+double get_x_end_max(void) {
+    return gXEndMax;
+}
+
+double get_y_end_max(void) {
+    return gYEndMax;
+}
+
 void set_zoom_factor(double zoomFactor) {
     gZoomFactor = zoomFactor;
 }
