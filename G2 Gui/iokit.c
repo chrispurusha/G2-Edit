@@ -191,8 +191,6 @@ void read_usb_complete(void * refCon, IOReturn result, void * arg0) {
 }
 
 void timeout_callback(CFRunLoopTimerRef timer, void * info) {
-    //timedOut = true;
-
     if ((*intf)->AbortPipe(intf, 1) != kIOReturnSuccess) {
         CFRunLoopStop(CFRunLoopGetCurrent());
     }
@@ -220,9 +218,7 @@ int32_t read_usb_interrupt(uint8_t * buff, uint32_t buffLength) {
     CFRelease(timer);
 
     if (result == kIOReturnSuccess) {   // Unless there's a way to detect aborted pipe read
-        if ((buff[0] != 0)) {
-            readLength = buffLength;
-        }
+        readLength = buffLength;
     } else if (result == kIOReturnNoDevice) {
         readLength = -1;
     }

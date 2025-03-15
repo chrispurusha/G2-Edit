@@ -502,7 +502,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 
             switch (subCommand) {
                 case SUB_COMMAND_OK:
-                    printf("Got 0x0c  OK\n");
+                    //printf("Got 0x0c  OK\n");
                     return EXIT_SUCCESS;
 
                 case SUB_COMMAND_GET_PATCH_VERSION:
@@ -580,7 +580,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     return EXIT_SUCCESS;
 
                 case 0x7F:
-                    printf("Got 0x7f OK\n");
+                    //printf("Got 0x7f OK\n");
                     return EXIT_SUCCESS;
 
                 default:
