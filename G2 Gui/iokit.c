@@ -26,7 +26,7 @@ extern "C" {
 #define G2_VENDOR_ID     (0xffc)
 #define G2_PRODUCT_ID    (2)
 
-static IOUSBInterfaceInterface ** intf     = NULL;
+static IOUSBInterfaceInterface ** intf = NULL;
 
 IOUSBDeviceInterface ** find_usb_device(void) {
     mach_port_t             masterPort      = 0;

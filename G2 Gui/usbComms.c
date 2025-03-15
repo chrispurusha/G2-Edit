@@ -131,7 +131,7 @@ static int parse_synth_settings(uint8_t * buff, int length) {
 
     return retVal;
 }
-    
+
 static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
     uint32_t   i      = 0;
     uint32_t   j      = 0;
@@ -167,7 +167,7 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
             mode = read_bit_stream(buff, subOffset, 6);             // Not sure what to do with this yet
         }
 
-        allocate_module_parameters(&module, gModuleProperties[type].numParameters);
+        allocate_module_parameters(&module, gModuleProperties[type].numParameters); // Also done on parameter set-up, so whichever's first
         allocate_module_connectors(&module, gModuleProperties[type].numConnectors);
 
         printf("Number connectors for module %u\n", gModuleProperties[type].numConnectors);
@@ -236,7 +236,7 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
 
         read_module(key, &module);
 
-        allocate_module_parameters(&module, paramCount);
+        allocate_module_parameters(&module, paramCount); // Also done on module creation, so whichever's first
 
         for (j = 0; j < variationCount; j++) {                                                          // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
             uint32_t variation = read_bit_stream(buff, subOffset, 8);

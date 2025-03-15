@@ -174,12 +174,11 @@ void delete_module(tModuleKey key, tDoFree doFree) {
             dbModule->next->prev = dbModule->prev;
         }
 
-        
         if (doFree == doFreeYes) {
             for (uint32_t i = 0; i < VARIATIONS; i++) {
                 free(dbModule->param[i]);
             }
-            
+
             if (dbModule->connector != NULL) {
                 free(dbModule->connector);
             }
@@ -359,7 +358,7 @@ void database_clear_modules(void) {
         for (uint32_t i = 0; i < VARIATIONS; i++) {
             free(module->param[i]);
         }
-        
+
         if (module->connector != NULL) {
             free(module->connector);
         }
@@ -419,12 +418,19 @@ int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCoun
 }
 
 void allocate_module_parameters(tModule * module, uint32_t paramCount) {
+    if ((gModuleProperties[module->type].numParameters > 0) && (gModuleProperties[module->type].numParameters != paramCount)) {
+        printf("When allocating for %s, param count %u should be %u\n", gModuleProperties[module->type].name, paramCount, gModuleProperties[module->type].numParameters);
+        exit(1);
+    }
+
     if (paramCount > 0) {
         printf("Type = %s parameters %u\n", gModuleProperties[module->type].name, paramCount);
+
         for (uint32_t i = 0; i < VARIATIONS; i++) {  // Might need to check if already allocated!?
             if (module->param[i] == NULL) {
                 module->param[i] = malloc(paramCount * sizeof(tParam));
             }
+
             if (module->param[i] != NULL) {
                 memset(module->param[i], 0, paramCount * sizeof(tParam));
             } else {
@@ -432,17 +438,24 @@ void allocate_module_parameters(tModule * module, uint32_t paramCount) {
                 exit(1);
             }
         }
+
         module->allocatedParams = paramCount;
     }
 }
-    
+
 void allocate_module_connectors(tModule * module, uint32_t connectorCount) {
-    // Ultimately do through a database function, so we're not mallocing here.
+    if ((gModuleProperties[module->type].numConnectors > 0) && (gModuleProperties[module->type].numConnectors != connectorCount)) {
+        printf("When allocating for %s, connector count %u should be %u\n", gModuleProperties[module->type].name, connectorCount, gModuleProperties[module->type].numConnectors);
+        exit(1);
+    }
+
     if (connectorCount > 0) {
         printf("Type = %s connectors %u\n", gModuleProperties[module->type].name, gModuleProperties[module->type].numConnectors);
+
         if (module->connector == NULL) {
             module->connector = malloc(gModuleProperties[module->type].numConnectors * sizeof(tConnector)); // Might need to check if already allocated!?
         }
+
         if (module->connector != NULL) {
             memset(module->connector, 0, gModuleProperties[module->type].numConnectors * sizeof(tConnector));
         } else {
@@ -452,7 +465,7 @@ void allocate_module_connectors(tModule * module, uint32_t connectorCount) {
         module->allocatedConnectors = connectorCount;
     }
 }
-    
+
 #ifdef __cplusplus
 }
 #endif

@@ -69,7 +69,7 @@ void set_module_colour(uint32_t colour) {
 // This might be too generic and won't be able to use, or we add extra params!
 void render_param_common_dial(tCoord coord, uint32_t param, tModule * module, char * label, uint32_t range) {
     char buff[16] = {0};
-        
+
     snprintf(buff, sizeof(buff), "%u", module->param[0][param].value);
     module->param[0][param].type  = paramTypeCommonDial;
     module->param[0][param].range = range;
@@ -188,21 +188,16 @@ void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir d
 }
 
 void render_FltClassic(tRectangle rectangle, tModule * module) {
-    if ((gModuleProperties[module->type].numParameters != module->allocatedParams) || (gModuleProperties[module->type].numConnectors != module->allocatedConnectors)) {
-        printf("%s parameter or connector number mismatch. param=%u should=%u connector=%u should=%u\n", __FUNCTION__, gModuleProperties[module->type].numParameters, module->allocatedParams, gModuleProperties[module->type].numConnectors, module->allocatedConnectors);
-        return;
-    }
-    
     uint32_t param     = 0;
     uint32_t connector = 0;
-    
+
     render_common_freq({rectangle.coord.x + 105.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_common_pitch({rectangle.coord.x + 15.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_common_keyboard_track({rectangle.coord.x + 75.0, rectangle.coord.y + 80.0}, param++, module);
     render_common_resonance({rectangle.coord.x + 160.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_FltClassic_db({rectangle.coord.x + 210.0, rectangle.coord.y + 80.0}, param++, module);
     render_common_bypass({rectangle.coord.x + 245.0, rectangle.coord.y + 50.0}, param++, module);
-    
+
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
     render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 95.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 95.0});
@@ -234,14 +229,9 @@ void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
 }
 
 void render_FltMulti(tRectangle rectangle, tModule * module) {
-    if ((gModuleProperties[module->type].numParameters != module->allocatedParams) || (gModuleProperties[module->type].numConnectors != module->allocatedConnectors)) {
-        printf("%s parameter or connector number mismatch. param=%u should=%u connector=%u should=%u\n", __FUNCTION__, gModuleProperties[module->type].numParameters, module->allocatedParams, gModuleProperties[module->type].numConnectors, module->allocatedConnectors);
-        return;
-    }
-    
     uint32_t param     = 0;
     uint32_t connector = 0;
-    
+
     render_common_freq({rectangle.coord.x + 125.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_common_pitch({rectangle.coord.x + 15.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_common_keyboard_track({rectangle.coord.x + 75.0, rectangle.coord.y + 80.0}, param++, module);
@@ -249,7 +239,7 @@ void render_FltMulti(tRectangle rectangle, tModule * module) {
     render_common_resonance({rectangle.coord.x + 185.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_FltMulti_db({rectangle.coord.x + 210.0, rectangle.coord.y + 25.0}, param++, module);   // Todo - this param num isn't db!!!
     render_common_bypass({rectangle.coord.x + 230.0, rectangle.coord.y + 80.0}, param++, module);
-    
+
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
     render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 60.0});
     render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 80.0});
@@ -275,19 +265,14 @@ void render_param_EnvAdsr_release(tCoord coord, uint32_t param, tModule * module
 }
 
 void render_EnvAdsr(tRectangle rectangle, tModule * module) {
-    if ((gModuleProperties[module->type].numParameters != module->allocatedParams) || (gModuleProperties[module->type].numConnectors != module->allocatedConnectors)) {
-        printf("%s parameter or connector number mismatch. param=%u should=%u connector=%u should=%u\n", __FUNCTION__, gModuleProperties[module->type].numParameters, module->allocatedParams, gModuleProperties[module->type].numConnectors, module->allocatedConnectors);
-        return;
-    }
-    
     uint32_t param     = 0;
     uint32_t connector = 0;
-    
+
     render_param_EnvAdsr_attack({rectangle.coord.x + 20.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_param_EnvAdsr_delay({rectangle.coord.x + 60.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_param_EnvAdsr_sustain({rectangle.coord.x + 100.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_param_EnvAdsr_release({rectangle.coord.x + 140.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
-    
+
     param += 4; // 4 more to implement
 
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
@@ -298,13 +283,8 @@ void render_EnvAdsr(tRectangle rectangle, tModule * module) {
 }
 
 void render_Mix4to1c(tRectangle rectangle, tModule * module) {
-    if ((gModuleProperties[module->type].numParameters != module->allocatedParams) || (gModuleProperties[module->type].numConnectors != module->allocatedConnectors)) {
-        printf("%s parameter or connector number mismatch. param=%u should=%u connector=%u should=%u\n", __FUNCTION__, gModuleProperties[module->type].numParameters, module->allocatedParams, gModuleProperties[module->type].numConnectors, module->allocatedConnectors);
-        return;
-    }
-    
     uint32_t connector = 0;
-    
+
     render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 95.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 60, rectangle.coord.y + 80.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 80, rectangle.coord.y + 80.0});
@@ -313,37 +293,22 @@ void render_Mix4to1c(tRectangle rectangle, tModule * module) {
 }
 
 void render_OscShpB(tRectangle rectangle, tModule * module) {
-    if ((gModuleProperties[module->type].numParameters != module->allocatedParams) || (gModuleProperties[module->type].numConnectors != module->allocatedConnectors)) {
-        printf("%s parameter or connector number mismatch. param=%u should=%u connector=%u should=%u\n", __FUNCTION__, gModuleProperties[module->type].numParameters, module->allocatedParams, gModuleProperties[module->type].numConnectors, module->allocatedConnectors);
-        return;
-    }
-    
     uint32_t connector = 0;
-    
+
     render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 150.0, rectangle.coord.y + 80.0});
 }
 
 void render_StChorus(tRectangle rectangle, tModule * module) {
-    if ((gModuleProperties[module->type].numParameters != module->allocatedParams) || (gModuleProperties[module->type].numConnectors != module->allocatedConnectors)) {
-        printf("%s parameter or connector number mismatch. param=%u should=%u connector=%u should=%u\n", __FUNCTION__, gModuleProperties[module->type].numParameters, module->allocatedParams, gModuleProperties[module->type].numConnectors, module->allocatedConnectors);
-        return;
-    }
-    
     uint32_t connector = 0;
-    
+
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
     render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 235.0, rectangle.coord.y + 65.0});
     render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 65.0});
 }
 
 void render_Compress(tRectangle rectangle, tModule * module) {
-    if ((gModuleProperties[module->type].numParameters != module->allocatedParams) || (gModuleProperties[module->type].numConnectors != module->allocatedConnectors)) {
-        printf("%s parameter or connector number mismatch. param=%u should=%u connector=%u should=%u\n", __FUNCTION__, gModuleProperties[module->type].numParameters, module->allocatedParams, gModuleProperties[module->type].numConnectors, module->allocatedConnectors);
-        return;
-    }
-    
     uint32_t connector = 0;
-    
+
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 235.0, rectangle.coord.y + 20.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
 }
