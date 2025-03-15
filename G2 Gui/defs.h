@@ -98,6 +98,10 @@
 #define BLANK_SIZE                       (0.0)    // Not used directly by calling function, or needs calculation in following calls
 #define STANDARD_TEXT_HEIGHT             (12.0)
 
+#define MAX_ROWS                         (127)
+#define MAX_COLUMNS                      (127)
+#define MAX_ROWS_MODULE                  (12)     // Operator type is 12 rows - largest we have
+
 #define ARRAY_SIZE(arr)    (sizeof(arr) / sizeof(arr[0]))
 
 #endif // #define __DEFS_H__

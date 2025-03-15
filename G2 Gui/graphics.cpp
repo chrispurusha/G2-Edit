@@ -370,7 +370,7 @@ bool handle_module_click(tCoord coord, int button) {
     return false;
 }
 
-void shift_modules_down(tModuleKey key) {
+void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already on last row!
     tModule  module            = {0};
     tModule  walk              = {0};
     bool     doDrop            = false;
@@ -547,28 +547,30 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 void adjust_scroll_for_drag(void) {
     double x = 0.0;
     double y = 0.0;
-    double adjustAmount = 0.1;
+    double xAdjustAmount = 0.1;
+    double yAdjustAmount = 0.2;
     double timeDelta = get_time_delta();
     tRectangle      area = module_area();
     
     glfwGetCursorPos(gWindow, &x, &y);
         
-    adjustAmount *= timeDelta;
+    xAdjustAmount *= timeDelta;
+    yAdjustAmount *= timeDelta;
     
     if (x > (area.coord.x+area.size.w)) {
-        gScrollState.xBar+=adjustAmount;
+        gScrollState.xBar+=xAdjustAmount;
         set_x_scroll_bar(gScrollState.xBar);
     }
     if (x < (area.coord.x)) {
-        gScrollState.xBar-=adjustAmount;
+        gScrollState.xBar-=xAdjustAmount;
         set_x_scroll_bar(gScrollState.xBar);
     }
     if (y > (area.coord.y+area.size.h)) {
-        gScrollState.yBar+=adjustAmount;
+        gScrollState.yBar+=yAdjustAmount;
         set_y_scroll_bar(gScrollState.yBar);
     }
     if (y < (area.coord.y)) {
-        gScrollState.yBar-=adjustAmount;
+        gScrollState.yBar-=yAdjustAmount;
         set_y_scroll_bar(gScrollState.yBar);
     }
 }
@@ -651,9 +653,8 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
 }
 
 void scroll_event(GLFWwindow * window, double x, double y) {
-    const double zoomIncrement = 0.05;  // Zoom sensitivity
+    const double zoomIncrement = 0.025;  // Zoom sensitivity
     double       zoomFactor    = 0.0;
-    //double     xEndMax = 0.0, yEndMax = 0.0;
 
     tCoord     mouseCoord = {0};
     tRectangle moduleArea = module_area(); // Get the module display area
@@ -671,8 +672,8 @@ void scroll_event(GLFWwindow * window, double x, double y) {
         zoomFactor  = get_zoom_factor();
         zoomFactor += y * zoomIncrement;
 
-        if (zoomFactor < 0.5) {
-            zoomFactor = 0.5;
+        if (zoomFactor < 0.25) {
+            zoomFactor = 0.25;
         } else if (zoomFactor > 2.0) {
             zoomFactor = 2.0;
         }

@@ -319,6 +319,7 @@ void render_parameters(tRectangle rectangle, tModule * module) {
     }
 }
 
+#if 0
 double calculate_x_end_max(void) {
     double  xEndMax     = MODULE_X_SPAN; // Set a minumum
     tModule module      = {0};
@@ -366,6 +367,8 @@ double calculate_y_end_max(void) {
 
     return yEndMax;
 }
+#endif
+
 
 void render_module(tModule * module) {
     double     moduleHeight               = gModuleProperties[module->type].height;
@@ -406,8 +409,8 @@ void render_modules(void) {
     bool       validModule = false;
     tRectangle area        = module_area();
 
-    set_x_end_max(calculate_x_end_max());
-    set_y_end_max(calculate_y_end_max());
+    //set_x_end_max(calculate_x_end_max());
+    //set_y_end_max(calculate_y_end_max());
 
     reset_walk_module();
 
@@ -460,12 +463,6 @@ void render_cable(tCable * cable) {
     if (fromConnectorIndex != -1 && toConnectorIndex != -1) {
         render_cable_from_to(moduleFrom.connector[fromConnectorIndex], moduleTo.connector[toConnectorIndex]);
     }
-    // Todo - see if there's any corruption on fltmulti's final 2 connector items on the array
-    //for (int i=0; i<gModuleProperties[moduleTo.type].numConnectors; i++) {
-    //    printf("%d to dir and type %u %u\n", i, moduleTo.connector[i].dir, moduleTo.connector[i].type);
-    //}
-
-    //printf("\n");
 }
 
 void render_cables(void) {

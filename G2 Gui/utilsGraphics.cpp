@@ -48,8 +48,8 @@ static double    gMetricsHeight            = 0.0;
 static double    gXScrollPercent           = 0.0;
 static double    gYScrollPercent           = 0.0;
 static double    gZoomFactor               = NO_ZOOM;
-static double    gXEndMax                  = 0.0;
-static double    gYEndMax                  = 0.0;
+//static double    gXEndMax                  = 0.0;
+//static double    gYEndMax                  = 0.0;
 static int       gRenderWidth              = 0;
 static int       gRenderHeight             = 0;
 
@@ -61,7 +61,7 @@ double calc_scroll_x(void) {
     tRectangle area  = module_area();
     double     value = 0.0;
 
-    value = (gXScrollPercent * (scale(gXEndMax) - area.size.w)) / 100.0;
+    value = (gXScrollPercent * (scale((MAX_COLUMNS + 1) * MODULE_X_SPAN) - area.size.w)) / 100.0;
 
     if (value < 0.0) {
         value = 0.0;
@@ -73,7 +73,7 @@ double calc_scroll_y(void) {
     tRectangle area  = module_area();
     double     value = 0.0;
 
-    value = (gYScrollPercent * (scale(gYEndMax) - area.size.h)) / 100.0;
+    value = (gYScrollPercent * (scale(((MAX_ROWS + 1)+(MAX_ROWS_MODULE-1)) * MODULE_Y_SPAN) - area.size.h)) / 100.0;
 
     if (value < 0.0) {
         value = 0.0;
@@ -807,21 +807,21 @@ void set_y_scroll_percent(double percent) {
     gYScrollPercent = percent;
 }
 
-void set_x_end_max(double xEndMax) {
-    gXEndMax = xEndMax;
-}
+//void set_x_end_max(double xEndMax) {
+//    gXEndMax = xEndMax;
+//}
 
-void set_y_end_max(double yEndMax) {
-    gYEndMax = yEndMax;
-}
+//void set_y_end_max(double yEndMax) {
+//    gYEndMax = yEndMax;
+//}
 
-double get_x_end_max(void) {
-    return gXEndMax;
-}
+//double get_x_end_max(void) {
+//    return gXEndMax;
+//}
 
-double get_y_end_max(void) {
-    return gYEndMax;
-}
+//double get_y_end_max(void) {
+//    return gYEndMax;
+//}
 
 void set_zoom_factor(double zoomFactor) {
     gZoomFactor = zoomFactor;
