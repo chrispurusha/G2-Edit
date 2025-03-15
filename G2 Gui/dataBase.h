@@ -26,7 +26,7 @@
 
 bool read_module(tModuleKey key, tModule * module);
 void write_module(tModuleKey key, tModule * module);
-void delete_module(tModuleKey key, tFreeConnector freeConnector);
+void delete_module(tModuleKey key, tDoFree doFree);
 void dump_modules(void);
 void reset_walk_module(void);
 bool walk_next_module(tModule * module);
@@ -41,5 +41,7 @@ void database_clear_modules(void);
 void database_clear_cables(void);
 int find_io_count_from_index(tModule * module, tConnectorDir dir, int index);
 int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCount);
+void allocate_module_parameters(tModule * module, uint32_t paramCount);
+void allocate_module_connectors(tModule * module, uint32_t connectorCount);
 
 #endif // __DATABASE_H__

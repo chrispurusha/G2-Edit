@@ -131,7 +131,7 @@ static int parse_synth_settings(uint8_t * buff, int length) {
 
     return retVal;
 }
-
+    
 static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
     uint32_t   i      = 0;
     uint32_t   j      = 0;
@@ -167,16 +167,8 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
             mode = read_bit_stream(buff, subOffset, 6);             // Not sure what to do with this yet
         }
 
-        // Ultimately do through a database function, so we're not mallocing here.
-        if (gModuleProperties[type].numConnectors > 0) {
-            //module.numConnectors = gModuleProperties[type].numConnectors;  //
-            printf("Type = %s connectors %u\n", gModuleProperties[type].name, gModuleProperties[type].numConnectors);
-            module.connector = malloc(gModuleProperties[type].numConnectors * sizeof(tConnector));
+        allocate_module_connectors(&module, gModuleProperties[type].numConnectors);   // Might need to do this here too!?
 
-            if (module.connector != NULL) {
-                memset(module.connector, 0, gModuleProperties[type].numConnectors * sizeof(tConnector));
-            }
-        }
         printf("Number connectors for module %u\n", gModuleProperties[type].numConnectors);
         write_module(key, &module);
     }
@@ -243,8 +235,7 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
 
         read_module(key, &module);
 
-        // See if we can do the mallocing and freeing in the db routines
-        module.numParams = paramCount;
+        allocate_module_parameters(&module, paramCount);
 
         for (j = 0; j < variationCount; j++) {                                                          // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
             uint32_t variation = read_bit_stream(buff, subOffset, 8);

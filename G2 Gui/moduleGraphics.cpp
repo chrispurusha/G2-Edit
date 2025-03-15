@@ -39,7 +39,7 @@ extern "C" {
 #include "utilsGraphics.h"
 #include "moduleResources.h"
 #include "moduleGraphics.h"
-    
+
 tRectangle render_dial(tRectangle rectangle, uint32_t value) {  // Drop down into utilsGraphics?
     double angle  = 0.0;
     double radius = 0.0;
@@ -198,6 +198,11 @@ void render_FltClassic(tRectangle rectangle, tModule * module) {
     render_FltClassic_db({rectangle.coord.x + 210.0, rectangle.coord.y + 80.0}, param++, module);
     render_common_bypass({rectangle.coord.x + 245.0, rectangle.coord.y + 50.0}, param++, module);
 
+    if ((param != gModuleProperties[module->type].numParameters) || (param != module->allocatedParams)) {
+        printf("%s Parameter number mismatch. Rendered %u and should be %u, allocated %u\n", __FUNCTION__, param, gModuleProperties[module->type].numParameters, module->allocatedParams);
+        exit(1);
+    }
+    
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
     render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 95.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 95.0});
@@ -245,6 +250,11 @@ void render_FltMulti(tRectangle rectangle, tModule * module) {
     render_FltMulti_db({rectangle.coord.x + 210.0, rectangle.coord.y + 25.0}, param++, module);   // Todo - this param num isn't db!!!
     render_common_bypass({rectangle.coord.x + 230.0, rectangle.coord.y + 80.0}, param++, module);
 
+    if ((param != gModuleProperties[module->type].numParameters) || (param != module->allocatedParams)) {
+        printf("%s Parameter number mismatch. Rendered %u and should be %u, allocated %u\n", __FUNCTION__, param, gModuleProperties[module->type].numParameters, module->allocatedParams);
+        exit(1);
+    }
+    
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
     render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 60.0});
     render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 80.0});
@@ -282,12 +292,19 @@ void render_EnvAdsr(tRectangle rectangle, tModule * module) {
     render_param_EnvAdsr_delay({rectangle.coord.x + 60.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_param_EnvAdsr_sustain({rectangle.coord.x + 100.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
     render_param_EnvAdsr_release({rectangle.coord.x + 140.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
+    
+    param += 4; // 4 more to implement
 
+    if ((param != gModuleProperties[module->type].numParameters) || (param != module->allocatedParams)) {
+        printf("%s Parameter number mismatch. Rendered %u and should be %u, allocated %u\n", __FUNCTION__, param, gModuleProperties[module->type].numParameters, module->allocatedParams);
+        exit(1);
+    }
+    
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 75.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 95.0});
     render_connector(module, connector++, connectorDirOut, connectorTypeControl, {rectangle.coord.x + 255.0, rectangle.coord.y + 95.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 95.0});     // Don't know if 1 is correct
+    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 95.0});
 
     if (connector != gModuleProperties[module->type].numConnectors) {
         printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
@@ -303,7 +320,7 @@ void render_Mix4to1c(tRectangle rectangle, tModule * module) {
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 80, rectangle.coord.y + 80.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 100, rectangle.coord.y + 80.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 120, rectangle.coord.y + 80.0});
-
+    
     if (connector != gModuleProperties[module->type].numConnectors) {
         printf("%s Connector number mismatch. Rendered %u and should be %u\n", __FUNCTION__, connector, gModuleProperties[module->type].numConnectors);
         exit(1);

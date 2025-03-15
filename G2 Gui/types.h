@@ -145,10 +145,10 @@ typedef struct _struct_module {
     uint32_t                unknown1;                                 // Guess we should store this, to write back if necessary. Might not be needed
     uint32_t                modeCount;                                // Don't yet know what this is for. Might need modes array adding
     char                    name[MODULE_NAME_SIZE + 1];
-    uint32_t                numParams;                                // Relates to tComp array below - Todo: only refer to this in the permanent tModuleProperties
-    tParam                  param[VARIATIONS][MAX_PARAMS_PER_MODULE]; // Going to need to allocate this per module, depending on numParams to save memory
-    //uint32_t                numConnectors;                                         // Todo: only refer to this in the permanent tModuleProperties - todo: might need to be num inputs connectors and num output connectors, but that would make direct array referencing not possible. Better to add up input and output connectors to check against protocol?
-    tConnector *            connector;                                // Going to need to allocate this per module to save memory - Todo: this should be array of input connectors and output connectors or one array of connectors, marked as input or output
+    uint32_t                allocatedParams;
+    tParam *                param[VARIATIONS];
+    uint32_t                allocatedConnectors;
+    tConnector *            connector;
     struct _struct_module * prev;
     struct _struct_module * next;
 } tModule;
@@ -166,10 +166,10 @@ typedef struct {
 } tModuleDragging;     // Parameter value dragging - Todo: rename
 
 typedef struct {
-    bool     active;
+    bool       active;
     tModuleKey moduleKey;
-    uint32_t variation;
-    uint32_t param;
+    uint32_t   variation;
+    uint32_t   param;
 } tDialDragging;     // Parameter value dragging - Todo: rename
 
 typedef struct {
@@ -408,6 +408,7 @@ typedef struct {
     const uint32_t height;
     //uint32_t       isLed;
     //uint32_t       upRate;
+    const uint32_t numParameters;
     const uint32_t numConnectors;
     void (*renderFunction)(tRectangle, tModule *);
 } tModuleProperties;
@@ -423,9 +424,9 @@ typedef enum {
 } tCableLinkType;
 
 typedef enum {
-    freeConnectorYes,
-    freeConnectorNo
-} tFreeConnector;
+    doFreeYes,
+    doFreeNo
+} tDoFree;
 
 typedef struct {
     double u1;         // Top-left texture coordinates
@@ -441,15 +442,15 @@ typedef struct {
 
 typedef struct {
     tModuleType moduleType;
-    tParamType type;
-    tCoord coord;
+    tParamType  type;
+    tCoord      coord;
 } tConstParameter;
 
 typedef struct {
-    tModuleType moduleType;
-    tConnectorDir dir;
+    tModuleType    moduleType;
+    tConnectorDir  dir;
     tConnectorType type;
-    tCoord coord;
+    tCoord         coord;
 } tConstConnector;
 
 #endif // __TYPES_H__

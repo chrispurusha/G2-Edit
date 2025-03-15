@@ -44,14 +44,14 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleGraphics.h"
 
-static tScrollState      gScrollState = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
-static tContextMenu      gContextMenu = {0};
-static FT_Library        gLibrary     = {0};
-static FT_Face           gFace        = {0};
-static GLFWwindow *      gWindow      = NULL;
+static tScrollState      gScrollState  = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
+static tContextMenu      gContextMenu  = {0};
+static FT_Library        gLibrary      = {0};
+static FT_Face           gFace         = {0};
+static GLFWwindow *      gWindow       = NULL;
 static tDialDragging     gDialDragging = {0};
-static tModuleDragging   gModuleDrag  = {0};
-static tCableDragging    gCableDrag   = {0};
+static tModuleDragging   gModuleDrag   = {0};
+static tCableDragging    gCableDrag    = {0};
 
 extern tMessageQueue     gCommandQueue;
 extern tModuleProperties gModuleProperties[];
@@ -198,33 +198,35 @@ bool handle_scrollbar_click(tCoord coord) {
 void send_module_move_msg(tModule * module) {
     tMessageContent messageContent = {0};
 
-    messageContent.cmd                 = eMsgCmdMoveModule;
+    messageContent.cmd                  = eMsgCmdMoveModule;
     messageContent.moduleData.moduleKey = module->key;
-    messageContent.moduleData.row      = module->row;
-    messageContent.moduleData.column   = module->column;
+    messageContent.moduleData.row       = module->row;
+    messageContent.moduleData.column    = module->column;
     msg_send(&gCommandQueue, &messageContent);
 }
 
 bool param_type_is_dial(tParamType type) {
-    switch(type) {
+    switch (type) {
         case paramTypeFreq:
         case paramTypeResonance:
         case paramTypePitch:
         case paramTypeCommonDial:
             return true;
+
         default:
             return false;
     }
 }
 
 bool param_type_is_toggle(tParamType type) {
-    switch(type) {
+    switch (type) {
         case paramTypeKeyboardTrack:
         case paramTypeGainControl:
         case paramTypeBypass:
         case paramTypeFltClassicDb:
         case paramTypeFltMultiDb:
             return true;
+
         default:
             return false;
     }
@@ -238,16 +240,16 @@ bool handle_module_click(tCoord coord, int button) {
     tModule module = {0};
 
     while (walk_next_module(&module)) {
-        for (int i = 0; i < module.numParams; i++) {
+        for (int i = 0; i < gModuleProperties[module.type].numParameters; i++) {
             tParam * param = &module.param[0][i];
 
             if (within_rectangle(coord, param->rectangle)) {
                 if (param_type_is_dial(param->type) == true) {
-                    gDialDragging.moduleKey.index     = module.key.index;
-                    gDialDragging.moduleKey.location  = module.key.location;
-                    gDialDragging.variation = 0;
-                    gDialDragging.param     = i;
-                    gDialDragging.active    = true;
+                    gDialDragging.moduleKey.index    = module.key.index;
+                    gDialDragging.moduleKey.location = module.key.location;
+                    gDialDragging.variation          = 0;
+                    gDialDragging.param              = i;
+                    gDialDragging.active             = true;
                     return true;
                 } else if (param_type_is_toggle(param->type) == true) {
                     param->value = (param->value + 1) % param->range;
@@ -297,7 +299,7 @@ bool handle_module_click(tCoord coord, int button) {
             // Take the module off the linked list and put on the end, which makes it render last and so render on the top
             tModule tmpModule = {0};
             read_module(module.key, &tmpModule);
-            delete_module(module.key, freeConnectorNo);
+            delete_module(module.key, doFreeNo);
             write_module(tmpModule.key, &tmpModule);
             gModuleDrag.moduleKey = tmpModule.key;
             gModuleDrag.active    = true;
@@ -475,9 +477,9 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         }
         gScrollState.yBarDragging = false;
         gScrollState.xBarDragging = false;
-        memset(&gModuleDrag, 0, sizeof(gModuleDrag)); // Reset dragging state
-        memset(&gDialDragging, 0, sizeof(gDialDragging));     // Reset dragging state
-        memset(&gCableDrag, 0, sizeof(gCableDrag));   // Reset dragging state
+        memset(&gModuleDrag, 0, sizeof(gModuleDrag));     // Reset dragging state
+        memset(&gDialDragging, 0, sizeof(gDialDragging)); // Reset dragging state
+        memset(&gCableDrag, 0, sizeof(gCableDrag));       // Reset dragging state
     }
 }
 
@@ -505,12 +507,12 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         read_module(gDialDragging.moduleKey, &module);
 
         if (param_type_is_dial(module.param[gDialDragging.variation][gDialDragging.param].type) == true) {
-            angle                                                    = calculate_mouse_angle({x, y}, module.param[gDialDragging.variation][gDialDragging.param].rectangle);   // possible add half size
-            value                                                    = angle_to_value(angle);
+            angle                                                            = calculate_mouse_angle({x, y}, module.param[gDialDragging.variation][gDialDragging.param].rectangle); // possible add half size
+            value                                                            = angle_to_value(angle);
             module.param[gDialDragging.variation][gDialDragging.param].value = value;
         } else {
-                printf("Unknown module type %u\n", module.param[gDialDragging.variation][gDialDragging.param].type);
-                exit(1);
+            printf("Unknown module type %u\n", module.param[gDialDragging.variation][gDialDragging.param].type);
+            exit(1);
         }
         write_module(gDialDragging.moduleKey, &module);         // Write new value into parameter
 

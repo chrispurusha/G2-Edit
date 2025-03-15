@@ -43,28 +43,28 @@ typedef enum {
 
 typedef struct {
     tModuleKey moduleKey;
-    uint32_t variation;
-    uint32_t param;
-    uint32_t value;
+    uint32_t   variation;
+    uint32_t   param;
+    uint32_t   value;
 } tParamData;
 
 typedef struct {
     tModuleKey moduleKey;
-    uint32_t type;
-    uint32_t row;
-    uint32_t column;
-    uint32_t colour;
-    uint32_t upRate;
-    uint32_t isLed;
-    uint32_t unknown1;
-    uint32_t modeCount;
-    char     name[MODULE_NAME_SIZE + 1];
+    uint32_t   type;
+    uint32_t   row;
+    uint32_t   column;
+    uint32_t   colour;
+    uint32_t   upRate;
+    uint32_t   isLed;
+    uint32_t   unknown1;
+    uint32_t   modeCount;
+    char       name[MODULE_NAME_SIZE + 1];
 } tModuleData;
 
 typedef struct {
     tModuleKey moduleKey;
-    uint32_t row;
-    uint32_t column;
+    uint32_t   row;
+    uint32_t   column;
 } tModuleMoveData;
 
 typedef struct {

@@ -156,7 +156,7 @@ void write_module(tModuleKey key, tModule * module) {
     mutex_unlock();
 }
 
-void delete_module(tModuleKey key, tFreeConnector freeConnector) {
+void delete_module(tModuleKey key, tDoFree doFree) {
     tModule * dbModule = NULL;
 
     mutex_lock();
@@ -174,7 +174,12 @@ void delete_module(tModuleKey key, tFreeConnector freeConnector) {
             dbModule->next->prev = dbModule->prev;
         }
 
-        if (freeConnector == freeConnectorYes) {
+        
+        if (doFree == doFreeYes) {
+            for (uint32_t i = 0; i < VARIATIONS; i++) {
+                free(dbModule->param[i]);
+            }
+            
             if (dbModule->connector != NULL) {
                 free(dbModule->connector);
             }
@@ -409,6 +414,38 @@ int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCoun
     return -1;  // Not found
 }
 
+void allocate_module_parameters(tModule * module, uint32_t paramCount) {
+    if (paramCount > 0) {
+        printf("Type = %s parameters %u\n", gModuleProperties[module->type].name, paramCount);
+        for (uint32_t n = 0; n < VARIATIONS; n++) {  // Might need to check if already allocated!?
+            module->param[n] = malloc(paramCount * sizeof(tParam));
+            if (module->param[n] != NULL) {
+                memset(module->param[n], 0, paramCount * sizeof(tParam));
+            } else {
+                perror("Failed to allocate memory for param array");
+                exit(1);
+            }
+        }
+        module->allocatedParams = paramCount;
+    }
+}
+    
+void allocate_module_connectors(tModule * module, uint32_t connectorCount) {
+    // Ultimately do through a database function, so we're not mallocing here.
+    if (connectorCount > 0) {
+        printf("Type = %s connectors %u\n", gModuleProperties[module->type].name, gModuleProperties[module->type].numConnectors);
+        module->connector = malloc(gModuleProperties[module->type].numConnectors * sizeof(tConnector)); // Might need to check if already allocated!?
+        
+        if (module->connector != NULL) {
+            memset(module->connector, 0, gModuleProperties[module->type].numConnectors * sizeof(tConnector));
+        } else {
+            perror("Failed to allocate memory for connector array");
+            exit(1);
+        }
+        module->allocatedConnectors = connectorCount;
+    }
+}
+    
 #ifdef __cplusplus
 }
 #endif

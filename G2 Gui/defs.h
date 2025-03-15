@@ -96,4 +96,6 @@
 #define BLANK_SIZE                       (0.0)    // Not used directly by calling function, or needs calculation in following calls
 #define STANDARD_TEXT_HEIGHT             (12.0)
 
+#define ARRAY_SIZE(arr)    (sizeof(arr) / sizeof(arr[0]))
+
 #endif // #define __DEFS_H__
