@@ -381,7 +381,7 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
     if (read_module(key, &module) == false) {
         return;
     }
-    // First step - if moved module lands on exisitng module after first row, drop it down
+    // First step - if moved module lands on exisitng module after existing module's first row, drop it down
     reset_walk_module();
 
     while (walk_next_module(&walk)) {
@@ -401,6 +401,8 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
     if (moduleRePosition == false) {
         send_module_move_msg(&module);
     }
+    
+    // If a module is on-top of the new module (within it's area), drop it
     reset_walk_module();
 
     while (walk_next_module(&walk)) {
@@ -416,6 +418,7 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
         }
     }
 
+    // Drop subsequent modules by the same amount used in walk section 2
     if (doDrop == true) {
         reset_walk_module();
 
