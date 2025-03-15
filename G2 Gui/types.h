@@ -108,6 +108,7 @@ typedef struct {
 typedef struct _struct_cable {
     tCableKey              key;
     uint32_t               colour;
+    struct _struct_cable * prev;
     struct _struct_cable * next;       // This can go, when we attach to modules rather than separate linked list
 } tCable;
 
@@ -188,6 +189,9 @@ typedef struct {
     bool        active; // Is the menu currently visible?
     tCoord      coord;  // Position of the menu
     tMenuItem * items;  // Pointer to an array of menu items
+    tModuleKey  moduleKey;
+    tConnectorDir connectorDir;
+    uint32_t    connectorIndex;
 } tContextMenu;
 
 typedef enum {

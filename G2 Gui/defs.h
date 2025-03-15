@@ -41,6 +41,8 @@
 #define SUB_COMMAND_MOVE_MODULE          (0x34)
 #define SUB_COMMAND_SET_PARAM            (0x40)
 #define SUB_COMMAND_WRITE_CABLE          (0x50)
+#define SUB_COMMAND_DELETE_CABLE         (0x51)
+#define SUB_COMMAND_WRITE_CABLE_COLOUR   (0x54)
 
 #define COMMAND_REQ                      (0x20) // High nibble, expects response
 #define COMMAND_WRITE_NO_RESP            (0x30) // High nibble, expects response

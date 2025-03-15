@@ -38,7 +38,8 @@ typedef enum {
     eMsgCmdSetValue,
     eMsgCmdWriteModule,
     eMsgCmdMoveModule,
-    eMsgCmdWriteCable
+    eMsgCmdWriteCable,
+    eMsgCmdDeleteCable
 } eMsgCmd;
 
 typedef struct {

@@ -145,14 +145,20 @@ void write_module(tModuleKey key, tModule * module) {
             dbModule->prev      = iterateModule;
         }
     }
-    // Preserve prev and next pointers before memcpy
-    tModule * prev = dbModule->prev;
-    tModule * next = dbModule->next;
-    memcpy(dbModule, module, sizeof(*dbModule));
-    // Restore prev and next pointers
-    dbModule->prev = prev;
-    dbModule->next = next;
-
+    
+    if (dbModule != NULL) {
+        // Preserve prev and next pointers before memcpy
+        tModule * prev = dbModule->prev;
+        tModule * next = dbModule->next;
+        memcpy(dbModule, module, sizeof(*dbModule));
+        // Restore prev and next pointers
+        dbModule->prev = prev;
+        dbModule->next = next;
+    } else {
+        printf("Module generation or update failed\n");
+        exit(1);
+    }
+    
     mutex_unlock();
 }
 
@@ -164,6 +170,8 @@ void delete_module(tModuleKey key, tDoFree doFree) {
     dbModule = find_module(key);
 
     if (dbModule != NULL) {
+        walkModule = dbModule->prev;  // Trick to point to previous item if we're deleting
+        
         if (dbModule->prev != NULL) {
             dbModule->prev->next = dbModule->next;
         } else {
@@ -294,6 +302,7 @@ void write_cable(tCableKey key, tCable * cable) {
             printf("Malloc fail\n");
             exit(1);
         }
+        memset(dbCable, 0, sizeof(*dbCable));
 
         if (firstCable == NULL) {
             firstCable = dbCable;
@@ -304,20 +313,50 @@ void write_cable(tCableKey key, tCable * cable) {
                 iterateCable = iterateCable->next;
             }
             iterateCable->next = dbCable;
+            dbCable->prev      = iterateCable;
         }
     }
 
     if (dbCable != NULL) {
+        tCable * prev = dbCable->prev;
+        tCable * next = dbCable->next;
         memcpy(dbCable, cable, sizeof(*dbCable));
+        dbCable->prev = prev;
+        dbCable->next = next;
     } else {
         printf("Cable generation or update failed\n");
         exit(1);
     }
-    //TODO - possibly have local copy of the db's model of next,rather than using incoming
 
     mutex_unlock();
 }
 
+void delete_cable(tCableKey key) {
+    tCable * dbCable      = NULL;
+
+    mutex_lock();
+
+    dbCable = find_cable(key);
+
+    if (dbCable != NULL) {
+        walkCable = dbCable->prev;  // Trick to point to previous item if we're deleting
+        
+        if (dbCable->prev != NULL) {
+            dbCable->prev->next = dbCable->next;
+        } else {
+            firstCable = dbCable->next;
+        }
+
+        if (dbCable->next != NULL) {
+            dbCable->next->prev = dbCable->prev;
+        }
+
+        memset(dbCable, 0, sizeof(*dbCable));  // Protection against using stale data
+        free(dbCable);
+    }
+    mutex_unlock();
+}
+    
 void reset_walk_cable(void) {
     walkCable = NULL;
 }

@@ -841,7 +841,7 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdWriteCable:
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;                                                          //+slot
-            buff[pos++] = slotVersion[slot];                                                                          // needs to be slot ultimately
+            buff[pos++] = slotVersion[slot];
             buff[pos++] = SUB_COMMAND_WRITE_CABLE;
             buff[pos++] = 0x10 | 0x08 | 0x00;                                                                         // unknown, location so 0x00 = fx and 0x08 = va, then 3 bits for colour
             buff[pos++] = messageContent->cableData.moduleFromIndex;
@@ -863,6 +863,18 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleMoveData.row;
             break;
 
+        case eMsgCmdDeleteCable:
+            buff[pos++] = 0x01;
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;                                                          //+slot
+            buff[pos++] = slotVersion[slot];
+            buff[pos++] = SUB_COMMAND_DELETE_CABLE;
+            buff[pos++] = 0x2 | 0x01;                                                                         // 1 = synth sectio / VA
+            buff[pos++] = messageContent->cableData.moduleFromIndex;
+            buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex; // top 2 bits = from type, 01 = output
+            buff[pos++] = messageContent->cableData.moduleToIndex;
+            buff[pos++] = messageContent->cableData.connectorToIoIndex;                                            // top 2 bits = to type, 01 = output - always an input in our case if we've done things right!?
+            break;
+            
         default:
             break;
     }

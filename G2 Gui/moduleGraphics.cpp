@@ -278,7 +278,7 @@ void render_EnvAdsr(tRectangle rectangle, tModule * module) {
     render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 75.0});
     render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 95.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeControl, {rectangle.coord.x + 255.0, rectangle.coord.y + 95.0});
+    render_connector(module, connector++, connectorDirOut, connectorTypeControl, {rectangle.coord.x + 230.0, rectangle.coord.y + 95.0});
     render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 95.0});
 }
 

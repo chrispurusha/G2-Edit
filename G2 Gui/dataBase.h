@@ -34,6 +34,7 @@ uint32_t module_height(uint32_t type);
 char * module_type_name(uint32_t type);
 bool read_cable(tCableKey key, tCable * cable);
 void write_cable(tCableKey key, tCable * cable);
+void delete_cable(tCableKey key);
 void dump_cables(void);
 void reset_walk_cable(void);
 bool walk_next_cable(tCable * cable);
