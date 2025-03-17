@@ -402,6 +402,10 @@ void render_module(tModule * module) {
     if (module->isLed) {
         render_text(moduleArea, {{moduleRectangle.coord.x + 60.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Led");
     }
+    if (module->modeCount > 0) {
+        snprintf(buff, sizeof(buff), "Modes %u", module->modeCount);
+        render_text(moduleArea, {{moduleRectangle.coord.x + 150.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    }
 }
 
 void render_modules(void) {

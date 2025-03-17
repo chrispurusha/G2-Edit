@@ -162,14 +162,9 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
         module.isLed     = read_bit_stream(buff, subOffset, 1);        // 1
         module.unknown1  = read_bit_stream(buff, subOffset, 6);        // 6
         module.modeCount = read_bit_stream(buff, subOffset, 4);        // 4
-        
-        if (module.modeCount>0) {
-            printf("Module type %u %s has a mode count of %d\n", module.type, gModuleProperties[module.type].name, module.modeCount);
-        }
 
         for (j = 0; j < module.modeCount; j++) {
-            mode = read_bit_stream(buff, subOffset, 6);             // Not sure what to do with this yet
-            printf("Mode %u\n", mode);
+            module.mode[i] = read_bit_stream(buff, subOffset, 6);
         }
 
         allocate_module_parameters(&module, gModuleProperties[type].numParameters); // Also done on parameter set-up, so whichever's first
@@ -194,17 +189,17 @@ static void parse_cable_list(uint8_t * buff, uint32_t * subOffset) {
 
     for (uint32_t i = 0; i < cableCount; i++) {
         cable.colour = read_bit_stream(buff, subOffset, 3);
-        printf(" Colour         0x%x\n", cable.colour);
+        //printf(" Colour         0x%x\n", cable.colour);
         key.moduleFromIndex = read_bit_stream(buff, subOffset, 8);         // key will get written into struct on write
-        printf(" Module From    %d\n", key.moduleFromIndex);
+        //printf(" Module From    %d\n", key.moduleFromIndex);
         key.connectorFromIoCount = read_bit_stream(buff, subOffset, 6);
-        printf(" Connector From %d\n", key.connectorFromIoCount);
+        //printf(" Connector From %d\n", key.connectorFromIoCount);
         key.linkType = read_bit_stream(buff, subOffset, 1);   // 1 = output to input, 0 = input to input
-        printf(" Link Type      0x%x\n", key.linkType);
+        //printf(" Link Type      0x%x\n", key.linkType);
         key.moduleToIndex = read_bit_stream(buff, subOffset, 8);
-        printf(" Module To      %d\n", key.moduleToIndex);
+        //printf(" Module To      %d\n", key.moduleToIndex);
         key.connectorToIoCount = read_bit_stream(buff, subOffset, 6);
-        printf(" Connector To   %d\n", key.connectorToIoCount);
+        //printf(" Connector To   %d\n", key.connectorToIoCount);
 
         write_cable(key, &cable);
     }

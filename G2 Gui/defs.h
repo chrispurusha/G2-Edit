@@ -44,6 +44,7 @@
 #define SUB_COMMAND_WRITE_CABLE          (0x50)
 #define SUB_COMMAND_DELETE_CABLE         (0x51)
 #define SUB_COMMAND_WRITE_CABLE_COLOUR   (0x54)
+#define SUB_COMMAND_SET_MODE             (0x2b)  // Works similar to set param
 
 #define COMMAND_REQ                      (0x20) // High nibble, expects response
 #define COMMAND_WRITE_NO_RESP            (0x30) // High nibble, expects response
