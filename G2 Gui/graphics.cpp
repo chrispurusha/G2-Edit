@@ -123,7 +123,47 @@ void menu_action_delete_cable(void) {
     }
 }
 
-void open_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t connectorIndex) {
+void menu_action_delete_module(void) {
+    tModule module = {0};
+    tCable walk = {0};
+    int outIndex = -1;
+    int inIndex = -1;
+    bool deleteWalk = false;
+    
+    read_module(gContextMenu.moduleKey, &module);
+    
+    reset_walk_cable();
+
+    while (walk_next_cable(&walk)) {
+        deleteWalk = false;
+        if (walk.key.location == gContextMenu.moduleKey.location) {
+            if (walk.key.moduleFromIndex == gContextMenu.moduleKey.index) {
+                deleteWalk = true;
+            } else if (walk.key.moduleToIndex == gContextMenu.moduleKey.index) {
+                deleteWalk = true;
+            }
+           
+            if (deleteWalk == true) {
+                tMessageContent messageContent = {0};
+
+                messageContent.cmd                            = eMsgCmdDeleteCable;
+                messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
+                messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
+                messageContent.cableData.moduleToIndex        = walk.key.moduleToIndex;
+                messageContent.cableData.connectorToIoIndex   = walk.key.connectorToIoCount;
+                messageContent.cableData.linkType             = walk.key.linkType;
+
+                msg_send(&gCommandQueue, &messageContent);
+                
+                delete_cable(walk.key);
+            }
+        }
+    }
+ 
+    delete_module(gContextMenu.moduleKey, doFreeYes);
+}
+
+void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t connectorIndex) {
     static tMenuItem menuItems[] = {
         {"Delete cable", menu_action_delete_cable},
         {"Dummy option", NULL                    },
@@ -136,6 +176,20 @@ void open_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t connectorInd
     gContextMenu.items  = menuItems;
     gContextMenu.moduleKey  = moduleKey;
     gContextMenu.connectorIndex  = connectorIndex;
+}
+
+void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
+    static tMenuItem menuItems[] = {
+        {"Delete module", menu_action_delete_module},
+        {"Dummy option", NULL                    },
+        {NULL,           NULL                    }         // End of menu
+    };
+
+    // Store menu position
+    gContextMenu.active = true;
+    gContextMenu.coord  = coord;
+    gContextMenu.items  = menuItems;
+    gContextMenu.moduleKey  = moduleKey;
 }
 
 void render_context_menu(void) {
@@ -214,7 +268,9 @@ bool handle_context_menu_click(tCoord coord) {
         yOffset += itemHeight + (5 * 2);
     }
 
-    gContextMenu.active = false;  // Close if clicked outside
+    //gContextMenu.active = false;  // Close if clicked outside
+    memset(&gContextMenu, 0, sizeof(gContextMenu)); // Clear everything (including active flag) to zero
+    
     return false;
 }
 
@@ -296,6 +352,8 @@ bool handle_module_click(tCoord coord, int button) {
     tModule module = {0};
 
     while (walk_next_module(&module)) {
+        
+        // Deal with click on param
         for (int i = 0; i < gModuleProperties[module.type].numParameters; i++) {
             tParam * param = &module.param[0][i];
 
@@ -326,6 +384,7 @@ bool handle_module_click(tCoord coord, int button) {
             }
         }
 
+        // Deal with click on connector
         for (int i = 0; i < gModuleProperties[module.type].numConnectors; i++) {
             if (within_rectangle(coord, module.connector[i].rectangle)) {
                 tRectangle area = module_area();
@@ -349,11 +408,13 @@ bool handle_module_click(tCoord coord, int button) {
                     gCableDrag.active = true;
                     return true;
                 } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-                    open_context_menu(coord, module.key, i);
+                    open_connector_context_menu(coord, module.key, i);
+                    return true;
                 }
             }
         }
 
+        // Deal with click on module
         if (within_rectangle(coord, module.rectangle)) {
             if (button == GLFW_MOUSE_BUTTON_LEFT) {
                 // Take the module off the linked list and put on the end, which makes it render last and so render on the top
@@ -363,6 +424,9 @@ bool handle_module_click(tCoord coord, int button) {
                 write_module(tmpModule.key, &tmpModule);
                 gModuleDrag.moduleKey = tmpModule.key;
                 gModuleDrag.active    = true;
+                return true;
+            } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+                open_module_context_menu(coord, module.key);
                 return true;
             }
         }
@@ -427,6 +491,12 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
                 if (walk.key.index != key.index) {
                     if (walk.row >= rowAndBelowToDrop) {
                         walk.row += dropAmount;
+                        
+                        if (walk.row > MAX_ROWS) {
+                            walk.row = MAX_ROWS;
+                            // ToDo - flag up the clash!
+                        }
+                        
                         write_module(walk.key, &walk);
                         send_module_move_msg(&module);
                     }
