@@ -162,9 +162,14 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
         module.isLed     = read_bit_stream(buff, subOffset, 1);        // 1
         module.unknown1  = read_bit_stream(buff, subOffset, 6);        // 6
         module.modeCount = read_bit_stream(buff, subOffset, 4);        // 4
+        
+        if (module.modeCount>0) {
+            printf("Module type %u %s has a mode count of %d\n", module.type, gModuleProperties[module.type].name, module.modeCount);
+        }
 
         for (j = 0; j < module.modeCount; j++) {
             mode = read_bit_stream(buff, subOffset, 6);             // Not sure what to do with this yet
+            printf("Mode %u\n", mode);
         }
 
         allocate_module_parameters(&module, gModuleProperties[type].numParameters); // Also done on parameter set-up, so whichever's first
