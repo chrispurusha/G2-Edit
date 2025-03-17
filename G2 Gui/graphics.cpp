@@ -118,6 +118,7 @@ void menu_action_delete_cable(void) {
                 msg_send(&gCommandQueue, &messageContent);
                 
                 delete_cable(walk.key);
+                // Todo: assess uprate for modules we were connected to. Maybe even run through all of them!?
             }
         }
     }
@@ -156,10 +157,18 @@ void menu_action_delete_module(void) {
                 msg_send(&gCommandQueue, &messageContent);
                 
                 delete_cable(walk.key);
+                // Todo: assess uprate for modules we were connected to. Maybe even run through all of them!?
             }
         }
     }
  
+    tMessageContent messageContent = {0};
+
+    messageContent.cmd                  = eMsgCmdDeleteModule;
+    messageContent.moduleData.moduleKey = module.key;
+
+    msg_send(&gCommandQueue, &messageContent);
+    
     delete_module(gContextMenu.moduleKey, doFreeYes);
 }
 

@@ -38,6 +38,7 @@
 #define SUB_COMMAND_LED_DATA             (0x39)
 #define SUB_COMMAND_VOLUME_INDICATOR     (0x3a)
 #define SUB_COMMAND_WRITE_MODULE         (0x30)
+#define SUB_COMMAND_DELETE_MODULE        (0x32)
 #define SUB_COMMAND_MOVE_MODULE          (0x34)
 #define SUB_COMMAND_SET_PARAM            (0x40)
 #define SUB_COMMAND_WRITE_CABLE          (0x50)

@@ -867,6 +867,15 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleMoveData.column;
             buff[pos++] = messageContent->moduleMoveData.row;
             break;
+            
+        case eMsgCmdDeleteModule:
+            buff[pos++] = 0x01;
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot; //+slot
+            buff[pos++] = slotVersion[slot];                 // needs to be slot ultimately
+            buff[pos++] = SUB_COMMAND_DELETE_MODULE;
+            buff[pos++] = messageContent->moduleMoveData.moduleKey.location;
+            buff[pos++] = messageContent->moduleMoveData.moduleKey.index;
+            break;
 
         case eMsgCmdDeleteCable:
             buff[pos++] = 0x01;
