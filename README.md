@@ -19,7 +19,7 @@ brew install --build-from-source glfw
 brew install --build-from-source freetype2
 
 
-Todo: Many mechanisms yet to implement - module dragging, creation and deletion, fx display, variation selection, copying,
+Todo: Many mechanisms yet to implement - module creation, fx display, variation selection, copying,
 file access etc.
 Also need to consider using arrays of structures to describe lay-out of modules, rather than the current function based
 mechanism. Should do this before scaling-up and implementing the other modules.
