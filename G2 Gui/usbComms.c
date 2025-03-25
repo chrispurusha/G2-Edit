@@ -54,14 +54,15 @@ typedef enum {
     eStateExit
 } eState;
 
-static bool              gotBadConnectionIndication = false;
-static bool              gotPatchChangeIndication   = false;
-static uint8_t           slotVersion[MAX_SLOTS]     = {0};
-static pthread_t         usbThread                  = NULL;
-static void              (*wake_glfw_func_ptr)(void) = NULL;
+tMessageQueue    gCommandQueue = {0};
 
-tMessageQueue            gCommandQueue = {0};
-unsigned int             volData[1024] = {0}; //Temporary for testing. Will ultimately have a better mechanism for passing data
+static bool      gotBadConnectionIndication = false;
+static bool      gotPatchChangeIndication   = false;
+static uint8_t   slotVersion[MAX_SLOTS]     = {0};
+static pthread_t usbThread                  = NULL;
+static void      (*wake_glfw_func_ptr)(void) = NULL;
+
+//unsigned int             volData[1024] = {0}; //Temporary for testing. Will ultimately have a better mechanism for passing data
 
 extern tModuleProperties gModuleProperties[];
 
@@ -465,7 +466,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     j = 0;
 
                     for (i = 4; i < (length - 6); i += 2) {     // Exclude header/footer
-                        volData[j] = read_bit_stream(buff, bitPos, 16);
+                        /*volData[j] =*/
+                        read_bit_stream(buff, bitPos, 16);
                         //printf("%u ", volData[j]);
                         j++;
                     }

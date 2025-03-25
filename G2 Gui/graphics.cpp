@@ -21,9 +21,6 @@
 extern "C" {
 #endif
 
-// System header files
-#include <math.h>
-
 // Disable warnings from external library headers etc.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Weverything"
@@ -46,10 +43,10 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleGraphics.h"
 
+GLFWwindow *             gWindow = NULL;
+
 static FT_Library        gLibrary = {0};
 static FT_Face           gFace    = {0};
-
-GLFWwindow *             gWindow = NULL;
 
 extern tScrollState      gScrollState;
 extern tContextMenu      gContextMenu;

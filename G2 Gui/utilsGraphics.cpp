@@ -48,10 +48,8 @@ static double    gMetricsHeight            = 0.0;
 static double    gXScrollPercent           = 0.0;
 static double    gYScrollPercent           = 0.0;
 static double    gZoomFactor               = NO_ZOOM;
-//static double    gXEndMax                  = 0.0;
-//static double    gYEndMax                  = 0.0;
-static int gRenderWidth  = 0;
-static int gRenderHeight = 0;
+static int       gRenderWidth              = 0;
+static int       gRenderHeight             = 0;
 
 static inline double scale(double value) {
     return value * gZoomFactor;
