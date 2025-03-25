@@ -219,7 +219,7 @@ bool swap_cable_to_from_if_needed(tCableKey * cableKey, tModule * fromModule, tM
     return false;
 }
 
-void menu_action_delete_cable(void) {
+void menu_action_delete_cable(int index) {
     tModule module     = {0};
     tCable  walk       = {0};
     int     outIndex   = -1;
@@ -280,11 +280,9 @@ void menu_action_delete_cable(void) {
     }
 }
 
-void menu_action_delete_module(void) {
+void menu_action_delete_module(int index) {
     tModule module     = {0};
     tCable  walk       = {0};
-    int     outIndex   = -1;
-    int     inIndex    = -1;
     bool    deleteWalk = false;
 
     read_module(gContextMenu.moduleKey, &module);
@@ -328,33 +326,97 @@ void menu_action_delete_module(void) {
     delete_module(gContextMenu.moduleKey, doFreeYes);
 }
 
-void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t connectorIndex) {
+void menu_action_create(int index) {
+    if (gContextMenu.items[index].param != 0) {
+        tModule module     = {0};
+        tMessageContent messageContent = {0};
+        double val = 0.0;
+        tRectangle area = module_area();
+
+        //messageContent.cmd                            = eMsgCmdCreateModule;
+        //messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
+        //messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
+        //messageContent.cableData.moduleToIndex        = walk.key.moduleToIndex;
+        //messageContent.cableData.connectorToIoIndex   = walk.key.connectorToIoCount;
+        //messageContent.cableData.linkType             = walk.key.linkType;
+
+        //msg_send(&gCommandQueue, &messageContent);
+        module.key.location = 1;
+        module.key.index = 200; // TODO - generate
+        module.type = gContextMenu.items[index].param;
+        
+        // Todo: Use a function for this scaling etc.
+
+        val           = gContextMenu.coord.x - area.coord.x;
+        val          += calc_scroll_x();
+        val          /= MODULE_X_SPAN;
+        val          /= get_zoom_factor();
+        module.column = floor(val);
+        val           = gContextMenu.coord.y - area.coord.y;
+        val          += calc_scroll_y();
+        val          /= MODULE_Y_SPAN;
+        val          /= get_zoom_factor();
+        module.row    = floor(val);
+        allocate_module_parameters(&module, gModuleProperties[module.type].numParameters); // Also done on parameter set-up, so whichever's first
+        allocate_module_connectors(&module, gModuleProperties[module.type].numConnectors);
+        
+        write_module(module.key, &module);
+    } else {
+        gContextMenu.items  = gContextMenu.items[index].subMenu;
+        gContextMenu.active = true;
+    }
+}
+
+void open_module_area_context_menu(tCoord coord) {
+    static tMenuItem filterMenuItems[] = {
+        {"Create LP Filter",    menu_action_create, 0, NULL},
+        {"Create Nord Filter",  menu_action_create, moduleTypeFltNord, NULL},
+        {"Create Classic Filter",  menu_action_create, moduleTypeFltClassic, NULL},
+        {"Create Multi Filter", menu_action_create, moduleTypeFltMulti, NULL},
+        {NULL,                  NULL,               0, NULL}        // End of menu
+    };
+    static tMenuItem moduleMenuItems[] = {
+        {"Create In/Out", menu_action_create, 0, NULL           },
+        {"Create Osc",    menu_action_create, 0, NULL           },
+        {"Create Filter", menu_action_create, 0, filterMenuItems},
+        {NULL,            NULL,               0, NULL           }   // End of menu
+    };
     static tMenuItem menuItems[] = {
-        {"Delete cable", menu_action_delete_cable},
-        {"Dummy option", NULL                    },
-        {NULL,           NULL                    }         // End of menu
+        {"Create module", menu_action_create, 0, moduleMenuItems},
+        {NULL,            NULL,              0, NULL           }   // End of menu
     };
 
     // Store menu position
-    gContextMenu.active         = true;
+    gContextMenu.coord  = coord;
+    gContextMenu.items  = menuItems;
+    gContextMenu.active = true;
+}
+
+void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t connectorIndex) {
+    static tMenuItem menuItems[] = {
+        {"Delete cable", menu_action_delete_cable, 0, NULL},
+        {NULL,           NULL,                     0, NULL}         // End of menu
+    };
+
+    // Store menu position
     gContextMenu.coord          = coord;
     gContextMenu.items          = menuItems;
     gContextMenu.moduleKey      = moduleKey;
     gContextMenu.connectorIndex = connectorIndex;
+    gContextMenu.active = true;
 }
 
 void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     static tMenuItem menuItems[] = {
-        {"Delete module", menu_action_delete_module},
-        {"Dummy option",  NULL                     },
-        {NULL,            NULL                     }       // End of menu
+        {"Delete module", menu_action_delete_module, 0, NULL},
+        {NULL,            NULL,                      0, NULL}       // End of menu
     };
 
     // Store menu position
-    gContextMenu.active    = true;
     gContextMenu.coord     = coord;
     gContextMenu.items     = menuItems;
     gContextMenu.moduleKey = moduleKey;
+    gContextMenu.active = true;
 }
 
 bool handle_module_click(tCoord coord, int button) {
@@ -446,6 +508,15 @@ bool handle_module_click(tCoord coord, int button) {
     return false;
 }
 
+bool handle_module_area_click(tCoord coord, int button) {
+    if (!within_rectangle(coord, module_area())) {
+        return false;
+    }
+    open_module_area_context_menu(coord);
+
+    return true;
+}
+
 void set_x_scroll_bar(double x) {
     gScrollState.xBar = clamp_scroll_bar(x, get_render_width());
     set_x_scroll_percent(get_scroll_bar_percent(gScrollState.xBar, get_render_width()));
@@ -480,16 +551,16 @@ bool handle_context_menu_click(tCoord coord) {
             {largestSize,          itemHeight + 5                }};
 
         if (within_rectangle(coord, itemRect)) {
+            gContextMenu.active = false; // Close the current menu
+
             if (gContextMenu.items[i].action != NULL) {
-                gContextMenu.items[i].action(); // Call the selected action
+                gContextMenu.items[i].action(i); // Call the selected action
             }
-            gContextMenu.active = false;        // Close the menu
             return true;
         }
         yOffset += itemHeight + (5 * 2);
     }
 
-    //gContextMenu.active = false;  // Close if clicked outside
     memset(&gContextMenu, 0, sizeof(gContextMenu)); // Clear everything (including active flag) to zero
 
     return false;
@@ -543,7 +614,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
             if (gContextMenu.active) {
                 if (!handle_context_menu_click(coord)) {
-                    gContextMenu.active = false;  // Close if clicked outside
+                    gContextMenu.active = false;  // Close if clicked outside - Todo: think if this is the right thing to do here
                 }
             } else {
                 if (!handle_scrollbar_click(coord)) {
@@ -551,7 +622,9 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             }
         } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-            handle_module_click(coord, button);
+            if (!handle_module_click(coord, button)) {
+                handle_module_area_click(coord, button);
+            }
         }
     } else if (action == GLFW_RELEASE) {
         if (gModuleDrag.active == true) {

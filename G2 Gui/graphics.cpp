@@ -81,29 +81,31 @@ void render_context_menu(void) {
     mouseCoord.x = (mouseCoord.x * (double)get_render_width()) / (double)width;
     mouseCoord.y = (mouseCoord.y * (double)get_render_height()) / (double)height;
 
-    for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
-        size = get_text_width(gContextMenu.items[i].label, itemHeight);
+    if (gContextMenu.items != NULL) {
+        for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
+            size = get_text_width(gContextMenu.items[i].label, itemHeight);
 
-        if (size > largestSize) {
-            largestSize = size;
+            if (size > largestSize) {
+                largestSize = size;
+            }
         }
-    }
 
-    int yOffset = 0;
+        int yOffset = 0;
 
-    for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
-        menuItem = {{gContextMenu.coord.x, gContextMenu.coord.y + yOffset}, {largestSize + (5 * 2), itemHeight + (5 * 2)}};
+        for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
+            menuItem = {{gContextMenu.coord.x, gContextMenu.coord.y + yOffset}, {largestSize + (5 * 2), itemHeight + (5 * 2)}};
 
-        if (within_rectangle(mouseCoord, menuItem)) {
-            set_rbg_colour({0.2, 0.6, 0.2});
-        } else {
-            set_rbg_colour({0.3, 0.3, 0.3});    // Background
+            if (within_rectangle(mouseCoord, menuItem)) {
+                set_rbg_colour({0.2, 0.6, 0.2});
+            } else {
+                set_rbg_colour({0.3, 0.3, 0.3});    // Background
+            }
+            render_rectangle(mainArea, menuItem);
+
+            set_rbg_colour({0.9, 0.9, 0.9});    // White text
+            render_text(mainArea, {{gContextMenu.coord.x + 5, gContextMenu.coord.y + 5 + yOffset}, {BLANK_SIZE, itemHeight}}, gContextMenu.items[i].label);
+            yOffset += itemHeight + (5 * 2);
         }
-        render_rectangle(mainArea, menuItem);
-
-        set_rbg_colour({0.9, 0.9, 0.9});    // White text
-        render_text(mainArea, {{gContextMenu.coord.x + 5, gContextMenu.coord.y + 5 + yOffset}, {BLANK_SIZE, itemHeight}}, gContextMenu.items[i].label);
-        yOffset += itemHeight + (5 * 2);
     }
 }
 

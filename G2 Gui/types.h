@@ -181,9 +181,11 @@ typedef struct {
     tConnector toConnector;
 } tCableDragging;
 
-typedef struct {
-    char * label;
-    void (*action)(void);
+typedef struct _struct_menuItem {
+    char *                    label;
+    void (*action)(int index);
+    uint32_t                  param;
+    struct _struct_menuItem * subMenu;
 } tMenuItem;
 
 typedef struct {
