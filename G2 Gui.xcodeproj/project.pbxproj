@@ -19,6 +19,7 @@
 		8397E1362D2FE00000DDD420 /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8397E1352D2FE00000DDD420 /* libglfw3.a */; };
 		8397E14A2D2FEF1700DDD420 /* libGLEW.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8397E1492D2FEF1700DDD420 /* libGLEW.a */; };
 		8397E14D2D2FEF9300DDD420 /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8397E14C2D2FEF9300DDD420 /* libfreetype.a */; };
+		83A016372D92F7F10041DF72 /* mouseHandle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83A016362D92F7F10041DF72 /* mouseHandle.cpp */; };
 		83B5655E2D4A71CF001BC997 /* usbComms.c in Sources */ = {isa = PBXBuildFile; fileRef = 83B5655D2D4A71CF001BC997 /* usbComms.c */; };
 		83BE0C692D6C86D6007E9CD8 /* moduleGraphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83BE0C682D6C86D6007E9CD8 /* moduleGraphics.cpp */; };
 		83BE0C6E2D6C8BAE007E9CD8 /* utilsGraphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83BE0C6D2D6C8BAE007E9CD8 /* utilsGraphics.cpp */; };
@@ -58,6 +59,8 @@
 		8397E1492D2FEF1700DDD420 /* libGLEW.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libGLEW.a; path = /opt/homebrew/Cellar/glew/2.2.0_1/lib/libGLEW.a; sourceTree = "<absolute>"; };
 		8397E14B2D2FEF4500DDD420 /* G2 Gui.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "G2 Gui.entitlements"; sourceTree = "<group>"; };
 		8397E14C2D2FEF9300DDD420 /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = /opt/homebrew/Cellar/freetype/2.13.3/lib/libfreetype.a; sourceTree = "<absolute>"; };
+		83A016352D92F7F10041DF72 /* mouseHandle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mouseHandle.h; sourceTree = "<group>"; };
+		83A016362D92F7F10041DF72 /* mouseHandle.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = mouseHandle.cpp; sourceTree = "<group>"; };
 		83B5655D2D4A71CF001BC997 /* usbComms.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = usbComms.c; sourceTree = "<group>"; };
 		83B5655F2D4A7243001BC997 /* usbComms.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = usbComms.h; sourceTree = "<group>"; };
 		83B565602D4A73B9001BC997 /* main.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = main.h; sourceTree = "<group>"; };
@@ -139,6 +142,8 @@
 				83B5655D2D4A71CF001BC997 /* usbComms.c */,
 				8352A5732D4BE21D00CD5AD9 /* dataBase.h */,
 				8352A5742D4BE22300CD5AD9 /* dataBase.c */,
+				83A016352D92F7F10041DF72 /* mouseHandle.h */,
+				83A016362D92F7F10041DF72 /* mouseHandle.cpp */,
 				83BE0C712D6C8BD0007E9CD8 /* utilsGraphics.h */,
 				83BE0C6D2D6C8BAE007E9CD8 /* utilsGraphics.cpp */,
 				83BE0C6C2D6C8A8D007E9CD8 /* moduleResources.h */,
@@ -213,6 +218,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				83B5655E2D4A71CF001BC997 /* usbComms.c in Sources */,
+				83A016372D92F7F10041DF72 /* mouseHandle.cpp in Sources */,
 				83BE0C6E2D6C8BAE007E9CD8 /* utilsGraphics.cpp in Sources */,
 				8376ECAE2D48FB6E008D1608 /* utils.c in Sources */,
 				83673D942D5A50F90077A0B2 /* main.c in Sources */,

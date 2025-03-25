@@ -145,7 +145,7 @@ void write_module(tModuleKey key, tModule * module) {
             dbModule->prev      = iterateModule;
         }
     }
-    
+
     if (dbModule != NULL) {
         // Preserve prev and next pointers before memcpy
         tModule * prev = dbModule->prev;
@@ -158,7 +158,6 @@ void write_module(tModuleKey key, tModule * module) {
         printf("Module generation or update failed\n");
         exit(1);
     }
-    
     mutex_unlock();
 }
 
@@ -171,7 +170,7 @@ void delete_module(tModuleKey key, tDoFree doFree) {
 
     if (dbModule != NULL) {
         walkModule = dbModule->prev;  // Trick to point to previous item if we're deleting
-        
+
         if (dbModule->prev != NULL) {
             dbModule->prev->next = dbModule->next;
         } else {
@@ -327,12 +326,11 @@ void write_cable(tCableKey key, tCable * cable) {
         printf("Cable generation or update failed\n");
         exit(1);
     }
-
     mutex_unlock();
 }
 
 void delete_cable(tCableKey key) {
-    tCable * dbCable      = NULL;
+    tCable * dbCable = NULL;
 
     mutex_lock();
 
@@ -340,7 +338,7 @@ void delete_cable(tCableKey key) {
 
     if (dbCable != NULL) {
         walkCable = dbCable->prev;  // Trick to point to previous item if we're deleting
-        
+
         if (dbCable->prev != NULL) {
             dbCable->prev->next = dbCable->next;
         } else {
@@ -350,13 +348,12 @@ void delete_cable(tCableKey key) {
         if (dbCable->next != NULL) {
             dbCable->next->prev = dbCable->prev;
         }
-
         memset(dbCable, 0, sizeof(*dbCable));  // Protection against using stale data
         free(dbCable);
     }
     mutex_unlock();
 }
-    
+
 void reset_walk_cable(void) {
     walkCable = NULL;
 }

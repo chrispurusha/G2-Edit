@@ -17,21 +17,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __SYS_INCLUDES_H__
-#define __SYS_INCLUDES_H__
+#ifndef __MOUSE_HANDLE_H__
+#define __MOUSE_HANDLE_H__
 
-#include <errno.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdbool.h>
-#include <time.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <dispatch/dispatch.h>
+#include "sysIncludes.h"
 
-#pragma clang diagnostic ignored "-Wwrite-strings"
+bool handle_context_menu_click(tCoord coord);
+bool handle_scrollbar_click(tCoord coord);
+void set_x_scroll_bar(double x);
+void set_y_scroll_bar(double y);
+void char_event(GLFWwindow * window, unsigned int value);
+void key_callback(GLFWwindow * window, int key, int scancode, int action, int mods);
+void cursor_pos(GLFWwindow * window, double x, double y);
+void mouse_button(GLFWwindow * window, int button, int action, int mods);
+void scroll_event(GLFWwindow * window, double x, double y);
 
-#endif // __SYS_INCLUDES_H__
+#endif // __MOUSE_HANDLE_H__

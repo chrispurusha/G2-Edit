@@ -187,12 +187,12 @@ typedef struct {
 } tMenuItem;
 
 typedef struct {
-    bool        active; // Is the menu currently visible?
-    tCoord      coord;  // Position of the menu
-    tMenuItem * items;  // Pointer to an array of menu items
-    tModuleKey  moduleKey;
+    bool          active; // Is the menu currently visible?
+    tCoord        coord;  // Position of the menu
+    tMenuItem *   items;  // Pointer to an array of menu items
+    tModuleKey    moduleKey;
     tConnectorDir connectorDir;
-    uint32_t    connectorIndex;
+    uint32_t      connectorIndex;
 } tContextMenu;
 
 typedef enum {

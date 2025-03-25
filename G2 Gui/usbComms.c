@@ -862,7 +862,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleMoveData.column;
             buff[pos++] = messageContent->moduleMoveData.row;
             break;
-            
+
         case eMsgCmdDeleteModule:
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot; //+slot
@@ -877,13 +877,13 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;                                                          //+slot
             buff[pos++] = slotVersion[slot];
             buff[pos++] = SUB_COMMAND_DELETE_CABLE;
-            buff[pos++] = 0x2 | 0x01;                                                                         // 1 = synth sectio / VA
+            buff[pos++] = 0x2 | 0x01;                                                                                 // 1 = synth sectio / VA
             buff[pos++] = messageContent->cableData.moduleFromIndex;
             buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex; // top 2 bits = from type, 01 = output
             buff[pos++] = messageContent->cableData.moduleToIndex;
-            buff[pos++] = messageContent->cableData.connectorToIoIndex;                                            // top 2 bits = to type, 01 = output - always an input in our case if we've done things right!?
+            buff[pos++] = messageContent->cableData.connectorToIoIndex;                                               // top 2 bits = to type, 01 = output - always an input in our case if we've done things right!?
             break;
-            
+
         default:
             break;
     }

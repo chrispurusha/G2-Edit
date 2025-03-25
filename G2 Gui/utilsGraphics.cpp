@@ -50,8 +50,8 @@ static double    gYScrollPercent           = 0.0;
 static double    gZoomFactor               = NO_ZOOM;
 //static double    gXEndMax                  = 0.0;
 //static double    gYEndMax                  = 0.0;
-static int       gRenderWidth              = 0;
-static int       gRenderHeight             = 0;
+static int gRenderWidth  = 0;
+static int gRenderHeight = 0;
 
 static inline double scale(double value) {
     return value * gZoomFactor;
@@ -73,7 +73,7 @@ double calc_scroll_y(void) {
     tRectangle area  = module_area();
     double     value = 0.0;
 
-    value = (gYScrollPercent * (scale(((MAX_ROWS + 1)+(MAX_ROWS_MODULE-1)) * MODULE_Y_SPAN) - area.size.h)) / 100.0;
+    value = (gYScrollPercent * (scale(((MAX_ROWS + 1) + (MAX_ROWS_MODULE - 1)) * MODULE_Y_SPAN) - area.size.h)) / 100.0;
 
     if (value < 0.0) {
         value = 0.0;

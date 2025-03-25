@@ -164,8 +164,8 @@ int32_t write_usb(uint8_t * buff, uint32_t length) {
     if (buff == NULL) {
         return writeLength;
     }
-
     (*intf)->AbortPipe(intf, 3);
+
     if ((*intf)->WritePipeTO(intf, 3, (void *)buff, length, 1000, 1000) == kIOReturnSuccess) {
         writeLength = length;
     }
@@ -182,6 +182,7 @@ int32_t read_usb_extended(uint8_t * buff, uint32_t buffLength) {
     readLength = buffLength;
 
     (*intf)->AbortPipe(intf, 2);
+
     if ((*intf)->ReadPipeTO(intf, 2, (void *)buff, &readLength, 1000, 1000) != kIOReturnSuccess) {
         readLength = 0;
     }

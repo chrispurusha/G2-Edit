@@ -22,7 +22,7 @@ extern "C" {
 #endif
 
 #include "utils.h"
-    
+
 uint16_t crc_iterator(int32_t seed, int32_t val) {
     int     i   = 0;
     int32_t crc = 0;
@@ -84,23 +84,22 @@ uint32_t read_bit_stream(uint8_t * buff, uint32_t * bitPos, uint32_t numBits) {
 }
 
 double get_time_delta(void) {
-    struct timespec currentTime = {0};
-    static struct timespec lastTime = {0};
-    
+    struct timespec        currentTime = {0};
+    static struct timespec lastTime    = {0};
+
     //clock_gettime(CLOCK_MONOTONIC, &gLastTime);
     clock_gettime(CLOCK_MONOTONIC, &currentTime);
-    
+
     if ((lastTime.tv_sec == 0) && (lastTime.tv_nsec == 0)) {
         lastTime = currentTime;
         return 0.0;
     }
-    
     double elapsedMS = (currentTime.tv_sec - lastTime.tv_sec) * 1000.0 +  // Convert seconds to milliseconds
-                       (currentTime.tv_nsec - lastTime.tv_nsec) / 1.0e6;   // Convert nanoseconds to milliseconds
+                       (currentTime.tv_nsec - lastTime.tv_nsec) / 1.0e6;  // Convert nanoseconds to milliseconds
     lastTime = currentTime;
     return elapsedMS;
 }
-    
+
 #ifdef __cplusplus
 }
 #endif
