@@ -31,8 +31,6 @@ extern "C" {
 #define GL_SILENCE_DEPRECATION    1
 #include <GLFW/glfw3.h>
 
-#include <ft2build.h>
-#include FT_FREETYPE_H
 #pragma clang diagnostic pop
 
 #include "defs.h"
