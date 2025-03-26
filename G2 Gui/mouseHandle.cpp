@@ -184,7 +184,7 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
                             // ToDo - flag up the clash!
                         }
                         write_module(walk.key, &walk);
-                        send_module_move_msg(&module);
+                        send_module_move_msg(&walk);
                     }
                 }
             }
