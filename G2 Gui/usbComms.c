@@ -504,7 +504,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 
             switch (subCommand) {
                 case SUB_COMMAND_OK:
-                    //printf("Got 0x0c  OK\n");
+                    printf("Got 0x0c  OK\n");
                     return EXIT_SUCCESS;
 
                 case SUB_COMMAND_GET_PATCH_VERSION:
@@ -582,7 +582,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     return EXIT_SUCCESS;
 
                 case 0x7F:
-                    //printf("Got 0x7f OK\n");
+                    printf("Got 0x7f OK\n");
                     return EXIT_SUCCESS;
 
                 default:
@@ -854,6 +854,25 @@ static int send_write_data(tMessageContent * messageContent) {
             // + extra data for potential module updates etc!?
             break;
 
+        case eMsgCmdWriteModule:
+            printf("Writing module!\n");
+            buff[pos++] = 0x01;
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot; //+slot
+            buff[pos++] = slotVersion[slot];                 // needs to be slot ultimately
+            buff[pos++] = SUB_COMMAND_WRITE_MODULE;
+            buff[pos++] = messageContent->moduleData.type;
+            buff[pos++] = messageContent->moduleData.moduleKey.location;
+            buff[pos++] = messageContent->moduleData.moduleKey.index;
+            buff[pos++] = messageContent->moduleData.column;
+            buff[pos++] = messageContent->moduleData.row;
+            buff[pos++] = messageContent->moduleData.colour;
+            buff[pos++] = messageContent->moduleData.upRate;
+            buff[pos++] = messageContent->moduleData.isLed;
+            //buff[pos++] = 0;  // Mode info, which will need working out
+            strcpy((char *)&buff[pos], messageContent->moduleData.name);
+            pos+=strlen(messageContent->moduleData.name) + 1;
+            break;
+            
         case eMsgCmdMoveModule:
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot; //+slot
