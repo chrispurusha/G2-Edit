@@ -343,7 +343,7 @@ uint32_t find_unique_module_id(uint32_t location) {
     return -1;
 }
 
-void convert_coord_to_column_row(uint32_t * column, uint32_t * row, tCoord coord) {
+void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row, tCoord coord) {
     double val = 0.0;
     tRectangle area = module_area();
     
@@ -364,6 +364,25 @@ void convert_coord_to_column_row(uint32_t * column, uint32_t * row, tCoord coord
     }
 }
 
+void convert_mouse_coord_to_module_area_coord(double * x, double * y, tCoord coord) {
+    double val = 0.0;
+    tRectangle area = module_area();
+    
+    if (x != NULL) {
+        val           = coord.x - area.coord.x;
+        val          += calc_scroll_x();
+        val          /= get_zoom_factor();
+        *x = val;
+    }
+    
+    if (y != NULL) {
+        val           = coord.y - area.coord.y;
+        val          += calc_scroll_y();
+        val          /= get_zoom_factor();
+        *y    = val;
+    }
+}
+
 void menu_action_create(int index) {
     if (gContextMenu.items[index].param != 0) {
         tModule module     = {0};
@@ -376,7 +395,7 @@ void menu_action_create(int index) {
         if (uniqueIndex > 0) {
             module.key.index = (uint32_t)uniqueIndex;
             module.type = gContextMenu.items[index].param;
-            convert_coord_to_column_row(&module.column, &module.row, gContextMenu.coord);
+            convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.coord);
             allocate_module_parameters(&module, gModuleProperties[module.type].numParameters);
             allocate_module_connectors(&module, gModuleProperties[module.type].numConnectors);
             memcpy(module.name, gModuleProperties[module.type].name, sizeof(module.name));
@@ -505,15 +524,7 @@ bool handle_module_click(tCoord coord, int button) {
                     gCableDrag.fromConnectorIndex = i;   // Index into array of connectors
                     double val = 0;
 
-                    // Todo: Use a function for this scaling etc.
-                    val                            = coord.x - area.coord.x;
-                    val                           += calc_scroll_x();
-                    val                           /= get_zoom_factor();
-                    gCableDrag.toConnector.coord.x = val;
-                    val                            = coord.y - area.coord.y;
-                    val                           += calc_scroll_y();
-                    val                           /= get_zoom_factor();
-                    gCableDrag.toConnector.coord.y = val;
+                    convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord.x, &gCableDrag.toConnector.coord.y, coord);
 
                     gCableDrag.active = true;
                     return true;
@@ -757,18 +768,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     } else if (gModuleDrag.active == true) {
         read_module(gModuleDrag.moduleKey, &module);
 
-        // Todo: Use a function for this scaling etc.
-
-        val           = x - area.coord.x;
-        val          += calc_scroll_x();
-        val          /= MODULE_X_SPAN;
-        val          /= get_zoom_factor();
-        module.column = floor(val);
-        val           = y - area.coord.y;
-        val          += calc_scroll_y();
-        val          /= MODULE_Y_SPAN;
-        val          /= get_zoom_factor();
-        module.row    = floor(val);
+        convert_mouse_coord_to_module_column_row(&module.column, &module.row, {x, y});
 
         if (module.row > 127) {
             module.row = 127;
@@ -780,15 +780,8 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         write_module(gModuleDrag.moduleKey, &module);
         adjust_scroll_for_drag();
     } else if (gCableDrag.active == true) {
-        // Todo: Use a function for this scaling etc.
-        val                            = x - area.coord.x;
-        val                           += calc_scroll_x();
-        val                           /= get_zoom_factor();
-        gCableDrag.toConnector.coord.x = val;
-        val                            = y - area.coord.y;
-        val                           += calc_scroll_y();
-        val                           /= get_zoom_factor();
-        gCableDrag.toConnector.coord.y = val;
+        convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord.x, &gCableDrag.toConnector.coord.y, {x, y});
+
         adjust_scroll_for_drag();
     }
 }
