@@ -870,9 +870,9 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.isLed;
             //buff[pos++] = 0;  // Mode info, which will need working out
             strcpy((char *)&buff[pos], messageContent->moduleData.name);
-            pos+=strlen(messageContent->moduleData.name) + 1;
+            pos += strlen(messageContent->moduleData.name) + 1;
             break;
-            
+
         case eMsgCmdMoveModule:
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot; //+slot

@@ -327,93 +327,95 @@ void menu_action_delete_module(int index) {
 }
 
 uint32_t find_unique_module_id(uint32_t location) {
-    tModuleKey key = {0};
-    tModule module     = {0};
-    uint32_t i = 0;
-    
+    tModuleKey key    = {0};
+    tModule    module = {0};
+    uint32_t   i      = 0;
+
     key.location = location;
-    
-    for(i=1; i<=255; i++) {
+
+    for (i = 1; i <= 255; i++) {
         key.index = i;
+
         if (read_module(key, &module) == false) {
             return (int32_t)i;
         }
     }
-    
+
     return -1;
 }
 
 void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row, tCoord coord) {
-    double val = 0.0;
+    double     val  = 0.0;
     tRectangle area = module_area();
-    
+
     if (column != NULL) {
-        val           = coord.x - area.coord.x;
-        val          += calc_scroll_x();
-        val          /= MODULE_X_SPAN;
-        val          /= get_zoom_factor();
+        val     = coord.x - area.coord.x;
+        val    += calc_scroll_x();
+        val    /= MODULE_X_SPAN;
+        val    /= get_zoom_factor();
         *column = floor(val);
     }
-    
+
     if (row != NULL) {
-        val           = coord.y - area.coord.y;
-        val          += calc_scroll_y();
-        val          /= MODULE_Y_SPAN;
-        val          /= get_zoom_factor();
-        *row    = floor(val);
+        val  = coord.y - area.coord.y;
+        val += calc_scroll_y();
+        val /= MODULE_Y_SPAN;
+        val /= get_zoom_factor();
+        *row = floor(val);
     }
 }
 
-void convert_mouse_coord_to_module_area_coord(double * x, double * y, tCoord coord) {
-    double val = 0.0;
+void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord) {
+    if (targetCoord == NULL) {
+        return;
+    }
+    double     val  = 0.0;
     tRectangle area = module_area();
-    
-    if (x != NULL) {
-        val           = coord.x - area.coord.x;
-        val          += calc_scroll_x();
-        val          /= get_zoom_factor();
-        *x = val;
-    }
-    
-    if (y != NULL) {
-        val           = coord.y - area.coord.y;
-        val          += calc_scroll_y();
-        val          /= get_zoom_factor();
-        *y    = val;
-    }
+
+
+    val            = coord.x - area.coord.x;
+    val           += calc_scroll_x();
+    val           /= get_zoom_factor();
+    targetCoord->x = val;
+
+    val            = coord.y - area.coord.y;
+    val           += calc_scroll_y();
+    val           /= get_zoom_factor();
+    targetCoord->y = val;
 }
 
 void menu_action_create(int index) {
     if (gContextMenu.items[index].param != 0) {
-        tModule module     = {0};
+        tModule         module         = {0};
         tMessageContent messageContent = {0};
-        double val = 0.0;
-        int32_t uniqueIndex = 0;
+        double          val            = 0.0;
+        int32_t         uniqueIndex    = 0;
 
         module.key.location = 1;
-        uniqueIndex = find_unique_module_id(module.key.location);
+        uniqueIndex         = find_unique_module_id(module.key.location);
+
         if (uniqueIndex > 0) {
             module.key.index = (uint32_t)uniqueIndex;
-            module.type = gContextMenu.items[index].param;
+            module.type      = gContextMenu.items[index].param;
             convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.coord);
             allocate_module_parameters(&module, gModuleProperties[module.type].numParameters);
             allocate_module_connectors(&module, gModuleProperties[module.type].numConnectors);
             memcpy(module.name, gModuleProperties[module.type].name, sizeof(module.name));
-            
-            messageContent.cmd                            = eMsgCmdWriteModule;
-            messageContent.moduleData.moduleKey      = module.key;
-            messageContent.moduleData.type = module.type;
-            messageContent.moduleData.row = module.row;
-            messageContent.moduleData.column = module.column;
-            messageContent.moduleData.colour = module.colour;
-            messageContent.moduleData.upRate = module.upRate;
-            messageContent.moduleData.isLed = module.isLed;
-            messageContent.moduleData.unknown1 = module.unknown1;
+
+            messageContent.cmd                  = eMsgCmdWriteModule;
+            messageContent.moduleData.moduleKey = module.key;
+            messageContent.moduleData.type      = module.type;
+            messageContent.moduleData.row       = module.row;
+            messageContent.moduleData.column    = module.column;
+            messageContent.moduleData.colour    = module.colour;
+            messageContent.moduleData.upRate    = module.upRate;
+            messageContent.moduleData.isLed     = module.isLed;
+            messageContent.moduleData.unknown1  = module.unknown1;
             messageContent.moduleData.modeCount = module.modeCount;
             memcpy(messageContent.moduleData.name, module.name, sizeof(messageContent.moduleData.name));
 
             msg_send(&gCommandQueue, &messageContent);
-            
+
             write_module(module.key, &module);
         }
     } else {
@@ -424,11 +426,11 @@ void menu_action_create(int index) {
 
 void open_module_area_context_menu(tCoord coord) {
     static tMenuItem filterMenuItems[] = {
-        {"Create LP Filter",    menu_action_create, 0, NULL},
-        {"Create Nord Filter",  menu_action_create, moduleTypeFltNord, NULL},
-        {"Create Classic Filter",  menu_action_create, moduleTypeFltClassic, NULL},
-        {"Create Multi Filter", menu_action_create, moduleTypeFltMulti, NULL},
-        {NULL,                  NULL,               0, NULL}        // End of menu
+        {"Create LP Filter",      menu_action_create,                    0, NULL},
+        {"Create Nord Filter",    menu_action_create, moduleTypeFltNord,    NULL},
+        {"Create Classic Filter", menu_action_create, moduleTypeFltClassic, NULL},
+        {"Create Multi Filter",   menu_action_create, moduleTypeFltMulti,   NULL},
+        {NULL,                    NULL,                                  0, NULL} // End of menu
     };
     static tMenuItem moduleMenuItems[] = {
         {"Create In/Out", menu_action_create, 0, NULL           },
@@ -438,7 +440,7 @@ void open_module_area_context_menu(tCoord coord) {
     };
     static tMenuItem menuItems[] = {
         {"Create module", menu_action_create, 0, moduleMenuItems},
-        {NULL,            NULL,              0, NULL           }   // End of menu
+        {NULL,            NULL,               0, NULL           }  // End of menu
     };
 
     // Store menu position
@@ -458,7 +460,7 @@ void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t co
     gContextMenu.items          = menuItems;
     gContextMenu.moduleKey      = moduleKey;
     gContextMenu.connectorIndex = connectorIndex;
-    gContextMenu.active = true;
+    gContextMenu.active         = true;
 }
 
 void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
@@ -471,7 +473,7 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     gContextMenu.coord     = coord;
     gContextMenu.items     = menuItems;
     gContextMenu.moduleKey = moduleKey;
-    gContextMenu.active = true;
+    gContextMenu.active    = true;
 }
 
 bool handle_module_click(tCoord coord, int button) {
@@ -524,7 +526,7 @@ bool handle_module_click(tCoord coord, int button) {
                     gCableDrag.fromConnectorIndex = i;   // Index into array of connectors
                     double val = 0;
 
-                    convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord.x, &gCableDrag.toConnector.coord.y, coord);
+                    convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, coord);
 
                     gCableDrag.active = true;
                     return true;
@@ -780,7 +782,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         write_module(gModuleDrag.moduleKey, &module);
         adjust_scroll_for_drag();
     } else if (gCableDrag.active == true) {
-        convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord.x, &gCableDrag.toConnector.coord.y, {x, y});
+        convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, {x, y});
 
         adjust_scroll_for_drag();
     }
