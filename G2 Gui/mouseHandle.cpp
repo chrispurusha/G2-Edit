@@ -372,7 +372,6 @@ void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord
     double     val  = 0.0;
     tRectangle area = module_area();
 
-
     val            = coord.x - area.coord.x;
     val           += calc_scroll_x();
     val           /= get_zoom_factor();
@@ -388,7 +387,6 @@ void menu_action_create(int index) {
     if (gContextMenu.items[index].param != 0) {
         tModule         module         = {0};
         tMessageContent messageContent = {0};
-        double          val            = 0.0;
         int32_t         uniqueIndex    = 0;
 
         module.key.location = 1;
@@ -518,13 +516,10 @@ bool handle_module_click(tCoord coord, int button) {
         // Deal with click on connector
         for (int i = 0; i < gModuleProperties[module.type].numConnectors; i++) {
             if (within_rectangle(coord, module.connector[i].rectangle)) {
-                tRectangle area = module_area();
-
                 gCableDrag.fromModuleKey = module.key;
 
                 if (button == GLFW_MOUSE_BUTTON_LEFT) {
                     gCableDrag.fromConnectorIndex = i;   // Index into array of connectors
-                    double val = 0;
 
                     convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, coord);
 
@@ -647,7 +642,8 @@ void stop_dragging(void) {
 }
 
 void mouse_button(GLFWwindow * window, int button, int action, int mods) {
-    int    width, height;
+    int    width    = 0;
+    int    height   = 0;
     tCoord coord    = {0};
     bool   quitLoop = false;
 
@@ -735,9 +731,6 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     uint32_t        value          = 0;
     tModule         module         = {0};
     tMessageContent messageContent = {0};
-    double          val            = 0;
-
-    tRectangle      area = module_area();
 
     // Scale x and y to match intended rendering window
     glfwGetWindowSize(window, &width, &height);
@@ -791,11 +784,10 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
 void scroll_event(GLFWwindow * window, double x, double y) {
     const double zoomIncrement = 0.025;  // Zoom sensitivity
     double       zoomFactor    = 0.0;
-
-    tCoord       mouseCoord = {0};
-    tRectangle   moduleArea = module_area(); // Get the module display area
-
-    int          width, height;
+    tCoord       mouseCoord    = {0};
+    tRectangle   moduleArea    = module_area(); // Get the module display area
+    int          width         = 0;
+    int          height        = 0;
 
     glfwGetWindowSize(window, &width, &height);
     glfwGetCursorPos(window, &mouseCoord.x, &mouseCoord.y);
