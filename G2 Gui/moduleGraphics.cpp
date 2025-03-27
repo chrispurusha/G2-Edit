@@ -231,7 +231,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     }
     uint32_t    param      = 0;
     uint32_t    connector  = 0;
-    tModuleType moduleType = (tModuleType)(module->type);
+    tModuleType moduleType = module->type;
 
     for (size_t i = 0; i < ARRAY_SIZE(paramLocationList); i++) {
         if (paramLocationList[i].moduleType == moduleType) {

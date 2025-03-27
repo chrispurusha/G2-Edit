@@ -394,7 +394,7 @@ void menu_action_create(int index) {
 
         if (uniqueIndex > 0) {
             module.key.index = (uint32_t)uniqueIndex;
-            module.type      = gContextMenu.items[index].param;
+            module.type      = (tModuleType)gContextMenu.items[index].param;
             convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.coord);
             allocate_module_parameters(&module, gModuleProperties[module.type].numParameters);
             allocate_module_connectors(&module, gModuleProperties[module.type].numConnectors);

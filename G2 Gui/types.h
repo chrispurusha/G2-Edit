@@ -22,181 +22,6 @@
 
 #include "sysIncludes.h"
 
-typedef struct {
-    uint8_t * buffPtr;
-    uint32_t  buffSize;
-} tString;
-
-typedef struct {
-    double red;
-    double green;
-    double blue;
-} tRgb;
-
-typedef struct {
-    double red;
-    double green;
-    double blue;
-    double alpha;
-} tRgba;
-
-typedef struct {
-    double x;
-    double y;
-} tCoord;
-
-typedef struct {
-    double w;
-    double h;
-} tSize;
-
-typedef struct {
-    tCoord coord;
-    tSize  size;
-} tRectangle;
-
-typedef struct {
-    int32_t x;
-    int32_t y;
-} tIntCoord;
-
-typedef struct {
-    int32_t w;
-    int32_t h;
-} tIntSize;
-
-typedef struct {
-    tIntCoord coord;
-    tIntSize  size;
-} tIntRectangle;
-
-typedef struct {
-    tCoord coord1;
-    tCoord coord2rel;
-    tCoord coord3rel;
-} tTriangle;
-
-typedef enum {
-    paramTypeNone,
-    paramTypeFreq,
-    paramTypeResonance,
-    paramTypePitch,
-    paramTypeKeyboardTrack,
-    paramTypeGainControl,
-    paramTypeBypass,
-    paramTypeFltClassicDb,
-    paramTypeFltMultiDb,
-    paramTypeCommonDial,
-} tParamType;
-
-typedef struct _struct_param {
-    tParamType type;
-    tRectangle rectangle;
-    uint32_t   range;
-    uint32_t   value;
-} tParam;
-
-typedef struct {
-    uint32_t location;
-    uint32_t moduleFromIndex;
-    uint32_t connectorFromIoCount;
-    uint32_t linkType;
-    uint32_t moduleToIndex;
-    uint32_t connectorToIoCount;
-} tCableKey;
-
-typedef struct _struct_cable {
-    tCableKey              key;
-    uint32_t               colour;
-    struct _struct_cable * prev;
-    struct _struct_cable * next;       // This can go, when we attach to modules rather than separate linked list
-} tCable;
-
-typedef enum {   // Todo: add a new type for e.g. yellow gate
-    connectorTypeAudio,
-    connectorTypeControl
-} tConnectorType;
-
-typedef enum {
-    connectorDirIn,
-    connectorDirOut
-} tConnectorDir;
-
-typedef struct {
-    tConnectorDir  dir;
-    tConnectorType type;
-    tCoord         coord;
-    tRectangle     rectangle;
-} tConnector;
-
-typedef struct {
-    uint32_t location;
-    uint32_t index;
-} tModuleKey;
-
-typedef struct _struct_module {
-    tModuleKey              key;
-    uint32_t                type;              // Review this. Is it used!?
-    uint32_t                row;
-    uint32_t                column;
-    tRectangle              rectangle;                                // Purely for mouse-click recognition
-    uint32_t                colour;
-    uint32_t                upRate;                                   // Probably needs to be permanent in tModuleProperties
-    uint32_t                isLed;                                    // Probably needs to be permanent in tModuleProperties
-    uint32_t                unknown1;                                 // Guess we should store this, to write back if necessary. Might not be needed
-    uint32_t                modeCount;                                // Don't yet know what this is for. Might need modes array adding
-    uint8_t                 mode[16];
-    char                    name[MODULE_NAME_SIZE + 1];
-    uint32_t                allocatedParams;
-    tParam *                param[VARIATIONS];
-    uint32_t                allocatedConnectors;
-    tConnector *            connector;
-    struct _struct_module * prev;
-    struct _struct_module * next;
-} tModule;
-
-typedef struct {
-    double xBar;
-    bool   xBarDragging;
-    double yBar;
-    bool   yBarDragging;
-} tScrollState;
-
-typedef struct {
-    bool       active;
-    tModuleKey moduleKey;
-} tModuleDragging;     // Parameter value dragging - Todo: rename
-
-typedef struct {
-    bool       active;
-    tModuleKey moduleKey;
-    uint32_t   variation;
-    uint32_t   param;
-} tDialDragging;     // Parameter value dragging - Todo: rename
-
-typedef struct {
-    bool       active;
-    tModuleKey fromModuleKey;
-    uint32_t   fromConnectorIndex;
-    tConnector toConnector;
-} tCableDragging;
-
-typedef struct _struct_menuItem {
-    char *                    label;
-    void (*action)(int index);
-    uint32_t                  param;
-    struct _struct_menuItem * subMenu;
-} tMenuItem;
-
-typedef struct {
-    bool          active; // Is the menu currently visible?
-    tCoord        coord;  // Position of the menu
-    tMenuItem *   items;  // Pointer to an array of menu items
-    tModuleKey    moduleKey;
-    tConnectorDir connectorDir;
-    uint32_t      connectorIndex;
-} tContextMenu;
-
 typedef enum {
     moduleTypeUnknown0,
     moduleTypeKeyboard,
@@ -408,6 +233,181 @@ typedef enum {
     moduleTypeUnknown207,
     moduleTypeRndPattern
 } tModuleType;
+
+typedef struct {
+    uint8_t * buffPtr;
+    uint32_t  buffSize;
+} tString;
+
+typedef struct {
+    double red;
+    double green;
+    double blue;
+} tRgb;
+
+typedef struct {
+    double red;
+    double green;
+    double blue;
+    double alpha;
+} tRgba;
+
+typedef struct {
+    double x;
+    double y;
+} tCoord;
+
+typedef struct {
+    double w;
+    double h;
+} tSize;
+
+typedef struct {
+    tCoord coord;
+    tSize  size;
+} tRectangle;
+
+typedef struct {
+    int32_t x;
+    int32_t y;
+} tIntCoord;
+
+typedef struct {
+    int32_t w;
+    int32_t h;
+} tIntSize;
+
+typedef struct {
+    tIntCoord coord;
+    tIntSize  size;
+} tIntRectangle;
+
+typedef struct {
+    tCoord coord1;
+    tCoord coord2rel;
+    tCoord coord3rel;
+} tTriangle;
+
+typedef enum {
+    paramTypeNone,
+    paramTypeFreq,
+    paramTypeResonance,
+    paramTypePitch,
+    paramTypeKeyboardTrack,
+    paramTypeGainControl,
+    paramTypeBypass,
+    paramTypeFltClassicDb,
+    paramTypeFltMultiDb,
+    paramTypeCommonDial,
+} tParamType;
+
+typedef struct _struct_param {
+    tParamType type;
+    tRectangle rectangle;
+    uint32_t   range;
+    uint32_t   value;
+} tParam;
+
+typedef struct {
+    uint32_t location;
+    uint32_t moduleFromIndex;
+    uint32_t connectorFromIoCount;
+    uint32_t linkType;
+    uint32_t moduleToIndex;
+    uint32_t connectorToIoCount;
+} tCableKey;
+
+typedef struct _struct_cable {
+    tCableKey              key;
+    uint32_t               colour;
+    struct _struct_cable * prev;
+    struct _struct_cable * next;       // This can go, when we attach to modules rather than separate linked list
+} tCable;
+
+typedef enum {   // Todo: add a new type for e.g. yellow gate
+    connectorTypeAudio,
+    connectorTypeControl
+} tConnectorType;
+
+typedef enum {
+    connectorDirIn,
+    connectorDirOut
+} tConnectorDir;
+
+typedef struct {
+    tConnectorDir  dir;
+    tConnectorType type;
+    tCoord         coord;
+    tRectangle     rectangle;
+} tConnector;
+
+typedef struct {
+    uint32_t location;
+    uint32_t index;
+} tModuleKey;
+
+typedef struct _struct_module {
+    tModuleKey              key;
+    tModuleType             type;              // Review this. Is it used!?
+    uint32_t                row;
+    uint32_t                column;
+    tRectangle              rectangle;                                // Purely for mouse-click recognition
+    uint32_t                colour;
+    uint32_t                upRate;                                   // Probably needs to be permanent in tModuleProperties
+    uint32_t                isLed;                                    // Probably needs to be permanent in tModuleProperties
+    uint32_t                unknown1;                                 // Guess we should store this, to write back if necessary. Might not be needed
+    uint32_t                modeCount;                                // Don't yet know what this is for. Might need modes array adding
+    uint8_t                 mode[16];
+    char                    name[MODULE_NAME_SIZE + 1];
+    uint32_t                allocatedParams;
+    tParam *                param[VARIATIONS];
+    uint32_t                allocatedConnectors;
+    tConnector *            connector;
+    struct _struct_module * prev;
+    struct _struct_module * next;
+} tModule;
+
+typedef struct {
+    double xBar;
+    bool   xBarDragging;
+    double yBar;
+    bool   yBarDragging;
+} tScrollState;
+
+typedef struct {
+    bool       active;
+    tModuleKey moduleKey;
+} tModuleDragging;     // Parameter value dragging - Todo: rename
+
+typedef struct {
+    bool       active;
+    tModuleKey moduleKey;
+    uint32_t   variation;
+    uint32_t   param;
+} tDialDragging;     // Parameter value dragging - Todo: rename
+
+typedef struct {
+    bool       active;
+    tModuleKey fromModuleKey;
+    uint32_t   fromConnectorIndex;
+    tConnector toConnector;
+} tCableDragging;
+
+typedef struct _struct_menuItem {
+    char *                    label;
+    void (*action)(int index);
+    uint32_t                  param;
+    struct _struct_menuItem * subMenu;
+} tMenuItem;
+
+typedef struct {
+    bool          active; // Is the menu currently visible?
+    tCoord        coord;  // Position of the menu
+    tMenuItem *   items;  // Pointer to an array of menu items
+    tModuleKey    moduleKey;
+    tConnectorDir connectorDir;
+    uint32_t      connectorIndex;
+} tContextMenu;
 
 typedef struct {
     const char *   name;
