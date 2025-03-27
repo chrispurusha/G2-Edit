@@ -189,10 +189,10 @@ void render_FltClassic(tRectangle rectangle, tModule * module) {
     uint32_t param     = 0;
     uint32_t connector = 0;
 
-    render_common_freq({rectangle.coord.x + 105.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
-    render_common_pitch({rectangle.coord.x + 15.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
+    render_common_freq({rectangle.coord.x + 120.0, rectangle.coord.y + 80.0}, param++, module);
+    render_common_pitch({rectangle.coord.x + 30.0, rectangle.coord.y + 80.0}, param++, module);
     render_common_keyboard_track({rectangle.coord.x + 75.0, rectangle.coord.y + 80.0}, param++, module);
-    render_common_resonance({rectangle.coord.x + 160.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
+    render_common_resonance({rectangle.coord.x + 175.0, rectangle.coord.y + 80.0}, param++, module);
     render_FltClassic_db({rectangle.coord.x + 210.0, rectangle.coord.y + 80.0}, param++, module);
     render_common_bypass({rectangle.coord.x + 245.0, rectangle.coord.y + 50.0}, param++, module);
 
@@ -230,11 +230,11 @@ void render_FltMulti(tRectangle rectangle, tModule * module) {
     uint32_t param     = 0;
     uint32_t connector = 0;
 
-    render_common_freq({rectangle.coord.x + 125.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
-    render_common_pitch({rectangle.coord.x + 15.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
+    render_common_freq({rectangle.coord.x + 140.0, rectangle.coord.y + 80.0}, param++, module);
+    render_common_pitch({rectangle.coord.x + 30.0, rectangle.coord.y + 80.0}, param++, module);
     render_common_keyboard_track({rectangle.coord.x + 75.0, rectangle.coord.y + 80.0}, param++, module);
     render_common_gc({rectangle.coord.x + 110.0, rectangle.coord.y + 80.0}, param++, module);
-    render_common_resonance({rectangle.coord.x + 185.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
+    render_common_resonance({rectangle.coord.x + 200.0, rectangle.coord.y + 80.0}, param++, module);
     render_FltMulti_db({rectangle.coord.x + 210.0, rectangle.coord.y + 25.0}, param++, module);   // Todo - this param num isn't db!!!
     render_common_bypass({rectangle.coord.x + 230.0, rectangle.coord.y + 80.0}, param++, module);
 
@@ -266,10 +266,10 @@ void render_EnvAdsr(tRectangle rectangle, tModule * module) {
     uint32_t param     = 0;
     uint32_t connector = 0;
 
-    render_param_EnvAdsr_attack({rectangle.coord.x + 20.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
-    render_param_EnvAdsr_delay({rectangle.coord.x + 60.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
-    render_param_EnvAdsr_sustain({rectangle.coord.x + 100.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
-    render_param_EnvAdsr_release({rectangle.coord.x + 140.0 + FILTER_FREQ_RADIUS, rectangle.coord.y + 80.0}, param++, module);
+    render_param_EnvAdsr_attack({rectangle.coord.x + 40.0, rectangle.coord.y + 80.0}, param++, module);
+    render_param_EnvAdsr_delay({rectangle.coord.x + 80.0, rectangle.coord.y + 80.0}, param++, module);
+    render_param_EnvAdsr_sustain({rectangle.coord.x + 120.0, rectangle.coord.y + 80.0}, param++, module);
+    render_param_EnvAdsr_release({rectangle.coord.x + 160.0, rectangle.coord.y + 80.0}, param++, module);
 
     param += 4; // 4 more to implement
 
