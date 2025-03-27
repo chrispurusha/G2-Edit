@@ -174,44 +174,6 @@ void render_common_resonance(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].rectangle = render_dial({coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}, module->param[0][param].value);
 }
 
-void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir dir, tConnectorType type, tCoord coord) {
-    module->connector[connectorIndex].coord = coord;  // Register where we're rendering this connector, for cable connecting
-    module->connector[connectorIndex].dir   = dir;    // Ultimately, should be constant in the structures, we shouldn't have to do this here
-    module->connector[connectorIndex].type  = type;
-
-    set_rbg_colour(connectorColourMap[module->connector[connectorIndex].dir][module->connector[connectorIndex].type]);
-    module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, coord, 8.0, 10.0, 0.0, 10.0);  // Should be zoomfactored
-    set_rbg_colour(RGB_BLACK);
-    render_circle_part(moduleArea, coord, 4.0, 10.0, 0.0, 10.0);
-}
-
-void render_FltClassic(tRectangle rectangle, tModule * module) {
-    uint32_t param     = 0;
-    uint32_t connector = 0;
-
-    render_common_freq({rectangle.coord.x + 120.0, rectangle.coord.y + 80.0}, param++, module);
-    render_common_pitch({rectangle.coord.x + 30.0, rectangle.coord.y + 80.0}, param++, module);
-    render_common_keyboard_track({rectangle.coord.x + 75.0, rectangle.coord.y + 80.0}, param++, module);
-    render_common_resonance({rectangle.coord.x + 175.0, rectangle.coord.y + 80.0}, param++, module);
-    render_FltClassic_db({rectangle.coord.x + 210.0, rectangle.coord.y + 80.0}, param++, module);
-    render_common_bypass({rectangle.coord.x + 245.0, rectangle.coord.y + 50.0}, param++, module);
-
-    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 95.0});
-    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 95.0});
-    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 50.0});
-}
-
-void render_FltMulti_db(tCoord coord, uint32_t param, tModule * module) {
-    uint32_t range     = MAP_NUM_ITEMS(fltMultiDbMap);
-    char *   valString = fltMultiDbMap[module->param[0][param].value];
-
-    module->param[0][param].type  = paramTypeFltMultiDb;
-    module->param[0][param].range = range;
-    set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, largest_text_width(range, fltMultiDbMap, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}, valString);
-}
-
 void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
     char * valString = "GC";
 
@@ -226,24 +188,105 @@ void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, get_text_width(valString, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}, valString);
 }
 
-void render_FltMulti(tRectangle rectangle, tModule * module) {
-    uint32_t param     = 0;
+void render_FltMulti_db(tCoord coord, uint32_t param, tModule * module) {
+    uint32_t range     = MAP_NUM_ITEMS(fltMultiDbMap);
+    char *   valString = fltMultiDbMap[module->param[0][param].value];
+
+    module->param[0][param].type  = paramTypeFltMultiDb;
+    module->param[0][param].range = range;
+    set_rbg_colour(RGB_BACKGROUND_GREY);
+    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, largest_text_width(range, fltMultiDbMap, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}, valString);
+}
+
+void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir dir, tConnectorType type, tCoord coord) {
+    module->connector[connectorIndex].coord = coord;  // Register where we're rendering this connector, for cable connecting
+    module->connector[connectorIndex].dir   = dir;    // Ultimately, should be constant in the structures, we shouldn't have to do this here
+    module->connector[connectorIndex].type  = type;
+
+    set_rbg_colour(connectorColourMap[module->connector[connectorIndex].dir][module->connector[connectorIndex].type]);
+    module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, coord, 8.0, 10.0, 0.0, 10.0);  // Should be zoomfactored
+    set_rbg_colour(RGB_BLACK);
+    render_circle_part(moduleArea, coord, 4.0, 10.0, 0.0, 10.0);
+}
+
+
+// Start of re-work to define parameter locations etc. in a structure. Will ultimately be moved to moduleResources etc.
+
+struct ParamDefinition {
+    void (*renderFunction)(tCoord coord, uint32_t param, tModule * module);
+    float offsetX;
+    float offsetY;
+};
+
+struct ConnectorDefinition {
+    void (*renderFunction)(tModule*, uint32_t, tConnectorDir, tConnectorType, tCoord); // Matches render_connector
+    tConnectorDir direction;
+    tConnectorType type;
+    float offsetX;
+    float offsetY;
+};
+
+const ParamDefinition FltClassicParams[] = {
+    {render_common_freq, 120.0, 80.0},
+    {render_common_pitch, 30.0, 80.0},
+    {render_common_keyboard_track, 75.0, 80.0},
+    {render_common_resonance, 175.0, 80.0},
+    {render_FltClassic_db, 210.0, 80.0},
+    {render_common_bypass, 245.0, 50.0}
+};
+
+const ConnectorDefinition FltClassicConnectors[] = {
+    {render_connector, connectorDirIn, connectorTypeAudio, 255.0, 20.0},
+    {render_connector, connectorDirOut, connectorTypeAudio, 255.0, 95.0},
+    {render_connector, connectorDirIn, connectorTypeControl, 15.0, 95.0},
+    {render_connector, connectorDirIn, connectorTypeControl, 15.0, 50.0}
+};
+
+const ParamDefinition FltMultiParams[] = {
+    {render_common_freq, 140.0, 80.0},
+    {render_common_pitch, 30.0, 80.0},
+    {render_common_keyboard_track, 75.0, 80.0},
+    {render_common_gc, 110.0, 80.0},
+    {render_common_resonance, 200.0, 80.0},
+    {render_FltMulti_db, 210.0, 25.0},
+    {render_common_bypass, 230.0, 80.0}
+};
+
+const ConnectorDefinition FltMultiConnectors[] = {
+    {render_connector, connectorDirIn, connectorTypeAudio, 255.0, 20.0},
+    {render_connector, connectorDirOut, connectorTypeAudio, 255.0, 60.0},
+    {render_connector, connectorDirOut, connectorTypeAudio, 255.0, 80.0},
+    {render_connector, connectorDirOut, connectorTypeAudio, 255.0, 100.0},
+    {render_connector, connectorDirIn, connectorTypeControl, 15.0, 95.0},
+    {render_connector, connectorDirIn, connectorTypeControl, 15.0, 50.0}
+};
+
+void render_module_common(tRectangle rectangle, tModule* module,
+                   const ParamDefinition* params, size_t paramCount,
+                   const ConnectorDefinition* connectors, size_t connectorCount) {
+    uint32_t param = 0;
     uint32_t connector = 0;
 
-    render_common_freq({rectangle.coord.x + 140.0, rectangle.coord.y + 80.0}, param++, module);
-    render_common_pitch({rectangle.coord.x + 30.0, rectangle.coord.y + 80.0}, param++, module);
-    render_common_keyboard_track({rectangle.coord.x + 75.0, rectangle.coord.y + 80.0}, param++, module);
-    render_common_gc({rectangle.coord.x + 110.0, rectangle.coord.y + 80.0}, param++, module);
-    render_common_resonance({rectangle.coord.x + 200.0, rectangle.coord.y + 80.0}, param++, module);
-    render_FltMulti_db({rectangle.coord.x + 210.0, rectangle.coord.y + 25.0}, param++, module);   // Todo - this param num isn't db!!!
-    render_common_bypass({rectangle.coord.x + 230.0, rectangle.coord.y + 80.0}, param++, module);
+    for (size_t i = 0; i < paramCount; ++i) {
+        params[i].renderFunction({rectangle.coord.x + params[i].offsetX, rectangle.coord.y + params[i].offsetY}, param++, module);
+    }
 
-    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 60.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 80.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 100.0});
-    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 95.0});
-    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 50.0});
+    for (size_t i = 0; i < connectorCount; ++i) {
+        connectors[i].renderFunction(module, connector++, connectors[i].direction, connectors[i].type,
+                                     {rectangle.coord.x + connectors[i].offsetX, rectangle.coord.y + connectors[i].offsetY});
+    }
+}
+
+void render_FltClassic(tRectangle rectangle, tModule* module) {
+    render_module_common(rectangle, module,
+                  FltClassicParams, sizeof(FltClassicParams) / sizeof(FltClassicParams[0]),
+                  FltClassicConnectors, sizeof(FltClassicConnectors) / sizeof(FltClassicConnectors[0]));
+}
+
+void render_FltMulti(tRectangle rectangle, tModule* module) {
+    render_module_common(rectangle, module,
+                  FltMultiParams, sizeof(FltMultiParams) / sizeof(FltMultiParams[0]),
+                  FltMultiConnectors, sizeof(FltMultiConnectors) / sizeof(FltMultiConnectors[0]));
 }
 
 void render_param_EnvAdsr_attack(tCoord coord, uint32_t param, tModule * module) {
