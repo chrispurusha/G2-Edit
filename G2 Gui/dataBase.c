@@ -459,23 +459,24 @@ void allocate_module_parameters(tModule * module, uint32_t paramCount) {
         exit(1);
     }
 
-    if (paramCount > 0) {
-        printf("Type = %s parameters %u\n", gModuleProperties[module->type].name, paramCount);
-
-        for (uint32_t i = 0; i < VARIATIONS; i++) {  // Might need to check if already allocated!?
-            if (module->param[i] == NULL) {
+    // Allocation can happen via several mechanisms, so don't re-allocate if we've already done it
+    if (module->allocatedParams == 0) {
+        if (paramCount > 0) {
+            printf("Type = %s parameters %u\n", gModuleProperties[module->type].name, paramCount);
+            
+            for (uint32_t i = 0; i < VARIATIONS; i++) {  // Might need to check if already allocated!?
                 module->param[i] = malloc(paramCount * sizeof(tParam));
+                
+                if (module->param[i] != NULL) {
+                    memset(module->param[i], 0, paramCount * sizeof(tParam));
+                } else {
+                    perror("Failed to allocate memory for param array");
+                    exit(1);
+                }
             }
-
-            if (module->param[i] != NULL) {
-                memset(module->param[i], 0, paramCount * sizeof(tParam));
-            } else {
-                perror("Failed to allocate memory for param array");
-                exit(1);
-            }
+            
+            module->allocatedParams = paramCount;
         }
-
-        module->allocatedParams = paramCount;
     }
 }
 
@@ -485,20 +486,21 @@ void allocate_module_connectors(tModule * module, uint32_t connectorCount) {
         exit(1);
     }
 
-    if (connectorCount > 0) {
-        printf("Type = %s connectors %u\n", gModuleProperties[module->type].name, gModuleProperties[module->type].numConnectors);
-
-        if (module->connector == NULL) {
+    // Allocation can happen via several mechanisms, so don't re-allocate if we've already done it
+    if (module->allocatedConnectors == 0) {
+        if (connectorCount > 0) {
+            printf("Type = %s connectors %u\n", gModuleProperties[module->type].name, gModuleProperties[module->type].numConnectors);
+            
             module->connector = malloc(gModuleProperties[module->type].numConnectors * sizeof(tConnector)); // Might need to check if already allocated!?
+            
+            if (module->connector != NULL) {
+                memset(module->connector, 0, gModuleProperties[module->type].numConnectors * sizeof(tConnector));
+            } else {
+                perror("Failed to allocate memory for connector array");
+                exit(1);
+            }
+            module->allocatedConnectors = connectorCount;
         }
-
-        if (module->connector != NULL) {
-            memset(module->connector, 0, gModuleProperties[module->type].numConnectors * sizeof(tConnector));
-        } else {
-            perror("Failed to allocate memory for connector array");
-            exit(1);
-        }
-        module->allocatedConnectors = connectorCount;
     }
 }
 
