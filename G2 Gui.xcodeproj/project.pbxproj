@@ -17,7 +17,6 @@
 		8376ECAB2D48FB52008D1608 /* iokit.c in Sources */ = {isa = PBXBuildFile; fileRef = 8376ECAA2D48FB52008D1608 /* iokit.c */; };
 		8376ECAE2D48FB6E008D1608 /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = 8376ECAD2D48FB6E008D1608 /* utils.c */; };
 		8397E1362D2FE00000DDD420 /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8397E1352D2FE00000DDD420 /* libglfw3.a */; };
-		8397E14A2D2FEF1700DDD420 /* libGLEW.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8397E1492D2FEF1700DDD420 /* libGLEW.a */; };
 		8397E14D2D2FEF9300DDD420 /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8397E14C2D2FEF9300DDD420 /* libfreetype.a */; };
 		83A016372D92F7F10041DF72 /* mouseHandle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83A016362D92F7F10041DF72 /* mouseHandle.cpp */; };
 		83B5655E2D4A71CF001BC997 /* usbComms.c in Sources */ = {isa = PBXBuildFile; fileRef = 83B5655D2D4A71CF001BC997 /* usbComms.c */; };
@@ -56,7 +55,6 @@
 		8376ECAC2D48FB6E008D1608 /* utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
 		8376ECAD2D48FB6E008D1608 /* utils.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = utils.c; sourceTree = "<group>"; };
 		8397E1352D2FE00000DDD420 /* libglfw3.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libglfw3.a; path = /opt/homebrew/Cellar/glfw/3.4/lib/libglfw3.a; sourceTree = "<absolute>"; };
-		8397E1492D2FEF1700DDD420 /* libGLEW.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libGLEW.a; path = /opt/homebrew/Cellar/glew/2.2.0_1/lib/libGLEW.a; sourceTree = "<absolute>"; };
 		8397E14B2D2FEF4500DDD420 /* G2 Gui.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "G2 Gui.entitlements"; sourceTree = "<group>"; };
 		8397E14C2D2FEF9300DDD420 /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = /opt/homebrew/Cellar/freetype/2.13.3/lib/libfreetype.a; sourceTree = "<absolute>"; };
 		83A016352D92F7F10041DF72 /* mouseHandle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mouseHandle.h; sourceTree = "<group>"; };
@@ -82,7 +80,6 @@
 			files = (
 				832FC5DE2D01F7840084A230 /* Quartz.framework in Frameworks */,
 				8397E1362D2FE00000DDD420 /* libglfw3.a in Frameworks */,
-				8397E14A2D2FEF1700DDD420 /* libGLEW.a in Frameworks */,
 				832FC5DC2D01F70A0084A230 /* IOKit.framework in Frameworks */,
 				8397E14D2D2FEF9300DDD420 /* libfreetype.a in Frameworks */,
 				832FC5D92D01F6C20084A230 /* Cocoa.framework in Frameworks */,
@@ -118,7 +115,6 @@
 				832FC5D62D01F68C0084A230 /* IOKit.framework */,
 				832FC5D22D01F6190084A230 /* OpenGL.framework */,
 				8397E14C2D2FEF9300DDD420 /* libfreetype.a */,
-				8397E1492D2FEF1700DDD420 /* libGLEW.a */,
 				8397E1352D2FE00000DDD420 /* libglfw3.a */,
 			);
 			name = Frameworks;
@@ -364,25 +360,20 @@
 				"HEADER_SEARCH_PATHS[arch=arm64]" = (
 					/opt/homebrew/Cellar/glfw/3.4/include,
 					/opt/homebrew/Cellar/freetype/2.13.3/include/freetype2,
-					/opt/homebrew/Cellar/glew/2.2.0_1/include,
 				);
 				"HEADER_SEARCH_PATHS[arch=x86_64]" = (
 					/usr/local/Cellar/glfw/3.4/include,
 					/usr/local/Cellar/freetype/2.13.3/include/freetype2,
-					/usr/local/Cellar/glew/2.2.0_1/include,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(PROJECT_DIR)",
 					/opt/homebrew/Cellar/freetype/2.13.3/lib,
-					/opt/homebrew/Cellar/glew/2.2.0_1/lib,
 				);
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = (
-					/opt/homebrew/Cellar/glew/2.2.0_1/lib,
 					/opt/homebrew/Cellar/glfw/3.4/lib,
 					/opt/homebrew/Cellar/freetype/2.13.3/lib,
 				);
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
-					/usr/local/Cellar/glew/2.2.0_1/lib,
 					/usr/local/Cellar/glfw/3.4/lib,
 					/usr/local/Cellar/freetype/2.13.3/lib,
 				);
@@ -403,7 +394,6 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(PROJECT_DIR)",
 					/opt/homebrew/Cellar/freetype/2.13.3/lib,
-					/opt/homebrew/Cellar/glew/2.2.0_1/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
