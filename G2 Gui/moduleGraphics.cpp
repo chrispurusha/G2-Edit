@@ -80,7 +80,7 @@ void render_param_common_dial(tCoord coord, uint32_t param, tModule * module, ch
     module->param[0][param].rectangle = render_dial({coord, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, module->param[0][param].value);
 }
 
-// This might become a common function for any modules with a bypes
+// This might become a common function for any modules with a bypass
 void render_common_bypass(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type  = paramTypeBypass;
     module->param[0][param].range = 2;
@@ -209,34 +209,6 @@ void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir d
     render_circle_part(moduleArea, coord, 4.0, 10.0, 0.0, 10.0);
 }
 
-void render_module_common(tRectangle rectangle, tModule * module) {
-    if (module == NULL) {
-        return;
-    }
-    uint32_t    param      = 0;
-    uint32_t    connector  = 0;
-    tModuleType moduleType = (tModuleType)(module->type);
-
-    // Render parameters for the given module type
-    for (size_t i = 0; i < ARRAY_SIZE(paramLocationList); i++) {
-        if (paramLocationList[i].moduleType == moduleType) {
-            paramLocationList[i].renderFunction(
-                (tCoord){rectangle.coord.x + paramLocationList[i].offsetX, rectangle.coord.y + paramLocationList[i].offsetY},
-                param++, module);
-        }
-    }
-
-    // Render connectors for the given module type
-    for (size_t i = 0; i < ARRAY_SIZE(connectorLocationList); i++) {
-        if (connectorLocationList[i].moduleType == moduleType) {
-            connectorLocationList[i].renderFunction(module, connector++,
-                                                    connectorLocationList[i].direction,
-                                                    connectorLocationList[i].type,
-                                                    (tCoord){rectangle.coord.x + connectorLocationList[i].offsetX, rectangle.coord.y + connectorLocationList[i].offsetY});
-        }
-    }
-}
-
 void render_param_EnvAdsr_attack(tCoord coord, uint32_t param, tModule * module) {
     render_param_common_dial(coord, param, module, "Attack", 128);
 }
@@ -253,108 +225,31 @@ void render_param_EnvAdsr_release(tCoord coord, uint32_t param, tModule * module
     render_param_common_dial(coord, param, module, "Rel", 128);
 }
 
-#if 0
+void render_module_common(tRectangle rectangle, tModule * module) {
+    if (module == NULL) {
+        return;
+    }
+    uint32_t    param      = 0;
+    uint32_t    connector  = 0;
+    tModuleType moduleType = (tModuleType)(module->type);
 
-void render_EnvAdsr(tRectangle rectangle, tModule * module) {
-    uint32_t param     = 0;
-    uint32_t connector = 0;
-
-    render_param_EnvAdsr_attack({rectangle.coord.x + 40.0, rectangle.coord.y + 80.0}, param++, module);
-    render_param_EnvAdsr_delay({rectangle.coord.x + 80.0, rectangle.coord.y + 80.0}, param++, module);
-    render_param_EnvAdsr_sustain({rectangle.coord.x + 120.0, rectangle.coord.y + 80.0}, param++, module);
-    render_param_EnvAdsr_release({rectangle.coord.x + 160.0, rectangle.coord.y + 80.0}, param++, module);
-
-    param += 4; // 4 more to implement
-
-    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
-    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 75.0});
-    render_connector(module, connector++, connectorDirIn, connectorTypeControl, {rectangle.coord.x + 15.0, rectangle.coord.y + 95.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeControl, {rectangle.coord.x + 230.0, rectangle.coord.y + 95.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 95.0});
-}
-
-void render_Mix4to1c(tRectangle rectangle, tModule * module) {
-    uint32_t connector = 0;
-
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 95.0});
-    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 60, rectangle.coord.y + 80.0});
-    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 80, rectangle.coord.y + 80.0});
-    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 100, rectangle.coord.y + 80.0});
-    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 120, rectangle.coord.y + 80.0});
-}
-
-void render_OscShpB(tRectangle rectangle, tModule * module) {
-    uint32_t connector = 0;
-
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 150.0, rectangle.coord.y + 80.0});
-}
-
-void render_StChorus(tRectangle rectangle, tModule * module) {
-    uint32_t connector = 0;
-
-    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 235.0, rectangle.coord.y + 65.0});
-    render_connector(module, connector++, connectorDirOut, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 65.0});
-}
-
-void render_Compress(tRectangle rectangle, tModule * module) {
-    uint32_t connector = 0;
-
-    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 235.0, rectangle.coord.y + 20.0});
-    render_connector(module, connector++, connectorDirIn, connectorTypeAudio, {rectangle.coord.x + 255.0, rectangle.coord.y + 20.0});
-}
-#endif
-
-#if 0
-
-double calculate_x_end_max(void) {
-    double  xEndMax     = MODULE_X_SPAN; // Set a minumum
-    tModule module      = {0};
-    bool    validModule = false;
-    double  xEnd        = 0.0;
-
-    reset_walk_module();
-
-    do {
-        validModule = walk_next_module(&module);
-
-        if (validModule && module.key.location == 1 && module.type != moduleTypeUnknown0) {
-            xEnd = module.column * MODULE_X_SPAN + MODULE_X_SPAN - MODULE_X_GAP;
-
-            if (xEnd > xEndMax) {
-                xEndMax = xEnd;
-            }
+    for (size_t i = 0; i < ARRAY_SIZE(paramLocationList); i++) {
+        if (paramLocationList[i].moduleType == moduleType) {
+            paramLocationList[i].renderFunction(
+                (tCoord){rectangle.coord.x + paramLocationList[i].offsetX, rectangle.coord.y + paramLocationList[i].offsetY},
+                param++, module);
         }
-    } while (validModule);
+    }
 
-    return xEndMax;
-}
-
-double calculate_y_end_max(void) {
-    double  yEndMax      = MODULE_Y_SPAN; // Set a minumum
-    tModule module       = {0};
-    bool    validModule  = false;
-    double  moduleHeight = 0.0;
-    double  yEnd         = 0.0;
-
-    reset_walk_module();
-
-    do {
-        validModule = walk_next_module(&module);
-
-        if (validModule && module.key.location == 1 && module.type != moduleTypeUnknown0) {
-            moduleHeight = (double)gModuleProperties[module.type].height;
-            yEnd         = module.row * MODULE_Y_SPAN + (moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP;
-
-            if (yEnd > yEndMax) {
-                yEndMax = yEnd;
-            }
+    for (size_t i = 0; i < ARRAY_SIZE(connectorLocationList); i++) {
+        if (connectorLocationList[i].moduleType == moduleType) {
+            connectorLocationList[i].renderFunction(module, connector++,
+                                                    connectorLocationList[i].direction,
+                                                    connectorLocationList[i].type,
+                                                    (tCoord){rectangle.coord.x + connectorLocationList[i].offsetX, rectangle.coord.y + connectorLocationList[i].offsetY});
         }
-    } while (validModule);
-
-    return yEndMax;
+    }
 }
-#endif
 
 void render_module(tModule * module) {
     double     moduleHeight               = gModuleProperties[module->type].height;
@@ -374,10 +269,10 @@ void render_module(tModule * module) {
     snprintf(buff, sizeof(buff), "%s", module->name);
     set_rbga_colour(RGBA_BLACK_ON_TRANSPARENT);
     render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    
     // Temporary items purely for development debug
     snprintf(buff, sizeof(buff), "(%s)", gModuleProperties[module->type].name);
 
-    // Various dev/debug indications not ultimately needed
     render_text(moduleArea, {{moduleRectangle.coord.x + 120.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     snprintf(buff, sizeof(buff), "%u", module->key.index);
     render_text(moduleArea, {{moduleRectangle.coord.x + moduleRectangle.size.w - 30.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
@@ -400,9 +295,6 @@ void render_modules(void) {
     tModule    module      = {0};
     bool       validModule = false;
     tRectangle area        = module_area();
-
-    //set_x_end_max(calculate_x_end_max());
-    //set_y_end_max(calculate_y_end_max());
 
     reset_walk_module();
 

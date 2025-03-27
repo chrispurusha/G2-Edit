@@ -70,6 +70,7 @@ const tRgb   connectorColourMap[2][2] =             // First index = direction, 
     {{0.7, 0.1, 0.1}, {0.7, 0.1, 0.7}}          // Out: { Audio, Control }
 };
 
+//TODO: see if we can make this const and only reference in one source file
 tModuleProperties gModuleProperties[] = {
     // Array index = module type for access speed
     {"Unknown",      0,  0, 0},
