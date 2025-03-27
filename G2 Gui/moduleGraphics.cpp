@@ -231,10 +231,9 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     }
     uint32_t    param      = 0;
     uint32_t    connector  = 0;
-    tModuleType moduleType = module->type;
 
     for (size_t i = 0; i < ARRAY_SIZE(paramLocationList); i++) {
-        if (paramLocationList[i].moduleType == moduleType) {
+        if (paramLocationList[i].moduleType == module->type) {
             paramLocationList[i].renderFunction(
                 (tCoord){rectangle.coord.x + paramLocationList[i].offsetX, rectangle.coord.y + paramLocationList[i].offsetY},
                 param++, module);
@@ -242,7 +241,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     }
 
     for (size_t i = 0; i < ARRAY_SIZE(connectorLocationList); i++) {
-        if (connectorLocationList[i].moduleType == moduleType) {
+        if (connectorLocationList[i].moduleType == module->type) {
             connectorLocationList[i].renderFunction(module, connector++,
                                                     connectorLocationList[i].direction,
                                                     connectorLocationList[i].type,

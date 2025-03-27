@@ -1,4 +1,4 @@
-// Auto generated file
+// Auto generated file - NOT CURRENTLY USED!!!!!!!!!
 
 /*
  * The G2 Editor application.
