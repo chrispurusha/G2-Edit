@@ -411,13 +411,11 @@ typedef enum {
 
 typedef struct {
     const char *   name;
-    //const char *   fileName;  // From the reverse engineering effort - might be required for file access?
     const uint32_t height;
-    //uint32_t       isLed;
-    //uint32_t       upRate;
+    //uint32_t       isLed;     // Might need to add this!
+    //uint32_t       upRate;    // This is probably calculated
     const uint32_t numParameters;
     const uint32_t numConnectors;
-    void (*renderFunction)(tRectangle, tModule *);
 } tModuleProperties;
 
 typedef enum {
@@ -459,5 +457,21 @@ typedef struct {
     tConnectorType type;
     tCoord         coord;
 } tConstConnector;
+
+typedef struct {
+    tModuleType moduleType;
+    void (*renderFunction)(tCoord coord, uint32_t param, tModule * module);
+    double      offsetX;
+    double      offsetY;
+} tParamLocation;
+
+typedef struct {
+    tModuleType    moduleType;
+    void (*renderFunction)(tModule *, uint32_t, tConnectorDir, tConnectorType, tCoord);
+    tConnectorDir  direction;
+    tConnectorType type;
+    double         offsetX;
+    double         offsetY;
+} tConnectorLocation;
 
 #endif // __TYPES_H__

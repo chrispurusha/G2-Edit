@@ -43,18 +43,17 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleGraphics.h"
 
-GLFWwindow *             gWindow = NULL;
+GLFWwindow *                   gWindow = NULL;
 
-static FT_Library        gLibrary = {0};
-static FT_Face           gFace    = {0};
+static FT_Library              gLibrary = {0};
+static FT_Face                 gFace    = {0};
 
-extern tScrollState      gScrollState;
-extern tContextMenu      gContextMenu;
-extern tMessageQueue     gCommandQueue;
-extern tModuleProperties gModuleProperties[];
-extern tCableDragging    gCableDrag;
-extern tDialDragging     gDialDragging;
-extern tModuleDragging   gModuleDrag;
+extern tScrollState            gScrollState;
+extern tContextMenu            gContextMenu;
+extern tMessageQueue           gCommandQueue;
+extern tCableDragging          gCableDrag;
+extern tDialDragging           gDialDragging;
+extern tModuleDragging         gModuleDrag;
 
 void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
     glViewport(0, 0, width, height);
