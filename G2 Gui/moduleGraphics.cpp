@@ -235,8 +235,9 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     // Todo: cache the start positions in the dynamic module structure
     for (uint32_t i = module->paramIndexCache; i < ARRAY_SIZE(paramLocationList); i++) {
         if (paramLocationList[i].moduleType == module->type) {
-            if (module->paramIndexCache == 0) {
+            if (module->gotParamIndexCache == false) {
                 module->paramIndexCache = i;
+                module->gotParamIndexCache = true;
             }
             paramLocationList[i].renderFunction(
                 (tCoord){rectangle.coord.x + paramLocationList[i].offsetX, rectangle.coord.y + paramLocationList[i].offsetY},
@@ -250,8 +251,9 @@ void render_module_common(tRectangle rectangle, tModule * module) {
 
     for (uint32_t i = module->connectorIndexCache; i < ARRAY_SIZE(connectorLocationList); i++) {
         if (connectorLocationList[i].moduleType == module->type) {
-            if (module->connectorIndexCache == 0) {
+            if (module->gotConnectorIndexCache == false) {
                 module->connectorIndexCache = i;
+                module->gotConnectorIndexCache = true;
             }
             connectorLocationList[i].renderFunction(module, connector++,
                                                     connectorLocationList[i].direction,

@@ -478,7 +478,7 @@ tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
     char * ch          = NULL;
 
     if (text == NULL) {
-        printf("render_text text=NULL\n");
+        //printf("render_text text=NULL\n");
         return {{0.0, 0.0}, {0.0, 0.0}};
     }
     glEnable(GL_TEXTURE_2D);

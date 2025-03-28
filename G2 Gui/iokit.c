@@ -183,6 +183,9 @@ int32_t read_usb_extended(uint8_t * buff, uint32_t buffLength) {
     readLength = buffLength;
 
     (*intf)->AbortPipe(intf, 2);
+    if ((*intf)->GetPipeStatus(intf, 2) == kIOUSBPipeStalled) {
+        (*intf)->ClearPipeStall(intf, 2);
+    }
 
     if ((*intf)->ReadPipeTO(intf, 2, (void *)buff, &readLength, 1000, 1000) != kIOReturnSuccess) {
         readLength = 0;

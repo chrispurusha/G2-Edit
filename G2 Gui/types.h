@@ -363,7 +363,9 @@ typedef struct _struct_module {
     tParam *                param[VARIATIONS];
     uint32_t                allocatedConnectors;
     tConnector *            connector;
+    bool                    gotParamIndexCache;
     uint32_t                paramIndexCache;
+    bool                    gotConnectorIndexCache;
     uint32_t                connectorIndexCache;
     struct _struct_module * prev;
     struct _struct_module * next;
