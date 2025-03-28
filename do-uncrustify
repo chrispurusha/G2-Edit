@@ -1,0 +1,9 @@
+#!/bin/zsh
+
+# To run: ./do-uncrustify
+
+mv constData.h tmp
+~/uncrustify -c uncrustify.cfg --no-backup G2\ Gui/*.h
+~/uncrustify -c uncrustify.cfg --no-backup G2\ Gui/*.c
+~/uncrustify -c uncrustify.cfg --no-backup G2\ Gui/*.cpp
+mv tmp constData.h

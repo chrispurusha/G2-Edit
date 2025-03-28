@@ -229,8 +229,8 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     if (module == NULL) {
         return;
     }
-    uint32_t    param      = 0;
-    uint32_t    connector  = 0;
+    uint32_t param     = 0;
+    uint32_t connector = 0;
 
     // Todo: cache the start positions in the dynamic module structure
     for (uint32_t i = module->paramIndexCache; i < ARRAY_SIZE(paramLocationList); i++) {
@@ -241,13 +241,14 @@ void render_module_common(tRectangle rectangle, tModule * module) {
             paramLocationList[i].renderFunction(
                 (tCoord){rectangle.coord.x + paramLocationList[i].offsetX, rectangle.coord.y + paramLocationList[i].offsetY},
                 param++, module);
+
             if (param == gModuleProperties[module->type].numParameters) {
                 break;
             }
         }
     }
 
-    for (uint32_t i =  module->connectorIndexCache; i < ARRAY_SIZE(connectorLocationList); i++) {
+    for (uint32_t i = module->connectorIndexCache; i < ARRAY_SIZE(connectorLocationList); i++) {
         if (connectorLocationList[i].moduleType == module->type) {
             if (module->connectorIndexCache == 0) {
                 module->connectorIndexCache = i;
@@ -256,6 +257,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                                                     connectorLocationList[i].direction,
                                                     connectorLocationList[i].type,
                                                     (tCoord){rectangle.coord.x + connectorLocationList[i].offsetX, rectangle.coord.y + connectorLocationList[i].offsetY});
+
             if (connector == gModuleProperties[module->type].numConnectors) {
                 break;
             }
@@ -281,7 +283,7 @@ void render_module(tModule * module) {
     snprintf(buff, sizeof(buff), "%s", module->name);
     set_rbga_colour(RGBA_BLACK_ON_TRANSPARENT);
     render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-    
+
     // Temporary items purely for development debug
     snprintf(buff, sizeof(buff), "(%s)", gModuleProperties[module->type].name);
 

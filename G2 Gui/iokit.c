@@ -26,7 +26,8 @@ extern "C" {
 #define G2_VENDOR_ID     (0xffc)
 #define G2_PRODUCT_ID    (2)
 
-static IOUSBInterfaceInterface ** intf = NULL;
+static IOUSBInterfaceInterface ** intf     = NULL;
+static pthread_mutex_t            usbMutex = PTHREAD_MUTEX_INITIALIZER;
 
 IOUSBDeviceInterface ** find_usb_device(void) {
     mach_port_t             masterPort      = 0;
@@ -190,13 +191,18 @@ int32_t read_usb_extended(uint8_t * buff, uint32_t buffLength) {
 }
 
 void read_usb_complete(void * refCon, IOReturn result, void * arg0) {
+    pthread_mutex_lock(&usbMutex);
     CFRunLoopStop(CFRunLoopGetCurrent());
+    pthread_mutex_unlock(&usbMutex);
 }
 
 void timeout_callback(CFRunLoopTimerRef timer, void * info) {
-    if ((*intf)->AbortPipe(intf, 1) != kIOReturnSuccess) {
+    pthread_mutex_lock(&usbMutex);
+
+    if (intf && (*intf)->AbortPipe(intf, 1) != kIOReturnSuccess) {
         CFRunLoopStop(CFRunLoopGetCurrent());
     }
+    pthread_mutex_unlock(&usbMutex);
 }
 
 int32_t read_usb_interrupt(uint8_t * buff, uint32_t buffLength) {
@@ -208,6 +214,7 @@ int32_t read_usb_interrupt(uint8_t * buff, uint32_t buffLength) {
     if (buff == NULL) {
         return readLength;
     }
+    pthread_mutex_lock(&usbMutex);
     memset(buff, 0, buffLength);
 
     timer = CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + interval, 0, 0, 0, timeout_callback, NULL);
@@ -215,11 +222,14 @@ int32_t read_usb_interrupt(uint8_t * buff, uint32_t buffLength) {
 
     (*intf)->AbortPipe(intf, 1);
     result = (*intf)->ReadPipeAsync(intf, 1, (void *)buff, buffLength, read_usb_complete, NULL);
+    pthread_mutex_unlock(&usbMutex);
 
     CFRunLoopRun();
 
+    pthread_mutex_lock(&usbMutex);
     CFRunLoopRemoveTimer(CFRunLoopGetCurrent(), timer, kCFRunLoopDefaultMode);
     CFRelease(timer);
+    pthread_mutex_unlock(&usbMutex);
 
     if (result == kIOReturnSuccess) {   // Unless there's a way to detect aborted pipe read
         readLength = buffLength;

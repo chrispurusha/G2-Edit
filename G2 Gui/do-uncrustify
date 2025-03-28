@@ -1,9 +1,0 @@
-#!/bin/zsh
-
-# To run: ./do-uncrustify
-
-mv constData.h tmp
-~/uncrustify -c uncrustify.cfg --no-backup *.h
-~/uncrustify -c uncrustify.cfg --no-backup *.c
-~/uncrustify -c uncrustify.cfg --no-backup *.cpp
-mv tmp constData.h

@@ -463,10 +463,10 @@ void allocate_module_parameters(tModule * module, uint32_t paramCount) {
     if (module->allocatedParams == 0) {
         if (paramCount > 0) {
             printf("Type = %s parameters %u\n", gModuleProperties[module->type].name, paramCount);
-            
+
             for (uint32_t i = 0; i < VARIATIONS; i++) {  // Might need to check if already allocated!?
                 module->param[i] = malloc(paramCount * sizeof(tParam));
-                
+
                 if (module->param[i] != NULL) {
                     memset(module->param[i], 0, paramCount * sizeof(tParam));
                 } else {
@@ -474,7 +474,7 @@ void allocate_module_parameters(tModule * module, uint32_t paramCount) {
                     exit(1);
                 }
             }
-            
+
             module->allocatedParams = paramCount;
         }
     }
@@ -490,9 +490,9 @@ void allocate_module_connectors(tModule * module, uint32_t connectorCount) {
     if (module->allocatedConnectors == 0) {
         if (connectorCount > 0) {
             printf("Type = %s connectors %u\n", gModuleProperties[module->type].name, gModuleProperties[module->type].numConnectors);
-            
+
             module->connector = malloc(gModuleProperties[module->type].numConnectors * sizeof(tConnector)); // Might need to check if already allocated!?
-            
+
             if (module->connector != NULL) {
                 memset(module->connector, 0, gModuleProperties[module->type].numConnectors * sizeof(tConnector));
             } else {
