@@ -17,20 +17,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: |
-        brew install glfw
+      - name: Install dependencies  # Proper indentation
+        run: |
+          brew install glfw
 
-    - name: Check for GLFW headers
-      id: check_glfw
-      run: |
-        if [ -f "/usr/local/include/GLFW/glfw3.h" ]; then
-          echo "GLFW headers found"
-          echo "glfw_present=true" >> $GITHUB_ENV
-        else
-          echo "GLFW headers not found"
-          echo "glfw_present=false" >> $GITHUB_ENV
-        fi
+      - name: Check for GLFW headers
+        id: check_glfw
+        run: |
+          if [ -f "/usr/local/include/GLFW/glfw3.h" ]; then
+            echo "GLFW headers found"
+            echo "glfw_present=true" >> $GITHUB_ENV
+          else
+            echo "GLFW headers not found"
+            echo "glfw_present=false" >> $GITHUB_ENV
+          fi
 
       - name: Initialize the CodeQL tools
         if: env.glfw_present == 'true'
@@ -55,11 +55,11 @@ jobs:
           xcodebuild -project "G2 Gui.xcodeproj" -scheme "G2 Gui" -configuration Debug clean build
           # Replace 'YourProject.xcodeproj' and 'YourScheme' with your actual Xcode project name and scheme
 
-      - name: Perform CodeQL Analysis
-      - name: Perform CodeQL Analysis
+      - name: Perform CodeQL Analysis  # Fixed duplication
         if: env.glfw_present == 'true'
         uses: github/codeql-action/analyze@v3
 
       - name: Log Detected Languages
         run: |
           echo "Detected languages: ${{ matrix.language }}"
+
