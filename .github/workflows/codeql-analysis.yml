@@ -17,6 +17,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.2' # Specify the compatible Xcode version here
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
