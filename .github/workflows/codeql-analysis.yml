@@ -1,0 +1,34 @@
+name: "CodeQL Analysis"
+
+on:
+  push:
+    branches: [ "main" ]  # Adjust branch name
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly scan
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: macos-latest  # Required for Xcode projects
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: 'cpp'  # Use 'cpp' for C projects (CodeQL treats C as C++)
+          # Optional: Specify build commands if auto-detection fails
+          # build-mode: manual
+
+      - name: Build the project (Xcode)
+        run: |
+          xcodebuild -project "G2-Edit/G2 Gui.xcodeproj" -scheme "G2 GUI" -configuration Debug clean build
+          # Replace 'YourProject.xcodeproj' and 'YourScheme' with your actual Xcode project name and scheme
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
