@@ -39,7 +39,7 @@ jobs:
           languages: cpp
 
       - name: Set up Xcode
-        uses: maxim-lobanov/setup-xcode@v3
+        uses: maxim-lobanov/setup-xcode@v2
         with:
           xcode-version: '16.2' # Specify the compatible Xcode version here
 
