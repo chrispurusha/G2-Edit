@@ -159,13 +159,20 @@ void close_usb(void) {
     }
 }
 
+void reset_pipe(uint32_t index) {
+    (*intf)->AbortPipe(intf, index);
+    if ((*intf)->GetPipeStatus(intf, index) == kIOUSBPipeStalled) {
+        (*intf)->ClearPipeStall(intf, index);
+    }
+}
+    
 int32_t write_usb(uint8_t * buff, uint32_t length) {
     uint32_t writeLength = 0;
 
     if (buff == NULL) {
         return writeLength;
     }
-    (*intf)->AbortPipe(intf, 3);
+    reset_pipe(3);
 
     if ((*intf)->WritePipeTO(intf, 3, (void *)buff, length, 1000, 1000) == kIOReturnSuccess) {
         writeLength = length;
@@ -182,10 +189,7 @@ int32_t read_usb_extended(uint8_t * buff, uint32_t buffLength) {
     memset(buff, 0, buffLength);
     readLength = buffLength;
 
-    (*intf)->AbortPipe(intf, 2);
-    if ((*intf)->GetPipeStatus(intf, 2) == kIOUSBPipeStalled) {
-        (*intf)->ClearPipeStall(intf, 2);
-    }
+    reset_pipe(2);
 
     if ((*intf)->ReadPipeTO(intf, 2, (void *)buff, &readLength, 1000, 1000) != kIOReturnSuccess) {
         readLength = 0;
@@ -223,7 +227,8 @@ int32_t read_usb_interrupt(uint8_t * buff, uint32_t buffLength) {
     timer = CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + interval, 0, 0, 0, timeout_callback, NULL);
     CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, kCFRunLoopDefaultMode);
 
-    (*intf)->AbortPipe(intf, 1);
+    reset_pipe(1);
+    
     result = (*intf)->ReadPipeAsync(intf, 1, (void *)buff, buffLength, read_usb_complete, NULL);
     pthread_mutex_unlock(&usbMutex);
 
