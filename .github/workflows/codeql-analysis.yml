@@ -26,7 +26,7 @@ jobs:
 
       - name: Build the project (Xcode)
         run: |
-          xcodebuild -project "G2-Edit/G2 Gui.xcodeproj" -scheme "G2 GUI" -configuration Debug clean build
+          xcodebuild -project "G2-Edit/G2 Gui.xcodeproj" -scheme "G2 Gui" -configuration Debug clean build
           # Replace 'YourProject.xcodeproj' and 'YourScheme' with your actual Xcode project name and scheme
 
       - name: Perform CodeQL Analysis
