@@ -17,7 +17,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install dependencies  # Proper indentation
+      - name: Install dependencies
         run: |
           brew install glfw
 
@@ -43,19 +43,12 @@ jobs:
         with:
           xcode-version: '16.2' # Specify the compatible Xcode version here
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: 'cpp'  # Use 'cpp' for C projects (CodeQL treats C as C++)
-          # Optional: Specify build commands if auto-detection fails
-          # build-mode: manual
-
       - name: Build the project (Xcode)
         run: |
           xcodebuild -project "G2 Gui.xcodeproj" -scheme "G2 Gui" -configuration Debug clean build
-          # Replace 'YourProject.xcodeproj' and 'YourScheme' with your actual Xcode project name and scheme
+          # Replace 'G2 Gui.xcodeproj' and 'G2 Gui' with your actual Xcode project name and scheme
 
-      - name: Perform CodeQL Analysis  # Fixed duplication
+      - name: Perform CodeQL Analysis
         if: env.glfw_present == 'true'
         uses: github/codeql-action/analyze@v3
 
