@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         with:
           languages: 'cpp'  # Use 'cpp' for C projects (CodeQL treats C as C++)
           # Optional: Specify build commands if auto-detection fails
