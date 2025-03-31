@@ -478,7 +478,6 @@ typedef struct {
 
 typedef struct {
     tModuleType    moduleType;
-    void (*renderFunction)(tModule *, uint32_t, tConnectorDir, tConnectorType, tCoord);
     tConnectorDir  direction;
     tConnectorType type;
     double         offsetX;

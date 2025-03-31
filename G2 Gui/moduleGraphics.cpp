@@ -205,7 +205,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->connectorIndexCache    = i;
                 module->gotConnectorIndexCache = true;
             }
-            connectorLocationList[i].renderFunction(module, connector++,
+            render_connector(module, connector++,
                                                     connectorLocationList[i].direction,
                                                     connectorLocationList[i].type,
                                                     (tCoord){rectangle.coord.x + connectorLocationList[i].offsetX, rectangle.coord.y + connectorLocationList[i].offsetY});
