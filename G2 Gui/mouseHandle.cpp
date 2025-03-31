@@ -48,6 +48,7 @@ tDialDragging            gDialDragging = {0};
 tModuleDragging          gModuleDrag   = {0};
 
 extern GLFWwindow *      gWindow;
+extern bool              gReDraw;
 extern tMessageQueue     gCommandQueue;
 extern tModuleProperties gModuleProperties[];
 
@@ -722,6 +723,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         }
         stop_dragging();
     }
+    gReDraw = true;
 }
 
 void cursor_pos(GLFWwindow * window, double x, double y) {
@@ -731,6 +733,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     uint32_t        value          = 0;
     tModule         module         = {0};
     tMessageContent messageContent = {0};
+    bool            noAction       = false;
 
     // Scale x and y to match intended rendering window
     glfwGetWindowSize(window, &width, &height);
@@ -778,6 +781,13 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, {x, y});
 
         adjust_scroll_for_drag();
+    } else {
+        noAction = true;
+    }
+    
+    // Limit re-draw/render if nothing's happened
+    if (noAction == false) {
+        gReDraw = true;
     }
 }
 
@@ -807,10 +817,12 @@ void scroll_event(GLFWwindow * window, double x, double y) {
         }
         set_zoom_factor(zoomFactor);
     }
+    gReDraw = true;
 }
 
 void char_event(GLFWwindow * window, unsigned int value) {
     printf("char=%d\n", value);
+    gReDraw = true;
 }
 
 void key_callback(GLFWwindow * window, int key, int scancode, int action, int mods) {
@@ -818,6 +830,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         glfwSetWindowShouldClose(window, GL_TRUE);
     }
     printf("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
+    gReDraw = true;
 }
 
 #ifdef __cplusplus

@@ -44,6 +44,7 @@ extern "C" {
 #include "moduleGraphics.h"
 
 GLFWwindow *           gWindow = NULL;
+bool                   gReDraw = false;
 
 static FT_Library      gLibrary = {0};
 static FT_Face         gFace    = {0};
@@ -130,6 +131,7 @@ void render_top_bar(void) {
 }
 
 void wake_glfw(void) {
+    gReDraw = true;
     glfwPostEmptyEvent();
 }
 
@@ -201,24 +203,27 @@ void init_graphics(void) {
 
 void do_graphics_loop(void) {
     while (!glfwWindowShouldClose(gWindow)) {
-        glClearColor(0.8, 0.8, 0.8, 1.0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        render_modules();
-        render_cables();
-
-        if (gCableDrag.active == true) {
-            tModule module = {0};
-            read_module(gCableDrag.fromModuleKey, &module);
-            set_rbg_colour(RGB_WHITE);
-            render_cable_from_to(module.connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector);
+        if (gReDraw == true) {
+            glClearColor(0.8, 0.8, 0.8, 1.0);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            
+            render_modules();
+            render_cables();
+            
+            if (gCableDrag.active == true) {
+                tModule module = {0};
+                read_module(gCableDrag.fromModuleKey, &module);
+                set_rbg_colour(RGB_WHITE);
+                render_cable_from_to(module.connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector);
+            }
+            render_top_bar();
+            render_scrollbars(gWindow);
+            render_context_menu();
+            
+            // Swap buffers and look for events
+            glfwSwapBuffers(gWindow);
+            gReDraw = false;
         }
-        render_top_bar();
-        render_scrollbars(gWindow);
-        render_context_menu();
-
-        // Swap buffers and look for events
-        glfwSwapBuffers(gWindow);
 
         if ((gModuleDrag.active == true) || (gCableDrag.active == true)) {
             double x = 0.0;
