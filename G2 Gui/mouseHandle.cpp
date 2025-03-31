@@ -52,6 +52,7 @@ extern uint32_t          gLocation;
 extern bool              gReDraw;
 extern tMessageQueue     gCommandQueue;
 extern tModuleProperties gModuleProperties[];
+extern tParamLocation    paramLocationList[];
 extern tButton           gSelectVa;
 extern tButton           gSelectFx;
 
@@ -497,15 +498,15 @@ bool handle_module_click(tCoord coord, int button) {
 
                 if (within_rectangle(coord, param->rectangle)) {
                     if (button == GLFW_MOUSE_BUTTON_LEFT) {
-                        if (param_type_is_dial(param->type) == true) {
+                        if (param_type_is_dial(paramLocationList[param->paramRef].type) == true) {
                             gDialDragging.moduleKey.index    = module.key.index;
                             gDialDragging.moduleKey.location = module.key.location;
                             gDialDragging.variation          = 0;
                             gDialDragging.param              = i;
                             gDialDragging.active             = true;
                             return true;
-                        } else if (param_type_is_toggle(param->type) == true) {
-                            param->value = (param->value + 1) % param->range;
+                        } else if (param_type_is_toggle(paramLocationList[param->paramRef].type) == true) {
+                            param->value = (param->value + 1) % paramLocationList[param->paramRef].range;
                             write_module(module.key, &module);
 
                             tMessageContent messageContent = {0};
@@ -762,12 +763,12 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     } else if (gDialDragging.active == true) {
         read_module(gDialDragging.moduleKey, &module);
 
-        if (param_type_is_dial(module.param[gDialDragging.variation][gDialDragging.param].type) == true) {
+        if (param_type_is_dial(paramLocationList[module.param[gDialDragging.variation][gDialDragging.param].paramRef].type) == true) {
             angle                                                            = calculate_mouse_angle({x, y}, module.param[gDialDragging.variation][gDialDragging.param].rectangle); // possible add half size
             value                                                            = angle_to_value(angle);
             module.param[gDialDragging.variation][gDialDragging.param].value = value;
         } else {
-            printf("Unknown module type %u\n", module.param[gDialDragging.variation][gDialDragging.param].type);
+            printf("Unknown module type %u\n", paramLocationList[module.param[gDialDragging.variation][gDialDragging.param].paramRef].type);
             exit(1);
         }
         write_module(gDialDragging.moduleKey, &module);         // Write new value into parameter

@@ -306,10 +306,9 @@ typedef enum {
     locationVa = 1
 } tLocation;
 
-typedef struct _struct_param {
-    tParamType type;
+typedef struct {
+    uint32_t   paramRef;
     tRectangle rectangle;
-    uint32_t   range;
     uint32_t   value;
 } tParam;
 
@@ -469,9 +468,12 @@ typedef struct {
 
 typedef struct {
     tModuleType moduleType;
-    void (*renderFunction)(tCoord coord, uint32_t param, tModule * module);
+    tParamType  type;
+    void (*renderFunction)(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module);
     double      offsetX;
     double      offsetY;
+    char *      label;
+    uint32_t    range;
 } tParamLocation;
 
 typedef struct {

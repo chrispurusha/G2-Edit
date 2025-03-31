@@ -40,6 +40,13 @@ extern "C" {
 
 extern uint32_t gLocation;
 
+void set_module_colour(uint32_t colour) {
+    tRgb rgb = {0};
+
+    rgb = gModuleColourMap[colour];
+    set_rbg_colour(rgb);
+}
+
 tRectangle render_dial(tRectangle rectangle, uint32_t value) {  // Drop down into utilsGraphics?
     double angle  = 0.0;
     double radius = 0.0;
@@ -59,128 +66,86 @@ tRectangle render_dial(tRectangle rectangle, uint32_t value) {  // Drop down int
     return render_circle_line(moduleArea, {x, y}, radius, 25, 1.0);
 }
 
-void set_module_colour(uint32_t colour) {
-    tRgb rgb = {0};
-
-    rgb = gModuleColourMap[colour];
-    set_rbg_colour(rgb);
-}
-
 // This might be too generic and won't be able to use, or we add extra params!
-void render_param_common_dial(tCoord coord, uint32_t param, tModule * module, char * label, uint32_t range) {
+void render_param_common_dial(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module) {
     char buff[16] = {0};
 
-    snprintf(buff, sizeof(buff), "%u", module->param[0][param].value);
-    module->param[0][param].type  = paramTypeCommonDial;
-    module->param[0][param].range = range;
-    //module->param[0][param].rectangle = ;
+    switch (paramLocationList[paramRef].type) {
+        case paramTypeFreq:
+        {
+            double freq = 0.0;
 
+            freq = round(13.75 * pow(2, (double)module->param[0][param].value / 12.0) * 100.0) / 100.0;
+
+            if (freq < 100) {
+                snprintf(buff, sizeof(buff), "%.2fHz", freq);
+            } else if (freq < 1000) {
+                snprintf(buff, sizeof(buff), "%.1fHz", freq);
+            } else if (freq < 10000) {
+                snprintf(buff, sizeof(buff), "%.2fkHz", freq / 1000.0);
+            } else {
+                snprintf(buff, sizeof(buff), "%.1fkHz", freq / 1000.0);
+            }
+            break;
+        }
+        case paramTypePitch:
+        {
+            double percent = 0.0;
+            double maxVal  = 200.0;
+
+            if (module->param[0][param].value < 127) {
+                percent = round(((double)module->param[0][param].value * maxVal * 10.0) / 128.0) / 10.0;
+            } else {
+                percent = maxVal;     // Clip
+            }
+            snprintf(buff, sizeof(buff), "%.1f%%", percent);
+            break;
+        }
+        case paramTypeResonance:
+        {
+            double res    = 0.0;
+            double maxVal = 100.0;
+
+            if (module->param[0][param].value < 127) {
+                res = round(((double)module->param[0][param].value * maxVal * 10.0) / 128.0) / 10.0;
+            } else {
+                res = maxVal;     // Clip
+            }
+            snprintf(buff, sizeof(buff), "%.1f", res);
+            break;
+        }
+        default:
+            snprintf(buff, sizeof(buff), "%u", module->param[0][param].value);
+            break;
+    }
+    module->param[0][param].paramRef = paramRef;
     set_rbg_colour(RGB_BLACK);
     render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-    render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, label);
+    render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, paramLocationList[paramRef].label);
     set_rbg_colour({0.2, 0.2, 0.2});
     module->param[0][param].rectangle = render_dial({coord, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, module->param[0][param].value);
 }
 
 // This might become a common function for any modules with a bypass
-void render_common_bypass(tCoord coord, uint32_t param, tModule * module) {
-    module->param[0][param].type  = paramTypeBypass;
-    module->param[0][param].range = 2;
-
+void render_param_common_bypass(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module) {
+    module->param[0][param].paramRef  = paramRef;
     module->param[0][param].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, module->param[0][param].value != 0);
 }
 
-void render_common_keyboard_track(tCoord coord, uint32_t param, tModule * module) {
-    uint32_t range     = ARRAY_SIZE(filterKbMap);
-    char *   valString = (char *)filterKbMap[module->param[0][param].value];
+void render_param_common_keyboard_track(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module) {
+    char * valString = (char *)filterKbMap[module->param[0][param].value];
 
-    module->param[0][param].type  = paramTypeKeyboardTrack;
-    module->param[0][param].range = range;
+    module->param[0][param].paramRef = paramRef;
     set_rbg_colour(RGB_BLACK);
     render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Kbt");
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle = draw_button(moduleArea, {coord, {largest_text_width(range, (char **)filterKbMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, valString);
+    module->param[0][param].rectangle = draw_button(moduleArea, {coord, {largest_text_width(paramLocationList[paramRef].range, (char **)filterKbMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, valString);
 }
 
-void render_FltClassic_db(tCoord coord, uint32_t param, tModule * module) {
-    uint32_t range     = ARRAY_SIZE(filterDbMap);
-    char *   valString = (char *)filterDbMap[module->param[0][param].value];
-
-    module->param[0][param].type  = paramTypeFltClassicDb;
-    module->param[0][param].range = ARRAY_SIZE(filterDbMap);
-    set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle = draw_button(moduleArea, {coord, {largest_text_width(range, (char **)filterDbMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, valString);
-}
-
-void render_common_freq(tCoord coord, uint32_t param, tModule * module) {
-    double freq     = 0.0;
-    char   buff[16] = {0};
-
-    freq = round(13.75 * pow(2, (double)module->param[0][param].value / 12.0) * 100.0) / 100.0;
-
-    if (freq < 100) {
-        snprintf(buff, sizeof(buff), "%.2fHz", freq);
-    } else if (freq < 1000) {
-        snprintf(buff, sizeof(buff), "%.1fHz", freq);
-    } else if (freq < 10000) {
-        snprintf(buff, sizeof(buff), "%.2fkHz", freq / 1000.0);
-    } else {
-        snprintf(buff, sizeof(buff), "%.1fkHz", freq / 1000.0);
-    }
-    module->param[0][param].type  = paramTypeFreq;
-    module->param[0][param].range = 128;
-    set_rbg_colour(RGB_BLACK);
-    render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-    render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Freq");
-    set_rbg_colour({0.2, 0.2, 0.2});
-    module->param[0][param].rectangle = render_dial({coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}, module->param[0][param].value);
-}
-
-void render_common_pitch(tCoord coord, uint32_t param, tModule * module) {
-    double percent  = 0.0;
-    double maxVal   = 200.0;
-    char   buff[16] = {0};
-
-    if (module->param[0][param].value < 127) {
-        percent = round(((double)module->param[0][param].value * maxVal * 10.0) / 128.0) / 10.0;
-    } else {
-        percent = maxVal;     // Clip
-    }
-    module->param[0][param].type  = paramTypePitch;
-    module->param[0][param].range = 128;
-    snprintf(buff, sizeof(buff), "%.1f%%", percent);
-    set_rbg_colour(RGB_BLACK);
-    render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-    render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Env");
-    set_rbg_colour({0.2, 0.2, 0.2});
-    module->param[0][param].rectangle = render_dial({coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}, module->param[0][param].value);
-}
-
-void render_common_resonance(tCoord coord, uint32_t param, tModule * module) {
-    double res      = 0.0;
-    double maxVal   = 100.0;
-    char   buff[16] = {0};
-
-    if (module->param[0][param].value < 127) {
-        res = round(((double)module->param[0][param].value * maxVal * 10.0) / 128.0) / 10.0;
-    } else {
-        res = maxVal;     // Clip
-    }
-    module->param[0][param].type  = paramTypeResonance;
-    module->param[0][param].range = 128;
-    snprintf(buff, sizeof(buff), "%.1f", res);
-    set_rbg_colour(RGB_BLACK);
-    render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-    render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Res");
-    set_rbg_colour({0.2, 0.2, 0.2});
-    module->param[0][param].rectangle = render_dial({coord, FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}, module->param[0][param].value);
-}
-
-void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
+void render_param_common_gc(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module) {
     char * valString = "GC";
 
-    module->param[0][param].type  = paramTypeGainControl;
-    module->param[0][param].range = 2;
+    module->param[0][param].paramRef = paramRef;
 
     if (module->param[0][param].value != 0) {
         set_rbg_colour({0.3, 0.7, 0.3});         // Green when ON
@@ -190,41 +155,24 @@ void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].rectangle = draw_button(moduleArea, {coord, get_text_width(valString, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}, valString);
 }
 
-void render_FltMulti_db(tCoord coord, uint32_t param, tModule * module) {
-    uint32_t range     = ARRAY_SIZE(fltMultiDbMap);
-    char *   valString = (char *)fltMultiDbMap[module->param[0][param].value];
+void render_param_common_db(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module) {
+    char ** map = NULL;
 
-    module->param[0][param].type  = paramTypeFltMultiDb;
-    module->param[0][param].range = range;
+    module->param[0][param].paramRef = paramRef;
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle = draw_button(moduleArea, {coord, largest_text_width(range, (char **)fltMultiDbMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}, valString);
-}
 
-void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir dir, tConnectorType type, tCoord coord) {
-    module->connector[connectorIndex].coord = coord;  // Register where we're rendering this connector, for cable connecting
-    module->connector[connectorIndex].dir   = dir;    // Ultimately, should be constant in the structures, we shouldn't have to do this here
-    module->connector[connectorIndex].type  = type;
-
-    set_rbg_colour(connectorColourMap[module->connector[connectorIndex].dir][module->connector[connectorIndex].type]);
-    module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, coord, 8.0, 10.0, 0.0, 10.0);  // Should be zoomfactored
-    set_rbg_colour(RGB_BLACK);
-    render_circle_part(moduleArea, coord, 4.0, 10.0, 0.0, 10.0);
-}
-
-void render_param_EnvAdsr_attack(tCoord coord, uint32_t param, tModule * module) {
-    render_param_common_dial(coord, param, module, "Attack", 128);
-}
-
-void render_param_EnvAdsr_delay(tCoord coord, uint32_t param, tModule * module) {
-    render_param_common_dial(coord, param, module, "Delay", 128);
-}
-
-void render_param_EnvAdsr_sustain(tCoord coord, uint32_t param, tModule * module) {
-    render_param_common_dial(coord, param, module, "Sus", 128);
-}
-
-void render_param_EnvAdsr_release(tCoord coord, uint32_t param, tModule * module) {
-    render_param_common_dial(coord, param, module, "Rel", 128);
+    switch (paramLocationList[paramRef].type) {
+        case paramTypeFltMultiDb:
+            map = (char **)fltMultiDbMap;
+            break;
+        case paramTypeFltClassicDb:
+            map = (char **)fltClassicDbMap;
+            break;
+        default:
+            break;
+    }
+    char * valString = map[module->param[0][param].value];
+    module->param[0][param].rectangle = draw_button(moduleArea, {coord, largest_text_width(paramLocationList[paramRef].range, map, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}, valString);
 }
 
 void render_module_common(tRectangle rectangle, tModule * module) {
@@ -242,7 +190,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->gotParamIndexCache = true;
             }
             paramLocationList[i].renderFunction(
-                (tCoord){rectangle.coord.x + paramLocationList[i].offsetX, rectangle.coord.y + paramLocationList[i].offsetY},
+                (tCoord){rectangle.coord.x + paramLocationList[i].offsetX, rectangle.coord.y + paramLocationList[i].offsetY}, i,
                 param++, module);
 
             if (param == gModuleProperties[module->type].numParameters) {
@@ -330,6 +278,17 @@ void render_modules(void) {
     render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
     render_rectangle(mainArea, {{area.coord.x + area.size.w, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
     render_rectangle(mainArea, {{0.0, area.coord.y + area.size.h}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
+}
+
+void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir dir, tConnectorType type, tCoord coord) {
+    module->connector[connectorIndex].coord = coord;  // Register where we're rendering this connector, for cable connecting
+    module->connector[connectorIndex].dir   = dir;    // Ultimately, should be constant in the structures, we shouldn't have to do this here
+    module->connector[connectorIndex].type  = type;
+
+    set_rbg_colour(connectorColourMap[module->connector[connectorIndex].dir][module->connector[connectorIndex].type]);
+    module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, coord, 8.0, 10.0, 0.0, 10.0);  // Should be zoomfactored
+    set_rbg_colour(RGB_BLACK);
+    render_circle_part(moduleArea, coord, 4.0, 10.0, 0.0, 10.0);
 }
 
 void render_cable_from_to(tConnector from, tConnector to) {

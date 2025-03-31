@@ -70,7 +70,7 @@ extern tModuleProperties gModuleProperties[];
 void register_glfw_wake_cb(void ( *func_ptr )(void)) {
     wake_glfw_func_ptr = func_ptr;
 }
-    
+
 void register_full_patch_change_notify_cb(void ( *func_ptr )(void)) {
     full_patch_change_notify_func_ptr = func_ptr;
 }
@@ -82,7 +82,7 @@ static void call_wake_glfw(void) {
     }
     wake_glfw_func_ptr();
 }
-    
+
 static void call_full_patch_change_notify(void) {
     if (full_patch_change_notify_func_ptr == NULL) {
         printf("Full patch change callback function not registered\n");
@@ -996,13 +996,13 @@ static void state_handler(void) {
     if (gotPatchChangeIndication == true) {
         database_clear_cables();
         database_clear_modules();
-        
+
         // Notify main graphics module that we've removed the module database
         call_full_patch_change_notify();
         call_wake_glfw();
 
-        state                    = eStateGetPatchVersion;
-        
+        state = eStateGetPatchVersion;
+
         gotPatchChangeIndication = false;
     }
 }

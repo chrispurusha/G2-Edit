@@ -146,14 +146,14 @@ void render_top_bar(void) {
 
     if (gLocation == locationVa) {
         set_rbg_colour({0.3, 0.7, 0.3});
-    } else  {
+    } else {
         set_rbg_colour(RGB_BACKGROUND_GREY);
     }
     gSelectVa.rectangle = draw_button(mainArea, {{400.0, 10.0}, {get_text_width(gSelectVa.text, MAIN_MENU_TEXT_HEIGHT), MAIN_MENU_TEXT_HEIGHT}}, gSelectVa.text);
 
     if (gLocation == locationFx) {
         set_rbg_colour({0.3, 0.7, 0.3});
-    } else  {
+    } else {
         set_rbg_colour(RGB_BACKGROUND_GREY);
     }
     gSelectFx.rectangle = draw_button(mainArea, {{425.0, 10.0}, {get_text_width(gSelectFx.text, MAIN_MENU_TEXT_HEIGHT), MAIN_MENU_TEXT_HEIGHT}}, gSelectFx.text);
