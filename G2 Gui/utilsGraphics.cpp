@@ -402,26 +402,30 @@ tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord 
     glBegin(GL_TRIANGLE_STRIP);
 
     for (int i = 0; i <= segments; i++) {
-        double t = (double)i / (double)segments;
+        double tx = 0.0;
+        double ty = 0.0;
+        double t  = (double)i / (double)segments;
 
-        // Compute Bezier point
         double x = (1 - t) * (1 - t) * start.x + 2 * (1 - t) * t * control.x + t * t * end.x;
         double y = (1 - t) * (1 - t) * start.y + 2 * (1 - t) * t * control.y + t * t * end.y;
 
-        // Compute tangent vector (approximate derivative)
-        double tx = 2 * (1 - t) * (control.x - start.x) + 2 * t * (end.x - control.x);
-        double ty = 2 * (1 - t) * (control.y - start.y) + 2 * t * (end.y - control.y);
-
-        // Normalize tangent to get perpendicular direction
+        if (start.x == end.x) {
+            tx = 0.0;
+            ty = 1.0;
+        } else if (start.y == end.y) {
+            tx = 1.0;
+            ty = 0.0;
+        } else {
+            tx = 2 * (1 - t) * (control.x - start.x) + 2 * t * (end.x - control.x);
+            ty = 2 * (1 - t) * (control.y - start.y) + 2 * t * (end.y - control.y);
+        }
         double length = sqrt(tx * tx + ty * ty);
         tx /= length;
         ty /= length;
 
-        // Get perpendicular vector for thickness
         double nx = -ty * thickness * 0.5;
         double ny = tx * thickness * 0.5;
 
-        // Add two vertices for the strip
         glVertex2f(x + nx, y + ny);
         glVertex2f(x - nx, y - ny);
     }

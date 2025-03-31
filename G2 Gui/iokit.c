@@ -161,11 +161,12 @@ void close_usb(void) {
 
 void reset_pipe(uint32_t index) {
     (*intf)->AbortPipe(intf, index);
+
     if ((*intf)->GetPipeStatus(intf, index) == kIOUSBPipeStalled) {
         (*intf)->ClearPipeStall(intf, index);
     }
 }
-    
+
 int32_t write_usb(uint8_t * buff, uint32_t length) {
     uint32_t writeLength = 0;
 
@@ -228,7 +229,7 @@ int32_t read_usb_interrupt(uint8_t * buff, uint32_t buffLength) {
     CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, kCFRunLoopDefaultMode);
 
     reset_pipe(1);
-    
+
     result = (*intf)->ReadPipeAsync(intf, 1, (void *)buff, buffLength, read_usb_complete, NULL);
     pthread_mutex_unlock(&usbMutex);
 

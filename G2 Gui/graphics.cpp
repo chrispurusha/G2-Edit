@@ -43,8 +43,14 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleGraphics.h"
 
-GLFWwindow *           gWindow = NULL;
-bool                   gReDraw = false;
+void va_button(void);
+void fx_button(void);
+
+GLFWwindow *           gWindow   = NULL;
+bool                   gReDraw   = false;
+uint32_t               gLocation = locationVa;
+tButton                gSelectVa = {NULL_RECTANGLE, "VA", va_button}; // TODO: put these in an array of structures
+tButton                gSelectFx = {NULL_RECTANGLE, "FX", fx_button};
 
 static FT_Library      gLibrary = {0};
 static FT_Face         gFace    = {0};
@@ -58,10 +64,19 @@ extern tModuleDragging gModuleDrag;
 
 void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
     glViewport(0, 0, width, height);
+    gReDraw = true;
 }
 
 void error_callback(int error, const char * description) {
     fprintf(stderr, "Error [%d]: %s\n", error, description);
+}
+
+void va_button(void) {
+    gLocation = locationVa;
+}
+
+void fx_button(void) {
+    gLocation = locationFx;
 }
 
 void render_context_menu(void) {
@@ -128,6 +143,20 @@ void render_scrollbars(GLFWwindow * window) {
 void render_top_bar(void) {
     set_rbg_colour({0.5, 0.5, 0.5});
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {get_render_width() - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
+
+    if (gLocation == locationVa) {
+        set_rbg_colour({0.3, 0.7, 0.3});
+    } else  {
+        set_rbg_colour(RGB_BACKGROUND_GREY);
+    }
+    gSelectVa.rectangle = draw_toggle_button(mainArea, {{400.0, 10.0}, {get_text_width(gSelectVa.text, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectVa.text);
+
+    if (gLocation == locationFx) {
+        set_rbg_colour({0.3, 0.7, 0.3});
+    } else  {
+        set_rbg_colour(RGB_BACKGROUND_GREY);
+    }
+    gSelectFx.rectangle = draw_toggle_button(mainArea, {{420.0, 10.0}, {get_text_width(gSelectFx.text, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectFx.text);
 }
 
 void wake_glfw(void) {
@@ -206,10 +235,10 @@ void do_graphics_loop(void) {
         if (gReDraw == true) {
             glClearColor(0.8, 0.8, 0.8, 1.0);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            
+
             render_modules();
             render_cables();
-            
+
             if (gCableDrag.active == true) {
                 tModule module = {0};
                 read_module(gCableDrag.fromModuleKey, &module);
@@ -219,7 +248,7 @@ void do_graphics_loop(void) {
             render_top_bar();
             render_scrollbars(gWindow);
             render_context_menu();
-            
+
             // Swap buffers and look for events
             glfwSwapBuffers(gWindow);
             gReDraw = false;

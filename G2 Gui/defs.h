@@ -69,7 +69,7 @@
 #define RGBA_BLACK_ON_TRANSPARENT         {0.0, 0.0, 0.0, 1.0}
 
 // Todo - rationalise this lot
-#define TOP_BAR_HEIGHT                    (50.0)
+#define TOP_BAR_HEIGHT                    (80.0)
 #define SCROLLBAR_WIDTH                   (15.0)
 #define SCROLLBAR_LENGTH                  (100.0)
 #define SCROLLBAR_MARGIN                  SCROLLBAR_WIDTH
@@ -104,6 +104,7 @@
 #define MAX_COLUMNS                       (127)
 #define MAX_ROWS_MODULE                   (12)    // Operator type is 12 rows - largest we have
 
+#define NULL_RECTANGLE                    {{0.0, 0.0}, {0.0, 0.0}}
 #define ARRAY_SIZE(arr)    (sizeof(arr) / sizeof(arr[0]))
 
 #endif // #define __DEFS_H__

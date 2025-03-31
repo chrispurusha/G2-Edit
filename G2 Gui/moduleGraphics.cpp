@@ -38,6 +38,8 @@ extern "C" {
 #include "moduleResources.h"
 #include "moduleGraphics.h"
 
+extern uint32_t gLocation;
+
 tRectangle render_dial(tRectangle rectangle, uint32_t value) {  // Drop down into utilsGraphics?
     double angle  = 0.0;
     double radius = 0.0;
@@ -236,7 +238,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     for (uint32_t i = module->paramIndexCache; i < ARRAY_SIZE(paramLocationList); i++) {
         if (paramLocationList[i].moduleType == module->type) {
             if (module->gotParamIndexCache == false) {
-                module->paramIndexCache = i;
+                module->paramIndexCache    = i;
                 module->gotParamIndexCache = true;
             }
             paramLocationList[i].renderFunction(
@@ -252,7 +254,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     for (uint32_t i = module->connectorIndexCache; i < ARRAY_SIZE(connectorLocationList); i++) {
         if (connectorLocationList[i].moduleType == module->type) {
             if (module->gotConnectorIndexCache == false) {
-                module->connectorIndexCache = i;
+                module->connectorIndexCache    = i;
                 module->gotConnectorIndexCache = true;
             }
             connectorLocationList[i].renderFunction(module, connector++,
@@ -317,7 +319,7 @@ void render_modules(void) {
     do {
         validModule = walk_next_module(&module);
 
-        if (validModule && module.key.location == 1 && module.type != moduleTypeUnknown0) {
+        if (validModule && module.key.location == gLocation && module.type != moduleTypeUnknown0) {
             render_module(&module);
         }
     } while (validModule);
@@ -374,7 +376,7 @@ void render_cables(void) {
     do {
         validCable = walk_next_cable(&cable);
 
-        if (validCable && cable.key.location == 1) {
+        if (validCable && cable.key.location == gLocation) {
             render_cable(&cable);
         }
     } while (validCable);

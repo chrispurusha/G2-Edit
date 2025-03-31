@@ -301,6 +301,11 @@ typedef enum {
     paramTypeCommonDial,
 } tParamType;
 
+typedef enum {
+    locationFx = 0,
+    locationVa = 1
+} tLocation;
+
 typedef struct _struct_param {
     tParamType type;
     tRectangle rectangle;
@@ -477,5 +482,11 @@ typedef struct {
     double         offsetX;
     double         offsetY;
 } tConnectorLocation;
+
+typedef struct {
+    tRectangle rectangle;
+    char *     text;
+    void (*function)(void);
+} tButton;
 
 #endif // __TYPES_H__

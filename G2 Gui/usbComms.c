@@ -845,7 +845,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;                                                          //+slot
             buff[pos++] = slotVersion[slot];
             buff[pos++] = SUB_COMMAND_WRITE_CABLE;
-            buff[pos++] = 0x10 | 0x08 | 0x00;                                                                         // unknown, location so 0x00 = fx and 0x08 = va, then 3 bits for colour
+            buff[pos++] = 0x10 | (messageContent->cableData.location << 3) | 0x00;                                    // unknown, location so 0x00 = fx and 0x08 = va, then 3 bits for colour
             buff[pos++] = messageContent->cableData.moduleFromIndex;
             buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex; // top 2 bits = from type, 01 = output
             buff[pos++] = messageContent->cableData.moduleToIndex;
@@ -898,7 +898,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;                                                          //+slot
             buff[pos++] = slotVersion[slot];
             buff[pos++] = SUB_COMMAND_DELETE_CABLE;
-            buff[pos++] = 0x2 | 0x01;                                                                                 // 1 = synth sectio / VA
+            buff[pos++] = 0x2 | messageContent->cableData.location;                                                   // 1 = synth sectio / VA
             buff[pos++] = messageContent->cableData.moduleFromIndex;
             buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex; // top 2 bits = from type, 01 = output
             buff[pos++] = messageContent->cableData.moduleToIndex;

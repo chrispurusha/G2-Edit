@@ -48,9 +48,12 @@ tDialDragging            gDialDragging = {0};
 tModuleDragging          gModuleDrag   = {0};
 
 extern GLFWwindow *      gWindow;
+extern uint32_t          gLocation;
 extern bool              gReDraw;
 extern tMessageQueue     gCommandQueue;
 extern tModuleProperties gModuleProperties[];
+extern tButton           gSelectVa;
+extern tButton           gSelectFx;
 
 bool param_type_is_dial(tParamType type) {
     switch (type) {
@@ -227,55 +230,57 @@ void menu_action_delete_cable(int index) {
     int     inIndex    = -1;
     bool    deleteWalk = false;
 
-    read_module(gContextMenu.moduleKey, &module);
+    if (gContextMenu.moduleKey.location == gLocation) {
+        read_module(gContextMenu.moduleKey, &module);
 
-    reset_walk_cable();
+        reset_walk_cable();
 
-    while (walk_next_cable(&walk)) {
-        deleteWalk = false;
+        while (walk_next_cable(&walk)) {
+            deleteWalk = false;
 
-        if (walk.key.location == gContextMenu.moduleKey.location) {
-            switch (module.connector[gContextMenu.connectorIndex].dir) {
-                case connectorDirOut:
-                    outIndex = find_io_count_from_index(&module, connectorDirOut, gContextMenu.connectorIndex);
-                    break;
-                case connectorDirIn:
-                    inIndex = find_io_count_from_index(&module, connectorDirIn, gContextMenu.connectorIndex);
-                    break;
-            }
+            if (walk.key.location == gContextMenu.moduleKey.location) {
+                switch (module.connector[gContextMenu.connectorIndex].dir) {
+                    case connectorDirOut:
+                        outIndex = find_io_count_from_index(&module, connectorDirOut, gContextMenu.connectorIndex);
+                        break;
+                    case connectorDirIn:
+                        inIndex = find_io_count_from_index(&module, connectorDirIn, gContextMenu.connectorIndex);
+                        break;
+                }
 
-            if (walk.key.moduleFromIndex == gContextMenu.moduleKey.index) {
-                if (walk.key.linkType == cableLinkTypeFromInput) {
-                    if (walk.key.connectorFromIoCount == inIndex) {
-                        deleteWalk = true;
+                if (walk.key.moduleFromIndex == gContextMenu.moduleKey.index) {
+                    if (walk.key.linkType == cableLinkTypeFromInput) {
+                        if (walk.key.connectorFromIoCount == inIndex) {
+                            deleteWalk = true;
+                        }
+                    } else if (walk.key.linkType == cableLinkTypeFromOutput) {
+                        if (walk.key.connectorFromIoCount == outIndex) {
+                            deleteWalk = true;
+                        }
                     }
-                } else if (walk.key.linkType == cableLinkTypeFromOutput) {
-                    if (walk.key.connectorFromIoCount == outIndex) {
+                }
+
+                if (walk.key.moduleToIndex == gContextMenu.moduleKey.index) {
+                    if (walk.key.connectorToIoCount == inIndex) {
                         deleteWalk = true;
                     }
                 }
-            }
 
-            if (walk.key.moduleToIndex == gContextMenu.moduleKey.index) {
-                if (walk.key.connectorToIoCount == inIndex) {
-                    deleteWalk = true;
+                if (deleteWalk == true) {
+                    tMessageContent messageContent = {0};
+
+                    messageContent.cmd                            = eMsgCmdDeleteCable;
+                    messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
+                    messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
+                    messageContent.cableData.moduleToIndex        = walk.key.moduleToIndex;
+                    messageContent.cableData.connectorToIoIndex   = walk.key.connectorToIoCount;
+                    messageContent.cableData.linkType             = walk.key.linkType;
+
+                    msg_send(&gCommandQueue, &messageContent);
+
+                    delete_cable(walk.key);
+                    // Todo: assess uprate for modules we were connected to. Maybe even run through all of them!?
                 }
-            }
-
-            if (deleteWalk == true) {
-                tMessageContent messageContent = {0};
-
-                messageContent.cmd                            = eMsgCmdDeleteCable;
-                messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
-                messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
-                messageContent.cableData.moduleToIndex        = walk.key.moduleToIndex;
-                messageContent.cableData.connectorToIoIndex   = walk.key.connectorToIoCount;
-                messageContent.cableData.linkType             = walk.key.linkType;
-
-                msg_send(&gCommandQueue, &messageContent);
-
-                delete_cable(walk.key);
-                // Todo: assess uprate for modules we were connected to. Maybe even run through all of them!?
             }
         }
     }
@@ -286,45 +291,47 @@ void menu_action_delete_module(int index) {
     tCable  walk       = {0};
     bool    deleteWalk = false;
 
-    read_module(gContextMenu.moduleKey, &module);
+    if (gContextMenu.moduleKey.location == gLocation) {
+        read_module(gContextMenu.moduleKey, &module);
 
-    reset_walk_cable();
+        reset_walk_cable();
 
-    while (walk_next_cable(&walk)) {
-        deleteWalk = false;
+        while (walk_next_cable(&walk)) {
+            deleteWalk = false;
 
-        if (walk.key.location == gContextMenu.moduleKey.location) {
-            if (walk.key.moduleFromIndex == gContextMenu.moduleKey.index) {
-                deleteWalk = true;
-            } else if (walk.key.moduleToIndex == gContextMenu.moduleKey.index) {
-                deleteWalk = true;
-            }
+            if (walk.key.location == gContextMenu.moduleKey.location) {
+                if (walk.key.moduleFromIndex == gContextMenu.moduleKey.index) {
+                    deleteWalk = true;
+                } else if (walk.key.moduleToIndex == gContextMenu.moduleKey.index) {
+                    deleteWalk = true;
+                }
 
-            if (deleteWalk == true) {
-                tMessageContent messageContent = {0};
+                if (deleteWalk == true) {
+                    tMessageContent messageContent = {0};
 
-                messageContent.cmd                            = eMsgCmdDeleteCable;
-                messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
-                messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
-                messageContent.cableData.moduleToIndex        = walk.key.moduleToIndex;
-                messageContent.cableData.connectorToIoIndex   = walk.key.connectorToIoCount;
-                messageContent.cableData.linkType             = walk.key.linkType;
+                    messageContent.cmd                            = eMsgCmdDeleteCable;
+                    messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
+                    messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
+                    messageContent.cableData.moduleToIndex        = walk.key.moduleToIndex;
+                    messageContent.cableData.connectorToIoIndex   = walk.key.connectorToIoCount;
+                    messageContent.cableData.linkType             = walk.key.linkType;
 
-                msg_send(&gCommandQueue, &messageContent);
+                    msg_send(&gCommandQueue, &messageContent);
 
-                delete_cable(walk.key);
-                // Todo: assess uprate for modules we were connected to. Maybe even run through all of them!?
+                    delete_cable(walk.key);
+                    // Todo: assess uprate for modules we were connected to. Maybe even run through all of them!?
+                }
             }
         }
+        tMessageContent messageContent = {0};
+
+        messageContent.cmd                  = eMsgCmdDeleteModule;
+        messageContent.moduleData.moduleKey = module.key;
+
+        msg_send(&gCommandQueue, &messageContent);
+
+        delete_module(gContextMenu.moduleKey, doFreeYes);
     }
-    tMessageContent messageContent = {0};
-
-    messageContent.cmd                  = eMsgCmdDeleteModule;
-    messageContent.moduleData.moduleKey = module.key;
-
-    msg_send(&gCommandQueue, &messageContent);
-
-    delete_module(gContextMenu.moduleKey, doFreeYes);
 }
 
 uint32_t find_unique_module_id(uint32_t location) {
@@ -390,7 +397,7 @@ void menu_action_create(int index) {
         tMessageContent messageContent = {0};
         int32_t         uniqueIndex    = 0;
 
-        module.key.location = 1;
+        module.key.location = gLocation;
         uniqueIndex         = find_unique_module_id(module.key.location);
 
         if (uniqueIndex > 0) {
@@ -483,70 +490,72 @@ bool handle_module_click(tCoord coord, int button) {
     tModule module = {0};
 
     while (walk_next_module(&module)) {
-        // Deal with click on param
-        for (int i = 0; i < gModuleProperties[module.type].numParameters; i++) {
-            tParam * param = &module.param[0][i];
+        if (module.key.location == gLocation) {
+            // Deal with click on param
+            for (int i = 0; i < gModuleProperties[module.type].numParameters; i++) {
+                tParam * param = &module.param[0][i];
 
-            if (within_rectangle(coord, param->rectangle)) {
-                if (button == GLFW_MOUSE_BUTTON_LEFT) {
-                    if (param_type_is_dial(param->type) == true) {
-                        gDialDragging.moduleKey.index    = module.key.index;
-                        gDialDragging.moduleKey.location = module.key.location;
-                        gDialDragging.variation          = 0;
-                        gDialDragging.param              = i;
-                        gDialDragging.active             = true;
+                if (within_rectangle(coord, param->rectangle)) {
+                    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+                        if (param_type_is_dial(param->type) == true) {
+                            gDialDragging.moduleKey.index    = module.key.index;
+                            gDialDragging.moduleKey.location = module.key.location;
+                            gDialDragging.variation          = 0;
+                            gDialDragging.param              = i;
+                            gDialDragging.active             = true;
+                            return true;
+                        } else if (param_type_is_toggle(param->type) == true) {
+                            param->value = (param->value + 1) % param->range;
+                            write_module(module.key, &module);
+
+                            tMessageContent messageContent = {0};
+                            messageContent.cmd                 = eMsgCmdSetValue;
+                            messageContent.paramData.moduleKey = module.key;
+                            messageContent.paramData.param     = i;
+                            messageContent.paramData.variation = 0;
+                            messageContent.paramData.value     = param->value;
+
+                            msg_send(&gCommandQueue, &messageContent);
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            // Deal with click on connector
+            for (int i = 0; i < gModuleProperties[module.type].numConnectors; i++) {
+                if (within_rectangle(coord, module.connector[i].rectangle)) {
+                    gCableDrag.fromModuleKey = module.key;
+
+                    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+                        gCableDrag.fromConnectorIndex = i;   // Index into array of connectors
+
+                        convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, coord);
+
+                        gCableDrag.active = true;
                         return true;
-                    } else if (param_type_is_toggle(param->type) == true) {
-                        param->value = (param->value + 1) % param->range;
-                        write_module(module.key, &module);
-
-                        tMessageContent messageContent = {0};
-                        messageContent.cmd                 = eMsgCmdSetValue;
-                        messageContent.paramData.moduleKey = module.key;
-                        messageContent.paramData.param     = i;
-                        messageContent.paramData.variation = 0;
-                        messageContent.paramData.value     = param->value;
-
-                        msg_send(&gCommandQueue, &messageContent);
+                    } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+                        open_connector_context_menu(coord, module.key, i);
                         return true;
                     }
                 }
             }
-        }
 
-        // Deal with click on connector
-        for (int i = 0; i < gModuleProperties[module.type].numConnectors; i++) {
-            if (within_rectangle(coord, module.connector[i].rectangle)) {
-                gCableDrag.fromModuleKey = module.key;
-
+            // Deal with click on module
+            if (within_rectangle(coord, module.rectangle)) {
                 if (button == GLFW_MOUSE_BUTTON_LEFT) {
-                    gCableDrag.fromConnectorIndex = i;   // Index into array of connectors
-
-                    convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, coord);
-
-                    gCableDrag.active = true;
+                    // Take the module off the linked list and put on the end, which makes it render last and so render on the top
+                    tModule tmpModule = {0};
+                    read_module(module.key, &tmpModule);
+                    delete_module(module.key, doFreeNo);
+                    write_module(tmpModule.key, &tmpModule);
+                    gModuleDrag.moduleKey = tmpModule.key;
+                    gModuleDrag.active    = true;
                     return true;
                 } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-                    open_connector_context_menu(coord, module.key, i);
+                    open_module_context_menu(coord, module.key);
                     return true;
                 }
-            }
-        }
-
-        // Deal with click on module
-        if (within_rectangle(coord, module.rectangle)) {
-            if (button == GLFW_MOUSE_BUTTON_LEFT) {
-                // Take the module off the linked list and put on the end, which makes it render last and so render on the top
-                tModule tmpModule = {0};
-                read_module(module.key, &tmpModule);
-                delete_module(module.key, doFreeNo);
-                write_module(tmpModule.key, &tmpModule);
-                gModuleDrag.moduleKey = tmpModule.key;
-                gModuleDrag.active    = true;
-                return true;
-            } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-                open_module_context_menu(coord, module.key);
-                return true;
             }
         }
     }
@@ -663,7 +672,11 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     gContextMenu.active = false;  // Close if clicked outside - Todo: think if this is the right thing to do here
                 }
             } else {
-                if (!handle_scrollbar_click(coord)) {
+                if (within_rectangle(coord, gSelectVa.rectangle)) {
+                    gSelectVa.function();
+                } else if (within_rectangle(coord, gSelectFx.rectangle)) {
+                    gSelectFx.function();
+                } else if (!handle_scrollbar_click(coord)) {
                     handle_module_click(coord, button);
                 }
             }
@@ -686,38 +699,40 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             reset_walk_module();
 
             while (walk_next_module(&toModule) && !quitLoop) {
-                for (int i = 0; i < gModuleProperties[toModule.type].numConnectors; i++) {
-                    if (!within_rectangle(coord, toModule.connector[i].rectangle)) {
-                        continue;
-                    }
-                    read_module(gCableDrag.fromModuleKey, &fromModule);
-                    set_up_cable_key(&cableKey, &fromModule, &toModule, i);
+                if (toModule.key.location == gLocation) {
+                    for (int i = 0; i < gModuleProperties[toModule.type].numConnectors; i++) {
+                        if (!within_rectangle(coord, toModule.connector[i].rectangle)) {
+                            continue;
+                        }
+                        read_module(gCableDrag.fromModuleKey, &fromModule);
+                        set_up_cable_key(&cableKey, &fromModule, &toModule, i);
 
-                    swap_cable_to_from_if_needed(&cableKey, &fromModule, &toModule, i);
+                        swap_cable_to_from_if_needed(&cableKey, &fromModule, &toModule, i);
 
-                    // Prevent self-connections and invalid connections
-                    if (  (cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i)
-                       || (  fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
-                          && toModule.connector[i].dir == connectorDirOut)) {
+                        // Prevent self-connections and invalid connections
+                        if (  (cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i)
+                           || (  fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
+                              && toModule.connector[i].dir == connectorDirOut)) {
+                            quitLoop = true;
+                            break;
+                        }
+                        cable.colour = 0; // Todo: choose colour from menu
+                        write_cable(cableKey, &cable);
+
+                        tMessageContent messageContent = {0};
+
+                        messageContent.cmd                            = eMsgCmdWriteCable;
+                        messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
+                        messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
+                        messageContent.cableData.moduleToIndex        = cableKey.moduleToIndex;
+                        messageContent.cableData.connectorToIoIndex   = cableKey.connectorToIoCount;
+                        messageContent.cableData.linkType             = cableKey.linkType;
+                        messageContent.cableData.colour               = cable.colour;
+                        msg_send(&gCommandQueue, &messageContent);
+
                         quitLoop = true;
                         break;
                     }
-                    cable.colour = 0; // Todo: choose colour from menu
-                    write_cable(cableKey, &cable);
-
-                    tMessageContent messageContent = {0};
-
-                    messageContent.cmd                            = eMsgCmdWriteCable;
-                    messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
-                    messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
-                    messageContent.cableData.moduleToIndex        = cableKey.moduleToIndex;
-                    messageContent.cableData.connectorToIoIndex   = cableKey.connectorToIoCount;
-                    messageContent.cableData.linkType             = cableKey.linkType;
-                    messageContent.cableData.colour               = cable.colour;
-                    msg_send(&gCommandQueue, &messageContent);
-
-                    quitLoop = true;
-                    break;
                 }
             }
         }
@@ -784,7 +799,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     } else {
         noAction = true;
     }
-    
+
     // Limit re-draw/render if nothing's happened
     if (noAction == false) {
         gReDraw = true;
