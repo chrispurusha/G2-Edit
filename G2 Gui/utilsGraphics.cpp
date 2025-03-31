@@ -462,14 +462,27 @@ tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active) {
     return {rectangle};
 }
 
-tRectangle draw_toggle_button(tArea area, tRectangle rectangle, char * text) {
+tRectangle draw_button(tArea area, tRectangle rectangle, char * text) {
+    tRectangle line = {0};
+    double borderLineWidth = 1;
+    
     if (area == moduleArea) {
         rectangle = scale_scroll_adjust_rectangle(rectangle);
     }
     render_rectangle(mainArea, rectangle);
+    
     set_rbg_colour(RGB_BLACK);
-
-    render_text(mainArea, rectangle, text);  // No zoom. Already zoomed
+    line = {{rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth}, {rectangle.size.w, borderLineWidth}};
+    render_rectangle(mainArea, line); //Bottom
+    line = {{rectangle.coord.x, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
+    render_rectangle(mainArea, line); //Left
+    line = {{rectangle.coord.x, rectangle.coord.y}, {rectangle.size.w, borderLineWidth}};
+    render_rectangle(mainArea, line); // Top
+    line = {{rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
+    render_rectangle(mainArea, line); // Right
+    
+    set_rbg_colour(RGB_BLACK);
+    render_text(mainArea, {{rectangle.coord.x+borderLineWidth,rectangle.coord.y+borderLineWidth}, {rectangle.size.w-(borderLineWidth*2),rectangle.size.h-(borderLineWidth*2)}} , text);  // No zoom. Already zoomed
 
     return {rectangle};
 }

@@ -99,7 +99,7 @@ void render_common_keyboard_track(tCoord coord, uint32_t param, tModule * module
     set_rbg_colour(RGB_BLACK);
     render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Kbt");
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, {largest_text_width(range, (char **)filterKbMap, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, valString);
+    module->param[0][param].rectangle = draw_button(moduleArea, {coord, {largest_text_width(range, (char **)filterKbMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, valString);
 }
 
 void render_FltClassic_db(tCoord coord, uint32_t param, tModule * module) {
@@ -109,7 +109,7 @@ void render_FltClassic_db(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type  = paramTypeFltClassicDb;
     module->param[0][param].range = ARRAY_SIZE(filterDbMap);
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, {largest_text_width(range, (char **)filterDbMap, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, valString);
+    module->param[0][param].rectangle = draw_button(moduleArea, {coord, {largest_text_width(range, (char **)filterDbMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, valString);
 }
 
 void render_common_freq(tCoord coord, uint32_t param, tModule * module) {
@@ -187,7 +187,7 @@ void render_common_gc(tCoord coord, uint32_t param, tModule * module) {
     } else {
         set_rbg_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
     }
-    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, get_text_width(valString, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}, valString);
+    module->param[0][param].rectangle = draw_button(moduleArea, {coord, get_text_width(valString, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}, valString);
 }
 
 void render_FltMulti_db(tCoord coord, uint32_t param, tModule * module) {
@@ -197,7 +197,7 @@ void render_FltMulti_db(tCoord coord, uint32_t param, tModule * module) {
     module->param[0][param].type  = paramTypeFltMultiDb;
     module->param[0][param].range = range;
     set_rbg_colour(RGB_BACKGROUND_GREY);
-    module->param[0][param].rectangle = draw_toggle_button(moduleArea, {coord, largest_text_width(range, (char **)fltMultiDbMap, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}, valString);
+    module->param[0][param].rectangle = draw_button(moduleArea, {coord, largest_text_width(range, (char **)fltMultiDbMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}, valString);
 }
 
 void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir dir, tConnectorType type, tCoord coord) {

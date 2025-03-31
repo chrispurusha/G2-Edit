@@ -24,5 +24,6 @@
 
 void start_usb_thread(void);
 void register_glfw_wake_cb(void ( *func_ptr )(void));
+void register_full_patch_change_notify_cb(void ( *func_ptr )(void));
 
 #endif // __USB_COMMS_H__

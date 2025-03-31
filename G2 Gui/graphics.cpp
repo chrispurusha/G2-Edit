@@ -149,19 +149,23 @@ void render_top_bar(void) {
     } else  {
         set_rbg_colour(RGB_BACKGROUND_GREY);
     }
-    gSelectVa.rectangle = draw_toggle_button(mainArea, {{400.0, 10.0}, {get_text_width(gSelectVa.text, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectVa.text);
+    gSelectVa.rectangle = draw_button(mainArea, {{400.0, 10.0}, {get_text_width(gSelectVa.text, MAIN_MENU_TEXT_HEIGHT), MAIN_MENU_TEXT_HEIGHT}}, gSelectVa.text);
 
     if (gLocation == locationFx) {
         set_rbg_colour({0.3, 0.7, 0.3});
     } else  {
         set_rbg_colour(RGB_BACKGROUND_GREY);
     }
-    gSelectFx.rectangle = draw_toggle_button(mainArea, {{420.0, 10.0}, {get_text_width(gSelectFx.text, STANDARD_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectFx.text);
+    gSelectFx.rectangle = draw_button(mainArea, {{425.0, 10.0}, {get_text_width(gSelectFx.text, MAIN_MENU_TEXT_HEIGHT), MAIN_MENU_TEXT_HEIGHT}}, gSelectFx.text);
 }
 
 void wake_glfw(void) {
     gReDraw = true;
     glfwPostEmptyEvent();
+}
+
+void notify_full_patch_change(void) {
+    gLocation = locationVa;
 }
 
 void setup_render_context(void) {
@@ -185,6 +189,7 @@ void init_graphics(void) {
         exit(EXIT_FAILURE);
     }
     register_glfw_wake_cb(wake_glfw);   //TODO - possible also register for callback on new module load, then reset scrollbars etc.
+    register_full_patch_change_notify_cb(notify_full_patch_change);
 
     glfwGetMonitorWorkarea(glfwGetPrimaryMonitor(), &monitor.coord.x, &monitor.coord.y, &monitor.size.w, &monitor.size.h);
     screenWidth  = monitor.coord.x + monitor.size.w;

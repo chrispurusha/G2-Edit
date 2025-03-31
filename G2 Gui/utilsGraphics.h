@@ -38,7 +38,7 @@ tRectangle render_circle_part(tArea area, tCoord coord, double radius, int segme
 tRectangle render_circle_part_angle(tArea area, tCoord coord, double radius, double startAngle, double endAngle, int numSteps);
 tRectangle render_radial_line(tArea area, tCoord coord, double radius, double angleDegrees, double thickness);
 tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active);
-tRectangle draw_toggle_button(tArea area, tRectangle rectangle, char * text);
+tRectangle draw_button(tArea area, tRectangle rectangle, char * text);
 tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord end, double thickness, int segments);
 tRectangle render_text(tArea area, tRectangle rectangle, char * text);
 bool preload_glyph_textures(const char * fontPath, double fontSize);
