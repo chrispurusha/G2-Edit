@@ -469,7 +469,6 @@ typedef struct {
 typedef struct {
     tModuleType moduleType;
     tParamType  type;
-    void (*renderFunction)(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module);
     double      offsetX;
     double      offsetY;
     char *      label;

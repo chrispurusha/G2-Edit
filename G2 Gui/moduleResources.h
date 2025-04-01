@@ -22,6 +22,7 @@
 
 #include "sysIncludes.h"
 
+const char * emptyMap[]        = {""};
 const char * fltClassicDbMap[] = {"12db", "18db", "24db"};
 const char * fltMultiDbMap[]   = {"6db", "12db"};
 const char * filterKbMap[]     = {"Off", "25%", "50%", "75%", "100%"};
@@ -283,31 +284,25 @@ tModuleProperties gModuleProperties[] = {
     {"Unknown",      0,  0, 0},
     {"RndPattern",   3,  0, 0}, };
 
-void render_param_common_resonance(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module);
-void render_param_common_bypass(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module);
-void render_param_common_gc(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module);
-void render_param_common_db(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module);
-void render_param_common_keyboard_track(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module);
-void render_param_common_dial(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module);
+void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module);
 
 tParamLocation paramLocationList[] = {
-    {moduleTypeFltClassic, paramTypeFreq,          render_param_common_dial,           120.0, 80.0, "Freq",   128},
-    {moduleTypeFltClassic, paramTypePitch,         render_param_common_dial,            30.0, 80.0, "Env",    128},
-    {moduleTypeFltClassic, paramTypeKeyboardTrack, render_param_common_keyboard_track,  75.0, 80.0, "",         5},
-    {moduleTypeFltClassic, paramTypeResonance,     render_param_common_dial,           175.0, 80.0, "Res",    128},
-    {moduleTypeFltClassic, paramTypeFltClassicDb,  render_param_common_db,             210.0, 80.0, "",         3},
-    {moduleTypeFltClassic, paramTypeBypass,        render_param_common_bypass,         245.0, 50.0, "",         2},
-    {moduleTypeFltMulti,   paramTypeFreq,          render_param_common_dial,           140.0, 80.0, "Freq",   128},
-    {moduleTypeFltMulti,   paramTypePitch,         render_param_common_dial,            30.0, 80.0, "Env",    128},
-    {moduleTypeFltMulti,   paramTypePitch,         render_param_common_keyboard_track,  75.0, 80.0, "Kbt",      5},
-    {moduleTypeFltMulti,   paramTypePitch,         render_param_common_gc,             110.0, 80.0, "",       128},
-    {moduleTypeFltMulti,   paramTypeResonance,     render_param_common_dial,           200.0, 80.0, "Res",    128},
-    {moduleTypeFltMulti,   paramTypeFltMultiDb,    render_param_common_db,             210.0, 25.0, "",         2},
-    {moduleTypeFltMulti,   paramTypeBypass,        render_param_common_bypass,         230.0, 80.0, "",         2},
-    {moduleTypeEnvADSR,    paramTypeCommonDial,    render_param_common_dial,            40.0, 80.0, "Attack", 128},
-    {moduleTypeEnvADSR,    paramTypeCommonDial,    render_param_common_dial,            80.0, 80.0, "Delay",  128},
-    {moduleTypeEnvADSR,    paramTypeCommonDial,    render_param_common_dial,           120.0, 80.0, "Sus",    128},
-    {moduleTypeEnvADSR,    paramTypeCommonDial,    render_param_common_dial,           160.0, 80.0, "Rel",    128}, };
+    {moduleTypeFltClassic, paramTypeFreq,          120.0, 80.0, "Freq",   128},
+    {moduleTypeFltClassic, paramTypePitch,          30.0, 80.0, "Env",    128},
+    {moduleTypeFltClassic, paramTypeKeyboardTrack,  75.0, 80.0, "Kbt",      5},
+    {moduleTypeFltClassic, paramTypeResonance,     175.0, 80.0, "Res",    128},
+    {moduleTypeFltClassic, paramTypeFltClassicDb,  210.0, 80.0, "",         3},
+    {moduleTypeFltClassic, paramTypeBypass,        245.0, 50.0, "",         2},
+    {moduleTypeFltMulti,   paramTypeFreq,          140.0, 80.0, "Freq",   128},
+    {moduleTypeFltMulti,   paramTypePitch,          30.0, 80.0, "Env",    128},
+    {moduleTypeFltMulti,   paramTypeKeyboardTrack,  75.0, 80.0, "Kbt",      5},
+    {moduleTypeFltMulti,   paramTypeResonance,     200.0, 80.0, "Res",    128},
+    {moduleTypeFltMulti,   paramTypeFltMultiDb,    210.0, 25.0, "",         2},
+    {moduleTypeFltMulti,   paramTypeBypass,        230.0, 80.0, "",         2},
+    {moduleTypeEnvADSR,    paramTypeCommonDial,     40.0, 80.0, "Attack", 128},
+    {moduleTypeEnvADSR,    paramTypeCommonDial,     80.0, 80.0, "Delay",  128},
+    {moduleTypeEnvADSR,    paramTypeCommonDial,    120.0, 80.0, "Sus",    128},
+    {moduleTypeEnvADSR,    paramTypeCommonDial,    160.0, 80.0, "Rel",    128}, };
 
 void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir dir, tConnectorType type, tCoord coord);
 
