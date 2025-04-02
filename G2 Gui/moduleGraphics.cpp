@@ -300,7 +300,7 @@ void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir d
     if (module->connector[connectorIndex].dir == connectorDirIn) {
         module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, coord, 8.0, 10.0, 0.0, 10.0);
     } else {
-        module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, {{coord.x-8.0, coord.y-8.0}, {16.0, 16.0}});
+        module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, {{coord.x - 8.0, coord.y - 8.0}, {16.0, 16.0}});
     }
     set_rbg_colour(RGB_BLACK);
     render_circle_part(moduleArea, coord, 4.0, 10.0, 0.0, 10.0);

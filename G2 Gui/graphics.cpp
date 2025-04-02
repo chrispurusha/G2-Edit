@@ -47,7 +47,7 @@ void va_button(void);
 void fx_button(void);
 
 GLFWwindow *           gWindow   = NULL;
-bool                   gReDraw   = false;
+bool                   gReDraw   = true;
 uint32_t               gLocation = locationVa;
 tButton                gSelectVa = {NULL_RECTANGLE, "VA", va_button}; // TODO: put these in an array of structures
 tButton                gSelectFx = {NULL_RECTANGLE, "FX", fx_button};

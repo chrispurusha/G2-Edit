@@ -41,6 +41,7 @@
 #define SUB_COMMAND_DELETE_MODULE         (0x32)
 #define SUB_COMMAND_MOVE_MODULE           (0x34)
 #define SUB_COMMAND_SET_PARAM             (0x40)
+#define SUB_COMMAND_SET_MODULE_UPRATE     (0x2a)
 #define SUB_COMMAND_WRITE_CABLE           (0x50)
 #define SUB_COMMAND_DELETE_CABLE          (0x51)
 #define SUB_COMMAND_WRITE_CABLE_COLOUR    (0x54)

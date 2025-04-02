@@ -117,6 +117,107 @@ void adjust_scroll_for_drag(void) {
     }
 }
 
+void update_module_up_rates(void) {
+    tModule   module         = {0};
+    int       safetyCounter  = 0;
+    const int MAX_ITERATIONS = 100; // Prevent infinite loops
+
+    // First step - any disconnected modules (on input) shouldn't be up-rate, so mark them as not uprated
+    reset_walk_module();
+
+    while (walk_next_module(&module)) {
+        bool   moduleHasInputCables = false;
+        tCable cableCheck           = {0};
+
+        reset_walk_cable();
+
+        while (walk_next_cable(&cableCheck)) {
+            // Check if this cable connects TO our module (input)
+            if (  cableCheck.key.location == module.key.location
+               && cableCheck.key.moduleToIndex == module.key.index) {
+                moduleHasInputCables = true;
+                break;
+            }
+        }
+
+        if (moduleHasInputCables == false) {
+            if (module.upRate == 1) {
+                module.upRate = 0;
+
+                write_module(module.key, &module);
+
+                tMessageContent messageContent = {0};
+                messageContent.cmd                  = eMsgCmdSetModuleUpRate;
+                messageContent.moduleData.moduleKey = module.key;
+                messageContent.moduleData.upRate    = module.upRate;
+                msg_send(&gCommandQueue, &messageContent);
+            }
+        }
+    }
+    
+    // Second step - run through cables and see if to module uprate needs modifying
+
+    bool changesMade = false;
+
+    do {
+        changesMade = false;
+        tCable  cable      = {0};
+        tModule fromModule = {0};
+        tModule toModule   = {0};
+
+        reset_walk_cable();
+
+        while (walk_next_cable(&cable)) {
+            uint32_t      newUpRate     = 0;
+            tModuleKey    fromModuleKey = {cable.key.location, cable.key.moduleFromIndex};
+            tModuleKey    toModuleKey   = {cable.key.location, cable.key.moduleToIndex};
+            tConnectorDir fromDir       = connectorDirOut;
+            int fromConnIndex = -1;
+            int toConnIndex = -1;
+
+            if (!read_module(fromModuleKey, &fromModule) || !read_module(toModuleKey, &toModule)) {
+                continue;
+            }
+
+            if (cable.key.linkType == cableLinkTypeFromInput) {
+                fromDir = connectorDirIn;
+            }
+            fromConnIndex = find_index_from_io_count(&fromModule, fromDir, cable.key.connectorFromIoCount);
+            toConnIndex   = find_index_from_io_count(&toModule, connectorDirIn, cable.key.connectorToIoCount);
+
+            if (fromConnIndex == -1 || toConnIndex == -1) {
+                continue;
+            }
+
+            if (fromModule.upRate) {
+                newUpRate = 1;
+            } else if ((fromModule.connector[fromConnIndex].type == connectorTypeAudio) && (toModule.connector[toConnIndex].type == connectorTypeControl)) {
+                newUpRate = 1;
+            }
+
+            if (newUpRate != toModule.upRate) {
+                toModule.upRate = newUpRate;
+
+                write_module(toModuleKey, &toModule);
+
+                tMessageContent messageContent = {0};
+                messageContent.cmd                  = eMsgCmdSetModuleUpRate;
+                messageContent.moduleData.moduleKey = toModuleKey;
+                messageContent.moduleData.upRate    = toModule.upRate;
+                msg_send(&gCommandQueue, &messageContent);
+
+                changesMade = true;
+            }
+        }
+        safetyCounter++;
+
+        if (safetyCounter >= MAX_ITERATIONS) {
+            printf("Warning: Potential infinite loop in update_module_up_rates()\n");
+            break;
+        }
+    } while (changesMade);
+}
+
 void send_module_move_msg(tModule * module) {
     tMessageContent messageContent = {0};
 
@@ -271,6 +372,7 @@ void menu_action_delete_cable(int index) {
                     tMessageContent messageContent = {0};
 
                     messageContent.cmd                            = eMsgCmdDeleteCable;
+                    messageContent.cableData.location             = gLocation;
                     messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
                     messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
                     messageContent.cableData.moduleToIndex        = walk.key.moduleToIndex;
@@ -280,10 +382,10 @@ void menu_action_delete_cable(int index) {
                     msg_send(&gCommandQueue, &messageContent);
 
                     delete_cable(walk.key);
-                    // Todo: assess uprate for modules we were connected to. Maybe even run through all of them!?
                 }
             }
         }
+        update_module_up_rates();
     }
 }
 
@@ -311,6 +413,7 @@ void menu_action_delete_module(int index) {
                     tMessageContent messageContent = {0};
 
                     messageContent.cmd                            = eMsgCmdDeleteCable;
+                    messageContent.cableData.location             = gLocation;
                     messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
                     messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
                     messageContent.cableData.moduleToIndex        = walk.key.moduleToIndex;
@@ -332,6 +435,8 @@ void menu_action_delete_module(int index) {
         msg_send(&gCommandQueue, &messageContent);
 
         delete_module(gContextMenu.moduleKey, doFreeYes);
+
+        update_module_up_rates();
     }
 }
 
@@ -432,6 +537,10 @@ void menu_action_create(int index) {
 }
 
 void open_module_area_context_menu(tCoord coord) {
+    static tMenuItem envMenuItems[] = {
+        {"Create Env ADSR", menu_action_create, moduleTypeEnvADSR, NULL},
+        {NULL,              NULL,                               0, NULL}          // End of menu
+    };
     static tMenuItem filterMenuItems[] = {
         {"Create LP Filter",      menu_action_create,                    0, NULL},
         {"Create Nord Filter",    menu_action_create, moduleTypeFltNord,    NULL},
@@ -439,10 +548,16 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Multi Filter",   menu_action_create, moduleTypeFltMulti,   NULL},
         {NULL,                    NULL,                                  0, NULL} // End of menu
     };
+    static tMenuItem mixerMenuItems[] = {
+        {"Create Mixer 4-1 C", menu_action_create, moduleTypeMix4to1C, NULL},
+        {NULL,                 NULL,                                0, NULL}      // End of menu
+    };
     static tMenuItem moduleMenuItems[] = {
         {"Create In/Out", menu_action_create, 0, NULL           },
         {"Create Osc",    menu_action_create, 0, NULL           },
+        {"Create Env",    menu_action_create, 0, envMenuItems   },
         {"Create Filter", menu_action_create, 0, filterMenuItems},
+        {"Create Mixer",  menu_action_create, 0, mixerMenuItems },
         {NULL,            NULL,               0, NULL           }   // End of menu
     };
     static tMenuItem menuItems[] = {
@@ -717,12 +832,13 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                             quitLoop = true;
                             break;
                         }
-                        cable.colour = 0; // Todo: choose colour from menu
+                        cable.colour = 0; // Todo: choose colour from menu or calculate
                         write_cable(cableKey, &cable);
 
                         tMessageContent messageContent = {0};
 
                         messageContent.cmd                            = eMsgCmdWriteCable;
+                        messageContent.cableData.location             = gLocation;
                         messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
                         messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
                         messageContent.cableData.moduleToIndex        = cableKey.moduleToIndex;
@@ -736,6 +852,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     }
                 }
             }
+            update_module_up_rates();
         }
         stop_dragging();
     }

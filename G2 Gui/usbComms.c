@@ -906,6 +906,16 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleMoveData.moduleKey.index;
             break;
 
+        case eMsgCmdSetModuleUpRate:
+            buff[pos++] = 0x01;
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot; //+slot
+            buff[pos++] = slotVersion[slot];                 // needs to be slot ultimately
+            buff[pos++] = SUB_COMMAND_SET_MODULE_UPRATE;
+            buff[pos++] = messageContent->moduleMoveData.moduleKey.location;
+            buff[pos++] = messageContent->moduleMoveData.moduleKey.index;
+            buff[pos++] = messageContent->moduleMoveData.upRate;
+            break;
+
         case eMsgCmdDeleteCable:
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;                                                          //+slot

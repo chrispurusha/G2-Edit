@@ -39,6 +39,7 @@ typedef enum {
     eMsgCmdWriteModule,
     eMsgCmdDeleteModule,
     eMsgCmdMoveModule,
+    eMsgCmdSetModuleUpRate,
     eMsgCmdWriteCable,
     eMsgCmdDeleteCable
 } eMsgCmd;
