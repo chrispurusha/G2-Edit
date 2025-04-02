@@ -336,8 +336,6 @@ static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
     uint32_t items = read_bit_stream(buff, subOffset, 8);
     printf("Items %u\n", items);
 
-    //reset_walk_module();
-
     for (i = 0; i < items; i++) {
         key.index = read_bit_stream(buff, subOffset, 8);
         printf(" Module Name Index %u\n", key.index);
@@ -975,6 +973,7 @@ static void state_handler(void) {
             if (send_command(state) == EXIT_SUCCESS) {
                 if (int_rec() == EXIT_SUCCESS) {
                     if (state == eStateStart) {
+                        call_full_patch_change_notify();
                         call_wake_glfw();
                     }
                     state += 1;

@@ -153,7 +153,10 @@ void update_module_up_rates(void) {
                 msg_send(&gCommandQueue, &messageContent);
             }
         }
+        finish_walk_cable();
     }
+    finish_walk_module();
+    
     // Second step - run through cables and see if to module uprate needs modifying
 
     bool changesMade = false;
@@ -208,6 +211,8 @@ void update_module_up_rates(void) {
                 changesMade = true;
             }
         }
+        finish_walk_cable();
+        
         safetyCounter++;
 
         if (safetyCounter >= MAX_ITERATIONS) {
@@ -254,6 +259,7 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
             }
         }
     }
+    finish_walk_module();
 
     if (moduleRePosition == false) {
         send_module_move_msg(&module);
@@ -273,6 +279,7 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
             }
         }
     }
+    finish_walk_module();
 
     // Drop subsequent modules by the same amount used in walk section 2
     if (doDrop == true) {
@@ -294,6 +301,7 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
                 }
             }
         }
+        finish_walk_module();
     }
 }
 
@@ -384,6 +392,7 @@ void menu_action_delete_cable(int index) {
                 }
             }
         }
+        finish_walk_cable();
         update_module_up_rates();
     }
 }
@@ -426,6 +435,7 @@ void menu_action_delete_module(int index) {
                 }
             }
         }
+        finish_walk_cable();
         tMessageContent messageContent = {0};
 
         messageContent.cmd                  = eMsgCmdDeleteModule;
@@ -598,16 +608,17 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
 }
 
 bool handle_module_click(tCoord coord, int button) {
+    bool quitLoop = false;
     if (!within_rectangle(coord, module_area())) {
         return false;
     }
     reset_walk_module();
     tModule module = {0};
 
-    while (walk_next_module(&module)) {
+    while (walk_next_module(&module) && (quitLoop == false)) {
         if (module.key.location == gLocation) {
             // Deal with click on param
-            for (int i = 0; i < gModuleProperties[module.type].numParameters; i++) {
+            for (int i = 0; i < (gModuleProperties[module.type].numParameters) && (quitLoop == false); i++) {
                 tParam * param = &module.param[0][i];
 
                 if (within_rectangle(coord, param->rectangle)) {
@@ -618,7 +629,7 @@ bool handle_module_click(tCoord coord, int button) {
                             gDialDragging.variation          = 0;
                             gDialDragging.param              = i;
                             gDialDragging.active             = true;
-                            return true;
+                            quitLoop = true;
                         } else if (param_type_is_toggle(paramLocationList[param->paramRef].type) == true) {
                             param->value = (param->value + 1) % paramLocationList[param->paramRef].range;
                             write_module(module.key, &module);
@@ -631,49 +642,56 @@ bool handle_module_click(tCoord coord, int button) {
                             messageContent.paramData.value     = param->value;
 
                             msg_send(&gCommandQueue, &messageContent);
-                            return true;
+                            quitLoop = true;
                         }
                     }
                 }
             }
 
-            // Deal with click on connector
-            for (int i = 0; i < gModuleProperties[module.type].numConnectors; i++) {
-                if (within_rectangle(coord, module.connector[i].rectangle)) {
-                    gCableDrag.fromModuleKey = module.key;
-
-                    if (button == GLFW_MOUSE_BUTTON_LEFT) {
-                        gCableDrag.fromConnectorIndex = i;   // Index into array of connectors
-
-                        convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, coord);
-
-                        gCableDrag.active = true;
-                        return true;
-                    } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-                        open_connector_context_menu(coord, module.key, i);
-                        return true;
+            if (quitLoop == false) {
+                // Deal with click on connector
+                for (int i = 0; i < (gModuleProperties[module.type].numConnectors) && (quitLoop == false); i++) {
+                    if (within_rectangle(coord, module.connector[i].rectangle)) {
+                        gCableDrag.fromModuleKey = module.key;
+                        
+                        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+                            gCableDrag.fromConnectorIndex = i;   // Index into array of connectors
+                            
+                            convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, coord);
+                            
+                            gCableDrag.active = true;
+                            quitLoop = true;
+                        } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+                            open_connector_context_menu(coord, module.key, i);
+                            finish_walk_module();
+                            quitLoop = true;
+                        }
                     }
                 }
             }
 
             // Deal with click on module
-            if (within_rectangle(coord, module.rectangle)) {
-                if (button == GLFW_MOUSE_BUTTON_LEFT) {
-                    // Take the module off the linked list and put on the end, which makes it render last and so render on the top
-                    tModule tmpModule = {0};
-                    read_module(module.key, &tmpModule);
-                    delete_module(module.key, doFreeNo);
-                    write_module(tmpModule.key, &tmpModule);
-                    gModuleDrag.moduleKey = tmpModule.key;
-                    gModuleDrag.active    = true;
-                    return true;
-                } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-                    open_module_context_menu(coord, module.key);
-                    return true;
+            if (quitLoop == false) {
+                if (within_rectangle(coord, module.rectangle)) {
+                    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+                        // Take the module off the linked list and put on the end, which makes it render last and so render on the top
+                        tModule tmpModule = {0};
+                        read_module(module.key, &tmpModule);
+                        delete_module(module.key, doFreeNo);
+                        write_module(tmpModule.key, &tmpModule);
+                        gModuleDrag.moduleKey = tmpModule.key;
+                        gModuleDrag.active    = true;
+                        quitLoop = true;
+                    } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+                        open_module_context_menu(coord, module.key);
+                        finish_walk_module();
+                        quitLoop = true;
+                    }
                 }
             }
         }
     }
+    finish_walk_module();
     return false;
 }
 
@@ -851,6 +869,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     }
                 }
             }
+            finish_walk_module();
             update_module_up_rates();
         }
         stop_dragging();

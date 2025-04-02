@@ -278,6 +278,7 @@ void render_modules(void) {
             render_module(&module);
         }
     } while (validModule);
+    finish_walk_module();
 
     // Draw background areas
     set_rbg_colour(RGB_BACKGROUND_GREY);
@@ -354,6 +355,7 @@ void render_cables(void) {
             render_cable(&cable);
         }
     } while (validCable);
+    finish_walk_cable();
 }
 
 #ifdef __cplusplus

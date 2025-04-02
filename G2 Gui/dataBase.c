@@ -197,7 +197,12 @@ void delete_module(tModuleKey key, tDoFree doFree) {
 }
 
 void reset_walk_module(void) {
+    mutex_lock();
     walkModule = NULL;
+}
+    
+void finish_walk_module(void) {
+    mutex_unlock();
 }
 
 bool walk_next_module(tModule * module) {
@@ -355,7 +360,12 @@ void delete_cable(tCableKey key) {
 }
 
 void reset_walk_cable(void) {
+    mutex_lock();
     walkCable = NULL;
+}
+ 
+void finish_walk_cable(void) {
+    mutex_unlock();
 }
 
 bool walk_next_cable(tCable * cable) {
