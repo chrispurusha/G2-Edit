@@ -200,7 +200,7 @@ void reset_walk_module(void) {
     mutex_lock();
     walkModule = NULL;
 }
-    
+
 void finish_walk_module(void) {
     mutex_unlock();
 }
@@ -363,7 +363,7 @@ void reset_walk_cable(void) {
     mutex_lock();
     walkCable = NULL;
 }
- 
+
 void finish_walk_cable(void) {
     mutex_unlock();
 }

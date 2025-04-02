@@ -278,6 +278,7 @@ void render_modules(void) {
             render_module(&module);
         }
     } while (validModule);
+
     finish_walk_module();
 
     // Draw background areas
@@ -355,6 +356,7 @@ void render_cables(void) {
             render_cable(&cable);
         }
     } while (validCable);
+
     finish_walk_cable();
 }
 

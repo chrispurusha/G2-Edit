@@ -132,7 +132,6 @@ void update_module_up_rates(void) {
         reset_walk_cable();
 
         while (walk_next_cable(&cableCheck)) {
-            // Check if this cable connects TO our module (input)
             if (  cableCheck.key.location == module.key.location
                && cableCheck.key.moduleToIndex == module.key.index) {
                 moduleHasInputCables = true;
@@ -156,7 +155,7 @@ void update_module_up_rates(void) {
         finish_walk_cable();
     }
     finish_walk_module();
-    
+
     // Second step - run through cables and see if to module uprate needs modifying
 
     bool changesMade = false;
@@ -171,11 +170,15 @@ void update_module_up_rates(void) {
 
         while (walk_next_cable(&cable)) {
             uint32_t      newUpRate     = 0;
-            tModuleKey    fromModuleKey = {cable.key.location, cable.key.moduleFromIndex};
-            tModuleKey    toModuleKey   = {cable.key.location, cable.key.moduleToIndex};
             tConnectorDir fromDir       = connectorDirOut;
             int           fromConnIndex = -1;
             int           toConnIndex   = -1;
+            tModuleKey    fromModuleKey = {cable.key.location, cable.key.moduleFromIndex};
+            tModuleKey    toModuleKey   = {cable.key.location, cable.key.moduleToIndex};
+
+            if (fromModuleKey.location != toModuleKey.location) {
+                continue;
+            }
 
             if (!read_module(fromModuleKey, &fromModule) || !read_module(toModuleKey, &toModule)) {
                 continue;
@@ -212,7 +215,7 @@ void update_module_up_rates(void) {
             }
         }
         finish_walk_cable();
-        
+
         safetyCounter++;
 
         if (safetyCounter >= MAX_ITERATIONS) {
@@ -608,17 +611,18 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
 }
 
 bool handle_module_click(tCoord coord, int button) {
-    bool quitLoop = false;
+    bool retVal = false;
+
     if (!within_rectangle(coord, module_area())) {
         return false;
     }
     reset_walk_module();
     tModule module = {0};
 
-    while (walk_next_module(&module) && (quitLoop == false)) {
+    while (walk_next_module(&module) && (retVal == false)) {
         if (module.key.location == gLocation) {
             // Deal with click on param
-            for (int i = 0; i < (gModuleProperties[module.type].numParameters) && (quitLoop == false); i++) {
+            for (int i = 0; i < (gModuleProperties[module.type].numParameters) && (retVal == false); i++) {
                 tParam * param = &module.param[0][i];
 
                 if (within_rectangle(coord, param->rectangle)) {
@@ -629,7 +633,7 @@ bool handle_module_click(tCoord coord, int button) {
                             gDialDragging.variation          = 0;
                             gDialDragging.param              = i;
                             gDialDragging.active             = true;
-                            quitLoop = true;
+                            retVal                           = true;
                         } else if (param_type_is_toggle(paramLocationList[param->paramRef].type) == true) {
                             param->value = (param->value + 1) % paramLocationList[param->paramRef].range;
                             write_module(module.key, &module);
@@ -642,36 +646,36 @@ bool handle_module_click(tCoord coord, int button) {
                             messageContent.paramData.value     = param->value;
 
                             msg_send(&gCommandQueue, &messageContent);
-                            quitLoop = true;
+                            retVal = true;
                         }
                     }
                 }
             }
 
-            if (quitLoop == false) {
+            if (retVal == false) {
                 // Deal with click on connector
-                for (int i = 0; i < (gModuleProperties[module.type].numConnectors) && (quitLoop == false); i++) {
+                for (int i = 0; i < (gModuleProperties[module.type].numConnectors) && (retVal == false); i++) {
                     if (within_rectangle(coord, module.connector[i].rectangle)) {
                         gCableDrag.fromModuleKey = module.key;
-                        
+
                         if (button == GLFW_MOUSE_BUTTON_LEFT) {
                             gCableDrag.fromConnectorIndex = i;   // Index into array of connectors
-                            
+
                             convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, coord);
-                            
+
                             gCableDrag.active = true;
-                            quitLoop = true;
+                            retVal            = true;
                         } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
                             open_connector_context_menu(coord, module.key, i);
                             finish_walk_module();
-                            quitLoop = true;
+                            retVal = true;
                         }
                     }
                 }
             }
 
             // Deal with click on module
-            if (quitLoop == false) {
+            if (retVal == false) {
                 if (within_rectangle(coord, module.rectangle)) {
                     if (button == GLFW_MOUSE_BUTTON_LEFT) {
                         // Take the module off the linked list and put on the end, which makes it render last and so render on the top
@@ -681,18 +685,18 @@ bool handle_module_click(tCoord coord, int button) {
                         write_module(tmpModule.key, &tmpModule);
                         gModuleDrag.moduleKey = tmpModule.key;
                         gModuleDrag.active    = true;
-                        quitLoop = true;
+                        retVal                = true;
                     } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
                         open_module_context_menu(coord, module.key);
                         finish_walk_module();
-                        quitLoop = true;
+                        retVal = true;
                     }
                 }
             }
         }
     }
     finish_walk_module();
-    return false;
+    return retVal;
 }
 
 bool handle_module_area_click(tCoord coord, int button) {
