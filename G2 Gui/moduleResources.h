@@ -297,6 +297,7 @@ tParamLocation paramLocationList[] = {
     {moduleTypeFltMulti,   paramTypePitch,          30.0, 80.0, "Env",    128},
     {moduleTypeFltMulti,   paramTypeKeyboardTrack,  75.0, 80.0, "Kbt",      5},
     {moduleTypeFltMulti,   paramTypeResonance,     200.0, 80.0, "Res",    128},
+    {moduleTypeFltMulti,   paramTypeGainControl,   180.0, 25.0, "",         2},
     {moduleTypeFltMulti,   paramTypeFltMultiDb,    210.0, 25.0, "",         2},
     {moduleTypeFltMulti,   paramTypeBypass,        230.0, 80.0, "",         2},
     {moduleTypeEnvADSR,    paramTypeCommonDial,     40.0, 80.0, "Attack", 128},
