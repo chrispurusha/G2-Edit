@@ -154,7 +154,6 @@ void update_module_up_rates(void) {
             }
         }
     }
-    
     // Second step - run through cables and see if to module uprate needs modifying
 
     bool changesMade = false;
@@ -172,8 +171,8 @@ void update_module_up_rates(void) {
             tModuleKey    fromModuleKey = {cable.key.location, cable.key.moduleFromIndex};
             tModuleKey    toModuleKey   = {cable.key.location, cable.key.moduleToIndex};
             tConnectorDir fromDir       = connectorDirOut;
-            int fromConnIndex = -1;
-            int toConnIndex = -1;
+            int           fromConnIndex = -1;
+            int           toConnIndex   = -1;
 
             if (!read_module(fromModuleKey, &fromModule) || !read_module(toModuleKey, &toModule)) {
                 continue;
