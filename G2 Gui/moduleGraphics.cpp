@@ -292,8 +292,12 @@ void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir d
     module->connector[connectorIndex].dir   = dir;    // Ultimately, should be constant in the structures, we shouldn't have to do this here
     module->connector[connectorIndex].type  = type;
 
-    set_rbg_colour(connectorColourMap[module->connector[connectorIndex].dir][module->connector[connectorIndex].type]);
-    module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, coord, 8.0, 10.0, 0.0, 10.0);  // Should be zoomfactored
+    set_rbg_colour(connectorColourMap[module->connector[connectorIndex].type]);
+    if (module->connector[connectorIndex].dir == connectorDirIn) {
+        module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, coord, 8.0, 10.0, 0.0, 10.0);
+    } else {
+        module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, {{coord.x-8.0, coord.y-8.0}, {16.0, 16.0}});
+    }
     set_rbg_colour(RGB_BLACK);
     render_circle_part(moduleArea, coord, 4.0, 10.0, 0.0, 10.0);
 }

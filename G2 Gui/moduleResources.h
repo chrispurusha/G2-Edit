@@ -65,10 +65,10 @@ const tRgb   gModuleColourMap[] = {
     {0.8, 0.6, 0.8},       // purple 4
 };
 
-const tRgb   connectorColourMap[2][2] =             // First index = direction, second = type
+const tRgb   connectorColourMap[] =  // TODO - add yellow for gate
 {
-    {{0.5, 0.1, 0.1}, {0.5, 0.1, 0.5}},         // In: { Audio, Control }
-    {{0.7, 0.1, 0.1}, {0.7, 0.1, 0.7}}          // Out: { Audio, Control }
+    {0.7, 0.2, 0.2},
+    {0.2, 0.2, 0.7}
 };
 
 //TODO: see if we can make this const and only reference in one source file
@@ -318,16 +318,16 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   255.0, 100.0},
     {moduleTypeFltMulti,   connectorDirIn,  connectorTypeControl,  15.0,  95.0},
     {moduleTypeFltMulti,   connectorDirIn,  connectorTypeControl,  15.0,  50.0},
-    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeAudio,   255.0,  20.0},
+    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl,   255.0,  20.0},
     {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl,  15.0,  75.0},
     {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl,  15.0,  95.0},
     {moduleTypeEnvADSR,    connectorDirOut, connectorTypeControl, 230.0,  95.0},
-    {moduleTypeEnvADSR,    connectorDirOut, connectorTypeAudio,   255.0,  95.0},
-    {moduleTypeMix4to1C,   connectorDirOut, connectorTypeAudio,   255.0,  95.0},
-    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeAudio,    60.0,  80.0},
-    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeAudio,    80.0,  80.0},
-    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeAudio,   100.0,  80.0},
-    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeAudio,   120.0,  80.0},
+    {moduleTypeEnvADSR,    connectorDirOut, connectorTypeControl,   255.0,  95.0},
+    {moduleTypeMix4to1C,   connectorDirOut, connectorTypeControl,   255.0,  95.0},
+    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl,    60.0,  80.0},
+    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl,    80.0,  80.0},
+    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl,   100.0,  80.0},
+    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl,   120.0,  80.0},
     {moduleTypeOscShpB,    connectorDirOut, connectorTypeAudio,   150.0,  80.0},
     {moduleTypeStChorus,   connectorDirIn,  connectorTypeAudio,   255.0,  20.0},
     {moduleTypeStChorus,   connectorDirOut, connectorTypeAudio,   235.0,  65.0},
