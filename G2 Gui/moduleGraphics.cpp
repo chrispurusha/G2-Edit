@@ -292,6 +292,7 @@ void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir d
     module->connector[connectorIndex].dir   = dir;    // Ultimately, should be constant in the structures, we shouldn't have to do this here
     module->connector[connectorIndex].type  = type;
 
+    // TODO - if module is uprated, all inputs are shown as red / audio, essentially treated as audio
     set_rbg_colour(connectorColourMap[module->connector[connectorIndex].type]);
     if (module->connector[connectorIndex].dir == connectorDirIn) {
         module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, coord, 8.0, 10.0, 0.0, 10.0);
