@@ -307,16 +307,18 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
             j += 3;
             printf("Param name: ");
 
-            for (k = 0; k < paramLength - 1; k++) {
-                uint8_t ch = read_bit_stream(buff, subOffset, 8);
+            if (paramLength > 0) { // Shouldn't ever be zero, so since we've seen that - something strange happening, generate error!?
+                for (k = 0; k < paramLength - 1; k++) {
+                    uint8_t ch = read_bit_stream(buff, subOffset, 8);
 
-                if ((ch >= 0x20) && (ch <= 0x7f)) {
-                    printf("%c", ch);
+                    if ((ch >= 0x20) && (ch <= 0x7f)) {
+                        printf("%c", ch);
+                    }
                 }
-            }
 
-            printf("\n");
-            j += paramLength - 1;
+                printf("\n");
+                j += paramLength - 1;
+            }
         }
     }
 }

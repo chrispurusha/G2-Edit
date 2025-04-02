@@ -114,6 +114,7 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
             render_dial_with_text(coord, paramRef, param, module, buff, paramValue);
             break;
         }
+        case paramTypeCommonDial: // Ultimately might not be a common dial, or could just be a default percent dial!?
         case paramTypeResonance:
         {
             double res    = 0.0;

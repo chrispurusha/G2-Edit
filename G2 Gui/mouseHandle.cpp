@@ -118,41 +118,40 @@ void adjust_scroll_for_drag(void) {
 }
 
 void update_module_up_rates(void) {
-    tModule   module         = {0};
-    int       safetyCounter  = 0;
-    const int MAX_ITERATIONS = 100; // Prevent infinite loops
+    tModule module = {0};
 
     // First step - any disconnected modules (on input) shouldn't be up-rate, so mark them as not uprated
     reset_walk_module();
 
     while (walk_next_module(&module)) {
-        bool   moduleHasInputCables = false;
-        tCable cableCheck           = {0};
+        if (module.key.location == gLocation) {
+            bool   moduleHasInputCables = false;
+            tCable cableCheck           = {0};
 
-        reset_walk_cable();
+            reset_walk_cable();
 
-        while (walk_next_cable(&cableCheck)) {
-            if (  cableCheck.key.location == module.key.location
-               && cableCheck.key.moduleToIndex == module.key.index) {
-                moduleHasInputCables = true;
-                break;
+            while (walk_next_cable(&cableCheck)) {
+                if ((cableCheck.key.location == module.key.location) && (cableCheck.key.moduleFromIndex != cableCheck.key.moduleToIndex) && (cableCheck.key.moduleToIndex == module.key.index)) {
+                    moduleHasInputCables = true;
+                    break;
+                }
             }
-        }
 
-        if (moduleHasInputCables == false) {
-            if (module.upRate == 1) {
-                module.upRate = 0;
+            if (moduleHasInputCables == false) {
+                if (module.upRate == 1) {
+                    module.upRate = 0;
 
-                write_module(module.key, &module);
+                    write_module(module.key, &module);
 
-                tMessageContent messageContent = {0};
-                messageContent.cmd                  = eMsgCmdSetModuleUpRate;
-                messageContent.moduleData.moduleKey = module.key;
-                messageContent.moduleData.upRate    = module.upRate;
-                msg_send(&gCommandQueue, &messageContent);
+                    tMessageContent messageContent = {0};
+                    messageContent.cmd                  = eMsgCmdSetModuleUpRate;
+                    messageContent.moduleData.moduleKey = module.key;
+                    messageContent.moduleData.upRate    = module.upRate;
+                    msg_send(&gCommandQueue, &messageContent);
+                }
             }
+            finish_walk_cable();
         }
-        finish_walk_cable();
     }
     finish_walk_module();
 
@@ -176,52 +175,39 @@ void update_module_up_rates(void) {
             tModuleKey    fromModuleKey = {cable.key.location, cable.key.moduleFromIndex};
             tModuleKey    toModuleKey   = {cable.key.location, cable.key.moduleToIndex};
 
-            if (fromModuleKey.location != toModuleKey.location) {
-                continue;
-            }
+            if ((fromModuleKey.location == gLocation) && (toModuleKey.location == gLocation)) {
+                if (read_module(fromModuleKey, &fromModule) && read_module(toModuleKey, &toModule)) {
+                    if (cable.key.linkType == cableLinkTypeFromInput) {
+                        fromDir = connectorDirIn;
+                    }
+                    fromConnIndex = find_index_from_io_count(&fromModule, fromDir, cable.key.connectorFromIoCount);
+                    toConnIndex   = find_index_from_io_count(&toModule, connectorDirIn, cable.key.connectorToIoCount);
 
-            if (!read_module(fromModuleKey, &fromModule) || !read_module(toModuleKey, &toModule)) {
-                continue;
-            }
+                    if ((fromConnIndex != -1) && (toConnIndex != -1)) {
+                        if (fromModule.upRate) {
+                            newUpRate = 1;
+                        } else if ((fromModule.connector[fromConnIndex].type == connectorTypeAudio) && (toModule.connector[toConnIndex].type == connectorTypeControl)) {
+                            newUpRate = 1;
+                        }
 
-            if (cable.key.linkType == cableLinkTypeFromInput) {
-                fromDir = connectorDirIn;
-            }
-            fromConnIndex = find_index_from_io_count(&fromModule, fromDir, cable.key.connectorFromIoCount);
-            toConnIndex   = find_index_from_io_count(&toModule, connectorDirIn, cable.key.connectorToIoCount);
+                        if (newUpRate != toModule.upRate) {
+                            toModule.upRate = newUpRate;
 
-            if (fromConnIndex == -1 || toConnIndex == -1) {
-                continue;
-            }
+                            write_module(toModuleKey, &toModule);
 
-            if (fromModule.upRate) {
-                newUpRate = 1;
-            } else if ((fromModule.connector[fromConnIndex].type == connectorTypeAudio) && (toModule.connector[toConnIndex].type == connectorTypeControl)) {
-                newUpRate = 1;
-            }
+                            tMessageContent messageContent = {0};
+                            messageContent.cmd                  = eMsgCmdSetModuleUpRate;
+                            messageContent.moduleData.moduleKey = toModuleKey;
+                            messageContent.moduleData.upRate    = toModule.upRate;
+                            msg_send(&gCommandQueue, &messageContent);
 
-            if (newUpRate != toModule.upRate) {
-                toModule.upRate = newUpRate;
-
-                write_module(toModuleKey, &toModule);
-
-                tMessageContent messageContent = {0};
-                messageContent.cmd                  = eMsgCmdSetModuleUpRate;
-                messageContent.moduleData.moduleKey = toModuleKey;
-                messageContent.moduleData.upRate    = toModule.upRate;
-                msg_send(&gCommandQueue, &messageContent);
-
-                changesMade = true;
+                            changesMade = true;
+                        }
+                    }
+                }
             }
         }
         finish_walk_cable();
-
-        safetyCounter++;
-
-        if (safetyCounter >= MAX_ITERATIONS) {
-            printf("Warning: Potential infinite loop in update_module_up_rates()\n");
-            break;
-        }
     } while (changesMade);
 }
 
