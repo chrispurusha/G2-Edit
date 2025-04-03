@@ -178,7 +178,8 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
         module.modeCount = read_bit_stream(buff, subOffset, 4);        // 4
 
         for (j = 0; j < module.modeCount; j++) {
-            module.mode[i] = read_bit_stream(buff, subOffset, 6);
+            module.mode[j] = read_bit_stream(buff, subOffset, 6);
+            printf("Mode index %u = %u\n", j, module.mode[j]);
         }
 
         allocate_module_parameters(&module, gModuleProperties[type].numParameters); // Also done on parameter set-up, so whichever's first
@@ -881,7 +882,9 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.colour;
             buff[pos++] = messageContent->moduleData.upRate;
             buff[pos++] = messageContent->moduleData.isLed;
-            //buff[pos++] = 0;  // Mode info, which will need working out
+            for (int i=0; i<messageContent->moduleData.modeCount; i++) {
+                buff[pos++] = messageContent->moduleData.mode[i];
+            }
             strcpy((char *)&buff[pos], messageContent->moduleData.name);
             pos += strlen(messageContent->moduleData.name) + 1;
             break;

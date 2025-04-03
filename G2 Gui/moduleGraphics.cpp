@@ -248,18 +248,19 @@ void render_module(tModule * module) {
     snprintf(buff, sizeof(buff), "(%s)", gModuleProperties[module->type].name);
 
     render_text(moduleArea, {{moduleRectangle.coord.x + 120.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-    snprintf(buff, sizeof(buff), "%u", module->key.index);
-    render_text(moduleArea, {{moduleRectangle.coord.x + moduleRectangle.size.w - 30.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    
+    //snprintf(buff, sizeof(buff), "%u", module->key.index);
+    //render_text(moduleArea, {{moduleRectangle.coord.x + moduleRectangle.size.w - 30.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
 
-    if (module->upRate) {
-        render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Uprated");
-    }
+    //if (module->upRate) {
+    //    render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Uprated");
+    //}
 
     if (module->isLed) {
         render_text(moduleArea, {{moduleRectangle.coord.x + 60.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Led");
     }
 
-    if (module->modeCount > 0) {
+    if (module->modeCount > 1) {
         snprintf(buff, sizeof(buff), "Modes %u", module->modeCount);
         render_text(moduleArea, {{moduleRectangle.coord.x + 150.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     }

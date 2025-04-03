@@ -553,7 +553,10 @@ void menu_action_create(int index) {
             messageContent.moduleData.upRate    = module.upRate;
             messageContent.moduleData.isLed     = module.isLed;
             messageContent.moduleData.unknown1  = module.unknown1;
-            messageContent.moduleData.modeCount = module.modeCount;
+            messageContent.moduleData.modeCount = gModuleProperties[module.type].modeCount;
+            for (int i=0; i<gModuleProperties[module.type].modeCount; i++) {
+                messageContent.moduleData.mode[i] = module.mode[i];
+            }
             memcpy(messageContent.moduleData.name, module.name, sizeof(messageContent.moduleData.name));
 
             msg_send(&gCommandQueue, &messageContent);
@@ -569,6 +572,10 @@ void menu_action_create(int index) {
 }
 
 void open_module_area_context_menu(tCoord coord) {
+    static tMenuItem oscMenuItems[] = {
+        {"Create Osc Shape B", menu_action_create, moduleTypeOscShpB, NULL},
+        {NULL,                 NULL,                               0, NULL}       // End of menu
+    };
     static tMenuItem envMenuItems[] = {
         {"Create Env ADSR", menu_action_create, moduleTypeEnvADSR, NULL},
         {NULL,              NULL,                               0, NULL}          // End of menu
@@ -586,7 +593,7 @@ void open_module_area_context_menu(tCoord coord) {
     };
     static tMenuItem moduleMenuItems[] = {
         {"Create In/Out", menu_action_create, 0, NULL           },
-        {"Create Osc",    menu_action_create, 0, NULL           },
+        {"Create Osc",    menu_action_create, 0, oscMenuItems   },
         {"Create Env",    menu_action_create, 0, envMenuItems   },
         {"Create Filter", menu_action_create, 0, filterMenuItems},
         {"Create Mixer",  menu_action_create, 0, mixerMenuItems },

@@ -361,7 +361,7 @@ typedef struct _struct_module {
     uint32_t                isLed;
     uint32_t                unknown1;                                 // Guess we should store this, to write back if necessary. Might not be needed
     uint32_t                modeCount;                                // Don't yet know what this is for. Might need modes array adding
-    uint8_t                 mode[16];
+    uint32_t                mode[16];
     char                    name[MODULE_NAME_SIZE + 1];
     uint32_t                allocatedParams;
     tParam *                param[VARIATIONS];
@@ -422,6 +422,7 @@ typedef struct {
     const uint32_t height;
     const uint32_t numParameters;
     const uint32_t numConnectors;
+    const uint32_t modeCount;
 } tModuleProperties;
 
 typedef enum {
