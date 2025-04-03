@@ -357,8 +357,8 @@ typedef struct _struct_module {
     uint32_t                column;
     tRectangle              rectangle;                                // Purely for mouse-click recognition
     uint32_t                colour;
-    uint32_t                upRate;                                   // Probably needs to be permanent in tModuleProperties
-    uint32_t                isLed;                                    // Probably needs to be permanent in tModuleProperties
+    uint32_t                upRate;
+    uint32_t                isLed;
     uint32_t                unknown1;                                 // Guess we should store this, to write back if necessary. Might not be needed
     uint32_t                modeCount;                                // Don't yet know what this is for. Might need modes array adding
     uint8_t                 mode[16];
@@ -420,8 +420,6 @@ typedef struct {
 typedef struct {
     const char *   name;
     const uint32_t height;
-    //uint32_t       isLed;     // Might need to add this!
-    //uint32_t       upRate;    // This is probably calculated
     const uint32_t numParameters;
     const uint32_t numConnectors;
 } tModuleProperties;
@@ -454,34 +452,34 @@ typedef struct {
 } GlyphInfo;
 
 typedef struct {
-    tModuleType moduleType;
-    tParamType  type;
-    tCoord      coord;
+    const tModuleType moduleType;
+    const tParamType  type;
+    const tCoord      coord;
 } tConstParameter;
 
 typedef struct {
-    tModuleType    moduleType;
-    tConnectorDir  dir;
-    tConnectorType type;
-    tCoord         coord;
+    const tModuleType    moduleType;
+    const tConnectorDir  dir;
+    const tConnectorType type;
+    const tCoord         coord;
 } tConstConnector;
 
 typedef struct {
-    tModuleType moduleType;
-    tParamType  type;
-    double      offsetX;
-    double      offsetY;
-    char *      label;
-    uint32_t    range;
-    uint32_t    defaultValue;
+    const tModuleType moduleType;
+    const tParamType  type;
+    const double      offsetX;
+    const double      offsetY;
+    const char *      label;
+    const uint32_t    range;
+    const uint32_t    defaultValue;
 } tParamLocation;
 
 typedef struct {
-    tModuleType    moduleType;
-    tConnectorDir  direction;
-    tConnectorType type;
-    double         offsetX;
-    double         offsetY;
+    const tModuleType    moduleType;
+    const tConnectorDir  direction;
+    const tConnectorType type;
+    const double         offsetX;
+    const double         offsetY;
 } tConnectorLocation;
 
 typedef struct {

@@ -283,6 +283,7 @@ tModuleProperties gModuleProperties[] = {
     {"Unknown",      0,  0, 0},
     {"RndPattern",   3,  0, 0}, };
 
+// Todo - I think we need a moduleResources.c for accessing these structures from anywhere, including getting size / number of items etc.
 void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module);
 
 tParamLocation paramLocationList[] = {
@@ -306,6 +307,7 @@ tParamLocation paramLocationList[] = {
 
 void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir dir, tConnectorType type, tCoord coord);
 
+// Note these need to be in same order of connectors which are referenced by the hardware
 const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFltClassic, connectorDirIn,  connectorTypeAudio,   255.0,  20.0},
     {moduleTypeFltClassic, connectorDirOut, connectorTypeAudio,   255.0,  95.0},

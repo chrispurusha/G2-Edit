@@ -69,7 +69,7 @@ tRectangle render_dial(tRectangle rectangle, uint32_t value) {  // Drop down int
 void render_dial_with_text(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module, char * buff, uint32_t value) {
     set_rbg_colour(RGB_BLACK);
     render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-    render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, paramLocationList[paramRef].label);
+    render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, (char *)paramLocationList[paramRef].label);
     set_rbg_colour({0.2, 0.2, 0.2});
     module->param[0][param].rectangle = render_dial({coord, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, value);
 }
