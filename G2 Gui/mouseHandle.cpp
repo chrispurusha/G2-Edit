@@ -495,6 +495,40 @@ void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord
     targetCoord->y = val;
 }
 
+void init_params_on_new_module(tModule * module) {
+    uint32_t locationListIndex     = 0;
+    uint32_t paramIndex     = 0;
+    uint32_t numParams = gModuleProperties[module->type].numParameters;
+
+    // TODO - ultimately need a method to get size of the array here, to limit the loop. Maybe move all the const definition structures to a new resources .c file and access from there?
+    for (uint32_t locationListIndex = 0; ; locationListIndex++) {
+        if (paramLocationList[locationListIndex].moduleType == module->type) {
+
+            tParam * param = &module->param[0][paramIndex];
+            
+            param->value = paramLocationList[locationListIndex].defaultValue;
+
+            tMessageContent messageContent = {0};
+            messageContent.cmd                 = eMsgCmdSetValue;
+            messageContent.paramData.moduleKey = module->key;
+            messageContent.paramData.param     = paramIndex;
+            messageContent.paramData.variation = 0; // Need to loop through variations
+            messageContent.paramData.value = param->value;
+
+            msg_send(&gCommandQueue, &messageContent);
+            
+            write_module(module->key, module);
+
+            paramIndex++;
+            
+            if (paramIndex >= numParams) {
+                break;
+            }
+        }
+        
+    }
+}
+
 void menu_action_create(int index) {
     if (gContextMenu.items[index].param != 0) {
         tModule         module         = {0};
@@ -511,7 +545,7 @@ void menu_action_create(int index) {
             allocate_module_parameters(&module, gModuleProperties[module.type].numParameters);
             allocate_module_connectors(&module, gModuleProperties[module.type].numConnectors);
             memcpy(module.name, gModuleProperties[module.type].name, sizeof(module.name));
-
+            
             messageContent.cmd                  = eMsgCmdWriteModule;
             messageContent.moduleData.moduleKey = module.key;
             messageContent.moduleData.type      = module.type;
@@ -527,6 +561,8 @@ void menu_action_create(int index) {
             msg_send(&gCommandQueue, &messageContent);
 
             write_module(module.key, &module);
+            
+            init_params_on_new_module(&module);
         }
     } else {
         gContextMenu.items  = gContextMenu.items[index].subMenu;
@@ -920,8 +956,10 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         adjust_scroll_for_drag();
     } else if (gCableDrag.active == true) {
         convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, {x, y});
-
+        
         adjust_scroll_for_drag();
+    } else if (gContextMenu.active == true) {
+        // Dummy
     } else {
         noAction = true;
     }

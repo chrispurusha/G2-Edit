@@ -473,6 +473,7 @@ typedef struct {
     double      offsetY;
     char *      label;
     uint32_t    range;
+    uint32_t    defaultValue;
 } tParamLocation;
 
 typedef struct {
