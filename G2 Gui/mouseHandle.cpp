@@ -119,43 +119,23 @@ void adjust_scroll_for_drag(void) {
 
 void update_module_up_rates(void) {
     tModule module = {0};
+    uint32_t location = gLocation;
 
-    // First step - any disconnected modules (on input) shouldn't be up-rate, so mark them as not uprated
+    
+    // Step 1 - initialise the old and new fields
     reset_walk_module();
 
     while (walk_next_module(&module)) {
-        if (module.key.location == gLocation) {
-            bool   moduleHasInputCables = false;
-            tCable cableCheck           = {0};
-
-            reset_walk_cable();
-
-            while (walk_next_cable(&cableCheck)) {
-                if ((cableCheck.key.location == module.key.location) && (cableCheck.key.moduleFromIndex != cableCheck.key.moduleToIndex) && (cableCheck.key.moduleToIndex == module.key.index)) {
-                    moduleHasInputCables = true;
-                    break;
-                }
-            }
-
-            if (moduleHasInputCables == false) {
-                if (module.upRate == 1) {
-                    module.upRate = 0;
-
-                    write_module(module.key, &module);
-
-                    tMessageContent messageContent = {0};
-                    messageContent.cmd                  = eMsgCmdSetModuleUpRate;
-                    messageContent.moduleData.moduleKey = module.key;
-                    messageContent.moduleData.upRate    = module.upRate;
-                    msg_send(&gCommandQueue, &messageContent);
-                }
-            }
-            finish_walk_cable();
+        if (module.key.location == location) {
+            
+            module.newUpRate = 0;
+            
+            write_module(module.key, &module);
         }
     }
     finish_walk_module();
 
-    // Second step - run through cables and see if to module uprate needs modifying
+    // Step - run through cables and see if to module needs up-rating
 
     bool changesMade = false;
 
@@ -168,40 +148,33 @@ void update_module_up_rates(void) {
         reset_walk_cable();
 
         while (walk_next_cable(&cable)) {
-            uint32_t      newUpRate     = 0;
-            tConnectorDir fromDir       = connectorDirOut;
+            tConnectorDir fromConnector       = connectorDirOut;
             int           fromConnIndex = -1;
             int           toConnIndex   = -1;
             tModuleKey    fromModuleKey = {cable.key.location, cable.key.moduleFromIndex};
             tModuleKey    toModuleKey   = {cable.key.location, cable.key.moduleToIndex};
 
-            if ((fromModuleKey.location == gLocation) && (toModuleKey.location == gLocation)) {
+            if ((fromModuleKey.location == location) && (toModuleKey.location == location)) {
                 if (read_module(fromModuleKey, &fromModule) && read_module(toModuleKey, &toModule)) {
                     if (cable.key.linkType == cableLinkTypeFromInput) {
-                        fromDir = connectorDirIn;
+                        fromConnector = connectorDirIn;
                     }
-                    fromConnIndex = find_index_from_io_count(&fromModule, fromDir, cable.key.connectorFromIoCount);
+                    fromConnIndex = find_index_from_io_count(&fromModule, fromConnector, cable.key.connectorFromIoCount);
                     toConnIndex   = find_index_from_io_count(&toModule, connectorDirIn, cable.key.connectorToIoCount);
 
                     if ((fromConnIndex != -1) && (toConnIndex != -1)) {
-                        if (fromModule.upRate) {
-                            newUpRate = 1;
-                        } else if ((fromModule.connector[fromConnIndex].type == connectorTypeAudio) && (toModule.connector[toConnIndex].type == connectorTypeControl)) {
-                            newUpRate = 1;
-                        }
-
-                        if (newUpRate != toModule.upRate) {
-                            toModule.upRate = newUpRate;
-
-                            write_module(toModuleKey, &toModule);
-
-                            tMessageContent messageContent = {0};
-                            messageContent.cmd                  = eMsgCmdSetModuleUpRate;
-                            messageContent.moduleData.moduleKey = toModuleKey;
-                            messageContent.moduleData.upRate    = toModule.upRate;
-                            msg_send(&gCommandQueue, &messageContent);
-
-                            changesMade = true;
+                        if (toModule.newUpRate == 0) {
+                            if (fromModule.newUpRate == 1) {
+                                //printf("From module is uprated from = %u %u\n", fromModule.key.location, fromModule.key.index);
+                                toModule.newUpRate = 1;
+                                write_module(toModuleKey, &toModule);
+                                changesMade = true;
+                            } else if ((fromModule.connector[fromConnIndex].type == connectorTypeAudio) && (toModule.connector[toConnIndex].type == connectorTypeControl)) {
+                                //printf("From module from is audio and to is control\n");
+                                toModule.newUpRate = 1;
+                                write_module(toModuleKey, &toModule);
+                                changesMade = true;
+                            }
                         }
                     }
                 }
@@ -209,6 +182,31 @@ void update_module_up_rates(void) {
         }
         finish_walk_cable();
     } while (changesMade);
+        
+    // Step 3 - write any changes to database and device
+    reset_walk_module();
+
+    while (walk_next_module(&module)) {
+        if (module.key.location == location) {
+            if (module.newUpRate != module.upRate) {
+                module.upRate = module.newUpRate;
+
+                write_module(module.key, &module);
+
+                tMessageContent messageContent = {0};
+                messageContent.cmd                  = eMsgCmdSetModuleUpRate;
+                messageContent.moduleData.moduleKey = module.key;
+                messageContent.moduleData.upRate    = module.upRate;
+                msg_send(&gCommandQueue, &messageContent);
+                
+                // Clean up, not actually really necessary
+                //module.oldUpRate = 0;
+                module.newUpRate = 0;
+            }
+        }
+    }
+    
+    finish_walk_module();
 }
 
 void send_module_move_msg(tModule * module) {

@@ -358,9 +358,10 @@ typedef struct _struct_module {
     tRectangle              rectangle;                                // Purely for mouse-click recognition
     uint32_t                colour;
     uint32_t                upRate;
+    uint32_t                newUpRate; // Only used for mass uprate re-assessing
     uint32_t                isLed;
-    uint32_t                unknown1;                                 // Guess we should store this, to write back if necessary. Might not be needed
-    uint32_t                modeCount;                                // Don't yet know what this is for. Might need modes array adding
+    uint32_t                unknown1;  // Guess we should store this, to write back if necessary. Might not be needed
+    uint32_t                modeCount; // Don't yet know what this is for. Might need modes array adding
     uint32_t                mode[16];
     char                    name[MODULE_NAME_SIZE + 1];
     uint32_t                allocatedParams;

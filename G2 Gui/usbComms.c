@@ -882,9 +882,11 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.colour;
             buff[pos++] = messageContent->moduleData.upRate;
             buff[pos++] = messageContent->moduleData.isLed;
-            for (int i=0; i<messageContent->moduleData.modeCount; i++) {
+
+            for (int i = 0; i < messageContent->moduleData.modeCount; i++) {
                 buff[pos++] = messageContent->moduleData.mode[i];
             }
+
             strcpy((char *)&buff[pos], messageContent->moduleData.name);
             pos += strlen(messageContent->moduleData.name) + 1;
             break;
