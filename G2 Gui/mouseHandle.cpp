@@ -148,7 +148,7 @@ void update_module_up_rates(void) {
         reset_walk_cable();
 
         while (walk_next_cable(&cable)) {
-            tConnectorDir fromConnector       = connectorDirOut;
+            tConnectorDir fromConnector = connectorDirOut;
             int           fromConnIndex = -1;
             int           toConnIndex   = -1;
             tModuleKey    fromModuleKey = {cable.key.location, cable.key.moduleFromIndex};
@@ -158,6 +158,8 @@ void update_module_up_rates(void) {
                 if (read_module(fromModuleKey, &fromModule) && read_module(toModuleKey, &toModule)) {
                     if (cable.key.linkType == cableLinkTypeFromInput) {
                         fromConnector = connectorDirIn;
+                    } else {
+                        fromConnector = connectorDirOut;
                     }
                     fromConnIndex = find_index_from_io_count(&fromModule, fromConnector, cable.key.connectorFromIoCount);
                     toConnIndex   = find_index_from_io_count(&toModule, connectorDirIn, cable.key.connectorToIoCount);
@@ -198,10 +200,6 @@ void update_module_up_rates(void) {
                 messageContent.moduleData.moduleKey = module.key;
                 messageContent.moduleData.upRate    = module.upRate;
                 msg_send(&gCommandQueue, &messageContent);
-                
-                // Clean up, not actually really necessary
-                //module.oldUpRate = 0;
-                module.newUpRate = 0;
             }
         }
     }
