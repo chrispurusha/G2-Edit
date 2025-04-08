@@ -75,7 +75,7 @@
 #define SCROLLBAR_LENGTH                  (100.0)
 #define SCROLLBAR_MARGIN                  SCROLLBAR_WIDTH
 
-#define MODULE_WIDTH                      (270.0)
+#define MODULE_WIDTH                      (350.0)
 #define MODULE_X_GAP                      (10.0)
 #define MODULE_X_SPAN                     (MODULE_WIDTH + MODULE_X_GAP)
 #define MODULE_TITLE_X_OFFSET             (3.0)
