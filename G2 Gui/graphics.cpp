@@ -254,16 +254,17 @@ void do_graphics_loop(void) {
             render_scrollbars(gWindow);
             render_context_menu();
 
+            gReDraw = false;
+            
             // Swap buffers and look for events
             glfwSwapBuffers(gWindow);
-            gReDraw = false;
         }
 
         if ((gModuleDrag.active == true) || (gCableDrag.active == true)) {
             double x = 0.0;
             double y = 0.0;
             glfwGetCursorPos(gWindow, &x, &y);
-            cursor_pos(gWindow, x, y);  // Artificially do cursor_pos call for drag scrolling
+            cursor_pos(gWindow, x, y);  // Artificially do cursor_pos call for drag scrolling when cursor not moving
             glfwWaitEventsTimeout(0.016);
         } else {
             glfwWaitEvents();
