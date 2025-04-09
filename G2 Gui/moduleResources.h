@@ -25,7 +25,8 @@
 const char * emptyMap[]        = {""};
 const char * fltClassicDbMap[] = {"12db", "18db", "24db"};
 const char * fltMultiDbMap[]   = {"6db", "12db"};
-const char * filterKbMap[]     = {"Off", "25%", "50%", "75%", "100%"};
+const char * offTo100KbMap[]   = {"Off", "25%", "50%", "75%", "100%"};
+const char * offOnKbMap[]      = {"Off", "On"};
 
 const tRgb   cableColourMap[] = {
     {0.7, 0.1, 0.1},       // red
@@ -289,68 +290,68 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue
 tParamLocation paramLocationList[] = {
-    {moduleTypeOscShpB,    paramTypeCommonDial,    120.0, 80.0, "Semi",     128, 64},
-    {moduleTypeOscShpB,    paramTypeCommonDial,    160.0, 80.0, "Cent",     128, 64},
-    {moduleTypeOscShpB,    paramTypeKeyboardTrack,    70, 80.0, "Kbt",        2,  1}, // Should be on/off
-    {moduleTypeOscShpB,    paramTypeCommonDial,       30, 80.0, "Env",      128,  0},
-    {moduleTypeOscShpB,    paramTypeCommonDial,      150, 80.0, "SemiFreq", 128,  0},
-    {moduleTypeOscShpB,    paramTypeCommonDial,      180, 80.0, "FMCtl?",   128,  0},
-    {moduleTypeOscShpB,    paramTypeCommonDial,      210, 35.0, "Shape",    128,  0},
-    {moduleTypeOscShpB,    paramTypeCommonDial,       50, 35.0, "ShpCtrl",  128,  0},
-    {moduleTypeOscShpB,    paramTypeBypass,          210, 70.0, "Bypass",     2,  0},
-    //{moduleTypeOscShpB,    paramTypeCommonDial, 300, 80.0, "FmTrkLin",   128, 0},
-    {moduleTypeFltClassic, paramTypeFreq,          120.0, 80.0, "Freq",     128,  0},
-    {moduleTypeFltClassic, paramTypePitch,          30.0, 80.0, "Env",      128,  0},
-    {moduleTypeFltClassic, paramTypeKeyboardTrack,  75.0, 80.0, "Kbt",        5,  4},
-    {moduleTypeFltClassic, paramTypeResonance,     175.0, 80.0, "Res",      128,  0},
-    {moduleTypeFltClassic, paramTypeFltClassicDb,  210.0, 80.0, "",           3,  0},
-    {moduleTypeFltClassic, paramTypeBypass,        245.0, 50.0, "",           2,  1},
-    {moduleTypeFltMulti,   paramTypeFreq,          140.0, 80.0, "Freq",     128,  0},
-    {moduleTypeFltMulti,   paramTypePitch,          30.0, 80.0, "Env",      128,  0},
-    {moduleTypeFltMulti,   paramTypeKeyboardTrack,  75.0, 80.0, "Kbt",        5,  4},
-    {moduleTypeFltMulti,   paramTypeResonance,     200.0, 80.0, "Res",      128,  0},
-    {moduleTypeFltMulti,   paramTypeGainControl,   180.0, 25.0, "",           2,  0},
-    {moduleTypeFltMulti,   paramTypeFltMultiDb,    210.0, 25.0, "",           2,  0},
-    {moduleTypeFltMulti,   paramTypeBypass,        230.0, 80.0, "",           2,  1},
-    {moduleTypeEnvADSR,    paramTypeCommonDial,     40.0, 80.0, "Attack",   128,  0},
-    {moduleTypeEnvADSR,    paramTypeCommonDial,     80.0, 80.0, "Delay",    128,  0},
-    {moduleTypeEnvADSR,    paramTypeCommonDial,    120.0, 80.0, "Sus",      128,  0},
-    {moduleTypeEnvADSR,    paramTypeCommonDial,    160.0, 80.0, "Rel",      128,  0}, };
+    {moduleTypeOscShpB,    paramTypeCommonDial,            120.0, 50.0, "Semi",     128, 64},
+    {moduleTypeOscShpB,    paramTypeCommonDial,            160.0, 50.0, "Cent",     128, 64},
+    {moduleTypeOscShpB,    paramTypeOffOnKeyboardTrack,       90, 50.0, "Kbt",        2,  1},
+    {moduleTypeOscShpB,    paramTypeCommonDial,               40, 50.0, "Env",      128,  0},
+    {moduleTypeOscShpB,    paramTypeCommonDial,              200, 50.0, "SemiFr", 128,  0},
+    {moduleTypeOscShpB,    paramTypeCommonDial,              240, 50.0, "FMCtl",   128,  0},
+    {moduleTypeOscShpB,    paramTypeCommonDial,              240, 15.0, "Shape",    128,  0},
+    {moduleTypeOscShpB,    paramTypeCommonDial,               50, 15.0, "ShpCtrl",  128,  0},
+    {moduleTypeOscShpB,    paramTypeBypass,                  320, 70.0, "Bypass",     2,  0},
+    //{moduleTypeOscShpB,    paramTypeCommonDial,              300, 80.0, "FmTrkLin", 128,  0},  // toggle
+    {moduleTypeFltClassic, paramTypeFreq,                  135.0, 50.0, "Freq",     128,  0},
+    {moduleTypeFltClassic, paramTypePitch,                  40.0, 50.0, "Env",      128,  0},
+    {moduleTypeFltClassic, paramTypeOffTo100KeyboardTrack,  90.0, 50.0, "Kbt",        5,  4},
+    {moduleTypeFltClassic, paramTypeResonance,             185.0, 50.0, "Res",      128,  0},
+    {moduleTypeFltClassic, paramTypeFltClassicDb,          225.0, 50.0, "",           3,  0},
+    {moduleTypeFltClassic, paramTypeBypass,                320.0, 50.0, "",           2,  1},
+    {moduleTypeFltMulti,   paramTypeFreq,                  140.0, 50.0, "Freq",     128,  0},
+    {moduleTypeFltMulti,   paramTypePitch,                  40.0, 50.0, "Env",      128,  0},
+    {moduleTypeFltMulti,   paramTypeOffTo100KeyboardTrack,  90.0, 50.0, "Kbt",        5,  4},
+    {moduleTypeFltMulti,   paramTypeResonance,             200.0, 50.0, "Res",      128,  0},
+    {moduleTypeFltMulti,   paramTypeGainControl,           180.0, 25.0, "",           2,  0},
+    {moduleTypeFltMulti,   paramTypeFltMultiDb,            210.0, 25.0, "",           2,  0},
+    {moduleTypeFltMulti,   paramTypeBypass,                300.0, 80.0, "",           2,  1},
+    {moduleTypeEnvADSR,    paramTypeCommonDial,             40.0, 50.0, "Attack",   128,  0},
+    {moduleTypeEnvADSR,    paramTypeCommonDial,             80.0, 50.0, "Delay",    128,  0},
+    {moduleTypeEnvADSR,    paramTypeCommonDial,            120.0, 50.0, "Sus",      128,  0},
+    {moduleTypeEnvADSR,    paramTypeCommonDial,            160.0, 50.0, "Rel",      128,  0}, };
 
 void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir dir, tConnectorType type, tCoord coord);
 
 // Note these need to be in same order of connectors which are referenced by the hardware
 const tConnectorLocation connectorLocationList[] = {
-    {moduleTypeFltClassic, connectorDirIn,  connectorTypeAudio,   255.0,  20.0},
-    {moduleTypeFltClassic, connectorDirOut, connectorTypeAudio,   255.0,  95.0},
-    {moduleTypeFltClassic, connectorDirIn,  connectorTypeControl,  15.0,  95.0},
+    {moduleTypeFltClassic, connectorDirIn,  connectorTypeAudio,   320.0,  20.0},
+    {moduleTypeFltClassic, connectorDirOut, connectorTypeAudio,   320.0,  90.0},
+    {moduleTypeFltClassic, connectorDirIn,  connectorTypeControl,  15.0,  90.0},
     {moduleTypeFltClassic, connectorDirIn,  connectorTypeControl,  15.0,  50.0},
-    {moduleTypeFltMulti,   connectorDirIn,  connectorTypeAudio,   255.0,  20.0},
-    {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   255.0,  60.0},
-    {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   255.0,  80.0},
-    {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   255.0, 100.0},
-    {moduleTypeFltMulti,   connectorDirIn,  connectorTypeControl,  15.0,  95.0},
+    {moduleTypeFltMulti,   connectorDirIn,  connectorTypeAudio,   320.0,  20.0},
+    {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   320.0,  50.0},
+    {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   320.0,  70.0},
+    {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   320.0,  90.0},
+    {moduleTypeFltMulti,   connectorDirIn,  connectorTypeControl,  15.0,  90.0},
     {moduleTypeFltMulti,   connectorDirIn,  connectorTypeControl,  15.0,  50.0},
-    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, 255.0,  20.0},
-    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl,  15.0,  75.0},
-    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl,  15.0,  95.0},
-    {moduleTypeEnvADSR,    connectorDirOut, connectorTypeControl, 230.0,  95.0},
-    {moduleTypeEnvADSR,    connectorDirOut, connectorTypeControl, 255.0,  95.0},
-    {moduleTypeMix4to1C,   connectorDirOut, connectorTypeControl, 255.0,  95.0},
-    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl,  60.0,  80.0},
-    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl,  80.0,  80.0},
-    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, 100.0,  80.0},
-    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, 120.0,  80.0},
-    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeControl,  15.0,  80.0},
-    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeControl,  15.0, 100.0},
-    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,    15.0,  60.0},
-    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,   200.0, 100.0},
-    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,   220.0, 100.0},
-    {moduleTypeOscShpB,    connectorDirOut, connectorTypeAudio,   255.0, 100.0},
-    {moduleTypeStChorus,   connectorDirIn,  connectorTypeAudio,   255.0,  20.0},
-    {moduleTypeStChorus,   connectorDirOut, connectorTypeAudio,   235.0,  65.0},
-    {moduleTypeStChorus,   connectorDirOut, connectorTypeAudio,   255.0,  65.0},
-    {moduleTypeCompress,   connectorDirIn,  connectorTypeAudio,   235.0,  20.0},
-    {moduleTypeCompress,   connectorDirIn,  connectorTypeAudio,   255.0,  20.0}, };
+    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, 320.0,  20.0},
+    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl,  15.0,  70.0},
+    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl,  15.0,  90.0},
+    {moduleTypeEnvADSR,    connectorDirOut, connectorTypeControl, 300.0,  90.0},
+    {moduleTypeEnvADSR,    connectorDirOut, connectorTypeControl, 320.0,  90.0},
+    {moduleTypeMix4to1C,   connectorDirOut, connectorTypeControl, 320.0,  90.0},
+    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl,  60.0,  70.0},
+    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl,  80.0,  70.0},
+    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, 100.0,  70.0},
+    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, 120.0,  70.0},
+    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeControl,  15.0,  70.0},
+    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeControl,  15.0,  90.0},
+    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,    15.0,  50.0},
+    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,   200.0,  90.0},
+    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,   300.0,  90.0},
+    {moduleTypeOscShpB,    connectorDirOut, connectorTypeAudio,   320.0,  90.0},
+    {moduleTypeStChorus,   connectorDirIn,  connectorTypeAudio,   320.0,  20.0},
+    {moduleTypeStChorus,   connectorDirOut, connectorTypeAudio,   300.0,  50.0},
+    {moduleTypeStChorus,   connectorDirOut, connectorTypeAudio,   320.0,  50.0},
+    {moduleTypeCompress,   connectorDirIn,  connectorTypeAudio,   300.0,  20.0},
+    {moduleTypeCompress,   connectorDirIn,  connectorTypeAudio,   320.0,  20.0}, };
 
 #endif // __MODULE_RESOURCES_H__

@@ -71,7 +71,8 @@ bool param_type_is_dial(tParamType type) {
 
 bool param_type_is_toggle(tParamType type) {
     switch (type) {
-        case paramTypeKeyboardTrack:
+        case paramTypeOffTo100KeyboardTrack:
+        case paramTypeOffOnKeyboardTrack:
         case paramTypeGainControl:
         case paramTypeBypass:
         case paramTypeFltClassicDb:
@@ -118,18 +119,17 @@ void adjust_scroll_for_drag(void) {
 }
 
 void update_module_up_rates(void) {
-    tModule module = {0};
+    tModule  module   = {0};
     uint32_t location = gLocation;
 
-    
+
     // Step 1 - initialise the old and new fields
     reset_walk_module();
 
     while (walk_next_module(&module)) {
         if (module.key.location == location) {
-            
             module.newUpRate = 0;
-            
+
             write_module(module.key, &module);
         }
     }
@@ -184,7 +184,7 @@ void update_module_up_rates(void) {
         }
         finish_walk_cable();
     } while (changesMade);
-        
+
     // Step 3 - write any changes to database and device
     reset_walk_module();
 
@@ -203,7 +203,6 @@ void update_module_up_rates(void) {
             }
         }
     }
-    
     finish_walk_module();
 }
 
@@ -550,9 +549,11 @@ void menu_action_create(int index) {
             messageContent.moduleData.isLed     = module.isLed;
             messageContent.moduleData.unknown1  = module.unknown1;
             messageContent.moduleData.modeCount = gModuleProperties[module.type].modeCount;
-            for (int i=0; i<gModuleProperties[module.type].modeCount; i++) {
+
+            for (int i = 0; i < gModuleProperties[module.type].modeCount; i++) {
                 messageContent.moduleData.mode[i] = module.mode[i];
             }
+
             memcpy(messageContent.moduleData.name, module.name, sizeof(messageContent.moduleData.name));
 
             msg_send(&gCommandQueue, &messageContent);
@@ -956,7 +957,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         write_module(gModuleDrag.moduleKey, &module);
         adjust_scroll_for_drag();
     } else if (gCableDrag.active == true) {
-        convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, {x, y});
+        convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, {x - CONNECTOR_RADIUS, y - CONNECTOR_RADIUS});
 
         adjust_scroll_for_drag();
     } else if (gContextMenu.active == true) {

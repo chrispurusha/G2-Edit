@@ -68,10 +68,10 @@ tRectangle render_dial(tRectangle rectangle, uint32_t value) {  // Drop down int
 
 void render_dial_with_text(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module, char * buff, uint32_t value) {
     set_rbg_colour(RGB_BLACK);
-    render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-    render_text(moduleArea, {{coord.x, coord.y - 30.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, (char *)paramLocationList[paramRef].label);
+    render_text(moduleArea, {{coord.x, coord.y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, (char *)paramLocationList[paramRef].label);
+    render_text(moduleArea, {{coord.x, coord.y + STANDARD_TEXT_HEIGHT}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     set_rbg_colour({0.2, 0.2, 0.2});
-    module->param[0][param].rectangle = render_dial({coord, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, value);
+    module->param[0][param].rectangle = render_dial({{coord.x, coord.y + (STANDARD_TEXT_HEIGHT * 2.0)}, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, value);
 }
 
 // This might be too generic and won't be able to use, or we add extra params!
@@ -150,14 +150,24 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
             module->param[0][param].rectangle = draw_button(moduleArea, {coord, largest_text_width(paramLocationList[paramRef].range, map, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}, valString);
             break;
         }
-        case paramTypeKeyboardTrack:
+        case paramTypeOffTo100KeyboardTrack:
         {
-            char * valString = (char *)filterKbMap[paramValue];
+            char * valString = (char *)offTo100KbMap[paramValue];
 
             set_rbg_colour(RGB_BLACK);
-            render_text(moduleArea, {{coord.x, coord.y - 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Kbt");
+            render_text(moduleArea, {{coord.x, coord.y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Kbt");
             set_rbg_colour(RGB_BACKGROUND_GREY);
-            module->param[0][param].rectangle = draw_button(moduleArea, {coord, {largest_text_width(paramLocationList[paramRef].range, (char **)filterKbMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, valString);
+            module->param[0][param].rectangle = draw_button(moduleArea, {{coord.x, coord.y + STANDARD_TEXT_HEIGHT}, {largest_text_width(paramLocationList[paramRef].range, (char **)offTo100KbMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, valString);
+            break;
+        }
+        case paramTypeOffOnKeyboardTrack:
+        {
+            char * valString = (char *)offOnKbMap[paramValue];
+
+            set_rbg_colour(RGB_BLACK);
+            render_text(moduleArea, {{coord.x, coord.y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Kbt");
+            set_rbg_colour(RGB_BACKGROUND_GREY);
+            module->param[0][param].rectangle = draw_button(moduleArea, {{coord.x, coord.y + STANDARD_TEXT_HEIGHT}, {largest_text_width(paramLocationList[paramRef].range, (char **)offOnKbMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, valString);
             break;
         }
         case paramTypeGainControl:
@@ -302,16 +312,21 @@ void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir d
     set_rbg_colour(connectorColourMap[type]);  // Note, was using "module->connector[connectorIndex].type", check that this type param is OK
 
     if (module->connector[connectorIndex].dir == connectorDirIn) {
-        module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, coord, 8.0, 10.0, 0.0, 10.0);
+        module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, {coord.x + CONNECTOR_RADIUS, coord.y + CONNECTOR_RADIUS}, CONNECTOR_RADIUS, 10.0, 0.0, 10.0);
     } else {
-        module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, {{coord.x - 8.0, coord.y - 8.0}, {16.0, 16.0}});
+        module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, {{coord.x, coord.y}, {CONNECTOR_DIAMETER, CONNECTOR_DIAMETER}});
     }
     set_rbg_colour(RGB_BLACK);
-    render_circle_part(moduleArea, coord, 4.0, 10.0, 0.0, 10.0);
+    render_circle_part(moduleArea, {coord.x + CONNECTOR_RADIUS, coord.y + CONNECTOR_RADIUS}, CONNECTOR_RADIUS / 2.0, 10.0, 0.0, 10.0);
 }
 
 void render_cable_from_to(tConnector from, tConnector to) {
     tCoord control = {0};
+
+    from.coord.x += CONNECTOR_RADIUS;
+    from.coord.y += CONNECTOR_RADIUS;
+    to.coord.x   += CONNECTOR_RADIUS;
+    to.coord.y   += CONNECTOR_RADIUS;
 
     if (from.coord.x == to.coord.x) {
         control.x = from.coord.x;

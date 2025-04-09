@@ -255,7 +255,7 @@ void do_graphics_loop(void) {
             render_context_menu();
 
             gReDraw = false;
-            
+
             // Swap buffers and look for events
             glfwSwapBuffers(gWindow);
         }

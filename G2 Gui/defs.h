@@ -103,6 +103,9 @@
 #define STANDARD_BUTTON_TEXT_HEIGHT       (15.0)
 #define MAIN_MENU_TEXT_HEIGHT             (16.0)
 
+#define CONNECTOR_RADIUS                  (8.0)
+#define CONNECTOR_DIAMETER                (CONNECTOR_RADIUS * 2.0)
+
 #define MAX_ROWS                          (127)
 #define MAX_COLUMNS                       (127)
 #define MAX_ROWS_MODULE                   (12)    // Operator type is 12 rows - largest we have
