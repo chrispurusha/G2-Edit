@@ -292,33 +292,33 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue
 tParamLocation paramLocationList[] = {
-    {moduleTypeOscShpB,    paramTypeCommonDial,            32, 60, "",    128, 64},
-    {moduleTypeOscShpB,    paramTypeCommonDial,            45, 60, "Cent",    128, 64},
-    {moduleTypeOscShpB,    paramTypeOffOnKeyboardTrack,    22, 60, "Kbt",       2,  1},
-    {moduleTypeOscShpB,    paramTypeCommonDial,            12, 60, "Env",     128,  0},
-    {moduleTypeOscShpB,    paramTypePitchType,             30, 45, "",          4,  0},
-    {moduleTypeOscShpB,    paramTypeCommonDial,            62, 60, "",        128,  0},
-    {moduleTypeOscShpB,    paramTypeCommonDial,            80, 15, "Shape",   128,  0},  // 50% to 99%, not decimals
-    {moduleTypeOscShpB,    paramTypeCommonDial,            82, 60, "ShpCtrl", 128,  0},
-    {moduleTypeOscShpB,    paramTypeBypass,                95, 70, "Bypass",    2,  0},
-    {moduleTypeOscShpB,    paramTypeFmType,                60, 45, "",          2,  0},  // FM Type toggle FM Lin/FM Trk/
-    {moduleTypeFltClassic, paramTypeFreq,                  40, 60, "Freq",    128,  0},
-    {moduleTypeFltClassic, paramTypePitch,                 10, 60, "Env",     128,  0},
-    {moduleTypeFltClassic, paramTypeOffTo100KeyboardTrack, 25, 60, "Kbt",       5,  4},
-    {moduleTypeFltClassic, paramTypeResonance,             55, 60, "Res",     128,  0},
-    {moduleTypeFltClassic, paramTypeFltClassicDb,          70, 60, "",          3,  0},
-    {moduleTypeFltClassic, paramTypeBypass,                95, 60, "",          2,  1},
-    {moduleTypeFltMulti,   paramTypeFreq,                  40, 60, "Freq",    128,  0},
-    {moduleTypeFltMulti,   paramTypePitch,                 12, 60, "Env",     128,  0},
-    {moduleTypeFltMulti,   paramTypeOffTo100KeyboardTrack, 25, 60, "Kbt",       5,  4},
-    {moduleTypeFltMulti,   paramTypeResonance,             55, 60, "Res",     128,  0},
-    {moduleTypeFltMulti,   paramTypeGainControl,           55, 20, "",          2,  0},
-    {moduleTypeFltMulti,   paramTypeFltMultiDb,            70, 20, "",          2,  0},
-    {moduleTypeFltMulti,   paramTypeBypass,                80, 80, "",          2,  1},
-    {moduleTypeEnvADSR,    paramTypeCommonDial,            20, 60, "Attack",  128,  0},
-    {moduleTypeEnvADSR,    paramTypeCommonDial,            35, 60, "Delay",   128,  0},
-    {moduleTypeEnvADSR,    paramTypeCommonDial,            50, 60, "Sus",     128,  0},
-    {moduleTypeEnvADSR,    paramTypeCommonDial,            65, 60, "Rel",     128,  0}, };
+    {moduleTypeOscShpB,    paramTypeCommonDial, paramType2Dial,  32, 60, "",    128, 64},
+    {moduleTypeOscShpB,    paramTypeCommonDial,  paramType2Dial,           45, 60, "Cent",    128, 64},
+    {moduleTypeOscShpB,    paramTypeOffOnKeyboardTrack,  paramType2Toggle,   22, 60, "Kbt",       2,  1},
+    {moduleTypeOscShpB,    paramTypeCommonDial,   paramType2Dial,          12, 60, "Env",     128,  0},
+    {moduleTypeOscShpB,    paramTypePitchType,   paramType2Toggle,          30, 45, "",          4,  0},
+    {moduleTypeOscShpB,    paramTypeCommonDial,   paramType2Dial,          62, 60, "",        128,  0},
+    {moduleTypeOscShpB,    paramTypeCommonDial,  paramType2Dial,           80, 15, "Shape",   128,  0},  // 50% to 99%, not decimals
+    {moduleTypeOscShpB,    paramTypeCommonDial,   paramType2Dial,          82, 60, "ShpCtrl", 128,  0},
+    {moduleTypeOscShpB,    paramTypeBypass, paramType2Toggle,               95, 70, "Bypass",    2,  0},
+    {moduleTypeOscShpB,    paramTypeFmType,  paramType2Toggle,              60, 45, "",          2,  0},  // FM Type toggle FM Lin/FM Trk/
+    {moduleTypeFltClassic, paramTypeFreq, paramType2Dial,                 40, 60, "Freq",    128,  0},
+    {moduleTypeFltClassic, paramTypePitch, paramType2Dial,                10, 60, "Env",     128,  0},
+    {moduleTypeFltClassic, paramTypeOffTo100KeyboardTrack,paramType2Toggle, 25, 60, "Kbt",       5,  4},
+    {moduleTypeFltClassic, paramTypeResonance, paramType2Dial,            55, 60, "Res",     128,  0},
+    {moduleTypeFltClassic, paramTypeFltClassicDb, paramType2Toggle,         70, 60, "",          3,  0},
+    {moduleTypeFltClassic, paramTypeBypass,  paramType2Toggle,              95, 60, "",          2,  1},
+    {moduleTypeFltMulti,   paramTypeFreq, paramType2Dial,                 40, 60, "Freq",    128,  0},
+    {moduleTypeFltMulti,   paramTypePitch, paramType2Dial,                12, 60, "Env",     128,  0},
+    {moduleTypeFltMulti,   paramTypeOffTo100KeyboardTrack,paramType2Toggle, 25, 60, "Kbt",       5,  4},
+    {moduleTypeFltMulti,   paramTypeResonance, paramType2Dial,            55, 60, "Res",     128,  0},
+    {moduleTypeFltMulti,   paramTypeGainControl, paramType2Toggle,          55, 20, "",          2,  0},
+    {moduleTypeFltMulti,   paramTypeFltMultiDb, paramType2Toggle,           70, 20, "",          2,  0},
+    {moduleTypeFltMulti,   paramTypeBypass, paramType2Toggle,               80, 80, "",          2,  1},
+    {moduleTypeEnvADSR,    paramTypeCommonDial,  paramType2Dial,           20, 60, "Attack",  128,  0},
+    {moduleTypeEnvADSR,    paramTypeCommonDial,  paramType2Dial,           35, 60, "Delay",   128,  0},
+    {moduleTypeEnvADSR,    paramTypeCommonDial,  paramType2Dial,           50, 60, "Sus",     128,  0},
+    {moduleTypeEnvADSR,    paramTypeCommonDial,  paramType2Dial,           65, 60, "Rel",     128,  0}, };
 
 void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir dir, tConnectorType type, tCoord coord);
 

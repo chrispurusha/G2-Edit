@@ -305,6 +305,12 @@ typedef enum {
 } tParamType;
 
 typedef enum {
+    paramType2Dial,
+    paramType2Toggle,
+    paramType2Other // Could add button, slider etc.
+} tParamType2;
+
+typedef enum {
     locationFx = 0,
     locationVa = 1
 } tLocation;
@@ -472,6 +478,7 @@ typedef struct {
 typedef struct {
     const tModuleType moduleType;
     const tParamType  type;
+    const tParamType2 type2;
     const double      offsetX;
     const double      offsetY;
     const char *      label;
