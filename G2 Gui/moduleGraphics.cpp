@@ -67,11 +67,17 @@ tRectangle render_dial(tRectangle rectangle, uint32_t value) {  // Drop down int
 }
 
 void render_dial_with_text(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module, char * buff, uint32_t value) {
+    double y = coord.y;
+    
     set_rbg_colour(RGB_BLACK);
-    render_text(moduleArea, {{coord.x, coord.y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, (char *)paramLocationList[paramRef].label);
-    render_text(moduleArea, {{coord.x, coord.y + STANDARD_TEXT_HEIGHT}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    if (paramLocationList[paramRef].label != NULL) {
+        render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, (char *)paramLocationList[paramRef].label);
+        y += STANDARD_TEXT_HEIGHT;
+    }
+    render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    y += STANDARD_TEXT_HEIGHT;
     set_rbg_colour({0.2, 0.2, 0.2});
-    module->param[0][param].rectangle = render_dial({{coord.x, coord.y + (STANDARD_TEXT_HEIGHT * 2.0)}, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, value);
+    module->param[0][param].rectangle = render_dial({{coord.x, y}, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, value);
 }
 
 // This might be too generic and won't be able to use, or we add extra params!

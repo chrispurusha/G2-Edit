@@ -292,12 +292,12 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
 tParamLocation paramLocationList[] = {
-    {moduleTypeOscShpB,    paramTypeCommonDial,            paramType2Dial,   32, 60, NULL,      128, 64, emptyMap       },
+    {moduleTypeOscShpB,    paramTypeCommonDial,            paramType2Dial,   32, 70, NULL,      128, 64, emptyMap       },
     {moduleTypeOscShpB,    paramTypeCommonDial,            paramType2Dial,   45, 60, "Cent",    128, 64, emptyMap       },
     {moduleTypeOscShpB,    paramTypeOffOnKeyboardTrack,    paramType2Toggle, 22, 60, "Kbt",       2,  1, offOnKbMap     },
     {moduleTypeOscShpB,    paramTypeCommonDial,            paramType2Dial,   12, 60, "Env",     128,  0, emptyMap       },
     {moduleTypeOscShpB,    paramTypePitchType,             paramType2Toggle, 30, 45, NULL,        4,  0, pitchTypeMap   },
-    {moduleTypeOscShpB,    paramTypeCommonDial,            paramType2Dial,   62, 60, NULL,      128,  0, emptyMap       },
+    {moduleTypeOscShpB,    paramTypeCommonDial,            paramType2Dial,   62, 70, NULL,      128,  0, emptyMap       },
     {moduleTypeOscShpB,    paramTypeCommonDial,            paramType2Dial,   80, 15, "Shape",   128,  0, emptyMap       }, // 50% to 99%, not decimals
     {moduleTypeOscShpB,    paramTypeCommonDial,            paramType2Dial,   82, 60, "ShpCtrl", 128,  0, emptyMap       },
     {moduleTypeOscShpB,    paramTypeBypass,                paramType2Toggle, 95, 70, "Bypass",    2,  0, emptyMap       },
