@@ -484,6 +484,7 @@ typedef struct {
     const char *      label;
     const uint32_t    range;
     const uint32_t    defaultValue;
+    const char **     strMap;
 } tParamLocation;
 
 typedef struct {

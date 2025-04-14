@@ -131,59 +131,21 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
         }
         case paramTypeFltMultiDb:
         case paramTypeFltClassicDb:
-        {
-            char ** map = (char **)emptyMap;
-
-            set_rbg_colour(RGB_BACKGROUND_GREY);
-
-            switch (paramLocationList[paramRef].type) {
-                case paramTypeFltMultiDb:
-                    map = (char **)fltMultiDbMap;
-                    break;
-                case paramTypeFltClassicDb:
-                    map = (char **)fltClassicDbMap;
-                    break;
-                default:
-                    break;
-            }
-            char * valString = map[paramValue];
-            module->param[0][param].rectangle = draw_button(moduleArea, {coord, largest_text_width(paramLocationList[paramRef].range, map, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}, valString);
-            break;
-        }
+        case paramTypePitchType:
+        case paramTypeFmType:
         case paramTypeOffTo100KeyboardTrack:
-        {
-            char * valString = (char *)offTo100KbMap[paramValue];
-
-            set_rbg_colour(RGB_BLACK);
-            render_text(moduleArea, {{coord.x, coord.y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Kbt");
-            set_rbg_colour(RGB_BACKGROUND_GREY);
-            module->param[0][param].rectangle = draw_button(moduleArea, {{coord.x, coord.y + STANDARD_TEXT_HEIGHT}, {largest_text_width(paramLocationList[paramRef].range, (char **)offTo100KbMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, valString);
-            break;
-        }
         case paramTypeOffOnKeyboardTrack:
         {
-            char * valString = (char *)offOnKbMap[paramValue];
+            char ** map = (char **)paramLocationList[paramRef].strMap;
+            double  y   = coord.y;
 
-            set_rbg_colour(RGB_BLACK);
-            render_text(moduleArea, {{coord.x, coord.y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Kbt");
+            if (paramLocationList[paramRef].label != NULL) {
+                set_rbg_colour(RGB_BLACK);
+                render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, (char *)paramLocationList[paramRef].label);
+                y += STANDARD_TEXT_HEIGHT;
+            }
             set_rbg_colour(RGB_BACKGROUND_GREY);
-            module->param[0][param].rectangle = draw_button(moduleArea, {{coord.x, coord.y + STANDARD_TEXT_HEIGHT}, {largest_text_width(paramLocationList[paramRef].range, (char **)offOnKbMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, valString);
-            break;
-        }
-        case paramTypePitchType:
-        {
-            char * valString = (char *)pitchTypeMap[paramValue];
-
-            set_rbg_colour(RGB_BACKGROUND_GREY);
-            module->param[0][param].rectangle = draw_button(moduleArea, {coord, {largest_text_width(paramLocationList[paramRef].range, (char **)pitchTypeMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, valString);
-            break;
-        }
-        case paramTypeFmType:
-        {
-            char * valString = (char *)fmTypeMap[paramValue];
-
-            set_rbg_colour(RGB_BACKGROUND_GREY);
-            module->param[0][param].rectangle = draw_button(moduleArea, {coord, {largest_text_width(paramLocationList[paramRef].range, (char **)fmTypeMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, valString);
+            module->param[0][param].rectangle = draw_button(moduleArea, {{coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, map, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, map[paramValue]);
             break;
         }
         case paramTypeGainControl:
