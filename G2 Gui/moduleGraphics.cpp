@@ -208,7 +208,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->gotParamIndexCache = true;
             }
             render_param_common(
-                (tCoord){rectangle.coord.x + paramLocationList[i].offsetX, rectangle.coord.y + paramLocationList[i].offsetY}, i,
+                (tCoord){rectangle.coord.x + x_param_pos_from_percent(paramLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, paramLocationList[i].offsetY)}, i,
                 param++, module);
 
             if (param == gModuleProperties[module->type].numParameters) {
@@ -226,7 +226,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
             render_connector(module, connector++,
                              connectorLocationList[i].direction,
                              connectorLocationList[i].type,
-                             (tCoord){rectangle.coord.x + connectorLocationList[i].offsetX, rectangle.coord.y + connectorLocationList[i].offsetY});
+                             (tCoord){rectangle.coord.x + x_param_pos_from_percent(connectorLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, connectorLocationList[i].offsetY)});
 
             if (connector == gModuleProperties[module->type].numConnectors) {
                 break;

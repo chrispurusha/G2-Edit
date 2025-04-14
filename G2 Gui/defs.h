@@ -79,7 +79,7 @@
 #define MODULE_X_GAP                      (10.0)
 #define MODULE_X_SPAN                     (MODULE_WIDTH + MODULE_X_GAP)
 #define MODULE_TITLE_X_OFFSET             (3.0)
-#define MODULE_HEIGHT                     (25.0) // 1 row
+#define MODULE_HEIGHT                     (30.0) // 1 row
 #define MODULE_MARGIN                     (5.0)
 #define MODULE_Y_GAP                      (5.0)
 #define MODULE_Y_SPAN                     (MODULE_HEIGHT + MODULE_Y_GAP)

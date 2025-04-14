@@ -38,18 +38,20 @@ extern "C" {
 #include "dataBase.h"
 #include "utilsGraphics.h"
 
-static GlyphInfo glyphInfo[MAX_GLYPH_CHAR] = {0};       // Array to store glyph metadata TODO: Not being freed!?
-static GLuint    textureAtlas              = 0;         // OpenGL texture handle
-static int       atlasWidth                = 1024 * 8;  // Initial atlas width
-static int       atlasHeight               = 1024 * 8;  // Initial atlas height
-static double    gMaxAscent                = 0.0;       // Used for dealing with preloaded text character height
-static double    gMaxDescent               = 0.0;
-static double    gMetricsHeight            = 0.0;
-static double    gXScrollPercent           = 0.0;
-static double    gYScrollPercent           = 0.0;
-static double    gZoomFactor               = NO_ZOOM;
-static int       gRenderWidth              = 0;
-static int       gRenderHeight             = 0;
+static GlyphInfo         glyphInfo[MAX_GLYPH_CHAR] = {0};      // Array to store glyph metadata TODO: Not being freed!?
+static GLuint            textureAtlas              = 0;        // OpenGL texture handle
+static int               atlasWidth                = 1024 * 8; // Initial atlas width
+static int               atlasHeight               = 1024 * 8; // Initial atlas height
+static double            gMaxAscent                = 0.0;      // Used for dealing with preloaded text character height
+static double            gMaxDescent               = 0.0;
+static double            gMetricsHeight            = 0.0;
+static double            gXScrollPercent           = 0.0;
+static double            gYScrollPercent           = 0.0;
+static double            gZoomFactor               = NO_ZOOM;
+static int               gRenderWidth              = 0;
+static int               gRenderHeight             = 0;
+
+extern tModuleProperties gModuleProperties[];
 
 static inline double scale(double value) {
     return value * gZoomFactor;
@@ -861,6 +863,17 @@ int get_render_width(void) {
 int get_render_height(void) {
     return gRenderHeight;
 }
+
+double x_param_pos_from_percent(double x) {
+    return (((MODULE_WIDTH * (x + 3.0)) ) / 100.0) * 0.94;
+}
+
+double y_param_pos_from_percent(tModuleType moduleType, double y) {
+    return (((MODULE_HEIGHT * gModuleProperties[moduleType].height * (y + 3.0)) / 100.0) * 0.94);
+}
+
+#define X_POS_FROM_PERCENT(x)    ((MODULE_WIDTH * (double)x) / 100.0)
+#define Y_POS_FROM_PERCENT(x)    ((MODULE_HEIGHT * (double)x) / 100.0)
 
 #ifdef __cplusplus
 }
