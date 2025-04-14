@@ -293,6 +293,8 @@ typedef enum {
     paramTypeFreq,
     paramTypeResonance,
     paramTypePitch,
+    paramTypePitchType,
+    paramTypeFmType,
     paramTypeOffTo100KeyboardTrack,
     paramTypeOffOnKeyboardTrack,
     paramTypeGainControl,

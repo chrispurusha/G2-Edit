@@ -74,6 +74,8 @@ bool param_type_is_toggle(tParamType type) {
         case paramTypeOffTo100KeyboardTrack:
         case paramTypeOffOnKeyboardTrack:
         case paramTypeGainControl:
+        case paramTypePitchType:
+        case paramTypeFmType:
         case paramTypeBypass:
         case paramTypeFltClassicDb:
         case paramTypeFltMultiDb:

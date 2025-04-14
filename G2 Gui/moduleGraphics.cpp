@@ -170,6 +170,22 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
             module->param[0][param].rectangle = draw_button(moduleArea, {{coord.x, coord.y + STANDARD_TEXT_HEIGHT}, {largest_text_width(paramLocationList[paramRef].range, (char **)offOnKbMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, valString);
             break;
         }
+        case paramTypePitchType:
+        {
+            char * valString = (char *)pitchTypeMap[paramValue];
+
+            set_rbg_colour(RGB_BACKGROUND_GREY);
+            module->param[0][param].rectangle = draw_button(moduleArea, {coord, {largest_text_width(paramLocationList[paramRef].range, (char **)pitchTypeMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, valString);
+            break;
+        }
+        case paramTypeFmType:
+        {
+            char * valString = (char *)fmTypeMap[paramValue];
+
+            set_rbg_colour(RGB_BACKGROUND_GREY);
+            module->param[0][param].rectangle = draw_button(moduleArea, {coord, {largest_text_width(paramLocationList[paramRef].range, (char **)fmTypeMap, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, valString);
+            break;
+        }
         case paramTypeGainControl:
         {
             char * valString = "GC";

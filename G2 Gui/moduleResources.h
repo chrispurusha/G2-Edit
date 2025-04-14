@@ -27,6 +27,8 @@ const char * fltClassicDbMap[] = {"12db", "18db", "24db"};
 const char * fltMultiDbMap[]   = {"6db", "12db"};
 const char * offTo100KbMap[]   = {"Off", "25%", "50%", "75%", "100%"};
 const char * offOnKbMap[]      = {"Off", "On"};
+const char * pitchTypeMap[]    = {"Semi", "Freq", "Factor", "Partial"};
+const char * fmTypeMap[]       = {"FM Lin", "FM Trk"};
 
 const tRgb   cableColourMap[] = {
     {0.7, 0.1, 0.1},       // red
@@ -290,16 +292,16 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue
 tParamLocation paramLocationList[] = {
-    {moduleTypeOscShpB,    paramTypeCommonDial,            32, 60, "Semi",    128, 64},
+    {moduleTypeOscShpB,    paramTypeCommonDial,            32, 60, "",    128, 64},
     {moduleTypeOscShpB,    paramTypeCommonDial,            45, 60, "Cent",    128, 64},
     {moduleTypeOscShpB,    paramTypeOffOnKeyboardTrack,    22, 60, "Kbt",       2,  1},
     {moduleTypeOscShpB,    paramTypeCommonDial,            12, 60, "Env",     128,  0},
-    {moduleTypeOscShpB,    paramTypeCommonDial,            15, 15, "SemiFr",  128,  0},    // Should be a toggle
-    {moduleTypeOscShpB,    paramTypeCommonDial,            40, 15, "FMCtl",   128,  0},    // Should be a toggle
-    {moduleTypeOscShpB,    paramTypeCommonDial,            60, 15, "Shape",   128,  0},
-    {moduleTypeOscShpB,    paramTypeCommonDial,            80, 60, "ShpCtrl", 128,  0},
+    {moduleTypeOscShpB,    paramTypePitchType,             30, 45, "",          4,  0},
+    {moduleTypeOscShpB,    paramTypeCommonDial,            62, 60, "",        128,  0},
+    {moduleTypeOscShpB,    paramTypeCommonDial,            80, 15, "Shape",   128,  0},  // 50% to 99%, not decimals
+    {moduleTypeOscShpB,    paramTypeCommonDial,            82, 60, "ShpCtrl", 128,  0},
     {moduleTypeOscShpB,    paramTypeBypass,                95, 70, "Bypass",    2,  0},
-    //{moduleTypeOscShpB,    paramTypeCommonDial,              80, 50, "FmTrkLin", 128,  0},  // toggle
+    {moduleTypeOscShpB,    paramTypeFmType,                60, 45, "",          2,  0},  // FM Type toggle FM Lin/FM Trk/
     {moduleTypeFltClassic, paramTypeFreq,                  40, 60, "Freq",    128,  0},
     {moduleTypeFltClassic, paramTypePitch,                 10, 60, "Env",     128,  0},
     {moduleTypeFltClassic, paramTypeOffTo100KeyboardTrack, 25, 60, "Kbt",       5,  4},
