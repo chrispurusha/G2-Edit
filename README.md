@@ -19,8 +19,6 @@ brew install --build-from-source glfw
 brew install --build-from-source freetype2
 
 
-Todo: Many mechanisms yet to implement - module creation, fx display, variation selection, copying,
-file access etc.
-Also need to consider using arrays of structures to describe lay-out of modules, rather than the current function based
-mechanism. Should do this before scaling-up and implementing the other modules.
+Todo: Many mechanisms yet to implement - including variation selection, copying,
+file access etc. 200+ modules to implement. LED volume indications etc. Graphical representation of filter curves / oscillator waves etc.
 
