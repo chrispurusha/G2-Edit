@@ -41,6 +41,8 @@ extern "C" {
 #include "mouseHandle.h"
 #include "dataBase.h"
 
+extern uint32_t array_size_param_location_list(void); // Todo: move to a module resources module
+
 tScrollState             gScrollState  = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
 tContextMenu             gContextMenu  = {0};
 tCableDragging           gCableDrag    = {0};
@@ -467,8 +469,7 @@ void init_params_on_new_module(tModule * module) {
     uint32_t paramIndex        = 0;
     uint32_t numParams         = gModuleProperties[module->type].numParameters;
 
-    // TODO - ultimately need a method to get size of the array here, to limit the loop. Maybe move all the const definition structures to a new resources .c file and access from there?
-    for (uint32_t locationListIndex = 0; ; locationListIndex++) {
+    for (uint32_t locationListIndex = 0; locationListIndex < array_size_param_location_list(); locationListIndex++) {
         if (paramLocationList[locationListIndex].moduleType == module->type) {
             tParam * param = &module->param[0][paramIndex];
 
@@ -800,79 +801,77 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
     if (action == GLFW_PRESS) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            if (gContextMenu.active) {
+            if (!handle_scrollbar_click(coord)) {
+                handle_module_click(coord, button);
+            }
+        }
+    } else if (action == GLFW_RELEASE) {
+        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+            if (within_rectangle(coord, gSelectVa.rectangle)) {
+                gSelectVa.function();
+            } else if (within_rectangle(coord, gSelectFx.rectangle)) {
+                gSelectFx.function();
+            } else if (gContextMenu.active) {
                 if (!handle_context_menu_click(coord)) {
                     gContextMenu.active = false;  // Close if clicked outside - Todo: think if this is the right thing to do here
                 }
-            } else {
-                if (within_rectangle(coord, gSelectVa.rectangle)) {
-                    gSelectVa.function();
-                } else if (within_rectangle(coord, gSelectFx.rectangle)) {
-                    gSelectFx.function();
-                } else if (!handle_scrollbar_click(coord)) {
-                    handle_module_click(coord, button);
+            } else if (gModuleDrag.active == true) {
+                shift_modules_down(gModuleDrag.moduleKey);
+            } else if (gCableDrag.active) {
+                tModule   fromModule = {0};
+                tModule   toModule   = {0};
+                tCableKey cableKey   = {0};
+                tCable    cable      = {0};
+                
+                reset_walk_module();
+                
+                while (walk_next_module(&toModule) && !quitLoop) {
+                    if (toModule.key.location == gLocation) {
+                        for (int i = 0; i < gModuleProperties[toModule.type].numConnectors; i++) {
+                            if (!within_rectangle(coord, toModule.connector[i].rectangle)) {
+                                continue;
+                            }
+                            read_module(gCableDrag.fromModuleKey, &fromModule);
+                            set_up_cable_key(&cableKey, &fromModule, &toModule, i);
+                            
+                            swap_cable_to_from_if_needed(&cableKey, &fromModule, &toModule, i);
+                            
+                            // Prevent self-connections and invalid connections
+                            if (  (cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i)
+                                || (  fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
+                                    && toModule.connector[i].dir == connectorDirOut)) {
+                                quitLoop = true;
+                                break;
+                            }
+                            cable.colour = 0; // Todo: choose colour from menu or calculate
+                            write_cable(cableKey, &cable);
+                            
+                            tMessageContent messageContent = {0};
+                            
+                            messageContent.cmd                            = eMsgCmdWriteCable;
+                            messageContent.cableData.location             = gLocation;
+                            messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
+                            messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
+                            messageContent.cableData.moduleToIndex        = cableKey.moduleToIndex;
+                            messageContent.cableData.connectorToIoIndex   = cableKey.connectorToIoCount;
+                            messageContent.cableData.linkType             = cableKey.linkType;
+                            messageContent.cableData.colour               = cable.colour;
+                            msg_send(&gCommandQueue, &messageContent);
+                            
+                            quitLoop = true;
+                            break;
+                        }
+                    }
                 }
+                finish_walk_module();
+                update_module_up_rates();
             }
         } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
             if (!handle_module_click(coord, button)) {
                 handle_module_area_click(coord, button);
             }
         }
-    } else if (action == GLFW_RELEASE) {
-        if (gModuleDrag.active == true) {
-            shift_modules_down(gModuleDrag.moduleKey);
-        }
-
-        if (gCableDrag.active) {
-            tModule   fromModule = {0};
-            tModule   toModule   = {0};
-            tCableKey cableKey   = {0};
-            tCable    cable      = {0};
-
-            reset_walk_module();
-
-            while (walk_next_module(&toModule) && !quitLoop) {
-                if (toModule.key.location == gLocation) {
-                    for (int i = 0; i < gModuleProperties[toModule.type].numConnectors; i++) {
-                        if (!within_rectangle(coord, toModule.connector[i].rectangle)) {
-                            continue;
-                        }
-                        read_module(gCableDrag.fromModuleKey, &fromModule);
-                        set_up_cable_key(&cableKey, &fromModule, &toModule, i);
-
-                        swap_cable_to_from_if_needed(&cableKey, &fromModule, &toModule, i);
-
-                        // Prevent self-connections and invalid connections
-                        if (  (cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i)
-                           || (  fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
-                              && toModule.connector[i].dir == connectorDirOut)) {
-                            quitLoop = true;
-                            break;
-                        }
-                        cable.colour = 0; // Todo: choose colour from menu or calculate
-                        write_cable(cableKey, &cable);
-
-                        tMessageContent messageContent = {0};
-
-                        messageContent.cmd                            = eMsgCmdWriteCable;
-                        messageContent.cableData.location             = gLocation;
-                        messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
-                        messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
-                        messageContent.cableData.moduleToIndex        = cableKey.moduleToIndex;
-                        messageContent.cableData.connectorToIoIndex   = cableKey.connectorToIoCount;
-                        messageContent.cableData.linkType             = cableKey.linkType;
-                        messageContent.cableData.colour               = cable.colour;
-                        msg_send(&gCommandQueue, &messageContent);
-
-                        quitLoop = true;
-                        break;
-                    }
-                }
-            }
-            finish_walk_module();
-            update_module_up_rates();
-        }
-        stop_dragging();
+        stop_dragging(); // Could do on dragging complete events, but arguably safer here
     }
     gReDraw = true;
 }

@@ -40,6 +40,10 @@ extern "C" {
 
 extern uint32_t gLocation;
 
+uint32_t array_size_param_location_list(void) { // Todo: move to a module resources source file when it's created
+    return ARRAY_SIZE(paramLocationList);
+}
+
 void set_module_colour(uint32_t colour) {
     tRgb rgb = {0};
 
