@@ -26,8 +26,8 @@
 extern const tRgb   cableColourMap[];
 extern const tRgb   gModuleColourMap[];
 extern const tRgb   connectorColourMap[];
-extern tModuleProperties gModuleProperties[];
-extern tParamLocation paramLocationList[];
+extern const tModuleProperties gModuleProperties[];
+extern const tParamLocation paramLocationList[];
 extern const tConnectorLocation connectorLocationList[];
 
 uint32_t array_size_param_location_list(void);

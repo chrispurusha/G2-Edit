@@ -77,8 +77,7 @@ const tRgb   connectorColourMap[] =  // TODO - add yellow for gate
     {0.7, 0.2, 0.2},
     {0.2, 0.2, 0.7}};
 
-//TODO: see if we can make this const and only reference in one source file
-tModuleProperties gModuleProperties[] = {
+const tModuleProperties gModuleProperties[] = {
     // Array index = module type for access speed
     {"Unknown",      0,  0, 0, 0},
     {"Keyboard",     2,  0, 0, 0},
@@ -292,10 +291,9 @@ tModuleProperties gModuleProperties[] = {
 
 // Todo - I think we need a moduleResources.c for accessing these structures from anywhere, including getting size / number of items etc.
 // Also, add text mapping reference in here! E.g. Keyboard track
-void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module);
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
-tParamLocation paramLocationList[] = {
+const tParamLocation paramLocationList[] = {
     {moduleTypeOscShpB,    paramTypeCommonDial,            paramType2Dial,   32, 70, NULL,      128, 64, emptyMap       },
     {moduleTypeOscShpB,    paramTypeCommonDial,            paramType2Dial,   45, 60, "Cent",    128, 64, emptyMap       },
     {moduleTypeOscShpB,    paramTypeOffOnKeyboardTrack,    paramType2Toggle, 22, 60, "Kbt",       2,  1, offOnKbMap     },
