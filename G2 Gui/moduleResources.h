@@ -78,7 +78,6 @@ const tRgb   connectorColourMap[] =  // TODO - add yellow for gate
     {0.2, 0.2, 0.7}};
 
 const tModuleProperties gModuleProperties[] = {
-    // Array index = module type for access speed
     {"Unknown",      0,  0, 0, 0},
     {"Keyboard",     2,  0, 0, 0},
     {"Unknown",      0,  0, 0, 0},
@@ -288,9 +287,6 @@ const tModuleProperties gModuleProperties[] = {
     {"RndClkB",      3,  0, 0, 0},
     {"Unknown",      0,  0, 0, 0},
     {"RndPattern",   3,  0, 0, 0}, };
-
-// Todo - I think we need a moduleResources.c for accessing these structures from anywhere, including getting size / number of items etc.
-// Also, add text mapping reference in here! E.g. Keyboard track
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
 const tParamLocation paramLocationList[] = {
