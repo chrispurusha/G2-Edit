@@ -17,10 +17,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// NOTE - Only moduleResourcesAccess.c should be including this!
+
 #ifndef __MODULE_RESOURCES_H__
 #define __MODULE_RESOURCES_H__
 
 #include "sysIncludes.h"
+#include "defs.h"
+#include "types.h"
 
 const char * emptyMap[]        = {NULL};
 const char * fltClassicDbMap[] = {"12db", "18db", "24db"};
@@ -319,8 +323,6 @@ tParamLocation paramLocationList[] = {
     {moduleTypeEnvADSR,    paramTypeCommonDial,            paramType2Dial,   35, 60, "Delay",   128,  0, emptyMap       },
     {moduleTypeEnvADSR,    paramTypeCommonDial,            paramType2Dial,   50, 60, "Sus",     128,  0, emptyMap       },
     {moduleTypeEnvADSR,    paramTypeCommonDial,            paramType2Dial,   65, 60, "Rel",     128,  0, emptyMap       }, };
-
-void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir dir, tConnectorType type, tCoord coord);
 
 // Note these need to be in same order of connectors which are referenced by the hardware
 const tConnectorLocation connectorLocationList[] = {

@@ -36,6 +36,7 @@ extern "C" {
 #pragma clang diagnostic pop
 
 #include "dataBase.h"
+#include "moduleResourcesAccess.h"
 #include "utilsGraphics.h"
 
 static GlyphInfo         glyphInfo[MAX_GLYPH_CHAR] = {0};      // Array to store glyph metadata TODO: Not being freed!?
@@ -50,8 +51,6 @@ static double            gYScrollPercent           = 0.0;
 static double            gZoomFactor               = NO_ZOOM;
 static int               gRenderWidth              = 0;
 static int               gRenderHeight             = 0;
-
-extern tModuleProperties gModuleProperties[];
 
 static inline double scale(double value) {
     return value * gZoomFactor;
@@ -414,9 +413,9 @@ tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord 
         if (start.x == end.x) {
             tx = 0.0;
             ty = 1.0;
-        } else if (start.y == end.y) {
-            tx = 1.0;
-            ty = 0.0;
+        //} else if (start.y == end.y) {  // This was causing tapering on lines
+        //    tx = 1.0;
+        //    ty = 0.0;
         } else {
             tx = 2 * (1 - t) * (control.x - start.x) + 2 * t * (end.x - control.x);
             ty = 2 * (1 - t) * (control.y - start.y) + 2 * t * (end.y - control.y);

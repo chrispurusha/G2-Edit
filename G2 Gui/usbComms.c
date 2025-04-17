@@ -34,8 +34,8 @@ extern "C" {
 #include "utils.h"
 #include "msgQueue.h"
 #include "usbComms.h"
-#include "main.h"
 #include "dataBase.h"
+#include "moduleResourcesAccess.h"
 
 typedef enum {
     eStateNone,
@@ -64,8 +64,6 @@ static void      (*wake_glfw_func_ptr)(void) = NULL;
 static void      (*full_patch_change_notify_func_ptr)(void) = NULL;
 
 //unsigned int             volData[1024] = {0}; //Temporary for testing. Will ultimately have a better mechanism for passing data
-
-extern tModuleProperties gModuleProperties[];
 
 void register_glfw_wake_cb(void ( *func_ptr )(void)) {
     wake_glfw_func_ptr = func_ptr;

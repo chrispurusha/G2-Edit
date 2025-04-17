@@ -34,15 +34,14 @@ extern "C" {
 #pragma clang diagnostic pop
 
 #include "dataBase.h"
+#include "moduleResourcesAccess.h"
 #include "utilsGraphics.h"
-#include "moduleResources.h"
 #include "moduleGraphics.h"
 
 extern uint32_t gLocation;
 
-uint32_t array_size_param_location_list(void) { // Todo: move to a module resources source file when it's created
-    return ARRAY_SIZE(paramLocationList);
-}
+// Prototypes
+void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir dir, tConnectorType type, tCoord coord);
 
 void set_module_colour(uint32_t colour) {
     tRgb rgb = {0};
@@ -189,7 +188,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     uint32_t connector = 0;
 
     // Todo: cache the start positions in the dynamic module structure
-    for (uint32_t i = module->paramIndexCache; i < ARRAY_SIZE(paramLocationList); i++) {
+    for (uint32_t i = module->paramIndexCache; i < array_size_param_location_list(); i++) {
         if (paramLocationList[i].moduleType == module->type) {
             if (module->gotParamIndexCache == false) {
                 module->paramIndexCache    = i;
@@ -205,7 +204,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
         }
     }
 
-    for (uint32_t i = module->connectorIndexCache; i < ARRAY_SIZE(connectorLocationList); i++) {
+    for (uint32_t i = module->connectorIndexCache; i < array_size_connector_location_list(); i++) {
         if (connectorLocationList[i].moduleType == module->type) {
             if (module->gotConnectorIndexCache == false) {
                 module->connectorIndexCache    = i;

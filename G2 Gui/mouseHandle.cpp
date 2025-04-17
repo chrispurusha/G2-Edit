@@ -37,11 +37,10 @@ extern "C" {
 #include "types.h"
 #include "utils.h"
 #include "msgQueue.h"
+#include "dataBase.h"
+#include "moduleResourcesAccess.h"
 #include "utilsGraphics.h"
 #include "mouseHandle.h"
-#include "dataBase.h"
-
-extern uint32_t array_size_param_location_list(void); // Todo: move to a module resources module
 
 tScrollState             gScrollState  = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
 tContextMenu             gContextMenu  = {0};
@@ -53,8 +52,6 @@ extern GLFWwindow *      gWindow;
 extern uint32_t          gLocation;
 extern bool              gReDraw;
 extern tMessageQueue     gCommandQueue;
-extern tModuleProperties gModuleProperties[];
-extern tParamLocation    paramLocationList[];
 extern tButton           gSelectVa;
 extern tButton           gSelectFx;
 
@@ -801,8 +798,10 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
     if (action == GLFW_PRESS) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            if (!handle_scrollbar_click(coord)) {
-                handle_module_click(coord, button);
+            if (gContextMenu.active == false) { // Don't check left button press on non-menu items
+                if (!handle_scrollbar_click(coord)) {
+                    handle_module_click(coord, button);
+                }
             }
         }
     } else if (action == GLFW_RELEASE) {

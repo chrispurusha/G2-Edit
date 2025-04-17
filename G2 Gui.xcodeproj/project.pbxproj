@@ -11,6 +11,7 @@
 		832FC5D92D01F6C20084A230 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 832FC5D82D01F6C20084A230 /* Cocoa.framework */; };
 		832FC5DC2D01F70A0084A230 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 832FC5D62D01F68C0084A230 /* IOKit.framework */; };
 		832FC5DE2D01F7840084A230 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 832FC5DD2D01F7840084A230 /* Quartz.framework */; };
+		833734552DB1033200ACF41F /* moduleResourcesAccess.c in Sources */ = {isa = PBXBuildFile; fileRef = 833734542DB1033200ACF41F /* moduleResourcesAccess.c */; };
 		8352A5752D4BE22300CD5AD9 /* dataBase.c in Sources */ = {isa = PBXBuildFile; fileRef = 8352A5742D4BE22300CD5AD9 /* dataBase.c */; };
 		83673D922D5A4C660077A0B2 /* graphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83673D912D5A4C660077A0B2 /* graphics.cpp */; };
 		83673D942D5A50F90077A0B2 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 83673D932D5A50F90077A0B2 /* main.c */; };
@@ -43,6 +44,8 @@
 		832FC5D82D01F6C20084A230 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		832FC5DD2D01F7840084A230 /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
 		833423482D5A613B00AA2AC9 /* sysIncludes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sysIncludes.h; sourceTree = "<group>"; };
+		833734532DB1033200ACF41F /* moduleResourcesAccess.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = moduleResourcesAccess.h; sourceTree = "<group>"; };
+		833734542DB1033200ACF41F /* moduleResourcesAccess.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = moduleResourcesAccess.c; sourceTree = "<group>"; };
 		8352A5732D4BE21D00CD5AD9 /* dataBase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dataBase.h; sourceTree = "<group>"; };
 		8352A5742D4BE22300CD5AD9 /* dataBase.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = dataBase.c; sourceTree = "<group>"; };
 		835D853C2D74AF5E008D5E46 /* constData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = constData.h; sourceTree = "<group>"; };
@@ -143,6 +146,8 @@
 				83BE0C712D6C8BD0007E9CD8 /* utilsGraphics.h */,
 				83BE0C6D2D6C8BAE007E9CD8 /* utilsGraphics.cpp */,
 				83BE0C6C2D6C8A8D007E9CD8 /* moduleResources.h */,
+				833734532DB1033200ACF41F /* moduleResourcesAccess.h */,
+				833734542DB1033200ACF41F /* moduleResourcesAccess.c */,
 				83BE0C6A2D6C86DF007E9CD8 /* moduleGraphics.h */,
 				83BE0C682D6C86D6007E9CD8 /* moduleGraphics.cpp */,
 				83673D8E2D5A461E0077A0B2 /* graphics.h */,
@@ -214,6 +219,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				83B5655E2D4A71CF001BC997 /* usbComms.c in Sources */,
+				833734552DB1033200ACF41F /* moduleResourcesAccess.c in Sources */,
 				83A016372D92F7F10041DF72 /* mouseHandle.cpp in Sources */,
 				83BE0C6E2D6C8BAE007E9CD8 /* utilsGraphics.cpp in Sources */,
 				8376ECAE2D48FB6E008D1608 /* utils.c in Sources */,
