@@ -42,18 +42,18 @@ extern "C" {
 #include "utilsGraphics.h"
 #include "mouseHandle.h"
 
-tScrollState             gScrollState  = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
-tContextMenu             gContextMenu  = {0};
-tCableDragging           gCableDrag    = {0};
-tDialDragging            gDialDragging = {0};
-tModuleDragging          gModuleDrag   = {0};
+tScrollState         gScrollState  = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
+tContextMenu         gContextMenu  = {0};
+tCableDragging       gCableDrag    = {0};
+tDialDragging        gDialDragging = {0};
+tModuleDragging      gModuleDrag   = {0};
 
-extern GLFWwindow *      gWindow;
-extern uint32_t          gLocation;
-extern bool              gReDraw;
-extern tMessageQueue     gCommandQueue;
-extern tButton           gSelectVa;
-extern tButton           gSelectFx;
+extern GLFWwindow *  gWindow;
+extern uint32_t      gLocation;
+extern bool          gReDraw;
+extern tMessageQueue gCommandQueue;
+extern tButton       gSelectVa;
+extern tButton       gSelectFx;
 
 void adjust_scroll_for_drag(void) {
     double     x             = 0.0;
@@ -521,7 +521,7 @@ void menu_action_create(int index) {
             messageContent.moduleData.modeCount = gModuleProperties[module.type].modeCount;
 
             for (int i = 0; i < gModuleProperties[module.type].modeCount; i++) {
-                messageContent.moduleData.mode[i] = module.mode[i];
+                messageContent.moduleData.mode[i] = module.mode[i].value;
             }
 
             memcpy(messageContent.moduleData.name, module.name, sizeof(messageContent.moduleData.name));
@@ -624,6 +624,7 @@ bool handle_module_click(tCoord coord, int button) {
                         if ((paramLocationList[param->paramRef].type2) == paramType2Dial) {
                             gDialDragging.moduleKey.index    = module.key.index;
                             gDialDragging.moduleKey.location = module.key.location;
+                            gDialDragging.type3              = paramType3Param;
                             gDialDragging.variation          = 0;
                             gDialDragging.param              = i;
                             gDialDragging.active             = true;
@@ -641,6 +642,39 @@ bool handle_module_click(tCoord coord, int button) {
 
                             msg_send(&gCommandQueue, &messageContent);
                             retVal = true;
+                        }
+                    }
+                }
+            }
+
+            if (retVal == false) {
+                // Deal with click on mode
+                for (int i = 0; (i < module.modeCount) && (retVal == false); i++) {
+                    tParam * mode = &module.mode[i];
+
+                    if (within_rectangle(coord, module.mode[i].rectangle)) {
+                        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+                            if ((modeLocationList[mode->paramRef].type2) == paramType2Dial) {
+                                gDialDragging.moduleKey.index    = module.key.index;
+                                gDialDragging.moduleKey.location = module.key.location;
+                                gDialDragging.type3              = paramType3Mode;
+                                gDialDragging.mode               = i;
+                                gDialDragging.active             = true;
+                                retVal                           = true;
+                            } else {
+                                /*param->value = (param->value + 1) % paramLocationList[param->paramRef].range;
+                                 * write_module(module.key, &module);
+                                 *
+                                 * tMessageContent messageContent = {0};
+                                 * messageContent.cmd                 = eMsgCmdSetValue;
+                                 * messageContent.paramData.moduleKey = module.key;
+                                 * messageContent.paramData.mode     = i;
+                                 * messageContent.paramData.variation = 0;
+                                 * messageContent.paramData.value     = param->value;
+                                 *
+                                 * msg_send(&gCommandQueue, &messageContent);
+                                 * retVal = true;*/
+                            }
                         }
                     }
                 }
@@ -821,9 +855,9 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 tModule   toModule   = {0};
                 tCableKey cableKey   = {0};
                 tCable    cable      = {0};
-                
+
                 reset_walk_module();
-                
+
                 while (walk_next_module(&toModule) && !quitLoop) {
                     if (toModule.key.location == gLocation) {
                         for (int i = 0; i < gModuleProperties[toModule.type].numConnectors; i++) {
@@ -832,21 +866,21 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                             }
                             read_module(gCableDrag.fromModuleKey, &fromModule);
                             set_up_cable_key(&cableKey, &fromModule, &toModule, i);
-                            
+
                             swap_cable_to_from_if_needed(&cableKey, &fromModule, &toModule, i);
-                            
+
                             // Prevent self-connections and invalid connections
                             if (  (cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i)
-                                || (  fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
-                                    && toModule.connector[i].dir == connectorDirOut)) {
+                               || (  fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
+                                  && toModule.connector[i].dir == connectorDirOut)) {
                                 quitLoop = true;
                                 break;
                             }
                             cable.colour = 0; // Todo: choose colour from menu or calculate
                             write_cable(cableKey, &cable);
-                            
+
                             tMessageContent messageContent = {0};
-                            
+
                             messageContent.cmd                            = eMsgCmdWriteCable;
                             messageContent.cableData.location             = gLocation;
                             messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
@@ -856,7 +890,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                             messageContent.cableData.linkType             = cableKey.linkType;
                             messageContent.cableData.colour               = cable.colour;
                             msg_send(&gCommandQueue, &messageContent);
-                            
+
                             quitLoop = true;
                             break;
                         }
@@ -896,22 +930,48 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     } else if (gDialDragging.active == true) {
         read_module(gDialDragging.moduleKey, &module);
 
-        if (paramLocationList[module.param[gDialDragging.variation][gDialDragging.param].paramRef].type2 == paramType2Dial) {
-            angle                                                            = calculate_mouse_angle({x, y}, module.param[gDialDragging.variation][gDialDragging.param].rectangle); // possible add half size
-            value                                                            = angle_to_value(angle);
-            module.param[gDialDragging.variation][gDialDragging.param].value = value;
-        } else {
-            printf("Unknown module type %u\n", paramLocationList[module.param[gDialDragging.variation][gDialDragging.param].paramRef].type);
-            exit(1);
-        }
-        write_module(gDialDragging.moduleKey, &module);         // Write new value into parameter
+        switch (gDialDragging.type3) {
+            case paramType3Param:
 
-        messageContent.cmd                 = eMsgCmdSetValue;
-        messageContent.paramData.moduleKey = gDialDragging.moduleKey;
-        messageContent.paramData.param     = gDialDragging.param;
-        messageContent.paramData.variation = gDialDragging.variation;
-        messageContent.paramData.value     = value;
-        msg_send(&gCommandQueue, &messageContent);
+                if (paramLocationList[module.param[gDialDragging.variation][gDialDragging.param].paramRef].type2 == paramType2Dial) {
+                    angle = calculate_mouse_angle({x, y}, module.param[gDialDragging.variation][gDialDragging.param].rectangle);                                                            // possible add half size
+                    value = angle_to_value(angle);
+
+                    if (module.param[gDialDragging.variation][gDialDragging.param].value != value) {
+                        module.param[gDialDragging.variation][gDialDragging.param].value = value;
+
+                        write_module(gDialDragging.moduleKey, &module);         // Write new value into parameter
+
+                        messageContent.cmd                 = eMsgCmdSetValue;
+                        messageContent.paramData.moduleKey = gDialDragging.moduleKey;
+                        messageContent.paramData.param     = gDialDragging.param;
+                        messageContent.paramData.variation = gDialDragging.variation;
+                        messageContent.paramData.value     = value;
+                        msg_send(&gCommandQueue, &messageContent);
+                    }
+                }
+                break;
+            case paramType3Mode:
+
+                if (modeLocationList[module.mode[gDialDragging.param].paramRef].type2 == paramType2Dial) {
+                    angle = calculate_mouse_angle({x, y}, module.mode[gDialDragging.param].rectangle);                                                            // possible add half size
+                    value = angle_to_value(angle);
+
+                    if (module.mode[gDialDragging.mode].value != value) {
+                        module.mode[gDialDragging.mode].value = value;
+
+                        write_module(gDialDragging.moduleKey, &module);         // Write new value into parameter
+
+                        messageContent.cmd                = eMsgCmdSetMode;
+                        messageContent.modeData.moduleKey = gDialDragging.moduleKey;
+                        messageContent.modeData.mode      = gDialDragging.mode;
+                        // TODO - don't do scaling here! Urgently needs to be done on rendering of dial itself!
+                        messageContent.modeData.value     = (uint32_t)((double)value * ((double)modeLocationList[module.mode[gDialDragging.param].paramRef].range / 128.0));
+                        msg_send(&gCommandQueue, &messageContent);
+                    }
+                }
+                break;
+        }
     } else if (gModuleDrag.active == true) {
         read_module(gModuleDrag.moduleKey, &module);
 

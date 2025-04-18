@@ -23,14 +23,16 @@
 #include "sysIncludes.h"
 #include "types.h"
 
-extern const tRgb   cableColourMap[];
-extern const tRgb   gModuleColourMap[];
-extern const tRgb   connectorColourMap[];
-extern const tModuleProperties gModuleProperties[];
-extern const tParamLocation paramLocationList[];
+extern const tRgb               cableColourMap[];
+extern const tRgb               gModuleColourMap[];
+extern const tRgb               connectorColourMap[];
+extern const tModuleProperties  gModuleProperties[];
+extern const tParamLocation     paramLocationList[];
+extern const tParamLocation     modeLocationList[];
 extern const tConnectorLocation connectorLocationList[];
 
 uint32_t array_size_param_location_list(void);
+uint32_t array_size_mode_location_list(void);
 uint32_t array_size_connector_location_list(void);
 
 #endif // __MODULE_RESOURCE_ACCESS_H__

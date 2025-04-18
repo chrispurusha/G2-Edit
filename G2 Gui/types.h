@@ -289,26 +289,32 @@ typedef struct {
 } tTriangle;
 
 typedef enum {
-    paramTypeNone,
-    paramTypeFreq,
-    paramTypeResonance,
-    paramTypePitch,
-    paramTypePitchType,
-    paramTypeFmType,
-    paramTypeOffTo100KeyboardTrack,
-    paramTypeOffOnKeyboardTrack,
-    paramTypeGainControl,
-    paramTypeBypass,
-    paramTypeFltClassicDb,
-    paramTypeFltMultiDb,
-    paramTypeCommonDial,
-} tParamType;
+    paramType1None,
+    paramType1Freq,
+    paramType1Resonance,
+    paramType1Pitch,
+    paramType1PitchType,
+    paramType1FmType,
+    paramType1OffTo100KeyboardTrack,
+    paramType1OffOnKeyboardTrack,
+    paramType1GainControl,
+    paramType1Bypass,
+    paramType1FltClassicDb,
+    paramType1FltMultiDb,
+    paramType1CommonDial,
+    paramType1OscWave
+} tParamType1;
 
 typedef enum {
     paramType2Dial,
     paramType2Toggle,
     paramType2Other // Could add button, slider etc.
 } tParamType2;
+
+typedef enum {
+    paramType3Param,
+    paramType3Mode
+} tParamType3;
 
 typedef enum {
     locationFx = 0,
@@ -371,7 +377,7 @@ typedef struct _struct_module {
     uint32_t                isLed;
     uint32_t                unknown1;  // Guess we should store this, to write back if necessary. Might not be needed
     uint32_t                modeCount; // Don't yet know what this is for. Might need modes array adding
-    uint32_t                mode[16];
+    tParam                  mode[NUM_MODES];
     char                    name[MODULE_NAME_SIZE + 1];
     uint32_t                allocatedParams;
     tParam *                param[VARIATIONS];
@@ -379,6 +385,8 @@ typedef struct _struct_module {
     tConnector *            connector;
     bool                    gotParamIndexCache;
     uint32_t                paramIndexCache;
+    bool                    gotModeIndexCache;
+    uint32_t                modeIndexCache;
     bool                    gotConnectorIndexCache;
     uint32_t                connectorIndexCache;
     struct _struct_module * prev;
@@ -398,10 +406,12 @@ typedef struct {
 } tModuleDragging;     // Parameter value dragging - Todo: rename
 
 typedef struct {
-    bool       active;
-    tModuleKey moduleKey;
-    uint32_t   variation;
-    uint32_t   param;
+    bool        active;
+    tModuleKey  moduleKey;
+    tParamType3 type3;
+    uint32_t    variation;
+    uint32_t    param;
+    uint32_t    mode;
 } tDialDragging;     // Parameter value dragging - Todo: rename
 
 typedef struct {
@@ -464,7 +474,7 @@ typedef struct {
 
 typedef struct {
     const tModuleType moduleType;
-    const tParamType  type;
+    const tParamType1 type;
     const tCoord      coord;
 } tConstParameter;
 
@@ -477,7 +487,7 @@ typedef struct {
 
 typedef struct {
     const tModuleType moduleType;
-    const tParamType  type;
+    const tParamType1 type1;
     const tParamType2 type2;
     const double      offsetX;
     const double      offsetY;

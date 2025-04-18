@@ -24,11 +24,11 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 
-static pthread_mutex_t   dbMutex     = {0};
-static tModule *         firstModule = NULL;
-static tModule *         walkModule  = NULL;
-static tCable *          firstCable  = NULL;
-static tCable *          walkCable   = NULL;
+static pthread_mutex_t dbMutex     = {0};
+static tModule *       firstModule = NULL;
+static tModule *       walkModule  = NULL;
+static tCable *        firstCable  = NULL;
+static tCable *        walkCable   = NULL;
 
 static void mutex_lock(void) {
     if (pthread_mutex_lock(&dbMutex) != 0) {

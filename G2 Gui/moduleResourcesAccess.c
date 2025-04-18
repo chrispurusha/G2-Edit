@@ -27,7 +27,11 @@ extern "C" {
 uint32_t array_size_param_location_list(void) { // Todo: move to a module resources source file when it's created
     return ARRAY_SIZE(paramLocationList);
 }
-    
+
+uint32_t array_size_mode_location_list(void) { // Todo: move to a module resources source file when it's created
+    return ARRAY_SIZE(modeLocationList);
+}
+
 uint32_t array_size_connector_location_list(void) { // Todo: move to a module resources source file when it's created
     return ARRAY_SIZE(connectorLocationList);
 }

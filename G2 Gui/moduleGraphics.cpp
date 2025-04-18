@@ -69,29 +69,31 @@ tRectangle render_dial(tRectangle rectangle, uint32_t value) {  // Drop down int
     return render_circle_line(moduleArea, {x, y}, radius, 25, 1.0);
 }
 
-void render_dial_with_text(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module, char * buff, uint32_t value) {
+tRectangle render_dial_with_text(tCoord coord, char * label, char * buff, uint32_t value) {
     double y = coord.y;
-    
+
     set_rbg_colour(RGB_BLACK);
-    if (paramLocationList[paramRef].label != NULL) {
-        render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, (char *)paramLocationList[paramRef].label);
+
+    if (label != NULL) {
+        render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, label);
         y += STANDARD_TEXT_HEIGHT;
     }
     render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     y += STANDARD_TEXT_HEIGHT;
     set_rbg_colour({0.2, 0.2, 0.2});
-    module->param[0][param].rectangle = render_dial({{coord.x, y}, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, value);
+    return render_dial({{coord.x, y}, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, value);
 }
 
 // This might be too generic and won't be able to use, or we add extra params!
 void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module) {
-    char     buff[16]   = {0};
+    char     buff[16] = {0};
+
     uint32_t paramValue = module->param[0][param].value;
 
     module->param[0][param].paramRef = paramRef;
 
-    switch (paramLocationList[paramRef].type) {
-        case paramTypeFreq:
+    switch (paramLocationList[paramRef].type1) {
+        case paramType1Freq:
         {
             double freq = 0.0;
 
@@ -106,10 +108,10 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
             } else {
                 snprintf(buff, sizeof(buff), "%.1fkHz", freq / 1000.0);
             }
-            render_dial_with_text(coord, paramRef, param, module, buff, paramValue);
+            module->param[0][param].rectangle = render_dial_with_text(coord, (char *)paramLocationList[paramRef].label, buff, paramValue);
             break;
         }
-        case paramTypePitch:
+        case paramType1Pitch:
         {
             double percent = 0.0;
             double maxVal  = 200.0;
@@ -117,14 +119,14 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
             if (paramValue < 127) {
                 percent = round(((double)paramValue * maxVal * 10.0) / 128.0) / 10.0;
             } else {
-                percent = maxVal;     // Clip
+                percent = maxVal;             // Clip
             }
             snprintf(buff, sizeof(buff), "%.1f%%", percent);
-            render_dial_with_text(coord, paramRef, param, module, buff, paramValue);
+            module->param[0][param].rectangle = render_dial_with_text(coord, (char *)paramLocationList[paramRef].label, buff, paramValue);
             break;
         }
-        case paramTypeCommonDial: // Ultimately might not be a common dial, or could just be a default percent dial!?
-        case paramTypeResonance:
+        case paramType1CommonDial:         // Ultimately might not be a common dial, or could just be a default percent dial!?
+        case paramType1Resonance:
         {
             double res    = 0.0;
             double maxVal = 100.0;
@@ -132,18 +134,18 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
             if (paramValue < 127) {
                 res = round(((double)paramValue * maxVal * 10.0) / 128.0) / 10.0;
             } else {
-                res = maxVal;     // Clip
+                res = maxVal;             // Clip
             }
             snprintf(buff, sizeof(buff), "%.1f", res);
-            render_dial_with_text(coord, paramRef, param, module, buff, paramValue);
+            module->param[0][param].rectangle = render_dial_with_text(coord, (char *)paramLocationList[paramRef].label, buff, paramValue);
             break;
         }
-        case paramTypeFltMultiDb:
-        case paramTypeFltClassicDb:
-        case paramTypePitchType:
-        case paramTypeFmType:
-        case paramTypeOffTo100KeyboardTrack:
-        case paramTypeOffOnKeyboardTrack:
+        case paramType1FltMultiDb:
+        case paramType1FltClassicDb:
+        case paramType1PitchType:
+        case paramType1FmType:
+        case paramType1OffTo100KeyboardTrack:
+        case paramType1OffOnKeyboardTrack:
         {
             char ** map = (char **)paramLocationList[paramRef].strMap;
             double  y   = coord.y;
@@ -157,19 +159,19 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
             module->param[0][param].rectangle = draw_button(moduleArea, {{coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, map, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, map[paramValue]);
             break;
         }
-        case paramTypeGainControl:
+        case paramType1GainControl:
         {
             char * valString = "GC";
 
             if (paramValue != 0) {
-                set_rbg_colour({0.3, 0.7, 0.3});         // Green when ON
+                set_rbg_colour({0.3, 0.7, 0.3});                 // Green when ON
             } else {
-                set_rbg_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
+                set_rbg_colour(RGB_BACKGROUND_GREY);             // Grey when OFF
             }
             module->param[0][param].rectangle = draw_button(moduleArea, {coord, get_text_width(valString, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}, valString);
             break;
         }
-        case paramTypeBypass:
+        case paramType1Bypass:
         {
             module->param[0][param].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
             return;
@@ -180,14 +182,34 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
     }
 }
 
+void render_mode_common(tCoord coord, uint32_t modeRef, uint32_t mode, tModule * module) {
+    char     buff[16] = {0};
+
+    uint32_t modeValue = module->mode[0].value;
+
+    module->mode[0].paramRef = modeRef;
+
+    switch (modeLocationList[modeRef].type1) {
+        case paramType1OscWave:
+        {
+            snprintf(buff, sizeof(buff), "%u", modeValue);
+            module->mode[mode].rectangle = render_dial_with_text(coord, (char *)modeLocationList[modeRef].label, buff, modeValue);
+            break;
+        }
+        default:
+            snprintf(buff, sizeof(buff), "%u", modeValue);
+            break;
+    }
+}
+
 void render_module_common(tRectangle rectangle, tModule * module) {
     if (module == NULL) {
         return;
     }
     uint32_t param     = 0;
+    uint32_t mode      = 0;
     uint32_t connector = 0;
 
-    // Todo: cache the start positions in the dynamic module structure
     for (uint32_t i = module->paramIndexCache; i < array_size_param_location_list(); i++) {
         if (paramLocationList[i].moduleType == module->type) {
             if (module->gotParamIndexCache == false) {
@@ -201,6 +223,18 @@ void render_module_common(tRectangle rectangle, tModule * module) {
             if (param == gModuleProperties[module->type].numParameters) {
                 break;
             }
+        }
+    }
+
+    for (uint32_t i = module->modeIndexCache; i < array_size_mode_location_list(); i++) {
+        if (modeLocationList[i].moduleType == module->type) {
+            if (module->gotModeIndexCache == false) {
+                module->modeIndexCache    = i;
+                module->gotModeIndexCache = true;
+            }
+            render_mode_common(
+                (tCoord){rectangle.coord.x + x_param_pos_from_percent(modeLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, modeLocationList[i].offsetY)}, i,
+                mode++, module);
         }
     }
 

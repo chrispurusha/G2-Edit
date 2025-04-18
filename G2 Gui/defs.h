@@ -24,6 +24,7 @@
 #define MAX_PARAMS_PER_MODULE             (38)
 #define MAX_CONNECTORS_PER_MODULE         (10)
 #define MAX_SLOTS                         (4)
+#define NUM_MODES                         (16)
 
 #define INTERRUPT_MESSAGE_SIZE            (16)
 #define EXTENDED_MESSAGE_SIZE             (8192)
@@ -41,6 +42,7 @@
 #define SUB_COMMAND_DELETE_MODULE         (0x32)
 #define SUB_COMMAND_MOVE_MODULE           (0x34)
 #define SUB_COMMAND_SET_PARAM             (0x40)
+#define SUB_COMMAND_SET_MODE              (0x2b)
 #define SUB_COMMAND_SET_MODULE_UPRATE     (0x2a)
 #define SUB_COMMAND_WRITE_CABLE           (0x50)
 #define SUB_COMMAND_DELETE_CABLE          (0x51)

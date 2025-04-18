@@ -176,8 +176,8 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
         module.modeCount = read_bit_stream(buff, subOffset, 4);        // 4
 
         for (j = 0; j < module.modeCount; j++) {
-            module.mode[j] = read_bit_stream(buff, subOffset, 6);
-            printf("Mode index %u = %u\n", j, module.mode[j]);
+            module.mode[j].value = read_bit_stream(buff, subOffset, 6);
+            printf("Mode index %u = %u\n", j, module.mode[j].value);
         }
 
         allocate_module_parameters(&module, gModuleProperties[type].numParameters); // Also done on parameter set-up, so whichever's first
@@ -850,6 +850,17 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->paramData.param;
             buff[pos++] = messageContent->paramData.value;
             buff[pos++] = messageContent->paramData.variation;     // variation
+            break;
+
+        case eMsgCmdSetMode:
+            buff[pos++] = 0x01;
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot; //+slot
+            buff[pos++] = slotVersion[slot];                 // needs to be slot ultimately
+            buff[pos++] = SUB_COMMAND_SET_MODE;
+            buff[pos++] = messageContent->modeData.moduleKey.location;
+            buff[pos++] = messageContent->modeData.moduleKey.index;
+            buff[pos++] = messageContent->modeData.mode;
+            buff[pos++] = messageContent->modeData.value;
             break;
 
         case eMsgCmdWriteCable:
