@@ -958,19 +958,18 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                 if (modeLocationList[module.mode[gDialDragging.param].paramRef].type2 == paramType2Dial) {
                     angle = calculate_mouse_angle({x, y}, module.mode[gDialDragging.param].rectangle);                                                            // possible add half size
                     value = angle_to_value(angle);
-                    //Todo: think about this scaling mechanism and see if we can improve. May need to deal with doubles for non-easy divides
-                    scaledValue = (value * modeLocationList[module.mode[gDialDragging.param].paramRef].range) / MAX_PARAM_RANGE;
-                    scaledModuleValue = (module.mode[gDialDragging.mode].value *modeLocationList[module.mode[gDialDragging.param].paramRef].range) / MAX_PARAM_RANGE;
+                    value = (value * modeLocationList[module.mode[gDialDragging.param].paramRef].range) / MAX_PARAM_RANGE;
+                    //printf("VALUE = %u\n", value);
                     
-                    module.mode[gDialDragging.mode].value = value;
+                    if (module.mode[gDialDragging.mode].value != value) {
+                        module.mode[gDialDragging.mode].value = value;
 
-                    write_module(gDialDragging.moduleKey, &module);         // Write new value into parameter
-                    
-                    if (scaledModuleValue != scaledValue) {
+                        write_module(gDialDragging.moduleKey, &module);         // Write new value into parameter
+                        
                         messageContent.cmd                = eMsgCmdSetMode;
                         messageContent.modeData.moduleKey = gDialDragging.moduleKey;
                         messageContent.modeData.mode      = gDialDragging.mode;
-                        messageContent.modeData.value     = scaledValue;
+                        messageContent.modeData.value     = value;
                         msg_send(&gCommandQueue, &messageContent);
                     }
                 }
