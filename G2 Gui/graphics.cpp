@@ -253,6 +253,15 @@ void do_graphics_loop(void) {
             render_top_bar();
             render_scrollbars(gWindow);
             render_context_menu();
+            // Debug only
+            //{
+            //    double x = 0.0;
+            //    double y = 0.0;
+            //    glfwGetCursorPos(gWindow, &x, &y);
+            //    set_rbg_colour(RGB_BLACK);
+            //    render_line(mainArea, {x, y-10}, {x, y+10}, 3);
+            //    render_line(mainArea, {x-10, y}, {x+10, y}, 3);
+            //}
 
             gReDraw = false;
 

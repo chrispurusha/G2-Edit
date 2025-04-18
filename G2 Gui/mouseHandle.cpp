@@ -924,7 +924,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     glfwGetWindowSize(window, &width, &height);
     x = (x * (double)get_render_width()) / (double)width;
     y = (y * (double)get_render_height()) / (double)height;
-
+ 
     if (gScrollState.yBarDragging == true) {
         set_y_scroll_bar(y);
     } else if (gScrollState.xBarDragging == true) {
