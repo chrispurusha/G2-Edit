@@ -62,6 +62,8 @@
 
 #define MAX_GLYPH_CHAR                    (128)
 
+#define MAX_PARAM_RANGE                   (128)
+
 #define MAX_COMPONENTS_PER_MODULE         (32)
 
 #define BORDER_LINE_WIDTH                 (2.0)

@@ -192,7 +192,10 @@ void render_mode_common(tCoord coord, uint32_t modeRef, uint32_t mode, tModule *
     switch (modeLocationList[modeRef].type1) {
         case paramType1OscWave:
         {
-            snprintf(buff, sizeof(buff), "%u", modeValue);
+            uint32_t wave = 0;
+
+            wave = (modeValue * modeLocationList[modeRef].range) / MAX_PARAM_RANGE; // TODO - OK for easy integer divides, but will need to deal with other divides
+            snprintf(buff, sizeof(buff), "%u", wave);
             module->mode[mode].rectangle = render_dial_with_text(coord, (char *)modeLocationList[modeRef].label, buff, modeValue);
             break;
         }

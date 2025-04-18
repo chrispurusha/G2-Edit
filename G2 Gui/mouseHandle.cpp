@@ -914,6 +914,8 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     int             height         = 0;
     double          angle          = 0.0;
     uint32_t        value          = 0;
+    uint32_t        scaledValue        = 0;
+    uint32_t        scaledModuleValue    = 0;
     tModule         module         = {0};
     tMessageContent messageContent = {0};
     bool            noAction       = false;
@@ -956,17 +958,19 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                 if (modeLocationList[module.mode[gDialDragging.param].paramRef].type2 == paramType2Dial) {
                     angle = calculate_mouse_angle({x, y}, module.mode[gDialDragging.param].rectangle);                                                            // possible add half size
                     value = angle_to_value(angle);
+                    //Todo: think about this scaling mechanism and see if we can improve. May need to deal with doubles for non-easy divides
+                    scaledValue = (value * modeLocationList[module.mode[gDialDragging.param].paramRef].range) / MAX_PARAM_RANGE;
+                    scaledModuleValue = (module.mode[gDialDragging.mode].value *modeLocationList[module.mode[gDialDragging.param].paramRef].range) / MAX_PARAM_RANGE;
+                    
+                    module.mode[gDialDragging.mode].value = value;
 
-                    if (module.mode[gDialDragging.mode].value != value) {
-                        module.mode[gDialDragging.mode].value = value;
-
-                        write_module(gDialDragging.moduleKey, &module);         // Write new value into parameter
-
+                    write_module(gDialDragging.moduleKey, &module);         // Write new value into parameter
+                    
+                    if (scaledModuleValue != scaledValue) {
                         messageContent.cmd                = eMsgCmdSetMode;
                         messageContent.modeData.moduleKey = gDialDragging.moduleKey;
                         messageContent.modeData.mode      = gDialDragging.mode;
-                        // TODO - don't do scaling here! Urgently needs to be done on rendering of dial itself!
-                        messageContent.modeData.value     = (uint32_t)((double)value * ((double)modeLocationList[module.mode[gDialDragging.param].paramRef].range / 128.0));
+                        messageContent.modeData.value     = scaledValue;
                         msg_send(&gCommandQueue, &messageContent);
                     }
                 }
