@@ -63,7 +63,7 @@ static pthread_t usbThread                  = NULL;
 static void      (*wake_glfw_func_ptr)(void) = NULL;
 static void      (*full_patch_change_notify_func_ptr)(void) = NULL;
 
-//unsigned int             volData[1024] = {0}; //Temporary for testing. Will ultimately have a better mechanism for passing data
+extern uint32_t gLocation;
 
 void register_glfw_wake_cb(void ( *func_ptr )(void)) {
     wake_glfw_func_ptr = func_ptr;
@@ -466,7 +466,7 @@ static void parse_param_change(uint8_t * buff, int length) {
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t commandResponse, uint8_t subCommand, int length) {
     int i = 0;
     int j = 0;
-
+    
     switch (commandResponse) {
         case 0x00: // slot!?
         case 0x01:
@@ -475,25 +475,45 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 
             switch (subCommand) {
                 case SUB_COMMAND_VOLUME_INDICATOR:
-                    //printf("Got Volume ");
+                    tModule module = {0};
+                    uint16_t volBuff[256] = {0};
+                    bool validModule = false;
+
+                    printf("Got Volume data ");
                     j = 0;
 
-                    for (i = 4; i < (length - 6); i += 2) {     // Exclude header/footer
-                        /*volData[j] =*/
-                        read_bit_stream(buff, bitPos, 16);
-                        //printf("%u ", volData[j]);
+                    for (i = 0; i < 20; i++) {     // Exclude header/footer
+                        volBuff[j] = read_bit_stream(buff, bitPos, 16);
+                        printf("%u ", volBuff[j]);
                         j++;
                     }
+                    
+                    printf("Volume length %u\n", j);
 
-                    //printf("\n");
+                    do {
+                        validModule = walk_next_module(&module);
+
+                        if (validModule && module.key.location == gLocation) {
+                            module.volume[0] = volBuff[(module.key.index-1)*2];
+                            module.volume[1] = volBuff[((module.key.index-1)*2)+1];
+                            printf("Module %u vol %u %u\n", module.key.index, module.volume[0], module.volume[1]);
+                            write_module(module.key, &module);
+                        }
+                    } while (validModule);
+
+                    finish_walk_module();
+                    
                     call_wake_glfw();
                     return EXIT_SUCCESS;
 
                 case SUB_COMMAND_LED_DATA:
-                    //printf("Got LED data ");
-                    //for (i = 4; i < (length - 6); i += 2)
-                    //    printf("%u ", read_bit_stream(buff, bitPos, 16));
-                    //printf("\n");
+#if 0
+                    printf("Got LED data ");
+                    for (i = 0; i < 256; i++)
+                        printf("%u ", read_bit_stream(buff, bitPos, 1));
+                    printf("\n");
+#endif
+                    call_wake_glfw();
                     return EXIT_SUCCESS;
 
                 case 0x7E:

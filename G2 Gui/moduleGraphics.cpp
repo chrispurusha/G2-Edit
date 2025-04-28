@@ -288,14 +288,18 @@ void render_module(tModule * module) {
     //    render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Uprated");
     //}
 
-    if (module->isLed) {
-        render_text(moduleArea, {{moduleRectangle.coord.x + 60.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Led");
-    }
+    //if (module->isLed) {
+    //    render_text(moduleArea, {{moduleRectangle.coord.x + 60.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Led");
+    //}
 
     if (module->modeCount > 1) {
         snprintf(buff, sizeof(buff), "Modes %u", module->modeCount);
         render_text(moduleArea, {{moduleRectangle.coord.x + 150.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     }
+    
+    snprintf(buff, sizeof(buff), "Vol %u %u", module->volume[0], module->volume[1]);
+    render_text(moduleArea, {{moduleRectangle.coord.x + 60.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+
 }
 
 void render_modules(void) {

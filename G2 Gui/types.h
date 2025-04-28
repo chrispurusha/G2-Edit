@@ -389,6 +389,7 @@ typedef struct _struct_module {
     uint32_t                modeIndexCache;
     bool                    gotConnectorIndexCache;
     uint32_t                connectorIndexCache;
+    uint32_t                volume[2];
     struct _struct_module * prev;
     struct _struct_module * next;
 } tModule;
