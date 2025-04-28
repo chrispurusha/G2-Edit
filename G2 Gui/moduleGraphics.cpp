@@ -229,7 +229,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 (tCoord){rectangle.coord.x + x_param_pos_from_percent(paramLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, paramLocationList[i].offsetY)}, i,
                 param++, module);
 
-            if (param == gModuleProperties[module->type].numParameters) {
+            if (param == module_param_count(module->type)) {
                 break;
             }
         }

@@ -181,7 +181,7 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
             printf("MODE %u %u\n", i, module.mode[j].value);
         }
 
-        allocate_module_parameters(&module, gModuleProperties[type].numParameters); // Also done on parameter set-up, so whichever's first
+        allocate_module_parameters(&module, module_param_count(type)); // Also done on parameter set-up, so whichever's first
         allocate_module_connectors(&module, module_connector_count(type));
 
         printf("Number connectors for module %u\n", module_connector_count(type));

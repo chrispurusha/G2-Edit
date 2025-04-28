@@ -36,6 +36,34 @@ uint32_t array_size_connector_location_list(void) { // Todo: move to a module re
     return ARRAY_SIZE(connectorLocationList);
 }
 
+uint32_t module_param_count(tModuleType moduleType) {
+    int      i     = 0;
+    uint32_t count = 0;
+
+    for (i = 0; i < array_size_param_location_list(); i++) {
+        if (paramLocationList[i].moduleType == moduleType) {
+            count++;
+        }
+    }
+
+    // Todo: possibly cache this value
+    return count;
+}
+
+uint32_t module_mode_count(tModuleType moduleType) {
+    int      i     = 0;
+    uint32_t count = 0;
+
+    for (i = 0; i < array_size_mode_location_list(); i++) {
+        if (modeLocationList[i].moduleType == moduleType) {
+            count++;
+        }
+    }
+
+    // Todo: possibly cache this value
+    return count;
+}
+
 uint32_t module_connector_count(tModuleType moduleType) {
     int      i     = 0;
     uint32_t count = 0;

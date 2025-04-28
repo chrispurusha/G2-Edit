@@ -464,7 +464,7 @@ void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord
 void init_params_on_new_module(tModule * module) {
     uint32_t locationListIndex = 0;
     uint32_t paramIndex        = 0;
-    uint32_t numParams         = gModuleProperties[module->type].numParameters;
+    uint32_t numParams         = module_param_count(module->type);
 
     for (uint32_t locationListIndex = 0; locationListIndex < array_size_param_location_list(); locationListIndex++) {
         if (paramLocationList[locationListIndex].moduleType == module->type) {
@@ -505,7 +505,7 @@ void menu_action_create(int index) {
             module.key.index = (uint32_t)uniqueIndex;
             module.type      = (tModuleType)gContextMenu.items[index].param;
             convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.coord);
-            allocate_module_parameters(&module, gModuleProperties[module.type].numParameters);
+            allocate_module_parameters(&module, module_param_count(module.type));
             allocate_module_connectors(&module, module_connector_count(module.type));
             memcpy(module.name, gModuleProperties[module.type].name, sizeof(module.name));
 
@@ -518,9 +518,9 @@ void menu_action_create(int index) {
             messageContent.moduleData.upRate    = module.upRate;
             messageContent.moduleData.isLed     = module.isLed;
             messageContent.moduleData.unknown1  = module.unknown1;
-            messageContent.moduleData.modeCount = gModuleProperties[module.type].modeCount;
+            messageContent.moduleData.modeCount = module_mode_count(module.type);
 
-            for (int i = 0; i < gModuleProperties[module.type].modeCount; i++) {
+            for (int i = 0; i < module_mode_count(module.type); i++) {
                 messageContent.moduleData.mode[i] = module.mode[i].value;
             }
 
@@ -616,7 +616,7 @@ bool handle_module_click(tCoord coord, int button) {
     while (walk_next_module(&module) && (retVal == false)) {
         if (module.key.location == gLocation) {
             // Deal with click on param
-            for (int i = 0; i < (gModuleProperties[module.type].numParameters) && (retVal == false); i++) {
+            for (int i = 0; (i < module_param_count(module.type)) && (retVal == false); i++) {
                 tParam * param = &module.param[0][i];
 
                 if (within_rectangle(coord, param->rectangle)) {

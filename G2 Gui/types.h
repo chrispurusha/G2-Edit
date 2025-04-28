@@ -449,8 +449,6 @@ typedef struct {
 typedef struct {
     const char *      name;
     const uint32_t    height;
-    const uint32_t    numParameters; // Todo: base on items in the location list structure using similar to module_connector_count()
-    const uint32_t    modeCount;     // Todo: base on items in the location list structure using similar to module_connector_count()
     const tVolumeType volumeType;
 } tModuleProperties;
 

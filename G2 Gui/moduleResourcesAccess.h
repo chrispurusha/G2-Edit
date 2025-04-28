@@ -34,6 +34,8 @@ extern const tConnectorLocation connectorLocationList[];
 uint32_t array_size_param_location_list(void);
 uint32_t array_size_mode_location_list(void);
 uint32_t array_size_connector_location_list(void);
+uint32_t module_param_count(tModuleType moduleType);
+uint32_t module_mode_count(tModuleType moduleType);
 uint32_t module_connector_count(tModuleType moduleType);
 
 #endif // __MODULE_RESOURCE_ACCESS_H__
