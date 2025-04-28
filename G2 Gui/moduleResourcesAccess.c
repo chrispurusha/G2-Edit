@@ -36,6 +36,20 @@ uint32_t array_size_connector_location_list(void) { // Todo: move to a module re
     return ARRAY_SIZE(connectorLocationList);
 }
 
+uint32_t module_connector_count(tModuleType moduleType) {
+    int      i     = 0;
+    uint32_t count = 0;
+
+    for (i = 0; i < array_size_connector_location_list(); i++) {
+        if (connectorLocationList[i].moduleType == moduleType) {
+            count++;
+        }
+    }
+
+    // Todo: possibly cache this value
+    return count;
+}
+
 #ifdef __cplusplus
 }
 #endif

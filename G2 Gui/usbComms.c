@@ -63,7 +63,7 @@ static pthread_t usbThread                  = NULL;
 static void      (*wake_glfw_func_ptr)(void) = NULL;
 static void      (*full_patch_change_notify_func_ptr)(void) = NULL;
 
-extern uint32_t gLocation;
+extern uint32_t  gLocation;
 
 void register_glfw_wake_cb(void ( *func_ptr )(void)) {
     wake_glfw_func_ptr = func_ptr;
@@ -182,9 +182,9 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
         }
 
         allocate_module_parameters(&module, gModuleProperties[type].numParameters); // Also done on parameter set-up, so whichever's first
-        allocate_module_connectors(&module, gModuleProperties[type].numConnectors);
+        allocate_module_connectors(&module, module_connector_count(type));
 
-        printf("Number connectors for module %u\n", gModuleProperties[type].numConnectors);
+        printf("Number connectors for module %u\n", module_connector_count(type));
         write_module(key, &module);
     }
 }
@@ -466,7 +466,7 @@ static void parse_param_change(uint8_t * buff, int length) {
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t commandResponse, uint8_t subCommand, int length) {
     int i = 0;
     int j = 0;
-    
+
     switch (commandResponse) {
         case 0x00: // slot!?
         case 0x01:
@@ -481,13 +481,13 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     //for (i = 4; i < 40; i++)
                     //    printf("0x%02x ", buff[i]);
                     //printf("\n");
-                    
-                    for (int k=0; k<=255; k++) {
+
+                    for (int k = 0; k <= 255; k++) {
                         module.key.location = gLocation;
-                        module.key.index = k;
-                        
-                        if (read_module(module.key, &module) == true ) {
-                            switch(gModuleProperties[module.type].volumeType) {
+                        module.key.index    = k;
+
+                        if (read_module(module.key, &module) == true) {
+                            switch (gModuleProperties[module.type].volumeType) {
                                 case volumeTypeStereo:
                                     read_bit_stream(buff, bitPos, 8);
                                     module.volume[0] = read_bit_stream(buff, bitPos, 8);
@@ -514,15 +514,17 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                             }
                         }
                     }
-                    
+
                     call_wake_glfw();
                     return EXIT_SUCCESS;
 
                 case SUB_COMMAND_LED_DATA:
 #if 0
                     printf("Got LED data ");
-                    for (i = 0; i <= 255; i++)
+
+                    for (i = 0; i <= 255; i++) {
                         printf("%u ", read_bit_stream(buff, bitPos, 1));
+                    }
                     printf("\n");
 #endif
                     call_wake_glfw();

@@ -506,7 +506,7 @@ void menu_action_create(int index) {
             module.type      = (tModuleType)gContextMenu.items[index].param;
             convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.coord);
             allocate_module_parameters(&module, gModuleProperties[module.type].numParameters);
-            allocate_module_connectors(&module, gModuleProperties[module.type].numConnectors);
+            allocate_module_connectors(&module, module_connector_count(module.type));
             memcpy(module.name, gModuleProperties[module.type].name, sizeof(module.name));
 
             messageContent.cmd                  = eMsgCmdWriteModule;
@@ -682,7 +682,7 @@ bool handle_module_click(tCoord coord, int button) {
 
             if (retVal == false) {
                 // Deal with click on connector
-                for (int i = 0; i < (gModuleProperties[module.type].numConnectors) && (retVal == false); i++) {
+                for (int i = 0; (i < module_connector_count(module.type)) && (retVal == false); i++) {
                     if (within_rectangle(coord, module.connector[i].rectangle)) {
                         gCableDrag.fromModuleKey = module.key;
 
@@ -860,7 +860,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
                 while (walk_next_module(&toModule) && !quitLoop) {
                     if (toModule.key.location == gLocation) {
-                        for (int i = 0; i < gModuleProperties[toModule.type].numConnectors; i++) {
+                        for (int i = 0; i < module_connector_count(toModule.type); i++) {
                             if (!within_rectangle(coord, toModule.connector[i].rectangle)) {
                                 continue;
                             }
@@ -910,21 +910,21 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 }
 
 void cursor_pos(GLFWwindow * window, double x, double y) {
-    int             width          = 0;
-    int             height         = 0;
-    double          angle          = 0.0;
-    uint32_t        value          = 0;
-    uint32_t        scaledValue        = 0;
-    uint32_t        scaledModuleValue    = 0;
-    tModule         module         = {0};
-    tMessageContent messageContent = {0};
-    bool            noAction       = false;
+    int             width             = 0;
+    int             height            = 0;
+    double          angle             = 0.0;
+    uint32_t        value             = 0;
+    uint32_t        scaledValue       = 0;
+    uint32_t        scaledModuleValue = 0;
+    tModule         module            = {0};
+    tMessageContent messageContent    = {0};
+    bool            noAction          = false;
 
     // Scale x and y to match intended rendering window
     glfwGetWindowSize(window, &width, &height);
     x = (x * (double)get_render_width()) / (double)width;
     y = (y * (double)get_render_height()) / (double)height;
- 
+
     if (gScrollState.yBarDragging == true) {
         set_y_scroll_bar(y);
     } else if (gScrollState.xBarDragging == true) {
@@ -960,12 +960,12 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                     value = angle_to_value(angle, modeLocationList[module.mode[gDialDragging.param].paramRef].range);
                     value = (value * modeLocationList[module.mode[gDialDragging.param].paramRef].range) / MAX_PARAM_RANGE;
                     //printf("VALUE = %u\n", value);
-                    
+
                     if (module.mode[gDialDragging.mode].value != value) {
                         module.mode[gDialDragging.mode].value = value;
 
                         write_module(gDialDragging.moduleKey, &module);         // Write new value into parameter
-                        
+
                         messageContent.cmd                = eMsgCmdSetMode;
                         messageContent.modeData.moduleKey = gDialDragging.moduleKey;
                         messageContent.modeData.mode      = gDialDragging.mode;

@@ -397,7 +397,7 @@ typedef struct _struct_module {
     uint32_t                modeIndexCache;
     bool                    gotConnectorIndexCache;
     uint32_t                connectorIndexCache;
-    uint32_t                 volume[2];
+    uint32_t                volume[2];
     struct _struct_module * prev;
     struct _struct_module * next;
 } tModule;
@@ -447,11 +447,10 @@ typedef struct {
 } tContextMenu;
 
 typedef struct {
-    const char *   name;
-    const uint32_t height;
-    const uint32_t numParameters;
-    const uint32_t numConnectors; // TODO - calculate based on count of connectors on module in connectorLocationList
-    const uint32_t modeCount;
+    const char *      name;
+    const uint32_t    height;
+    const uint32_t    numParameters; // Todo: base on items in the location list structure using similar to module_connector_count()
+    const uint32_t    modeCount;     // Todo: base on items in the location list structure using similar to module_connector_count()
     const tVolumeType volumeType;
 } tModuleProperties;
 

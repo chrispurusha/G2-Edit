@@ -450,7 +450,7 @@ int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCoun
     int count = 0;
 
     //printf("%s find index num connectors %u\n", gModuleProperties[module->type].name, gModuleProperties[module->type].numConnectors);
-    for (int index = 0; index < gModuleProperties[module->type].numConnectors; index++) {
+    for (uint32_t index = 0; index < module_connector_count(module->type); index++) {
         if (module->connector[index].dir == dir) {
             if (count == targetCount) {
                 return index;
@@ -490,20 +490,20 @@ void allocate_module_parameters(tModule * module, uint32_t paramCount) {
 }
 
 void allocate_module_connectors(tModule * module, uint32_t connectorCount) {
-    if ((gModuleProperties[module->type].numConnectors > 0) && (gModuleProperties[module->type].numConnectors != connectorCount)) {
-        printf("When allocating for %s, connector count %u should be %u\n", gModuleProperties[module->type].name, connectorCount, gModuleProperties[module->type].numConnectors);
+    if ((module_connector_count(module->type) > 0) && (module_connector_count(module->type) != connectorCount)) {
+        printf("When allocating for %s, connector count %u should be %u\n", gModuleProperties[module->type].name, connectorCount, module_connector_count(module->type));
         exit(1);
     }
 
     // Allocation can happen via several mechanisms, so don't re-allocate if we've already done it
     if (module->allocatedConnectors == 0) {
         if (connectorCount > 0) {
-            printf("Type = %s connectors %u\n", gModuleProperties[module->type].name, gModuleProperties[module->type].numConnectors);
+            printf("Type = %s connectors %u\n", gModuleProperties[module->type].name, module_connector_count(module->type));
 
-            module->connector = malloc(gModuleProperties[module->type].numConnectors * sizeof(tConnector)); // Might need to check if already allocated!?
+            module->connector = malloc(module_connector_count(module->type) * sizeof(tConnector)); // Might need to check if already allocated!?
 
             if (module->connector != NULL) {
-                memset(module->connector, 0, gModuleProperties[module->type].numConnectors * sizeof(tConnector));
+                memset(module->connector, 0, module_connector_count(module->type) * sizeof(tConnector));
             } else {
                 perror("Failed to allocate memory for connector array");
                 exit(1);

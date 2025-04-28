@@ -66,9 +66,9 @@ tRectangle render_dial(tRectangle rectangle, uint32_t value, uint32_t range) {  
         char buff[256] = {0};
         set_rbg_colour({0.5, 0.5, 0.5});
         snprintf(buff, sizeof(buff), "%u", value);
-        render_text(moduleArea, {{x, y+20}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+        render_text(moduleArea, {{x, y + 20}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     }
-    
+
     set_rbg_colour({0.5, 0.5, 0.5});
     render_circle_part_angle(moduleArea, {x, y}, radius, 0.0, 360.0, 25);
     set_rbg_colour({0.0, 0.0, 0.0});
@@ -201,7 +201,7 @@ void render_mode_common(tCoord coord, uint32_t modeRef, uint32_t mode, tModule *
         case paramType1OscWave:
         {
             snprintf(buff, sizeof(buff), "%u", modeValue);
-            modeValue = (uint32_t)round((double)modeValue * (double)(MAX_PARAM_RANGE - 1)) / ((double)(modeLocationList[modeRef].range - 1));
+            modeValue                    = (uint32_t)round((double)modeValue * (double)(MAX_PARAM_RANGE - 1)) / ((double)(modeLocationList[modeRef].range - 1));
             module->mode[mode].rectangle = render_dial_with_text(coord, (char *)modeLocationList[modeRef].label, buff, modeValue, modeLocationList[modeRef].range);
             break;
         }
@@ -258,7 +258,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                              connectorLocationList[i].type,
                              (tCoord){rectangle.coord.x + x_param_pos_from_percent(connectorLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, connectorLocationList[i].offsetY)});
 
-            if (connector == gModuleProperties[module->type].numConnectors) {
+            if (connector == module_connector_count(module->type)) {
                 break;
             }
         }
@@ -304,7 +304,7 @@ void render_module(tModule * module) {
         snprintf(buff, sizeof(buff), "Modes %u", module->modeCount);
         render_text(moduleArea, {{moduleRectangle.coord.x + 150.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     }
-    
+
     if (gModuleProperties[module->type].volumeType != volumeTypeNone) {
         if (gModuleProperties[module->type].volumeType == volumeTypeStereo) {
             snprintf(buff, sizeof(buff), "Vol %u %u", module->volume[0], module->volume[1]);

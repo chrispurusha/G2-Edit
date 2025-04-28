@@ -775,7 +775,7 @@ uint32_t angle_to_value(double angle, uint32_t range) {
     uint32_t value = (uint32_t)floor((angle * (double)range) / 270.0);
 
     if (value >= range) { // If we hit 128, we only just hit it, so decrement
-        value = range-1;
+        value = range - 1;
     }
     return value;
 }
