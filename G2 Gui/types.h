@@ -302,6 +302,7 @@ typedef enum {
     paramType1FltClassicDb,
     paramType1FltMultiDb,
     paramType1CommonDial,
+    paramType1Sidechain,
     paramType1OscWave
 } tParamType1;
 
@@ -310,6 +311,13 @@ typedef enum {
     paramType2Toggle,
     paramType2Other // Could add button, slider etc.
 } tParamType2;
+
+typedef enum {
+    volumeTypeNone,
+    volumeTypeStereo,
+    volumeTypeMono,
+    volumeTypeCompress,
+} tVolumeType;
 
 typedef enum {
     paramType3Param,
@@ -389,7 +397,7 @@ typedef struct _struct_module {
     uint32_t                modeIndexCache;
     bool                    gotConnectorIndexCache;
     uint32_t                connectorIndexCache;
-    uint32_t                volume[2];
+    uint32_t                 volume[2];
     struct _struct_module * prev;
     struct _struct_module * next;
 } tModule;
@@ -444,6 +452,7 @@ typedef struct {
     const uint32_t numParameters;
     const uint32_t numConnectors;
     const uint32_t modeCount;
+    const tVolumeType volumeType;
 } tModuleProperties;
 
 typedef enum {

@@ -61,6 +61,14 @@ tRectangle render_dial(tRectangle rectangle, uint32_t value) {  // Drop down int
     y      = rectangle.coord.y + radius;
     angle  = value_to_angle(value);
 
+    //debug
+    /*{
+        char buff[256] = {0};
+        set_rbg_colour({0.5, 0.5, 0.5});
+        snprintf(buff, sizeof(buff), "%u", value);
+        render_text(moduleArea, {{x, y+20}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    }*/
+    
     set_rbg_colour({0.5, 0.5, 0.5});
     render_circle_part_angle(moduleArea, {x, y}, radius, 0.0, 360.0, 25);
     set_rbg_colour({0.0, 0.0, 0.0});
@@ -297,9 +305,14 @@ void render_module(tModule * module) {
         render_text(moduleArea, {{moduleRectangle.coord.x + 150.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     }
     
-    snprintf(buff, sizeof(buff), "Vol %u %u", module->volume[0], module->volume[1]);
-    render_text(moduleArea, {{moduleRectangle.coord.x + 60.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-
+    if (gModuleProperties[module->type].volumeType != volumeTypeNone) {
+        if (gModuleProperties[module->type].volumeType == volumeTypeStereo) {
+            snprintf(buff, sizeof(buff), "Vol %u %u", module->volume[0], module->volume[1]);
+        } else{
+            snprintf(buff, sizeof(buff), "Vol %u", module->volume[0]);
+        }
+        render_text(moduleArea, {{moduleRectangle.coord.x + 60.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    }
 }
 
 void render_modules(void) {

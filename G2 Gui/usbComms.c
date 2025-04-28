@@ -476,32 +476,44 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
             switch (subCommand) {
                 case SUB_COMMAND_VOLUME_INDICATOR:
                     tModule module = {0};
-                    uint16_t volBuff[256] = {0};
-                    bool validModule = false;
 
-                    printf("Got Volume data ");
-                    j = 0;
-
-                    for (i = 0; i < 20; i++) {     // Exclude header/footer
-                        volBuff[j] = read_bit_stream(buff, bitPos, 16);
-                        printf("%u ", volBuff[j]);
-                        j++;
-                    }
+                    //printf("Vol ");
+                    //for (i = 4; i < 40; i++)
+                    //    printf("0x%02x ", buff[i]);
+                    //printf("\n");
                     
-                    printf("Volume length %u\n", j);
+                    for (int k=0; k<=255; k++) {
+                        module.key.location = gLocation;
+                        module.key.index = k;
+                        
+                        if (read_module(module.key, &module) == true ) {
+                            switch(gModuleProperties[module.type].volumeType) {
+                                case volumeTypeStereo:
+                                    read_bit_stream(buff, bitPos, 8);
+                                    module.volume[0] = read_bit_stream(buff, bitPos, 8);
+                                    read_bit_stream(buff, bitPos, 8);
+                                    module.volume[1] = read_bit_stream(buff, bitPos, 8);
+                                    read_bit_stream(buff, bitPos, 8); // Unused / unknown!?
+                                    break;
+                                case volumeTypeMono:
+                                    module.volume[0] = read_bit_stream(buff, bitPos, 8);
+                                    module.volume[1] = 0;
+                                    break;
+                                case volumeTypeCompress:
+                                    module.volume[0] = read_bit_stream(buff, bitPos, 8);
+                                    read_bit_stream(buff, bitPos, 8); // Maybe bit values mean clipping or similar!?
+                                    module.volume[1] = 0;
+                                    break;
+                                default:
+                                    break;
+                            }
 
-                    do {
-                        validModule = walk_next_module(&module);
-
-                        if (validModule && module.key.location == gLocation) {
-                            module.volume[0] = volBuff[(module.key.index-1)*2];
-                            module.volume[1] = volBuff[((module.key.index-1)*2)+1];
-                            printf("Module %u vol %u %u\n", module.key.index, module.volume[0], module.volume[1]);
-                            write_module(module.key, &module);
+                            if (gModuleProperties[module.type].volumeType != volumeTypeNone) {
+                                //printf("Module %u vol %u %u\n", module.key.index, module.volume[0], module.volume[1]);
+                                write_module(module.key, &module);
+                            }
                         }
-                    } while (validModule);
-
-                    finish_walk_module();
+                    }
                     
                     call_wake_glfw();
                     return EXIT_SUCCESS;
@@ -509,7 +521,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                 case SUB_COMMAND_LED_DATA:
 #if 0
                     printf("Got LED data ");
-                    for (i = 0; i < 256; i++)
+                    for (i = 0; i <= 255; i++)
                         printf("%u ", read_bit_stream(buff, bitPos, 1));
                     printf("\n");
 #endif
