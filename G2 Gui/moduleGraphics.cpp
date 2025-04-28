@@ -50,7 +50,7 @@ void set_module_colour(uint32_t colour) {
     set_rbg_colour(rgb);
 }
 
-tRectangle render_dial(tRectangle rectangle, uint32_t value) {  // Drop down into utilsGraphics?
+tRectangle render_dial(tRectangle rectangle, uint32_t value, uint32_t range) {  // Drop down into utilsGraphics?
     double angle  = 0.0;
     double radius = 0.0;
     double x      = 0;
@@ -59,15 +59,15 @@ tRectangle render_dial(tRectangle rectangle, uint32_t value) {  // Drop down int
     radius = (rectangle.size.w / 2.0);
     x      = rectangle.coord.x + radius;
     y      = rectangle.coord.y + radius;
-    angle  = value_to_angle(value);
+    angle  = value_to_angle(value, range);
 
     //debug
-    /*{
+    {
         char buff[256] = {0};
         set_rbg_colour({0.5, 0.5, 0.5});
         snprintf(buff, sizeof(buff), "%u", value);
         render_text(moduleArea, {{x, y+20}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-    }*/
+    }
     
     set_rbg_colour({0.5, 0.5, 0.5});
     render_circle_part_angle(moduleArea, {x, y}, radius, 0.0, 360.0, 25);
@@ -77,7 +77,7 @@ tRectangle render_dial(tRectangle rectangle, uint32_t value) {  // Drop down int
     return render_circle_line(moduleArea, {x, y}, radius, 25, 1.0);
 }
 
-tRectangle render_dial_with_text(tCoord coord, char * label, char * buff, uint32_t value) {
+tRectangle render_dial_with_text(tCoord coord, char * label, char * buff, uint32_t value, uint32_t range) {
     double y = coord.y;
 
     set_rbg_colour(RGB_BLACK);
@@ -89,7 +89,7 @@ tRectangle render_dial_with_text(tCoord coord, char * label, char * buff, uint32
     render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     y += STANDARD_TEXT_HEIGHT;
     set_rbg_colour({0.2, 0.2, 0.2});
-    return render_dial({{coord.x, y}, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, value);
+    return render_dial({{coord.x, y}, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, value, range);
 }
 
 // This might be too generic and won't be able to use, or we add extra params!
@@ -116,7 +116,7 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
             } else {
                 snprintf(buff, sizeof(buff), "%.1fkHz", freq / 1000.0);
             }
-            module->param[0][param].rectangle = render_dial_with_text(coord, (char *)paramLocationList[paramRef].label, buff, paramValue);
+            module->param[0][param].rectangle = render_dial_with_text(coord, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
             break;
         }
         case paramType1Pitch:
@@ -130,7 +130,7 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
                 percent = maxVal;             // Clip
             }
             snprintf(buff, sizeof(buff), "%.1f%%", percent);
-            module->param[0][param].rectangle = render_dial_with_text(coord, (char *)paramLocationList[paramRef].label, buff, paramValue);
+            module->param[0][param].rectangle = render_dial_with_text(coord, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
             break;
         }
         case paramType1CommonDial:         // Ultimately might not be a common dial, or could just be a default percent dial!?
@@ -145,7 +145,7 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
                 res = maxVal;             // Clip
             }
             snprintf(buff, sizeof(buff), "%.1f", res);
-            module->param[0][param].rectangle = render_dial_with_text(coord, (char *)paramLocationList[paramRef].label, buff, paramValue);
+            module->param[0][param].rectangle = render_dial_with_text(coord, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
             break;
         }
         case paramType1FltMultiDb:
@@ -202,7 +202,7 @@ void render_mode_common(tCoord coord, uint32_t modeRef, uint32_t mode, tModule *
         {
             snprintf(buff, sizeof(buff), "%u", modeValue);
             modeValue = (uint32_t)round((double)modeValue * (double)(MAX_PARAM_RANGE - 1)) / ((double)(modeLocationList[modeRef].range - 1));
-            module->mode[mode].rectangle = render_dial_with_text(coord, (char *)modeLocationList[modeRef].label, buff, modeValue);
+            module->mode[mode].rectangle = render_dial_with_text(coord, (char *)modeLocationList[modeRef].label, buff, modeValue, modeLocationList[modeRef].range);
             break;
         }
         default:
@@ -341,6 +341,10 @@ void render_modules(void) {
 }
 
 void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir dir, tConnectorType type, tCoord coord) {
+    if (module->connector == NULL) {
+        printf("No connector index %u on module index %u\n", connectorIndex, module->key.index);
+        return;
+    }
     module->connector[connectorIndex].coord = coord;  // Register where we're rendering this connector, for cable connecting
     module->connector[connectorIndex].dir   = dir;    // Ultimately, should be constant in the structures, we shouldn't have to do this here
     module->connector[connectorIndex].type  = type;

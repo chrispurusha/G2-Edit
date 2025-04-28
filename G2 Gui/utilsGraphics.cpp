@@ -740,8 +740,8 @@ void free_textures(void) {
 }
 
 // Converts normalized value [0,127] back to an angle (-135° to 135°)
-double value_to_angle(uint32_t value) {
-    return ((double)value * (135.0 * 2.0) / 128.0) - 135.0;
+double value_to_angle(uint32_t value, uint32_t range) {
+    return ((double)value * (135.0 * 2.0) / (double)range) - 135.0;
 }
 
 double get_scroll_bar_percent(double scrollBar, double renderSize) {
@@ -762,7 +762,7 @@ double set_scroll_bar_percent(double percent, double renderSize) {
 }
 
 // Converts angle (-135° to 135°) to normalized value [0,127]
-uint32_t angle_to_value(double angle) {
+uint32_t angle_to_value(double angle, uint32_t range) {
     // Clamp angle within [-135, 135] range
     if (angle > 135.0 && angle < 180.0) {
         angle = 135.0;
@@ -772,10 +772,10 @@ uint32_t angle_to_value(double angle) {
     // Normalize angle to [0, 270]
     angle = fmod(angle + 135.0, 360.0);
 
-    uint32_t value = (uint32_t)floor((angle * 128.0) / 270.0);
+    uint32_t value = (uint32_t)floor((angle * (double)range) / 270.0);
 
-    if (value >= 128) { // If we hit 128, we only just hit it, so decrement
-        value = 127;
+    if (value >= range) { // If we hit 128, we only just hit it, so decrement
+        value = range-1;
     }
     return value;
 }

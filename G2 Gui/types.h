@@ -450,7 +450,7 @@ typedef struct {
     const char *   name;
     const uint32_t height;
     const uint32_t numParameters;
-    const uint32_t numConnectors;
+    const uint32_t numConnectors; // TODO - calculate based on count of connectors on module in connectorLocationList
     const uint32_t modeCount;
     const tVolumeType volumeType;
 } tModuleProperties;

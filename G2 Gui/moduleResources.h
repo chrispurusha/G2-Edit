@@ -83,7 +83,7 @@ const tModuleProperties gModuleProperties[] = {
     {"Keyboard",     2,  0, 0, 0, volumeTypeNone},
     {"Unknown",      0,  0, 0, 0, volumeTypeNone},
     {"4-Out",        2,  0, 0, 0, volumeTypeNone},
-    {"2-Out",        2,  0, 0, 0, volumeTypeStereo},
+    {"2-Out",        2,  0, 2, 0, volumeTypeStereo},
     {"Invert",       2,  0, 0, 0, volumeTypeNone},
     {"Unknown",      0,  0, 0, 0, volumeTypeNone},
     {"OscB",         5,  0, 0, 0, volumeTypeNone},
@@ -229,7 +229,7 @@ const tModuleProperties gModuleProperties[] = {
     {"CtrlRcv",      2,  0, 0, 0, volumeTypeNone},
     {"NoteRcv",      2,  0, 0, 0, volumeTypeNone},
     {"NoteZone",     3,  0, 0, 0, volumeTypeNone},
-    {"Compress",     5,  7, 2, 0, volumeTypeCompress},
+    {"Compress",     5,  7, 5, 0, volumeTypeCompress},
     {"Unknown",      0,  0, 0, 0, volumeTypeNone},
     {"KeyQuant",     2,  0, 0, 0, volumeTypeNone},
     {"Unknown",      0,  0, 0, 0, volumeTypeNone},
@@ -324,7 +324,8 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeCompress,   paramType1CommonDial,            paramType2Dial,   30, 60, "Rel",     128,  0, NULL           },
     {moduleTypeCompress,   paramType1CommonDial,            paramType2Dial,   40, 60, "RefLvl",    43,  0, NULL           },
     {moduleTypeCompress,   paramType1Sidechain,            paramType2Toggle,  40, 20, NULL,     2,  0, NULL           },
-    {moduleTypeCompress,   paramType1Bypass,                paramType2Toggle,   80, 80, NULL,  2,  1, NULL } };
+    {moduleTypeCompress,   paramType1Bypass,                paramType2Toggle,   80, 80, NULL,  2,  1, NULL },
+};
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
 const tParamLocation modeLocationList[] = {
@@ -362,6 +363,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeStChorus,   connectorDirOut, connectorTypeAudio,   85, 95},
     {moduleTypeStChorus,   connectorDirOut, connectorTypeAudio,   95, 95},
     {moduleTypeCompress,   connectorDirIn,  connectorTypeAudio,   85, 15},
-    {moduleTypeCompress,   connectorDirIn,  connectorTypeAudio,   95, 15}, };
+    {moduleTypeCompress,   connectorDirIn,  connectorTypeAudio,   95, 15},
+    {moduleTypeCompress,   connectorDirIn,  connectorTypeAudio,   40, 15},
+    {moduleTypeCompress,   connectorDirOut, connectorTypeAudio,   95, 90},
+    {moduleTypeCompress,   connectorDirOut, connectorTypeAudio,   85, 90},
+    {moduleType2toOut,     connectorDirIn,  connectorTypeAudio,   85, 30},
+    {moduleType2toOut,     connectorDirIn,  connectorTypeAudio,   95, 30},
+};
 
 #endif // __MODULE_RESOURCES_H__

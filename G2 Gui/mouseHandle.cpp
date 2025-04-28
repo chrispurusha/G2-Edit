@@ -937,7 +937,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
 
                 if (paramLocationList[module.param[gDialDragging.variation][gDialDragging.param].paramRef].type2 == paramType2Dial) {
                     angle = calculate_mouse_angle({x, y}, module.param[gDialDragging.variation][gDialDragging.param].rectangle);                                                            // possible add half size
-                    value = angle_to_value(angle);
+                    value = angle_to_value(angle, paramLocationList[module.param[gDialDragging.variation][gDialDragging.param].paramRef].range);
 
                     if (module.param[gDialDragging.variation][gDialDragging.param].value != value) {
                         module.param[gDialDragging.variation][gDialDragging.param].value = value;
@@ -957,7 +957,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
 
                 if (modeLocationList[module.mode[gDialDragging.param].paramRef].type2 == paramType2Dial) {
                     angle = calculate_mouse_angle({x, y}, module.mode[gDialDragging.param].rectangle);                                                            // possible add half size
-                    value = angle_to_value(angle);
+                    value = angle_to_value(angle, modeLocationList[module.mode[gDialDragging.param].paramRef].range);
                     value = (value * modeLocationList[module.mode[gDialDragging.param].paramRef].range) / MAX_PARAM_RANGE;
                     //printf("VALUE = %u\n", value);
                     
