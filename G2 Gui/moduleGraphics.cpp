@@ -55,11 +55,11 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
 
     double thresholds[] = {0.5, 0.8, 1.0};  // Green up to 50%, yellow to 80%, red the rest
     double fullHeight = rectangle.size.h;
-    double accumulatedHeight = 0.0;
-    tRgb colors[3] = {
-        {0.0, 1.0, 0.0},  // Green
-        {1.0, 1.0, 0.0},  // Yellow
-        {1.0, 0.0, 0.0}   // Red
+    //double accumulatedHeight = 0.0;
+    tRgb colours[3] = {
+        {0.0, 8.0, 0.0},  // Green
+        {8.0, 8.0, 0.0},  // Yellow
+        {8.0, 0.0, 0.0}   // Red
     };
 
     set_rbg_colour({0.0, 0.0, 0.0});
@@ -77,7 +77,8 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
                 ? scaledValue - segmentBottom
                 : segmentHeight;
 
-            set_rbg_colour(colors[i]);
+            set_rbg_colour(colours[i]);
+
             render_rectangle(
                 moduleArea,
                 {{
@@ -377,7 +378,7 @@ void render_module(tModule * module) {
         } else{
             set_rbg_colour({0.0, 0.0, 0.0});
         }
-        render_rectangle(moduleArea, {{moduleRectangle.coord.x+x_param_pos_from_percent(0), moduleRectangle.coord.y+y_param_pos_from_percent(module->type, 15)}, {10, 10}});
+        render_rectangle(moduleArea, {{moduleRectangle.coord.x+x_param_pos_from_percent(0), moduleRectangle.coord.y+y_param_pos_from_percent(module->type, 15)}, {x_param_size_from_percent(3), x_param_size_from_percent(3)}});
     }
 }
 
