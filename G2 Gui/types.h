@@ -320,6 +320,11 @@ typedef enum {
 } tVolumeType;
 
 typedef enum {
+    ledTypeNo,
+    ledTypeYes,
+} tLedType;
+
+typedef enum {
     paramType3Param,
     paramType3Mode
 } tParamType3;
@@ -398,6 +403,7 @@ typedef struct _struct_module {
     bool                    gotConnectorIndexCache;
     uint32_t                connectorIndexCache;
     uint32_t                volume[2];
+    uint32_t                led;
     struct _struct_module * prev;
     struct _struct_module * next;
 } tModule;
@@ -450,6 +456,7 @@ typedef struct {
     const char *      name;
     const uint32_t    height;
     const tVolumeType volumeType;
+    const tLedType    ledType;
 } tModuleProperties;
 
 typedef enum {

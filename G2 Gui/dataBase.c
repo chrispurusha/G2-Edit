@@ -467,6 +467,11 @@ void allocate_module_parameters(tModule * module, uint32_t paramCount) {
         printf("Warning! When allocating for %s, param count %u should be %u\n", gModuleProperties[module->type].name, paramCount, module_param_count(module->type));
     }
 
+    // Allocate largest, for safety
+    if (module_param_count(module->type) > paramCount) {
+        paramCount = module_param_count(module->type);
+    }
+    
     // Allocation can happen via several mechanisms, so don't re-allocate if we've already done it
     if (module->allocatedParams == 0) {
         if (paramCount > 0) {
@@ -491,6 +496,11 @@ void allocate_module_parameters(tModule * module, uint32_t paramCount) {
 void allocate_module_connectors(tModule * module, uint32_t connectorCount) {
     if ((module_connector_count(module->type) > 0) && (module_connector_count(module->type) != connectorCount)) {
         printf("Warning! When allocating for %s, connector count %u should be %u\n", gModuleProperties[module->type].name, connectorCount, module_connector_count(module->type));
+    }
+    
+    // Allocate largest, for safety
+    if (module_connector_count(module->type) > connectorCount) {
+        connectorCount = module_connector_count(module->type);
     }
 
     // Allocation can happen via several mechanisms, so don't re-allocate if we've already done it

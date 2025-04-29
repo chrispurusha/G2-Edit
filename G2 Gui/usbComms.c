@@ -519,14 +519,31 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     return EXIT_SUCCESS;
 
                 case SUB_COMMAND_LED_DATA:
-#if 0
-                    printf("Got LED data ");
-
-                    for (i = 0; i <= 255; i++) {
-                        printf("%u ", read_bit_stream(buff, bitPos, 1));
+                    for (i = 4; i < (length-2); i++) {
+                        buff[i] = reverse_bits_in_byte(buff[i]);
                     }
-                    printf("\n");
-#endif
+                    
+                    //printf("LED ");
+                    //for (i = 4; i < (length-2); i++)
+                    //    printf("0x%02x ", buff[i]);
+                    //printf("\n");
+                    
+                    read_bit_stream(buff, bitPos, 8); // Seems to be a byte of padding
+                    
+                    for (int k = 0; k <= 255; k++) {
+                        module.key.location = gLocation;
+                        module.key.index    = k;
+                        
+                        if (read_module(module.key, &module) == true) {
+                            if (gModuleProperties[module.type].ledType == ledTypeYes) {
+                                module.led = read_bit_stream(buff, bitPos, 1);
+                                read_bit_stream(buff, bitPos, 1); // Not sure if this is used for anything yet, might just be padding
+                                
+                                //printf("Module %u LED %u\n", module.key.index, module.led);
+                                write_module(module.key, &module);
+                            }
+                        }
+                    }
                     call_wake_glfw();
                     return EXIT_SUCCESS;
 

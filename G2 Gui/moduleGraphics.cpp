@@ -313,6 +313,11 @@ void render_module(tModule * module) {
         }
         render_text(moduleArea, {{moduleRectangle.coord.x + 60.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     }
+    
+    if (gModuleProperties[module->type].ledType == ledTypeYes) {
+        snprintf(buff, sizeof(buff), "LED %u", module->led);
+        render_text(moduleArea, {{moduleRectangle.coord.x + 80.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    }
 }
 
 void render_modules(void) {

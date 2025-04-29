@@ -31,5 +31,6 @@ uint16_t calc_crc16(uint8_t * buff, int length);
 void write_uint16(uint8_t * buff, uint16_t val);
 uint32_t read_bit_stream(uint8_t * buff, uint32_t * bitPos, uint32_t numBits);
 double get_time_delta(void);
+uint8_t reverse_bits_in_byte(uint8_t byte);
 
 #endif // __UTILS_H__
