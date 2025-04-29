@@ -303,7 +303,10 @@ typedef enum {
     paramType1FltMultiDb,
     paramType1CommonDial,
     paramType1Sidechain,
-    paramType1OscWave
+    paramType1OscWave,
+    paramType1Enable,
+    paramType1Exp,
+    paramType1Pad
 } tParamType1;
 
 typedef enum {

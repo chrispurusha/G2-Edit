@@ -69,5 +69,7 @@ double calc_scroll_x(void);
 double calc_scroll_y(void);
 double x_param_pos_from_percent(double x);
 double y_param_pos_from_percent(tModuleType moduleType, double y);
+double x_param_size_from_percent(double x);
+double y_param_size_from_percent(tModuleType moduleType, double y);
 
 #endif // __UTILS_GRAPHICS_H__

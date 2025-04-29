@@ -50,12 +50,44 @@ void set_module_colour(uint32_t colour) {
     set_rbg_colour(rgb);
 }
 
-void render_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) {  // Drop down into utilsGraphics?
-    double scaledValue = 0.0;
-    
+void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) {
+    double scaledValue = (rectangle.size.h * value) / 128.0;
+
+    double thresholds[] = {0.5, 0.8, 1.0};  // Green up to 50%, yellow to 80%, red the rest
+    double fullHeight = rectangle.size.h;
+    double accumulatedHeight = 0.0;
+    tRgb colors[3] = {
+        {0.0, 1.0, 0.0},  // Green
+        {1.0, 1.0, 0.0},  // Yellow
+        {1.0, 0.0, 0.0}   // Red
+    };
+
     set_rbg_colour({0.0, 0.0, 0.0});
-    scaledValue = (rectangle.size.h * value) / 256.0;
-    render_rectangle(moduleArea, {{rectangle.coord.x, rectangle.coord.y+rectangle.size.h-scaledValue}, {rectangle.size.w, scaledValue}});
+    render_rectangle(moduleArea, rectangle);
+    
+    for (int i = 0; i < 3; i++) {
+        double segmentTop = thresholds[i] * fullHeight;
+        double segmentBottom = (i == 0) ? 0 : thresholds[i - 1] * fullHeight;
+        double segmentHeight = segmentTop - segmentBottom;
+        double drawHeight = 0;
+
+        // How much of this segment should be drawn
+        if (scaledValue > segmentBottom) {
+            drawHeight = scaledValue < segmentTop
+                ? scaledValue - segmentBottom
+                : segmentHeight;
+
+            set_rbg_colour(colors[i]);
+            render_rectangle(
+                moduleArea,
+                {{
+                    rectangle.coord.x,
+                    rectangle.coord.y + fullHeight - segmentTop + (segmentHeight - drawHeight)
+                },
+                {rectangle.size.w, drawHeight}}
+            );
+        }
+    }
 }
 
 tRectangle render_dial(tRectangle rectangle, uint32_t value, uint32_t range) {  // Drop down into utilsGraphics?
@@ -192,6 +224,21 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
             module->param[0][param].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
             return;
         }
+        case paramType1Enable:
+        {
+            module->param[0][param].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
+            return;
+        }
+        case paramType1Exp:
+        {
+            module->param[0][param].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
+            return;
+        }
+        case paramType1Pad:
+        {
+            module->param[0][param].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
+            return;
+        }
         default:
             snprintf(buff, sizeof(buff), "%u", paramValue);
             break;
@@ -313,19 +360,24 @@ void render_module(tModule * module) {
         render_text(moduleArea, {{moduleRectangle.coord.x + 150.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     }
 
+    // Todo: store locations of volume and led items in a const array like params and connectors and do these in functions
+    
     if (gModuleProperties[module->type].volumeType != volumeTypeNone) {
-        if (gModuleProperties[module->type].volumeType == volumeTypeStereo || gModuleProperties[module->type].volumeType == volumeTypeCompress) {
-            snprintf(buff, sizeof(buff), "Vol %u %u", module->volume[0], module->volume[1]);
-        } else{
-            snprintf(buff, sizeof(buff), "Vol %u", module->volume[0]);
-        }
+        snprintf(buff, sizeof(buff), "Vol %u %u", module->volume[0], module->volume[1]);
         render_text(moduleArea, {{moduleRectangle.coord.x + 60.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-        render_meter({{moduleRectangle.coord.x + 300.0, moduleRectangle.coord.y + 20.0}, {10, 40}},gModuleProperties[module->type].volumeType, module->volume[0]);
+        render_volume_meter({{moduleRectangle.coord.x + x_param_pos_from_percent(80), moduleRectangle.coord.y + y_param_pos_from_percent(module->type, 20)}, {x_param_size_from_percent(3), y_param_size_from_percent(module->type, 80)}},gModuleProperties[module->type].volumeType, module->volume[0]);
+        if (gModuleProperties[module->type].volumeType == volumeTypeStereo) {
+            render_volume_meter({{moduleRectangle.coord.x + x_param_pos_from_percent(90), moduleRectangle.coord.y + y_param_pos_from_percent(module->type, 20)}, {x_param_size_from_percent(3), y_param_size_from_percent(module->type, 80)}},gModuleProperties[module->type].volumeType, module->volume[1]);
+        }
     }
     
     if (gModuleProperties[module->type].ledType == ledTypeYes) {
-        snprintf(buff, sizeof(buff), "LED %u", module->led);
-        render_text(moduleArea, {{moduleRectangle.coord.x + 80.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+        if (module->led != 0) {
+            set_rbg_colour({0.0, 8.0, 0.0});
+        } else{
+            set_rbg_colour({0.0, 0.0, 0.0});
+        }
+        render_rectangle(moduleArea, {{moduleRectangle.coord.x+x_param_pos_from_percent(0), moduleRectangle.coord.y+y_param_pos_from_percent(module->type, 15)}, {10, 10}});
     }
 }
 

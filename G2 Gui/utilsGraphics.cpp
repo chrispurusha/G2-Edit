@@ -871,6 +871,14 @@ double y_param_pos_from_percent(tModuleType moduleType, double y) {
     return ((MODULE_HEIGHT * gModuleProperties[moduleType].height * (y + 3.0)) / 100.0) * 0.94;
 }
 
+double x_param_size_from_percent(double x) {
+    return ((MODULE_WIDTH * x) / 100.0) * 0.94;
+}
+
+double y_param_size_from_percent(tModuleType moduleType, double y) {
+    return ((MODULE_HEIGHT * gModuleProperties[moduleType].height * y) / 100.0) * 0.94;
+}
+
 #define X_POS_FROM_PERCENT(x)    ((MODULE_WIDTH * (double)x) / 100.0)
 #define Y_POS_FROM_PERCENT(x)    ((MODULE_HEIGHT * (double)x) / 100.0)
 
