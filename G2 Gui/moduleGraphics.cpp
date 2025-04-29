@@ -50,6 +50,14 @@ void set_module_colour(uint32_t colour) {
     set_rbg_colour(rgb);
 }
 
+void render_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) {  // Drop down into utilsGraphics?
+    double scaledValue = 0.0;
+    
+    set_rbg_colour({0.0, 0.0, 0.0});
+    scaledValue = (rectangle.size.h * value) / 256.0;
+    render_rectangle(moduleArea, {{rectangle.coord.x, rectangle.coord.y+rectangle.size.h-scaledValue}, {rectangle.size.w, scaledValue}});
+}
+
 tRectangle render_dial(tRectangle rectangle, uint32_t value, uint32_t range) {  // Drop down into utilsGraphics?
     double angle  = 0.0;
     double radius = 0.0;
@@ -306,12 +314,13 @@ void render_module(tModule * module) {
     }
 
     if (gModuleProperties[module->type].volumeType != volumeTypeNone) {
-        if (gModuleProperties[module->type].volumeType == volumeTypeStereo) {
+        if (gModuleProperties[module->type].volumeType == volumeTypeStereo || gModuleProperties[module->type].volumeType == volumeTypeCompress) {
             snprintf(buff, sizeof(buff), "Vol %u %u", module->volume[0], module->volume[1]);
         } else{
             snprintf(buff, sizeof(buff), "Vol %u", module->volume[0]);
         }
         render_text(moduleArea, {{moduleRectangle.coord.x + 60.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+        render_meter({{moduleRectangle.coord.x + 300.0, moduleRectangle.coord.y + 20.0}, {10, 40}},gModuleProperties[module->type].volumeType, module->volume[0]);
     }
     
     if (gModuleProperties[module->type].ledType == ledTypeYes) {

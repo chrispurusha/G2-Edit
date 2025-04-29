@@ -501,8 +501,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                                     break;
                                 case volumeTypeCompress:
                                     module.volume[0] = read_bit_stream(buff, bitPos, 8);
-                                    read_bit_stream(buff, bitPos, 8); // Maybe bit values mean clipping or similar!?
-                                    module.volume[1] = 0;
+                                    module.volume[1] = read_bit_stream(buff, bitPos, 8);;
                                     break;
                                 default:
                                     break;
