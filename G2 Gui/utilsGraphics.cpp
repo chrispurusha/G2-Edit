@@ -195,16 +195,16 @@ tRectangle render_rectangle_with_border(tArea area, tRectangle rectangle) {
 
     render_rectangle(mainArea, rectangle);
 
-    set_rbg_colour(RGB_BLACK);
+    set_rgb_colour(RGB_BLACK);
     line = {{rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth}, {rectangle.size.w, borderLineWidth}};
     render_rectangle(mainArea, line); //Bottom
-    set_rbg_colour(RGB_WHITE);
+    set_rgb_colour(RGB_WHITE);
     line = {{rectangle.coord.x, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
     render_rectangle(mainArea, line); //Left
-    set_rbg_colour(RGB_WHITE);
+    set_rgb_colour(RGB_WHITE);
     line = {{rectangle.coord.x, rectangle.coord.y}, {rectangle.size.w, borderLineWidth}};
     render_rectangle(mainArea, line); // Top
-    set_rbg_colour(RGB_BLACK);
+    set_rgb_colour(RGB_BLACK);
     line = {{rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
     render_rectangle(mainArea, line); // Right
 
@@ -385,11 +385,11 @@ tRectangle render_radial_line(tArea area, tCoord coord, double radius, double an
     return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
 }
 
-void set_rbg_colour(tRgb rgb) {
+void set_rgb_colour(tRgb rgb) {
     glColor3f(rgb.red, rgb.green, rgb.blue);
 }
 
-void set_rbga_colour(tRgba rgba) {
+void set_rgba_colour(tRgba rgba) {
     glColor4f(rgba.red, rgba.green, rgba.blue, rgba.alpha);
 }
 
@@ -446,13 +446,13 @@ tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active) {
     }
 
     if (active) {
-        set_rbg_colour({0.3, 0.7, 0.3});         // Green when ON
+        set_rgb_colour({0.3, 0.7, 0.3});         // Green when ON
     } else {
-        set_rbg_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
+        set_rgb_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
     }
     render_rectangle(mainArea, rectangle);
 
-    set_rbg_colour(RGB_BLACK);
+    set_rgb_colour(RGB_BLACK);
     tCoord circleCentre = {rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)};
     double circleRadius = (rectangle.size.h / 2.0);
     circleRadius *= 0.75;
@@ -472,7 +472,7 @@ tRectangle draw_button(tArea area, tRectangle rectangle, char * text) {
     }
     render_rectangle(mainArea, rectangle);
 
-    set_rbg_colour(RGB_BLACK);
+    set_rgb_colour(RGB_BLACK);
     line = {{rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth}, {rectangle.size.w, borderLineWidth}};
     render_rectangle(mainArea, line); //Bottom
     line = {{rectangle.coord.x, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
@@ -482,7 +482,7 @@ tRectangle draw_button(tArea area, tRectangle rectangle, char * text) {
     line = {{rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
     render_rectangle(mainArea, line); // Right
 
-    set_rbg_colour(RGB_BLACK);
+    set_rgb_colour(RGB_BLACK);
     render_text(mainArea, {{rectangle.coord.x + borderLineWidth, rectangle.coord.y + borderLineWidth}, {rectangle.size.w - (borderLineWidth * 2), rectangle.size.h - (borderLineWidth * 2)}}, text);  // No zoom. Already zoomed
 
     return {rectangle};

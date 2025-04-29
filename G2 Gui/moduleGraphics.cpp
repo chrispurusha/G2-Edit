@@ -47,29 +47,28 @@ void set_module_colour(uint32_t colour) {
     tRgb rgb = {0};
 
     rgb = gModuleColourMap[colour];
-    set_rbg_colour(rgb);
+    set_rgb_colour(rgb);
 }
 
 void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) {
     double scaledValue = (rectangle.size.h * value) / 128.0;
 
     double thresholds[] = {0.5, 0.8, 1.0};  // Green up to 50%, yellow to 80%, red the rest
-    double fullHeight = rectangle.size.h;
-    //double accumulatedHeight = 0.0;
-    tRgb colours[3] = {
-        {0.0, 8.0, 0.0},  // Green
-        {8.0, 8.0, 0.0},  // Yellow
-        {8.0, 0.0, 0.0}   // Red
+    double fullHeight   = rectangle.size.h;
+    tRgb   colours[3]   = {
+        {0.0, 0.7, 0.0},  // Green
+        {0.7, 0.7, 0.0},  // Yellow
+        {0.7, 0.0, 0.0}   // Red
     };
 
-    set_rbg_colour({0.0, 0.0, 0.0});
+    set_rgb_colour({0.0, 0.0, 0.0});
     render_rectangle(moduleArea, rectangle);
-    
+
     for (int i = 0; i < 3; i++) {
-        double segmentTop = thresholds[i] * fullHeight;
+        double segmentTop    = thresholds[i] * fullHeight;
         double segmentBottom = (i == 0) ? 0 : thresholds[i - 1] * fullHeight;
         double segmentHeight = segmentTop - segmentBottom;
-        double drawHeight = 0;
+        double drawHeight    = 0;
 
         // How much of this segment should be drawn
         if (scaledValue > segmentBottom) {
@@ -77,16 +76,13 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
                 ? scaledValue - segmentBottom
                 : segmentHeight;
 
-            set_rbg_colour(colours[i]);
+            set_rgb_colour(colours[i]);
 
             render_rectangle(
                 moduleArea,
-                {{
-                    rectangle.coord.x,
-                    rectangle.coord.y + fullHeight - segmentTop + (segmentHeight - drawHeight)
-                },
-                {rectangle.size.w, drawHeight}}
-            );
+                {{rectangle.coord.x,
+                    rectangle.coord.y + fullHeight - segmentTop + (segmentHeight - drawHeight)},
+                    {rectangle.size.w, drawHeight}});
         }
     }
 }
@@ -105,23 +101,23 @@ tRectangle render_dial(tRectangle rectangle, uint32_t value, uint32_t range) {  
     //debug
     {
         char buff[256] = {0};
-        set_rbg_colour({0.5, 0.5, 0.5});
+        set_rgb_colour({0.5, 0.5, 0.5});
         snprintf(buff, sizeof(buff), "%u", value);
         render_text(moduleArea, {{x, y + 20}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     }
 
-    set_rbg_colour({0.5, 0.5, 0.5});
+    set_rgb_colour({0.5, 0.5, 0.5});
     render_circle_part_angle(moduleArea, {x, y}, radius, 0.0, 360.0, 25);
-    set_rbg_colour({0.0, 0.0, 0.0});
+    set_rgb_colour({0.0, 0.0, 0.0});
     render_radial_line(moduleArea, {x, y}, radius, angle, 2.0);
-    set_rbg_colour({0.0, 0.0, 0.0});
+    set_rgb_colour({0.0, 0.0, 0.0});
     return render_circle_line(moduleArea, {x, y}, radius, 25, 1.0);
 }
 
 tRectangle render_dial_with_text(tCoord coord, char * label, char * buff, uint32_t value, uint32_t range) {
     double y = coord.y;
 
-    set_rbg_colour(RGB_BLACK);
+    set_rgb_colour(RGB_BLACK);
 
     if (label != NULL) {
         render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, label);
@@ -129,7 +125,7 @@ tRectangle render_dial_with_text(tCoord coord, char * label, char * buff, uint32
     }
     render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     y += STANDARD_TEXT_HEIGHT;
-    set_rbg_colour({0.2, 0.2, 0.2});
+    set_rgb_colour({0.2, 0.2, 0.2});
     return render_dial({{coord.x, y}, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, value, range);
 }
 
@@ -200,11 +196,11 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
             double  y   = coord.y;
 
             if (paramLocationList[paramRef].label != NULL) {
-                set_rbg_colour(RGB_BLACK);
+                set_rgb_colour(RGB_BLACK);
                 render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, (char *)paramLocationList[paramRef].label);
                 y += STANDARD_TEXT_HEIGHT;
             }
-            set_rbg_colour(RGB_BACKGROUND_GREY);
+            set_rgb_colour(RGB_BACKGROUND_GREY);
             module->param[0][param].rectangle = draw_button(moduleArea, {{coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, map, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, map[paramValue]);
             break;
         }
@@ -213,9 +209,9 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
             char * valString = "GC";
 
             if (paramValue != 0) {
-                set_rbg_colour({0.3, 0.7, 0.3});                 // Green when ON
+                set_rgb_colour({0.3, 0.7, 0.3});                 // Green when ON
             } else {
-                set_rbg_colour(RGB_BACKGROUND_GREY);             // Grey when OFF
+                set_rgb_colour(RGB_BACKGROUND_GREY);             // Grey when OFF
             }
             module->param[0][param].rectangle = draw_button(moduleArea, {coord, get_text_width(valString, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}, valString);
             break;
@@ -337,7 +333,7 @@ void render_module(tModule * module) {
     write_module(module->key, module);                                             // Save calculated coords
 
     snprintf(buff, sizeof(buff), "%s", module->name);
-    set_rbga_colour(RGBA_BLACK_ON_TRANSPARENT);
+    set_rgba_colour(RGBA_BLACK_ON_TRANSPARENT);
     render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
 
     // Temporary items purely for development debug
@@ -360,25 +356,25 @@ void render_module(tModule * module) {
         snprintf(buff, sizeof(buff), "Modes %u", module->modeCount);
         render_text(moduleArea, {{moduleRectangle.coord.x + 150.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     }
-
     // Todo: store locations of volume and led items in a const array like params and connectors and do these in functions
-    
+
     if (gModuleProperties[module->type].volumeType != volumeTypeNone) {
         snprintf(buff, sizeof(buff), "Vol %u %u", module->volume[0], module->volume[1]);
         render_text(moduleArea, {{moduleRectangle.coord.x + 60.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-        render_volume_meter({{moduleRectangle.coord.x + x_param_pos_from_percent(80), moduleRectangle.coord.y + y_param_pos_from_percent(module->type, 20)}, {x_param_size_from_percent(3), y_param_size_from_percent(module->type, 80)}},gModuleProperties[module->type].volumeType, module->volume[0]);
+        render_volume_meter({{moduleRectangle.coord.x + x_param_pos_from_percent(80), moduleRectangle.coord.y + y_param_pos_from_percent(module->type, 20)}, {x_param_size_from_percent(3), y_param_size_from_percent(module->type, 80)}}, gModuleProperties[module->type].volumeType, module->volume[0]);
+
         if (gModuleProperties[module->type].volumeType == volumeTypeStereo) {
-            render_volume_meter({{moduleRectangle.coord.x + x_param_pos_from_percent(90), moduleRectangle.coord.y + y_param_pos_from_percent(module->type, 20)}, {x_param_size_from_percent(3), y_param_size_from_percent(module->type, 80)}},gModuleProperties[module->type].volumeType, module->volume[1]);
+            render_volume_meter({{moduleRectangle.coord.x + x_param_pos_from_percent(90), moduleRectangle.coord.y + y_param_pos_from_percent(module->type, 20)}, {x_param_size_from_percent(3), y_param_size_from_percent(module->type, 80)}}, gModuleProperties[module->type].volumeType, module->volume[1]);
         }
     }
-    
+
     if (gModuleProperties[module->type].ledType == ledTypeYes) {
         if (module->led != 0) {
-            set_rbg_colour({0.0, 8.0, 0.0});
+            set_rgb_colour({0.0, 0.7, 0.0});
         } else{
-            set_rbg_colour({0.0, 0.0, 0.0});
+            set_rgb_colour({0.0, 0.0, 0.0});
         }
-        render_rectangle(moduleArea, {{moduleRectangle.coord.x+x_param_pos_from_percent(0), moduleRectangle.coord.y+y_param_pos_from_percent(module->type, 15)}, {x_param_size_from_percent(3), x_param_size_from_percent(3)}});
+        render_rectangle(moduleArea, {{moduleRectangle.coord.x + x_param_pos_from_percent(0), moduleRectangle.coord.y + y_param_pos_from_percent(module->type, 15)}, {x_param_size_from_percent(3), x_param_size_from_percent(3)}});
     }
 }
 
@@ -400,7 +396,7 @@ void render_modules(void) {
     finish_walk_module();
 
     // Draw background areas
-    set_rbg_colour(RGB_BACKGROUND_GREY);
+    set_rgb_colour(RGB_BACKGROUND_GREY);
     render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
     render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
     render_rectangle(mainArea, {{area.coord.x + area.size.w, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
@@ -419,14 +415,14 @@ void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir d
     if (module->upRate) {
         type = connectorTypeAudio;
     }
-    set_rbg_colour(connectorColourMap[type]);  // Note, was using "module->connector[connectorIndex].type", check that this type param is OK
+    set_rgb_colour(connectorColourMap[type]);  // Note, was using "module->connector[connectorIndex].type", check that this type param is OK
 
     if (module->connector[connectorIndex].dir == connectorDirIn) {
         module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, {coord.x + CONNECTOR_RADIUS, coord.y + CONNECTOR_RADIUS}, CONNECTOR_RADIUS, 10.0, 0.0, 10.0);
     } else {
         module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, {{coord.x, coord.y}, {CONNECTOR_DIAMETER, CONNECTOR_DIAMETER}});
     }
-    set_rbg_colour(RGB_BLACK);
+    set_rgb_colour(RGB_BLACK);
     render_circle_part(moduleArea, {coord.x + CONNECTOR_RADIUS, coord.y + CONNECTOR_RADIUS}, CONNECTOR_RADIUS / 2.0, 10.0, 0.0, 10.0);
 }
 
@@ -459,7 +455,7 @@ void render_cable(tCable * cable) {
     if (read_module({cable->key.location, cable->key.moduleToIndex}, &moduleTo) == false) {
         return;
     }
-    set_rbg_colour(cableColourMap[cable->colour]);
+    set_rgb_colour(cableColourMap[cable->colour]);
 
     int fromConnectorIndex = find_index_from_io_count(&moduleFrom, (tConnectorDir)cable->key.linkType, cable->key.connectorFromIoCount);
 

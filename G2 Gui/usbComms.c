@@ -501,7 +501,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                                     break;
                                 case volumeTypeCompress:
                                     module.volume[0] = read_bit_stream(buff, bitPos, 8);
-                                    module.volume[1] = read_bit_stream(buff, bitPos, 8);;
+                                    module.volume[1] = read_bit_stream(buff, bitPos, 8);
                                     break;
                                 default:
                                     break;
@@ -518,31 +518,33 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     return EXIT_SUCCESS;
 
                 case SUB_COMMAND_LED_DATA:
-                    for (i = 4; i < (length-2); i++) {
+
+                    for (i = 4; i < (length - 2); i++) {
                         buff[i] = reverse_bits_in_byte(buff[i]);
                     }
-                    
+
                     //printf("LED ");
                     //for (i = 4; i < (length-2); i++)
                     //    printf("0x%02x ", buff[i]);
                     //printf("\n");
-                    
+
                     read_bit_stream(buff, bitPos, 8); // Seems to be a byte of padding
-                    
+
                     for (int k = 0; k <= 255; k++) {
                         module.key.location = gLocation;
                         module.key.index    = k;
-                        
+
                         if (read_module(module.key, &module) == true) {
                             if (gModuleProperties[module.type].ledType == ledTypeYes) {
                                 module.led = read_bit_stream(buff, bitPos, 1);
                                 read_bit_stream(buff, bitPos, 1); // Not sure if this is used for anything yet, might just be padding
-                                
+
                                 //printf("Module %u LED %u\n", module.key.index, module.led);
                                 write_module(module.key, &module);
                             }
                         }
                     }
+
                     call_wake_glfw();
                     return EXIT_SUCCESS;
 
@@ -1084,7 +1086,37 @@ static void state_handler(void) {
     }
 }
 
+static void usb_comms_signal_handler(int sigraised) {
+    // ToDo - deal with signals properly
+    printf("\nUSBComms Sig Handler!!! %d\n", sigraised);
+
+    _exit(0);
+}
+
+static int usb_comms_init_signals(void) {
+    int retVal = EXIT_FAILURE;
+
+    if (signal(SIGINT, usb_comms_signal_handler) != SIG_ERR) {
+        retVal = EXIT_SUCCESS;
+    }
+
+    if (signal(SIGBUS, usb_comms_signal_handler) != SIG_ERR) {
+        retVal = EXIT_SUCCESS;
+    }
+
+    if (signal(SIGSEGV, usb_comms_signal_handler) != SIG_ERR) {
+        retVal = EXIT_SUCCESS;
+    }
+
+    if (signal(SIGTERM, usb_comms_signal_handler) != SIG_ERR) {
+        retVal = EXIT_SUCCESS;
+    }
+    return retVal;
+}
+
 static void * usb_thread_loop(void * arg) {
+    usb_comms_init_signals();
+
     msg_init(&gCommandQueue, "command");
 
     reset_usb();

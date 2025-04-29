@@ -106,7 +106,7 @@ uint8_t reverse_bits_in_byte(uint8_t byte) {
     byte = (byte & 0xAA) >> 1 | (byte & 0x55) << 1;
     return byte;
 }
-    
+
 #ifdef __cplusplus
 }
 #endif

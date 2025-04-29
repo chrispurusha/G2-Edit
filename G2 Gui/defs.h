@@ -69,7 +69,7 @@
 #define BORDER_LINE_WIDTH                 (2.0)
 
 #define RGB_BLACK                         {0.0, 0.0, 0.0}
-#define RGB_WHITE                         {10.0, 10.0, 10.0}
+#define RGB_WHITE                         {1.0, 1.0, 1.0}
 #define RGB_BACKGROUND_GREY               {0.8, 0.8, 0.8}
 #define RGBA_BLACK_ON_TRANSPARENT         {0.0, 0.0, 0.0, 1.0}
 

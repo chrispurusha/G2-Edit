@@ -52,8 +52,10 @@ uint32_t               gLocation = locationVa;
 tButton                gSelectVa = {NULL_RECTANGLE, "VA", va_button}; // TODO: put these in an array of structures
 tButton                gSelectFx = {NULL_RECTANGLE, "FX", fx_button};
 
-static FT_Library      gLibrary = {0};
-static FT_Face         gFace    = {0};
+static FT_Library      gLibrary     = {0};
+static FT_Face         gFace        = {0};
+static pthread_mutex_t gReDrawMutex = {0};
+static bool            gClosing     = false;
 
 extern tScrollState    gScrollState;
 extern tContextMenu    gContextMenu;
@@ -62,9 +64,39 @@ extern tCableDragging  gCableDrag;
 extern tDialDragging   gDialDragging;
 extern tModuleDragging gModuleDrag;
 
+static void gfx_mutex_lock(void) {
+    // Todo: implement a generic utility function for this, passing the mutex?
+    if (pthread_mutex_lock(&gReDrawMutex) != 0) {
+        pthread_mutexattr_t attr = {0};
+
+        pthread_mutexattr_init(&attr);
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+        pthread_mutex_init(&gReDrawMutex, &attr);
+        pthread_mutexattr_destroy(&attr);
+
+        pthread_mutex_lock(&gReDrawMutex);
+    }
+}
+
+static void gfx_mutex_unlock(void) {
+    // Todo: implement a generic utility function for this, passing the mutex?
+    pthread_mutex_unlock(&gReDrawMutex);
+}
+
 void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
+    gfx_mutex_lock();
     glViewport(0, 0, width, height);
     gReDraw = true;
+    gfx_mutex_unlock();
+}
+
+void window_close_callback(GLFWwindow * window) {
+    gfx_mutex_lock();
+    gClosing = true;
+    gReDraw  = false;
+    glfwSetWindowShouldClose(gWindow, GLFW_TRUE);
+    glfwPostEmptyEvent();
+    gfx_mutex_unlock();
 }
 
 void error_callback(int error, const char * description) {
@@ -111,13 +143,13 @@ void render_context_menu(void) {
             menuItem = {{gContextMenu.coord.x, gContextMenu.coord.y + yOffset}, {largestSize + (5 * 2), itemHeight + (5 * 2)}};
 
             if (within_rectangle(mouseCoord, menuItem)) {
-                set_rbg_colour({0.2, 0.6, 0.2});
+                set_rgb_colour({0.2, 0.6, 0.2});
             } else {
-                set_rbg_colour({0.3, 0.3, 0.3});    // Background
+                set_rgb_colour({0.3, 0.3, 0.3});    // Background
             }
             render_rectangle(mainArea, menuItem);
 
-            set_rbg_colour({0.9, 0.9, 0.9});    // White text
+            set_rgb_colour({0.9, 0.9, 0.9});    // White text
             render_text(mainArea, {{gContextMenu.coord.x + 5, gContextMenu.coord.y + 5 + yOffset}, {BLANK_SIZE, itemHeight}}, gContextMenu.items[i].label);
             yOffset += itemHeight + (5 * 2);
         }
@@ -126,44 +158,48 @@ void render_context_menu(void) {
 
 void render_scrollbars(GLFWwindow * window) {
     // Scrollbar background
-    set_rbg_colour({0.7, 0.7, 0.7});
+    set_rgb_colour({0.7, 0.7, 0.7});
     render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, (double)get_render_height() - SCROLLBAR_MARGIN}});
     render_rectangle(mainArea, {{0.0, (double)get_render_height() - SCROLLBAR_WIDTH}, {(double)get_render_width() - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH}});
 
     // Bottom right box
-    set_rbg_colour(RGB_BACKGROUND_GREY);
+    set_rgb_colour(RGB_BACKGROUND_GREY);
     render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, (double)get_render_height() - SCROLLBAR_WIDTH}, {SCROLLBAR_WIDTH, SCROLLBAR_WIDTH}});
 
     // Scroll indicator blocks
-    set_rbg_colour({0.9, 0.9, 0.9});
+    set_rgb_colour({0.9, 0.9, 0.9});
     render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, gScrollState.yBar - (SCROLLBAR_LENGTH / 2.0)}, {SCROLLBAR_WIDTH, SCROLLBAR_LENGTH}});
     render_rectangle(mainArea, {{gScrollState.xBar - (SCROLLBAR_LENGTH / 2.0), (double)get_render_height() - SCROLLBAR_WIDTH}, {SCROLLBAR_LENGTH, SCROLLBAR_WIDTH}});
 }
 
 void render_top_bar(void) {
-    set_rbg_colour({0.5, 0.5, 0.5});
+    set_rgb_colour({0.5, 0.5, 0.5});
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {get_render_width() - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
 
     if (gLocation == locationVa) {
-        set_rbg_colour({0.3, 0.7, 0.3});
+        set_rgb_colour({0.3, 0.7, 0.3});
     } else {
-        set_rbg_colour(RGB_BACKGROUND_GREY);
+        set_rgb_colour(RGB_BACKGROUND_GREY);
     }
     gSelectVa.rectangle = draw_button(mainArea, {{400.0, 10.0}, {get_text_width(gSelectVa.text, MAIN_MENU_TEXT_HEIGHT), MAIN_MENU_TEXT_HEIGHT}}, gSelectVa.text);
 
     if (gLocation == locationFx) {
-        set_rbg_colour({0.3, 0.7, 0.3});
+        set_rgb_colour({0.3, 0.7, 0.3});
     } else {
-        set_rbg_colour(RGB_BACKGROUND_GREY);
+        set_rgb_colour(RGB_BACKGROUND_GREY);
     }
     gSelectFx.rectangle = draw_button(mainArea, {{425.0, 10.0}, {get_text_width(gSelectFx.text, MAIN_MENU_TEXT_HEIGHT), MAIN_MENU_TEXT_HEIGHT}}, gSelectFx.text);
 }
 
 void wake_glfw(void) {
-    if (gReDraw == false) {
-        gReDraw = true;
-        glfwPostEmptyEvent();
+    gfx_mutex_lock();
+    if (gClosing == false) {
+        if (gReDraw == false) {
+            gReDraw = true;
+            glfwPostEmptyEvent();
+        }
     }
+    gfx_mutex_unlock();
 }
 
 void notify_full_patch_change(void) {
@@ -214,6 +250,7 @@ void init_graphics(void) {
     glfwSetFramebufferSizeCallback(gWindow, framebuffer_size_callback);
     glfwSwapInterval(1);
 
+    glfwSetWindowCloseCallback(gWindow, window_close_callback);
     glfwSetKeyCallback(gWindow, key_callback);
     glfwSetCharCallback(gWindow, char_event);
     glfwSetCursorPosCallback(gWindow, cursor_pos);
@@ -238,8 +275,15 @@ void init_graphics(void) {
 }
 
 void do_graphics_loop(void) {
+    bool reDraw = false;
+
     while (!glfwWindowShouldClose(gWindow)) {
-        if (gReDraw == true) {
+        gfx_mutex_lock();
+        reDraw  = gReDraw;
+        gReDraw = false;
+        gfx_mutex_unlock();
+
+        if (reDraw == true) {
             glClearColor(0.8, 0.8, 0.8, 1.0);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -249,7 +293,7 @@ void do_graphics_loop(void) {
             if (gCableDrag.active == true) {
                 tModule module = {0};
                 read_module(gCableDrag.fromModuleKey, &module);
-                set_rbg_colour(RGB_WHITE);
+                set_rgb_colour(RGB_WHITE);
                 render_cable_from_to(module.connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector);
             }
             render_top_bar();
@@ -264,8 +308,6 @@ void do_graphics_loop(void) {
             //    render_line(mainArea, {x, y-10}, {x, y+10}, 3);
             //    render_line(mainArea, {x-10, y}, {x+10, y}, 3);
             //}
-
-            gReDraw = false;
 
             // Swap buffers and look for events
             glfwSwapBuffers(gWindow);
@@ -289,6 +331,14 @@ void clean_up_graphics(void) {
     FT_Done_FreeType(gLibrary);
     free_textures();
 
+    glfwSetWindowCloseCallback(gWindow, NULL);
+    glfwSetKeyCallback(gWindow, NULL);
+    glfwSetCharCallback(gWindow, NULL);
+    glfwSetCursorPosCallback(gWindow, NULL);
+    glfwSetMouseButtonCallback(gWindow, NULL);
+    glfwSetScrollCallback(gWindow, NULL);
+
+    glfwMakeContextCurrent(NULL);
     glfwDestroyWindow(gWindow);
     glfwTerminate();
 }

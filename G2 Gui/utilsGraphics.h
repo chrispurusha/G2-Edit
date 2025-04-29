@@ -25,8 +25,8 @@
 
 #define NO_ZOOM    (1.0)
 
-void set_rbg_colour(tRgb rgb);
-void set_rbga_colour(tRgba rgba);
+void set_rgb_colour(tRgb rgb);
+void set_rgba_colour(tRgba rgba);
 
 tRectangle module_area(void);
 tRectangle render_line(tArea area, tCoord start, tCoord end, double thickness);
