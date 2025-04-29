@@ -160,8 +160,10 @@ void render_top_bar(void) {
 }
 
 void wake_glfw(void) {
-    gReDraw = true;
-    glfwPostEmptyEvent();
+    if (gReDraw == false) {
+        gReDraw = true;
+        glfwPostEmptyEvent();
+    }
 }
 
 void notify_full_patch_change(void) {
