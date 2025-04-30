@@ -94,6 +94,7 @@ void window_close_callback(GLFWwindow * window) {
     gfx_mutex_lock();
     gClosing = true;
     gReDraw  = false;
+    glfwMakeContextCurrent(NULL); // Experiment doing this here, since were seeing window close crashes
     glfwSetWindowShouldClose(gWindow, GLFW_TRUE);
     glfwPostEmptyEvent();
     gfx_mutex_unlock();
