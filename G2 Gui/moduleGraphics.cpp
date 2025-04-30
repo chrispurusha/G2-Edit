@@ -99,12 +99,12 @@ tRectangle render_dial(tRectangle rectangle, uint32_t value, uint32_t range) {  
     angle  = value_to_angle(value, range);
 
     //debug
-    {
-        char buff[256] = {0};
-        set_rgb_colour({0.5, 0.5, 0.5});
-        snprintf(buff, sizeof(buff), "%u", value);
-        render_text(moduleArea, {{x, y + 20}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-    }
+    //{
+    //    char buff[256] = {0};
+    //    set_rgb_colour({0.5, 0.5, 0.5});
+    //    snprintf(buff, sizeof(buff), "%u", value);
+    //    render_text(moduleArea, {{x, y + 20}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    //}
 
     set_rgb_colour({0.5, 0.5, 0.5});
     render_circle_part_angle(moduleArea, {x, y}, radius, 0.0, 360.0, 25);
@@ -121,9 +121,11 @@ tRectangle render_dial_with_text(tCoord coord, char * label, char * buff, uint32
 
     if (label != NULL) {
         render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, label);
-        y += STANDARD_TEXT_HEIGHT;
     }
-    render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    y += STANDARD_TEXT_HEIGHT;
+    if (buff != NULL) {
+        render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    }
     y += STANDARD_TEXT_HEIGHT;
     set_rgb_colour({0.2, 0.2, 0.2});
     return render_dial({{coord.x, y}, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, value, range);
