@@ -1111,6 +1111,11 @@ static int usb_comms_init_signals(void) {
     if (signal(SIGTERM, usb_comms_signal_handler) != SIG_ERR) {
         retVal = EXIT_SUCCESS;
     }
+    
+    if (signal(SIGABRT, usb_comms_signal_handler) != SIG_ERR) {
+        retVal = EXIT_SUCCESS;
+    }
+    
     return retVal;
 }
 

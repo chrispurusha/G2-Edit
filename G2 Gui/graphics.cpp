@@ -55,7 +55,6 @@ tButton                gSelectFx = {NULL_RECTANGLE, "FX", fx_button};
 static FT_Library      gLibrary     = {0};
 static FT_Face         gFace        = {0};
 static pthread_mutex_t gReDrawMutex = {0};
-static bool            gClosing     = false;
 
 extern tScrollState    gScrollState;
 extern tContextMenu    gContextMenu;
@@ -92,8 +91,16 @@ void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
 
 void window_close_callback(GLFWwindow * window) {
     gfx_mutex_lock();
-    gClosing = true;
     gReDraw  = false;
+    
+    glfwSetFramebufferSizeCallback(gWindow, NULL);
+    glfwSetWindowCloseCallback(gWindow, NULL);
+    glfwSetKeyCallback(gWindow, NULL);
+    glfwSetCharCallback(gWindow, NULL);
+    glfwSetCursorPosCallback(gWindow, NULL);
+    glfwSetMouseButtonCallback(gWindow, NULL);
+    glfwSetScrollCallback(gWindow, NULL);
+    
     glfwSetWindowShouldClose(gWindow, GLFW_TRUE);
     glfwPostEmptyEvent();
     gfx_mutex_unlock();
@@ -193,7 +200,7 @@ void render_top_bar(void) {
 
 void wake_glfw(void) {
     gfx_mutex_lock();
-    if (gClosing == false) {
+    if (!glfwWindowShouldClose(gWindow)) {
         if (gReDraw == false) {
             gReDraw = true;
             glfwPostEmptyEvent();
@@ -249,7 +256,6 @@ void init_graphics(void) {
 
     glfwSetFramebufferSizeCallback(gWindow, framebuffer_size_callback);
     glfwSwapInterval(1);
-
     glfwSetWindowCloseCallback(gWindow, window_close_callback);
     glfwSetKeyCallback(gWindow, key_callback);
     glfwSetCharCallback(gWindow, char_event);
@@ -277,10 +283,17 @@ void init_graphics(void) {
 void do_graphics_loop(void) {
     bool reDraw = false;
 
-    while (!glfwWindowShouldClose(gWindow)) {
+    for (;;) {
         gfx_mutex_lock();
+
+        if (glfwWindowShouldClose(gWindow)) {
+            gfx_mutex_unlock();
+            break;
+        }
+        
         reDraw  = gReDraw;
         gReDraw = false;
+
         gfx_mutex_unlock();
 
         if (reDraw == true) {
@@ -331,15 +344,9 @@ void clean_up_graphics(void) {
     FT_Done_FreeType(gLibrary);
     free_textures();
 
-    glfwSetWindowCloseCallback(gWindow, NULL);
-    glfwSetKeyCallback(gWindow, NULL);
-    glfwSetCharCallback(gWindow, NULL);
-    glfwSetCursorPosCallback(gWindow, NULL);
-    glfwSetMouseButtonCallback(gWindow, NULL);
-    glfwSetScrollCallback(gWindow, NULL);
-
     glfwMakeContextCurrent(NULL);
     glfwDestroyWindow(gWindow);
+    gWindow = NULL;
     glfwTerminate();
 }
 
