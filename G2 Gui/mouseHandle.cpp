@@ -771,7 +771,7 @@ bool handle_context_menu_click(tCoord coord) {
     for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
         tRectangle itemRect = {
             {gContextMenu.coord.x, gContextMenu.coord.y + yOffset},
-            {largestSize,          itemHeight + 5                }};
+            {largestSize +(5*2),          itemHeight + (5*2)                }};
 
         if (within_rectangle(coord, itemRect)) {
             gContextMenu.active = false; // Close the current menu
