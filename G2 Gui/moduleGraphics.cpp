@@ -51,39 +51,75 @@ void set_module_colour(uint32_t colour) {
 }
 
 void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) {
-    double scaledValue = (rectangle.size.h * value) / 128.0;
+    switch (volumeType) {
+        case volumeTypeCompress:
+        {
+            tRectangle smallRectangle = rectangle;
+            double     space          = 2.0; // Todo: Possibly make a percentage of width
+            uint32_t   leds           = 10;
 
-    double thresholds[] = {0.5, 0.8, 1.0};  // Green up to 50%, yellow to 80%, red the rest
-    double fullHeight   = rectangle.size.h;
-    tRgb   colours[3]   = {
-        {0.0, 0.7, 0.0},  // Green
-        {0.7, 0.7, 0.0},  // Yellow
-        {0.7, 0.0, 0.0}   // Red
-    };
+            smallRectangle.coord.y += space;
+            smallRectangle.coord.x += space;
+            smallRectangle.size.h   = (smallRectangle.size.h - (space * (double)(leds + 1))) / (double)leds;
+            smallRectangle.size.w  -= space * 2;
 
-    set_rgb_colour({0.0, 0.0, 0.0});
-    render_rectangle(moduleArea, rectangle);
+            set_rgb_colour({0.0, 0.0, 0.0});
+            render_rectangle(moduleArea, rectangle);
 
-    for (int i = 0; i < 3; i++) {
-        double segmentTop    = thresholds[i] * fullHeight;
-        double segmentBottom = (i == 0) ? 0 : thresholds[i - 1] * fullHeight;
-        double segmentHeight = segmentTop - segmentBottom;
-        double drawHeight    = 0;
-
-        // How much of this segment should be drawn
-        if (scaledValue > segmentBottom) {
-            drawHeight = scaledValue < segmentTop
-                ? scaledValue - segmentBottom
-                : segmentHeight;
-
-            set_rgb_colour(colours[i]);
-
-            render_rectangle(
-                moduleArea,
-                {{rectangle.coord.x,
-                    rectangle.coord.y + fullHeight - segmentTop + (segmentHeight - drawHeight)},
-                    {rectangle.size.w, drawHeight}});
+            for (int i = 0; i < leds; i++) {
+                if ((value >> i) & 0x01) {
+                    set_rgb_colour({0.0, 0.7, 0.0});
+                } else {
+                    set_rgb_colour({0.0, 0.3, 0.0});
+                }
+                render_rectangle(moduleArea, smallRectangle);
+                smallRectangle.coord.y += smallRectangle.size.h + space;
+            }
         }
+        break;
+
+        case volumeTypeMono:
+        case volumeTypeStereo:
+        {
+            double scaledValue = (rectangle.size.h * value) / 128.0;
+
+            double thresholds[] = {0.5, 0.8, 1.0};  // Green up to 50%, yellow to 80%, red the rest
+            double fullHeight   = rectangle.size.h;
+            tRgb   colours[3]   = {
+                {0.0, 0.7, 0.0},  // Green
+                {0.7, 0.7, 0.0},  // Yellow
+                {0.7, 0.0, 0.0}   // Red
+            };
+
+            set_rgb_colour({0.0, 0.0, 0.0});
+            render_rectangle(moduleArea, rectangle);
+
+            for (int i = 0; i < 3; i++) {
+                double segmentTop    = thresholds[i] * fullHeight;
+                double segmentBottom = (i == 0) ? 0 : thresholds[i - 1] * fullHeight;
+                double segmentHeight = segmentTop - segmentBottom;
+                double drawHeight    = 0;
+
+                // How much of this segment should be drawn
+                if (scaledValue > segmentBottom) {
+                    drawHeight = scaledValue < segmentTop
+                    ? scaledValue - segmentBottom
+                    : segmentHeight;
+
+                    set_rgb_colour(colours[i]);
+
+                    render_rectangle(
+                        moduleArea,
+                        {{rectangle.coord.x,
+                            rectangle.coord.y + fullHeight - segmentTop + (segmentHeight - drawHeight)},
+                            {rectangle.size.w, drawHeight}});
+                }
+            }
+        }
+
+        break;
+        default:
+            break;
     }
 }
 
@@ -123,6 +159,7 @@ tRectangle render_dial_with_text(tCoord coord, char * label, char * buff, uint32
         render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, label);
     }
     y += STANDARD_TEXT_HEIGHT;
+
     if (buff != NULL) {
         render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     }

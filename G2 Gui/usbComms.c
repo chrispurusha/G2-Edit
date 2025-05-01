@@ -490,20 +490,29 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                         if (read_module(module.key, &module) == true) {
                             switch (gModuleProperties[module.type].volumeType) {
                                 case volumeTypeStereo:
+                                {
                                     read_bit_stream(buff, bitPos, 8);
                                     module.volume[0] = read_bit_stream(buff, bitPos, 8);
                                     read_bit_stream(buff, bitPos, 8);
                                     module.volume[1] = read_bit_stream(buff, bitPos, 8);
                                     read_bit_stream(buff, bitPos, 8); // Unused / unknown!?
-                                    break;
+                                }
+                                break;
                                 case volumeTypeMono:
+                                {
                                     module.volume[0] = read_bit_stream(buff, bitPos, 8);
                                     module.volume[1] = 0;
-                                    break;
+                                }
+                                break;
                                 case volumeTypeCompress:
-                                    module.volume[0] = read_bit_stream(buff, bitPos, 8);
-                                    module.volume[1] = read_bit_stream(buff, bitPos, 8);
-                                    break;
+                                {
+                                    uint32_t val = 0;
+
+                                    module.volume[0]  = read_bit_stream(buff, bitPos, 8);
+                                    val               = read_bit_stream(buff, bitPos, 8);
+                                    module.volume[0] |= (val << 8);
+                                }
+                                break;
                                 default:
                                     break;
                             }
@@ -1112,11 +1121,10 @@ static int usb_comms_init_signals(void) {
     if (signal(SIGTERM, usb_comms_signal_handler) != SIG_ERR) {
         retVal = EXIT_SUCCESS;
     }
-    
+
     if (signal(SIGABRT, usb_comms_signal_handler) != SIG_ERR) {
         retVal = EXIT_SUCCESS;
     }
-    
     return retVal;
 }
 

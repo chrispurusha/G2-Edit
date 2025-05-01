@@ -52,11 +52,10 @@ static int init_signals(void) {
     if (signal(SIGTERM, signal_handler) != SIG_ERR) {
         retVal = EXIT_SUCCESS;
     }
-    
+
     if (signal(SIGABRT, signal_handler) != SIG_ERR) {
         retVal = EXIT_SUCCESS;
     }
-    
     return retVal;
 }
 

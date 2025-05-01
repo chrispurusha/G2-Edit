@@ -497,7 +497,7 @@ void menu_action_create(int index) {
         tModule         module         = {0};
         tMessageContent messageContent = {0};
         int32_t         uniqueIndex    = 0;
-        uint32_t        cpySize = 0;
+        uint32_t        cpySize        = 0;
 
         module.key.location = gLocation;
         uniqueIndex         = find_unique_module_id(module.key.location);
@@ -508,7 +508,7 @@ void menu_action_create(int index) {
             convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.coord);
             allocate_module_parameters(&module, module_param_count(module.type));
             allocate_module_connectors(&module, module_connector_count(module.type));
-            
+
             strncpy(module.name, gModuleProperties[module.type].name, sizeof(module.name));
             module.name[sizeof(module.name) - 1] = '\0';
 
@@ -770,8 +770,8 @@ bool handle_context_menu_click(tCoord coord) {
 
     for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
         tRectangle itemRect = {
-            {gContextMenu.coord.x, gContextMenu.coord.y + yOffset},
-            {largestSize +(5*2),          itemHeight + (5*2)                }};
+            {gContextMenu.coord.x,  gContextMenu.coord.y + yOffset},
+            {largestSize + (5 * 2), itemHeight + (5 * 2)          }};
 
         if (within_rectangle(coord, itemRect)) {
             gContextMenu.active = false; // Close the current menu

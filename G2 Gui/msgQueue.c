@@ -116,7 +116,7 @@ void msg_send(tMessageQueue * msgQueue, tMessageContent * messageContent) {
         return;         // Memory allocation failure
     }
     memset(message, 0, sizeof(tMessage));
-    
+
     // Copy the message content to the new message
     memcpy(&(message->messageContent), messageContent, sizeof(message->messageContent));
 

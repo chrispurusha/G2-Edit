@@ -91,9 +91,9 @@ void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
 
 void window_close_callback(GLFWwindow * window) {
     re_draw_mutex_lock();
-    gReDraw  = false;
+    gReDraw = false;
     re_draw_mutex_unlock();
-    
+
     glfwSetFramebufferSizeCallback(gWindow, NULL);
     glfwSetWindowCloseCallback(gWindow, NULL);
     glfwSetKeyCallback(gWindow, NULL);
@@ -101,7 +101,7 @@ void window_close_callback(GLFWwindow * window) {
     glfwSetCursorPosCallback(gWindow, NULL);
     glfwSetMouseButtonCallback(gWindow, NULL);
     glfwSetScrollCallback(gWindow, NULL);
-    
+
     glfwSetWindowShouldClose(gWindow, GLFW_TRUE);
     glfwPostEmptyEvent();
 }
@@ -200,6 +200,7 @@ void render_top_bar(void) {
 
 void wake_glfw(void) {
     re_draw_mutex_lock();
+
     if (gReDraw == false) {
         gReDraw = true;
     }

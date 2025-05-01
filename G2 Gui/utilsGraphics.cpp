@@ -183,7 +183,6 @@ tRectangle render_rectangle(tArea area, tRectangle rectangle) {
         glVertex2f(rectangle.coord.x, rectangle.coord.y + rectangle.size.h);
         glEnd();
     }
-    
     return {rectangle};
 }
 

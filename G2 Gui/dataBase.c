@@ -479,7 +479,6 @@ void allocate_module_parameters(tModule * module, uint32_t paramCount) {
                 perror("Failed to allocate memory for param array");
                 exit(1);
             }
-
             memset(module->param[i], 0, paramCount * sizeof(tParam));
         }
 
@@ -491,7 +490,6 @@ void allocate_module_connectors(tModule * module, uint32_t connectorCount) {
     if ((module_connector_count(module->type) > 0) && (module_connector_count(module->type) != connectorCount)) {
         printf("Warning! When allocating for %s, connector count %u should be %u\n", gModuleProperties[module->type].name, connectorCount, module_connector_count(module->type));
     }
-
 
     // Allocation can happen via several mechanisms, so don't re-allocate if we've already done it
     if (connectorCount > module->allocatedConnectors) {
@@ -506,7 +504,7 @@ void allocate_module_connectors(tModule * module, uint32_t connectorCount) {
             exit(1);
         }
         memset(module->connector, 0, connectorCount * sizeof(tConnector));
-        
+
         module->allocatedConnectors = connectorCount;
     }
 }
