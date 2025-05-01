@@ -497,6 +497,7 @@ void menu_action_create(int index) {
         tModule         module         = {0};
         tMessageContent messageContent = {0};
         int32_t         uniqueIndex    = 0;
+        uint32_t        cpySize = 0;
 
         module.key.location = gLocation;
         uniqueIndex         = find_unique_module_id(module.key.location);
@@ -507,7 +508,11 @@ void menu_action_create(int index) {
             convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.coord);
             allocate_module_parameters(&module, module_param_count(module.type));
             allocate_module_connectors(&module, module_connector_count(module.type));
-            //memcpy(module.name, gModuleProperties[module.type].name, sizeof(module.name)); // Todo: this was causing a buffer overflow
+            cpySize = sizeof(gModuleProperties[module.type].name); // Stop read data overflow, maybe need a better mechanism
+            if (cpySize > sizeof(module.name)) {
+                cpySize = sizeof(module.name);
+            }
+            memcpy(module.name, gModuleProperties[module.type].name, cpySize);
 
             messageContent.cmd                  = eMsgCmdWriteModule;
             messageContent.moduleData.moduleKey = module.key;
