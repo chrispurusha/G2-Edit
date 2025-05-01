@@ -174,13 +174,16 @@ tRectangle render_rectangle(tArea area, tRectangle rectangle) {
     if (area == moduleArea) {
         rectangle = scale_scroll_adjust_rectangle(rectangle);
     }
-    glBegin(GL_QUADS);
-    glVertex2f(rectangle.coord.x, rectangle.coord.y);
-    glVertex2f(rectangle.coord.x + rectangle.size.w, rectangle.coord.y);
-    glVertex2f(rectangle.coord.x + rectangle.size.w, rectangle.coord.y + rectangle.size.h);
-    glVertex2f(rectangle.coord.x, rectangle.coord.y + rectangle.size.h);
-    glEnd();
 
+    if ((rectangle.size.w > 0.0) && (rectangle.size.h > 0.0)) {
+        glBegin(GL_QUADS);
+        glVertex2f(rectangle.coord.x, rectangle.coord.y);
+        glVertex2f(rectangle.coord.x + rectangle.size.w, rectangle.coord.y);
+        glVertex2f(rectangle.coord.x + rectangle.size.w, rectangle.coord.y + rectangle.size.h);
+        glVertex2f(rectangle.coord.x, rectangle.coord.y + rectangle.size.h);
+        glEnd();
+    }
+    
     return {rectangle};
 }
 

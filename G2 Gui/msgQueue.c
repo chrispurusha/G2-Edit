@@ -110,6 +110,7 @@ void msg_send(tMessageQueue * msgQueue, tMessageContent * messageContent) {
     }
     // Allocate memory for the new message
     message = malloc(sizeof(tMessage));
+    memset(message, 0, sizeof(tMessage));
 
     if (message == NULL) {
         fprintf(stderr, "%s() Memory allocation failed for message\n", __FUNCTION__);

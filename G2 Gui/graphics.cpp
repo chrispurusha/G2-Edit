@@ -63,7 +63,7 @@ extern tCableDragging  gCableDrag;
 extern tDialDragging   gDialDragging;
 extern tModuleDragging gModuleDrag;
 
-static void gfx_mutex_lock(void) {
+static void re_draw_mutex_lock(void) {
     // Todo: implement a generic utility function for this, passing the mutex?
     if (pthread_mutex_lock(&gReDrawMutex) != 0) {
         pthread_mutexattr_t attr = {0};
@@ -77,21 +77,22 @@ static void gfx_mutex_lock(void) {
     }
 }
 
-static void gfx_mutex_unlock(void) {
+static void re_draw_mutex_unlock(void) {
     // Todo: implement a generic utility function for this, passing the mutex?
     pthread_mutex_unlock(&gReDrawMutex);
 }
 
 void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
-    gfx_mutex_lock();
     glViewport(0, 0, width, height);
+    re_draw_mutex_lock();
     gReDraw = true;
-    gfx_mutex_unlock();
+    re_draw_mutex_unlock();
 }
 
 void window_close_callback(GLFWwindow * window) {
-    gfx_mutex_lock();
+    re_draw_mutex_lock();
     gReDraw  = false;
+    re_draw_mutex_unlock();
     
     glfwSetFramebufferSizeCallback(gWindow, NULL);
     glfwSetWindowCloseCallback(gWindow, NULL);
@@ -103,7 +104,6 @@ void window_close_callback(GLFWwindow * window) {
     
     glfwSetWindowShouldClose(gWindow, GLFW_TRUE);
     glfwPostEmptyEvent();
-    gfx_mutex_unlock();
 }
 
 void error_callback(int error, const char * description) {
@@ -199,14 +199,12 @@ void render_top_bar(void) {
 }
 
 void wake_glfw(void) {
-    gfx_mutex_lock();
-    if (!glfwWindowShouldClose(gWindow)) {
-        if (gReDraw == false) {
-            gReDraw = true;
-            glfwPostEmptyEvent();
-        }
+    re_draw_mutex_lock();
+    if (gReDraw == false) {
+        gReDraw = true;
     }
-    gfx_mutex_unlock();
+    re_draw_mutex_unlock();
+    glfwPostEmptyEvent();
 }
 
 void notify_full_patch_change(void) {
@@ -283,18 +281,11 @@ void init_graphics(void) {
 void do_graphics_loop(void) {
     bool reDraw = false;
 
-    for (;;) {
-        gfx_mutex_lock();
-
-        if (glfwWindowShouldClose(gWindow)) {
-            gfx_mutex_unlock();
-            break;
-        }
-        
+    while (!glfwWindowShouldClose(gWindow)) {
+        re_draw_mutex_lock(); // Only really protecting the gap between setting redraw and clearing the global flag, may need re-think
         reDraw  = gReDraw;
         gReDraw = false;
-
-        gfx_mutex_unlock();
+        re_draw_mutex_unlock();
 
         if (reDraw == true) {
             glClearColor(0.8, 0.8, 0.8, 1.0);
@@ -333,7 +324,7 @@ void do_graphics_loop(void) {
             cursor_pos(gWindow, x, y);  // Artificially do cursor_pos call for drag scrolling when cursor not moving
             glfwWaitEventsTimeout(0.016);
         } else {
-            glfwWaitEvents();
+            glfwWaitEvents(); // Todo: might have to wait on timeout and not use the empty event post, since indication that it can't be called from other thread
         }
     }
 }
