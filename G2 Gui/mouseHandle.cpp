@@ -508,11 +508,9 @@ void menu_action_create(int index) {
             convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.coord);
             allocate_module_parameters(&module, module_param_count(module.type));
             allocate_module_connectors(&module, module_connector_count(module.type));
-            cpySize = sizeof(gModuleProperties[module.type].name); // Stop read data overflow, maybe need a better mechanism
-            if (cpySize > sizeof(module.name)) {
-                cpySize = sizeof(module.name);
-            }
-            memcpy(module.name, gModuleProperties[module.type].name, cpySize);
+            
+            strncpy(module.name, gModuleProperties[module.type].name, sizeof(module.name));
+            module.name[sizeof(module.name) - 1] = '\0';
 
             messageContent.cmd                  = eMsgCmdWriteModule;
             messageContent.moduleData.moduleKey = module.key;
@@ -529,7 +527,8 @@ void menu_action_create(int index) {
                 messageContent.moduleData.mode[i] = module.mode[i].value;
             }
 
-            memcpy(messageContent.moduleData.name, module.name, sizeof(messageContent.moduleData.name));
+            strncpy(messageContent.moduleData.name, module.name, sizeof(messageContent.moduleData.name));
+            messageContent.moduleData.name[sizeof(messageContent.moduleData.name) - 1] = '\0';
 
             msg_send(&gCommandQueue, &messageContent);
 

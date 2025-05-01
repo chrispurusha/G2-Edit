@@ -356,7 +356,8 @@ static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
         printf("%s\n", name);
 
         if (read_module(key, &module) == true) {
-            memcpy(module.name, name, sizeof(module.name));
+            strncpy(module.name, name, sizeof(module.name));
+            module.name[sizeof(module.name) - 1] = '\0';
             write_module(key, &module);
         }
     }
