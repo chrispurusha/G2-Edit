@@ -50,7 +50,7 @@ void set_module_colour(uint32_t colour) {
     set_rgb_colour(rgb);
 }
 
-void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) {
+void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) { // todo: move to utilsgraphics!?
     switch (volumeType) {
         case volumeTypeCompress:
         {
@@ -276,8 +276,9 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
             return;
         }
         default:
-            snprintf(buff, sizeof(buff), "%u", paramValue);
-            break;
+        {
+        }
+        break;
     }
 }
 
@@ -286,7 +287,7 @@ void render_mode_common(tCoord coord, uint32_t modeRef, uint32_t mode, tModule *
 
     uint32_t modeValue = module->mode[0].value;
 
-    module->mode[0].paramRef = modeRef;
+    module->mode[0].modeRef = modeRef;
 
     switch (modeLocationList[modeRef].type1) {
         case paramType1OscWave:
@@ -297,8 +298,74 @@ void render_mode_common(tCoord coord, uint32_t modeRef, uint32_t mode, tModule *
             break;
         }
         default:
-            snprintf(buff, sizeof(buff), "%u", modeValue);
+        {
+        }
+        break;
+    }
+}
+
+void render_volume_common(tRectangle rectangle, uint32_t volumeRef, tModule * module) { //Todo - change the other similar functions to also use rectangle
+    char     buff[16] = {0};
+
+    uint32_t volumeValue1 = module->volume.value1;
+    uint32_t volumeValue2 = module->volume.value2;
+
+    module->volume.volumeRef = volumeRef;
+
+    switch (volumeLocationList[volumeRef].volumeType) {
+        case volumeTypeMono:
+        {
+            // Debug
+            //snprintf(buff, sizeof(buff), "Vol %u", module->volume.value1);
+            //set_rgb_colour({0.0, 0.0, 0.0});
+            //render_text(moduleArea, {{coord.x + x_param_size_from_percent(5), coord.y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+
+            render_volume_meter(rectangle, gModuleProperties[module->type].volumeType, module->volume.value1);
+        }
+        break;
+        case volumeTypeStereo:
+        {
+            double space = 2.0;              // Todo: Possibly make a percentage of width
+
+            render_volume_meter(rectangle, gModuleProperties[module->type].volumeType, module->volume.value1);
+            rectangle.coord.x += (rectangle.size.w + space);
+            render_volume_meter(rectangle, gModuleProperties[module->type].volumeType, module->volume.value2);
+        }
+        break;
+        case volumeTypeCompress:
+        {
+            render_volume_meter(rectangle, gModuleProperties[module->type].volumeType, module->volume.value1);
+        }
+        break;
+        default:
+        {
+        }
+        break;
+    }
+}
+
+void render_led_common(tCoord coord, uint32_t ledRef, tModule * module) {
+    char     buff[16] = {0};
+
+    uint32_t ledValue = module->led.value;
+
+    module->led.ledRef = ledRef;
+
+    switch (ledLocationList[ledRef].ledType) {
+        case ledTypeYes:
+        {
+            if (ledValue != 0) {
+                set_rgb_colour({0.0, 0.7, 0.0});
+            } else{
+                set_rgb_colour({0.0, 0.0, 0.0});
+            }
+            render_rectangle(moduleArea, {{coord}, {x_param_size_from_percent(3), x_param_size_from_percent(3)}});
             break;
+        }
+        default:
+        {
+        }
+        break;
     }
 }
 
@@ -309,6 +376,8 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     uint32_t param     = 0;
     uint32_t mode      = 0;
     uint32_t connector = 0;
+    uint32_t volume    = 0;
+    uint32_t led       = 0;
 
     for (uint32_t i = module->paramIndexCache; i < array_size_param_location_list(); i++) {
         if (paramLocationList[i].moduleType == module->type) {
@@ -317,10 +386,10 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->gotParamIndexCache = true;
             }
             render_param_common(
-                (tCoord){rectangle.coord.x + x_param_pos_from_percent(paramLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, paramLocationList[i].offsetY)}, i,
+                {rectangle.coord.x + x_param_pos_from_percent(paramLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, paramLocationList[i].offsetY)}, i,
                 param++, module);
 
-            if (param == module_param_count(module->type)) {
+            if (param >= module_param_count(module->type)) {
                 break;
             }
         }
@@ -333,8 +402,12 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->gotModeIndexCache = true;
             }
             render_mode_common(
-                (tCoord){rectangle.coord.x + x_param_pos_from_percent(modeLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, modeLocationList[i].offsetY)}, i,
+                {rectangle.coord.x + x_param_pos_from_percent(modeLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, modeLocationList[i].offsetY)}, i,
                 mode++, module);
+
+            if (mode >= module_mode_count(module->type)) {
+                break;
+            }
         }
     }
 
@@ -347,9 +420,42 @@ void render_module_common(tRectangle rectangle, tModule * module) {
             render_connector(module, connector++,
                              connectorLocationList[i].direction,
                              connectorLocationList[i].type,
-                             (tCoord){rectangle.coord.x + x_param_pos_from_percent(connectorLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, connectorLocationList[i].offsetY)});
+                             {rectangle.coord.x + x_param_pos_from_percent(connectorLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, connectorLocationList[i].offsetY)});
 
-            if (connector == module_connector_count(module->type)) {
+            if (connector >= module_connector_count(module->type)) {
+                break;
+            }
+        }
+    }
+
+    for (uint32_t i = module->volumeIndexCache; i < array_size_volume_location_list(); i++) {
+        if (volumeLocationList[i].moduleType == module->type) {
+            if (module->gotVolumeIndexCache == false) {
+                module->volumeIndexCache    = i;
+                module->gotVolumeIndexCache = true;
+            }
+            render_volume_common(
+                {{rectangle.coord.x + x_param_pos_from_percent(volumeLocationList[i].rectangle.coord.x), rectangle.coord.y + y_param_pos_from_percent(module->type, volumeLocationList[i].rectangle.coord.y)}, {x_param_size_from_percent(volumeLocationList[i].rectangle.size.w), y_param_size_from_percent(module->type, volumeLocationList[i].rectangle.size.h)}}, i, module);
+            volume++;
+
+            if (volume >= module_volume_count(module->type)) {
+                break;
+            }
+        }
+    }
+
+    for (uint32_t i = module->ledIndexCache; i < array_size_led_location_list(); i++) {
+        if (ledLocationList[i].moduleType == module->type) {
+            if (module->gotLedIndexCache == false) {
+                module->ledIndexCache    = i;
+                module->gotLedIndexCache = true;
+            }
+            render_led_common(
+                {rectangle.coord.x + x_param_pos_from_percent(ledLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, ledLocationList[i].offsetY)}, i,
+                module);
+            led++;
+
+            if (led >= module_led_count(module->type)) {
                 break;
             }
         }
@@ -383,37 +489,9 @@ void render_module(tModule * module) {
     snprintf(buff, sizeof(buff), "%u", module->key.index);
     render_text(moduleArea, {{moduleRectangle.coord.x + moduleRectangle.size.w - 20.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
 
-    //if (module->upRate) {
-    //    render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Uprated");
-    //}
-
-    //if (module->isLed) {
-    //    render_text(moduleArea, {{moduleRectangle.coord.x + 60.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Led");
-    //}
-
-    if (module->modeCount > 1) {
+    if (module->modeCount > 0) {
         snprintf(buff, sizeof(buff), "Modes %u", module->modeCount);
         render_text(moduleArea, {{moduleRectangle.coord.x + 150.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-    }
-    // Todo: store locations of volume and led items in a const array like params and connectors and do these in functions
-
-    if (gModuleProperties[module->type].volumeType != volumeTypeNone) {
-        snprintf(buff, sizeof(buff), "Vol %u %u", module->volume[0], module->volume[1]);
-        render_text(moduleArea, {{moduleRectangle.coord.x + 60.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-        render_volume_meter({{moduleRectangle.coord.x + x_param_pos_from_percent(80), moduleRectangle.coord.y + y_param_pos_from_percent(module->type, 20)}, {x_param_size_from_percent(3), y_param_size_from_percent(module->type, 80)}}, gModuleProperties[module->type].volumeType, module->volume[0]);
-
-        if (gModuleProperties[module->type].volumeType == volumeTypeStereo) {
-            render_volume_meter({{moduleRectangle.coord.x + x_param_pos_from_percent(90), moduleRectangle.coord.y + y_param_pos_from_percent(module->type, 20)}, {x_param_size_from_percent(3), y_param_size_from_percent(module->type, 80)}}, gModuleProperties[module->type].volumeType, module->volume[1]);
-        }
-    }
-
-    if (gModuleProperties[module->type].ledType == ledTypeYes) {
-        if (module->led != 0) {
-            set_rgb_colour({0.0, 0.7, 0.0});
-        } else{
-            set_rgb_colour({0.0, 0.0, 0.0});
-        }
-        render_rectangle(moduleArea, {{moduleRectangle.coord.x + x_param_pos_from_percent(0), moduleRectangle.coord.y + y_param_pos_from_percent(module->type, 15)}, {x_param_size_from_percent(3), x_param_size_from_percent(3)}});
     }
 }
 

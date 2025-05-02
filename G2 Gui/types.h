@@ -344,6 +344,25 @@ typedef struct {
 } tParam;
 
 typedef struct {
+    uint32_t   modeRef;
+    tRectangle rectangle;
+    uint32_t   value;
+} tMode;
+
+typedef struct {
+    uint32_t   volumeRef;
+    tRectangle rectangle;
+    uint32_t   value1;
+    uint32_t   value2;
+} tVolume;
+
+typedef struct {
+    uint32_t   ledRef;
+    tRectangle rectangle;
+    uint32_t   value;
+} tLed;
+
+typedef struct {
     uint32_t location;
     uint32_t moduleFromIndex;
     uint32_t connectorFromIoCount;
@@ -393,7 +412,7 @@ typedef struct _struct_module {
     uint32_t                isLed;
     uint32_t                unknown1;  // Guess we should store this, to write back if necessary. Might not be needed
     uint32_t                modeCount; // Don't yet know what this is for. Might need modes array adding
-    tParam                  mode[NUM_MODES];
+    tMode                   mode[NUM_MODES];
     char                    name[MODULE_NAME_SIZE + 1];
     uint32_t                allocatedParams;
     tParam *                param[VARIATIONS];
@@ -405,8 +424,14 @@ typedef struct _struct_module {
     uint32_t                modeIndexCache;
     bool                    gotConnectorIndexCache;
     uint32_t                connectorIndexCache;
-    uint32_t                volume[2];
-    uint32_t                led;
+    bool                    gotVolumeIndexCache;
+    uint32_t                volumeIndexCache;
+    bool                    gotLedIndexCache;
+    uint32_t                ledIndexCache;
+    //uint32_t                volume[2];
+    tVolume                 volume;
+    tLed                    led;
+    //uint32_t                led;
     struct _struct_module * prev;
     struct _struct_module * next;
 } tModule;
@@ -521,6 +546,33 @@ typedef struct {
     const double         offsetX;
     const double         offsetY;
 } tConnectorLocation;
+
+typedef struct {
+    const tModuleType moduleType;
+    const tParamType1 type1;
+    const tParamType2 type2;
+    const double      offsetX;
+    const double      offsetY;
+    const char *      label;
+    const uint32_t    range;
+    const uint32_t    defaultValue;
+    const char **     strMap;
+} tModeLocation;
+
+typedef struct {
+    const tModuleType moduleType;
+    const tVolumeType volumeType;
+    //const double      offsetX;
+    //const double      offsetY;
+    const tRectangle  rectangle;
+} tVolumeLocation;
+
+typedef struct {
+    const tModuleType moduleType;
+    const tLedType    ledType;
+    const double      offsetX;
+    const double      offsetY;
+} tLedLocation;
 
 typedef struct {
     tRectangle rectangle;

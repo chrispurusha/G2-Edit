@@ -492,25 +492,25 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                                 case volumeTypeStereo:
                                 {
                                     read_bit_stream(buff, bitPos, 8);
-                                    module.volume[0] = read_bit_stream(buff, bitPos, 8);
+                                    module.volume.value1 = read_bit_stream(buff, bitPos, 8);
                                     read_bit_stream(buff, bitPos, 8);
-                                    module.volume[1] = read_bit_stream(buff, bitPos, 8);
+                                    module.volume.value2 = read_bit_stream(buff, bitPos, 8);
                                     read_bit_stream(buff, bitPos, 8); // Unused / unknown!?
                                 }
                                 break;
                                 case volumeTypeMono:
                                 {
-                                    module.volume[0] = read_bit_stream(buff, bitPos, 8);
-                                    module.volume[1] = 0;
+                                    module.volume.value1 = read_bit_stream(buff, bitPos, 8);
+                                    module.volume.value2 = 0;
                                 }
                                 break;
                                 case volumeTypeCompress:
                                 {
                                     uint32_t val = 0;
 
-                                    module.volume[0]  = read_bit_stream(buff, bitPos, 8);
-                                    val               = read_bit_stream(buff, bitPos, 8);
-                                    module.volume[0] |= (val << 8);
+                                    module.volume.value1  = read_bit_stream(buff, bitPos, 8);
+                                    val                   = read_bit_stream(buff, bitPos, 8);
+                                    module.volume.value2 |= (val << 8);
                                 }
                                 break;
                                 default:
@@ -546,7 +546,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 
                         if (read_module(module.key, &module) == true) {
                             if (gModuleProperties[module.type].ledType == ledTypeYes) {
-                                module.led = read_bit_stream(buff, bitPos, 1);
+                                module.led.value = read_bit_stream(buff, bitPos, 1);
                                 read_bit_stream(buff, bitPos, 1); // Not sure if this is used for anything yet, might just be padding
 
                                 //printf("Module %u LED %u\n", module.key.index, module.led);

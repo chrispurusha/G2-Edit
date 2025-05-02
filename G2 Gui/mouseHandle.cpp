@@ -654,11 +654,11 @@ bool handle_module_click(tCoord coord, int button) {
             if (retVal == false) {
                 // Deal with click on mode
                 for (int i = 0; (i < module.modeCount) && (retVal == false); i++) {
-                    tParam * mode = &module.mode[i];
+                    tMode * mode = &module.mode[i];
 
                     if (within_rectangle(coord, module.mode[i].rectangle)) {
                         if (button == GLFW_MOUSE_BUTTON_LEFT) {
-                            if ((modeLocationList[mode->paramRef].type2) == paramType2Dial) {
+                            if ((modeLocationList[mode->modeRef].type2) == paramType2Dial) {
                                 gDialDragging.moduleKey.index    = module.key.index;
                                 gDialDragging.moduleKey.location = module.key.location;
                                 gDialDragging.type3              = paramType3Mode;
@@ -959,10 +959,10 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                 break;
             case paramType3Mode:
 
-                if (modeLocationList[module.mode[gDialDragging.param].paramRef].type2 == paramType2Dial) {
+                if (modeLocationList[module.mode[gDialDragging.param].modeRef].type2 == paramType2Dial) {
                     angle = calculate_mouse_angle({x, y}, module.mode[gDialDragging.param].rectangle);                                                            // possible add half size
-                    value = angle_to_value(angle, modeLocationList[module.mode[gDialDragging.param].paramRef].range);
-                    value = (value * modeLocationList[module.mode[gDialDragging.param].paramRef].range) / MAX_PARAM_RANGE;
+                    value = angle_to_value(angle, modeLocationList[module.mode[gDialDragging.param].modeRef].range);
+                    value = (value * modeLocationList[module.mode[gDialDragging.param].modeRef].range) / MAX_PARAM_RANGE;
                     //printf("VALUE = %u\n", value);
 
                     if (module.mode[gDialDragging.mode].value != value) {
