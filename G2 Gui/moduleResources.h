@@ -338,53 +338,53 @@ const tParamLocation paramLocationList[] = {
 
 // Note these need to be in same order of connectors which are referenced by the hardware
 const tConnectorLocation connectorLocationList[] = {
-    {moduleTypeFltClassic, connectorDirIn,  connectorTypeAudio,   95, 20},
-    {moduleTypeFltClassic, connectorDirOut, connectorTypeAudio,   95, 95},
-    {moduleTypeFltClassic, connectorDirIn,  connectorTypeControl,  0, 95},
-    {moduleTypeFltClassic, connectorDirIn,  connectorTypeControl,  0, 50},
-    {moduleTypeFltMulti,   connectorDirIn,  connectorTypeAudio,   95, 20},
-    {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   95, 50},
-    {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   95, 70},
-    {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   95, 95},
-    {moduleTypeFltMulti,   connectorDirIn,  connectorTypeControl,  0, 90},
-    {moduleTypeFltMulti,   connectorDirIn,  connectorTypeControl,  0, 50},
-    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, 95, 20},
-    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl,  0, 70},
-    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl,  0, 95},
-    {moduleTypeEnvADSR,    connectorDirOut, connectorTypeControl, 85, 95},
-    {moduleTypeEnvADSR,    connectorDirOut, connectorTypeControl, 95, 95},
-    {moduleTypeMix4to1C,   connectorDirOut, connectorTypeControl, 95, 95},
-    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, 15, 40},
-    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, 30, 40},
-    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, 45, 40},
-    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, 60, 40},
-    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeControl,  0, 70},
-    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeControl,  0, 95},
-    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,    0, 45},
-    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,   55, 95},
-    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,   75, 95},
-    {moduleTypeOscShpB,    connectorDirOut, connectorTypeAudio,   95, 95},
-    {moduleTypeStChorus,   connectorDirIn,  connectorTypeAudio,   95, 20},
-    {moduleTypeStChorus,   connectorDirOut, connectorTypeAudio,   85, 95},
-    {moduleTypeStChorus,   connectorDirOut, connectorTypeAudio,   95, 95},
-    {moduleTypeCompress,   connectorDirIn,  connectorTypeAudio,   85, 15},
-    {moduleTypeCompress,   connectorDirIn,  connectorTypeAudio,   95, 15},
-    {moduleTypeCompress,   connectorDirIn,  connectorTypeAudio,   40, 15},
-    {moduleTypeCompress,   connectorDirOut, connectorTypeAudio,   95, 90},
-    {moduleTypeCompress,   connectorDirOut, connectorTypeAudio,   85, 90},
-    {moduleType2toOut,     connectorDirIn,  connectorTypeAudio,   85, 30},
-    {moduleType2toOut,     connectorDirIn,  connectorTypeAudio,   95, 30}, };
+    {moduleTypeFltClassic, connectorDirIn,  connectorTypeAudio,   {{95, 20}, {2.5, 2.5}}},
+    {moduleTypeFltClassic, connectorDirOut, connectorTypeAudio,   {{95, 95}, {2.5, 2.5}}},
+    {moduleTypeFltClassic, connectorDirIn,  connectorTypeControl, {{ 0, 95}, {2.5, 2.5}}},
+    {moduleTypeFltClassic, connectorDirIn,  connectorTypeControl, {{ 0, 50}, {2.5, 2.5}}},
+    {moduleTypeFltMulti,   connectorDirIn,  connectorTypeAudio,   {{95, 20}, {2.5, 2.5}}},
+    {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   {{95, 50}, {2.5, 2.5}}},
+    {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   {{95, 70}, {2.5, 2.5}}},
+    {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   {{95, 95}, {2.5, 2.5}}},
+    {moduleTypeFltMulti,   connectorDirIn,  connectorTypeControl, {{ 0, 90}, {2.5, 2.5}}},
+    {moduleTypeFltMulti,   connectorDirIn,  connectorTypeControl, {{ 0, 50}, {2.5, 2.5}}},
+    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, {{95, 20}, {2.5, 2.5}}},
+    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, {{ 0, 70}, {2.5, 2.5}}},
+    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, {{ 0, 95}, {2.5, 2.5}}},
+    {moduleTypeEnvADSR,    connectorDirOut, connectorTypeControl, {{85, 95}, {2.5, 2.5}}},
+    {moduleTypeEnvADSR,    connectorDirOut, connectorTypeControl, {{95, 95}, {2.5, 2.5}}},
+    {moduleTypeMix4to1C,   connectorDirOut, connectorTypeControl, {{95, 95}, {2.5, 2.5}}},
+    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{15, 40}, {2.5, 2.5}}},
+    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{30, 40}, {2.5, 2.5}}},
+    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{45, 40}, {2.5, 2.5}}},
+    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{60, 40}, {2.5, 2.5}}},
+    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeControl, {{ 0, 70}, {2.5, 2.5}}},
+    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeControl, {{ 0, 95}, {2.5, 2.5}}},
+    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,   {{ 0, 45}, {2.5, 2.5}}},
+    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,   {{55, 95}, {2.5, 2.5}}},
+    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,   {{75, 95}, {2.5, 2.5}}},
+    {moduleTypeOscShpB,    connectorDirOut, connectorTypeAudio,   {{95, 95}, {2.5, 2.5}}},
+    {moduleTypeStChorus,   connectorDirIn,  connectorTypeAudio,   {{95, 20}, {2.5, 2.5}}},
+    {moduleTypeStChorus,   connectorDirOut, connectorTypeAudio,   {{85, 95}, {2.5, 2.5}}},
+    {moduleTypeStChorus,   connectorDirOut, connectorTypeAudio,   {{95, 95}, {2.5, 2.5}}},
+    {moduleTypeCompress,   connectorDirIn,  connectorTypeAudio,   {{85, 15}, {2.5, 2.5}}},
+    {moduleTypeCompress,   connectorDirIn,  connectorTypeAudio,   {{95, 15}, {2.5, 2.5}}},
+    {moduleTypeCompress,   connectorDirIn,  connectorTypeAudio,   {{40, 15}, {2.5, 2.5}}},
+    {moduleTypeCompress,   connectorDirOut, connectorTypeAudio,   {{95, 90}, {2.5, 2.5}}},
+    {moduleTypeCompress,   connectorDirOut, connectorTypeAudio,   {{85, 90}, {2.5, 2.5}}},
+    {moduleType2toOut,     connectorDirIn,  connectorTypeAudio,   {{85, 30}, {2.5, 2.5}}},
+    {moduleType2toOut,     connectorDirIn,  connectorTypeAudio,   {{95, 30}, {2.5, 2.5}}} };
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
-const tModeLocation   modeLocationList[] = {
-    {moduleTypeOscShpB, paramType1OscWave, paramType2Dial, 20, 15, "Wave", 8, 0, NULL}, };
+const tModeLocation modeLocationList[] = {
+    {moduleTypeOscShpB, paramType1OscWave, paramType2Dial, 20, 15, "Wave", 8, 0, NULL} };
 
-const tVolumeLocation volumeLocationList[] = {
+const tVolumeLocation    volumeLocationList[] = {
     {moduleTypeMix4to1C, volumeTypeMono,     {{85, 15}, {3, 70}}},
     {moduleTypeCompress, volumeTypeCompress, {{80, 15}, {3, 70}}},
     {moduleType2toOut,   volumeTypeStereo,   {{75, 15}, {3, 70}}}};
 
-const tLedLocation    ledLocationList[] = {
-    {moduleTypeEnvADSR, ledTypeYes, {{0, 20}, {3, 3}}}, };
+const tLedLocation       ledLocationList[] = {
+    {moduleTypeEnvADSR, ledTypeYes, {{0, 20}, {2.5, 2.5}}}, };
 
 #endif // __MODULE_RESOURCES_H__

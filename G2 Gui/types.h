@@ -389,10 +389,10 @@ typedef enum {
 } tConnectorDir;
 
 typedef struct {
-    tConnectorDir  dir;
-    tConnectorType type;
-    tCoord         coord;
     tRectangle     rectangle;
+    tCoord         coord;
+    tConnectorDir  dir;  // Should pull from the location list
+    tConnectorType type;// Should pull from the location list
 } tConnector;
 
 typedef struct {
@@ -543,8 +543,7 @@ typedef struct {
     const tModuleType    moduleType;
     const tConnectorDir  direction;
     const tConnectorType type;
-    const double         offsetX;
-    const double         offsetY;
+    const tRectangle     rectangle;
 } tConnectorLocation;
 
 typedef struct {

@@ -40,9 +40,6 @@ extern "C" {
 
 extern uint32_t gLocation;
 
-// Prototypes
-void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir dir, tConnectorType type, tCoord coord);
-
 void set_module_colour(uint32_t colour) {
     tRgb rgb = {0};
 
@@ -169,12 +166,11 @@ tRectangle render_dial_with_text(tCoord coord, char * label, char * buff, uint32
 }
 
 // This might be too generic and won't be able to use, or we add extra params!
-void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModule * module) {
+void render_param_common(tCoord coord, tModule * module, uint32_t paramRef, uint32_t paramIndex) {
     char     buff[16] = {0};
+    uint32_t paramValue = module->param[0][paramIndex].value;
 
-    uint32_t paramValue = module->param[0][param].value;
-
-    module->param[0][param].paramRef = paramRef;
+    module->param[0][paramIndex].paramRef = paramRef;
 
     switch (paramLocationList[paramRef].type1) {
         case paramType1Freq:
@@ -192,7 +188,7 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
             } else {
                 snprintf(buff, sizeof(buff), "%.1fkHz", freq / 1000.0);
             }
-            module->param[0][param].rectangle = render_dial_with_text(coord, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
+            module->param[0][paramIndex].rectangle = render_dial_with_text(coord, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
             break;
         }
         case paramType1Pitch:
@@ -206,7 +202,7 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
                 percent = maxVal;             // Clip
             }
             snprintf(buff, sizeof(buff), "%.1f%%", percent);
-            module->param[0][param].rectangle = render_dial_with_text(coord, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
+            module->param[0][paramIndex].rectangle = render_dial_with_text(coord, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
             break;
         }
         case paramType1CommonDial:         // Ultimately might not be a common dial, or could just be a default percent dial!?
@@ -221,7 +217,7 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
                 res = maxVal;             // Clip
             }
             snprintf(buff, sizeof(buff), "%.1f", res);
-            module->param[0][param].rectangle = render_dial_with_text(coord, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
+            module->param[0][paramIndex].rectangle = render_dial_with_text(coord, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
             break;
         }
         case paramType1FltMultiDb:
@@ -240,7 +236,7 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
                 y += STANDARD_TEXT_HEIGHT;
             }
             set_rgb_colour(RGB_BACKGROUND_GREY);
-            module->param[0][param].rectangle = draw_button(moduleArea, {{coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, map, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, map[paramValue]);
+            module->param[0][paramIndex].rectangle = draw_button(moduleArea, {{coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, map, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, map[paramValue]);
             break;
         }
         case paramType1GainControl:
@@ -252,27 +248,27 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
             } else {
                 set_rgb_colour(RGB_BACKGROUND_GREY);             // Grey when OFF
             }
-            module->param[0][param].rectangle = draw_button(moduleArea, {coord, get_text_width(valString, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}, valString);
+            module->param[0][paramIndex].rectangle = draw_button(moduleArea, {coord, get_text_width(valString, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}, valString);
             break;
         }
         case paramType1Bypass:
         {
-            module->param[0][param].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
+            module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
             return;
         }
         case paramType1Enable:
         {
-            module->param[0][param].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
+            module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
             return;
         }
         case paramType1Exp:
         {
-            module->param[0][param].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
+            module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
             return;
         }
         case paramType1Pad:
         {
-            module->param[0][param].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
+            module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, {coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
             return;
         }
         default:
@@ -282,19 +278,19 @@ void render_param_common(tCoord coord, uint32_t paramRef, uint32_t param, tModul
     }
 }
 
-void render_mode_common(tCoord coord, uint32_t modeRef, uint32_t mode, tModule * module) {
-    char     buff[16] = {0};
-
-    uint32_t modeValue = module->mode[0].value;
+void render_mode_common(tCoord coord, tModule * module, uint32_t modeRef, uint32_t modeIndex) {
 
     module->mode[0].modeRef = modeRef;
 
     switch (modeLocationList[modeRef].type1) {
         case paramType1OscWave:
         {
+            char     buff[16] = {0};
+            uint32_t modeValue = 0;
+            
             snprintf(buff, sizeof(buff), "%u", modeValue);
-            modeValue                    = (uint32_t)round((double)modeValue * (double)(MAX_PARAM_RANGE - 1)) / ((double)(modeLocationList[modeRef].range - 1));
-            module->mode[mode].rectangle = render_dial_with_text(coord, (char *)modeLocationList[modeRef].label, buff, modeValue, modeLocationList[modeRef].range);
+            modeValue                    = (uint32_t)round((double)(module->mode[0].value) * (double)(MAX_PARAM_RANGE - 1)) / ((double)(modeLocationList[modeRef].range - 1));
+            module->mode[modeIndex].rectangle = render_dial_with_text(coord, (char *)modeLocationList[modeRef].label, buff, modeValue, modeLocationList[modeRef].range);
             break;
         }
         default:
@@ -304,11 +300,7 @@ void render_mode_common(tCoord coord, uint32_t modeRef, uint32_t mode, tModule *
     }
 }
 
-void render_volume_common(tRectangle rectangle, uint32_t volumeRef, tModule * module) { //Todo - change the other similar functions to also use rectangle
-    char     buff[16] = {0};
-
-    uint32_t volumeValue1 = module->volume.value1;
-    uint32_t volumeValue2 = module->volume.value2;
+void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volumeRef, uint32_t volumeIndex) {
 
     module->volume.volumeRef = volumeRef;
 
@@ -344,17 +336,14 @@ void render_volume_common(tRectangle rectangle, uint32_t volumeRef, tModule * mo
     }
 }
 
-void render_led_common(tRectangle rectangle, uint32_t ledRef, tModule * module) {
-    char     buff[16] = {0};
-
-    uint32_t ledValue = module->led.value;
-
+void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, uint32_t ledIndex) {
+    
     module->led.ledRef = ledRef;
 
     switch (ledLocationList[ledRef].ledType) {
         case ledTypeYes:
         {
-            if (ledValue != 0) {
+            if (module->led.value != 0) {
                 set_rgb_colour({0.0, 0.7, 0.0});
             } else{
                 set_rgb_colour({0.0, 0.0, 0.0});
@@ -369,7 +358,33 @@ void render_led_common(tRectangle rectangle, uint32_t ledRef, tModule * module) 
     }
 }
 
-tRectangle adjust_rectangle(tRectangle base, tRectangle relative, tModule *module) {
+void render_connector_common(tRectangle rectangle, tModule * module, tConnectorDir dir, tConnectorType type, uint32_t connectorIndex) {
+    
+    if (module->connector == NULL) {
+        printf("No connector index %u on module index %u\n", connectorIndex, module->key.index);
+        return;
+    }
+    module->connector[connectorIndex].coord = rectangle.coord;  // Register where we're rendering this connector, for cable connecting
+    module->connector[connectorIndex].dir   = dir;    // Ultimately, should be constant in the structures, we shouldn't have to do this here
+    module->connector[connectorIndex].type  = type;
+
+    if (module->upRate) {
+        type = connectorTypeAudio;
+    }
+    set_rgb_colour(connectorColourMap[type]);  // Note, was using "module->connector[connectorIndex].type", check that this type param is OK
+
+    if (module->connector[connectorIndex].dir == connectorDirIn) {
+        //module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, {coord.x + CONNECTOR_RADIUS, coord.y + CONNECTOR_RADIUS}, CONNECTOR_RADIUS, 10.0, 0.0, 10.0);
+        module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, {rectangle.coord.x + rectangle.size.w, rectangle.coord.y + rectangle.size.h}, rectangle.size.w, 10.0, 0.0, 10.0);
+    } else {
+        //module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, {{coord.x, coord.y}, {CONNECTOR_DIAMETER, CONNECTOR_DIAMETER}});
+        module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, {rectangle.coord, {rectangle.size.w * 2, rectangle.size.h * 2}});
+    }
+    set_rgb_colour(RGB_BLACK);
+    render_circle_part(moduleArea, {rectangle.coord.x + rectangle.size.w, rectangle.coord.y + rectangle.size.h}, rectangle.size.w / 2.0, 10.0, 0.0, 10.0);
+}
+
+tRectangle adjust_rectangle(tRectangle base, tRectangle relative, tModule * module) {
     tRectangle result;
 
     result.coord.x = base.coord.x + x_param_pos_from_percent(relative.coord.x);
@@ -397,8 +412,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->gotParamIndexCache = true;
             }
             render_param_common(
-                {rectangle.coord.x + x_param_pos_from_percent(paramLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, paramLocationList[i].offsetY)}, i,
-                param++, module);
+                {rectangle.coord.x + x_param_pos_from_percent(paramLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, paramLocationList[i].offsetY)}, module, i, param++);
 
             if (param >= module_param_count(module->type)) {
                 break;
@@ -413,8 +427,8 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->gotModeIndexCache = true;
             }
             render_mode_common(
-                {rectangle.coord.x + x_param_pos_from_percent(modeLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, modeLocationList[i].offsetY)}, i,
-                mode++, module);
+                {rectangle.coord.x + x_param_pos_from_percent(modeLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, modeLocationList[i].offsetY)}, module, i,
+                mode++);
 
             if (mode >= module_mode_count(module->type)) {
                 break;
@@ -428,10 +442,9 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->connectorIndexCache    = i;
                 module->gotConnectorIndexCache = true;
             }
-            render_connector(module, connector++,
-                             connectorLocationList[i].direction,
-                             connectorLocationList[i].type,
-                             {rectangle.coord.x + x_param_pos_from_percent(connectorLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, connectorLocationList[i].offsetY)});
+            tRectangle adjusted = adjust_rectangle(rectangle, connectorLocationList[i].rectangle, module);
+            adjusted.size.h = adjusted.size.w; // We want this one to be square
+            render_connector_common(adjusted, module, connectorLocationList[i].direction, connectorLocationList[i].type, connector++);
 
             if (connector >= module_connector_count(module->type)) {
                 break;
@@ -446,8 +459,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->gotVolumeIndexCache = true;
             }
             tRectangle adjusted = adjust_rectangle(rectangle, volumeLocationList[i].rectangle, module);
-            render_volume_common(adjusted, i, module);
-            volume++;
+            render_volume_common(adjusted, module, i, volume++);
 
             if (volume >= module_volume_count(module->type)) {
                 break;
@@ -463,8 +475,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
             }
             tRectangle adjusted = adjust_rectangle(rectangle, ledLocationList[i].rectangle, module);
             adjusted.size.h = adjusted.size.w; // We want this one to be square
-            render_led_common(adjusted, i, module);
-            volume++;
+            render_led_common(adjusted, module, i, led++);
 
             if (led >= module_led_count(module->type)) {
                 break;
@@ -529,29 +540,6 @@ void render_modules(void) {
     render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
     render_rectangle(mainArea, {{area.coord.x + area.size.w, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
     render_rectangle(mainArea, {{0.0, area.coord.y + area.size.h}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
-}
-
-void render_connector(tModule * module, uint32_t connectorIndex, tConnectorDir dir, tConnectorType type, tCoord coord) {
-    if (module->connector == NULL) {
-        printf("No connector index %u on module index %u\n", connectorIndex, module->key.index);
-        return;
-    }
-    module->connector[connectorIndex].coord = coord;  // Register where we're rendering this connector, for cable connecting
-    module->connector[connectorIndex].dir   = dir;    // Ultimately, should be constant in the structures, we shouldn't have to do this here
-    module->connector[connectorIndex].type  = type;
-
-    if (module->upRate) {
-        type = connectorTypeAudio;
-    }
-    set_rgb_colour(connectorColourMap[type]);  // Note, was using "module->connector[connectorIndex].type", check that this type param is OK
-
-    if (module->connector[connectorIndex].dir == connectorDirIn) {
-        module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, {coord.x + CONNECTOR_RADIUS, coord.y + CONNECTOR_RADIUS}, CONNECTOR_RADIUS, 10.0, 0.0, 10.0);
-    } else {
-        module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, {{coord.x, coord.y}, {CONNECTOR_DIAMETER, CONNECTOR_DIAMETER}});
-    }
-    set_rgb_colour(RGB_BLACK);
-    render_circle_part(moduleArea, {coord.x + CONNECTOR_RADIUS, coord.y + CONNECTOR_RADIUS}, CONNECTOR_RADIUS / 2.0, 10.0, 0.0, 10.0);
 }
 
 void render_cable_from_to(tConnector from, tConnector to) {
