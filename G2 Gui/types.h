@@ -392,7 +392,7 @@ typedef struct {
     tRectangle     rectangle;
     tCoord         coord;
     tConnectorDir  dir;  // Should pull from the location list
-    tConnectorType type;// Should pull from the location list
+    tConnectorType type; // Should pull from the location list
 } tConnector;
 
 typedef struct {

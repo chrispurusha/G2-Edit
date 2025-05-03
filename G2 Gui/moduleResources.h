@@ -373,18 +373,18 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeCompress,   connectorDirOut, connectorTypeAudio,   {{95, 90}, {2.5, 2.5}}},
     {moduleTypeCompress,   connectorDirOut, connectorTypeAudio,   {{85, 90}, {2.5, 2.5}}},
     {moduleType2toOut,     connectorDirIn,  connectorTypeAudio,   {{85, 30}, {2.5, 2.5}}},
-    {moduleType2toOut,     connectorDirIn,  connectorTypeAudio,   {{95, 30}, {2.5, 2.5}}} };
+    {moduleType2toOut,     connectorDirIn,  connectorTypeAudio,   {{95, 30}, {2.5, 2.5}}}};
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
-const tModeLocation modeLocationList[] = {
-    {moduleTypeOscShpB, paramType1OscWave, paramType2Dial, 20, 15, "Wave", 8, 0, NULL} };
+const tModeLocation   modeLocationList[] = {
+    {moduleTypeOscShpB, paramType1OscWave, paramType2Dial, 20, 15, "Wave", 8, 0, NULL}};
 
-const tVolumeLocation    volumeLocationList[] = {
+const tVolumeLocation volumeLocationList[] = {
     {moduleTypeMix4to1C, volumeTypeMono,     {{85, 15}, {3, 70}}},
     {moduleTypeCompress, volumeTypeCompress, {{80, 15}, {3, 70}}},
     {moduleType2toOut,   volumeTypeStereo,   {{75, 15}, {3, 70}}}};
 
-const tLedLocation       ledLocationList[] = {
+const tLedLocation    ledLocationList[] = {
     {moduleTypeEnvADSR, ledTypeYes, {{0, 20}, {2.5, 2.5}}}, };
 
 #endif // __MODULE_RESOURCES_H__

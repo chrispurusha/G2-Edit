@@ -167,7 +167,7 @@ tRectangle render_dial_with_text(tCoord coord, char * label, char * buff, uint32
 
 // This might be too generic and won't be able to use, or we add extra params!
 void render_param_common(tCoord coord, tModule * module, uint32_t paramRef, uint32_t paramIndex) {
-    char     buff[16] = {0};
+    char     buff[16]   = {0};
     uint32_t paramValue = module->param[0][paramIndex].value;
 
     module->param[0][paramIndex].paramRef = paramRef;
@@ -279,17 +279,16 @@ void render_param_common(tCoord coord, tModule * module, uint32_t paramRef, uint
 }
 
 void render_mode_common(tCoord coord, tModule * module, uint32_t modeRef, uint32_t modeIndex) {
-
     module->mode[0].modeRef = modeRef;
 
     switch (modeLocationList[modeRef].type1) {
         case paramType1OscWave:
         {
-            char     buff[16] = {0};
+            char     buff[16]  = {0};
             uint32_t modeValue = 0;
-            
+
             snprintf(buff, sizeof(buff), "%u", modeValue);
-            modeValue                    = (uint32_t)round((double)(module->mode[0].value) * (double)(MAX_PARAM_RANGE - 1)) / ((double)(modeLocationList[modeRef].range - 1));
+            modeValue                         = (uint32_t)round((double)(module->mode[0].value) * (double)(MAX_PARAM_RANGE - 1)) / ((double)(modeLocationList[modeRef].range - 1));
             module->mode[modeIndex].rectangle = render_dial_with_text(coord, (char *)modeLocationList[modeRef].label, buff, modeValue, modeLocationList[modeRef].range);
             break;
         }
@@ -301,7 +300,6 @@ void render_mode_common(tCoord coord, tModule * module, uint32_t modeRef, uint32
 }
 
 void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volumeRef, uint32_t volumeIndex) {
-
     module->volume.volumeRef = volumeRef;
 
     switch (volumeLocationList[volumeRef].volumeType) {
@@ -337,7 +335,6 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
 }
 
 void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, uint32_t ledIndex) {
-    
     module->led.ledRef = ledRef;
 
     switch (ledLocationList[ledRef].ledType) {
@@ -359,13 +356,12 @@ void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, 
 }
 
 void render_connector_common(tRectangle rectangle, tModule * module, tConnectorDir dir, tConnectorType type, uint32_t connectorIndex) {
-    
     if (module->connector == NULL) {
         printf("No connector index %u on module index %u\n", connectorIndex, module->key.index);
         return;
     }
     module->connector[connectorIndex].coord = rectangle.coord;  // Register where we're rendering this connector, for cable connecting
-    module->connector[connectorIndex].dir   = dir;    // Ultimately, should be constant in the structures, we shouldn't have to do this here
+    module->connector[connectorIndex].dir   = dir;
     module->connector[connectorIndex].type  = type;
 
     if (module->upRate) {
@@ -374,10 +370,8 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
     set_rgb_colour(connectorColourMap[type]);  // Note, was using "module->connector[connectorIndex].type", check that this type param is OK
 
     if (module->connector[connectorIndex].dir == connectorDirIn) {
-        //module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, {coord.x + CONNECTOR_RADIUS, coord.y + CONNECTOR_RADIUS}, CONNECTOR_RADIUS, 10.0, 0.0, 10.0);
         module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, {rectangle.coord.x + rectangle.size.w, rectangle.coord.y + rectangle.size.h}, rectangle.size.w, 10.0, 0.0, 10.0);
     } else {
-        //module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, {{coord.x, coord.y}, {CONNECTOR_DIAMETER, CONNECTOR_DIAMETER}});
         module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, {rectangle.coord, {rectangle.size.w * 2, rectangle.size.h * 2}});
     }
     set_rgb_colour(RGB_BLACK);
