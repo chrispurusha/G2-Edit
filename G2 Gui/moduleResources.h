@@ -385,6 +385,6 @@ const tVolumeLocation volumeLocationList[] = {
     {moduleType2toOut,   volumeTypeStereo,   {{75, 15}, {3, 70}}}};
 
 const tLedLocation    ledLocationList[] = {
-    {moduleTypeEnvADSR, ledTypeYes, 0, 20}, };
+    {moduleTypeEnvADSR, ledTypeYes, {{0, 20}, {3, 3}}}, };
 
 #endif // __MODULE_RESOURCES_H__

@@ -562,16 +562,13 @@ typedef struct {
 typedef struct {
     const tModuleType moduleType;
     const tVolumeType volumeType;
-    //const double      offsetX;
-    //const double      offsetY;
     const tRectangle  rectangle;
 } tVolumeLocation;
 
 typedef struct {
     const tModuleType moduleType;
     const tLedType    ledType;
-    const double      offsetX;
-    const double      offsetY;
+    const tRectangle  rectangle;
 } tLedLocation;
 
 typedef struct {

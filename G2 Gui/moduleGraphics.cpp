@@ -344,7 +344,7 @@ void render_volume_common(tRectangle rectangle, uint32_t volumeRef, tModule * mo
     }
 }
 
-void render_led_common(tCoord coord, uint32_t ledRef, tModule * module) {
+void render_led_common(tRectangle rectangle, uint32_t ledRef, tModule * module) {
     char     buff[16] = {0};
 
     uint32_t ledValue = module->led.value;
@@ -359,7 +359,7 @@ void render_led_common(tCoord coord, uint32_t ledRef, tModule * module) {
             } else{
                 set_rgb_colour({0.0, 0.0, 0.0});
             }
-            render_rectangle(moduleArea, {{coord}, {x_param_size_from_percent(3), x_param_size_from_percent(3)}});
+            render_rectangle(moduleArea, rectangle);
             break;
         }
         default:
@@ -367,6 +367,17 @@ void render_led_common(tCoord coord, uint32_t ledRef, tModule * module) {
         }
         break;
     }
+}
+
+tRectangle adjust_rectangle(tRectangle base, tRectangle relative, tModule *module) {
+    tRectangle result;
+
+    result.coord.x = base.coord.x + x_param_pos_from_percent(relative.coord.x);
+    result.coord.y = base.coord.y + y_param_pos_from_percent(module->type, relative.coord.y);
+    result.size.w  = x_param_size_from_percent(relative.size.w);
+    result.size.h  = y_param_size_from_percent(module->type, relative.size.h);
+
+    return result;
 }
 
 void render_module_common(tRectangle rectangle, tModule * module) {
@@ -434,8 +445,8 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->volumeIndexCache    = i;
                 module->gotVolumeIndexCache = true;
             }
-            render_volume_common(
-                {{rectangle.coord.x + x_param_pos_from_percent(volumeLocationList[i].rectangle.coord.x), rectangle.coord.y + y_param_pos_from_percent(module->type, volumeLocationList[i].rectangle.coord.y)}, {x_param_size_from_percent(volumeLocationList[i].rectangle.size.w), y_param_size_from_percent(module->type, volumeLocationList[i].rectangle.size.h)}}, i, module);
+            tRectangle adjusted = adjust_rectangle(rectangle, volumeLocationList[i].rectangle, module);
+            render_volume_common(adjusted, i, module);
             volume++;
 
             if (volume >= module_volume_count(module->type)) {
@@ -450,10 +461,10 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->ledIndexCache    = i;
                 module->gotLedIndexCache = true;
             }
-            render_led_common(
-                {rectangle.coord.x + x_param_pos_from_percent(ledLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, ledLocationList[i].offsetY)}, i,
-                module);
-            led++;
+            tRectangle adjusted = adjust_rectangle(rectangle, ledLocationList[i].rectangle, module);
+            adjusted.size.h = adjusted.size.w; // We want this one to be square
+            render_led_common(adjusted, i, module);
+            volume++;
 
             if (led >= module_led_count(module->type)) {
                 break;
