@@ -54,6 +54,7 @@ extern bool          gReDraw;
 extern tMessageQueue gCommandQueue;
 extern tButton       gSelectVa;
 extern tButton       gSelectFx;
+extern tButton       gSelectOpenReadFile;
 
 void adjust_scroll_for_drag(void) {
     double     x             = 0.0;
@@ -848,6 +849,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 gSelectVa.function();
             } else if (within_rectangle(coord, gSelectFx.rectangle)) {
                 gSelectFx.function();
+            } else if (within_rectangle(coord, gSelectOpenReadFile.rectangle)) {
+                gSelectOpenReadFile.function();
             } else if (gContextMenu.active) {
                 if (!handle_context_menu_click(coord)) {
                     gContextMenu.active = false;  // Close if clicked outside - Todo: think if this is the right thing to do here

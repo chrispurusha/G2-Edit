@@ -105,7 +105,6 @@
 #define BLANK_SIZE                        (0.0)   // Not used directly by calling function, or needs calculation in following calls
 #define STANDARD_TEXT_HEIGHT              (12.0)
 #define STANDARD_BUTTON_TEXT_HEIGHT       (15.0)
-#define MAIN_MENU_TEXT_HEIGHT             (16.0)
 
 #define CONNECTOR_RADIUS                  (8.0)
 #define CONNECTOR_DIAMETER                (CONNECTOR_RADIUS * 2.0)

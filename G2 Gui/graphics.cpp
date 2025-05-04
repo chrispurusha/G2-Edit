@@ -42,15 +42,19 @@ extern "C" {
 #include "mouseHandle.h"
 #include "dataBase.h"
 #include "moduleGraphics.h"
+#include "fileDialogue.h"
 
 void va_button(void);
 void fx_button(void);
+void open_read_file_button(void);
 
-GLFWwindow *           gWindow   = NULL;
-bool                   gReDraw   = true;
-uint32_t               gLocation = locationVa;
-tButton                gSelectVa = {NULL_RECTANGLE, "VA", va_button}; // TODO: put these in an array of structures
-tButton                gSelectFx = {NULL_RECTANGLE, "FX", fx_button};
+GLFWwindow *           gWindow                   = NULL;
+bool                   gReDraw                   = true;
+uint32_t               gLocation                 = locationVa;
+tButton                gSelectVa                 = {NULL_RECTANGLE, "VA", va_button}; // TODO: put these select items in an array of structures
+tButton                gSelectFx                 = {NULL_RECTANGLE, "FX", fx_button};
+tButton                gSelectOpenReadFile       = {NULL_RECTANGLE, "Read File", open_read_file_button};
+bool                   gShowOpenFileReadDialogue = false;
 
 static FT_Library      gLibrary     = {0};
 static FT_Face         gFace        = {0};
@@ -116,6 +120,10 @@ void va_button(void) {
 
 void fx_button(void) {
     gLocation = locationFx;
+}
+
+void open_read_file_button(void) {
+    gShowOpenFileReadDialogue = true;
 }
 
 void render_context_menu(void) {
@@ -188,14 +196,17 @@ void render_top_bar(void) {
     } else {
         set_rgb_colour(RGB_BACKGROUND_GREY);
     }
-    gSelectVa.rectangle = draw_button(mainArea, {{400.0, 10.0}, {get_text_width(gSelectVa.text, MAIN_MENU_TEXT_HEIGHT), MAIN_MENU_TEXT_HEIGHT}}, gSelectVa.text);
+    gSelectVa.rectangle = draw_button(mainArea, {{400.0, 8.0}, {0.0, STANDARD_TEXT_HEIGHT}}, gSelectVa.text); // Todo - move coords into button definition
 
     if (gLocation == locationFx) {
         set_rgb_colour({0.3, 0.7, 0.3});
     } else {
         set_rgb_colour(RGB_BACKGROUND_GREY);
     }
-    gSelectFx.rectangle = draw_button(mainArea, {{425.0, 10.0}, {get_text_width(gSelectFx.text, MAIN_MENU_TEXT_HEIGHT), MAIN_MENU_TEXT_HEIGHT}}, gSelectFx.text);
+    gSelectFx.rectangle = draw_button(mainArea, {{425.0, 8.0}, {0.0, STANDARD_TEXT_HEIGHT}}, gSelectFx.text);
+
+    set_rgb_colour(RGB_BACKGROUND_GREY);
+    gSelectOpenReadFile.rectangle = draw_button(mainArea, {{20.0, 8.0}, {0.0, STANDARD_TEXT_HEIGHT}}, gSelectOpenReadFile.text);
 }
 
 void wake_glfw(void) {
@@ -279,10 +290,24 @@ void init_graphics(void) {
     setup_render_context();
 }
 
+void check_action_flags(void) {
+    if (gShowOpenFileReadDialogue == true) { // Todo - move to a function
+        const char * path = open_file_dialogue();
+
+        if (path != NULL) {
+            printf("Selected file: %s\n", path);
+            free((void *)path);
+        }
+        gShowOpenFileReadDialogue = false;
+    }
+}
+
 void do_graphics_loop(void) {
     bool reDraw = false;
 
     while (!glfwWindowShouldClose(gWindow)) {
+        check_action_flags();
+
         re_draw_mutex_lock(); // Only really protecting the gap between setting redraw and clearing the global flag, may need re-think
         reDraw  = gReDraw;
         gReDraw = false;

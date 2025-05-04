@@ -18,7 +18,7 @@
  */
 
 #ifndef __MODULE_RESOURCE_ACCESS_H__
-#define __RESOURCE_ACCESS_H__
+#define __MODULE_RESOURCE_ACCESS_H__
 
 #include "sysIncludes.h"
 #include "types.h"

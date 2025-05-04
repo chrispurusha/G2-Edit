@@ -12,6 +12,7 @@
 		832FC5DC2D01F70A0084A230 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 832FC5D62D01F68C0084A230 /* IOKit.framework */; };
 		832FC5DE2D01F7840084A230 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 832FC5DD2D01F7840084A230 /* Quartz.framework */; };
 		833734552DB1033200ACF41F /* moduleResourcesAccess.c in Sources */ = {isa = PBXBuildFile; fileRef = 833734542DB1033200ACF41F /* moduleResourcesAccess.c */; };
+		8347FD552DC7E77E009751C4 /* fileDialogue.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8347FD542DC7E772009751C4 /* fileDialogue.mm */; };
 		8352A5752D4BE22300CD5AD9 /* dataBase.c in Sources */ = {isa = PBXBuildFile; fileRef = 8352A5742D4BE22300CD5AD9 /* dataBase.c */; };
 		83673D922D5A4C660077A0B2 /* graphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83673D912D5A4C660077A0B2 /* graphics.cpp */; };
 		83673D942D5A50F90077A0B2 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 83673D932D5A50F90077A0B2 /* main.c */; };
@@ -46,6 +47,8 @@
 		833423482D5A613B00AA2AC9 /* sysIncludes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sysIncludes.h; sourceTree = "<group>"; };
 		833734532DB1033200ACF41F /* moduleResourcesAccess.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = moduleResourcesAccess.h; sourceTree = "<group>"; };
 		833734542DB1033200ACF41F /* moduleResourcesAccess.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = moduleResourcesAccess.c; sourceTree = "<group>"; };
+		8347FD542DC7E772009751C4 /* fileDialogue.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = fileDialogue.mm; sourceTree = "<group>"; };
+		8347FD562DC7EAAD009751C4 /* fileDialogue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = fileDialogue.h; sourceTree = "<group>"; };
 		8352A5732D4BE21D00CD5AD9 /* dataBase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dataBase.h; sourceTree = "<group>"; };
 		8352A5742D4BE22300CD5AD9 /* dataBase.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = dataBase.c; sourceTree = "<group>"; };
 		835D853C2D74AF5E008D5E46 /* constData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = constData.h; sourceTree = "<group>"; };
@@ -127,6 +130,8 @@
 			isa = PBXGroup;
 			children = (
 				8397E14B2D2FEF4500DDD420 /* G2 Gui.entitlements */,
+				8347FD542DC7E772009751C4 /* fileDialogue.mm */,
+				8347FD562DC7EAAD009751C4 /* fileDialogue.h */,
 				833423482D5A613B00AA2AC9 /* sysIncludes.h */,
 				83F363872D5BD96E00F5F627 /* types.h */,
 				8376ECA82D48FB41008D1608 /* defs.h */,
@@ -227,6 +232,7 @@
 				83BE0C692D6C86D6007E9CD8 /* moduleGraphics.cpp in Sources */,
 				83673D922D5A4C660077A0B2 /* graphics.cpp in Sources */,
 				8376ECAB2D48FB52008D1608 /* iokit.c in Sources */,
+				8347FD552DC7E77E009751C4 /* fileDialogue.mm in Sources */,
 				8352A5752D4BE22300CD5AD9 /* dataBase.c in Sources */,
 				83EDF68E2D64D84C0052CE9F /* msgQueue.c in Sources */,
 			);
