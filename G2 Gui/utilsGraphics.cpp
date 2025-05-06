@@ -467,25 +467,22 @@ tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active) {
 
 tRectangle draw_button(tArea area, tRectangle rectangle, char * text) {
     double     borderLineWidth = 1.0;
-    double     margin          = 4.0;
+    double     margin          = 2.0;
     tRectangle textRectangle   = rectangle;
-    double     textHeight =rectangle.size.h;
-    double     textWidth =rectangle.size.w;
 
-    
-    rectangle.size.w = rectangle.size.w + (2 * margin);
-    rectangle.size.h = rectangle.size.h + (2 * margin);
+    rectangle.size.w       = rectangle.size.w + (2 * margin);
+    rectangle.size.h       = rectangle.size.h + (2 * margin);
     textRectangle.coord.x += margin;
     textRectangle.coord.y += margin;
+
     if (area == moduleArea) {
-        rectangle = scale_scroll_adjust_rectangle(rectangle);
+        rectangle     = scale_scroll_adjust_rectangle(rectangle);
         textRectangle = scale_scroll_adjust_rectangle(textRectangle);
     }
     render_rectangle(mainArea, rectangle);
 
     set_rgb_colour(RGB_BLACK);
 
-    // Draw border lines (same as before)
     tRectangle line = {0};
     line = (tRectangle){{
                             rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth
@@ -504,7 +501,6 @@ tRectangle draw_button(tArea area, tRectangle rectangle, char * text) {
                         }, {borderLineWidth, rectangle.size.h}};
     render_rectangle(mainArea, line); // Right
 
-    // Draw text inside padded area
     render_text(mainArea, textRectangle, text);
 
     return rectangle;

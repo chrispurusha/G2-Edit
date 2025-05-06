@@ -322,13 +322,13 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeMix4to1C,   paramType1Enable,                paramType2Toggle, {{35, 40}, {10, 10}}, NULL,        2,  0, NULL           },
     {moduleTypeMix4to1C,   paramType1Enable,                paramType2Toggle, {{50, 40}, {10, 10}}, NULL,        2,  0, NULL           },
     {moduleTypeMix4to1C,   paramType1Enable,                paramType2Toggle, {{65, 40}, {10, 10}}, NULL,        2,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1Exp,                   paramType2Toggle,  {{0, 25}, {10, 10}}, NULL,        2,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1Pad,                   paramType2Toggle,  {{0, 45}, {10, 10}}, NULL,        2,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1Exp,                   paramType2Toggle, {{ 0, 25}, {10, 10}}, NULL,        2,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1Pad,                   paramType2Toggle, {{ 0, 45}, {10, 10}}, NULL,        2,  0, NULL           },
     {moduleTypeEnvADSR,    paramType1CommonDial,            paramType2Dial,   {{20, 60}, {10, 10}}, "Attack",  128,  0, NULL           },
     {moduleTypeEnvADSR,    paramType1CommonDial,            paramType2Dial,   {{35, 60}, {10, 10}}, "Delay",   128,  0, NULL           },
     {moduleTypeEnvADSR,    paramType1CommonDial,            paramType2Dial,   {{50, 60}, {10, 10}}, "Sus",     128,  0, NULL           },
     {moduleTypeEnvADSR,    paramType1CommonDial,            paramType2Dial,   {{65, 60}, {10, 10}}, "Rel",     128,  0, NULL           },
-    {moduleTypeCompress,   paramType1CommonDial,            paramType2Dial,    {{0, 60}, {10, 10}}, "Thr",      43,  0, NULL           },
+    {moduleTypeCompress,   paramType1CommonDial,            paramType2Dial,   {{ 0, 60}, {10, 10}}, "Thr",      43,  0, NULL           },
     {moduleTypeCompress,   paramType1CommonDial,            paramType2Dial,   {{10, 60}, {10, 10}}, "2",        67,  0, NULL           },
     {moduleTypeCompress,   paramType1CommonDial,            paramType2Dial,   {{20, 60}, {10, 10}}, "Att",     128,  0, NULL           },
     {moduleTypeCompress,   paramType1CommonDial,            paramType2Dial,   {{30, 60}, {10, 10}}, "Rel",     128,  0, NULL           },
@@ -377,7 +377,7 @@ const tConnectorLocation connectorLocationList[] = {
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
 const tModeLocation   modeLocationList[] = {
-    {moduleTypeOscShpB, paramType1OscWave, paramType2Dial, {{20, 15}, {10,10}}, "Wave", 8, 0, NULL}};
+    {moduleTypeOscShpB, paramType1OscWave, paramType2Dial, {{20, 15}, {10, 10}}, "Wave", 8, 0, NULL}};
 
 const tVolumeLocation volumeLocationList[] = {
     {moduleTypeMix4to1C, volumeTypeMono,     {{85, 15}, {3, 70}}},

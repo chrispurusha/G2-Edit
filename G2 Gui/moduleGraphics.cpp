@@ -423,7 +423,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
             //    {rectangle.coord.x + x_param_pos_from_percent(modeLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, modeLocationList[i].offsetY)}, //module, i,
             //    mode++);
             tRectangle adjusted = adjust_rectangle(rectangle, modeLocationList[i].rectangle, module);
-            render_mode_common(adjusted, module, i,mode++);
+            render_mode_common(adjusted, module, i, mode++);
 
             if (mode >= module_mode_count(module->type)) {
                 break;
