@@ -196,17 +196,17 @@ void render_top_bar(void) {
     } else {
         set_rgb_colour(RGB_BACKGROUND_GREY);
     }
-    gSelectVa.rectangle = draw_button(mainArea, {{400.0, 8.0}, {0.0, STANDARD_TEXT_HEIGHT}}, gSelectVa.text); // Todo - move coords into button definition
+    gSelectVa.rectangle = draw_button(mainArea, {{400.0, 8.0}, {get_text_width(gSelectVa.text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectVa.text); // Todo - move coords into button definition
 
     if (gLocation == locationFx) {
         set_rgb_colour({0.3, 0.7, 0.3});
     } else {
         set_rgb_colour(RGB_BACKGROUND_GREY);
     }
-    gSelectFx.rectangle = draw_button(mainArea, {{425.0, 8.0}, {0.0, STANDARD_TEXT_HEIGHT}}, gSelectFx.text);
+    gSelectFx.rectangle = draw_button(mainArea, {{425.0, 8.0}, {get_text_width(gSelectFx.text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectFx.text);
 
     set_rgb_colour(RGB_BACKGROUND_GREY);
-    gSelectOpenReadFile.rectangle = draw_button(mainArea, {{20.0, 8.0}, {0.0, STANDARD_TEXT_HEIGHT}}, gSelectOpenReadFile.text);
+    gSelectOpenReadFile.rectangle = draw_button(mainArea, {{20.0, 8.0}, {get_text_width(gSelectOpenReadFile.text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectOpenReadFile.text);
 }
 
 void wake_glfw(void) {

@@ -531,8 +531,7 @@ typedef struct {
     const tModuleType moduleType;
     const tParamType1 type1;
     const tParamType2 type2;
-    const double      offsetX;
-    const double      offsetY;
+    const tRectangle     rectangle;
     const char *      label;
     const uint32_t    range;
     const uint32_t    defaultValue;
@@ -550,8 +549,7 @@ typedef struct {
     const tModuleType moduleType;
     const tParamType1 type1;
     const tParamType2 type2;
-    const double      offsetX;
-    const double      offsetY;
+    const tRectangle  rectangle;
     const char *      label;
     const uint32_t    range;
     const uint32_t    defaultValue;
