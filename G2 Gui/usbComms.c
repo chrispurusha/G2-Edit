@@ -363,7 +363,7 @@ static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
-static int parse_patch(uint8_t * buff, int length) {
+int parse_patch(uint8_t * buff, int length) { // Todo - also accessed from file, so need to decide how to access from USB and file
     if ((buff == NULL) || (length <= 0)) {
         return EXIT_FAILURE;
     }

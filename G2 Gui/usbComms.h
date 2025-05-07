@@ -25,5 +25,6 @@
 void start_usb_thread(void);
 void register_glfw_wake_cb(void ( *func_ptr )(void));
 void register_full_patch_change_notify_cb(void ( *func_ptr )(void));
+int parse_patch(uint8_t * buff, int length); // Todo - also accessed from file, so need to decide how to access from USB and file
 
 #endif // __USB_COMMS_H__
