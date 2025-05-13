@@ -97,7 +97,7 @@ static tCoord adjust_to_module_area_coord(tCoord coord) {
 
     coord.x += area.coord.x;
     coord.y += area.coord.y;
-    return {coord};
+    return coord;
 }
 
 static tRectangle adjust_to_module_area_rectangle(tRectangle rectangle) {
@@ -107,7 +107,7 @@ static tRectangle adjust_to_module_area_rectangle(tRectangle rectangle) {
 static tCoord adjust_scroll_coord(tCoord coord) {
     coord.x -= calc_scroll_x();
     coord.y -= calc_scroll_y();
-    return {coord};
+    return coord;
 }
 
 static tRectangle adjust_scroll_rectangle(tRectangle rectangle) {
@@ -118,14 +118,14 @@ static tCoord scale_scroll_adjust_coord(tCoord coord) {
     coord = scale_coord(coord);
     coord = adjust_scroll_coord(coord);
     coord = adjust_to_module_area_coord(coord);
-    return {coord};
+    return coord;
 }
 
 static tRectangle scale_scroll_adjust_rectangle(tRectangle rectangle) {
     rectangle = scale_rectangle(rectangle);
     rectangle = adjust_scroll_rectangle(rectangle);
     rectangle = adjust_to_module_area_rectangle(rectangle);
-    return {rectangle};
+    return rectangle;
 }
 
 tRectangle module_area(void) {
@@ -183,7 +183,7 @@ tRectangle render_rectangle(tArea area, tRectangle rectangle) {
         glVertex2f(rectangle.coord.x, rectangle.coord.y + rectangle.size.h);
         glEnd();
     }
-    return {rectangle};
+    return rectangle;
 }
 
 tRectangle render_rectangle_with_border(tArea area, tRectangle rectangle) {
@@ -210,7 +210,7 @@ tRectangle render_rectangle_with_border(tArea area, tRectangle rectangle) {
     line = {{rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
     render_rectangle(mainArea, line); // Right
 
-    return {rectangle};
+    return rectangle;
 }
 
 tRectangle render_triangle(tArea area, tTriangle triangle) {
@@ -462,7 +462,7 @@ tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active) {
     render_circle_line_part_angle(mainArea, circleCentre, circleRadius, 30.0, 330.0, rectangle.size.w * 0.1, 10);
     render_line(mainArea, {circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05)}, {circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05) + (rectangle.size.h * 0.5)}, rectangle.size.w * 0.1);
 
-    return {rectangle};
+    return rectangle;
 }
 
 tRectangle draw_button(tArea area, tRectangle rectangle, char * text) { // Todo - bring setting of colour for button backgound into this function
@@ -575,7 +575,7 @@ tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
     glDisable(GL_TEXTURE_2D);
     glDisable(GL_BLEND);
 
-    return {rectangle};
+    return rectangle;
 }
 
 bool preload_glyph_textures(const char * fontPath, double fontSize) {
@@ -844,22 +844,6 @@ void set_x_scroll_percent(double percent) {
 void set_y_scroll_percent(double percent) {
     gYScrollPercent = percent;
 }
-
-//void set_x_end_max(double xEndMax) {
-//    gXEndMax = xEndMax;
-//}
-
-//void set_y_end_max(double yEndMax) {
-//    gYEndMax = yEndMax;
-//}
-
-//double get_x_end_max(void) {
-//    return gXEndMax;
-//}
-
-//double get_y_end_max(void) {
-//    return gYEndMax;
-//}
 
 void set_zoom_factor(double zoomFactor) {
     gZoomFactor = zoomFactor;
