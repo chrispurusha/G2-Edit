@@ -37,8 +37,7 @@ extern "C" {
 #include "moduleResourcesAccess.h"
 #include "utilsGraphics.h"
 #include "moduleGraphics.h"
-
-extern uint32_t gLocation;
+#include "globalVars.h"
 
 void set_module_colour(uint32_t colour) {
     tRgb rgb = {0};

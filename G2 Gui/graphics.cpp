@@ -43,29 +43,11 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleGraphics.h"
 #include "fileDialogue.h"
-
-void va_button(void);
-void fx_button(void);
-void open_read_file_button(void);
-
-GLFWwindow *           gWindow                   = NULL;
-bool                   gReDraw                   = true;
-uint32_t               gLocation                 = locationVa;
-tButton                gSelectVa                 = {NULL_RECTANGLE, "VA", va_button}; // TODO: put these select items in an array of structures
-tButton                gSelectFx                 = {NULL_RECTANGLE, "FX", fx_button};
-tButton                gSelectOpenReadFile       = {NULL_RECTANGLE, "Read File", open_read_file_button};
-bool                   gShowOpenFileReadDialogue = false;
+#include "globalVars.h"
 
 static FT_Library      gLibrary     = {0};
 static FT_Face         gFace        = {0};
 static pthread_mutex_t gReDrawMutex = {0};
-
-extern tScrollState    gScrollState;
-extern tContextMenu    gContextMenu;
-extern tMessageQueue   gCommandQueue;
-extern tCableDragging  gCableDrag;
-extern tDialDragging   gDialDragging;
-extern tModuleDragging gModuleDrag;
 
 static void re_draw_mutex_lock(void) {
     // Todo: implement a generic utility function for this, passing the mutex?
@@ -290,61 +272,60 @@ void init_graphics(void) {
     setup_render_context();
 }
 
-void read_file_into_memory_and_process(const char *filepath) { // Todo: find a better source file home
-    int byteOffset = 0;
-    
-    FILE *file = fopen(filepath, "rb");
+void read_file_into_memory_and_process(const char * filepath) { // Todo: find a better source file home
+    int    byteOffset = 0;
+
+    FILE * file = fopen(filepath, "rb");
+
     if (!file) {
         perror("Error opening file");
         return;
     }
-
     fseek(file, 0, SEEK_END);
     long fileSize = ftell(file);
     rewind(file);
 
     uint8_t * buffer = (uint8_t *)malloc(fileSize);
+
     if (!buffer) {
         perror("Memory allocation failed");
         fclose(file);
         return;
     }
-
     size_t readSize = fread(buffer, 1, fileSize, file);
+
     if (readSize != fileSize) {
         fprintf(stderr, "Failed to read entire file\n");
         free(buffer);
         fclose(file);
         return;
     }
-    
-    
-    for (long i=0; i<fileSize; i++) {
+
+    for (long i = 0; i < fileSize; i++) {
         if (buffer[i] == 0x00) {
-            byteOffset = i+1;
+            byteOffset = i + 1;
             break;
         }
     }
-    
-    uint32_t readCrc = buffer[fileSize-2] << 8 | buffer[fileSize-1];
-    uint32_t calcCrc = calc_crc16(buffer+byteOffset, (fileSize-byteOffset) - 2);
+
+    uint32_t readCrc = buffer[fileSize - 2] << 8 | buffer[fileSize - 1];
+    uint32_t calcCrc = calc_crc16(buffer + byteOffset, (fileSize - byteOffset) - 2);
 
     if (readCrc == calcCrc) {
-        uint8_t  version   = buffer[byteOffset++];
-        uint8_t  type      = buffer[byteOffset++];
+        uint8_t version = buffer[byteOffset++];
+        uint8_t type    = buffer[byteOffset++];
         //printf("Version %u\n", version);
         //printf("Type %u\n", type);
-        
+
         database_clear_cables();
         database_clear_modules();
-        
+
         if (type == 0) {
-            parse_patch(buffer+byteOffset, (fileSize-byteOffset)-2);  // Todo - parse_patch should really be in a commonly accessible source file, for file or USB access
+            parse_patch(buffer + byteOffset, (fileSize - byteOffset) - 2);  // Todo - parse_patch should really be in a commonly accessible source file, for file or USB access
         } // 1 = performance
     } else {
         printf("CRC Fail!!!\n");
     }
-
     free(buffer);
     fclose(file);
 }
@@ -355,9 +336,9 @@ void check_action_flags(void) {
 
         if (path != NULL) {
             printf("Selected file: %s\n", path);
-            
+
             read_file_into_memory_and_process(path);
-            
+
             free((void *)path);
         }
         gShowOpenFileReadDialogue = false;

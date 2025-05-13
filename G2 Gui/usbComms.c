@@ -36,6 +36,7 @@ extern "C" {
 #include "usbComms.h"
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
+#include "globalVars.h"
 
 typedef enum {
     eStateNone,
@@ -54,16 +55,12 @@ typedef enum {
     eStateExit
 } eState;
 
-tMessageQueue    gCommandQueue = {0};
-
 static bool      gotBadConnectionIndication = false;
 static bool      gotPatchChangeIndication   = false;
 static uint8_t   slotVersion[MAX_SLOTS]     = {0};
 static pthread_t usbThread                  = NULL;
 static void      (*wake_glfw_func_ptr)(void) = NULL;
 static void      (*full_patch_change_notify_func_ptr)(void) = NULL;
-
-extern uint32_t  gLocation;
 
 void register_glfw_wake_cb(void ( *func_ptr )(void)) {
     wake_glfw_func_ptr = func_ptr;

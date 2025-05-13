@@ -41,20 +41,7 @@ extern "C" {
 #include "moduleResourcesAccess.h"
 #include "utilsGraphics.h"
 #include "mouseHandle.h"
-
-tScrollState         gScrollState  = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
-tContextMenu         gContextMenu  = {0};
-tCableDragging       gCableDrag    = {0};
-tDialDragging        gDialDragging = {0};
-tModuleDragging      gModuleDrag   = {0};
-
-extern GLFWwindow *  gWindow;
-extern uint32_t      gLocation;
-extern bool          gReDraw;
-extern tMessageQueue gCommandQueue;
-extern tButton       gSelectVa;
-extern tButton       gSelectFx;
-extern tButton       gSelectOpenReadFile;
+#include "globalVars.h"
 
 void adjust_scroll_for_drag(void) {
     double     x             = 0.0;
