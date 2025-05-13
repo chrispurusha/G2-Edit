@@ -758,8 +758,11 @@ bool handle_context_menu_click(tCoord coord) {
 
     for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
         tRectangle itemRect = {
-            {gContextMenu.coord.x,  gContextMenu.coord.y + yOffset},
-            {largestSize + (5 * 2), itemHeight + (5 * 2)          }};
+            {gContextMenu.coord.x, gContextMenu.coord.y + yOffset},
+            {
+                largestSize + (5 * 2), itemHeight + (5 * 2)
+            }
+        };
 
         if (within_rectangle(coord, itemRect)) {
             gContextMenu.active = false; // Close the current menu
@@ -779,12 +782,18 @@ bool handle_context_menu_click(tCoord coord) {
 
 bool handle_scrollbar_click(tCoord coord) {
     tRectangle yScrollBar = {
-        {(double)get_render_width() - SCROLLBAR_WIDTH,                         0.0},
-        {SCROLLBAR_WIDTH,                              (double)get_render_height()}};
+        {(double)get_render_width() - SCROLLBAR_WIDTH, 0.0},
+        {
+            SCROLLBAR_WIDTH, (double)get_render_height()
+        }
+    };
 
     tRectangle xScrollBar = {
-        {                       0.0, (double)get_render_height() - SCROLLBAR_WIDTH},
-        {(double)get_render_width(), SCROLLBAR_WIDTH                              }};
+        {0.0, (double)get_render_height() - SCROLLBAR_WIDTH},
+        {
+            (double)get_render_width(), SCROLLBAR_WIDTH
+        }
+    };
 
     if (within_rectangle(coord, yScrollBar)) {
         set_y_scroll_bar(coord.y);

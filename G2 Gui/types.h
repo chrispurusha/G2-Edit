@@ -289,6 +289,18 @@ typedef struct {
 } tTriangle;
 
 typedef enum {
+    anchorTopLeft,
+    anchorTopMiddle,
+    anchorTopRight,
+    anchorMiddleLeft,
+    anchorMiddleRight,
+    anchorMiddle,
+    anchorBottomLeft,
+    anchorBottomMiddle,
+    anchorBottomRight
+} tAnchor;
+
+typedef enum {
     paramType1None,
     paramType1Freq,
     paramType1Resonance,
@@ -532,6 +544,7 @@ typedef struct {
     const tParamType1 type1;
     const tParamType2 type2;
     const tRectangle  rectangle;
+    const tAnchor        anchor;
     const char *      label;
     const uint32_t    range;
     const uint32_t    defaultValue;
@@ -543,6 +556,7 @@ typedef struct {
     const tConnectorDir  direction;
     const tConnectorType type;
     const tRectangle     rectangle;
+    const tAnchor        anchor;
 } tConnectorLocation;
 
 typedef struct {
@@ -550,6 +564,7 @@ typedef struct {
     const tParamType1 type1;
     const tParamType2 type2;
     const tRectangle  rectangle;
+    const tAnchor        anchor;
     const char *      label;
     const uint32_t    range;
     const uint32_t    defaultValue;
@@ -560,16 +575,19 @@ typedef struct {
     const tModuleType moduleType;
     const tVolumeType volumeType;
     const tRectangle  rectangle;
+    const tAnchor        anchor;
 } tVolumeLocation;
 
 typedef struct {
     const tModuleType moduleType;
     const tLedType    ledType;
     const tRectangle  rectangle;
+    const tAnchor        anchor;
 } tLedLocation;
 
 typedef struct {
     tRectangle rectangle;
+    tAnchor        anchor;
     char *     text;
     void (*function)(void);
 } tButton;

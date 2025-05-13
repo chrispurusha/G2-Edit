@@ -60,7 +60,7 @@
 
 #define MODULE_NAME_SIZE                  (16)
 
-#define MAX_GLYPH_CHAR                    (128)
+#define MAX_GLYPH_CHAR                    (127)
 
 #define MAX_PARAM_RANGE                   (128)
 

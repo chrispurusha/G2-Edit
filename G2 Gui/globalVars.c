@@ -31,9 +31,9 @@ extern void open_read_file_button(void);
 GLFWwindow *    gWindow                   = NULL;
 uint32_t        gLocation                 = locationVa;
 bool            gReDraw                   = true;
-tButton         gSelectVa                 = {NULL_RECTANGLE, "VA", va_button};        // TODO: put these select items in an array of structures
-tButton         gSelectFx                 = {NULL_RECTANGLE, "FX", fx_button};
-tButton         gSelectOpenReadFile       = {NULL_RECTANGLE, "Read File", open_read_file_button};
+tButton         gSelectVa                 = {NULL_RECTANGLE, anchorTopLeft, "VA", va_button};        // TODO: put these select items in an array of structures
+tButton         gSelectFx                 = {NULL_RECTANGLE, anchorTopLeft, "FX", fx_button};
+tButton         gSelectOpenReadFile       = {NULL_RECTANGLE, anchorTopLeft, "Read File", open_read_file_button};
 bool            gShowOpenFileReadDialogue = false;
 tScrollState    gScrollState              = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
 tContextMenu    gContextMenu              = {0};

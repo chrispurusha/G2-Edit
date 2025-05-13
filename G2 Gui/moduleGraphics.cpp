@@ -376,9 +376,41 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
     render_circle_part(moduleArea, {rectangle.coord.x + rectangle.size.w, rectangle.coord.y + rectangle.size.h}, rectangle.size.w / 2.0, 10.0, 0.0, 10.0);
 }
 
-tRectangle adjust_rectangle(tRectangle base, tRectangle relative, tModule * module) {
+tRectangle adjust_rectangle(tRectangle base, tRectangle relative, tAnchor anchor, tModule * module) {
     tRectangle result;
 
+    switch (anchor) {
+        case anchorTopLeft:
+            break;
+        case anchorTopRight:
+            relative.coord.x = 100 + relative.coord.x;
+            break;
+        case anchorTopMiddle:
+            relative.coord.x = 50 + relative.coord.x;
+            break;
+        case anchorMiddleLeft:
+            relative.coord.y = 50 + relative.coord.y;
+            break;
+        case anchorMiddleRight:
+            relative.coord.x = 100 + relative.coord.x;
+            relative.coord.y = 50 + relative.coord.y;
+            break;
+        case anchorMiddle:
+            relative.coord.x = 50 + relative.coord.x;
+            relative.coord.y = 50 + relative.coord.y;
+            break;
+        case anchorBottomLeft:
+            relative.coord.y = 100 + relative.coord.y;
+            break;
+        case anchorBottomMiddle:
+            relative.coord.x = 50 + relative.coord.x;
+            relative.coord.y = 100 + relative.coord.y;
+            break;
+        case anchorBottomRight:
+            relative.coord.x = 100 + relative.coord.x;
+            relative.coord.y = 100 + relative.coord.y;
+            break;
+    }
     result.coord.x = base.coord.x + x_param_pos_from_percent(relative.coord.x);
     result.coord.y = base.coord.y + y_param_pos_from_percent(module->type, relative.coord.y);
     result.size.w  = x_param_size_from_percent(relative.size.w);
@@ -403,7 +435,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->paramIndexCache    = i;
                 module->gotParamIndexCache = true;
             }
-            tRectangle adjusted = adjust_rectangle(rectangle, paramLocationList[i].rectangle, module);
+            tRectangle adjusted = adjust_rectangle(rectangle,paramLocationList[i].rectangle, paramLocationList[i].anchor,  module);
             render_param_common(adjusted, module, i, param++);
 
             if (param >= module_param_count(module->type)) {
@@ -421,7 +453,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
             //render_mode_common(
             //    {rectangle.coord.x + x_param_pos_from_percent(modeLocationList[i].offsetX), rectangle.coord.y + y_param_pos_from_percent(module->type, modeLocationList[i].offsetY)}, //module, i,
             //    mode++);
-            tRectangle adjusted = adjust_rectangle(rectangle, modeLocationList[i].rectangle, module);
+            tRectangle adjusted = adjust_rectangle(rectangle, modeLocationList[i].rectangle, modeLocationList[i].anchor, module);
             render_mode_common(adjusted, module, i, mode++);
 
             if (mode >= module_mode_count(module->type)) {
@@ -436,7 +468,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->connectorIndexCache    = i;
                 module->gotConnectorIndexCache = true;
             }
-            tRectangle adjusted = adjust_rectangle(rectangle, connectorLocationList[i].rectangle, module);
+            tRectangle adjusted = adjust_rectangle(rectangle, connectorLocationList[i].rectangle, connectorLocationList[i].anchor, module);
             adjusted.size.h = adjusted.size.w; // We want this one to be square
             render_connector_common(adjusted, module, connectorLocationList[i].direction, connectorLocationList[i].type, connector++);
 
@@ -452,7 +484,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->volumeIndexCache    = i;
                 module->gotVolumeIndexCache = true;
             }
-            tRectangle adjusted = adjust_rectangle(rectangle, volumeLocationList[i].rectangle, module);
+            tRectangle adjusted = adjust_rectangle(rectangle, volumeLocationList[i].rectangle, volumeLocationList[i].anchor, module);
             render_volume_common(adjusted, module, i, volume++);
 
             if (volume >= module_volume_count(module->type)) {
@@ -467,7 +499,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->ledIndexCache    = i;
                 module->gotLedIndexCache = true;
             }
-            tRectangle adjusted = adjust_rectangle(rectangle, ledLocationList[i].rectangle, module);
+            tRectangle adjusted = adjust_rectangle(rectangle, ledLocationList[i].rectangle, ledLocationList[i].anchor, module);
             adjusted.size.h = adjusted.size.w; // We want this one to be square
             render_led_common(adjusted, module, i, led++);
 
