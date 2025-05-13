@@ -930,7 +930,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
             case paramType3Param:
 
                 if (paramLocationList[module.param[gDialDragging.variation][gDialDragging.param].paramRef].type2 == paramType2Dial) {
-                    angle = calculate_mouse_angle({x, y}, module.param[gDialDragging.variation][gDialDragging.param].rectangle);                                                            // possible add half size
+                    angle = calculate_mouse_angle((tCoord){x, y}, module.param[gDialDragging.variation][gDialDragging.param].rectangle);                                                            // possible add half size
                     value = angle_to_value(angle, paramLocationList[module.param[gDialDragging.variation][gDialDragging.param].paramRef].range);
 
                     if (module.param[gDialDragging.variation][gDialDragging.param].value != value) {
@@ -950,7 +950,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
             case paramType3Mode:
 
                 if (modeLocationList[module.mode[gDialDragging.param].modeRef].type2 == paramType2Dial) {
-                    angle = calculate_mouse_angle({x, y}, module.mode[gDialDragging.param].rectangle);                                                            // possible add half size
+                    angle = calculate_mouse_angle((tCoord){x, y}, module.mode[gDialDragging.param].rectangle);                                                            // possible add half size
                     value = angle_to_value(angle, modeLocationList[module.mode[gDialDragging.param].modeRef].range);
                     printf("VALUE = %u\n", value);
                     //value = (value * modeLocationList[module.mode[gDialDragging.param].modeRef].range) / MAX_PARAM_RANGE;
@@ -973,7 +973,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     } else if (gModuleDrag.active == true) {
         read_module(gModuleDrag.moduleKey, &module);
 
-        convert_mouse_coord_to_module_column_row(&module.column, &module.row, {x, y});
+        convert_mouse_coord_to_module_column_row(&module.column, &module.row, (tCoord){x, y});
 
         if (module.row > 127) {
             module.row = 127;
@@ -985,7 +985,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         write_module(gModuleDrag.moduleKey, &module);
         adjust_scroll_for_drag();
     } else if (gCableDrag.active == true) {
-        convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, {x - CONNECTOR_RADIUS, y - CONNECTOR_RADIUS});
+        convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, (tCoord){x - CONNECTOR_RADIUS, y - CONNECTOR_RADIUS});
 
         adjust_scroll_for_drag();
     } else if (gContextMenu.active == true) {

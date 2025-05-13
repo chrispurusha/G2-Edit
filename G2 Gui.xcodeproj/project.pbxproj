@@ -14,17 +14,17 @@
 		833734552DB1033200ACF41F /* moduleResourcesAccess.c in Sources */ = {isa = PBXBuildFile; fileRef = 833734542DB1033200ACF41F /* moduleResourcesAccess.c */; };
 		8347FD552DC7E77E009751C4 /* fileDialogue.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8347FD542DC7E772009751C4 /* fileDialogue.mm */; };
 		8352A5752D4BE22300CD5AD9 /* dataBase.c in Sources */ = {isa = PBXBuildFile; fileRef = 8352A5742D4BE22300CD5AD9 /* dataBase.c */; };
-		83673D922D5A4C660077A0B2 /* graphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83673D912D5A4C660077A0B2 /* graphics.cpp */; };
 		83673D942D5A50F90077A0B2 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 83673D932D5A50F90077A0B2 /* main.c */; };
 		8376ECAB2D48FB52008D1608 /* iokit.c in Sources */ = {isa = PBXBuildFile; fileRef = 8376ECAA2D48FB52008D1608 /* iokit.c */; };
 		8376ECAE2D48FB6E008D1608 /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = 8376ECAD2D48FB6E008D1608 /* utils.c */; };
 		8397E1362D2FE00000DDD420 /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8397E1352D2FE00000DDD420 /* libglfw3.a */; };
 		8397E14D2D2FEF9300DDD420 /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8397E14C2D2FEF9300DDD420 /* libfreetype.a */; };
-		83A016372D92F7F10041DF72 /* mouseHandle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83A016362D92F7F10041DF72 /* mouseHandle.cpp */; };
 		83B5655E2D4A71CF001BC997 /* usbComms.c in Sources */ = {isa = PBXBuildFile; fileRef = 83B5655D2D4A71CF001BC997 /* usbComms.c */; };
 		83BE0C692D6C86D6007E9CD8 /* moduleGraphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83BE0C682D6C86D6007E9CD8 /* moduleGraphics.cpp */; };
-		83BE0C6E2D6C8BAE007E9CD8 /* utilsGraphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83BE0C6D2D6C8BAE007E9CD8 /* utilsGraphics.cpp */; };
-		83DB9C352DD346D200F9D2A5 /* globalVars.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83DB9C342DD346D200F9D2A5 /* globalVars.cpp */; };
+		83DB9C372DD3510600F9D2A5 /* globalVars.c in Sources */ = {isa = PBXBuildFile; fileRef = 83DB9C362DD3510600F9D2A5 /* globalVars.c */; };
+		83DB9C392DD3513E00F9D2A5 /* mouseHandle.c in Sources */ = {isa = PBXBuildFile; fileRef = 83DB9C382DD3513E00F9D2A5 /* mouseHandle.c */; };
+		83DB9C3D2DD3570A00F9D2A5 /* utilsGraphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83DB9C3C2DD3570A00F9D2A5 /* utilsGraphics.cpp */; };
+		83DB9C412DD3580100F9D2A5 /* graphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83DB9C402DD3580100F9D2A5 /* graphics.cpp */; };
 		83EDF68E2D64D84C0052CE9F /* msgQueue.c in Sources */ = {isa = PBXBuildFile; fileRef = 83EDF68D2D64D84C0052CE9F /* msgQueue.c */; };
 /* End PBXBuildFile section */
 
@@ -54,7 +54,6 @@
 		8352A5742D4BE22300CD5AD9 /* dataBase.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = dataBase.c; sourceTree = "<group>"; };
 		835D853C2D74AF5E008D5E46 /* constData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = constData.h; sourceTree = "<group>"; };
 		83673D8E2D5A461E0077A0B2 /* graphics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = graphics.h; sourceTree = "<group>"; };
-		83673D912D5A4C660077A0B2 /* graphics.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = graphics.cpp; sourceTree = "<group>"; };
 		83673D932D5A50F90077A0B2 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		8376ECA82D48FB41008D1608 /* defs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = defs.h; sourceTree = "<group>"; };
 		8376ECA92D48FB52008D1608 /* iokit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iokit.h; sourceTree = "<group>"; };
@@ -65,18 +64,19 @@
 		8397E14B2D2FEF4500DDD420 /* G2 Gui.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "G2 Gui.entitlements"; sourceTree = "<group>"; };
 		8397E14C2D2FEF9300DDD420 /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = /opt/homebrew/Cellar/freetype/2.13.3/lib/libfreetype.a; sourceTree = "<absolute>"; };
 		83A016352D92F7F10041DF72 /* mouseHandle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mouseHandle.h; sourceTree = "<group>"; };
-		83A016362D92F7F10041DF72 /* mouseHandle.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = mouseHandle.cpp; sourceTree = "<group>"; };
 		83B5655D2D4A71CF001BC997 /* usbComms.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = usbComms.c; sourceTree = "<group>"; };
 		83B5655F2D4A7243001BC997 /* usbComms.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = usbComms.h; sourceTree = "<group>"; };
 		83B565602D4A73B9001BC997 /* main.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = main.h; sourceTree = "<group>"; };
 		83BE0C682D6C86D6007E9CD8 /* moduleGraphics.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = moduleGraphics.cpp; sourceTree = "<group>"; };
 		83BE0C6A2D6C86DF007E9CD8 /* moduleGraphics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = moduleGraphics.h; sourceTree = "<group>"; };
 		83BE0C6C2D6C8A8D007E9CD8 /* moduleResources.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = moduleResources.h; sourceTree = "<group>"; };
-		83BE0C6D2D6C8BAE007E9CD8 /* utilsGraphics.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = utilsGraphics.cpp; sourceTree = "<group>"; };
 		83BE0C712D6C8BD0007E9CD8 /* utilsGraphics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utilsGraphics.h; sourceTree = "<group>"; };
 		83C145322CFF6E5F004E572A /* G2 Gui */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "G2 Gui"; sourceTree = BUILT_PRODUCTS_DIR; };
 		83DB9C332DD346D200F9D2A5 /* globalVars.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = globalVars.h; sourceTree = "<group>"; };
-		83DB9C342DD346D200F9D2A5 /* globalVars.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = globalVars.cpp; sourceTree = "<group>"; };
+		83DB9C362DD3510600F9D2A5 /* globalVars.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = globalVars.c; sourceTree = "<group>"; };
+		83DB9C382DD3513E00F9D2A5 /* mouseHandle.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = mouseHandle.c; sourceTree = "<group>"; };
+		83DB9C3C2DD3570A00F9D2A5 /* utilsGraphics.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = utilsGraphics.cpp; sourceTree = "<group>"; };
+		83DB9C402DD3580100F9D2A5 /* graphics.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = graphics.cpp; sourceTree = "<group>"; };
 		83EDF68D2D64D84C0052CE9F /* msgQueue.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = msgQueue.c; sourceTree = "<group>"; };
 		83EDF68F2D64D8550052CE9F /* msgQueue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = msgQueue.h; sourceTree = "<group>"; };
 		83F363872D5BD96E00F5F627 /* types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
@@ -150,18 +150,18 @@
 				8352A5732D4BE21D00CD5AD9 /* dataBase.h */,
 				8352A5742D4BE22300CD5AD9 /* dataBase.c */,
 				83A016352D92F7F10041DF72 /* mouseHandle.h */,
-				83A016362D92F7F10041DF72 /* mouseHandle.cpp */,
+				83DB9C382DD3513E00F9D2A5 /* mouseHandle.c */,
 				83BE0C712D6C8BD0007E9CD8 /* utilsGraphics.h */,
-				83BE0C6D2D6C8BAE007E9CD8 /* utilsGraphics.cpp */,
+				83DB9C3C2DD3570A00F9D2A5 /* utilsGraphics.cpp */,
 				83BE0C6C2D6C8A8D007E9CD8 /* moduleResources.h */,
 				833734532DB1033200ACF41F /* moduleResourcesAccess.h */,
 				833734542DB1033200ACF41F /* moduleResourcesAccess.c */,
 				83BE0C6A2D6C86DF007E9CD8 /* moduleGraphics.h */,
 				83BE0C682D6C86D6007E9CD8 /* moduleGraphics.cpp */,
 				83673D8E2D5A461E0077A0B2 /* graphics.h */,
-				83673D912D5A4C660077A0B2 /* graphics.cpp */,
+				83DB9C402DD3580100F9D2A5 /* graphics.cpp */,
 				83DB9C332DD346D200F9D2A5 /* globalVars.h */,
-				83DB9C342DD346D200F9D2A5 /* globalVars.cpp */,
+				83DB9C362DD3510600F9D2A5 /* globalVars.c */,
 				83B565602D4A73B9001BC997 /* main.h */,
 				83673D932D5A50F90077A0B2 /* main.c */,
 			);
@@ -228,15 +228,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				83DB9C352DD346D200F9D2A5 /* globalVars.cpp in Sources */,
+				83DB9C372DD3510600F9D2A5 /* globalVars.c in Sources */,
 				83B5655E2D4A71CF001BC997 /* usbComms.c in Sources */,
 				833734552DB1033200ACF41F /* moduleResourcesAccess.c in Sources */,
-				83A016372D92F7F10041DF72 /* mouseHandle.cpp in Sources */,
-				83BE0C6E2D6C8BAE007E9CD8 /* utilsGraphics.cpp in Sources */,
+				83DB9C392DD3513E00F9D2A5 /* mouseHandle.c in Sources */,
+				83DB9C3D2DD3570A00F9D2A5 /* utilsGraphics.cpp in Sources */,
 				8376ECAE2D48FB6E008D1608 /* utils.c in Sources */,
+				83DB9C412DD3580100F9D2A5 /* graphics.cpp in Sources */,
 				83673D942D5A50F90077A0B2 /* main.c in Sources */,
 				83BE0C692D6C86D6007E9CD8 /* moduleGraphics.cpp in Sources */,
-				83673D922D5A4C660077A0B2 /* graphics.cpp in Sources */,
 				8376ECAB2D48FB52008D1608 /* iokit.c in Sources */,
 				8347FD552DC7E77E009751C4 /* fileDialogue.mm in Sources */,
 				8352A5752D4BE22300CD5AD9 /* dataBase.c in Sources */,
