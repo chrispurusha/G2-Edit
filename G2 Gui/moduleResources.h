@@ -31,6 +31,8 @@ const char * fltClassicDbMap[] = {"12db", "18db", "24db"};
 const char * fltMultiDbMap[]   = {"6db", "12db"};
 const char * offTo100KbMap[]   = {"Off", "25%", "50%", "75%", "100%"};
 const char * offOnMap[]        = {"Off", "On"};
+const char * expMap[]          = {"Exp", "Lin", "dB"};
+const char * padMap[]          = {"0dB", "-6dB"};
 const char * pitchTypeMap[]    = {"Semi", "Freq", "Factor", "Partial"};
 const char * fmTypeMap[]       = {"FM Lin", "FM Trk"};
 
@@ -322,8 +324,8 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{ 41,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL           },
     {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{ 56,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL           },
     {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{ 71,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1Exp,                paramType2Toggle, {{  3,  10}, {7,  7}}, anchorTopLeft,     "Exp",       2,  0, offOnMap       },
-    {moduleTypeMix4to1C,   paramType1Pad,                paramType2Toggle, {{  3,  20}, {7,  7}}, anchorTopLeft,     "Pad",       2,  0, offOnMap       },
+    {moduleTypeMix4to1C,   paramType1Pad,                paramType2Toggle, {{  3,  20}, {7,  7}}, anchorTopLeft,     "Pad",       2,  0, padMap       },
+    {moduleTypeMix4to1C,   paramType1Exp,                paramType2Toggle, {{  3,  10}, {7,  7}}, anchorTopLeft,     NULL,       3,  0, expMap       },
     {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "Attack",  128,  0, NULL           },
     {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{ 35,  -3}, {7, 14}}, anchorBottomLeft,  "Delay",   128,  0, NULL           },
     {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{ 50,  -3}, {7, 14}}, anchorBottomLeft,  "Sus",     128,  0, NULL           },
@@ -349,8 +351,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFltClassic, connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft },
     {moduleTypeFltClassic, connectorDirIn,  connectorTypeControl, {{  3,  15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft    },
     {moduleTypeFltMulti,   connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight   },
-    {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   {{ -3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight   },
-    {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   {{ -3,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight   },
+    {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight},
+    {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   {{ -3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight},
     {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight},
     {moduleTypeFltMulti,   connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft },
     {moduleTypeFltMulti,   connectorDirIn,  connectorTypeControl, {{  3,  30}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft    },

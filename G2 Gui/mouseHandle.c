@@ -696,8 +696,9 @@ bool handle_module_click(tCoord coord, int button) {
 
             // Deal with click on module
             if (retVal == false) {
-                if (within_rectangle(coord, module.rectangle)) {
+                if (within_rectangle(coord, module.dragArea)) {
                     if (button == GLFW_MOUSE_BUTTON_LEFT) {
+                        // Todo - maybe only drag if we're clicking at the top, or on a special icon on the module!?
                         // Take the module off the linked list and put on the end, which makes it render last and so render on the top
                         tModule tmpModule = {0};
                         read_module(module.key, &tmpModule);

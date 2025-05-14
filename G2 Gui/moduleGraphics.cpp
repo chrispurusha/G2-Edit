@@ -270,7 +270,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             //module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
 
             if (paramValue != 0) {
-                set_rgb_colour({0.3, 0.7, 0.3});                 // Green when ON
+                set_rgb_colour({0.3, 0.7, 0.3});       // Green when ON
             } else {
                 set_rgb_colour(RGB_BLACK);             // Grey when OFF
             }
@@ -437,6 +437,9 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     uint32_t volume    = 0;
     uint32_t led       = 0;
 
+    set_rgb_colour({0.75, 0.75, 0.75});
+    module->dragArea = render_rectangle(moduleArea, {{rectangle.coord.x + 3, rectangle.coord.y + 3}, {rectangle.size.w - 6, STANDARD_TEXT_HEIGHT + 2}});
+
     for (uint32_t i = module->paramIndexCache; i < array_size_param_location_list(); i++) {
         if (paramLocationList[i].moduleType == module->type) {
             if (module->gotParamIndexCache == false) {
@@ -529,7 +532,7 @@ void render_module(tModule * module) {
     tRectangle moduleRectangle = {{xPos, yPos}, {xWidth, yHeight}};
 
     set_module_colour(module->colour);
-    module->rectangle = render_rectangle_with_border(moduleArea, moduleRectangle); // Add zoom factor for border - really needs to scale the whole thing!
+    module->rectangle = render_rectangle_with_border(moduleArea, moduleRectangle);
     render_module_common(moduleRectangle, module);
     write_module(module->key, module);                                             // Save calculated coords
 
@@ -540,14 +543,14 @@ void render_module(tModule * module) {
     // Temporary items purely for development debug
     snprintf(buff, sizeof(buff), "(%s)", gModuleProperties[module->type].name);
 
-    render_text(moduleArea, {{moduleRectangle.coord.x + 120.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    render_text(moduleArea, {{moduleRectangle.coord.x + 180.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
 
     snprintf(buff, sizeof(buff), "%u", module->key.index);
     render_text(moduleArea, {{moduleRectangle.coord.x + moduleRectangle.size.w - 20.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
 
     if (module->modeCount > 0) {
         snprintf(buff, sizeof(buff), "Modes %u", module->modeCount);
-        render_text(moduleArea, {{moduleRectangle.coord.x + 150.0, moduleRectangle.coord.y + 15.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+        render_text(moduleArea, {{moduleRectangle.coord.x + 250.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     }
 }
 

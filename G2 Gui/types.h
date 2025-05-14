@@ -417,7 +417,8 @@ typedef struct _struct_module {
     tModuleType             type;              // Review this. Is it used!?
     uint32_t                row;
     uint32_t                column;
-    tRectangle              rectangle;                                // Purely for mouse-click recognition
+    tRectangle              dragArea;         // For mouse-click recognition for dragging and menu
+    tRectangle              rectangle;        // Full size of module rectangle, in case we need it
     uint32_t                colour;
     uint32_t                upRate;
     uint32_t                newUpRate; // Only used for mass uprate re-assessing
