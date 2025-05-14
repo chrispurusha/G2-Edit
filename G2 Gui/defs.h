@@ -96,19 +96,10 @@
 
 #define COMP_MARGIN                       (5.0)
 
-
-#define BYPASS_BUTTON_WIDTH               (15.0)
-#define BYPASS_BUTTON_HEIGHT              (15.0)
-#define GC_BUTTON_WIDTH                   (25.0)
-#define GC_BUTTON_HEIGHT                  (15.0)
-//#define FILTER_FREQ_RADIUS                (12.0)
-//#define FILTER_RESONANCE_RADIUS           (12.0)
 #define BLANK_SIZE                        (0.0)   // Not used directly by calling function, or needs calculation in following calls
 #define STANDARD_TEXT_HEIGHT              (12.0)
 #define STANDARD_BUTTON_TEXT_HEIGHT       (12.0)
 
-//#define CONNECTOR_RADIUS                  (8.0)
-//#define CONNECTOR_DIAMETER                (CONNECTOR_RADIUS * 2.0)
 #define CONNECTOR_SIZE                    (5)
 
 #define MAX_ROWS                          (127)
