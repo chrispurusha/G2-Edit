@@ -147,7 +147,7 @@ tRectangle render_dial(tRectangle rectangle, uint32_t value, uint32_t range) {  
 }
 
 tRectangle render_dial_with_text(tRectangle rectangle, char * label, char * buff, uint32_t value, uint32_t range) {
-    double textHeight =rectangle.size.h / 4.0;
+    double textHeight = rectangle.size.h / 4.0;
 
     set_rgb_colour(RGB_BLACK);
 
@@ -158,9 +158,8 @@ tRectangle render_dial_with_text(tRectangle rectangle, char * label, char * buff
     if (buff != NULL) {
         render_text(moduleArea, {{rectangle.coord.x, rectangle.coord.y + textHeight}, {BLANK_SIZE, textHeight}}, buff);
     }
-    
     set_rgb_colour({0.2, 0.2, 0.2});
-    return render_dial({{rectangle.coord.x, rectangle.coord.y+(textHeight * 2.0)}, {rectangle.size.w, rectangle.size.w}}, value, range);
+    return render_dial({{rectangle.coord.x, rectangle.coord.y + (textHeight * 2.0)}, {rectangle.size.w, rectangle.size.w}}, value, range);
 }
 
 // This might be too generic and won't be able to use, or we add extra params!
@@ -227,31 +226,31 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         case paramType1Exp:
         case paramType1Pad:
         {
-            char ** map = (char **)paramLocationList[paramRef].strMap;
-            double y = rectangle.coord.y;
-            double textHeight =rectangle.size.h / 2.0;
-            
+            char ** map        = (char **)paramLocationList[paramRef].strMap;
+            double  y          = rectangle.coord.y;
+            double  textHeight = rectangle.size.h / 2.0;
+
             if (paramLocationList[paramRef].label != NULL) {
                 set_rgb_colour(RGB_BLACK);
                 render_text(moduleArea, {{rectangle.coord.x, y}, {BLANK_SIZE, textHeight}}, (char *)paramLocationList[paramRef].label);
                 y += textHeight;
             }
+
             if ((paramLocationList[paramRef].range == 2) && (paramValue == 1)) {
-                set_rgb_colour({0.3, 0.7, 0.3}); 
+                set_rgb_colour({0.3, 0.7, 0.3});
             } else {
                 set_rgb_colour(RGB_BACKGROUND_GREY);
             }
-                
             module->param[0][paramIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, map, textHeight), textHeight}}, map[paramValue]);
-            
+
             //set_rgb_colour(RGB_GREEN);
             //render_rectangle(moduleArea, rectangle);
             break;
         }
         case paramType1GainControl:
         {
-            char * valString = "GC";
-            double textHeight =rectangle.size.h / 2.0;
+            char * valString  = "GC";
+            double textHeight = rectangle.size.h / 2.0;
 
             if (paramValue != 0) {
                 set_rgb_colour({0.3, 0.7, 0.3});                 // Green when ON
@@ -268,7 +267,14 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         }
         case paramType1Enable:
         {
-            module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
+            //module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
+
+            if (paramValue != 0) {
+                set_rgb_colour({0.3, 0.7, 0.3});                 // Green when ON
+            } else {
+                set_rgb_colour(RGB_BLACK);             // Grey when OFF
+            }
+            module->param[0][paramIndex].rectangle = draw_button(moduleArea, rectangle, NULL);
             return;
         }
         default:
@@ -573,10 +579,10 @@ void render_modules(void) {
 void render_cable_from_to(tConnector from, tConnector to) {
     tCoord control = {0};
 
-    from.coord.x += scale_from_percent(CONNECTOR_SIZE/2.0);
-    from.coord.y += scale_from_percent(CONNECTOR_SIZE/2.0);
-    to.coord.x   += scale_from_percent(CONNECTOR_SIZE/2.0);
-    to.coord.y   += scale_from_percent(CONNECTOR_SIZE/2.0);
+    from.coord.x += scale_from_percent(CONNECTOR_SIZE / 2.0);
+    from.coord.y += scale_from_percent(CONNECTOR_SIZE / 2.0);
+    to.coord.x   += scale_from_percent(CONNECTOR_SIZE / 2.0);
+    to.coord.y   += scale_from_percent(CONNECTOR_SIZE / 2.0);
 
     if (from.coord.x == to.coord.x) {
         control.x = from.coord.x;

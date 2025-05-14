@@ -30,7 +30,7 @@
 const char * fltClassicDbMap[] = {"12db", "18db", "24db"};
 const char * fltMultiDbMap[]   = {"6db", "12db"};
 const char * offTo100KbMap[]   = {"Off", "25%", "50%", "75%", "100%"};
-const char * offOnMap[]      = {"Off", "On"};
+const char * offOnMap[]        = {"Off", "On"};
 const char * pitchTypeMap[]    = {"Semi", "Freq", "Factor", "Partial"};
 const char * fmTypeMap[]       = {"FM Lin", "FM Trk"};
 
@@ -291,50 +291,50 @@ const tModuleProperties gModuleProperties[] = {
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
 const tParamLocation paramLocationList[] = {
-    {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{32, -3}, { 7, 14}}, anchorBottomLeft,     "Pitch",      128, 64, NULL           },
-    {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{45, -3}, { 7, 14}}, anchorBottomLeft,     "Cent",    128, 64, NULL           },
-    {moduleTypeOscShpB,    paramType1OffOnKeyboardTrack, paramType2Toggle, {{22, -10}, {7, 7}}, anchorBottomLeft,     "Kbt",       2,  1, offOnMap     },
-    {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{12, -3}, { 7, 14}}, anchorBottomLeft,     "Env",     128,  0, NULL           },
-    {moduleTypeOscShpB,    paramType1PitchType,          paramType2Toggle, {{30, 15}, {7, 7}}, anchorTopLeft,     NULL,        4,  0, pitchTypeMap   },
-    {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{62, -3}, { 7, 14}}, anchorBottomLeft,     "FM",      128,  0, NULL           },
-    {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{-15,  5}, { 7, 14}}, anchorTopRight,     "Shape",   128,  0, NULL           },   // 50% to 99%, not decimals
-    {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{80, -3}, { 7, 14}}, anchorBottomLeft,     "ShpCtrl", 128,  0, NULL           },
-    {moduleTypeOscShpB,    paramType1Bypass,             paramType2Toggle, {{ -3,  0}, { 4,  4}}, anchorMiddleRight, "Bypass",    2,  0, NULL           },
-    {moduleTypeOscShpB,    paramType1FmType,             paramType2Toggle, {{60, 15}, {7, 7}}, anchorTopLeft,     NULL,        2,  0, fmTypeMap      },
-    {moduleTypeFltClassic, paramType1Freq,               paramType2Dial,   {{40, -3}, { 7, 14}}, anchorBottomLeft,     "Freq",    128,  0, NULL           },
-    {moduleTypeFltClassic, paramType1Pitch,              paramType2Dial,   {{10, -3}, { 7, 14}}, anchorBottomLeft,     "Env",     128,  0, NULL           },
-    {moduleTypeFltClassic, paramType1OffTo100KbTrack,    paramType2Toggle, {{25, -10}, {7, 7}}, anchorBottomLeft,     "Kbt",       5,  4, offTo100KbMap  },
-    {moduleTypeFltClassic, paramType1Resonance,          paramType2Dial,   {{55, -3}, { 7, 14}}, anchorBottomLeft,     "Res",     128,  0, NULL           },
-    {moduleTypeFltClassic, paramType1FltClassicDb,       paramType2Toggle, {{70, -10}, {7, 7}}, anchorBottomLeft,     NULL,        3,  0, fltClassicDbMap},
-    {moduleTypeFltClassic, paramType1Bypass,             paramType2Toggle, {{ -3,  0}, { 4,  4}}, anchorMiddleRight, NULL,        2,  1, NULL           },
-    {moduleTypeFltMulti,   paramType1Freq,               paramType2Dial,   {{40, -3}, { 7, 14}}, anchorBottomLeft,     "Freq",    128,  0, NULL           },
-    {moduleTypeFltMulti,   paramType1Pitch,              paramType2Dial,   {{12, -3}, { 7, 14}}, anchorBottomLeft,     "Env",     128,  0, NULL           },
-    {moduleTypeFltMulti,   paramType1OffTo100KbTrack,    paramType2Toggle, {{25, -10}, {7, 7}}, anchorBottomLeft,     "Kbt",       5,  4, offTo100KbMap  },
-    {moduleTypeFltMulti,   paramType1Resonance,          paramType2Dial,   {{55, -3}, { 7, 14}}, anchorBottomLeft,     "Res",     128,  0, NULL           },
-    {moduleTypeFltMulti,   paramType1GainControl,        paramType2Toggle, {{55,  5}, {7, 7}}, anchorTopLeft,     NULL,        2,  0, NULL           },
-    {moduleTypeFltMulti,   paramType1FltMultiDb,         paramType2Toggle, {{70, -10}, {7, 7}}, anchorBottomLeft,     NULL,        2,  0, fltMultiDbMap  },
-    {moduleTypeFltMulti,   paramType1Bypass,             paramType2Toggle, {{ -10,  0}, { 4,  4}}, anchorMiddleRight, NULL,        2,  1, NULL           },
-    {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{20, 15}, { 7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{35, 15}, { 7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{50, 15}, { 7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{65, 15}, { 7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{26, 10}, { 4,  4}}, anchorTopLeft,     NULL,        2,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{41, 10}, { 4,  4}}, anchorTopLeft,     NULL,        2,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{56, 10}, { 4,  4}}, anchorTopLeft,     NULL,        2,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{71, 10}, { 4,  4}}, anchorTopLeft,     NULL,        2,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1Exp,                paramType2Toggle, {{ 3, 10}, { 7,  7}}, anchorTopLeft,     "Exp",        2,  0, offOnMap           },
-    {moduleTypeMix4to1C,   paramType1Pad,                paramType2Toggle, {{ 3, 20}, { 7,  7}}, anchorTopLeft,     "Pad",        2,  0, offOnMap           },
-    {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{20, -3}, { 7, 14}}, anchorBottomLeft,  "Attack",  128,  0, NULL           },
-    {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{35, -3}, { 7, 14}}, anchorBottomLeft,  "Delay",   128,  0, NULL           },
-    {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{50, -3}, { 7, 14}}, anchorBottomLeft,  "Sus",     128,  0, NULL           },
-    {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{65, -3}, { 7, 14}}, anchorBottomLeft,  "Rel",     128,  0, NULL           },
-    {moduleTypeCompress,   paramType1CommonDial,         paramType2Dial,   {{10, -3}, { 7, 14}}, anchorBottomLeft,  "Thr",      43,  0, NULL           },
-    {moduleTypeCompress,   paramType1CommonDial,         paramType2Dial,   {{24, -3}, { 7, 14}}, anchorBottomLeft,     "2",        67,  0, NULL           },
-    {moduleTypeCompress,   paramType1CommonDial,         paramType2Dial,   {{38, -3}, { 7, 14}}, anchorBottomLeft,     "Att",     128,  0, NULL           },
-    {moduleTypeCompress,   paramType1CommonDial,         paramType2Dial,   {{52, -3}, { 7, 14}}, anchorBottomLeft,     "Rel",     128,  0, NULL           },
-    {moduleTypeCompress,   paramType1CommonDial,         paramType2Dial,   {{66, -3}, { 7, 14}}, anchorBottomLeft,     "RefLvl",   43,  0, NULL           },
-    {moduleTypeCompress,   paramType1Sidechain,          paramType2Toggle, {{45, 20}, {7, 14}}, anchorTopLeft,     NULL,        2,  0, NULL           },
-    {moduleTypeCompress,   paramType1Bypass,             paramType2Toggle, {{ -3,  0}, { 4,  4}}, anchorMiddleRight, NULL,        2,  1, NULL           }, };
+    {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128, 64, NULL           }, // Todo: add a colour field - i.e. Green on value 1
+    {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL           },
+    {moduleTypeOscShpB,    paramType1OffOnKeyboardTrack, paramType2Toggle, {{ 22, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnMap       },
+    {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Env",     128,  0, NULL           },
+    {moduleTypeOscShpB,    paramType1PitchType,          paramType2Toggle, {{ 30,  15}, {7,  7}}, anchorTopLeft,     NULL,        4,  0, pitchTypeMap   },
+    {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{ 62,  -3}, {7, 14}}, anchorBottomLeft,  "FM",      128,  0, NULL           },
+    {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{-15,   5}, {7, 14}}, anchorTopRight,    "Shape",   128,  0, NULL           },    // 50% to 99%, not decimals
+    {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{ 80,  -3}, {7, 14}}, anchorBottomLeft,  "ShpCtrl", 128,  0, NULL           },
+    {moduleTypeOscShpB,    paramType1Bypass,             paramType2Toggle, {{ -3,   0}, {5,  5}}, anchorMiddleRight, "Bypass",    2,  0, NULL           },
+    {moduleTypeOscShpB,    paramType1FmType,             paramType2Toggle, {{ 60,  15}, {7,  7}}, anchorTopLeft,     NULL,        2,  0, fmTypeMap      },
+    {moduleTypeFltClassic, paramType1Freq,               paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Freq",    128,  0, NULL           },
+    {moduleTypeFltClassic, paramType1Pitch,              paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  "Env",     128,  0, NULL           },
+    {moduleTypeFltClassic, paramType1OffTo100KbTrack,    paramType2Toggle, {{ 25, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       5,  4, offTo100KbMap  },
+    {moduleTypeFltClassic, paramType1Resonance,          paramType2Dial,   {{ 55,  -3}, {7, 14}}, anchorBottomLeft,  "Res",     128,  0, NULL           },
+    {moduleTypeFltClassic, paramType1FltClassicDb,       paramType2Toggle, {{ 70, -10}, {7,  7}}, anchorBottomLeft,  NULL,        3,  0, fltClassicDbMap},
+    {moduleTypeFltClassic, paramType1Bypass,             paramType2Toggle, {{ -3,   0}, {5,  5}}, anchorMiddleRight, NULL,        2,  1, NULL           },
+    {moduleTypeFltMulti,   paramType1Freq,               paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Freq",    128,  0, NULL           },
+    {moduleTypeFltMulti,   paramType1Pitch,              paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Env",     128,  0, NULL           },
+    {moduleTypeFltMulti,   paramType1OffTo100KbTrack,    paramType2Toggle, {{ 25, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       5,  4, offTo100KbMap  },
+    {moduleTypeFltMulti,   paramType1Resonance,          paramType2Dial,   {{ 55,  -3}, {7, 14}}, anchorBottomLeft,  "Res",     128,  0, NULL           },
+    {moduleTypeFltMulti,   paramType1GainControl,        paramType2Toggle, {{ 55,   5}, {7,  7}}, anchorTopLeft,     NULL,        2,  0, NULL           },
+    {moduleTypeFltMulti,   paramType1FltMultiDb,         paramType2Toggle, {{ 70, -10}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, fltMultiDbMap  },
+    {moduleTypeFltMulti,   paramType1Bypass,             paramType2Toggle, {{-10,   0}, {5,  5}}, anchorMiddleRight, NULL,        2,  1, NULL           },
+    {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{ 20,  15}, {7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{ 35,  15}, {7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{ 50,  15}, {7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{ 65,  15}, {7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{ 26,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{ 41,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{ 56,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{ 71,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1Exp,                paramType2Toggle, {{  3,  10}, {7,  7}}, anchorTopLeft,     "Exp",       2,  0, offOnMap       },
+    {moduleTypeMix4to1C,   paramType1Pad,                paramType2Toggle, {{  3,  20}, {7,  7}}, anchorTopLeft,     "Pad",       2,  0, offOnMap       },
+    {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "Attack",  128,  0, NULL           },
+    {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{ 35,  -3}, {7, 14}}, anchorBottomLeft,  "Delay",   128,  0, NULL           },
+    {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{ 50,  -3}, {7, 14}}, anchorBottomLeft,  "Sus",     128,  0, NULL           },
+    {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{ 65,  -3}, {7, 14}}, anchorBottomLeft,  "Rel",     128,  0, NULL           },
+    {moduleTypeCompress,   paramType1CommonDial,         paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  "Thr",      43,  0, NULL           },
+    {moduleTypeCompress,   paramType1CommonDial,         paramType2Dial,   {{ 24,  -3}, {7, 14}}, anchorBottomLeft,  "2",        67,  0, NULL           },
+    {moduleTypeCompress,   paramType1CommonDial,         paramType2Dial,   {{ 38,  -3}, {7, 14}}, anchorBottomLeft,  "Att",     128,  0, NULL           },
+    {moduleTypeCompress,   paramType1CommonDial,         paramType2Dial,   {{ 52,  -3}, {7, 14}}, anchorBottomLeft,  "Rel",     128,  0, NULL           },
+    {moduleTypeCompress,   paramType1CommonDial,         paramType2Dial,   {{ 66,  -3}, {7, 14}}, anchorBottomLeft,  "RefLvl",   43,  0, NULL           },
+    {moduleTypeCompress,   paramType1Sidechain,          paramType2Toggle, {{ 45,  20}, {7, 14}}, anchorTopLeft,     NULL,        2,  0, NULL           },
+    {moduleTypeCompress,   paramType1Bypass,             paramType2Toggle, {{ -3,   0}, {5,  5}}, anchorMiddleRight, NULL,        2,  1, NULL           }, };
 
 // Note these need to be in same order of connectors which are referenced by the hardware
 const tConnectorLocation connectorLocationList[] = {

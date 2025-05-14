@@ -870,7 +870,6 @@ int get_render_height(void) {
 }
 
 double scale_from_percent(double val) {
-    
     return (val * MODULE_WIDTH) / 100;
 }
 
