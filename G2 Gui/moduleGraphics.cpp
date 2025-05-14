@@ -52,7 +52,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
             smallRectangle.size.h   = (smallRectangle.size.h - (space * (double)(leds + 1))) / (double)leds;
             smallRectangle.size.w  -= space * 2;
 
-            set_rgb_colour({0.0, 0.0, 0.0});
+            set_rgb_colour(RGB_BLACK);
             render_rectangle(moduleArea, rectangle);
 
             for (int i = 0; i < leds; i++) {
@@ -80,7 +80,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
                 {0.7, 0.0, 0.0}   // Red
             };
 
-            set_rgb_colour({0.0, 0.0, 0.0});
+            set_rgb_colour(RGB_BLACK);
             render_rectangle(moduleArea, rectangle);
 
             for (int i = 0; i < 3; i++) {
@@ -133,9 +133,9 @@ tRectangle render_dial(tRectangle rectangle, uint32_t value, uint32_t range) {  
 
     set_rgb_colour({0.5, 0.5, 0.5});
     render_circle_part_angle(moduleArea, {x, y}, radius, 0.0, 360.0, 25);
-    set_rgb_colour({0.0, 0.0, 0.0});
+    set_rgb_colour(RGB_BLACK);
     render_radial_line(moduleArea, {x, y}, radius, angle, 2.0);
-    set_rgb_colour({0.0, 0.0, 0.0});
+    set_rgb_colour(RGB_BLACK);
     return render_circle_line(moduleArea, {x, y}, radius, 25, 1.0);
 }
 
@@ -346,7 +346,7 @@ void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, 
             if (module->led.value != 0) {
                 set_rgb_colour({0.0, 0.7, 0.0});
             } else{
-                set_rgb_colour({0.0, 0.0, 0.0});
+                set_rgb_colour(RGB_BLACK);
             }
             render_rectangle(moduleArea, rectangle);
             break;
