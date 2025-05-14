@@ -448,7 +448,7 @@ tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active) {
     }
 
     if (active) {
-        set_rgb_colour({0.3, 0.7, 0.3});         // Green when ON
+        set_rgb_colour(RGB_GREEN_ON);         // Green when ON
     } else {
         set_rgb_colour(RGB_BACKGROUND_GREY);     // Grey when OFF
     }

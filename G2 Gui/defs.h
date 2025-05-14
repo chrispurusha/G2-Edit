@@ -72,6 +72,7 @@
 #define RGB_WHITE                         {1.0, 1.0, 1.0}
 #define RGB_GREEN                         {0.0, 0.8, 0.0}
 #define RGB_BACKGROUND_GREY               {0.8, 0.8, 0.8}
+#define RGB_GREEN_ON                      {0.3, 0.7, 0.3}
 #define RGBA_BLACK_ON_TRANSPARENT         {0.0, 0.0, 0.0, 1.0}
 
 // Todo - rationalise this lot

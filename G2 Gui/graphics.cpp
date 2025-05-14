@@ -174,14 +174,14 @@ void render_top_bar(void) {
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {get_render_width() - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
 
     if (gLocation == locationVa) {
-        set_rgb_colour({0.3, 0.7, 0.3});
+        set_rgb_colour(RGB_GREEN_ON);
     } else {
         set_rgb_colour(RGB_BACKGROUND_GREY);
     }
     gSelectVa.rectangle = draw_button(mainArea, {{400.0, 8.0}, {get_text_width(gSelectVa.text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectVa.text); // Todo - move coords into button definition
 
     if (gLocation == locationFx) {
-        set_rgb_colour({0.3, 0.7, 0.3});
+        set_rgb_colour(RGB_GREEN_ON);
     } else {
         set_rgb_colour(RGB_BACKGROUND_GREY);
     }

@@ -550,6 +550,7 @@ typedef struct {
     const uint32_t    range;
     const uint32_t    defaultValue;
     const char **     strMap;
+    const tRgb *      colourMap;
 } tParamLocation;
 
 typedef struct {

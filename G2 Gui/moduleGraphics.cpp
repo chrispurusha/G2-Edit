@@ -160,6 +160,11 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
     char     buff[16]   = {0};
     uint32_t paramValue = module->param[0][paramIndex].value;
 
+    if (paramValue >= paramLocationList[paramRef].range) {
+        printf("Value  %u > Range %u\n", paramValue, paramLocationList[paramRef].range);
+        exit(1);
+    }
+    
     module->param[0][paramIndex].paramRef = paramRef;
 
     switch (paramLocationList[paramRef].type1) {
@@ -229,8 +234,8 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 y += textHeight;
             }
 
-            if ((paramLocationList[paramRef].range == 2) && (paramValue == 1)) {
-                set_rgb_colour({0.3, 0.7, 0.3});
+            if (paramLocationList[paramRef].colourMap != NULL) {
+                set_rgb_colour(paramLocationList[paramRef].colourMap[paramValue]);
             } else {
                 set_rgb_colour(RGB_BACKGROUND_GREY);
             }
@@ -246,7 +251,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             double textHeight = rectangle.size.h / 2.0;
 
             if (paramValue != 0) {
-                set_rgb_colour({0.3, 0.7, 0.3});                 // Green when ON
+                set_rgb_colour(RGB_GREEN_ON);                 // Green when ON
             } else {
                 set_rgb_colour(RGB_BACKGROUND_GREY);             // Grey when OFF
             }
@@ -263,7 +268,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             //module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
 
             if (paramValue != 0) {
-                set_rgb_colour({0.3, 0.7, 0.3});       // Green when ON
+                set_rgb_colour(RGB_GREEN_ON);       // Green when ON
             } else {
                 set_rgb_colour(RGB_BLACK);             // Grey when OFF
             }
@@ -525,7 +530,7 @@ void render_module(tModule * module) {
     rgb = gModuleColourMap[module->colour];
     set_rgb_colour(rgb);
     module->rectangle = render_rectangle_with_border(moduleArea, moduleRectangle);
-    
+
     rgb = {rgb.red * 1.05, rgb.green * 1.05, rgb.blue * 1.05};
     set_rgb_colour(rgb);
     module->dragArea = render_rectangle(moduleArea, {{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3}, {moduleRectangle.size.w - 6, STANDARD_TEXT_HEIGHT + 2}});
