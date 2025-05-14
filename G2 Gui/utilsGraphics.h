@@ -68,5 +68,6 @@ int get_render_height(void);
 double calc_scroll_x(void);
 double calc_scroll_y(void);
 tRectangle rectangle_scale_from_percent(tRectangle rectangle);
+double scale_from_percent(double val);
 
 #endif // __UTILS_GRAPHICS_H__

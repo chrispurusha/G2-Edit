@@ -107,8 +107,9 @@
 #define STANDARD_TEXT_HEIGHT              (12.0)
 #define STANDARD_BUTTON_TEXT_HEIGHT       (12.0)
 
-#define CONNECTOR_RADIUS                  (8.0)
-#define CONNECTOR_DIAMETER                (CONNECTOR_RADIUS * 2.0)
+//#define CONNECTOR_RADIUS                  (8.0)
+//#define CONNECTOR_DIAMETER                (CONNECTOR_RADIUS * 2.0)
+#define CONNECTOR_SIZE                    (5)
 
 #define MAX_ROWS                          (127)
 #define MAX_COLUMNS                       (127)

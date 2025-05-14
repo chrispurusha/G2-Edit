@@ -576,10 +576,10 @@ void render_modules(void) {
 void render_cable_from_to(tConnector from, tConnector to) {
     tCoord control = {0};
 
-    from.coord.x += CONNECTOR_RADIUS;
-    from.coord.y += CONNECTOR_RADIUS;
-    to.coord.x   += CONNECTOR_RADIUS;
-    to.coord.y   += CONNECTOR_RADIUS;
+    from.coord.x += scale_from_percent(CONNECTOR_SIZE/2.0);
+    from.coord.y += scale_from_percent(CONNECTOR_SIZE/2.0);
+    to.coord.x   += scale_from_percent(CONNECTOR_SIZE/2.0);
+    to.coord.y   += scale_from_percent(CONNECTOR_SIZE/2.0);
 
     if (from.coord.x == to.coord.x) {
         control.x = from.coord.x;

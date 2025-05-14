@@ -994,7 +994,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         write_module(gModuleDrag.moduleKey, &module);
         adjust_scroll_for_drag();
     } else if (gCableDrag.active == true) {
-        convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, (tCoord){x - CONNECTOR_RADIUS, y - CONNECTOR_RADIUS});
+        convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, (tCoord){x - scale_from_percent(CONNECTOR_SIZE/2.0), y - scale_from_percent(CONNECTOR_SIZE/2.0)});
 
         adjust_scroll_for_drag();
     } else if (gContextMenu.active == true) {
