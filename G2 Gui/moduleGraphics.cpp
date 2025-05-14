@@ -39,13 +39,6 @@ extern "C" {
 #include "moduleGraphics.h"
 #include "globalVars.h"
 
-void set_module_colour(uint32_t colour) {
-    tRgb rgb = {0};
-
-    rgb = gModuleColourMap[colour];
-    set_rgb_colour(rgb);
-}
-
 void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) { // todo: move to utilsgraphics!?
     switch (volumeType) {
         case volumeTypeCompress:
@@ -437,9 +430,6 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     uint32_t volume    = 0;
     uint32_t led       = 0;
 
-    set_rgb_colour({0.75, 0.75, 0.75});
-    module->dragArea = render_rectangle(moduleArea, {{rectangle.coord.x + 3, rectangle.coord.y + 3}, {rectangle.size.w - 6, STANDARD_TEXT_HEIGHT + 2}});
-
     for (uint32_t i = module->paramIndexCache; i < array_size_param_location_list(); i++) {
         if (paramLocationList[i].moduleType == module->type) {
             if (module->gotParamIndexCache == false) {
@@ -528,11 +518,18 @@ void render_module(tModule * module) {
     double     xWidth                     = MODULE_WIDTH;
     double     yHeight                    = (moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP;
     char       buff[MODULE_NAME_SIZE + 1] = {0};
+    tRgb       rgb                        = {0};
 
     tRectangle moduleRectangle = {{xPos, yPos}, {xWidth, yHeight}};
 
-    set_module_colour(module->colour);
+    rgb = gModuleColourMap[module->colour];
+    set_rgb_colour(rgb);
     module->rectangle = render_rectangle_with_border(moduleArea, moduleRectangle);
+    
+    rgb = {rgb.red * 1.05, rgb.green * 1.05, rgb.blue * 1.05};
+    set_rgb_colour(rgb);
+    module->dragArea = render_rectangle(moduleArea, {{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3}, {moduleRectangle.size.w - 6, STANDARD_TEXT_HEIGHT + 2}});
+
     render_module_common(moduleRectangle, module);
     write_module(module->key, module);                                             // Save calculated coords
 
