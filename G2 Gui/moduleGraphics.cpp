@@ -224,6 +224,8 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         case paramType1FmType:
         case paramType1OffTo100KbTrack:
         case paramType1OffOnKeyboardTrack:
+        case paramType1Exp:
+        case paramType1Pad:
         {
             char ** map = (char **)paramLocationList[paramRef].strMap;
             double y = rectangle.coord.y;
@@ -234,7 +236,12 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 render_text(moduleArea, {{rectangle.coord.x, y}, {BLANK_SIZE, textHeight}}, (char *)paramLocationList[paramRef].label);
                 y += textHeight;
             }
-            set_rgb_colour(RGB_BACKGROUND_GREY);
+            if ((paramLocationList[paramRef].range == 2) && (paramValue == 1)) {
+                set_rgb_colour({0.3, 0.7, 0.3}); 
+            } else {
+                set_rgb_colour(RGB_BACKGROUND_GREY);
+            }
+                
             module->param[0][paramIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, map, textHeight), textHeight}}, map[paramValue]);
             
             //set_rgb_colour(RGB_GREEN);
@@ -260,16 +267,6 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             return;
         }
         case paramType1Enable:
-        {
-            module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
-            return;
-        }
-        case paramType1Exp:
-        {
-            module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
-            return;
-        }
-        case paramType1Pad:
         {
             module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
             return;

@@ -30,7 +30,7 @@
 const char * fltClassicDbMap[] = {"12db", "18db", "24db"};
 const char * fltMultiDbMap[]   = {"6db", "12db"};
 const char * offTo100KbMap[]   = {"Off", "25%", "50%", "75%", "100%"};
-const char * offOnKbMap[]      = {"Off", "On"};
+const char * offOnMap[]      = {"Off", "On"};
 const char * pitchTypeMap[]    = {"Semi", "Freq", "Factor", "Partial"};
 const char * fmTypeMap[]       = {"FM Lin", "FM Trk"};
 
@@ -293,7 +293,7 @@ const tModuleProperties gModuleProperties[] = {
 const tParamLocation paramLocationList[] = {
     {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{32, -3}, { 7, 14}}, anchorBottomLeft,     "Pitch",      128, 64, NULL           },
     {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{45, -3}, { 7, 14}}, anchorBottomLeft,     "Cent",    128, 64, NULL           },
-    {moduleTypeOscShpB,    paramType1OffOnKeyboardTrack, paramType2Toggle, {{22, -10}, {7, 7}}, anchorBottomLeft,     "Kbt",       2,  1, offOnKbMap     },
+    {moduleTypeOscShpB,    paramType1OffOnKeyboardTrack, paramType2Toggle, {{22, -10}, {7, 7}}, anchorBottomLeft,     "Kbt",       2,  1, offOnMap     },
     {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{12, -3}, { 7, 14}}, anchorBottomLeft,     "Env",     128,  0, NULL           },
     {moduleTypeOscShpB,    paramType1PitchType,          paramType2Toggle, {{30, 15}, {7, 7}}, anchorTopLeft,     NULL,        4,  0, pitchTypeMap   },
     {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{62, -3}, { 7, 14}}, anchorBottomLeft,     "FM",      128,  0, NULL           },
@@ -314,16 +314,16 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeFltMulti,   paramType1GainControl,        paramType2Toggle, {{55,  5}, {7, 7}}, anchorTopLeft,     NULL,        2,  0, NULL           },
     {moduleTypeFltMulti,   paramType1FltMultiDb,         paramType2Toggle, {{70, -10}, {7, 7}}, anchorBottomLeft,     NULL,        2,  0, fltMultiDbMap  },
     {moduleTypeFltMulti,   paramType1Bypass,             paramType2Toggle, {{ -10,  0}, { 4,  4}}, anchorMiddleRight, NULL,        2,  1, NULL           },
-    {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{15, 15}, { 7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{30, 15}, { 7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{45, 15}, { 7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{60, 15}, { 7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{21, 10}, { 4,  4}}, anchorTopLeft,     NULL,        2,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{36, 10}, { 4,  4}}, anchorTopLeft,     NULL,        2,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{51, 10}, { 4,  4}}, anchorTopLeft,     NULL,        2,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{66, 10}, { 4,  4}}, anchorTopLeft,     NULL,        2,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1Exp,                paramType2Toggle, {{ 3, 10}, { 4,  4}}, anchorTopLeft,     NULL,        2,  0, NULL           },
-    {moduleTypeMix4to1C,   paramType1Pad,                paramType2Toggle, {{ 3, 20}, { 4,  4}}, anchorTopLeft,     NULL,        2,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{20, 15}, { 7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{35, 15}, { 7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{50, 15}, { 7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{65, 15}, { 7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{26, 10}, { 4,  4}}, anchorTopLeft,     NULL,        2,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{41, 10}, { 4,  4}}, anchorTopLeft,     NULL,        2,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{56, 10}, { 4,  4}}, anchorTopLeft,     NULL,        2,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{71, 10}, { 4,  4}}, anchorTopLeft,     NULL,        2,  0, NULL           },
+    {moduleTypeMix4to1C,   paramType1Exp,                paramType2Toggle, {{ 3, 10}, { 7,  7}}, anchorTopLeft,     "Exp",        2,  0, offOnMap           },
+    {moduleTypeMix4to1C,   paramType1Pad,                paramType2Toggle, {{ 3, 20}, { 7,  7}}, anchorTopLeft,     "Pad",        2,  0, offOnMap           },
     {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{20, -3}, { 7, 14}}, anchorBottomLeft,  "Attack",  128,  0, NULL           },
     {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{35, -3}, { 7, 14}}, anchorBottomLeft,  "Delay",   128,  0, NULL           },
     {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{50, -3}, { 7, 14}}, anchorBottomLeft,  "Sus",     128,  0, NULL           },
@@ -355,10 +355,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFltMulti,   connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft },
     {moduleTypeFltMulti,   connectorDirIn,  connectorTypeControl, {{  3,  30}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft    },
     {moduleTypeMix4to1C,   connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight},
-    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 15,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft    },
-    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 30,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft    },
-    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 45,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft    },
-    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 60,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft    },
+    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 20,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft    },
+    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 35,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft    },
+    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 50,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft    },
+    {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 65,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft    },
     {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight   },
     {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, {{  3,  15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft    },
     {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft },
