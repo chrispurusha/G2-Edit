@@ -295,7 +295,7 @@ const tModuleProperties gModuleProperties[] = {
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
 const tParamLocation paramLocationList[] = {
-    {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128, 64, NULL,               NULL          }, // Todo: add a colour field - i.e. Green on value 1
+    {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128, 64, NULL,               NULL          },
     {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL,               NULL          },
     {moduleTypeOscShpB,    paramType1OffOnKeyboardTrack, paramType2Toggle, {{ 22, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap},
     {moduleTypeOscShpB,    paramType1CommonDial,         paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Env",     128,  0, NULL,               NULL          },

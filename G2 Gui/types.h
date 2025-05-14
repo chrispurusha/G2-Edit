@@ -421,11 +421,11 @@ typedef struct _struct_module {
     tRectangle              rectangle;        // Full size of module rectangle, in case we need it
     uint32_t                colour;
     uint32_t                upRate;
-    uint32_t                newUpRate; // Only used for mass uprate re-assessing
+    uint32_t                newUpRate;       // Only used for mass uprate re-assessing
     uint32_t                isLed;
-    uint32_t                unknown1;  // Guess we should store this, to write back if necessary. Might not be needed
-    uint32_t                modeCount; // Don't yet know what this is for. Might need modes array adding
-    tMode                   mode[NUM_MODES];
+    uint32_t                unknown1;        // Guess we should store this, to write back if necessary. Might not be needed
+    uint32_t                modeCount;       // Don't yet know what this is for. Might need modes array adding
+    tMode                   mode[NUM_MODES]; // Might not need to be an array, since only seeing one mode so far
     char                    name[MODULE_NAME_SIZE + 1];
     uint32_t                allocatedParams;
     tParam *                param[VARIATIONS];

@@ -456,7 +456,7 @@ void init_params_on_new_module(tModule * module) {
 
     for (uint32_t locationListIndex = 0; locationListIndex < array_size_param_location_list(); locationListIndex++) {
         if (paramLocationList[locationListIndex].moduleType == module->type) {
-            tParam * param = &module->param[0][paramIndex];
+            tParam * param = &module->param[gVariation][paramIndex];
 
             param->value = paramLocationList[locationListIndex].defaultValue;
 
@@ -609,7 +609,7 @@ bool handle_module_click(tCoord coord, int button) {
         if (module.key.location == gLocation) {
             // Deal with click on param
             for (int i = 0; (i < module_param_count(module.type)) && (retVal == false); i++) {
-                tParam * param = &module.param[0][i];
+                tParam * param = &module.param[gVariation][i];
 
                 if (within_rectangle(coord, param->rectangle)) {
                     if (button == GLFW_MOUSE_BUTTON_LEFT) {

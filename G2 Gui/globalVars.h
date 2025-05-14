@@ -36,6 +36,7 @@
 
 extern GLFWwindow *    gWindow;
 extern uint32_t        gLocation;
+extern uint32_t        gVariation;
 extern bool            gReDraw;
 extern tButton         gSelectVa;
 extern tButton         gSelectFx;

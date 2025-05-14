@@ -156,13 +156,13 @@ tRectangle render_dial_with_text(tRectangle rectangle, char * label, char * buff
 // This might be too generic and won't be able to use, or we add extra params!
 void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramRef, uint32_t paramIndex) {
     char     buff[16]   = {0};
-    uint32_t paramValue = module->param[0][paramIndex].value;
+    uint32_t paramValue = module->param[gVariation][paramIndex].value;
 
     if (paramValue >= paramLocationList[paramRef].range) {
         printf("Value  %u > Range %u\n", paramValue, paramLocationList[paramRef].range);
         exit(1);
     }
-    module->param[0][paramIndex].paramRef = paramRef;
+    module->param[gVariation][paramIndex].paramRef = paramRef;
 
     switch (paramLocationList[paramRef].type1) {
         case paramType1Freq:
@@ -180,7 +180,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             } else {
                 snprintf(buff, sizeof(buff), "%.1fkHz", freq / 1000.0);
             }
-            module->param[0][paramIndex].rectangle = render_dial_with_text(rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
             break;
         }
         case paramType1Pitch:
@@ -194,7 +194,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 percent = maxVal;             // Clip
             }
             snprintf(buff, sizeof(buff), "%.1f%%", percent);
-            module->param[0][paramIndex].rectangle = render_dial_with_text(rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
             break;
         }
         case paramType1CommonDial:         // Ultimately might not be a common dial, or could just be a default percent dial!?
@@ -209,7 +209,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 res = maxVal;             // Clip
             }
             snprintf(buff, sizeof(buff), "%.1f", res);
-            module->param[0][paramIndex].rectangle = render_dial_with_text(rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
             break;
         }
         case paramType1FltMultiDb:
@@ -237,24 +237,24 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             } else {
                 set_rgb_colour(RGB_BACKGROUND_GREY);
             }
-            module->param[0][paramIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[paramValue]);
+            module->param[gVariation][paramIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[paramValue]);
             break;
         }
         case paramType1Bypass:
         {
-            module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
+            module->param[gVariation][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
             return;
         }
         case paramType1Enable:
         {
-            //module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
+            //module->param[gVariation][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
 
             if (paramLocationList[paramRef].colourMap != NULL) {
                 set_rgb_colour(paramLocationList[paramRef].colourMap[paramValue]);
             } else {
                 set_rgb_colour(RGB_BACKGROUND_GREY);          // Grey when OFF
             }
-            module->param[0][paramIndex].rectangle = draw_button(moduleArea, rectangle, NULL);
+            module->param[gVariation][paramIndex].rectangle = draw_button(moduleArea, rectangle, NULL);
             return;
         }
         default:

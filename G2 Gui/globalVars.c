@@ -30,6 +30,7 @@ extern void open_read_file_button(void);
 
 GLFWwindow *    gWindow                   = NULL;
 uint32_t        gLocation                 = locationVa;
+uint32_t        gVariation                = 0;
 bool            gReDraw                   = true;
 tButton         gSelectVa                 = {NULL_RECTANGLE, anchorTopLeft, "VA", va_button};        // TODO: put these select items in an array of structures
 tButton         gSelectFx                 = {NULL_RECTANGLE, anchorTopLeft, "FX", fx_button};
