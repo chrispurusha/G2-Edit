@@ -223,7 +223,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         case paramType1FltClassicDb:
         case paramType1PitchType:
         case paramType1FmType:
-        case paramType1OffTo100KeyboardTrack:
+        case paramType1OffTo100KbTrack:
         case paramType1OffOnKeyboardTrack:
         {
             char ** map = (char **)paramLocationList[paramRef].strMap;
@@ -252,22 +252,22 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         }
         case paramType1Bypass:
         {
-            module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, {rectangle.coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
+            module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
             return;
         }
         case paramType1Enable:
         {
-            module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, {rectangle.coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
+            module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
             return;
         }
         case paramType1Exp:
         {
-            module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, {rectangle.coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
+            module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
             return;
         }
         case paramType1Pad:
         {
-            module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, {rectangle.coord, {BYPASS_BUTTON_WIDTH, BYPASS_BUTTON_HEIGHT}}, paramValue != 0);
+            module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
             return;
         }
         default:
@@ -368,55 +368,56 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
     set_rgb_colour(connectorColourMap[type]);  // Note, was using "module->connector[connectorIndex].type", check that this type param is OK
 
     if (module->connector[connectorIndex].dir == connectorDirIn) {
-        module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, {rectangle.coord.x + rectangle.size.w, rectangle.coord.y + rectangle.size.h}, rectangle.size.w, 10.0, 0.0, 10.0);
+        module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, {rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)}, rectangle.size.w / 2.0, 10.0, 0.0, 10.0);
     } else {
-        module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, {rectangle.coord, {rectangle.size.w * 2, rectangle.size.h * 2}});
+        module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, {rectangle.coord, {rectangle.size.w, rectangle.size.h}});
     }
     set_rgb_colour(RGB_BLACK);
-    render_circle_part(moduleArea, {rectangle.coord.x + rectangle.size.w, rectangle.coord.y + rectangle.size.h}, rectangle.size.w / 2.0, 10.0, 0.0, 10.0);
+    render_circle_part(moduleArea, {rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)}, rectangle.size.w / 4.0, 10.0, 0.0, 10.0);
 }
 
-tRectangle adjust_rectangle(tRectangle base, tRectangle relative, tAnchor anchor, tModule * module) {
-    tRectangle result;
+tRectangle adjust_rectangle(tRectangle moduleBase, tRectangle relative, tAnchor anchor, tModule * module) {
+    relative = rectangle_scale_from_percent(relative);
 
     switch (anchor) {
         case anchorTopLeft:
+            relative.coord.x = moduleBase.coord.x + relative.coord.x;
+            relative.coord.y = moduleBase.coord.y + relative.coord.y;
             break;
         case anchorTopRight:
-            relative.coord.x = 100 + relative.coord.x;
+            relative.coord.x = ((moduleBase.coord.x + moduleBase.size.w) + relative.coord.x) - relative.size.w;
+            relative.coord.y = moduleBase.coord.y + relative.coord.y;
             break;
         case anchorTopMiddle:
-            relative.coord.x = 50 + relative.coord.x;
+            relative.coord.x = ((moduleBase.coord.x + (moduleBase.size.w / 2.0)) + relative.coord.x) - (relative.size.w / 2.0);
+            relative.coord.y = moduleBase.coord.y + relative.coord.y;
             break;
         case anchorMiddleLeft:
-            relative.coord.y = 50 + relative.coord.y;
+            relative.coord.x = moduleBase.coord.x + relative.coord.x;
+            relative.coord.y = ((moduleBase.coord.y + (moduleBase.size.h / 2.0)) + relative.coord.y) - (relative.size.h / 2.0);
             break;
         case anchorMiddleRight:
-            relative.coord.x = 100 + relative.coord.x;
-            relative.coord.y = 50 + relative.coord.y;
+            relative.coord.x = ((moduleBase.coord.x + moduleBase.size.w) - relative.coord.x) - relative.size.w;
+            relative.coord.y = ((moduleBase.coord.y + (moduleBase.size.h / 2.0)) + relative.coord.y) - (relative.size.h / 2.0);
             break;
         case anchorMiddle:
-            relative.coord.x = 50 + relative.coord.x;
-            relative.coord.y = 50 + relative.coord.y;
+            relative.coord.x = ((moduleBase.coord.x + (moduleBase.size.w / 2.0)) + relative.coord.x) - (relative.size.w / 2.0);
+            relative.coord.y = ((moduleBase.coord.y + (moduleBase.size.h / 2.0)) + relative.coord.y) - (relative.size.h / 2.0);
             break;
         case anchorBottomLeft:
-            relative.coord.y = 100 + relative.coord.y;
+            relative.coord.x = moduleBase.coord.x + relative.coord.x;
+            relative.coord.y = ((moduleBase.coord.y + moduleBase.size.h) + relative.coord.y) - relative.size.h;
             break;
         case anchorBottomMiddle:
-            relative.coord.x = 50 + relative.coord.x;
-            relative.coord.y = 100 + relative.coord.y;
+            relative.coord.x = ((moduleBase.coord.x + (moduleBase.size.w / 2.0)) + relative.coord.x) - (relative.size.w / 2.0);
+            relative.coord.y = ((moduleBase.coord.y + moduleBase.size.h) + relative.coord.y) - relative.size.h;
             break;
         case anchorBottomRight:
-            relative.coord.x = 100 + relative.coord.x;
-            relative.coord.y = 100 + relative.coord.y;
+            relative.coord.x = ((moduleBase.coord.x + moduleBase.size.w) + relative.coord.x) - relative.size.w;
+            relative.coord.y = ((moduleBase.coord.y + moduleBase.size.h) + relative.coord.y) - relative.size.h;
             break;
     }
-    result.coord.x = base.coord.x + x_param_pos_from_percent(relative.coord.x);
-    result.coord.y = base.coord.y + y_param_pos_from_percent(module->type, relative.coord.y);
-    result.size.w  = x_param_size_from_percent(relative.size.w);
-    result.size.h  = y_param_size_from_percent(module->type, relative.size.h);
-
-    return result;
+    return relative;
 }
 
 void render_module_common(tRectangle rectangle, tModule * module) {
@@ -435,7 +436,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
                 module->paramIndexCache    = i;
                 module->gotParamIndexCache = true;
             }
-            tRectangle adjusted = adjust_rectangle(rectangle,paramLocationList[i].rectangle, paramLocationList[i].anchor,  module);
+            tRectangle adjusted = adjust_rectangle(rectangle, paramLocationList[i].rectangle, paramLocationList[i].anchor, module);
             render_param_common(adjusted, module, i, param++);
 
             if (param >= module_param_count(module->type)) {

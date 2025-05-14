@@ -307,7 +307,7 @@ typedef enum {
     paramType1Pitch,
     paramType1PitchType,
     paramType1FmType,
-    paramType1OffTo100KeyboardTrack,
+    paramType1OffTo100KbTrack,
     paramType1OffOnKeyboardTrack,
     paramType1GainControl,
     paramType1Bypass,
@@ -544,7 +544,7 @@ typedef struct {
     const tParamType1 type1;
     const tParamType2 type2;
     const tRectangle  rectangle;
-    const tAnchor        anchor;
+    const tAnchor     anchor;
     const char *      label;
     const uint32_t    range;
     const uint32_t    defaultValue;
@@ -564,7 +564,7 @@ typedef struct {
     const tParamType1 type1;
     const tParamType2 type2;
     const tRectangle  rectangle;
-    const tAnchor        anchor;
+    const tAnchor     anchor;
     const char *      label;
     const uint32_t    range;
     const uint32_t    defaultValue;
@@ -575,19 +575,19 @@ typedef struct {
     const tModuleType moduleType;
     const tVolumeType volumeType;
     const tRectangle  rectangle;
-    const tAnchor        anchor;
+    const tAnchor     anchor;
 } tVolumeLocation;
 
 typedef struct {
     const tModuleType moduleType;
     const tLedType    ledType;
     const tRectangle  rectangle;
-    const tAnchor        anchor;
+    const tAnchor     anchor;
 } tLedLocation;
 
 typedef struct {
     tRectangle rectangle;
-    tAnchor        anchor;
+    tAnchor    anchor;
     char *     text;
     void (*function)(void);
 } tButton;

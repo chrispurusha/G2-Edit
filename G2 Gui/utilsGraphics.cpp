@@ -869,20 +869,15 @@ int get_render_height(void) {
     return gRenderHeight;
 }
 
-double x_param_pos_from_percent(double x) {
-    return (((MODULE_WIDTH * (x + 3.0))) / 100.0) * 0.94;
-}
+tRectangle rectangle_scale_from_percent(tRectangle rectangle) {
+    // Scaling is done by module width, so Y percentage may be greater than 100% in some cases
 
-double y_param_pos_from_percent(tModuleType moduleType, double y) {
-    return ((MODULE_HEIGHT * gModuleProperties[moduleType].height * (y + 3.0)) / 100.0) * 0.94;
-}
+    rectangle.coord.x = (rectangle.coord.x * MODULE_WIDTH) / 100.0;
+    rectangle.coord.y = (rectangle.coord.y * MODULE_WIDTH) / 100.0;
+    rectangle.size.w  = (rectangle.size.w * MODULE_WIDTH) / 100.0;
+    rectangle.size.h  = (rectangle.size.h * MODULE_WIDTH) / 100.0;
 
-double x_param_size_from_percent(double x) {
-    return ((MODULE_WIDTH * x) / 100.0) * 0.94;
-}
-
-double y_param_size_from_percent(tModuleType moduleType, double y) {
-    return ((MODULE_HEIGHT * gModuleProperties[moduleType].height * y) / 100.0) * 0.94;
+    return rectangle;
 }
 
 #define X_POS_FROM_PERCENT(x)    ((MODULE_WIDTH * (double)x) / 100.0)
