@@ -70,6 +70,7 @@
 
 #define RGB_BLACK                         {0.0, 0.0, 0.0}
 #define RGB_WHITE                         {1.0, 1.0, 1.0}
+#define RGB_GREEN                         {0.0, 0.8, 0.0}
 #define RGB_BACKGROUND_GREY               {0.8, 0.8, 0.8}
 #define RGBA_BLACK_ON_TRANSPARENT         {0.0, 0.0, 0.0, 1.0}
 
@@ -100,8 +101,8 @@
 #define BYPASS_BUTTON_HEIGHT              (15.0)
 #define GC_BUTTON_WIDTH                   (25.0)
 #define GC_BUTTON_HEIGHT                  (15.0)
-#define FILTER_FREQ_RADIUS                (12.0)
-#define FILTER_RESONANCE_RADIUS           (12.0)
+//#define FILTER_FREQ_RADIUS                (12.0)
+//#define FILTER_RESONANCE_RADIUS           (12.0)
 #define BLANK_SIZE                        (0.0)   // Not used directly by calling function, or needs calculation in following calls
 #define STANDARD_TEXT_HEIGHT              (12.0)
 #define STANDARD_BUTTON_TEXT_HEIGHT       (12.0)

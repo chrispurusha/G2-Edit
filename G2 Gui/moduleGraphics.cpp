@@ -146,22 +146,25 @@ tRectangle render_dial(tRectangle rectangle, uint32_t value, uint32_t range) {  
     return render_circle_line(moduleArea, {x, y}, radius, 25, 1.0);
 }
 
-tRectangle render_dial_with_text(tCoord coord, char * label, char * buff, uint32_t value, uint32_t range) {
-    double y = coord.y;
+tRectangle render_dial_with_text(tRectangle rectangle, char * label, char * buff, uint32_t value, uint32_t range) {
+    //set_rgb_colour(RGB_GREEN);
+    //render_rectangle(moduleArea, rectangle);
+    double y = rectangle.coord.y;
+    double textHeight =rectangle.size.h / 4.0;
 
     set_rgb_colour(RGB_BLACK);
 
     if (label != NULL) {
-        render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, label);
+        render_text(moduleArea, {{rectangle.coord.x, y}, {BLANK_SIZE, textHeight}}, label);
+        y += textHeight;
     }
-    y += STANDARD_TEXT_HEIGHT;
 
     if (buff != NULL) {
-        render_text(moduleArea, {{coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+        render_text(moduleArea, {{rectangle.coord.x, y}, {BLANK_SIZE, textHeight}}, buff);
+        y += textHeight;
     }
-    y += STANDARD_TEXT_HEIGHT;
     set_rgb_colour({0.2, 0.2, 0.2});
-    return render_dial({{coord.x, y}, {FILTER_FREQ_RADIUS * 2.0, FILTER_FREQ_RADIUS * 2.0}}, value, range);
+    return render_dial({{rectangle.coord.x, y}, {rectangle.size.w, rectangle.size.w}}, value, range);
 }
 
 // This might be too generic and won't be able to use, or we add extra params!
@@ -187,7 +190,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             } else {
                 snprintf(buff, sizeof(buff), "%.1fkHz", freq / 1000.0);
             }
-            module->param[0][paramIndex].rectangle = render_dial_with_text(rectangle.coord, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
+            module->param[0][paramIndex].rectangle = render_dial_with_text(rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
             break;
         }
         case paramType1Pitch:
@@ -201,7 +204,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 percent = maxVal;             // Clip
             }
             snprintf(buff, sizeof(buff), "%.1f%%", percent);
-            module->param[0][paramIndex].rectangle = render_dial_with_text(rectangle.coord, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
+            module->param[0][paramIndex].rectangle = render_dial_with_text(rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
             break;
         }
         case paramType1CommonDial:         // Ultimately might not be a common dial, or could just be a default percent dial!?
@@ -216,7 +219,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 res = maxVal;             // Clip
             }
             snprintf(buff, sizeof(buff), "%.1f", res);
-            module->param[0][paramIndex].rectangle = render_dial_with_text(rectangle.coord, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
+            module->param[0][paramIndex].rectangle = render_dial_with_text(rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
             break;
         }
         case paramType1FltMultiDb:
@@ -227,27 +230,32 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         case paramType1OffOnKeyboardTrack:
         {
             char ** map = (char **)paramLocationList[paramRef].strMap;
-            double  y   = rectangle.coord.y;
-
+            double y = rectangle.coord.y;
+            double textHeight =rectangle.size.h / 2.0;
+            
             if (paramLocationList[paramRef].label != NULL) {
                 set_rgb_colour(RGB_BLACK);
-                render_text(moduleArea, {{rectangle.coord.x, y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, (char *)paramLocationList[paramRef].label);
-                y += STANDARD_TEXT_HEIGHT;
+                render_text(moduleArea, {{rectangle.coord.x, y}, {BLANK_SIZE, textHeight}}, (char *)paramLocationList[paramRef].label);
+                y += textHeight;
             }
             set_rgb_colour(RGB_BACKGROUND_GREY);
-            module->param[0][paramIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, map, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, map[paramValue]);
+            module->param[0][paramIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, map, textHeight), textHeight}}, map[paramValue]);
+            
+            //set_rgb_colour(RGB_GREEN);
+            //render_rectangle(moduleArea, rectangle);
             break;
         }
         case paramType1GainControl:
         {
             char * valString = "GC";
+            double textHeight =rectangle.size.h / 2.0;
 
             if (paramValue != 0) {
                 set_rgb_colour({0.3, 0.7, 0.3});                 // Green when ON
             } else {
                 set_rgb_colour(RGB_BACKGROUND_GREY);             // Grey when OFF
             }
-            module->param[0][paramIndex].rectangle = draw_button(moduleArea, {rectangle.coord, get_text_width(valString, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}, valString);
+            module->param[0][paramIndex].rectangle = draw_button(moduleArea, {rectangle.coord, get_text_width(valString, textHeight), textHeight}, valString);
             break;
         }
         case paramType1Bypass:
@@ -287,7 +295,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             uint32_t modeValue = 0;
 
             snprintf(buff, sizeof(buff), "%u", module->mode[0].value);
-            module->mode[modeIndex].rectangle = render_dial_with_text(rectangle.coord, (char *)modeLocationList[modeRef].label, buff, module->mode[0].value, modeLocationList[modeRef].range);
+            module->mode[modeIndex].rectangle = render_dial_with_text(rectangle, (char *)modeLocationList[modeRef].label, buff, module->mode[0].value, modeLocationList[modeRef].range);
             break;
         }
         default:
