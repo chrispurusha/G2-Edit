@@ -467,7 +467,7 @@ typedef struct {
     tParamType3 type3;      // Denotes param or mode, which shoul maybe be union-ed?
     uint32_t    param;
     uint32_t    mode;
-} tDialDragging;        // Todo: rename as param dragging, since might not just be dial!?
+} tParamDragging;        // Todo: rename as param dragging, since might not just be dial!?
 
 typedef struct {
     bool       active;

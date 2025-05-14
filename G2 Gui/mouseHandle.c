@@ -614,13 +614,13 @@ bool handle_module_click(tCoord coord, int button) {
                 if (within_rectangle(coord, param->rectangle)) {
                     if (button == GLFW_MOUSE_BUTTON_LEFT) {
                         if ((paramLocationList[param->paramRef].type2) == paramType2Dial) {
-                            gDialDragging.moduleKey.index    = module.key.index;
-                            gDialDragging.moduleKey.location = module.key.location;
-                            gDialDragging.type3              = paramType3Param;
-                            //gDialDragging.variation          = gVariation;  // Might not need variation in the dragging struct
-                            gDialDragging.param  = i;
-                            gDialDragging.active = true;
-                            retVal               = true;
+                            gParamDragging.moduleKey.index    = module.key.index;
+                            gParamDragging.moduleKey.location = module.key.location;
+                            gParamDragging.type3              = paramType3Param;
+                            //gParamDragging.variation          = gVariation;  // Might not need variation in the dragging struct
+                            gParamDragging.param  = i;
+                            gParamDragging.active = true;
+                            retVal                = true;
                         } else {
                             param->value = (param->value + 1) % paramLocationList[param->paramRef].range;
                             write_module(module.key, &module);
@@ -647,12 +647,12 @@ bool handle_module_click(tCoord coord, int button) {
                     if (within_rectangle(coord, module.mode[i].rectangle)) {
                         if (button == GLFW_MOUSE_BUTTON_LEFT) {
                             if ((modeLocationList[mode->modeRef].type2) == paramType2Dial) {
-                                gDialDragging.moduleKey.index    = module.key.index;
-                                gDialDragging.moduleKey.location = module.key.location;
-                                gDialDragging.type3              = paramType3Mode;
-                                gDialDragging.mode               = i;
-                                gDialDragging.active             = true;
-                                retVal                           = true;
+                                gParamDragging.moduleKey.index    = module.key.index;
+                                gParamDragging.moduleKey.location = module.key.location;
+                                gParamDragging.type3              = paramType3Mode;
+                                gParamDragging.mode               = i;
+                                gParamDragging.active             = true;
+                                retVal                            = true;
                             } else {
                                 /*param->value = (param->value + 1) % paramLocationList[param->paramRef].range;
                                  * write_module(module.key, &module);
@@ -814,7 +814,7 @@ void stop_dragging(void) {
     gScrollState.yBarDragging = false;
     gScrollState.xBarDragging = false;
     memset(&gModuleDrag, 0, sizeof(gModuleDrag));
-    memset(&gDialDragging, 0, sizeof(gDialDragging));
+    memset(&gParamDragging, 0, sizeof(gParamDragging));
     memset(&gCableDrag, 0, sizeof(gCableDrag));
 }
 
@@ -945,24 +945,24 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         set_y_scroll_bar(y);
     } else if (gScrollState.xBarDragging == true) {
         set_x_scroll_bar(x);
-    } else if (gDialDragging.active == true) {
-        read_module(gDialDragging.moduleKey, &module);
+    } else if (gParamDragging.active == true) {
+        read_module(gParamDragging.moduleKey, &module);
 
-        switch (gDialDragging.type3) {
+        switch (gParamDragging.type3) {
             case paramType3Param:
 
-                if (paramLocationList[module.param[gVariation][gDialDragging.param].paramRef].type2 == paramType2Dial) {
-                    angle = calculate_mouse_angle((tCoord){x, y}, module.param[gVariation][gDialDragging.param].rectangle);                                                            // possible add half size
-                    value = angle_to_value(angle, paramLocationList[module.param[gVariation][gDialDragging.param].paramRef].range);
+                if (paramLocationList[module.param[gVariation][gParamDragging.param].paramRef].type2 == paramType2Dial) {
+                    angle = calculate_mouse_angle((tCoord){x, y}, module.param[gVariation][gParamDragging.param].rectangle);                                                            // possible add half size
+                    value = angle_to_value(angle, paramLocationList[module.param[gVariation][gParamDragging.param].paramRef].range);
 
-                    if (module.param[gVariation][gDialDragging.param].value != value) {
-                        module.param[gVariation][gDialDragging.param].value = value;
+                    if (module.param[gVariation][gParamDragging.param].value != value) {
+                        module.param[gVariation][gParamDragging.param].value = value;
 
-                        write_module(gDialDragging.moduleKey, &module);         // Write new value into parameter
+                        write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
 
                         messageContent.cmd                 = eMsgCmdSetValue;
-                        messageContent.paramData.moduleKey = gDialDragging.moduleKey;
-                        messageContent.paramData.param     = gDialDragging.param;
+                        messageContent.paramData.moduleKey = gParamDragging.moduleKey;
+                        messageContent.paramData.param     = gParamDragging.param;
                         messageContent.paramData.variation = gVariation;
                         messageContent.paramData.value     = value;
                         msg_send(&gCommandQueue, &messageContent);
@@ -971,21 +971,21 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                 break;
             case paramType3Mode:
 
-                if (modeLocationList[module.mode[gDialDragging.param].modeRef].type2 == paramType2Dial) {
-                    angle = calculate_mouse_angle((tCoord){x, y}, module.mode[gDialDragging.param].rectangle);                                                            // possible add half size
-                    value = angle_to_value(angle, modeLocationList[module.mode[gDialDragging.param].modeRef].range);
+                if (modeLocationList[module.mode[gParamDragging.param].modeRef].type2 == paramType2Dial) {
+                    angle = calculate_mouse_angle((tCoord){x, y}, module.mode[gParamDragging.param].rectangle);                                                            // possible add half size
+                    value = angle_to_value(angle, modeLocationList[module.mode[gParamDragging.param].modeRef].range);
                     printf("VALUE = %u\n", value);
-                    //value = (value * modeLocationList[module.mode[gDialDragging.param].modeRef].range) / MAX_PARAM_RANGE;
+                    //value = (value * modeLocationList[module.mode[gParamDragging.param].modeRef].range) / MAX_PARAM_RANGE;
                     //printf("VALUE = %u\n", value);
 
-                    if (module.mode[gDialDragging.mode].value != value) {
-                        module.mode[gDialDragging.mode].value = value;
+                    if (module.mode[gParamDragging.mode].value != value) {
+                        module.mode[gParamDragging.mode].value = value;
 
-                        write_module(gDialDragging.moduleKey, &module);         // Write new value into parameter
+                        write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
 
                         messageContent.cmd                = eMsgCmdSetMode;
-                        messageContent.modeData.moduleKey = gDialDragging.moduleKey;
-                        messageContent.modeData.mode      = gDialDragging.mode;
+                        messageContent.modeData.moduleKey = gParamDragging.moduleKey;
+                        messageContent.modeData.mode      = gParamDragging.mode;
                         messageContent.modeData.value     = value;
                         msg_send(&gCommandQueue, &messageContent);
                     }

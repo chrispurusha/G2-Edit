@@ -46,7 +46,7 @@ extern bool            gShowOpenFileReadDialogue;
 extern tScrollState    gScrollState;
 extern tContextMenu    gContextMenu;
 extern tCableDragging  gCableDrag;
-extern tDialDragging   gDialDragging;
+extern tParamDragging  gParamDragging;
 extern tModuleDragging gModuleDrag;
 extern tMessageQueue   gCommandQueue;
 

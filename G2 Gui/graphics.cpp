@@ -191,13 +191,16 @@ void render_top_bar(void) {
     }
     gSelectFx.rectangle = draw_button(mainArea, {{425.0, 8.0}, {get_text_width(gSelectFx.text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectFx.text);
 
+    set_rgb_colour(RGB_BLACK);
+    render_text(mainArea, {{400.0, 47.0}, {NULL, STANDARD_TEXT_HEIGHT}}, "Variation");
+
     for (int i = 0; i < VARIATIONS; i++) {
         if (i == gVariation) {
             set_rgb_colour(RGB_GREEN_ON);
         } else {
             set_rgb_colour(RGB_BACKGROUND_GREY);
         }
-        gSelectVariation[i].rectangle = draw_button(mainArea, {{400.0 + (i * 12.0), 35.0}, {get_text_width(gSelectVariation[i].text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectVariation[i].text);
+        gSelectVariation[i].rectangle = draw_button(mainArea, {{400.0 + (i * 12.0), 60.0}, {get_text_width(gSelectVariation[i].text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectVariation[i].text);
     }
 
     set_rgb_colour(RGB_BACKGROUND_GREY);
