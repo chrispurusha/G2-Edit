@@ -40,6 +40,7 @@ extern uint32_t        gVariation;
 extern bool            gReDraw;
 extern tButton         gSelectVa;
 extern tButton         gSelectFx;
+extern tButton         gSelectVariation[VARIATIONS];
 extern tButton         gSelectOpenReadFile;
 extern bool            gShowOpenFileReadDialogue;
 extern tScrollState    gScrollState;

@@ -96,15 +96,19 @@ void error_callback(int error, const char * description) {
     fprintf(stderr, "Error [%d]: %s\n", error, description);
 }
 
-void va_button(void) {
+void va_button(uint32_t dummy) {
     gLocation = locationVa;
 }
 
-void fx_button(void) {
+void fx_button(uint32_t dummy) {
     gLocation = locationFx;
 }
 
-void open_read_file_button(void) {
+void variation_button(uint32_t variation) {
+    gVariation = variation;
+}
+
+void open_read_file_button(uint32_t dummy) {
     gShowOpenFileReadDialogue = true;
 }
 
@@ -173,19 +177,28 @@ void render_top_bar(void) {
     set_rgb_colour(RGB_GREY_5);
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {get_render_width() - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
 
-    if (gLocation == locationVa) {
+    if (locationVa == gLocation) {
         set_rgb_colour(RGB_GREEN_ON);
     } else {
         set_rgb_colour(RGB_BACKGROUND_GREY);
     }
     gSelectVa.rectangle = draw_button(mainArea, {{400.0, 8.0}, {get_text_width(gSelectVa.text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectVa.text); // Todo - move coords into button definition
 
-    if (gLocation == locationFx) {
+    if (locationFx == gLocation) {
         set_rgb_colour(RGB_GREEN_ON);
     } else {
         set_rgb_colour(RGB_BACKGROUND_GREY);
     }
     gSelectFx.rectangle = draw_button(mainArea, {{425.0, 8.0}, {get_text_width(gSelectFx.text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectFx.text);
+
+    for (int i = 0; i < VARIATIONS; i++) {
+        if (i == gVariation) {
+            set_rgb_colour(RGB_GREEN_ON);
+        } else {
+            set_rgb_colour(RGB_BACKGROUND_GREY);
+        }
+        gSelectVariation[i].rectangle = draw_button(mainArea, {{400.0 + (i * 12.0), 35.0}, {get_text_width(gSelectVariation[i].text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectVariation[i].text);
+    }
 
     set_rgb_colour(RGB_BACKGROUND_GREY);
     gSelectOpenReadFile.rectangle = draw_button(mainArea, {{20.0, 8.0}, {get_text_width(gSelectOpenReadFile.text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectOpenReadFile.text);

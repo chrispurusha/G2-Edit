@@ -617,10 +617,10 @@ bool handle_module_click(tCoord coord, int button) {
                             gDialDragging.moduleKey.index    = module.key.index;
                             gDialDragging.moduleKey.location = module.key.location;
                             gDialDragging.type3              = paramType3Param;
-                            gDialDragging.variation          = 0;
-                            gDialDragging.param              = i;
-                            gDialDragging.active             = true;
-                            retVal                           = true;
+                            //gDialDragging.variation          = gVariation;  // Might not need variation in the dragging struct
+                            gDialDragging.param  = i;
+                            gDialDragging.active = true;
+                            retVal               = true;
                         } else {
                             param->value = (param->value + 1) % paramLocationList[param->paramRef].range;
                             write_module(module.key, &module);
@@ -629,7 +629,7 @@ bool handle_module_click(tCoord coord, int button) {
                             messageContent.cmd                 = eMsgCmdSetValue;
                             messageContent.paramData.moduleKey = module.key;
                             messageContent.paramData.param     = i;
-                            messageContent.paramData.variation = 0;
+                            messageContent.paramData.variation = gVariation;
                             messageContent.paramData.value     = param->value;
 
                             msg_send(&gCommandQueue, &messageContent);
@@ -842,66 +842,78 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         }
     } else if (action == GLFW_RELEASE) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            if (within_rectangle(coord, gSelectVa.rectangle)) {
-                gSelectVa.function();
-            } else if (within_rectangle(coord, gSelectFx.rectangle)) {
-                gSelectFx.function();
-            } else if (within_rectangle(coord, gSelectOpenReadFile.rectangle)) {
-                gSelectOpenReadFile.function();
-            } else if (gContextMenu.active) {
-                if (!handle_context_menu_click(coord)) {
-                    gContextMenu.active = false;  // Close if clicked outside - Todo: think if this is the right thing to do here
+            bool foundVariation = false;
+
+            for (int i = 0; i < VARIATIONS; i++) {
+                if (within_rectangle(coord, gSelectVariation[i].rectangle)) {
+                    gSelectVariation[i].function(i);
+                    foundVariation = true;
+                    break;
                 }
-            } else if (gModuleDrag.active == true) {
-                shift_modules_down(gModuleDrag.moduleKey);
-            } else if (gCableDrag.active) {
-                tModule   fromModule = {0};
-                tModule   toModule   = {0};
-                tCableKey cableKey   = {0};
-                tCable    cable      = {0};
+            }
 
-                reset_walk_module();
+            if (foundVariation == false) {
+                if (within_rectangle(coord, gSelectVa.rectangle)) {
+                    gSelectVa.function(0);
+                } else if (within_rectangle(coord, gSelectFx.rectangle)) {
+                    gSelectFx.function(0);
+                } else if (within_rectangle(coord, gSelectOpenReadFile.rectangle)) {
+                    gSelectOpenReadFile.function(0);
+                } else if (gContextMenu.active) {
+                    if (!handle_context_menu_click(coord)) {
+                        gContextMenu.active = false;  // Close if clicked outside - Todo: think if this is the right thing to do here
+                    }
+                } else if (gModuleDrag.active == true) {
+                    shift_modules_down(gModuleDrag.moduleKey);
+                } else if (gCableDrag.active) {
+                    tModule   fromModule = {0};
+                    tModule   toModule   = {0};
+                    tCableKey cableKey   = {0};
+                    tCable    cable      = {0};
 
-                while (walk_next_module(&toModule) && !quitLoop) {
-                    if (toModule.key.location == gLocation) {
-                        for (int i = 0; i < module_connector_count(toModule.type); i++) {
-                            if (!within_rectangle(coord, toModule.connector[i].rectangle)) {
-                                continue;
-                            }
-                            read_module(gCableDrag.fromModuleKey, &fromModule);
-                            set_up_cable_key(&cableKey, &fromModule, &toModule, i);
+                    reset_walk_module();
 
-                            swap_cable_to_from_if_needed(&cableKey, &fromModule, &toModule, i);
+                    while (walk_next_module(&toModule) && !quitLoop) {
+                        if (toModule.key.location == gLocation) {
+                            for (int i = 0; i < module_connector_count(toModule.type); i++) {
+                                if (!within_rectangle(coord, toModule.connector[i].rectangle)) {
+                                    continue;
+                                }
+                                read_module(gCableDrag.fromModuleKey, &fromModule);
+                                set_up_cable_key(&cableKey, &fromModule, &toModule, i);
 
-                            // Prevent self-connections and invalid connections
-                            if (  (cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i)
-                               || (  fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
-                                  && toModule.connector[i].dir == connectorDirOut)) {
+                                swap_cable_to_from_if_needed(&cableKey, &fromModule, &toModule, i);
+
+                                // Prevent self-connections and invalid connections
+                                if (  (cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i)
+                                   || (  fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
+                                      && toModule.connector[i].dir == connectorDirOut)) {
+                                    quitLoop = true;
+                                    break;
+                                }
+                                cable.colour = 0; // Todo: choose colour from menu or calculate
+                                write_cable(cableKey, &cable);
+
+                                tMessageContent messageContent = {0};
+
+                                messageContent.cmd                            = eMsgCmdWriteCable;
+                                messageContent.cableData.location             = gLocation;
+                                messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
+                                messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
+                                messageContent.cableData.moduleToIndex        = cableKey.moduleToIndex;
+                                messageContent.cableData.connectorToIoIndex   = cableKey.connectorToIoCount;
+                                messageContent.cableData.linkType             = cableKey.linkType;
+                                messageContent.cableData.colour               = cable.colour;
+                                msg_send(&gCommandQueue, &messageContent);
+
                                 quitLoop = true;
                                 break;
                             }
-                            cable.colour = 0; // Todo: choose colour from menu or calculate
-                            write_cable(cableKey, &cable);
-
-                            tMessageContent messageContent = {0};
-
-                            messageContent.cmd                            = eMsgCmdWriteCable;
-                            messageContent.cableData.location             = gLocation;
-                            messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
-                            messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
-                            messageContent.cableData.moduleToIndex        = cableKey.moduleToIndex;
-                            messageContent.cableData.connectorToIoIndex   = cableKey.connectorToIoCount;
-                            messageContent.cableData.linkType             = cableKey.linkType;
-                            messageContent.cableData.colour               = cable.colour;
-                            msg_send(&gCommandQueue, &messageContent);
-
-                            quitLoop = true;
-                            break;
                         }
                     }
+                    finish_walk_module();
+                    update_module_up_rates();
                 }
-                finish_walk_module();
-                update_module_up_rates();
             }
         } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
             if (!handle_module_click(coord, button)) {
@@ -939,19 +951,19 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         switch (gDialDragging.type3) {
             case paramType3Param:
 
-                if (paramLocationList[module.param[gDialDragging.variation][gDialDragging.param].paramRef].type2 == paramType2Dial) {
-                    angle = calculate_mouse_angle((tCoord){x, y}, module.param[gDialDragging.variation][gDialDragging.param].rectangle);                                                            // possible add half size
-                    value = angle_to_value(angle, paramLocationList[module.param[gDialDragging.variation][gDialDragging.param].paramRef].range);
+                if (paramLocationList[module.param[gVariation][gDialDragging.param].paramRef].type2 == paramType2Dial) {
+                    angle = calculate_mouse_angle((tCoord){x, y}, module.param[gVariation][gDialDragging.param].rectangle);                                                            // possible add half size
+                    value = angle_to_value(angle, paramLocationList[module.param[gVariation][gDialDragging.param].paramRef].range);
 
-                    if (module.param[gDialDragging.variation][gDialDragging.param].value != value) {
-                        module.param[gDialDragging.variation][gDialDragging.param].value = value;
+                    if (module.param[gVariation][gDialDragging.param].value != value) {
+                        module.param[gVariation][gDialDragging.param].value = value;
 
                         write_module(gDialDragging.moduleKey, &module);         // Write new value into parameter
 
                         messageContent.cmd                 = eMsgCmdSetValue;
                         messageContent.paramData.moduleKey = gDialDragging.moduleKey;
                         messageContent.paramData.param     = gDialDragging.param;
-                        messageContent.paramData.variation = gDialDragging.variation;
+                        messageContent.paramData.variation = gVariation;
                         messageContent.paramData.value     = value;
                         msg_send(&gCommandQueue, &messageContent);
                     }
