@@ -57,9 +57,9 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
 
             for (int i = 0; i < leds; i++) {
                 if ((value >> i) & 0x01) {
-                    set_rgb_colour({0.0, 0.7, 0.0});
+                    set_rgb_colour(RGB_GREEN_7);
                 } else {
-                    set_rgb_colour({0.0, 0.3, 0.0});
+                    set_rgb_colour(RGB_GREEN_3);
                 }
                 render_rectangle(moduleArea, smallRectangle);
                 smallRectangle.coord.y += smallRectangle.size.h + space;
@@ -74,11 +74,9 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
 
             double thresholds[] = {0.5, 0.8, 1.0};  // Green up to 50%, yellow to 80%, red the rest
             double fullHeight   = rectangle.size.h;
-            tRgb   colours[3]   = {
-                {0.0, 0.7, 0.0},  // Green
-                {0.7, 0.7, 0.0},  // Yellow
-                {0.7, 0.0, 0.0}   // Red
-            };
+            tRgb   colours[3]   = {RGB_GREEN_7,
+                                   RGB_YELLOW_7,
+                                   RGB_RED_7};
 
             set_rgb_colour(RGB_BLACK);
             render_rectangle(moduleArea, rectangle);
@@ -126,12 +124,12 @@ tRectangle render_dial(tRectangle rectangle, uint32_t value, uint32_t range) {  
     //debug
     //{
     //    char buff[256] = {0};
-    //    set_rgb_colour({0.5, 0.5, 0.5});
+    //    set_rgb_colour(RGB_GREY_5);
     //    snprintf(buff, sizeof(buff), "%u", value);
     //    render_text(moduleArea, {{x, y + 20}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     //}
 
-    set_rgb_colour({0.5, 0.5, 0.5});
+    set_rgb_colour(RGB_GREY_5);
     render_circle_part_angle(moduleArea, {x, y}, radius, 0.0, 360.0, 25);
     set_rgb_colour(RGB_BLACK);
     render_radial_line(moduleArea, {x, y}, radius, angle, 2.0);
@@ -151,7 +149,7 @@ tRectangle render_dial_with_text(tRectangle rectangle, char * label, char * buff
     if (buff != NULL) {
         render_text(moduleArea, {{rectangle.coord.x, rectangle.coord.y + textHeight}, {BLANK_SIZE, textHeight}}, buff);
     }
-    set_rgb_colour({0.2, 0.2, 0.2});
+    set_rgb_colour(RGB_GREY_2);
     return render_dial({{rectangle.coord.x, rectangle.coord.y + (textHeight * 2.0)}, {rectangle.size.w, rectangle.size.w}}, value, range);
 }
 
@@ -164,7 +162,6 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         printf("Value  %u > Range %u\n", paramValue, paramLocationList[paramRef].range);
         exit(1);
     }
-    
     module->param[0][paramIndex].paramRef = paramRef;
 
     switch (paramLocationList[paramRef].type1) {
@@ -253,7 +250,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             if (paramValue != 0) {
                 set_rgb_colour(RGB_GREEN_ON);                 // Green when ON
             } else {
-                set_rgb_colour(RGB_BACKGROUND_GREY);             // Grey when OFF
+                set_rgb_colour(RGB_BACKGROUND_GREY);          // Grey when OFF
             }
             module->param[0][paramIndex].rectangle = draw_button(moduleArea, {rectangle.coord, get_text_width(valString, textHeight), textHeight}, valString);
             break;
@@ -270,7 +267,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             if (paramValue != 0) {
                 set_rgb_colour(RGB_GREEN_ON);       // Green when ON
             } else {
-                set_rgb_colour(RGB_BLACK);             // Grey when OFF
+                set_rgb_colour(RGB_BLACK);          // Grey when OFF
             }
             module->param[0][paramIndex].rectangle = draw_button(moduleArea, rectangle, NULL);
             return;
@@ -310,7 +307,7 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
         {
             // Debug
             //snprintf(buff, sizeof(buff), "Vol %u", module->volume.value1);
-            //set_rgb_colour({0.0, 0.0, 0.0});
+            //set_rgb_colour(RGB_BLACK);
             //render_text(moduleArea, {{coord.x + x_param_size_from_percent(5), coord.y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
 
             render_volume_meter(rectangle, gModuleProperties[module->type].volumeType, module->volume.value1);
@@ -344,7 +341,7 @@ void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, 
         case ledTypeYes:
         {
             if (module->led.value != 0) {
-                set_rgb_colour({0.0, 0.7, 0.0});
+                set_rgb_colour(RGB_GREEN_7);
             } else{
                 set_rgb_colour(RGB_BLACK);
             }

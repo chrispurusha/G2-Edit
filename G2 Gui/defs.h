@@ -72,7 +72,17 @@
 #define RGB_WHITE                         {1.0, 1.0, 1.0}
 #define RGB_GREEN                         {0.0, 0.8, 0.0}
 #define RGB_BACKGROUND_GREY               {0.8, 0.8, 0.8}
+#define RGB_GREY_2                        {0.2, 0.2, 0.2}
+#define RGB_GREY_3                        {0.3, 0.3, 0.3}
+#define RGB_GREY_5                        {0.5, 0.5, 0.5}
+#define RGB_GREY_7                        {0.7, 0.7, 0.7}
+#define RGB_GREY_9                        {0.9, 0.9, 0.9}
 #define RGB_GREEN_ON                      {0.3, 0.7, 0.3}
+#define RGB_GREEN_3                       {0.0, 0.3, 0.0}
+#define RGB_GREEN_7                       {0.0, 0.7, 0.0}
+#define RGB_CONTEXT_MENU_GREEN            {0.2, 0.6, 0.2}
+#define RGB_YELLOW_7                      {0.7, 0.7, 0.0}
+#define RGB_RED_7                         {0.7, 0.0, 0.0}
 #define RGBA_BLACK_ON_TRANSPARENT         {0.0, 0.0, 0.0, 1.0}
 
 // Todo - rationalise this lot

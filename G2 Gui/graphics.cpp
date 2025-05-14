@@ -140,13 +140,13 @@ void render_context_menu(void) {
             menuItem = {{gContextMenu.coord.x, gContextMenu.coord.y + yOffset}, {largestSize + (5 * 2), itemHeight + (5 * 2)}};
 
             if (within_rectangle(mouseCoord, menuItem)) {
-                set_rgb_colour({0.2, 0.6, 0.2});
+                set_rgb_colour(RGB_CONTEXT_MENU_GREEN);
             } else {
-                set_rgb_colour({0.3, 0.3, 0.3});    // Background
+                set_rgb_colour(RGB_GREY_3);    // Background
             }
             render_rectangle(mainArea, menuItem);
 
-            set_rgb_colour({0.9, 0.9, 0.9});    // White text
+            set_rgb_colour(RGB_GREY_9);    // White text
             render_text(mainArea, {{gContextMenu.coord.x + 5, gContextMenu.coord.y + 5 + yOffset}, {BLANK_SIZE, itemHeight}}, gContextMenu.items[i].label);
             yOffset += itemHeight + (5 * 2);
         }
@@ -155,7 +155,7 @@ void render_context_menu(void) {
 
 void render_scrollbars(GLFWwindow * window) {
     // Scrollbar background
-    set_rgb_colour({0.7, 0.7, 0.7});
+    set_rgb_colour(RGB_GREY_7);
     render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, (double)get_render_height() - SCROLLBAR_MARGIN}});
     render_rectangle(mainArea, {{0.0, (double)get_render_height() - SCROLLBAR_WIDTH}, {(double)get_render_width() - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH}});
 
@@ -164,13 +164,13 @@ void render_scrollbars(GLFWwindow * window) {
     render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, (double)get_render_height() - SCROLLBAR_WIDTH}, {SCROLLBAR_WIDTH, SCROLLBAR_WIDTH}});
 
     // Scroll indicator blocks
-    set_rgb_colour({0.9, 0.9, 0.9});
+    set_rgb_colour(RGB_GREY_9);
     render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, gScrollState.yBar - (SCROLLBAR_LENGTH / 2.0)}, {SCROLLBAR_WIDTH, SCROLLBAR_LENGTH}});
     render_rectangle(mainArea, {{gScrollState.xBar - (SCROLLBAR_LENGTH / 2.0), (double)get_render_height() - SCROLLBAR_WIDTH}, {SCROLLBAR_LENGTH, SCROLLBAR_WIDTH}});
 }
 
 void render_top_bar(void) {
-    set_rgb_colour({0.5, 0.5, 0.5});
+    set_rgb_colour(RGB_GREY_5);
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {get_render_width() - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
 
     if (gLocation == locationVa) {
