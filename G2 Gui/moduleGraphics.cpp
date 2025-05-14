@@ -220,8 +220,9 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         case paramType1OffOnKeyboardTrack:
         case paramType1Exp:
         case paramType1Pad:
+        case paramType1GainControl:
         {
-            char ** map        = (char **)paramLocationList[paramRef].strMap;
+            char ** strMap     = (char **)paramLocationList[paramRef].strMap;
             double  y          = rectangle.coord.y;
             double  textHeight = rectangle.size.h / 2.0;
 
@@ -236,23 +237,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             } else {
                 set_rgb_colour(RGB_BACKGROUND_GREY);
             }
-            module->param[0][paramIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, map, textHeight), textHeight}}, map[paramValue]);
-
-            //set_rgb_colour(RGB_GREEN);
-            //render_rectangle(moduleArea, rectangle);
-            break;
-        }
-        case paramType1GainControl:
-        {
-            char * valString  = "GC";
-            double textHeight = rectangle.size.h / 2.0;
-
-            if (paramValue != 0) {
-                set_rgb_colour(RGB_GREEN_ON);                 // Green when ON
-            } else {
-                set_rgb_colour(RGB_BACKGROUND_GREY);          // Grey when OFF
-            }
-            module->param[0][paramIndex].rectangle = draw_button(moduleArea, {rectangle.coord, get_text_width(valString, textHeight), textHeight}, valString);
+            module->param[0][paramIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[paramValue]);
             break;
         }
         case paramType1Bypass:
@@ -264,10 +249,10 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         {
             //module->param[0][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
 
-            if (paramValue != 0) {
-                set_rgb_colour(RGB_GREEN_ON);       // Green when ON
+            if (paramLocationList[paramRef].colourMap != NULL) {
+                set_rgb_colour(paramLocationList[paramRef].colourMap[paramValue]);
             } else {
-                set_rgb_colour(RGB_BLACK);          // Grey when OFF
+                set_rgb_colour(RGB_BACKGROUND_GREY);          // Grey when OFF
             }
             module->param[0][paramIndex].rectangle = draw_button(moduleArea, rectangle, NULL);
             return;

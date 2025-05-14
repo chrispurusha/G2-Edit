@@ -34,6 +34,7 @@ const char * offOnStrMap[]        = {"Off", "On"};
 const tRgb   offOnColourMap[]     = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 const char * expStrMap[]          = {"Exp", "Lin", "dB"};
 const char * padStrMap[]          = {"0dB", "-6dB"};
+const char * gcStrMap[]           = {"GC", "GC"};
 const char * pitchTypeStrMap[]    = {"Semi", "Freq", "Factor", "Partial"};
 const char * fmTypeStrMap[]       = {"FM Lin", "FM Trk"};
 
@@ -314,17 +315,17 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeFltMulti,   paramType1Pitch,              paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Env",     128,  0, NULL,               NULL          },
     {moduleTypeFltMulti,   paramType1OffTo100KbTrack,    paramType2Toggle, {{ 25, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       5,  4, offTo100KbStrMap,   NULL          },
     {moduleTypeFltMulti,   paramType1Resonance,          paramType2Dial,   {{ 55,  -3}, {7, 14}}, anchorBottomLeft,  "Res",     128,  0, NULL,               NULL          },
-    {moduleTypeFltMulti,   paramType1GainControl,        paramType2Toggle, {{ 55,   5}, {7,  7}}, anchorTopLeft,     NULL,        2,  0, NULL,               NULL          },
+    {moduleTypeFltMulti,   paramType1GainControl,        paramType2Toggle, {{ 55,   5}, {7,  7}}, anchorTopLeft,     NULL,        2,  0, gcStrMap,           offOnColourMap},
     {moduleTypeFltMulti,   paramType1FltMultiDb,         paramType2Toggle, {{ 70, -10}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, fltMultiDbStrMap,   NULL          },
     {moduleTypeFltMulti,   paramType1Bypass,             paramType2Toggle, {{-10,   0}, {5,  5}}, anchorMiddleRight, NULL,        2,  1, NULL,               NULL          },
     {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{ 20,  15}, {7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL,               NULL          },
     {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{ 35,  15}, {7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL,               NULL          },
     {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{ 50,  15}, {7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL,               NULL          },
     {moduleTypeMix4to1C,   paramType1CommonDial,         paramType2Dial,   {{ 65,  15}, {7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL,               NULL          },
-    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{ 26,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               NULL          },
-    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{ 41,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               NULL          },
-    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{ 56,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               NULL          },
-    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{ 71,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               NULL          },
+    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{ 26,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               offOnColourMap},
+    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{ 41,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               offOnColourMap},
+    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{ 56,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               offOnColourMap},
+    {moduleTypeMix4to1C,   paramType1Enable,             paramType2Toggle, {{ 71,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               offOnColourMap},
     {moduleTypeMix4to1C,   paramType1Pad,                paramType2Toggle, {{  3,  20}, {7,  7}}, anchorTopLeft,     "Pad",       2,  0, padStrMap,          NULL          },
     {moduleTypeMix4to1C,   paramType1Exp,                paramType2Toggle, {{  3,  10}, {7,  7}}, anchorTopLeft,     NULL,        3,  0, expStrMap,          NULL          },
     {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "Attack",  128,  0, NULL,               NULL          },
