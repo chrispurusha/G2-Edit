@@ -147,24 +147,20 @@ tRectangle render_dial(tRectangle rectangle, uint32_t value, uint32_t range) {  
 }
 
 tRectangle render_dial_with_text(tRectangle rectangle, char * label, char * buff, uint32_t value, uint32_t range) {
-    //set_rgb_colour(RGB_GREEN);
-    //render_rectangle(moduleArea, rectangle);
-    double y = rectangle.coord.y;
     double textHeight =rectangle.size.h / 4.0;
 
     set_rgb_colour(RGB_BLACK);
 
     if (label != NULL) {
-        render_text(moduleArea, {{rectangle.coord.x, y}, {BLANK_SIZE, textHeight}}, label);
-        y += textHeight;
+        render_text(moduleArea, {{rectangle.coord.x, rectangle.coord.y}, {BLANK_SIZE, textHeight}}, label);
     }
 
     if (buff != NULL) {
-        render_text(moduleArea, {{rectangle.coord.x, y}, {BLANK_SIZE, textHeight}}, buff);
-        y += textHeight;
+        render_text(moduleArea, {{rectangle.coord.x, rectangle.coord.y + textHeight}, {BLANK_SIZE, textHeight}}, buff);
     }
+    
     set_rgb_colour({0.2, 0.2, 0.2});
-    return render_dial({{rectangle.coord.x, y}, {rectangle.size.w, rectangle.size.w}}, value, range);
+    return render_dial({{rectangle.coord.x, rectangle.coord.y+(textHeight * 2.0)}, {rectangle.size.w, rectangle.size.w}}, value, range);
 }
 
 // This might be too generic and won't be able to use, or we add extra params!
@@ -405,7 +401,7 @@ tRectangle adjust_rectangle(tRectangle moduleBase, tRectangle relative, tAnchor 
             relative.coord.y = ((moduleBase.coord.y + (moduleBase.size.h / 2.0)) + relative.coord.y) - (relative.size.h / 2.0);
             break;
         case anchorMiddleRight:
-            relative.coord.x = ((moduleBase.coord.x + moduleBase.size.w) - relative.coord.x) - relative.size.w;
+            relative.coord.x = ((moduleBase.coord.x + moduleBase.size.w) + relative.coord.x) - relative.size.w;
             relative.coord.y = ((moduleBase.coord.y + (moduleBase.size.h / 2.0)) + relative.coord.y) - (relative.size.h / 2.0);
             break;
         case anchorMiddle:
