@@ -194,7 +194,7 @@ void render_top_bar(void) {
     set_rgb_colour(RGB_BLACK);
     render_text(mainArea, {{400.0, 47.0}, {NULL, STANDARD_TEXT_HEIGHT}}, "Variation");
 
-    for (int i = 0; i < VARIATIONS; i++) {
+    for (int i = 0; i < NUM_GUI_VARIATIONS; i++) {
         if (i == gVariation) {
             set_rgb_colour(RGB_GREEN_ON);
         } else {

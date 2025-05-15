@@ -301,6 +301,13 @@ typedef enum {
 } tAnchor;
 
 typedef enum {
+    labelLocUp,
+    labelLocDown,
+    labelLocLeft,
+    labelLocRight,
+} tLabelLoc;
+
+typedef enum {
     paramType1None,
     paramType1Freq,
     paramType1Resonance,
@@ -429,7 +436,7 @@ typedef struct _struct_module {
     tMode                   mode[NUM_MODES]; // Might not need to be an array, since only seeing one mode so far
     char                    name[MODULE_NAME_SIZE + 1];
     uint32_t                allocatedParams;
-    tParam *                param[VARIATIONS];
+    tParam *                param[NUM_VARIATIONS];
     uint32_t                allocatedConnectors;
     tConnector *            connector;
     bool                    gotParamIndexCache;
@@ -559,6 +566,8 @@ typedef struct {
     const tConnectorType type;
     const tRectangle     rectangle;
     const tAnchor        anchor;
+    const char *         label;
+    const tLabelLoc      labelLoc;
 } tConnectorLocation;
 
 typedef struct {

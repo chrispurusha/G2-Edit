@@ -340,7 +340,7 @@ void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, 
     }
 }
 
-void render_connector_common(tRectangle rectangle, tModule * module, tConnectorDir dir, tConnectorType type, uint32_t connectorIndex) {
+void render_connector_common(tRectangle rectangle, tModule * module, tConnectorDir dir, tConnectorType type, uint32_t connectorListIndex, uint32_t connectorIndex) {
     if (module->connector == NULL) {
         printf("No connector index %u on module index %u\n", connectorIndex, module->key.index);
         return;
@@ -349,7 +349,33 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
     module->connector[connectorIndex].dir   = dir;
     module->connector[connectorIndex].type  = type;
 
-    if (module->upRate) {
+    if (connectorLocationList[connectorListIndex].label != NULL) {
+        tRectangle textRectangle = rectangle;
+        textRectangle.size.w = BLANK_SIZE;
+        textRectangle.size.h = STANDARD_TEXT_HEIGHT;
+
+        set_rgb_colour(RGB_BLACK);
+
+        switch (connectorLocationList[connectorListIndex].labelLoc) {
+            case labelLocUp:
+                textRectangle.coord.y -= STANDARD_TEXT_HEIGHT; // May need scaling
+                break;
+            case labelLocDown:
+                textRectangle.coord.y += STANDARD_TEXT_HEIGHT;
+                break;
+            case labelLocLeft:
+                textRectangle.coord.x -= (get_text_width((char *)connectorLocationList[connectorListIndex].label, textRectangle.size.h) + 2);
+                textRectangle.coord.y += 2;
+                break;
+            case labelLocRight:
+                textRectangle.coord.x += (get_text_width((char *)connectorLocationList[connectorListIndex].label, textRectangle.size.h) + 2);
+                textRectangle.coord.y += 2;
+                break;
+        }
+        render_text(moduleArea, textRectangle, (char *)connectorLocationList[connectorListIndex].label);
+    }
+
+    if (module->upRate) { // Todo: should only apply to connectors which carry audio
         type = connectorTypeAudio;
     }
     set_rgb_colour(connectorColourMap[type]);  // Note, was using "module->connector[connectorIndex].type", check that this type param is OK
@@ -458,7 +484,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
             }
             tRectangle adjusted = adjust_rectangle(rectangle, connectorLocationList[i].rectangle, connectorLocationList[i].anchor, module);
             adjusted.size.h = adjusted.size.w; // We want this one to be square
-            render_connector_common(adjusted, module, connectorLocationList[i].direction, connectorLocationList[i].type, connector++);
+            render_connector_common(adjusted, module, connectorLocationList[i].direction, connectorLocationList[i].type, i, connector++);
 
             if (connector >= module_connector_count(module->type)) {
                 break;

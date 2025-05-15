@@ -20,7 +20,8 @@
 #ifndef __DEFS_H__
 #define __DEFS_H__
 
-#define VARIATIONS                        (10) // 10 variations per patch, but only fist 8 presented on the GUI
+#define NUM_VARIATIONS                    (10)     // 10 variations per patch, but only fist 8 presented on the GUI
+#define NUM_GUI_VARIATIONS                (8)
 #define MAX_PARAMS_PER_MODULE             (38)
 #define MAX_CONNECTORS_PER_MODULE         (10)
 #define MAX_SLOTS                         (4)

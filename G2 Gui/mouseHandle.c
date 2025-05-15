@@ -450,26 +450,31 @@ void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord
 }
 
 void init_params_on_new_module(tModule * module) {
-    uint32_t locationListIndex = 0;
-    uint32_t paramIndex        = 0;
-    uint32_t numParams         = module_param_count(module->type);
+    uint32_t        locationListIndex = 0;
+    uint32_t        paramIndex        = 0;
+    uint32_t        numParams         = module_param_count(module->type);
+    tMessageContent messageContent    = {0};
+    uint32_t        defaultValue      = 0;
 
-    for (uint32_t locationListIndex = 0; locationListIndex < array_size_param_location_list(); locationListIndex++) {
+    for (locationListIndex = 0; locationListIndex < array_size_param_location_list(); locationListIndex++) {
         if (paramLocationList[locationListIndex].moduleType == module->type) {
-            tParam * param = &module->param[gVariation][paramIndex];
+            defaultValue = paramLocationList[locationListIndex].defaultValue;
 
-            param->value = paramLocationList[locationListIndex].defaultValue;
-
-            tMessageContent messageContent = {0};
-            messageContent.cmd                 = eMsgCmdSetValue;
-            messageContent.paramData.moduleKey = module->key;
-            messageContent.paramData.param     = paramIndex;
-            messageContent.paramData.variation = 0; // Need to loop through variations
-            messageContent.paramData.value     = param->value;
-
-            msg_send(&gCommandQueue, &messageContent);
+            for (int i = 0; i < NUM_VARIATIONS; i++) {
+                module->param[i][paramIndex].value = defaultValue;
+            }
 
             write_module(module->key, module);
+
+            for (int i = 0; i < NUM_VARIATIONS; i++) {
+                messageContent.cmd                 = eMsgCmdSetValue;
+                messageContent.paramData.moduleKey = module->key;
+                messageContent.paramData.param     = paramIndex;
+                messageContent.paramData.variation = i;
+                messageContent.paramData.value     = defaultValue;
+
+                msg_send(&gCommandQueue, &messageContent);
+            }
 
             paramIndex++;
 
@@ -531,6 +536,11 @@ void menu_action_create(int index) {
 }
 
 void open_module_area_context_menu(tCoord coord) {
+    static tMenuItem ioMenuItems[] = {
+        {"Create Keyboard", menu_action_create, moduleTypeKeyboard, NULL},
+        {"Create Name Bar", menu_action_create, moduleTypeName, NULL},
+        {NULL,              NULL,                                0, NULL}         // End of menu
+    };
     static tMenuItem oscMenuItems[] = {
         {"Create Osc Shape B", menu_action_create, moduleTypeOscShpB, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
@@ -551,12 +561,23 @@ void open_module_area_context_menu(tCoord coord) {
         {NULL,                 NULL,                                0, NULL}      // End of menu
     };
     static tMenuItem moduleMenuItems[] = {
-        {"Create In/Out", menu_action_create, 0, NULL           },
-        {"Create Osc",    menu_action_create, 0, oscMenuItems   },
-        {"Create Env",    menu_action_create, 0, envMenuItems   },
-        {"Create Filter", menu_action_create, 0, filterMenuItems},
-        {"Create Mixer",  menu_action_create, 0, mixerMenuItems },
-        {NULL,            NULL,               0, NULL           }   // End of menu
+        {"Create In/Out",   menu_action_create, 0, ioMenuItems    },
+        {"Create Osc",      menu_action_create, 0, oscMenuItems   },
+        {"Create Random",   menu_action_create, 0, NULL           },
+        {"Create Filter",   menu_action_create, 0, filterMenuItems},
+        {"Create Delay",    menu_action_create, 0, NULL           },
+        {"Create Level",    menu_action_create, 0, NULL           },
+        {"Create Switch",   menu_action_create, 0, NULL           },
+        {"Create Sequence", menu_action_create, 0, NULL           },
+        {"Create Note",     menu_action_create, 0, NULL           },
+        {"Create LFO",      menu_action_create, 0, NULL           },
+        {"Create Env",      menu_action_create, 0, envMenuItems   },
+        {"Create FX",       menu_action_create, 0, NULL           },
+        {"Create Shaper",   menu_action_create, 0, NULL           },
+        {"Create Mixer",    menu_action_create, 0, mixerMenuItems },
+        {"Create Logic",    menu_action_create, 0, NULL           },
+        {"Create Midi",     menu_action_create, 0, NULL           },
+        {NULL,              NULL,               0, NULL           } // End of menu
     };
     static tMenuItem menuItems[] = {
         {"Create module", menu_action_create, 0, moduleMenuItems},
@@ -617,10 +638,9 @@ bool handle_module_click(tCoord coord, int button) {
                             gParamDragging.moduleKey.index    = module.key.index;
                             gParamDragging.moduleKey.location = module.key.location;
                             gParamDragging.type3              = paramType3Param;
-                            //gParamDragging.variation          = gVariation;  // Might not need variation in the dragging struct
-                            gParamDragging.param  = i;
-                            gParamDragging.active = true;
-                            retVal                = true;
+                            gParamDragging.param              = i;
+                            gParamDragging.active             = true;
+                            retVal                            = true;
                         } else {
                             param->value = (param->value + 1) % paramLocationList[param->paramRef].range;
                             write_module(module.key, &module);
@@ -844,7 +864,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
             bool foundVariation = false;
 
-            for (int i = 0; i < VARIATIONS; i++) {
+            for (int i = 0; i < NUM_GUI_VARIATIONS; i++) {
                 if (within_rectangle(coord, gSelectVariation[i].rectangle)) {
                     gSelectVariation[i].function(i);
                     foundVariation = true;

@@ -181,7 +181,7 @@ void delete_module(tModuleKey key, tDoFree doFree) {
         }
 
         if (doFree == doFreeYes) {
-            for (uint32_t i = 0; i < VARIATIONS; i++) {
+            for (uint32_t i = 0; i < NUM_VARIATIONS; i++) {
                 free(dbModule->param[i]);
             }
 
@@ -400,7 +400,7 @@ void database_clear_modules(void) {
     while (module != NULL) {
         nextModule = module->next;
 
-        for (uint32_t i = 0; i < VARIATIONS; i++) {
+        for (uint32_t i = 0; i < NUM_VARIATIONS; i++) {
             free(module->param[i]);
         }
 
@@ -468,7 +468,7 @@ void allocate_module_parameters(tModule * module, uint32_t paramCount) {
     }
 
     if (paramCount > module->allocatedParams) {
-        for (uint32_t i = 0; i < VARIATIONS; i++) {
+        for (uint32_t i = 0; i < NUM_VARIATIONS; i++) {
             if (module->param[i] == NULL) {
                 module->param[i] = malloc(paramCount * sizeof(tParam));
             } else {

@@ -29,23 +29,21 @@ extern void fx_button(uint32_t dummy);
 extern void variation_button(uint32_t variation);
 extern void open_read_file_button(uint32_t dummy);
 
-GLFWwindow *    gWindow                      = NULL;
-uint32_t        gLocation                    = locationVa;
-uint32_t        gVariation                   = 0;
-bool            gReDraw                      = true;
-tButton         gSelectVa                    = {NULL_RECTANGLE, anchorTopLeft, "VA", va_button};     // TODO: put these select items in an array of structures
-tButton         gSelectFx                    = {NULL_RECTANGLE, anchorTopLeft, "FX", fx_button};
-tButton         gSelectOpenReadFile          = {NULL_RECTANGLE, anchorTopLeft, "Read File", open_read_file_button};
-tButton         gSelectVariation[VARIATIONS] = {{NULL_RECTANGLE, anchorTopLeft, "1", variation_button},
-                                                {NULL_RECTANGLE, anchorTopLeft, "2", variation_button},
-                                                {NULL_RECTANGLE, anchorTopLeft, "3", variation_button},
-                                                {NULL_RECTANGLE, anchorTopLeft, "4", variation_button},
-                                                {NULL_RECTANGLE, anchorTopLeft, "5", variation_button},
-                                                {NULL_RECTANGLE, anchorTopLeft, "6", variation_button},
-                                                {NULL_RECTANGLE, anchorTopLeft, "7", variation_button},
-                                                {NULL_RECTANGLE, anchorTopLeft, "8", variation_button},
-                                                {NULL_RECTANGLE, anchorTopLeft, "A", variation_button},
-                                                {NULL_RECTANGLE, anchorTopLeft, "B", variation_button}};
+GLFWwindow *    gWindow                              = NULL;
+uint32_t        gLocation                            = locationVa;
+uint32_t        gVariation                           = 0;
+bool            gReDraw                              = true;
+tButton         gSelectVa                            = {NULL_RECTANGLE, anchorTopLeft, "VA", va_button}; // TODO: put these select items in an array of structures
+tButton         gSelectFx                            = {NULL_RECTANGLE, anchorTopLeft, "FX", fx_button};
+tButton         gSelectOpenReadFile                  = {NULL_RECTANGLE, anchorTopLeft, "Read File", open_read_file_button};
+tButton         gSelectVariation[NUM_GUI_VARIATIONS] = {{NULL_RECTANGLE, anchorTopLeft, "1", variation_button},
+                                                        {NULL_RECTANGLE, anchorTopLeft, "2", variation_button},
+                                                        {NULL_RECTANGLE, anchorTopLeft, "3", variation_button},
+                                                        {NULL_RECTANGLE, anchorTopLeft, "4", variation_button},
+                                                        {NULL_RECTANGLE, anchorTopLeft, "5", variation_button},
+                                                        {NULL_RECTANGLE, anchorTopLeft, "6", variation_button},
+                                                        {NULL_RECTANGLE, anchorTopLeft, "7", variation_button},
+                                                        {NULL_RECTANGLE, anchorTopLeft, "8", variation_button}};
 bool            gShowOpenFileReadDialogue = false;
 tScrollState    gScrollState              = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
 tContextMenu    gContextMenu              = {0};
