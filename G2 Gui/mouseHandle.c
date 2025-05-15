@@ -130,7 +130,7 @@ void update_module_up_rates(void) {
                                 toModule.newUpRate = 1;
                                 write_module(toModuleKey, &toModule);
                                 changesMade = true;
-                            } else if ((fromModule.connector[fromConnIndex].type == connectorTypeAudio) && (toModule.connector[toConnIndex].type == connectorTypeControl)) {
+                            } else if ((fromModule.connector[fromConnIndex].type == connectorTypeAudio) && (toModule.connector[toConnIndex].type != connectorTypeAudio)) {
                                 //printf("From module from is audio and to is control\n");
                                 toModule.newUpRate = 1;
                                 write_module(toModuleKey, &toModule);

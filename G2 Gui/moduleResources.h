@@ -79,7 +79,9 @@ const tRgb   gModuleColourMap[] = {
 const tRgb   connectorColourMap[] =  // TODO - add yellow for gate
 {
     {0.7, 0.2, 0.2},
-    {0.2, 0.2, 0.7}};
+    {0.2, 0.2, 0.7},
+    {0.8, 0.8, 0.2},
+};
 
 
 const tModuleProperties gModuleProperties[] = {
@@ -364,7 +366,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 50,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft    },
     {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 65,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft    },
     {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight   },
-    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, {{  3,  15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft    },
+    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeLogic, {{  3,  15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft    },
     {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft },
     {moduleTypeEnvADSR,    connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight},
     {moduleTypeEnvADSR,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight},

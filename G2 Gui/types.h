@@ -392,7 +392,8 @@ typedef struct _struct_cable {
 
 typedef enum {   // Todo: add a new type for e.g. yellow gate
     connectorTypeAudio,
-    connectorTypeControl
+    connectorTypeControl,
+    connectorTypeLogic
 } tConnectorType;
 
 typedef enum {
