@@ -531,7 +531,9 @@ void menu_action_create(int index) {
         }
     } else {
         gContextMenu.items  = gContextMenu.items[index].subMenu;
-        gContextMenu.active = true;
+        if (gContextMenu.items != NULL) {
+            gContextMenu.active = true;
+        }
     }
 }
 
@@ -760,17 +762,13 @@ void set_y_scroll_bar(double y) {
 }
 
 bool handle_context_menu_click(tCoord coord) {
-    if (!gContextMenu.active) {
+    if ((gContextMenu.active == false) || (gContextMenu.items == NULL)) {
         return false;
     }
+    
     double size        = 0.0;
     double largestSize = 0.0;
     double itemHeight  = STANDARD_TEXT_HEIGHT;
-
-    if (gContextMenu.items == NULL) {
-        printf("No items on context menu (seen an instance of this)!!!\n");
-        exit(1);
-    }
 
     for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
         size = get_text_width(gContextMenu.items[i].label, itemHeight);
