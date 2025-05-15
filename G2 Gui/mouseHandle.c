@@ -538,7 +538,7 @@ void menu_action_create(int index) {
 void open_module_area_context_menu(tCoord coord) {
     static tMenuItem ioMenuItems[] = {
         {"Create Keyboard", menu_action_create, moduleTypeKeyboard, NULL},
-        {"Create Name Bar", menu_action_create, moduleTypeName, NULL},
+        {"Create Name Bar", menu_action_create, moduleTypeName,     NULL},
         {NULL,              NULL,                                0, NULL}         // End of menu
     };
     static tMenuItem oscMenuItems[] = {
@@ -766,6 +766,11 @@ bool handle_context_menu_click(tCoord coord) {
     double size        = 0.0;
     double largestSize = 0.0;
     double itemHeight  = STANDARD_TEXT_HEIGHT;
+
+    if (gContextMenu.items == NULL) {
+        printf("No items on context menu (seen an instance of this)!!!\n");
+        exit(1);
+    }
 
     for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
         size = get_text_width(gContextMenu.items[i].label, itemHeight);
