@@ -55,23 +55,23 @@ void dump_modules(void) {
 
     module = firstModule;
 
-    printf("\n\nDump modules\n");
+    LOG_DEBUG("\n\nDump modules\n");
 
     while (module != NULL) {
-        printf("Location %u\n", module->key.location);
-        printf("Index %u\n", module->key.index);
-        printf(" Type %u\n", module->type);
-        printf(" Name %s\n", module->name);
-        printf(" Row %d\n", module->row);
-        printf(" Column %d\n", module->column);
-        printf(" Prev %p\n", module->prev);
-        printf(" Next %p\n", module->next);
+        LOG_DEBUG("Location %u\n", module->key.location);
+        LOG_DEBUG("Index %u\n", module->key.index);
+        LOG_DEBUG(" Type %u\n", module->type);
+        LOG_DEBUG(" Name %s\n", module->name);
+        LOG_DEBUG(" Row %d\n", module->row);
+        LOG_DEBUG(" Column %d\n", module->column);
+        LOG_DEBUG(" Prev %p\n", module->prev);
+        LOG_DEBUG(" Next %p\n", module->next);
 
         count++;
         module = module->next;
     }
-    printf("\nModule Count=%u\n", count);
-    printf("\n\n");
+    LOG_DEBUG("\nModule Count=%u\n", count);
+    LOG_DEBUG("\n\n");
 
     mutex_unlock();
 }
@@ -127,7 +127,7 @@ void write_module(tModuleKey key, tModule * module) {
         dbModule = (tModule *)malloc(sizeof(tModule));
 
         if (dbModule == NULL) {
-            printf("Malloc fail\n");
+            LOG_ERROR("Malloc fail\n");
             exit(1);
         }
         memset(dbModule, 0, sizeof(*dbModule));
@@ -154,7 +154,7 @@ void write_module(tModuleKey key, tModule * module) {
         dbModule->prev = prev;
         dbModule->next = next;
     } else {
-        printf("Module generation or update failed\n");
+        LOG_ERROR("Module generation or update failed\n");
         exit(1);
     }
     mutex_unlock();
@@ -233,20 +233,20 @@ void dump_cables(void) {
 
     cable = firstCable;
 
-    printf("\n\n\nDump cables\n");
+    LOG_DEBUG("\n\n\nDump cables\n");
 
     while (cable != NULL) {
-        printf("Cable\n");
-        printf("Location %u\n", cable->key.location);
-        printf(" Colour %u\n", cable->colour);
-        printf(" Module from %u\n", cable->key.moduleFromIndex);
-        printf(" Connector from %u\n", cable->key.connectorFromIoCount);
-        printf(" Link type %u\n", cable->key.linkType);
-        printf(" Module to %u\n", cable->key.moduleToIndex);
-        printf(" Connector to %u (depends on link type)\n", cable->key.connectorToIoCount);
+        LOG_DEBUG("Cable\n");
+        LOG_DEBUG("Location %u\n", cable->key.location);
+        LOG_DEBUG(" Colour %u\n", cable->colour);
+        LOG_DEBUG(" Module from %u\n", cable->key.moduleFromIndex);
+        LOG_DEBUG(" Connector from %u\n", cable->key.connectorFromIoCount);
+        LOG_DEBUG(" Link type %u\n", cable->key.linkType);
+        LOG_DEBUG(" Module to %u\n", cable->key.moduleToIndex);
+        LOG_DEBUG(" Connector to %u (depends on link type)\n", cable->key.connectorToIoCount);
         cable = cable->next;
     }
-    printf("\n\n\n");
+    LOG_DEBUG("\n\n\n");
 
     mutex_unlock();
 }
@@ -302,7 +302,7 @@ void write_cable(tCableKey key, tCable * cable) {
         dbCable = (tCable *)malloc(sizeof(tCable));
 
         if (dbCable == NULL) {
-            printf("Malloc fail\n");
+            LOG_DEBUG("Malloc fail\n");
             exit(1);
         }
         memset(dbCable, 0, sizeof(*dbCable));
@@ -327,7 +327,7 @@ void write_cable(tCableKey key, tCable * cable) {
         dbCable->prev = prev;
         dbCable->next = next;
     } else {
-        printf("Cable generation or update failed\n");
+        LOG_DEBUG("Cable generation or update failed\n");
         exit(1);
     }
     mutex_unlock();
@@ -437,7 +437,7 @@ int find_io_count_from_index(tModule * module, tConnectorDir dir, int index) {
     int ioCount = -1;
 
     for (int i = 0; i <= index; i++) {
-        //printf("%d is type %d\n", i, module->connector[i].dir);
+        //LOG_DEBUG("%d is type %d\n", i, module->connector[i].dir);
         if (module->connector[i].dir == dir) {
             ioCount++;
         }
@@ -449,7 +449,7 @@ int find_io_count_from_index(tModule * module, tConnectorDir dir, int index) {
 int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCount) {   // Todo: have an instance of this in graphics too! Needs moving to one place
     int count = 0;
 
-    //printf("%s find index num connectors %u\n", gModuleProperties[module->type].name, gModuleProperties[module->type].numConnectors);
+    //LOG_DEBUG("%s find index num connectors %u\n", gModuleProperties[module->type].name, gModuleProperties[module->type].numConnectors);
     for (uint32_t index = 0; index < module_connector_count(module->type); index++) {
         if (module->connector[index].dir == dir) {
             if (count == targetCount) {
@@ -464,7 +464,7 @@ int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCoun
 
 void allocate_module_parameters(tModule * module, uint32_t paramCount) {
     if ((module_param_count(module->type) > 0) && (module_param_count(module->type) != paramCount)) {
-        printf("Warning! When allocating for %s, param count %u should be %u\n", gModuleProperties[module->type].name, paramCount, module_param_count(module->type));
+        LOG_WARNING("When allocating for %s, param count %u should be %u\n", gModuleProperties[module->type].name, paramCount, module_param_count(module->type));
     }
 
     if (paramCount > module->allocatedParams) {
@@ -488,7 +488,7 @@ void allocate_module_parameters(tModule * module, uint32_t paramCount) {
 
 void allocate_module_connectors(tModule * module, uint32_t connectorCount) {
     if ((module_connector_count(module->type) > 0) && (module_connector_count(module->type) != connectorCount)) {
-        printf("Warning! When allocating for %s, connector count %u should be %u\n", gModuleProperties[module->type].name, connectorCount, module_connector_count(module->type));
+        LOG_WARNING("When allocating for %s, connector count %u should be %u\n", gModuleProperties[module->type].name, connectorCount, module_connector_count(module->type));
     }
 
     // Allocation can happen via several mechanisms, so don't re-allocate if we've already done it

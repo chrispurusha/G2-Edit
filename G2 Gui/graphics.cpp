@@ -93,7 +93,7 @@ void window_close_callback(GLFWwindow * window) {
 }
 
 void error_callback(int error, const char * description) {
-    fprintf(stderr, "Error [%d]: %s\n", error, description);
+    LOG_ERROR("GLFW error [%d]: %s\n", error, description);
 }
 
 void va_button(uint32_t dummy) {
@@ -277,7 +277,7 @@ void init_graphics(void) {
 
     // Preload glyph textures
     if (!preload_glyph_textures("/System/Library/Fonts/Supplemental/Arial.ttf", 72.0f)) {
-        printf("Failed to preload glyph textures.\n");
+        LOG_ERROR("Failed to preload glyph textures\n");
     }
     int renderWidth  = 0;
     int renderHeight = 0;
@@ -289,69 +289,77 @@ void init_graphics(void) {
 }
 
 void read_file_into_memory_and_process(const char * filepath) { // Todo: find a better source file home
-    int    byteOffset = 0;
+    int64_t   byteOffset = 0;
+    int64_t   fileSize   = 0;
+    FILE *    file       = NULL;
+    uint8_t * buff       = NULL;
+    size_t    readSize   = 0;
+    uint8_t   type       = 0;
+    uint32_t  readCrc    = 0;
+    uint32_t  calcCrc    = 0;
 
-    FILE * file = fopen(filepath, "rb");
+    file = fopen(filepath, "rb");
 
     if (!file) {
-        perror("Error opening file");
+        LOG_ERROR("Error opening file\n");
         return;
     }
     fseek(file, 0, SEEK_END);
-    long fileSize = ftell(file);
+    fileSize = ftell(file);
     rewind(file);
 
-    uint8_t * buffer = (uint8_t *)malloc(fileSize);
+    buff = (uint8_t *)malloc(fileSize);
 
-    if (!buffer) {
-        perror("Memory allocation failed");
+    if (buff == NULL) {
+        LOG_ERROR("Memory allocation failed\n");
         fclose(file);
         return;
     }
-    size_t readSize = fread(buffer, 1, fileSize, file);
+    readSize = fread(buff, 1, fileSize, file);
 
     if (readSize != fileSize) {
-        fprintf(stderr, "Failed to read entire file\n");
-        free(buffer);
+        LOG_ERROR("Failed to read entire file\n");
+        free(buff);
         fclose(file);
         return;
     }
 
-    for (long i = 0; i < fileSize; i++) {
-        if (buffer[i] == 0x00) {
+    for (int64_t i = 0; i < fileSize; i++) {
+        if (buff[i] == 0x00) {
             byteOffset = i + 1;
             break;
         }
     }
 
-    uint32_t readCrc = buffer[fileSize - 2] << 8 | buffer[fileSize - 1];
-    uint32_t calcCrc = calc_crc16(buffer + byteOffset, (fileSize - byteOffset) - 2);
+    readCrc = buff[fileSize - 2] << 8 | buff[fileSize - 1];
+    calcCrc = calc_crc16(buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
 
     if (readCrc == calcCrc) {
-        uint8_t version = buffer[byteOffset++];
-        uint8_t type    = buffer[byteOffset++];
-        //printf("Version %u\n", version);
-        //printf("Type %u\n", type);
+        //uint8_t version = buffer[byteOffset++];
+        byteOffset++; // Version
+        type = buff[byteOffset++];
+        //LOG_DEBUG("Version %u\n", version);
+        //LOG_DEBUG("Type %u\n", type);
 
         database_clear_cables();
         database_clear_modules();
 
         if (type == 0) {
-            parse_patch(buffer + byteOffset, (fileSize - byteOffset) - 2);  // Todo - parse_patch should really be in a commonly accessible source file, for file or USB access
+            parse_patch(buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // Todo - parse_patch should really be in a commonly accessible source file, for file or USB access
         } // 1 = performance
     } else {
-        printf("CRC Fail!!!\n");
+        LOG_WARNING("CRC check failed\n");
     }
-    free(buffer);
+    free(buff);
     fclose(file);
 }
 
 void check_action_flags(void) {
     if (gShowOpenFileReadDialogue == true) { // Todo - move to a function
-        const char * path = open_file_dialogue();
+        char * path = open_file_dialogue();
 
         if (path != NULL) {
-            printf("Selected file: %s\n", path);
+            LOG_INFO("Selected file: %s\n", path);
 
             read_file_into_memory_and_process(path);
 

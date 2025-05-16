@@ -20,16 +20,16 @@
 #import "fileDialogue.h"
 #import <Cocoa/Cocoa.h>
 
-const char* open_file_dialogue(void) {
+char * open_file_dialogue(void) {
     @autoreleasepool {
-        NSOpenPanel* panel = [NSOpenPanel openPanel];
+        NSOpenPanel * panel = [NSOpenPanel openPanel];
         [panel setCanChooseFiles:YES];
         [panel setCanChooseDirectories:NO];
         [panel setAllowsMultipleSelection:NO];
         [panel setTitle:@"Select a File"];
 
         if ([panel runModal] == NSModalResponseOK) {
-            NSString *path = [panel.URL path];
+            NSString * path = [panel.URL path];
             return strdup([path UTF8String]); // Caller must free this
         } else {
             return NULL;

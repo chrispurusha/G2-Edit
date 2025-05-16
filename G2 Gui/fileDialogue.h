@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-const char * open_file_dialogue(void);  // Declare the function for C
+char * open_file_dialogue(void);  // Declare the function for C
 
 #ifdef __cplusplus
 }

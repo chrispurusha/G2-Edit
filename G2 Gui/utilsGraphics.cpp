@@ -514,7 +514,7 @@ tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
     char * ch          = NULL;
 
     if (text == NULL) {
-        //printf("render_text text=NULL\n");
+        //LOG_DEBUG("render_text text=NULL\n");
         return {{0.0, 0.0}, {0.0, 0.0}};
     }
     glEnable(GL_TEXTURE_2D);
@@ -593,18 +593,18 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
 
 
     if (FT_Init_FreeType(&ftLibrary)) {
-        printf("Failed to initialize FreeType.\n");
+        LOG_DEBUG("Failed to initialize FreeType.\n");
         return false;
     }
 
     if (FT_New_Face(ftLibrary, fontPath, 0, &face)) {
-        printf("Failed to load font: %s\n", fontPath);
+        LOG_DEBUG("Failed to load font: %s\n", fontPath);
         FT_Done_FreeType(ftLibrary);
         return false;
     }
 
     if (FT_Set_Pixel_Sizes(face, 0, fontSize)) {
-        printf("Failed to set font size.\n");
+        LOG_DEBUG("Failed to set font size.\n");
         FT_Done_Face(face);
         FT_Done_FreeType(ftLibrary);
         return false;
@@ -626,17 +626,17 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
         glyphIndex = FT_Get_Char_Index(face, charCode);
 
         if (glyphIndex == 0) {
-            printf("Glyph index not found for character %d %c\n", charCode, charCode);
+            LOG_DEBUG("Glyph index not found for character %d %c\n", charCode, charCode);
             continue;
         }
 
         if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_DEFAULT)) {
-            printf("Failed to load glyph for character %c\n", charCode);
+            LOG_DEBUG("Failed to load glyph for character %c\n", charCode);
             continue;
         }
 
         if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL)) {
-            printf("Failed to render glyph for character %c\n", charCode);
+            LOG_DEBUG("Failed to render glyph for character %c\n", charCode);
             continue;
         }
         // Track the highest ascent and lowest descent
@@ -760,7 +760,7 @@ void free_textures(void) {
 // Converts normalized value [0,127] back to an angle (-135° to 135°)
 double value_to_angle(uint32_t value, uint32_t range) {
     if (range < 2) {
-        printf("%s() Can't deal with a range of %u\n", __FUNCTION__, range);
+        LOG_ERROR("Can't deal with a range of %u\n", range);
         exit(1);
     }
     return ((double)value * (135.0 * 2.0) / (double)(range - 1)) - 135.0;

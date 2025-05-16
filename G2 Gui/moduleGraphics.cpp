@@ -159,7 +159,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
     uint32_t paramValue = module->param[gVariation][paramIndex].value;
 
     if (paramValue >= paramLocationList[paramRef].range) {
-        printf("Value  %u > Range %u\n", paramValue, paramLocationList[paramRef].range);
+        LOG_ERROR("Value  %u > Range %u\n", paramValue, paramLocationList[paramRef].range);
         exit(1);
     }
     module->param[gVariation][paramIndex].paramRef = paramRef;
@@ -270,8 +270,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
     switch (modeLocationList[modeRef].type1) {
         case paramType1OscWave:
         {
-            char     buff[16]  = {0};
-            uint32_t modeValue = 0;
+            char buff[16] = {0};
 
             snprintf(buff, sizeof(buff), "%u", module->mode[0].value);
             module->mode[modeIndex].rectangle = render_dial_with_text(rectangle, (char *)modeLocationList[modeRef].label, buff, module->mode[0].value, modeLocationList[modeRef].range);
@@ -342,7 +341,7 @@ void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, 
 
 void render_connector_common(tRectangle rectangle, tModule * module, tConnectorDir dir, tConnectorType type, uint32_t connectorListIndex, uint32_t connectorIndex) {
     if (module->connector == NULL) {
-        printf("No connector index %u on module index %u\n", connectorIndex, module->key.index);
+        LOG_ERROR("No connector index %u on module index %u\n", connectorIndex, module->key.index);
         return;
     }
     module->connector[connectorIndex].coord = rectangle.coord;  // Register where we're rendering this connector, for cable connecting

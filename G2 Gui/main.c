@@ -23,13 +23,14 @@ extern "C" {
 
 #include <signal.h>
 
+#include "defs.h"
 #include "graphics.h"
 #include "usbComms.h"
 #include "main.h"
 
 static void signal_handler(int sigraised) {
     // ToDo - deal with signals properly
-    printf("\nSig Handler!!! %d\n", sigraised);
+    LOG_DEBUG("\nSig Handler!!! %d\n", sigraised);
 
     _exit(0);
 }

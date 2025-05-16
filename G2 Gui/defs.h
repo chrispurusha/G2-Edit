@@ -20,6 +20,19 @@
 #ifndef __DEFS_H__
 #define __DEFS_H__
 
+#define ENABLE_DEBUG    // Comment out of not required
+
+#define LOG_ERROR(fmt, ...)           fprintf(stderr, "E %s() " fmt, __func__, ## __VA_ARGS__)
+#define LOG_WARNING(fmt, ...)         fprintf(stderr, "W %s() " fmt, __func__, ## __VA_ARGS__)
+#define LOG_INFO(fmt, ...)            fprintf(stdout, "I %s() " fmt, __func__, ## __VA_ARGS__)
+#ifdef ENABLE_DEBUG
+#define LOG_DEBUG(fmt, ...)           fprintf(stdout, "D %s() " fmt, __func__, ## __VA_ARGS__)
+#define LOG_DEBUG_DIRECT(fmt, ...)    fprintf(stdout, fmt, ## __VA_ARGS__)
+#else
+#define LOG_DEBUG(fmt, ...)           ((void)0)
+#define LOG_DEBUG_DIRECT(fmt, ...)    ((void)0)
+#endif
+
 #define NUM_VARIATIONS                    (10)     // 10 variations per patch, but only fist 8 presented on the GUI
 #define NUM_GUI_VARIATIONS                (8)
 #define MAX_PARAMS_PER_MODULE             (38)

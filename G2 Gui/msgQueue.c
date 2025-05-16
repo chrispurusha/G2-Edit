@@ -38,7 +38,7 @@ void msg_init(tMessageQueue * msgQueue, char * semName) {
         msgQueue->semaphore = sem_open(semName, 0);
 
         if (msgQueue->semaphore == SEM_FAILED) {
-            fprintf(stderr, "%s() Semaphore '%s' create/open failed\n", __FUNCTION__, semName);
+            LOG_ERROR("Semaphore '%s' create/open failed\n", semName);
             return;
         }
     }
@@ -51,12 +51,12 @@ int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageCon
     tMessage * oldMsgQueue = NULL;
 
     if (msgQueue == NULL) {
-        fprintf(stderr, "%s() msgQueue==NULL\n", __FUNCTION__);
+        LOG_DEBUG("msgQueue==NULL\n");
         return retVal;
     }
 
     if (messageContent == NULL) {
-        fprintf(stderr, "%s() messageContent==NULL\n", __FUNCTION__);
+        LOG_DEBUG("messageContent==NULL\n");
         return retVal;
     }
 
@@ -105,14 +105,14 @@ void msg_send(tMessageQueue * msgQueue, tMessageContent * messageContent) {
     tMessage * message = NULL;
 
     if (msgQueue == NULL) {
-        fprintf(stderr, "%s() msgQueue==NULL\n", __FUNCTION__);
+        LOG_DEBUG("msgQueue==NULL\n");
         return;
     }
     // Allocate memory for the new message
     message = malloc(sizeof(tMessage));
 
     if (message == NULL) {
-        fprintf(stderr, "%s() Memory allocation failed for message\n", __FUNCTION__);
+        LOG_DEBUG("Memory allocation failed for message\n");
         return;         // Memory allocation failure
     }
     memset(message, 0, sizeof(tMessage));

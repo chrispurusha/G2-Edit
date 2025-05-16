@@ -72,7 +72,7 @@ void register_full_patch_change_notify_cb(void ( *func_ptr )(void)) {
 
 static void call_wake_glfw(void) {
     if (wake_glfw_func_ptr == NULL) {
-        printf("Wake GLFW callback function not registered\n");
+        LOG_ERROR("Wake GLFW callback function not registered\n");
         exit(1);
     }
     wake_glfw_func_ptr();
@@ -80,7 +80,7 @@ static void call_wake_glfw(void) {
 
 static void call_full_patch_change_notify(void) {
     if (full_patch_change_notify_func_ptr == NULL) {
-        printf("Full patch change callback function not registered\n");
+        LOG_ERROR("Full patch change callback function not registered\n");
         exit(1);
     }
     full_patch_change_notify_func_ptr();
@@ -95,45 +95,45 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     if (buff == NULL) {
         return retVal;
     }
-    printf("Clavia string '");
+    LOG_DEBUG("Clavia string '");
 
     for (i = 0; i < 11; i++) {
         ch = read_bit_stream(buff, &bitPos, 8);
 
         if ((ch <= 0x7f) && (ch >= 0x20)) {
-            printf("%c", ch);
+            LOG_DEBUG_DIRECT("%c", ch);
         }
     }
 
-    printf("'\n");
+    LOG_DEBUG_DIRECT("'\n");
 
-    printf("Perf Mode 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    printf("Perf Bank 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    printf("Perf Location 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    printf("Memory Protect (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 1));
+    LOG_DEBUG("Perf Mode 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Perf Bank 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Perf Location 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Memory Protect (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 1));
     read_bit_stream(buff, &bitPos, 7);
-    printf("MIDI chan Slot A 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    printf("MIDI chan Slot A 0x%x\n", read_bit_stream(buff, &bitPos, 8));     // 16 = off/disabled
-    printf("MIDI chan Slot A 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    printf("MIDI chan Slot A 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    printf("Global chan 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    printf("Sysex ID 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    printf("Local on (bit 0)0x%x\n", read_bit_stream(buff, &bitPos, 1));     //Actually top bit = 0x80
+    LOG_DEBUG("MIDI chan Slot A 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("MIDI chan Slot A 0x%x\n", read_bit_stream(buff, &bitPos, 8));     // 16 = off/disabled
+    LOG_DEBUG("MIDI chan Slot A 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("MIDI chan Slot A 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Global chan 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Sysex ID 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Local on (bit 0)0x%x\n", read_bit_stream(buff, &bitPos, 1));     //Actually top bit = 0x80
     read_bit_stream(buff, &bitPos, 7);
     read_bit_stream(buff, &bitPos, 6);
-    printf("Prog Change Rcv 0x%x\n", read_bit_stream(buff, &bitPos, 1));
-    printf("Prog Change Snd 0x%x\n", read_bit_stream(buff, &bitPos, 1));
+    LOG_DEBUG("Prog Change Rcv 0x%x\n", read_bit_stream(buff, &bitPos, 1));
+    LOG_DEBUG("Prog Change Snd 0x%x\n", read_bit_stream(buff, &bitPos, 1));
     read_bit_stream(buff, &bitPos, 6);
-    printf("Controllers Rcv 0x%x\n", read_bit_stream(buff, &bitPos, 1));     // send actually bit 0
-    printf("Controllers Snd 0x%x\n", read_bit_stream(buff, &bitPos, 1));     // send actually bit 0
-    printf("Send Clock (bit 1), ignore ext clock (bit 2) , 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    printf("Tune cent 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    printf("Global Shift Active (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    printf("Global Octave Shift 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    printf("Tune semi 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    printf("Filler 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    printf("Pedal Polarity (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 8));     //0xC0 (1100) = closed, 0x40 (0100) = open therefore bit 7
-    printf("Control Pedal Gain 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Controllers Rcv 0x%x\n", read_bit_stream(buff, &bitPos, 1));     // send actually bit 0
+    LOG_DEBUG("Controllers Snd 0x%x\n", read_bit_stream(buff, &bitPos, 1));     // send actually bit 0
+    LOG_DEBUG("Send Clock (bit 1), ignore ext clock (bit 2) , 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Tune cent 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Global Shift Active (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Global Octave Shift 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Tune semi 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Filler 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Pedal Polarity (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 8));     //0xC0 (1100) = closed, 0x40 (0100) = open therefore bit 7
+    LOG_DEBUG("Control Pedal Gain 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     //17 other unknown bytes to go
 
     retVal = EXIT_SUCCESS;
@@ -144,24 +144,23 @@ static int parse_synth_settings(uint8_t * buff, int length) {
 static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
     uint32_t   i      = 0;
     uint32_t   j      = 0;
-    uint32_t   mode   = 0;
     uint32_t   type   = 0;
     tModuleKey key    = {0};
     tModule    module = {0};
 
-    printf("Module list\n");
+    LOG_DEBUG("Module list\n");
 
     key.location = read_bit_stream(buff, subOffset, 2);
-    printf("Location       0x%x\n", key.location);     // Discerns between FX and main, could put in the module itself
+    LOG_DEBUG("Location       0x%x\n", key.location);     // Discerns between FX and main, could put in the module itself
     uint32_t moduleCount = read_bit_stream(buff, subOffset, 8);
-    printf("Module Count   %d\n", moduleCount);
+    LOG_DEBUG("Module Count   %d\n", moduleCount);
 
     for (i = 0; i < moduleCount; i++) {
         type      = read_bit_stream(buff, subOffset, 8);
         key.index = read_bit_stream(buff, subOffset, 8);
 
         if (read_module(key, &module) == true) {
-            printf("Module already created\n");
+            LOG_DEBUG("Module already created\n");
         }
         module.type      = type;
         module.column    = read_bit_stream(buff, subOffset, 7);        // 7
@@ -174,14 +173,14 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
 
         for (j = 0; j < module.modeCount; j++) {
             module.mode[j].value = read_bit_stream(buff, subOffset, 6);
-            printf("Mode index %u = %u\n", j, module.mode[j].value);
-            printf("MODE %u %u\n", i, module.mode[j].value);
+            LOG_DEBUG("Mode index %u = %u\n", j, module.mode[j].value);
+            LOG_DEBUG("MODE %u %u\n", i, module.mode[j].value);
         }
 
         allocate_module_parameters(&module, module_param_count(type)); // Also done on parameter set-up, so whichever's first
         allocate_module_connectors(&module, module_connector_count(type));
 
-        printf("Number connectors for module %u\n", module_connector_count(type));
+        LOG_DEBUG("Number connectors for module %u\n", module_connector_count(type));
         write_module(key, &module);
     }
 }
@@ -190,27 +189,27 @@ static void parse_cable_list(uint8_t * buff, uint32_t * subOffset) {
     tCableKey key   = {0};
     tCable    cable = {0};
 
-    printf("Cable list\n");
+    LOG_DEBUG("Cable list\n");
 
     key.location = read_bit_stream(buff, subOffset, 2);
-    printf("Location       0x%x\n", key.location);
-    printf("Unknown        0x%x\n", read_bit_stream(buff, subOffset, 12));
+    LOG_DEBUG("Location       0x%x\n", key.location);
+    LOG_DEBUG("Unknown        0x%x\n", read_bit_stream(buff, subOffset, 12));
     uint32_t cableCount = read_bit_stream(buff, subOffset, 10);
-    printf("Cable Count    %d\n", cableCount);
+    LOG_DEBUG("Cable Count    %d\n", cableCount);
 
     for (uint32_t i = 0; i < cableCount; i++) {
         cable.colour = read_bit_stream(buff, subOffset, 3);
-        //printf(" Colour         0x%x\n", cable.colour);
+        //LOG_DEBUG(" Colour         0x%x\n", cable.colour);
         key.moduleFromIndex = read_bit_stream(buff, subOffset, 8);         // key will get written into struct on write
-        //printf(" Module From    %d\n", key.moduleFromIndex);
+        //LOG_DEBUG(" Module From    %d\n", key.moduleFromIndex);
         key.connectorFromIoCount = read_bit_stream(buff, subOffset, 6);
-        //printf(" Connector From %d\n", key.connectorFromIoCount);
+        //LOG_DEBUG(" Connector From %d\n", key.connectorFromIoCount);
         key.linkType = read_bit_stream(buff, subOffset, 1);   // 1 = output to input, 0 = input to input
-        //printf(" Link Type      0x%x\n", key.linkType);
+        //LOG_DEBUG(" Link Type      0x%x\n", key.linkType);
         key.moduleToIndex = read_bit_stream(buff, subOffset, 8);
-        //printf(" Module To      %d\n", key.moduleToIndex);
+        //LOG_DEBUG(" Module To      %d\n", key.moduleToIndex);
         key.connectorToIoCount = read_bit_stream(buff, subOffset, 6);
-        //printf(" Connector To   %d\n", key.connectorToIoCount);
+        //LOG_DEBUG(" Connector To   %d\n", key.connectorToIoCount);
 
         write_cable(key, &cable);
     }
@@ -228,22 +227,22 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
     int        j              = 0;
     int        k              = 0;
 
-    printf("Param list\n");
+    LOG_DEBUG("Param list\n");
     key.location = read_bit_stream(buff, subOffset, 2);
-    printf("Location       0x%x\n", key.location);     // 0..1 = param list, 2 = patch settings 2=morph!?
+    LOG_DEBUG("Location       0x%x\n", key.location);     // 0..1 = param list, 2 = patch settings 2=morph!?
     // SWITCH ON LOC BEING 0..1 or 2
 
     moduleCount = read_bit_stream(buff, subOffset, 8);
-    printf("Module Count      %u\n", moduleCount);
+    LOG_DEBUG("Module Count      %u\n", moduleCount);
     variationCount = read_bit_stream(buff, subOffset, 8);     // Should always be 10 (VARIATIONS) - todo: sanity check
-    printf("Variation Count      %u\n", variationCount);
+    LOG_DEBUG("Variation Count      %u\n", variationCount);
 
     for (i = 0; i < moduleCount; i++) {
         key.index = read_bit_stream(buff, subOffset, 8);
-        printf(" Module Index        %u\n", key.index);
+        LOG_DEBUG(" Module Index        %u\n", key.index);
 
         paramCount = read_bit_stream(buff, subOffset, 7);
-        printf("  variation list param count = %u\n", paramCount);
+        LOG_DEBUG("  variation list param count = %u\n", paramCount);
 
         read_module(key, &module);
 
@@ -251,11 +250,14 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
 
         for (j = 0; j < variationCount; j++) {                                                          // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
             uint32_t variation = read_bit_stream(buff, subOffset, 8);
-            //printf("   Variation %02d Variation %u\n", j, variation);         // Should match!!!
+
+            if (j != variation) {
+                LOG_WARNING("loop var %u != variation %u\n", j, variation);
+            }
 
             for (k = 0; k < paramCount; k++) {
                 paramValue = read_bit_stream(buff, subOffset, 7);
-                //printf("   Param number %02d param value %02d\n", k, paramValue);
+                //LOG_DEBUG("   Param number %02d param value %02d\n", k, paramValue);
                 module.param[j][k].value = paramValue;
             }
         }
@@ -276,44 +278,44 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
     int        j      = 0;
     int        k      = 0;
 
-    printf("Param names\n");
+    LOG_DEBUG("Param names\n");
 
     key.location = read_bit_stream(buff, subOffset, 2);
-    printf("Location       0x%x\n", key.location);
-    //printf("Unknown        %d\n", read_bit_stream(buff, subOffset, 6));
+    LOG_DEBUG("Location       0x%x\n", key.location);
+    //LOG_DEBUG("Unknown        %d\n", read_bit_stream(buff, subOffset, 6));
     nameCount = read_bit_stream(buff, subOffset, 8);
-    printf("NameCount      %d\n", nameCount);
-    //printf("Module count      %d\n", read_bit_stream(buff, subOffset, 8));
+    LOG_DEBUG("NameCount      %d\n", nameCount);
+    //LOG_DEBUG("Module count      %d\n", read_bit_stream(buff, subOffset, 8));
 
     // SWITCH ON LOC BEING 0..1 or 2
     for (i = 0; i < nameCount; i++) {
         key.index = read_bit_stream(buff, subOffset, 8);
-        printf("Module index      %d\n", key.index);
+        LOG_DEBUG("Module index      %d\n", key.index);
 
         if (read_module(key, &module) == false) {
             write_module(key, &module);
         }
         moduleLength = read_bit_stream(buff, subOffset, 8);
-        printf("Module length     %d\n", moduleLength);         // 5004
+        LOG_DEBUG("Module length     %d\n", moduleLength);         // 5004
 
         for (j = 0; j < moduleLength;) {
-            printf("IsString     %d\n", read_bit_stream(buff, subOffset, 8));
+            LOG_DEBUG("IsString     %d\n", read_bit_stream(buff, subOffset, 8));
             paramLength = read_bit_stream(buff, subOffset, 8);
-            printf("ParamLen     %d\n", paramLength);
-            printf("Param Index  %d\n", read_bit_stream(buff, subOffset, 8));
+            LOG_DEBUG("ParamLen     %d\n", paramLength);
+            LOG_DEBUG("Param Index  %d\n", read_bit_stream(buff, subOffset, 8));
             j += 3;
-            printf("Param name: ");
+            LOG_DEBUG("Param name: ");
 
             if (paramLength > 0) { // Shouldn't ever be zero, so since we've seen that - something strange happening, generate error!?
                 for (k = 0; k < paramLength - 1; k++) {
                     uint8_t ch = read_bit_stream(buff, subOffset, 8);
 
                     if ((ch >= 0x20) && (ch <= 0x7f)) {
-                        printf("%c", ch);
+                        LOG_DEBUG_DIRECT("%c", ch);
                     }
                 }
 
-                printf("\n");
+                LOG_DEBUG_DIRECT("\n");
                 j += paramLength - 1;
             }
         }
@@ -327,19 +329,19 @@ static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
     char       name[MODULE_NAME_SIZE + 1];
 
 
-    printf("Module names\n");
+    LOG_DEBUG("Module names\n");
 
     key.location = read_bit_stream(buff, subOffset, 2);
     read_bit_stream(buff, subOffset, 6);
-    printf("Location 0x%x\n", key.location);
+    LOG_DEBUG("Location 0x%x\n", key.location);
     uint32_t items = read_bit_stream(buff, subOffset, 8);
-    printf("Items %u\n", items);
+    LOG_DEBUG("Items %u\n", items);
 
     for (i = 0; i < items; i++) {
         key.index = read_bit_stream(buff, subOffset, 8);
-        printf(" Module Name Index %u\n", key.index);
+        LOG_DEBUG(" Module Name Index %u\n", key.index);
 
-        printf(" Module loc %u index %u\n", module.key.location, module.key.index);
+        LOG_DEBUG(" Module loc %u index %u\n", module.key.location, module.key.index);
 
         for (int k = 0; k < MODULE_NAME_SIZE; k++) {
             name[k] = read_bit_stream(buff, subOffset, 8);
@@ -350,7 +352,7 @@ static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
         }
 
         name[sizeof(name) - 1] = '\0'; // Make sure we're null terminated
-        printf("%s\n", name);
+        LOG_DEBUG("%s\n", name);
 
         if (read_module(key, &module) == true) {
             strncpy(module.name, name, sizeof(module.name));
@@ -371,7 +373,7 @@ int parse_patch(uint8_t * buff, int length) { // Todo - also accessed from file,
         int16_t  count     = read_bit_stream(buff, &bitOffset, 16);
         uint32_t subOffset = bitOffset;
 
-        printf("Type = 0x%x, Count = %d\n", type, count);
+        LOG_DEBUG("Type = 0x%x, Count = %d\n", type, count);
 
         switch (type) {
             case 0x4a:     // Module list
@@ -401,23 +403,23 @@ int parse_patch(uint8_t * buff, int length) { // Todo - also accessed from file,
                 break;
 
             case 0x21:
-                printf("Patch Descr\n");
+                LOG_DEBUG("Patch Descr\n");
                 break;
 
             case 0x65:
-                printf("Morph Params\n");
+                LOG_DEBUG("Morph Params\n");
                 break;
 
             case 0x62:
-                printf("Knobs\n");
+                LOG_DEBUG("Knobs\n");
                 break;
 
             case 0x60:
-                printf("Controllers\n");
+                LOG_DEBUG("Controllers\n");
                 break;
 
             default:
-                printf("Unprocessed type 0x%02x\n", type);
+                LOG_DEBUG("Unprocessed type 0x%02x\n", type);
                 break;
         }
         bitOffset += SIGNED_BYTE_TO_BIT(count);
@@ -458,12 +460,12 @@ static void parse_param_change(uint8_t * buff, int length) {
     module.param[variation][param].value = value;
     write_module(key, &module);
 
-    printf("param = %u value = %u\n", param, value);
+    LOG_DEBUG("param = %u value = %u\n", param, value);
 }
 
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t commandResponse, uint8_t subCommand, int length) {
-    int i = 0;
-    int j = 0;
+    tModule module = {0};
+    int     i      = 0;
 
     switch (commandResponse) {
         case 0x00: // slot!?
@@ -473,12 +475,11 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 
             switch (subCommand) {
                 case SUB_COMMAND_VOLUME_INDICATOR:
-                    tModule module = {0};
-
-                    //printf("Vol ");
+                {
+                    //LOG_DEBUG("Vol ");
                     //for (i = 4; i < 40; i++)
-                    //    printf("0x%02x ", buff[i]);
-                    //printf("\n");
+                    //    LOG_DEBUG("0x%02x ", buff[i]);
+                    //LOG_DEBUG("\n");
 
                     for (int k = 0; k <= 255; k++) {
                         module.key.location = gLocation;
@@ -515,7 +516,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                             }
 
                             if (gModuleProperties[module.type].volumeType != volumeTypeNone) {
-                                //printf("Module %u vol %u %u\n", module.key.index, module.volume[0], module.volume[1]);
+                                //LOG_DEBUG("Module %u vol %u %u\n", module.key.index, module.volume[0], module.volume[1]);
                                 write_module(module.key, &module);
                             }
                         }
@@ -523,17 +524,17 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 
                     call_wake_glfw();
                     return EXIT_SUCCESS;
-
+                }
                 case SUB_COMMAND_LED_DATA:
-
+                {
                     for (i = 4; i < (length - 2); i++) {
                         buff[i] = reverse_bits_in_byte(buff[i]);
                     }
 
-                    //printf("LED ");
+                    //LOG_DEBUG("LED ");
                     //for (i = 4; i < (length-2); i++)
-                    //    printf("0x%02x ", buff[i]);
-                    //printf("\n");
+                    //    LOG_DEBUG("0x%02x ", buff[i]);
+                    //LOG_DEBUG("\n");
 
                     read_bit_stream(buff, bitPos, 8); // Seems to be a byte of padding
 
@@ -546,7 +547,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                                 module.led.value = read_bit_stream(buff, bitPos, 1);
                                 read_bit_stream(buff, bitPos, 1); // Not sure if this is used for anything yet, might just be padding
 
-                                //printf("Module %u LED %u\n", module.key.index, module.led);
+                                //LOG_DEBUG("Module %u LED %u\n", module.key.index, module.led);
                                 write_module(module.key, &module);
                             }
                         }
@@ -554,116 +555,124 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 
                     call_wake_glfw();
                     return EXIT_SUCCESS;
-
+                }
                 case 0x7E:
-                    printf("Got Error!!!\n");
+                {
+                    LOG_DEBUG("Got Error!!!\n");
                     return EXIT_FAILURE;
-
+                }
                 case 0x72:
-                    printf("Got resources in use slot %u\n", commandResponse);
+                {
+                    LOG_DEBUG("Got resources in use slot %u\n", commandResponse);
                     return EXIT_SUCCESS;
-
+                }
                 case 0x40:
+                {
                     parse_param_change(&buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
                     call_wake_glfw();
                     return EXIT_SUCCESS;
-
+                }
                 default:
-                    printf("Got 0x00 Unknown sub-command 0x%02x\n", subCommand);
+                    LOG_DEBUG("Got 0x00 Unknown sub-command 0x%02x\n", subCommand);
                     return EXIT_SUCCESS;
             }
         case 0x0C:
-
+        {
             switch (subCommand) {
                 case SUB_COMMAND_OK:
-                    //printf("Got 0x0c OK\n");
+                    //LOG_DEBUG("Got 0x0c OK\n");
                     return EXIT_SUCCESS;
 
                 case SUB_COMMAND_GET_PATCH_VERSION:
-                    printf("Got get patch version\n");
+                    LOG_DEBUG("Got get patch version\n");
                     return parse_patch_version(&buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
 
                 case 0x03:
-                    printf("Got synth settings\n");
+                    LOG_DEBUG("Got synth settings\n");
                     return parse_synth_settings(&buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
 
                 case 0x80:
-                    printf("Got response to deliberate unknown message 1\n");
+                    LOG_DEBUG("Got response to deliberate unknown message 1\n");
                     return EXIT_SUCCESS;
 
                 case 0x1E:
-                    printf("Got response to deliberate unknown message 2\n");
+                    LOG_DEBUG("Got response to deliberate unknown message 2\n");
                     return EXIT_SUCCESS;
 
                 default:
-                    printf("Got 0x0C Unknown sub-command 0x%02x\n", subCommand);
+                    LOG_DEBUG("Got 0x0C Unknown sub-command 0x%02x\n", subCommand);
                     return EXIT_FAILURE;
             }
+        }
         case 0x04:
-
+        {
             switch (subCommand) {
                 case 0x38:
-                    printf("Got Patch load\n");
+                    LOG_DEBUG("Got Patch load\n");
                     gotPatchChangeIndication = true;
                     return EXIT_SUCCESS;
 
                 case 0x05:
-                    printf("Got unknown sub-command 0x05 - possibly assigned voices\n");
+                    LOG_DEBUG("Got unknown sub-command 0x05 - possibly assigned voices\n");
                     return EXIT_SUCCESS;
 
                 case 0x04:
-                    printf("Got unknown sub-command 0x04\n");
+                    LOG_DEBUG("Got unknown sub-command 0x04\n");
                     return EXIT_SUCCESS;
 
                 case 0x29:
-                    printf("Got performance name\n");
+                    LOG_DEBUG("Got performance name\n");
                     return EXIT_SUCCESS;
 
                 default:
-                    printf("Got 0x04 Unknown sub-command 0x%02x\n", subCommand);
+                    LOG_DEBUG("Got 0x04 Unknown sub-command 0x%02x\n", subCommand);
                     return EXIT_FAILURE;
             }
+        }
         case 0x08:
-
+        {
             switch (subCommand) {
                 case 0x36:
-                    printf("Got Patch Version\n");
-                    printf("Val 1 0x%02x\n", read_bit_stream(buff, bitPos, 8));
-                    printf("Val 2 0x%02x\n", read_bit_stream(buff, bitPos, 8));
-                    printf("Val 3 0x%02x\n", read_bit_stream(buff, bitPos, 8));
+                    LOG_DEBUG("Got Patch Version\n");
+                    LOG_DEBUG("Val 1 0x%02x\n", read_bit_stream(buff, bitPos, 8));
+                    LOG_DEBUG("Val 2 0x%02x\n", read_bit_stream(buff, bitPos, 8));
+                    LOG_DEBUG("Val 3 0x%02x\n", read_bit_stream(buff, bitPos, 8));
                     return EXIT_SUCCESS;
 
                 case 0x21:
-                    printf("Got Patch info\n");
+                    LOG_DEBUG("Got Patch info\n");
                     parse_patch(&buff[BIT_TO_BYTE(*bitPos) - 1], (length - BIT_TO_BYTE(*bitPos) - CRC_BYTES) + 1);
                     return EXIT_SUCCESS;
 
                 case 0x27:
-                    printf("Got Patch name (length %d)'", length);
+                    LOG_DEBUG("Got Patch name (length %d)'", length);
 
                     for (int i = 0; i < (length - 6); i++) {
                         uint8_t ch = read_bit_stream(buff, bitPos, 8);
 
-                        //printf("<0x%02x> ", ch);
+                        //LOG_DEBUG("<0x%02x> ", ch);
                         if (ch <= 0x7F) {         // Only print valid ASCII characters - should be 16 chars max = length of 22
-                            printf("%c", ch);
+                            LOG_DEBUG_DIRECT("%c", ch);
                         }
                     }
 
-                    printf("'\n");
+                    LOG_DEBUG_DIRECT("'\n");
                     return EXIT_SUCCESS;
 
                 case 0x7F:
-                    //printf("Got 0x7f OK\n");
+                    //LOG_DEBUG("Got 0x7f OK\n");
                     return EXIT_SUCCESS;
 
                 default:
-                    printf("Got 0x08 Unknown sub-command 0x%02x\n", subCommand);
+                    LOG_DEBUG("Got 0x08 Unknown sub-command 0x%02x\n", subCommand);
                     return EXIT_FAILURE;
             }
+        }
         default:
-            printf("Got Unknown command response 0x%02x\n", commandResponse);
+        {
+            LOG_DEBUG("Got Unknown command response 0x%02x\n", commandResponse);
             return EXIT_FAILURE;
+        }
     }
 }
 
@@ -676,21 +685,24 @@ static int parse_incoming(uint8_t * buff, int length) {
 
     switch (responseType) {
         case RESPONSE_TYPE_INIT:
-            printf("Got Response init\n");
+        {
+            LOG_DEBUG("Got Response init\n");
             return EXIT_SUCCESS;
-
+        }
         case RESPONSE_TYPE_COMMAND:
         {
             uint8_t commandResponse = read_bit_stream(buff, &bitPos, 8);
-            uint8_t version         = read_bit_stream(buff, &bitPos, 8);
-            uint8_t subCommand      = read_bit_stream(buff, &bitPos, 8);
+            /*uint8_t version         =*/ read_bit_stream(buff, &bitPos, 8);
+            uint8_t subCommand = read_bit_stream(buff, &bitPos, 8);
 
             return parse_command_response(buff, &bitPos, commandResponse, subCommand, length);
         }
 
         default:
-            printf("Got Unknown response type 0x%02x\n", responseType);
+        {
+            LOG_DEBUG("Got Unknown response type 0x%02x\n", responseType);
             return EXIT_FAILURE;
+        }
     }
 }
 
@@ -721,11 +733,11 @@ static int rcv_extended(int dataLength) {
         if (calc_crc16(buff, dataLength - 2) == read_bit_stream(buff, &bitPos, 16)) {
             retVal = parse_incoming(buff, dataLength);
         } else {
-            printf("Bad CRC on ext message\n");
+            LOG_DEBUG("Bad CRC on ext message\n");
             retVal = -1;
         }
     } else {
-        printf("Read ext problem! Read length = %d, data length = %d\n", readLength, dataLength);
+        LOG_DEBUG("Read ext problem! Read length = %d, data length = %d\n", readLength, dataLength);
     }
     return retVal;
 }
@@ -816,7 +828,7 @@ static int send_command(int state) {
                             break;
 
                         default:
-                            printf("Unknown state %d\n", state);
+                            LOG_DEBUG("Unknown state %d\n", state);
                             break;
                     }
                     break;
@@ -866,13 +878,13 @@ static int send_command(int state) {
                     break;
 
                 default:
-                    printf("Unknown state %d\n", state);
+                    LOG_DEBUG("Unknown state %d\n", state);
                     break;
             }
             break;
 
         default:
-            printf("Unknown state %d\n", state);
+            LOG_DEBUG("Unknown state %d\n", state);
             break;
     }
     msgLength = pos - COMMAND_OFFSET;
@@ -921,7 +933,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->modeData.moduleKey.index;
             buff[pos++] = messageContent->modeData.mode;
             buff[pos++] = messageContent->modeData.value;
-            printf("SET MODE %u %u\n", messageContent->modeData.mode, messageContent->modeData.value);
+            LOG_DEBUG("SET MODE %u %u\n", messageContent->modeData.mode, messageContent->modeData.value);
             break;
 
         case eMsgCmdWriteCable:
@@ -939,7 +951,7 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdWriteModule:
-            printf("Writing module!\n");
+            LOG_DEBUG("Writing module!\n");
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot; //+slot
             buff[pos++] = slotVersion[slot];                 // needs to be slot ultimately
@@ -1069,7 +1081,7 @@ static void state_handler(void) {
             break;
 
         default:
-            printf("State unknown %d\n", state);
+            LOG_DEBUG("State unknown %d\n", state);
             usleep(1000);
             break;
     }
@@ -1095,7 +1107,7 @@ static void state_handler(void) {
 
 static void usb_comms_signal_handler(int sigraised) {
     // ToDo - deal with signals properly
-    printf("\nUSBComms Sig Handler!!! %d\n", sigraised);
+    LOG_DEBUG("\nUSBComms Sig Handler!!! %d\n", sigraised);
 
     _exit(0);
 }

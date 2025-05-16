@@ -126,12 +126,12 @@ void update_module_up_rates(void) {
                     if ((fromConnIndex != -1) && (toConnIndex != -1)) {
                         if (toModule.newUpRate == 0) {
                             if (fromModule.newUpRate == 1) {
-                                //printf("From module is uprated from = %u %u\n", fromModule.key.location, fromModule.key.index);
+                                //LOG_DEBUG("From module is uprated from = %u %u\n", fromModule.key.location, fromModule.key.index);
                                 toModule.newUpRate = 1;
                                 write_module(toModuleKey, &toModule);
                                 changesMade = true;
                             } else if ((fromModule.connector[fromConnIndex].type == connectorTypeAudio) && (toModule.connector[toConnIndex].type != connectorTypeAudio)) {
-                                //printf("From module from is audio and to is control\n");
+                                //LOG_DEBUG("From module from is audio and to is control\n");
                                 toModule.newUpRate = 1;
                                 write_module(toModuleKey, &toModule);
                                 changesMade = true;
@@ -490,7 +490,6 @@ void menu_action_create(int index) {
         tModule         module         = {0};
         tMessageContent messageContent = {0};
         int32_t         uniqueIndex    = 0;
-        uint32_t        cpySize        = 0;
 
         module.key.location = gLocation;
         uniqueIndex         = find_unique_module_id(module.key.location);
@@ -530,7 +529,8 @@ void menu_action_create(int index) {
             init_params_on_new_module(&module);
         }
     } else {
-        gContextMenu.items  = gContextMenu.items[index].subMenu;
+        gContextMenu.items = gContextMenu.items[index].subMenu;
+
         if (gContextMenu.items != NULL) {
             gContextMenu.active = true;
         }
@@ -765,7 +765,6 @@ bool handle_context_menu_click(tCoord coord) {
     if ((gContextMenu.active == false) || (gContextMenu.items == NULL)) {
         return false;
     }
-    
     double size        = 0.0;
     double largestSize = 0.0;
     double itemHeight  = STANDARD_TEXT_HEIGHT;
@@ -853,7 +852,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     coord.x = (coord.x * (double)get_render_width()) / (double)width;
     coord.y = (coord.y * (double)get_render_height()) / (double)height;
 
-    //printf("button=%d action=%d mods=%d\n", button, action, mods);
+    //LOG_DEBUG("button=%d action=%d mods=%d\n", button, action, mods);
 
     if (action == GLFW_PRESS) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -949,15 +948,13 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 }
 
 void cursor_pos(GLFWwindow * window, double x, double y) {
-    int             width             = 0;
-    int             height            = 0;
-    double          angle             = 0.0;
-    uint32_t        value             = 0;
-    uint32_t        scaledValue       = 0;
-    uint32_t        scaledModuleValue = 0;
-    tModule         module            = {0};
-    tMessageContent messageContent    = {0};
-    bool            noAction          = false;
+    int             width          = 0;
+    int             height         = 0;
+    double          angle          = 0.0;
+    uint32_t        value          = 0;
+    tModule         module         = {0};
+    tMessageContent messageContent = {0};
+    bool            noAction       = false;
 
     // Scale x and y to match intended rendering window
     glfwGetWindowSize(window, &width, &height);
@@ -997,9 +994,9 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                 if (modeLocationList[module.mode[gParamDragging.param].modeRef].type2 == paramType2Dial) {
                     angle = calculate_mouse_angle((tCoord){x, y}, module.mode[gParamDragging.param].rectangle);                                                            // possible add half size
                     value = angle_to_value(angle, modeLocationList[module.mode[gParamDragging.param].modeRef].range);
-                    printf("VALUE = %u\n", value);
+                    LOG_DEBUG("VALUE = %u\n", value);
                     //value = (value * modeLocationList[module.mode[gParamDragging.param].modeRef].range) / MAX_PARAM_RANGE;
-                    //printf("VALUE = %u\n", value);
+                    //LOG_DEBUG("VALUE = %u\n", value);
 
                     if (module.mode[gParamDragging.mode].value != value) {
                         module.mode[gParamDragging.mode].value = value;
@@ -1058,7 +1055,7 @@ void scroll_event(GLFWwindow * window, double x, double y) {
     mouseCoord.x = (mouseCoord.x * (double)get_render_width()) / (double)width;
     mouseCoord.y = (mouseCoord.y * (double)get_render_height()) / (double)height;
 
-    //printf("Zoom = %f yEndMax = %f module area size = %f percent = %f\n", gZoomFactor, yEndMax, moduleArea.size.h, get_scroll_bar_percent(gScrollState.yBar, gRenderHeight));
+    //LOG_DEBUG("Zoom = %f yEndMax = %f module area size = %f percent = %f\n", gZoomFactor, yEndMax, moduleArea.size.h, get_scroll_bar_percent(gScrollState.yBar, gRenderHeight));
 
     if (within_rectangle(mouseCoord, moduleArea)) {
         zoomFactor  = get_zoom_factor();
@@ -1075,7 +1072,7 @@ void scroll_event(GLFWwindow * window, double x, double y) {
 }
 
 void char_event(GLFWwindow * window, unsigned int value) {
-    printf("char=%d\n", value);
+    LOG_DEBUG("char=%d\n", value);
     gReDraw = true;
 }
 
@@ -1083,7 +1080,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GL_TRUE);
     }
-    printf("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
+    LOG_DEBUG("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
     gReDraw = true;
 }
 
