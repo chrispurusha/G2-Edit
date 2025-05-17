@@ -33,6 +33,7 @@ const char * offOnStrMap[]        = {"Off", "On"};
 const char * expStrMap[]          = {"Exp", "Lin", "dB"};
 const char * padStrMap[]          = {"0dB", "-6dB"};
 const char * gcStrMap[]           = {"GC", "GC"};
+const char * sideChainStrMap[]    = {"Side Chain", "Side Chain"};
 const char * pitchTypeStrMap[]    = {"Semi", "Freq", "Factor", "Partial"};
 const char * fmTypeStrMap[]       = {"FM Lin", "FM Trk"};
 
@@ -79,7 +80,7 @@ const tRgb   gModuleColourMap[] = {
 const tRgb   connectorColourMap[] = {
     {0.7, 0.2, 0.2},
     {0.2, 0.2, 0.7},
-    {0.5, 0.5, 0.0}, };
+    {0.9, 0.9, 0.0}, };
 
 
 const tModuleProperties gModuleProperties[] = {
@@ -332,12 +333,14 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{ 35,  -3}, {7, 14}}, anchorBottomLeft,  "Delay",   128,  0, NULL,               NULL          },
     {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{ 50,  -3}, {7, 14}}, anchorBottomLeft,  "Sus",     128,  0, NULL,               NULL          },
     {moduleTypeEnvADSR,    paramType1CommonDial,         paramType2Dial,   {{ 65,  -3}, {7, 14}}, anchorBottomLeft,  "Rel",     128,  0, NULL,               NULL          },
+    {moduleTypeStChorus,   paramType1CommonDial,         paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "Detune",  128,  0, NULL,               NULL          },
+    {moduleTypeStChorus,   paramType1CommonDial,         paramType2Dial,   {{ 35,  -3}, {7, 14}}, anchorBottomLeft,  "Amount",  128,  0, NULL,               NULL          },
     {moduleTypeCompress,   paramType1CommonDial,         paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  "Thr",      43,  0, NULL,               NULL          },
-    {moduleTypeCompress,   paramType1CommonDial,         paramType2Dial,   {{ 24,  -3}, {7, 14}}, anchorBottomLeft,  "2",        67,  0, NULL,               NULL          },
+    {moduleTypeCompress,   paramType1CommonDial,         paramType2Dial,   {{ 24,  -3}, {7, 14}}, anchorBottomLeft,  "Ratio",    67,  0, NULL,               NULL          },
     {moduleTypeCompress,   paramType1CommonDial,         paramType2Dial,   {{ 38,  -3}, {7, 14}}, anchorBottomLeft,  "Att",     128,  0, NULL,               NULL          },
     {moduleTypeCompress,   paramType1CommonDial,         paramType2Dial,   {{ 52,  -3}, {7, 14}}, anchorBottomLeft,  "Rel",     128,  0, NULL,               NULL          },
     {moduleTypeCompress,   paramType1CommonDial,         paramType2Dial,   {{ 66,  -3}, {7, 14}}, anchorBottomLeft,  "RefLvl",   43,  0, NULL,               NULL          },
-    {moduleTypeCompress,   paramType1Sidechain,          paramType2Toggle, {{ 45,  20}, {7, 14}}, anchorTopLeft,     NULL,        2,  0, NULL,               NULL          },
+    {moduleTypeCompress,   paramType1SideChain,          paramType2Toggle, {{ 27,   5}, {7,  7}}, anchorTopLeft,     NULL,        2,  1, sideChainStrMap,    offOnColourMap},
     {moduleTypeCompress,   paramType1Bypass,             paramType2Toggle, {{ -3,   0}, {5,  5}}, anchorMiddleRight, NULL,        2,  1, NULL,               NULL          }, };
 
 // Note these need to be in same order of connectors which are referenced by the hardware
@@ -391,7 +394,7 @@ const tModeLocation   modeLocationList[] = {
 
 const tVolumeLocation volumeLocationList[] = {
     {moduleTypeMix4to1C, volumeTypeMono,     {{-15, 5}, {3, 25}}, anchorTopRight},
-    {moduleTypeCompress, volumeTypeCompress, {{-18, 5}, {3, 38}}, anchorTopRight},
+    {moduleTypeCompress, volumeTypeCompress, {{-18, 5}, {4, 38}}, anchorTopRight},
     {moduleType2toOut,   volumeTypeStereo,   {{-25, 5}, {3, 10}}, anchorTopRight}};
 
 const tLedLocation    ledLocationList[] = {

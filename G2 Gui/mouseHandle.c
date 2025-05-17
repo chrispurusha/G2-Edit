@@ -551,6 +551,10 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Env ADSR", menu_action_create, moduleTypeEnvADSR, NULL},
         {NULL,              NULL,                               0, NULL}          // End of menu
     };
+    static tMenuItem fxMenuItems[] = {
+        {"Create Compressor", menu_action_create, moduleTypeCompress, NULL},
+        {NULL,                NULL,                                0, NULL}       // End of menu
+    };
     static tMenuItem filterMenuItems[] = {
         {"Create LP Filter",      menu_action_create,                    0, NULL},
         {"Create Nord Filter",    menu_action_create, moduleTypeFltNord,    NULL},
@@ -574,7 +578,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Note",     menu_action_create, 0, NULL           },
         {"Create LFO",      menu_action_create, 0, NULL           },
         {"Create Env",      menu_action_create, 0, envMenuItems   },
-        {"Create FX",       menu_action_create, 0, NULL           },
+        {"Create FX",       menu_action_create, 0, fxMenuItems    },
         {"Create Shaper",   menu_action_create, 0, NULL           },
         {"Create Mixer",    menu_action_create, 0, mixerMenuItems },
         {"Create Logic",    menu_action_create, 0, NULL           },

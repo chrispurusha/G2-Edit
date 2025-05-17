@@ -221,10 +221,16 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         case paramType1Exp:
         case paramType1Pad:
         case paramType1GainControl:
+        case paramType1SideChain:
         {
             char ** strMap     = (char **)paramLocationList[paramRef].strMap;
             double  y          = rectangle.coord.y;
             double  textHeight = rectangle.size.h / 2.0;
+
+            if (strMap == NULL) {
+                LOG_ERROR("No strMap for module type %s\n", gModuleProperties[module->type].name);
+                return;
+            }
 
             if (paramLocationList[paramRef].label != NULL) {
                 set_rgb_colour(RGB_BLACK);
