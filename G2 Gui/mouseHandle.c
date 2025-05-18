@@ -175,6 +175,51 @@ void send_module_move_msg(tModule * module) {
     msg_send(&gCommandQueue, &messageContent);
 }
 
+void init_params_on_module(tModule * module, uint32_t location, uint32_t variation) {
+    uint32_t        locationListIndex = 0;
+    uint32_t        paramIndex        = 0;
+    uint32_t        numParams         = module_param_count(module->type);
+    tMessageContent messageContent    = {0};
+
+    if (location != gLocation) {
+        return;
+    }
+
+    for (locationListIndex = 0; locationListIndex < array_size_param_location_list(); locationListIndex++) {
+        if (paramLocationList[locationListIndex].moduleType == module->type) {
+            module->param[variation][paramIndex].value = paramLocationList[locationListIndex].defaultValue;
+
+            write_module(module->key, module);
+
+            for (int i = 0; i < NUM_VARIATIONS; i++) {
+                messageContent.cmd                 = eMsgCmdSetValue;
+                messageContent.paramData.moduleKey = module->key;
+                messageContent.paramData.param     = paramIndex;
+                messageContent.paramData.variation = i;
+                messageContent.paramData.value     = module->param[variation][paramIndex].value;
+
+                msg_send(&gCommandQueue, &messageContent);
+            }
+
+            paramIndex++;
+
+            if (paramIndex >= numParams) {
+                break;
+            }
+        }
+    }
+}
+
+void init_params_on_module_all_variations(tModule * module, uint32_t location) {
+    if (location != gLocation) {
+        return;
+    }
+
+    for (uint32_t variation = 0; variation < NUM_VARIATIONS; variation++) {
+        init_params_on_module(module, location, variation);
+    }
+}
+
 void handle_button(tButtonId buttonId) {
     switch (buttonId) {
         case vaButtonId:
@@ -209,8 +254,8 @@ void handle_button(tButtonId buttonId) {
 
             gVariation = variation;
 
-            for (uint32_t id = 0; id < 8; id++) {
-                gMainButtonArray[variation1ButtonId + id].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            for (uint32_t variation = 0; variation < NUM_GUI_VARIATIONS; variation++) {
+                gMainButtonArray[(uint32_t)variation1ButtonId + variation].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
             }
 
             gMainButtonArray[buttonId].backgroundColour = (tRgb)RGB_GREEN_ON;
@@ -226,8 +271,8 @@ void handle_button(tButtonId buttonId) {
             do {
                 validModule = walk_next_module(&module);
 
-                if (validModule && module.key.location == gLocation) {
-                    init_params_on_new_module(&module);     // Todo - optionally limit this to specific variation, maybe add location and variation to parameters list, or create new common function
+                if (validModule) {
+                    init_params_on_module(&module, gLocation, gVariation);
                 }
             } while (validModule);
 
@@ -512,42 +557,6 @@ void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord
     targetCoord->y = val;
 }
 
-void init_params_on_new_module(tModule * module) { // Todo - Might move to database utils, since used externally
-    uint32_t        locationListIndex = 0;
-    uint32_t        paramIndex        = 0;
-    uint32_t        numParams         = module_param_count(module->type);
-    tMessageContent messageContent    = {0};
-    uint32_t        defaultValue      = 0;
-
-    for (locationListIndex = 0; locationListIndex < array_size_param_location_list(); locationListIndex++) {
-        if (paramLocationList[locationListIndex].moduleType == module->type) {
-            defaultValue = paramLocationList[locationListIndex].defaultValue;
-
-            for (int i = 0; i < NUM_VARIATIONS; i++) {
-                module->param[i][paramIndex].value = defaultValue;
-            }
-
-            write_module(module->key, module);
-
-            for (int i = 0; i < NUM_VARIATIONS; i++) {
-                messageContent.cmd                 = eMsgCmdSetValue;
-                messageContent.paramData.moduleKey = module->key;
-                messageContent.paramData.param     = paramIndex;
-                messageContent.paramData.variation = i;
-                messageContent.paramData.value     = defaultValue;
-
-                msg_send(&gCommandQueue, &messageContent);
-            }
-
-            paramIndex++;
-
-            if (paramIndex >= numParams) {
-                break;
-            }
-        }
-    }
-}
-
 void menu_action_create(int index) {
     if (gContextMenu.items[index].param != 0) {
         tModule         module         = {0};
@@ -589,7 +598,7 @@ void menu_action_create(int index) {
 
             write_module(module.key, &module);
 
-            init_params_on_new_module(&module);
+            init_params_on_module_all_variations(&module, gLocation);
 
             shift_modules_down(module.key);
         }

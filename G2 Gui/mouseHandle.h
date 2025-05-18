@@ -31,6 +31,5 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 void cursor_pos(GLFWwindow * window, double x, double y);
 void mouse_button(GLFWwindow * window, int button, int action, int mods);
 void scroll_event(GLFWwindow * window, double x, double y);
-void init_params_on_new_module(tModule * module);
 
 #endif // __MOUSE_HANDLE_H__
