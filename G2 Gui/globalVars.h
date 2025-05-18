@@ -41,6 +41,7 @@ extern bool            gReDraw;
 extern tButton         gSelectVa;
 extern tButton         gSelectFx;
 extern tButton         gSelectVariation[NUM_GUI_VARIATIONS];
+extern tButton         gSelectInitParams;
 extern tButton         gSelectOpenReadFile;
 extern bool            gShowOpenFileReadDialogue;
 extern tScrollState    gScrollState;

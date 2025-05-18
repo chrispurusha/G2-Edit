@@ -449,7 +449,7 @@ void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord
     targetCoord->y = val;
 }
 
-void init_params_on_new_module(tModule * module) {
+void init_params_on_new_module(tModule * module) { // Todo - Might move to database utils, since used externally
     uint32_t        locationListIndex = 0;
     uint32_t        paramIndex        = 0;
     uint32_t        numParams         = module_param_count(module->type);
@@ -885,6 +885,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     gSelectVa.function(0);
                 } else if (within_rectangle(coord, gSelectFx.rectangle)) {
                     gSelectFx.function(0);
+                } else if (within_rectangle(coord, gSelectInitParams.rectangle)) {
+                    gSelectInitParams.function(0);
                 } else if (within_rectangle(coord, gSelectOpenReadFile.rectangle)) {
                     gSelectOpenReadFile.function(0);
                 } else if (gContextMenu.active) {

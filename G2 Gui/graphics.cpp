@@ -112,6 +112,24 @@ void open_read_file_button(uint32_t dummy) {
     gShowOpenFileReadDialogue = true;
 }
 
+void init_params_button(uint32_t dummy) {
+    tModule    module      = {0};
+    bool       validModule = false;
+    tRectangle area        = module_area();
+
+    reset_walk_module();
+
+    do {
+        validModule = walk_next_module(&module);
+
+        if (validModule && module.key.location == gLocation) {
+            init_params_on_new_module(&module); // Todo - optionally limit this to specific variation, maybe add location and variation to parameters list, or create new common function
+        }
+    } while (validModule);
+
+    finish_walk_module();
+}
+
 void render_context_menu(void) {
     if (!gContextMenu.active) {
         return;
@@ -202,6 +220,9 @@ void render_top_bar(void) {
         }
         gSelectVariation[i].rectangle = draw_button(mainArea, {{400.0 + (i * 12.0), 60.0}, {get_text_width(gSelectVariation[i].text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectVariation[i].text);
     }
+    
+    set_rgb_colour(RGB_BACKGROUND_GREY);
+    gSelectInitParams.rectangle = draw_button(mainArea, {{500.0, 60.0}, {get_text_width(gSelectInitParams.text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectInitParams.text);
 
     set_rgb_colour(RGB_BACKGROUND_GREY);
     gSelectOpenReadFile.rectangle = draw_button(mainArea, {{20.0, 8.0}, {get_text_width(gSelectOpenReadFile.text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gSelectOpenReadFile.text);

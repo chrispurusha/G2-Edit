@@ -27,12 +27,14 @@ extern "C" {
 extern void va_button(uint32_t dummy);
 extern void fx_button(uint32_t dummy);
 extern void variation_button(uint32_t variation);
+    extern void init_params_button(uint32_t dummy);
 extern void open_read_file_button(uint32_t dummy);
 
 GLFWwindow *    gWindow                              = NULL;
 uint32_t        gLocation                            = locationVa;
 uint32_t        gVariation                           = 0;
 bool            gReDraw                              = true;
+// Rendering of buttons is done in void render_top_bar(void), but if we drop these into an array/sructure, we can probably step through instead
 tButton         gSelectVa                            = {NULL_RECTANGLE, anchorTopLeft, "VA", va_button}; // TODO: put these select items in an array of structures
 tButton         gSelectFx                            = {NULL_RECTANGLE, anchorTopLeft, "FX", fx_button};
 tButton         gSelectOpenReadFile                  = {NULL_RECTANGLE, anchorTopLeft, "Read File", open_read_file_button};
@@ -44,6 +46,7 @@ tButton         gSelectVariation[NUM_GUI_VARIATIONS] = {{NULL_RECTANGLE, anchorT
                                                         {NULL_RECTANGLE, anchorTopLeft, "6", variation_button},
                                                         {NULL_RECTANGLE, anchorTopLeft, "7", variation_button},
                                                         {NULL_RECTANGLE, anchorTopLeft, "8", variation_button}};
+    tButton         gSelectInitParams                = {NULL_RECTANGLE, anchorTopLeft, "Init", init_params_button};
 bool            gShowOpenFileReadDialogue = false;
 tScrollState    gScrollState              = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
 tContextMenu    gContextMenu              = {0};
