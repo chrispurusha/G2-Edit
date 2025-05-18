@@ -178,26 +178,32 @@ void send_module_move_msg(tModule * module) {
 void handle_button(tButtonId buttonId) {     // Todo - move to mouse handling?
     switch (buttonId) {
         case vaButtonId:
+        {
             gLocation                                     = locationVa;
             gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
             gMainButtonArray[fxButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
             break;
+        }
         case fxButtonId:
+        {
             gLocation                                     = locationFx;
             gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
             gMainButtonArray[vaButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
             break;
-        case    openReadFileButtonId:
+        }
+        case openReadFileButtonId:
+        {
             gShowOpenFileReadDialogue = true;
             break;
+        }
         case variation1ButtonId:
-        case   variation2ButtonId:
-        case   variation3ButtonId:
-        case   variation4ButtonId:
-        case  variation5ButtonId:
-        case  variation6ButtonId:
-        case  variation7ButtonId:
-        case   variation8ButtonId:
+        case variation2ButtonId:
+        case variation3ButtonId:
+        case variation4ButtonId:
+        case variation5ButtonId:
+        case variation6ButtonId:
+        case variation7ButtonId:
+        case variation8ButtonId:
         {
             uint32_t variation = (uint32_t)buttonId - (uint32_t)variation1ButtonId;
 
@@ -210,7 +216,7 @@ void handle_button(tButtonId buttonId) {     // Todo - move to mouse handling?
             gMainButtonArray[buttonId].backgroundColour = (tRgb)RGB_GREEN_ON;
             break;
         }
-        case   initParamsButtonId:
+        case initParamsButtonId:
         {
             tModule module      = {0};
             bool    validModule = false;
