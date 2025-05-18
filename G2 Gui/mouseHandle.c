@@ -503,7 +503,7 @@ void menu_action_create(int index) {
 
             strncpy(module.name, gModuleProperties[module.type].name, sizeof(module.name));
             module.name[sizeof(module.name) - 1] = '\0';
-
+            
             messageContent.cmd                  = eMsgCmdWriteModule;
             messageContent.moduleData.moduleKey = module.key;
             messageContent.moduleData.type      = module.type;
@@ -527,6 +527,8 @@ void menu_action_create(int index) {
             write_module(module.key, &module);
 
             init_params_on_new_module(&module);
+            
+            shift_modules_down(module.key);
         }
     } else {
         gContextMenu.items = gContextMenu.items[index].subMenu;
@@ -998,9 +1000,6 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                 if (modeLocationList[module.mode[gParamDragging.param].modeRef].type2 == paramType2Dial) {
                     angle = calculate_mouse_angle((tCoord){x, y}, module.mode[gParamDragging.param].rectangle);                                                            // possible add half size
                     value = angle_to_value(angle, modeLocationList[module.mode[gParamDragging.param].modeRef].range);
-                    LOG_DEBUG("VALUE = %u\n", value);
-                    //value = (value * modeLocationList[module.mode[gParamDragging.param].modeRef].range) / MAX_PARAM_RANGE;
-                    //LOG_DEBUG("VALUE = %u\n", value);
 
                     if (module.mode[gParamDragging.mode].value != value) {
                         module.mode[gParamDragging.mode].value = value;
