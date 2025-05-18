@@ -408,6 +408,21 @@ typedef enum {
     connectorDirOut
 } tConnectorDir;
 
+typedef enum {
+    vaButtonId,
+    fxButtonId,
+    openReadFileButtonId,
+    variation1ButtonId,
+    variation2ButtonId,
+    variation3ButtonId,
+    variation4ButtonId,
+    variation5ButtonId,
+    variation6ButtonId,
+    variation7ButtonId,
+    variation8ButtonId,
+    initParamsButtonId
+} tButtonId;
+
 typedef struct {
     tRectangle     rectangle;
     tCoord         coord;
@@ -597,10 +612,11 @@ typedef struct {
 } tLedLocation;
 
 typedef struct {
-    tRectangle rectangle;
-    tAnchor    anchor;
-    char *     text;
-    void (*function)(uint32_t);
+    const tCoord  coord;
+    tRectangle    rectangle;
+    const tAnchor anchor;
+    char *        text;
+    tRgb          backgroundColour;
 } tButton;
 
 #endif // __TYPES_H__

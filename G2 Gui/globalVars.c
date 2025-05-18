@@ -24,36 +24,42 @@ extern "C" {
 #include "globalVars.h"
 
 // Todo: find a better way/place to define these functions
-extern void va_button(uint32_t dummy);
-extern void fx_button(uint32_t dummy);
-extern void variation_button(uint32_t variation);
-    extern void init_params_button(uint32_t dummy);
-extern void open_read_file_button(uint32_t dummy);
+extern void location_button(tButtonId buttonId);
+extern void variation_button(tButtonId buttonId);
+extern void init_params_button(tButtonId buttonId);
+extern void open_read_file_button(tButtonId buttonId);
 
-GLFWwindow *    gWindow                              = NULL;
-uint32_t        gLocation                            = locationVa;
-uint32_t        gVariation                           = 0;
-bool            gReDraw                              = true;
-// Rendering of buttons is done in void render_top_bar(void), but if we drop these into an array/sructure, we can probably step through instead
-tButton         gSelectVa                            = {NULL_RECTANGLE, anchorTopLeft, "VA", va_button}; // TODO: put these select items in an array of structures
-tButton         gSelectFx                            = {NULL_RECTANGLE, anchorTopLeft, "FX", fx_button};
-tButton         gSelectOpenReadFile                  = {NULL_RECTANGLE, anchorTopLeft, "Read File", open_read_file_button};
-tButton         gSelectVariation[NUM_GUI_VARIATIONS] = {{NULL_RECTANGLE, anchorTopLeft, "1", variation_button},
-                                                        {NULL_RECTANGLE, anchorTopLeft, "2", variation_button},
-                                                        {NULL_RECTANGLE, anchorTopLeft, "3", variation_button},
-                                                        {NULL_RECTANGLE, anchorTopLeft, "4", variation_button},
-                                                        {NULL_RECTANGLE, anchorTopLeft, "5", variation_button},
-                                                        {NULL_RECTANGLE, anchorTopLeft, "6", variation_button},
-                                                        {NULL_RECTANGLE, anchorTopLeft, "7", variation_button},
-                                                        {NULL_RECTANGLE, anchorTopLeft, "8", variation_button}};
-    tButton         gSelectInitParams                = {NULL_RECTANGLE, anchorTopLeft, "Init", init_params_button};
+GLFWwindow *    gWindow            = NULL;
+uint32_t        gLocation          = locationVa;
+uint32_t        gVariation         = 0;
+bool            gReDraw            = true;
+tButton         gMainButtonArray[] = {  // Must align with tButtonId enumaration
+    {{400,  8}, NULL_RECTANGLE, anchorTopLeft, "VA",        RGB_GREEN_ON       },
+    {{425,  8}, NULL_RECTANGLE, anchorTopLeft, "FX",        RGB_BACKGROUND_GREY},
+    {{ 20,  8}, NULL_RECTANGLE, anchorTopLeft, "Read File", RGB_BACKGROUND_GREY},
+    {{400, 60}, NULL_RECTANGLE, anchorTopLeft, "1",         RGB_GREEN_ON       },
+    {{412, 60}, NULL_RECTANGLE, anchorTopLeft, "2",         RGB_BACKGROUND_GREY},
+    {{424, 60}, NULL_RECTANGLE, anchorTopLeft, "3",         RGB_BACKGROUND_GREY},
+    {{436, 60}, NULL_RECTANGLE, anchorTopLeft, "4",         RGB_BACKGROUND_GREY},
+    {{448, 60}, NULL_RECTANGLE, anchorTopLeft, "5",         RGB_BACKGROUND_GREY},
+    {{460, 60}, NULL_RECTANGLE, anchorTopLeft, "6",         RGB_BACKGROUND_GREY},
+    {{472, 60}, NULL_RECTANGLE, anchorTopLeft, "7",         RGB_BACKGROUND_GREY},
+    {{484, 60}, NULL_RECTANGLE, anchorTopLeft, "8",         RGB_BACKGROUND_GREY},
+    {{500, 60}, NULL_RECTANGLE, anchorTopLeft, "Init",      RGB_BACKGROUND_GREY},
+};
+
 bool            gShowOpenFileReadDialogue = false;
-tScrollState    gScrollState              = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
-tContextMenu    gContextMenu              = {0};
-tCableDragging  gCableDrag                = {0};
-tParamDragging  gParamDragging            = {0};
-tModuleDragging gModuleDrag               = {0};
-tMessageQueue   gCommandQueue             = {0};
+
+tScrollState    gScrollState   = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
+tContextMenu    gContextMenu   = {0};
+tCableDragging  gCableDrag     = {0};
+tParamDragging  gParamDragging = {0};
+tModuleDragging gModuleDrag    = {0};
+tMessageQueue   gCommandQueue  = {0};
+
+uint32_t array_size_main_button_array(void) {
+    return ARRAY_SIZE(gMainButtonArray);
+}
 
 #ifdef __cplusplus
 }

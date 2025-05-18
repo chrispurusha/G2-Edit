@@ -38,11 +38,7 @@ extern GLFWwindow *    gWindow;
 extern uint32_t        gLocation;
 extern uint32_t        gVariation;
 extern bool            gReDraw;
-extern tButton         gSelectVa;
-extern tButton         gSelectFx;
-extern tButton         gSelectVariation[NUM_GUI_VARIATIONS];
-extern tButton         gSelectInitParams;
-extern tButton         gSelectOpenReadFile;
+extern tButton         gMainButtonArray[];
 extern bool            gShowOpenFileReadDialogue;
 extern tScrollState    gScrollState;
 extern tContextMenu    gContextMenu;
@@ -50,5 +46,7 @@ extern tCableDragging  gCableDrag;
 extern tParamDragging  gParamDragging;
 extern tModuleDragging gModuleDrag;
 extern tMessageQueue   gCommandQueue;
+
+uint32_t array_size_main_button_array(void);
 
 #endif // __GLOBAL_VARS_H__

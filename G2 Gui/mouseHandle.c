@@ -175,6 +175,63 @@ void send_module_move_msg(tModule * module) {
     msg_send(&gCommandQueue, &messageContent);
 }
 
+void handle_button(tButtonId buttonId) {     // Todo - move to mouse handling?
+    switch (buttonId) {
+        case vaButtonId:
+            gLocation                                     = locationVa;
+            gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
+            gMainButtonArray[fxButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            break;
+        case fxButtonId:
+            gLocation                                     = locationFx;
+            gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
+            gMainButtonArray[vaButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            break;
+        case    openReadFileButtonId:
+            gShowOpenFileReadDialogue = true;
+            break;
+        case variation1ButtonId:
+        case   variation2ButtonId:
+        case   variation3ButtonId:
+        case   variation4ButtonId:
+        case  variation5ButtonId:
+        case  variation6ButtonId:
+        case  variation7ButtonId:
+        case   variation8ButtonId:
+        {
+            uint32_t variation = (uint32_t)buttonId - (uint32_t)variation1ButtonId;
+
+            gVariation = variation;
+
+            for (uint32_t id = 0; id < 8; id++) {
+                gMainButtonArray[variation1ButtonId + id].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            }
+
+            gMainButtonArray[buttonId].backgroundColour = (tRgb)RGB_GREEN_ON;
+            break;
+        }
+        case   initParamsButtonId:
+        {
+            tModule module      = {0};
+            bool    validModule = false;
+
+            reset_walk_module();
+
+            do {
+                validModule = walk_next_module(&module);
+
+                if (validModule && module.key.location == gLocation) {
+                    init_params_on_new_module(&module);     // Todo - optionally limit this to specific variation, maybe add location and variation to parameters list, or create new common function
+                }
+            } while (validModule);
+
+            finish_walk_module();
+
+            break;
+        }
+    }
+}
+
 void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already on last row!
     tModule  module            = {0};
     tModule  walk              = {0};
@@ -503,7 +560,7 @@ void menu_action_create(int index) {
 
             strncpy(module.name, gModuleProperties[module.type].name, sizeof(module.name));
             module.name[sizeof(module.name) - 1] = '\0';
-            
+
             messageContent.cmd                  = eMsgCmdWriteModule;
             messageContent.moduleData.moduleKey = module.key;
             messageContent.moduleData.type      = module.type;
@@ -527,7 +584,7 @@ void menu_action_create(int index) {
             write_module(module.key, &module);
 
             init_params_on_new_module(&module);
-            
+
             shift_modules_down(module.key);
         }
     } else {
@@ -870,26 +927,17 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         }
     } else if (action == GLFW_RELEASE) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            bool foundVariation = false;
+            bool found = false;
 
-            for (int i = 0; i < NUM_GUI_VARIATIONS; i++) {
-                if (within_rectangle(coord, gSelectVariation[i].rectangle)) {
-                    gSelectVariation[i].function(i);
-                    foundVariation = true;
-                    break;
+            for (uint32_t i = 0; i < array_size_main_button_array(); i++) {
+                if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
+                    handle_button(i);
+                    found = true;
                 }
             }
 
-            if (foundVariation == false) {
-                if (within_rectangle(coord, gSelectVa.rectangle)) {
-                    gSelectVa.function(0);
-                } else if (within_rectangle(coord, gSelectFx.rectangle)) {
-                    gSelectFx.function(0);
-                } else if (within_rectangle(coord, gSelectInitParams.rectangle)) {
-                    gSelectInitParams.function(0);
-                } else if (within_rectangle(coord, gSelectOpenReadFile.rectangle)) {
-                    gSelectOpenReadFile.function(0);
-                } else if (gContextMenu.active) {
+            if (found == false) {
+                if (gContextMenu.active) {
                     if (!handle_context_menu_click(coord)) {
                         gContextMenu.active = false;  // Close if clicked outside - Todo: think if this is the right thing to do here
                     }
