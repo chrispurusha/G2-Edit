@@ -465,7 +465,7 @@ tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active) {
     return rectangle;
 }
 
-tRectangle draw_button(tArea area, tRectangle rectangle, char * text) { // Todo - bring setting of colour for button backgound into this function
+tRectangle draw_button(tArea area, tRectangle rectangle, char * text) { // TODO: bring setting of colour for button backgound into this function
     double     borderLineWidth = 1.0;
     double     margin          = 2.0;
     tRectangle textRectangle   = rectangle;

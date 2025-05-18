@@ -76,7 +76,7 @@ void dump_modules(void) {
     mutex_unlock();
 }
 
-static tModule * find_module(tModuleKey key) { // todo - use tModuleKey instead of location and index
+static tModule * find_module(tModuleKey key) {
     tModule * module = NULL;
 
     mutex_lock();
@@ -446,7 +446,7 @@ int find_io_count_from_index(tModule * module, tConnectorDir dir, int index) {
     return ioCount;  // Index does not match the direction
 }
 
-int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCount) {   // Todo: have an instance of this in graphics too! Needs moving to one place
+int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCount) {
     int count = 0;
 
     //LOG_DEBUG("%s find index num connectors %u\n", gModuleProperties[module->type].name, gModuleProperties[module->type].numConnectors);

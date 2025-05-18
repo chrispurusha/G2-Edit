@@ -39,12 +39,12 @@ extern "C" {
 #include "moduleGraphics.h"
 #include "globalVars.h"
 
-void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) { // todo: move to utilsgraphics!?
+void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) { // TODO: move to utilsgraphics!?
     switch (volumeType) {
         case volumeTypeCompress:
         {
             tRectangle smallRectangle = rectangle;
-            double     space          = 2.0; // Todo: Possibly make a percentage of width
+            double     space          = 2.0; // TODO: Possibly make a percentage of width
             uint32_t   leds           = 10;
 
             smallRectangle.coord.y += space;
@@ -305,7 +305,7 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
         break;
         case volumeTypeStereo:
         {
-            double space = 2.0;              // Todo: Possibly make a percentage of width
+            double space = 2.0;              // TODO: Possibly make a percentage of width
 
             render_volume_meter(rectangle, gModuleProperties[module->type].volumeType, module->volume.value1);
             rectangle.coord.x += (rectangle.size.w + space);
@@ -380,7 +380,7 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
         render_text(moduleArea, textRectangle, (char *)connectorLocationList[connectorListIndex].label);
     }
 
-    if (module->upRate) { // Todo: should only apply to connectors which carry audio
+    if (module->upRate) { // TODO: should only apply to connectors which carry audio
         type = connectorTypeAudio;
     }
     set_rgb_colour(connectorColourMap[type]);  // Note, was using "module->connector[connectorIndex].type", check that this type param is OK

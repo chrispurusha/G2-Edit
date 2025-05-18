@@ -24,23 +24,23 @@ extern "C" {
 #include "moduleResources.h"
 #include "moduleResourcesAccess.h"
 
-uint32_t array_size_param_location_list(void) { // Todo: move to a module resources source file when it's created
+uint32_t array_size_param_location_list(void) {
     return ARRAY_SIZE(paramLocationList);
 }
 
-uint32_t array_size_connector_location_list(void) { // Todo: move to a module resources source file when it's created
+uint32_t array_size_connector_location_list(void) {
     return ARRAY_SIZE(connectorLocationList);
 }
 
-uint32_t array_size_mode_location_list(void) {     // Todo: move to a module resources source file when it's created
+uint32_t array_size_mode_location_list(void) {
     return ARRAY_SIZE(modeLocationList);
 }
 
-uint32_t array_size_volume_location_list(void) { // Todo: move to a module resources source file when it's created
+uint32_t array_size_volume_location_list(void) {
     return ARRAY_SIZE(volumeLocationList);
 }
 
-uint32_t array_size_led_location_list(void) { // Todo: move to a module resources source file when it's created
+uint32_t array_size_led_location_list(void) {
     return ARRAY_SIZE(ledLocationList);
 }
 
@@ -54,7 +54,7 @@ uint32_t module_param_count(tModuleType moduleType) {
         }
     }
 
-    // Todo: possibly cache this value
+    // TODO: possibly cache this value
     return count;
 }
 
@@ -68,7 +68,7 @@ uint32_t module_connector_count(tModuleType moduleType) {
         }
     }
 
-    // Todo: possibly cache this value
+    // TODO: possibly cache this value
     return count;
 }
 
@@ -82,7 +82,7 @@ uint32_t module_mode_count(tModuleType moduleType) {
         }
     }
 
-    // Todo: possibly cache this value
+    // TODO: possibly cache this value
     return count;
 }
 
@@ -96,7 +96,7 @@ uint32_t module_volume_count(tModuleType moduleType) {
         }
     }
 
-    // Todo: possibly cache this value
+    // TODO: possibly cache this value
     return count;
 }
 
@@ -110,7 +110,7 @@ uint32_t module_led_count(tModuleType moduleType) {
         }
     }
 
-    // Todo: possibly cache this value
+    // TODO: possibly cache this value
     return count;
 }
 

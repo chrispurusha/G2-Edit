@@ -397,7 +397,7 @@ typedef struct _struct_cable {
     struct _struct_cable * next;       // This can go, when we attach to modules rather than separate linked list
 } tCable;
 
-typedef enum {   // Todo: add a new type for e.g. yellow gate
+typedef enum {
     connectorTypeAudio,
     connectorTypeControl,
     connectorTypeLogic
@@ -490,7 +490,7 @@ typedef struct {
     tParamType3 type3;      // Denotes param or mode, which shoul maybe be union-ed?
     uint32_t    param;
     uint32_t    mode;
-} tParamDragging;        // Todo: rename as param dragging, since might not just be dial!?
+} tParamDragging;
 
 typedef struct {
     bool       active;

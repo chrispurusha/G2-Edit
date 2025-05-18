@@ -234,7 +234,7 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
 
     moduleCount = read_bit_stream(buff, subOffset, 8);
     LOG_DEBUG("Module Count      %u\n", moduleCount);
-    variationCount = read_bit_stream(buff, subOffset, 8);     // Should always be 10 (VARIATIONS) - todo: sanity check
+    variationCount = read_bit_stream(buff, subOffset, 8);     // Should always be 10 (VARIATIONS) - TODO: sanity check
     LOG_DEBUG("Variation Count      %u\n", variationCount);
 
     for (i = 0; i < moduleCount; i++) {
@@ -362,7 +362,7 @@ static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
-int parse_patch(uint8_t * buff, int length) { // Todo - also accessed from file, so need to decide how to access from USB and file
+int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, so need to decide how to access from USB and file
     if ((buff == NULL) || (length <= 0)) {
         return EXIT_FAILURE;
     }
@@ -1106,7 +1106,6 @@ static void state_handler(void) {
 }
 
 static void usb_comms_signal_handler(int sigraised) {
-    // ToDo - deal with signals properly
     LOG_DEBUG("\nUSBComms Sig Handler!!! %d\n", sigraised);
 
     _exit(0);

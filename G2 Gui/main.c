@@ -29,7 +29,6 @@ extern "C" {
 #include "main.h"
 
 static void signal_handler(int sigraised) {
-    // ToDo - deal with signals properly
     LOG_DEBUG("\nSig Handler!!! %d\n", sigraised);
 
     _exit(0);

@@ -50,7 +50,7 @@ static FT_Face         gFace        = {0};
 static pthread_mutex_t gReDrawMutex = {0};
 
 static void re_draw_mutex_lock(void) {
-    // Todo: implement a generic utility function for this, passing the mutex?
+    // TODO: implement a generic utility function for this, passing the mutex?
     if (pthread_mutex_lock(&gReDrawMutex) != 0) {
         pthread_mutexattr_t attr = {0};
 
@@ -64,7 +64,7 @@ static void re_draw_mutex_lock(void) {
 }
 
 static void re_draw_mutex_unlock(void) {
-    // Todo: implement a generic utility function for this, passing the mutex?
+    // TODO: implement a generic utility function for this, passing the mutex?
     pthread_mutex_unlock(&gReDrawMutex);
 }
 
@@ -205,7 +205,7 @@ void init_graphics(void) {
     if (!glfwInit()) {
         exit(EXIT_FAILURE);
     }
-    register_glfw_wake_cb(wake_glfw);   //TODO - possible also register for callback on new module load, then reset scrollbars etc.
+    register_glfw_wake_cb(wake_glfw);
     register_full_patch_change_notify_cb(notify_full_patch_change);
 
     glfwGetMonitorWorkarea(glfwGetPrimaryMonitor(), &monitor.coord.x, &monitor.coord.y, &monitor.size.w, &monitor.size.h);
@@ -252,7 +252,7 @@ void init_graphics(void) {
     setup_render_context();
 }
 
-void read_file_into_memory_and_process(const char * filepath) { // Todo: find a better source file home
+void read_file_into_memory_and_process(const char * filepath) {
     int64_t   byteOffset = 0;
     int64_t   fileSize   = 0;
     FILE *    file       = NULL;
@@ -309,7 +309,7 @@ void read_file_into_memory_and_process(const char * filepath) { // Todo: find a 
         database_clear_modules();
 
         if (type == 0) {
-            parse_patch(buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // Todo - parse_patch should really be in a commonly accessible source file, for file or USB access
+            parse_patch(buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // TODO: parse_patch should really be in a commonly accessible source file, for file or USB access
         } // 1 = performance
     } else {
         LOG_WARNING("CRC check failed\n");
@@ -319,7 +319,7 @@ void read_file_into_memory_and_process(const char * filepath) { // Todo: find a 
 }
 
 void check_action_flags(void) {
-    if (gShowOpenFileReadDialogue == true) { // Todo - move to a function
+    if (gShowOpenFileReadDialogue == true) { // TODO: move to a function
         char * path = open_file_dialogue();
 
         if (path != NULL) {
@@ -381,7 +381,7 @@ void do_graphics_loop(void) {
             cursor_pos(gWindow, x, y);  // Artificially do cursor_pos call for drag scrolling when cursor not moving
             glfwWaitEventsTimeout(0.016);
         } else {
-            glfwWaitEvents(); // Todo: might have to wait on timeout and not use the empty event post, since indication that it can't be called from other thread
+            glfwWaitEvents(); // Might have to wait on timeout and not use the empty event post, since indication that it  can't be called from other thread
         }
     }
 }

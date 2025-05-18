@@ -344,7 +344,7 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
 
                         if (walk.row > MAX_ROWS) {
                             walk.row = MAX_ROWS;
-                            // ToDo - flag up the clash!
+                            // TODO: flag up the clash!
                         }
                         write_module(walk.key, &walk);
                         send_module_move_msg(&walk);
@@ -482,7 +482,6 @@ void menu_action_delete_module(int index) {
                     msg_send(&gCommandQueue, &messageContent);
 
                     delete_cable(walk.key);
-                    // Todo: assess uprate for modules we were connected to. Maybe even run through all of them!?
                 }
             }
         }
@@ -798,9 +797,8 @@ bool handle_module_click(tCoord coord, int button) {
             if (retVal == false) {
                 if (within_rectangle(coord, module.dragArea)) {
                     if (button == GLFW_MOUSE_BUTTON_LEFT) {
-                        // Todo - maybe only drag if we're clicking at the top, or on a special icon on the module!?
-                        // Take the module off the linked list and put on the end, which makes it render last and so render on the top
                         tModule tmpModule = {0};
+
                         read_module(module.key, &tmpModule);
                         delete_module(module.key, doFreeNo);
                         write_module(tmpModule.key, &tmpModule);
@@ -954,7 +952,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             if (found == false) {
                 if (gContextMenu.active) {
                     if (!handle_context_menu_click(coord)) {
-                        gContextMenu.active = false;  // Close if clicked outside - Todo: think if this is the right thing to do here
+                        gContextMenu.active = false;  // Close if clicked outside - TODO: think if this is the right thing to do here
                     }
                 } else if (gModuleDrag.active == true) {
                     shift_modules_down(gModuleDrag.moduleKey);
@@ -984,7 +982,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                                     quitLoop = true;
                                     break;
                                 }
-                                cable.colour = 0; // Todo: choose colour from menu or calculate
+                                cable.colour = 0; // TODO: choose colour from menu or calculate
                                 write_cable(cableKey, &cable);
 
                                 tMessageContent messageContent = {0};

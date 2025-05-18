@@ -99,7 +99,7 @@
 #define RGB_RED_7                         {0.7, 0.0, 0.0}
 #define RGBA_BLACK_ON_TRANSPARENT         {0.0, 0.0, 0.0, 1.0}
 
-// Todo - rationalise this lot
+// TODO: rationalise this lot
 #define TOP_BAR_HEIGHT                    (80.0)
 #define SCROLLBAR_WIDTH                   (15.0)
 #define SCROLLBAR_LENGTH                  (100.0)

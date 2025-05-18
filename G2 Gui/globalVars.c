@@ -23,12 +23,6 @@ extern "C" {
 
 #include "globalVars.h"
 
-// Todo: find a better way/place to define these functions
-extern void location_button(tButtonId buttonId);
-extern void variation_button(tButtonId buttonId);
-extern void init_params_button(tButtonId buttonId);
-extern void open_read_file_button(tButtonId buttonId);
-
 GLFWwindow *    gWindow            = NULL;
 uint32_t        gLocation          = locationVa;
 uint32_t        gVariation         = 0;
