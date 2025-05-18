@@ -175,7 +175,7 @@ void send_module_move_msg(tModule * module) {
     msg_send(&gCommandQueue, &messageContent);
 }
 
-void handle_button(tButtonId buttonId) {     // Todo - move to mouse handling?
+void handle_button(tButtonId buttonId) {
     switch (buttonId) {
         case vaButtonId:
         {
@@ -937,7 +937,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             for (uint32_t i = 0; i < array_size_main_button_array(); i++) {
                 if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
-                    handle_button(i);
+                    handle_button((tButtonId)i);
                     found = true;
                 }
             }
