@@ -182,7 +182,9 @@ void wake_glfw(void) {
 }
 
 void notify_full_patch_change(void) {
-    gLocation = locationVa;
+    gLocation                                     = locationVa;
+    gMainButtonArray[vaButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
+    gMainButtonArray[fxButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
 }
 
 void setup_render_context(void) {

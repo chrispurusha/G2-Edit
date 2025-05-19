@@ -295,7 +295,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
 
 void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volumeRef, uint32_t volumeIndex) {
     module->volume.volumeRef = volumeRef;
-
+    
     switch (volumeLocationList[volumeRef].volumeType) {
         case volumeTypeMono:
         {
@@ -304,21 +304,21 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
             //set_rgb_colour(RGB_BLACK);
             //render_text(moduleArea, {{coord.x + x_param_size_from_percent(5), coord.y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
 
-            render_volume_meter(rectangle, gModuleProperties[module->type].volumeType, module->volume.value1);
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value1);
         }
         break;
         case volumeTypeStereo:
         {
             double space = 2.0;              // TODO: Possibly make a percentage of width
 
-            render_volume_meter(rectangle, gModuleProperties[module->type].volumeType, module->volume.value1);
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value1); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
             rectangle.coord.x += (rectangle.size.w + space);
-            render_volume_meter(rectangle, gModuleProperties[module->type].volumeType, module->volume.value2);
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value2);
         }
         break;
         case volumeTypeCompress:
         {
-            render_volume_meter(rectangle, gModuleProperties[module->type].volumeType, module->volume.value1);
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value1);
         }
         break;
         default:

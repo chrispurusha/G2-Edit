@@ -32,6 +32,7 @@ const char * offTo100KbStrMap[]   = {"Off", "25%", "50%", "75%", "100%"};
 const char * offOnStrMap[]        = {"Off", "On"};
 const char * expStrMap[]          = {"Exp", "Lin", "dB"};
 const char * padStrMap[]          = {"0dB", "-6dB"};
+const char * db12PadStrMap[]      = {"+6dB", "0dB", "-6dB", "-12dB"};
 const char * gcStrMap[]           = {"GC", "GC"};
 const char * kbStrMap[]           = {"KB", "KB"};
 const char * sideChainStrMap[]    = {"Side Chain", "Side Chain"};
@@ -40,7 +41,8 @@ const char * fmTypeStrMap[]       = {"FM Lin", "FM Trk"};
 const char * envShapeStrMap[]     = {"LogExp", "LinExp", "ExpExp", "LinLin"};
 const char * normalResetStrMap[]  = {"Normal", "Reset"};
 const char * posStrMap[]          = {"Pos", "PosInv", "Neg", "NegInv", "Bip", "BipInv"};
-const char * outToStrMap[]          = {"Main 1/2", "Main 3/4","FX 1/2","FX 3/4","Bus 1/2","Bus 3/4",};
+const char * outToStrMap[]        = {"Main 1/2", "Main 3/4", "FX 1/2", "FX 3/4", "Bus 1/2", "Bus 3/4", };
+const char * inFxStrMap[]         = {"1/2", "3/4"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -216,7 +218,7 @@ const tModuleProperties gModuleProperties[] = {
     {"Mux8-1",       2, volumeTypeNone,     ledTypeNo },
     {"WahWah",       2, volumeTypeNone,     ledTypeNo },
     {"Name",         1, volumeTypeNone,     ledTypeNo },
-    {"Fx-In",        2, volumeTypeNone,     ledTypeNo },
+    {"Fx-In",        2, volumeTypeStereo,     ledTypeNo },
     {"MinMax",       2, volumeTypeNone,     ledTypeNo },
     {"Unknown",      0, volumeTypeNone,     ledTypeNo },
     {"BinCounter",   2, volumeTypeNone,     ledTypeNo },
@@ -229,7 +231,7 @@ const tModuleProperties gModuleProperties[] = {
     {"Unknown",      0, volumeTypeNone,     ledTypeNo },
     {"Unknown",      0, volumeTypeNone,     ledTypeNo },
     {"T&H",          2, volumeTypeNone,     ledTypeNo },
-    {"Mix4-1S",      4, volumeTypeNone,     ledTypeNo },
+    {"Mix4-1S",      4, volumeTypeStereo,     ledTypeNo },
     {"CtrlSend",     2, volumeTypeNone,     ledTypeNo },
     {"PCSend",       2, volumeTypeNone,     ledTypeNo },
     {"NoteSend",     2, volumeTypeNone,     ledTypeNo },
@@ -301,7 +303,7 @@ const tModuleProperties gModuleProperties[] = {
 
 // moduleType, paramType1, paramType2, position rectangle, anchor, label, range, defaultValue, string map, colour map
 const tParamLocation paramLocationList[] = {
-    {moduleType2toOut,     paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, {7,  7}}, anchorBottomLeft,  "Out to",       6,  0, outToStrMap,               NULL          },
+    {moduleType2toOut,     paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, {7,  7}}, anchorBottomLeft,  "Out to",    6,  0, outToStrMap,        NULL          },
     {moduleType2toOut,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {7,  7}}, anchorBottomLeft,  "Pad",       2,  0, padStrMap,          NULL          },
     {moduleTypeOscShpB,    paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128, 64, NULL,               NULL          },
     {moduleTypeOscShpB,    paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL,               NULL          },
@@ -336,6 +338,9 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 71,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               offOnColourMap},
     {moduleTypeMix4to1C,   paramType1StandardToggle, paramType2Toggle, {{  3,  20}, {7,  7}}, anchorTopLeft,     "Pad",       2,  0, padStrMap,          NULL          },
     {moduleTypeMix4to1C,   paramType1StandardToggle, paramType2Toggle, {{  3,  10}, {7,  7}}, anchorTopLeft,     NULL,        3,  0, expStrMap,          NULL          },
+    {moduleTypeFxtoIn,     paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, {7,  7}}, anchorBottomLeft,  "In FX",     2,  0, inFxStrMap,         NULL          },
+    {moduleTypeFxtoIn,     paramType1Bypass,         paramType2Toggle, {{-35,  -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          },
+    {moduleTypeFxtoIn,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {7,  7}}, anchorBottomLeft,  "Pad",       4,  0, db12PadStrMap,          NULL          },
     {moduleTypeEnvADSR,    paramType1StandardToggle, paramType2Toggle, {{-26,  -3}, {7,  7}}, anchorBottomRight, NULL,        4,  0, envShapeStrMap,     NULL          },
     {moduleTypeEnvADSR,    paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "Attack",  128,  0, NULL,               NULL          },
     {moduleTypeEnvADSR,    paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Delay",   128,  0, NULL,               NULL          },
@@ -384,6 +389,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 35,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
     {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 50,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
     {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 65,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
+    {moduleTypeFxtoIn,     connectorDirIn,  connectorTypeAudio,   {{-10,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },
+    {moduleTypeFxtoIn,     connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },
     {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   }, // Audio in, top right
     {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeLogic,   {{  3,  15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Gate",  labelLocRight},
     {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "AM",    labelLocRight},
@@ -407,7 +414,9 @@ const tModeLocation   modeLocationList[] = {
 const tVolumeLocation volumeLocationList[] = {
     {moduleTypeMix4to1C, volumeTypeMono,     {{-15, 6}, {3, 25}}, anchorTopRight},
     {moduleTypeCompress, volumeTypeCompress, {{-18, 6}, {4, 38}}, anchorTopRight},
-    {moduleType2toOut,   volumeTypeStereo,   {{-25, 6}, {3, 10}}, anchorTopRight}};
+    {moduleType2toOut,   volumeTypeStereo,   {{-25, 6}, {3, 10}}, anchorTopRight},
+    {moduleTypeFxtoIn,   volumeTypeStereo,   {{-25, 6}, {3, 10}}, anchorTopRight},
+    {moduleTypeMix4to1S,   volumeTypeStereo,   {{-25, 6}, {3, 25}}, anchorTopRight},};
 
 const tLedLocation    ledLocationList[] = {
     {moduleTypeEnvADSR, ledTypeYes, {{3, 8}, {3, 3}}, anchorTopLeft}, };

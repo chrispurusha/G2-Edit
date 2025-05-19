@@ -227,6 +227,8 @@ void handle_button(tButtonId buttonId) {
             gLocation                                     = locationVa;
             gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
             gMainButtonArray[fxButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            set_x_scroll_bar(0); // or different scroll positions for va and fx!?
+            set_y_scroll_bar(0);
             break;
         }
         case fxButtonId:
@@ -234,6 +236,8 @@ void handle_button(tButtonId buttonId) {
             gLocation                                     = locationFx;
             gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
             gMainButtonArray[vaButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            set_x_scroll_bar(0);
+            set_y_scroll_bar(0);
             break;
         }
         case openReadFileButtonId:
