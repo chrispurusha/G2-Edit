@@ -219,20 +219,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range);
             break;
         }
-        case paramType1FltMultiDb:
-        case paramType1FltClassicDb:
-        case paramType1PitchType:
-        case paramType1FmType:
-        case paramType1OffTo100KbTrack:
-        case paramType1OffOnKeyboardTrack:
-        case paramType1Exp:
-        case paramType1Pad:
-        case paramType1NormalReset:
-        case paramType1Kb:
-        case paramType1EnvShape:
-        case paramType1Pos:
-        case paramType1GainControl:
-        case paramType1SideChain:
+        case paramType1StandardToggle:
         {
             char ** strMap     = (char **)paramLocationList[paramRef].strMap;
             double  y          = rectangle.coord.y;
@@ -240,7 +227,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 
             if (strMap == NULL) {
                 LOG_ERROR("No strMap for module type %s\n", gModuleProperties[module->type].name);
-                
+
                 //Debug help for value
                 char debug[64] = {0};
                 snprintf(debug, sizeof(debug), "%u", paramValue);

@@ -312,24 +312,11 @@ typedef enum {
     paramType1Freq,
     paramType1Resonance,
     paramType1Pitch,
-    paramType1PitchType,
-    paramType1FmType,
-    paramType1OffTo100KbTrack,
-    paramType1OffOnKeyboardTrack,
-    paramType1GainControl,
     paramType1Bypass,
-    paramType1FltClassicDb,
-    paramType1FltMultiDb,
     paramType1CommonDial,
     paramType1OscWave,
     paramType1Enable,
-    paramType1Exp,
-    paramType1Pad,
-    paramType1SideChain,
-    paramType1Kb,
-    paramType1NormalReset,
-    paramType1EnvShape,
-    paramType1Pos
+    paramType1StandardToggle
 } tParamType1;
 
 typedef enum {
