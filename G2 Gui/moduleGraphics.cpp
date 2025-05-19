@@ -149,6 +149,13 @@ tRectangle render_dial_with_text(tRectangle rectangle, char * label, char * buff
     if (buff != NULL) {
         render_text(moduleArea, {{rectangle.coord.x, rectangle.coord.y + textHeight}, {BLANK_SIZE, textHeight}}, buff);
     }
+    //{
+    //    char debug[64] = {0};
+    //
+    //    snprintf(debug, sizeof(debug), "VAL %u\n", value);
+    //    render_text(moduleArea, {{rectangle.coord.x, rectangle.coord.y + textHeight}, {BLANK_SIZE, textHeight}}, debug);
+    //}
+
     set_rgb_colour(RGB_GREY_2);
     return render_dial({{rectangle.coord.x, rectangle.coord.y + (textHeight * 2.0)}, {rectangle.size.w, rectangle.size.w}}, value, range);
 }
@@ -220,6 +227,10 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         case paramType1OffOnKeyboardTrack:
         case paramType1Exp:
         case paramType1Pad:
+        case paramType1NormalReset:
+        case paramType1Kb:
+        case paramType1EnvShape:
+        case paramType1Pos:
         case paramType1GainControl:
         case paramType1SideChain:
         {
@@ -229,6 +240,12 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 
             if (strMap == NULL) {
                 LOG_ERROR("No strMap for module type %s\n", gModuleProperties[module->type].name);
+                
+                //Debug help for value
+                char debug[64] = {0};
+                snprintf(debug, sizeof(debug), "%u", paramValue);
+                set_rgb_colour(RGB_BACKGROUND_GREY);
+                module->param[gVariation][paramIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {30, textHeight}}, debug);
                 return;
             }
 
@@ -373,7 +390,7 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
                 textRectangle.coord.y += 2;
                 break;
             case labelLocRight:
-                textRectangle.coord.x += (get_text_width((char *)connectorLocationList[connectorListIndex].label, textRectangle.size.h) + 2);
+                textRectangle.coord.x += (rectangle.size.w + 2);
                 textRectangle.coord.y += 2;
                 break;
         }

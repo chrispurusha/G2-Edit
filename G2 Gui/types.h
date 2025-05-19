@@ -326,6 +326,10 @@ typedef enum {
     paramType1Exp,
     paramType1Pad,
     paramType1SideChain,
+    paramType1Kb,
+    paramType1NormalReset,
+    paramType1EnvShape,
+    paramType1Pos
 } tParamType1;
 
 typedef enum {
