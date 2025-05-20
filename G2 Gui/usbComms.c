@@ -465,7 +465,7 @@ static void parse_param_change(uint8_t * buff, int length) {
 
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t commandResponse, uint8_t subCommand, int length) {
     tModule module = {0};
-    int     i      = 0;
+    //int     i      = 0;
 
     switch (commandResponse) {
         case 0x00: // slot!?
@@ -476,48 +476,53 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
             switch (subCommand) {
                 case SUB_COMMAND_VOLUME_INDICATOR:
                 {
-                    //LOG_DEBUG("Vol ");
-                    //for (i = 4; i < 40; i++)
-                    //    LOG_DEBUG("0x%02x ", buff[i]);
-                    //LOG_DEBUG("\n");
+                    //{
+                    //    uint32_t tmpBitPos = *bitPos;
+                    //
+                    //    for (int i = 4; i < (length - 2); i++) {
+                    //        LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, bitPos, 8));
+                    //    }
+                    //    LOG_DEBUG_DIRECT("\n");
+                    //    *bitPos = tmpBitPos;
+                    //}
+                    
+                    read_bit_stream(buff, bitPos, 8); // dummy - not sure what it does
 
-                    for (int k = 0; k <= 255; k++) {
-                        module.key.location = gLocation;
-                        module.key.index    = k;
-
-                        if (read_module(module.key, &module) == true) {
-                            switch (gModuleProperties[module.type].volumeType) {
-                                case volumeTypeStereo:
-                                {
-                                    read_bit_stream(buff, bitPos, 8);
-                                    module.volume.value1 = read_bit_stream(buff, bitPos, 8);
-                                    read_bit_stream(buff, bitPos, 8);
-                                    module.volume.value2 = read_bit_stream(buff, bitPos, 8);
-                                    read_bit_stream(buff, bitPos, 8); // Unused / unknown!?
+                    for (int32_t location = 1; location >= 0; location--) {
+                        for (int k = 0; k <= 255; k++) {
+                            module.key.location = location;
+                            module.key.index    = k;
+                            
+                            if (read_module(module.key, &module) == true) {
+                                switch (gModuleProperties[module.type].volumeType) {
+                                    case volumeTypeStereo:
+                                    {
+                                        module.volume.value1 = read_bit_stream(buff, bitPos, 16);
+                                        module.volume.value2 = read_bit_stream(buff, bitPos, 16);
+                                        break;
+                                    }
+                                    case volumeTypeMono:
+                                    {
+                                        module.volume.value1 = read_bit_stream(buff, bitPos, 16);
+                                        module.volume.value2 = 0;
+                                        break;
+                                    }
+                                    case volumeTypeCompress:
+                                    {
+                                        module.volume.value1 = read_bit_stream(buff, bitPos, 16);
+                                        module.volume.value2 = 0;
+                                        break;
+                                    }
+                                    default:
+                                    {
+                                        break;
+                                    }
                                 }
-                                break;
-                                case volumeTypeMono:
-                                {
-                                    module.volume.value1 = read_bit_stream(buff, bitPos, 8);
-                                    module.volume.value2 = 0;
+                                
+                                if (gModuleProperties[module.type].volumeType != volumeTypeNone) {
+                                    //LOG_DEBUG("Module loc %u index %u vol %u %u\n", module.key.location, module.key.index, module.volume.value1, module.volume.value2);
+                                    write_module(module.key, &module);
                                 }
-                                break;
-                                case volumeTypeCompress:
-                                {
-                                    uint32_t val = 0;
-
-                                    module.volume.value1  = read_bit_stream(buff, bitPos, 8);
-                                    val                   = read_bit_stream(buff, bitPos, 8);
-                                    module.volume.value2 |= (val << 8);
-                                }
-                                break;
-                                default:
-                                    break;
-                            }
-
-                            if (gModuleProperties[module.type].volumeType != volumeTypeNone) {
-                                //LOG_DEBUG("Module %u vol %u %u\n", module.key.index, module.volume[0], module.volume[1]);
-                                write_module(module.key, &module);
                             }
                         }
                     }
@@ -527,7 +532,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                 }
                 case SUB_COMMAND_LED_DATA:
                 {
-                    for (i = 4; i < (length - 2); i++) {
+                    for (int i = 4; i < (length - 2); i++) {
                         buff[i] = reverse_bits_in_byte(buff[i]);
                     }
 

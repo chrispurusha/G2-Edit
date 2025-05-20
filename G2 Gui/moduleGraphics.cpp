@@ -55,6 +55,9 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
             set_rgb_colour(RGB_BLACK);
             render_rectangle(moduleArea, rectangle);
 
+            value = ((value & 0xff00) >> 8) | ((value & 0xff) << 8); // Swap bytes
+            value &= 0x03ff;  // There's a value of 3 in the high nibble, which is unknown use. Might be an indication of this being individual bit per LED?
+            
             for (int i = 0; i < leds; i++) {
                 if ((value >> i) & 0x01) {
                     set_rgb_colour(RGB_GREEN_7);
@@ -70,38 +73,50 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
         case volumeTypeMono:
         case volumeTypeStereo:
         {
-            double scaledValue = (rectangle.size.h * value) / 128.0;
+            uint32_t top3Bits = 0;
+            
+            value = ((value & 0xff00) >> 8) | ((value & 0xff) << 8); // Swap bytes
+            top3Bits = (value >>5) & 0x7;
+            value &= 0x1f;
+            //LOG_DEBUG("Top 3 bits = %u val = %u\n", top3Bits, value); // Val of 10 or 11 = Yellow, 12 = red?, top bits 3 = clip?
+            
+            double fullHeight = rectangle.size.h;
+            double scaledValue = (rectangle.size.h * value) / 12.0;    // 128 usually, but one example of 300!? Maybe the leading nibble denotes a type? val of 1 changes scale!?
 
-            double thresholds[] = {0.5, 0.8, 1.0};  // Green up to 50%, yellow to 80%, red the rest
-            double fullHeight   = rectangle.size.h;
-            tRgb   colours[3]   = {RGB_GREEN_7,
-                                   RGB_YELLOW_7,
-                                   RGB_RED_7};
+            int valueThresholds[] = {9, 11, 12}; // Exclusive upper bounds for green/yellow/red
+              tRgb colours[] = {RGB_GREEN_7, RGB_YELLOW_7, RGB_RED_7};
 
             set_rgb_colour(RGB_BLACK);
             render_rectangle(moduleArea, rectangle);
 
+            double previousHeight = 0;
             for (int i = 0; i < 3; i++) {
-                double segmentTop    = thresholds[i] * fullHeight;
-                double segmentBottom = (i == 0) ? 0 : thresholds[i - 1] * fullHeight;
-                double segmentHeight = segmentTop - segmentBottom;
-                double drawHeight    = 0;
+                    int segmentTopVal = valueThresholds[i];
+                    int segmentBottomVal = (i == 0) ? 0 : valueThresholds[i - 1];
+                    int segmentRange = segmentTopVal - segmentBottomVal;
 
-                // How much of this segment should be drawn
-                if (scaledValue > segmentBottom) {
-                    drawHeight = scaledValue < segmentTop
-                    ? scaledValue - segmentBottom
-                    : segmentHeight;
+                    double segmentHeight = (segmentRange * fullHeight) / 12.0;
 
-                    set_rgb_colour(colours[i]);
+                    // Determine how much of this segment to draw
+                    double segmentDrawHeight = 0;
+                    if (value >= segmentBottomVal) {
+                        int drawSteps = (value < segmentTopVal) ? value - segmentBottomVal : segmentRange;
+                        segmentDrawHeight = (drawSteps * fullHeight) / 12.0;
 
-                    render_rectangle(
-                        moduleArea,
-                        {{rectangle.coord.x,
-                            rectangle.coord.y + fullHeight - segmentTop + (segmentHeight - drawHeight)},
-                            {rectangle.size.w, drawHeight}});
+                        set_rgb_colour(colours[i]);
+                        render_rectangle(
+                            moduleArea,
+                            {{
+                                rectangle.coord.x,
+                                rectangle.coord.y + fullHeight - previousHeight - segmentDrawHeight
+                            },
+                            {
+                                rectangle.size.w,
+                                segmentDrawHeight
+                            }});
+                        previousHeight += segmentDrawHeight;
+                    }
                 }
-            }
         }
 
         break;
