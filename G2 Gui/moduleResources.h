@@ -218,7 +218,7 @@ const tModuleProperties gModuleProperties[] = {
     {"Mux8-1",       2, volumeTypeNone,     ledTypeNo },
     {"WahWah",       2, volumeTypeNone,     ledTypeNo },
     {"Name",         1, volumeTypeNone,     ledTypeNo },
-    {"Fx-In",        2, volumeTypeStereo,     ledTypeNo },
+    {"Fx-In",        2, volumeTypeStereo,   ledTypeNo },
     {"MinMax",       2, volumeTypeNone,     ledTypeNo },
     {"Unknown",      0, volumeTypeNone,     ledTypeNo },
     {"BinCounter",   2, volumeTypeNone,     ledTypeNo },
@@ -231,7 +231,7 @@ const tModuleProperties gModuleProperties[] = {
     {"Unknown",      0, volumeTypeNone,     ledTypeNo },
     {"Unknown",      0, volumeTypeNone,     ledTypeNo },
     {"T&H",          2, volumeTypeNone,     ledTypeNo },
-    {"Mix4-1S",      4, volumeTypeStereo,     ledTypeNo },
+    {"Mix4-1S",      4, volumeTypeStereo,   ledTypeNo },
     {"CtrlSend",     2, volumeTypeNone,     ledTypeNo },
     {"PCSend",       2, volumeTypeNone,     ledTypeNo },
     {"NoteSend",     2, volumeTypeNone,     ledTypeNo },
@@ -340,7 +340,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeMix4to1C,   paramType1StandardToggle, paramType2Toggle, {{  3,  10}, {7,  7}}, anchorTopLeft,     NULL,        3,  0, expStrMap,          NULL          },
     {moduleTypeFxtoIn,     paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, {7,  7}}, anchorBottomLeft,  "In FX",     2,  0, inFxStrMap,         NULL          },
     {moduleTypeFxtoIn,     paramType1Bypass,         paramType2Toggle, {{-35,  -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          },
-    {moduleTypeFxtoIn,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {7,  7}}, anchorBottomLeft,  "Pad",       4,  0, db12PadStrMap,          NULL          },
+    {moduleTypeFxtoIn,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {7,  7}}, anchorBottomLeft,  "Pad",       4,  0, db12PadStrMap,      NULL          },
     {moduleTypeEnvADSR,    paramType1StandardToggle, paramType2Toggle, {{-26,  -3}, {7,  7}}, anchorBottomRight, NULL,        4,  0, envShapeStrMap,     NULL          },
     {moduleTypeEnvADSR,    paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "Attack",  128,  0, NULL,               NULL          },
     {moduleTypeEnvADSR,    paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Delay",   128,  0, NULL,               NULL          },
@@ -374,6 +374,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,   {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },
     {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,   {{ 73,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },
     {moduleTypeOscShpB,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },
+    {moduleTypeDelayB,     connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },
+    {moduleTypeReverb,     connectorDirIn,  connectorTypeAudio,   {{-10,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },
+    {moduleTypeDelayB,     connectorDirOut, connectorTypeAudio,   {{ -3,  -1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },
+    {moduleTypeReverb,     connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },
+    {moduleTypeReverb,     connectorDirOut, connectorTypeAudio,   {{-10,  -1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },
+    {moduleTypeReverb,     connectorDirOut, connectorTypeAudio,   {{ -3,  -1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },
     {moduleTypeFltClassic, connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },
     {moduleTypeFltClassic, connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },
     {moduleTypeFltClassic, connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },
@@ -389,9 +395,21 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 35,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
     {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 50,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
     {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 65,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
-    {moduleTypeFxtoIn,     connectorDirIn,  connectorTypeAudio,   {{-10,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },
-    {moduleTypeFxtoIn,     connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },
-    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   }, // Audio in, top right
+    {moduleTypeMix4to1S,   connectorDirOut, connectorTypeAudio,   {{-10,  -1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // Out L
+    {moduleTypeMix4to1S,   connectorDirOut, connectorTypeAudio,   {{ -3,  -1}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // Out R
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 20,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 25,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 30,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 35,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 40,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 45,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 50,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 55,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{-10,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },  // Chain input L
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },  // Chain input R
+    {moduleTypeFxtoIn,     connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },
+    {moduleTypeFxtoIn,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },
+    {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },  // Audio in, top right
     {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeLogic,   {{  3,  15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Gate",  labelLocRight},
     {moduleTypeEnvADSR,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "AM",    labelLocRight},
     {moduleTypeEnvADSR,    connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",   labelLocUp   },
@@ -416,7 +434,7 @@ const tVolumeLocation volumeLocationList[] = {
     {moduleTypeCompress, volumeTypeCompress, {{-18, 6}, {4, 38}}, anchorTopRight},
     {moduleType2toOut,   volumeTypeStereo,   {{-25, 6}, {3, 10}}, anchorTopRight},
     {moduleTypeFxtoIn,   volumeTypeStereo,   {{-25, 6}, {3, 10}}, anchorTopRight},
-    {moduleTypeMix4to1S,   volumeTypeStereo,   {{-25, 6}, {3, 25}}, anchorTopRight},};
+    {moduleTypeMix4to1S, volumeTypeStereo,   {{-25, 6}, {3, 25}}, anchorTopRight}, };
 
 const tLedLocation    ledLocationList[] = {
     {moduleTypeEnvADSR, ledTypeYes, {{3, 8}, {3, 3}}, anchorTopLeft}, };
