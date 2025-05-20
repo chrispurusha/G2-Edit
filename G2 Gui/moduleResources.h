@@ -31,7 +31,7 @@ const char * fltMultiDbStrMap[]   = {"6db", "12db", NULL};
 const char * offTo100KbStrMap[]   = {"Off", "25%", "50%", "75%", "100%"};
 const char * offOnStrMap[]        = {"Off", "On"};
 const char * expStrMap[]          = {"Exp", "Lin", "dB"};
-const char * padStrMap[]          = {"0dB", "-6dB"};
+const char * padStrMap[]          = {"0dB", "+6dB"};
 const char * db12PadStrMap[]      = {"+6dB", "0dB", "-6dB", "-12dB"};
 const char * gcStrMap[]           = {"GC", "GC"};
 const char * kbStrMap[]           = {"KB", "KB"};
@@ -304,6 +304,7 @@ const tModuleProperties gModuleProperties[] = {
 // moduleType, paramType1, paramType2, position rectangle, anchor, label, range, defaultValue, string map, colour map
 const tParamLocation paramLocationList[] = {
     {moduleType2toOut,     paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, {7,  7}}, anchorBottomLeft,  "Out to",    6,  0, outToStrMap,        NULL          },
+    {moduleType2toOut,     paramType1Bypass,         paramType2Toggle, {{ -3,   -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          },
     {moduleType2toOut,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {7,  7}}, anchorBottomLeft,  "Pad",       2,  0, padStrMap,          NULL          },
     {moduleTypeOscShpB,    paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128, 64, NULL,               NULL          },
     {moduleTypeOscShpB,    paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL,               NULL          },
