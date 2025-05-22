@@ -170,11 +170,15 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
         module.isLed     = read_bit_stream(buff, subOffset, 1);        // 1
         module.unknown1  = read_bit_stream(buff, subOffset, 6);        // 6
         module.modeCount = read_bit_stream(buff, subOffset, 4);        // 4
+        
+        LOG_DEBUG("Module type %u\n", module.type);
+        LOG_DEBUG("Module column %u\n", module.column);
+        LOG_DEBUG("Module row %u\n", module.row);
 
         for (j = 0; j < module.modeCount; j++) {
             module.mode[j].value = read_bit_stream(buff, subOffset, 6);
             LOG_DEBUG("Mode index %u = %u\n", j, module.mode[j].value);
-            LOG_DEBUG("MODE %u %u\n", i, module.mode[j].value);
+            LOG_DEBUG("MODE %u %u\n", j, module.mode[j].value);
         }
 
         allocate_module_parameters(&module, module_param_count(type)); // Also done on parameter set-up, so whichever's first
@@ -378,50 +382,99 @@ int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, 
 
         switch (type) {
             case SUB_RESPONSE_MODULE_LIST:     // Module list
+            {
                 parse_module_list(buff, &subOffset);
                 break;
+            }
 
             case SUB_RESPONSE_CABLE_LIST:     // Cable list
+            {
                 parse_cable_list(buff, &subOffset);
                 break;
+            }
 
             case SUB_RESPONSE_PARAM_LIST:     // Param list
+            {
                 parse_param_list(buff, &subOffset);
                 break;
+            }
 
             case SUB_RESPONSE_PARAM_NAMES:     // Param names
+            {
                 parse_param_names(buff, &subOffset, count);
                 break;
+            }
 
             case SUB_RESPONSE_MODULE_NAMES:     // Module names
+            {
                 parse_module_names(buff, &subOffset);
                 break;
+            }
 
             case 0x2d:     // Special case (ignore)
+            {
                 // This 0x2d 0x00 sequence reportedly only appears on USB comms, not in files
                 // so ignore as a size by moving back a byte
                 count = -1;
                 break;
+            }
 
             case SUB_RESPONSE_PATCH_DESCRIPTION: // Not sure we should be getting this, since we're already processing patch description in this function!?
+            {
                 LOG_DEBUG("Patch Descr\n");
                 break;
+            }
 
             case SUB_RESPONSE_MORPH_PARAMS:
+            {
                 LOG_DEBUG("Morph Params\n");
+
+                uint32_t tmpSubOffset = subOffset;
+
+                for (int i = 0; i < 32; i++) {
+                    LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, &subOffset, 8));
+                }
+
+                LOG_DEBUG_DIRECT("\n");
+                subOffset = tmpSubOffset;
                 break;
+            }
 
             case 0x62:
+            {
                 LOG_DEBUG("Knobs\n");
+
+                uint32_t tmpSubOffset = subOffset;
+
+                for (int i = 0; i < 32; i++) {
+                    LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, &subOffset, 8));
+                }
+
+                LOG_DEBUG_DIRECT("\n");
+                subOffset = tmpSubOffset;
                 break;
+            }
 
             case 0x60:
+            {
                 LOG_DEBUG("Controllers\n");
+
+                uint32_t tmpSubOffset = subOffset;
+
+                for (int i = 0; i < 32; i++) {
+                    LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, &subOffset, 8));
+                }
+
+                LOG_DEBUG_DIRECT("\n");
+                subOffset = tmpSubOffset;
                 break;
+            }
 
             default:
+            {
                 LOG_DEBUG("Unprocessed type 0x%02x\n", type);
                 break;
+            }
         }
         bitOffset += SIGNED_BYTE_TO_BIT(count);
     }
