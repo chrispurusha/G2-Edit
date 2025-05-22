@@ -170,7 +170,7 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
         module.isLed     = read_bit_stream(buff, subOffset, 1);        // 1
         module.unknown1  = read_bit_stream(buff, subOffset, 6);        // 6
         module.modeCount = read_bit_stream(buff, subOffset, 4);        // 4
-        
+
         LOG_DEBUG("Module type %u\n", module.type);
         LOG_DEBUG("Module column %u\n", module.column);
         LOG_DEBUG("Module row %u\n", module.row);
@@ -233,7 +233,7 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
 
     LOG_DEBUG("Param list\n");
     key.location = read_bit_stream(buff, subOffset, 2);
-    LOG_DEBUG("Location       0x%x\n", key.location);     // 0..1 = param list, 2 = patch settings 2=morph!?
+    LOG_DEBUG("Location       0x%x\n", key.location);     // 0..1 = param list, 2 = patch settings!?
     // SWITCH ON LOC BEING 0..1 or 2
 
     moduleCount = read_bit_stream(buff, subOffset, 8);
@@ -254,7 +254,10 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
 
         for (j = 0; j < variationCount; j++) {                                                          // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
             uint32_t variation = read_bit_stream(buff, subOffset, 8);
-            LOG_DEBUG("  Variation %u\n", variation);
+
+            if (variation == 0) { // Limit to just 1st variation for now
+                LOG_DEBUG("  Variation %u\n", variation);
+            }
 
             if (j != variation) {
                 LOG_WARNING("loop var %u != variation %u\n", j, variation);
@@ -262,7 +265,10 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
 
             for (k = 0; k < paramCount; k++) {
                 paramValue = read_bit_stream(buff, subOffset, 7);
-                LOG_DEBUG("   Param number %02d param value %02d\n", k, paramValue);
+
+                if (variation == 0) { // Limit to just 1st variation for now
+                    LOG_DEBUG("   Param number %02d param value %02d\n", k, paramValue);
+                }
                 module.param[j][k].value = paramValue;
             }
         }
@@ -514,229 +520,223 @@ static void parse_param_change(uint8_t * buff, int length) {
     module.param[variation][param].value = value;
     write_module(key, &module);
 
-    LOG_DEBUG("param = %u value = %u\n", param, value);
+    LOG_DEBUG("Param change - module %u:%u param = %u value = %u\n", key.location, key.index, param, value);
 }
 
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t commandResponse, uint8_t subCommand, int length) {
-    tModule module = {0};
+    tModule  module = {0};
+    uint32_t slot   = commandResponse & 0x03;
 
-    //int     i      = 0;
+    // Not sure higher bits in commandResponse byte have much practical effect
+    //LOG_DEBUG("Slot %u\n", slot);
 
-    switch (commandResponse) {
-        case 0x00: // slot!?
-        case 0x01:
-        case 0x02:
-        case 0x03:
+    switch (subCommand) {
+        case SUB_RESPONSE_VOLUME_INDICATOR:
+        {
+            //{
+            //    uint32_t tmpBitPos = *bitPos;
+            //
+            //    for (int i = 4; i < (length - 2); i++) {
+            //        LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, bitPos, 8));
+            //    }
+            //    LOG_DEBUG_DIRECT("\n");
+            //    *bitPos = tmpBitPos;
+            //}
 
-            switch (subCommand) {
-                case SUB_RESPONSE_VOLUME_INDICATOR:
-                {
-                    //{
-                    //    uint32_t tmpBitPos = *bitPos;
-                    //
-                    //    for (int i = 4; i < (length - 2); i++) {
-                    //        LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, bitPos, 8));
-                    //    }
-                    //    LOG_DEBUG_DIRECT("\n");
-                    //    *bitPos = tmpBitPos;
-                    //}
+            read_bit_stream(buff, bitPos, 8); // dummy - not sure what it does
 
-                    read_bit_stream(buff, bitPos, 8); // dummy - not sure what it does
+            for (int32_t location = 1; location >= 0; location--) {
+                for (int k = 0; k <= 255; k++) {
+                    module.key.location = location;
+                    module.key.index    = k;
 
-                    for (int32_t location = 1; location >= 0; location--) {
-                        for (int k = 0; k <= 255; k++) {
-                            module.key.location = location;
-                            module.key.index    = k;
-
-                            if (read_module(module.key, &module) == true) {
-                                switch (gModuleProperties[module.type].volumeType) {
-                                    case volumeTypeStereo:
-                                    {
-                                        module.volume.value1 = read_bit_stream(buff, bitPos, 16);
-                                        module.volume.value2 = read_bit_stream(buff, bitPos, 16);
-                                        break;
-                                    }
-                                    case volumeTypeMono:
-                                    {
-                                        module.volume.value1 = read_bit_stream(buff, bitPos, 16);
-                                        module.volume.value2 = 0;
-                                        break;
-                                    }
-                                    case volumeTypeCompress:
-                                    {
-                                        module.volume.value1 = read_bit_stream(buff, bitPos, 16);
-                                        module.volume.value2 = 0;
-                                        break;
-                                    }
-                                    default:
-                                    {
-                                        break;
-                                    }
-                                }
-
-                                if (gModuleProperties[module.type].volumeType != volumeTypeNone) {
-                                    //LOG_DEBUG("Module loc %u index %u vol %u %u\n", module.key.location, module.key.index, module.volume.value1, module.volume.value2);
-                                    write_module(module.key, &module);
-                                }
+                    if (read_module(module.key, &module) == true) {
+                        switch (gModuleProperties[module.type].volumeType) {
+                            case volumeTypeStereo:
+                            {
+                                module.volume.value1 = read_bit_stream(buff, bitPos, 16);
+                                module.volume.value2 = read_bit_stream(buff, bitPos, 16);
+                                break;
+                            }
+                            case volumeTypeMono:
+                            {
+                                module.volume.value1 = read_bit_stream(buff, bitPos, 16);
+                                module.volume.value2 = 0;
+                                break;
+                            }
+                            case volumeTypeCompress:
+                            {
+                                module.volume.value1 = read_bit_stream(buff, bitPos, 16);
+                                module.volume.value2 = 0;
+                                break;
+                            }
+                            default:
+                            {
+                                break;
                             }
                         }
-                    }
 
-                    call_wake_glfw();
-                    return EXIT_SUCCESS;
-                }
-                case SUB_RESPONSE_LED_DATA:
-                {
-                    for (int i = 4; i < (length - 2); i++) {
-                        buff[i] = reverse_bits_in_byte(buff[i]);
-                    }
-
-                    //LOG_DEBUG("LED ");
-                    //for (i = 4; i < (length-2); i++)
-                    //    LOG_DEBUG("0x%02x ", buff[i]);
-                    //LOG_DEBUG("\n");
-
-                    read_bit_stream(buff, bitPos, 8); // Seems to be a byte of padding
-
-                    for (int k = 0; k <= 255; k++) {
-                        module.key.location = gLocation;
-                        module.key.index    = k;
-
-                        if (read_module(module.key, &module) == true) {
-                            if (gModuleProperties[module.type].ledType == ledTypeYes) {
-                                module.led.value = read_bit_stream(buff, bitPos, 1);
-                                read_bit_stream(buff, bitPos, 1); // Not sure if this is used for anything yet, might just be padding
-
-                                //LOG_DEBUG("Module %u LED %u\n", module.key.index, module.led);
-                                write_module(module.key, &module);
-                            }
+                        if (gModuleProperties[module.type].volumeType != volumeTypeNone) {
+                            //LOG_DEBUG("Module loc %u index %u vol %u %u\n", module.key.location, module.key.index, module.volume.value1, module.volume.value2);
+                            write_module(module.key, &module);
                         }
                     }
-
-                    call_wake_glfw();
-                    return EXIT_SUCCESS;
                 }
-                case SUB_RESPONSE_ERROR:
-                {
-                    LOG_DEBUG("Got Error!!!\n");
-                    return EXIT_FAILURE;
-                }
-                case SUB_RESPONSE_RESOURCES_USED:
-                {
-                    LOG_DEBUG("Got resources in use slot %u\n", commandResponse);
-                    return EXIT_SUCCESS;
-                }
-                case SUB_RESPONSE_PARAM_CHANGE:
-                {
-                    parse_param_change(&buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
-                    call_wake_glfw();
-                    return EXIT_SUCCESS;
-                }
-                default:
-                    LOG_DEBUG("Got 0x00 Unknown sub-command 0x%02x\n", subCommand);
-                    return EXIT_SUCCESS;
             }
-        case 0x0C:
-        {
-            switch (subCommand) {
-                case SUB_RESPONSE_OK:
-                    //LOG_DEBUG("Got 0x0c OK\n");
-                    return EXIT_SUCCESS;
 
-                case SUB_RESPONSE_PATCH_VERSION:
-                    LOG_DEBUG("Got get patch version\n");
-                    return parse_patch_version(&buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
-
-                case SUB_RESPONSE_SYNTH_SETTINGS:
-                    LOG_DEBUG("Got synth settings\n");
-                    return parse_synth_settings(&buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
-
-                case SUB_RESPONSE_MIDI_CC:
-                    LOG_DEBUG("Got MIDI cc response\n");
-                    return EXIT_SUCCESS;
-
-                case SUB_RESPONSE_GLOBAL_PAGE:
-                    LOG_DEBUG("Got Global page\n");
-                    return EXIT_SUCCESS;
-
-                default:
-                    LOG_DEBUG("Got 0x0C Unknown sub-command 0x%02x\n", subCommand);
-                    return EXIT_FAILURE;
-            }
+            return EXIT_SUCCESS;
         }
-        case 0x04:
+
+        case SUB_RESPONSE_LED_DATA:
         {
-            switch (subCommand) {
-                case SUB_RESPONSE_PATCH_VERSION_CHANGE:
-                    LOG_DEBUG("Got Patch load\n");
-                    gotPatchChangeIndication = true;
-                    return EXIT_SUCCESS;
-
-                case SUB_RESPONSE_ASSIGNED_VOICES:
-                    LOG_DEBUG("Got assigned voices Response\n");
-                    return EXIT_SUCCESS;
-
-                case SUB_COMMAND_SET_ASSIGNED_VOICES:
-                    LOG_DEBUG("Got assigned voiced command - shouldn't happen!?\n");
-                    return EXIT_SUCCESS;
-
-                case SUB_RESPONSE_PERFORMANCE_NAME:
-                    LOG_DEBUG("Got performance name\n");
-                    return EXIT_SUCCESS;
-
-                default:
-                    LOG_DEBUG("Got 0x04 Unknown sub-command 0x%02x\n", subCommand);
-                    return EXIT_FAILURE;
+            for (int i = 4; i < (length - 2); i++) {
+                buff[i] = reverse_bits_in_byte(buff[i]);
             }
-        }
-        case 0x08:
-        {
-            switch (subCommand) {
-                case SUB_RESPONSE_PATCH_VERSION:
-                    LOG_DEBUG("Got Patch Version\n");
-                    LOG_DEBUG("Val 1 0x%02x\n", read_bit_stream(buff, bitPos, 8));
-                    LOG_DEBUG("Val 2 0x%02x\n", read_bit_stream(buff, bitPos, 8));
-                    LOG_DEBUG("Val 3 0x%02x\n", read_bit_stream(buff, bitPos, 8));
-                    return EXIT_SUCCESS;
 
-                case SUB_RESPONSE_PATCH_DESCRIPTION:
-                    LOG_DEBUG("Got Patch info\n");
-                    parse_patch(&buff[BIT_TO_BYTE(*bitPos) - 1], (length - BIT_TO_BYTE(*bitPos) - CRC_BYTES) + 1);
-                    return EXIT_SUCCESS;
+            //LOG_DEBUG("LED ");
+            //for (i = 4; i < (length-2); i++)
+            //    LOG_DEBUG("0x%02x ", buff[i]);
+            //LOG_DEBUG("\n");
 
-                case SUB_RESPONSE_PATCH_NAME:
-                    LOG_DEBUG("Got Patch name (length %d)'", length);
+            read_bit_stream(buff, bitPos, 8); // Seems to be a byte of padding
 
-                    for (int i = 0; i < (length - 6); i++) {
-                        uint8_t ch = read_bit_stream(buff, bitPos, 8);
+            for (int k = 0; k <= 255; k++) {
+                module.key.location = gLocation;
+                module.key.index    = k;
 
-                        //LOG_DEBUG("<0x%02x> ", ch);
-                        if (ch <= 0x7F) {         // Only print valid ASCII characters - should be 16 chars max = length of 22
-                            LOG_DEBUG_DIRECT("%c", ch);
-                        }
+                if (read_module(module.key, &module) == true) {
+                    if (gModuleProperties[module.type].ledType == ledTypeYes) {
+                        module.led.value = read_bit_stream(buff, bitPos, 1);
+                        read_bit_stream(buff, bitPos, 1); // Not sure if this is used for anything yet, might just be padding
+
+                        //LOG_DEBUG("Module %u LED %u\n", module.key.index, module.led);
+                        write_module(module.key, &module);
                     }
-
-                    LOG_DEBUG_DIRECT("'\n");
-                    return EXIT_SUCCESS;
-
-                case SUB_RESPONSE_OK:
-                    //LOG_DEBUG("Got 0x7f OK\n");
-                    return EXIT_SUCCESS;
-
-                default:
-                    LOG_DEBUG("Got 0x08 Unknown sub-command 0x%02x\n", subCommand);
-                    return EXIT_FAILURE;
+                }
             }
+
+            return EXIT_SUCCESS;
         }
+
+        case SUB_RESPONSE_ERROR:
+        {
+            LOG_DEBUG("Got Error!!!\n");
+            return EXIT_FAILURE;
+        }
+
+        case SUB_RESPONSE_RESOURCES_USED:
+        {
+            LOG_DEBUG("Got resources in use slot %u\n", commandResponse);
+            return EXIT_SUCCESS;
+        }
+        case SUB_RESPONSE_PARAM_CHANGE:
+        {
+            parse_param_change(&buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
+            return EXIT_SUCCESS;
+        }
+
+        case SUB_RESPONSE_PATCH_VERSION:
+        {
+            LOG_DEBUG("Got get patch version\n");
+            return parse_patch_version(&buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
+        }
+
+        case SUB_RESPONSE_SYNTH_SETTINGS:
+        {
+            LOG_DEBUG("Got synth settings\n");
+            return parse_synth_settings(&buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
+        }
+
+        case SUB_RESPONSE_MIDI_CC:
+        {
+            LOG_DEBUG("Got MIDI cc response\n");
+            return EXIT_SUCCESS;
+        }
+
+        case SUB_RESPONSE_GLOBAL_PAGE:
+        {
+            LOG_DEBUG("Got Global page\n");
+            return EXIT_SUCCESS;
+        }
+
+        case SUB_RESPONSE_PATCH_VERSION_CHANGE:
+        {
+            LOG_DEBUG("Got Patch load\n");
+            gotPatchChangeIndication = true;
+            return EXIT_SUCCESS;
+        }
+
+        case SUB_RESPONSE_ASSIGNED_VOICES:
+        {
+            LOG_DEBUG("Got assigned voices Response\n");
+            return EXIT_SUCCESS;
+        }
+
+        case SUB_COMMAND_SET_ASSIGNED_VOICES:
+        {
+            LOG_DEBUG("Got assigned voiced command - shouldn't happen!?\n");
+            return EXIT_SUCCESS;
+        }
+
+        case SUB_RESPONSE_PERFORMANCE_NAME:
+        {
+            LOG_DEBUG("Got performance name\n");
+            return EXIT_SUCCESS;
+        }
+
+        case SUB_RESPONSE_MASTER_CLOCK:
+        {
+            LOG_DEBUG("Got master clock\n");
+            return EXIT_SUCCESS;
+        }
+
+        case SUB_COMMAND_SELECT_SLOT:
+        {
+            LOG_DEBUG("Got slot select\n");
+            return EXIT_SUCCESS;
+        }
+
+        case SUB_RESPONSE_PATCH_DESCRIPTION:
+        {
+            LOG_DEBUG("Got Patch info\n");
+            parse_patch(&buff[BIT_TO_BYTE(*bitPos) - 1], (length - BIT_TO_BYTE(*bitPos) - CRC_BYTES) + 1);
+            return EXIT_SUCCESS;
+        }
+
+        case SUB_RESPONSE_PATCH_NAME:
+        {
+            LOG_DEBUG("Got Patch name (length %d)'", length);
+
+            for (int i = 0; i < (length - 6); i++) {
+                uint8_t ch = read_bit_stream(buff, bitPos, 8);
+
+                //LOG_DEBUG("<0x%02x> ", ch);
+                if (ch <= 0x7F) {         // Only print valid ASCII characters - should be 16 chars max = length of 22
+                    LOG_DEBUG_DIRECT("%c", ch);
+                }
+            }
+
+            LOG_DEBUG_DIRECT("'\n");
+            return EXIT_SUCCESS;
+        }
+
+        case SUB_RESPONSE_OK:
+        {
+            //LOG_DEBUG("Got 0x7f OK\n");
+            return EXIT_SUCCESS;
+        }
+
         default:
         {
-            LOG_DEBUG("Got Unknown command response 0x%02x\n", commandResponse);
+            LOG_DEBUG("Got unknown sub-command 0x%02x\n", subCommand);
             return EXIT_FAILURE;
         }
     }
 }
 
 static int parse_incoming(uint8_t * buff, int length) {
+    int ret = EXIT_FAILURE;
+
     if ((buff == NULL) || (length <= 0)) {
         return EXIT_FAILURE;
     }
@@ -747,23 +747,30 @@ static int parse_incoming(uint8_t * buff, int length) {
         case RESPONSE_TYPE_INIT:
         {
             LOG_DEBUG("Got Response init\n");
-            return EXIT_SUCCESS;
+
+            ret = EXIT_SUCCESS;
+            break;
         }
+
         case RESPONSE_TYPE_COMMAND:
         {
             uint8_t commandResponse = read_bit_stream(buff, &bitPos, 8);
             /*uint8_t version         =*/ read_bit_stream(buff, &bitPos, 8);
             uint8_t subCommand = read_bit_stream(buff, &bitPos, 8);
 
-            return parse_command_response(buff, &bitPos, commandResponse, subCommand, length);
+            ret = parse_command_response(buff, &bitPos, commandResponse, subCommand, length);
+            break;
         }
 
         default:
         {
             LOG_DEBUG("Got Unknown response type 0x%02x\n", responseType);
-            return EXIT_FAILURE;
+            ret = EXIT_FAILURE;
+            break;
         }
     }
+    call_wake_glfw(); // Assume something happened, so we want to re-draw
+    return ret;
 }
 
 static int rcv_extended(int dataLength) {

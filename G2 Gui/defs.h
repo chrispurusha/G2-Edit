@@ -76,6 +76,7 @@
 #define SUB_RESPONSE_LED_DATA                (0x39)
 #define SUB_RESPONSE_VOLUME_INDICATOR        (0x3a)
 #define SUB_COMMAND_GET_PATCH_SLOT           (0x3c)
+#define SUB_RESPONSE_MASTER_CLOCK            (0x3f)
 #define SUB_RESPONSE_PARAM_CHANGE            (0x40) // Seems to be used for response and set command
 #define SUB_COMMAND_SET_PARAM                (0x40)
 #define SUB_COMMAND_SET_PARAM_LABEL          (0x42)

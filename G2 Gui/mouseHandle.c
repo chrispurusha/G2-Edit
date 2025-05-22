@@ -276,7 +276,7 @@ void handle_button(tButtonId buttonId) {
                 validModule = walk_next_module(&module);
 
                 if (validModule) {
-                    init_params_on_module(&module, gLocation, gVariation);
+                    init_params_on_module(&module, gLocation, gVariation); // TODO: take init value from the 9th (init) variation, or at least check our init values are the same
                 }
             } while (validModule);
 

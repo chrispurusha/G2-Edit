@@ -360,6 +360,7 @@ void do_graphics_loop(void) {
                 render_cable_from_to(module.connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector);
             }
             render_top_bar();
+            render_morph_groups();
             render_scrollbars(gWindow);
             render_context_menu();
             // Debug only
