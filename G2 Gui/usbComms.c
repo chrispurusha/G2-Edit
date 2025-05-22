@@ -250,6 +250,7 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
 
         for (j = 0; j < variationCount; j++) {                                                          // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
             uint32_t variation = read_bit_stream(buff, subOffset, 8);
+            LOG_DEBUG("  Variation %u\n", variation);
 
             if (j != variation) {
                 LOG_WARNING("loop var %u != variation %u\n", j, variation);
@@ -257,7 +258,7 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
 
             for (k = 0; k < paramCount; k++) {
                 paramValue = read_bit_stream(buff, subOffset, 7);
-                //LOG_DEBUG("   Param number %02d param value %02d\n", k, paramValue);
+                LOG_DEBUG("   Param number %02d param value %02d\n", k, paramValue);
                 module.param[j][k].value = paramValue;
             }
         }
@@ -376,23 +377,23 @@ int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, 
         LOG_DEBUG("Type = 0x%x, Count = %d\n", type, count);
 
         switch (type) {
-            case 0x4a:     // Module list
+            case SUB_RESPONSE_MODULE_LIST:     // Module list
                 parse_module_list(buff, &subOffset);
                 break;
 
-            case 0x52:     // Cable list
+            case SUB_RESPONSE_CABLE_LIST:     // Cable list
                 parse_cable_list(buff, &subOffset);
                 break;
 
-            case 0x4d:     // Param list
+            case SUB_RESPONSE_PARAM_LIST:     // Param list
                 parse_param_list(buff, &subOffset);
                 break;
 
-            case 0x5b:     // Param names
+            case SUB_RESPONSE_PARAM_NAMES:     // Param names
                 parse_param_names(buff, &subOffset, count);
                 break;
 
-            case 0x5a:     // Module names
+            case SUB_RESPONSE_MODULE_NAMES:     // Module names
                 parse_module_names(buff, &subOffset);
                 break;
 
@@ -402,11 +403,11 @@ int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, 
                 count = -1;
                 break;
 
-            case 0x21:
+            case SUB_RESPONSE_PATCH_DESCRIPTION: // Not sure we should be getting this, since we're already processing patch description in this function!?
                 LOG_DEBUG("Patch Descr\n");
                 break;
 
-            case 0x65:
+            case SUB_RESPONSE_MORPH_PARAMS:
                 LOG_DEBUG("Morph Params\n");
                 break;
 
@@ -465,6 +466,7 @@ static void parse_param_change(uint8_t * buff, int length) {
 
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t commandResponse, uint8_t subCommand, int length) {
     tModule module = {0};
+
     //int     i      = 0;
 
     switch (commandResponse) {
@@ -474,7 +476,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
         case 0x03:
 
             switch (subCommand) {
-                case SUB_COMMAND_VOLUME_INDICATOR:
+                case SUB_RESPONSE_VOLUME_INDICATOR:
                 {
                     //{
                     //    uint32_t tmpBitPos = *bitPos;
@@ -485,14 +487,14 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     //    LOG_DEBUG_DIRECT("\n");
                     //    *bitPos = tmpBitPos;
                     //}
-                    
+
                     read_bit_stream(buff, bitPos, 8); // dummy - not sure what it does
 
                     for (int32_t location = 1; location >= 0; location--) {
                         for (int k = 0; k <= 255; k++) {
                             module.key.location = location;
                             module.key.index    = k;
-                            
+
                             if (read_module(module.key, &module) == true) {
                                 switch (gModuleProperties[module.type].volumeType) {
                                     case volumeTypeStereo:
@@ -518,7 +520,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                                         break;
                                     }
                                 }
-                                
+
                                 if (gModuleProperties[module.type].volumeType != volumeTypeNone) {
                                     //LOG_DEBUG("Module loc %u index %u vol %u %u\n", module.key.location, module.key.index, module.volume.value1, module.volume.value2);
                                     write_module(module.key, &module);
@@ -530,7 +532,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     call_wake_glfw();
                     return EXIT_SUCCESS;
                 }
-                case SUB_COMMAND_LED_DATA:
+                case SUB_RESPONSE_LED_DATA:
                 {
                     for (int i = 4; i < (length - 2); i++) {
                         buff[i] = reverse_bits_in_byte(buff[i]);
@@ -561,17 +563,17 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     call_wake_glfw();
                     return EXIT_SUCCESS;
                 }
-                case 0x7E:
+                case SUB_RESPONSE_ERROR:
                 {
                     LOG_DEBUG("Got Error!!!\n");
                     return EXIT_FAILURE;
                 }
-                case 0x72:
+                case SUB_RESPONSE_RESOURCES_USED:
                 {
                     LOG_DEBUG("Got resources in use slot %u\n", commandResponse);
                     return EXIT_SUCCESS;
                 }
-                case 0x40:
+                case SUB_RESPONSE_PARAM_CHANGE:
                 {
                     parse_param_change(&buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
                     call_wake_glfw();
@@ -584,24 +586,24 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
         case 0x0C:
         {
             switch (subCommand) {
-                case SUB_COMMAND_OK:
+                case SUB_RESPONSE_OK:
                     //LOG_DEBUG("Got 0x0c OK\n");
                     return EXIT_SUCCESS;
 
-                case SUB_COMMAND_GET_PATCH_VERSION:
+                case SUB_RESPONSE_PATCH_VERSION:
                     LOG_DEBUG("Got get patch version\n");
                     return parse_patch_version(&buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
 
-                case 0x03:
+                case SUB_RESPONSE_SYNTH_SETTINGS:
                     LOG_DEBUG("Got synth settings\n");
                     return parse_synth_settings(&buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
 
-                case 0x80:
-                    LOG_DEBUG("Got response to deliberate unknown message 1\n");
+                case SUB_RESPONSE_MIDI_CC:
+                    LOG_DEBUG("Got MIDI cc response\n");
                     return EXIT_SUCCESS;
 
-                case 0x1E:
-                    LOG_DEBUG("Got response to deliberate unknown message 2\n");
+                case SUB_RESPONSE_GLOBAL_PAGE:
+                    LOG_DEBUG("Got Global page\n");
                     return EXIT_SUCCESS;
 
                 default:
@@ -612,20 +614,20 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
         case 0x04:
         {
             switch (subCommand) {
-                case 0x38:
+                case SUB_RESPONSE_PATCH_VERSION_CHANGE:
                     LOG_DEBUG("Got Patch load\n");
                     gotPatchChangeIndication = true;
                     return EXIT_SUCCESS;
 
-                case 0x05:
-                    LOG_DEBUG("Got unknown sub-command 0x05 - possibly assigned voices\n");
+                case SUB_RESPONSE_ASSIGNED_VOICES:
+                    LOG_DEBUG("Got assigned voices Response\n");
                     return EXIT_SUCCESS;
 
-                case 0x04:
-                    LOG_DEBUG("Got unknown sub-command 0x04\n");
+                case SUB_COMMAND_SET_ASSIGNED_VOICES:
+                    LOG_DEBUG("Got assigned voiced command - shouldn't happen!?\n");
                     return EXIT_SUCCESS;
 
-                case 0x29:
+                case SUB_RESPONSE_PERFORMANCE_NAME:
                     LOG_DEBUG("Got performance name\n");
                     return EXIT_SUCCESS;
 
@@ -637,19 +639,19 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
         case 0x08:
         {
             switch (subCommand) {
-                case 0x36:
+                case SUB_RESPONSE_PATCH_VERSION:
                     LOG_DEBUG("Got Patch Version\n");
                     LOG_DEBUG("Val 1 0x%02x\n", read_bit_stream(buff, bitPos, 8));
                     LOG_DEBUG("Val 2 0x%02x\n", read_bit_stream(buff, bitPos, 8));
                     LOG_DEBUG("Val 3 0x%02x\n", read_bit_stream(buff, bitPos, 8));
                     return EXIT_SUCCESS;
 
-                case 0x21:
+                case SUB_RESPONSE_PATCH_DESCRIPTION:
                     LOG_DEBUG("Got Patch info\n");
                     parse_patch(&buff[BIT_TO_BYTE(*bitPos) - 1], (length - BIT_TO_BYTE(*bitPos) - CRC_BYTES) + 1);
                     return EXIT_SUCCESS;
 
-                case 0x27:
+                case SUB_RESPONSE_PATCH_NAME:
                     LOG_DEBUG("Got Patch name (length %d)'", length);
 
                     for (int i = 0; i < (length - 6); i++) {
@@ -664,7 +666,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     LOG_DEBUG_DIRECT("'\n");
                     return EXIT_SUCCESS;
 
-                case 0x7F:
+                case SUB_RESPONSE_OK:
                     //LOG_DEBUG("Got 0x7f OK\n");
                     return EXIT_SUCCESS;
 
@@ -821,7 +823,7 @@ static int send_command(int state) {
                 case eStateStart:
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x41;
-                    buff[pos++] = 0x7d;
+                    buff[pos++] = SUB_COMMAND_START_STOP;
 
                     switch (state) {
                         case eStateStop:
@@ -841,21 +843,21 @@ static int send_command(int state) {
                 case eStateSelectSlot:
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x00;
-                    buff[pos++] = 0x09;     // Sub command
+                    buff[pos++] = SUB_COMMAND_SELECT_SLOT;
                     buff[pos++] = slot;
                     break;
 
                 case eStateGetPatchVersion:
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x41;
-                    buff[pos++] = 0x35;
+                    buff[pos++] = SUB_COMMAND_GET_PATCH_VERSION;
                     buff[pos++] = slot;     // Slot 0=A
                     break;
 
                 case eStateGetSynthSettings:
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x41;
-                    buff[pos++] = 0x02;
+                    buff[pos++] = SUB_COMMAND_GET_SYNTH_SETTINGS;
                     break;
 
                 case eStateGetUnknown1:
@@ -870,16 +872,16 @@ static int send_command(int state) {
                     buff[pos++] = 0x59;
                     break;
 
-                case eStateGetPatchSlot:
+                case eStateGetPatchSlot:   // Get patch by slot
                     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | 0;
                     buff[pos++] = slotVersion[slot];
-                    buff[pos++] = 0x3c | slot;
+                    buff[pos++] = SUB_COMMAND_GET_PATCH_SLOT | slot;
                     break;
 
-                case eStateGetPatchNameSlot:
+                case eStateGetPatchNameSlot:   // Get name patch by slot
                     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | 0;
                     buff[pos++] = slotVersion[slot];
-                    buff[pos++] = 0x28 | slot;
+                    buff[pos++] = SUB_COMMAND_GET_PATCH_NAME | slot;
                     break;
 
                 default:
@@ -960,7 +962,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot; //+slot
             buff[pos++] = slotVersion[slot];                 // needs to be slot ultimately
-            buff[pos++] = SUB_COMMAND_WRITE_MODULE;
+            buff[pos++] = SUB_COMMAND_ADD_MODULE;
             buff[pos++] = messageContent->moduleData.type;
             buff[pos++] = messageContent->moduleData.moduleKey.location;
             buff[pos++] = messageContent->moduleData.moduleKey.index;
