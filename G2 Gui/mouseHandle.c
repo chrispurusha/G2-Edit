@@ -731,7 +731,7 @@ bool handle_module_click(tCoord coord, int button) {
                         if (module.key.location == locationMorph) {
                             paramType2 = paramType2Dial;
                         } else {
-                            paramType2 = paramLocationList[module.param[gVariation][gParamDragging.param].paramRef].type2;
+                            paramType2 = (paramLocationList[param->paramRef].type2);
                         }
 
                         if (paramType2 == paramType2Dial) {
