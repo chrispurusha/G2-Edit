@@ -251,7 +251,6 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
         if (read_module(key, &module) == false) {
             module.key = key;
         }
-
         allocate_module_parameters(&module, paramCount); // Also done on module creation, so whichever's first
 
         for (j = 0; j < variationCount; j++) {                                                          // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
@@ -319,9 +318,9 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
             j += 3;
             LOG_DEBUG("Param name: ");
 
-            if (paramLength > 0) { // Shouldn't ever be zero, so since we've seen that - something strange happening, generate error!?
+            if (paramLength > 0) {                                                    // Shouldn't ever be zero, so since we've seen that - something strange happening, generate error!?
                 memset(&module.param[0][0].name, 0, sizeof(module.param[0][0].name)); // TODO: Sort indexing
-                
+
                 for (k = 0; k < paramLength - 1; k++) {
                     uint8_t ch = read_bit_stream(buff, subOffset, 8);
 

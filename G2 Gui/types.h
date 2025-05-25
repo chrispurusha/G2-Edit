@@ -351,7 +351,7 @@ typedef enum {
 typedef struct {
     uint32_t   paramRef;
     tRectangle rectangle;
-    char       name[PARAM_NAME_SIZE+1];
+    char       name[PARAM_NAME_SIZE + 1];
     uint32_t   value;
 } tParam;
 
