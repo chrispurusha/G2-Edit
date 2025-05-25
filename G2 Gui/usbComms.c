@@ -289,6 +289,8 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
     int        i      = 0;
     int        j      = 0;
     int        k      = 0;
+    int variation = 0;
+    uint32_t   ref    = 0;
 
     LOG_DEBUG("Param names\n");
 
@@ -319,19 +321,24 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
             LOG_DEBUG("Param name: ");
 
             if (paramLength > 0) {                                                    // Shouldn't ever be zero, so since we've seen that - something strange happening, generate error!?
-                memset(&module.param[0][0].name, 0, sizeof(module.param[0][0].name)); // TODO: Sort indexing
+                for (variation = 0; variation < NUM_VARIATIONS; variation++) {
+                    memset(&module.param[variation][ref].name, 0, sizeof(module.param[variation][ref].name));
+                }
 
                 for (k = 0; k < paramLength - 1; k++) {
                     uint8_t ch = read_bit_stream(buff, subOffset, 8);
 
                     if ((ch >= 0x20) && (ch <= 0x7f)) {
-                        module.param[0][0].name[k] = ch;   // TODO: Sort indexing
+                        for (variation = 0; variation < NUM_VARIATIONS; variation++) {
+                            module.param[variation][ref].name[k] = ch;
+                        }
                         LOG_DEBUG_DIRECT("%c", ch);
                     }
                 }
 
                 LOG_DEBUG_DIRECT("\n");
                 j += paramLength - 1;
+                ref++;
             }
         }
     }
@@ -358,6 +365,8 @@ static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
 
         LOG_DEBUG(" Module loc %u index %u\n", module.key.location, module.key.index);
 
+        memset(&name, 0, sizeof(name));
+        
         for (int k = 0; k < MODULE_NAME_SIZE; k++) {
             name[k] = read_bit_stream(buff, subOffset, 8);
 
@@ -366,7 +375,6 @@ static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
             }
         }
 
-        name[sizeof(name) - 1] = '\0'; // Make sure we're null terminated
         LOG_DEBUG("%s\n", name);
 
         if (read_module(key, &module) == true) {
