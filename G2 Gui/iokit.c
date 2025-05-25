@@ -27,7 +27,7 @@ extern "C" {
 #define G2_PRODUCT_ID    (2)
 
 static IOUSBInterfaceInterface ** intf     = NULL;
-static pthread_mutex_t            usbMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t            usbMutex = {0};
 
 IOUSBDeviceInterface ** find_usb_device(void) {
     mach_port_t             masterPort      = 0;
@@ -93,10 +93,14 @@ void release_usb_device(IOUSBDeviceInterface ** deviceInterface) {
     }
 }
 
-void reset_usb(void) {
-    IOUSBDeviceInterface ** deviceInterface = NULL;
-
-    deviceInterface = find_usb_device();
+void init_usb(void) {
+    pthread_mutexattr_t attr = {0};
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&usbMutex, &attr);
+    pthread_mutexattr_destroy(&attr);
+    
+    IOUSBDeviceInterface ** deviceInterface = find_usb_device();
 
     if (deviceInterface != NULL) {
         (*deviceInterface)->USBDeviceOpenSeize(deviceInterface);
@@ -117,6 +121,16 @@ int open_usb(void) {
     IOUSBDeviceInterface **   deviceInterface    = NULL;
     CFRunLoopSourceRef        asyncRunLoopSource = NULL;
 
+    pthread_mutex_lock(&usbMutex);
+
+    if (intf != NULL) {
+        (*intf)->USBInterfaceClose(intf);
+        (*intf)->Release(intf);
+        intf = NULL;
+    }
+
+    pthread_mutex_unlock(&usbMutex);
+
     deviceInterface = find_usb_device();
 
     if (deviceInterface != NULL) {
@@ -133,68 +147,112 @@ int open_usb(void) {
         IOObjectRelease(usbInterface);
 
         if (plugInInterface != NULL) {
+            pthread_mutex_lock(&usbMutex);
+			
             (*plugInInterface)->QueryInterface(plugInInterface, CFUUIDGetUUIDBytes(kIOUSBInterfaceInterfaceID), (LPVOID)&intf);
             IODestroyPlugInInterface(plugInInterface);
 
-            (*intf)->USBInterfaceOpen(intf);
-
-            (*intf)->CreateInterfaceAsyncEventSource(intf, &asyncRunLoopSource);
-
-            if (asyncRunLoopSource) {
-                CFRunLoopAddSource(CFRunLoopGetCurrent(), asyncRunLoopSource, kCFRunLoopDefaultMode);
+            if (intf != NULL && *intf != NULL) {
+                if ((*intf)->USBInterfaceOpen(intf) == kIOReturnSuccess) {
+                    if ((*intf)->CreateInterfaceAsyncEventSource(intf, &asyncRunLoopSource) == kIOReturnSuccess) {
+                        if (asyncRunLoopSource) {
+                            CFRunLoopAddSource(CFRunLoopGetCurrent(), asyncRunLoopSource, kCFRunLoopDefaultMode);
+                            retVal = EXIT_SUCCESS;
+                        } else {
+                            (*intf)->USBInterfaceClose(intf);
+                            (*intf)->Release(intf);
+                            intf = NULL;
+                        }
+                    } else {
+                        (*intf)->USBInterfaceClose(intf);
+                        (*intf)->Release(intf);
+                        intf = NULL;
+                    }
+                } else {
+                    (*intf)->Release(intf);
+                    intf = NULL;
+                }
+            } else {
+                intf = NULL;
             }
-            release_usb_device(deviceInterface);
-
-            retVal = EXIT_SUCCESS;
+            pthread_mutex_unlock(&usbMutex);
         }
+        release_usb_device(deviceInterface);
     }
     return retVal;
 }
 
 void close_usb(void) {
-    if (intf != NULL) {
+    pthread_mutex_lock(&usbMutex);
+    if (intf != NULL && *intf != NULL) {
         (*intf)->USBInterfaceClose(intf);
         (*intf)->Release(intf);
         intf = NULL;
     }
+    pthread_mutex_unlock(&usbMutex);
 }
 
 void reset_pipe(uint32_t index) {
-    (*intf)->AbortPipe(intf, index);
+    pthread_mutex_lock(&usbMutex);
+    if (intf != NULL && *intf != NULL) {
+        (*intf)->AbortPipe(intf, index);
 
-    if ((*intf)->GetPipeStatus(intf, index) == kIOUSBPipeStalled) {
-        (*intf)->ClearPipeStall(intf, index);
+        if ((*intf)->GetPipeStatus(intf, index) == kIOUSBPipeStalled) {
+            (*intf)->ClearPipeStall(intf, index);
+        }
     }
+    pthread_mutex_unlock(&usbMutex);
 }
 
 int32_t write_usb(uint8_t * buff, uint32_t length) {
     uint32_t writeLength = 0;
+    IOReturn ret = kIOReturnError;
 
     if (buff == NULL) {
         return writeLength;
     }
-    reset_pipe(3);
 
-    if ((*intf)->WritePipeTO(intf, 3, (void *)buff, length, 1000, 1000) == kIOReturnSuccess) {
-        writeLength = length;
+    pthread_mutex_lock(&usbMutex);
+    if (intf != NULL && *intf != NULL) {
+        pthread_mutex_unlock(&usbMutex);
+        reset_pipe(3);
+        pthread_mutex_lock(&usbMutex);
+
+        if (intf != NULL && *intf != NULL) {
+            ret = (*intf)->WritePipeTO(intf, 3, (void *)buff, length, 1000, 1000);
+            if (ret == kIOReturnSuccess) {
+                writeLength = length;
+            }
+        }
     }
+    pthread_mutex_unlock(&usbMutex);
     return writeLength;
 }
 
 int32_t read_usb_extended(uint8_t * buff, uint32_t buffLength) {
     uint32_t readLength = 0;
+    IOReturn ret = kIOReturnError;
 
     if (buff == NULL) {
         return readLength;
     }
     memset(buff, 0, buffLength);
-    readLength = buffLength;
 
-    reset_pipe(2);
-
-    if ((*intf)->ReadPipeTO(intf, 2, (void *)buff, &readLength, 1000, 1000) != kIOReturnSuccess) {
-        readLength = 0;
+    pthread_mutex_lock(&usbMutex);
+    if (intf != NULL && *intf != NULL) {
+        pthread_mutex_unlock(&usbMutex);
+        reset_pipe(2);
+        pthread_mutex_lock(&usbMutex);
+        
+        if (intf != NULL && *intf != NULL) {
+            uint32_t numBytesRead = buffLength;
+            ret = (*intf)->ReadPipeTO(intf, 2, (void *)buff, &numBytesRead, 1000, 1000);
+            if (ret == kIOReturnSuccess) {
+                readLength = numBytesRead;
+            }
+        }
     }
+    pthread_mutex_unlock(&usbMutex);
     return readLength;
 }
 
@@ -207,7 +265,7 @@ void read_usb_complete(void * refCon, IOReturn result, void * arg0) {
 void timeout_callback(CFRunLoopTimerRef timer, void * info) {
     pthread_mutex_lock(&usbMutex);
 
-    if (intf && (*intf)->AbortPipe(intf, 1) != kIOReturnSuccess) {
+    if (intf && *intf && (*intf)->AbortPipe(intf, 1) != kIOReturnSuccess) {
         CFRunLoopStop(CFRunLoopGetCurrent());
     }
     pthread_mutex_unlock(&usbMutex);
@@ -228,23 +286,36 @@ int32_t read_usb_interrupt(uint8_t * buff, uint32_t buffLength) {
     timer = CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + interval, 0, 0, 0, timeout_callback, NULL);
     CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, kCFRunLoopDefaultMode);
 
+    pthread_mutex_unlock(&usbMutex);
     reset_pipe(1);
+    pthread_mutex_lock(&usbMutex);
 
-    result = (*intf)->ReadPipeAsync(intf, 1, (void *)buff, buffLength, read_usb_complete, NULL);
+    if (intf != NULL && *intf != NULL) {
+        result = (*intf)->ReadPipeAsync(intf, 1, (void *)buff, buffLength, read_usb_complete, NULL);
+    } else {
+        result = kIOReturnNoDevice;
+    }
+    
     pthread_mutex_unlock(&usbMutex);
 
-    CFRunLoopRun();
-
+    if (result == kIOReturnSuccess) {
+        CFRunLoopRun();
+    }
+    
     pthread_mutex_lock(&usbMutex);
+    
     CFRunLoopRemoveTimer(CFRunLoopGetCurrent(), timer, kCFRunLoopDefaultMode);
     CFRelease(timer);
-    pthread_mutex_unlock(&usbMutex);
+    timer = NULL;
 
-    if (result == kIOReturnSuccess) {   // Unless there's a way to detect aborted pipe read
+    pthread_mutex_unlock(&usbMutex);
+    
+    if (result == kIOReturnSuccess) {
         readLength = buffLength;
     } else if (result == kIOReturnNoDevice) {
         readLength = -1;
     }
+    
     return readLength;
 }
 

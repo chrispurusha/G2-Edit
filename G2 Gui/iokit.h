@@ -30,7 +30,7 @@
 
 IOUSBDeviceInterface ** find_usb_device(void);
 void release_usb_device(IOUSBDeviceInterface ** deviceInterface);
-void reset_usb(void);
+void init_usb(void);
 int open_usb(void);
 void close_usb(void);
 int32_t write_usb(uint8_t * buff, uint32_t length);

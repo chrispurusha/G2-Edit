@@ -26,7 +26,12 @@ extern "C" {
 #include "msgQueue.h"
 
 void msg_init(tMessageQueue * msgQueue, char * semName) {
-    pthread_mutex_init(&msgQueue->mutex, NULL);
+    pthread_mutexattr_t attr = {0};
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&msgQueue->mutex, &attr);
+    pthread_mutexattr_destroy(&attr);
+
     msgQueue->head = NULL;
     msgQueue->tail = NULL;
 

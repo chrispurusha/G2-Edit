@@ -1208,7 +1208,7 @@ static void * usb_thread_loop(void * arg) {
 
     msg_init(&gCommandQueue, "command");
 
-    reset_usb();
+    init_usb();
 
     for ( ; ;) {
         state_handler();
