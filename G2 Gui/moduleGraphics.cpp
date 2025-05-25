@@ -179,7 +179,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
     uint32_t paramValue = module->param[gVariation][paramIndex].value;
 
     if (paramValue >= paramLocationList[paramRef].range) {
-        LOG_ERROR("Value  %u > Range %u\n", paramValue, paramLocationList[paramRef].range);
+        LOG_ERROR("Module index %u name %s ParamRef %u Value %u > Range %u\n", module->key.index, module->name, paramRef, paramValue, paramLocationList[paramRef].range);
         exit(1);
     }
     module->param[gVariation][paramIndex].paramRef = paramRef;
