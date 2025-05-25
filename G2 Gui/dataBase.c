@@ -463,8 +463,10 @@ int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCoun
 }
 
 void allocate_module_parameters(tModule * module, uint32_t paramCount) {
-    if ((module_param_count(module->type) > 0) && (module_param_count(module->type) != paramCount)) {
-        LOG_WARNING("When allocating for %s, param count %u should be %u\n", gModuleProperties[module->type].name, paramCount, module_param_count(module->type));
+    if (module->key.location != locationMorph) {   // TODO: See if we can do this more elegantly? Maybe pass the location to module_param_count?
+        if ((module_param_count(module->type) > 0) && (module_param_count(module->type) != paramCount)) {
+            LOG_WARNING("When allocating for %s, param count %u should be %u\n", gModuleProperties[module->type].name, paramCount, module_param_count(module->type));
+        }
     }
 
     if (paramCount > module->allocatedParams) {

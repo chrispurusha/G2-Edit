@@ -701,23 +701,40 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
 }
 
 bool handle_module_click(tCoord coord, int button) {
-    bool retVal = false;
+    bool        retVal     = false;
+    uint32_t    paramCount = 0;
+    tParamType2 paramType2 = paramType2Dial;
 
-    if (!within_rectangle(coord, module_area())) {
-        return false;
-    }
+    // Since morph parameters are in top banner area, no longer need to check if (!within_rectangle(coord, module_area()))
+
     reset_walk_module();
     tModule module = {0};
 
     while (walk_next_module(&module) && (retVal == false)) {
-        if (module.key.location == gLocation) {
+        if (module.key.location == gLocation || module.key.location == locationMorph) {
+            if (module.key.location == locationMorph) {
+                if (module.key.index == 1) {
+                    paramCount = 16;
+                } else {
+                    paramCount = 1;  // TODO: correct value for index, probably through a function which returns correct count
+                }
+            } else {
+                paramCount = module_param_count(module.type);
+            }
+
             // Deal with click on param
-            for (int i = 0; (i < module_param_count(module.type)) && (retVal == false); i++) {
+            for (int i = 0; (i < paramCount) && (retVal == false); i++) {
                 tParam * param = &module.param[gVariation][i];
 
                 if (within_rectangle(coord, param->rectangle)) {
                     if (button == GLFW_MOUSE_BUTTON_LEFT) {
-                        if ((paramLocationList[param->paramRef].type2) == paramType2Dial) {
+                        if (module.key.location == locationMorph) {
+                            paramType2 = paramType2Dial;
+                        } else {
+                            paramType2 = paramLocationList[module.param[gVariation][gParamDragging.param].paramRef].type2;
+                        }
+
+                        if (paramType2 == paramType2Dial) {
                             gParamDragging.moduleKey.index    = module.key.index;
                             gParamDragging.moduleKey.location = module.key.location;
                             gParamDragging.type3              = paramType3Param;
@@ -1024,10 +1041,12 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     int             width          = 0;
     int             height         = 0;
     double          angle          = 0.0;
+    uint32_t        range          = 0;
     uint32_t        value          = 0;
     tModule         module         = {0};
     tMessageContent messageContent = {0};
     bool            noAction       = false;
+    tParamType2     paramType2     = paramType2Dial;
 
     // Scale x and y to match intended rendering window
     glfwGetWindowSize(window, &width, &height);
@@ -1044,9 +1063,20 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         switch (gParamDragging.type3) {
             case paramType3Param:
 
-                if (paramLocationList[module.param[gVariation][gParamDragging.param].paramRef].type2 == paramType2Dial) {
+                if (module.key.location == locationMorph) {
+                    paramType2 = paramType2Dial;
+                } else {
+                    paramType2 = paramLocationList[module.param[gVariation][gParamDragging.param].paramRef].type2;
+                }
+
+                if (paramType2 == paramType2Dial) {
+                    if (module.key.location == locationMorph) {
+                        range = 128;
+                    } else {
+                        range = paramLocationList[module.param[gVariation][gParamDragging.param].paramRef].range;
+                    }
                     angle = calculate_mouse_angle((tCoord){x, y}, module.param[gVariation][gParamDragging.param].rectangle);                                                            // possible add half size
-                    value = angle_to_value(angle, paramLocationList[module.param[gVariation][gParamDragging.param].paramRef].range);
+                    value = angle_to_value(angle, range);
 
                     if (module.param[gVariation][gParamDragging.param].value != value) {
                         module.param[gVariation][gParamDragging.param].value = value;

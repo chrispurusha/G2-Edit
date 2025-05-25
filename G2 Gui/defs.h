@@ -107,6 +107,7 @@
 #define CRC_BYTES                            (2)
 
 #define MODULE_NAME_SIZE                     (16)
+#define PARAM_NAME_SIZE                      (16)
 
 #define MAX_GLYPH_CHAR                       (127)
 

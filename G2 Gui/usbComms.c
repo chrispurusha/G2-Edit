@@ -248,7 +248,9 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
         paramCount = read_bit_stream(buff, subOffset, 7);
         LOG_DEBUG("  variation list param count = %u\n", paramCount);
 
-        read_module(key, &module);
+        if (read_module(key, &module) == false) {
+            module.key = key;
+        }
 
         allocate_module_parameters(&module, paramCount); // Also done on module creation, so whichever's first
 
@@ -318,10 +320,13 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
             LOG_DEBUG("Param name: ");
 
             if (paramLength > 0) { // Shouldn't ever be zero, so since we've seen that - something strange happening, generate error!?
+                memset(&module.param[0][0].name, 0, sizeof(module.param[0][0].name)); // TODO: Sort indexing
+                
                 for (k = 0; k < paramLength - 1; k++) {
                     uint8_t ch = read_bit_stream(buff, subOffset, 8);
 
                     if ((ch >= 0x20) && (ch <= 0x7f)) {
+                        module.param[0][0].name[k] = ch;   // TODO: Sort indexing
                         LOG_DEBUG_DIRECT("%c", ch);
                     }
                 }

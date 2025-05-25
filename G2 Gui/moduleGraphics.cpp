@@ -671,16 +671,25 @@ void render_cables(void) {
 void render_morph_groups(void) {
     tModule    module    = {0};
     tModuleKey key       = {0};
-    tRectangle rectangle = {{1000, 20}, {30, STANDARD_TEXT_HEIGHT * 4}};
+    tRectangle rectangle = {{820, 24}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
+    char       buff[16]  = {0};
 
-    key.location = 2;
+    key.location = locationMorph;
     key.index    = 1;
 
     if (read_module(key, &module) == false) {
         return;
     }
+
     // Dial render needs to have area module/main as lead param
-    module.param[gVariation][0].rectangle = render_dial_with_text(mainArea, rectangle, (char *)"Test", "3", 3, 128);
+    for (uint32_t i = 0; i < 16; i++) { // Purely the morph group dials
+        snprintf(buff, sizeof(buff), "%u", module.param[gVariation][i].value);
+
+        module.param[gVariation][i].rectangle = render_dial_with_text(mainArea, rectangle, module.param[gVariation][i].name, buff, module.param[gVariation][i].value, 128);
+        rectangle.coord.x                    += (STANDARD_TEXT_HEIGHT * 4) * 0.8;
+    }
+
+    write_module(module.key, &module);
 }
 
 #ifdef __cplusplus

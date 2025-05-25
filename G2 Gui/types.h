@@ -343,13 +343,15 @@ typedef enum {
 } tParamType3;
 
 typedef enum {
-    locationFx = 0,
-    locationVa = 1
+    locationFx    = 0,
+    locationVa    = 1,
+    locationMorph = 2
 } tLocation;
 
 typedef struct {
     uint32_t   paramRef;
     tRectangle rectangle;
+    char       name[PARAM_NAME_SIZE+1];
     uint32_t   value;
 } tParam;
 
