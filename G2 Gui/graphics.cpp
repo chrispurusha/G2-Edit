@@ -167,6 +167,7 @@ void render_top_bar(void) {
     for (int i = 0; i < array_size_main_button_array(); i++) {
         set_rgb_colour(gMainButtonArray[i].backgroundColour);
 
+        // TODO: Deal with anchoring top right, top left etc.
         gMainButtonArray[i].rectangle = draw_button(mainArea, {gMainButtonArray[i].coord, {get_text_width(gMainButtonArray[i].text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gMainButtonArray[i].text);
     }
 }

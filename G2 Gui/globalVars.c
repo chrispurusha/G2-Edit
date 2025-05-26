@@ -40,16 +40,20 @@ tButton         gMainButtonArray[] = {  // Must align with tButtonId enumaration
     {{472, 60}, NULL_RECTANGLE, anchorTopLeft, "7",         RGB_BACKGROUND_GREY},
     {{484, 60}, NULL_RECTANGLE, anchorTopLeft, "8",         RGB_BACKGROUND_GREY},
     {{500, 60}, NULL_RECTANGLE, anchorTopLeft, "Init",      RGB_BACKGROUND_GREY},
+    {{600,  8}, NULL_RECTANGLE, anchorTopLeft, "Cont",      RGB_GREEN_ON       },
+    {{635,  8}, NULL_RECTANGLE, anchorTopLeft, "Knobs",     RGB_BACKGROUND_GREY},
 };
 
 bool            gShowOpenFileReadDialogue = false;
 
-tScrollState    gScrollState   = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
-tContextMenu    gContextMenu   = {0};
-tCableDragging  gCableDrag     = {0};
-tParamDragging  gParamDragging = {0};
-tModuleDragging gModuleDrag    = {0};
-tMessageQueue   gCommandQueue  = {0};
+tScrollState    gScrollState     = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
+tContextMenu    gContextMenu     = {0};
+tCableDragging  gCableDrag       = {0};
+tParamDragging  gParamDragging   = {0};
+tModuleDragging gModuleDrag      = {0};
+tMessageQueue   gCommandQueue    = {0};
+uint32_t        gMorphRow        = 0;    // TODO: Use an enumeration for the row rather than 0 and 1
+uint32_t        gMorphGroupFocus = 0;
 
 uint32_t array_size_main_button_array(void) {
     return ARRAY_SIZE(gMainButtonArray);

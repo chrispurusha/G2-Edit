@@ -284,6 +284,20 @@ void handle_button(tButtonId buttonId) {
 
             break;
         }
+        case     morphContButtonId:
+        {
+            gMorphRow                                            = 0;
+            gMainButtonArray[morphContButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
+            gMainButtonArray[morphKnobButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            break;
+        }
+        case morphKnobButtonId:
+        {
+            gMorphRow                                            = 1;
+            gMainButtonArray[morphContButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            gMainButtonArray[morphKnobButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
+            break;
+        }
     }
 }
 

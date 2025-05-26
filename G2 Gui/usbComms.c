@@ -284,13 +284,13 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
     uint32_t   paramLength  = 0;
     uint32_t   moduleLength = 0;
     //uint32_t index = 0;
-    tModule    module = {0};
-    tModuleKey key    = {0};
-    int        i      = 0;
-    int        j      = 0;
-    int        k      = 0;
-    int variation = 0;
-    uint32_t   ref    = 0;
+    tModule    module    = {0};
+    tModuleKey key       = {0};
+    int        i         = 0;
+    int        j         = 0;
+    int        k         = 0;
+    int        variation = 0;
+    uint32_t   ref       = 0;
 
     LOG_DEBUG("Param names\n");
 
@@ -332,6 +332,7 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
                         for (variation = 0; variation < NUM_VARIATIONS; variation++) {
                             module.param[variation][ref].name[k] = ch;
                         }
+
                         LOG_DEBUG_DIRECT("%c", ch);
                     }
                 }
@@ -366,7 +367,7 @@ static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
         LOG_DEBUG(" Module loc %u index %u\n", module.key.location, module.key.index);
 
         memset(&name, 0, sizeof(name));
-        
+
         for (int k = 0; k < MODULE_NAME_SIZE; k++) {
             name[k] = read_bit_stream(buff, subOffset, 8);
 
