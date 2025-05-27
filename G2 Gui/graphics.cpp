@@ -226,8 +226,8 @@ void init_graphics(void) {
     register_full_patch_change_notify_cb(notify_full_patch_change);
 
     glfwGetMonitorWorkarea(glfwGetPrimaryMonitor(), &monitor.coord.x, &monitor.coord.y, &monitor.size.w, &monitor.size.h);
-    screenWidth  = monitor.coord.x + monitor.size.w;
-    screenHeight = monitor.coord.y + monitor.size.h;
+    screenWidth  = 1920; // monitor.coord.x + monitor.size.w;
+    screenHeight = 1080; // monitor.coord.y + monitor.size.h;
 
     gWindow = glfwCreateWindow((screenWidth * 3) / 4, (screenHeight * 3) / 4, "G2 Editor", NULL, NULL);
 
