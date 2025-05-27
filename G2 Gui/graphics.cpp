@@ -216,8 +216,8 @@ void init_graphics(void) {
     int           windowWidth  = 0;
     int           windowHeight = 0;
     GLFWmonitor * monitor      = NULL;
-    float         xScale       = 0;
-    float         yScale       = 0;
+    float         xScale       = 1;
+    float         yScale       = 1;
 
     glfwSetErrorCallback(error_callback);
 
@@ -230,8 +230,8 @@ void init_graphics(void) {
     monitor = glfwGetPrimaryMonitor();
 
     glfwGetMonitorContentScale(monitor, &xScale, &yScale);
-    xScale *= 0.8;
-    yScale *= 0.8;
+    //xScale *= 0.4;
+    //yScale *= 0.4;
     windowWidth  = TARGET_FRAME_BUFF_WIDTH / xScale;
     windowHeight = TARGET_FRAME_BUFF_HEIGHT / yScale;
 
@@ -241,11 +241,12 @@ void init_graphics(void) {
         glfwTerminate();
         exit(EXIT_FAILURE);
     }
+    
     glfwSetWindowSizeLimits(gWindow, windowWidth, windowHeight, GLFW_DONT_CARE, GLFW_DONT_CARE);
     glfwSetWindowAspectRatio(gWindow, TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT);
 
     glfwMakeContextCurrent(gWindow);
-
+    
     glfwGetFramebufferSize(gWindow, &fbWidth, &fbHeight);
     glViewport(0, 0, fbWidth, fbHeight);
 
@@ -268,7 +269,8 @@ void init_graphics(void) {
     }
     int renderWidth  = 0;
     int renderHeight = 0;
-    glfwGetWindowSize(gWindow, &renderWidth, &renderHeight);
+    //glfwGetWindowSize(gWindow, &renderWidth, &renderHeight);
+    glfwGetFramebufferSize(gWindow, &renderWidth, &renderHeight);
     set_render_width(renderWidth);
     set_render_height(renderHeight);
 
