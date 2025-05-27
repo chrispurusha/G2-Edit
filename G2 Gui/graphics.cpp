@@ -158,6 +158,8 @@ void render_scrollbars(GLFWwindow * window) {
 }
 
 void render_top_bar(void) {
+    tRectangle rectangle = {0};
+
     set_rgb_colour(RGB_GREY_5);
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {get_render_width() - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
 
@@ -167,8 +169,20 @@ void render_top_bar(void) {
     for (int i = 0; i < array_size_main_button_array(); i++) {
         set_rgb_colour(gMainButtonArray[i].backgroundColour);
 
-        // TODO: Deal with anchoring top right, top left etc.
-        gMainButtonArray[i].rectangle = draw_button(mainArea, {gMainButtonArray[i].coord, {get_text_width(gMainButtonArray[i].text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, gMainButtonArray[i].text);
+        rectangle = {gMainButtonArray[i].coord, {get_text_width(gMainButtonArray[i].text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
+
+        switch (gMainButtonArray[i].anchor) {
+            case anchorTopRight:
+            {
+                rectangle.coord.x = get_render_width() + gMainButtonArray[i].coord.x;
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
+        gMainButtonArray[i].rectangle = draw_button(mainArea, rectangle, gMainButtonArray[i].text);
     }
 }
 

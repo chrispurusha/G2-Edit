@@ -686,8 +686,12 @@ void render_morph_groups(void) {
     if (gMorphRow == 1) {
         dialIndexOffset = 8;
     }
-    
-    for (uint32_t i = dialIndexOffset; i < (8 + dialIndexOffset); i++) { // Purely the morph group dials
+
+    for (uint32_t i = 0; i < 16; i++) {
+        module.param[gVariation][i].rectangle = NULL_RECTANGLE;
+    }
+
+    for (uint32_t i = dialIndexOffset; i < (8 + dialIndexOffset); i++) {
         snprintf(buff, sizeof(buff), "%u", module.param[gVariation][i].value);
 
         if (i == gMorphGroupFocus) {

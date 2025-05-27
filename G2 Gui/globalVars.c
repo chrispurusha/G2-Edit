@@ -28,20 +28,20 @@ uint32_t        gLocation          = locationVa;
 uint32_t        gVariation         = 0;
 bool            gReDraw            = true;
 tButton         gMainButtonArray[] = {  // Must align with tButtonId enumaration
-    {{400,  8}, NULL_RECTANGLE, anchorTopLeft, "VA",        RGB_GREEN_ON       },
-    {{425,  8}, NULL_RECTANGLE, anchorTopLeft, "FX",        RGB_BACKGROUND_GREY},
-    {{ 20,  8}, NULL_RECTANGLE, anchorTopLeft, "Read File", RGB_BACKGROUND_GREY},
-    {{400, 60}, NULL_RECTANGLE, anchorTopLeft, "1",         RGB_GREEN_ON       },
-    {{412, 60}, NULL_RECTANGLE, anchorTopLeft, "2",         RGB_BACKGROUND_GREY},
-    {{424, 60}, NULL_RECTANGLE, anchorTopLeft, "3",         RGB_BACKGROUND_GREY},
-    {{436, 60}, NULL_RECTANGLE, anchorTopLeft, "4",         RGB_BACKGROUND_GREY},
-    {{448, 60}, NULL_RECTANGLE, anchorTopLeft, "5",         RGB_BACKGROUND_GREY},
-    {{460, 60}, NULL_RECTANGLE, anchorTopLeft, "6",         RGB_BACKGROUND_GREY},
-    {{472, 60}, NULL_RECTANGLE, anchorTopLeft, "7",         RGB_BACKGROUND_GREY},
-    {{484, 60}, NULL_RECTANGLE, anchorTopLeft, "8",         RGB_BACKGROUND_GREY},
-    {{500, 60}, NULL_RECTANGLE, anchorTopLeft, "Init",      RGB_BACKGROUND_GREY},
-    {{600,  8}, NULL_RECTANGLE, anchorTopLeft, "Cont",      RGB_GREEN_ON       },
-    {{635,  8}, NULL_RECTANGLE, anchorTopLeft, "Knobs",     RGB_BACKGROUND_GREY},
+    {{ 400,  8}, NULL_RECTANGLE, anchorTopLeft,  "VA",        RGB_GREEN_ON       },
+    {{ 425,  8}, NULL_RECTANGLE, anchorTopLeft,  "FX",        RGB_BACKGROUND_GREY},
+    {{  20,  8}, NULL_RECTANGLE, anchorTopLeft,  "Read File", RGB_BACKGROUND_GREY},
+    {{ 400, 60}, NULL_RECTANGLE, anchorTopLeft,  "1",         RGB_GREEN_ON       },
+    {{ 412, 60}, NULL_RECTANGLE, anchorTopLeft,  "2",         RGB_BACKGROUND_GREY},
+    {{ 424, 60}, NULL_RECTANGLE, anchorTopLeft,  "3",         RGB_BACKGROUND_GREY},
+    {{ 436, 60}, NULL_RECTANGLE, anchorTopLeft,  "4",         RGB_BACKGROUND_GREY},
+    {{ 448, 60}, NULL_RECTANGLE, anchorTopLeft,  "5",         RGB_BACKGROUND_GREY},
+    {{ 460, 60}, NULL_RECTANGLE, anchorTopLeft,  "6",         RGB_BACKGROUND_GREY},
+    {{ 472, 60}, NULL_RECTANGLE, anchorTopLeft,  "7",         RGB_BACKGROUND_GREY},
+    {{ 484, 60}, NULL_RECTANGLE, anchorTopLeft,  "8",         RGB_BACKGROUND_GREY},
+    {{ 500, 60}, NULL_RECTANGLE, anchorTopLeft,  "Init",      RGB_BACKGROUND_GREY},
+    {{-300,  8}, NULL_RECTANGLE, anchorTopRight, "Cont",      RGB_GREEN_ON       },
+    {{-265,  8}, NULL_RECTANGLE, anchorTopRight, "Knobs",     RGB_BACKGROUND_GREY},
 };
 
 bool            gShowOpenFileReadDialogue = false;
