@@ -211,11 +211,13 @@ void setup_render_context(void) {
 }
 
 void init_graphics(void) {
-    tIntRectangle monitor      = {0};
     int           fbWidth      = 0;
     int           fbHeight     = 0;
-    int           screenWidth  = 0;
-    int           screenHeight = 0;
+    int           windowWidth  = 0;
+    int           windowHeight = 0;
+    GLFWmonitor * monitor      = NULL;
+    float         xScale       = 0;
+    float         yScale       = 0;
 
     glfwSetErrorCallback(error_callback);
 
@@ -225,18 +227,22 @@ void init_graphics(void) {
     register_glfw_wake_cb(wake_glfw);
     register_full_patch_change_notify_cb(notify_full_patch_change);
 
-    glfwGetMonitorWorkarea(glfwGetPrimaryMonitor(), &monitor.coord.x, &monitor.coord.y, &monitor.size.w, &monitor.size.h);
-    screenWidth  = 1920; // monitor.coord.x + monitor.size.w;
-    screenHeight = 1080; // monitor.coord.y + monitor.size.h;
+    monitor = glfwGetPrimaryMonitor();
 
-    gWindow = glfwCreateWindow((screenWidth * 3) / 4, (screenHeight * 3) / 4, "G2 Editor", NULL, NULL);
+    glfwGetMonitorContentScale(monitor, &xScale, &yScale);
+    xScale *= 0.8;
+    yScale *= 0.8;
+    windowWidth  = TARGET_FRAME_BUFF_WIDTH / xScale;
+    windowHeight = TARGET_FRAME_BUFF_HEIGHT / yScale;
+
+    gWindow = glfwCreateWindow(windowWidth, windowHeight, "G2 Editor", NULL, NULL);
 
     if (!gWindow) {
         glfwTerminate();
         exit(EXIT_FAILURE);
     }
-    glfwSetWindowSizeLimits(gWindow, (screenWidth * 1) / 4, (screenHeight * 1) / 4, GLFW_DONT_CARE, GLFW_DONT_CARE);
-    glfwSetWindowAspectRatio(gWindow, screenWidth, screenHeight);
+    glfwSetWindowSizeLimits(gWindow, windowWidth, windowHeight, GLFW_DONT_CARE, GLFW_DONT_CARE);
+    glfwSetWindowAspectRatio(gWindow, TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT);
 
     glfwMakeContextCurrent(gWindow);
 
