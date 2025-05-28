@@ -33,8 +33,9 @@
 #define LOG_DEBUG_DIRECT(fmt, ...)    ((void)0)
 #endif
 
-#define TARGET_FRAME_BUFF_WIDTH              (1280)
-#define TARGET_FRAME_BUFF_HEIGHT             (720)
+#define TARGET_FRAME_BUFF_WIDTH              (2560)
+#define TARGET_FRAME_BUFF_HEIGHT             (1440)
+#define GLOBAL_GUI_SCALE                     (2)
 
 #define NUM_VARIATIONS                       (10)  // 10 variations per patch, but only fist 8 presented on the GUI
 #define NUM_GUI_VARIATIONS                   (8)

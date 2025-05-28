@@ -142,29 +142,32 @@ void render_context_menu(void) {
 }
 
 void render_scrollbars(GLFWwindow * window) {
+    double renderWidth  = get_render_width() / GLOBAL_GUI_SCALE;
+    double renderHeight = get_render_height() / GLOBAL_GUI_SCALE;
+
     // Scrollbar background
     set_rgb_colour(RGB_GREY_7);
-    render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, (double)get_render_height() - SCROLLBAR_MARGIN}});
-    render_rectangle(mainArea, {{0.0, (double)get_render_height() - SCROLLBAR_WIDTH}, {(double)get_render_width() - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH}});
+    render_rectangle(mainArea, {{renderWidth - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, renderHeight - SCROLLBAR_MARGIN}});
+    render_rectangle(mainArea, {{0.0, renderHeight - SCROLLBAR_WIDTH}, {renderWidth - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH}});
 
     // Bottom right box
     set_rgb_colour(RGB_BACKGROUND_GREY);
-    render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, (double)get_render_height() - SCROLLBAR_WIDTH}, {SCROLLBAR_WIDTH, SCROLLBAR_WIDTH}});
+    render_rectangle(mainArea, {{renderWidth - SCROLLBAR_WIDTH, renderHeight - SCROLLBAR_WIDTH}, {SCROLLBAR_WIDTH, SCROLLBAR_WIDTH}});
 
     // Scroll indicator blocks
     set_rgb_colour(RGB_GREY_9);
-    render_rectangle(mainArea, {{(double)get_render_width() - SCROLLBAR_WIDTH, gScrollState.yBar - (SCROLLBAR_LENGTH / 2.0)}, {SCROLLBAR_WIDTH, SCROLLBAR_LENGTH}});
-    render_rectangle(mainArea, {{gScrollState.xBar - (SCROLLBAR_LENGTH / 2.0), (double)get_render_height() - SCROLLBAR_WIDTH}, {SCROLLBAR_LENGTH, SCROLLBAR_WIDTH}});
+    render_rectangle(mainArea, {{renderWidth - SCROLLBAR_WIDTH, gScrollState.yBar - (SCROLLBAR_LENGTH / 2.0)}, {SCROLLBAR_WIDTH, SCROLLBAR_LENGTH}});
+    render_rectangle(mainArea, {{gScrollState.xBar - (SCROLLBAR_LENGTH / 2.0), renderHeight - SCROLLBAR_WIDTH}, {SCROLLBAR_LENGTH, SCROLLBAR_WIDTH}});
 }
 
 void render_top_bar(void) {
     tRectangle rectangle = {0};
 
     set_rgb_colour(RGB_GREY_5);
-    render_rectangle_with_border(mainArea, {{0.0, 0.0}, {get_render_width() - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
+    render_rectangle_with_border(mainArea, {{0.0, 0.0}, {(get_render_width() / GLOBAL_GUI_SCALE) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
 
     set_rgb_colour(RGB_BLACK);
-    render_text(mainArea, {{400.0, 47.0}, {NULL, STANDARD_TEXT_HEIGHT}}, "Variation");
+    render_text(mainArea, {{400.0, 43.0}, {NULL, STANDARD_TEXT_HEIGHT}}, "Variation");
 
     for (int i = 0; i < array_size_main_button_array(); i++) {
         set_rgb_colour(gMainButtonArray[i].backgroundColour);
@@ -174,7 +177,7 @@ void render_top_bar(void) {
         switch (gMainButtonArray[i].anchor) {
             case anchorTopRight:
             {
-                rectangle.coord.x = get_render_width() + gMainButtonArray[i].coord.x;
+                rectangle.coord.x = (get_render_width()/GLOBAL_GUI_SCALE) + gMainButtonArray[i].coord.x;
                 break;
             }
             default:
@@ -182,6 +185,7 @@ void render_top_bar(void) {
                 break;
             }
         }
+
         gMainButtonArray[i].rectangle = draw_button(mainArea, rectangle, gMainButtonArray[i].text);
     }
 }
@@ -241,12 +245,11 @@ void init_graphics(void) {
         glfwTerminate();
         exit(EXIT_FAILURE);
     }
-    
-    glfwSetWindowSizeLimits(gWindow, windowWidth, windowHeight, GLFW_DONT_CARE, GLFW_DONT_CARE);
-    glfwSetWindowAspectRatio(gWindow, TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT);
+    glfwSetWindowSizeLimits(gWindow, windowWidth/GLOBAL_GUI_SCALE, windowHeight/GLOBAL_GUI_SCALE, GLFW_DONT_CARE, GLFW_DONT_CARE);
+    glfwSetWindowAspectRatio(gWindow, windowWidth, windowHeight);
 
     glfwMakeContextCurrent(gWindow);
-    
+
     glfwGetFramebufferSize(gWindow, &fbWidth, &fbHeight);
     glViewport(0, 0, fbWidth, fbHeight);
 

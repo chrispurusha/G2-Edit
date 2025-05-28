@@ -52,6 +52,7 @@ void adjust_scroll_for_drag(void) {
     tRectangle area          = module_area();
 
     glfwGetCursorPos(gWindow, &x, &y);
+    // TODO: Most of the translation for global gui zooming, should be adjusting the mouse coords by /= the 2
 
     xAdjustAmount *= timeDelta;
     yAdjustAmount *= timeDelta;
@@ -538,12 +539,16 @@ uint32_t find_unique_module_id(uint32_t location) {
 void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row, tCoord coord) {
     double     val  = 0.0;
     tRectangle area = module_area();
-
+    
     if (column != NULL) {
         val     = coord.x - area.coord.x;
         val    += calc_scroll_x();
         val    /= MODULE_X_SPAN;
         val    /= get_zoom_factor();
+        val  /= GLOBAL_GUI_SCALE;   // Might not need this, if we adjust coord at source
+        if (val < 0.0) {
+            val = 0.0;
+        }
         *column = floor(val);
     }
 
@@ -552,6 +557,10 @@ void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row,
         val += calc_scroll_y();
         val /= MODULE_Y_SPAN;
         val /= get_zoom_factor();
+        val  /= GLOBAL_GUI_SCALE;  // Might not need this, if we adjust coord at source
+        if (val < 0.0) {
+            val = 0.0;
+        }
         *row = floor(val);
     }
 }
@@ -563,14 +572,19 @@ void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord
     double     val  = 0.0;
     tRectangle area = module_area();
 
+    coord.x /= GLOBAL_GUI_SCALE;
+    coord.y /= GLOBAL_GUI_SCALE;
+    
     val            = coord.x - area.coord.x;
     val           += calc_scroll_x();
     val           /= get_zoom_factor();
+    //val /= GLOBAL_GUI_SCALE;
     targetCoord->x = val;
 
     val            = coord.y - area.coord.y;
     val           += calc_scroll_y();
     val           /= get_zoom_factor();
+    //val /= GLOBAL_GUI_SCALE; // POSITION IN SEQUENCE!?
     targetCoord->y = val;
 }
 
@@ -915,28 +929,20 @@ bool handle_context_menu_click(tCoord coord) {
 }
 
 bool handle_scrollbar_click(tCoord coord) {
-    tRectangle yScrollBar = {
-        {(double)get_render_width() - SCROLLBAR_WIDTH, 0.0},
-        {
-            SCROLLBAR_WIDTH, (double)get_render_height()
-        }
-    };
+    double     renderWidth  = get_render_width();
+    double     renderHeight = get_render_height();
 
-    tRectangle xScrollBar = {
-        {0.0, (double)get_render_height() - SCROLLBAR_WIDTH},
-        {
-            (double)get_render_width(), SCROLLBAR_WIDTH
-        }
-    };
+    tRectangle yScrollBar = {{renderWidth - (SCROLLBAR_WIDTH * GLOBAL_GUI_SCALE), 0.0}, {(SCROLLBAR_WIDTH * GLOBAL_GUI_SCALE), renderHeight}};
+    tRectangle xScrollBar = {{0.0, renderHeight - (SCROLLBAR_WIDTH * GLOBAL_GUI_SCALE)}, {renderWidth, (SCROLLBAR_WIDTH * GLOBAL_GUI_SCALE)}};
 
     if (within_rectangle(coord, yScrollBar)) {
-        set_y_scroll_bar(coord.y);
+        set_y_scroll_bar(coord.y/GLOBAL_GUI_SCALE);
         gScrollState.yBarDragging = true;
         return true;
     }
 
     if (within_rectangle(coord, xScrollBar)) {
-        set_x_scroll_bar(coord.x);
+        set_x_scroll_bar(coord.x/GLOBAL_GUI_SCALE);
         gScrollState.xBarDragging = true;
         return true;
     }
@@ -986,6 +992,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (gContextMenu.active) {
+                    coord.x /= GLOBAL_GUI_SCALE;
+                    coord.y /= GLOBAL_GUI_SCALE;
                     if (!handle_context_menu_click(coord)) {
                         gContextMenu.active = false;  // Close if clicked outside - TODO: think if this is the right thing to do here
                     }
@@ -1043,6 +1051,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
         } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
             if (!handle_module_click(coord, button)) {
+                coord.x /= GLOBAL_GUI_SCALE;
+                coord.y /= GLOBAL_GUI_SCALE;
                 handle_module_area_click(coord, button);
             }
         }
@@ -1068,9 +1078,9 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     y = (y * (double)get_render_height()) / (double)height;
 
     if (gScrollState.yBarDragging == true) {
-        set_y_scroll_bar(y);
+        set_y_scroll_bar(y/GLOBAL_GUI_SCALE);
     } else if (gScrollState.xBarDragging == true) {
-        set_x_scroll_bar(x);
+        set_x_scroll_bar(x/GLOBAL_GUI_SCALE);
     } else if (gParamDragging.active == true) {
         read_module(gParamDragging.moduleKey, &module);
 
@@ -1138,11 +1148,11 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         if (module.column > 127) {
             module.column = 127;
         }
+        
         write_module(gModuleDrag.moduleKey, &module);
         adjust_scroll_for_drag();
     } else if (gCableDrag.active == true) {
-        convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, (tCoord){x - scale_from_percent(CONNECTOR_SIZE / 2.0), y - scale_from_percent(CONNECTOR_SIZE / 2.0)});
-
+        convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, (tCoord){x - scale_from_percent(CONNECTOR_SIZE / 2.0), y - scale_from_percent(CONNECTOR_SIZE / 2.0)});  // SOMETHING NOT RIGHT HERE
         adjust_scroll_for_drag();
     } else if (gContextMenu.active == true) {
         // Dummy
@@ -1166,6 +1176,8 @@ void scroll_event(GLFWwindow * window, double x, double y) {
 
     glfwGetWindowSize(window, &width, &height);
     glfwGetCursorPos(window, &mouseCoord.x, &mouseCoord.y);
+    mouseCoord.x /= GLOBAL_GUI_SCALE;
+    mouseCoord.y /= GLOBAL_GUI_SCALE;
     mouseCoord.x = (mouseCoord.x * (double)get_render_width()) / (double)width;
     mouseCoord.y = (mouseCoord.y * (double)get_render_height()) / (double)height;
 

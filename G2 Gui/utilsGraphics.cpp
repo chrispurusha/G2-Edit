@@ -56,6 +56,10 @@ static inline double scale(double value) {
     return value * gZoomFactor;
 }
 
+static inline double global_scale(double value) {
+    return value * GLOBAL_GUI_SCALE;
+}
+
 double calc_scroll_x(void) {
     tRectangle area  = module_area();
     double     value = 0.0;
@@ -90,6 +94,18 @@ static tSize scale_size(tSize size) {
 
 static tRectangle scale_rectangle(tRectangle rectangle) {
     return {scale_coord(rectangle.coord), scale_size(rectangle.size)};
+}
+
+static tCoord global_scale_coord(tCoord coord) {
+    return {global_scale(coord.x), global_scale(coord.y)};
+}
+
+static tSize global_scale_size(tSize size) {
+    return {global_scale(size.w), global_scale(size.h)};
+}
+
+static tRectangle global_scale_rectangle(tRectangle rectangle) {
+    return {global_scale_coord(rectangle.coord), global_scale_size(rectangle.size)};
 }
 
 static tCoord adjust_to_module_area_coord(tCoord coord) {
@@ -131,25 +147,20 @@ static tRectangle scale_scroll_adjust_rectangle(tRectangle rectangle) {
 tRectangle module_area(void) {
     double left   = MODULE_MARGIN;
     double top    = TOP_BAR_HEIGHT + MODULE_MARGIN;
-    double width  = gRenderWidth - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
-    double height = gRenderHeight - TOP_BAR_HEIGHT - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
+    double width  = (gRenderWidth/GLOBAL_GUI_SCALE) - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
+    double height = (gRenderHeight/GLOBAL_GUI_SCALE) - TOP_BAR_HEIGHT - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
 
     return {{left, top}, {width, height}};
 }
 
-tRectangle render_line(tArea area, tCoord start, tCoord end, double thickness) {
-    if (area == moduleArea) {
-        start     = scale_scroll_adjust_coord(start);
-        end       = scale_scroll_adjust_coord(end);
-        thickness = scale(thickness);
-    }
+static void internal_render_line(tCoord start, tCoord end, double thickness) {
     double half_thickness = thickness * 0.5;
     double dx             = end.x - start.x;
     double dy             = end.y - start.y;
     double length         = sqrt(dx * dx + dy * dy);
 
     if (length == 0.0) {
-        return {{0.0, 0.0}, {0.0, 0.0}};
+        return;
     }
     // Normalize direction
     double nx = dx / length;
@@ -166,15 +177,9 @@ tRectangle render_line(tArea area, tCoord start, tCoord end, double thickness) {
     glVertex2f(end.x - px, end.y - py);
     glVertex2f(end.x + px, end.y + py);
     glEnd();
-
-    return {{0.0, 0.0}, {0.0, 0.0}};
 }
 
-tRectangle render_rectangle(tArea area, tRectangle rectangle) {
-    if (area == moduleArea) {
-        rectangle = scale_scroll_adjust_rectangle(rectangle);
-    }
-
+static void internal_render_rectangle(tRectangle rectangle) {
     if ((rectangle.size.w > 0.0) && (rectangle.size.h > 0.0)) {
         glBegin(GL_QUADS);
         glVertex2f(rectangle.coord.x, rectangle.coord.y);
@@ -183,56 +188,30 @@ tRectangle render_rectangle(tArea area, tRectangle rectangle) {
         glVertex2f(rectangle.coord.x, rectangle.coord.y + rectangle.size.h);
         glEnd();
     }
-    return rectangle;
 }
 
-tRectangle render_rectangle_with_border(tArea area, tRectangle rectangle) {
-    double borderLineWidth = BORDER_LINE_WIDTH;
+static void internal_render_circle_part(tCoord coord, double radius, int segments, int startSeg, int numSegs) {
+    double angle = 0.0;
+    double x     = 0.0;
+    double y     = 0.0;
+    int    i     = 0;
 
-    if (area == moduleArea) {
-        rectangle       = scale_scroll_adjust_rectangle(rectangle);
-        borderLineWidth = scale(borderLineWidth);
+    // seg 0 starting point = horizontel, right
+
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(coord.x, coord.y);  // Center
+
+    for (i = 0; i <= numSegs; i++) {
+        angle = 2.0f * M_PI * (double)(i + startSeg) / (double)segments;
+        x     = coord.x + cos(angle) * radius;
+        y     = coord.y + sin(angle) * radius;
+        glVertex2f(x, y);
     }
-    tRectangle line = {0};
 
-    render_rectangle(mainArea, rectangle);
-
-    set_rgb_colour(RGB_BLACK);
-    line = {{rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth}, {rectangle.size.w, borderLineWidth}};
-    render_rectangle(mainArea, line); //Bottom
-    set_rgb_colour(RGB_WHITE);
-    line = {{rectangle.coord.x, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
-    render_rectangle(mainArea, line); //Left
-    set_rgb_colour(RGB_WHITE);
-    line = {{rectangle.coord.x, rectangle.coord.y}, {rectangle.size.w, borderLineWidth}};
-    render_rectangle(mainArea, line); // Top
-    set_rgb_colour(RGB_BLACK);
-    line = {{rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
-    render_rectangle(mainArea, line); // Right
-
-    return rectangle;
-}
-
-tRectangle render_triangle(tArea area, tTriangle triangle) {
-    if (area == moduleArea) {
-        triangle.coord1    = scale_scroll_adjust_coord(triangle.coord1);
-        triangle.coord2rel = scale_scroll_adjust_coord(triangle.coord2rel);
-        triangle.coord3rel = scale_scroll_adjust_coord(triangle.coord3rel);
-    }
-    glBegin(GL_POLYGON);
-    glVertex2f(triangle.coord1.x, triangle.coord1.y);
-    glVertex2f(triangle.coord1.x + triangle.coord2rel.x, triangle.coord1.y + triangle.coord2rel.y);
-    glVertex2f(triangle.coord1.x + triangle.coord3rel.x, triangle.coord1.y + triangle.coord3rel.y);
     glEnd();
-
-    return {{0.0, 0.0}, {0.0, 0.0}};
 }
 
-tRectangle render_circle_line_part_angle(tArea area, tCoord coord, double radius, double startAngle, double endAngle, double thickness, int numSteps) {
-    if (area == moduleArea) {
-        coord     = scale_scroll_adjust_coord(coord);
-        thickness = scale(thickness);
-    }
+static void internal_render_circle_line_part_angle(tCoord coord, double radius, double startAngle, double endAngle, double thickness, int numSteps) {
     const double DEG_TO_RAD = M_PI / 180.0;
     double       angle, x_inner, y_inner, x_outer, y_outer;
     double       half_thickness = thickness * 0.5;
@@ -241,7 +220,7 @@ tRectangle render_circle_line_part_angle(tArea area, tCoord coord, double radius
     double sweep = fmod((endAngle - startAngle + 360.0), 360.0);
 
     if (sweep == 0) {
-        return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};                    // Avoid rendering nothing
+        return;                    // Avoid rendering nothing
     }
     glEnable(GL_LINE_SMOOTH);
     glBegin(GL_TRIANGLE_STRIP);
@@ -263,259 +242,15 @@ tRectangle render_circle_line_part_angle(tArea area, tCoord coord, double radius
     }
 
     glEnd();
-
-    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
 }
 
-tRectangle render_circle_line(tArea area, tCoord coord, double radius, int segments, double thickness) {
-    if (area == moduleArea) {
-        coord  = scale_scroll_adjust_coord(coord);
-        radius = scale(radius);
-    }
-    thickness = scale(thickness);
-    const double DEG_TO_RAD     = 2.0 * M_PI / (double)segments;
-    double       half_thickness = thickness * 0.5;
-
-    glEnable(GL_LINE_SMOOTH);
-    glBegin(GL_TRIANGLE_STRIP);
-
-    for (int i = 0; i <= segments; i++) {
-        double angle = i * DEG_TO_RAD;
-        double cos_a = cos(angle);
-        double sin_a = sin(angle);
-
-        // Compute inner and outer edge vertices
-        glVertex2f(coord.x + cos_a * (radius - half_thickness),
-                   coord.y + sin_a * (radius - half_thickness));
-
-        glVertex2f(coord.x + cos_a * (radius + half_thickness),
-                   coord.y + sin_a * (radius + half_thickness));
-    }
-
-    glEnd();
-
-    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
-}
-
-tRectangle render_circle_part(tArea area, tCoord coord, double radius, int segments, int startSeg, int numSegs) {
-    if (area == moduleArea) {
-        coord  = scale_scroll_adjust_coord(coord);
-        radius = scale(radius);
-    }
-    double angle = 0.0;
-    double x     = 0.0;
-    double y     = 0.0;
-    int    i     = 0;
-
-    // seg 0 starting point = horizontel, right
-
-    glBegin(GL_TRIANGLE_FAN);
-    glVertex2f(coord.x, coord.y);  // Center
-
-    for (i = 0; i <= numSegs; i++) {
-        angle = 2.0f * M_PI * (double)(i + startSeg) / (double)segments;
-        x     = coord.x + cos(angle) * radius;
-        y     = coord.y + sin(angle) * radius;
-        glVertex2f(x, y);
-    }
-
-    glEnd();
-
-    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
-}
-
-tRectangle render_circle_part_angle(tArea area, tCoord coord, double radius, double startAngle, double endAngle, int numSteps) {
-    if (area == moduleArea) {
-        coord  = scale_scroll_adjust_coord(coord);
-        radius = scale(radius);
-    }
-    double angle = 0.0;
-    double x     = 0.0;
-    double y     = 0.0;
-    int    i     = 0;
-
-    glBegin(GL_TRIANGLE_FAN);
-    glVertex2f(coord.x, coord.y);  // Center of the circle
-
-    // Handle cases where the arc spans across 0°
-    if (endAngle < startAngle) {
-        endAngle += 360.0;     // Ensure interpolation works correctly across 0°
-    }
-
-    for (i = 0; i <= numSteps; i++) {
-        // Interpolate between startAngle and endAngle
-        double interpAngle = startAngle + (endAngle - startAngle) * (double)i / (double)numSteps;
-
-        if (interpAngle >= 360.0) {
-            interpAngle -= 360.0;
-        }
-        // Convert to radians and adjust so 0° is at the top
-        angle = (interpAngle - 90.0) * (M_PI / 180.0);
-
-        // Compute vertex position
-        x = coord.x + cos(angle) * radius;
-        y = coord.y + sin(angle) * radius;
-        glVertex2f(x, y);
-    }
-
-    glEnd();
-
-    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
-}
-
-tRectangle render_radial_line(tArea area, tCoord coord, double radius, double angleDegrees, double thickness) {
-    if (area == moduleArea) {
-        coord     = scale_scroll_adjust_coord(coord);
-        radius    = scale(radius);
-        thickness = scale(thickness);
-    }
-    double angle = 0.0;
-    double x     = 0.0;
-    double y     = 0.0;
-
-    // Adjust so 0° is at the top
-    angle = (angleDegrees - 90.0) * (M_PI / 180.0);
-
-    // Calculate endpoint of the line
-    x = coord.x + cos(angle) * radius;
-    y = coord.y + sin(angle) * radius;
-
-    // Draw the line
-    //render_line(xPos, yPos, x, y, thickness);
-    render_line(mainArea, {coord.x, coord.y}, {x, y}, thickness);
-
-    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
-}
-
-void set_rgb_colour(tRgb rgb) {
-    glColor3f(rgb.red, rgb.green, rgb.blue);
-}
-
-void set_rgba_colour(tRgba rgba) {
-    glColor4f(rgba.red, rgba.green, rgba.blue, rgba.alpha);
-}
-
-tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord end, double thickness, int segments) {
-    if (area == moduleArea) {
-        start     = scale_scroll_adjust_coord(start);
-        control   = scale_scroll_adjust_coord(control);
-        end       = scale_scroll_adjust_coord(end);
-        thickness = scale(thickness);
-    }
-    glBegin(GL_TRIANGLE_STRIP);
-
-    for (int i = 0; i <= segments; i++) {
-        double tx = 0.0;
-        double ty = 0.0;
-        double t  = (double)i / (double)segments;
-
-        double x = (1 - t) * (1 - t) * start.x + 2 * (1 - t) * t * control.x + t * t * end.x;
-        double y = (1 - t) * (1 - t) * start.y + 2 * (1 - t) * t * control.y + t * t * end.y;
-
-        if (start.x == end.x) {
-            tx = 0.0;
-            ty = 1.0;
-            //} else if (start.y == end.y) {  // This was causing tapering on lines
-            //    tx = 1.0;
-            //    ty = 0.0;
-        } else {
-            tx = 2 * (1 - t) * (control.x - start.x) + 2 * t * (end.x - control.x);
-            ty = 2 * (1 - t) * (control.y - start.y) + 2 * t * (end.y - control.y);
-        }
-        double length = sqrt(tx * tx + ty * ty);
-        tx /= length;
-        ty /= length;
-
-        double nx = -ty * thickness * 0.5;
-        double ny = tx * thickness * 0.5;
-
-        glVertex2f(x + nx, y + ny);
-        glVertex2f(x - nx, y - ny);
-    }
-
-    glEnd();
-
-    render_circle_part(mainArea, start, thickness / 2.0, 10, 0, 10);
-    render_circle_part(mainArea, end, thickness / 2.0, 10, 0, 10);
-
-    return {{0.0, 0.0}, {0.0, 0.0}};
-}
-
-// Draw the power button symbol
-tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active) {
-    if (area == moduleArea) {
-        rectangle = scale_scroll_adjust_rectangle(rectangle);
-    }
-
-    if (active) {
-        set_rgb_colour(RGB_GREEN_ON);         // Green when ON
-    } else {
-        set_rgb_colour(RGB_BACKGROUND_GREY);  // Grey when OFF
-    }
-    render_rectangle(mainArea, rectangle);
-
-    set_rgb_colour(RGB_BLACK);
-    tCoord circleCentre = {rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)};
-    double circleRadius = (rectangle.size.h / 2.0);
-    circleRadius *= 0.75;
-
-    render_circle_line_part_angle(mainArea, circleCentre, circleRadius, 30.0, 330.0, rectangle.size.w * 0.1, 10);
-    render_line(mainArea, {circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05)}, {circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05) + (rectangle.size.h * 0.5)}, rectangle.size.w * 0.1);
-
-    return rectangle;
-}
-
-tRectangle draw_button(tArea area, tRectangle rectangle, char * text) { // TODO: bring setting of colour for button backgound into this function
-    double     borderLineWidth = 1.0;
-    double     margin          = 2.0;
-    tRectangle textRectangle   = rectangle;
-
-    rectangle.size.w       = rectangle.size.w + (2 * margin);
-    rectangle.size.h       = rectangle.size.h + (2 * margin);
-    textRectangle.coord.x += margin;
-    textRectangle.coord.y += margin;
-
-    if (area == moduleArea) {
-        rectangle     = scale_scroll_adjust_rectangle(rectangle);
-        textRectangle = scale_scroll_adjust_rectangle(textRectangle);
-    }
-    render_rectangle(mainArea, rectangle);
-
-    set_rgb_colour(RGB_BLACK);
-
-    tRectangle line = {0};
-    line = (tRectangle){{
-                            rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth
-                        }, {rectangle.size.w, borderLineWidth}};
-    render_rectangle(mainArea, line); // Bottom
-    line = (tRectangle){{
-                            rectangle.coord.x, rectangle.coord.y
-                        }, {borderLineWidth, rectangle.size.h}};
-    render_rectangle(mainArea, line); // Left
-    line = (tRectangle){{
-                            rectangle.coord.x, rectangle.coord.y
-                        }, {rectangle.size.w, borderLineWidth}};
-    render_rectangle(mainArea, line); // Top
-    line = (tRectangle){{
-                            rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y
-                        }, {borderLineWidth, rectangle.size.h}};
-    render_rectangle(mainArea, line); // Right
-
-    render_text(mainArea, textRectangle, text);
-
-    return rectangle;
-}
-
-tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
-    if (area == moduleArea) {
-        rectangle = scale_scroll_adjust_rectangle(rectangle);
-    }
+static void internal_render_text(tRectangle rectangle, char * text) {
     double scaleFactor = 0.0;
     char * ch          = NULL;
 
     if (text == NULL) {
-        //LOG_DEBUG("render_text text=NULL\n");
-        return {{0.0, 0.0}, {0.0, 0.0}};
+        //LOG_ERROR("render_text text=NULL\n");
+        return;
     }
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, textureAtlas);
@@ -574,6 +309,347 @@ tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
 
     glDisable(GL_TEXTURE_2D);
     glDisable(GL_BLEND);
+}
+
+tRectangle render_line(tArea area, tCoord start, tCoord end, double thickness) {
+    if (area == moduleArea) {
+        start     = scale_scroll_adjust_coord(start);
+        end       = scale_scroll_adjust_coord(end);
+        thickness = scale(thickness);
+    }
+    
+    start     = global_scale_coord(start);
+    end       = global_scale_coord(end);
+    thickness = global_scale(thickness);
+    
+    internal_render_line(start, end, thickness);
+
+    return {{0.0, 0.0}, {0.0, 0.0}};
+}
+
+tRectangle render_rectangle(tArea area, tRectangle rectangle) {
+    if (area == moduleArea) {
+        rectangle = scale_scroll_adjust_rectangle(rectangle);
+    }
+    
+    rectangle = global_scale_rectangle(rectangle);
+    
+    internal_render_rectangle(rectangle);
+
+    return rectangle;
+}
+
+tRectangle render_rectangle_with_border(tArea area, tRectangle rectangle) {
+    double borderLineWidth = BORDER_LINE_WIDTH;
+    
+    if (area == moduleArea) {
+        rectangle       = scale_scroll_adjust_rectangle(rectangle);
+        borderLineWidth = scale(borderLineWidth);
+    }
+    
+    rectangle = global_scale_rectangle(rectangle);
+    borderLineWidth = global_scale(borderLineWidth);
+    
+    tRectangle line = {0};
+
+    internal_render_rectangle(rectangle);
+
+    set_rgb_colour(RGB_BLACK);
+    line = {{rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth}, {rectangle.size.w, borderLineWidth}};
+    internal_render_rectangle(line); //Bottom
+    set_rgb_colour(RGB_WHITE);
+    line = {{rectangle.coord.x, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
+    internal_render_rectangle(line); //Left
+    set_rgb_colour(RGB_WHITE);
+    line = {{rectangle.coord.x, rectangle.coord.y}, {rectangle.size.w, borderLineWidth}};
+    internal_render_rectangle(line); // Top
+    set_rgb_colour(RGB_BLACK);
+    line = {{rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
+    internal_render_rectangle(line); // Right
+
+    return rectangle;
+}
+
+tRectangle render_triangle(tArea area, tTriangle triangle) {
+    if (area == moduleArea) {
+        triangle.coord1    = scale_scroll_adjust_coord(triangle.coord1);
+        triangle.coord2rel = scale_scroll_adjust_coord(triangle.coord2rel);
+        triangle.coord3rel = scale_scroll_adjust_coord(triangle.coord3rel);
+    }
+    
+    triangle.coord1    = global_scale_coord(triangle.coord1);
+    triangle.coord2rel = global_scale_coord(triangle.coord2rel);
+    triangle.coord3rel = global_scale_coord(triangle.coord3rel);
+    
+    glBegin(GL_POLYGON);
+    glVertex2f(triangle.coord1.x, triangle.coord1.y);
+    glVertex2f(triangle.coord1.x + triangle.coord2rel.x, triangle.coord1.y + triangle.coord2rel.y);
+    glVertex2f(triangle.coord1.x + triangle.coord3rel.x, triangle.coord1.y + triangle.coord3rel.y);
+    glEnd();
+
+    return {{0.0, 0.0}, {0.0, 0.0}};
+}
+
+tRectangle render_circle_line(tArea area, tCoord coord, double radius, int segments, double thickness) {
+    if (area == moduleArea) {
+        coord  = scale_scroll_adjust_coord(coord);
+        radius = scale(radius);
+        thickness = scale(thickness); // WAS OUTSIDE. Hmmmm
+    }
+    
+    coord     = global_scale_coord(coord);
+    radius    = global_scale(radius);
+    thickness = global_scale(thickness);
+
+    const double DEG_TO_RAD     = 2.0 * M_PI / (double)segments;
+    double       half_thickness = thickness * 0.5;
+
+    glEnable(GL_LINE_SMOOTH);
+    glBegin(GL_TRIANGLE_STRIP);
+
+    for (int i = 0; i <= segments; i++) {
+        double angle = i * DEG_TO_RAD;
+        double cos_a = cos(angle);
+        double sin_a = sin(angle);
+
+        // Compute inner and outer edge vertices
+        glVertex2f(coord.x + cos_a * (radius - half_thickness),
+                   coord.y + sin_a * (radius - half_thickness));
+
+        glVertex2f(coord.x + cos_a * (radius + half_thickness),
+                   coord.y + sin_a * (radius + half_thickness));
+    }
+
+    glEnd();
+
+    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
+}
+
+tRectangle render_circle_part(tArea area, tCoord coord, double radius, int segments, int startSeg, int numSegs) {
+    if (area == moduleArea) {
+        coord  = scale_scroll_adjust_coord(coord);
+        radius = scale(radius);
+    }
+    
+    coord  = global_scale_coord(coord);
+    radius = global_scale(radius);
+    
+    internal_render_circle_part(coord, radius, segments, startSeg, numSegs);
+
+    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
+}
+
+tRectangle render_circle_part_angle(tArea area, tCoord coord, double radius, double startAngle, double endAngle, int numSteps) {
+    if (area == moduleArea) {
+        coord  = scale_scroll_adjust_coord(coord);
+        radius = scale(radius);
+    }
+    
+    coord  = global_scale_coord(coord);
+    radius = global_scale(radius);
+    
+    double angle = 0.0;
+    double x     = 0.0;
+    double y     = 0.0;
+    int    i     = 0;
+
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(coord.x, coord.y);  // Center of the circle
+
+    // Handle cases where the arc spans across 0°
+    if (endAngle < startAngle) {
+        endAngle += 360.0;     // Ensure interpolation works correctly across 0°
+    }
+
+    for (i = 0; i <= numSteps; i++) {
+        // Interpolate between startAngle and endAngle
+        double interpAngle = startAngle + (endAngle - startAngle) * (double)i / (double)numSteps;
+
+        if (interpAngle >= 360.0) {
+            interpAngle -= 360.0;
+        }
+        // Convert to radians and adjust so 0° is at the top
+        angle = (interpAngle - 90.0) * (M_PI / 180.0);
+
+        // Compute vertex position
+        x = coord.x + cos(angle) * radius;
+        y = coord.y + sin(angle) * radius;
+        glVertex2f(x, y);
+    }
+
+    glEnd();
+
+    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
+}
+
+tRectangle render_radial_line(tArea area, tCoord coord, double radius, double angleDegrees, double thickness) {
+    if (area == moduleArea) {
+        coord     = scale_scroll_adjust_coord(coord);
+        radius    = scale(radius);
+        thickness = scale(thickness);
+    }
+    
+    coord     = global_scale_coord(coord);
+    radius    = global_scale(radius);
+    thickness = global_scale(thickness);
+
+    double angle = 0.0;
+    double x     = 0.0;
+    double y     = 0.0;
+
+    // Adjust so 0° is at the top
+    angle = (angleDegrees - 90.0) * (M_PI / 180.0);
+
+    // Calculate endpoint of the line
+    x = coord.x + cos(angle) * radius;
+    y = coord.y + sin(angle) * radius;
+
+    // Draw the line
+    //render_line(xPos, yPos, x, y, thickness);
+    internal_render_line({coord.x, coord.y}, {x, y}, thickness);
+
+    return {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
+}
+
+void set_rgb_colour(tRgb rgb) {
+    glColor3f(rgb.red, rgb.green, rgb.blue);
+}
+
+void set_rgba_colour(tRgba rgba) {
+    glColor4f(rgba.red, rgba.green, rgba.blue, rgba.alpha);
+}
+
+tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord end, double thickness, int segments) {
+    if (area == moduleArea) {
+        start     = scale_scroll_adjust_coord(start);
+        control   = scale_scroll_adjust_coord(control);
+        end       = scale_scroll_adjust_coord(end);
+        thickness = scale(thickness);
+    }
+    
+    start     = global_scale_coord(start);
+    control   = global_scale_coord(control);
+    end       = global_scale_coord(end);
+    thickness = global_scale(thickness);
+
+    glBegin(GL_TRIANGLE_STRIP);
+
+    for (int i = 0; i <= segments; i++) {
+        double tx = 0.0;
+        double ty = 0.0;
+        double t  = (double)i / (double)segments;
+
+        double x = (1 - t) * (1 - t) * start.x + 2 * (1 - t) * t * control.x + t * t * end.x;
+        double y = (1 - t) * (1 - t) * start.y + 2 * (1 - t) * t * control.y + t * t * end.y;
+
+        if (start.x == end.x) {
+            tx = 0.0;
+            ty = 1.0;
+            //} else if (start.y == end.y) {  // This was causing tapering on lines
+            //    tx = 1.0;
+            //    ty = 0.0;
+        } else {
+            tx = 2 * (1 - t) * (control.x - start.x) + 2 * t * (end.x - control.x);
+            ty = 2 * (1 - t) * (control.y - start.y) + 2 * t * (end.y - control.y);
+        }
+        double length = sqrt(tx * tx + ty * ty);
+        tx /= length;
+        ty /= length;
+
+        double nx = -ty * thickness * 0.5;
+        double ny = tx * thickness * 0.5;
+
+        glVertex2f(x + nx, y + ny);
+        glVertex2f(x - nx, y - ny);
+    }
+
+    glEnd();
+
+    internal_render_circle_part(start, thickness / 2.0, 10, 0, 10);
+    internal_render_circle_part(end, thickness / 2.0, 10, 0, 10);
+
+    return {{0.0, 0.0}, {0.0, 0.0}};
+}
+
+// Draw the power button symbol
+tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active) {
+    if (area == moduleArea) {
+        rectangle = scale_scroll_adjust_rectangle(rectangle);
+    }
+    
+    rectangle = global_scale_rectangle(rectangle);
+
+    if (active) {
+        set_rgb_colour(RGB_GREEN_ON);         // Green when ON
+    } else {
+        set_rgb_colour(RGB_BACKGROUND_GREY);  // Grey when OFF
+    }
+    internal_render_rectangle(rectangle);
+
+    set_rgb_colour(RGB_BLACK);
+    tCoord circleCentre = {rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)};
+    double circleRadius = (rectangle.size.h / 2.0);
+    circleRadius *= 0.75;
+
+    internal_render_circle_line_part_angle(circleCentre, circleRadius, 30.0, 330.0, rectangle.size.w * 0.1, 10);
+    internal_render_line({circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05)}, {circleCentre.x, rectangle.coord.y + (rectangle.size.h * 0.05) + (rectangle.size.h * 0.5)}, rectangle.size.w * 0.1);
+
+    return rectangle;
+}
+
+tRectangle draw_button(tArea area, tRectangle rectangle, char * text) { // TODO: bring setting of colour for button backgound into this function
+    double     borderLineWidth = 1.0;
+    double     margin          = 2.0;
+    tRectangle textRectangle   = rectangle;
+
+    rectangle.size.w       = rectangle.size.w + (2 * margin);
+    rectangle.size.h       = rectangle.size.h + (2 * margin);
+    textRectangle.coord.x += margin;
+    textRectangle.coord.y += margin;
+
+    if (area == moduleArea) {
+        rectangle     = scale_scroll_adjust_rectangle(rectangle);
+        textRectangle = scale_scroll_adjust_rectangle(textRectangle);
+    }
+
+    rectangle = global_scale_rectangle(rectangle);
+    textRectangle = global_scale_rectangle(textRectangle);
+
+    internal_render_rectangle(rectangle);
+
+    set_rgb_colour(RGB_BLACK);
+
+    tRectangle line = {0};
+    line = (tRectangle){{
+                            rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth
+                        }, {rectangle.size.w, borderLineWidth}};
+    internal_render_rectangle(line); // Bottom
+    line = (tRectangle){{
+                            rectangle.coord.x, rectangle.coord.y
+                        }, {borderLineWidth, rectangle.size.h}};
+    internal_render_rectangle(line); // Left
+    line = (tRectangle){{
+                            rectangle.coord.x, rectangle.coord.y
+                        }, {rectangle.size.w, borderLineWidth}};
+    internal_render_rectangle(line); // Top
+    line = (tRectangle){{
+                            rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y
+                        }, {borderLineWidth, rectangle.size.h}};
+    internal_render_rectangle(line); // Right
+
+    internal_render_text(textRectangle, text);
+
+    return rectangle;
+}
+
+tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
+    if (area == moduleArea) {
+        rectangle = scale_scroll_adjust_rectangle(rectangle);
+    }
+    
+    rectangle = global_scale_rectangle(rectangle);
+
+    internal_render_text(rectangle, text);
 
     return rectangle;
 }
@@ -766,6 +842,23 @@ double value_to_angle(uint32_t value, uint32_t range) {
     return ((double)value * (135.0 * 2.0) / (double)(range - 1)) - 135.0;
 }
 
+double clamp_scroll_bar(double value, double max_value) {
+    max_value /= GLOBAL_GUI_SCALE;
+    
+    double half_length = SCROLLBAR_LENGTH / 2.0;
+    double min_limit   = half_length + SCROLLBAR_MARGIN;
+    double max_limit   = max_value - (half_length + SCROLLBAR_MARGIN);
+
+    if (value < min_limit) {
+        return min_limit;
+    }
+
+    if (value > max_limit) {
+        return max_limit;
+    }
+    return value;
+}
+
 double get_scroll_bar_percent(double scrollBar, double renderSize) {
     double half_length = SCROLLBAR_LENGTH / 2.0;
     double low         = half_length + SCROLLBAR_MARGIN;
@@ -774,14 +867,14 @@ double get_scroll_bar_percent(double scrollBar, double renderSize) {
     return ((scrollBar - low) / (high - low)) * 100.0;
 }
 
-double set_scroll_bar_percent(double percent, double renderSize) {
-    double half_length = SCROLLBAR_LENGTH / 2.0;
-    double low         = half_length + SCROLLBAR_MARGIN;
-    double high        = renderSize - (half_length + SCROLLBAR_MARGIN);
-
+//double set_scroll_bar_percent(double percent, double renderSize) {
+//    double half_length = SCROLLBAR_LENGTH / 2.0;
+//    double low         = half_length + SCROLLBAR_MARGIN;
+//    double high        = renderSize - (half_length + SCROLLBAR_MARGIN);
+//
     // Convert percentage back to actual position on the scrollbar
-    return low + (percent / 100.0) * (high - low);
-}
+//    return low + (percent / 100.0) * (high - low);
+//}
 
 // Converts angle (-135° to 135°) to normalized value [0,127]
 uint32_t angle_to_value(double angle, uint32_t range) {
@@ -820,21 +913,6 @@ bool within_rectangle(tCoord coord, tRectangle rectangle) {
            && coord.x <= rectangle.coord.x + rectangle.size.w
            && coord.y >= rectangle.coord.y
            && coord.y <= rectangle.coord.y + rectangle.size.h;
-}
-
-double clamp_scroll_bar(double value, double max_value) {
-    double half_length = SCROLLBAR_LENGTH / 2.0;
-    double min_limit   = half_length + SCROLLBAR_MARGIN;
-    double max_limit   = max_value - (half_length + SCROLLBAR_MARGIN);
-
-    if (value < min_limit) {
-        return min_limit;
-    }
-
-    if (value > max_limit) {
-        return max_limit;
-    }
-    return value;
 }
 
 void set_x_scroll_percent(double percent) {

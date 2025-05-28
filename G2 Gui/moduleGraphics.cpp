@@ -589,7 +589,6 @@ void render_module(tModule * module) {
 void render_modules(void) {
     tModule    module      = {0};
     bool       validModule = false;
-    tRectangle area        = module_area();
 
     reset_walk_module();
 
@@ -604,11 +603,12 @@ void render_modules(void) {
     finish_walk_module();
 
     // Draw background areas
-    set_rgb_colour(RGB_BACKGROUND_GREY);
-    render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
-    render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
-    render_rectangle(mainArea, {{area.coord.x + area.size.w, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
-    render_rectangle(mainArea, {{0.0, area.coord.y + area.size.h}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
+    //set_rgb_colour(RGB_RED_7/*RGB_BACKGROUND_GREY*/);
+    //tRectangle area        = module_area();
+    //render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
+    //render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
+    //render_rectangle(mainArea, {{area.coord.x + area.size.w, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
+    //render_rectangle(mainArea, {{0.0, area.coord.y + area.size.h}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
 }
 
 void render_cable_from_to(tConnector from, tConnector to) {
@@ -671,7 +671,7 @@ void render_cables(void) {
 void render_morph_groups(void) {
     tModule    module          = {0};
     tModuleKey key             = {0};
-    tRectangle rectangle       = {{(get_render_width() - SCROLLBAR_MARGIN) - ((STANDARD_TEXT_HEIGHT * 4) * 8), 26}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
+    tRectangle rectangle       = {{((get_render_width() / 2) - SCROLLBAR_MARGIN) - ((STANDARD_TEXT_HEIGHT * 4) * 8), 26}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
     char       buff[16]        = {0};
     uint32_t   dialIndexOffset = 0;
     tRgb       dialColour      = RGB_BACKGROUND_GREY;
