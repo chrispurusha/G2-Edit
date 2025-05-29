@@ -147,8 +147,8 @@ void render_scrollbars(GLFWwindow * window) {
 
     // Scrollbar background
     set_rgb_colour(RGB_GREY_7);
-    render_rectangle(mainArea, {{renderWidth - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, renderHeight - SCROLLBAR_MARGIN}});
-    render_rectangle(mainArea, {{0.0, renderHeight - SCROLLBAR_WIDTH}, {renderWidth - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH}});
+    gScrollState.xRectangle = render_rectangle(mainArea, {{0.0, renderHeight - SCROLLBAR_WIDTH}, {renderWidth - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH}});
+    gScrollState.yRectangle = render_rectangle(mainArea, {{renderWidth - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, renderHeight - SCROLLBAR_MARGIN}});
 
     // Bottom right box
     set_rgb_colour(RGB_BACKGROUND_GREY);

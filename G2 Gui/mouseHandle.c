@@ -941,23 +941,20 @@ bool handle_context_menu_click(tCoord coord) {
 }
 
 bool handle_scrollbar_click(tCoord coord) {
-    double     renderWidth  = get_render_width();
-    double     renderHeight = get_render_height();
-
-    tRectangle yScrollBar = {{renderWidth - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, renderHeight}};
-    tRectangle xScrollBar = {{0.0, renderHeight - SCROLLBAR_WIDTH}, {renderWidth, SCROLLBAR_WIDTH}};
-
-    if (within_rectangle(coord, yScrollBar)) {
+    //printf("Mouse %f %f bar x %f %f %f %f\n", coord.x, coord.y, gScrollState.xRectangle.coord.x,  gScrollState.xRectangle.coord.y,  gScrollState.xRectangle.size.w,  gScrollState.xRectangle.size.h);
+    
+    if (within_rectangle(coord, gScrollState.xRectangle)) {
+        set_x_scroll_bar(coord.x);
+        gScrollState.xBarDragging = true;
+        return true;
+    }
+    
+    if (within_rectangle(coord, gScrollState.yRectangle)) {
         set_y_scroll_bar(coord.y);
         gScrollState.yBarDragging = true;
         return true;
     }
 
-    if (within_rectangle(coord, xScrollBar)) {
-        set_x_scroll_bar(coord.x);
-        gScrollState.xBarDragging = true;
-        return true;
-    }
     return false;
 }
 

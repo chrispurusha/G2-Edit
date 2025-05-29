@@ -46,7 +46,7 @@ tButton         gMainButtonArray[] = {  // Must align with tButtonId enumaration
 
 bool            gShowOpenFileReadDialogue = false;
 
-tScrollState    gScrollState     = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false};
+tScrollState    gScrollState     = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE};
 tContextMenu    gContextMenu     = {0};
 tCableDragging  gCableDrag       = {0};
 tParamDragging  gParamDragging   = {0};
