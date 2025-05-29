@@ -587,8 +587,8 @@ void render_module(tModule * module) {
 }
 
 void render_modules(void) {
-    tModule    module      = {0};
-    bool       validModule = false;
+    tModule module      = {0};
+    bool    validModule = false;
 
     reset_walk_module();
 

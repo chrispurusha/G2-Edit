@@ -177,7 +177,7 @@ void render_top_bar(void) {
         switch (gMainButtonArray[i].anchor) {
             case anchorTopRight:
             {
-                rectangle.coord.x = (get_render_width()/GLOBAL_GUI_SCALE) + gMainButtonArray[i].coord.x;
+                rectangle.coord.x = (get_render_width() / GLOBAL_GUI_SCALE) + gMainButtonArray[i].coord.x;
                 break;
             }
             default:
@@ -185,7 +185,6 @@ void render_top_bar(void) {
                 break;
             }
         }
-
         gMainButtonArray[i].rectangle = draw_button(mainArea, rectangle, gMainButtonArray[i].text);
     }
 }
@@ -245,7 +244,7 @@ void init_graphics(void) {
         glfwTerminate();
         exit(EXIT_FAILURE);
     }
-    glfwSetWindowSizeLimits(gWindow, windowWidth/GLOBAL_GUI_SCALE, windowHeight/GLOBAL_GUI_SCALE, GLFW_DONT_CARE, GLFW_DONT_CARE);
+    glfwSetWindowSizeLimits(gWindow, windowWidth / GLOBAL_GUI_SCALE, windowHeight / GLOBAL_GUI_SCALE, GLFW_DONT_CARE, GLFW_DONT_CARE);
     glfwSetWindowAspectRatio(gWindow, windowWidth, windowHeight);
 
     glfwMakeContextCurrent(gWindow);
@@ -389,14 +388,23 @@ void do_graphics_loop(void) {
             render_morph_groups();
             render_scrollbars(gWindow);
             render_context_menu();
-            // Debug only
+            //Debug only
             //{
-            //    double x = 0.0;
-            //    double y = 0.0;
+            //    double x        = 0.0;
+            //    double y        = 0.0;
+            //    int    fbWidth  = 0;
+            //    int    fbHeight = 0;
             //    glfwGetCursorPos(gWindow, &x, &y);
-            //    set_rbg_colour(RGB_BLACK);
-            //    render_line(mainArea, {x, y-10}, {x, y+10}, 3);
-            //    render_line(mainArea, {x-10, y}, {x+10, y}, 3);
+            //    glfwGetFramebufferSize(gWindow, &fbWidth, &fbHeight);
+            //
+            //    x /= fbWidth;
+            //    y /= fbHeight;
+            //    x *= TARGET_FRAME_BUFF_WIDTH;
+            //    y *= TARGET_FRAME_BUFF_HEIGHT;
+            //
+            //    set_rgb_colour(RGB_BLACK);
+            //    render_line(mainArea, {x, y - 10}, {x, y + 10}, 3);
+            //    render_line(mainArea, {x - 10, y}, {x + 10, y}, 3);
             //}
 
             // Swap buffers and look for events

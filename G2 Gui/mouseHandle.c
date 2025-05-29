@@ -43,7 +43,22 @@ extern "C" {
 #include "mouseHandle.h"
 #include "globalVars.h"
 
+static void get_global_gui_scaled_mouse_coord(tCoord * coord) {
+    int fbWidth  = 0;
+    int fbHeight = 0;
+
+    glfwGetCursorPos(gWindow, &(coord->x), &(coord->y));
+
+    glfwGetFramebufferSize(gWindow, &fbWidth, &fbHeight);
+
+    coord->x /= fbWidth;
+    coord->y /= fbHeight;
+    coord->x *= TARGET_FRAME_BUFF_WIDTH;
+    coord->y *= TARGET_FRAME_BUFF_HEIGHT;
+}
+
 void adjust_scroll_for_drag(void) {
+    tCoord     coord         = {0};
     double     x             = 0.0;
     double     y             = 0.0;
     double     xAdjustAmount = 0.1;
@@ -51,8 +66,10 @@ void adjust_scroll_for_drag(void) {
     double     timeDelta     = get_time_delta();
     tRectangle area          = module_area();
 
-    glfwGetCursorPos(gWindow, &x, &y);
-    // TODO: Most of the translation for global gui zooming, should be adjusting the mouse coords by /= the 2
+    get_global_gui_scaled_mouse_coord(&coord);
+    x = coord.x;
+    y = coord.y;
+
 
     xAdjustAmount *= timeDelta;
     yAdjustAmount *= timeDelta;
@@ -539,13 +556,13 @@ uint32_t find_unique_module_id(uint32_t location) {
 void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row, tCoord coord) {
     double     val  = 0.0;
     tRectangle area = module_area();
-    
+
     if (column != NULL) {
-        val     = coord.x - area.coord.x;
-        val    += calc_scroll_x();
-        val    /= MODULE_X_SPAN;
-        val    /= get_zoom_factor();
-        val  /= GLOBAL_GUI_SCALE;   // Might not need this, if we adjust coord at source
+        val  = coord.x - area.coord.x;
+        val += calc_scroll_x();
+        val /= MODULE_X_SPAN;
+        val /= get_zoom_factor();
+
         if (val < 0.0) {
             val = 0.0;
         }
@@ -557,7 +574,7 @@ void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row,
         val += calc_scroll_y();
         val /= MODULE_Y_SPAN;
         val /= get_zoom_factor();
-        val  /= GLOBAL_GUI_SCALE;  // Might not need this, if we adjust coord at source
+
         if (val < 0.0) {
             val = 0.0;
         }
@@ -572,19 +589,14 @@ void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord
     double     val  = 0.0;
     tRectangle area = module_area();
 
-    coord.x /= GLOBAL_GUI_SCALE;
-    coord.y /= GLOBAL_GUI_SCALE;
-    
     val            = coord.x - area.coord.x;
     val           += calc_scroll_x();
     val           /= get_zoom_factor();
-    //val /= GLOBAL_GUI_SCALE;
     targetCoord->x = val;
 
     val            = coord.y - area.coord.y;
     val           += calc_scroll_y();
     val           /= get_zoom_factor();
-    //val /= GLOBAL_GUI_SCALE; // POSITION IN SEQUENCE!?
     targetCoord->y = val;
 }
 
@@ -932,17 +944,17 @@ bool handle_scrollbar_click(tCoord coord) {
     double     renderWidth  = get_render_width();
     double     renderHeight = get_render_height();
 
-    tRectangle yScrollBar = {{renderWidth - (SCROLLBAR_WIDTH * GLOBAL_GUI_SCALE), 0.0}, {(SCROLLBAR_WIDTH * GLOBAL_GUI_SCALE), renderHeight}};
-    tRectangle xScrollBar = {{0.0, renderHeight - (SCROLLBAR_WIDTH * GLOBAL_GUI_SCALE)}, {renderWidth, (SCROLLBAR_WIDTH * GLOBAL_GUI_SCALE)}};
+    tRectangle yScrollBar = {{renderWidth - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, renderHeight}};
+    tRectangle xScrollBar = {{0.0, renderHeight - SCROLLBAR_WIDTH}, {renderWidth, SCROLLBAR_WIDTH}};
 
     if (within_rectangle(coord, yScrollBar)) {
-        set_y_scroll_bar(coord.y/GLOBAL_GUI_SCALE);
+        set_y_scroll_bar(coord.y);
         gScrollState.yBarDragging = true;
         return true;
     }
 
     if (within_rectangle(coord, xScrollBar)) {
-        set_x_scroll_bar(coord.x/GLOBAL_GUI_SCALE);
+        set_x_scroll_bar(coord.x);
         gScrollState.xBarDragging = true;
         return true;
     }
@@ -964,10 +976,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     bool   quitLoop = false;
 
     glfwGetWindowSize(window, &width, &height);
-    glfwGetCursorPos(window, &coord.x, &coord.y);
 
-    coord.x = (coord.x * (double)get_render_width()) / (double)width;
-    coord.y = (coord.y * (double)get_render_height()) / (double)height;
+    get_global_gui_scaled_mouse_coord(&coord);
 
     //LOG_DEBUG("button=%d action=%d mods=%d\n", button, action, mods);
 
@@ -992,8 +1002,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (gContextMenu.active) {
-                    coord.x /= GLOBAL_GUI_SCALE;
-                    coord.y /= GLOBAL_GUI_SCALE;
                     if (!handle_context_menu_click(coord)) {
                         gContextMenu.active = false;  // Close if clicked outside - TODO: think if this is the right thing to do here
                     }
@@ -1051,8 +1059,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
         } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
             if (!handle_module_click(coord, button)) {
-                coord.x /= GLOBAL_GUI_SCALE;
-                coord.y /= GLOBAL_GUI_SCALE;
                 handle_module_area_click(coord, button);
             }
         }
@@ -1062,6 +1068,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 }
 
 void cursor_pos(GLFWwindow * window, double x, double y) {
+    tCoord          coord          = {0};
     int             width          = 0;
     int             height         = 0;
     double          angle          = 0.0;
@@ -1072,15 +1079,19 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     bool            noAction       = false;
     tParamType2     paramType2     = paramType2Dial;
 
+    get_global_gui_scaled_mouse_coord(&coord);
+    x = coord.x;
+    y = coord.y;
+
     // Scale x and y to match intended rendering window
-    glfwGetWindowSize(window, &width, &height);
-    x = (x * (double)get_render_width()) / (double)width;
-    y = (y * (double)get_render_height()) / (double)height;
+    //glfwGetWindowSize(window, &width, &height);
+    //x = (x * (double)get_render_width()) / (double)width;
+    //y = (y * (double)get_render_height()) / (double)height;
 
     if (gScrollState.yBarDragging == true) {
-        set_y_scroll_bar(y/GLOBAL_GUI_SCALE);
+        set_y_scroll_bar(y);
     } else if (gScrollState.xBarDragging == true) {
-        set_x_scroll_bar(x/GLOBAL_GUI_SCALE);
+        set_x_scroll_bar(x);
     } else if (gParamDragging.active == true) {
         read_module(gParamDragging.moduleKey, &module);
 
@@ -1148,7 +1159,6 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
         if (module.column > 127) {
             module.column = 127;
         }
-        
         write_module(gModuleDrag.moduleKey, &module);
         adjust_scroll_for_drag();
     } else if (gCableDrag.active == true) {
@@ -1175,11 +1185,11 @@ void scroll_event(GLFWwindow * window, double x, double y) {
     int          height        = 0;
 
     glfwGetWindowSize(window, &width, &height);
-    glfwGetCursorPos(window, &mouseCoord.x, &mouseCoord.y);
-    mouseCoord.x /= GLOBAL_GUI_SCALE;
-    mouseCoord.y /= GLOBAL_GUI_SCALE;
-    mouseCoord.x = (mouseCoord.x * (double)get_render_width()) / (double)width;
-    mouseCoord.y = (mouseCoord.y * (double)get_render_height()) / (double)height;
+
+    get_global_gui_scaled_mouse_coord(&mouseCoord);
+
+    //mouseCoord.x = (mouseCoord.x * (double)get_render_width()) / (double)width;
+    //mouseCoord.y = (mouseCoord.y * (double)get_render_height()) / (double)height;
 
     //LOG_DEBUG("Zoom = %f yEndMax = %f module area size = %f percent = %f\n", gZoomFactor, yEndMax, moduleArea.size.h, get_scroll_bar_percent(gScrollState.yBar, gRenderHeight));
 
