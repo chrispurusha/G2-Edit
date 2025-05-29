@@ -890,12 +890,12 @@ bool handle_module_area_click(tCoord coord, int button) {
 
 void set_x_scroll_bar(double x) {
     gScrollState.xBar = clamp_scroll_bar(x, get_render_width());
-    set_x_scroll_percent(get_scroll_bar_percent(gScrollState.xBar, get_render_width()));
+    set_x_scroll_percent(get_scroll_bar_percent(gScrollState.xBar, get_render_width() / GLOBAL_GUI_SCALE));
 }
 
 void set_y_scroll_bar(double y) {
     gScrollState.yBar = clamp_scroll_bar(y, get_render_height());
-    set_y_scroll_percent(get_scroll_bar_percent(gScrollState.yBar, get_render_height()));
+    set_y_scroll_percent(get_scroll_bar_percent(gScrollState.yBar, get_render_height() / GLOBAL_GUI_SCALE));
 }
 
 bool handle_context_menu_click(tCoord coord) {
