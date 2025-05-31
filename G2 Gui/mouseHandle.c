@@ -1112,18 +1112,38 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                     }
                     angle = calculate_mouse_angle((tCoord){x, y}, module.param[gVariation][gParamDragging.param].rectangle);                                                            // possible add half size
                     value = angle_to_value(angle, range);
-
-                    if (module.param[gVariation][gParamDragging.param].value != value) {
-                        module.param[gVariation][gParamDragging.param].value = value;
-
-                        write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
-
-                        messageContent.cmd                 = eMsgCmdSetValue;
-                        messageContent.paramData.moduleKey = gParamDragging.moduleKey;
-                        messageContent.paramData.param     = gParamDragging.param;
-                        messageContent.paramData.variation = gVariation;
-                        messageContent.paramData.value     = value;
-                        msg_send(&gCommandQueue, &messageContent);
+                    
+                    if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) != GLFW_PRESS) {
+                        
+                        if (module.param[gVariation][gParamDragging.param].value != value) {
+                            module.param[gVariation][gParamDragging.param].value = value;
+                            
+                            write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
+                            
+                            messageContent.cmd                 = eMsgCmdSetValue;
+                            messageContent.paramData.moduleKey = gParamDragging.moduleKey;
+                            messageContent.paramData.param     = gParamDragging.param;
+                            messageContent.paramData.variation = gVariation;
+                            messageContent.paramData.value     = value;
+                            msg_send(&gCommandQueue, &messageContent);
+                        }
+                    } else {
+                        if (module.param[gVariation][gParamDragging.param].morphRange[gMorphGroupFocus] != value) {
+                            if (value >= module.param[gVariation][gParamDragging.param].value) {
+                                module.param[gVariation][gParamDragging.param].morphRange[gMorphGroupFocus] = value - module.param[gVariation][gParamDragging.param].value;
+                            } else {
+                                module.param[gVariation][gParamDragging.param].morphRange[gMorphGroupFocus] = 256-(module.param[gVariation][gParamDragging.param].value - value);
+                            }
+                            
+                            write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
+                            
+                            messageContent.cmd                 = eMsgCmdSetValue;
+                            messageContent.paramData.moduleKey = gParamDragging.moduleKey;
+                            messageContent.paramData.param     = gParamDragging.param;
+                            messageContent.paramData.variation = gVariation;
+                            //messageContent.paramData.value     = value;
+                            //msg_send(&gCommandQueue, &messageContent);
+                        }
                     }
                 }
                 break;
