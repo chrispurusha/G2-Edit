@@ -53,7 +53,7 @@ tParamDragging  gParamDragging   = {0};
 tModuleDragging gModuleDrag      = {0};
 tMessageQueue   gCommandQueue    = {0};
 uint32_t        gMorphRow        = 0;    // TODO: Use an enumeration for the row rather than 0 and 1
-uint32_t        gMorphGroupFocus = 0;
+uint32_t        gMorphGroupFocus = 0;    // TODO: Implement mechanism to select this!
 
 uint32_t array_size_main_button_array(void) {
     return ARRAY_SIZE(gMainButtonArray);

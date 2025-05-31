@@ -220,7 +220,6 @@ static void parse_cable_list(uint8_t * buff, uint32_t * subOffset) {
 }
 
 static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
-    //file.pas at around line 3166 or 3511, possibly pivoted on location?
     uint32_t   variationCount = 0;
     uint32_t   paramCount     = 0;
     uint32_t   moduleCount    = 0;
@@ -386,6 +385,74 @@ static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
+static void parse_morph_params(uint8_t * buff, uint32_t * subOffset) {
+    // line 3754 in file.pas
+    tModule    module          = {0};
+    tModuleKey key             = {0};
+    uint32_t   variationCount  = 0;
+    uint32_t   variation       = 0;
+    uint32_t   location        = 0;
+    uint32_t   morphCount      = 0;
+    uint32_t   morphParamCount = 0;
+    uint32_t   moduleIndex     = 0;
+    uint32_t   paramIndex      = 0;
+    uint32_t   morph           = 0;
+    uint32_t   range           = 0;
+    int        j               = 0;
+    int        k               = 0;
+    uint32_t   bitsLeft        = 0;
+
+    variationCount = read_bit_stream(buff, subOffset, 8);
+    morphCount     = read_bit_stream(buff, subOffset, 4);
+    read_bit_stream(buff, subOffset, 20);  // Reserved data
+
+    LOG_DEBUG("Variations %u Morphs %u\n", variationCount, morphCount);
+
+    for (j = 0; j < variationCount; j++) {    // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
+        variation = read_bit_stream(buff, subOffset, 4);
+        read_bit_stream(buff, subOffset, 4);  // Lots of unknown stuff
+        read_bit_stream(buff, subOffset, 8);
+        read_bit_stream(buff, subOffset, 8);
+        read_bit_stream(buff, subOffset, 8);
+        read_bit_stream(buff, subOffset, 8);
+        read_bit_stream(buff, subOffset, 8);
+        read_bit_stream(buff, subOffset, 8);
+        read_bit_stream(buff, subOffset, 4);
+        morphParamCount = read_bit_stream(buff, subOffset, 8);
+        LOG_DEBUG("Variation %u Morph param count %u\n", variation, morphParamCount);
+
+        for (k = 0; k < morphParamCount; k++) {
+            key.location = read_bit_stream(buff, subOffset, 2);
+            key.index    = read_bit_stream(buff, subOffset, 8);
+            paramIndex   = read_bit_stream(buff, subOffset, 7);
+            morph        = read_bit_stream(buff, subOffset, 4);
+            range        = read_bit_stream(buff, subOffset, 8);
+
+            LOG_DEBUG("  Location %u\n", location);
+            LOG_DEBUG("  Module index %u\n", moduleIndex);
+            LOG_DEBUG("  Param index %u\n", paramIndex);
+            LOG_DEBUG("  Morph %u\n", morph);
+            LOG_DEBUG("  Range %u\n", range);
+
+            if (read_module(key, &module) == false) {
+                write_module(key, &module);
+            }
+            module.param[j][paramIndex].morphRange[morph] = range;
+
+            write_module(key, &module);
+        }
+
+        // Align
+        bitsLeft = 8 - (*subOffset % 8);
+
+        if (bitsLeft < 4) {
+            read_bit_stream(buff, subOffset, bitsLeft);
+        } else {
+            read_bit_stream(buff, subOffset, 4);
+        }
+    }
+}
+
 int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, so need to decide how to access from USB and file
     if ((buff == NULL) || (length <= 0)) {
         return EXIT_FAILURE;
@@ -456,6 +523,8 @@ int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, 
 
                 LOG_DEBUG_DIRECT("\n");
                 subOffset = tmpSubOffset;
+
+                parse_morph_params(buff, &subOffset);
                 break;
             }
 

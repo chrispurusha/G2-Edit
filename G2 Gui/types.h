@@ -353,6 +353,7 @@ typedef struct {
     tRectangle rectangle;
     char       name[PARAM_NAME_SIZE + 1];
     uint32_t   value;
+    uint32_t   morphRange[8];  // 8 seems to be number of morphs. Not sure we can go higher, but
 } tParam;
 
 typedef struct {
@@ -468,11 +469,11 @@ typedef struct _struct_module {
 } tModule;
 
 typedef struct {
-    double xBar;
-    bool   xBarDragging;
+    double     xBar;
+    bool       xBarDragging;
     tRectangle xRectangle;
-    double yBar;
-    bool   yBarDragging;
+    double     yBar;
+    bool       yBarDragging;
     tRectangle yRectangle;
 } tScrollState;
 

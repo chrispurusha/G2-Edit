@@ -37,8 +37,9 @@
 #define TARGET_FRAME_BUFF_HEIGHT             (1440)
 #define GLOBAL_GUI_SCALE                     (2)
 
-#define NUM_VARIATIONS                       (10)  // 10 variations per patch, but only fist 8 presented on the GUI
+#define NUM_VARIATIONS                       (10) // 10 variations per patch, but only fist 8 presented on the GUI
 #define NUM_GUI_VARIATIONS                   (8)
+#define NUM_MORPHS                           (8)  // Not sure if we can go higher with this, so remember to check
 #define MAX_PARAMS_PER_MODULE                (38)
 #define MAX_CONNECTORS_PER_MODULE            (10)
 #define MAX_SLOTS                            (4)
@@ -136,6 +137,7 @@
 #define RGB_CONTEXT_MENU_GREEN               {0.2, 0.6, 0.2}
 #define RGB_YELLOW_7                         {0.7, 0.7, 0.0}
 #define RGB_RED_7                            {0.7, 0.0, 0.0}
+#define RGB_ORANGE_1                         {0.8, 0.3, 0.1}
 #define RGB_ORANGE_2                         {0.8, 0.5, 0.2}
 #define RGBA_BLACK_ON_TRANSPARENT            {0.0, 0.0, 0.0, 1.0}
 

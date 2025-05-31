@@ -780,7 +780,11 @@ bool handle_module_click(tCoord coord, int button) {
                             gParamDragging.type3              = paramType3Param;
                             gParamDragging.param              = i;
                             gParamDragging.active             = true;
-                            retVal                            = true;
+
+                            if (module.key.location == locationMorph) {
+                                gMorphGroupFocus = i;
+                            }
+                            retVal = true;
                         } else {
                             param->value = (param->value + 1) % paramLocationList[param->paramRef].range;
                             write_module(module.key, &module);
@@ -942,19 +946,18 @@ bool handle_context_menu_click(tCoord coord) {
 
 bool handle_scrollbar_click(tCoord coord) {
     //printf("Mouse %f %f bar x %f %f %f %f\n", coord.x, coord.y, gScrollState.xRectangle.coord.x,  gScrollState.xRectangle.coord.y,  gScrollState.xRectangle.size.w,  gScrollState.xRectangle.size.h);
-    
+
     if (within_rectangle(coord, gScrollState.xRectangle)) {
         set_x_scroll_bar(coord.x);
         gScrollState.xBarDragging = true;
         return true;
     }
-    
+
     if (within_rectangle(coord, gScrollState.yRectangle)) {
         set_y_scroll_bar(coord.y);
         gScrollState.yBarDragging = true;
         return true;
     }
-
     return false;
 }
 
