@@ -19,6 +19,5 @@ brew install --build-from-source glfw
 brew install --build-from-source freetype2
 
 
-Todo: Many mechanisms yet to implement - including variation selection, copying,
-file access etc. 200+ modules to implement. LED volume indications etc. Graphical representation of filter curves / oscillator waves etc.
+Todo: Many mechanisms yet to implement - including copying, file writing, morph group modulation etc. 200+ modules to implement. Graphical representation of filter curves / oscillator waves etc.
 
