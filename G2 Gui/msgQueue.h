@@ -43,7 +43,8 @@ typedef enum {
     eMsgCmdMoveModule,
     eMsgCmdSetModuleUpRate,
     eMsgCmdWriteCable,
-    eMsgCmdDeleteCable
+    eMsgCmdDeleteCable,
+    eMsgCmdSelectVariation
 } eMsgCmd;
 
 typedef struct {
@@ -67,6 +68,10 @@ typedef struct {
     uint32_t   mode;
     uint32_t   value;
 } tModeData;
+
+typedef struct {
+    uint32_t variation;
+} tVariationData;
 
 typedef struct {
     tModuleKey moduleKey;
@@ -107,6 +112,7 @@ typedef struct {
         tModuleData     moduleData;
         tModuleData     moduleMoveData;
         tCableData      cableData;
+        tVariationData  variationData;
     };
 } tMessageContent;
 

@@ -281,6 +281,12 @@ void handle_button(tButtonId buttonId) {
             }
 
             gMainButtonArray[buttonId].backgroundColour = (tRgb)RGB_GREEN_ON;
+
+            tMessageContent messageContent = {0};
+            messageContent.cmd                     = eMsgCmdSelectVariation;
+            messageContent.variationData.variation = variation;
+            msg_send(&gCommandQueue, &messageContent);
+
             break;
         }
         case initParamsButtonId:

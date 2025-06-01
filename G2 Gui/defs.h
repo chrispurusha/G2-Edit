@@ -99,6 +99,7 @@
 #define SUB_RESPONSE_PARAM_NAMES             (0x5b)
 #define SUB_RESPONSE_KNOBS                   (0x62)
 #define SUB_RESPONSE_MORPH_PARAMS            (0x65)
+#define SUB_COMMAND_SELECT_VARIATION         (0x6a)
 #define SUB_RESPONSE_RESOURCES_USED          (0x72)
 #define SUB_COMMAND_START_STOP               (0x7d)
 #define SUB_RESPONSE_ERROR                   (0x7e)
