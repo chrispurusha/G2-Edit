@@ -414,9 +414,7 @@ typedef enum {
     variation6ButtonId,
     variation7ButtonId,
     variation8ButtonId,
-    initParamsButtonId,
-    morphContButtonId,
-    morphKnobButtonId
+    initParamsButtonId
 } tButtonId;
 
 typedef struct {

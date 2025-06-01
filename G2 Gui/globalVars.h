@@ -46,7 +46,6 @@ extern tCableDragging  gCableDrag;
 extern tParamDragging  gParamDragging;
 extern tModuleDragging gModuleDrag;
 extern tMessageQueue   gCommandQueue;
-extern uint32_t        gMorphRow;
 extern uint32_t        gMorphGroupFocus;
 
 uint32_t array_size_main_button_array(void);

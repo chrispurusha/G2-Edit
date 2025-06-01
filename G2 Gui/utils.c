@@ -71,7 +71,12 @@ uint32_t read_bit_stream(uint8_t * buff, uint32_t * bitPos, uint32_t numBits) {
     int      i   = 0;
     uint32_t val = 0;
 
-    if ((buff == NULL) || (bitPos == NULL) || (numBits > 32) || (numBits == 0)) {
+    if ((buff == NULL) || (bitPos == NULL) || (numBits == 0)) {
+        return 0;
+    }
+
+    if (numBits > 32) {
+        *bitPos += numBits;
         return 0;
     }
 

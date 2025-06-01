@@ -37,6 +37,7 @@ typedef enum {
 typedef enum {
     eMsgCmdSetValue,
     eMsgCmdSetMode,
+    eMsgCmdSetParamMorph,
     eMsgCmdWriteModule,
     eMsgCmdDeleteModule,
     eMsgCmdMoveModule,
@@ -51,6 +52,15 @@ typedef struct {
     uint32_t   param;
     uint32_t   value;
 } tParamData;
+
+typedef struct {
+    tModuleKey moduleKey;
+    uint32_t   variation;
+    uint32_t   param;
+    uint32_t   paramMorph;
+    uint32_t   value;
+    uint32_t   negative;
+} tParamMorphData;
 
 typedef struct {
     tModuleKey moduleKey;
@@ -91,11 +101,12 @@ typedef struct {
 typedef struct {
     uint32_t cmd;
     union {
-        tParamData  paramData;
-        tModeData   modeData;
-        tModuleData moduleData;
-        tModuleData moduleMoveData;
-        tCableData  cableData;
+        tParamData      paramData;
+        tParamMorphData paramMorphData;
+        tModeData       modeData;
+        tModuleData     moduleData;
+        tModuleData     moduleMoveData;
+        tCableData      cableData;
     };
 } tMessageContent;
 

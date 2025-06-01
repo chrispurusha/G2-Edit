@@ -66,6 +66,8 @@
 #define SUB_COMMAND_CLEAR_BANK               (0x0e)
 #define SUB_RESPONSE_GLOBAL_PAGE             (0x1e)
 #define SUB_RESPONSE_PATCH_DESCRIPTION       (0x21)
+#define SUB_COMMAND_ASSIGN_KNOB              (0x25)  // S_ASSIGN_KNOB
+#define SUB_COMMAND_DEASSIGN_KNOB            (0x26)
 #define SUB_RESPONSE_PATCH_NAME              (0x27)
 #define SUB_COMMAND_GET_PATCH_NAME           (0x28)
 #define SUB_RESPONSE_PERFORMANCE_NAME        (0x29)
@@ -95,6 +97,7 @@
 #define SUB_COMMAND_WRITE_CABLE_COLOUR       (0x54)
 #define SUB_RESPONSE_MODULE_NAMES            (0x5a)
 #define SUB_RESPONSE_PARAM_NAMES             (0x5b)
+#define SUB_RESPONSE_KNOBS                   (0x62)
 #define SUB_RESPONSE_MORPH_PARAMS            (0x65)
 #define SUB_RESPONSE_RESOURCES_USED          (0x72)
 #define SUB_COMMAND_START_STOP               (0x7d)

@@ -233,8 +233,7 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
     LOG_DEBUG("Param list\n");
     key.location = read_bit_stream(buff, subOffset, 2);
     LOG_DEBUG("Location       0x%x\n", key.location);     // 0..1 = param list, 2 = patch settings!?
-    // SWITCH ON LOC BEING 0..1 or 2
-
+    // SWITCH ON LOC BEING 0..1 or 2 2 = line 4112 in file.pas
     moduleCount = read_bit_stream(buff, subOffset, 8);
     LOG_DEBUG("Module Count      %u\n", moduleCount);
     variationCount = read_bit_stream(buff, subOffset, 8);     // Should always be 10 (VARIATIONS) - TODO: sanity check
@@ -391,10 +390,8 @@ static void parse_morph_params(uint8_t * buff, uint32_t * subOffset) {
     tModuleKey key             = {0};
     uint32_t   variationCount  = 0;
     uint32_t   variation       = 0;
-    uint32_t   location        = 0;
     uint32_t   morphCount      = 0;
     uint32_t   morphParamCount = 0;
-    uint32_t   moduleIndex     = 0;
     uint32_t   paramIndex      = 0;
     uint32_t   morph           = 0;
     uint32_t   range           = 0;
@@ -428,8 +425,8 @@ static void parse_morph_params(uint8_t * buff, uint32_t * subOffset) {
             morph        = read_bit_stream(buff, subOffset, 4);
             range        = read_bit_stream(buff, subOffset, 8);
 
-            LOG_DEBUG("  Location %u\n", location);
-            LOG_DEBUG("  Module index %u\n", moduleIndex);
+            LOG_DEBUG("  Location %u\n", key.location);
+            LOG_DEBUG("  Module index %u\n", key.index);
             LOG_DEBUG("  Param index %u\n", paramIndex);
             LOG_DEBUG("  Morph %u\n", morph);
             LOG_DEBUG("  Range %u\n", range);
@@ -442,15 +439,88 @@ static void parse_morph_params(uint8_t * buff, uint32_t * subOffset) {
             write_module(key, &module);
         }
 
-        // Align
-        bitsLeft = 8 - (*subOffset % 8);
+        read_bit_stream(buff, subOffset, 4);
 
-        if (bitsLeft < 4) {
-            read_bit_stream(buff, subOffset, bitsLeft);
-        } else {
-            read_bit_stream(buff, subOffset, 4);
+        // Supposedly, if what's left is < 4 bits, we should read the remaining bits only. Shouldn't happen on this system since we step over block
+    }
+}
+
+static void parse_knobs(uint8_t * buff, uint32_t * subOffset) {
+    // line 4268 in file.pas
+
+    tModuleKey key        = {0};
+    uint32_t   knobCount  = 0;
+    uint32_t   isLed      = 0;
+    uint32_t   paramIndex = 0;
+    uint32_t   assigned   = 0;
+    int        i          = 0;
+
+
+    knobCount = read_bit_stream(buff, subOffset, 16);
+    LOG_DEBUG("  Knob Count %u\n", knobCount);
+
+    for (i = 0; i < knobCount; i++) {
+        assigned = read_bit_stream(buff, subOffset, 1);
+
+        if (assigned == 1) {
+            key.location = read_bit_stream(buff, subOffset, 2);
+            key.index    = read_bit_stream(buff, subOffset, 8);
+            isLed        = read_bit_stream(buff, subOffset, 2);
+            paramIndex   = read_bit_stream(buff, subOffset, 7);
+
+            LOG_DEBUG("Knob %d\n", i);
+            LOG_DEBUG("  Module Location %u\n", key.location);
+            LOG_DEBUG("  Module Index %u\n", key.index);
+            LOG_DEBUG("  IsLed %u\n", isLed);
+            LOG_DEBUG("  Param Index %u\n", paramIndex);
         }
     }
+}
+
+static void parse_patch_descr(uint8_t * buff, uint32_t * subOffset) {
+    uint32_t barPosition     = 0;
+    uint32_t voiceCount      = 0;
+    uint32_t redVisible      = 0;
+    uint32_t blueVisible     = 0;
+    uint32_t yellowVisible   = 0;
+    uint32_t orangeVisible   = 0;
+    uint32_t greenVisible    = 0;
+    uint32_t purpleVisible   = 0;
+    uint32_t whiteVisible    = 0;
+    uint32_t monoPoly        = 0;
+    uint32_t activeVariation = 0;
+    uint32_t category        = 0;
+
+    read_bit_stream(buff, subOffset, 61);  // Unknown - may need to write to file or back to synth?
+    voiceCount  = read_bit_stream(buff, subOffset, 5);
+    barPosition = read_bit_stream(buff, subOffset, 14);
+    read_bit_stream(buff, subOffset, 3);   // Unknown - may need to write to file or back to synth?
+    redVisible      = read_bit_stream(buff, subOffset, 1);
+    blueVisible     = read_bit_stream(buff, subOffset, 1);
+    yellowVisible   = read_bit_stream(buff, subOffset, 1);
+    orangeVisible   = read_bit_stream(buff, subOffset, 1);
+    greenVisible    = read_bit_stream(buff, subOffset, 1);
+    purpleVisible   = read_bit_stream(buff, subOffset, 1);
+    whiteVisible    = read_bit_stream(buff, subOffset, 1);
+    monoPoly        = read_bit_stream(buff, subOffset, 2);
+    activeVariation = read_bit_stream(buff, subOffset, 8);
+    category        = read_bit_stream(buff, subOffset, 8);
+    read_bit_stream(buff, subOffset, 12);  // Unknown or padding - may need to write to file or back to synth?
+
+    LOG_DEBUG("  Voice Count %u\n", voiceCount);
+    LOG_DEBUG("  Bar Position %u\n", barPosition);
+    LOG_DEBUG("  Red %u\n", redVisible);
+    LOG_DEBUG("  Blue %u\n", blueVisible);
+    LOG_DEBUG("  Yellow %u\n", yellowVisible);
+    LOG_DEBUG("  Orange %u\n", orangeVisible);
+    LOG_DEBUG("  Green %u\n", greenVisible);
+    LOG_DEBUG("  Purple %u\n", purpleVisible);
+    LOG_DEBUG("  White %u\n", whiteVisible);
+    LOG_DEBUG("  Mono Poly %u\n", monoPoly);
+    LOG_DEBUG("  Active Variation %u\n", activeVariation);
+    LOG_DEBUG("  Category %u\n", category);
+
+    gVariation = activeVariation;
 }
 
 int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, so need to decide how to access from USB and file
@@ -508,12 +578,6 @@ int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, 
             case SUB_RESPONSE_PATCH_DESCRIPTION: // Not sure we should be getting this, since we're already processing patch description in this function!?
             {
                 LOG_DEBUG("Patch Descr\n");
-                break;
-            }
-
-            case SUB_RESPONSE_MORPH_PARAMS:
-            {
-                LOG_DEBUG("Morph Params\n");
 
                 uint32_t tmpSubOffset = subOffset;
 
@@ -523,12 +587,17 @@ int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, 
 
                 LOG_DEBUG_DIRECT("\n");
                 subOffset = tmpSubOffset;
+                parse_patch_descr(buff, &subOffset);
+                break;
+            }
 
+            case SUB_RESPONSE_MORPH_PARAMS:
+            {
                 parse_morph_params(buff, &subOffset);
                 break;
             }
 
-            case 0x62:
+            case SUB_RESPONSE_KNOBS:
             {
                 LOG_DEBUG("Knobs\n");
 
@@ -540,6 +609,7 @@ int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, 
 
                 LOG_DEBUG_DIRECT("\n");
                 subOffset = tmpSubOffset;
+                parse_knobs(buff, &subOffset);
                 break;
             }
 
@@ -1164,6 +1234,21 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->cableData.connectorToIoIndex;                                               // top 2 bits = to type, 01 = output - always an input in our case if we've done things right!?
             break;
 
+        case eMsgCmdSetParamMorph:
+            // Mess.[pas 4099
+            buff[pos++] = 0x01;
+            buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | slot; //+slot
+            buff[pos++] = slotVersion[slot];
+            buff[pos++] = SUB_COMMAND_SET_MORPH_RANGE;
+            buff[pos++] = messageContent->paramMorphData.moduleKey.location;
+            buff[pos++] = messageContent->paramMorphData.moduleKey.index;
+            buff[pos++] = messageContent->paramMorphData.param;
+            buff[pos++] = messageContent->paramMorphData.paramMorph;
+            buff[pos++] = messageContent->paramMorphData.value;
+            buff[pos++] = messageContent->paramMorphData.negative;
+            buff[pos++] = messageContent->paramMorphData.variation;
+            break;
+        // 4418 mess.pas for assign/deassign knob
         default:
             break;
     }

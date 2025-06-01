@@ -709,37 +709,42 @@ void render_cables(void) {
 }
 
 void render_morph_groups(void) {
-    tModule    module          = {0};
-    tModuleKey key             = {0};
-    tRectangle rectangle       = {{((get_render_width() / 2) - SCROLLBAR_MARGIN) - ((STANDARD_TEXT_HEIGHT * 4) * 8), 26}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
-    char       buff[16]        = {0};
-    uint32_t   dialIndexOffset = 0;
-    tRgb       dialColour      = RGB_BACKGROUND_GREY;
+    tModule    module     = {0};
+    tModuleKey key        = {0};
+    tRectangle rectangle  = {{((get_render_width() / 2) - SCROLLBAR_MARGIN) - ((STANDARD_TEXT_HEIGHT * 4) * 8), 26}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
+    char       buff[16]   = {0};
+    char       label[16]  = {0};
+    tRgb       dialColour = RGB_BACKGROUND_GREY;
+    uint32_t   i          = 0;
 
     key.location = locationMorph;
     key.index    = 1;
+
+    // 8 to 15 are the knob enable / disable bits!!!!!
 
     if (read_module(key, &module) == false) {
         return;
     }
 
-    if (gMorphRow == 1) {
-        dialIndexOffset = 8;
-    }
-
-    for (uint32_t i = 0; i < 16; i++) {
+    for (i = 0; i < 8; i++) {
         module.param[gVariation][i].rectangle = NULL_RECTANGLE;
     }
 
-    for (uint32_t i = dialIndexOffset; i < (8 + dialIndexOffset); i++) {
+    for (i = 0; i < NUM_MORPHS; i++) {
         snprintf(buff, sizeof(buff), "%u", module.param[gVariation][i].value);
+
+        if (module.param[gVariation][i + NUM_MORPHS].value != 0) {
+            snprintf(label, sizeof(label), "%s", module.param[gVariation][i].name);
+        } else {
+            snprintf(label, sizeof(label), "Knob");
+        }
 
         if (i == gMorphGroupFocus) {
             dialColour = RGB_ORANGE_2;
         } else {
             dialColour = RGB_GREY_3;
         }
-        module.param[gVariation][i].rectangle = render_dial_with_text(mainArea, rectangle, module.param[gVariation][i].name, buff, module.param[gVariation][i].value, 128, module.param[gVariation][i].morphRange[gMorphGroupFocus], dialColour);
+        module.param[gVariation][i].rectangle = render_dial_with_text(mainArea, rectangle, label, buff, module.param[gVariation][i].value, 128, module.param[gVariation][i].morphRange[gMorphGroupFocus], dialColour);
         rectangle.coord.x                    += (STANDARD_TEXT_HEIGHT * 4);
     }
 

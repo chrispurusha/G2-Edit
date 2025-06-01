@@ -302,20 +302,6 @@ void handle_button(tButtonId buttonId) {
 
             break;
         }
-        case     morphContButtonId:
-        {
-            gMorphRow                                            = 0;
-            gMainButtonArray[morphContButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
-            gMainButtonArray[morphKnobButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
-            break;
-        }
-        case morphKnobButtonId:
-        {
-            gMorphRow                                            = 1;
-            gMainButtonArray[morphContButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
-            gMainButtonArray[morphKnobButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
-            break;
-        }
     }
 }
 
@@ -754,7 +740,7 @@ bool handle_module_click(tCoord coord, int button) {
         if (module.key.location == gLocation || module.key.location == locationMorph) {
             if (module.key.location == locationMorph) {
                 if (module.key.index == 1) {
-                    paramCount = 16;
+                    paramCount = NUM_MORPHS;
                 } else {
                     paramCount = 1;  // TODO: correct value for index, probably through a function which returns correct count
                 }
@@ -1112,14 +1098,13 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                     }
                     angle = calculate_mouse_angle((tCoord){x, y}, module.param[gVariation][gParamDragging.param].rectangle);                                                            // possible add half size
                     value = angle_to_value(angle, range);
-                    
+
                     if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) != GLFW_PRESS) {
-                        
                         if (module.param[gVariation][gParamDragging.param].value != value) {
                             module.param[gVariation][gParamDragging.param].value = value;
-                            
+
                             write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
-                            
+
                             messageContent.cmd                 = eMsgCmdSetValue;
                             messageContent.paramData.moduleKey = gParamDragging.moduleKey;
                             messageContent.paramData.param     = gParamDragging.param;
@@ -1132,17 +1117,19 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                             if (value >= module.param[gVariation][gParamDragging.param].value) {
                                 module.param[gVariation][gParamDragging.param].morphRange[gMorphGroupFocus] = value - module.param[gVariation][gParamDragging.param].value;
                             } else {
-                                module.param[gVariation][gParamDragging.param].morphRange[gMorphGroupFocus] = 256-(module.param[gVariation][gParamDragging.param].value - value);
+                                module.param[gVariation][gParamDragging.param].morphRange[gMorphGroupFocus] = 256 - (module.param[gVariation][gParamDragging.param].value - value);
                             }
-                            
                             write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
-                            
-                            messageContent.cmd                 = eMsgCmdSetValue;
-                            messageContent.paramData.moduleKey = gParamDragging.moduleKey;
-                            messageContent.paramData.param     = gParamDragging.param;
-                            messageContent.paramData.variation = gVariation;
-                            //messageContent.paramData.value     = value;
-                            //msg_send(&gCommandQueue, &messageContent);
+                            printf("Write to module %u variation %u\n", module.key.index, gVariation);
+
+                            messageContent.cmd                       = eMsgCmdSetParamMorph;
+                            messageContent.paramMorphData.moduleKey  = module.key;
+                            messageContent.paramMorphData.param      = gParamDragging.param;
+                            messageContent.paramMorphData.paramMorph = gMorphGroupFocus;
+                            messageContent.paramMorphData.value      = module.param[gVariation][gParamDragging.param].morphRange[gMorphGroupFocus];
+                            messageContent.paramMorphData.negative   = 0;
+                            messageContent.paramMorphData.variation  = gVariation;
+                            msg_send(&gCommandQueue, &messageContent);
                         }
                     }
                 }
