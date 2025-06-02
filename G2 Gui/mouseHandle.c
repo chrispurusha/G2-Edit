@@ -736,6 +736,7 @@ bool handle_module_click(tCoord coord, int button) {
     bool        retVal     = false;
     uint32_t    paramCount = 0;
     tParamType2 paramType2 = paramType2Dial;
+    uint32_t    range = 0;
 
     // Since morph parameters are in top banner area, no longer need to check if (!within_rectangle(coord, module_area()))
 
@@ -745,8 +746,8 @@ bool handle_module_click(tCoord coord, int button) {
     while (walk_next_module(&module) && (retVal == false)) {
         if (module.key.location == gLocation || module.key.location == locationMorph) {
             if (module.key.location == locationMorph) {
-                if (module.key.index == 1) {
-                    paramCount = NUM_MORPHS;
+                if (module.key.index == 1) {  // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
+                    paramCount = NUM_MORPHS * 2;
                 } else {
                     paramCount = 1;  // TODO: correct value for index, probably through a function which returns correct count
                 }
@@ -760,8 +761,12 @@ bool handle_module_click(tCoord coord, int button) {
 
                 if (within_rectangle(coord, param->rectangle)) {
                     if (button == GLFW_MOUSE_BUTTON_LEFT) {
-                        if (module.key.location == locationMorph) {
-                            paramType2 = paramType2Dial;
+                        if (module.key.location == locationMorph) {  // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
+                            if (i < NUM_MORPHS) {
+                                paramType2 = paramType2Dial;
+                            } else {
+                                paramType2 = paramType2Toggle;
+                            }
                         } else {
                             paramType2 = (paramLocationList[param->paramRef].type2);
                         }
@@ -778,7 +783,13 @@ bool handle_module_click(tCoord coord, int button) {
                             }
                             retVal = true;
                         } else {
-                            param->value = (param->value + 1) % paramLocationList[param->paramRef].range;
+                            if (module.key.location == locationMorph) {   // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
+                                range = 2;
+                            } else {
+                                range = paramLocationList[param->paramRef].range;
+                            }
+                            
+                            param->value = (param->value + 1) % range;
                             write_module(module.key, &module);
 
                             tMessageContent messageContent = {0};

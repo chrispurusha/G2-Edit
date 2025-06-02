@@ -716,7 +716,8 @@ void render_morph_groups(void) {
     char       label[16]  = {0};
     tRgb       dialColour = RGB_BACKGROUND_GREY;
     uint32_t   i          = 0;
-
+    double textHeight = 0.0;
+        
     key.location = locationMorph;
     key.index    = 1;
 
@@ -728,6 +729,7 @@ void render_morph_groups(void) {
 
     for (i = 0; i < 8; i++) {
         module.param[gVariation][i].rectangle = NULL_RECTANGLE;
+        module.param[gVariation][i+NUM_MORPHS].rectangle = NULL_RECTANGLE;
     }
 
     for (i = 0; i < NUM_MORPHS; i++) {
@@ -744,7 +746,13 @@ void render_morph_groups(void) {
         } else {
             dialColour = RGB_GREY_3;
         }
-        module.param[gVariation][i].rectangle = render_dial_with_text(mainArea, rectangle, label, buff, module.param[gVariation][i].value, 128, module.param[gVariation][i].morphRange[gMorphGroupFocus], dialColour);
+        module.param[gVariation][i].rectangle = render_dial_with_text(mainArea, rectangle, NULL, buff, module.param[gVariation][i].value, 128, module.param[gVariation][i].morphRange[gMorphGroupFocus], dialColour);
+        
+        textHeight = rectangle.size.h / 4.0;
+        
+        set_rgb_colour(RGB_BACKGROUND_GREY);
+        module.param[gVariation][i+NUM_MORPHS].rectangle = draw_button(mainArea, {{rectangle.coord.x-5, rectangle.coord.y-8}, {43, textHeight}}, label);
+
         rectangle.coord.x                    += (STANDARD_TEXT_HEIGHT * 4);
     }
 
