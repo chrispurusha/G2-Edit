@@ -319,20 +319,24 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
             LOG_DEBUG("Param name: ");
 
             if (paramLength > 0) {                                                    // Shouldn't ever be zero, so since we've seen that - something strange happening, generate error!?
-                for (variation = 0; variation < NUM_VARIATIONS; variation++) {
-                    memset(&module.param[variation][ref].name, 0, sizeof(module.param[variation][ref].name));
-                }
-
-                for (k = 0; k < paramLength - 1; k++) {
-                    uint8_t ch = read_bit_stream(buff, subOffset, 8);
-
-                    if ((ch >= 0x20) && (ch <= 0x7f)) {
-                        for (variation = 0; variation < NUM_VARIATIONS; variation++) {
-                            module.param[variation][ref].name[k] = ch;
-                        }
-
-                        LOG_DEBUG_DIRECT("%c", ch);
+                if (ref < module.allocatedParams) {
+                    for (variation = 0; variation < NUM_VARIATIONS; variation++) {
+                        memset(&module.param[variation][ref].name, 0, sizeof(module.param[variation][ref].name));
                     }
+
+                    for (k = 0; k < paramLength - 1; k++) {
+                        uint8_t ch = read_bit_stream(buff, subOffset, 8);
+                        
+                        if ((ch >= 0x20) && (ch <= 0x7f)) {
+                            for (variation = 0; variation < NUM_VARIATIONS; variation++) {
+                                module.param[variation][ref].name[k] = ch;
+                            }
+                            
+                            LOG_DEBUG_DIRECT("%c", ch);
+                        }
+                    }
+                } else {
+                    LOG_ERROR(" Too many parameters %d for the module %s which expects %u - something not right with name processing\n", ref, gModuleProperties[module.type].name, module.allocatedParams);
                 }
 
                 LOG_DEBUG_DIRECT("\n");
