@@ -711,7 +711,7 @@ void render_cables(void) {
 void render_morph_groups(void) {
     tModule    module     = {0};
     tModuleKey key        = {0};
-    tRectangle rectangle  = {{((get_render_width() / 2) - SCROLLBAR_MARGIN) - ((STANDARD_TEXT_HEIGHT * 4) * 8), 26}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
+    tRectangle rectangle  = {{((get_render_width() / 2) - SCROLLBAR_MARGIN) - (((STANDARD_TEXT_HEIGHT * 4) + 5) * 8), 26}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
     char       buff[16]   = {0};
     char       label[16]  = {0};
     tRgb       dialColour = RGB_BACKGROUND_GREY;
@@ -751,9 +751,9 @@ void render_morph_groups(void) {
         textHeight = rectangle.size.h / 4.0;
         
         set_rgb_colour(RGB_BACKGROUND_GREY);
-        module.param[gVariation][i+NUM_MORPHS].rectangle = draw_button(mainArea, {{rectangle.coord.x-5, rectangle.coord.y-8}, {43, textHeight}}, label);
+        module.param[gVariation][i+NUM_MORPHS].rectangle = draw_button(mainArea, {{rectangle.coord.x-5, rectangle.coord.y-8}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label);
 
-        rectangle.coord.x                    += (STANDARD_TEXT_HEIGHT * 4);
+        rectangle.coord.x                    += (STANDARD_TEXT_HEIGHT * 4) + 5;
     }
 
     write_module(module.key, &module);
