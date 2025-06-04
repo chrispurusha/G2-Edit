@@ -83,7 +83,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
             double fullHeight  = rectangle.size.h;
             double scaledValue = (rectangle.size.h * value) / 12.0; // 128 usually, but one example of 300!? Maybe the leading nibble denotes a type? val of 1 changes scale!?
 
-            int    valueThresholds[] = {8, 11, 12};                 // Exclusive upper bounds for green/yellow/red
+            int    valueThresholds[] = {7, 11, 12};                 // Exclusive upper bounds for green/yellow/red
             tRgb   colours[]         = {RGB_GREEN_7, RGB_YELLOW_7, RGB_RED_7};
 
             set_rgb_colour(RGB_BLACK);
