@@ -281,14 +281,16 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
     uint32_t   nameCount    = 0;
     uint32_t   paramLength  = 0;
     uint32_t   moduleLength = 0;
-    //uint32_t index = 0;
-    tModule    module    = {0};
-    tModuleKey key       = {0};
-    int        i         = 0;
-    int        j         = 0;
-    int        k         = 0;
-    int        variation = 0;
-    uint32_t   ref       = 0;
+    tModule    module       = {0};
+    tModuleKey key          = {0};
+    int        i            = 0;
+    int        j            = 0;
+    int        labelIndex   = 0;
+    int        k            = 0;
+    int        variation    = 0;
+    uint32_t   isString     = 0;
+    uint32_t   paramIndex   = 0;
+    uint32_t   numLabels    = 0;
 
     LOG_DEBUG("Param names\n");
 
@@ -311,37 +313,38 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
         LOG_DEBUG("Module length     %d\n", moduleLength);         // 5004
 
         for (j = 0; j < moduleLength;) {
-            LOG_DEBUG("IsString     %d\n", read_bit_stream(buff, subOffset, 8));
+            isString = read_bit_stream(buff, subOffset, 8);
+            LOG_DEBUG("IsString     %d\n", isString);
             paramLength = read_bit_stream(buff, subOffset, 8);
             LOG_DEBUG("ParamLen     %d\n", paramLength);
-            LOG_DEBUG("Param Index  %d\n", read_bit_stream(buff, subOffset, 8));
+            paramIndex = read_bit_stream(buff, subOffset, 8);
+            LOG_DEBUG("Param Index  %d\n", paramIndex);
             j += 3;
             LOG_DEBUG("Param name: ");
 
-            if (paramLength > 0) {                                                    // Shouldn't ever be zero, so since we've seen that - something strange happening, generate error!?
-                if (ref < module.allocatedParams) {
-                    for (variation = 0; variation < NUM_VARIATIONS; variation++) {
-                        memset(&module.param[variation][ref].name, 0, sizeof(module.param[variation][ref].name));
-                    }
+            if (paramLength > 0) {
+                numLabels = (paramLength - 1) / PROTOCOL_PARAM_NAME_SIZE;
 
-                    for (k = 0; k < paramLength - 1; k++) {
+                for (variation = 0; variation < NUM_VARIATIONS; variation++) {
+                    memset(&module.param[variation][paramIndex].name, 0, sizeof(module.param[variation][paramIndex].name));
+                }
+
+                for (labelIndex = 0; labelIndex < numLabels; labelIndex++) {
+                    for (k = 0; k < PROTOCOL_PARAM_NAME_SIZE; k++) {
                         uint8_t ch = read_bit_stream(buff, subOffset, 8);
-                        
+
                         if ((ch >= 0x20) && (ch <= 0x7f)) {
-                            for (variation = 0; variation < NUM_VARIATIONS; variation++) {
-                                module.param[variation][ref].name[k] = ch;
-                            }
-                            
                             LOG_DEBUG_DIRECT("%c", ch);
                         }
+
+                        for (variation = 0; variation < NUM_VARIATIONS; variation++) {
+                            module.param[variation][paramIndex].name[k] = ch;
+                        }
                     }
-                } else {
-                    LOG_ERROR(" Too many parameters %d for the module %s which expects %u - something not right with name processing\n", ref, gModuleProperties[module.type].name, module.allocatedParams);
                 }
 
                 LOG_DEBUG_DIRECT("\n");
                 j += paramLength - 1;
-                ref++;
             }
         }
     }

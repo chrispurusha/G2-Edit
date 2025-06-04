@@ -117,6 +117,7 @@
 
 #define MODULE_NAME_SIZE                     (16)
 #define PARAM_NAME_SIZE                      (16)
+#define PROTOCOL_PARAM_NAME_SIZE             (7)
 
 #define MAX_GLYPH_CHAR                       (127)
 

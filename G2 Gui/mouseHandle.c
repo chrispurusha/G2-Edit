@@ -736,7 +736,7 @@ bool handle_module_click(tCoord coord, int button) {
     bool        retVal     = false;
     uint32_t    paramCount = 0;
     tParamType2 paramType2 = paramType2Dial;
-    uint32_t    range = 0;
+    uint32_t    range      = 0;
 
     // Since morph parameters are in top banner area, no longer need to check if (!within_rectangle(coord, module_area()))
 
@@ -788,7 +788,6 @@ bool handle_module_click(tCoord coord, int button) {
                             } else {
                                 range = paramLocationList[param->paramRef].range;
                             }
-                            
                             param->value = (param->value + 1) % range;
                             write_module(module.key, &module);
 
