@@ -348,13 +348,14 @@ typedef enum {
     locationMorph = 2
 } tLocation;
 
-typedef struct {
-    uint32_t   paramRef;
+typedef struct __attribute__((packed)) {  // TODO: Pack more of the structures in this file
+    uint8_t    paramRef;
     tRectangle rectangle;
     char       name[PARAM_NAME_SIZE + 1];
-    uint32_t   value;
-    uint32_t   morphRange[8];  // 8 seems to be number of morphs. Not sure we can go higher, but
-} tParam;
+    uint8_t    value;
+    uint8_t    morphRange[8]; // 8 seems to be number of morphs. Not sure we can go higher, but
+}
+tParam;
 
 typedef struct {
     uint32_t   modeRef;
@@ -438,16 +439,14 @@ typedef struct _struct_module {
     tRectangle              rectangle;        // Full size of module rectangle, in case we need it
     uint32_t                colour;
     uint32_t                upRate;
-    uint32_t                newUpRate;       // Only used for mass uprate re-assessing
+    uint32_t                newUpRate;           // Only used for mass uprate re-assessing
     uint32_t                isLed;
-    uint32_t                unknown1;        // Guess we should store this, to write back if necessary. Might not be needed
-    uint32_t                modeCount;       // Don't yet know what this is for. Might need modes array adding
-    tMode                   mode[NUM_MODES]; // Might not need to be an array, since only seeing one mode so far
+    uint32_t                unknown1;            // Guess we should store this, to write back if necessary. Might not be needed
+    uint32_t                modeCount;           // Don't yet know what this is for. Might need modes array adding
+    tMode                   mode[MAX_NUM_MODES]; // Might not need to be an array, since only seeing one mode so far
     char                    name[MODULE_NAME_SIZE + 1];
-    uint32_t                allocatedParams;
-    tParam *                param[NUM_VARIATIONS];
-    uint32_t                allocatedConnectors;
-    tConnector *            connector;
+    tParam                  param[NUM_VARIATIONS][MAX_NUM_PARAMETERS];
+    tConnector              connector[MAX_NUM_CONNECTORS];
     bool                    gotParamIndexCache;
     uint32_t                paramIndexCache;
     bool                    gotModeIndexCache;

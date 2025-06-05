@@ -407,6 +407,11 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
         LOG_ERROR("No connector index %u on module index %u\n", connectorIndex, module->key.index);
         return;
     }
+
+    if (connectorIndex >= MAX_NUM_CONNECTORS) {
+        LOG_ERROR("MAX_NUM_CONNECTORS needs increasing to >= %u\n", connectorIndex + 1);
+        exit(1);
+    }
     module->connector[connectorIndex].coord = rectangle.coord;  // Register where we're rendering this connector, for cable connecting
     module->connector[connectorIndex].dir   = dir;
     module->connector[connectorIndex].type  = type;

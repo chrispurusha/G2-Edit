@@ -181,9 +181,6 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
             LOG_DEBUG("MODE %u %u\n", j, module.mode[j].value);
         }
 
-        allocate_module_parameters(&module, module_param_count(type)); // Also done on parameter set-up, so whichever's first
-        allocate_module_connectors(&module, module_connector_count(type));
-
         LOG_DEBUG("Number connectors for module %u\n", module_connector_count(type));
         write_module(key, &module);
     }
@@ -246,10 +243,14 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
         paramCount = read_bit_stream(buff, subOffset, 7);
         LOG_DEBUG("  variation list param count = %u\n", paramCount);
 
+        if (paramCount >= MAX_NUM_PARAMETERS) {
+            LOG_ERROR("MAX_NUM_PARAMETERS needs increasing to >= %u\n", paramCount + 1);
+            exit(1);
+        }
+
         if (read_module(key, &module) == false) {
             module.key = key;
         }
-        allocate_module_parameters(&module, paramCount); // Also done on module creation, so whichever's first
 
         for (j = 0; j < variationCount; j++) {                                                          // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
             uint32_t variation = read_bit_stream(buff, subOffset, 8);
@@ -347,6 +348,8 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
                 j += paramLength - 1;
             }
         }
+
+        write_module(key, &module);
     }
 }
 
@@ -1313,7 +1316,7 @@ static void state_handler(void) {
                     if (state == eStateStop) {
                         database_clear_cables();
                         database_clear_modules();
-                        
+
                         // Notify main graphics module that we've removed the module database
                         call_full_patch_change_notify();
                         call_wake_glfw();
@@ -1350,7 +1353,7 @@ static void state_handler(void) {
 
     if (gotPatchChangeIndication == true) {
         LOG_DEBUG("Patch change indication\n");
-        state = eStateStop;
+        state                    = eStateStop;
         gotPatchChangeIndication = false;
     }
 }

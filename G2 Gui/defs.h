@@ -43,7 +43,9 @@
 #define MAX_PARAMS_PER_MODULE                (38)
 #define MAX_CONNECTORS_PER_MODULE            (10)
 #define MAX_SLOTS                            (4)
-#define NUM_MODES                            (16)
+#define MAX_NUM_MODES                        (16)
+#define MAX_NUM_PARAMETERS                   (39)
+#define MAX_NUM_CONNECTORS                   (12)
 
 #define INTERRUPT_MESSAGE_SIZE               (16)
 #define EXTENDED_MESSAGE_SIZE                (8192)

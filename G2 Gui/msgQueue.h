@@ -83,7 +83,7 @@ typedef struct {
     uint32_t   isLed;
     uint32_t   unknown1;
     uint32_t   modeCount;
-    uint32_t   mode[NUM_MODES];
+    uint32_t   mode[MAX_NUM_MODES];
     char       name[MODULE_NAME_SIZE + 1];
 } tModuleData;
 
