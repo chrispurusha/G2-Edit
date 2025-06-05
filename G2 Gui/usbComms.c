@@ -326,9 +326,8 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
             if (paramLength > 0) {
                 numLabels = (paramLength - 1) / PROTOCOL_PARAM_NAME_SIZE;
 
-                for (variation = 0; variation < NUM_VARIATIONS; variation++) {
-                    memset(&module.param[variation][paramIndex].name, 0, sizeof(module.param[variation][paramIndex].name));
-                }
+
+                memset(&module.paramName[paramIndex], 0, sizeof(module.paramName[paramIndex]));
 
                 for (labelIndex = 0; labelIndex < numLabels; labelIndex++) {
                     for (k = 0; k < PROTOCOL_PARAM_NAME_SIZE; k++) {
@@ -339,7 +338,7 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
                         }
 
                         for (variation = 0; variation < NUM_VARIATIONS; variation++) {
-                            module.param[variation][paramIndex].name[k] = ch;
+                            module.paramName[paramIndex][k] = ch;
                         }
                     }
                 }

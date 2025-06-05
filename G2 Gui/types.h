@@ -351,7 +351,6 @@ typedef enum {
 typedef struct __attribute__((packed)) {  // TODO: Pack more of the structures in this file
     uint8_t    paramRef;
     tRectangle rectangle;
-    char       name[PARAM_NAME_SIZE + 1];
     uint8_t    value;
     uint8_t    morphRange[8]; // 8 seems to be number of morphs. Not sure we can go higher, but
 }
@@ -446,6 +445,7 @@ typedef struct _struct_module {
     tMode                   mode[MAX_NUM_MODES]; // Might not need to be an array, since only seeing one mode so far
     char                    name[MODULE_NAME_SIZE + 1];
     tParam                  param[NUM_VARIATIONS][MAX_NUM_PARAMETERS];
+    char                    paramName[MAX_NUM_PARAMETERS][PARAM_NAME_SIZE + 1];
     tConnector              connector[MAX_NUM_CONNECTORS];
     bool                    gotParamIndexCache;
     uint32_t                paramIndexCache;
