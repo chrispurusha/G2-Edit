@@ -649,10 +649,16 @@ void menu_action_create(int index) {
 void open_module_area_context_menu(tCoord coord) {
     static tMenuItem ioMenuItems[] = {
         {"Create Keyboard", menu_action_create, moduleTypeKeyboard, NULL},
+        {"Create 2-Out",    menu_action_create, moduleType2toOut,   NULL},
+        {"Create 4-Out",    menu_action_create, moduleType4toOut,   NULL},
         {"Create Name Bar", menu_action_create, moduleTypeName,     NULL},
         {NULL,              NULL,                                0, NULL}         // End of menu
     };
+    static tMenuItem noteMenuItems[] = {
+        {NULL,                 NULL,                               0, NULL}       // End of menu
+    };
     static tMenuItem oscMenuItems[] = {
+        {"Create Osc B",       menu_action_create, moduleTypeOscB,    NULL},
         {"Create Osc Shape B", menu_action_create, moduleTypeOscShpB, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
@@ -675,6 +681,10 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Mixer 4-1 C", menu_action_create, moduleTypeMix4to1C, NULL},
         {NULL,                 NULL,                                0, NULL}      // End of menu
     };
+    static tMenuItem logicMenuItems[] = {
+        {"Create Invert",   menu_action_create,  moduleTypeInvert, NULL},
+        {NULL,                 NULL,                               0, NULL}       // End of menu
+    };
     static tMenuItem moduleMenuItems[] = {
         {"Create In/Out",   menu_action_create, 0, ioMenuItems    },
         {"Create Osc",      menu_action_create, 0, oscMenuItems   },
@@ -690,7 +700,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create FX",       menu_action_create, 0, fxMenuItems    },
         {"Create Shaper",   menu_action_create, 0, NULL           },
         {"Create Mixer",    menu_action_create, 0, mixerMenuItems },
-        {"Create Logic",    menu_action_create, 0, NULL           },
+        {"Create Logic",    menu_action_create, 0, logicMenuItems },
         {"Create Midi",     menu_action_create, 0, NULL           },
         {NULL,              NULL,               0, NULL           } // End of menu
     };

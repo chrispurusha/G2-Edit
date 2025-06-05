@@ -42,7 +42,9 @@ const char * envShapeStrMap[]     = {"LogExp", "LinExp", "ExpExp", "LinLin"};
 const char * normalResetStrMap[]  = {"Normal", "Reset"};
 const char * posStrMap[]          = {"Pos", "PosInv", "Neg", "NegInv", "Bip", "BipInv"};
 const char * outToStrMap[]        = {"Main 1/2", "Main 3/4", "FX 1/2", "FX 3/4", "Bus 1/2", "Bus 3/4", };
+const char * outTo4OutStrMap[]    = {"Main", "Fx", "Bus"};
 const char * inFxStrMap[]         = {"1/2", "3/4"};
+const char * shapeTypeStrMap[]    = {"sin", "tri", "saw", "squ", "sup"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -303,9 +305,26 @@ const tModuleProperties gModuleProperties[] = {
 
 // moduleType, paramType1, paramType2, position rectangle, anchor, label, range, defaultValue, string map, colour map
 const tParamLocation paramLocationList[] = {
-    {moduleType2toOut,     paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, {7,  7}}, anchorBottomLeft,  "Out to",    6,  0, outToStrMap,        NULL          },  // 4
-    {moduleType2toOut,     paramType1Bypass,         paramType2Toggle, {{ -3,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          },
+    {moduleType4toOut,     paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, {7,  7}}, anchorBottomLeft,  "Out to",    3,  0, outTo4OutStrMap,    NULL          },  // 3 4-Out
+    {moduleType4toOut,     paramType1Bypass,         paramType2Toggle, {{ 45,  -3}, {5,  5}}, anchorBottomLeft,  "Bypass",    2,  0, NULL,               NULL          },
+    {moduleType4toOut,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {7,  7}}, anchorBottomLeft,  "Pad",       2,  0, padStrMap,          NULL          },
+    {moduleType2toOut,     paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, {7,  7}}, anchorBottomLeft,  "Out to",    6,  0, outToStrMap,        NULL          },  // 4 2-Out
+    {moduleType2toOut,     paramType1Bypass,         paramType2Toggle, {{ 45,  -3}, {5,  5}}, anchorBottomLeft,  "Bypass",    2,  0, NULL,               NULL          },
     {moduleType2toOut,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {7,  7}}, anchorBottomLeft,  "Pad",       2,  0, padStrMap,          NULL          },
+    // 5 Invert has no parameters
+    // 6 is Unknown
+    {moduleTypeOscB,       paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Tune",    128, 64, NULL,               NULL          }, // 7 OscB
+    {moduleTypeOscB,       paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL,               NULL          },
+    {moduleTypeOscB,       paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap},
+    {moduleTypeOscB,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128,  0, NULL,               NULL          },
+    {moduleTypeOscB,       paramType1StandardToggle, paramType2Toggle, {{ 30,  15}, {7,  7}}, anchorTopLeft,     NULL,        4,  0, pitchTypeStrMap,    NULL          },
+    {moduleTypeOscB,       paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, {7, 14}}, anchorBottomLeft,  "FM",      128,  0, NULL,               NULL          },
+    {moduleTypeOscB,       paramType1CommonDial,     paramType2Dial,   {{-15,   5}, {7, 14}}, anchorTopRight,    "Shape",   128,  0, NULL,               NULL          },     // 50% to 99%, not decimals
+    {moduleTypeOscB,       paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, {7, 14}}, anchorBottomLeft,  "ShpM",    128,  0, NULL,               NULL          },
+    {moduleTypeOscB,       paramType1StandardToggle, paramType2Toggle, {{-30,   5}, {7,  7}}, anchorTopRight,    NULL,        5,  0, shapeTypeStrMap,    NULL          },  // 7 Wave
+    {moduleTypeOscB,       paramType1Bypass,         paramType2Toggle, {{ -3,   0}, {5,  5}}, anchorMiddleRight, "Bypass",    2,  0, NULL,               NULL          },
+    {moduleTypeOscB,       paramType1StandardToggle, paramType2Toggle, {{ 60,  15}, {7,  7}}, anchorTopLeft,     NULL,        2,  0, fmTypeStrMap,       NULL          },
+
     {moduleTypeOscShpB,    paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128, 64, NULL,               NULL          },  // 8
     {moduleTypeOscShpB,    paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL,               NULL          },
     {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap},
@@ -369,14 +388,28 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeKeyboard,   connectorDirOut, connectorTypeControl, {{ 93,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rel",   labelLocLeft },
     {moduleTypeKeyboard,   connectorDirOut, connectorTypeControl, {{ 25,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Note",  labelLocLeft },
     {moduleTypeKeyboard,   connectorDirOut, connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Exp",   labelLocLeft },
+    {moduleType4toOut,     connectorDirIn,  connectorTypeAudio,   {{-24,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "1",     labelLocUp   }, // 3 4-out
+    {moduleType4toOut,     connectorDirIn,  connectorTypeAudio,   {{-17,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "2",     labelLocUp   },
+    {moduleType4toOut,     connectorDirIn,  connectorTypeAudio,   {{-10,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "3",     labelLocUp   },
+    {moduleType4toOut,     connectorDirIn,  connectorTypeAudio,   {{ -3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "4",     labelLocUp   },
     {moduleType2toOut,     connectorDirIn,  connectorTypeAudio,   {{-10,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   }, // 4
     {moduleType2toOut,     connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },
+    {moduleTypeInvert,     connectorDirIn,  connectorTypeLogic,   {{-24,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, NULL, labelLocLeft}, // 5 Invert
+    {moduleTypeInvert,     connectorDirOut, connectorTypeLogic,   {{-17,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, NULL, labelLocLeft}, // 5 Invert
+    {moduleTypeInvert,     connectorDirIn,  connectorTypeLogic,   {{-10,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, NULL, labelLocLeft}, // 5 Invert
+    {moduleTypeInvert,     connectorDirOut, connectorTypeLogic,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, NULL, labelLocLeft}, // 5 Invert
     {moduleTypeFltNord,    connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   }, // 5
     {moduleTypeFltNord,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // Out
     {moduleTypeFltNord,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // PitchVar
     {moduleTypeFltNord,    connectorDirIn,  connectorTypeControl, {{ 3,  -15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // Pitch
     {moduleTypeFltNord,    connectorDirIn,  connectorTypeControl, {{ 15,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // FMLin
-    {moduleTypeFltNord,    connectorDirIn,  connectorTypeControl, {{ 25,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // Res
+    {moduleTypeFltNord,    connectorDirIn,  connectorTypeControl, {{ 25,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // Res
+    {moduleTypeOscB,       connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight},
+    {moduleTypeOscB,       connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight},
+    {moduleTypeOscB,       connectorDirIn,  connectorTypeAudio,   {{  3, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Sync", labelLocRight},
+    {moduleTypeOscB,       connectorDirIn,  connectorTypeAudio,   {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight},
+    {moduleTypeOscB,       connectorDirIn,  connectorTypeAudio,   {{ 73,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight},
+    {moduleTypeOscB,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },
     {moduleTypeOscShpB,    connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 8
     {moduleTypeOscShpB,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },
     {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,   {{  3, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },
