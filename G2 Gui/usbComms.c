@@ -1310,7 +1310,14 @@ static void state_handler(void) {
 
             if (send_command(state) == EXIT_SUCCESS) {
                 if (int_rec() == EXIT_SUCCESS) {
-                    if (state == eStateStart) {
+                    if (state == eStateStop) {
+                        database_clear_cables();
+                        database_clear_modules();
+                        
+                        // Notify main graphics module that we've removed the module database
+                        call_full_patch_change_notify();
+                        call_wake_glfw();
+                    } else if (state == eStateStart) {
                         call_full_patch_change_notify();
                         call_wake_glfw();
                     }
@@ -1336,20 +1343,14 @@ static void state_handler(void) {
     }
 
     if (gotBadConnectionIndication == true) {
+        LOG_DEBUG("Bad connection indication\n");
         state                      = eStateFindDevice;
         gotBadConnectionIndication = false;
     }
 
     if (gotPatchChangeIndication == true) {
-        database_clear_cables();
-        database_clear_modules();
-
-        // Notify main graphics module that we've removed the module database
-        call_full_patch_change_notify();
-        call_wake_glfw();
-
-        state = eStateGetPatchVersion;
-
+        LOG_DEBUG("Patch change indication\n");
+        state = eStateStop;
         gotPatchChangeIndication = false;
     }
 }
