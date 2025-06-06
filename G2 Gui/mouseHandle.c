@@ -659,16 +659,13 @@ void open_module_area_context_menu(tCoord coord) {
     };
     static tMenuItem oscMenuItems[] = {
         {"Create Osc B",       menu_action_create, moduleTypeOscB,    NULL},
+        {"Create Osc C",       menu_action_create, moduleTypeOscC,    NULL},
         {"Create Osc Shape B", menu_action_create, moduleTypeOscShpB, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
     static tMenuItem envMenuItems[] = {
         {"Create Env ADSR", menu_action_create, moduleTypeEnvADSR, NULL},
         {NULL,              NULL,                               0, NULL}          // End of menu
-    };
-    static tMenuItem fxMenuItems[] = {
-        {"Create Compressor", menu_action_create, moduleTypeCompress, NULL},
-        {NULL,                NULL,                                0, NULL}       // End of menu
     };
     static tMenuItem filterMenuItems[] = {
         {"Create LP Filter",      menu_action_create,                    0, NULL},
@@ -684,6 +681,11 @@ void open_module_area_context_menu(tCoord coord) {
     static tMenuItem logicMenuItems[] = {
         {"Create Invert",   menu_action_create,  moduleTypeInvert, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
+    };
+    static tMenuItem fxMenuItems[] = {
+        {"Create Compressor", menu_action_create,  moduleTypeCompress, NULL},
+        {"Create Reberb",     menu_action_create,  moduleTypeReverb,   NULL},
+        {NULL,                NULL,                               0,   NULL}       // End of menu
     };
     static tMenuItem moduleMenuItems[] = {
         {"Create In/Out",   menu_action_create, 0, ioMenuItems    },
