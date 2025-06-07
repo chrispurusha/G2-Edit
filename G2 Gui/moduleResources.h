@@ -439,7 +439,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeMetNoise,     paramType1Bypass,         paramType2Toggle, {{-3,  -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 28 Bypass
     {moduleTypeMetNoise, paramType1CommonDial,     paramType2Dial,   {{ 70,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 64, NULL,               NULL          },  // 29 Color M
     {moduleTypeMetNoise, paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 64, NULL,               NULL          },  // 29 Freq M
-    // 30 Device
+    // 30 Device - No controls
     // 31 Noise
     // 32 Eq2Band
     // 33 Eq3Band
@@ -762,6 +762,13 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMetNoise,    connectorDirIn,  connectorTypeControl, {{ 62,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 29 ColorMod
     {moduleTypeMetNoise,    connectorDirOut,  connectorTypeAudio, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 29 Out
     // 30 Device
+    {moduleTypeDevice,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Wheel",    labelLocUp   },  // 30 Wheel
+    {moduleTypeDevice,    connectorDirOut,  connectorTypeControl, {{ 18,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "AftTouch",    labelLocUp   },  // 30 AfterTouch
+    {moduleTypeDevice,    connectorDirOut,  connectorTypeControl, {{ 33,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "CtrlPedal",    labelLocUp   },  // 30 ControlPedal
+    {moduleTypeDevice,    connectorDirOut,  connectorTypeLogic, {{ 48,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Sustain",    labelLocUp   },  // 30 SustainPedal
+    {moduleTypeDevice,    connectorDirOut,  connectorTypeControl, {{ 63,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Stick",    labelLocUp   },  // 30 PitchStick
+    {moduleTypeDevice,    connectorDirOut,  connectorTypeControl, {{ 78,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "GWh1",    labelLocUp   },  // 30 Global Wheel 1
+    {moduleTypeDevice,    connectorDirOut,  connectorTypeControl, {{ 88,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "GWh2",    labelLocUp   },  // 30 Global Wheel 2
     // 31 Noise
     // 32 Eq2Band
     // 33 Eq3Band

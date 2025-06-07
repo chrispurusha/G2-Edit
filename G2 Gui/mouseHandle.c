@@ -651,6 +651,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Keyboard", menu_action_create, moduleTypeKeyboard, NULL},
         {"Create 2-Out",    menu_action_create, moduleType2toOut,   NULL},
         {"Create 4-Out",    menu_action_create, moduleType4toOut,   NULL},
+        {"Create Device",    menu_action_create, moduleTypeDevice,   NULL},
         {"Create Name Bar", menu_action_create, moduleTypeName,     NULL},
         {NULL,              NULL,                                0, NULL}         // End of menu
     };
