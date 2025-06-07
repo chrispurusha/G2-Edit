@@ -237,6 +237,16 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
+        case paramType1dB:
+        {
+            double dB = 0.0;
+
+            dB = round( ((double)paramValue-64.0)/64.0 * 18.0);
+            snprintf(buff, sizeof(buff), "%+.0fdB", dB);
+            
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
         case paramType1Pitch:
         {
             double percent = 0.0;

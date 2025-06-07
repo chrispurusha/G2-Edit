@@ -444,8 +444,8 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeNoise, paramType1CommonDial,     paramType2Dial,   {{ 70,  -3}, {7, 14}}, anchorBottomLeft,  "Color",   128, 0, NULL,               NULL          },  // 31 Color  *** Or special dial
     {moduleTypeNoise,     paramType1Bypass,         paramType2Toggle, {{-3,  -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 31 Bypass
     // 32 Eq2Band
-    {moduleTypeEq2Band, paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Lo",   128, 64, NULL,               NULL          },  // 32 Lo Gain
-    {moduleTypeEq2Band, paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  "Hi",   128, 64, NULL,               NULL          },  // 32 Hi Gain
+    {moduleTypeEq2Band, paramType1dB,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Lo (80Hz)",   128, 64, NULL,               NULL          },  // 32 Lo Gain
+    {moduleTypeEq2Band, paramType1dB,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  "Hi (12kHz)",   128, 64, NULL,               NULL          },  // 32 Hi Gain
     {moduleTypeEq2Band, paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  "Level",   128, 127, NULL,               NULL          },  // 32 Level
     {moduleTypeEq2Band,     paramType1Bypass,         paramType2Toggle, {{-3,  -9}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 32 Bypass
     // 33 Eq3Band
