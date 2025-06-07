@@ -449,6 +449,12 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEq2Band, paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  "Level",   128, 127, NULL,               NULL          },  // 32 Level
     {moduleTypeEq2Band,     paramType1Bypass,         paramType2Toggle, {{-3,  -9}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 32 Bypass
     // 33 Eq3Band
+    {moduleTypeEq3band, paramType1dB,     paramType2Dial,   {{ 5,  -3}, {7, 14}}, anchorBottomLeft,  "Lo (80Hz)",   128, 64, NULL,               NULL          },  // 33 Lo Gain
+    {moduleTypeEq3band, paramType1dB,     paramType2Dial,   {{ 24,  -3}, {7, 14}}, anchorBottomLeft,  "MidGn",   128, 64, NULL,               NULL          },  // 33 Mid Gain
+    {moduleTypeEq3band, paramType1Freq,     paramType2Dial,   {{ 36,  -3}, {7, 14}}, anchorBottomLeft,  "Freq",   128, 64, NULL,               NULL          },  // 33 Mid Freq
+    {moduleTypeEq3band, paramType1dB,     paramType2Dial,   {{ 55,  -3}, {7, 14}}, anchorBottomLeft,  "Hi (12kHz)",   128, 64, NULL,               NULL          },  // 33 Hi Gain
+    {moduleTypeEq3band, paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, {7, 14}}, anchorBottomLeft,  "Level",   128, 127, NULL,               NULL          },  // 33 Level
+    {moduleTypeEq3band,     paramType1Bypass,         paramType2Toggle, {{-3,  -9}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 33 Bypass
     // 34 ShpExp
     // 35 Driver
     // 36 SwOnOffM
@@ -780,8 +786,9 @@ const tConnectorLocation connectorLocationList[] = {
     // 32 Eq2Band
     {moduleTypeEq2Band,    connectorDirIn,  connectorTypeAudio, {{ -3,   -15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 32 In
     {moduleTypeEq2Band,    connectorDirOut,  connectorTypeAudio, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 32 Out
-
     // 33 Eq3Band
+    {moduleTypeEq3band,    connectorDirIn,  connectorTypeAudio, {{ -3,   -15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 33 In
+    {moduleTypeEq3band,    connectorDirOut,  connectorTypeAudio, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 33 Out
     // 34 ShpExp
     // 35 Driver
     // 36 SwOnOffM

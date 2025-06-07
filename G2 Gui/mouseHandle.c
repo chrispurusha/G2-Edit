@@ -684,6 +684,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Classic Filter", menu_action_create, moduleTypeFltClassic, NULL},
         {"Create Multi Filter",   menu_action_create, moduleTypeFltMulti,   NULL},
         {"Create Eq 2-band",      menu_action_create, moduleTypeEq2Band, NULL},
+        {"Create Eq 3-band",      menu_action_create, moduleTypeEq3band, NULL},
         {NULL,                    NULL,                                  0, NULL} // End of menu
     };
     static tMenuItem shaperMenuItems[] = {
