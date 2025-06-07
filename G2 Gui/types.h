@@ -310,7 +310,8 @@ typedef enum {
 typedef enum {
     paramType1None,
     paramType1Freq,
-    paramType1dB, 
+    paramType1dB,
+    paramType1ADRTime,
     paramType1Resonance,
     paramType1Pitch,
     paramType1Bypass,

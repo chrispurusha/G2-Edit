@@ -247,6 +247,21 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
+        case paramType1ADRTime:
+        {
+            double time = 0.0;
+            // scale 0 -> 5 ms and 127 -> 45 s, exponentially
+            time = exp((double)paramValue * 0.0717 )*0.005;
+            
+            if (time < 1.0) {
+                snprintf(buff, sizeof(buff), "%.0fms", time*1000);
+            } else {
+                snprintf(buff, sizeof(buff), "%.1fs", time);
+            }
+            
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
         case paramType1Pitch:
         {
             double percent = 0.0;
