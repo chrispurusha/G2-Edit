@@ -684,10 +684,17 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Nord Filter",    menu_action_create, moduleTypeFltNord,    NULL},
         {"Create Classic Filter", menu_action_create, moduleTypeFltClassic, NULL},
         {"Create Multi Filter",   menu_action_create, moduleTypeFltMulti,   NULL},
+        {"Create FltVoice",       menu_action_create, moduleTypeFltVoice,   NULL},
         {"Create Eq 2-band",      menu_action_create, moduleTypeEq2Band, NULL},
         {"Create Eq 3-band",      menu_action_create, moduleTypeEq3band, NULL},
         {NULL,                    NULL,                                  0, NULL} // End of menu
     };
+    static tMenuItem levelMenuItems[] = {
+        {"Create Constant",    menu_action_create,  moduleTypeConstant, NULL},
+        {"Create LevMult",     menu_action_create,  moduleTypeLevMult,  NULL},
+        {NULL,                 NULL,                                 0, NULL}       // End of menu
+    };
+
     static tMenuItem switchMenuItems[] = {
         {"Create SwOnOffM",   menu_action_create,  moduleTypeSwOnOffM, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
@@ -706,7 +713,7 @@ void open_module_area_context_menu(tCoord coord) {
     static tMenuItem logicMenuItems[] = {
         {"Create Invert",   menu_action_create,  moduleTypeInvert, NULL},
         {"Create Pulse",   menu_action_create,  moduleTypePulse, NULL},
-        {"Create Delay",   menu_action_create,  moduleTypeDelay, NULL},   
+        {"Create Delay",   menu_action_create,  moduleTypeDelay, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
     static tMenuItem fxMenuItems[] = {
@@ -720,7 +727,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Random",   menu_action_create, 0, NULL           },
         {"Create Filter",   menu_action_create, 0, filterMenuItems},
         {"Create Delay",    menu_action_create, 0, NULL           },
-        {"Create Level",    menu_action_create, 0, NULL           },
+        {"Create Level",    menu_action_create, 0, levelMenuItems },
         {"Create Switch",   menu_action_create, 0, switchMenuItems},
         {"Create Sequence", menu_action_create, 0, NULL           },
         {"Create Note",     menu_action_create, 0, NULL           },

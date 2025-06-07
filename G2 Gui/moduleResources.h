@@ -56,6 +56,9 @@ const char * saturateCurveStrMap[]= {"1", "2", "3", "4"};
 const char * shpExpCurveStrMap[]  = {"x2", "x3", "x4", "x5"};
 const char * pulseRangeStrMap[]   = {"Sub", "Lo", "Hi"};
 const char * pulseModeStrMap[]    = {"Plus", "Minus"};
+const char * bipUniStrMap[]       = {"Bip", "Uni"};
+const char * vowelStrMap[]        = {"A", "E", "I", "O", "U", "Y", "AA", "AE", "OE"};
+
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
 const tRgb   cableColourMap[] = {
@@ -494,8 +497,21 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeDelay,    paramType1StandardToggle, paramType2Toggle, {{ 52, -3}, {7,  7}}, anchorBottomLeft,  NULL,       3,  0, pulseRangeStrMap, NULL},  // 42 Range
     {moduleTypeDelay,    paramType1StandardToggle, paramType2Toggle, {{ -13, -3}, {7,  7}}, anchorBottomRight,  NULL,       2,  0, pulseModeStrMap, NULL},  // 42 Mode
     // 43 Constant
-    // 44 LevMult
+    {moduleTypeConstant,    paramType1CommonDial, paramType2Dial, {{80,  -3}, {7,  14}}, anchorBottomLeft, NULL,        128, 64, NULL,     NULL          },  // 43 Value
+    {moduleTypeConstant,    paramType1StandardToggle, paramType2Toggle, {{ 40, -3}, {7,  7}}, anchorBottomLeft,  NULL,       2,  0, bipUniStrMap, NULL},  // 43 Bip/Uni
+    // 44 LevMult  - No Controls
     // 45 FltVoice
+    {moduleTypeFltVoice, paramType1StandardToggle, paramType2Toggle, {{ 40, -17}, {7,  7}}, anchorBottomLeft,  NULL,       9,  0, vowelStrMap, NULL},  // 45 Vowel1
+    {moduleTypeFltVoice, paramType1StandardToggle, paramType2Toggle, {{ 50, -17}, {7,  7}}, anchorBottomLeft,  NULL,       9,  1, vowelStrMap, NULL},  // 45 Vowel2
+    {moduleTypeFltVoice, paramType1StandardToggle, paramType2Toggle, {{ 60, -17}, {7,  7}}, anchorBottomLeft,  NULL,       9,  2, vowelStrMap, NULL},  // 45 Vowel3
+    {moduleTypeFltVoice, paramType1CommonDial, paramType2Dial, {{-15, -17}, {7,  14}}, anchorBottomRight, NULL,        128, 80, NULL,     NULL          },  // 45 Level
+    {moduleTypeFltVoice, paramType1CommonDial, paramType2Dial, {{55, -3}, {7,  14}}, anchorBottomLeft, NULL,        128, 80, NULL,     NULL          },  // 45 Vowel
+    {moduleTypeFltVoice, paramType1CommonDial, paramType2Dial, {{45, -3}, {7,  14}}, anchorBottomLeft, NULL,        128, 0, NULL,     NULL          },  // 45 VowelMod
+    {moduleTypeFltVoice, paramType1CommonDial, paramType2Dial, {{20, -3}, {7,  14}}, anchorBottomLeft, "Freq",        128, 80, NULL,     NULL          },  // 45 Freq
+    {moduleTypeFltVoice, paramType1CommonDial, paramType2Dial, {{10, -3}, {7,  14}}, anchorBottomLeft, NULL,        128, 0, NULL,     NULL          },  // 45 FreqMod
+    {moduleTypeFltVoice, paramType1CommonDial, paramType2Dial, {{30, -3}, {7,  14}}, anchorBottomLeft, "Res",        128, 0, NULL,     NULL          },  // 45 Res
+    {moduleTypeFltVoice, paramType1Bypass,         paramType2Toggle, {{-3,  -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 45 Bypass
+ 
     // 46 EnvAHD
     // 47 Pan
     // 48 MixStereo
@@ -854,10 +870,17 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDelay,    connectorDirIn,  connectorTypeLogic, {{ -21,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 42 In
     {moduleTypeDelay,    connectorDirIn,  connectorTypeControl, {{ 35,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 42 TimeM
     {moduleTypeDelay,    connectorDirOut,  connectorTypeLogic, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 42 Out
-
     // 43 Constant
+    {moduleTypeConstant,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 43 Out
     // 44 LevMult
+    {moduleTypeLevMult,    connectorDirIn,  connectorTypeControl, {{ -30,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 44 In
+    {moduleTypeLevMult,    connectorDirIn,  connectorTypeControl, {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 44 Mod
+    {moduleTypeLevMult,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 43 Out
     // 45 FltVoice
+    {moduleTypeFltVoice,connectorDirIn,  connectorTypeAudio, {{ -3,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 45 In
+    {moduleTypeFltVoice,connectorDirIn,  connectorTypeControl, {{ 38,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 45 Vowel
+    {moduleTypeFltVoice,connectorDirIn,  connectorTypeAudio, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 45 FreqMod
+    {moduleTypeFltVoice,connectorDirOut,  connectorTypeAudio, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 45 Out
     // 46 EnvAHD
     // 47 Pan
     // 48 MixStereo
