@@ -28,6 +28,7 @@
 
 const char * fltClassicDbStrMap[] = {"12db", "18db", "24db"};
 const char * fltMultiDbStrMap[]   = {"6db", "12db", NULL};
+const char * fltNordDbStrMap[]   = {"12dB", "24dB"};
 const char * offTo100KbStrMap[]   = {"Off", "25%", "50%", "75%", "100%"};
 const char * offOnStrMap[]        = {"Off", "On"};
 const char * expStrMap[]          = {"Exp", "Lin", "dB"};
@@ -58,6 +59,7 @@ const char * pulseRangeStrMap[]   = {"Sub", "Lo", "Hi"};
 const char * pulseModeStrMap[]    = {"Plus", "Minus"};
 const char * bipUniStrMap[]       = {"Bip", "Uni"};
 const char * vowelStrMap[]        = {"A", "E", "I", "O", "U", "Y", "AA", "AE", "OE"};
+const char * nordFilterTypeStrMap[]={"LP", "BP", "HP", "BR"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -550,7 +552,16 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeConstSwT,   paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  NULL,       2,  0, offOnStrMap,   offOnColourMap          }, // 50 Switch
     {moduleTypeConstSwT,    paramType1StandardToggle, paramType2Toggle, {{ 40, -3}, {7,  7}}, anchorBottomLeft,  NULL,       2,  0, bipUniStrMap, NULL},  // 50 Bip/Uni
     // 51 FltNord
-    
+    {moduleTypeFltNord,   paramType1Freq,           paramType2Dial,   {{ 30,  -25}, {7, 14}}, anchorBottomLeft,  "Freq",    128,  0, NULL,               NULL          },  // 51 Freq
+    {moduleTypeFltNord,   paramType1CommonDial,          paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",     128,  0, NULL,               NULL          }, // 51 Pitch M
+    {moduleTypeFltNord,   paramType1StandardToggle, paramType2Toggle, {{ 15, -25}, {7,  7}}, anchorBottomLeft,  "Kbt",       5,  4, offTo100KbStrMap,   NULL          }, // 51 Kbt
+    {moduleTypeFltNord,   paramType1StandardToggle, paramType2Toggle, {{ 40,   -15}, {7,  7}}, anchorBottomLeft,     NULL,        2,  0, gcStrMap,           offOnColourMap}, // 51 GC
+    {moduleTypeFltNord,   paramType1Resonance,      paramType2Dial,   {{ 55,  -25}, {7, 14}}, anchorBottomLeft,  "Res",     128,  0, NULL,               NULL          }, // 51 Res
+    {moduleTypeFltNord,   paramType1StandardToggle, paramType2Toggle, {{ 70, -10}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, fltNordDbStrMap,   NULL          }, // 51 dB/Oct
+    {moduleTypeFltNord,   paramType1Bypass,         paramType2Toggle, {{-17,   -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 51 Bypass
+    {moduleTypeFltNord,   paramType1CommonDial,          paramType2Dial,   {{ 31,  -3}, {7, 14}}, anchorBottomLeft,  "Fm Lin",     128,  0, NULL,               NULL          }, // 51 Fm Lin
+    {moduleTypeFltNord,   paramType1StandardToggle, paramType2Toggle, {{ 70, -20}, {7,  7}}, anchorBottomLeft,  NULL,        4,  0, nordFilterTypeStrMap,   NULL          }, // 51 FilterType
+    {moduleTypeFltNord,   paramType1CommonDial,          paramType2Dial,   {{ 55,  -3}, {7, 14}}, anchorBottomLeft,  "Res M",     128,  0, NULL,               NULL          }, // 51 Res M
     // 52 EnvMulti
     // 53 SandH
     // 54 FltStatic
@@ -937,12 +948,12 @@ const tConnectorLocation connectorLocationList[] = {
     // 50 ConstSwT
     {moduleTypeConstSwT,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 50 Out
     // 51 FltNord
-    {moduleTypeFltNord,    connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   }, // 51
+    {moduleTypeFltNord,    connectorDirIn,  connectorTypeAudio,   {{ -3,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   }, // 51 In
     {moduleTypeFltNord,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // Out
     {moduleTypeFltNord,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // PitchVar
-    {moduleTypeFltNord,    connectorDirIn,  connectorTypeControl, {{ 3,  -15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // Pitch
-    {moduleTypeFltNord,    connectorDirIn,  connectorTypeControl, {{ 15,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // FMLin
-    {moduleTypeFltNord,    connectorDirIn,  connectorTypeControl, {{ 25,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // Res
+    {moduleTypeFltNord,    connectorDirIn,  connectorTypeControl, {{ 3,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // Pitch
+    {moduleTypeFltNord,    connectorDirIn,  connectorTypeControl, {{ 25,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // FMLin
+    {moduleTypeFltNord,    connectorDirIn,  connectorTypeControl, {{ 47,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // Res
     // 52 EnvMulti
     // 53 SandH
     // 54 FltStatic
