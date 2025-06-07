@@ -524,6 +524,19 @@ const tParamLocation paramLocationList[] = {
     {moduleTypePan,    paramType1LRDial,     paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128,  64, NULL,               NULL          }, // 47 Pan
     {moduleTypePan,    paramType1StandardToggle, paramType2Toggle, {{ 10, -5}, {7,  7}}, anchorBottomLeft, NULL,        2,  0, logStrMap,          NULL          }, // 47 LogLin
     // 48 MixStereo
+    {moduleTypeMixStereo,  paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 48 Lvl1
+    {moduleTypeMixStereo,  paramType1CommonDial,     paramType2Dial,   {{ 22,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 48 Lvl2
+    {moduleTypeMixStereo,  paramType1CommonDial,     paramType2Dial,   {{ 34,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 48 Lvl3
+    {moduleTypeMixStereo,  paramType1CommonDial,     paramType2Dial,   {{ 48,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 48 Lvl4
+    {moduleTypeMixStereo,  paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 48 Lvl5
+    {moduleTypeMixStereo,  paramType1CommonDial,     paramType2Dial,   {{ 72,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 48 Lvl6
+    {moduleTypeMixStereo,    paramType1LRDial,     paramType2Dial,   {{ 10,  -17}, {7, 14}}, anchorBottomLeft,  NULL,   128,  64, NULL,               NULL          }, // 48 Pan1
+    {moduleTypeMixStereo,    paramType1LRDial,     paramType2Dial,   {{ 22,  -17}, {7, 14}}, anchorBottomLeft,  NULL,   128,  64, NULL,               NULL          }, // 48 Pan2
+    {moduleTypeMixStereo,    paramType1LRDial,     paramType2Dial,   {{ 34,  -17}, {7, 14}}, anchorBottomLeft,  NULL,   128,  64, NULL,               NULL          }, // 48 Pan3
+    {moduleTypeMixStereo,    paramType1LRDial,     paramType2Dial,   {{ 46,  -17}, {7, 14}}, anchorBottomLeft,  NULL,   128,  64, NULL,               NULL          }, // 48 Pan4
+    {moduleTypeMixStereo,    paramType1LRDial,     paramType2Dial,   {{ 58,  -17}, {7, 14}}, anchorBottomLeft,  NULL,   128,  64, NULL,               NULL          }, // 48 Pan5
+    {moduleTypeMixStereo,    paramType1LRDial,     paramType2Dial,   {{ 70,  -17}, {7, 14}}, anchorBottomLeft,  NULL,   128,  64, NULL,               NULL          }, // 48 Pan6
+    {moduleTypeMixStereo,  paramType1CommonDial,     paramType2Dial,   {{ -7,  -25}, {7, 14}}, anchorBottomRight,  NULL,    128, 80, NULL,               NULL          },  // 48 LvlMaster
     // 49 FltMulti
     {moduleTypeFltMulti,   paramType1Freq,           paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Freq",    128,  0, NULL,               NULL          },  // 49
     {moduleTypeFltMulti,   paramType1Pitch,          paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Env",     128,  0, NULL,               NULL          },
@@ -903,6 +916,14 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypePan,    connectorDirOut,  connectorTypeControl, {{  -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "R",    labelLocLeft}, // 46 OutR
 
    // 48 MixStereo
+    {moduleTypeMixStereo,    connectorDirIn,  connectorTypeControl, {{  10,  -30}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 48 In1
+    {moduleTypeMixStereo,    connectorDirIn,  connectorTypeControl, {{  22,  -30}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 48 In2
+    {moduleTypeMixStereo,    connectorDirIn,  connectorTypeControl, {{  34,  -30}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 48 In3
+    {moduleTypeMixStereo,    connectorDirIn,  connectorTypeControl, {{  46,  -30}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 48 In4
+    {moduleTypeMixStereo,    connectorDirIn,  connectorTypeControl, {{  58,  -30}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 48 In5
+    {moduleTypeMixStereo,    connectorDirIn,  connectorTypeControl, {{  70,  -30}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 48 In6
+    {moduleTypeMixStereo,    connectorDirOut,  connectorTypeControl, {{  -10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "L",    labelLocUp}, // 48 OutL
+    {moduleTypeMixStereo,    connectorDirOut,  connectorTypeControl, {{  -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "R",    labelLocUp}, // 48 OutR
     // 49 FltMulti
     {moduleTypeFltMulti,   connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   }, // 49
     {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },
