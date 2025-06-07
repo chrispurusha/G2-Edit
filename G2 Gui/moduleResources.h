@@ -51,6 +51,7 @@ const char * polyMonoStrMap[]     = {"Poly", "Mono"};
 const char * rangeStrMap[]        = {"Rate Lo", "Rate Hi", "BPM", "Clk", "Rate Sub"};
 const char * lfoWaveStrMap[]      = {"Sin", "Tri", "Saw", "Squ", "RndSt", "Rnd"};
 const char * lfoAltWaveStrMap[]   = {"Sine", "CosBell", "TriBell", "Saw>Tri", "Tri>Squ", "Pulse"};
+const char * saturateCurveStrMap[]= {"1", "2", "3", "4"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -422,8 +423,22 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeLfoA,    paramType1StandardToggle,  paramType2Toggle, {{ -10, -10}, {7, 7}}, anchorBottomRight,  NULL,  6, 0,  posStrMap,  NULL},  // 26 OutType
     {moduleTypeLfoA,    paramType1StandardToggle,  paramType2Toggle, {{25, -3}, {7, 7}}, anchorBottomLeft,  NULL,  5, 0,  rangeStrMap,  NULL},  // 26 Range
     // 27 OscMaster
+    {moduleTypeOscMaster,    paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128, 64, NULL,               NULL          },  // 27 Pitch
+    {moduleTypeOscMaster,    paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL,               NULL          },  // 27 Fine
+    {moduleTypeOscMaster,    paramType1StandardToggle, paramType2Toggle, {{ 22, -3}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap},  // 27 Kbt
+    {moduleTypeOscMaster,    paramType1StandardToggle, paramType2Toggle, {{ 30,  15}, {7,  7}}, anchorTopLeft,     NULL,        4,  0, pitchTypeStrMap,    NULL          },  // 27 Tune mode
+    {moduleTypeOscMaster,  paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch M",   128,  0, NULL,               NULL          }, // 27 Pitch M
     // 28 Saturate
+    {moduleTypeSaturate,  paramType1CommonDial,     paramType2Dial,   {{ 54,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 0, NULL,               NULL          },  // 28 Amount
+    {moduleTypeSaturate,  paramType1CommonDial,     paramType2Dial,   {{ 41,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 0, NULL,               NULL          },  // 28 AmountMod
+    {moduleTypeSaturate,     paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 28 Bypass
+    {moduleTypeSaturate,    paramType1StandardToggle, paramType2Toggle, {{ 70, -6}, {7,  7}}, anchorBottomLeft,  "Curve",       4,  0, saturateCurveStrMap, NULL},  // 28 Curve
     // 29 MetNoise
+    {moduleTypeMetNoise, paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, {7, 14}}, anchorBottomLeft,  "Color",   128, 64, NULL,               NULL          },  // 29 Color
+    {moduleTypeMetNoise, paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, {7, 14}}, anchorBottomLeft,  "Freq",   128, 64, NULL,               NULL          },  // 29 Freq
+    {moduleTypeMetNoise,     paramType1Bypass,         paramType2Toggle, {{-3,  -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 28 Bypass
+    {moduleTypeMetNoise, paramType1CommonDial,     paramType2Dial,   {{ 70,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 64, NULL,               NULL          },  // 29 Color M
+    {moduleTypeMetNoise, paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 64, NULL,               NULL          },  // 29 Freq M
     // 30 Device
     // 31 Noise
     // 32 Eq2Band
@@ -735,8 +750,17 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeLfoA,   connectorDirIn,  connectorTypeControl, {{  3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp   }, // Rate
     {moduleTypeLfoA,   connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // Out
     // 27 OscMaster
+    {moduleTypeOscMaster,       connectorDirIn,  connectorTypeControl, {{  3,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 9 OscC Pitch
+    {moduleTypeOscMaster,       connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 9 OscC PitchVar
+    {moduleTypeOscMaster,   connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // Out
     // 28 Saturate
+    {moduleTypeSaturate,    connectorDirIn,  connectorTypeControl, {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 28 In
+    {moduleTypeSaturate,    connectorDirIn,  connectorTypeControl, {{ 35,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 28 Mod
+    {moduleTypeSaturate,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 28 Out
     // 29 MetNoise
+    {moduleTypeMetNoise,    connectorDirIn,  connectorTypeControl, {{ 32,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 29 FreqMod
+    {moduleTypeMetNoise,    connectorDirIn,  connectorTypeControl, {{ 62,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 29 ColorMod
+    {moduleTypeMetNoise,    connectorDirOut,  connectorTypeAudio, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 29 Out
     // 30 Device
     // 31 Noise
     // 32 Eq2Band

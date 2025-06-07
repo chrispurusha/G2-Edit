@@ -662,6 +662,8 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Osc C",       menu_action_create, moduleTypeOscC,    NULL},
         {"Create Osc Shape B", menu_action_create, moduleTypeOscShpB, NULL},
         {"Create Osc String",  menu_action_create, moduleTypeOscString, NULL},
+        {"Create Met Noise",  menu_action_create, moduleTypeMetNoise, NULL},
+        {"Create Osc Master",       menu_action_create, moduleTypeOscMaster,    NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
     static tMenuItem lfoMenuItems[] = {
@@ -680,6 +682,10 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Classic Filter", menu_action_create, moduleTypeFltClassic, NULL},
         {"Create Multi Filter",   menu_action_create, moduleTypeFltMulti,   NULL},
         {NULL,                    NULL,                                  0, NULL} // End of menu
+    };
+    static tMenuItem shaperMenuItems[] = {
+        {"Create Saturate",   menu_action_create,  moduleTypeSaturate, NULL},
+        {NULL,                 NULL,                               0, NULL}       // End of menu
     };
     static tMenuItem mixerMenuItems[] = {
         {"Create Mixer 4-1 C", menu_action_create, moduleTypeMix4to1C, NULL},
@@ -708,7 +714,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create LFO",      menu_action_create, 0, lfoMenuItems   },
         {"Create Env",      menu_action_create, 0, envMenuItems   },
         {"Create FX",       menu_action_create, 0, fxMenuItems    },
-        {"Create Shaper",   menu_action_create, 0, NULL           },
+        {"Create Shaper",   menu_action_create, 0, shaperMenuItems},
         {"Create Mixer",    menu_action_create, 0, mixerMenuItems },
         {"Create Logic",    menu_action_create, 0, logicMenuItems },
         {"Create Midi",     menu_action_create, 0, NULL           },
