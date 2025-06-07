@@ -52,6 +52,7 @@ const char * rangeStrMap[]        = {"Rate Lo", "Rate Hi", "BPM", "Clk", "Rate S
 const char * lfoWaveStrMap[]      = {"Sin", "Tri", "Saw", "Squ", "RndSt", "Rnd"};
 const char * lfoAltWaveStrMap[]   = {"Sine", "CosBell", "TriBell", "Saw>Tri", "Tri>Squ", "Pulse"};
 const char * saturateCurveStrMap[]= {"1", "2", "3", "4"};
+const char * shpExpCurveStrMap[]= {"x2", "x3", "x4", "x5"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -456,6 +457,10 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEq3band, paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, {7, 14}}, anchorBottomLeft,  "Level",   128, 127, NULL,               NULL          },  // 33 Level
     {moduleTypeEq3band,     paramType1Bypass,         paramType2Toggle, {{-3,  -9}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 33 Bypass
     // 34 ShpExp
+    {moduleTypeShpExp,  paramType1CommonDial,     paramType2Dial,   {{ 54,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 0, NULL,               NULL          },  // 34 Amount
+    {moduleTypeShpExp,  paramType1CommonDial,     paramType2Dial,   {{ 41,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 0, NULL,               NULL          },  // 34 AmountMod
+    {moduleTypeShpExp,     paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 34 Bypass
+    {moduleTypeShpExp,    paramType1StandardToggle, paramType2Toggle, {{ 70, -6}, {7,  7}}, anchorBottomLeft,  "Curve",       4,  0, shpExpCurveStrMap, NULL},  // 34 Curve
     // 35 Driver
     // 36 SwOnOffM
     // 37 Unknown
@@ -790,6 +795,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeEq3band,    connectorDirIn,  connectorTypeAudio, {{ -3,   -15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 33 In
     {moduleTypeEq3band,    connectorDirOut,  connectorTypeAudio, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 33 Out
     // 34 ShpExp
+    {moduleTypeShpExp,    connectorDirIn,  connectorTypeControl, {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 34 In
+    {moduleTypeShpExp,    connectorDirIn,  connectorTypeControl, {{ 35,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 34 Mod
+    {moduleTypeShpExp,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 34 Out
+
     // 35 Driver
     // 36 SwOnOffM
     // 37 Unknown
