@@ -52,8 +52,9 @@ const char * rangeStrMap[]        = {"Rate Lo", "Rate Hi", "BPM", "Clk", "Rate S
 const char * lfoWaveStrMap[]      = {"Sin", "Tri", "Saw", "Squ", "RndSt", "Rnd"};
 const char * lfoAltWaveStrMap[]   = {"Sine", "CosBell", "TriBell", "Saw>Tri", "Tri>Squ", "Pulse"};
 const char * saturateCurveStrMap[]= {"1", "2", "3", "4"};
-const char * shpExpCurveStrMap[]= {"x2", "x3", "x4", "x5"};
-
+const char * shpExpCurveStrMap[]  = {"x2", "x3", "x4", "x5"};
+const char * pulseRangeStrMap[]   = {"Sub", "Lo", "Hi"};
+const char * pulseModeStrMap[]    = {"Plus", "Minus"};
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
 const tRgb   cableColourMap[] = {
@@ -461,10 +462,15 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeShpExp,  paramType1CommonDial,     paramType2Dial,   {{ 41,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 0, NULL,               NULL          },  // 34 AmountMod
     {moduleTypeShpExp,     paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 34 Bypass
     {moduleTypeShpExp,    paramType1StandardToggle, paramType2Toggle, {{ 70, -6}, {7,  7}}, anchorBottomLeft,  "Curve",       4,  0, shpExpCurveStrMap, NULL},  // 34 Curve
-    // 35 Driver
+    // 35 Driver *** What module is this?
     // 36 SwOnOffM
+    {moduleTypeSwOnOffM,    paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  NULL,       2,  0, offOnStrMap, NULL}, // 36 On
     // 37 Unknown
     // 38 Pulse
+    {moduleTypePulse,  paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, {7, 14}}, anchorBottomLeft,  "Time",    128, 0, NULL,               NULL          },  // 38 Time
+    {moduleTypePulse,  paramType1CommonDial,     paramType2Dial,   {{ 42,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 0, NULL,               NULL          },  // 38 TimeMod
+    {moduleTypePulse,    paramType1StandardToggle, paramType2Toggle, {{ 52, -3}, {7,  7}}, anchorBottomLeft,  NULL,       3,  0, pulseRangeStrMap, NULL},  // 38 Range
+    {moduleTypePulse,    paramType1StandardToggle, paramType2Toggle, {{ -13, -3}, {7,  7}}, anchorBottomRight,  NULL,       2,  0, pulseModeStrMap, NULL},  // 38 Range
     // 39 Unknown
     // 40 Mix8-1B
     // 41 EnvH
@@ -798,11 +804,17 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeShpExp,    connectorDirIn,  connectorTypeControl, {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 34 In
     {moduleTypeShpExp,    connectorDirIn,  connectorTypeControl, {{ 35,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 34 Mod
     {moduleTypeShpExp,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 34 Out
-
-    // 35 Driver
+    // 35 Driver *** What Module is this?
     // 36 SwOnOffM
+    {moduleTypeSwOnOffM,    connectorDirIn,  connectorTypeControl, {{ -20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 35 In
+    {moduleTypeSwOnOffM,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 34 Out
+    {moduleTypeSwOnOffM,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 34 Ctrl
     // 37 Unknown
     // 38 Pulse
+    {moduleTypePulse,    connectorDirIn,  connectorTypeLogic, {{ -21,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 35 In
+    {moduleTypePulse,    connectorDirIn,  connectorTypeControl, {{ 35,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 35 TimeM
+    {moduleTypePulse,    connectorDirOut,  connectorTypeLogic, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 34 Out
+
     // 39 Unknown
     // 40 Mix8-1B
     // 41 EnvH

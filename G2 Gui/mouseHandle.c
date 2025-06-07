@@ -687,6 +687,10 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Eq 3-band",      menu_action_create, moduleTypeEq3band, NULL},
         {NULL,                    NULL,                                  0, NULL} // End of menu
     };
+    static tMenuItem switchMenuItems[] = {
+        {"Create SwOnOffM",   menu_action_create,  moduleTypeSwOnOffM, NULL},
+        {NULL,                 NULL,                               0, NULL}       // End of menu
+    };
     static tMenuItem shaperMenuItems[] = {
         {"Create Saturate",   menu_action_create,  moduleTypeSaturate, NULL},
         {"Create ShpExp",     menu_action_create,  moduleTypeShpExp,   NULL},
@@ -699,6 +703,7 @@ void open_module_area_context_menu(tCoord coord) {
     };
     static tMenuItem logicMenuItems[] = {
         {"Create Invert",   menu_action_create,  moduleTypeInvert, NULL},
+        {"Create Pulse",   menu_action_create,  moduleTypePulse, NULL},   
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
     static tMenuItem fxMenuItems[] = {
@@ -713,7 +718,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Filter",   menu_action_create, 0, filterMenuItems},
         {"Create Delay",    menu_action_create, 0, NULL           },
         {"Create Level",    menu_action_create, 0, NULL           },
-        {"Create Switch",   menu_action_create, 0, NULL           },
+        {"Create Switch",   menu_action_create, 0, switchMenuItems},
         {"Create Sequence", menu_action_create, 0, NULL           },
         {"Create Note",     menu_action_create, 0, NULL           },
         {"Create LFO",      menu_action_create, 0, lfoMenuItems   },
