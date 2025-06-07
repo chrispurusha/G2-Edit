@@ -441,6 +441,8 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeMetNoise, paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 64, NULL,               NULL          },  // 29 Freq M
     // 30 Device - No controls
     // 31 Noise
+    {moduleTypeNoise, paramType1CommonDial,     paramType2Dial,   {{ 70,  -3}, {7, 14}}, anchorBottomLeft,  "Color",   128, 0, NULL,               NULL          },  // 31 Color  *** Or special dial
+    {moduleTypeNoise,     paramType1Bypass,         paramType2Toggle, {{-3,  -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 31 Bypass
     // 32 Eq2Band
     // 33 Eq3Band
     // 34 ShpExp
@@ -770,6 +772,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDevice,    connectorDirOut,  connectorTypeControl, {{ 78,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "GWh1",    labelLocUp   },  // 30 Global Wheel 1
     {moduleTypeDevice,    connectorDirOut,  connectorTypeControl, {{ 88,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "GWh2",    labelLocUp   },  // 30 Global Wheel 2
     // 31 Noise
+    {moduleTypeNoise,    connectorDirOut,  connectorTypeAudio, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 31 Out
+
     // 32 Eq2Band
     // 33 Eq3Band
     // 34 ShpExp
