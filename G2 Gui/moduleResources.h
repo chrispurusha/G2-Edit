@@ -520,6 +520,9 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEnvAHD,    paramType1StandardToggle, paramType2Toggle, {{-26, -10}, {7,  7}}, anchorBottomRight, NULL,        6,  0, posStrMap,          NULL          },
     {moduleTypeEnvAHD,    paramType1StandardToggle, paramType2Toggle, {{ 10,   8}, {7,  7}}, anchorTopLeft,     NULL,        2,  0, kbStrMap,           offOnColourMap},
     // 47 Pan
+    {moduleTypePan,    paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128,  0, NULL,               NULL          }, // 47 PanMod
+    {moduleTypePan,    paramType1LRDial,     paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128,  64, NULL,               NULL          }, // 47 Pan
+    {moduleTypePan,    paramType1StandardToggle, paramType2Toggle, {{ 10, -5}, {7,  7}}, anchorBottomLeft, NULL,        2,  0, logStrMap,          NULL          }, // 47 LogLin
     // 48 MixStereo
     // 49 FltMulti
     {moduleTypeFltMulti,   paramType1Freq,           paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Freq",    128,  0, NULL,               NULL          },  // 49
@@ -894,7 +897,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeEnvAHD,    connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",   labelLocUp   }, // 46 Env
     {moduleTypeEnvAHD,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 46 Out
     // 47 Pan
-    // 48 MixStereo
+    {moduleTypePan,    connectorDirIn,  connectorTypeControl, {{  -25,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocRight}, // 47 In
+    {moduleTypePan,    connectorDirIn,  connectorTypeControl, {{  20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 47 Mod
+    {moduleTypePan,    connectorDirOut,  connectorTypeControl, {{  -15,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "L",    labelLocLeft}, // 47 OutL
+    {moduleTypePan,    connectorDirOut,  connectorTypeControl, {{  -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "R",    labelLocLeft}, // 46 OutR
+
+   // 48 MixStereo
     // 49 FltMulti
     {moduleTypeFltMulti,   connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   }, // 49
     {moduleTypeFltMulti,   connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },

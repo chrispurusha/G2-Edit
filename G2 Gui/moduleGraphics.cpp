@@ -277,6 +277,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             break;
         }
         case paramType1CommonDial:         // Ultimately might not be a common dial, or could just be a default percent dial!?
+        case paramType1LRDial: // Pan type dial, perhaps with reset triangle
         case paramType1Resonance:
         {
             double res    = 0.0;
