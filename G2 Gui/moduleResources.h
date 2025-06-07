@@ -488,7 +488,11 @@ const tParamLocation paramLocationList[] = {
     // 41 EnvH
     {moduleTypeEnvH,    paramType1CommonDial, paramType2Dial, {{50,  -3}, {7,  14}}, anchorBottomLeft, NULL,        128, 64, NULL,     NULL          },  // 41 Hold
     {moduleTypeEnvH,    paramType1StandardToggle, paramType2Toggle, {{-32, -3}, {7,  7}}, anchorBottomRight, NULL,        6,  0, posStrMap,          NULL          }, // 41 Pos
-    // 42 Delay
+    // 42 Delay (Logic Delay)
+    {moduleTypeDelay,  paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, {7, 14}}, anchorBottomLeft,  "Time",    128, 0, NULL,               NULL          },  // 42 Time
+    {moduleTypeDelay,  paramType1CommonDial,     paramType2Dial,   {{ 42,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 0, NULL,               NULL          },  // 42 TimeMod
+    {moduleTypeDelay,    paramType1StandardToggle, paramType2Toggle, {{ 52, -3}, {7,  7}}, anchorBottomLeft,  NULL,       3,  0, pulseRangeStrMap, NULL},  // 42 Range
+    {moduleTypeDelay,    paramType1StandardToggle, paramType2Toggle, {{ -13, -3}, {7,  7}}, anchorBottomRight,  NULL,       2,  0, pulseModeStrMap, NULL},  // 42 Mode
     // 43 Constant
     // 44 LevMult
     // 45 FltVoice
@@ -825,9 +829,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSwOnOffM,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 34 Ctrl
     // 37 Unknown
     // 38 Pulse
-    {moduleTypePulse,    connectorDirIn,  connectorTypeLogic, {{ -21,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 35 In
-    {moduleTypePulse,    connectorDirIn,  connectorTypeControl, {{ 35,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 35 TimeM
-    {moduleTypePulse,    connectorDirOut,  connectorTypeLogic, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 34 Out
+    {moduleTypePulse,    connectorDirIn,  connectorTypeLogic, {{ -21,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 38 In
+    {moduleTypePulse,    connectorDirIn,  connectorTypeControl, {{ 35,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 38 TimeM
+    {moduleTypePulse,    connectorDirOut,  connectorTypeLogic, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 38 Out
     // 39 Unknown
     // 40 Mix8-1B
     {moduleTypeMix8to1B,  connectorDirIn,  connectorTypeControl, {{ 21,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "1",    labelLocUp   },  // 40 In1
@@ -847,6 +851,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeEnvH,    connectorDirOut, connectorTypeControl, {{-20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",   labelLocUp   }, // 41 Env
     {moduleTypeEnvH,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 41 Out
     // 42 Delay
+    {moduleTypeDelay,    connectorDirIn,  connectorTypeLogic, {{ -21,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 42 In
+    {moduleTypeDelay,    connectorDirIn,  connectorTypeControl, {{ 35,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 42 TimeM
+    {moduleTypeDelay,    connectorDirOut,  connectorTypeLogic, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 42 Out
+
     // 43 Constant
     // 44 LevMult
     // 45 FltVoice
