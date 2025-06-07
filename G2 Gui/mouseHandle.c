@@ -664,6 +664,11 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Osc String",  menu_action_create, moduleTypeOscString, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
+    static tMenuItem lfoMenuItems[] = {
+        {"Create LFO C", menu_action_create, moduleTypeLfoC, NULL},
+        {"Create LFO Shp A", menu_action_create, moduleTypeLfoShpA, NULL},
+        {NULL,              NULL,                               0, NULL}          // End of menu
+    };
     static tMenuItem envMenuItems[] = {
         {"Create Env ADSR", menu_action_create, moduleTypeEnvADSR, NULL},
         {NULL,              NULL,                               0, NULL}          // End of menu
@@ -699,7 +704,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Switch",   menu_action_create, 0, NULL           },
         {"Create Sequence", menu_action_create, 0, NULL           },
         {"Create Note",     menu_action_create, 0, NULL           },
-        {"Create LFO",      menu_action_create, 0, NULL           },
+        {"Create LFO",      menu_action_create, 0, lfoMenuItems   },
         {"Create Env",      menu_action_create, 0, envMenuItems   },
         {"Create FX",       menu_action_create, 0, fxMenuItems    },
         {"Create Shaper",   menu_action_create, 0, NULL           },
