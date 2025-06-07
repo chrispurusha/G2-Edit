@@ -402,17 +402,25 @@ const tParamLocation paramLocationList[] = {
     // 25 LfoShpA
     {moduleTypeLfoShpA, paramType1CommonDial,  paramType2Dial, {{36, -3}, {7, 14}}, anchorBottomLeft,  NULL,  128, 64,  NULL,  NULL},  // 25 Rate  *** Could have Freq but tied to Range
     {moduleTypeLfoShpA, paramType1StandardToggle,  paramType2Toggle, {{36, -17}, {7, 7}}, anchorBottomLeft,  NULL,  5, 0,  rangeStrMap,  NULL},  // 25 Range
-    {moduleTypeLfoShpA, paramType1StandardToggle,  paramType2Toggle, {{25, -17}, {7, 7}}, anchorBottomLeft,  NULL,  5, 0,  offTo100KbStrMap,  NULL},  // 25 Kbt
+    {moduleTypeLfoShpA, paramType1StandardToggle,  paramType2Toggle, {{25, -28}, {7, 7}}, anchorBottomLeft,  "Kbt",  5, 0,  offTo100KbStrMap,  NULL},  // 25 Kbt
     {moduleTypeLfoShpA, paramType1CommonDial,  paramType2Dial, {{25, -3}, {7, 14}}, anchorBottomLeft,  NULL,  128, 0,  NULL,  NULL},  // 25 Rate M
     {moduleTypeLfoShpA,  paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 25 Bypass
     {moduleTypeLfoShpA, paramType1CommonDial,  paramType2Dial, {{57, -17}, {7, 14}}, anchorBottomLeft,  "Shape",  128, 0,  NULL,  NULL},  // 25 Shape
     {moduleTypeLfoShpA, paramType1CommonDial,  paramType2Dial, {{74, -3}, {7, 14}}, anchorBottomLeft,  NULL,  128, 0,  NULL,  NULL},  // 25 Phase M
     {moduleTypeLfoShpA, paramType1CommonDial,  paramType2Dial, {{74, -17}, {7, 14}}, anchorBottomLeft,  "Phase",  128, 64,  NULL,  NULL},  // 25 Phase
     {moduleTypeLfoShpA, paramType1CommonDial,  paramType2Dial, {{57, -3}, {7, 14}}, anchorBottomLeft,  NULL,  128, 0,  NULL,  NULL},  // 25 Shape M
-    {moduleTypeLfoC,    paramType1StandardToggle,  paramType2Toggle, {{30, -3}, {7, 7}}, anchorBottomLeft,  NULL,  2, 0,  polyMonoStrMap,  NULL},  // 24 Mode
-    {moduleTypeLfoC,    paramType1StandardToggle,  paramType2Toggle, {{76, -3}, {7, 7}}, anchorBottomLeft,  NULL,  6, 0,  posStrMap,  NULL},  // 24 OutType
+    {moduleTypeLfoShpA, paramType1StandardToggle,  paramType2Toggle, {{25,-17}, {7, 7}}, anchorBottomLeft,  NULL,  2, 0,  polyMonoStrMap,  NULL},  // 25 Mode
+    {moduleTypeLfoShpA, paramType1StandardToggle,  paramType2Toggle, {{ -10, -10}, {7, 7}}, anchorBottomRight,  NULL,  6, 0,  posStrMap,  NULL},  // 25 OutType
     {moduleTypeLfoShpA,    paramType1StandardToggle,  paramType2Toggle, {{57, -32}, {7, 7}}, anchorBottomLeft,  NULL,  6, 0,  lfoAltWaveStrMap,  NULL},  // 25 Wave
     // 26 LfoA
+    {moduleTypeLfoA,    paramType1CommonDial,  paramType2Dial, {{45, -3}, {7, 14}}, anchorBottomLeft,  NULL,  128, 64,  NULL,  NULL},  // 26 Rate  *** Could have Freq but tied to Range
+    {moduleTypeLfoA,    paramType1StandardToggle,  paramType2Toggle, {{17, -10}, {7, 7}}, anchorBottomLeft,  NULL,  2, 0,  polyMonoStrMap,  NULL},  // 26 Mode
+    {moduleTypeLfoA,    paramType1StandardToggle,  paramType2Toggle, {{65,  -3}, {7, 7}}, anchorBottomLeft,  "Kbt",  5, 0,  offTo100KbStrMap,  NULL},  // 26 Kbt
+    {moduleTypeLfoA, paramType1CommonDial,  paramType2Dial, {{10, -3}, {7, 14}}, anchorBottomLeft,  NULL,  128, 0,  NULL,  NULL},  // 26 Rate M
+    {moduleTypeLfoA,    paramType1StandardToggle,  paramType2Toggle, {{65, -10}, {7, 7}}, anchorBottomLeft,  NULL,  6, 0,  lfoWaveStrMap,  NULL},  // 26 Wave
+    {moduleTypeLfoA,     paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 26 Bypass
+    {moduleTypeLfoA,    paramType1StandardToggle,  paramType2Toggle, {{ -10, -10}, {7, 7}}, anchorBottomRight,  NULL,  6, 0,  posStrMap,  NULL},  // 26 OutType
+    {moduleTypeLfoA,    paramType1StandardToggle,  paramType2Toggle, {{25, -3}, {7, 7}}, anchorBottomLeft,  NULL,  5, 0,  rangeStrMap,  NULL},  // 26 Range
     // 27 OscMaster
     // 28 Saturate
     // 29 MetNoise
@@ -722,8 +730,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeLfoShpA,   connectorDirIn,  connectorTypeControl, {{  10,  -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Dir",    labelLocUp   }, // Dir
     {moduleTypeLfoShpA,   connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // Out
     {moduleTypeLfoShpA,   connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Snc",    labelLocUp   }, // Snc
-
     // 26 LfoA
+    {moduleTypeLfoA,   connectorDirIn,  connectorTypeControl, {{  3,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp   }, // Rate
+    {moduleTypeLfoA,   connectorDirIn,  connectorTypeControl, {{  3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp   }, // Rate
+    {moduleTypeLfoA,   connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // Out
     // 27 OscMaster
     // 28 Saturate
     // 29 MetNoise
