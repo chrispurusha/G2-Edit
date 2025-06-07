@@ -676,6 +676,7 @@ void open_module_area_context_menu(tCoord coord) {
     };
     static tMenuItem envMenuItems[] = {
         {"Create Env ADSR", menu_action_create, moduleTypeEnvADSR, NULL},
+        {"Create Env H",    menu_action_create, moduleTypeEnvH,    NULL},
         {NULL,              NULL,                               0, NULL}          // End of menu
     };
     static tMenuItem filterMenuItems[] = {
@@ -698,6 +699,7 @@ void open_module_area_context_menu(tCoord coord) {
     };
     static tMenuItem mixerMenuItems[] = {
         {"Create Mixer 4-1 C", menu_action_create, moduleTypeMix4to1C, NULL},
+        {"Create Mixer 8-1 B", menu_action_create, moduleTypeMix8to1B, NULL},
         {"Create X-Fade",      menu_action_create, moduleTypeXtoFade, NULL },
         {NULL,                 NULL,                                0, NULL}      // End of menu
     };

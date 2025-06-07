@@ -34,6 +34,7 @@ const char * expStrMap[]          = {"Exp", "Lin", "dB"};
 const char * logStrMap[]          = {"Log", "Lin"};
 const char * padStrMap[]          = {"0dB", "+6dB"};
 const char * db12PadStrMap[]      = {"+6dB", "0dB", "-6dB", "-12dB"};
+const char * db12BPadStrMap[]     = {"0dB", "-6dB", "-12dB"};
 const char * gcStrMap[]           = {"GC", "GC"};
 const char * kbStrMap[]           = {"KB", "KB"};
 const char * sideChainStrMap[]    = {"Side Chain", "Side Chain"};
@@ -385,6 +386,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeXtoFade,    paramType1CommonDial,     paramType2Dial,   {{ 55, -3}, {7, 14}},  anchorBottomLeft,   NULL,   128, 64, NULL, NULL}, // 18 X-fade *** should be another type of dial
     {moduleTypeXtoFade,    paramType1StandardToggle, paramType2Toggle, {{ 20, -3}, {7,  7}},  anchorBottomLeft,   NULL,   2, 0, logStrMap, NULL},
     // 19 Mix4-1B
+    // 20 EnvvADSR
     {moduleTypeEnvADSR,    paramType1StandardToggle, paramType2Toggle, {{-26,  -3}, {7,  7}}, anchorBottomRight, NULL,        4,  0, envShapeStrMap,     NULL          },  // 20 EnvADSR
         {moduleTypeEnvADSR,    paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "Attack",  128,  0, NULL,               NULL          },
         {moduleTypeEnvADSR,    paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Delay",   128,  0, NULL,               NULL          },
@@ -473,7 +475,19 @@ const tParamLocation paramLocationList[] = {
     {moduleTypePulse,    paramType1StandardToggle, paramType2Toggle, {{ -13, -3}, {7,  7}}, anchorBottomRight,  NULL,       2,  0, pulseModeStrMap, NULL},  // 38 Range
     // 39 Unknown
     // 40 Mix8-1B
+    {moduleTypeMix8to1B,  paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 40 In1
+    {moduleTypeMix8to1B,  paramType1CommonDial,     paramType2Dial,   {{ 29,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 40 In2
+    {moduleTypeMix8to1B,  paramType1CommonDial,     paramType2Dial,   {{ 38,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 40 In3
+    {moduleTypeMix8to1B,  paramType1CommonDial,     paramType2Dial,   {{ 47,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 40 In4
+    {moduleTypeMix8to1B,  paramType1CommonDial,     paramType2Dial,   {{ 56,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 40 In5
+    {moduleTypeMix8to1B,  paramType1CommonDial,     paramType2Dial,   {{ 65,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 40 In6
+    {moduleTypeMix8to1B,  paramType1CommonDial,     paramType2Dial,   {{ 74,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 40 In7
+    {moduleTypeMix8to1B,  paramType1CommonDial,     paramType2Dial,   {{ 83,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 40 In8
+    {moduleTypeMix8to1B,  paramType1StandardToggle,     paramType2Toggle,   {{ 3,  -17}, {7, 7}}, anchorBottomLeft,  NULL,    3, 0, expStrMap,               NULL          },  // 40 ExpLinDB
+    {moduleTypeMix8to1B,  paramType1StandardToggle,     paramType2Toggle,   {{ 3,  -10}, {7, 7}}, anchorBottomLeft,  "Pad",    3, 0, db12BPadStrMap,               NULL          },  // 40 Pad
     // 41 EnvH
+    {moduleTypeEnvH,    paramType1CommonDial, paramType2Dial, {{50,  -3}, {7,  14}}, anchorBottomLeft, NULL,        128, 64, NULL,     NULL          },  // 41 Hold
+    {moduleTypeEnvH,    paramType1StandardToggle, paramType2Toggle, {{-32, -3}, {7,  7}}, anchorBottomRight, NULL,        6,  0, posStrMap,          NULL          }, // 41 Pos
     // 42 Delay
     // 43 Constant
     // 44 LevMult
@@ -814,10 +828,24 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypePulse,    connectorDirIn,  connectorTypeLogic, {{ -21,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 35 In
     {moduleTypePulse,    connectorDirIn,  connectorTypeControl, {{ 35,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 35 TimeM
     {moduleTypePulse,    connectorDirOut,  connectorTypeLogic, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 34 Out
-
     // 39 Unknown
     // 40 Mix8-1B
+    {moduleTypeMix8to1B,  connectorDirIn,  connectorTypeControl, {{ 21,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "1",    labelLocUp   },  // 40 In1
+    {moduleTypeMix8to1B,  connectorDirIn,  connectorTypeControl, {{ 30,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "2",    labelLocUp   },  // 40 In2
+    {moduleTypeMix8to1B,  connectorDirIn,  connectorTypeControl, {{ 39,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "3",    labelLocUp   },  // 40 In3
+    {moduleTypeMix8to1B,  connectorDirIn,  connectorTypeControl, {{ 48,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "4",    labelLocUp   },  // 40 In4
+    {moduleTypeMix8to1B,  connectorDirIn,  connectorTypeControl, {{ 57,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "5",    labelLocUp   },  // 40 In5
+    {moduleTypeMix8to1B,  connectorDirIn,  connectorTypeControl, {{ 66,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "6",    labelLocUp   },  // 40 In6
+    {moduleTypeMix8to1B,  connectorDirIn,  connectorTypeControl, {{ 75,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "7",    labelLocUp   },  // 40 In7
+    {moduleTypeMix8to1B,  connectorDirIn,  connectorTypeControl, {{ 84,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "8",    labelLocUp   },  // 40 In8
+    {moduleTypeMix8to1B,  connectorDirIn,  connectorTypeControl, {{ -3,   -28}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    "Chain",    labelLocLeft   },  // 40 Chain
+    {moduleTypeMix8to1B,  connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 40 Out
     // 41 EnvH
+    {moduleTypeEnvH,    connectorDirIn,  connectorTypeLogic, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Trig",    labelLocRight   },  // 41 Trig
+    {moduleTypeEnvH,    connectorDirIn,  connectorTypeControl, {{  25,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "AM",    labelLocRight},
+    {moduleTypeEnvH,    connectorDirIn,  connectorTypeControl, {{  -12,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocRight}, // 41 In
+    {moduleTypeEnvH,    connectorDirOut, connectorTypeControl, {{-20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",   labelLocUp   }, // 41 Env
+    {moduleTypeEnvH,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 41 Out
     // 42 Delay
     // 43 Constant
     // 44 LevMult
