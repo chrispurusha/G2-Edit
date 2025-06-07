@@ -444,6 +444,10 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeNoise, paramType1CommonDial,     paramType2Dial,   {{ 70,  -3}, {7, 14}}, anchorBottomLeft,  "Color",   128, 0, NULL,               NULL          },  // 31 Color  *** Or special dial
     {moduleTypeNoise,     paramType1Bypass,         paramType2Toggle, {{-3,  -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 31 Bypass
     // 32 Eq2Band
+    {moduleTypeEq2Band, paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Lo",   128, 64, NULL,               NULL          },  // 32 Lo Gain
+    {moduleTypeEq2Band, paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  "Hi",   128, 64, NULL,               NULL          },  // 32 Hi Gain
+    {moduleTypeEq2Band, paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  "Level",   128, 127, NULL,               NULL          },  // 32 Level
+    {moduleTypeEq2Band,     paramType1Bypass,         paramType2Toggle, {{-3,  -9}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 32 Bypass
     // 33 Eq3Band
     // 34 ShpExp
     // 35 Driver
@@ -773,8 +777,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDevice,    connectorDirOut,  connectorTypeControl, {{ 88,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "GWh2",    labelLocUp   },  // 30 Global Wheel 2
     // 31 Noise
     {moduleTypeNoise,    connectorDirOut,  connectorTypeAudio, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 31 Out
-
     // 32 Eq2Band
+    {moduleTypeEq2Band,    connectorDirIn,  connectorTypeAudio, {{ -3,   -15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 32 In
+    {moduleTypeEq2Band,    connectorDirOut,  connectorTypeAudio, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 32 Out
+
     // 33 Eq3Band
     // 34 ShpExp
     // 35 Driver
