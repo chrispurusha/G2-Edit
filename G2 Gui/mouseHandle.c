@@ -692,6 +692,7 @@ void open_module_area_context_menu(tCoord coord) {
     };
     static tMenuItem levelMenuItems[] = {
         {"Create Constant",    menu_action_create,  moduleTypeConstant, NULL},
+        {"Create ConstSwT",    menu_action_create,  moduleTypeConstSwT, NULL},
         {"Create LevMult",     menu_action_create,  moduleTypeLevMult,  NULL},
         {NULL,                 NULL,                                 0, NULL}       // End of menu
     };

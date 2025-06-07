@@ -546,7 +546,11 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeFltMulti,   paramType1StandardToggle, paramType2Toggle, {{ 70, -10}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, fltMultiDbStrMap,   NULL          }, // 49 dB
     {moduleTypeFltMulti,   paramType1Bypass,         paramType2Toggle, {{-17,   -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 49 Bypass
     // 50 ConstSwT
+    {moduleTypeConstSwT,    paramType1CommonDial, paramType2Dial, {{80,  -3}, {7,  14}}, anchorBottomLeft, NULL,        128, 64, NULL,     NULL          },  // 50 Value
+    {moduleTypeConstSwT,   paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  NULL,       2,  0, offOnStrMap,   offOnColourMap          }, // 50 Switch
+    {moduleTypeConstSwT,    paramType1StandardToggle, paramType2Toggle, {{ 40, -3}, {7,  7}}, anchorBottomLeft,  NULL,       2,  0, bipUniStrMap, NULL},  // 50 Bip/Uni
     // 51 FltNord
+    
     // 52 EnvMulti
     // 53 SandH
     // 54 FltStatic
@@ -914,7 +918,6 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypePan,    connectorDirIn,  connectorTypeControl, {{  20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 47 Mod
     {moduleTypePan,    connectorDirOut,  connectorTypeControl, {{  -15,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "L",    labelLocLeft}, // 47 OutL
     {moduleTypePan,    connectorDirOut,  connectorTypeControl, {{  -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "R",    labelLocLeft}, // 46 OutR
-
    // 48 MixStereo
     {moduleTypeMixStereo,    connectorDirIn,  connectorTypeControl, {{  10,  -30}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 48 In1
     {moduleTypeMixStereo,    connectorDirIn,  connectorTypeControl, {{  22,  -30}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 48 In2
@@ -932,6 +935,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFltMulti,   connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // PitchVar
     {moduleTypeFltMulti,   connectorDirIn,  connectorTypeControl, {{  3,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // Pitch
     // 50 ConstSwT
+    {moduleTypeConstSwT,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 50 Out
     // 51 FltNord
     {moduleTypeFltNord,    connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   }, // 51
     {moduleTypeFltNord,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // Out
