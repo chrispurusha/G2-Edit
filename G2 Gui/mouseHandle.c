@@ -716,6 +716,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Clip",   menu_action_create,  moduleTypeClip, NULL},
         {"Create OverDrive",   menu_action_create,  moduleTypeOverdrive, NULL},
         {"Create ShpExp",     menu_action_create,  moduleTypeShpExp,   NULL},
+        {"Create WaveWrap",     menu_action_create,  moduleTypeWaveWrap,   NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
     static tMenuItem mixerMenuItems[] = {

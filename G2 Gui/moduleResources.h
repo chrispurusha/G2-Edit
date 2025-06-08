@@ -665,6 +665,9 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeNoteScaler,   paramType1CommonDial,           paramType2Dial,   {{40,  -3}, {7, 14}}, anchorBottomLeft,  "Range",    128,  0, NULL,               NULL          },  // 72 Range *** needs UI element
     // 73 Unknown
     // 74 WaveWrap
+    {moduleTypeWaveWrap,   paramType1CommonDial,           paramType2Dial,   {{40,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  0, NULL,               NULL          },  // 74 Amount Mod
+    {moduleTypeWaveWrap,   paramType1CommonDial,           paramType2Dial,   {{55,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  0, NULL,               NULL          },  // 74 Amount
+    {moduleTypeWaveWrap,   paramType1Bypass,         paramType2Toggle, {{-10,   -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 74 Bypass
     // 75 NoteQuant
     // 76 SwOnOffT
     // 77 Unknown
@@ -1119,6 +1122,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeNoteScaler,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 72 Out
     // 73 Unknown
     // 74 WaveWrap
+    {moduleTypeWaveWrap,    connectorDirIn,  connectorTypeControl, {{  30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 74 Mod
+    {moduleTypeWaveWrap,    connectorDirIn,  connectorTypeControl, {{  -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocRight}, // 74 In
+    {moduleTypeWaveWrap,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 74 Out
     // 75 NoteQuant
     // 76 SwOnOffT
     // 77 Unknown
