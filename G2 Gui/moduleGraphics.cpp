@@ -237,6 +237,21 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
+        case paramType1FreqDrum:
+        {
+            double freq = 0.0;
+            
+            // 0 -> 20 Hz, 127 -> 784 Hz
+            freq = round(20.0 * pow(2, (double)paramValue * 0.041675) * 100.0) / 100.0;
+
+            if (freq < 100) {
+                snprintf(buff, sizeof(buff), "%.2fHz", freq);
+            } else {
+                snprintf(buff, sizeof(buff), "%.1fHz", freq);
+            }
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
         case paramType1dB:
         {
             double dB = 0.0;

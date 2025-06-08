@@ -62,6 +62,7 @@ const char * vowelStrMap[]        = {"A", "E", "I", "O", "U", "Y", "AA", "AE", "
 const char * nordFilterTypeStrMap[]={"LP", "BP", "HP", "BR"};
 const char * staticFilterTypeStrMap[]={"LP", "BP", "HP"};
 const char * multiEnvSustainStrMap[]= {"None", "L1", "L2", "L3", "L4"};
+const char * drSynthPresetStrMap[]= {"Kick 1"}; // *** Don't have the list
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -582,15 +583,32 @@ const tParamLocation paramLocationList[] = {
     // 54 FltStatic
     {moduleTypeFltStatic,   paramType1Freq,           paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "Freq",    128,  0, NULL,               NULL          },  // 54 Freq
     {moduleTypeFltStatic,   paramType1Resonance,      paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Res",     128,  0, NULL,               NULL          }, // 54 Res
-    {moduleTypeFltStatic,   paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  NULL,        3,  0, nordFilterTypeStrMap,   NULL          }, // 54 FilterType
+    {moduleTypeFltStatic,   paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  NULL,        3,  0, staticFilterTypeStrMap,   NULL          }, // 54 FilterType
     {moduleTypeFltStatic,   paramType1Bypass,         paramType2Toggle, {{-3,   2}, {5,  5}}, anchorMiddleRight, NULL,        2,  1, NULL,               NULL          }, // 54 Bypass
     {moduleTypeFltStatic,   paramType1StandardToggle, paramType2Toggle, {{ 80,   -3}, {7,  7}}, anchorBottomLeft,     NULL,        2,  0, gcStrMap,           offOnColourMap}, // 54 GC
     // 55 EnvD
     {moduleTypeEnvD,    paramType1ADRTime,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Decay",     128,  0, NULL,               NULL          }, // 55 Decay
     {moduleTypeEnvD,    paramType1StandardToggle, paramType2Toggle, {{55, -3}, {7,  7}}, anchorBottomLeft, NULL,        6,  0, posStrMap,          NULL          }, // 55 OutType
-    // 56 Resonator
-    // 57 Automate
+    // 56 Resonator *** Which module is this?
+    // 57 Automate *** We lack an UI element for the CTRL selector
     // 58 Drumsynth
+    {moduleTypeDrumSynth,   paramType1FreqDrum,           paramType2Dial,   {{ 20,  -22}, {7, 14}}, anchorBottomLeft,  NULL,    128,  100, NULL,               NULL          },  // 58 Master Freq
+    {moduleTypeDrumSynth,   paramType1CommonDial,           paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  0, NULL,               NULL          },  // 58 Slave Ratio
+    {moduleTypeDrumSynth,    paramType1ADRTime,     paramType2Dial,   {{ 30,  -22}, {7, 14}}, anchorBottomLeft,  "Dcy",     128,  0, NULL,               NULL          }, // 58 MasterDecay
+    {moduleTypeDrumSynth,    paramType1ADRTime,     paramType2Dial,   {{ 30,  -3}, {7, 14}}, anchorBottomLeft,  "Dcy",     128,  0, NULL,               NULL          }, // 58 Slave Decay
+    {moduleTypeDrumSynth,   paramType1CommonDial,           paramType2Dial,   {{ 40,  -22}, {7, 14}}, anchorBottomLeft,  "Lvl",    128,  100, NULL,               NULL          },  // 58 Master Level
+    {moduleTypeDrumSynth,   paramType1CommonDial,           paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Lvl",    128,  100, NULL,               NULL          },  // 58 Slave Level
+    {moduleTypeDrumSynth,   paramType1Freq,           paramType2Dial,   {{ 50,  -22}, {7, 14}}, anchorBottomLeft,  "Freq",    128,  0, NULL,               NULL          },  // 58 Noise Filter Freq
+    {moduleTypeDrumSynth,   paramType1Resonance,      paramType2Dial,   {{ 60,  -22}, {7, 14}}, anchorBottomLeft,  "Res",     128,  0, NULL,               NULL          }, // 54 Noise Filter Res
+    {moduleTypeDrumSynth,   paramType1CommonDial,           paramType2Dial,   {{ 70,  -22}, {7, 14}}, anchorBottomLeft,  "Swp",    128,  0, NULL,               NULL          },  // 58 Noise Filter Sweep
+    {moduleTypeDrumSynth,    paramType1ADRTime,     paramType2Dial,   {{ 80,  -22}, {7, 14}}, anchorBottomLeft,  "Dcy",     128,  0, NULL,               NULL          }, // 58 Noise Filter Decay
+    {moduleTypeDrumSynth,   paramType1StandardToggle, paramType2Toggle, {{ 90, -22}, {7,  7}}, anchorBottomLeft,  NULL,        3,  0, staticFilterTypeStrMap,   NULL          }, // 58 Noise FilterType
+    {moduleTypeDrumSynth,   paramType1CommonDial,           paramType2Dial,   {{ 50,  -3}, {7, 14}}, anchorBottomLeft,  "Bend",    128,  0, NULL,               NULL          },  // 58 Bend Amount
+    {moduleTypeDrumSynth,    paramType1ADRTime,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  "Dcy",     128,  0, NULL,               NULL          }, // 58 BendDecay
+    {moduleTypeDrumSynth,   paramType1CommonDial,           paramType2Dial,   {{ 70,  -3}, {7, 14}}, anchorBottomLeft,  "Click",    128,  0, NULL,               NULL          },  // 58 Click Amount
+    {moduleTypeDrumSynth,   paramType1CommonDial,           paramType2Dial,   {{ 80,  -3}, {7, 14}}, anchorBottomLeft,  "Noise",    128,  0, NULL,               NULL          },  // 58 Noise Amount
+    {moduleTypeDrumSynth,   paramType1Bypass,         paramType2Toggle, {{-3,   -10}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 58 Bypass
+    {moduleTypeDrumSynth,   paramType1StandardToggle, paramType2Toggle, {{ 60, -35}, {7,  7}}, anchorBottomLeft,  NULL,        1,  0, drSynthPresetStrMap,   NULL          }, // 58 Preset *** Length must be updated
     // 59 CompLev
     // 60 Mux8-1X
     // 61 Clip
@@ -998,7 +1016,12 @@ const tConnectorLocation connectorLocationList[] = {
     // 56 Resonator
     // 57 Automate
     // 58 Drumsynth
+    {moduleTypeDrumSynth,    connectorDirIn,  connectorTypeLogic,   {{  3,  5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Trig",  labelLocUp}, // 55 Trig
+    {moduleTypeDrumSynth,    connectorDirIn,  connectorTypeControl, {{  3,  -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Pitch",    labelLocUp}, // 55 Pitch M
+    {moduleTypeDrumSynth,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",    labelLocUp}, // 55 Velocity
+    {moduleTypeDrumSynth,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 55 Out
     // 59 CompLev
+    
     // 60 Mux8-1X
     // 61 Clip
     // 62 OverDrive

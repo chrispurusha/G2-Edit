@@ -665,6 +665,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Osc String",  menu_action_create, moduleTypeOscString, NULL},
         {"Create Noise",  menu_action_create, moduleTypeNoise, NULL},
         {"Create Met Noise",  menu_action_create, moduleTypeMetNoise, NULL},
+        {"Create DrumSynth",  menu_action_create, moduleTypeDrumSynth, NULL},
         {"Create Osc Master",       menu_action_create, moduleTypeOscMaster,    NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
