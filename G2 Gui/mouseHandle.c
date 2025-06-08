@@ -700,6 +700,7 @@ void open_module_area_context_menu(tCoord coord) {
 
     static tMenuItem switchMenuItems[] = {
         {"Create SwOnOffM",   menu_action_create,  moduleTypeSwOnOffM, NULL},
+        {"Create S&H",   menu_action_create,  moduleTypeSandH, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
     static tMenuItem shaperMenuItems[] = {

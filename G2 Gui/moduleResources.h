@@ -577,7 +577,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEnvMulti,    paramType1StandardToggle, paramType2Toggle, {{-17, -29}, {7,  7}}, anchorBottomRight, NULL,        6,  0, posStrMap,          NULL          }, // 52 OutType
     {moduleTypeEnvMulti,    paramType1StandardToggle, paramType2Toggle, {{ 10,   17}, {7,  7}}, anchorTopLeft,     NULL,        2,  0, kbStrMap,           offOnColourMap}, // 52 Kbt
     {moduleTypeEnvMulti,    paramType1StandardToggle, paramType2Toggle, {{-26,  -17}, {7,  7}}, anchorBottomRight, NULL,        4,  0, envShapeStrMap,     NULL          },  // 52 Shape
-    // 53 SandH
+    // 53 SandH -- No parameters
     // 54 FltStatic
     // 55 EnvD
     // 56 Resonator
@@ -975,6 +975,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeEnvMulti,    connectorDirOut, connectorTypeControl, {{-3, 14}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, "Env",   labelLocLeft   }, // 52 Env
     {moduleTypeEnvMulti,    connectorDirOut, connectorTypeControl, {{ -3,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, NULL,    labelLocUp   }, // 52 Out
     // 53 SandH
+    {moduleTypeSandH,    connectorDirIn,  connectorTypeControl, {{  80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 53 In
+    {moduleTypeSandH,    connectorDirIn,  connectorTypeLogic,   {{  60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     "Ctrl",  labelLocLeft}, // 53 Ctrl
+    {moduleTypeSandH,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 53 Out
     // 54 FltStatic
     // 55 EnvD
     // 56 Resonator
