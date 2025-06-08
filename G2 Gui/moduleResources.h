@@ -66,6 +66,7 @@ const char * drSynthPresetStrMap[]= {"Kick 1"}; // *** Don't have the list
 const char * asymSymStrMap[]      = {"Asym", "Sym"};
 const char * odTypeStrMap[]       = {"Soft", "Hard", "Heavy", "Fat"};
 const char * delayStrMap[]        = {"50ms", "?", "?", "?"}; // *** For Scratch module; don't have the list
+const char * gateTypeStrMap[]     = {"AND", "NAND", "OR", "NOR", "XOR", "NXOR"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -632,7 +633,9 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeScratch,   paramType1CommonDial,           paramType2Dial,   {{ 15,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  64, NULL,               NULL          },  // 63 Ratio Mod
     {moduleTypeScratch,   paramType1StandardToggle, paramType2Toggle, {{ 75, -3}, {7,  7}}, anchorBottomLeft,  NULL,        4,  0, delayStrMap,   NULL          }, // 63 Delay
     {moduleTypeScratch,   paramType1Bypass,         paramType2Toggle, {{-3,   -10}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 63 Bypass
-    // 64 Gate
+    // 64 Gate (Logic Gate)
+    {moduleTypeGate,   paramType1StandardToggle, paramType2Toggle, {{ 40, -3}, {7,  7}}, anchorBottomLeft,  NULL,        6,  0, gateTypeStrMap,   NULL          }, // 64 Gate 1 Type
+    {moduleTypeGate,   paramType1StandardToggle, paramType2Toggle, {{ 70, -3}, {7,  7}}, anchorBottomLeft,  NULL,        6,  0, gateTypeStrMap,   NULL          }, // 64 Gate 2 Type
     // 65 Unknown
     // 66 Mix2-1B
     // 67 Unknown
@@ -1065,6 +1068,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeScratch,    connectorDirIn,  connectorTypeControl, {{  6,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp}, // 63 Mod
     {moduleTypeScratch,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 63 Out
     // 64 Gate
+    {moduleTypeGate,    connectorDirIn,  connectorTypeLogic,   {{  35,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,  labelLocRight}, // 64 In1_1
+    {moduleTypeGate,    connectorDirIn,  connectorTypeLogic,   {{  30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,  labelLocRight}, // 64 In1_2
+    {moduleTypeGate,    connectorDirIn,  connectorTypeLogic,   {{  65,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,  labelLocRight}, // 64 In2_1
+    {moduleTypeGate,    connectorDirIn,  connectorTypeLogic,   {{  60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,  labelLocRight}, // 64 In2_1
+    {moduleTypeGate,    connectorDirOut, connectorTypeLogic, {{ 52,  -6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocLeft   }, // 64 Out1
+    {moduleTypeGate,    connectorDirOut, connectorTypeLogic, {{ 82,  -6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocLeft   }, // 64 Out1
     // 65 Unknown
     // 66 Mix2-1B
     // 67 Unknown

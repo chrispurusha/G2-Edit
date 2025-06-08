@@ -727,6 +727,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Invert",   menu_action_create,  moduleTypeInvert, NULL},
         {"Create Pulse",   menu_action_create,  moduleTypePulse, NULL},
         {"Create Delay",   menu_action_create,  moduleTypeDelay, NULL},
+        {"Create Gate",   menu_action_create,  moduleTypeGate, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
     static tMenuItem fxMenuItems[] = {
