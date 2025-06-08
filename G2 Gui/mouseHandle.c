@@ -731,7 +731,8 @@ void open_module_area_context_menu(tCoord coord) {
     };
     static tMenuItem fxMenuItems[] = {
         {"Create Compressor", menu_action_create,  moduleTypeCompress, NULL},
-        {"Create Reberb",     menu_action_create,  moduleTypeReverb,   NULL},
+        {"Create Reverb",     menu_action_create,  moduleTypeReverb,   NULL},
+        {"Create Scratch",     menu_action_create,  moduleTypeScratch,   NULL},
         {NULL,                NULL,                               0,   NULL}       // End of menu
     };
     static tMenuItem moduleMenuItems[] = {

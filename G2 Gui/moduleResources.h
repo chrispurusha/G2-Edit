@@ -65,6 +65,7 @@ const char * multiEnvSustainStrMap[]= {"None", "L1", "L2", "L3", "L4"};
 const char * drSynthPresetStrMap[]= {"Kick 1"}; // *** Don't have the list
 const char * asymSymStrMap[]      = {"Asym", "Sym"};
 const char * odTypeStrMap[]       = {"Soft", "Hard", "Heavy", "Fat"};
+const char * delayStrMap[]        = {"50ms", "?", "?", "?"}; // *** For Scratch module; don't have the list
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -626,8 +627,11 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeOverdrive,   paramType1Bypass,         paramType2Toggle, {{-10,   -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 62 Bypass
     {moduleTypeOverdrive,   paramType1StandardToggle, paramType2Toggle, {{ 15, -3}, {7,  7}}, anchorBottomLeft,  NULL,        4,  0, odTypeStrMap,   NULL          }, // 62 Type
     {moduleTypeOverdrive,   paramType1StandardToggle, paramType2Toggle, {{ 3, -3}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, asymSymStrMap,   NULL          }, // 62 Shape
-
     // 63 Scratch
+    {moduleTypeScratch,   paramType1CommonDial,           paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  64, NULL,               NULL          },  // 63 Ratio
+    {moduleTypeScratch,   paramType1CommonDial,           paramType2Dial,   {{ 15,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  64, NULL,               NULL          },  // 63 Ratio Mod
+    {moduleTypeScratch,   paramType1StandardToggle, paramType2Toggle, {{ 75, -3}, {7,  7}}, anchorBottomLeft,  NULL,        4,  0, delayStrMap,   NULL          }, // 63 Delay
+    {moduleTypeScratch,   paramType1Bypass,         paramType2Toggle, {{-3,   -10}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 63 Bypass
     // 64 Gate
     // 65 Unknown
     // 66 Mix2-1B
@@ -1057,6 +1061,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeOverdrive,    connectorDirIn,  connectorTypeControl, {{  33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp}, // 62 Mod
     {moduleTypeOverdrive,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 62 Out
     // 63 Scratch
+    {moduleTypeScratch,    connectorDirIn,  connectorTypeControl, {{  -3,  -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocUp}, // 63 In
+    {moduleTypeScratch,    connectorDirIn,  connectorTypeControl, {{  6,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp}, // 63 Mod
+    {moduleTypeScratch,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 63 Out
     // 64 Gate
     // 65 Unknown
     // 66 Mix2-1B
