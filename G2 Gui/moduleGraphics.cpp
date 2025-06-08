@@ -305,6 +305,17 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
+        case paramType1LevAmpDial: // 0.25 to 4.0
+        {
+            double lev = 1.0;
+            // scale 0 -> 0.25x and 127 -> 4.0x, exponentially
+            lev = round(exp((double)paramValue * 0.0218 )*0.25*100.0)/100.0;
+            
+            snprintf(buff, sizeof(buff), "%.2fx", lev);
+            
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
         case paramType1CommonDial:         // Ultimately might not be a common dial, or could just be a default percent dial!?
         case paramType1LRDial: // Pan type dial, perhaps with reset triangle
         case paramType1Resonance:

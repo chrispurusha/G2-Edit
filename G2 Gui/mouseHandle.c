@@ -701,6 +701,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Constant",    menu_action_create,  moduleTypeConstant, NULL},
         {"Create ConstSwT",    menu_action_create,  moduleTypeConstSwT, NULL},
         {"Create CompLev",    menu_action_create,  moduleTypeCompLev, NULL},
+        {"Create LevAmp",     menu_action_create,  moduleTypeLevAmp,  NULL},
         {"Create LevMult",     menu_action_create,  moduleTypeLevMult,  NULL},
         {"Create EnvFollow",     menu_action_create,  moduleTypeEnvFollow,  NULL},
         {NULL,                 NULL,                                 0, NULL}       // End of menu
@@ -709,6 +710,8 @@ void open_module_area_context_menu(tCoord coord) {
     static tMenuItem switchMenuItems[] = {
         {"Create SwOnOffM",   menu_action_create,  moduleTypeSwOnOffM, NULL},
         {"Create SwOnOffT",   menu_action_create,  moduleTypeSwOnOffT, NULL},
+        {"Create Sw4-1",   menu_action_create,  moduleTypeSw4to1, NULL},
+        {"Create Sw1-8",   menu_action_create,  moduleTypeSw1to8, NULL},
         {"Create Mux8-1X",   menu_action_create,  moduleTypeMux8to1X, NULL},
         {"Create S&H",   menu_action_create,  moduleTypeSandH, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu

@@ -71,6 +71,8 @@ const char * invStrMap[]          = {"+", "Inv"};
 const char * clkSrcStrMap[]       = {"Internal", "Master"};
 const char * syncBeatStrMap[]     = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"};
 const char * divModeStrMap[]      = {"Gated", "Toggled"};
+const char * out8StrMap[]         = {"Out1", "Out2", "Out3", "Out4", "Out5", "Out6", "Out7", "Out8"};
+const char * in8StrMap[]          = {"In1", "In2", "In3", "In4", "In5", "In6", "In7", "In8"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -675,9 +677,13 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeSwOnOffT,    paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  NULL,       2,  0, offOnStrMap, NULL}, // 76 On
     // 77 Unknown
     // 78 Sw1-8
+    {moduleTypeSw1to8,   paramType1StandardToggle, paramType2Toggle, {{ 40, -17}, {7,  7}}, anchorBottomLeft,  NULL,        8,  0, out8StrMap,   NULL          }, // 78 Selector
     // 79 Sw4-1
+    {moduleTypeSw4to1,   paramType1StandardToggle, paramType2Toggle, {{ 40, -17}, {7,  7}}, anchorBottomLeft,  NULL,        4,  0, in8StrMap,   NULL          }, // 79 Selector
     // 80 Unknown
     // 81 LevAmp
+    {moduleTypeLevAmp,   paramType1LevAmpDial,           paramType2Dial,   {{70,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  64, NULL,               NULL          },  // 81 Gain
+    {moduleTypeLevAmp,    paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  NULL,       2,  1, expStrMap, NULL}, // 81 Type
     // 82 Rect
     // 83 ShpStatic
     // 84 EnvADR
@@ -1137,9 +1143,27 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSwOnOffT,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 76 Ctrl
     // 77 Unknown
     // 78 Sw1-8
+    {moduleTypeSw1to8,    connectorDirIn,  connectorTypeControl, {{ 15,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 78 In
+    {moduleTypeSw1to8,    connectorDirOut,  connectorTypeControl, {{ 28,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "1",    labelLocLeft   },  // 78 Out1
+    {moduleTypeSw1to8,    connectorDirOut,  connectorTypeControl, {{ 36,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "2",    labelLocLeft   },  // 78 Out2
+    {moduleTypeSw1to8,    connectorDirOut,  connectorTypeControl, {{ 44,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "3",    labelLocLeft   },  // 78 Out3
+    {moduleTypeSw1to8,    connectorDirOut,  connectorTypeControl, {{ 52,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "4",    labelLocLeft   },  // 78 Out4
+    {moduleTypeSw1to8,    connectorDirOut,  connectorTypeControl, {{ 60,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "5",    labelLocLeft   },  // 78 Out5
+    {moduleTypeSw1to8,    connectorDirOut,  connectorTypeControl, {{ 68,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "6",    labelLocLeft   },  // 78 Out6
+    {moduleTypeSw1to8,    connectorDirOut,  connectorTypeControl, {{ 76,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "7",    labelLocLeft   },  // 78 Out7
+    {moduleTypeSw1to8,    connectorDirOut,  connectorTypeControl, {{ 84,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "8",    labelLocLeft   },  // 78 Out8
+    {moduleTypeSw1to8,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Ctrl",    labelLocRight   },  // 78 Ctrl
     // 79 Sw4-1
+    {moduleTypeSw4to1,    connectorDirIn,  connectorTypeControl, {{ 20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "1",    labelLocLeft   },  // 79 In1
+    {moduleTypeSw4to1,    connectorDirIn,  connectorTypeControl, {{ 30,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "2",    labelLocLeft   },  // 79 In2
+    {moduleTypeSw4to1,    connectorDirIn,  connectorTypeControl, {{ 40,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "3",    labelLocLeft   },  // 79 In3
+    {moduleTypeSw4to1,    connectorDirIn,  connectorTypeControl, {{ 50,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "4",    labelLocLeft   },  // 79 In4
+    {moduleTypeSw4to1,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 79 Out
+    {moduleTypeSw4to1,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Ctrl",    labelLocRight   },  // 79 Ctrl
     // 80 Unknown
     // 81 LevAmp
+    {moduleTypeLevAmp,    connectorDirIn,  connectorTypeControl, {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 81 In
+    {moduleTypeLevAmp,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 81 Out
     // 82 Rect
     // 83 ShpStatic
     // 84 EnvADR
