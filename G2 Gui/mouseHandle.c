@@ -656,6 +656,7 @@ void open_module_area_context_menu(tCoord coord) {
         {NULL,              NULL,                                0, NULL}         // End of menu
     };
     static tMenuItem noteMenuItems[] = {
+        {"Create NoteScaler", menu_action_create, moduleTypeNoteScaler, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
     static tMenuItem oscMenuItems[] = {
@@ -749,7 +750,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Level",    menu_action_create, 0, levelMenuItems },
         {"Create Switch",   menu_action_create, 0, switchMenuItems},
         {"Create Sequence", menu_action_create, 0, NULL           },
-        {"Create Note",     menu_action_create, 0, NULL           },
+        {"Create Note",     menu_action_create, 0, noteMenuItems  },
         {"Create LFO",      menu_action_create, 0, lfoMenuItems   },
         {"Create Env",      menu_action_create, 0, envMenuItems   },
         {"Create FX",       menu_action_create, 0, fxMenuItems    },

@@ -662,6 +662,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEnvFollow,    paramType1ADRTime,     paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "Attack",     128,  0, NULL,               NULL          }, // 71 Attack *** check values
     {moduleTypeEnvFollow,    paramType1ADRTime,     paramType2Dial,   {{ 35,  -3}, {7, 14}}, anchorBottomLeft,  "Release",     128,  0, NULL,               NULL          }, // 71 Attack *** check values
     // 72 NoteScaler
+    {moduleTypeNoteScaler,   paramType1CommonDial,           paramType2Dial,   {{40,  -3}, {7, 14}}, anchorBottomLeft,  "Range",    128,  0, NULL,               NULL          },  // 72 Range *** needs UI element
     // 73 Unknown
     // 74 WaveWrap
     // 75 NoteQuant
@@ -1114,6 +1115,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeEnvFollow,    connectorDirIn,  connectorTypeControl, {{  -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocRight}, // 71 In
     {moduleTypeEnvFollow,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 71 Out
     // 72 NoteScaler
+    {moduleTypeNoteScaler,    connectorDirIn,  connectorTypeControl, {{  -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocRight}, // 72 In
+    {moduleTypeNoteScaler,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 72 Out
     // 73 Unknown
     // 74 WaveWrap
     // 75 NoteQuant
