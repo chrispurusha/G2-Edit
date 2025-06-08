@@ -64,6 +64,7 @@ const char * staticFilterTypeStrMap[]={"LP", "BP", "HP"};
 const char * multiEnvSustainStrMap[]= {"None", "L1", "L2", "L3", "L4"};
 const char * drSynthPresetStrMap[]= {"Kick 1"}; // *** Don't have the list
 const char * asymSymStrMap[]      = {"Asym", "Sym"};
+const char * odTypeStrMap[]       = {"Soft", "Hard", "Heavy", "Fat"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -620,6 +621,12 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeClip,   paramType1StandardToggle, paramType2Toggle, {{ 10, -3}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, asymSymStrMap,   NULL          }, // 61 Shape
     {moduleTypeClip,   paramType1Bypass,         paramType2Toggle, {{-10,   -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 61 Bypass
     // 62 OverDrive
+    {moduleTypeOverdrive,   paramType1CommonDial,           paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  0, NULL,               NULL          },  // 62 Amount M
+    {moduleTypeOverdrive,   paramType1CommonDial,           paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  0, NULL,               NULL          },  // 62 Amount
+    {moduleTypeOverdrive,   paramType1Bypass,         paramType2Toggle, {{-10,   -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 62 Bypass
+    {moduleTypeOverdrive,   paramType1StandardToggle, paramType2Toggle, {{ 15, -3}, {7,  7}}, anchorBottomLeft,  NULL,        4,  0, odTypeStrMap,   NULL          }, // 62 Type
+    {moduleTypeOverdrive,   paramType1StandardToggle, paramType2Toggle, {{ 3, -3}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, asymSymStrMap,   NULL          }, // 62 Shape
+
     // 63 Scratch
     // 64 Gate
     // 65 Unknown
@@ -1046,6 +1053,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeClip,    connectorDirIn,  connectorTypeControl, {{  33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp}, // 61 Mod
     {moduleTypeClip,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 61 Out
     // 62 OverDrive
+    {moduleTypeOverdrive,    connectorDirIn,  connectorTypeControl, {{  -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocUp}, // 62 In
+    {moduleTypeOverdrive,    connectorDirIn,  connectorTypeControl, {{  33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp}, // 62 Mod
+    {moduleTypeOverdrive,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 62 Out
     // 63 Scratch
     // 64 Gate
     // 65 Unknown

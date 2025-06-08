@@ -711,6 +711,7 @@ void open_module_area_context_menu(tCoord coord) {
     static tMenuItem shaperMenuItems[] = {
         {"Create Saturate",   menu_action_create,  moduleTypeSaturate, NULL},
         {"Create Clip",   menu_action_create,  moduleTypeClip, NULL},
+        {"Create OverDrive",   menu_action_create,  moduleTypeOverdrive, NULL},
         {"Create ShpExp",     menu_action_create,  moduleTypeShpExp,   NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
