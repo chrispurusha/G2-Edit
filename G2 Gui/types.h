@@ -107,7 +107,7 @@ typedef enum {
     moduleTypeLevAmp,
     moduleTypeRect,
     moduleTypeShpStatic,
-    moduleTypeEnvAD,
+    moduleTypeEnvADR,
     moduleTypeWindSw,
     moduleType8Counter,
     moduleTypeFltLP,

@@ -681,6 +681,7 @@ void open_module_area_context_menu(tCoord coord) {
     static tMenuItem envMenuItems[] = {
         {"Create Env ADSR", menu_action_create, moduleTypeEnvADSR, NULL},
         {"Create Env AHD",  menu_action_create, moduleTypeEnvAHD,  NULL},
+        {"Create Env ADR",  menu_action_create, moduleTypeEnvADR,  NULL},
         {"Create Env H",    menu_action_create, moduleTypeEnvH,    NULL},
         {"Create Env D",    menu_action_create, moduleTypeEnvD,    NULL},
         {"Create Env Multi",menu_action_create, moduleTypeEnvMulti,NULL},

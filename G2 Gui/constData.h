@@ -168,7 +168,7 @@ tModuleDef      constModules[] = {
     { 81, "LevAmp",      "LevCAmplifier",    "Level Amplifier",                       2,  19,  15, 206, 1, 0, "",  5},
     { 82, "Rect",        "ShaperDiode",      "Rectifier",                             2,   9,   4, 208, 1, 0, "",  6},
     { 83, "ShpStatic",   "ShaperShaper",     "Shape Static",                          2,   0,   1, 208, 1, 0, "",  5},
-    { 84, "EnvADR",      "EnvAD",            "Envelope AD/R",                         3,  35,  33, 206, 0, 0, "",  3},
+    { 84, "EnvADR",      "EnvADR",            "Envelope AD/R",                         3,  35,  33, 206, 0, 0, "",  3},
     { 85, "WindSw",      "SwWindSw",         "Window Switch",                         2,  25,   9, 206, 1, 0, "", 12},
     { 86, "8Counter",    "Logic8-Counter",   "8 Counter",                             2,  46,  47, 208, 0, 0, "",  6},
     { 87, "FltLP",       "FilterLP",         "Filter Lowpass",                        2,   0,   0, 208, 0, 0, "",  0},

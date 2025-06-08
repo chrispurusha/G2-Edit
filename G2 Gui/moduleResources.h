@@ -75,6 +75,8 @@ const char * out8StrMap[]         = {"Out1", "Out2", "Out3", "Out4", "Out5", "Ou
 const char * in8StrMap[]          = {"In1", "In2", "In3", "In4", "In5", "In6", "In7", "In8"};
 const char * rectStrMap[]         = {"Half wave pos.", "Half wave neg.", "Full wave pos.", "Full wave neg."};
 const char * shpStaticStrMap[]    = {"Inv x3", "Inv x2", "x2", "x3"};
+const char * trigGateStrMap[]     = {"Trig", "Gate"};
+const char * decayReleaseStrMap[] = {"Decay", "Release"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -207,7 +209,7 @@ const tModuleProperties gModuleProperties[] = {
     {"LevAmp",       2, volumeTypeNone,     ledTypeNo },
     {"Rect",         2, volumeTypeNone,     ledTypeNo },
     {"ShpStatic",    2, volumeTypeNone,     ledTypeNo },
-    {"EnvAD",        3, volumeTypeNone,     ledTypeNo },
+    {"EnvADR",       3, volumeTypeNone,     ledTypeNo },
     {"WindSw",       2, volumeTypeNone,     ledTypeNo },
     {"8Counter",     2, volumeTypeNone,     ledTypeNo },
     {"FltLP",        2, volumeTypeNone,     ledTypeNo },
@@ -693,6 +695,14 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeShpStatic,   paramType1StandardToggle, paramType2Toggle, {{ 40, -3}, {7,  7}}, anchorBottomLeft,  NULL,        4,  0, shpStaticStrMap,   NULL          }, // 83 Mode
     {moduleTypeShpStatic,   paramType1Bypass,         paramType2Toggle, {{-10,   -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 83 Bypass
     // 84 EnvADR
+    {moduleTypeEnvADR,    paramType1StandardToggle, paramType2Toggle, {{70,  -17}, {7,  7}}, anchorBottomLeft, NULL,        4,  0, envShapeStrMap,     NULL          },  // 84 Shape
+    {moduleTypeEnvADR,    paramType1ADRTime,     paramType2Dial,   {{ 35,  -3}, {7, 14}}, anchorBottomLeft,  "Attack",  128,  0, NULL,               NULL          },  // 84 Attack
+    {moduleTypeEnvADR,    paramType1StandardToggle, paramType2Toggle, {{  28,  -17}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, normalResetStrMap,  NULL          },  // 84 Reset
+    {moduleTypeEnvADR,    paramType1ADRTime,     paramType2Dial,   {{ 55,  -3}, {7, 14}}, anchorBottomLeft,  NULL,     128,  0, NULL,               NULL          }, // 84 Release/Decay time
+    {moduleTypeEnvADR,    paramType1StandardToggle, paramType2Toggle, {{  10,  -3}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, trigGateStrMap,  NULL          },  // 84 Trig/Gate
+    {moduleTypeEnvADR,    paramType1StandardToggle, paramType2Toggle, {{70, -10}, {7,  7}}, anchorBottomLeft, NULL,        6,  0, posStrMap,          NULL          },
+    {moduleTypeEnvADR,    paramType1StandardToggle, paramType2Toggle, {{ 3,   -10}, {7,  7}}, anchorBottomLeft,     NULL,        2,  0, kbStrMap,           offOnColourMap},
+    {moduleTypeEnvADR,    paramType1StandardToggle, paramType2Toggle, {{  52,  -12}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, decayReleaseStrMap,  NULL          },  // 84 Decay/Release toggle
     // 85 WindSw
     // 86 8Counter
     // 87 FltLP
@@ -1177,6 +1187,13 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeShpStatic,    connectorDirIn,  connectorTypeControl, {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 82 In
     {moduleTypeShpStatic,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 82 Out
     // 84 EnvADR
+    {moduleTypeEnvADR,    connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,  labelLocRight}, // 84 Trig/Gate
+    {moduleTypeEnvADR,    connectorDirIn,  connectorTypeControl, {{  -3,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocRight}, // 84 In
+    {moduleTypeEnvADR,    connectorDirIn,  connectorTypeControl, {{ 25,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "AM",    labelLocUp}, // 84 AM
+    {moduleTypeEnvADR,    connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",   labelLocUp   }, // 84 Env
+    {moduleTypeEnvADR,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 84 Out
+    {moduleTypeEnvADR,    connectorDirOut,  connectorTypeLogic,   {{  -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,     NULL,  labelLocLeft}, // 46 End
+
     // 85 WindSw
     // 86 8Counter
     // 87 FltLP
