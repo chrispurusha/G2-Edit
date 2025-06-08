@@ -63,6 +63,7 @@ const char * nordFilterTypeStrMap[]={"LP", "BP", "HP", "BR"};
 const char * staticFilterTypeStrMap[]={"LP", "BP", "HP"};
 const char * multiEnvSustainStrMap[]= {"None", "L1", "L2", "L3", "L4"};
 const char * drSynthPresetStrMap[]= {"Kick 1"}; // *** Don't have the list
+const char * asymSymStrMap[]      = {"Asym", "Sym"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -614,6 +615,10 @@ const tParamLocation paramLocationList[] = {
     // 60 Mux8-1X
     {moduleTypeMux8to1X,   paramType1CommonDial,           paramType2Dial,   {{ 80,  -3}, {7, 14}}, anchorBottomLeft,  "X-fade",    128,  0, NULL,               NULL          },  // 58 X-fade
     // 61 Clip
+    {moduleTypeClip,   paramType1CommonDial,           paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  0, NULL,               NULL          },  // 61 Clip level M
+    {moduleTypeClip,   paramType1CommonDial,           paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  0, NULL,               NULL          },  // 61 Clip level
+    {moduleTypeClip,   paramType1StandardToggle, paramType2Toggle, {{ 10, -3}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, asymSymStrMap,   NULL          }, // 61 Shape
+    {moduleTypeClip,   paramType1Bypass,         paramType2Toggle, {{-10,   -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 61 Bypass
     // 62 OverDrive
     // 63 Scratch
     // 64 Gate
@@ -1035,8 +1040,11 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{  58,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",    labelLocUp}, // 60 In7
     {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{  66,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",    labelLocUp}, // 60 In8
     {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",    labelLocUp}, // 60 Ctrl
-    {moduleTypeMux8to1X,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 55 Out
+    {moduleTypeMux8to1X,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 60 Out
     // 61 Clip
+    {moduleTypeClip,    connectorDirIn,  connectorTypeControl, {{  -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocUp}, // 61 In
+    {moduleTypeClip,    connectorDirIn,  connectorTypeControl, {{  33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp}, // 61 Mod
+    {moduleTypeClip,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 61 Out
     // 62 OverDrive
     // 63 Scratch
     // 64 Gate
