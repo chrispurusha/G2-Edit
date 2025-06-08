@@ -657,9 +657,10 @@ const tParamLocation paramLocationList[] = {
     // 69 ClkDiv
     {moduleTypeClkDiv,   paramType1CommonDial,           paramType2Dial,   {{60,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  0, NULL,               NULL          },  // 69 Divider *** needs other UI element
     {moduleTypeClkGen,  paramType1StandardToggle,     paramType2Toggle,   {{ 80,  -3}, {7, 7}}, anchorBottomLeft,  NULL,    2, 0, divModeStrMap,               NULL          },  // 69 DivMode
-
     // 70 Unknown
     // 71 EnvFollow
+    {moduleTypeEnvFollow,    paramType1ADRTime,     paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "Attack",     128,  0, NULL,               NULL          }, // 71 Attack *** check values
+    {moduleTypeEnvFollow,    paramType1ADRTime,     paramType2Dial,   {{ 35,  -3}, {7, 14}}, anchorBottomLeft,  "Release",     128,  0, NULL,               NULL          }, // 71 Attack *** check values
     // 72 NoteScaler
     // 73 Unknown
     // 74 WaveWrap
@@ -1110,6 +1111,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeClkDiv,    connectorDirOut, connectorTypeLogic, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 69 Out
     // 70 Unknown
     // 71 EnvFollow
+    {moduleTypeEnvFollow,    connectorDirIn,  connectorTypeControl, {{  -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocRight}, // 71 In
+    {moduleTypeEnvFollow,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 71 Out
     // 72 NoteScaler
     // 73 Unknown
     // 74 WaveWrap

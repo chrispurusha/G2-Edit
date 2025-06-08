@@ -700,6 +700,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create ConstSwT",    menu_action_create,  moduleTypeConstSwT, NULL},
         {"Create CompLev",    menu_action_create,  moduleTypeCompLev, NULL},
         {"Create LevMult",     menu_action_create,  moduleTypeLevMult,  NULL},
+        {"Create EnvFollow",     menu_action_create,  moduleTypeEnvFollow,  NULL},
         {NULL,                 NULL,                                 0, NULL}       // End of menu
     };
 
