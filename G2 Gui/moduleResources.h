@@ -67,6 +67,7 @@ const char * asymSymStrMap[]      = {"Asym", "Sym"};
 const char * odTypeStrMap[]       = {"Soft", "Hard", "Heavy", "Fat"};
 const char * delayStrMap[]        = {"50ms", "?", "?", "?"}; // *** For Scratch module; don't have the list
 const char * gateTypeStrMap[]     = {"AND", "NAND", "OR", "NOR", "XOR", "NXOR"};
+const char * invStrMap[]          = {"+", "Inv"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -638,6 +639,11 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeGate,   paramType1StandardToggle, paramType2Toggle, {{ 70, -3}, {7,  7}}, anchorBottomLeft,  NULL,        6,  0, gateTypeStrMap,   NULL          }, // 64 Gate 2 Type
     // 65 Unknown
     // 66 Mix2-1B
+    {moduleTypeMix2to1B,   paramType1StandardToggle,         paramType2Toggle, {{40,   -3}, {7,  7}}, anchorBottomLeft, NULL,        2,  0, invStrMap,               NULL          }, // 66 Inv1
+    {moduleTypeMix2to1B,   paramType1CommonDial,           paramType2Dial,   {{ 50,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  100, NULL,               NULL          },  // 66 Lvl1
+    {moduleTypeMix2to1B,   paramType1StandardToggle,         paramType2Toggle, {{65,   -3}, {7,  7}}, anchorBottomLeft, NULL,        2,  0, invStrMap,               NULL          }, // 66 Inv2
+    {moduleTypeMix2to1B,   paramType1CommonDial,           paramType2Dial,   {{ 75,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  100, NULL,               NULL          },  // 66 Lvl2
+    {moduleTypeMix2to1B,  paramType1StandardToggle,     paramType2Toggle,   {{ 20,  -3}, {7, 7}}, anchorBottomLeft,  NULL,    3, 0, expStrMap,               NULL          },  // 66 ExpLinDB
     // 67 Unknown
     // 68 ClkGen
     // 69 ClkDiv
@@ -1076,6 +1082,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeGate,    connectorDirOut, connectorTypeLogic, {{ 82,  -6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocLeft   }, // 64 Out1
     // 65 Unknown
     // 66 Mix2-1B
+    {moduleTypeMix2to1B,    connectorDirIn,  connectorTypeControl, {{  33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp}, // 66 In1
+    {moduleTypeMix2to1B,    connectorDirIn,  connectorTypeControl, {{  58,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp}, // 66 In2
+    {moduleTypeMix2to1B,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Chain",    labelLocRight}, // 66 Chain
+    {moduleTypeMix2to1B,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 66 Out
     // 67 Unknown
     // 68 ClkGen
     // 69 ClkDiv
