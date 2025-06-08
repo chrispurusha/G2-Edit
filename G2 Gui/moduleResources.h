@@ -68,6 +68,8 @@ const char * odTypeStrMap[]       = {"Soft", "Hard", "Heavy", "Fat"};
 const char * delayStrMap[]        = {"50ms", "?", "?", "?"}; // *** For Scratch module; don't have the list
 const char * gateTypeStrMap[]     = {"AND", "NAND", "OR", "NOR", "XOR", "NXOR"};
 const char * invStrMap[]          = {"+", "Inv"};
+const char * clkSrcStrMap[]       = {"Internal", "Master"};
+const char * syncBeatStrMap[]     = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -646,6 +648,11 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeMix2to1B,  paramType1StandardToggle,     paramType2Toggle,   {{ 20,  -3}, {7, 7}}, anchorBottomLeft,  NULL,    3, 0, expStrMap,               NULL          },  // 66 ExpLinDB
     // 67 Unknown
     // 68 ClkGen
+    {moduleTypeClkGen,   paramType1CommonDial,           paramType2Dial,   {{60,  -17}, {7, 14}}, anchorBottomLeft,  NULL,    128,  100, NULL,               NULL          },  // 68 Tempo *** needs new dial 24-214 BPM
+    {moduleTypeClkGen,   paramType1Bypass,         paramType2Toggle, {{70,   -17}, {5,  5}}, anchorBottomLeft, NULL,        2,  1, NULL,               NULL          }, // 68 Bypass
+    {moduleTypeClkGen,  paramType1StandardToggle,     paramType2Toggle,   {{ 3,  -3}, {7, 7}}, anchorBottomLeft,  "Source",    2, 0, clkSrcStrMap,               NULL          },  // 66 Clk Source
+    {moduleTypeClkGen,  paramType1StandardToggle,     paramType2Toggle,   {{ 60,  -3}, {7, 7}}, anchorBottomLeft,  "Sync every",    16, 3, syncBeatStrMap,               NULL          },  // 66 BeatSync
+    {moduleTypeClkGen,   paramType1CommonDial,           paramType2Dial,   {{25,  -3}, {7, 14}}, anchorBottomLeft,  "Swing",    128,  0, NULL,               NULL          },  // 68 Swing
     // 69 ClkDiv
     // 70 Unknown
     // 71 EnvFollow
@@ -1088,6 +1095,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMix2to1B,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 66 Out
     // 67 Unknown
     // 68 ClkGen
+    {moduleTypeClkGen,    connectorDirIn,  connectorTypeLogic,   {{  3,  -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     "Reset",  labelLocRight}, // 68 Reset
+    {moduleTypeClkGen,    connectorDirOut, connectorTypeLogic, {{ -3,  -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "1/96",    labelLocLeft   }, // 68 1/96
+    {moduleTypeClkGen,    connectorDirOut, connectorTypeLogic, {{ -3,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "1/16",    labelLocLeft   }, // 68 1/16
+    {moduleTypeClkGen,    connectorDirOut, connectorTypeLogic, {{ -3,  -24}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "ClkActive",    labelLocLeft   }, // 68 1/96
+    {moduleTypeClkGen,    connectorDirOut, connectorTypeLogic, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Sync",    labelLocLeft   }, // 68 1/96
+
     // 69 ClkDiv
     // 70 Unknown
     // 71 EnvFollow

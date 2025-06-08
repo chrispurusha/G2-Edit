@@ -673,6 +673,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create LFO A", menu_action_create, moduleTypeLfoA, NULL},
         {"Create LFO C", menu_action_create, moduleTypeLfoC, NULL},
         {"Create LFO Shp A", menu_action_create, moduleTypeLfoShpA, NULL},
+        {"Create ClkGen", menu_action_create, moduleTypeClkGen, NULL},
         {NULL,              NULL,                               0, NULL}          // End of menu
     };
     static tMenuItem envMenuItems[] = {
