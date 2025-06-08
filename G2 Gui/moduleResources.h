@@ -704,6 +704,8 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEnvADR,    paramType1StandardToggle, paramType2Toggle, {{ 3,   -10}, {7,  7}}, anchorBottomLeft,     NULL,        2,  0, kbStrMap,           offOnColourMap},
     {moduleTypeEnvADR,    paramType1StandardToggle, paramType2Toggle, {{  52,  -12}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, decayReleaseStrMap,  NULL          },  // 84 Decay/Release toggle
     // 85 WindSw
+    {moduleTypeWindSw,   paramType1CommonDial,           paramType2Dial,   {{40,  -3}, {7, 14}}, anchorBottomLeft,  "From",    128,  0, NULL,               NULL          },  // 85 From
+    {moduleTypeWindSw,   paramType1CommonDial,           paramType2Dial,   {{60,  -3}, {7, 14}}, anchorBottomLeft,  "To",    128,  0, NULL,               NULL          },  // 85 To
     // 86 8Counter
     // 87 FltLP
     // 88 Sw1-4
@@ -1193,8 +1195,11 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeEnvADR,    connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",   labelLocUp   }, // 84 Env
     {moduleTypeEnvADR,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 84 Out
     {moduleTypeEnvADR,    connectorDirOut,  connectorTypeLogic,   {{  -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,     NULL,  labelLocLeft}, // 46 End
-
     // 85 WindSw
+    {moduleTypeWindSw,    connectorDirIn,  connectorTypeControl, {{  -10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocRight}, // 85 In
+    {moduleTypeWindSw,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",    labelLocRight}, // 85 In
+    {moduleTypeWindSw,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 85 Out
+    {moduleTypeWindSw,    connectorDirOut, connectorTypeLogic, {{ -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 85 Gate
     // 86 8Counter
     // 87 FltLP
     // 88 Sw1-4
