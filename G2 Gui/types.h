@@ -316,6 +316,7 @@ typedef enum {
     paramType1Resonance,
     paramType1Pitch,
     paramType1Bypass,
+    paramType1BipLevel,
     paramType1CommonDial,
     paramType1LRDial,
     paramType1OscWave,

@@ -291,6 +291,20 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
+        case paramType1BipLevel: // -64 to 63
+        {
+            double res    = 0.0;
+            double maxVal = 64.0;
+
+            if (paramValue < 127) {
+                res = round((((double) paramValue - 64.0) * maxVal * 10.0) / 64.0) / 10.0;
+            } else {
+                res = maxVal;             // Clip
+            }
+            snprintf(buff, sizeof(buff), "%.1f", res);
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
         case paramType1CommonDial:         // Ultimately might not be a common dial, or could just be a default percent dial!?
         case paramType1LRDial: // Pan type dial, perhaps with reset triangle
         case paramType1Resonance:

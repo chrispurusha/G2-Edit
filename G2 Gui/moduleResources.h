@@ -610,7 +610,9 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeDrumSynth,   paramType1Bypass,         paramType2Toggle, {{-3,   -10}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 58 Bypass
     {moduleTypeDrumSynth,   paramType1StandardToggle, paramType2Toggle, {{ 60, -35}, {7,  7}}, anchorBottomLeft,  NULL,        1,  0, drSynthPresetStrMap,   NULL          }, // 58 Preset *** Length must be updated
     // 59 CompLev
+    {moduleTypeCompLev,   paramType1BipLevel,           paramType2Dial,   {{ 70,  -3}, {7, 14}}, anchorBottomLeft,  "C",    128,  64, NULL,               NULL          },  // 59 Compare Level
     // 60 Mux8-1X
+    {moduleTypeMux8to1X,   paramType1CommonDial,           paramType2Dial,   {{ 80,  -3}, {7, 14}}, anchorBottomLeft,  "X-fade",    128,  0, NULL,               NULL          },  // 58 X-fade
     // 61 Clip
     // 62 OverDrive
     // 63 Scratch
@@ -1021,8 +1023,19 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDrumSynth,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",    labelLocUp}, // 55 Velocity
     {moduleTypeDrumSynth,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 55 Out
     // 59 CompLev
-    
+    {moduleTypeCompLev,    connectorDirIn,  connectorTypeControl, {{  40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "A",    labelLocLeft}, // 55 Pitch M
+    {moduleTypeCompLev,    connectorDirOut, connectorTypeLogic, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "A>=C",    labelLocLeft   }, // 55 Out
     // 60 Mux8-1X
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{  10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",    labelLocUp}, // 60 In1
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{  18,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",    labelLocUp}, // 60 In2
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{  26,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",    labelLocUp}, // 60 In3
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{  34,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",    labelLocUp}, // 60 In4
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{  42,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",    labelLocUp}, // 60 In5
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{  50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",    labelLocUp}, // 60 In6
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{  58,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",    labelLocUp}, // 60 In7
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{  66,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",    labelLocUp}, // 60 In8
+    {moduleTypeMux8to1X,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",    labelLocUp}, // 60 Ctrl
+    {moduleTypeMux8to1X,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 55 Out
     // 61 Clip
     // 62 OverDrive
     // 63 Scratch

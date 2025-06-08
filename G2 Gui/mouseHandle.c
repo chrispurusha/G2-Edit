@@ -697,12 +697,14 @@ void open_module_area_context_menu(tCoord coord) {
     static tMenuItem levelMenuItems[] = {
         {"Create Constant",    menu_action_create,  moduleTypeConstant, NULL},
         {"Create ConstSwT",    menu_action_create,  moduleTypeConstSwT, NULL},
+        {"Create CompLev",    menu_action_create,  moduleTypeCompLev, NULL},
         {"Create LevMult",     menu_action_create,  moduleTypeLevMult,  NULL},
         {NULL,                 NULL,                                 0, NULL}       // End of menu
     };
 
     static tMenuItem switchMenuItems[] = {
         {"Create SwOnOffM",   menu_action_create,  moduleTypeSwOnOffM, NULL},
+        {"Create Mux8-1X",   menu_action_create,  moduleTypeMux8to1X, NULL},
         {"Create S&H",   menu_action_create,  moduleTypeSandH, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
