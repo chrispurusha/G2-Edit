@@ -60,6 +60,7 @@ const char * pulseModeStrMap[]    = {"Plus", "Minus"};
 const char * bipUniStrMap[]       = {"Bip", "Uni"};
 const char * vowelStrMap[]        = {"A", "E", "I", "O", "U", "Y", "AA", "AE", "OE"};
 const char * nordFilterTypeStrMap[]={"LP", "BP", "HP", "BR"};
+const char * staticFilterTypeStrMap[]={"LP", "BP", "HP"};
 const char * multiEnvSustainStrMap[]= {"None", "L1", "L2", "L3", "L4"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
@@ -579,6 +580,11 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEnvMulti,    paramType1StandardToggle, paramType2Toggle, {{-26,  -17}, {7,  7}}, anchorBottomRight, NULL,        4,  0, envShapeStrMap,     NULL          },  // 52 Shape
     // 53 SandH -- No parameters
     // 54 FltStatic
+    {moduleTypeFltStatic,   paramType1Freq,           paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "Freq",    128,  0, NULL,               NULL          },  // 54 Freq
+    {moduleTypeFltStatic,   paramType1Resonance,      paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Res",     128,  0, NULL,               NULL          }, // 54 Res
+    {moduleTypeFltStatic,   paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  NULL,        3,  0, nordFilterTypeStrMap,   NULL          }, // 54 FilterType
+    {moduleTypeFltStatic,   paramType1Bypass,         paramType2Toggle, {{-3,   2}, {5,  5}}, anchorMiddleRight, NULL,        2,  1, NULL,               NULL          }, // 54 Bypass
+    {moduleTypeFltStatic,   paramType1StandardToggle, paramType2Toggle, {{ 80,   -3}, {7,  7}}, anchorBottomLeft,     NULL,        2,  0, gcStrMap,           offOnColourMap}, // 54 GC
     // 55 EnvD
     // 56 Resonator
     // 57 Automate
@@ -979,6 +985,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSandH,    connectorDirIn,  connectorTypeLogic,   {{  60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     "Ctrl",  labelLocLeft}, // 53 Ctrl
     {moduleTypeSandH,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 53 Out
     // 54 FltStatic
+    {moduleTypeFltStatic,    connectorDirIn,  connectorTypeAudio,   {{ -3,   7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   }, // 54 In
+    {moduleTypeFltStatic,    connectorDirOut, connectorTypeAudio, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 54 Out
     // 55 EnvD
     // 56 Resonator
     // 57 Automate
