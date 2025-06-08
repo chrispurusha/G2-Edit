@@ -70,6 +70,7 @@ const char * gateTypeStrMap[]     = {"AND", "NAND", "OR", "NOR", "XOR", "NXOR"};
 const char * invStrMap[]          = {"+", "Inv"};
 const char * clkSrcStrMap[]       = {"Internal", "Master"};
 const char * syncBeatStrMap[]     = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"};
+const char * divModeStrMap[]      = {"Gated", "Toggled"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -654,6 +655,9 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeClkGen,  paramType1StandardToggle,     paramType2Toggle,   {{ 60,  -3}, {7, 7}}, anchorBottomLeft,  "Sync every",    16, 3, syncBeatStrMap,               NULL          },  // 66 BeatSync
     {moduleTypeClkGen,   paramType1CommonDial,           paramType2Dial,   {{25,  -3}, {7, 14}}, anchorBottomLeft,  "Swing",    128,  0, NULL,               NULL          },  // 68 Swing
     // 69 ClkDiv
+    {moduleTypeClkDiv,   paramType1CommonDial,           paramType2Dial,   {{60,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  0, NULL,               NULL          },  // 69 Divider *** needs other UI element
+    {moduleTypeClkGen,  paramType1StandardToggle,     paramType2Toggle,   {{ 80,  -3}, {7, 7}}, anchorBottomLeft,  NULL,    2, 0, divModeStrMap,               NULL          },  // 69 DivMode
+
     // 70 Unknown
     // 71 EnvFollow
     // 72 NoteScaler
@@ -1100,8 +1104,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeClkGen,    connectorDirOut, connectorTypeLogic, {{ -3,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "1/16",    labelLocLeft   }, // 68 1/16
     {moduleTypeClkGen,    connectorDirOut, connectorTypeLogic, {{ -3,  -24}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "ClkActive",    labelLocLeft   }, // 68 1/96
     {moduleTypeClkGen,    connectorDirOut, connectorTypeLogic, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Sync",    labelLocLeft   }, // 68 1/96
-
     // 69 ClkDiv
+    {moduleTypeClkDiv,    connectorDirIn,  connectorTypeLogic,   {{  20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     "Clock",  labelLocRight}, // 69 Clock
+    {moduleTypeClkDiv,    connectorDirIn,  connectorTypeLogic,   {{  40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     "Reset",  labelLocRight}, // 69 Reset
+    {moduleTypeClkDiv,    connectorDirOut, connectorTypeLogic, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 69 Out
     // 70 Unknown
     // 71 EnvFollow
     // 72 NoteScaler
