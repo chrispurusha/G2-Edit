@@ -586,6 +586,8 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeFltStatic,   paramType1Bypass,         paramType2Toggle, {{-3,   2}, {5,  5}}, anchorMiddleRight, NULL,        2,  1, NULL,               NULL          }, // 54 Bypass
     {moduleTypeFltStatic,   paramType1StandardToggle, paramType2Toggle, {{ 80,   -3}, {7,  7}}, anchorBottomLeft,     NULL,        2,  0, gcStrMap,           offOnColourMap}, // 54 GC
     // 55 EnvD
+    {moduleTypeEnvD,    paramType1ADRTime,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Decay",     128,  0, NULL,               NULL          }, // 55 Decay
+    {moduleTypeEnvD,    paramType1StandardToggle, paramType2Toggle, {{55, -3}, {7,  7}}, anchorBottomLeft, NULL,        6,  0, posStrMap,          NULL          }, // 55 OutType
     // 56 Resonator
     // 57 Automate
     // 58 Drumsynth
@@ -988,6 +990,11 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFltStatic,    connectorDirIn,  connectorTypeAudio,   {{ -3,   7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   }, // 54 In
     {moduleTypeFltStatic,    connectorDirOut, connectorTypeAudio, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 54 Out
     // 55 EnvD
+    {moduleTypeEnvD,    connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     "Trig",  labelLocRight}, // 55 Trig
+    {moduleTypeEnvD,    connectorDirIn,  connectorTypeControl, {{  17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "AM",    labelLocRight}, // 55 AM
+    {moduleTypeEnvD,    connectorDirIn,  connectorTypeControl, {{  -10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocRight}, // 55 In
+    {moduleTypeEnvD,    connectorDirOut, connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",   labelLocLeft   }, // 55 Env
+    {moduleTypeEnvD,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 55 Out
     // 56 Resonator
     // 57 Automate
     // 58 Drumsynth
