@@ -60,6 +60,7 @@ const char * pulseModeStrMap[]    = {"Plus", "Minus"};
 const char * bipUniStrMap[]       = {"Bip", "Uni"};
 const char * vowelStrMap[]        = {"A", "E", "I", "O", "U", "Y", "AA", "AE", "OE"};
 const char * nordFilterTypeStrMap[]={"LP", "BP", "HP", "BR"};
+const char * multiEnvSustainStrMap[]= {"None", "L1", "L2", "L3", "L4"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -563,6 +564,19 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeFltNord,   paramType1StandardToggle, paramType2Toggle, {{ 70, -20}, {7,  7}}, anchorBottomLeft,  NULL,        4,  0, nordFilterTypeStrMap,   NULL          }, // 51 FilterType
     {moduleTypeFltNord,   paramType1CommonDial,          paramType2Dial,   {{ 55,  -3}, {7, 14}}, anchorBottomLeft,  "Res M",     128,  0, NULL,               NULL          }, // 51 Res M
     // 52 EnvMulti
+    {moduleTypeEnvMulti,   paramType1CommonDial,          paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "L1",     128,  127   , NULL,               NULL          }, // 52 Lvl1
+    {moduleTypeEnvMulti,   paramType1CommonDial,          paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "L1",     128,  127   , NULL,               NULL          }, // 52 Lvl2
+    {moduleTypeEnvMulti,   paramType1CommonDial,          paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  "L1",     128,  127   , NULL,               NULL          }, // 52 Lvl3
+    {moduleTypeEnvMulti,   paramType1CommonDial,          paramType2Dial,   {{ 80,  -3}, {7, 14}}, anchorBottomLeft,  "L1",     128,  127   , NULL,               NULL          }, // 52 Lvl4
+    {moduleTypeEnvMulti,    paramType1ADRTime,     paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  "T1",     128,  0, NULL,               NULL          }, // 52 Time1
+    {moduleTypeEnvMulti,    paramType1ADRTime,     paramType2Dial,   {{ 30,  -3}, {7, 14}}, anchorBottomLeft,  "T2",     128,  0, NULL,               NULL          }, // 52 Time2
+    {moduleTypeEnvMulti,    paramType1ADRTime,     paramType2Dial,   {{ 50,  -3}, {7, 14}}, anchorBottomLeft,  "T3",     128,  0, NULL,               NULL          }, // 52 Time3
+    {moduleTypeEnvMulti,    paramType1ADRTime,     paramType2Dial,   {{ 70,  -3}, {7, 14}}, anchorBottomLeft,  "T4",     128,  0, NULL,               NULL          }, // 52 Time4
+    {moduleTypeEnvMulti,    paramType1StandardToggle, paramType2Toggle, {{  3,  -22}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, normalResetStrMap,  NULL          },  // 52 Reset
+    {moduleTypeEnvMulti,    paramType1StandardToggle, paramType2Toggle, {{  30,  -22}, {7,  7}}, anchorBottomLeft,  "Sust",        5,  1, multiEnvSustainStrMap,  NULL          },  // 52 SustainPlacement
+    {moduleTypeEnvMulti,    paramType1StandardToggle, paramType2Toggle, {{-17, -29}, {7,  7}}, anchorBottomRight, NULL,        6,  0, posStrMap,          NULL          }, // 52 OutType
+    {moduleTypeEnvMulti,    paramType1StandardToggle, paramType2Toggle, {{ 10,   17}, {7,  7}}, anchorTopLeft,     NULL,        2,  0, kbStrMap,           offOnColourMap}, // 52 Kbt
+    {moduleTypeEnvMulti,    paramType1StandardToggle, paramType2Toggle, {{-26,  -17}, {7,  7}}, anchorBottomRight, NULL,        4,  0, envShapeStrMap,     NULL          },  // 52 Shape
     // 53 SandH
     // 54 FltStatic
     // 55 EnvD
@@ -955,6 +969,11 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFltNord,    connectorDirIn,  connectorTypeControl, {{ 25,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // FMLin
     {moduleTypeFltNord,    connectorDirIn,  connectorTypeControl, {{ 47,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // Res
     // 52 EnvMulti
+    {moduleTypeEnvMulti,    connectorDirIn,  connectorTypeLogic,   {{  3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Gate",  labelLocRight}, // 52 Gate
+    {moduleTypeEnvMulti,    connectorDirIn,  connectorTypeControl, {{  17,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,  "AM",    labelLocRight}, // 52 AM
+    {moduleTypeEnvMulti,    connectorDirIn,  connectorTypeControl, {{  -10,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,  NULL,    labelLocRight}, // 52 In
+    {moduleTypeEnvMulti,    connectorDirOut, connectorTypeControl, {{-3, 14}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, "Env",   labelLocLeft   }, // 52 Env
+    {moduleTypeEnvMulti,    connectorDirOut, connectorTypeControl, {{ -3,  7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, NULL,    labelLocUp   }, // 52 Out
     // 53 SandH
     // 54 FltStatic
     // 55 EnvD

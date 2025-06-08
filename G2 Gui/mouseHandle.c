@@ -678,6 +678,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Env ADSR", menu_action_create, moduleTypeEnvADSR, NULL},
         {"Create Env AHD",  menu_action_create, moduleTypeEnvAHD,  NULL},
         {"Create Env H",    menu_action_create, moduleTypeEnvH,    NULL},
+        {"Create Env Multi",menu_action_create, moduleTypeEnvMulti,NULL},
         {NULL,              NULL,                               0, NULL}          // End of menu
     };
     static tMenuItem filterMenuItems[] = {
