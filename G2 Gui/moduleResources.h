@@ -73,6 +73,8 @@ const char * syncBeatStrMap[]     = {"1", "2", "3", "4", "5", "6", "7", "8", "9"
 const char * divModeStrMap[]      = {"Gated", "Toggled"};
 const char * out8StrMap[]         = {"Out1", "Out2", "Out3", "Out4", "Out5", "Out6", "Out7", "Out8"};
 const char * in8StrMap[]          = {"In1", "In2", "In3", "In4", "In5", "In6", "In7", "In8"};
+const char * rectStrMap[]         = {"Half wave pos.", "Half wave neg.", "Full wave pos.", "Full wave neg."};
+const char * shpStaticStrMap[]    = {"Inv x3", "Inv x2", "x2", "x3"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -685,7 +687,11 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeLevAmp,   paramType1LevAmpDial,           paramType2Dial,   {{70,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  64, NULL,               NULL          },  // 81 Gain
     {moduleTypeLevAmp,    paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  NULL,       2,  1, expStrMap, NULL}, // 81 Type
     // 82 Rect
+    {moduleTypeRect,   paramType1StandardToggle, paramType2Toggle, {{ 40, -3}, {7,  7}}, anchorBottomLeft,  NULL,        4,  0, rectStrMap,   NULL          }, // 82 Mode
+    {moduleTypeRect,   paramType1Bypass,         paramType2Toggle, {{-10,   -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 82 Bypass
     // 83 ShpStatic
+    {moduleTypeShpStatic,   paramType1StandardToggle, paramType2Toggle, {{ 40, -3}, {7,  7}}, anchorBottomLeft,  NULL,        4,  0, shpStaticStrMap,   NULL          }, // 83 Mode
+    {moduleTypeShpStatic,   paramType1Bypass,         paramType2Toggle, {{-10,   -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 83 Bypass
     // 84 EnvADR
     // 85 WindSw
     // 86 8Counter
@@ -1165,7 +1171,11 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeLevAmp,    connectorDirIn,  connectorTypeControl, {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 81 In
     {moduleTypeLevAmp,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 81 Out
     // 82 Rect
+    {moduleTypeRect,    connectorDirIn,  connectorTypeControl, {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 82 In
+    {moduleTypeRect,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 82 Out
     // 83 ShpStatic
+    {moduleTypeShpStatic,    connectorDirIn,  connectorTypeControl, {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 82 In
+    {moduleTypeShpStatic,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 82 Out
     // 84 EnvADR
     // 85 WindSw
     // 86 8Counter

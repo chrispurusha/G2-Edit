@@ -722,6 +722,8 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create OverDrive",   menu_action_create,  moduleTypeOverdrive, NULL},
         {"Create ShpExp",     menu_action_create,  moduleTypeShpExp,   NULL},
         {"Create WaveWrap",     menu_action_create,  moduleTypeWaveWrap,   NULL},
+        {"Create ShpStatic",     menu_action_create,  moduleTypeShpStatic,   NULL},
+        {"Create Rect",     menu_action_create,  moduleTypeRect,   NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
     static tMenuItem mixerMenuItems[] = {
