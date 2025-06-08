@@ -669,7 +669,10 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeWaveWrap,   paramType1CommonDial,           paramType2Dial,   {{55,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  0, NULL,               NULL          },  // 74 Amount
     {moduleTypeWaveWrap,   paramType1Bypass,         paramType2Toggle, {{-10,   -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 74 Bypass
     // 75 NoteQuant
+    {moduleTypeNoteQuant,   paramType1CommonDial,           paramType2Dial,   {{25,  -3}, {7, 14}}, anchorBottomLeft,  "Range",    128,  127, NULL,               NULL          },  // 75 Range
+    {moduleTypeNoteQuant,   paramType1CommonDial,           paramType2Dial,   {{40,  -3}, {7, 14}}, anchorBottomLeft,  "Notes",    128,  0, NULL,               NULL          },  // 75 Notes
     // 76 SwOnOffT
+    {moduleTypeSwOnOffT,    paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  NULL,       2,  0, offOnStrMap, NULL}, // 76 On
     // 77 Unknown
     // 78 Sw1-8
     // 79 Sw4-1
@@ -960,9 +963,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeShpExp,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 34 Out
     // 35 Driver *** What Module is this?
     // 36 SwOnOffM
-    {moduleTypeSwOnOffM,    connectorDirIn,  connectorTypeControl, {{ -20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 35 In
-    {moduleTypeSwOnOffM,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 34 Out
-    {moduleTypeSwOnOffM,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 34 Ctrl
+    {moduleTypeSwOnOffM,    connectorDirIn,  connectorTypeControl, {{ -20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 36 In
+    {moduleTypeSwOnOffM,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 36 Out
+    {moduleTypeSwOnOffM,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 36 Ctrl
     // 37 Unknown
     // 38 Pulse
     {moduleTypePulse,    connectorDirIn,  connectorTypeLogic, {{ -21,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 38 In
@@ -1126,7 +1129,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeWaveWrap,    connectorDirIn,  connectorTypeControl, {{  -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocRight}, // 74 In
     {moduleTypeWaveWrap,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 74 Out
     // 75 NoteQuant
+    {moduleTypeNoteQuant,    connectorDirIn,  connectorTypeControl, {{  -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocRight}, // 75 In
+    {moduleTypeNoteQuant,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 75 Out
     // 76 SwOnOffT
+    {moduleTypeSwOnOffT,    connectorDirIn,  connectorTypeControl, {{ -20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 76 In
+    {moduleTypeSwOnOffT,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 76 Out
+    {moduleTypeSwOnOffT,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 76 Ctrl
     // 77 Unknown
     // 78 Sw1-8
     // 79 Sw4-1

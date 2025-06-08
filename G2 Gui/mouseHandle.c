@@ -656,6 +656,7 @@ void open_module_area_context_menu(tCoord coord) {
         {NULL,              NULL,                                0, NULL}         // End of menu
     };
     static tMenuItem noteMenuItems[] = {
+        {"Create NoteQuant", menu_action_create, moduleTypeNoteQuant, NULL},
         {"Create NoteScaler", menu_action_create, moduleTypeNoteScaler, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
@@ -707,6 +708,7 @@ void open_module_area_context_menu(tCoord coord) {
 
     static tMenuItem switchMenuItems[] = {
         {"Create SwOnOffM",   menu_action_create,  moduleTypeSwOnOffM, NULL},
+        {"Create SwOnOffT",   menu_action_create,  moduleTypeSwOnOffT, NULL},
         {"Create Mux8-1X",   menu_action_create,  moduleTypeMux8to1X, NULL},
         {"Create S&H",   menu_action_create,  moduleTypeSandH, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
