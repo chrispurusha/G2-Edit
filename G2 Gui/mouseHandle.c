@@ -741,6 +741,7 @@ void open_module_area_context_menu(tCoord coord) {
     static tMenuItem switchMenuItems[] = {
         {"Create SwOnOffM",   menu_action_create,  moduleTypeSwOnOffM, NULL},
         {"Create SwOnOffT",   menu_action_create,  moduleTypeSwOnOffT, NULL},
+        {"Create Sw2-1",   menu_action_create,  moduleTypeSw2to1, NULL},
         {"Create Sw4-1",   menu_action_create,  moduleTypeSw4to1, NULL},
         {"Create Sw1-2",   menu_action_create,  moduleTypeSw1to2, NULL},
         {"Create Sw1-4",   menu_action_create,  moduleTypeSw1to4, NULL},

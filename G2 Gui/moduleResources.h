@@ -765,6 +765,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeFreqShift,       paramType1Bypass,         paramType2Toggle, {{-10,  -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 98 Bypass
     // 99 Unknown
     // 100 Sw2-1
+    {moduleTypeSw2to1,   paramType1StandardToggle, paramType2Toggle, {{ 50, -3}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, in8StrMap,   NULL          }, // 100 Selector
     // 101 Unknown
     // 102 FltPhase
     // 103 EqPeak
@@ -1301,9 +1302,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFreqShift,   connectorDirIn,  connectorTypeAudio,   {{ -10,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },  // 98 In
     {moduleTypeFreqShift,   connectorDirOut, connectorTypeAudio,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Down",    labelLocLeft   }, //98 Down
     {moduleTypeFreqShift,   connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Up",    labelLocLeft   }, // 98 Up
-
     // 99 Unknown
     // 100 Sw2-1
+    {moduleTypeSw2to1,    connectorDirIn,  connectorTypeControl, {{ 30,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 100 In1
+    {moduleTypeSw2to1,    connectorDirIn,  connectorTypeControl, {{ 40,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "1",    labelLocLeft   },  // 100 In2
+    {moduleTypeSw2to1,    connectorDirOut,  connectorTypeControl, {{ 60,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "2",    labelLocLeft   },  // 100 Out
+    {moduleTypeSw2to1,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Ctrl",    labelLocRight   },  // 100 Ctrl
     // 101 Unknown
     // 102 FltPhase
     // 103 EqPeak
