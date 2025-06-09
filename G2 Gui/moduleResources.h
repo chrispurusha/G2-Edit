@@ -717,6 +717,10 @@ const tParamLocation paramLocationList[] = {
     // 88 Sw1-4
     {moduleTypeSw1to4,   paramType1StandardToggle, paramType2Toggle, {{ 37, -3}, {7,  7}}, anchorBottomLeft,  NULL,        4,  0, out8StrMap,   NULL          }, // 88 Selector
     // 89 Flanger
+    {moduleTypeFlanger,   paramType1CommonDial,           paramType2Dial,   {{35,  -3}, {7, 14}}, anchorBottomLeft,  "Rate",    128,  64, NULL,               NULL          },  // 89 Rate
+    {moduleTypeFlanger,   paramType1CommonDial,           paramType2Dial,   {{55,  -3}, {7, 14}}, anchorBottomLeft,  "Range",    128,  64, NULL,               NULL          },  // 89 Range
+    {moduleTypeFlanger,   paramType1CommonDial,           paramType2Dial,   {{75,  -3}, {7, 14}}, anchorBottomLeft,  "Feedback",    128,  64, NULL,               NULL          },  // 89 Feedback
+    {moduleTypeFlanger,   paramType1Bypass,         paramType2Toggle, {{-3,   -8}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 89 Bypass
     // 90 Sw1-2
     // 91 FlipFlop
     // 92 FltClassic
@@ -1230,6 +1234,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSw1to4,    connectorDirOut,  connectorTypeControl, {{ 80,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "4",    labelLocLeft   },  // 88 Out4
     {moduleTypeSw1to4,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Ctrl",    labelLocRight   },  // 88 Ctrl
     // 89 Flanger
+    {moduleTypeFlanger, connectorDirIn,  connectorTypeAudio,   {{ -3,   -13}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 89 In
+    {moduleTypeFlanger, connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // 89 Out
     // 90 Sw1-2
     // 91 FlipFlop
     // 92 FltClassic
