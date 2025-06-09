@@ -712,6 +712,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create SwOnOffM",   menu_action_create,  moduleTypeSwOnOffM, NULL},
         {"Create SwOnOffT",   menu_action_create,  moduleTypeSwOnOffT, NULL},
         {"Create Sw4-1",   menu_action_create,  moduleTypeSw4to1, NULL},
+        {"Create Sw1-2",   menu_action_create,  moduleTypeSw1to2, NULL},
         {"Create Sw1-4",   menu_action_create,  moduleTypeSw1to4, NULL},
         {"Create Sw1-8",   menu_action_create,  moduleTypeSw1to8, NULL},
         {"Create Mux8-1X",   menu_action_create,  moduleTypeMux8to1X, NULL},

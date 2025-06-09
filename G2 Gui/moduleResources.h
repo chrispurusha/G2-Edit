@@ -722,6 +722,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeFlanger,   paramType1CommonDial,           paramType2Dial,   {{75,  -3}, {7, 14}}, anchorBottomLeft,  "Feedback",    128,  64, NULL,               NULL          },  // 89 Feedback
     {moduleTypeFlanger,   paramType1Bypass,         paramType2Toggle, {{-3,   -8}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 89 Bypass
     // 90 Sw1-2
+    {moduleTypeSw1to2,   paramType1StandardToggle, paramType2Toggle, {{ 37, -3}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, out8StrMap,   NULL          }, // 90 Selector
     // 91 FlipFlop
     // 92 FltClassic
     {moduleTypeFltClassic, paramType1Freq,           paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Freq",    128,  0, NULL,               NULL          },  // 92
@@ -1237,6 +1238,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFlanger, connectorDirIn,  connectorTypeAudio,   {{ -3,   -13}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 89 In
     {moduleTypeFlanger, connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // 89 Out
     // 90 Sw1-2
+    {moduleTypeSw1to2,    connectorDirIn,  connectorTypeControl, {{ 30,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 88 In
+    {moduleTypeSw1to2,    connectorDirOut,  connectorTypeControl, {{ 50,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "1",    labelLocLeft   },  // 88 Out1
+    {moduleTypeSw1to2,    connectorDirOut,  connectorTypeControl, {{ 60,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "2",    labelLocLeft   },  // 88 Out2
+    {moduleTypeSw1to2,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Ctrl",    labelLocRight   },  // 88 Ctrl
     // 91 FlipFlop
     // 92 FltClassic
     {moduleTypeFltClassic, connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },  // 92
