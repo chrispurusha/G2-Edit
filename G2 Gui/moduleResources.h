@@ -77,6 +77,7 @@ const char * rectStrMap[]         = {"Half wave pos.", "Half wave neg.", "Full w
 const char * shpStaticStrMap[]    = {"Inv x3", "Inv x2", "x2", "x3"};
 const char * trigGateStrMap[]     = {"Trig", "Gate"};
 const char * decayReleaseStrMap[] = {"Decay", "Release"};
+const char * fltLPSlopeStrMap[]   = {"6db", "12db", "18db", "24db", "30db", "36db"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -708,7 +709,13 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeWindSw,   paramType1CommonDial,           paramType2Dial,   {{60,  -3}, {7, 14}}, anchorBottomLeft,  "To",    128,  0, NULL,               NULL          },  // 85 To
     // 86 8Counter -- No controls
     // 87 FltLP
+    {moduleTypeFltLP,   paramType1Freq,           paramType2Dial,   {{50,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  64, NULL,               NULL          },  // 87 Freq
+    {moduleTypeFltLP,   paramType1CommonDial,           paramType2Dial,   {{35,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  64, NULL,               NULL          },  // 87 FreqMod
+    {moduleTypeFltLP, paramType1StandardToggle, paramType2Toggle, {{ 10, -3}, {7,  7}}, anchorBottomLeft,  "Kbt",       5,  4, offTo100KbStrMap,   NULL          },
+    {moduleTypeFltLP, paramType1StandardToggle, paramType2Toggle, {{ 67, -3}, {7,  7}}, anchorBottomLeft,  "Kbt",       6,  2, fltLPSlopeStrMap,   NULL          },
+    {moduleTypeFltLP,   paramType1Bypass,         paramType2Toggle, {{-10,   -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 83 Bypass
     // 88 Sw1-4
+    {moduleTypeSw1to4,   paramType1StandardToggle, paramType2Toggle, {{ 37, -3}, {7,  7}}, anchorBottomLeft,  NULL,        4,  0, out8StrMap,   NULL          }, // 88 Selector
     // 89 Flanger
     // 90 Sw1-2
     // 91 FlipFlop
@@ -1211,9 +1218,17 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleType8Counter,    connectorDirOut, connectorTypeLogic, {{ 70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "6",    labelLocUp   }, // 86 Out6
     {moduleType8Counter,    connectorDirOut, connectorTypeLogic, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "7",    labelLocUp   }, // 86 Out7
     {moduleType8Counter,    connectorDirOut, connectorTypeLogic, {{ 90,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "8",    labelLocUp   }, // 86 Out8
-
     // 87 FltLP
+    {moduleTypeFltLP, connectorDirIn,  connectorTypeAudio,   {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 87 In
+    {moduleTypeFltLP, connectorDirIn,  connectorTypeControl, {{  28,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },  // 87 Mod
+    {moduleTypeFltLP, connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // 87 Out
     // 88 Sw1-4
+    {moduleTypeSw1to4,    connectorDirIn,  connectorTypeControl, {{ 30,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 88 In
+    {moduleTypeSw1to4,    connectorDirOut,  connectorTypeControl, {{ 50,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "1",    labelLocLeft   },  // 88 Out1
+    {moduleTypeSw1to4,    connectorDirOut,  connectorTypeControl, {{ 60,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "2",    labelLocLeft   },  // 88 Out2
+    {moduleTypeSw1to4,    connectorDirOut,  connectorTypeControl, {{ 70,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "3",    labelLocLeft   },  // 88 Out3
+    {moduleTypeSw1to4,    connectorDirOut,  connectorTypeControl, {{ 80,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "4",    labelLocLeft   },  // 88 Out4
+    {moduleTypeSw1to4,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Ctrl",    labelLocRight   },  // 88 Ctrl
     // 89 Flanger
     // 90 Sw1-2
     // 91 FlipFlop

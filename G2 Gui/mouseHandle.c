@@ -688,7 +688,7 @@ void open_module_area_context_menu(tCoord coord) {
         {NULL,              NULL,                               0, NULL}          // End of menu
     };
     static tMenuItem filterMenuItems[] = {
-        {"Create LP Filter",      menu_action_create,                    0, NULL},
+        {"Create LP Filter",      menu_action_create, moduleTypeFltLP, NULL},
         {"Create Nord Filter",    menu_action_create, moduleTypeFltNord,    NULL},
         {"Create Classic Filter", menu_action_create, moduleTypeFltClassic, NULL},
         {"Create Multi Filter",   menu_action_create, moduleTypeFltMulti,   NULL},
@@ -712,6 +712,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create SwOnOffM",   menu_action_create,  moduleTypeSwOnOffM, NULL},
         {"Create SwOnOffT",   menu_action_create,  moduleTypeSwOnOffT, NULL},
         {"Create Sw4-1",   menu_action_create,  moduleTypeSw4to1, NULL},
+        {"Create Sw1-4",   menu_action_create,  moduleTypeSw1to4, NULL},
         {"Create Sw1-8",   menu_action_create,  moduleTypeSw1to8, NULL},
         {"Create Mux8-1X",   menu_action_create,  moduleTypeMux8to1X, NULL},
         {"Create S&H",   menu_action_create,  moduleTypeSandH, NULL},
