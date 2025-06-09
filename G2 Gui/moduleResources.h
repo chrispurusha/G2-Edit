@@ -48,6 +48,7 @@ const char * outToStrMap[]        = {"Main 1/2", "Main 3/4", "FX 1/2", "FX 3/4",
 const char * outTo4OutStrMap[]    = {"Main", "Fx", "Bus"};
 const char * inFxStrMap[]         = {"1/2", "3/4"};
 const char * shapeTypeStrMap[]    = {"sin", "tri", "saw", "squ", "sup"};
+const char * shapeOscATypeStrMap[]= {"sin", "tri", "saw", "squ", "pulse25%", "pulse10%"};
 const char * reverbTypeStrMap[]   = {"Small", "Medium", "Large", "Hall"};
 const char * polyMonoStrMap[]     = {"Poly", "Mono"};
 const char * rangeStrMap[]        = {"Rate Lo", "Rate Hi", "BPM", "Clk", "Rate Sub"};
@@ -749,6 +750,12 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{ 70,  -1}, {7,  7}}, anchorBottomLeft,     NULL,        2,  0, fmTypeStrMap,       NULL          }, // 96 FM Type
     {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{-20,   5}, {7,  7}}, anchorTopRight,    NULL,        5,  0, shapeTypeStrMap,    NULL          },     // 96 Waveform
     // 97 OscA
+    {moduleTypeOscA,       paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Tune",    128, 64, NULL,               NULL          }, // 97 Tune
+    {moduleTypeOscA,       paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL,               NULL          }, // 97 Fine
+    {moduleTypeOscA,       paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap}, // 97 Kbt
+    {moduleTypeOscA,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128,  0, NULL,               NULL          }, // 97 Pitch M
+    {moduleTypeOscA,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 97 Bypass
+    {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{-20,   5}, {7,  7}}, anchorTopRight,    NULL,        5,  0, shapeOscATypeStrMap,    NULL   },     // 97 Waveform
     // 98 FreqShift
     // 99 Unknown
     // 100 Sw2-1
@@ -1280,9 +1287,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeOscD,       connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 96 Pitch
     {moduleTypeOscD,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 96 Out
     // 97 OscA
-    {moduleTypeOscA,       connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 97
-    {moduleTypeOscA,       connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // PitchVar
-    {moduleTypeOscA,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // Out
+    {moduleTypeOscA,       connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 97 Pitch
+    {moduleTypeOscA,       connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 97  PitchVar
+    {moduleTypeOscA,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 97 Out
     // 98 FreqShift
     // 99 Unknown
     // 100 Sw2-1
