@@ -355,7 +355,7 @@ typedef enum {
 } tLocation;
 
 typedef struct __attribute__((packed)) {  // TODO: Pack more of the structures in this file
-    uint8_t    paramRef;
+    uint32_t    paramRef;
     tRectangle rectangle;
     uint8_t    value;
     uint8_t    morphRange[8]; // 8 seems to be number of morphs. Not sure we can go higher, but
