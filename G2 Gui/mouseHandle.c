@@ -647,31 +647,113 @@ void menu_action_create(int index) {
 void open_module_area_context_menu(tCoord coord) {
     static tMenuItem ioMenuItems[] = {
         {"Create Keyboard", menu_action_create, moduleTypeKeyboard, NULL},
+        {"Create 2-Out",    menu_action_create, moduleType2toOut,   NULL},
+        {"Create 4-Out",    menu_action_create, moduleType4toOut,   NULL},
+        {"Create Device",    menu_action_create, moduleTypeDevice,   NULL},
         {"Create Name Bar", menu_action_create, moduleTypeName,     NULL},
         {NULL,              NULL,                                0, NULL}         // End of menu
     };
-    static tMenuItem oscMenuItems[] = {
-        {"Create Osc Shape B", menu_action_create, moduleTypeOscShpB, NULL},
+    static tMenuItem noteMenuItems[] = {
+        {"Create NoteQuant", menu_action_create, moduleTypeNoteQuant, NULL},
+        {"Create NoteScaler", menu_action_create, moduleTypeNoteScaler, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
+    };
+    static tMenuItem oscMenuItems[] = {
+        {"Create Osc B",       menu_action_create, moduleTypeOscB,    NULL},
+        {"Create Osc C",       menu_action_create, moduleTypeOscC,    NULL},
+        {"Create Osc Shape B", menu_action_create, moduleTypeOscShpB, NULL},
+        {"Create Osc String",  menu_action_create, moduleTypeOscString, NULL},
+        {"Create Noise",  menu_action_create, moduleTypeNoise, NULL},
+        {"Create Met Noise",  menu_action_create, moduleTypeMetNoise, NULL},
+        {"Create DrumSynth",  menu_action_create, moduleTypeDrumSynth, NULL},
+        {"Create Osc Master",       menu_action_create, moduleTypeOscMaster,    NULL},
+        {NULL,                 NULL,                               0, NULL}       // End of menu
+    };
+    static tMenuItem lfoMenuItems[] = {
+        {"Create LFO A", menu_action_create, moduleTypeLfoA, NULL},
+        {"Create LFO C", menu_action_create, moduleTypeLfoC, NULL},
+        {"Create LFO Shp A", menu_action_create, moduleTypeLfoShpA, NULL},
+        {"Create ClkGen", menu_action_create, moduleTypeClkGen, NULL},
+        {NULL,              NULL,                               0, NULL}          // End of menu
     };
     static tMenuItem envMenuItems[] = {
         {"Create Env ADSR", menu_action_create, moduleTypeEnvADSR, NULL},
+        {"Create Env AHD",  menu_action_create, moduleTypeEnvAHD,  NULL},
+        {"Create Env ADR",  menu_action_create, moduleTypeEnvADR,  NULL},
+        {"Create Env H",    menu_action_create, moduleTypeEnvH,    NULL},
+        {"Create Env D",    menu_action_create, moduleTypeEnvD,    NULL},
+        {"Create Env Multi",menu_action_create, moduleTypeEnvMulti,NULL},
         {NULL,              NULL,                               0, NULL}          // End of menu
     };
-    static tMenuItem fxMenuItems[] = {
-        {"Create Compressor", menu_action_create, moduleTypeCompress, NULL},
-        {NULL,                NULL,                                0, NULL}       // End of menu
-    };
     static tMenuItem filterMenuItems[] = {
-        {"Create LP Filter",      menu_action_create,                    0, NULL},
+        {"Create LP Filter",      menu_action_create, moduleTypeFltLP, NULL},
         {"Create Nord Filter",    menu_action_create, moduleTypeFltNord,    NULL},
         {"Create Classic Filter", menu_action_create, moduleTypeFltClassic, NULL},
         {"Create Multi Filter",   menu_action_create, moduleTypeFltMulti,   NULL},
+        {"Create Static Filter",   menu_action_create, moduleTypeFltStatic,   NULL},
+        {"Create FltVoice",       menu_action_create, moduleTypeFltVoice,   NULL},
+        {"Create Eq 2-band",      menu_action_create, moduleTypeEq2Band, NULL},
+        {"Create Eq 3-band",      menu_action_create, moduleTypeEq3band, NULL},
         {NULL,                    NULL,                                  0, NULL} // End of menu
+    };
+    static tMenuItem levelMenuItems[] = {
+        {"Create Constant",    menu_action_create,  moduleTypeConstant, NULL},
+        {"Create ConstSwT",    menu_action_create,  moduleTypeConstSwT, NULL},
+        {"Create CompLev",    menu_action_create,  moduleTypeCompLev, NULL},
+        {"Create LevAmp",     menu_action_create,  moduleTypeLevAmp,  NULL},
+        {"Create LevMult",     menu_action_create,  moduleTypeLevMult,  NULL},
+        {"Create EnvFollow",     menu_action_create,  moduleTypeEnvFollow,  NULL},
+        {NULL,                 NULL,                                 0, NULL}       // End of menu
+    };
+
+    static tMenuItem switchMenuItems[] = {
+        {"Create SwOnOffM",   menu_action_create,  moduleTypeSwOnOffM, NULL},
+        {"Create SwOnOffT",   menu_action_create,  moduleTypeSwOnOffT, NULL},
+        {"Create Sw4-1",   menu_action_create,  moduleTypeSw4to1, NULL},
+        {"Create Sw1-2",   menu_action_create,  moduleTypeSw1to2, NULL},
+        {"Create Sw1-4",   menu_action_create,  moduleTypeSw1to4, NULL},
+        {"Create Sw1-8",   menu_action_create,  moduleTypeSw1to8, NULL},
+        {"Create Mux8-1X",   menu_action_create,  moduleTypeMux8to1X, NULL},
+        {"Create S&H",   menu_action_create,  moduleTypeSandH, NULL},
+        {"Create WindSw",   menu_action_create,  moduleTypeWindSw, NULL},
+        {NULL,                 NULL,                               0, NULL}       // End of menu
+    };
+    static tMenuItem shaperMenuItems[] = {
+        {"Create Saturate",   menu_action_create,  moduleTypeSaturate, NULL},
+        {"Create Clip",   menu_action_create,  moduleTypeClip, NULL},
+        {"Create OverDrive",   menu_action_create,  moduleTypeOverdrive, NULL},
+        {"Create ShpExp",     menu_action_create,  moduleTypeShpExp,   NULL},
+        {"Create WaveWrap",     menu_action_create,  moduleTypeWaveWrap,   NULL},
+        {"Create ShpStatic",     menu_action_create,  moduleTypeShpStatic,   NULL},
+        {"Create Rect",     menu_action_create,  moduleTypeRect,   NULL},
+        {NULL,                 NULL,                               0, NULL}       // End of menu
     };
     static tMenuItem mixerMenuItems[] = {
         {"Create Mixer 4-1 C", menu_action_create, moduleTypeMix4to1C, NULL},
+        {"Create Mixer 2-1 B", menu_action_create, moduleTypeMix2to1B, NULL},
+        {"Create Mixer 8-1 B", menu_action_create, moduleTypeMix8to1B, NULL},
+        {"Create MixStereo",   menu_action_create, moduleTypeMixStereo,NULL},
+        {"Create X-Fade",      menu_action_create, moduleTypeXtoFade,  NULL},
+        {"Create Pan",         menu_action_create, moduleTypePan,      NULL},
         {NULL,                 NULL,                                0, NULL}      // End of menu
+    };
+    static tMenuItem logicMenuItems[] = {
+        {"Create Invert",   menu_action_create,  moduleTypeInvert, NULL},
+        {"Create Pulse",   menu_action_create,  moduleTypePulse, NULL},
+        {"Create Delay",   menu_action_create,  moduleTypeDelay, NULL},
+        {"Create Gate",   menu_action_create,  moduleTypeGate, NULL},
+        {"Create FlipFlop",   menu_action_create,  moduleTypeFlipFlop, NULL},
+        {"Create ClkDiv",   menu_action_create,  moduleTypeClkDiv, NULL},
+        {"Create 8Counter",   menu_action_create,  moduleType8Counter, NULL},
+        {NULL,                 NULL,                               0, NULL}       // End of menu
+    };
+    static tMenuItem fxMenuItems[] = {
+        {"Create Compressor", menu_action_create,  moduleTypeCompress, NULL},
+        {"Create Flanger", menu_action_create,  moduleTypeFlanger, NULL},
+        {"Create Chorus", menu_action_create,  moduleTypeStChorus, NULL},   
+        {"Create Reverb",     menu_action_create,  moduleTypeReverb,   NULL},
+        {"Create Scratch",     menu_action_create,  moduleTypeScratch,   NULL},
+        {NULL,                NULL,                               0,   NULL}       // End of menu
     };
     static tMenuItem moduleMenuItems[] = {
         {"Create In/Out",   menu_action_create, 0, ioMenuItems    },
@@ -679,16 +761,16 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Random",   menu_action_create, 0, NULL           },
         {"Create Filter",   menu_action_create, 0, filterMenuItems},
         {"Create Delay",    menu_action_create, 0, NULL           },
-        {"Create Level",    menu_action_create, 0, NULL           },
-        {"Create Switch",   menu_action_create, 0, NULL           },
+        {"Create Level",    menu_action_create, 0, levelMenuItems },
+        {"Create Switch",   menu_action_create, 0, switchMenuItems},
         {"Create Sequence", menu_action_create, 0, NULL           },
-        {"Create Note",     menu_action_create, 0, NULL           },
-        {"Create LFO",      menu_action_create, 0, NULL           },
+        {"Create Note",     menu_action_create, 0, noteMenuItems  },
+        {"Create LFO",      menu_action_create, 0, lfoMenuItems   },
         {"Create Env",      menu_action_create, 0, envMenuItems   },
         {"Create FX",       menu_action_create, 0, fxMenuItems    },
-        {"Create Shaper",   menu_action_create, 0, NULL           },
+        {"Create Shaper",   menu_action_create, 0, shaperMenuItems},
         {"Create Mixer",    menu_action_create, 0, mixerMenuItems },
-        {"Create Logic",    menu_action_create, 0, NULL           },
+        {"Create Logic",    menu_action_create, 0, logicMenuItems },
         {"Create Midi",     menu_action_create, 0, NULL           },
         {NULL,              NULL,               0, NULL           } // End of menu
     };

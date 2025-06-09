@@ -246,6 +246,46 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
+        case paramType1FreqDrum:
+        {
+            double freq = 0.0;
+            
+            // 0 -> 20 Hz, 127 -> 784 Hz
+            freq = round(20.0 * pow(2, (double)paramValue * 0.041675) * 100.0) / 100.0;
+
+            if (freq < 100) {
+                snprintf(buff, sizeof(buff), "%.2fHz", freq);
+            } else {
+                snprintf(buff, sizeof(buff), "%.1fHz", freq);
+            }
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
+        case paramType1dB:
+        {
+            double dB = 0.0;
+
+            dB = round( ((double)paramValue-64.0)/64.0 * 18.0);
+            snprintf(buff, sizeof(buff), "%+.0fdB", dB);
+            
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
+        case paramType1ADRTime:
+        {
+            double time = 0.0;
+            // scale 0 -> 5 ms and 127 -> 45 s, exponentially
+            time = exp((double)paramValue * 0.0717 )*0.005;
+            
+            if (time < 1.0) {
+                snprintf(buff, sizeof(buff), "%.0fms", time*1000);
+            } else {
+                snprintf(buff, sizeof(buff), "%.1fs", time);
+            }
+            
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
         case paramType1Pitch:
         {
             double percent = 0.0;
@@ -260,7 +300,33 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
+        case paramType1BipLevel: // -64 to 63
+        {
+            double res    = 0.0;
+            double maxVal = 64.0;
+
+            if (paramValue < 127) {
+                res = round((((double) paramValue - 64.0) * maxVal * 10.0) / 64.0) / 10.0;
+            } else {
+                res = maxVal;             // Clip
+            }
+            snprintf(buff, sizeof(buff), "%.1f", res);
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
+        case paramType1LevAmpDial: // 0.25 to 4.0
+        {
+            double lev = 1.0;
+            // scale 0 -> 0.25x and 127 -> 4.0x, exponentially
+            lev = round(exp((double)paramValue * 0.0218 )*0.25*100.0)/100.0;
+            
+            snprintf(buff, sizeof(buff), "%.2fx", lev);
+            
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
         case paramType1CommonDial:         // Ultimately might not be a common dial, or could just be a default percent dial!?
+        case paramType1LRDial: // Pan type dial, perhaps with reset triangle
         case paramType1Resonance:
         {
             double res    = 0.0;
