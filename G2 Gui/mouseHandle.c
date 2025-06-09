@@ -174,6 +174,7 @@ void update_module_up_rates(void) {
 
                 tMessageContent messageContent = {0};
                 messageContent.cmd                  = eMsgCmdSetModuleUpRate;
+                messageContent.slot                    = gSlot;
                 messageContent.moduleData.moduleKey = module.key;
                 messageContent.moduleData.upRate    = module.upRate;
                 msg_send(&gCommandQueue, &messageContent);
@@ -187,6 +188,7 @@ void send_module_move_msg(tModule * module) {
     tMessageContent messageContent = {0};
 
     messageContent.cmd                  = eMsgCmdMoveModule;
+    messageContent.slot                    = gSlot;
     messageContent.moduleData.moduleKey = module->key;
     messageContent.moduleData.row       = module->row;
     messageContent.moduleData.column    = module->column;
@@ -211,6 +213,7 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
 
             for (int i = 0; i < NUM_VARIATIONS; i++) {
                 messageContent.cmd                 = eMsgCmdSetValue;
+                messageContent.slot                    = gSlot;
                 messageContent.paramData.moduleKey = module->key;
                 messageContent.paramData.param     = paramIndex;
                 messageContent.paramData.variation = i;
@@ -276,14 +279,15 @@ void handle_button(tButtonId buttonId) {
 
             gVariation = variation;
 
-            for (uint32_t variation = 0; variation < NUM_GUI_VARIATIONS; variation++) {
-                gMainButtonArray[(uint32_t)variation1ButtonId + variation].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            for (uint32_t i = 0; i < NUM_GUI_VARIATIONS; i++) {
+                gMainButtonArray[(uint32_t)variation1ButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
             }
 
             gMainButtonArray[buttonId].backgroundColour = (tRgb)RGB_GREEN_ON;
 
             tMessageContent messageContent = {0};
             messageContent.cmd                     = eMsgCmdSelectVariation;
+            messageContent.slot                    = gSlot;
             messageContent.variationData.variation = variation;
             msg_send(&gCommandQueue, &messageContent);
 
@@ -305,6 +309,29 @@ void handle_button(tButtonId buttonId) {
             } while (validModule);
 
             finish_walk_module();
+
+            break;
+        }
+        case slotAButtonId:
+        case slotBButtonId:
+        case slotCButtonId:
+        case slotDButtonId:
+        {
+            uint32_t slot = (uint32_t)buttonId - (uint32_t)slotAButtonId;
+
+            gSlot = slot;
+
+            for (uint32_t i = 0; i < MAX_SLOTS; i++) {
+                gMainButtonArray[(uint32_t)slotAButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            }
+
+            gMainButtonArray[buttonId].backgroundColour = (tRgb)RGB_GREEN_ON;
+
+            tMessageContent messageContent = {0};
+            messageContent.cmd                     = eMsgCmdSelectSlot;
+            messageContent.slot                    = gSlot;
+            messageContent.slotData.slot = slot;
+            msg_send(&gCommandQueue, &messageContent);
 
             break;
         }
@@ -458,6 +485,7 @@ void menu_action_delete_cable(int index) {
                     tMessageContent messageContent = {0};
 
                     messageContent.cmd                            = eMsgCmdDeleteCable;
+                    messageContent.slot                    = gSlot;
                     messageContent.cableData.location             = gLocation;
                     messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
                     messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
@@ -500,6 +528,7 @@ void menu_action_delete_module(int index) {
                     tMessageContent messageContent = {0};
 
                     messageContent.cmd                            = eMsgCmdDeleteCable;
+                    messageContent.slot                    = gSlot;
                     messageContent.cableData.location             = gLocation;
                     messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
                     messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
@@ -610,6 +639,7 @@ void menu_action_create(int index) {
             module.name[sizeof(module.name) - 1] = '\0';
 
             messageContent.cmd                  = eMsgCmdWriteModule;
+            messageContent.slot                    = gSlot;
             messageContent.moduleData.moduleKey = module.key;
             messageContent.moduleData.type      = module.type;
             messageContent.moduleData.row       = module.row;
@@ -873,6 +903,7 @@ bool handle_module_click(tCoord coord, int button) {
 
                             tMessageContent messageContent = {0};
                             messageContent.cmd                 = eMsgCmdSetValue;
+                            messageContent.slot                    = gSlot;
                             messageContent.paramData.moduleKey = module.key;
                             messageContent.paramData.param     = i;
                             messageContent.paramData.variation = gVariation;
@@ -905,6 +936,7 @@ bool handle_module_click(tCoord coord, int button) {
                                  *
                                  * tMessageContent messageContent = {0};
                                  * messageContent.cmd                 = eMsgCmdSetValue;
+                                 * messageContent.slot                    = gSlot;
                                  * messageContent.paramData.moduleKey = module.key;
                                  * messageContent.paramData.mode     = i;
                                  * messageContent.paramData.variation = 0;
@@ -1121,6 +1153,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                                 tMessageContent messageContent = {0};
 
                                 messageContent.cmd                            = eMsgCmdWriteCable;
+                                messageContent.slot                    = gSlot;
                                 messageContent.cableData.location             = gLocation;
                                 messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
                                 messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
@@ -1202,6 +1235,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                             write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
 
                             messageContent.cmd                 = eMsgCmdSetValue;
+                            messageContent.slot                    = gSlot;
                             messageContent.paramData.moduleKey = gParamDragging.moduleKey;
                             messageContent.paramData.param     = gParamDragging.param;
                             messageContent.paramData.variation = gVariation;
@@ -1219,6 +1253,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                             printf("Write to module %u variation %u\n", module.key.index, gVariation);
 
                             messageContent.cmd                       = eMsgCmdSetParamMorph;
+                            messageContent.slot                    = gSlot;
                             messageContent.paramMorphData.moduleKey  = module.key;
                             messageContent.paramMorphData.param      = gParamDragging.param;
                             messageContent.paramMorphData.paramMorph = gMorphGroupFocus;
@@ -1242,6 +1277,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                         write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
 
                         messageContent.cmd                = eMsgCmdSetMode;
+                        messageContent.slot                    = gSlot;
                         messageContent.modeData.moduleKey = gParamDragging.moduleKey;
                         messageContent.modeData.mode      = gParamDragging.mode;
                         messageContent.modeData.value     = value;

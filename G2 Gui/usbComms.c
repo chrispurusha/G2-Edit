@@ -622,7 +622,7 @@ int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, 
                 break;
             }
 
-            case 0x60:
+            case SUB_RESPONSE_CONTROLLERS:
             {
                 LOG_DEBUG("Controllers\n");
 
@@ -636,7 +636,19 @@ int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, 
                 subOffset = tmpSubOffset;
                 break;
             }
+                
+            case SUB_RESPONSE_CURRENT_NOTE_2:
+            {
+                LOG_DEBUG("Current note 2\n");
+                break;
+            }
 
+            case SUB_RESPONSE_PATCH_NOTES:
+            {
+                LOG_DEBUG("Patch notes\n");
+                break;
+            }
+                
             default:
             {
                 LOG_DEBUG("Unprocessed type 0x%02x\n", type);
@@ -1137,13 +1149,13 @@ static int send_write_data(tMessageContent * messageContent) {
     uint16_t crc                     = 0;
     int      msgLength               = 0;
     int      pos                     = COMMAND_OFFSET;
-    uint32_t slot                    = 0;
+    //uint32_t slot                    = 0;   // TODO: pass this via the message structure
 
     switch (messageContent->cmd) {
         case eMsgCmdSetValue:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_SET_PARAM;
             buff[pos++] = messageContent->paramData.moduleKey.location;
             buff[pos++] = messageContent->paramData.moduleKey.index;
@@ -1154,8 +1166,8 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdSetMode:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_SET_MODE;
             buff[pos++] = messageContent->modeData.moduleKey.location;
             buff[pos++] = messageContent->modeData.moduleKey.index;
@@ -1166,8 +1178,8 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdWriteCable:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_WRITE_CABLE;
             buff[pos++] = 0x10 | (messageContent->cableData.location << 3) | 0x00;                                    // unknown, location so 0x00 = fx and 0x08 = va, then 3 bits for colour
             buff[pos++] = messageContent->cableData.moduleFromIndex;
@@ -1181,8 +1193,8 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdWriteModule:
             LOG_DEBUG("Writing module!\n");
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_ADD_MODULE;
             buff[pos++] = messageContent->moduleData.type;
             buff[pos++] = messageContent->moduleData.moduleKey.location;
@@ -1203,8 +1215,8 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdMoveModule:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_MOVE_MODULE;
             buff[pos++] = messageContent->moduleMoveData.moduleKey.location;
             buff[pos++] = messageContent->moduleMoveData.moduleKey.index;
@@ -1214,8 +1226,8 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdDeleteModule:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_DELETE_MODULE;
             buff[pos++] = messageContent->moduleMoveData.moduleKey.location;
             buff[pos++] = messageContent->moduleMoveData.moduleKey.index;
@@ -1223,8 +1235,8 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdSetModuleUpRate:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_SET_MODULE_UPRATE;
             buff[pos++] = messageContent->moduleMoveData.moduleKey.location;
             buff[pos++] = messageContent->moduleMoveData.moduleKey.index;
@@ -1233,8 +1245,8 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdDeleteCable:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_DELETE_CABLE;
             buff[pos++] = 0x2 | messageContent->cableData.location;
             buff[pos++] = messageContent->cableData.moduleFromIndex;
@@ -1245,8 +1257,8 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdSetParamMorph:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_SET_MORPH_RANGE;
             buff[pos++] = messageContent->paramMorphData.moduleKey.location;
             buff[pos++] = messageContent->paramMorphData.moduleKey.index;
@@ -1259,10 +1271,19 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdSelectVariation:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_SELECT_VARIATION;
             buff[pos++] = messageContent->variationData.variation;
+            break;
+            
+        case eMsgCmdSelectSlot:
+            buff[pos++] = 0x01;
+            buff[pos++] = COMMAND_REQ | COMMAND_SYS;
+            buff[pos++] = 0;
+            buff[pos++] = SUB_COMMAND_SELECT_SLOT;
+            buff[pos++] = messageContent->slotData.slot;
+            
             break;
 
         // 4418 mess.pas for assign/deassign knob

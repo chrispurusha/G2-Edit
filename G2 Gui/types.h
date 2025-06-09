@@ -420,7 +420,11 @@ typedef enum {
     variation6ButtonId,
     variation7ButtonId,
     variation8ButtonId,
-    initParamsButtonId
+    initParamsButtonId,
+    slotAButtonId,
+    slotBButtonId,
+    slotCButtonId,
+    slotDButtonId
 } tButtonId;
 
 typedef struct {
