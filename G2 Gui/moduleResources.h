@@ -78,6 +78,7 @@ const char * shpStaticStrMap[]    = {"Inv x3", "Inv x2", "x2", "x3"};
 const char * trigGateStrMap[]     = {"Trig", "Gate"};
 const char * decayReleaseStrMap[] = {"Decay", "Release"};
 const char * fltLPSlopeStrMap[]   = {"6db", "12db", "18db", "24db", "30db", "36db"};
+const char * flipFlopStrMap[]     = {"D-type", "RS-type"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -724,6 +725,7 @@ const tParamLocation paramLocationList[] = {
     // 90 Sw1-2
     {moduleTypeSw1to2,   paramType1StandardToggle, paramType2Toggle, {{ 37, -3}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, out8StrMap,   NULL          }, // 90 Selector
     // 91 FlipFlop
+    {moduleTypeFlipFlop,   paramType1StandardToggle, paramType2Toggle, {{ 45, -3}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, flipFlopStrMap,   NULL          }, // 91 Selector
     // 92 FltClassic
     {moduleTypeFltClassic, paramType1Freq,           paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Freq",    128,  0, NULL,               NULL          },  // 92
         {moduleTypeFltClassic, paramType1Pitch,          paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  "Env",     128,  0, NULL,               NULL          },
@@ -1243,6 +1245,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSw1to2,    connectorDirOut,  connectorTypeControl, {{ 60,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "2",    labelLocLeft   },  // 88 Out2
     {moduleTypeSw1to2,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Ctrl",    labelLocRight   },  // 88 Ctrl
     // 91 FlipFlop
+    {moduleTypeFlipFlop,    connectorDirIn,  connectorTypeLogic,   {{  30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     "Clk",  labelLocLeft}, // 91 Clock
+    {moduleTypeFlipFlop,    connectorDirIn,  connectorTypeLogic,   {{  15,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     "Rst",  labelLocLeft}, // 91 Reset
+    {moduleTypeFlipFlop,    connectorDirIn,  connectorTypeLogic,   {{  35,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     "In",  labelLocLeft}, // 91 In
+    {moduleTypeFlipFlop,    connectorDirOut,  connectorTypeLogic,   {{  70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     "NotQ",  labelLocRight}, // 91 NotQ
+    {moduleTypeFlipFlop,    connectorDirOut,  connectorTypeLogic,   {{  80,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     "Q",  labelLocRight}, // 91 Q
+
     // 92 FltClassic
     {moduleTypeFltClassic, connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },  // 92
     {moduleTypeFltClassic, connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },

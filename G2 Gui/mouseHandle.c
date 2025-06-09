@@ -744,6 +744,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Pulse",   menu_action_create,  moduleTypePulse, NULL},
         {"Create Delay",   menu_action_create,  moduleTypeDelay, NULL},
         {"Create Gate",   menu_action_create,  moduleTypeGate, NULL},
+        {"Create FlipFlop",   menu_action_create,  moduleTypeFlipFlop, NULL},
         {"Create ClkDiv",   menu_action_create,  moduleTypeClkDiv, NULL},
         {"Create 8Counter",   menu_action_create,  moduleType8Counter, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
