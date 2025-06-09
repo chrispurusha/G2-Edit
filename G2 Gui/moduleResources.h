@@ -1250,7 +1250,6 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFlipFlop,    connectorDirIn,  connectorTypeLogic,   {{  35,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     "In",  labelLocLeft}, // 91 In
     {moduleTypeFlipFlop,    connectorDirOut,  connectorTypeLogic,   {{  70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     "NotQ",  labelLocRight}, // 91 NotQ
     {moduleTypeFlipFlop,    connectorDirOut,  connectorTypeLogic,   {{  80,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     "Q",  labelLocRight}, // 91 Q
-
     // 92 FltClassic
     {moduleTypeFltClassic, connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },  // 92
     {moduleTypeFltClassic, connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },
