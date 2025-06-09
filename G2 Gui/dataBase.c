@@ -160,7 +160,7 @@ void write_module(tModuleKey key, tModule * module) {
     mutex_unlock();
 }
 
-void delete_module(tModuleKey key, tDoFree doFree) {
+void delete_module(tModuleKey key) {
     tModule * dbModule = NULL;
 
     mutex_lock();
@@ -178,16 +178,6 @@ void delete_module(tModuleKey key, tDoFree doFree) {
 
         if (dbModule->next != NULL) {
             dbModule->next->prev = dbModule->prev;
-        }
-
-        if (doFree == doFreeYes) {
-            for (uint32_t i = 0; i < NUM_VARIATIONS; i++) {
-                free(dbModule->param[i]);
-            }
-
-            if (dbModule->connector != NULL) {
-                free(dbModule->connector);
-            }
         }
         memset(dbModule, 0, sizeof(*dbModule));  // Protection against using stale data
         free(dbModule);
@@ -399,14 +389,6 @@ void database_clear_modules(void) {
 
     while (module != NULL) {
         nextModule = module->next;
-
-        for (uint32_t i = 0; i < NUM_VARIATIONS; i++) {
-            free(module->param[i]);
-        }
-
-        if (module->connector != NULL) {
-            free(module->connector);
-        }
         free(module);
         module = nextModule;
     }
@@ -460,55 +442,6 @@ int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCoun
     }
 
     return -1;  // Not found
-}
-
-void allocate_module_parameters(tModule * module, uint32_t paramCount) {
-    if (module->key.location != locationMorph) {   // TODO: See if we can do this more elegantly? Maybe pass the location to module_param_count?
-        if ((module_param_count(module->type) > 0) && (module_param_count(module->type) != paramCount)) {
-            LOG_WARNING("When allocating for %s, param count %u should be %u\n", gModuleProperties[module->type].name, paramCount, module_param_count(module->type));
-        }
-    }
-
-    if (paramCount > module->allocatedParams) {
-        for (uint32_t i = 0; i < NUM_VARIATIONS; i++) {
-            if (module->param[i] == NULL) {
-                module->param[i] = malloc(paramCount * sizeof(tParam));
-            } else {
-                module->param[i] = realloc(module->param[i], paramCount * sizeof(tParam));
-            }
-
-            if (module->param[i] == NULL) {
-                perror("Failed to allocate memory for param array");
-                exit(1);
-            }
-            memset(module->param[i], 0, paramCount * sizeof(tParam));
-        }
-
-        module->allocatedParams = paramCount;
-    }
-}
-
-void allocate_module_connectors(tModule * module, uint32_t connectorCount) {
-    if ((module_connector_count(module->type) > 0) && (module_connector_count(module->type) != connectorCount)) {
-        LOG_WARNING("When allocating for %s, connector count %u should be %u\n", gModuleProperties[module->type].name, connectorCount, module_connector_count(module->type));
-    }
-
-    // Allocation can happen via several mechanisms, so don't re-allocate if we've already done it
-    if (connectorCount > module->allocatedConnectors) {
-        if (module->connector == NULL) {
-            module->connector = malloc(connectorCount * sizeof(tConnector));
-        } else {
-            module->connector = realloc(module->connector, connectorCount * sizeof(tConnector));
-        }
-
-        if (module->connector == NULL) {
-            perror("Failed to allocate memory for connector array");
-            exit(1);
-        }
-        memset(module->connector, 0, connectorCount * sizeof(tConnector));
-
-        module->allocatedConnectors = connectorCount;
-    }
 }
 
 #ifdef __cplusplus

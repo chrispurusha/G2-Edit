@@ -521,7 +521,7 @@ void menu_action_delete_module(int index) {
 
         msg_send(&gCommandQueue, &messageContent);
 
-        delete_module(gContextMenu.moduleKey, doFreeYes);
+        delete_module(gContextMenu.moduleKey);
 
         update_module_up_rates();
     }
@@ -605,8 +605,6 @@ void menu_action_create(int index) {
             module.key.index = (uint32_t)uniqueIndex;
             module.type      = (tModuleType)gContextMenu.items[index].param;
             convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.coord);
-            allocate_module_parameters(&module, module_param_count(module.type));
-            allocate_module_connectors(&module, module_connector_count(module.type));
 
             strncpy(module.name, gModuleProperties[module.type].name, sizeof(module.name));
             module.name[sizeof(module.name) - 1] = '\0';
@@ -943,7 +941,7 @@ bool handle_module_click(tCoord coord, int button) {
                         tModule tmpModule = {0};
 
                         read_module(module.key, &tmpModule);
-                        delete_module(module.key, doFreeNo);
+                        delete_module(module.key);
                         write_module(tmpModule.key, &tmpModule);
                         gModuleDrag.moduleKey = tmpModule.key;
                         gModuleDrag.active    = true;
