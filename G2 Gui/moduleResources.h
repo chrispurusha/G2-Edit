@@ -706,7 +706,7 @@ const tParamLocation paramLocationList[] = {
     // 85 WindSw
     {moduleTypeWindSw,   paramType1CommonDial,           paramType2Dial,   {{40,  -3}, {7, 14}}, anchorBottomLeft,  "From",    128,  0, NULL,               NULL          },  // 85 From
     {moduleTypeWindSw,   paramType1CommonDial,           paramType2Dial,   {{60,  -3}, {7, 14}}, anchorBottomLeft,  "To",    128,  0, NULL,               NULL          },  // 85 To
-    // 86 8Counter
+    // 86 8Counter -- No controls
     // 87 FltLP
     // 88 Sw1-4
     // 89 Flanger
@@ -1201,6 +1201,17 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeWindSw,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 85 Out
     {moduleTypeWindSw,    connectorDirOut, connectorTypeLogic, {{ -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 85 Gate
     // 86 8Counter
+    {moduleType8Counter,    connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     "Clk",  labelLocRight}, // 86 Clock
+    {moduleType8Counter,    connectorDirIn,  connectorTypeLogic,   {{  10,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     "Rst",  labelLocRight}, // 86 Reset
+    {moduleType8Counter,    connectorDirOut, connectorTypeLogic, {{ 20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "1",    labelLocUp   }, // 86 Out1
+    {moduleType8Counter,    connectorDirOut, connectorTypeLogic, {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "2",    labelLocUp   }, // 86 Out2
+    {moduleType8Counter,    connectorDirOut, connectorTypeLogic, {{ 40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "3",    labelLocUp   }, // 86 Out3
+    {moduleType8Counter,    connectorDirOut, connectorTypeLogic, {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "4",    labelLocUp   }, // 86 Out4
+    {moduleType8Counter,    connectorDirOut, connectorTypeLogic, {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "5",    labelLocUp   }, // 86 Out5
+    {moduleType8Counter,    connectorDirOut, connectorTypeLogic, {{ 70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "6",    labelLocUp   }, // 86 Out6
+    {moduleType8Counter,    connectorDirOut, connectorTypeLogic, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "7",    labelLocUp   }, // 86 Out7
+    {moduleType8Counter,    connectorDirOut, connectorTypeLogic, {{ 90,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "8",    labelLocUp   }, // 86 Out8
+
     // 87 FltLP
     // 88 Sw1-4
     // 89 Flanger
