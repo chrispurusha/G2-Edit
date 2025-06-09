@@ -80,6 +80,8 @@ const char * trigGateStrMap[]     = {"Trig", "Gate"};
 const char * decayReleaseStrMap[] = {"Decay", "Release"};
 const char * fltLPSlopeStrMap[]   = {"6db", "12db", "18db", "24db", "30db", "36db"};
 const char * flipFlopStrMap[]     = {"D-type", "RS-type"};
+const char * freqShiftRangeStrMap[]= {"Hi", "Lo", "Sub"};
+
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -741,7 +743,7 @@ const tParamLocation paramLocationList[] = {
         {moduleTypeStChorus,   paramType1Bypass,         paramType2Toggle, {{ -3,   0}, {5,  5}}, anchorMiddleRight, NULL,        2,  1, NULL,               NULL          },
     // 95 Unknown
     // 96 OscD
-    {moduleTypeOscD,       paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Tune",    128, 64, NULL,               NULL          }, // 96 Tune
+    {moduleTypeOscD,       paramType1Freq,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Tune",    128, 64, NULL,               NULL          }, // 96 Tune
     {moduleTypeOscD,       paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL,               NULL          }, // 96 Fine
     {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap}, // 96 Kbt
     {moduleTypeOscD,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128,  0, NULL,               NULL          }, // 96 Pitch M
@@ -750,13 +752,17 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{ 70,  -1}, {7,  7}}, anchorBottomLeft,     NULL,        2,  0, fmTypeStrMap,       NULL          }, // 96 FM Type
     {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{-20,   5}, {7,  7}}, anchorTopRight,    NULL,        5,  0, shapeTypeStrMap,    NULL          },     // 96 Waveform
     // 97 OscA
-    {moduleTypeOscA,       paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Tune",    128, 64, NULL,               NULL          }, // 97 Tune
+    {moduleTypeOscA,       paramType1Freq,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Tune",    128, 64, NULL,               NULL          }, // 97 Tune
     {moduleTypeOscA,       paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL,               NULL          }, // 97 Fine
     {moduleTypeOscA,       paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap}, // 97 Kbt
     {moduleTypeOscA,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128,  0, NULL,               NULL          }, // 97 Pitch M
     {moduleTypeOscA,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 97 Bypass
     {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{-20,   5}, {7,  7}}, anchorTopRight,    NULL,        5,  0, shapeOscATypeStrMap,    NULL   },     // 97 Waveform
     // 98 FreqShift
+    {moduleTypeFreqShift,       paramType1Freq,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "FreqShift",    128, 64, NULL,               NULL          }, // 98 FreqShift
+    {moduleTypeFreqShift,       paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 64, NULL,               NULL          }, // 98 Mod
+    {moduleTypeFreqShift,       paramType1StandardToggle, paramType2Toggle, {{60,   -10}, {7,  7}}, anchorBottomLeft,    NULL,        3,  0, freqShiftRangeStrMap,    NULL   },     // 98 Range
+    {moduleTypeFreqShift,       paramType1Bypass,         paramType2Toggle, {{-10,  -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 98 Bypass
     // 99 Unknown
     // 100 Sw2-1
     // 101 Unknown
@@ -1291,6 +1297,11 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeOscA,       connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 97  PitchVar
     {moduleTypeOscA,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 97 Out
     // 98 FreqShift
+    {moduleTypeFreqShift,       connectorDirIn,  connectorTypeControl, {{  3, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 98 Mod
+    {moduleTypeFreqShift,   connectorDirIn,  connectorTypeAudio,   {{ -10,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },  // 98 In
+    {moduleTypeFreqShift,   connectorDirOut, connectorTypeAudio,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Down",    labelLocLeft   }, //98 Down
+    {moduleTypeFreqShift,   connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Up",    labelLocLeft   }, // 98 Up
+
     // 99 Unknown
     // 100 Sw2-1
     // 101 Unknown
