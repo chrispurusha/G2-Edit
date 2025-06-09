@@ -98,13 +98,14 @@ void adjust_scroll_for_drag(void) {
 void update_module_up_rates(void) {
     tModule  module   = {0};
     uint32_t location = gLocation;
+    uint32_t slot     = gSlot;  // TODO: Might need to pass this in as a parameter
 
 
     // Step 1 - initialise the old and new fields
     reset_walk_module();
 
     while (walk_next_module(&module)) {
-        if (module.key.location == location) {
+        if (module.key.slot == slot && module.key.location == location) {
             module.newUpRate = 0;
 
             write_module(module.key, &module);
@@ -128,10 +129,10 @@ void update_module_up_rates(void) {
             tConnectorDir fromConnector = connectorDirOut;
             int           fromConnIndex = -1;
             int           toConnIndex   = -1;
-            tModuleKey    fromModuleKey = {cable.key.location, cable.key.moduleFromIndex};
-            tModuleKey    toModuleKey   = {cable.key.location, cable.key.moduleToIndex};
+            tModuleKey    fromModuleKey = {cable.key.slot, cable.key.location, cable.key.moduleFromIndex};
+            tModuleKey    toModuleKey   = {cable.key.slot, cable.key.location, cable.key.moduleToIndex};
 
-            if ((fromModuleKey.location == location) && (toModuleKey.location == location)) {
+            if ((fromModuleKey.slot == slot) && (toModuleKey.slot == slot) && (fromModuleKey.location == location) && (toModuleKey.location == location)) {
                 if (read_module(fromModuleKey, &fromModule) && read_module(toModuleKey, &toModule)) {
                     if (cable.key.linkType == cableLinkTypeFromInput) {
                         fromConnector = connectorDirIn;
@@ -166,7 +167,7 @@ void update_module_up_rates(void) {
     reset_walk_module();
 
     while (walk_next_module(&module)) {
-        if (module.key.location == location) {
+        if ((module.key.slot == slot) && (module.key.location == location)) {
             if (module.newUpRate != module.upRate) {
                 module.upRate = module.newUpRate;
 
@@ -321,7 +322,7 @@ void handle_button(tButtonId buttonId) {
 
             gSlot = slot;
 
-            for (uint32_t i = 0; i < MAX_SLOTS; i++) {
+            for (uint32_t i = 0; i < MAX_SLOTS; i++) {  // TODO: commonalise this with USB message receipt on slot select
                 gMainButtonArray[(uint32_t)slotAButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
             }
 
@@ -353,7 +354,7 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
     reset_walk_module();
 
     while (walk_next_module(&walk)) {
-        if ((walk.column == module.column) && (walk.key.location == key.location)) {
+        if ((walk.column == module.column) && (walk.key.slot == key.slot) && (walk.key.location == key.location)) {
             if (walk.key.index != key.index) {
                 if ((module.row > walk.row) && (module.row < walk.row + gModuleProperties[walk.type].height)) {
                     module.row = walk.row + gModuleProperties[walk.type].height;
@@ -374,7 +375,7 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
     reset_walk_module();
 
     while (walk_next_module(&walk)) {
-        if ((walk.column == module.column) && (walk.key.location == key.location)) {
+        if ((walk.column == module.column) && (walk.key.slot == key.slot) && (walk.key.location == key.location)) {
             if (walk.key.index != key.index) {
                 if ((walk.row >= module.row) && (walk.row < module.row + gModuleProperties[module.type].height)) {
                     rowAndBelowToDrop = walk.row;
@@ -392,7 +393,7 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
         reset_walk_module();
 
         while (walk_next_module(&walk)) {
-            if ((walk.column == module.column) && (walk.key.location == key.location)) {
+            if ((walk.column == module.column) && (walk.key.slot == key.slot) && (walk.key.location == key.location)) {
                 if (walk.key.index != key.index) {
                     if (walk.row >= rowAndBelowToDrop) {
                         walk.row += dropAmount;
@@ -413,6 +414,7 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
 
 void set_up_cable_key(tCableKey * cableKey, tModule * fromModule, tModule * toModule, int toConnectorIndex) {
     // This logic is pretty horrible - sorry
+    cableKey->slot                 = fromModule->key.slot;
     cableKey->location             = fromModule->key.location;
     cableKey->moduleFromIndex      = fromModule->key.index;
     cableKey->connectorFromIoCount = find_io_count_from_index(fromModule, fromModule->connector[gCableDrag.fromConnectorIndex].dir, gCableDrag.fromConnectorIndex);
@@ -445,7 +447,7 @@ void menu_action_delete_cable(int index) {
     int     inIndex    = -1;
     bool    deleteWalk = false;
 
-    if (gContextMenu.moduleKey.location == gLocation) {
+    if ((gContextMenu.moduleKey.slot == gSlot) && (gContextMenu.moduleKey.location == gLocation)) {
         read_module(gContextMenu.moduleKey, &module);
 
         reset_walk_cable();
@@ -453,7 +455,7 @@ void menu_action_delete_cable(int index) {
         while (walk_next_cable(&walk)) {
             deleteWalk = false;
 
-            if (walk.key.location == gContextMenu.moduleKey.location) {
+            if (walk.key.slot == gSlot && walk.key.location == gContextMenu.moduleKey.location) {
                 switch (module.connector[gContextMenu.connectorIndex].dir) {
                     case connectorDirOut:
                         outIndex = find_io_count_from_index(&module, connectorDirOut, gContextMenu.connectorIndex);
@@ -509,7 +511,7 @@ void menu_action_delete_module(int index) {
     tCable  walk       = {0};
     bool    deleteWalk = false;
 
-    if (gContextMenu.moduleKey.location == gLocation) {
+    if (gContextMenu.moduleKey.slot == gSlot && gContextMenu.moduleKey.location == gLocation) {
         read_module(gContextMenu.moduleKey, &module);
 
         reset_walk_cable();
@@ -517,7 +519,7 @@ void menu_action_delete_module(int index) {
         while (walk_next_cable(&walk)) {
             deleteWalk = false;
 
-            if (walk.key.location == gContextMenu.moduleKey.location) {
+            if (walk.key.slot == gSlot && walk.key.location == gContextMenu.moduleKey.location) {
                 if (walk.key.moduleFromIndex == gContextMenu.moduleKey.index) {
                     deleteWalk = true;
                 } else if (walk.key.moduleToIndex == gContextMenu.moduleKey.index) {
@@ -561,6 +563,7 @@ uint32_t find_unique_module_id(uint32_t location) {
     tModule    module = {0};
     uint32_t   i      = 0;
 
+    key.slot = gSlot;     // TODO: Might need to pass this in as a parameter?
     key.location = location;
 
     for (i = 1; i <= 255; i++) {
@@ -627,6 +630,7 @@ void menu_action_create(int index) {
         tMessageContent messageContent = {0};
         int32_t         uniqueIndex    = 0;
 
+        module.key.slot = gSlot;   // TODO: Possibly pass this into find_unique...
         module.key.location = gLocation;
         uniqueIndex         = find_unique_module_id(module.key.location);
 
@@ -854,7 +858,7 @@ bool handle_module_click(tCoord coord, int button) {
     tModule module = {0};
 
     while (walk_next_module(&module) && (retVal == false)) {
-        if (module.key.location == gLocation || module.key.location == locationMorph) {
+        if (module.key.slot == gSlot && (module.key.location == gLocation || module.key.location == locationMorph)) {
             if (module.key.location == locationMorph) {
                 if (module.key.index == 1) {  // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
                     paramCount = NUM_MORPHS * 2;
@@ -882,6 +886,7 @@ bool handle_module_click(tCoord coord, int button) {
                         }
 
                         if (paramType2 == paramType2Dial) {
+                            gParamDragging.moduleKey.slot    = gSlot;  // TODO: Think about this being best way of doing it?
                             gParamDragging.moduleKey.index    = module.key.index;
                             gParamDragging.moduleKey.location = module.key.location;
                             gParamDragging.type3              = paramType3Param;
@@ -924,6 +929,7 @@ bool handle_module_click(tCoord coord, int button) {
                     if (within_rectangle(coord, module.mode[i].rectangle)) {
                         if (button == GLFW_MOUSE_BUTTON_LEFT) {
                             if ((modeLocationList[mode->modeRef].type2) == paramType2Dial) {
+                                gParamDragging.moduleKey.slot    = gSlot;  // TODO: Think about this being best way of doing it?
                                 gParamDragging.moduleKey.index    = module.key.index;
                                 gParamDragging.moduleKey.location = module.key.location;
                                 gParamDragging.type3              = paramType3Mode;
@@ -1130,7 +1136,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     reset_walk_module();
 
                     while (walk_next_module(&toModule) && !quitLoop) {
-                        if (toModule.key.location == gLocation) {
+                        if (toModule.key.slot == gSlot && toModule.key.location == gLocation) {
                             for (int i = 0; i < module_connector_count(toModule.type); i++) {
                                 if (!within_rectangle(coord, toModule.connector[i].rectangle)) {
                                     continue;
@@ -1210,6 +1216,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     } else if (gParamDragging.active == true) {
         read_module(gParamDragging.moduleKey, &module);
 
+        // TODO: Think about if we need to check key's slot
         switch (gParamDragging.type3) {
             case paramType3Param:
 

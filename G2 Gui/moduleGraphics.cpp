@@ -710,7 +710,7 @@ void render_modules(void) {
     do {
         validModule = walk_next_module(&module);
 
-        if (validModule && module.key.location == gLocation && module.type != moduleTypeUnknown0) {
+        if (validModule && module.key.slot == gSlot && module.key.location == gLocation && module.type != moduleTypeUnknown0) {
             render_module(&module);
         }
     } while (validModule);
@@ -748,11 +748,11 @@ void render_cable(tCable * cable) {
     tModule moduleFrom = {0};
     tModule moduleTo   = {0};
 
-    if (read_module({cable->key.location, cable->key.moduleFromIndex}, &moduleFrom) == false) {
+    if (read_module({cable->key.slot, cable->key.location, cable->key.moduleFromIndex}, &moduleFrom) == false) {
         return;
     }
 
-    if (read_module({cable->key.location, cable->key.moduleToIndex}, &moduleTo) == false) {
+    if (read_module({cable->key.slot, cable->key.location, cable->key.moduleToIndex}, &moduleTo) == false) {
         return;
     }
     set_rgb_colour(cableColourMap[cable->colour]);
@@ -775,7 +775,7 @@ void render_cables(void) {
     do {
         validCable = walk_next_cable(&cable);
 
-        if (validCable && cable.key.location == gLocation) {
+        if (validCable && cable.key.slot == gSlot && cable.key.location == gLocation) {
             render_cable(&cable);
         }
     } while (validCable);
@@ -799,7 +799,7 @@ void render_morph_groups(void) {
     do {
         validModule = walk_next_module(&module);
 
-        if ((validModule && module.key.location == locationMorph) && (module.key.index == 1)) {
+        if ((validModule && module.key.slot == gSlot && module.key.location == locationMorph) && (module.key.index == 1)) {
             // Make sure all rectangles (for mouse click) are nullified
             for (i = 0; i < NUM_VARIATIONS; i++) {
                 for (j = 0; j < (NUM_MORPHS * 2); j++) {

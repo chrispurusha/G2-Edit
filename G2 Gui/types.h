@@ -382,6 +382,7 @@ typedef struct {
 } tLed;
 
 typedef struct {
+    uint32_t slot;
     uint32_t location;
     uint32_t moduleFromIndex;
     uint32_t connectorFromIoCount;
@@ -435,6 +436,7 @@ typedef struct {
 } tConnector;
 
 typedef struct {
+    uint32_t slot;
     uint32_t location;
     uint32_t index;
 } tModuleKey;
