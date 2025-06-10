@@ -70,7 +70,7 @@ const char * delayStrMap[]        = {"50ms", "?", "?", "?"}; // *** For Scratch 
 const char * gateTypeStrMap[]     = {"AND", "NAND", "OR", "NOR", "XOR", "NXOR"};
 const char * invStrMap[]          = {"+", "Inv"};
 const char * clkSrcStrMap[]       = {"Internal", "Master"};
-const char * syncBeatStrMap[]     = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"};
+const char * int16StrMap[]     = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"};
 const char * divModeStrMap[]      = {"Gated", "Toggled"};
 const char * out8StrMap[]         = {"Out1", "Out2", "Out3", "Out4", "Out5", "Out6", "Out7", "Out8"};
 const char * in8StrMap[]          = {"In1", "In2", "In3", "In4", "In5", "In6", "In7", "In8"};
@@ -81,6 +81,7 @@ const char * decayReleaseStrMap[] = {"Decay", "Release"};
 const char * fltLPSlopeStrMap[]   = {"6db", "12db", "18db", "24db", "30db", "36db"};
 const char * flipFlopStrMap[]     = {"D-type", "RS-type"};
 const char * freqShiftRangeStrMap[]= {"Hi", "Lo", "Sub"};
+const char * fltPhaseTypeStrMap[] = {"Notch", "Peak", "Deep"};
 
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
@@ -663,7 +664,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeClkGen,   paramType1CommonDial,           paramType2Dial,   {{60,  -17}, {7, 14}}, anchorBottomLeft,  NULL,    128,  100, NULL,               NULL          },  // 68 Tempo *** needs new dial 24-214 BPM
     {moduleTypeClkGen,   paramType1Bypass,         paramType2Toggle, {{70,   -17}, {5,  5}}, anchorBottomLeft, NULL,        2,  1, NULL,               NULL          }, // 68 Bypass
     {moduleTypeClkGen,  paramType1StandardToggle,     paramType2Toggle,   {{ 3,  -3}, {7, 7}}, anchorBottomLeft,  "Source",    2, 0, clkSrcStrMap,               NULL          },  // 66 Clk Source
-    {moduleTypeClkGen,  paramType1StandardToggle,     paramType2Toggle,   {{ 60,  -3}, {7, 7}}, anchorBottomLeft,  "Sync every",    16, 3, syncBeatStrMap,               NULL          },  // 66 BeatSync
+    {moduleTypeClkGen,  paramType1StandardToggle,     paramType2Toggle,   {{ 60,  -3}, {7, 7}}, anchorBottomLeft,  "Sync every",    16, 3, int16StrMap,               NULL          },  // 66 BeatSync
     {moduleTypeClkGen,   paramType1CommonDial,           paramType2Dial,   {{25,  -3}, {7, 14}}, anchorBottomLeft,  "Swing",    128,  0, NULL,               NULL          },  // 68 Swing
     // 69 ClkDiv
     {moduleTypeClkDiv,   paramType1CommonDial,           paramType2Dial,   {{60,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  0, NULL,               NULL          },  // 69 Divider *** needs other UI element
@@ -768,6 +769,17 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeSw2to1,   paramType1StandardToggle, paramType2Toggle, {{ 50, -3}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, in8StrMap,   NULL          }, // 100 Selector
     // 101 Unknown
     // 102 FltPhase
+    {moduleTypeFltPhase,   paramType1CommonDial,          paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",     128,  0, NULL,               NULL          }, // 102 Pitch M
+    {moduleTypeFltPhase,   paramType1Freq,           paramType2Dial,   {{ 22,  -10}, {7, 14}}, anchorBottomLeft,  "Freq",    128,  0, NULL,               NULL          },  // 102 Freq
+    {moduleTypeFltPhase,   paramType1CommonDial,          paramType2Dial,   {{ 42,  -3}, {7, 14}}, anchorBottomLeft,  NULL,     128,  0, NULL,               NULL          }, // 102 Spread M
+    {moduleTypeFltPhase,   paramType1CommonDial,          paramType2Dial,   {{ 57,  -17}, {7, 14}}, anchorBottomLeft,  "FB",     128,  64, NULL,               NULL          }, // 102 FB
+    {moduleTypeFltPhase,   paramType1StandardToggle, paramType2Toggle, {{ 70, -3}, {7,  7}}, anchorBottomLeft,  "Notch",        6,  4, int16StrMap,   NULL          },// 102 Notch count
+    {moduleTypeFltPhase,   paramType1CommonDial,          paramType2Dial,   {{ 38,  -17}, {7, 14}}, anchorBottomLeft,  "Spread",     128,  64, NULL,               NULL          }, // 102 Spread
+    {moduleTypeFltPhase,   paramType1Bypass,         paramType2Toggle, {{-3,   -10}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 102 Bypass
+    {moduleTypeFltPhase,   paramType1CommonDial,          paramType2Dial,   {{ 83,  -3}, {7, 14}}, anchorBottomLeft,  "Level",     128,  0, NULL,               NULL          },// 102 Level
+    {moduleTypeFltPhase,   paramType1CommonDial,          paramType2Dial,   {{ 62,  -3}, {7, 14}}, anchorBottomLeft,  NULL,     128,  0, NULL,               NULL          }, // 102 FB Mod
+    {moduleTypeFltPhase,   paramType1StandardToggle, paramType2Toggle, {{ 68, -12}, {7,  7}}, anchorBottomLeft,  NULL,        3,  0, fltPhaseTypeStrMap,   NULL          },// 102 Type
+    {moduleTypeFltPhase,   paramType1StandardToggle, paramType2Toggle, {{ 3, -22}, {7,  7}}, anchorBottomLeft,  "Kbt",       5,  4, offTo100KbStrMap,   NULL          }, // 102 Kbt
     // 103 EqPeak
     // 104 Unknown
     // 105 ValSq2-1
@@ -1310,6 +1322,13 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSw2to1,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Ctrl",    labelLocRight   },  // 100 Ctrl
     // 101 Unknown
     // 102 FltPhase
+    {moduleTypeFltPhase,    connectorDirIn,  connectorTypeAudio,   {{ -3,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   }, // 102 In
+    {moduleTypeFltPhase,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 102 PitchVar
+    {moduleTypeFltPhase,    connectorDirIn,  connectorTypeControl, {{  35,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 102 Spr
+    {moduleTypeFltPhase,    connectorDirIn,  connectorTypeControl, {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // 102 FM
+    {moduleTypeFltPhase,    connectorDirIn,  connectorTypeControl, {{ 3,  -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // Pitch
+    {moduleTypeFltPhase,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // Out
+
     // 103 EqPeak
     // 104 Unknown
     // 105 ValSq2-1

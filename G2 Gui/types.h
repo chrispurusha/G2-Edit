@@ -125,7 +125,7 @@ typedef enum {
     moduleTypeUnknown99,
     moduleTypeSw2to1,
     moduleTypeUnknown101,
-    moduleType1FltPhase,
+    moduleTypeFltPhase,
     moduleTypeEqPeak,
     moduleTypeUnknown104,
     moduleTypeValSw2to1,
