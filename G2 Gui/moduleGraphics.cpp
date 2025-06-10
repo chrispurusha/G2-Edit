@@ -214,7 +214,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
     uint32_t morphRange                 = module->param[gVariation][paramIndex].morphRange[gMorphGroupFocus];
 
     if (paramValue >= paramLocationList[paramRef].range) {
-        LOG_ERROR("Module index %u name %s ParamRef %u Value %u > Range %u\n", module->key.index, module->name, paramRef, paramValue, paramLocationList[paramRef].range);
+        LOG_ERROR("Module index %u name %s ParamRef %u ParamIndex %u Value %u > Range %u\n", module->key.index, module->name, paramRef, paramIndex, paramValue, paramLocationList[paramRef].range);
         exit(1);
     }
 
