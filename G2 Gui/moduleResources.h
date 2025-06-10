@@ -781,6 +781,11 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeFltPhase,   paramType1StandardToggle, paramType2Toggle, {{ 68, -12}, {7,  7}}, anchorBottomLeft,  NULL,        3,  0, fltPhaseTypeStrMap,   NULL          },// 102 Type
     {moduleTypeFltPhase,   paramType1StandardToggle, paramType2Toggle, {{ 3, -22}, {7,  7}}, anchorBottomLeft,  "Kbt",       5,  4, offTo100KbStrMap,   NULL          }, // 102 Kbt
     // 103 EqPeak
+    {moduleTypeEqPeak,   paramType1Freq,           paramType2Dial,   {{ 22,  -3}, {7, 14}}, anchorBottomLeft,  "Freq",    128,  64, NULL,               NULL          },  // 103 Freq
+    {moduleTypeEqPeak,   paramType1BipLevel,           paramType2Dial,   {{ 42,  -3}, {7, 14}}, anchorBottomLeft,  "Gain",    128,  64, NULL,               NULL          },  // 103 Gain
+    {moduleTypeEqPeak,   paramType1CommonDial,           paramType2Dial,   {{ 62,  -10}, {7, 14}}, anchorBottomLeft,  "BW",    128,  64, NULL,               NULL          },  // 103 BW *** needs UI element
+    {moduleTypeEqPeak,   paramType1CommonDial,          paramType2Dial,   {{ 83,  -3}, {7, 14}}, anchorBottomLeft,  "Level",     128,  127, NULL,               NULL          },// 102 Level
+    {moduleTypeEqPeak,   paramType1Bypass,         paramType2Toggle, {{-3,   -10}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 103 Bypass
     // 104 Unknown
     // 105 ValSq2-1
     // 106 OscNoise
@@ -1326,10 +1331,11 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFltPhase,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 102 PitchVar
     {moduleTypeFltPhase,    connectorDirIn,  connectorTypeControl, {{  35,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 102 Spr
     {moduleTypeFltPhase,    connectorDirIn,  connectorTypeControl, {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // 102 FM
-    {moduleTypeFltPhase,    connectorDirIn,  connectorTypeControl, {{ 3,  -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // Pitch
-    {moduleTypeFltPhase,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // Out
-
+    {moduleTypeFltPhase,    connectorDirIn,  connectorTypeControl, {{ 3,  -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // 102 Pitch
+    {moduleTypeFltPhase,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 102 Out
     // 103 EqPeak
+    {moduleTypeEqPeak,    connectorDirIn,  connectorTypeAudio,   {{ -3,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   }, // 103 In
+    {moduleTypeEqPeak,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 103 Out
     // 104 Unknown
     // 105 ValSq2-1
     // 106 OscNoise

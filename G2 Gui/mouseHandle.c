@@ -727,6 +727,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create FltVoice",       menu_action_create, moduleTypeFltVoice,   NULL},
         {"Create Eq 2-band",      menu_action_create, moduleTypeEq2Band, NULL},
         {"Create Eq 3-band",      menu_action_create, moduleTypeEq3band, NULL},
+        {"Create Eq Peak",      menu_action_create, moduleTypeEqPeak, NULL},
         {NULL,                    NULL,                                  0, NULL} // End of menu
     };
     static tMenuItem levelMenuItems[] = {
