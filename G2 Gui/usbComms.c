@@ -48,8 +48,14 @@ typedef enum {
     eStateGetUnknown2,
     eStateSelectSlot,
     eStateGetPatchVersion,
-    eStateGetPatchSlot,
-    eStateGetPatchNameSlot,
+    eStateGetPatchSlotA,
+    eStateGetPatchSlotB,
+    eStateGetPatchSlotC,
+    eStateGetPatchSlotD,
+    eStateGetPatchNameSlotA,
+    eStateGetPatchNameSlotB,
+    eStateGetPatchNameSlotC,
+    eStateGetPatchNameSlotD,
     eStateStart,     // Last one to increment in order
     eStatePoll,
     eStateExit
@@ -141,7 +147,7 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     return retVal;
 }
 
-static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
+static void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     uint32_t   i      = 0;
     uint32_t   j      = 0;
     uint32_t   type   = 0;
@@ -150,6 +156,7 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
 
     LOG_DEBUG("Module list\n");
 
+    key.slot = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
     LOG_DEBUG("Location       0x%x\n", key.location);     // Discerns between FX and main, could put in the module itself
     uint32_t moduleCount = read_bit_stream(buff, subOffset, 8);
@@ -186,12 +193,13 @@ static void parse_module_list(uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
-static void parse_cable_list(uint8_t * buff, uint32_t * subOffset) {
+static void parse_cable_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     tCableKey key   = {0};
     tCable    cable = {0};
 
     LOG_DEBUG("Cable list\n");
 
+    key.slot = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
     LOG_DEBUG("Location       0x%x\n", key.location);
     LOG_DEBUG("Unknown        0x%x\n", read_bit_stream(buff, subOffset, 12));
@@ -216,7 +224,7 @@ static void parse_cable_list(uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
-static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
+static void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     uint32_t   variationCount = 0;
     uint32_t   paramCount     = 0;
     uint32_t   moduleCount    = 0;
@@ -228,6 +236,7 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
     int        k              = 0;
 
     LOG_DEBUG("Param list\n");
+    key.slot = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
     LOG_DEBUG("Location       0x%x\n", key.location);     // 0..1 = param list, 2 = patch settings!?
     // SWITCH ON LOC BEING 0..1 or 2 2 = line 4112 in file.pas
@@ -277,7 +286,7 @@ static void parse_param_list(uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
-static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
+static void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset, int count) {
     //uint32_t location = 0;
     uint32_t   nameCount    = 0;
     uint32_t   paramLength  = 0;
@@ -295,6 +304,7 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
 
     LOG_DEBUG("Param names\n");
 
+    key.slot = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
     LOG_DEBUG("Location       0x%x\n", key.location);
     //LOG_DEBUG("Unknown        %d\n", read_bit_stream(buff, subOffset, 6));
@@ -352,7 +362,7 @@ static void parse_param_names(uint8_t * buff, uint32_t * subOffset, int count) {
     }
 }
 
-static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
+static void parse_module_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     tModule    module = {0};
     tModuleKey key    = {0};
     uint32_t   i      = 0;
@@ -361,6 +371,7 @@ static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
 
     LOG_DEBUG("Module names\n");
 
+    key.slot = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
     read_bit_stream(buff, subOffset, 6);
     LOG_DEBUG("Location 0x%x\n", key.location);
@@ -393,7 +404,7 @@ static void parse_module_names(uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
-static void parse_morph_params(uint8_t * buff, uint32_t * subOffset) {
+static void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     // line 3754 in file.pas
     tModule    module          = {0};
     tModuleKey key             = {0};
@@ -428,6 +439,7 @@ static void parse_morph_params(uint8_t * buff, uint32_t * subOffset) {
         LOG_DEBUG("Variation %u Morph param count %u\n", variation, morphParamCount);
 
         for (k = 0; k < morphParamCount; k++) {
+            key.slot = slot;
             key.location = read_bit_stream(buff, subOffset, 2);
             key.index    = read_bit_stream(buff, subOffset, 8);
             paramIndex   = read_bit_stream(buff, subOffset, 7);
@@ -454,7 +466,7 @@ static void parse_morph_params(uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
-static void parse_knobs(uint8_t * buff, uint32_t * subOffset) {
+static void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     // line 4268 in file.pas
 
     tModuleKey key        = {0};
@@ -472,6 +484,7 @@ static void parse_knobs(uint8_t * buff, uint32_t * subOffset) {
         assigned = read_bit_stream(buff, subOffset, 1);
 
         if (assigned == 1) {
+            key.slot = slot;
             key.location = read_bit_stream(buff, subOffset, 2);
             key.index    = read_bit_stream(buff, subOffset, 8);
             isLed        = read_bit_stream(buff, subOffset, 2);
@@ -532,7 +545,7 @@ static void parse_patch_descr(uint8_t * buff, uint32_t * subOffset) {
     gVariation = activeVariation;
 }
 
-int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, so need to decide how to access from USB and file
+int parse_patch(uint32_t slot, uint8_t * buff, int length) { // TODO: also accessed from file, so need to decide how to access from USB and file
     if ((buff == NULL) || (length <= 0)) {
         return EXIT_FAILURE;
     }
@@ -548,31 +561,31 @@ int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, 
         switch (type) {
             case SUB_RESPONSE_MODULE_LIST:     // Module list
             {
-                parse_module_list(buff, &subOffset);
+                parse_module_list(slot, buff, &subOffset);
                 break;
             }
 
             case SUB_RESPONSE_CABLE_LIST:     // Cable list
             {
-                parse_cable_list(buff, &subOffset);
+                parse_cable_list(slot, buff, &subOffset);
                 break;
             }
 
             case SUB_RESPONSE_PARAM_LIST:     // Param list
             {
-                parse_param_list(buff, &subOffset);
+                parse_param_list(slot, buff, &subOffset);
                 break;
             }
 
             case SUB_RESPONSE_PARAM_NAMES:     // Param names
             {
-                parse_param_names(buff, &subOffset, count);
+                parse_param_names(slot, buff, &subOffset, count);
                 break;
             }
 
             case SUB_RESPONSE_MODULE_NAMES:     // Module names
             {
-                parse_module_names(buff, &subOffset);
+                parse_module_names(slot, buff, &subOffset);
                 break;
             }
 
@@ -602,7 +615,7 @@ int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, 
 
             case SUB_RESPONSE_MORPH_PARAMS:
             {
-                parse_morph_params(buff, &subOffset);
+                parse_morph_params(slot, buff, &subOffset);
                 break;
             }
 
@@ -618,11 +631,11 @@ int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, 
 
                 LOG_DEBUG_DIRECT("\n");
                 subOffset = tmpSubOffset;
-                parse_knobs(buff, &subOffset);
+                parse_knobs(slot, buff, &subOffset);
                 break;
             }
 
-            case 0x60:
+            case SUB_RESPONSE_CONTROLLERS:
             {
                 LOG_DEBUG("Controllers\n");
 
@@ -636,7 +649,19 @@ int parse_patch(uint8_t * buff, int length) { // TODO: also accessed from file, 
                 subOffset = tmpSubOffset;
                 break;
             }
+                
+            case SUB_RESPONSE_CURRENT_NOTE_2:
+            {
+                LOG_DEBUG("Current note 2\n");
+                break;
+            }
 
+            case SUB_RESPONSE_PATCH_NOTES:
+            {
+                LOG_DEBUG("Patch notes\n");
+                break;
+            }
+                
             default:
             {
                 LOG_DEBUG("Unprocessed type 0x%02x\n", type);
@@ -708,6 +733,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 
             for (int32_t location = 1; location >= 0; location--) {
                 for (int k = 0; k <= 255; k++) {
+                    module.key.slot = slot;
                     module.key.location = location;
                     module.key.index    = k;
 
@@ -762,6 +788,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
             read_bit_stream(buff, bitPos, 8); // Seems to be a byte of padding
 
             for (int k = 0; k <= 255; k++) {
+                module.key.slot = slot;
                 module.key.location = gLocation;
                 module.key.index    = k;
 
@@ -853,14 +880,26 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 
         case SUB_COMMAND_SELECT_SLOT:
         {
+            uint32_t slot = 0;
+            
             LOG_DEBUG("Got slot select\n");
+            slot = read_bit_stream(buff, bitPos, 8);
+            
+            gSlot = slot;
+            
+            for (uint32_t i = 0; i < MAX_SLOTS; i++) {
+                gMainButtonArray[(uint32_t)slotAButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            }
+
+            gMainButtonArray[slotAButtonId + slot].backgroundColour = (tRgb)RGB_GREEN_ON;
+            
             return EXIT_SUCCESS;
         }
 
         case SUB_RESPONSE_PATCH_DESCRIPTION:
         {
             LOG_DEBUG("Got Patch info\n");
-            parse_patch(&buff[BIT_TO_BYTE(*bitPos) - 1], (length - BIT_TO_BYTE(*bitPos) - CRC_BYTES) + 1);
+            parse_patch(slot, &buff[BIT_TO_BYTE(*bitPos) - 1], (length - BIT_TO_BYTE(*bitPos) - CRC_BYTES) + 1);
             return EXIT_SUCCESS;
         }
 
@@ -1021,10 +1060,9 @@ static int send_command(int state) {
     uint16_t crc                     = 0;
     int      msgLength               = 0;
     int      pos                     = COMMAND_OFFSET;
-    uint32_t slot                    = 0;
-
+    
     switch (state) {
-        case eStateInit:
+        case eStateInit: // Apparently resets the version numbers
             buff[pos++] = 0x80;
             break;
 
@@ -1035,8 +1073,14 @@ static int send_command(int state) {
         case eStateGetSynthSettings:
         case eStateGetUnknown1:
         case eStateGetUnknown2:
-        case eStateGetPatchSlot:
-        case eStateGetPatchNameSlot:
+        case eStateGetPatchSlotA:
+        case eStateGetPatchSlotB:
+        case eStateGetPatchSlotC:
+        case eStateGetPatchSlotD:
+        case eStateGetPatchNameSlotA:
+        case eStateGetPatchNameSlotB:
+        case eStateGetPatchNameSlotC:
+        case eStateGetPatchNameSlotD:
             buff[pos++] = 0x01;
 
             switch (state) {
@@ -1065,14 +1109,14 @@ static int send_command(int state) {
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x00;
                     buff[pos++] = SUB_COMMAND_SELECT_SLOT;
-                    buff[pos++] = slot;
+                    buff[pos++] = 0; // Slot
                     break;
 
                 case eStateGetPatchVersion:
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x41;
-                    buff[pos++] = SUB_COMMAND_GET_PATCH_VERSION;
-                    buff[pos++] = slot;     // Slot 0=A
+                    buff[pos++] = SUB_COMMAND_GET_PATCH_VERSION;  // TODO: each slot!?
+                    buff[pos++] = 0;     // Slot 0=A
                     break;
 
                 case eStateGetSynthSettings:
@@ -1093,17 +1137,31 @@ static int send_command(int state) {
                     buff[pos++] = 0x59;
                     break;
 
-                case eStateGetPatchSlot:   // Get patch by slot
-                    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | 0;
+                case eStateGetPatchSlotA:
+                case eStateGetPatchSlotB:
+                case eStateGetPatchSlotC:
+                case eStateGetPatchSlotD:
+                {
+                    uint32_t slot = state - eStateGetPatchSlotA;
+                    
+                    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
                     buff[pos++] = slotVersion[slot];
-                    buff[pos++] = SUB_COMMAND_GET_PATCH_SLOT | slot;
+                    buff[pos++] = SUB_COMMAND_GET_PATCH_SLOT;
                     break;
+                }
 
-                case eStateGetPatchNameSlot:   // Get name patch by slot
-                    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | 0;
+                case eStateGetPatchNameSlotA:
+                case eStateGetPatchNameSlotB:
+                case eStateGetPatchNameSlotC:
+                case eStateGetPatchNameSlotD:
+                {
+                    uint32_t slot = state - eStateGetPatchNameSlotA;
+                    
+                    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
                     buff[pos++] = slotVersion[slot];
-                    buff[pos++] = SUB_COMMAND_GET_PATCH_NAME | slot;
+                    buff[pos++] = SUB_COMMAND_GET_PATCH_NAME;
                     break;
+                }
 
                 default:
                     LOG_DEBUG("Unknown state %d\n", state);
@@ -1137,13 +1195,13 @@ static int send_write_data(tMessageContent * messageContent) {
     uint16_t crc                     = 0;
     int      msgLength               = 0;
     int      pos                     = COMMAND_OFFSET;
-    uint32_t slot                    = 0;
+    //uint32_t slot                    = 0;   // TODO: pass this via the message structure
 
     switch (messageContent->cmd) {
         case eMsgCmdSetValue:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_SET_PARAM;
             buff[pos++] = messageContent->paramData.moduleKey.location;
             buff[pos++] = messageContent->paramData.moduleKey.index;
@@ -1154,8 +1212,8 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdSetMode:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_SET_MODE;
             buff[pos++] = messageContent->modeData.moduleKey.location;
             buff[pos++] = messageContent->modeData.moduleKey.index;
@@ -1166,8 +1224,8 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdWriteCable:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_WRITE_CABLE;
             buff[pos++] = 0x10 | (messageContent->cableData.location << 3) | 0x00;                                    // unknown, location so 0x00 = fx and 0x08 = va, then 3 bits for colour
             buff[pos++] = messageContent->cableData.moduleFromIndex;
@@ -1181,8 +1239,8 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdWriteModule:
             LOG_DEBUG("Writing module!\n");
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_ADD_MODULE;
             buff[pos++] = messageContent->moduleData.type;
             buff[pos++] = messageContent->moduleData.moduleKey.location;
@@ -1203,8 +1261,8 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdMoveModule:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_MOVE_MODULE;
             buff[pos++] = messageContent->moduleMoveData.moduleKey.location;
             buff[pos++] = messageContent->moduleMoveData.moduleKey.index;
@@ -1214,8 +1272,8 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdDeleteModule:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_DELETE_MODULE;
             buff[pos++] = messageContent->moduleMoveData.moduleKey.location;
             buff[pos++] = messageContent->moduleMoveData.moduleKey.index;
@@ -1223,8 +1281,8 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdSetModuleUpRate:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_SET_MODULE_UPRATE;
             buff[pos++] = messageContent->moduleMoveData.moduleKey.location;
             buff[pos++] = messageContent->moduleMoveData.moduleKey.index;
@@ -1233,8 +1291,8 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdDeleteCable:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_DELETE_CABLE;
             buff[pos++] = 0x2 | messageContent->cableData.location;
             buff[pos++] = messageContent->cableData.moduleFromIndex;
@@ -1245,8 +1303,8 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdSetParamMorph:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_SET_MORPH_RANGE;
             buff[pos++] = messageContent->paramMorphData.moduleKey.location;
             buff[pos++] = messageContent->paramMorphData.moduleKey.index;
@@ -1259,10 +1317,19 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdSelectVariation:
             buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = slotVersion[slot];
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = slotVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_SELECT_VARIATION;
             buff[pos++] = messageContent->variationData.variation;
+            break;
+            
+        case eMsgCmdSelectSlot:
+            buff[pos++] = 0x01;
+            buff[pos++] = COMMAND_REQ | COMMAND_SYS;
+            buff[pos++] = 0;
+            buff[pos++] = SUB_COMMAND_SELECT_SLOT;
+            buff[pos++] = messageContent->slotData.slot;
+            
             break;
 
         // 4418 mess.pas for assign/deassign knob
@@ -1303,8 +1370,14 @@ static void state_handler(void) {
         case eStateStop:
         case eStateSelectSlot:
         case eStateGetPatchVersion:
-        case eStateGetPatchSlot:
-        case eStateGetPatchNameSlot:
+        case eStateGetPatchSlotA:
+        case eStateGetPatchSlotB:
+        case eStateGetPatchSlotC:
+        case eStateGetPatchSlotD:
+        case eStateGetPatchNameSlotA:
+        case eStateGetPatchNameSlotB:
+        case eStateGetPatchNameSlotC:
+        case eStateGetPatchNameSlotD:
         case eStateGetSynthSettings:
         case eStateGetUnknown1:
         case eStateGetUnknown2:

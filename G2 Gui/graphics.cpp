@@ -336,7 +336,7 @@ void read_file_into_memory_and_process(const char * filepath) {
         database_clear_modules();
 
         if (type == 0) {
-            parse_patch(buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // TODO: parse_patch should really be in a commonly accessible source file, for file or USB access
+            parse_patch(gSlot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // TODO: parse_patch should really be in a commonly accessible source file, for file or USB access
         } // 1 = performance
     } else {
         LOG_WARNING("CRC check failed\n");

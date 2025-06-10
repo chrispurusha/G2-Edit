@@ -58,6 +58,7 @@ void dump_modules(void) {
     LOG_DEBUG("\n\nDump modules\n");
 
     while (module != NULL) {
+        LOG_DEBUG("Slot %u\n", module->key.slot);
         LOG_DEBUG("Location %u\n", module->key.location);
         LOG_DEBUG("Index %u\n", module->key.index);
         LOG_DEBUG(" Type %u\n", module->type);
@@ -84,7 +85,7 @@ static tModule * find_module(tModuleKey key) {
     module = firstModule;
 
     while (module != NULL) {
-        if ((module->key.location == key.location) && (module->key.index == key.index)) {
+        if ((module->key.slot == key.slot) && (module->key.location == key.location) && (module->key.index == key.index)) {
             break;
         }
         module = module->next;
@@ -227,6 +228,7 @@ void dump_cables(void) {
 
     while (cable != NULL) {
         LOG_DEBUG("Cable\n");
+        LOG_DEBUG("Slot %u\n", cable->key.slot);
         LOG_DEBUG("Location %u\n", cable->key.location);
         LOG_DEBUG(" Colour %u\n", cable->colour);
         LOG_DEBUG(" Module from %u\n", cable->key.moduleFromIndex);

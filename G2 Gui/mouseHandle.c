@@ -98,13 +98,14 @@ void adjust_scroll_for_drag(void) {
 void update_module_up_rates(void) {
     tModule  module   = {0};
     uint32_t location = gLocation;
+    uint32_t slot     = gSlot;  // TODO: Might need to pass this in as a parameter
 
 
     // Step 1 - initialise the old and new fields
     reset_walk_module();
 
     while (walk_next_module(&module)) {
-        if (module.key.location == location) {
+        if (module.key.slot == slot && module.key.location == location) {
             module.newUpRate = 0;
 
             write_module(module.key, &module);
@@ -128,10 +129,10 @@ void update_module_up_rates(void) {
             tConnectorDir fromConnector = connectorDirOut;
             int           fromConnIndex = -1;
             int           toConnIndex   = -1;
-            tModuleKey    fromModuleKey = {cable.key.location, cable.key.moduleFromIndex};
-            tModuleKey    toModuleKey   = {cable.key.location, cable.key.moduleToIndex};
+            tModuleKey    fromModuleKey = {cable.key.slot, cable.key.location, cable.key.moduleFromIndex};
+            tModuleKey    toModuleKey   = {cable.key.slot, cable.key.location, cable.key.moduleToIndex};
 
-            if ((fromModuleKey.location == location) && (toModuleKey.location == location)) {
+            if ((fromModuleKey.slot == slot) && (toModuleKey.slot == slot) && (fromModuleKey.location == location) && (toModuleKey.location == location)) {
                 if (read_module(fromModuleKey, &fromModule) && read_module(toModuleKey, &toModule)) {
                     if (cable.key.linkType == cableLinkTypeFromInput) {
                         fromConnector = connectorDirIn;
@@ -166,7 +167,7 @@ void update_module_up_rates(void) {
     reset_walk_module();
 
     while (walk_next_module(&module)) {
-        if (module.key.location == location) {
+        if ((module.key.slot == slot) && (module.key.location == location)) {
             if (module.newUpRate != module.upRate) {
                 module.upRate = module.newUpRate;
 
@@ -174,6 +175,7 @@ void update_module_up_rates(void) {
 
                 tMessageContent messageContent = {0};
                 messageContent.cmd                  = eMsgCmdSetModuleUpRate;
+                messageContent.slot                    = gSlot;
                 messageContent.moduleData.moduleKey = module.key;
                 messageContent.moduleData.upRate    = module.upRate;
                 msg_send(&gCommandQueue, &messageContent);
@@ -187,6 +189,7 @@ void send_module_move_msg(tModule * module) {
     tMessageContent messageContent = {0};
 
     messageContent.cmd                  = eMsgCmdMoveModule;
+    messageContent.slot                    = gSlot;
     messageContent.moduleData.moduleKey = module->key;
     messageContent.moduleData.row       = module->row;
     messageContent.moduleData.column    = module->column;
@@ -211,6 +214,7 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
 
             for (int i = 0; i < NUM_VARIATIONS; i++) {
                 messageContent.cmd                 = eMsgCmdSetValue;
+                messageContent.slot                    = gSlot;
                 messageContent.paramData.moduleKey = module->key;
                 messageContent.paramData.param     = paramIndex;
                 messageContent.paramData.variation = i;
@@ -276,14 +280,15 @@ void handle_button(tButtonId buttonId) {
 
             gVariation = variation;
 
-            for (uint32_t variation = 0; variation < NUM_GUI_VARIATIONS; variation++) {
-                gMainButtonArray[(uint32_t)variation1ButtonId + variation].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            for (uint32_t i = 0; i < NUM_GUI_VARIATIONS; i++) {
+                gMainButtonArray[(uint32_t)variation1ButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
             }
 
             gMainButtonArray[buttonId].backgroundColour = (tRgb)RGB_GREEN_ON;
 
             tMessageContent messageContent = {0};
             messageContent.cmd                     = eMsgCmdSelectVariation;
+            messageContent.slot                    = gSlot;
             messageContent.variationData.variation = variation;
             msg_send(&gCommandQueue, &messageContent);
 
@@ -308,6 +313,29 @@ void handle_button(tButtonId buttonId) {
 
             break;
         }
+        case slotAButtonId:
+        case slotBButtonId:
+        case slotCButtonId:
+        case slotDButtonId:
+        {
+            uint32_t slot = (uint32_t)buttonId - (uint32_t)slotAButtonId;
+
+            gSlot = slot;
+
+            for (uint32_t i = 0; i < MAX_SLOTS; i++) {  // TODO: commonalise this with USB message receipt on slot select
+                gMainButtonArray[(uint32_t)slotAButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            }
+
+            gMainButtonArray[buttonId].backgroundColour = (tRgb)RGB_GREEN_ON;
+
+            tMessageContent messageContent = {0};
+            messageContent.cmd                     = eMsgCmdSelectSlot;
+            messageContent.slot                    = gSlot;
+            messageContent.slotData.slot = slot;
+            msg_send(&gCommandQueue, &messageContent);
+
+            break;
+        }
     }
 }
 
@@ -326,7 +354,7 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
     reset_walk_module();
 
     while (walk_next_module(&walk)) {
-        if ((walk.column == module.column) && (walk.key.location == key.location)) {
+        if ((walk.column == module.column) && (walk.key.slot == key.slot) && (walk.key.location == key.location)) {
             if (walk.key.index != key.index) {
                 if ((module.row > walk.row) && (module.row < walk.row + gModuleProperties[walk.type].height)) {
                     module.row = walk.row + gModuleProperties[walk.type].height;
@@ -347,7 +375,7 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
     reset_walk_module();
 
     while (walk_next_module(&walk)) {
-        if ((walk.column == module.column) && (walk.key.location == key.location)) {
+        if ((walk.column == module.column) && (walk.key.slot == key.slot) && (walk.key.location == key.location)) {
             if (walk.key.index != key.index) {
                 if ((walk.row >= module.row) && (walk.row < module.row + gModuleProperties[module.type].height)) {
                     rowAndBelowToDrop = walk.row;
@@ -365,7 +393,7 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
         reset_walk_module();
 
         while (walk_next_module(&walk)) {
-            if ((walk.column == module.column) && (walk.key.location == key.location)) {
+            if ((walk.column == module.column) && (walk.key.slot == key.slot) && (walk.key.location == key.location)) {
                 if (walk.key.index != key.index) {
                     if (walk.row >= rowAndBelowToDrop) {
                         walk.row += dropAmount;
@@ -386,6 +414,7 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
 
 void set_up_cable_key(tCableKey * cableKey, tModule * fromModule, tModule * toModule, int toConnectorIndex) {
     // This logic is pretty horrible - sorry
+    cableKey->slot                 = fromModule->key.slot;
     cableKey->location             = fromModule->key.location;
     cableKey->moduleFromIndex      = fromModule->key.index;
     cableKey->connectorFromIoCount = find_io_count_from_index(fromModule, fromModule->connector[gCableDrag.fromConnectorIndex].dir, gCableDrag.fromConnectorIndex);
@@ -418,7 +447,7 @@ void menu_action_delete_cable(int index) {
     int     inIndex    = -1;
     bool    deleteWalk = false;
 
-    if (gContextMenu.moduleKey.location == gLocation) {
+    if ((gContextMenu.moduleKey.slot == gSlot) && (gContextMenu.moduleKey.location == gLocation)) {
         read_module(gContextMenu.moduleKey, &module);
 
         reset_walk_cable();
@@ -426,7 +455,7 @@ void menu_action_delete_cable(int index) {
         while (walk_next_cable(&walk)) {
             deleteWalk = false;
 
-            if (walk.key.location == gContextMenu.moduleKey.location) {
+            if (walk.key.slot == gSlot && walk.key.location == gContextMenu.moduleKey.location) {
                 switch (module.connector[gContextMenu.connectorIndex].dir) {
                     case connectorDirOut:
                         outIndex = find_io_count_from_index(&module, connectorDirOut, gContextMenu.connectorIndex);
@@ -458,6 +487,7 @@ void menu_action_delete_cable(int index) {
                     tMessageContent messageContent = {0};
 
                     messageContent.cmd                            = eMsgCmdDeleteCable;
+                    messageContent.slot                    = gSlot;
                     messageContent.cableData.location             = gLocation;
                     messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
                     messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
@@ -481,7 +511,7 @@ void menu_action_delete_module(int index) {
     tCable  walk       = {0};
     bool    deleteWalk = false;
 
-    if (gContextMenu.moduleKey.location == gLocation) {
+    if (gContextMenu.moduleKey.slot == gSlot && gContextMenu.moduleKey.location == gLocation) {
         read_module(gContextMenu.moduleKey, &module);
 
         reset_walk_cable();
@@ -489,7 +519,7 @@ void menu_action_delete_module(int index) {
         while (walk_next_cable(&walk)) {
             deleteWalk = false;
 
-            if (walk.key.location == gContextMenu.moduleKey.location) {
+            if (walk.key.slot == gSlot && walk.key.location == gContextMenu.moduleKey.location) {
                 if (walk.key.moduleFromIndex == gContextMenu.moduleKey.index) {
                     deleteWalk = true;
                 } else if (walk.key.moduleToIndex == gContextMenu.moduleKey.index) {
@@ -500,6 +530,7 @@ void menu_action_delete_module(int index) {
                     tMessageContent messageContent = {0};
 
                     messageContent.cmd                            = eMsgCmdDeleteCable;
+                    messageContent.slot                    = gSlot;
                     messageContent.cableData.location             = gLocation;
                     messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
                     messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
@@ -532,6 +563,7 @@ uint32_t find_unique_module_id(uint32_t location) {
     tModule    module = {0};
     uint32_t   i      = 0;
 
+    key.slot = gSlot;     // TODO: Might need to pass this in as a parameter?
     key.location = location;
 
     for (i = 1; i <= 255; i++) {
@@ -598,6 +630,7 @@ void menu_action_create(int index) {
         tMessageContent messageContent = {0};
         int32_t         uniqueIndex    = 0;
 
+        module.key.slot = gSlot;   // TODO: Possibly pass this into find_unique...
         module.key.location = gLocation;
         uniqueIndex         = find_unique_module_id(module.key.location);
 
@@ -610,6 +643,7 @@ void menu_action_create(int index) {
             module.name[sizeof(module.name) - 1] = '\0';
 
             messageContent.cmd                  = eMsgCmdWriteModule;
+            messageContent.slot                    = gSlot;
             messageContent.moduleData.moduleKey = module.key;
             messageContent.moduleData.type      = module.type;
             messageContent.moduleData.row       = module.row;
@@ -659,8 +693,10 @@ void open_module_area_context_menu(tCoord coord) {
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
     static tMenuItem oscMenuItems[] = {
+        {"Create Osc A",       menu_action_create, moduleTypeOscA,    NULL},
         {"Create Osc B",       menu_action_create, moduleTypeOscB,    NULL},
         {"Create Osc C",       menu_action_create, moduleTypeOscC,    NULL},
+        {"Create Osc D",       menu_action_create, moduleTypeOscD,    NULL},
         {"Create Osc Shape B", menu_action_create, moduleTypeOscShpB, NULL},
         {"Create Osc String",  menu_action_create, moduleTypeOscString, NULL},
         {"Create Noise",  menu_action_create, moduleTypeNoise, NULL},
@@ -686,14 +722,16 @@ void open_module_area_context_menu(tCoord coord) {
         {NULL,              NULL,                               0, NULL}          // End of menu
     };
     static tMenuItem filterMenuItems[] = {
-        {"Create LP Filter",      menu_action_create,                    0, NULL},
+        {"Create LP Filter",      menu_action_create, moduleTypeFltLP, NULL},
         {"Create Nord Filter",    menu_action_create, moduleTypeFltNord,    NULL},
         {"Create Classic Filter", menu_action_create, moduleTypeFltClassic, NULL},
         {"Create Multi Filter",   menu_action_create, moduleTypeFltMulti,   NULL},
+        {"Create Phase Filter",   menu_action_create, moduleTypeFltPhase,   NULL},
         {"Create Static Filter",   menu_action_create, moduleTypeFltStatic,   NULL},
         {"Create FltVoice",       menu_action_create, moduleTypeFltVoice,   NULL},
         {"Create Eq 2-band",      menu_action_create, moduleTypeEq2Band, NULL},
         {"Create Eq 3-band",      menu_action_create, moduleTypeEq3band, NULL},
+        {"Create Eq Peak",      menu_action_create, moduleTypeEqPeak, NULL},
         {NULL,                    NULL,                                  0, NULL} // End of menu
     };
     static tMenuItem levelMenuItems[] = {
@@ -709,7 +747,10 @@ void open_module_area_context_menu(tCoord coord) {
     static tMenuItem switchMenuItems[] = {
         {"Create SwOnOffM",   menu_action_create,  moduleTypeSwOnOffM, NULL},
         {"Create SwOnOffT",   menu_action_create,  moduleTypeSwOnOffT, NULL},
+        {"Create Sw2-1",   menu_action_create,  moduleTypeSw2to1, NULL},
         {"Create Sw4-1",   menu_action_create,  moduleTypeSw4to1, NULL},
+        {"Create Sw1-2",   menu_action_create,  moduleTypeSw1to2, NULL},
+        {"Create Sw1-4",   menu_action_create,  moduleTypeSw1to4, NULL},
         {"Create Sw1-8",   menu_action_create,  moduleTypeSw1to8, NULL},
         {"Create Mux8-1X",   menu_action_create,  moduleTypeMux8to1X, NULL},
         {"Create S&H",   menu_action_create,  moduleTypeSandH, NULL},
@@ -740,11 +781,16 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Pulse",   menu_action_create,  moduleTypePulse, NULL},
         {"Create Delay",   menu_action_create,  moduleTypeDelay, NULL},
         {"Create Gate",   menu_action_create,  moduleTypeGate, NULL},
+        {"Create FlipFlop",   menu_action_create,  moduleTypeFlipFlop, NULL},
         {"Create ClkDiv",   menu_action_create,  moduleTypeClkDiv, NULL},
+        {"Create 8Counter",   menu_action_create,  moduleType8Counter, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
     static tMenuItem fxMenuItems[] = {
         {"Create Compressor", menu_action_create,  moduleTypeCompress, NULL},
+        {"Create FreqShift", menu_action_create,  moduleTypeFreqShift, NULL},
+        {"Create Flanger", menu_action_create,  moduleTypeFlanger, NULL},
+        {"Create Chorus", menu_action_create,  moduleTypeStChorus, NULL},   
         {"Create Reverb",     menu_action_create,  moduleTypeReverb,   NULL},
         {"Create Scratch",     menu_action_create,  moduleTypeScratch,   NULL},
         {NULL,                NULL,                               0,   NULL}       // End of menu
@@ -818,7 +864,7 @@ bool handle_module_click(tCoord coord, int button) {
     tModule module = {0};
 
     while (walk_next_module(&module) && (retVal == false)) {
-        if (module.key.location == gLocation || module.key.location == locationMorph) {
+        if (module.key.slot == gSlot && (module.key.location == gLocation || module.key.location == locationMorph)) {
             if (module.key.location == locationMorph) {
                 if (module.key.index == 1) {  // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
                     paramCount = NUM_MORPHS * 2;
@@ -846,6 +892,7 @@ bool handle_module_click(tCoord coord, int button) {
                         }
 
                         if (paramType2 == paramType2Dial) {
+                            gParamDragging.moduleKey.slot    = gSlot;  // TODO: Think about this being best way of doing it?
                             gParamDragging.moduleKey.index    = module.key.index;
                             gParamDragging.moduleKey.location = module.key.location;
                             gParamDragging.type3              = paramType3Param;
@@ -867,6 +914,7 @@ bool handle_module_click(tCoord coord, int button) {
 
                             tMessageContent messageContent = {0};
                             messageContent.cmd                 = eMsgCmdSetValue;
+                            messageContent.slot                    = gSlot;
                             messageContent.paramData.moduleKey = module.key;
                             messageContent.paramData.param     = i;
                             messageContent.paramData.variation = gVariation;
@@ -887,6 +935,7 @@ bool handle_module_click(tCoord coord, int button) {
                     if (within_rectangle(coord, module.mode[i].rectangle)) {
                         if (button == GLFW_MOUSE_BUTTON_LEFT) {
                             if ((modeLocationList[mode->modeRef].type2) == paramType2Dial) {
+                                gParamDragging.moduleKey.slot    = gSlot;  // TODO: Think about this being best way of doing it?
                                 gParamDragging.moduleKey.index    = module.key.index;
                                 gParamDragging.moduleKey.location = module.key.location;
                                 gParamDragging.type3              = paramType3Mode;
@@ -899,6 +948,7 @@ bool handle_module_click(tCoord coord, int button) {
                                  *
                                  * tMessageContent messageContent = {0};
                                  * messageContent.cmd                 = eMsgCmdSetValue;
+                                 * messageContent.slot                    = gSlot;
                                  * messageContent.paramData.moduleKey = module.key;
                                  * messageContent.paramData.mode     = i;
                                  * messageContent.paramData.variation = 0;
@@ -1092,7 +1142,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     reset_walk_module();
 
                     while (walk_next_module(&toModule) && !quitLoop) {
-                        if (toModule.key.location == gLocation) {
+                        if (toModule.key.slot == gSlot && toModule.key.location == gLocation) {
                             for (int i = 0; i < module_connector_count(toModule.type); i++) {
                                 if (!within_rectangle(coord, toModule.connector[i].rectangle)) {
                                     continue;
@@ -1115,6 +1165,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                                 tMessageContent messageContent = {0};
 
                                 messageContent.cmd                            = eMsgCmdWriteCable;
+                                messageContent.slot                    = gSlot;
                                 messageContent.cableData.location             = gLocation;
                                 messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
                                 messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
@@ -1171,6 +1222,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     } else if (gParamDragging.active == true) {
         read_module(gParamDragging.moduleKey, &module);
 
+        // TODO: Think about if we need to check key's slot
         switch (gParamDragging.type3) {
             case paramType3Param:
 
@@ -1196,6 +1248,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                             write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
 
                             messageContent.cmd                 = eMsgCmdSetValue;
+                            messageContent.slot                    = gSlot;
                             messageContent.paramData.moduleKey = gParamDragging.moduleKey;
                             messageContent.paramData.param     = gParamDragging.param;
                             messageContent.paramData.variation = gVariation;
@@ -1213,6 +1266,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                             printf("Write to module %u variation %u\n", module.key.index, gVariation);
 
                             messageContent.cmd                       = eMsgCmdSetParamMorph;
+                            messageContent.slot                    = gSlot;
                             messageContent.paramMorphData.moduleKey  = module.key;
                             messageContent.paramMorphData.param      = gParamDragging.param;
                             messageContent.paramMorphData.paramMorph = gMorphGroupFocus;
@@ -1236,6 +1290,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                         write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
 
                         messageContent.cmd                = eMsgCmdSetMode;
+                        messageContent.slot                    = gSlot;
                         messageContent.modeData.moduleKey = gParamDragging.moduleKey;
                         messageContent.modeData.mode      = gParamDragging.mode;
                         messageContent.modeData.value     = value;

@@ -125,7 +125,7 @@ typedef enum {
     moduleTypeUnknown99,
     moduleTypeSw2to1,
     moduleTypeUnknown101,
-    moduleType1FltPhase,
+    moduleTypeFltPhase,
     moduleTypeEqPeak,
     moduleTypeUnknown104,
     moduleTypeValSw2to1,
@@ -382,6 +382,7 @@ typedef struct {
 } tLed;
 
 typedef struct {
+    uint32_t slot;
     uint32_t location;
     uint32_t moduleFromIndex;
     uint32_t connectorFromIoCount;
@@ -420,7 +421,11 @@ typedef enum {
     variation6ButtonId,
     variation7ButtonId,
     variation8ButtonId,
-    initParamsButtonId
+    initParamsButtonId,
+    slotAButtonId,
+    slotBButtonId,
+    slotCButtonId,
+    slotDButtonId
 } tButtonId;
 
 typedef struct {
@@ -431,6 +436,7 @@ typedef struct {
 } tConnector;
 
 typedef struct {
+    uint32_t slot;
     uint32_t location;
     uint32_t index;
 } tModuleKey;
