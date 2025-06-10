@@ -800,6 +800,7 @@ void render_morph_groups(void) {
         validModule = walk_next_module(&module);
 
         if ((validModule && module.key.slot == gSlot && module.key.location == locationMorph) && (module.key.index == 1)) {
+
             // Make sure all rectangles (for mouse click) are nullified
             for (i = 0; i < NUM_VARIATIONS; i++) {
                 for (j = 0; j < (NUM_MORPHS * 2); j++) {
