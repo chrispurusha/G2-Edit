@@ -693,8 +693,10 @@ void open_module_area_context_menu(tCoord coord) {
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
     static tMenuItem oscMenuItems[] = {
+        {"Create Osc A",       menu_action_create, moduleTypeOscA,    NULL},
         {"Create Osc B",       menu_action_create, moduleTypeOscB,    NULL},
         {"Create Osc C",       menu_action_create, moduleTypeOscC,    NULL},
+        {"Create Osc D",       menu_action_create, moduleTypeOscD,    NULL},
         {"Create Osc Shape B", menu_action_create, moduleTypeOscShpB, NULL},
         {"Create Osc String",  menu_action_create, moduleTypeOscString, NULL},
         {"Create Noise",  menu_action_create, moduleTypeNoise, NULL},
@@ -724,10 +726,12 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Nord Filter",    menu_action_create, moduleTypeFltNord,    NULL},
         {"Create Classic Filter", menu_action_create, moduleTypeFltClassic, NULL},
         {"Create Multi Filter",   menu_action_create, moduleTypeFltMulti,   NULL},
+        {"Create Phase Filter",   menu_action_create, moduleTypeFltPhase,   NULL},
         {"Create Static Filter",   menu_action_create, moduleTypeFltStatic,   NULL},
         {"Create FltVoice",       menu_action_create, moduleTypeFltVoice,   NULL},
         {"Create Eq 2-band",      menu_action_create, moduleTypeEq2Band, NULL},
         {"Create Eq 3-band",      menu_action_create, moduleTypeEq3band, NULL},
+        {"Create Eq Peak",      menu_action_create, moduleTypeEqPeak, NULL},
         {NULL,                    NULL,                                  0, NULL} // End of menu
     };
     static tMenuItem levelMenuItems[] = {
@@ -743,6 +747,7 @@ void open_module_area_context_menu(tCoord coord) {
     static tMenuItem switchMenuItems[] = {
         {"Create SwOnOffM",   menu_action_create,  moduleTypeSwOnOffM, NULL},
         {"Create SwOnOffT",   menu_action_create,  moduleTypeSwOnOffT, NULL},
+        {"Create Sw2-1",   menu_action_create,  moduleTypeSw2to1, NULL},
         {"Create Sw4-1",   menu_action_create,  moduleTypeSw4to1, NULL},
         {"Create Sw1-2",   menu_action_create,  moduleTypeSw1to2, NULL},
         {"Create Sw1-4",   menu_action_create,  moduleTypeSw1to4, NULL},
@@ -783,6 +788,7 @@ void open_module_area_context_menu(tCoord coord) {
     };
     static tMenuItem fxMenuItems[] = {
         {"Create Compressor", menu_action_create,  moduleTypeCompress, NULL},
+        {"Create FreqShift", menu_action_create,  moduleTypeFreqShift, NULL},
         {"Create Flanger", menu_action_create,  moduleTypeFlanger, NULL},
         {"Create Chorus", menu_action_create,  moduleTypeStChorus, NULL},   
         {"Create Reverb",     menu_action_create,  moduleTypeReverb,   NULL},
