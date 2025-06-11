@@ -260,6 +260,11 @@ static void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset
         if (read_module(key, &module) == false) {
             module.key = key;
         }
+        
+        if ((module.type != moduleTypeUnknown0) && (module_param_count(module.type) > 0) && (paramCount != module_param_count(module.type))) {
+            LOG_ERROR("Incorrect number of parameters on module %u %s count from G2 = %u, our structures = %u\n",  module.type, gModuleProperties[module.type].name, paramCount, module_param_count(module.type));
+            exit(1);
+        }
 
         for (j = 0; j < variationCount; j++) {                                                          // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
             uint32_t variation = read_bit_stream(buff, subOffset, 8);
