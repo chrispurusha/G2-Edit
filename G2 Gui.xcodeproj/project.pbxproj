@@ -80,6 +80,7 @@
 		83EDF68D2D64D84C0052CE9F /* msgQueue.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = msgQueue.c; sourceTree = "<group>"; };
 		83EDF68F2D64D8550052CE9F /* msgQueue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = msgQueue.h; sourceTree = "<group>"; };
 		83F363872D5BD96E00F5F627 /* types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
+		8BEF40BD2DFB28AA008CBE07 /* debugnotes.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = debugnotes.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -132,6 +133,7 @@
 		83FF21B72D01F95300BB5253 /* G2 Gui */ = {
 			isa = PBXGroup;
 			children = (
+				8BEF40BD2DFB28AA008CBE07 /* debugnotes.txt */,
 				8397E14B2D2FEF4500DDD420 /* G2 Gui.entitlements */,
 				8347FD542DC7E772009751C4 /* fileDialogue.mm */,
 				8347FD562DC7EAAD009751C4 /* fileDialogue.h */,

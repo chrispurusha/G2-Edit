@@ -943,6 +943,20 @@ bool handle_module_click(tCoord coord, int button) {
                                 gParamDragging.active             = true;
                                 retVal                            = true;
                             } else {
+                                // Toggle
+                                mode->value = (mode->value + 1) % modeLocationList[mode->modeRef].range;
+                                write_module(module.key, &module);
+                                tMessageContent messageContent = {0};
+                                messageContent.cmd                 = eMsgCmdSetValue;
+                                messageContent.slot                    = gSlot;
+                                messageContent.paramData.moduleKey = module.key;
+                                //messageContent.paramData.mode     = i;
+                                messageContent.paramData.variation = 0;
+                                messageContent.paramData.value     = mode->value;
+                                
+                                msg_send(&gCommandQueue, &messageContent);
+
+                                retVal = true;
                                 /*param->value = (param->value + 1) % paramLocationList[param->paramRef].range;
                                  * write_module(module.key, &module);
                                  *

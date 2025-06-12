@@ -403,6 +403,11 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 }
 
 void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef, uint32_t modeIndex) {
+    char     buff[16]                   = {0};
+    char     label[PARAM_NAME_SIZE + 1] = {0};
+    uint32_t modeValue                 = module->mode[modeIndex].value;
+
+    
     module->mode[0].modeRef = modeRef;
 
     switch (modeLocationList[modeRef].type1) {
@@ -412,6 +417,33 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
 
             snprintf(buff, sizeof(buff), "%u", module->mode[0].value);
             module->mode[modeIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)modeLocationList[modeRef].label, buff, module->mode[0].value, modeLocationList[modeRef].range, 0, RGB_GREY_5);  // TODO: Check if Mode can be morphed
+            break;
+        }
+        case paramType1StandardToggle:
+        {
+            char ** strMap     = (char **)modeLocationList[modeRef].strMap;
+            double  y          = rectangle.coord.y;
+            double  textHeight = rectangle.size.h / 2.0;
+            
+
+            if (strMap == NULL) {
+                LOG_ERROR("No strMap for module type %s\n", gModuleProperties[module->type].name);
+
+                //Debug help for value
+                char debug[64] = {0};
+                snprintf(debug, sizeof(debug), "modeRef %u", modeRef);
+                set_rgb_colour(RGB_BACKGROUND_GREY);
+                module->param[gVariation][modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {30, textHeight}}, debug);
+                return;
+            }
+
+            //if (paramLocationList[paramRef].colourMap != NULL) {
+            //    set_rgb_colour(paramLocationList[paramRef].colourMap[paramValue]);
+            //} else {
+            //    set_rgb_colour(RGB_BACKGROUND_GREY);
+            //}
+            set_rgb_colour(RGB_BACKGROUND_GREY);
+            module->mode[modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(paramLocationList[modeRef].range, strMap, textHeight), textHeight}}, strMap[modeValue]);
             break;
         }
         default:
