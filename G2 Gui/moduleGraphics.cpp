@@ -443,7 +443,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             //    set_rgb_colour(RGB_BACKGROUND_GREY);
             //}
             set_rgb_colour(RGB_BACKGROUND_GREY);
-            module->mode[modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(paramLocationList[modeRef].range, strMap, textHeight), textHeight}}, strMap[modeValue]);
+            module->mode[modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight), textHeight}}, strMap[modeValue]);
             break;
         }
         default:
@@ -703,7 +703,7 @@ void render_module(tModule * module) {
     tRgb       rgb                        = {0};
 
     tRectangle moduleRectangle = {{xPos, yPos}, {xWidth, yHeight}};
-
+    
     rgb = gModuleColourMap[module->colour];
     set_rgb_colour(rgb);
     module->rectangle = render_rectangle_with_border(moduleArea, moduleRectangle);
