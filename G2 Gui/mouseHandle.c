@@ -726,6 +726,7 @@ void open_module_area_context_menu(tCoord coord) {
     };
     static tMenuItem filterMenuItems[] = {
         {"Create LP Filter",      menu_action_create, moduleTypeFltLP, NULL},
+        {"Create HP Filter",      menu_action_create, moduleTypeFltHP, NULL},
         {"Create Nord Filter",    menu_action_create, moduleTypeFltNord,    NULL},
         {"Create Classic Filter", menu_action_create, moduleTypeFltClassic, NULL},
         {"Create Multi Filter",   menu_action_create, moduleTypeFltMulti,   NULL},

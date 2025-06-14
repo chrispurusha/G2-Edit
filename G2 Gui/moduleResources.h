@@ -899,6 +899,10 @@ const tParamLocation paramLocationList[] = {
     // 132 DAConv
     // 133 Unknown
     // 134 FltHP
+    {moduleTypeFltHP,   paramType1Freq,           paramType2Dial,   {{50,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  64, NULL,               NULL          },  // 134 Freq
+    {moduleTypeFltHP,   paramType1CommonDial,           paramType2Dial,   {{35,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  64, NULL,               NULL          },  // 134 FreqMod
+    {moduleTypeFltHP, paramType1StandardToggle, paramType2Toggle, {{ 10, -3}, {7,  7}}, anchorBottomLeft,  "Kbt",       5,  4, offTo100KbStrMap,   NULL          }, // 134 Kbt
+    {moduleTypeFltHP,   paramType1Bypass,         paramType2Toggle, {{-10,   -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 134 Bypass
     // 135 Unknown
     // 136 Unknown
     // 137 Unknown
@@ -1526,9 +1530,11 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDAConv,    connectorDirIn,  connectorTypeLogic,   {{ 78,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "D6",    labelLocUp   }, // 132 In D6
     {moduleTypeDAConv,    connectorDirIn,  connectorTypeLogic,   {{ 86,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "D7",    labelLocUp   }, // 132 In D7
     {moduleTypeDAConv,    connectorDirOut,  connectorTypeControl,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    "Out",    labelLocUp   }, // 132 Output
-
     // 133 Unknown
     // 134 FltHP
+    {moduleTypeFltHP, connectorDirIn,  connectorTypeAudio,   {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 134 In
+    {moduleTypeFltHP, connectorDirIn,  connectorTypeControl, {{  28,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },  // 134 Mod
+    {moduleTypeFltHP, connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // 134 Out
     // 135 Unknown
     // 136 Unknown
     // 137 Unknown
@@ -1640,6 +1646,7 @@ const tModeLocation   modeLocationList[] = {
     {moduleTypeFltLP, paramType1StandardToggle, paramType2Toggle, {{ 67, -3}, {7,  7}}, anchorBottomLeft, "Slope", 6, 2, fltLPSlopeStrMap}, // 87 FltLP
     {moduleTypeFlipFlop,   paramType1StandardToggle, paramType2Toggle, {{ 45, -3}, {7,  7}}, anchorBottomLeft,  "Type",        2,  0, flipFlopStrMap}, // 91 Selector
     {moduleTypeOscD, paramType1StandardToggle, paramType2Toggle, {{-30,   5}, {7,  7}}, anchorTopRight, "Wave", 6, 0, shapeOscATypeStrMap}, // 96 Wave
+    {moduleTypeFltHP, paramType1StandardToggle, paramType2Toggle, {{ 67, -3}, {7,  7}}, anchorBottomLeft, "Slope", 6, 2, fltLPSlopeStrMap}, // 134 FltLP
 };
 
 //{moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14, 7}}, anchorBottomLeft,  "Type",      4, 0, reverbTypeStrMap,    NULL          },
