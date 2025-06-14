@@ -1517,6 +1517,16 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeADConv,    connectorDirOut,  connectorTypeLogic,   {{ 78,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "D6",    labelLocUp   }, // 131 Out D6
     {moduleTypeADConv,    connectorDirOut,  connectorTypeLogic,   {{ 86,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "D7",    labelLocUp   }, // 131 Out D7
     // 132 DAConv
+    {moduleTypeDAConv,    connectorDirIn,  connectorTypeLogic,   {{ 30,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "D0",    labelLocUp   }, // 132 In D0
+    {moduleTypeDAConv,    connectorDirIn,  connectorTypeLogic,   {{ 38,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "D1",    labelLocUp   }, // 132 In D1
+    {moduleTypeDAConv,    connectorDirIn,  connectorTypeLogic,   {{ 46,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "D2",    labelLocUp   }, // 132 In D2
+    {moduleTypeDAConv,    connectorDirIn,  connectorTypeLogic,   {{ 54,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "D3",    labelLocUp   }, // 132 In D3
+    {moduleTypeDAConv,    connectorDirIn,  connectorTypeLogic,   {{ 62,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "D4",    labelLocUp   }, // 132 In D4
+    {moduleTypeDAConv,    connectorDirIn,  connectorTypeLogic,   {{ 70,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "D5",    labelLocUp   }, // 132 In D5
+    {moduleTypeDAConv,    connectorDirIn,  connectorTypeLogic,   {{ 78,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "D6",    labelLocUp   }, // 132 In D6
+    {moduleTypeDAConv,    connectorDirIn,  connectorTypeLogic,   {{ 86,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "D7",    labelLocUp   }, // 132 In D7
+    {moduleTypeDAConv,    connectorDirOut,  connectorTypeControl,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    "Out",    labelLocUp   }, // 132 Output
+
     // 133 Unknown
     // 134 FltHP
     // 135 Unknown
