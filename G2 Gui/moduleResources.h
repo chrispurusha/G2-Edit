@@ -925,6 +925,8 @@ const tParamLocation paramLocationList[] = {
     // 145 SeqVal
     // 146 SeqLev
     // 147 CtrRcv
+    {moduleTypeCtrlRcv, paramType1CommonDial, paramType2Dial, {{ 40, -3}, {7,  14}}, anchorBottomLeft,  "Note",       128,  64, NULL,   NULL          }, // 147 Ctrl
+    {moduleTypeCtrlRcv, paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  "Chan",       21,  0, midiChanStrMap,   NULL          }, // 147 Channel
     // 148 NoteRcv
     // 149 Note>one
     // 150 Compress
@@ -1582,6 +1584,8 @@ const tConnectorLocation connectorLocationList[] = {
     // 145 SeqVal
     // 146 SeqLev
     // 147 CtrRcv
+    {moduleTypeCtrlRcv,    connectorDirOut,  connectorTypeLogic,   {{80,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Rcv",    labelLocUp   }, // 147 Rcv
+    {moduleTypeCtrlRcv, connectorDirOut,  connectorTypeControl, {{  92,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Val",    labelLocUp   },  // 147 Value
     // 148 NoteRcv
     // 149 Note>one
     // 150 Compress
