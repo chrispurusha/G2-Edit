@@ -955,13 +955,14 @@ const tParamLocation paramLocationList[] = {
         {moduleTypeCompress,   paramType1CommonDial,     paramType2Dial,   {{ 52,  -3}, {7, 14}}, anchorBottomLeft,  "Rel",     128,  0, NULL,               NULL          },
         {moduleTypeCompress,   paramType1CommonDial,     paramType2Dial,   {{ 66,  -3}, {7, 14}}, anchorBottomLeft,  "RefLvl",   43,  0, NULL,               NULL          },
         {moduleTypeCompress,   paramType1StandardToggle, paramType2Toggle, {{ 27,   5}, {7,  7}}, anchorTopLeft,     NULL,        2,  1, sideChainStrMap,    offOnColourMap},
-        {moduleTypeCompress,   paramType1Bypass,         paramType2Toggle, {{ -3,   0}, {5,  5}}, anchorMiddleRight, NULL,        2,  1, NULL,               NULL          }
+        {moduleTypeCompress,   paramType1Bypass,         paramType2Toggle, {{ -3,   0}, {5,  5}}, anchorMiddleRight, NULL,        2,  1, NULL,               NULL          },
     // 151 Unknown
     // 152 KeyQuant *** Skip for now
     // 153 Unknown
     // 154 SeqCtr
     // 155 Unknown
     // 156 NoteDet
+    {moduleTypeNoteDet, paramType1NoteDial, paramType2Dial, {{ 23, -3}, {7,  14}}, anchorBottomLeft,  "Note",       128,  64, NULL,   NULL          }, // 156 Note
     // 157 LevConv
     // 158 Glide
     // 159 CompSig
@@ -1623,6 +1624,10 @@ const tConnectorLocation connectorLocationList[] = {
     // 154 SeqCtr
     // 155 Unknown
     // 156 NoteDet
+    {moduleTypeNoteDet,    connectorDirOut,  connectorTypeLogic,   {{70,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Gate",    labelLocUp   }, // 156 Gate
+    {moduleTypeNoteDet, connectorDirOut,  connectorTypeControl, {{  80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",    labelLocUp   },  // 156 Vel
+    {moduleTypeNoteDet, connectorDirOut,  connectorTypeControl, {{  90,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "RVel",    labelLocUp   },  // 156 Release vel
+
     // 157 LevConv
     // 158 Glide
     // 159 CompSig
