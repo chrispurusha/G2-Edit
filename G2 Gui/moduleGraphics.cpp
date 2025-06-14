@@ -341,6 +341,23 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
+        case paramType1NoteDial: // C-1 to G9
+        {
+            int noteoctave;
+            int noteval;
+            char * noteNameStrMap[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+            char * noteName;
+            
+            noteoctave = paramValue/12 - 1;
+            noteval = paramValue%12;
+            noteName = noteNameStrMap[noteval];
+            
+            snprintf(buff, sizeof(buff), "%s%i", noteName, noteoctave);
+            
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+  
+        }
         case paramType1CommonDial:         // Ultimately might not be a common dial, or could just be a default percent dial!?
         case paramType1LRDial: // Pan type dial, perhaps with reset triangle
         case paramType1Resonance:

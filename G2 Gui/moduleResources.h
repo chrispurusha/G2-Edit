@@ -930,7 +930,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypePCSend, paramType1StandardToggle, paramType2Toggle, {{ 85, -3}, {7,  7}}, anchorBottomLeft,  "Chan",       21,  0, midiChanStrMap,   NULL          }, // 142 Channel
     // 143 NoteSend
     {moduleTypeNoteSend, paramType1CommonDial, paramType2Dial, {{ 42, -3}, {7,  14}}, anchorBottomLeft,  "Vel",       128,  100, NULL,   NULL          }, // 143 Vel
-    {moduleTypeNoteSend, paramType1CommonDial, paramType2Dial, {{ 62, -3}, {7,  14}}, anchorBottomLeft,  "Note",       128,  64, NULL,   NULL          }, // 143 Ctrl
+    {moduleTypeNoteSend, paramType1NoteDial, paramType2Dial, {{ 62, -3}, {7,  14}}, anchorBottomLeft,  "Note",       128,  64, NULL,   NULL          }, // 143 Ctrl
     {moduleTypeNoteSend, paramType1StandardToggle, paramType2Toggle, {{ 85, -3}, {7,  7}}, anchorBottomLeft,  "Chan",       21,  0, midiChanStrMap,   NULL          }, // 143 Channel
     // 144 SeqEvent
     // 145 SeqVal
@@ -939,12 +939,12 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeCtrlRcv, paramType1CommonDial, paramType2Dial, {{ 40, -3}, {7,  14}}, anchorBottomLeft,  "Ctrl",       128,  64, NULL,   NULL          }, // 147 Ctrl
     {moduleTypeCtrlRcv, paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  "Chan",       18,  17, midiChanRcvStrMap,   NULL          }, // 147 Channel
     // 148 NoteRcv
-    {moduleTypeNoteRcv, paramType1CommonDial, paramType2Dial, {{ 40, -3}, {7,  14}}, anchorBottomLeft,  "Note",       128,  64, NULL,   NULL          }, // 148 Note
+    {moduleTypeNoteRcv, paramType1NoteDial, paramType2Dial, {{ 40, -3}, {7,  14}}, anchorBottomLeft,  "Note",       128,  64, NULL,   NULL          }, // 148 Note
     {moduleTypeNoteRcv, paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  "Chan",       18,  17, midiChanRcvStrMap,   NULL          }, // 148 Channel
     // 149 NoteZone
     {moduleTypeNoteZone, paramType1StandardToggle, paramType2Toggle, {{ 3, -3}, {7,  7}}, anchorBottomLeft,  "RChan",       18,  17, midiChanRcvStrMap,   NULL          }, // 149 Receive Channel
-    {moduleTypeNoteZone, paramType1CommonDial, paramType2Dial, {{ 23, -3}, {7,  14}}, anchorBottomLeft,  "Min",       128,  0, NULL,   NULL          }, // 149 Min note
-    {moduleTypeNoteZone, paramType1CommonDial, paramType2Dial, {{ 43, -3}, {7,  14}}, anchorBottomLeft,  "Max",       128,  127, NULL,   NULL          }, // 149 Max note
+    {moduleTypeNoteZone, paramType1NoteDial, paramType2Dial, {{ 23, -3}, {7,  14}}, anchorBottomLeft,  "Min",       128,  0, NULL,   NULL          }, // 149 Min note
+    {moduleTypeNoteZone, paramType1NoteDial, paramType2Dial, {{ 43, -3}, {7,  14}}, anchorBottomLeft,  "Max",       128,  127, NULL,   NULL          }, // 149 Max note
     {moduleTypeNoteZone, paramType1CommonDial, paramType2Dial, {{ 63, -3}, {7,  14}}, anchorBottomLeft,  "Trans",       128,  64, NULL,   NULL          }, // 149 Transpose
     {moduleTypeNoteZone, paramType1StandardToggle, paramType2Toggle, {{ 83, -3}, {7,  7}}, anchorBottomLeft,  "SChan",       21,  0, midiChanStrMap,   NULL          }, // 149 Send Channel
     {moduleTypeNoteZone, paramType1StandardToggle, paramType2Toggle, {{ 60, -17}, {7,  7}}, anchorBottomLeft,  "Thru",       2,  0, thruStrMap,   NULL          }, // 149 Thru mode
@@ -957,7 +957,7 @@ const tParamLocation paramLocationList[] = {
         {moduleTypeCompress,   paramType1StandardToggle, paramType2Toggle, {{ 27,   5}, {7,  7}}, anchorTopLeft,     NULL,        2,  1, sideChainStrMap,    offOnColourMap},
         {moduleTypeCompress,   paramType1Bypass,         paramType2Toggle, {{ -3,   0}, {5,  5}}, anchorMiddleRight, NULL,        2,  1, NULL,               NULL          }
     // 151 Unknown
-    // 152 KeyQuant
+    // 152 KeyQuant *** Skip for now
     // 153 Unknown
     // 154 SeqCtr
     // 155 Unknown

@@ -318,6 +318,7 @@ typedef enum {
     paramType1Bypass,
     paramType1BipLevel,
     paramType1LevAmpDial,
+    paramType1NoteDial,
     paramType1CommonDial,
     paramType1LRDial,
     paramType1OscWave,
