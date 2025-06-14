@@ -87,6 +87,7 @@ const char * eq2BandHiStrMap[]    = {"12kHz"};
 const char * presetStrMap[]       = {"Set"};
 const char * bitsStrMap[]         = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "Off"};
 const char * sustainStrMap[]      = {"L1", "L2"};
+const char * midiChanStrMap[]     = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "SlotA", "SlotB", "SlotC", "SlotD"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -910,6 +911,9 @@ const tParamLocation paramLocationList[] = {
     // 139 T&H -- No params
     // 140 Mix4-1S
     // 141 CtrlSend
+    {moduleTypeCtrlSend, paramType1CommonDial, paramType2Dial, {{ 40, -3}, {7,  14}}, anchorBottomLeft,  "Ctrl",       128,  1, NULL,   NULL          }, // 141 Ctrl
+    {moduleTypeCtrlSend, paramType1CommonDial, paramType2Dial, {{ 75, -3}, {7,  14}}, anchorBottomLeft,  "Value",       128,  1, NULL,   NULL          }, // 141 Ctrl
+    {moduleTypeCtrlSend, paramType1StandardToggle, paramType2Toggle, {{ 85, -3}, {7,  7}}, anchorBottomLeft,  "Chan",       21,  0, midiChanStrMap,   NULL          }, // 141 Channel
     // 142 PCSend
     // 143 NoteSend
     // 144 SeqEvent
@@ -1558,6 +1562,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{-10,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },
     {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },
     // 141 CtrlSend
+    {moduleTypeCtrlSend,    connectorDirIn,  connectorTypeLogic,   {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Send",    labelLocRight   }, // 141 Send In
+    {moduleTypeCtrlSend,    connectorDirOut,  connectorTypeLogic,   {{ 20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocRight   }, // 141 Send Out
+    {moduleTypeCtrlSend, connectorDirOut,  connectorTypeControl, {{  65,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },  // 141 Value
     // 142 PCSend
     // 143 NoteSend
     // 144 SeqEvent

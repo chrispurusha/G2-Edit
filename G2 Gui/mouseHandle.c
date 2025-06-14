@@ -814,6 +814,11 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Scratch",     menu_action_create,  moduleTypeScratch,   NULL},
         {NULL,                NULL,                               0,   NULL}       // End of menu
     };
+    static tMenuItem midiMenuItems[] = {
+        {"Create CtrlSend", menu_action_create, moduleTypeCtrlSend, NULL},
+        {NULL,                 NULL,                               0, NULL}       // End of menu
+    };
+ 
     static tMenuItem moduleMenuItems[] = {
         {"Create In/Out",   menu_action_create, 0, ioMenuItems    },
         {"Create Osc",      menu_action_create, 0, oscMenuItems   },
@@ -830,7 +835,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Shaper",   menu_action_create, 0, shaperMenuItems},
         {"Create Mixer",    menu_action_create, 0, mixerMenuItems },
         {"Create Logic",    menu_action_create, 0, logicMenuItems },
-        {"Create Midi",     menu_action_create, 0, NULL           },
+        {"Create Midi",     menu_action_create, 0, midiMenuItems  },
         {NULL,              NULL,               0, NULL           } // End of menu
     };
     static tMenuItem menuItems[] = {
