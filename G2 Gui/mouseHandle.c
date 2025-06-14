@@ -797,6 +797,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create FlipFlop",   menu_action_create,  moduleTypeFlipFlop, NULL},
         {"Create ClkDiv",   menu_action_create,  moduleTypeClkDiv, NULL},
         {"Create 8Counter",   menu_action_create,  moduleType8Counter, NULL},
+        {"Create BinCounter",   menu_action_create,  moduleTypeBinCounter, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
     static tMenuItem fxMenuItems[] = {

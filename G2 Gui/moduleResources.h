@@ -1494,9 +1494,18 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMinMax,    connectorDirIn,  connectorTypeControl,   {{ 55,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "B",    labelLocLeft   }, // 128 In B
     {moduleTypeMinMax,    connectorDirOut, connectorTypeControl,   {{ -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Min",    labelLocLeft   }, // 128 Min Out
     {moduleTypeMinMax,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Max",    labelLocLeft   }, // 128 Max Out
-
     // 128 Unknown
     // 130 BinCounter
+    {moduleTypeBinCounter,    connectorDirIn,  connectorTypeLogic,   {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Clk",    labelLocRight   }, // 130 Clk
+    {moduleTypeBinCounter,    connectorDirIn,  connectorTypeLogic,   {{ 17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Rst",    labelLocRight   }, // 130 Rst
+    {moduleTypeBinCounter,    connectorDirOut,  connectorTypeLogic,   {{ 30,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "001",    labelLocUp   }, // 130 Out 001
+    {moduleTypeBinCounter,    connectorDirOut,  connectorTypeLogic,   {{ 38,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "002",    labelLocUp   }, // 130 Out 002
+    {moduleTypeBinCounter,    connectorDirOut,  connectorTypeLogic,   {{ 46,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "004",    labelLocUp   }, // 130 Out 004
+    {moduleTypeBinCounter,    connectorDirOut,  connectorTypeLogic,   {{ 54,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "008",    labelLocUp   }, // 130 Out 008
+    {moduleTypeBinCounter,    connectorDirOut,  connectorTypeLogic,   {{ 62,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "016",    labelLocUp   }, // 130 Out 016
+    {moduleTypeBinCounter,    connectorDirOut,  connectorTypeLogic,   {{ 70,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "032",    labelLocUp   }, // 130 Out 032
+    {moduleTypeBinCounter,    connectorDirOut,  connectorTypeLogic,   {{ 78,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "064",    labelLocUp   }, // 130 Out 064
+    {moduleTypeBinCounter,    connectorDirOut,  connectorTypeLogic,   {{ 86,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "128",    labelLocUp   }, // 130 Out 128
     // 131 ADConv
     // 132 DAConv
     // 133 Unknown
