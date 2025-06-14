@@ -968,6 +968,9 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeLevConv,    paramType1StandardToggle, paramType2Toggle, {{-15, -1}, {7,  7}}, anchorBottomRight, NULL,        6,  0, posStrMap,          NULL          }, // 157 OutType
     {moduleTypeLevConv,    paramType1StandardToggle, paramType2Toggle, {{-57, -3}, {7,  7}}, anchorBottomRight, "Input",        3,  0, levConvStrMap,          NULL          }, // 157 In Signal Type
     // 158 Glide
+    {moduleTypeGlide,    paramType1Time,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  "Time",  128,  0, NULL,               NULL          }, // 158 Time
+    {moduleTypeGlide,    paramType1StandardToggle, paramType2Toggle, {{40, -3}, {7,  7}}, anchorBottomLeft, NULL,        2,  0, offOnStrMap,          NULL          }, // 158 Glide on/off
+    {moduleTypeGlide,    paramType1StandardToggle, paramType2Toggle, {{70, -3}, {7,  7}}, anchorBottomLeft, NULL,        2,  0, logStrMap,          NULL          }, // 158 Shape
     // 159 CompSig
     // 160 ZeroCnt
     // 161 MixFader
@@ -1634,6 +1637,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeLevConv, connectorDirIn,  connectorTypeControl, {{  -23,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocUp   },  // 157 In
     {moduleTypeLevConv, connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // 157 Out
     // 158 Glide
+    {moduleTypeGlide, connectorDirIn,  connectorTypeControl, {{  80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },  // 139 In
+    {moduleTypeGlide,    connectorDirIn,  connectorTypeLogic,   {{3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Glide on",    labelLocRight  }, // 158 Glide On
+    {moduleTypeGlide, connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // 139 Out
+
     // 159 CompSig
     // 160 ZeroCnt
     // 161 MixFader

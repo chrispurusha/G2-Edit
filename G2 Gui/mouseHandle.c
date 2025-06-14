@@ -688,6 +688,7 @@ void open_module_area_context_menu(tCoord coord) {
         {NULL,              NULL,                                0, NULL}         // End of menu
     };
     static tMenuItem noteMenuItems[] = {
+        {"Create Glide", menu_action_create, moduleTypeGlide, NULL},
         {"Create NoteQuant", menu_action_create, moduleTypeNoteQuant, NULL},
         {"Create NoteScaler", menu_action_create, moduleTypeNoteScaler, NULL},
         {"Create LevScaler", menu_action_create, moduleTypeLevScaler, NULL},

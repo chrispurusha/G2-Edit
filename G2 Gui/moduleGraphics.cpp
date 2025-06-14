@@ -287,6 +287,33 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
+        case paramType1Time:
+        {
+            double time = 0.0;
+            double min_time, max_time;
+            switch (module->type) {
+                case moduleTypeGlide:
+                {
+                    min_time = 0.002;
+                    max_time = 22.4;
+                    break;
+                }
+                default:
+                {
+                }
+            }
+            // scale 0 -> min_time and 127 -> max_time, exponentially
+            time = exp((double)paramValue/127 * log(max_time/min_time) )*min_time;
+            if (time < 1.0) {
+                snprintf(buff, sizeof(buff), "%.0fms", time*1000);
+            } else {
+                snprintf(buff, sizeof(buff), "%.1fs", time);
+            }
+            
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
+
         case paramType1ADRTime:
         {
             double time = 0.0;
@@ -356,7 +383,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
-  
+
         }
         case paramType1CommonDial:         // Ultimately might not be a common dial, or could just be a default percent dial!?
         case paramType1LRDial: // Pan type dial, perhaps with reset triangle
