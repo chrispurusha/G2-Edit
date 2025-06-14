@@ -836,6 +836,8 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeFade1to2,       paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 64, NULL,               NULL          }, // 113 Mix
     {moduleTypeFade1to2,       paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 64, NULL,               NULL          }, // 113 Mix M
     // 114 Fade2-1
+    {moduleTypeFade2to1,       paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 64, NULL,               NULL          }, // 114 Mix
+    {moduleTypeFade2to1,       paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 64, NULL,               NULL          }, // 114 Mix M
     // 115 LevScaler
     // 116 Mix8-1A
     // 117 LevMod
@@ -1396,8 +1398,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFade1to2,    connectorDirIn,  connectorTypeControl,   {{ 33,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   }, // 113 Ctrl
     {moduleTypeFade1to2,    connectorDirOut, connectorTypeControl,   {{ -10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 113 Out1
     {moduleTypeFade1to2,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 113 Out2
-
     // 114 Fade2-1
+    {moduleTypeFade2to1,    connectorDirIn,  connectorTypeControl,   {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   }, // 114 In1
+    {moduleTypeFade2to1,    connectorDirIn, connectorTypeControl,   {{ -10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 114 In2
+    {moduleTypeFade2to1,    connectorDirIn,  connectorTypeControl,   {{ 33,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   }, // 114 Ctrl
+    {moduleTypeFade2to1,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 114 Out
+
     // 115 LevScaler
     // 116 Mix8-1A
     // 117 LevMod
