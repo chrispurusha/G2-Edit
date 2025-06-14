@@ -85,6 +85,7 @@ const char * fltPhaseTypeStrMap[] = {"Notch", "Peak", "Deep"};
 const char * eq2BandLoStrMap[]    = {"80Hz"};
 const char * eq2BandHiStrMap[]    = {"12kHz"};
 const char * presetStrMap[]       = {"Set"};
+const char * bitsStrMap[]         = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "Off"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -846,7 +847,13 @@ const tParamLocation paramLocationList[] = {
     // 116 Mix8-1A
     {moduleTypeMix8to1A,  paramType1StandardToggle,     paramType2Toggle,   {{ 3,  -3}, {7, 7}}, anchorBottomLeft,  "Pad",    3, 0, db12BPadStrMap,               NULL          },  // 116 Pad
     // 117 LevMod
+    {moduleTypeLevMod,       paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 0, NULL,               NULL          }, // 117 ModDepth
+    {moduleTypeLevMod,       paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 64, NULL,               NULL          }, // 117 ModType
     // 118 Digitizer
+    {moduleTypeDigitizer,  paramType1StandardToggle,     paramType2Toggle,   {{80,  -3}, {7, 7}}, anchorBottomLeft,  "Bits",    13, 11, bitsStrMap,               NULL          },  // 118 Bits
+    {moduleTypeDigitizer,       paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  "Sample Rate",    128, 64, NULL,               NULL          }, // 118 Rate
+    {moduleTypeDigitizer,       paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "Rate",    128, 0, NULL,               NULL          }, // 118 Rate M
+    {moduleTypeDigitizer,       paramType1Bypass,         paramType2Toggle, {{-3,  -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 106 Bypass
     // 119 EnvADDSR
     // 120 Unknown
     // 121 SeqNote
@@ -1423,9 +1430,15 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMix8to1A,  connectorDirIn,  connectorTypeControl, {{ 75,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "7",    labelLocUp   },  // 116 In7
     {moduleTypeMix8to1A,  connectorDirIn,  connectorTypeControl, {{ 84,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "8",    labelLocUp   },  // 116 In8
     {moduleTypeMix8to1A,  connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 116 Out
-
     // 117 LevMod
+    {moduleTypeLevMod,    connectorDirIn,  connectorTypeControl,   {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocRight   }, // 117 In
+    {moduleTypeLevMod,    connectorDirIn,  connectorTypeControl,   {{ -10,   -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    "Mod",    labelLocLeft  }, // 117 Mod
+    {moduleTypeLevMod,    connectorDirIn, connectorTypeControl,   {{ 33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp  }, // 117 ModDepth
+    {moduleTypeLevMod,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 115 Out
     // 118 Digitizer
+    {moduleTypeDigitizer,    connectorDirIn,  connectorTypeControl,   {{ -3,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocRight   }, // 118 In
+    {moduleTypeDigitizer,    connectorDirIn, connectorTypeControl,   {{ 13,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp  }, // 118 Rate M
+    {moduleTypeDigitizer,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 118 Out
     // 119 EnvADDSR
     // 120 Unknown
     // 121 SeqNote

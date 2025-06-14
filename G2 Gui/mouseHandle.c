@@ -743,6 +743,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create CompLev",    menu_action_create,  moduleTypeCompLev, NULL},
         {"Create LevAdd",     menu_action_create,  moduleTypeLevAdd,  NULL},
         {"Create LevAmp",     menu_action_create,  moduleTypeLevAmp,  NULL},
+        {"Create LevMod",     menu_action_create,  moduleTypeLevMod,  NULL},
         {"Create LevMult",     menu_action_create,  moduleTypeLevMult,  NULL},
         {"Create EnvFollow",     menu_action_create,  moduleTypeEnvFollow,  NULL},
         {NULL,                 NULL,                                 0, NULL}       // End of menu
@@ -796,6 +797,7 @@ void open_module_area_context_menu(tCoord coord) {
     };
     static tMenuItem fxMenuItems[] = {
         {"Create Compressor", menu_action_create,  moduleTypeCompress, NULL},
+        {"Create Digitizer", menu_action_create,  moduleTypeDigitizer, NULL},
         {"Create FreqShift", menu_action_create,  moduleTypeFreqShift, NULL},
         {"Create Flanger", menu_action_create,  moduleTypeFlanger, NULL},
         {"Create Chorus", menu_action_create,  moduleTypeStChorus, NULL},   
