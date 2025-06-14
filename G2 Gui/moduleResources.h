@@ -830,6 +830,8 @@ const tParamLocation paramLocationList[] = {
     // 110 Unknown
     // 111 Unknown
     // 112 LevAdd
+    {moduleTypeLevAdd,       paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 64, NULL,               NULL          }, // 112 Constant
+    {moduleTypeLevAdd,    paramType1StandardToggle, paramType2Toggle, {{ 40, -3}, {7,  7}}, anchorBottomLeft,  NULL,       2,  0, bipUniStrMap, NULL},  // 112 Bip/Uni
     // 113 Fade1-2
     // 114 Fade2-1
     // 115 LevScaler
@@ -1385,6 +1387,9 @@ const tConnectorLocation connectorLocationList[] = {
     // 110 Unknown
     // 111 Unknown
     // 112 LevAdd
+    {moduleTypeLevAdd,    connectorDirIn,  connectorTypeControl,   {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   }, // 112 In
+    {moduleTypeLevAdd,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 112 Out
+
     // 113 Fade1-2
     // 114 Fade2-1
     // 115 LevScaler

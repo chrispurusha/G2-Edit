@@ -740,6 +740,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Constant",    menu_action_create,  moduleTypeConstant, NULL},
         {"Create ConstSwT",    menu_action_create,  moduleTypeConstSwT, NULL},
         {"Create CompLev",    menu_action_create,  moduleTypeCompLev, NULL},
+        {"Create LevAdd",     menu_action_create,  moduleTypeLevAdd,  NULL},
         {"Create LevAmp",     menu_action_create,  moduleTypeLevAmp,  NULL},
         {"Create LevMult",     menu_action_create,  moduleTypeLevMult,  NULL},
         {"Create EnvFollow",     menu_action_create,  moduleTypeEnvFollow,  NULL},
