@@ -776,6 +776,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Mixer 2-1 B", menu_action_create, moduleTypeMix2to1B, NULL},
         {"Create Mixer 8-1 B", menu_action_create, moduleTypeMix8to1B, NULL},
         {"Create MixStereo",   menu_action_create, moduleTypeMixStereo,NULL},
+        {"Create Fade 1-2",      menu_action_create, moduleTypeFade1to2,  NULL},
         {"Create X-Fade",      menu_action_create, moduleTypeXtoFade,  NULL},
         {"Create Pan",         menu_action_create, moduleTypePan,      NULL},
         {NULL,                 NULL,                                0, NULL}      // End of menu

@@ -833,6 +833,8 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeLevAdd,       paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 64, NULL,               NULL          }, // 112 Constant
     {moduleTypeLevAdd,    paramType1StandardToggle, paramType2Toggle, {{ 40, -3}, {7,  7}}, anchorBottomLeft,  NULL,       2,  0, bipUniStrMap, NULL},  // 112 Bip/Uni
     // 113 Fade1-2
+    {moduleTypeFade1to2,       paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 64, NULL,               NULL          }, // 113 Mix
+    {moduleTypeFade1to2,       paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 64, NULL,               NULL          }, // 113 Mix M
     // 114 Fade2-1
     // 115 LevScaler
     // 116 Mix8-1A
@@ -1389,8 +1391,12 @@ const tConnectorLocation connectorLocationList[] = {
     // 112 LevAdd
     {moduleTypeLevAdd,    connectorDirIn,  connectorTypeControl,   {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   }, // 112 In
     {moduleTypeLevAdd,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 112 Out
-
     // 113 Fade1-2
+    {moduleTypeFade1to2,    connectorDirIn,  connectorTypeControl,   {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   }, // 113 In
+    {moduleTypeFade1to2,    connectorDirIn,  connectorTypeControl,   {{ 33,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   }, // 113 Ctrl
+    {moduleTypeFade1to2,    connectorDirOut, connectorTypeControl,   {{ -10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 113 Out1
+    {moduleTypeFade1to2,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 113 Out2
+
     // 114 Fade2-1
     // 115 LevScaler
     // 116 Mix8-1A
