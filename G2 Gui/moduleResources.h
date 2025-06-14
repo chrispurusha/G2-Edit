@@ -84,6 +84,7 @@ const char * freqShiftRangeStrMap[]= {"Hi", "Lo", "Sub"};
 const char * fltPhaseTypeStrMap[] = {"Notch", "Peak", "Deep"};
 const char * eq2BandLoStrMap[]    = {"80Hz"};
 const char * eq2BandHiStrMap[]    = {"12kHz"};
+const char * presetStrMap[]       = {"Set"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -800,6 +801,31 @@ const tParamLocation paramLocationList[] = {
 
     // 107 Unknown
     // 108 Vocoder
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, {5,  7}}, anchorBottomLeft,     "1",        16,  0, int16StrMap,    NULL          }, // 108 BandSel 1
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 15,  -3}, {5,  7}}, anchorBottomLeft,     "2",        16,  1, int16StrMap,    NULL          }, // 108 BandSel 2
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 20,  -3}, {5,  7}}, anchorBottomLeft,     "3",        16,  2, int16StrMap,    NULL          }, // 108 BandSel 3
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, {5,  7}}, anchorBottomLeft,     "4",        16,  3, int16StrMap,    NULL         }, // 108 BandSel 4
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 30,  -3}, {5,  7}}, anchorBottomLeft,     "5",        16,  4, int16StrMap,    NULL          }, // 108 BandSel 5
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 35,  -3}, {5,  7}}, anchorBottomLeft,     "6",        16,  5, int16StrMap,    NULL          }, // 108 BandSel 6
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 40,  -3}, {5,  7}}, anchorBottomLeft,     "7",        16,  6, int16StrMap,    NULL          }, // 108 BandSel 7
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 45,  -3}, {5,  7}}, anchorBottomLeft,     "8",        16,  7, int16StrMap,    NULL          }, // 108 BandSel 8
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 50,  -3}, {5,  7}}, anchorBottomLeft,     "9",        16,  8, int16StrMap,    NULL          }, // 108 BandSel 9
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 55,  -3}, {5,  7}}, anchorBottomLeft,     "10",        16,  9, int16StrMap,    NULL          }, // 108 BandSel 10
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 60,  -3}, {5,  7}}, anchorBottomLeft,     "11",        16,  10, int16StrMap,    NULL          }, // 108 BandSel 11
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 65,  -3}, {5,  7}}, anchorBottomLeft,     "12",        16,  11, int16StrMap,    NULL          }, // 108 BandSel 12
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 70,  -3}, {5,  7}}, anchorBottomLeft,     "13",        16,  12, int16StrMap,    NULL          }, // 108 BandSel 13
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 75,  -3}, {5,  7}}, anchorBottomLeft,     "14",        16,  13, int16StrMap,    NULL          }, // 108 BandSel 14
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, {5,  7}}, anchorBottomLeft,     "15",        16,  14, int16StrMap,    NULL          }, // 108 BandSel 15
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 85,  -3}, {5,  7}}, anchorBottomLeft,     "16",        16,  15, int16StrMap,    NULL          }, // 108 BandSel 16
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 3,  -12}, {7,  7}}, anchorBottomLeft,     "Emp",        2,  0, offOnStrMap,    NULL          }, // 108 Emphasis
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 3,  -24}, {7,  7}}, anchorBottomLeft,     "Mon",        2,  0, offOnStrMap,    NULL          }, // 108 Monitor
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 10,  -24}, {7,  7}}, anchorBottomLeft,     "-2",        1,  0, presetStrMap,    NULL          }, // 108 Preset -2
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{ 17,  -24}, {7,  7}}, anchorBottomLeft,     "-1",        1,  0, presetStrMap,    NULL          }, // 108 Preset -1
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{24,  -24}, {7,  7}}, anchorBottomLeft,     "-0",        1,  0, presetStrMap,    NULL          }, // 108 Preset 0
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{31,  -24}, {7,  7}}, anchorBottomLeft,     "+1",        1,  0, presetStrMap,    NULL          }, // 108 Preset +1
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{38,  -24}, {7,  7}}, anchorBottomLeft,     "+2",        1,  0, presetStrMap,    NULL          }, // 108 Preset +2
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{45,  -24}, {7,  7}}, anchorBottomLeft,     "Inv",        1,  0, presetStrMap,    NULL          }, // 108 Preset Inv
+    {moduleTypeVocoder,       paramType1StandardToggle, paramType2Toggle, {{52,  -24}, {7,  7}}, anchorBottomLeft,     "Rnd",        1,  0, presetStrMap,    NULL          }, // 108 Preset Rnd
     // 109 Unknown
     // 110 Unknown
     // 111 Unknown
@@ -1352,6 +1378,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeOscNoise,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 106 Out
     // 107 Unknown
     // 108 Vocoder
+    {moduleTypeVocoder,       connectorDirIn, connectorTypeAudio,   {{ 3,  -35}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Ctrl",    labelLocRight   }, // 108 Ctrl
+    {moduleTypeVocoder,       connectorDirIn, connectorTypeAudio,   {{ -3,  -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 108 In
+    {moduleTypeVocoder,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 108 Out
     // 109 Unknown
     // 110 Unknown
     // 111 Unknown
