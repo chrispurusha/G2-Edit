@@ -973,8 +973,16 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeGlide,    paramType1StandardToggle, paramType2Toggle, {{70, -3}, {7,  7}}, anchorBottomLeft, NULL,        2,  0, logStrMap,          NULL          }, // 158 Shape
     // 159 CompSig
     // 160 ZeroCnt
-    // 161 MixFader
+    // 161 MixFader -- skip for now
     // 162 FltComb
+    {moduleTypeFltComb,   paramType1Freq,           paramType2Dial,   {{ 22,  -10}, {7, 14}}, anchorBottomLeft,  "Freq",    128,  0, NULL,               NULL          },  // 102 Freq
+    {moduleTypeFltComb,   paramType1CommonDial,          paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",     128,  0, NULL,               NULL          }, // 102 Pitch M
+    {moduleTypeFltComb,   paramType1StandardToggle, paramType2Toggle, {{ 3, -22}, {7,  7}}, anchorBottomLeft,  "Kbt",       5,  4, offTo100KbStrMap,   NULL          }, // 102 Kbt
+    {moduleTypeFltComb,   paramType1CommonDial,          paramType2Dial,   {{ 57,  -17}, {7, 14}}, anchorBottomLeft,  "FB",     128,  64, NULL,               NULL          }, // 102 FB
+    {moduleTypeFltComb,   paramType1CommonDial,          paramType2Dial,   {{ 62,  -3}, {7, 14}}, anchorBottomLeft,  NULL,     128,  0, NULL,               NULL          }, // 102 FB Mod
+    {moduleTypeFltComb,   paramType1StandardToggle, paramType2Toggle, {{ 68, -12}, {7,  7}}, anchorBottomLeft,  NULL,        3,  0, fltPhaseTypeStrMap,   NULL          },// 102 Type
+    {moduleTypeFltComb,   paramType1CommonDial,          paramType2Dial,   {{ 83,  -3}, {7, 14}}, anchorBottomLeft,  "Level",     128,  0, NULL,               NULL          },// 102 Level
+    {moduleTypeFltComb,   paramType1Bypass,         paramType2Toggle, {{-3,   -10}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 102 Bypass
     // 163 OscShpA
     // 164 OscDual
     // 165 DXRouter
@@ -1647,8 +1655,13 @@ const tConnectorLocation connectorLocationList[] = {
     // 160 ZeroCnt
     {moduleTypeZeroCnt, connectorDirIn,  connectorTypeControl, {{  80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },  // 160 In
     {moduleTypeZeroCnt, connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // 160 Out
-    // 161 MixFader
+    // 161 MixFader // Skip
     // 162 FltComb
+    {moduleTypeFltComb,    connectorDirIn,  connectorTypeAudio,   {{ -3,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   }, // 162 In
+    {moduleTypeFltComb,    connectorDirIn,  connectorTypeControl, {{ 3,  -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // 162 Pitch
+    {moduleTypeFltComb,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 162 PitchVar
+    {moduleTypeFltComb,    connectorDirIn,  connectorTypeControl, {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // 162 FM
+    {moduleTypeFltComb,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 162 Out
     // 163 OscShpA
     // 164 OscDual
     // 165 DXRouter

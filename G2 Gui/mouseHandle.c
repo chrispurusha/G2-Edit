@@ -733,6 +733,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Classic Filter", menu_action_create, moduleTypeFltClassic, NULL},
         {"Create Multi Filter",   menu_action_create, moduleTypeFltMulti,   NULL},
         {"Create Phase Filter",   menu_action_create, moduleTypeFltPhase,   NULL},
+        {"Create Comb Filter",   menu_action_create, moduleTypeFltComb,   NULL},
         {"Create Static Filter",   menu_action_create, moduleTypeFltStatic,   NULL},
         {"Create FltVoice",       menu_action_create, moduleTypeFltVoice,   NULL},
         {"Create WahWah",       menu_action_create, moduleTypeWahWah,   NULL},
