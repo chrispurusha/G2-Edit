@@ -1645,6 +1645,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeCompSig, connectorDirIn,  connectorTypeControl, {{  75,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "B",    labelLocLeft   },  // 159 B
     {moduleTypeCompSig,    connectorDirOut,  connectorTypeLogic,   {{-3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    "A>=B",    labelLocLeft  }, // 159 Cmp
     // 160 ZeroCnt
+    {moduleTypeZeroCnt, connectorDirIn,  connectorTypeControl, {{  80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },  // 160 In
+    {moduleTypeZeroCnt, connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // 160 Out
     // 161 MixFader
     // 162 FltComb
     // 163 OscShpA
