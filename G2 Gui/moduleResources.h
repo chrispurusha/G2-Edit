@@ -1640,8 +1640,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeGlide, connectorDirIn,  connectorTypeControl, {{  80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },  // 139 In
     {moduleTypeGlide,    connectorDirIn,  connectorTypeLogic,   {{3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Glide on",    labelLocRight  }, // 158 Glide On
     {moduleTypeGlide, connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // 139 Out
-
     // 159 CompSig
+    {moduleTypeCompSig, connectorDirIn,  connectorTypeControl, {{  60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "A",    labelLocLeft   },  // 159 A
+    {moduleTypeCompSig, connectorDirIn,  connectorTypeControl, {{  75,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "B",    labelLocLeft   },  // 159 B
+    {moduleTypeCompSig,    connectorDirOut,  connectorTypeLogic,   {{-3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    "A>=B",    labelLocLeft  }, // 159 Cmp
     // 160 ZeroCnt
     // 161 MixFader
     // 162 FltComb
