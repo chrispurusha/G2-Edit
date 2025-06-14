@@ -88,6 +88,8 @@ const char * presetStrMap[]       = {"Set"};
 const char * bitsStrMap[]         = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "Off"};
 const char * sustainStrMap[]      = {"L1", "L2"};
 const char * midiChanStrMap[]     = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "SlotA", "SlotB", "SlotC", "SlotD"};
+const char * midiChanRcvStrMap[]     = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "Keyb"};
+const char * thruStrMap[]         = {"Notes only", "Notes+Ctrls"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -925,10 +927,18 @@ const tParamLocation paramLocationList[] = {
     // 145 SeqVal
     // 146 SeqLev
     // 147 CtrRcv
-    {moduleTypeCtrlRcv, paramType1CommonDial, paramType2Dial, {{ 40, -3}, {7,  14}}, anchorBottomLeft,  "Note",       128,  64, NULL,   NULL          }, // 147 Ctrl
-    {moduleTypeCtrlRcv, paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  "Chan",       21,  0, midiChanStrMap,   NULL          }, // 147 Channel
+    {moduleTypeCtrlRcv, paramType1CommonDial, paramType2Dial, {{ 40, -3}, {7,  14}}, anchorBottomLeft,  "Ctrl",       128,  64, NULL,   NULL          }, // 147 Ctrl
+    {moduleTypeCtrlRcv, paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  "Chan",       18,  17, midiChanRcvStrMap,   NULL          }, // 147 Channel
     // 148 NoteRcv
-    // 149 Note>one
+    {moduleTypeNoteRcv, paramType1CommonDial, paramType2Dial, {{ 40, -3}, {7,  14}}, anchorBottomLeft,  "Note",       128,  64, NULL,   NULL          }, // 148 Note
+    {moduleTypeNoteRcv, paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  "Chan",       18,  17, midiChanRcvStrMap,   NULL          }, // 148 Channel
+    // 149 NoteZone
+    {moduleTypeNoteZone, paramType1StandardToggle, paramType2Toggle, {{ 3, -3}, {7,  7}}, anchorBottomLeft,  "RChan",       18,  17, midiChanRcvStrMap,   NULL          }, // 149 Receive Channel
+    {moduleTypeNoteZone, paramType1CommonDial, paramType2Dial, {{ 23, -3}, {7,  14}}, anchorBottomLeft,  "Min",       128,  0, NULL,   NULL          }, // 149 Min note
+    {moduleTypeNoteZone, paramType1CommonDial, paramType2Dial, {{ 43, -3}, {7,  14}}, anchorBottomLeft,  "Max",       128,  127, NULL,   NULL          }, // 149 Max note
+    {moduleTypeNoteZone, paramType1CommonDial, paramType2Dial, {{ 63, -3}, {7,  14}}, anchorBottomLeft,  "Trans",       128,  64, NULL,   NULL          }, // 149 Transpose
+    {moduleTypeNoteZone, paramType1StandardToggle, paramType2Toggle, {{ 83, -3}, {7,  7}}, anchorBottomLeft,  "SChan",       21,  0, midiChanStrMap,   NULL          }, // 149 Send Channel
+    {moduleTypeNoteZone, paramType1StandardToggle, paramType2Toggle, {{ 60, -17}, {7,  7}}, anchorBottomLeft,  "Thru",       2,  0, thruStrMap,   NULL          }, // 149 Thru mode
     // 150 Compress
         {moduleTypeCompress,   paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  "Thr",      43,  0, NULL,               NULL          },  // 150
         {moduleTypeCompress,   paramType1CommonDial,     paramType2Dial,   {{ 24,  -3}, {7, 14}}, anchorBottomLeft,  "Ratio",    67,  0, NULL,               NULL          },
@@ -1587,7 +1597,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeCtrlRcv,    connectorDirOut,  connectorTypeLogic,   {{80,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Rcv",    labelLocUp   }, // 147 Rcv
     {moduleTypeCtrlRcv, connectorDirOut,  connectorTypeControl, {{  92,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Val",    labelLocUp   },  // 147 Value
     // 148 NoteRcv
-    // 149 Note>one
+    {moduleTypeNoteRcv,    connectorDirOut,  connectorTypeLogic,   {{74,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Rcv",    labelLocUp   }, // 148 Rcv
+    {moduleTypeNoteRcv, connectorDirOut,  connectorTypeControl, {{  81,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",    labelLocUp   },  // 148 Vel
+    {moduleTypeNoteRcv, connectorDirOut,  connectorTypeControl, {{  88,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "RVel",    labelLocUp   },  // 148 Release vel
+    // 149 NoteZone
     // 150 Compress
     {moduleTypeCompress,   connectorDirIn,  connectorTypeAudio,   {{-10,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },  // 150
     {moduleTypeCompress,   connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },

@@ -819,6 +819,8 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create PCSend", menu_action_create, moduleTypePCSend, NULL},
         {"Create NoteSend", menu_action_create, moduleTypeNoteSend, NULL},
         {"Create CtrlRcv", menu_action_create, moduleTypeCtrlRcv, NULL},
+        {"Create NoteRcv", menu_action_create, moduleTypeNoteRcv, NULL},
+        {"Create NoteZone", menu_action_create, moduleTypeNoteZone, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
  
