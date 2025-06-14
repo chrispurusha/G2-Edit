@@ -765,6 +765,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Mux8-1",   menu_action_create,  moduleTypeMux8to1, NULL},
         {"Create Mux8-1X",   menu_action_create,  moduleTypeMux8to1X, NULL},
         {"Create S&H",   menu_action_create,  moduleTypeSandH, NULL},
+        {"Create T&H",   menu_action_create,  moduleTypeTandH, NULL},
         {"Create WindSw",   menu_action_create,  moduleTypeWindSw, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };

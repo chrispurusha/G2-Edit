@@ -894,9 +894,9 @@ const tParamLocation paramLocationList[] = {
         {moduleTypeFxtoIn,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {7,  7}}, anchorBottomLeft,  "Pad",       4,  0, db12PadStrMap,      NULL          }, // 127 Pad
     // 128 MinMax -- No params
     // 128 Unknown
-    // 130 BinCounter
-    // 131 ADConv
-    // 132 DAConv
+    // 130 BinCounter -- No params
+    // 131 ADConv  -- No params
+    // 132 DAConv -- No params
     // 133 Unknown
     // 134 FltHP
     {moduleTypeFltHP,   paramType1Freq,           paramType2Dial,   {{50,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  64, NULL,               NULL          },  // 134 Freq
@@ -907,7 +907,7 @@ const tParamLocation paramLocationList[] = {
     // 136 Unknown
     // 137 Unknown
     // 138 Unknown
-    // 139 T&H
+    // 139 T&H -- No params
     // 140 Mix4-1S
     // 141 CtrlSend
     // 142 PCSend
@@ -1540,6 +1540,10 @@ const tConnectorLocation connectorLocationList[] = {
     // 137 Unknown
     // 138 Unknown
     // 139 T&H
+    {moduleTypeTandH,    connectorDirIn,  connectorTypeLogic,   {{ 60,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Ctrl",    labelLocLeft   }, // 139 Ctrl
+    {moduleTypeTandH, connectorDirIn,  connectorTypeControl, {{  80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },  // 139 In
+    {moduleTypeTandH, connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // 139 Out
+
     // 140 Mix4-1S
    {moduleTypeMix4to1S,   connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // 140
     {moduleTypeMix4to1S,   connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },
