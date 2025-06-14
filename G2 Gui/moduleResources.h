@@ -915,6 +915,8 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeCtrlSend, paramType1CommonDial, paramType2Dial, {{ 75, -3}, {7,  14}}, anchorBottomLeft,  "Value",       128,  1, NULL,   NULL          }, // 141 Ctrl
     {moduleTypeCtrlSend, paramType1StandardToggle, paramType2Toggle, {{ 85, -3}, {7,  7}}, anchorBottomLeft,  "Chan",       21,  0, midiChanStrMap,   NULL          }, // 141 Channel
     // 142 PCSend
+    {moduleTypePCSend, paramType1CommonDial, paramType2Dial, {{ 75, -3}, {7,  14}}, anchorBottomLeft,  "Program",       128,  1, NULL,   NULL          }, // 142 Program
+    {moduleTypePCSend, paramType1StandardToggle, paramType2Toggle, {{ 85, -3}, {7,  7}}, anchorBottomLeft,  "Chan",       21,  0, midiChanStrMap,   NULL          }, // 142 Channel
     // 143 NoteSend
     // 144 SeqEvent
     // 145 SeqVal
@@ -1564,8 +1566,11 @@ const tConnectorLocation connectorLocationList[] = {
     // 141 CtrlSend
     {moduleTypeCtrlSend,    connectorDirIn,  connectorTypeLogic,   {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Send",    labelLocRight   }, // 141 Send In
     {moduleTypeCtrlSend,    connectorDirOut,  connectorTypeLogic,   {{ 20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocRight   }, // 141 Send Out
-    {moduleTypeCtrlSend, connectorDirOut,  connectorTypeControl, {{  65,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },  // 141 Value
+    {moduleTypeCtrlSend, connectorDirIn,  connectorTypeControl, {{  65,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },  // 141 Value
     // 142 PCSend
+    {moduleTypePCSend,    connectorDirIn,  connectorTypeLogic,   {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Send",    labelLocRight   }, // 142 Send In
+    {moduleTypePCSend,    connectorDirOut,  connectorTypeLogic,   {{ 20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocRight   }, // 142 Send Out
+    {moduleTypePCSend, connectorDirIn,  connectorTypeControl, {{  65,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },  // 142 Program
     // 143 NoteSend
     // 144 SeqEvent
     // 145 SeqVal
