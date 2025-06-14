@@ -90,6 +90,7 @@ const char * sustainStrMap[]      = {"L1", "L2"};
 const char * midiChanStrMap[]     = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "SlotA", "SlotB", "SlotC", "SlotD"};
 const char * midiChanRcvStrMap[]     = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "Keyb"};
 const char * thruStrMap[]         = {"Notes only", "Notes+Ctrls"};
+const char * levConvStrMap[]      = {"Bip", "Pos", "Neg"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -964,6 +965,8 @@ const tParamLocation paramLocationList[] = {
     // 156 NoteDet
     {moduleTypeNoteDet, paramType1NoteDial, paramType2Dial, {{ 23, -3}, {7,  14}}, anchorBottomLeft,  "Note",       128,  64, NULL,   NULL          }, // 156 Note
     // 157 LevConv
+    {moduleTypeLevConv,    paramType1StandardToggle, paramType2Toggle, {{-15, -1}, {7,  7}}, anchorBottomRight, NULL,        6,  0, posStrMap,          NULL          }, // 157 OutType
+    {moduleTypeLevConv,    paramType1StandardToggle, paramType2Toggle, {{-57, -3}, {7,  7}}, anchorBottomRight, "Input",        3,  0, levConvStrMap,          NULL          }, // 157 In Signal Type
     // 158 Glide
     // 159 CompSig
     // 160 ZeroCnt
@@ -1627,8 +1630,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeNoteDet,    connectorDirOut,  connectorTypeLogic,   {{70,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Gate",    labelLocUp   }, // 156 Gate
     {moduleTypeNoteDet, connectorDirOut,  connectorTypeControl, {{  80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",    labelLocUp   },  // 156 Vel
     {moduleTypeNoteDet, connectorDirOut,  connectorTypeControl, {{  90,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "RVel",    labelLocUp   },  // 156 Release vel
-
     // 157 LevConv
+    {moduleTypeLevConv, connectorDirIn,  connectorTypeControl, {{  -23,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocUp   },  // 157 In
+    {moduleTypeLevConv, connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // 157 Out
     // 158 Glide
     // 159 CompSig
     // 160 ZeroCnt
