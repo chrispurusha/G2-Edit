@@ -912,6 +912,15 @@ const tParamLocation paramLocationList[] = {
     // 138 Unknown
     // 139 T&H -- No params
     // 140 Mix4-1S
+    {moduleTypeMix4to1S,   paramType1CommonDial,     paramType2Dial,   {{ 15,  -10}, {7, 14}}, anchorBottomLeft,     NULL,      128,  0, NULL,               NULL          },  // 123 L1
+    {moduleTypeMix4to1S,   paramType1CommonDial,     paramType2Dial,   {{ 35,  -10}, {7, 14}}, anchorBottomLeft,     NULL,      128,  0, NULL,               NULL          },  // 123 L2
+    {moduleTypeMix4to1S,   paramType1CommonDial,     paramType2Dial,   {{ 55,  -10}, {7, 14}}, anchorBottomLeft,     NULL,      128,  0, NULL,               NULL          },  // 123 L3
+    {moduleTypeMix4to1S,   paramType1CommonDial,     paramType2Dial,   {{ 75,  -10}, {7, 14}}, anchorBottomLeft,     NULL,      128,  0, NULL,               NULL          },  // 123 L4
+    {moduleTypeMix4to1S,   paramType1Enable,         paramType2Toggle, {{ 3,  -3}, {14,  4}}, anchorBottomLeft,     NULL,        2,  0, NULL,               offOnColourMap}, // 123 Enable1
+    {moduleTypeMix4to1S,   paramType1Enable,         paramType2Toggle, {{ 23,  -3}, {14,  4}}, anchorBottomLeft,     NULL,        2,  0, NULL,               offOnColourMap},  // 123 Enable2
+    {moduleTypeMix4to1S,   paramType1Enable,         paramType2Toggle, {{ 43,  -3}, {14,  4}}, anchorBottomLeft,     NULL,        2,  0, NULL,               offOnColourMap},  // 123 Enable3
+    {moduleTypeMix4to1S,   paramType1Enable,         paramType2Toggle, {{ 63,  -3}, {14,  4}}, anchorBottomLeft,     NULL,        2,  0, NULL,               offOnColourMap}, // 123 Enable4
+    {moduleTypeMix4to1S,   paramType1StandardToggle, paramType2Toggle, {{  40,  -25}, {7,  7}}, anchorBottomLeft,     NULL,        3,  0, expStrMap,          NULL          }, // 123 Exp
     // 141 CtrlSend
     {moduleTypeCtrlSend, paramType1CommonDial, paramType2Dial, {{ 40, -3}, {7,  14}}, anchorBottomLeft,  "Ctrl",       128,  1, NULL,   NULL          }, // 141 Ctrl
     {moduleTypeCtrlSend, paramType1CommonDial, paramType2Dial, {{ 75, -3}, {7,  14}}, anchorBottomLeft,  "Value",       128,  1, NULL,   NULL          }, // 141 Ctrl
@@ -1566,18 +1575,18 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeTandH, connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // 139 Out
 
     // 140 Mix4-1S
-   {moduleTypeMix4to1S,   connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // 140
-    {moduleTypeMix4to1S,   connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },
-    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 20,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
-    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 25,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
-    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 30,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
-    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 35,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
-    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 40,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
-    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 45,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
-    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 50,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
-    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 55,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
-    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{-10,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },
-    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },
+   {moduleTypeMix4to1S,   connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // 140 OutL
+    {moduleTypeMix4to1S,   connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 140 OutR
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 3,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // 140 In1L
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 10,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   },// 140 In1R
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 23,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   },// 140 In2L
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 30,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   },// 140 In2R
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 43,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   },// 140 In3L
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 50,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   },// 140 In3R
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 63,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   },// 140 In4L
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ 70,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   },// 140 In4R
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{-10,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },// 140 ChainL
+    {moduleTypeMix4to1S,   connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },// 140 ChainR
     // 141 CtrlSend
     {moduleTypeCtrlSend,    connectorDirIn,  connectorTypeLogic,   {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Send",    labelLocRight   }, // 141 Send In
     {moduleTypeCtrlSend,    connectorDirOut,  connectorTypeLogic,   {{ 20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocRight   }, // 141 Send Out
@@ -1706,7 +1715,7 @@ const tVolumeLocation volumeLocationList[] = {
     {moduleTypeCompress, volumeTypeCompress, {{-18, 6}, {4, 38}}, anchorTopRight},
     {moduleType2toOut,   volumeTypeStereo,   {{-25, 6}, {3, 10}}, anchorTopRight},
     {moduleTypeFxtoIn,   volumeTypeStereo,   {{-25, 6}, {3, 10}}, anchorTopRight},
-    {moduleTypeMix4to1S, volumeTypeStereo,   {{-25, 6}, {3, 25}}, anchorTopRight}, };
+    {moduleTypeMix4to1S, volumeTypeStereo,   {{-10, 13}, {3, 15}}, anchorTopRight}, };
 
 const tLedLocation    ledLocationList[] = {
     {moduleTypeEnvADSR, ledTypeYes, {{3, 8}, {3, 3}}, anchorTopLeft}, };
