@@ -91,6 +91,8 @@ const char * midiChanStrMap[]     = {"1", "2", "3", "4", "5", "6", "7", "8", "9"
 const char * midiChanRcvStrMap[]     = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "Keyb"};
 const char * thruStrMap[]         = {"Notes only", "Notes+Ctrls"};
 const char * levConvStrMap[]      = {"Bip", "Pos", "Neg"};
+const char * oscShpAStrMap[]      = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "SymPulse"};
+const char * oscShpBStrMap[]      = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "DblSaw", "Pulse", "SymPulse"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -984,6 +986,17 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeFltComb,   paramType1CommonDial,          paramType2Dial,   {{ 83,  -3}, {7, 14}}, anchorBottomLeft,  "Level",     128,  0, NULL,               NULL          },// 102 Level
     {moduleTypeFltComb,   paramType1Bypass,         paramType2Toggle, {{-3,   -10}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 102 Bypass
     // 163 OscShpA
+    {moduleTypeOscShpA,    paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128, 64, NULL,               NULL          },  // 163 Coarse
+    {moduleTypeOscShpA,    paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL,               NULL          }, // 163 Fine
+    {moduleTypeOscShpA,    paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap}, // 163 Kbt
+    {moduleTypeOscShpA,    paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",     128,  0, NULL,               NULL          }, // 163 Pitch M
+    {moduleTypeOscShpA,    paramType1StandardToggle, paramType2Toggle, {{ 15,  15}, {7,  7}}, anchorTopLeft,     NULL,        4,  0, pitchTypeStrMap,    NULL          }, // 163 Tune M
+    {moduleTypeOscShpA,    paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, {7, 14}}, anchorBottomLeft,  "FM",      128,  0, NULL,               NULL          }, // FM
+    {moduleTypeOscShpA,    paramType1StandardToggle, paramType2Toggle, {{ 60,  15}, {7,  7}}, anchorTopLeft,     NULL,        2,  0, fmTypeStrMap,       NULL          }, // FM Pitch Track
+    {moduleTypeOscShpA,    paramType1CommonDial,     paramType2Dial,   {{-15,   5}, {7, 14}}, anchorTopRight,    "Shape",   128,  0, NULL,               NULL          },     // 50% to 99%, not decimals
+    {moduleTypeOscShpA,    paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, {7, 14}}, anchorBottomLeft,  "ShpCtrl", 128,  0, NULL,               NULL          }, // 163 Shape M
+    {moduleTypeOscShpA,    paramType1StandardToggle, paramType2Toggle, {{ 30,  15}, {7,  7}}, anchorTopLeft,     NULL,        6,  0, oscShpAStrMap,    NULL          }, // 163 Wave
+    {moduleTypeOscShpA,    paramType1Bypass,         paramType2Toggle, {{ -3,   0}, {5,  5}}, anchorMiddleRight, "Bypass",    2,  0, NULL,               NULL          },
     // 164 OscDual
     // 165 DXRouter
     // 166 Unknown
@@ -1066,7 +1079,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeOscB,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // Out
     //  8 OscShpB
     {moduleTypeOscShpB,    connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 8 OscShpB
-    {moduleTypeOscShpB,    connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 8
+    //{moduleTypeOscShpB,    connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 8
     {moduleTypeOscShpB,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },
     {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,   {{  3, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },
     {moduleTypeOscShpB,    connectorDirIn,  connectorTypeAudio,   {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },
@@ -1663,6 +1676,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFltComb,    connectorDirIn,  connectorTypeControl, {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,     NULL,    labelLocUp   }, // 162 FM
     {moduleTypeFltComb,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 162 Out
     // 163 OscShpA
+    {moduleTypeOscShpA,    connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 163 Pitch
+    {moduleTypeOscShpA,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 163 PitchVar
+    {moduleTypeOscShpA,    connectorDirIn,  connectorTypeAudio,   {{  3, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Sync",    labelLocUp   }, // 163 Sync
+    {moduleTypeOscShpA,    connectorDirIn,  connectorTypeAudio,   {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // FM
+    {moduleTypeOscShpA,    connectorDirIn,  connectorTypeAudio,   {{ 73,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 163 Shape
+    {moduleTypeOscShpA,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // Out
     // 164 OscDual
     // 165 DXRouter
     // 166 Unknown
@@ -1715,7 +1734,7 @@ const tConnectorLocation connectorLocationList[] = {
 };
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
 const tModeLocation   modeLocationList[] = {
-    {moduleTypeOscShpB, paramType1OscWave, paramType2Dial, {{20, 5}, {7, 14}}, anchorTopLeft, "Wave", 8, 0, NULL}, // 8 OscShpB
+    {moduleTypeOscShpB, paramType1StandardToggle, paramType2Dial, {{20, 5}, {7, 14}}, anchorTopLeft, "Wave", 8, 0, oscShpBStrMap}, // 8 OscShpB
     {moduleTypeOscC, paramType1StandardToggle, paramType2Toggle, {{-30,   5}, {7,  7}}, anchorTopRight, "Wave", 6, 0, shapeOscATypeStrMap}, // 9 Wave
     {moduleTypeReverb, paramType1StandardToggle, paramType2Toggle, {{3, -3}, {14, 7}}, anchorBottomLeft, "Type", 4, 0, reverbTypeStrMap}, // 12 Reverb
     //{moduleTypeLfoC,    paramType1StandardToggle,  paramType2Toggle, {{64, -3}, {7, 7}}, anchorBottomLeft, "Wave", 6, 0, lfoWaveStrMap}, // 24 LfoC
