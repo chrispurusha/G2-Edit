@@ -918,6 +918,9 @@ const tParamLocation paramLocationList[] = {
     {moduleTypePCSend, paramType1CommonDial, paramType2Dial, {{ 75, -3}, {7,  14}}, anchorBottomLeft,  "Program",       128,  1, NULL,   NULL          }, // 142 Program
     {moduleTypePCSend, paramType1StandardToggle, paramType2Toggle, {{ 85, -3}, {7,  7}}, anchorBottomLeft,  "Chan",       21,  0, midiChanStrMap,   NULL          }, // 142 Channel
     // 143 NoteSend
+    {moduleTypeNoteSend, paramType1CommonDial, paramType2Dial, {{ 42, -3}, {7,  14}}, anchorBottomLeft,  "Vel",       128,  100, NULL,   NULL          }, // 143 Vel
+    {moduleTypeNoteSend, paramType1CommonDial, paramType2Dial, {{ 62, -3}, {7,  14}}, anchorBottomLeft,  "Note",       128,  64, NULL,   NULL          }, // 143 Ctrl
+    {moduleTypeNoteSend, paramType1StandardToggle, paramType2Toggle, {{ 85, -3}, {7,  7}}, anchorBottomLeft,  "Chan",       21,  0, midiChanStrMap,   NULL          }, // 143 Channel
     // 144 SeqEvent
     // 145 SeqVal
     // 146 SeqLev
@@ -1572,6 +1575,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypePCSend,    connectorDirOut,  connectorTypeLogic,   {{ 20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocRight   }, // 142 Send Out
     {moduleTypePCSend, connectorDirIn,  connectorTypeControl, {{  65,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   },  // 142 Program
     // 143 NoteSend
+    {moduleTypeNoteSend,    connectorDirIn,  connectorTypeLogic,   {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Gate",    labelLocRight   }, // 143 Gate
+    {moduleTypeNoteSend, connectorDirIn,  connectorTypeControl, {{  35,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",    labelLocUp   },  // 143 Velocity
+    {moduleTypeNoteSend, connectorDirIn,  connectorTypeControl, {{  55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Note",    labelLocUp   },  // 143 Note
     // 144 SeqEvent
     // 145 SeqVal
     // 146 SeqLev
