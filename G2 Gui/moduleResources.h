@@ -789,6 +789,15 @@ const tParamLocation paramLocationList[] = {
     // 105 ValSw2-1
     {moduleTypeValSw2to1,   paramType1CommonDial,           paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Ctrl Value",    64,  0, NULL,               NULL          },  // 105 Value
     // 106 OscNoise
+    {moduleTypeOscNoise,       paramType1Freq,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Tune",    128, 64, NULL,               NULL          }, // 106 Tune
+    {moduleTypeOscNoise,       paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL,               NULL          }, // 106 Fine
+    {moduleTypeOscNoise,       paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap}, // 97 Kbt
+    {moduleTypeOscNoise,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128,  0, NULL,               NULL          }, // 97 Pitch M
+    {moduleTypeOscNoise,       paramType1StandardToggle, paramType2Toggle, {{ 30,  6}, {7,  7}}, anchorTopLeft,     NULL,        4,  0, pitchTypeStrMap,    NULL          }, // 97 Pitch Type
+    {moduleTypeOscNoise,       paramType1CommonDial,     paramType2Dial,   {{ 75,  -3}, {7, 14}}, anchorBottomLeft,  "Width",    128, 64, NULL,               NULL          }, // 106 Width
+    {moduleTypeOscNoise,       paramType1CommonDial,     paramType2Dial,   {{ 65,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 64, NULL,               NULL          }, // 106 Width M
+    {moduleTypeOscNoise,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 106 Bypass
+
     // 107 Unknown
     // 108 Vocoder
     // 109 Unknown
@@ -1337,6 +1346,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeValSw2to1,    connectorDirIn,  connectorTypeControl,   {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Ctrl",    labelLocRight   }, // 105 Ctrl
     {moduleTypeValSw2to1,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 105 Out
     // 106 OscNoise
+    {moduleTypeOscNoise,       connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 1106 Pitch
+    {moduleTypeOscNoise,       connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 106  PitchVar
+    {moduleTypeOscNoise,       connectorDirIn,  connectorTypeControl, {{  58,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 106  Width
+    {moduleTypeOscNoise,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 106 Out
     // 107 Unknown
     // 108 Vocoder
     // 109 Unknown
