@@ -747,6 +747,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create LevAmp",     menu_action_create,  moduleTypeLevAmp,  NULL},
         {"Create LevMod",     menu_action_create,  moduleTypeLevMod,  NULL},
         {"Create LevMult",     menu_action_create,  moduleTypeLevMult,  NULL},
+        {"Create MinMax",     menu_action_create,  moduleTypeMinMax,  NULL},
         {"Create EnvFollow",     menu_action_create,  moduleTypeEnvFollow,  NULL},
         {NULL,                 NULL,                                 0, NULL}       // End of menu
     };

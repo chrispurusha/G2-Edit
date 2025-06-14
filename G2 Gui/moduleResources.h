@@ -889,10 +889,10 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeWahWah,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 125 Bypass
     // 126 Name
     // 127 Fx-In
-        {moduleTypeFxtoIn,     paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, {7,  7}}, anchorBottomLeft,  "In FX",     2,  0, inFxStrMap,         NULL          },  // 127
-        {moduleTypeFxtoIn,     paramType1Bypass,         paramType2Toggle, {{-35,  -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          },
-        {moduleTypeFxtoIn,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {7,  7}}, anchorBottomLeft,  "Pad",       4,  0, db12PadStrMap,      NULL          },
-    // 128 MinMax
+        {moduleTypeFxtoIn,     paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, {7,  7}}, anchorBottomLeft,  "In FX",     2,  0, inFxStrMap,         NULL          },  // 127 In
+        {moduleTypeFxtoIn,     paramType1Bypass,         paramType2Toggle, {{-35,  -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 127 Bypass
+        {moduleTypeFxtoIn,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {7,  7}}, anchorBottomLeft,  "Pad",       4,  0, db12PadStrMap,      NULL          }, // 127 Pad
+    // 128 MinMax -- No params
     // 128 Unknown
     // 130 BinCounter
     // 131 ADConv
@@ -1490,6 +1490,11 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFxtoIn,     connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },  // 127
     {moduleTypeFxtoIn,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },
     // 128 MinMax
+    {moduleTypeMinMax,    connectorDirIn,  connectorTypeControl,   {{ 40,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "A",    labelLocLeft   }, // 128 In A
+    {moduleTypeMinMax,    connectorDirIn,  connectorTypeControl,   {{ 55,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "B",    labelLocLeft   }, // 128 In B
+    {moduleTypeMinMax,    connectorDirOut, connectorTypeControl,   {{ -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Min",    labelLocLeft   }, // 128 Min Out
+    {moduleTypeMinMax,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Max",    labelLocLeft   }, // 128 Max Out
+
     // 128 Unknown
     // 130 BinCounter
     // 131 ADConv
