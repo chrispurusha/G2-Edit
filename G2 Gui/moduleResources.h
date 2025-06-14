@@ -519,7 +519,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeMix8to1B,  paramType1CommonDial,     paramType2Dial,   {{ 74,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 40 In7
     {moduleTypeMix8to1B,  paramType1CommonDial,     paramType2Dial,   {{ 83,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 40 In8
     {moduleTypeMix8to1B,  paramType1StandardToggle,     paramType2Toggle,   {{ 3,  -17}, {7, 7}}, anchorBottomLeft,  NULL,    3, 0, expStrMap,               NULL          },  // 40 ExpLinDB
-    {moduleTypeMix8to1B,  paramType1StandardToggle,     paramType2Toggle,   {{ 3,  -10}, {7, 7}}, anchorBottomLeft,  "Pad",    3, 0, db12BPadStrMap,               NULL          },  // 40 Pad
+    {moduleTypeMix8to1B,  paramType1StandardToggle,     paramType2Toggle,   {{ 3,  -10}, {7, 7}}, anchorBottomLeft,  "Pad",    2, 0, db12BPadStrMap,               NULL          },  // 40 Pad *** Check range of Pad
     // 41 EnvH
     {moduleTypeEnvH,    paramType1CommonDial, paramType2Dial, {{50,  -3}, {7,  14}}, anchorBottomLeft, NULL,        128, 64, NULL,     NULL          },  // 41 Hold
     {moduleTypeEnvH,    paramType1StandardToggle, paramType2Toggle, {{-32, -3}, {7,  7}}, anchorBottomRight, NULL,        6,  0, posStrMap,          NULL          }, // 41 Pos
@@ -844,6 +844,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeLevScaler, paramType1dB,     paramType2Dial,   {{ 70,  -3}, {7, 14}}, anchorBottomLeft,  "R",   128, 64, NULL,               NULL          },  // 115 Right slope +- 8 db/oct
     {moduleTypeLevScaler,       paramType1StandardToggle, paramType2Toggle, {{ 22, -3}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap}, // 115 Kbt
     // 116 Mix8-1A
+    {moduleTypeMix8to1A,  paramType1StandardToggle,     paramType2Toggle,   {{ 3,  -3}, {7, 7}}, anchorBottomLeft,  "Pad",    3, 0, db12BPadStrMap,               NULL          },  // 116 Pad
     // 117 LevMod
     // 118 Digitizer
     // 119 EnvADDSR
@@ -1412,8 +1413,17 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeLevScaler,    connectorDirIn,  connectorTypeControl,   {{ -3,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   }, // 115 In
     {moduleTypeLevScaler,    connectorDirOut, connectorTypeControl,   {{ -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Level",    labelLocUp  }, // 115 Level
     {moduleTypeLevScaler,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 115 Out
-
     // 116 Mix8-1A
+    {moduleTypeMix8to1A,  connectorDirIn,  connectorTypeControl, {{ 21,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "1",    labelLocUp   },  // 116 In1
+    {moduleTypeMix8to1A,  connectorDirIn,  connectorTypeControl, {{ 30,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "2",    labelLocUp   },  // 116 In2
+    {moduleTypeMix8to1A,  connectorDirIn,  connectorTypeControl, {{ 39,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "3",    labelLocUp   },  // 116 In3
+    {moduleTypeMix8to1A,  connectorDirIn,  connectorTypeControl, {{ 48,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "4",    labelLocUp   },  // 116 In4
+    {moduleTypeMix8to1A,  connectorDirIn,  connectorTypeControl, {{ 57,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "5",    labelLocUp   },  // 116 In5
+    {moduleTypeMix8to1A,  connectorDirIn,  connectorTypeControl, {{ 66,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "6",    labelLocUp   },  // 116 In6
+    {moduleTypeMix8to1A,  connectorDirIn,  connectorTypeControl, {{ 75,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "7",    labelLocUp   },  // 116 In7
+    {moduleTypeMix8to1A,  connectorDirIn,  connectorTypeControl, {{ 84,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "8",    labelLocUp   },  // 116 In8
+    {moduleTypeMix8to1A,  connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 116 Out
+
     // 117 LevMod
     // 118 Digitizer
     // 119 EnvADDSR
