@@ -690,6 +690,7 @@ void open_module_area_context_menu(tCoord coord) {
     static tMenuItem noteMenuItems[] = {
         {"Create NoteQuant", menu_action_create, moduleTypeNoteQuant, NULL},
         {"Create NoteScaler", menu_action_create, moduleTypeNoteScaler, NULL},
+        {"Create LevScaler", menu_action_create, moduleTypeLevScaler, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
     static tMenuItem oscMenuItems[] = {

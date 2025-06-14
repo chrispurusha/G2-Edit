@@ -264,8 +264,24 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         case paramType1dB:
         {
             double dB = 0.0;
-
-            dB = round( ((double)paramValue-64.0)/64.0 * 18.0);
+            double dB_range = 1.0;
+            switch (module->type) {
+                case moduleTypeEq2Band:
+                case moduleTypeEq3band:
+                {
+                    dB_range = 18.0;
+                    break;
+                }
+                case moduleTypeLevScaler:
+                {
+                    dB_range = 8.0;
+                    break;
+                }
+                default:
+                {
+                }
+            }
+            dB = round( ((double)paramValue-64.0)/64.0 * dB_range);
             snprintf(buff, sizeof(buff), "%+.0fdB", dB);
             
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);

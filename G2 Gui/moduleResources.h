@@ -839,6 +839,10 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeFade2to1,       paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 64, NULL,               NULL          }, // 114 Mix
     {moduleTypeFade2to1,       paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 64, NULL,               NULL          }, // 114 Mix M
     // 115 LevScaler
+    {moduleTypeLevScaler, paramType1dB,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "L",   128, 64, NULL,               NULL          },  // 115 Left slope +- 8 db/oct
+    {moduleTypeLevScaler,       paramType1CommonDial,     paramType2Dial,   {{ 55,  -3}, {7, 14}}, anchorBottomLeft,  "BP",    128, 64, NULL,               NULL          }, // 115 BreakPoint
+    {moduleTypeLevScaler, paramType1dB,     paramType2Dial,   {{ 70,  -3}, {7, 14}}, anchorBottomLeft,  "R",   128, 64, NULL,               NULL          },  // 115 Right slope +- 8 db/oct
+    {moduleTypeLevScaler,       paramType1StandardToggle, paramType2Toggle, {{ 22, -3}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap}, // 115 Kbt
     // 116 Mix8-1A
     // 117 LevMod
     // 118 Digitizer
@@ -1403,8 +1407,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFade2to1,    connectorDirIn, connectorTypeControl,   {{ -10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 114 In2
     {moduleTypeFade2to1,    connectorDirIn,  connectorTypeControl,   {{ 33,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   }, // 114 Ctrl
     {moduleTypeFade2to1,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 114 Out
-
     // 115 LevScaler
+    {moduleTypeLevScaler,    connectorDirIn,  connectorTypeControl,   {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Note",    labelLocRight   }, // 115 Note
+    {moduleTypeLevScaler,    connectorDirIn,  connectorTypeControl,   {{ -3,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   }, // 115 In
+    {moduleTypeLevScaler,    connectorDirOut, connectorTypeControl,   {{ -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Level",    labelLocUp  }, // 115 Level
+    {moduleTypeLevScaler,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 115 Out
+
     // 116 Mix8-1A
     // 117 LevMod
     // 118 Digitizer
