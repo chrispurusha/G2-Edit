@@ -752,6 +752,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Sw1-2",   menu_action_create,  moduleTypeSw1to2, NULL},
         {"Create Sw1-4",   menu_action_create,  moduleTypeSw1to4, NULL},
         {"Create Sw1-8",   menu_action_create,  moduleTypeSw1to8, NULL},
+        {"Create ValSw2-1",   menu_action_create,  moduleTypeValSw2to1, NULL},
         {"Create Mux8-1X",   menu_action_create,  moduleTypeMux8to1X, NULL},
         {"Create S&H",   menu_action_create,  moduleTypeSandH, NULL},
         {"Create WindSw",   menu_action_create,  moduleTypeWindSw, NULL},

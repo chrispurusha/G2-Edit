@@ -786,7 +786,8 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEqPeak,   paramType1Bypass,         paramType2Toggle, {{-3,   -10}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 103 Bypass
     {moduleTypeEqPeak,   paramType1CommonDial,          paramType2Dial,   {{ 83,  -3}, {7, 14}}, anchorBottomLeft,  "Level",     128,  127, NULL,               NULL          },// 102 Level
     // 104 Unknown
-    // 105 ValSq2-1
+    // 105 ValSw2-1
+    {moduleTypeValSw2to1,   paramType1CommonDial,           paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Ctrl Value",    64,  0, NULL,               NULL          },  // 105 Value
     // 106 OscNoise
     // 107 Unknown
     // 108 Vocoder
@@ -1330,7 +1331,11 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeEqPeak,    connectorDirIn,  connectorTypeAudio,   {{ -3,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   }, // 103 In
     {moduleTypeEqPeak,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 103 Out
     // 104 Unknown
-    // 105 ValSq2-1
+    // 105 ValSw2-1
+    {moduleTypeValSw2to1,    connectorDirIn,  connectorTypeControl,   {{ -24,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   }, // 105 In1
+    {moduleTypeValSw2to1,    connectorDirIn,  connectorTypeControl,   {{ -10,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    "On",    labelLocLeft   }, // 105 In2
+    {moduleTypeValSw2to1,    connectorDirIn,  connectorTypeControl,   {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Ctrl",    labelLocRight   }, // 105 Ctrl
+    {moduleTypeValSw2to1,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 105 Out
     // 106 OscNoise
     // 107 Unknown
     // 108 Vocoder
