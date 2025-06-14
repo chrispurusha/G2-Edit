@@ -86,6 +86,7 @@ const char * eq2BandLoStrMap[]    = {"80Hz"};
 const char * eq2BandHiStrMap[]    = {"12kHz"};
 const char * presetStrMap[]       = {"Set"};
 const char * bitsStrMap[]         = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "Off"};
+const char * sustainStrMap[]      = {"L1", "L2"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -855,20 +856,32 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeDigitizer,       paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "Rate",    128, 0, NULL,               NULL          }, // 118 Rate M
     {moduleTypeDigitizer,       paramType1Bypass,         paramType2Toggle, {{-3,  -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 106 Bypass
     // 119 EnvADDSR
+    {moduleTypeEnvADDSR,    paramType1StandardToggle, paramType2Toggle, {{ 10,   8}, {7,  7}}, anchorTopLeft,     NULL,        2,  0, kbStrMap,           offOnColourMap}, // 119 Kb
+    {moduleTypeEnvADDSR,    paramType1StandardToggle, paramType2Toggle, {{-30,  -31}, {7,  7}}, anchorBottomRight, NULL,        4,  0, envShapeStrMap,     NULL          },  // 119 Shape
+    {moduleTypeEnvADDSR,    paramType1ADRTime,     paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "A",  128,  0, NULL,               NULL          }, // 119 A
+    {moduleTypeEnvADDSR,    paramType1ADRTime,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "D1",   128,  0, NULL,               NULL          }, // 119 D1
+    {moduleTypeEnvADDSR,    paramType1CommonDial,     paramType2Dial,   {{ 44,  -3}, {7, 14}}, anchorBottomLeft,  "L1",     128,  0, NULL,               NULL          }, // 119 L1
+    {moduleTypeEnvADDSR,    paramType1ADRTime,     paramType2Dial,   {{ 56,  -3}, {7, 14}}, anchorBottomLeft,  "D2",   128,  0, NULL,               NULL          }, // 119 D2
+    {moduleTypeEnvADDSR,    paramType1CommonDial,     paramType2Dial,   {{ 68,  -3}, {7, 14}}, anchorBottomLeft,  "L2",     128,  0, NULL,               NULL          }, // 119 L2
+    {moduleTypeEnvADDSR,    paramType1ADRTime,     paramType2Dial,   {{ 80,  -3}, {7, 14}}, anchorBottomLeft,  "R",     128,  0, NULL,               NULL          }, // 119 R
+    {moduleTypeEnvADDSR,    paramType1StandardToggle, paramType2Toggle, {{20, -24}, {7,  7}}, anchorBottomLeft, "Sustain",        2,  0, sustainStrMap,          NULL          }, // 119 Sustainmode
+    {moduleTypeEnvADDSR,    paramType1StandardToggle, paramType2Toggle, {{-30, -24}, {7,  7}}, anchorBottomRight, NULL,        6,  0, posStrMap,          NULL          }, // 119 Pos
+    {moduleTypeEnvADDSR,    paramType1StandardToggle, paramType2Toggle, {{  5,  -8}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, normalResetStrMap,  NULL          }, // 119 Reset
+ 
     // 120 Unknown
-    // 121 SeqNote
+    // 121 SeqNote *** Postpone
     // 122 Unknown
     // 123 Mix4-1C
-        {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 20,  15}, {7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL,               NULL          },  // 123
-        {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 35,  15}, {7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL,               NULL          },
-        {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 50,  15}, {7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL,               NULL          },
-        {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 65,  15}, {7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL,               NULL          },
-        {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 26,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               offOnColourMap},
-        {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 41,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               offOnColourMap},
-        {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 56,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               offOnColourMap},
-        {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 71,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               offOnColourMap},
-        {moduleTypeMix4to1C,   paramType1StandardToggle, paramType2Toggle, {{  3,  20}, {7,  7}}, anchorTopLeft,     "Pad",       2,  0, padStrMap,          NULL          },
-        {moduleTypeMix4to1C,   paramType1StandardToggle, paramType2Toggle, {{  3,  10}, {7,  7}}, anchorTopLeft,     NULL,        3,  0, expStrMap,          NULL          },
+        {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 20,  15}, {7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL,               NULL          },  // 123 L1
+        {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 35,  15}, {7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL,               NULL          },  // 123 L2
+        {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 50,  15}, {7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL,               NULL          },  // 123 L3
+        {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 65,  15}, {7, 14}}, anchorTopLeft,     NULL,      128,  0, NULL,               NULL          },  // 123 L4
+        {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 26,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               offOnColourMap}, // 123 Enable1
+        {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 41,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               offOnColourMap},  // 123 Enable2
+        {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 56,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               offOnColourMap},  // 123 Enable3
+        {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 71,  10}, {3,  3}}, anchorTopLeft,     NULL,        2,  0, NULL,               offOnColourMap}, // 123 Enable4
+        {moduleTypeMix4to1C,   paramType1StandardToggle, paramType2Toggle, {{  3,  20}, {7,  7}}, anchorTopLeft,     "Pad",       2,  0, padStrMap,          NULL          }, // 123 Pad
+        {moduleTypeMix4to1C,   paramType1StandardToggle, paramType2Toggle, {{  3,  10}, {7,  7}}, anchorTopLeft,     NULL,        3,  0, expStrMap,          NULL          }, // 123 Exp
     // 124 Mux8-1
     // 125 WahWah
     // 126 Name
@@ -1440,6 +1453,11 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDigitizer,    connectorDirIn, connectorTypeControl,   {{ 13,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp  }, // 118 Rate M
     {moduleTypeDigitizer,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 118 Out
     // 119 EnvADDSR
+    {moduleTypeEnvADDSR,    connectorDirIn,  connectorTypeLogic,   {{  3,  15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Gate",  labelLocRight}, // 119 Gate
+    {moduleTypeEnvADDSR,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "AM",    labelLocRight}, // 119 AM
+    {moduleTypeEnvADDSR,    connectorDirIn,  connectorTypeControl, {{ -17,   10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },  // 119 In
+    {moduleTypeEnvADDSR,    connectorDirOut, connectorTypeControl, {{-3,  24}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, "Env",   labelLocLeft  }, // 119 Env
+    {moduleTypeEnvADDSR,    connectorDirOut, connectorTypeControl, {{ -3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, NULL,    labelLocUp   }, // 119 Out
     // 120 Unknown
     // 121 SeqNote
     // 122 Unknown
@@ -1450,6 +1468,16 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 50,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
     {moduleTypeMix4to1C,   connectorDirIn,  connectorTypeControl, {{ 65,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,    labelLocUp   },
     // 124 Mux8-1
+    {moduleTypeMux8to1,    connectorDirIn,  connectorTypeControl, {{  10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",    labelLocUp}, // 60 In1
+    {moduleTypeMux8to1,    connectorDirIn,  connectorTypeControl, {{  18,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",    labelLocUp}, // 60 In2
+    {moduleTypeMux8to1,    connectorDirIn,  connectorTypeControl, {{  26,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",    labelLocUp}, // 60 In3
+    {moduleTypeMux8to1,    connectorDirIn,  connectorTypeControl, {{  34,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",    labelLocUp}, // 60 In4
+    {moduleTypeMux8to1,    connectorDirIn,  connectorTypeControl, {{  42,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",    labelLocUp}, // 60 In5
+    {moduleTypeMux8to1,    connectorDirIn,  connectorTypeControl, {{  50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",    labelLocUp}, // 60 In6
+    {moduleTypeMux8to1,    connectorDirIn,  connectorTypeControl, {{  58,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",    labelLocUp}, // 60 In7
+    {moduleTypeMux8to1,    connectorDirIn,  connectorTypeControl, {{  66,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",    labelLocUp}, // 60 In8
+    {moduleTypeMux8to1,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",    labelLocUp}, // 60 Ctrl
+    {moduleTypeMux8to1,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 60 Out
     // 125 WahWah
     // 126 Name
     // 127 Fx-In
