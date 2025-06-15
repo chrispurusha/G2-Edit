@@ -749,6 +749,18 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Eq Peak",      menu_action_create, moduleTypeEqPeak, NULL},
         {NULL,                    NULL,                                  0, NULL} // End of menu
     };
+    static tMenuItem delayMenuItems[] = {
+        {"Create Delay Single A", menu_action_create,  moduleTypeDlySingleA, NULL},
+        {"Create Delay Single B", menu_action_create,  moduleTypeDlySingleB, NULL},
+        {"Create Delay Dual", menu_action_create,  moduleTypeDelayDual, NULL},
+        {"Create Delay Quad", menu_action_create,  moduleTypeDelayQuad, NULL},
+        {"Create Delay A", menu_action_create,  moduleTypeDelayA, NULL},
+        {"Create Delay B", menu_action_create,  moduleTypeDelayB, NULL},
+        {"Create Delay Clock", menu_action_create,  moduleTypeDlyClock, NULL},
+         {NULL,                 NULL,                                 0, NULL}       // End of menu
+    };
+
+
     static tMenuItem levelMenuItems[] = {
         {"Create Constant",    menu_action_create,  moduleTypeConstant, NULL},
         {"Create ConstSwT",    menu_action_create,  moduleTypeConstSwT, NULL},
@@ -818,12 +830,6 @@ void open_module_area_context_menu(tCoord coord) {
     };
     static tMenuItem fxMenuItems[] = {
         {"Create Compressor", menu_action_create,  moduleTypeCompress, NULL},
-        {"Create Delay Single A", menu_action_create,  moduleTypeDlySingleA, NULL},
-        {"Create Delay Single B", menu_action_create,  moduleTypeDlySingleB, NULL},
-        {"Create Delay Dual", menu_action_create,  moduleTypeDelayDual, NULL},
-        {"Create Delay Quad", menu_action_create,  moduleTypeDelayQuad, NULL},
-        {"Create Delay A", menu_action_create,  moduleTypeDelayA, NULL},
-        {"Create Delay B", menu_action_create,  moduleTypeDelayB, NULL},
         {"Create Digitizer", menu_action_create,  moduleTypeDigitizer, NULL},
         {"Create FreqShift", menu_action_create,  moduleTypeFreqShift, NULL},
         {"Create Flanger", menu_action_create,  moduleTypeFlanger, NULL},
@@ -849,7 +855,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Osc",      menu_action_create, 0, oscMenuItems   },
         {"Create Random",   menu_action_create, 0, NULL           },
         {"Create Filter",   menu_action_create, 0, filterMenuItems},
-        {"Create Delay",    menu_action_create, 0, NULL           },
+        {"Create Delay",    menu_action_create, 0, delayMenuItems },
         {"Create Level",    menu_action_create, 0, levelMenuItems },
         {"Create Switch",   menu_action_create, 0, switchMenuItems},
         {"Create Sequence", menu_action_create, 0, NULL           },

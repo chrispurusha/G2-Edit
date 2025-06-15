@@ -311,6 +311,7 @@ typedef enum {
     paramType1None,
     paramType1Freq,
     paramType1FreqDrum,
+    paramType1Int,
     paramType1dB,
     paramType1ADRTime,
     paramType1Time,

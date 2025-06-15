@@ -1085,6 +1085,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeDelayB,    paramType1Bypass,         paramType2Toggle, {{ -3,   -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 176 On/Off
     {moduleTypeDelayB,    paramType1Freq,     paramType2Dial,   {{ 60,  -17}, {7, 14}}, anchorBottomLeft,  "HP",   128, 64, NULL,               NULL          },  // 176 Filter
     // 178 DlyClock
+    {moduleTypeDlyClock,    paramType1Int,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Sample delay",  128,  0, NULL,               NULL          }, // 176 Time
     // 179 DlyShiftReg
     // 180 Operator
     // 181 DlyEight
@@ -1832,6 +1833,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDelayB,    connectorDirIn, connectorTypeControl,   {{ 68,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocLeft   }, // 169 E
     {moduleTypeDelayB,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },
     // 178 DlyClock
+    {moduleTypeDlyClock,    connectorDirIn, connectorTypeControl,   {{ -10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 178 In
+    {moduleTypeDlyClock,    connectorDirIn, connectorTypeLogic,   {{ 3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Clk",    labelLocRight   }, // 178 Clk
+    {moduleTypeDlyClock,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 178 Out
+
     // 179 DlyShiftReg
     // 180 Operator
     // 181 DlyEight
