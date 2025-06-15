@@ -298,6 +298,22 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     max_time = 22.4;
                     break;
                 }
+                case moduleTypeDlySingleA:
+                case moduleTypeDlySingleB:
+                case moduleTypeDelayDual:
+                {
+                    min_time = 0.001;
+                    switch (module->mode[0].value) {
+                        case 0: {max_time = 0.005; break;}
+                        case 1: {max_time = 0.025; break;}
+                        case 2: {max_time = 0.100; break;}
+                        case 3: {max_time = 0.500; break;}
+                        case 4: {max_time = 1.0; break;}
+                        case 5: {max_time = 2.0; break;}
+                        case 6: {max_time = 2.7; break;}
+                    }
+                    break;
+                }
                 default:
                 {
                 }

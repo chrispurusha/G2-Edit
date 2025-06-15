@@ -818,6 +818,9 @@ void open_module_area_context_menu(tCoord coord) {
     };
     static tMenuItem fxMenuItems[] = {
         {"Create Compressor", menu_action_create,  moduleTypeCompress, NULL},
+        {"Create Delay Single A", menu_action_create,  moduleTypeDlySingleA, NULL},
+        {"Create Delay Single B", menu_action_create,  moduleTypeDlySingleB, NULL},
+        {"Create Delay Dual", menu_action_create,  moduleTypeDelayDual, NULL},
         {"Create Digitizer", menu_action_create,  moduleTypeDigitizer, NULL},
         {"Create FreqShift", menu_action_create,  moduleTypeFreqShift, NULL},
         {"Create Flanger", menu_action_create,  moduleTypeFlanger, NULL},
