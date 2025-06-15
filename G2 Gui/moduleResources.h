@@ -96,6 +96,9 @@ const char * oscShpBStrMap[]      = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw
 const char * dxFeedbackStrMap[]   = {"0", "1", "2", "3", "4", "5", "6", "7",};
 const char * dxAlgStrMap[]        = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32"};
 const char * pShiftDelayStrMod[]  = {"50ms", "?", "?", "?", "?"};
+const char * twoToInSourceStrMap[]  = {"In1/2", "In3/4", "Bus1/2", "Bus3/4"};
+const char * fourToInSourceStrMap[] = {"In", "Bus"};
+
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -1035,8 +1038,10 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeModAHD,    paramType1CommonDial,     paramType2Dial,   {{ 67,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 0, NULL,               NULL          },  // 167 Attack M
     {moduleTypeModAHD,    paramType1StandardToggle, paramType2Toggle, {{-20, -10}, {7,  7}}, anchorBottomRight, NULL,        6,  0, posStrMap,          NULL          },
     {moduleTypeModAHD,    paramType1StandardToggle, paramType2Toggle, {{ 3,   -17}, {7,  7}}, anchorBottomLeft,     NULL,        2,  0, kbStrMap,           offOnColourMap},
-
     // 170 2-In
+    {moduleType2toIn,    paramType1StandardToggle, paramType2Toggle, {{40, -3}, {7,  7}}, anchorBottomLeft, NULL,        4,  0, twoToInSourceStrMap,          NULL          },
+    {moduleType2toIn,    paramType1Bypass,         paramType2Toggle, {{ -24,   -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 167 On/Off
+    {moduleType2toIn,    paramType1StandardToggle, paramType2Toggle, {{3, -3}, {7,  7}}, anchorBottomLeft, NULL,        4,  0, db12PadStrMap,          NULL          },
     // 171 4-In
     // 172 DlySingleA
     // 173 DlySingleB
@@ -1751,8 +1756,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeModAHD,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 169 AM
     {moduleTypeModAHD,    connectorDirOut, connectorTypeControl,   {{ -10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",    labelLocLeft   }, // 169 Env
     {moduleTypeModAHD,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 169 Out
-
     // 170 2-In
+    {moduleType2toIn,    connectorDirOut, connectorTypeAudio,   {{ -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "L",    labelLocUp   }, // 170 OutL
+    {moduleType2toIn,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "R",    labelLocUp   }, // 170 OutR
     // 171 4-In
     // 172 DlySingleA
     // 173 DlySingleB
