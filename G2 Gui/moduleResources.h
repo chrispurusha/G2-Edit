@@ -93,6 +93,8 @@ const char * thruStrMap[]         = {"Notes only", "Notes+Ctrls"};
 const char * levConvStrMap[]      = {"Bip", "Pos", "Neg"};
 const char * oscShpAStrMap[]      = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "SymPulse"};
 const char * oscShpBStrMap[]      = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "DblSaw", "Pulse", "SymPulse"};
+const char * dxFeedbackStrMap[]   = {"0", "1", "2", "3", "4", "5", "6", "7",};
+const char * dxAlgStrMap[]        = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -1012,9 +1014,9 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 55,  -17}, {7, 14}}, anchorBottomLeft,  NULL,    128, 100, NULL,               NULL          }, // 164 Sqr M
     {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 55,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 100, NULL,               NULL          }, // 164 Saw M
     {moduleTypeOscDual,    paramType1StandardToggle, paramType2Toggle, {{ -3,  -10}, {7,  7}}, anchorBottomRight,     "Soft",        2,  0, offOnStrMap,    NULL          }, // 164 Tune M
-
-
     // 165 DXRouter
+    {moduleTypeDXRouter,    paramType1StandardToggle, paramType2Toggle, {{ 10,  -10}, {7,  7}}, anchorBottomLeft,     "Feedback",        8,  0, dxFeedbackStrMap,    NULL          }, // 165 Feedback
+    {moduleTypeDXRouter,    paramType1StandardToggle, paramType2Toggle, {{ 10,  -20}, {7,  7}}, anchorBottomLeft,     "Algorithm",        32,  0, dxAlgStrMap,    NULL          }, // 165 Algorithm
     // 166 Unknown
     // 167 PShift
     // 168 Unknown
@@ -1706,6 +1708,19 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeOscDual,    connectorDirIn,  connectorTypeAudio,   {{  48, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp   }, // 164 Phase
     {moduleTypeOscDual,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 164 Out
     // 165 DXRouter
+    {moduleTypeDXRouter,    connectorDirIn, connectorTypeAudio,   {{ 5,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "1",    labelLocLeft   }, // 164 In1
+    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 11,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocLeft   }, // 164 Out1
+    {moduleTypeDXRouter,    connectorDirIn, connectorTypeAudio,   {{ 20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "2",    labelLocLeft   }, // 164 In2
+    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 26,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocLeft   }, // 164 Out2
+    {moduleTypeDXRouter,    connectorDirIn, connectorTypeAudio,   {{ 35,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "3",    labelLocLeft   }, // 164 In3
+    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 41,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocLeft   }, // 164 Out3
+    {moduleTypeDXRouter,    connectorDirIn, connectorTypeAudio,   {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "4",    labelLocLeft   }, // 164 In4
+    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 56,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocLeft   }, // 164 Out4
+    {moduleTypeDXRouter,    connectorDirIn, connectorTypeAudio,   {{ 65,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "5",    labelLocLeft   }, // 164 In5
+    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 71,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocLeft   }, // 164 Out5
+    {moduleTypeDXRouter,    connectorDirIn, connectorTypeAudio,   {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "6",    labelLocLeft   }, // 164 In6
+    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ 86,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocLeft   }, // 164 Out6
+    {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Main",    labelLocUp   }, // 164 Out
     // 166 Unknown
     // 167 PShift
     // 168 Unknown
