@@ -986,7 +986,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeFltComb,   paramType1CommonDial,          paramType2Dial,   {{ 83,  -3}, {7, 14}}, anchorBottomLeft,  "Level",     128,  0, NULL,               NULL          },// 102 Level
     {moduleTypeFltComb,   paramType1Bypass,         paramType2Toggle, {{-3,   -10}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 102 Bypass
     // 163 OscShpA
-    {moduleTypeOscShpA,    paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128, 64, NULL,               NULL          },  // 163 Coarse
+    {moduleTypeOscShpA,    paramType1Freq,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128, 64, NULL,               NULL          },  // 163 Coarse
     {moduleTypeOscShpA,    paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL,               NULL          }, // 163 Fine
     {moduleTypeOscShpA,    paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap}, // 163 Kbt
     {moduleTypeOscShpA,    paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",     128,  0, NULL,               NULL          }, // 163 Pitch M
@@ -998,6 +998,22 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeOscShpA,    paramType1StandardToggle, paramType2Toggle, {{ 30,  15}, {7,  7}}, anchorTopLeft,     NULL,        6,  0, oscShpAStrMap,    NULL          }, // 163 Wave
     {moduleTypeOscShpA,    paramType1Bypass,         paramType2Toggle, {{ -3,   0}, {5,  5}}, anchorMiddleRight, "Bypass",    2,  0, NULL,               NULL          },
     // 164 OscDual
+    {moduleTypeOscDual,    paramType1Freq,     paramType2Dial,   {{ 25,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128, 64, NULL,               NULL          },  // 164 Coarse
+    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 35,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL,               NULL          }, // 164 Fine
+    {moduleTypeOscDual,    paramType1StandardToggle, paramType2Toggle, {{ 12, -20}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap}, // 164 Kbt
+    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",     128,  0, NULL,               NULL          }, // 164 Pitch M
+    {moduleTypeOscDual,    paramType1StandardToggle, paramType2Toggle, {{ 25,  -17}, {7,  7}}, anchorBottomLeft,     NULL,        4,  0, pitchTypeStrMap,    NULL          }, // 164 Tune M
+    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 75,  -17}, {7, 14}}, anchorBottomLeft,  "SqrLvl",    128, 100, NULL,               NULL          }, // 164 SqrLvl
+    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 65,  -17}, {7, 14}}, anchorBottomLeft,  "PW",    128, 0, NULL,               NULL          }, // 164 PW
+    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 75,  -3}, {7, 14}}, anchorBottomLeft,  "SawLvl",    128, 100, NULL,               NULL          }, // 164 SawLvl
+    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 65,  -3}, {7, 14}}, anchorBottomLeft,  "Phase",    128, 0, NULL,               NULL          }, // 164 Phase
+    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 90,  -17}, {7, 14}}, anchorBottomLeft,  "ubLvl",    128, 100, NULL,               NULL          }, // 164 Suboct Lvl
+    {moduleTypeOscDual,    paramType1Bypass,         paramType2Toggle, {{ -10,   -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          },
+    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 55,  -17}, {7, 14}}, anchorBottomLeft,  NULL,    128, 100, NULL,               NULL          }, // 164 Sqr M
+    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 55,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 100, NULL,               NULL          }, // 164 Saw M
+    {moduleTypeOscDual,    paramType1StandardToggle, paramType2Toggle, {{ -3,  -10}, {7,  7}}, anchorBottomRight,     "Soft",        2,  0, offOnStrMap,    NULL          }, // 164 Tune M
+
+
     // 165 DXRouter
     // 166 Unknown
     // 167 PShift
@@ -1683,6 +1699,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeOscShpA,    connectorDirIn,  connectorTypeAudio,   {{ 73,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 163 Shape
     {moduleTypeOscShpA,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // Out
     // 164 OscDual
+    {moduleTypeOscDual,    connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 164 Pitch
+    {moduleTypeOscDual,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 164 PitchVar
+    {moduleTypeOscDual,    connectorDirIn,  connectorTypeAudio,   {{  3, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Sync",    labelLocUp   }, // 164 Sync
+    {moduleTypeOscDual,    connectorDirIn,  connectorTypeAudio,   {{  48, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 164 PW
+    {moduleTypeOscDual,    connectorDirIn,  connectorTypeAudio,   {{  48, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp   }, // 164 Phase
+    {moduleTypeOscDual,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 164 Out
     // 165 DXRouter
     // 166 Unknown
     // 167 PShift

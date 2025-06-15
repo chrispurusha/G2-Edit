@@ -703,6 +703,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Osc Shape A", menu_action_create, moduleTypeOscShpA, NULL},
         {"Create Osc Shape B", menu_action_create, moduleTypeOscShpB, NULL},
         {"Create Osc String",  menu_action_create, moduleTypeOscString, NULL},
+        {"Create Osc Dual",  menu_action_create, moduleTypeOscDual, NULL},
         {"Create Noise",  menu_action_create, moduleTypeNoise, NULL},
         {"Create Osc Noise",  menu_action_create, moduleTypeOscNoise, NULL},
         {"Create Met Noise",  menu_action_create, moduleTypeMetNoise, NULL},
