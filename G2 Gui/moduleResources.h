@@ -1027,6 +1027,15 @@ const tParamLocation paramLocationList[] = {
     {moduleTypePShift,    paramType1Bypass,         paramType2Toggle, {{ -3,   -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 167 On/Off
     // 168 Unknown
     // 169 ModAHD
+    {moduleTypeModAHD,    paramType1ADRTime,     paramType2Dial,   {{ 20,  -17}, {7, 14}}, anchorBottomLeft,  "Attack",  128,  0, NULL,               NULL          },  // 46 Attack
+    {moduleTypeModAHD,    paramType1ADRTime,     paramType2Dial,   {{ 40,  -17}, {7, 14}}, anchorBottomLeft,  "Hold",   128,  0, NULL,               NULL          }, // 46 Hold
+    {moduleTypeModAHD,    paramType1ADRTime,     paramType2Dial,   {{ 60,  -17}, {7, 14}}, anchorBottomLeft,  "Decay",     128,  0, NULL,               NULL          }, // 46 Decay
+    {moduleTypeModAHD,    paramType1CommonDial,     paramType2Dial,   {{ 27,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 0, NULL,               NULL          },  // 167 Attack M
+    {moduleTypeModAHD,    paramType1CommonDial,     paramType2Dial,   {{ 47,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 0, NULL,               NULL          },  // 167 Hold M
+    {moduleTypeModAHD,    paramType1CommonDial,     paramType2Dial,   {{ 67,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 0, NULL,               NULL          },  // 167 Attack M
+    {moduleTypeModAHD,    paramType1StandardToggle, paramType2Toggle, {{-20, -10}, {7,  7}}, anchorBottomRight, NULL,        6,  0, posStrMap,          NULL          },
+    {moduleTypeModAHD,    paramType1StandardToggle, paramType2Toggle, {{ 3,   -17}, {7,  7}}, anchorBottomLeft,     NULL,        2,  0, kbStrMap,           offOnColourMap},
+
     // 170 2-In
     // 171 4-In
     // 172 DlySingleA
@@ -1734,6 +1743,15 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypePShift,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 167 Out
     // 168 Unknown
     // 169 ModAHD
+    {moduleTypeModAHD,    connectorDirIn,  connectorTypeLogic, {{  3,  -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Trig",    labelLocUp   }, // 169 Trig
+    {moduleTypeModAHD,    connectorDirIn,  connectorTypeControl, {{  20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 169 Attack M
+    {moduleTypeModAHD,    connectorDirIn,  connectorTypeControl, {{  40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 169 Hold M
+    {moduleTypeModAHD,    connectorDirIn,  connectorTypeControl, {{  60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 169 Delay M
+    {moduleTypeModAHD,    connectorDirIn,  connectorTypeControl, {{  -3,  -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocUp   }, // 169 In
+    {moduleTypeModAHD,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 169 AM
+    {moduleTypeModAHD,    connectorDirOut, connectorTypeControl,   {{ -10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",    labelLocLeft   }, // 169 Env
+    {moduleTypeModAHD,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 169 Out
+
     // 170 2-In
     // 171 4-In
     // 172 DlySingleA
