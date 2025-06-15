@@ -718,6 +718,7 @@ void open_module_area_context_menu(tCoord coord) {
     };
     static tMenuItem lfoMenuItems[] = {
         {"Create LFO A", menu_action_create, moduleTypeLfoA, NULL},
+        {"Create LFO B", menu_action_create, moduleTypeLfoB, NULL},
         {"Create LFO C", menu_action_create, moduleTypeLfoC, NULL},
         {"Create LFO Shp A", menu_action_create, moduleTypeLfoShpA, NULL},
         {"Create ClkGen", menu_action_create, moduleTypeClkGen, NULL},
@@ -768,6 +769,7 @@ void open_module_area_context_menu(tCoord coord) {
 
     static tMenuItem levelMenuItems[] = {
         {"Create Constant",    menu_action_create,  moduleTypeConstant, NULL},
+        {"Create ConstSwM",    menu_action_create,  moduleTypeConstSwM, NULL},
         {"Create ConstSwT",    menu_action_create,  moduleTypeConstSwT, NULL},
         {"Create CompLev",    menu_action_create,  moduleTypeCompLev, NULL},
         {"Create CompSig",    menu_action_create,  moduleTypeCompSig, NULL},
@@ -777,6 +779,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create LevMod",     menu_action_create,  moduleTypeLevMod,  NULL},
         {"Create LevMult",     menu_action_create,  moduleTypeLevMult,  NULL},
         {"Create MinMax",     menu_action_create,  moduleTypeMinMax,  NULL},
+        {"Create NoiseGate",     menu_action_create,  moduleTypeNoiseGate,  NULL},
         {"Create EnvFollow",     menu_action_create,  moduleTypeEnvFollow,  NULL},
         {NULL,                 NULL,                                 0, NULL}       // End of menu
     };
@@ -785,8 +788,10 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create SwOnOffM",   menu_action_create,  moduleTypeSwOnOffM, NULL},
         {"Create SwOnOffT",   menu_action_create,  moduleTypeSwOnOffT, NULL},
         {"Create Sw2-1",   menu_action_create,  moduleTypeSw2to1, NULL},
+        {"Create Sw2-1M",   menu_action_create,  moduleTypeSw2to1, NULL},
         {"Create Sw4-1",   menu_action_create,  moduleTypeSw4to1, NULL},
         {"Create Sw1-2",   menu_action_create,  moduleTypeSw1to2, NULL},
+        {"Create Sw1-2M",   menu_action_create,  moduleTypeSw1to2M, NULL},
         {"Create Sw1-4",   menu_action_create,  moduleTypeSw1to4, NULL},
         {"Create Sw1-8",   menu_action_create,  moduleTypeSw1to8, NULL},
         {"Create ValSw2-1",   menu_action_create,  moduleTypeValSw2to1, NULL},

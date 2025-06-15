@@ -1148,10 +1148,29 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeMix1to1S,   paramType1Enable,         paramType2Toggle, {{ 40,  -3}, {14,  4}}, anchorBottomLeft,     NULL,        2,  0, NULL,               offOnColourMap}, // 184 Enable1
     {moduleTypeMix1to1S,   paramType1StandardToggle, paramType2Toggle, {{  30,  -25}, {7,  7}}, anchorBottomLeft,     NULL,        3,  0, expStrMap,          NULL          }, // 184 Exp
     // 186 Sw1-2M
+    {moduleTypeSw1to2M,   paramType1StandardToggle, paramType2Toggle, {{ 37, -3}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, out8StrMap,   NULL          }, // 186 Selector *** Needs new UI element
     // 187 Sw2-1M
-    // 177 ConstSwM
+    {moduleTypeSw2to1M,   paramType1StandardToggle, paramType2Toggle, {{ 37, -3}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, out8StrMap,   NULL          }, // 187 Selector *** Needs new UI element
+    // 188 ConstSwM
+    {moduleTypeConstSwM,   paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, {7, 14}}, anchorBottomLeft,     NULL,      128,  64, NULL,               NULL          },  // 188 Level
+    {moduleTypeConstSwM,   paramType1StandardToggle, paramType2Toggle, {{ 60, -3}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, offOnStrMap,   NULL          }, // 188 Selector *** needs new UI element
+    {moduleTypeConstSwM,    paramType1StandardToggle, paramType2Toggle, {{ 40, -3}, {7,  7}}, anchorBottomLeft,  NULL,       2,  0, bipUniStrMap, NULL},  // 188 Bip/Uni
     // 189 NoiseGate
+    {moduleTypeNoiseGate,    paramType1ADRTime,     paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "Attack",  128,  0, NULL,               NULL          },  // 189 Attack
+    {moduleTypeNoiseGate,    paramType1ADRTime,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Release",   128,  0, NULL,               NULL          }, // 189 Release
+    {moduleTypeNoiseGate,   paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,     "Threshold",      128,  64, NULL,               NULL          },  // 188 Level
+
     // 190 LfoB
+    {moduleTypeLfoB,    paramType1CommonDial,  paramType2Dial, {{40, -3}, {7, 14}}, anchorBottomLeft,  NULL,  128, 64,  NULL,  NULL},  // 26 Rate  *** Could have Freq but tied to Range
+    {moduleTypeLfoB, paramType1CommonDial,  paramType2Dial, {{30, -3}, {7, 14}}, anchorBottomLeft,  NULL,  128, 0,  NULL,  NULL},  // 26 Rate M
+    {moduleTypeLfoB,    paramType1StandardToggle,  paramType2Toggle, {{40, -20}, {7, 7}}, anchorBottomLeft,  NULL,  5, 0,  rangeStrMap,  NULL},  // 26 Range
+    {moduleTypeLfoB,    paramType1StandardToggle,  paramType2Toggle, {{50,  -13}, {7, 7}}, anchorBottomLeft,  "Kbt",  5, 0,  offTo100KbStrMap,  NULL},  // 26 Kbt
+    {moduleTypeLfoB,    paramType1StandardToggle,  paramType2Toggle, {{60, -20}, {7, 7}}, anchorBottomLeft,  NULL,  4, 0,  lfoWaveStrMap,  NULL},  // 26 Wave
+    {moduleTypeLfoB,    paramType1StandardToggle,  paramType2Toggle, {{30, -20}, {7, 7}}, anchorBottomLeft,  NULL,  2, 0,  polyMonoStrMap,  NULL},  // 26 Mode
+    {moduleTypeLfoB,    paramType1CommonDial,  paramType2Dial, {{77, -3}, {7, 14}}, anchorBottomLeft,  "Phase",  128, 64,  NULL,  NULL},  // 26 Phase
+    {moduleTypeLfoB,     paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 26 Bypass
+    {moduleTypeLfoB,    paramType1StandardToggle,  paramType2Toggle, {{ -17, -17}, {7, 7}}, anchorBottomRight,  NULL,  6, 0,  posStrMap,  NULL},  // 26 OutType
+    {moduleTypeLfoB,    paramType1CommonDial,  paramType2Dial, {{67, -3}, {7, 14}}, anchorBottomLeft,  NULL,  128, 64,  NULL,  NULL},  // 26 Phase M
     // 191 Unknown
     // 192 Phaser
     // 193 Mix4-1A
@@ -1942,10 +1961,29 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMix1to1S,       connectorDirOut,  connectorTypeControl, {{  -10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "L",    labelLocLeft}, // 185 Out L
     {moduleTypeMix1to1S,       connectorDirOut,  connectorTypeControl, {{  -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "R",    labelLocLeft}, // 185 Out R
     // 186 Sw1-2M
+    {moduleTypeSw1to2M,    connectorDirIn,  connectorTypeControl, {{ 30,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 186 In
+    {moduleTypeSw1to2M,    connectorDirOut,  connectorTypeControl, {{ 50,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "1",    labelLocLeft   },  // 186 Out1
+    {moduleTypeSw1to2M,    connectorDirOut,  connectorTypeControl, {{ 60,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "2",    labelLocLeft   },  // 186 Out2
+    {moduleTypeSw1to2M,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Ctrl",    labelLocRight   },  // 186 Ctrl
     // 187 Sw2-1M
-    // 177 ConstSwM
+    {moduleTypeSw1to2M,    connectorDirIn,  connectorTypeControl, {{ 30,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "1",    labelLocUp   },  // 187 In
+    {moduleTypeSw1to2M,    connectorDirIn,  connectorTypeControl, {{ 50,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "2",    labelLocLeft   },  // 187 Out1
+    {moduleTypeSw1to2M,    connectorDirOut,  connectorTypeControl, {{ 60,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocLeft   },  // 187 Out2
+    {moduleTypeSw1to2M,    connectorDirOut,  connectorTypeControl, {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "Ctrl",    labelLocRight   },  // 187 Ctrl
+    // 188 ConstSwM
+    {moduleTypeConstSwM,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocLeft   },  // 188 Out
     // 189 NoiseGate
+    {moduleTypeNoiseGate,    connectorDirIn,  connectorTypeControl, {{ -3,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 189 In
+    {moduleTypeNoiseGate,    connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 189 In
+    {moduleTypeNoiseGate,    connectorDirOut,  connectorTypeControl, {{ -10,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    "Env",    labelLocLeft   },  // 189 Env
     // 190 LfoB
+    {moduleTypeLfoB,      connectorDirIn,  connectorTypeControl, {{  15,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Rate",    labelLocUp   }, // 190 Rate
+    {moduleTypeLfoB,      connectorDirIn,  connectorTypeControl, {{  22,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp   }, // 190 Ratevar
+    {moduleTypeLfoB,      connectorDirIn,  connectorTypeControl, {{  3,  -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Rst",    labelLocUp   }, // 190 Reset
+    {moduleTypeLfoB,      connectorDirIn,  connectorTypeControl, {{  60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Rate",    labelLocUp   }, // 190 PhaseM
+    {moduleTypeLfoB,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 190 Out
+    {moduleTypeLfoB,      connectorDirOut, connectorTypeControl, {{ 3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp   }, // 190 Sync
+
     // 191 Unknown
     // 192 Phaser
     // 193 Mix4-1A
