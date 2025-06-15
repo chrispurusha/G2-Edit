@@ -1132,6 +1132,13 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeDlyStereo,    paramType1Bypass,         paramType2Toggle, {{ -3,   -17}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 182 On/Off
     {moduleTypeDlyStereo,   paramType1Freq,           paramType2Dial,   {{ 70,  -3}, {7, 14}}, anchorBottomLeft,  "HP",    128,  127, NULL,               NULL          },  // 180 HP
     // 183 OscPM
+    {moduleTypeOscPM,       paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Tune",    128, 64, NULL,               NULL          }, // 9 Coarse
+    {moduleTypeOscPM,       paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL,               NULL          }, // 9 Fine
+    {moduleTypeOscPM,       paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap}, // 9 Kbt
+    {moduleTypeOscPM,    paramType1StandardToggle, paramType2Toggle, {{ 30,  10}, {7,  7}}, anchorTopLeft,     NULL,        4,  0, pitchTypeStrMap,    NULL          }, // 9 Tune Mode
+    {moduleTypeOscPM,       paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, {7, 14}}, anchorBottomLeft,  "PhM",      128,  0, NULL,               NULL          }, // FM
+    {moduleTypeOscPM,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 9 Bypass
+    {moduleTypeOscPM,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128,  0, NULL,               NULL          }, // Pitch Mode
     // 184 Mix1-1A
     // 185 Mix1-1S
     // 186 Sw1-2M
@@ -1912,6 +1919,11 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDlyStereo,     connectorDirOut,  connectorTypeAudio,   {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    "L",    labelLocLeft   },  // 181 Out1
     {moduleTypeDlyStereo,     connectorDirOut,  connectorTypeAudio,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    "R",    labelLocLeft },  // 181 Out2
     // 183 OscPM
+    {moduleTypeOscPM,       connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 9 OscC PitchVar
+    {moduleTypeOscPM,       connectorDirIn,  connectorTypeAudio,   {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Sync",  labelLocRight}, // Sync
+    {moduleTypeOscPM,       connectorDirIn,  connectorTypeAudio,   {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // Phase M
+    {moduleTypeOscPM,       connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // Pitch
+    {moduleTypeOscPM,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // Out
     // 184 Mix1-1A
     // 185 Mix1-1S
     // 186 Sw1-2M
@@ -1963,6 +1975,7 @@ const tModeLocation   modeLocationList[] = {
     {moduleTypeDelayB, paramType1StandardToggle, paramType2Toggle, {{ 3, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 177 Delay Range
     {moduleTypeDlyStereo, paramType1StandardToggle, paramType2Toggle, {{ 10, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 178 Delay Range
     {moduleTypeDlyEight, paramType1StandardToggle, paramType2Toggle, {{ 10, -10}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 178 Delay Range
+    {moduleTypeOscPM, paramType1StandardToggle, paramType2Toggle, {{-30,   5}, {7,  7}}, anchorTopRight, "Wave", 6, 0, shapeOscATypeStrMap}, // 183 Wave
 };
 
 //{moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14, 7}}, anchorBottomLeft,  "Type",      4, 0, reverbTypeStrMap,    NULL          },
