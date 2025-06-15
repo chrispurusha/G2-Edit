@@ -1043,6 +1043,9 @@ const tParamLocation paramLocationList[] = {
     {moduleType2toIn,    paramType1Bypass,         paramType2Toggle, {{ -24,   -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 167 On/Off
     {moduleType2toIn,    paramType1StandardToggle, paramType2Toggle, {{3, -3}, {7,  7}}, anchorBottomLeft, NULL,        4,  0, db12PadStrMap,          NULL          },
     // 171 4-In
+    {moduleType4toIn,    paramType1StandardToggle, paramType2Toggle, {{30, -3}, {7,  7}}, anchorBottomLeft, NULL,        2,  0, fourToInSourceStrMap,          NULL          }, // 171 source
+    {moduleType4toIn,    paramType1Bypass,         paramType2Toggle, {{ -45,   -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 171 On/Off
+    {moduleType4toIn,    paramType1StandardToggle, paramType2Toggle, {{3, -3}, {7,  7}}, anchorBottomLeft, NULL,        4,  1, db12PadStrMap,          NULL}, // 171 pad
     // 172 DlySingleA
     // 173 DlySingleB
     // 174 DelayDual
@@ -1760,6 +1763,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleType2toIn,    connectorDirOut, connectorTypeAudio,   {{ -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "L",    labelLocUp   }, // 170 OutL
     {moduleType2toIn,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "R",    labelLocUp   }, // 170 OutR
     // 171 4-In
+    {moduleType4toIn,    connectorDirOut, connectorTypeAudio,   {{ -45,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "1",    labelLocUp   }, // 170 Out1
+    {moduleType4toIn,    connectorDirOut, connectorTypeAudio,   {{ -31,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "2",    labelLocUp   }, // 170 Out2
+    {moduleType4toIn,    connectorDirOut, connectorTypeAudio,   {{ -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "3",    labelLocUp   }, // 170 Out3
+    {moduleType4toIn,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "4",    labelLocUp   }, // 170 Out4
     // 172 DlySingleA
     // 173 DlySingleB
     // 174 DelayDual

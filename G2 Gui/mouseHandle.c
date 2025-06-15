@@ -682,6 +682,7 @@ void open_module_area_context_menu(tCoord coord) {
     static tMenuItem ioMenuItems[] = {
         {"Create Keyboard", menu_action_create, moduleTypeKeyboard, NULL},
         {"Create 2-In",    menu_action_create, moduleType2toIn,   NULL},
+        {"Create 4-In",    menu_action_create, moduleType4toIn,   NULL},
         {"Create 2-Out",    menu_action_create, moduleType2toOut,   NULL},
         {"Create 4-Out",    menu_action_create, moduleType4toOut,   NULL},
         {"Create Device",    menu_action_create, moduleTypeDevice,   NULL},
