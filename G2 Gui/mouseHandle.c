@@ -823,6 +823,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Delay Dual", menu_action_create,  moduleTypeDelayDual, NULL},
         {"Create Delay Quad", menu_action_create,  moduleTypeDelayQuad, NULL},
         {"Create Delay A", menu_action_create,  moduleTypeDelayA, NULL},
+        {"Create Delay B", menu_action_create,  moduleTypeDelayB, NULL},
         {"Create Digitizer", menu_action_create,  moduleTypeDigitizer, NULL},
         {"Create FreqShift", menu_action_create,  moduleTypeFreqShift, NULL},
         {"Create Flanger", menu_action_create,  moduleTypeFlanger, NULL},

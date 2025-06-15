@@ -1075,6 +1075,15 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeDelayA,    paramType1StandardToggle, paramType2Toggle, {{30, -3}, {7,  7}}, anchorBottomLeft, NULL,        2,  0, timeClkStrMap,          NULL}, // 176 Time/Clk
     {moduleTypeDelayA,    paramType1Bypass,         paramType2Toggle, {{ -3,   -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 176 On/Off
     // 177 DelayB
+    {moduleTypeDelayB,    paramType1TimeClk,     paramType2Dial,   {{ 40,  -10}, {7, 14}}, anchorBottomLeft,  "Time",  128,  0, NULL,               NULL          }, // 176 Time
+    {moduleTypeDelayB,    paramType1CommonDial,     paramType2Dial,   {{ 50,  -17}, {7, 14}}, anchorBottomLeft,  "FB",   128, 0, NULL,               NULL          },  // 176 FB
+    {moduleTypeDelayB,    paramType1Freq,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  "LP",   128, 64, NULL,               NULL          },  // 176 Filter
+    {moduleTypeDelayB,    paramType1CommonDial,     paramType2Dial,   {{ 75,  -17}, {7, 14}}, anchorBottomLeft,  "Dry/Wet",   128, 64, NULL,               NULL          },  // 176 Filter
+    {moduleTypeDelayB,    paramType1StandardToggle, paramType2Toggle, {{30, -3}, {7,  7}}, anchorBottomLeft, NULL,        2,  0, timeClkStrMap,          NULL}, // 176 Time/Clk
+    {moduleTypeDelayB,    paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 0, NULL,               NULL          },  // 176 FBmod
+    {moduleTypeDelayB,    paramType1CommonDial,     paramType2Dial,   {{ 75,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 0, NULL,               NULL          },  // 176 DryWet mod
+    {moduleTypeDelayB,    paramType1Bypass,         paramType2Toggle, {{ -3,   -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 176 On/Off
+    {moduleTypeDelayB,    paramType1Freq,     paramType2Dial,   {{ 60,  -17}, {7, 14}}, anchorBottomLeft,  "HP",   128, 64, NULL,               NULL          },  // 176 Filter
     // 178 DlyClock
     // 179 DlyShiftReg
     // 180 Operator
@@ -1817,9 +1826,10 @@ const tConnectorLocation connectorLocationList[] = {
     // 176 DelayA
     {moduleTypeDelayA,     connectorDirIn,  connectorTypeAudio,   {{ -3,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 177
     {moduleTypeDelayA,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },
-
     // 177 DelayB
-    {moduleTypeDelayB,     connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },  // 177
+    {moduleTypeDelayB,     connectorDirIn,  connectorTypeAudio,   {{ -3,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 177
+    {moduleTypeDelayB,    connectorDirIn, connectorTypeControl,   {{ 43,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocLeft   }, // 169 E
+    {moduleTypeDelayB,    connectorDirIn, connectorTypeControl,   {{ 68,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocLeft   }, // 169 E
     {moduleTypeDelayB,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   },
     // 178 DlyClock
     // 179 DlyShiftReg
@@ -1874,8 +1884,8 @@ const tModeLocation   modeLocationList[] = {
     {moduleTypeDlySingleB, paramType1StandardToggle, paramType2Toggle, {{ 10, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 173 Delay Range
     {moduleTypeDelayDual, paramType1StandardToggle, paramType2Toggle, {{ 10, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 174 Delay Range
     {moduleTypeDelayQuad, paramType1StandardToggle, paramType2Toggle, {{ 80, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 175 Delay Range
-    {moduleTypeDelayA, paramType1StandardToggle, paramType2Toggle, {{ 10, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 176 Delay Range
-    {moduleTypeDelayB, paramType1StandardToggle, paramType2Toggle, {{ 80, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 177 Delay Range
+    {moduleTypeDelayA, paramType1StandardToggle, paramType2Toggle, {{ 3, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 176 Delay Range
+    {moduleTypeDelayB, paramType1StandardToggle, paramType2Toggle, {{ 3, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 177 Delay Range
     {moduleTypeDlyStereo, paramType1StandardToggle, paramType2Toggle, {{ 80, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 178 Delay Range
     {moduleTypeDlyEight, paramType1StandardToggle, paramType2Toggle, {{ 80, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 178 Delay Range
 };
