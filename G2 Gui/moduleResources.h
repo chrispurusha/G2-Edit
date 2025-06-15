@@ -1140,7 +1140,13 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeOscPM,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 9 Bypass
     {moduleTypeOscPM,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128,  0, NULL,               NULL          }, // Pitch Mode
     // 184 Mix1-1A
+    {moduleTypeMix1to1A,   paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,     NULL,      128,  0, NULL,               NULL          },  // 184 Level
+    {moduleTypeMix1to1A,   paramType1Enable,         paramType2Toggle, {{ 40,  -3}, {14,  4}}, anchorBottomLeft,     NULL,        2,  0, NULL,               offOnColourMap}, // 184 Enable1
+    {moduleTypeMix1to1A,   paramType1StandardToggle, paramType2Toggle, {{  30,  -25}, {7,  7}}, anchorBottomLeft,     NULL,        3,  0, expStrMap,          NULL          }, // 184 Exp
     // 185 Mix1-1S
+    {moduleTypeMix1to1S,   paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,     NULL,      128,  0, NULL,               NULL          },  // 184 Level
+    {moduleTypeMix1to1S,   paramType1Enable,         paramType2Toggle, {{ 40,  -3}, {14,  4}}, anchorBottomLeft,     NULL,        2,  0, NULL,               offOnColourMap}, // 184 Enable1
+    {moduleTypeMix1to1S,   paramType1StandardToggle, paramType2Toggle, {{  30,  -25}, {7,  7}}, anchorBottomLeft,     NULL,        3,  0, expStrMap,          NULL          }, // 184 Exp
     // 186 Sw1-2M
     // 187 Sw2-1M
     // 177 ConstSwM
@@ -1925,7 +1931,16 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeOscPM,       connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // Pitch
     {moduleTypeOscPM,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // Out
     // 184 Mix1-1A
+    {moduleTypeMix1to1A,       connectorDirIn,  connectorTypeControl, {{  -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocRight}, // 184 In
+    {moduleTypeMix1to1A,       connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Chain",    labelLocRight}, // 184 Chain
+    {moduleTypeMix1to1A,       connectorDirOut,  connectorTypeControl, {{  -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,    labelLocRight}, // 184 Out
     // 185 Mix1-1S
+    {moduleTypeMix1to1S,       connectorDirIn,  connectorTypeControl, {{  -24,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "L",    labelLocLeft}, // 185 InL
+    {moduleTypeMix1to1S,       connectorDirIn,  connectorTypeControl, {{  -17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "R",    labelLocLeft}, // 185 InR
+    {moduleTypeMix1to1S,       connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "L",    labelLocRight}, // 185 Chain L
+    {moduleTypeMix1to1S,       connectorDirIn,  connectorTypeControl, {{  10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "R Chain",    labelLocRight}, // 185 Chain R
+    {moduleTypeMix1to1S,       connectorDirOut,  connectorTypeControl, {{  -10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "L",    labelLocLeft}, // 185 Out L
+    {moduleTypeMix1to1S,       connectorDirOut,  connectorTypeControl, {{  -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "R",    labelLocLeft}, // 185 Out R
     // 186 Sw1-2M
     // 187 Sw2-1M
     // 177 ConstSwM
