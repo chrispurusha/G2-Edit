@@ -1836,8 +1836,17 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDlyClock,    connectorDirIn, connectorTypeControl,   {{ -10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocLeft   }, // 178 In
     {moduleTypeDlyClock,    connectorDirIn, connectorTypeLogic,   {{ 3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Clk",    labelLocRight   }, // 178 Clk
     {moduleTypeDlyClock,    connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 178 Out
-
     // 179 DlyShiftReg
+    {moduleTypeDlyShiftReg,    connectorDirIn, connectorTypeControl,   {{ 20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocLeft   }, // 179 In
+    {moduleTypeDlyShiftReg,    connectorDirIn, connectorTypeLogic,   {{ 3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Clk",    labelLocRight   }, // 179 Clk
+    {moduleTypeDlyShiftReg,    connectorDirOut, connectorTypeControl,   {{ 28,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "1",    labelLocUp   }, // 179 Out1
+    {moduleTypeDlyShiftReg,    connectorDirOut, connectorTypeControl,   {{ 36,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "2",    labelLocUp   }, // 179 Out2
+    {moduleTypeDlyShiftReg,    connectorDirOut, connectorTypeControl,   {{ 44,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "3",    labelLocUp   }, // 179 Out3
+    {moduleTypeDlyShiftReg,    connectorDirOut, connectorTypeControl,   {{ 52,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "4",    labelLocUp   }, // 179 Out4
+    {moduleTypeDlyShiftReg,    connectorDirOut, connectorTypeControl,   {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "5",    labelLocUp   }, // 179 Out5
+    {moduleTypeDlyShiftReg,    connectorDirOut, connectorTypeControl,   {{ 68,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "6",    labelLocUp   }, // 179 Out6
+    {moduleTypeDlyShiftReg,    connectorDirOut, connectorTypeControl,   {{ 76,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "7",    labelLocUp   }, // 179 Out7
+    {moduleTypeDlyShiftReg,    connectorDirOut, connectorTypeControl,   {{ 84,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "8",    labelLocUp   }, // 179 Out8
     // 180 Operator
     // 181 DlyEight
     // 182 DlyStereo
