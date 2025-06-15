@@ -104,6 +104,7 @@ const char * ratioFixedStrMap[]   = {"Ratio", "Fixed"};
 const char * detuneStrMap[]       = {"-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "+1", "+2", "+3", "+4", "+5", "+6", "+7"};
 const char * operator07StrMap[]   = {"0", "1", "2", "3", "4", "5", "6", "7"};
 const char * operatorDepthStrMap[]= {"-Lin", "-Exp", "+Exp", "+Lin"};
+const char * phaserTypeStrMap[]   = {"Type I", "Type II"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -1173,6 +1174,10 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeLfoB,    paramType1CommonDial,  paramType2Dial, {{67, -3}, {7, 14}}, anchorBottomLeft,  NULL,  128, 64,  NULL,  NULL},  // 26 Phase M
     // 191 Unknown
     // 192 Phaser
+    {moduleTypePhaser,    paramType1StandardToggle,  paramType2Toggle, {{3, -3}, {7, 7}}, anchorBottomLeft,  NULL,  2, 0,  phaserTypeStrMap,  NULL},  // 192 Type
+    {moduleTypePhaser,    paramType1CommonDial,  paramType2Dial, {{40, -3}, {7, 14}}, anchorBottomLeft,  "Rate",  128, 64,  NULL,  NULL},  // 192 Rate *** UI
+    {moduleTypePhaser,    paramType1CommonDial,  paramType2Dial, {{60, -3}, {7, 14}}, anchorBottomLeft,  "FB",  128, 0,  NULL,  NULL},  // 192 FB
+    {moduleTypePhaser,     paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL  }, // 192 Bypass
     // 193 Mix4-1A
     // 194 Mix2-1A
     // 195 ModAmt
@@ -1983,9 +1988,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeLfoB,      connectorDirIn,  connectorTypeControl, {{  60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Rate",    labelLocUp   }, // 190 PhaseM
     {moduleTypeLfoB,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 190 Out
     {moduleTypeLfoB,      connectorDirOut, connectorTypeControl, {{ 3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp   }, // 190 Sync
-
     // 191 Unknown
     // 192 Phaser
+    {moduleTypePhaser,      connectorDirIn, connectorTypeAudio, {{ -18,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 192 In
+    {moduleTypePhaser,      connectorDirOut, connectorTypeAudio, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 192 Out
     // 193 Mix4-1A
     // 194 Mix2-1A
     // 195 ModAmt

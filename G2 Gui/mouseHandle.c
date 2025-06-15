@@ -846,7 +846,8 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create FreqShift", menu_action_create,  moduleTypeFreqShift, NULL},
         {"Create Flanger", menu_action_create,  moduleTypeFlanger, NULL},
         {"Create Chorus", menu_action_create,  moduleTypeStChorus, NULL},
-        {"Create PShift", menu_action_create,  moduleTypePShift, NULL},   
+        {"Create Phaser", menu_action_create,  moduleTypePhaser, NULL},
+        {"Create PShift", menu_action_create,  moduleTypePShift, NULL},
         {"Create Reverb",     menu_action_create,  moduleTypeReverb,   NULL},
         {"Create Scratch",     menu_action_create,  moduleTypeScratch,   NULL},
         {NULL,                NULL,                               0,   NULL}       // End of menu
