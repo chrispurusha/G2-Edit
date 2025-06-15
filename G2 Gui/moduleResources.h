@@ -95,6 +95,7 @@ const char * oscShpAStrMap[]      = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw
 const char * oscShpBStrMap[]      = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "DblSaw", "Pulse", "SymPulse"};
 const char * dxFeedbackStrMap[]   = {"0", "1", "2", "3", "4", "5", "6", "7",};
 const char * dxAlgStrMap[]        = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32"};
+const char * pShiftDelayStrMod[]  = {"50ms", "?", "?", "?", "?"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -1019,6 +1020,11 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeDXRouter,    paramType1StandardToggle, paramType2Toggle, {{ 10,  -20}, {7,  7}}, anchorBottomLeft,     "Algorithm",        32,  0, dxAlgStrMap,    NULL          }, // 165 Algorithm
     // 166 Unknown
     // 167 PShift
+    {moduleTypePShift,    paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, {7, 14}}, anchorBottomLeft,  "Semi",   128, 64, NULL,               NULL          },  // 167 Semi
+    {moduleTypePShift,    paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  "Fine",    128, 64, NULL,               NULL          }, // 167 Fine
+    {moduleTypePShift,    paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 0, NULL,               NULL          },  // 167 Shift M
+    {moduleTypePShift,    paramType1StandardToggle, paramType2Toggle, {{ 75,  -10}, {7,  7}}, anchorBottomLeft,     "Delay",        5,  0, pShiftDelayStrMod,    NULL          }, // 167 Delay *** CHeck param vals
+    {moduleTypePShift,    paramType1Bypass,         paramType2Toggle, {{ -3,   -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 167 On/Off
     // 168 Unknown
     // 169 ModAHD
     // 170 2-In
@@ -1723,6 +1729,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDXRouter,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Main",    labelLocUp   }, // 164 Out
     // 166 Unknown
     // 167 PShift
+    {moduleTypePShift,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp   }, // 167 PitchVar
+    {moduleTypePShift,    connectorDirIn, connectorTypeAudio,   {{ -3,  -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 167 In
+    {moduleTypePShift,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 167 Out
     // 168 Unknown
     // 169 ModAHD
     // 170 2-In
