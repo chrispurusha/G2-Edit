@@ -1120,6 +1120,17 @@ const tParamLocation paramLocationList[] = {
     // 181 DlyEight
     {moduleTypeDlyEight,    paramType1Time,     paramType2Dial,   {{ 40,  -10}, {7, 14}}, anchorBottomLeft,  "Time",  128,  0, NULL,               NULL          }, // 181 Time
     // 182 DlyStereo
+    {moduleTypeDlyStereo,    paramType1TimeClk,     paramType2Dial,   {{ 30,  -17}, {7, 14}}, anchorBottomLeft,  "Left",  64,  0, NULL,               NULL          }, // 182 Time Left
+    {moduleTypeDlyStereo,    paramType1TimeClk,     paramType2Dial,   {{ 30,  -3}, {7, 14}}, anchorBottomLeft,  "Right",  64,  0, NULL,               NULL          }, // 182 Time Right
+    {moduleTypeDlyStereo,   paramType1CommonDial,           paramType2Dial,   {{ 40,  -17}, {7, 14}}, anchorBottomLeft,  "FB",    128,  127, NULL,               NULL          },  // 182 FB L
+    {moduleTypeDlyStereo,   paramType1CommonDial,           paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  127, NULL,               NULL          },  // 182 FB R
+    {moduleTypeDlyStereo,   paramType1CommonDial,           paramType2Dial,   {{ 50,  -17}, {7, 14}}, anchorBottomLeft,  "X-FB",    128,  127, NULL,               NULL          },  // 182 X-FB L
+    {moduleTypeDlyStereo,   paramType1CommonDial,           paramType2Dial,   {{ 50,  -3}, {7, 14}}, anchorBottomLeft,  "X-FB",    128,  127, NULL,               NULL          },  // 180 X-FB R
+    {moduleTypeDlyStereo,    paramType1StandardToggle, paramType2Toggle, {{20, -24}, {7,  7}}, anchorBottomLeft, NULL,        2,  0, timeClkStrMap,          NULL}, // 182 Time/Clk
+    {moduleTypeDlyStereo,   paramType1Freq,           paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  "LP",    128,  127, NULL,               NULL          },  // 182 LP
+    {moduleTypeDlyStereo,   paramType1CommonDial,           paramType2Dial,   {{ 80,  -17}, {7, 14}}, anchorBottomLeft,  "Dry/Wet",    128,  64, NULL,               NULL          },  // 182 Dry/Wet
+    {moduleTypeDlyStereo,    paramType1Bypass,         paramType2Toggle, {{ -3,   -17}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 182 On/Off
+    {moduleTypeDlyStereo,   paramType1Freq,           paramType2Dial,   {{ 70,  -3}, {7, 14}}, anchorBottomLeft,  "HP",    128,  127, NULL,               NULL          },  // 180 HP
     // 183 OscPM
     // 184 Mix1-1A
     // 185 Mix1-1S
@@ -1897,6 +1908,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDlyEight,     connectorDirOut,  connectorTypeAudio,   {{ 80,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 181 Out7
     {moduleTypeDlyEight,     connectorDirOut,  connectorTypeAudio,   {{ 90,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 181 Out8
     // 182 DlyStereo
+    {moduleTypeDlyStereo,     connectorDirIn,  connectorTypeAudio,   {{ -3,   -24}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 181 In
+    {moduleTypeDlyStereo,     connectorDirOut,  connectorTypeAudio,   {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    "L",    labelLocLeft   },  // 181 Out1
+    {moduleTypeDlyStereo,     connectorDirOut,  connectorTypeAudio,   {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    "R",    labelLocLeft },  // 181 Out2
     // 183 OscPM
     // 184 Mix1-1A
     // 185 Mix1-1S
@@ -1947,7 +1961,7 @@ const tModeLocation   modeLocationList[] = {
     {moduleTypeDelayQuad, paramType1StandardToggle, paramType2Toggle, {{ 80, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 175 Delay Range
     {moduleTypeDelayA, paramType1StandardToggle, paramType2Toggle, {{ 3, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 176 Delay Range
     {moduleTypeDelayB, paramType1StandardToggle, paramType2Toggle, {{ 3, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 177 Delay Range
-    {moduleTypeDlyStereo, paramType1StandardToggle, paramType2Toggle, {{ 80, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 178 Delay Range
+    {moduleTypeDlyStereo, paramType1StandardToggle, paramType2Toggle, {{ 10, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 178 Delay Range
     {moduleTypeDlyEight, paramType1StandardToggle, paramType2Toggle, {{ 10, -10}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 178 Delay Range
 };
 
