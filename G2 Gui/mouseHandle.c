@@ -709,6 +709,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Noise",  menu_action_create, moduleTypeNoise, NULL},
         {"Create Osc Noise",  menu_action_create, moduleTypeOscNoise, NULL},
         {"Create Met Noise",  menu_action_create, moduleTypeMetNoise, NULL},
+        {"Create Operator",  menu_action_create, moduleTypeOperator, NULL},
         {"Create DXRouter",  menu_action_create, moduleTypeDXRouter, NULL},
         {"Create DrumSynth",  menu_action_create, moduleTypeDrumSynth, NULL},
         {"Create Osc Master",       menu_action_create, moduleTypeOscMaster,    NULL},

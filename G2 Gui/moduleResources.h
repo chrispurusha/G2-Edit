@@ -100,6 +100,10 @@ const char * twoToInSourceStrMap[]  = {"In1/2", "In3/4", "Bus1/2", "Bus3/4"};
 const char * fourToInSourceStrMap[] = {"In", "Bus"};
 const char * delayRangeStrMap[]   = {"5ms", "25ms", "100ms", "500ms", "1.0s", "2.0s", "2.7s"};
 const char * timeClkStrMap[]      = {"Time", "Clk"};
+const char * ratioFixedStrMap[]   = {"Ratio", "Fixed"};
+const char * detuneStrMap[]       = {"-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "+1", "+2", "+3", "+4", "+5", "+6", "+7"};
+const char * operator07StrMap[]   = {"0", "1", "2", "3", "4", "5", "6", "7"};
+const char * operatorDepthStrMap[]= {"-Lin", "-Exp", "+Exp", "+Lin"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -1088,6 +1092,31 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeDlyClock,    paramType1Int,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  "Sample delay",  128,  0, NULL,               NULL          }, // 176 Time
     // 179 DlyShiftReg
     // 180 Operator
+    {moduleTypeOperator,    paramType1StandardToggle, paramType2Toggle, {{ 20, -60}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap}, // 180 Kbt
+    {moduleTypeOperator,    paramType1StandardToggle, paramType2Toggle, {{30, -60}, {7,  7}}, anchorBottomLeft, "Sync",        2,  0, offOnStrMap,          NULL}, // 180 Sync *** Check values
+    {moduleTypeOperator,    paramType1StandardToggle, paramType2Toggle, {{40, -60}, {7,  7}}, anchorBottomLeft, NULL,        2,  0, ratioFixedStrMap,          NULL}, // 180 RatioFixes
+    {moduleTypeOperator,   paramType1Freq,           paramType2Dial,   {{ 60,  -60}, {7, 14}}, anchorBottomLeft,  "Coarse",    128,  0, NULL,               NULL          },  // 180 Freq
+    {moduleTypeOperator,   paramType1CommonDial,           paramType2Dial,   {{ 50,  -60}, {7, 14}}, anchorBottomLeft,  "Fine",    128,  0, NULL,               NULL          },  // 180 Freq
+    {moduleTypeOperator,    paramType1StandardToggle, paramType2Toggle, {{70, -60}, {7,  7}}, anchorBottomLeft, "Detune",        15,  7, detuneStrMap,          NULL}, // 180 FreqDetune
+    {moduleTypeOperator,    paramType1StandardToggle, paramType2Toggle, {{70, -50}, {7,  7}}, anchorBottomLeft, "Vel",        8,  0, operator07StrMap,          NULL}, // 180 Vel
+    {moduleTypeOperator,    paramType1StandardToggle, paramType2Toggle, {{83, -50}, {7,  7}}, anchorBottomLeft, "RateScale",        8,  0, operator07StrMap,          NULL}, // 180 RateScale
+    {moduleTypeOperator,   paramType1CommonDial,           paramType2Dial,   {{ 20,  -30}, {7, 14}}, anchorBottomLeft,  "R1",    128,  127, NULL,               NULL          },  // 180 R1
+    {moduleTypeOperator,   paramType1CommonDial,           paramType2Dial,   {{ 30,  -30}, {7, 14}}, anchorBottomLeft,  "L1",    128,  127, NULL,               NULL          },  // 180 L1
+    {moduleTypeOperator,   paramType1CommonDial,           paramType2Dial,   {{ 40,  -30}, {7, 14}}, anchorBottomLeft,  "R2",    128,  127, NULL,               NULL          },  // 180 R2
+    {moduleTypeOperator,   paramType1CommonDial,           paramType2Dial,   {{ 50,  -30}, {7, 14}}, anchorBottomLeft,  "L2",    128,  127, NULL,               NULL          },  // 180 L2
+    {moduleTypeOperator,   paramType1CommonDial,           paramType2Dial,   {{ 60,  -30}, {7, 14}}, anchorBottomLeft,  "R3",    128,  127, NULL,               NULL          },  // 180 R3
+    {moduleTypeOperator,   paramType1CommonDial,           paramType2Dial,   {{ 70,  -30}, {7, 14}}, anchorBottomLeft,  "L3",    128,  127, NULL,               NULL          },  // 180 L3
+    {moduleTypeOperator,   paramType1CommonDial,           paramType2Dial,   {{ 80,  -30}, {7, 14}}, anchorBottomLeft,  "R4",    128,  127, NULL,               NULL          },  // 180 R4
+    {moduleTypeOperator,   paramType1CommonDial,           paramType2Dial,   {{ 90,  -30}, {7, 14}}, anchorBottomLeft,  "L4",    128,  127, NULL,               NULL          },  // 180 L4
+    {moduleTypeOperator,    paramType1StandardToggle, paramType2Toggle, {{17, -20}, {7,  7}}, anchorBottomLeft, "AMod",        8,  0, operator07StrMap,          NULL}, // 180 AMod
+    {moduleTypeOperator,    paramType1NoteDial, paramType2Dial, {{20, -3}, {7,  14}}, anchorBottomLeft, "BrPt",        128, 64, NULL,          NULL}, // 180 AMod
+    {moduleTypeOperator,    paramType1StandardToggle, paramType2Toggle, {{35, -3}, {7,  7}}, anchorBottomLeft, NULL,        4,  0, operatorDepthStrMap,          NULL}, // 180 LDepth Mode
+    {moduleTypeOperator,    paramType1StandardToggle, paramType2Toggle, {{45, -3}, {7,  7}}, anchorBottomLeft, "Ldepth",        8,  0, operator07StrMap,          NULL}, // 180 LDepth
+    {moduleTypeOperator,    paramType1StandardToggle, paramType2Toggle, {{60, -3}, {7,  7}}, anchorBottomLeft, NULL,        4,  0, operatorDepthStrMap,          NULL}, // 180 RDepth Mode
+    {moduleTypeOperator,    paramType1StandardToggle, paramType2Toggle, {{70, -3}, {7,  7}}, anchorBottomLeft, "Rdepth",        8,  0, operator07StrMap,          NULL}, // 180 RDepth
+    {moduleTypeOperator,   paramType1CommonDial,           paramType2Dial,   {{ 80,  -3}, {7, 14}}, anchorBottomLeft,  "Level",    128,  127, NULL,               NULL          },  // 180 Level
+    {moduleTypeOperator,    paramType1Bypass,         paramType2Toggle, {{ -3,   -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 180 On/Off
+    {moduleTypeOperator,    paramType1StandardToggle, paramType2Toggle, {{ 20, -50}, {7,  7}}, anchorBottomLeft,  "KBEnv",       2,  1, offOnStrMap,        offOnColourMap}, // 180 EnvLB
     // 181 DlyEight
     // 182 DlyStereo
     // 183 OscPM
@@ -1848,6 +1877,14 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDlyShiftReg,    connectorDirOut, connectorTypeControl,   {{ 76,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "7",    labelLocUp   }, // 179 Out7
     {moduleTypeDlyShiftReg,    connectorDirOut, connectorTypeControl,   {{ 84,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "8",    labelLocUp   }, // 179 Out8
     // 180 Operator
+    {moduleTypeOperator,    connectorDirIn, connectorTypeControl,   {{ 3,  -45}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Freq",    labelLocUp   }, // 180 Freq
+    {moduleTypeOperator,    connectorDirIn, connectorTypeAudio,   {{ 90,  -60}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "FM",    labelLocUp   }, // 180 FM
+    {moduleTypeOperator,    connectorDirIn, connectorTypeLogic,   {{ 3,  -35}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Gate",    labelLocUp   }, // 180 Freq
+    {moduleTypeOperator,    connectorDirIn, connectorTypeControl,   {{ 3,  -25}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Note",    labelLocUp   }, // 180 Note
+    {moduleTypeOperator,    connectorDirIn, connectorTypeControl,   {{ 3,  -15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "AMod",    labelLocUp   }, // 180 Amod
+    {moduleTypeOperator,    connectorDirIn, connectorTypeControl,   {{ 3,  -5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Vel",    labelLocUp   }, // 180 Vel
+    {moduleTypeOperator,    connectorDirIn, connectorTypeControl,   {{ 3,  -60}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Pitch",    labelLocUp   }, // 180 Pitch
+    {moduleTypeOperator,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 180 Out
     // 181 DlyEight
     // 182 DlyStereo
     // 183 OscPM
