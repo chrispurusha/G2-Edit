@@ -99,7 +99,7 @@ const char * pShiftDelayStrMod[]  = {"50ms", "?", "?", "?", "?"};
 const char * twoToInSourceStrMap[]  = {"In1/2", "In3/4", "Bus1/2", "Bus3/4"};
 const char * fourToInSourceStrMap[] = {"In", "Bus"};
 const char * delayRangeStrMap[]   = {"5ms", "25ms", "100ms", "500ms", "1.0s", "2.0s", "2.7s"};
-
+const char * timeClkStrMap[]      = {"Time", "Clk"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -1057,8 +1057,17 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeDelayDual,    paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 0, NULL,               NULL          },  // 174 Time M
     {moduleTypeDelayDual,    paramType1Time,     paramType2Dial,   {{ 88,  -10}, {7, 14}}, anchorBottomLeft,  "Time2",  128,  0, NULL,               NULL          }, // 174 Time2
     {moduleTypeDelayDual,    paramType1CommonDial,     paramType2Dial,   {{ 75,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 0, NULL,               NULL          },  // 174 Time M
-
     // 175 DelayQuad
+    {moduleTypeDelayQuad,    paramType1TimeClk,     paramType2Dial,   {{ 3,  -10}, {7, 14}}, anchorBottomLeft,  "Time1",  128,  0, NULL,               NULL          }, // 174 Time1
+    {moduleTypeDelayQuad,    paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 0, NULL,               NULL          },  // 174 Time1 M
+    {moduleTypeDelayQuad,    paramType1TimeClk,     paramType2Dial,   {{ 23,  -10}, {7, 14}}, anchorBottomLeft,  "Time2",  128,  0, NULL,               NULL          }, // 174 Time2
+    {moduleTypeDelayQuad,    paramType1CommonDial,     paramType2Dial,   {{ 30,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 0, NULL,               NULL          },  // 174 Time2 M
+    {moduleTypeDelayQuad,    paramType1TimeClk,     paramType2Dial,   {{ 43,  -10}, {7, 14}}, anchorBottomLeft,  "Time3",  128,  0, NULL,               NULL          }, // 174 Time3
+    {moduleTypeDelayQuad,    paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 0, NULL,               NULL          },  // 174 Time3 M
+    {moduleTypeDelayQuad,    paramType1TimeClk,     paramType2Dial,   {{ 63,  -10}, {7, 14}}, anchorBottomLeft,  "Time4",  128,  0, NULL,               NULL          }, // 174 Time4
+    {moduleTypeDelayQuad,    paramType1CommonDial,     paramType2Dial,   {{ 70,  -3}, {7, 14}}, anchorBottomLeft,  NULL,   128, 0, NULL,               NULL          },  // 174 Time4 M
+    {moduleTypeDelayQuad,    paramType1StandardToggle, paramType2Toggle, {{80, -10}, {7,  7}}, anchorBottomLeft, NULL,        2,  0, timeClkStrMap,          NULL}, // 171 pad
+
     // 176 DelayA
     // 177 DelayB
     // 178 DlyClock
@@ -1790,6 +1799,16 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDelayDual,     connectorDirOut, connectorTypeAudio,   {{ 53,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp   }, // 174 Out1
     {moduleTypeDelayDual,     connectorDirOut, connectorTypeAudio,   {{ 88,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp   }, // 174 Out2
     // 175 DelayQuad
+    {moduleTypeDelayQuad,     connectorDirIn,  connectorTypeAudio,   {{ -3,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    "In",    labelLocLeft   },  // 174 In
+    {moduleTypeDelayQuad,     connectorDirIn,  connectorTypeAudio,   {{ 3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocRight   },  // 175 Time1
+    {moduleTypeDelayQuad,     connectorDirIn,  connectorTypeAudio,   {{ 23,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocRight   },  // 175 Time2
+    {moduleTypeDelayQuad,     connectorDirIn,  connectorTypeAudio,   {{ 43,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocRight   },  // 175 Time3
+    {moduleTypeDelayQuad,     connectorDirIn,  connectorTypeAudio,   {{ 63,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocRight   },  // 175 Time4
+    {moduleTypeDelayQuad,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Main",    labelLocUp   }, // 175 Out Main
+    {moduleTypeDelayQuad,     connectorDirOut, connectorTypeAudio,   {{ 13,  -14}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp   }, // 175 Out1
+    {moduleTypeDelayQuad,     connectorDirOut, connectorTypeAudio,   {{ 33,  -14}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp   }, // 175 Out2
+    {moduleTypeDelayQuad,     connectorDirOut, connectorTypeAudio,   {{ 53,  -14}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp   }, // 175 Out3
+    {moduleTypeDelayQuad,     connectorDirOut, connectorTypeAudio,   {{ 73,  -14}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,    labelLocUp   }, // 175 Out4
     // 176 DelayA
     // 177 DelayB
     {moduleTypeDelayB,     connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,    labelLocUp   },  // 177
@@ -1846,6 +1865,7 @@ const tModeLocation   modeLocationList[] = {
     {moduleTypeDlySingleA, paramType1StandardToggle, paramType2Toggle, {{ 10, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 172 Delay Range
     {moduleTypeDlySingleB, paramType1StandardToggle, paramType2Toggle, {{ 10, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 173 Delay Range
     {moduleTypeDelayDual, paramType1StandardToggle, paramType2Toggle, {{ 10, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 174 Delay Range
+    {moduleTypeDelayQuad, paramType1StandardToggle, paramType2Toggle, {{ 80, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 174 Delay Range
 };
 
 //{moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14, 7}}, anchorBottomLeft,  "Type",      4, 0, reverbTypeStrMap,    NULL          },

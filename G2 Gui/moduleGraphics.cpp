@@ -329,7 +329,40 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
+        case paramType1TimeClk:
+        {
+            double time = 0.0;
+            double min_time, max_time;
+            switch (module->type) {
+                case moduleTypeDelayQuad:
+                {
+                    min_time = 0.001;
+                    switch (module->mode[0].value) {
+                        case 0: {max_time = 0.005; break;}
+                        case 1: {max_time = 0.025; break;}
+                        case 2: {max_time = 0.100; break;}
+                        case 3: {max_time = 0.500; break;}
+                        case 4: {max_time = 1.0; break;}
+                        case 5: {max_time = 2.0; break;}
+                        case 6: {max_time = 2.7; break;}
+                    }
+                    break;
+                }
+                default:
+                {
+                }
+            }
+            // scale 0 -> min_time and 127 -> max_time, exponentially
+            time = exp((double)paramValue/127 * log(max_time/min_time) )*min_time;
+            if (time < 1.0) {
+                snprintf(buff, sizeof(buff), "%.0fms", time*1000);
+            } else {
+                snprintf(buff, sizeof(buff), "%.1fs", time);
+            }
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
 
+        }
         case paramType1ADRTime:
         {
             double time = 0.0;

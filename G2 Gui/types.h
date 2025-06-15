@@ -314,6 +314,7 @@ typedef enum {
     paramType1dB,
     paramType1ADRTime,
     paramType1Time,
+    paramType1TimeClk,
     paramType1Resonance,
     paramType1Pitch,
     paramType1Bypass,
