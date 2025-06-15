@@ -758,6 +758,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Delay A", menu_action_create,  moduleTypeDelayA, NULL},
         {"Create Delay B", menu_action_create,  moduleTypeDelayB, NULL},
         {"Create Delay Clock", menu_action_create,  moduleTypeDlyClock, NULL},
+        {"Create Delay Eight", menu_action_create,  moduleTypeDlyEight, NULL},
         {"Create DlyShiftReg", menu_action_create,  moduleTypeDlyShiftReg, NULL},
          {NULL,                 NULL,                                 0, NULL}       // End of menu
     };

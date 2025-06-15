@@ -310,6 +310,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 case moduleTypeDlySingleA:
                 case moduleTypeDlySingleB:
                 case moduleTypeDelayDual:
+                case moduleTypeDlyEight:
                 {
                     min_time = 0.001;
                     switch (module->mode[0].value) {

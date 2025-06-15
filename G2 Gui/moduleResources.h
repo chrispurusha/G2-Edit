@@ -1118,6 +1118,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeOperator,    paramType1Bypass,         paramType2Toggle, {{ -3,   -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 180 On/Off
     {moduleTypeOperator,    paramType1StandardToggle, paramType2Toggle, {{ 20, -50}, {7,  7}}, anchorBottomLeft,  "KBEnv",       2,  1, offOnStrMap,        offOnColourMap}, // 180 EnvLB
     // 181 DlyEight
+    {moduleTypeDlyEight,    paramType1Time,     paramType2Dial,   {{ 40,  -10}, {7, 14}}, anchorBottomLeft,  "Time",  128,  0, NULL,               NULL          }, // 181 Time
     // 182 DlyStereo
     // 183 OscPM
     // 184 Mix1-1A
@@ -1886,6 +1887,15 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeOperator,    connectorDirIn, connectorTypeControl,   {{ 3,  -60}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, "Pitch",    labelLocUp   }, // 180 Pitch
     {moduleTypeOperator,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 180 Out
     // 181 DlyEight
+    {moduleTypeDlyEight,     connectorDirIn,  connectorTypeAudio,   {{ -3,   -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 181 In
+    {moduleTypeDlyEight,     connectorDirOut,  connectorTypeAudio,   {{ 20,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 181 Out1
+    {moduleTypeDlyEight,     connectorDirOut,  connectorTypeAudio,   {{ 30,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 181 Out2
+    {moduleTypeDlyEight,     connectorDirOut,  connectorTypeAudio,   {{ 40,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 181 Out3
+    {moduleTypeDlyEight,     connectorDirOut,  connectorTypeAudio,   {{ 50,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 181 Out4
+    {moduleTypeDlyEight,     connectorDirOut,  connectorTypeAudio,   {{ 60,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 181 Out5
+    {moduleTypeDlyEight,     connectorDirOut,  connectorTypeAudio,   {{ 70,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 181 Out6
+    {moduleTypeDlyEight,     connectorDirOut,  connectorTypeAudio,   {{ 80,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 181 Out7
+    {moduleTypeDlyEight,     connectorDirOut,  connectorTypeAudio,   {{ 90,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    NULL,    labelLocUp   },  // 181 Out8
     // 182 DlyStereo
     // 183 OscPM
     // 184 Mix1-1A
@@ -1938,7 +1948,7 @@ const tModeLocation   modeLocationList[] = {
     {moduleTypeDelayA, paramType1StandardToggle, paramType2Toggle, {{ 3, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 176 Delay Range
     {moduleTypeDelayB, paramType1StandardToggle, paramType2Toggle, {{ 3, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 177 Delay Range
     {moduleTypeDlyStereo, paramType1StandardToggle, paramType2Toggle, {{ 80, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 178 Delay Range
-    {moduleTypeDlyEight, paramType1StandardToggle, paramType2Toggle, {{ 80, -3}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 178 Delay Range
+    {moduleTypeDlyEight, paramType1StandardToggle, paramType2Toggle, {{ 10, -10}, {7,  7}}, anchorBottomLeft, "Slope", 7, 0, delayRangeStrMap}, // 178 Delay Range
 };
 
 //{moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14, 7}}, anchorBottomLeft,  "Type",      4, 0, reverbTypeStrMap,    NULL          },
