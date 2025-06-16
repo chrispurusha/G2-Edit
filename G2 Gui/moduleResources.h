@@ -105,6 +105,9 @@ const char * detuneStrMap[]       = {"-7", "-6", "-5", "-4", "-3", "-2", "-1", "
 const char * operator07StrMap[]   = {"0", "1", "2", "3", "4", "5", "6", "7"};
 const char * operatorDepthStrMap[]= {"-Lin", "-Exp", "+Exp", "+Lin"};
 const char * phaserTypeStrMap[]   = {"Type I", "Type II"};
+const char * invertStrMap[]       = {"m", "1-m"};
+const char * monoKeyStrMap[]      = {"Last", "Lo", "Hi"};
+const char * edgeStepStrMap[]     = {"100%", "75%", "50%", "25%", "0%"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -1121,8 +1124,8 @@ const tParamLocation paramLocationList[] = {
     // 181 DlyEight
     {moduleTypeDlyEight,    paramType1Time,     paramType2Dial,   {{ 40,  -10}, {7, 14}}, anchorBottomLeft,  "Time",  128,  0, NULL,               NULL          }, // 181 Time
     // 182 DlyStereo
-    {moduleTypeDlyStereo,    paramType1TimeClk,     paramType2Dial,   {{ 30,  -17}, {7, 14}}, anchorBottomLeft,  "Left",  64,  0, NULL,               NULL          }, // 182 Time Left
-    {moduleTypeDlyStereo,    paramType1TimeClk,     paramType2Dial,   {{ 30,  -3}, {7, 14}}, anchorBottomLeft,  "Right",  64,  0, NULL,               NULL          }, // 182 Time Right
+    {moduleTypeDlyStereo,    paramType1TimeClk,     paramType2Dial,   {{ 30,  -17}, {7, 14}}, anchorBottomLeft,  "Left",  128,  0, NULL,               NULL          }, // 182 Time Left
+    {moduleTypeDlyStereo,    paramType1TimeClk,     paramType2Dial,   {{ 30,  -3}, {7, 14}}, anchorBottomLeft,  "Right",  128,  0, NULL,               NULL          }, // 182 Time Right
     {moduleTypeDlyStereo,   paramType1CommonDial,           paramType2Dial,   {{ 40,  -17}, {7, 14}}, anchorBottomLeft,  "FB",    128,  127, NULL,               NULL          },  // 182 FB L
     {moduleTypeDlyStereo,   paramType1CommonDial,           paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  127, NULL,               NULL          },  // 182 FB R
     {moduleTypeDlyStereo,   paramType1CommonDial,           paramType2Dial,   {{ 50,  -17}, {7, 14}}, anchorBottomLeft,  "X-FB",    128,  127, NULL,               NULL          },  // 182 X-FB L
@@ -1178,16 +1181,52 @@ const tParamLocation paramLocationList[] = {
     {moduleTypePhaser,    paramType1CommonDial,  paramType2Dial, {{40, -3}, {7, 14}}, anchorBottomLeft,  "Rate",  128, 64,  NULL,  NULL},  // 192 Rate *** UI
     {moduleTypePhaser,    paramType1CommonDial,  paramType2Dial, {{60, -3}, {7, 14}}, anchorBottomLeft,  "FB",  128, 0,  NULL,  NULL},  // 192 FB
     {moduleTypePhaser,     paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL  }, // 192 Bypass
-    // 193 Mix4-1A
+    // 193 Mix4-1A -- no params
     // 194 Mix2-1A
+    {moduleTypeMix2to1A,   paramType1CommonDial,     paramType2Dial,   {{ 57,  -3}, {7, 14}}, anchorBottomLeft,     NULL,      128,  0, NULL,               NULL          },  // 123 L1
+    {moduleTypeMix2to1A,   paramType1CommonDial,     paramType2Dial,   {{ 82,  -3}, {7, 14}}, anchorBottomLeft,     NULL,      128,  0, NULL,               NULL          },  // 123 L2
+    {moduleTypeMix2to1A,   paramType1Enable,         paramType2Toggle, {{ 37,  -3}, {5,  3}}, anchorBottomLeft,     NULL,        2,  0, NULL,               offOnColourMap}, // 123 Enable1
+    {moduleTypeMix2to1A,   paramType1Enable,         paramType2Toggle, {{ 67,  -3}, {5,  3}}, anchorBottomLeft,     NULL,        2,  0, NULL,               offOnColourMap},  // 123 Enable2
+    {moduleTypeMix2to1A,   paramType1StandardToggle, paramType2Toggle, {{  20,  -3}, {7,  7}}, anchorBottomLeft,     NULL,        3,  0, expStrMap,          NULL          }, // 123 Exp
     // 195 ModAmt
+    {moduleTypeModAmt,   paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, {7, 14}}, anchorBottomLeft,     "Depth",      128,  0, NULL,               NULL          },  // 195 Depth
+    {moduleTypeModAmt,   paramType1StandardToggle,         paramType2Toggle, {{ 60,  -3}, {7,  7}}, anchorBottomLeft,     NULL,        2,  1, offOnStrMap,               offOnColourMap}, // 195 Enable
+    {moduleTypeModAmt,   paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {7,  7}}, anchorBottomLeft,     NULL,        3,  0, expStrMap,          NULL          }, // 195 Exp
+    {moduleTypeModAmt,   paramType1StandardToggle,         paramType2Toggle, {{ 20,  -3}, {7,  7}}, anchorBottomLeft,     NULL,        2, 0, invertStrMap,               NULL}, // 195 m/1-m
     // 196 OscPerc
-    // 197 Status
+    {moduleTypeOscPerc,       paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, {7, 14}}, anchorBottomLeft,  "Tune",    128, 64, NULL,               NULL          }, // 196 Coarse
+    {moduleTypeOscPerc,       paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL,               NULL          }, // 196 Fine
+    {moduleTypeOscPerc,    paramType1StandardToggle, paramType2Toggle, {{ 50,  -17}, {7,  7}}, anchorBottomLeft,     NULL,        4,  0, pitchTypeStrMap,    NULL          }, // 196 Tune Mode
+    {moduleTypeOscPerc,       paramType1StandardToggle, paramType2Toggle, {{ 40, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap}, // 196  Kbt
+    {moduleTypeOscPerc,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128,  0, NULL,               NULL          }, // 196 Pitch M
+    {moduleTypeOscPerc,       paramType1ADRTime,     paramType2Dial,   {{ 70,  -3}, {7, 14}}, anchorBottomLeft,  "Decay",    128, 64, NULL,               NULL          }, // 196 Decay
+    {moduleTypeOscPerc,       paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, {7, 14}}, anchorBottomLeft,  "Click",    128, 64, NULL,               NULL          }, // 196 Click
+    {moduleTypeOscPerc,       paramType1StandardToggle, paramType2Toggle, {{ 90, -10}, {7,  7}}, anchorBottomLeft,  "Punch",       2,  1, offOnStrMap,        offOnColourMap}, // 196 Punch
+    {moduleTypeOscPM,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 196 Bypass
+    // 197 Status -- No params
     // 198 PitchTrack
+    {moduleTypePitchTrack,       paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, {7, 14}}, anchorBottomLeft,  "Threshold",    128, 64, NULL,               NULL          }, // 198 Threshold
     // 199 MonoKey
+    {moduleTypeMonoKey,       paramType1StandardToggle, paramType2Toggle, {{ 30, -3}, {7,  7}}, anchorBottomLeft,  NULL,       3,  0, monoKeyStrMap,        NULL}, // 199 Priority
     // 200 RandomA
+    {moduleTypeRandomA,    paramType1Freq,  paramType2Dial, {{50, -3}, {7, 14}}, anchorBottomLeft,  NULL,  128, 64,  NULL,  NULL},  // 200 Rate
+    {moduleTypeRandomA,       paramType1StandardToggle, paramType2Toggle, {{ 30, 0}, {7,  7}}, anchorBottomLeft,  NULL,       2,  0, polyMonoStrMap,        NULL}, // 200 Poly/Mono mode
+    {moduleTypeRandomA,    paramType1StandardToggle,  paramType2Toggle, {{ 80, -3}, {7, 7}}, anchorBottomLeft,  NULL,  6, 0,  posStrMap,  NULL},  // 200 OutType
+    {moduleTypeRandomA,    paramType1StandardToggle,  paramType2Toggle, {{ 30, -9}, {7, 7}}, anchorBottomLeft,  NULL,  5, 0,  rangeStrMap,  NULL},  // 200 Range
+    {moduleTypeRandomA,     paramType1Bypass,         paramType2Toggle, {{-3,  -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 26 Bypass
+    {moduleTypeRandomA,    paramType1StandardToggle,  paramType2Toggle, {{ 65, -2}, {7, 7}}, anchorBottomLeft,  "Edge", 5, 0,  edgeStepStrMap,  NULL},  // 200 edge
+    {moduleTypeRandomA,    paramType1StandardToggle,  paramType2Toggle, {{ 65, -10}, {7, 7}}, anchorBottomLeft,  "Step",  5, 0,  edgeStepStrMap,  NULL},  // 200 step
     // 201 Red2Blue
     // 202 RandomB
+    {moduleTypeRandomB,    paramType1Freq,  paramType2Dial, {{50, -3}, {7, 14}}, anchorBottomLeft,  NULL,  128, 64,  NULL,  NULL},  // 202 Rate
+    {moduleTypeRandomB,       paramType1StandardToggle, paramType2Toggle, {{ 30, 0}, {7,  7}}, anchorBottomLeft,  NULL,       2,  0, polyMonoStrMap,        NULL}, // 202 Poly/Mono mode
+    {moduleTypeRandomB,       paramType1StandardToggle, paramType2Toggle, {{ 40, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap}, // 202  Kbt
+    {moduleTypeRandomB,       paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  "Rate",    128, 64, NULL,               NULL          }, // 202 Rate M
+    {moduleTypeRandomB,       paramType1CommonDial,     paramType2Dial,   {{ 65,  -10}, {7, 14}}, anchorBottomLeft,  "Step",    128, 64, NULL,               NULL          }, // 202 Rate M
+    {moduleTypeRandomB,     paramType1Bypass,         paramType2Toggle, {{-3,  -10}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 202 Bypass
+    {moduleTypeRandomB,    paramType1StandardToggle,  paramType2Toggle, {{ 80, -3}, {7, 7}}, anchorBottomLeft,  NULL,  6, 0,  posStrMap,  NULL},  // 202 OutType
+    {moduleTypeRandomB,    paramType1StandardToggle,  paramType2Toggle, {{ 20, -14}, {7, 7}}, anchorBottomLeft,  NULL,  5, 0,  rangeStrMap,  NULL},  // 202 Range
+    {moduleTypeRandomB,    paramType1StandardToggle,  paramType2Toggle, {{ 65, -2}, {7, 7}}, anchorBottomLeft,  "Edge", 5, 0,  edgeStepStrMap,  NULL},  // 202 edge
     // 203 Blue2Red
     // 204 RndClkA
     // 205 RndTrig
@@ -1993,16 +2032,49 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypePhaser,      connectorDirIn, connectorTypeAudio, {{ -18,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 192 In
     {moduleTypePhaser,      connectorDirOut, connectorTypeAudio, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 192 Out
     // 193 Mix4-1A
+    {moduleTypeMix4to1A,  connectorDirIn,  connectorTypeControl, {{ 25,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "1",    labelLocUp   },  // 193 In1
+    {moduleTypeMix4to1A,  connectorDirIn,  connectorTypeControl, {{ 40,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "2",    labelLocUp   },  // 193 In2
+    {moduleTypeMix4to1A,  connectorDirIn,  connectorTypeControl, {{ 55,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "3",    labelLocUp   },  // 193 In3
+    {moduleTypeMix4to1A,  connectorDirIn,  connectorTypeControl, {{ 70,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "4",    labelLocUp   },  // 193 In4
+    {moduleTypeMix4to1A,  connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 193 Out
     // 194 Mix2-1A
+    {moduleTypeMix2to1A,  connectorDirIn,  connectorTypeControl, {{ 50,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "1",    labelLocUp   },  // 194 In1
+    {moduleTypeMix2to1A,  connectorDirIn,  connectorTypeControl, {{ 75,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,    "2",    labelLocUp   },  // 194 In2
+    {moduleTypeMix2to1A,  connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Chain",    labelLocRight}, // 185 Chain L
+    {moduleTypeMix2to1A,  connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 194 Out
     // 195 ModAmt
+    {moduleTypeModAmt,  connectorDirIn,  connectorTypeControl, {{ -10,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 194 In1
+    {moduleTypeModAmt,  connectorDirIn,  connectorTypeControl, {{ -17,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    "Mod",    labelLocLeft   },  // 194 In2
+    {moduleTypeModAmt,  connectorDirOut,  connectorTypeControl, {{ -3,   -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,    NULL,    labelLocUp   },  // 194 Out
+
     // 196 OscPerc
+    {moduleTypeOscPerc,       connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 196 Pitch
+    {moduleTypeOscPerc,       connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 196  PitchVar
+    {moduleTypeOscPerc,       connectorDirIn,  connectorTypeAudio, {{  25,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Trig",    labelLocUp}, // 196 Trig
+    {moduleTypeOscPerc,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 196 Out
+
     // 197 Status
+    {moduleTypeStatus,       connectorDirOut, connectorTypeLogic,   {{ -60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Patch Active",    labelLocUp   }, // 197 Patch Active
+    {moduleTypeStatus,       connectorDirOut, connectorTypeLogic,   {{ -40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Var. Active",    labelLocUp   }, // 197 Var Active
+    {moduleTypeStatus,       connectorDirOut, connectorTypeControl,   {{ -20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Voice No.",    labelLocUp   }, // 197 Voice No.
     // 198 PitchTrack
+    {moduleTypePitchTrack,       connectorDirIn,  connectorTypeControl, {{  3, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Input",    labelLocRight}, // 198 Input
+    {moduleTypePitchTrack,       connectorDirOut, connectorTypeLogic,   {{ -30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Period",    labelLocUp   }, // 198 Period
+    {moduleTypePitchTrack,       connectorDirOut, connectorTypeLogic,   {{ -19,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Gate",    labelLocUp   }, // 198 Gate
+    {moduleTypePitchTrack,       connectorDirOut, connectorTypeControl,   {{ -8,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Pitch",    labelLocUp   }, // 198 Pitch
     // 199 MonoKey
+    {moduleTypeMonoKey,       connectorDirOut,  connectorTypeControl, {{  -30, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "Pitch",    labelLocUp}, // 199 Pitch
+    {moduleTypeMonoKey,       connectorDirOut, connectorTypeLogic,   {{ -19,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Gate",    labelLocUp   }, // 198 Gate
+    {moduleTypeMonoKey,       connectorDirOut, connectorTypeControl,   {{ -8,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Vel",    labelLocUp   }, // 199 Vel
     // 200 RandomA
-    // 201 Red2Blue
+    {moduleTypeRandomA,       connectorDirIn,  connectorTypeControl, {{  3, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocUp}, // 200 Pitch
+    {moduleTypeRandomA,       connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 200 Vel
+    // 201 Red2Blue -- ???
     // 202 RandomB
-    // 203 Blue2Red
+    {moduleTypeRandomB,       connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 200 Rate
+    {moduleTypeRandomB,       connectorDirIn,  connectorTypeControl, {{  3, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,    labelLocRight}, // 202 RateVar
+    {moduleTypeRandomB,       connectorDirOut, connectorTypeControl,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,    labelLocUp   }, // 202 Out
+    // 203 Blue2Red -- ???
     // 204 RndClkA
     // 205 RndTrig
     // 206 RndClkB

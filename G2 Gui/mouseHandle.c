@@ -686,6 +686,8 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create 2-Out",    menu_action_create, moduleType2toOut,   NULL},
         {"Create 4-Out",    menu_action_create, moduleType4toOut,   NULL},
         {"Create Device",    menu_action_create, moduleTypeDevice,   NULL},
+        {"Create MonoKey",    menu_action_create, moduleTypeMonoKey,   NULL},
+        {"Create Status",    menu_action_create, moduleTypeStatus,   NULL},
         {"Create Name Bar", menu_action_create, moduleTypeName,     NULL},
         {NULL,              NULL,                                0, NULL}         // End of menu
     };
@@ -694,6 +696,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create NoteQuant", menu_action_create, moduleTypeNoteQuant, NULL},
         {"Create NoteScaler", menu_action_create, moduleTypeNoteScaler, NULL},
         {"Create LevScaler", menu_action_create, moduleTypeLevScaler, NULL},
+        {"Create PitchTrack", menu_action_create, moduleTypePitchTrack, NULL},
         {"Create ZeroCnt", menu_action_create, moduleTypeZeroCnt, NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
@@ -713,9 +716,16 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create Operator",  menu_action_create, moduleTypeOperator, NULL},
         {"Create DXRouter",  menu_action_create, moduleTypeDXRouter, NULL},
         {"Create DrumSynth",  menu_action_create, moduleTypeDrumSynth, NULL},
+        {"Create OscPerc",  menu_action_create, moduleTypeOscPerc, NULL},
         {"Create Osc Master",       menu_action_create, moduleTypeOscMaster,    NULL},
         {NULL,                 NULL,                               0, NULL}       // End of menu
     };
+    static tMenuItem randomMenuItems[] = {
+        {"Create RandomA",       menu_action_create, moduleTypeRandomA,    NULL},
+        {"Create RandomB",       menu_action_create, moduleTypeRandomB,    NULL},
+        {NULL,              NULL,                               0, NULL}          // End of menu
+    };
+
     static tMenuItem lfoMenuItems[] = {
         {"Create LFO A", menu_action_create, moduleTypeLfoA, NULL},
         {"Create LFO B", menu_action_create, moduleTypeLfoB, NULL},
@@ -779,6 +789,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Create LevMod",     menu_action_create,  moduleTypeLevMod,  NULL},
         {"Create LevMult",     menu_action_create,  moduleTypeLevMult,  NULL},
         {"Create MinMax",     menu_action_create,  moduleTypeMinMax,  NULL},
+        {"Create ModAmt",     menu_action_create,  moduleTypeModAmt,  NULL},
         {"Create NoiseGate",     menu_action_create,  moduleTypeNoiseGate,  NULL},
         {"Create EnvFollow",     menu_action_create,  moduleTypeEnvFollow,  NULL},
         {NULL,                 NULL,                                 0, NULL}       // End of menu
@@ -815,6 +826,8 @@ void open_module_area_context_menu(tCoord coord) {
     static tMenuItem mixerMenuItems[] = {
         {"Create Mixer 1-1 A", menu_action_create, moduleTypeMix1to1A, NULL},
         {"Create Mixer 1-1 S", menu_action_create, moduleTypeMix1to1S, NULL},
+        {"Create Mixer 2-1 A", menu_action_create, moduleTypeMix2to1A, NULL},
+        {"Create Mixer 4-1 A", menu_action_create, moduleTypeMix4to1A, NULL},
         {"Create Mixer 4-1 C", menu_action_create, moduleTypeMix4to1C, NULL},
         {"Create Mixer 4-1 S", menu_action_create, moduleTypeMix4to1S, NULL},
         {"Create Mixer 2-1 B", menu_action_create, moduleTypeMix2to1B, NULL},
@@ -866,7 +879,7 @@ void open_module_area_context_menu(tCoord coord) {
     static tMenuItem moduleMenuItems[] = {
         {"Create In/Out",   menu_action_create, 0, ioMenuItems    },
         {"Create Osc",      menu_action_create, 0, oscMenuItems   },
-        {"Create Random",   menu_action_create, 0, NULL           },
+        {"Create Random",   menu_action_create, 0, randomMenuItems},
         {"Create Filter",   menu_action_create, 0, filterMenuItems},
         {"Create Delay",    menu_action_create, 0, delayMenuItems },
         {"Create Level",    menu_action_create, 0, levelMenuItems },
