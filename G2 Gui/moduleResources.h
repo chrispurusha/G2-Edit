@@ -480,6 +480,8 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEq2Band, paramType1dB,     paramType2Dial,   {{ 60,  -3}, {7, 14}}, anchorBottomLeft,  "Hi (12kHz)",   128, 64, NULL,               NULL          },  // 32 Hi Gain
     {moduleTypeEq2Band, paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  "Level",   128, 127, NULL,               NULL          },  // 32 Level
     {moduleTypeEq2Band,     paramType1Bypass,         paramType2Toggle, {{-3,  -9}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 32 Bypass
+    {moduleTypeEq2Band,       paramType1StandardToggle, paramType2Toggle, {{20,   5}, {7,  7}}, anchorTopLeft,    NULL,        128,  0, NULL,    NULL   },     // TODO: 32 Dummy for now
+    {moduleTypeEq2Band,       paramType1StandardToggle, paramType2Toggle, {{20,   5}, {7,  7}}, anchorTopLeft,    NULL,        128,  0, NULL,    NULL   },     // TODO: 32 Dummy for now
     // 33 Eq3Band
     {moduleTypeEq3band, paramType1dB,     paramType2Dial,   {{ 5,  -3}, {7, 14}}, anchorBottomLeft,  "Lo (80Hz)",   128, 64, NULL,               NULL          },  // 33 Lo Gain
     {moduleTypeEq3band, paramType1dB,     paramType2Dial,   {{ 24,  -3}, {7, 14}}, anchorBottomLeft,  "MidGn",   128, 64, NULL,               NULL          },  // 33 Mid Gain
@@ -487,6 +489,8 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEq3band, paramType1dB,     paramType2Dial,   {{ 55,  -3}, {7, 14}}, anchorBottomLeft,  "Hi (12kHz)",   128, 64, NULL,               NULL          },  // 33 Hi Gain
     {moduleTypeEq3band, paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, {7, 14}}, anchorBottomLeft,  "Level",   128, 127, NULL,               NULL          },  // 33 Level
     {moduleTypeEq3band,     paramType1Bypass,         paramType2Toggle, {{-3,  -9}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 33 Bypass
+    {moduleTypeEq3band,       paramType1StandardToggle, paramType2Toggle, {{20,   5}, {7,  7}}, anchorTopLeft,    NULL,        128,  0, NULL,    NULL   },     // TODO: 33 Dummy for now
+    {moduleTypeEq3band,       paramType1StandardToggle, paramType2Toggle, {{20,   5}, {7,  7}}, anchorTopLeft,    NULL,        128,  0, NULL,    NULL   },     // TODO: 33 Dummy for now
     // 34 ShpExp
     {moduleTypeShpExp,  paramType1CommonDial,     paramType2Dial,   {{ 54,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 0, NULL,               NULL          },  // 34 Amount
     {moduleTypeShpExp,  paramType1CommonDial,     paramType2Dial,   {{ 41,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 0, NULL,               NULL          },  // 34 AmountMod
@@ -500,7 +504,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypePulse,  paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, {7, 14}}, anchorBottomLeft,  "Time",    128, 0, NULL,               NULL          },  // 38 Time
     {moduleTypePulse,  paramType1CommonDial,     paramType2Dial,   {{ 42,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 0, NULL,               NULL          },  // 38 TimeMod
     {moduleTypePulse,    paramType1StandardToggle, paramType2Toggle, {{ 52, -3}, {7,  7}}, anchorBottomLeft,  NULL,       3,  0, pulseRangeStrMap, NULL},  // 38 Range
-    {moduleTypePulse,    paramType1StandardToggle, paramType2Toggle, {{ -13, -3}, {7,  7}}, anchorBottomRight,  NULL,       2,  0, pulseModeStrMap, NULL},  // 38 Range
+    // {moduleTypePulse,    paramType1StandardToggle, paramType2Toggle, {{ -13, -3}, {7,  7}}, anchorBottomRight,  NULL,       2,  0, pulseModeStrMap, NULL},  // 38 Range  // TODO: only 3 params on this one
     // 39 Unknown
     // 40 Mix8-1B
     {moduleTypeMix8to1B,  paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 80, NULL,               NULL          },  // 40 In1
@@ -520,7 +524,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeDelay,  paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, {7, 14}}, anchorBottomLeft,  "Time",    128, 0, NULL,               NULL          },  // 42 Time
     {moduleTypeDelay,  paramType1CommonDial,     paramType2Dial,   {{ 42,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 0, NULL,               NULL          },  // 42 TimeMod
     {moduleTypeDelay,    paramType1StandardToggle, paramType2Toggle, {{ 52, -3}, {7,  7}}, anchorBottomLeft,  NULL,       3,  0, pulseRangeStrMap, NULL},  // 42 Range
-    {moduleTypeDelay,    paramType1StandardToggle, paramType2Toggle, {{ -13, -3}, {7,  7}}, anchorBottomRight,  NULL,       2,  0, pulseModeStrMap, NULL},  // 42 Mode
+    // {moduleTypeDelay,    paramType1StandardToggle, paramType2Toggle, {{ -13, -3}, {7,  7}}, anchorBottomRight,  NULL,       2,  0, pulseModeStrMap, NULL},  // 42 Mode   // TODO: only 3 params on this one
     // 43 Constant
     {moduleTypeConstant,    paramType1CommonDial, paramType2Dial, {{80,  -3}, {7,  14}}, anchorBottomLeft, NULL,        128, 64, NULL,     NULL          },  // 43 Value
     {moduleTypeConstant,    paramType1StandardToggle, paramType2Toggle, {{ 40, -3}, {7,  7}}, anchorBottomLeft,  NULL,       2,  0, bipUniStrMap, NULL},  // 43 Bip/Uni
@@ -628,7 +632,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeDrumSynth,   paramType1CommonDial,           paramType2Dial,   {{ 70,  -3}, {7, 14}}, anchorBottomLeft,  "Click",    128,  0, NULL,               NULL          },  // 58 Click Amount
     {moduleTypeDrumSynth,   paramType1CommonDial,           paramType2Dial,   {{ 80,  -3}, {7, 14}}, anchorBottomLeft,  "Noise",    128,  0, NULL,               NULL          },  // 58 Noise Amount
     {moduleTypeDrumSynth,   paramType1Bypass,         paramType2Toggle, {{-3,   -10}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 58 Bypass
-    {moduleTypeDrumSynth,   paramType1StandardToggle, paramType2Toggle, {{ 60, -35}, {7,  7}}, anchorBottomLeft,  NULL,        1,  0, drSynthPresetStrMap,   NULL          }, // 58 Preset *** Length must be updated
+    //{moduleTypeDrumSynth,   paramType1StandardToggle, paramType2Toggle, {{ 60, -35}, {7,  7}}, anchorBottomLeft,  NULL,        1,  0, drSynthPresetStrMap,   NULL          }, // 58 Preset *** Length must be updated  // TODO: Only 16 parameters on this one, decide which one is wrong
     // 59 CompLev
     {moduleTypeCompLev,   paramType1BipLevel,           paramType2Dial,   {{ 70,  -3}, {7, 14}}, anchorBottomLeft,  "C",    128,  64, NULL,               NULL          },  // 59 Compare Level
     // 60 Mux8-1X
@@ -668,7 +672,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeClkGen,   paramType1CommonDial,           paramType2Dial,   {{25,  -3}, {7, 14}}, anchorBottomLeft,  "Swing",    128,  0, NULL,               NULL          },  // 68 Swing
     // 69 ClkDiv
     {moduleTypeClkDiv,   paramType1CommonDial,           paramType2Dial,   {{60,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  0, NULL,               NULL          },  // 69 Divider *** needs other UI element
-    {moduleTypeClkGen,  paramType1StandardToggle,     paramType2Toggle,   {{ 80,  -3}, {7, 7}}, anchorBottomLeft,  NULL,    2, 0, divModeStrMap,               NULL          },  // 69 DivMode
+    // {moduleTypeClkGen,  paramType1StandardToggle,     paramType2Toggle,   {{ 80,  -3}, {7, 7}}, anchorBottomLeft,  NULL,    2, 0, divModeStrMap,               NULL          },  // 69 DivMode  // TODO: one too many parameters on this one, commented out 'til we work out which one
     // 70 Unknown
     // 71 EnvFollow
     {moduleTypeEnvFollow,    paramType1ADRTime,     paramType2Dial,   {{ 20,  -3}, {7, 14}}, anchorBottomLeft,  "Attack",     128,  0, NULL,               NULL          }, // 71 Attack *** check values
@@ -749,17 +753,17 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap}, // 96 Kbt
     {moduleTypeOscD,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128,  0, NULL,               NULL          }, // 96 Pitch M
     {moduleTypeOscD,       paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, {7, 14}}, anchorBottomLeft,  "FM",      128,  0, NULL,               NULL          }, // 96 FM
-    {moduleTypeOscD,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 96 Bypass
-    {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{ 70,  -1}, {7,  7}}, anchorBottomLeft,     NULL,        2,  0, fmTypeStrMap,       NULL          }, // 96 FM Type
-    {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{-20,   5}, {7,  7}}, anchorTopRight,    NULL,        5,  0, shapeTypeStrMap,    NULL          },     // 96 Waveform
+    //{moduleTypeOscD,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 96 Bypass // TODO: only 5 params for this one!
+    //{moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{ 70,  -1}, {7,  7}}, anchorBottomLeft,     NULL,        2,  0, fmTypeStrMap,       NULL          }, // 96 FM Type TODO: only 5 params for this one!
+    //{moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{-20,   5}, {7,  7}}, anchorTopRight,    NULL,        5,  0, shapeTypeStrMap,    NULL          },     // 96 Waveform TODO: only 5 params for this one!
     // 97 OscA
     {moduleTypeOscA,       paramType1Freq,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "Tune",    128, 64, NULL,               NULL          }, // 97 Tune
     {moduleTypeOscA,       paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, {7, 14}}, anchorBottomLeft,  "Cent",    128, 64, NULL,               NULL          }, // 97 Fine
     {moduleTypeOscA,       paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap}, // 97 Kbt
     {moduleTypeOscA,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128,  0, NULL,               NULL          }, // 97 Pitch M
-    {moduleTypeOscA,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 97 Bypass
+    {moduleTypeOscA,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",   128 /*2*/,  0, NULL,               NULL          }, // 97 Bypass  // TODO: this one is in wrong position, set back to range 2 when correct
     {moduleTypeOscA,       paramType1StandardToggle, paramType2Toggle, {{-20,   5}, {7,  7}}, anchorTopRight,    NULL,        5,  0, shapeOscATypeStrMap,    NULL   },     // 97 Waveform
-    {moduleTypeOscA,       paramType1StandardToggle, paramType2Toggle, {{20,   5}, {7,  7}}, anchorTopLeft,    NULL,        128,  0, shapeOscATypeStrMap,    NULL   },     // TODO: 97 Dummy for now
+    {moduleTypeOscA,       paramType1StandardToggle, paramType2Toggle, {{20,   5}, {7,  7}}, anchorTopLeft,    NULL,        128,  0, NULL,    NULL   },     // TODO: 97 Dummy for now
     // 98 FreqShift
     {moduleTypeFreqShift,       paramType1Freq,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "FreqShift",    128, 64, NULL,               NULL          }, // 98 FreqShift
     {moduleTypeFreqShift,       paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 64, NULL,               NULL          }, // 98 Mod
@@ -786,7 +790,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEqPeak,   paramType1BipLevel,           paramType2Dial,   {{ 42,  -3}, {7, 14}}, anchorBottomLeft,  "Gain",    128,  64, NULL,               NULL          },  // 103 Gain
     {moduleTypeEqPeak,   paramType1CommonDial,           paramType2Dial,   {{ 62,  -10}, {7, 14}}, anchorBottomLeft,  "BW",    128,  64, NULL,               NULL          },  // 103 BW *** needs UI element
     {moduleTypeEqPeak,   paramType1CommonDial,          paramType2Dial,   {{ 83,  -3}, {7, 14}}, anchorBottomLeft,  "Level",     128,  127, NULL,               NULL          },// 102 Level
-    {moduleTypeEqPeak,   paramType1Bypass,         paramType2Toggle, {{-3,   -10}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 103 Bypass
+    {moduleTypeEqPeak,   paramType1Bypass,         paramType2Toggle, {{-3,   -10}, {5,  5}}, anchorBottomRight, NULL,        128 /*2*/,  1, NULL,               NULL          }, // 103 Bypass  // TODO: wrong order, will need range back as 2
     // 104 Unknown
     // 105 ValSq2-1
     // 106 OscNoise
