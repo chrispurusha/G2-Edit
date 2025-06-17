@@ -1062,7 +1062,7 @@ static int int_rec(void) {
     return retVal;
 }
 
-static int send_command(int state) {
+static int send_command(int state) { // TODO: Can probably now flatten into a single switch possibly combine with send_write_data()
     int      retVal                  = EXIT_FAILURE;
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint16_t crc                     = 0;

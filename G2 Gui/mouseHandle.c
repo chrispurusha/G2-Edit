@@ -678,7 +678,7 @@ void menu_action_create(int index) {
     }
 }
 
-void open_module_area_context_menu(tCoord coord) {
+void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static structures into a module like globalVars.c
     static tMenuItem ioMenuItems[] = {
         {"Create Keyboard", menu_action_create, moduleTypeKeyboard, NULL},
         {"Create 2-Out",    menu_action_create, moduleType2toOut,   NULL},
