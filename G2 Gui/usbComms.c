@@ -47,7 +47,10 @@ typedef enum {
     eStateGetUnknown1,
     eStateGetUnknown2,
     eStateSelectSlot,
-    eStateGetPatchVersion,
+    eStateGetPatchVersionSlotA,
+    eStateGetPatchVersionSlotB,
+    eStateGetPatchVersionSlotC,
+    eStateGetPatchVersionSlotD,
     eStateGetPatchSlotA,
     eStateGetPatchSlotB,
     eStateGetPatchSlotC,
@@ -1074,7 +1077,10 @@ static int send_command(int state) {
         case eStateStop:
         case eStateStart:
         case eStateSelectSlot:
-        case eStateGetPatchVersion:
+        case eStateGetPatchVersionSlotA:
+        case eStateGetPatchVersionSlotB:
+        case eStateGetPatchVersionSlotC:
+        case eStateGetPatchVersionSlotD:
         case eStateGetSynthSettings:
         case eStateGetUnknown1:
         case eStateGetUnknown2:
@@ -1117,13 +1123,6 @@ static int send_command(int state) {
                     buff[pos++] = 0; // Slot
                     break;
 
-                case eStateGetPatchVersion:
-                    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-                    buff[pos++] = 0x41;
-                    buff[pos++] = SUB_COMMAND_GET_PATCH_VERSION;  // TODO: each slot!?
-                    buff[pos++] = 0;     // Slot 0=A
-                    break;
-
                 case eStateGetSynthSettings:
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x41;
@@ -1142,6 +1141,20 @@ static int send_command(int state) {
                     buff[pos++] = 0x59;
                     break;
 
+                case eStateGetPatchVersionSlotA:
+                case eStateGetPatchVersionSlotB:
+                case eStateGetPatchVersionSlotC:
+                case eStateGetPatchVersionSlotD:
+                {
+                    uint32_t slot = state - eStateGetPatchVersionSlotA;
+                    
+                    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
+                    buff[pos++] = 0x41;
+                    buff[pos++] = SUB_COMMAND_GET_PATCH_VERSION;
+                    buff[pos++] = slot;     // Slot 0=A
+                    break;
+                }
+                    
                 case eStateGetPatchSlotA:
                 case eStateGetPatchSlotB:
                 case eStateGetPatchSlotC:
@@ -1374,7 +1387,10 @@ static void state_handler(void) {
         case eStateInit:
         case eStateStop:
         case eStateSelectSlot:
-        case eStateGetPatchVersion:
+        case eStateGetPatchVersionSlotA:
+        case eStateGetPatchVersionSlotB:
+        case eStateGetPatchVersionSlotC:
+        case eStateGetPatchVersionSlotD:
         case eStateGetPatchSlotA:
         case eStateGetPatchSlotB:
         case eStateGetPatchSlotC:

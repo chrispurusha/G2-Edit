@@ -395,7 +395,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeReverb,     paramType1CommonDial,     paramType2Dial,   {{ 37,  -3}, {7, 14}}, anchorBottomLeft,  "Brightness", 128, 64, NULL,            NULL          },
     {moduleTypeReverb,     paramType1CommonDial,     paramType2Dial,   {{ 57,  -3}, {7, 14}}, anchorBottomLeft,  "DryWet",   128, 64, NULL,              NULL          },
     {moduleTypeReverb,     paramType1Bypass,         paramType2Toggle, {{-20,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          },
-    {moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14, 7}}, anchorBottomLeft,  "Type",      4, 0, reverbTypeStrMap,    NULL          },
+    //{moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14, 7}}, anchorBottomLeft,  "Type",      4, 0, reverbTypeStrMap,    NULL          }, // TODO: Should be a mode
     // 13 OscString
     {moduleTypeOscString,  paramType1Freq,           paramType2Dial,   {{ 30,  -3}, { 7,14}}, anchorBottomLeft,  NULL,     128, 64, NULL,              NULL          }, // 13 OscString Coarse
     {moduleTypeOscString,  paramType1CommonDial,     paramType2Dial,   {{ 47,  -3}, { 7,14}}, anchorBottomLeft,  "Cent",     128, 64, NULL,              NULL          }, // 13 OscString Fine
@@ -717,7 +717,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeFltLP,   paramType1Freq,           paramType2Dial,   {{50,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  64, NULL,               NULL          },  // 87 Freq
     {moduleTypeFltLP,   paramType1CommonDial,           paramType2Dial,   {{35,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128,  64, NULL,               NULL          },  // 87 FreqMod
     {moduleTypeFltLP, paramType1StandardToggle, paramType2Toggle, {{ 10, -3}, {7,  7}}, anchorBottomLeft,  "Kbt",       5,  4, offTo100KbStrMap,   NULL          },
-    {moduleTypeFltLP, paramType1StandardToggle, paramType2Toggle, {{ 67, -3}, {7,  7}}, anchorBottomLeft,  "Kbt",       6,  2, fltLPSlopeStrMap,   NULL          },
+    //{moduleTypeFltLP, paramType1StandardToggle, paramType2Toggle, {{ 67, -3}, {7,  7}}, anchorBottomLeft,  "Kbt",       6,  2, fltLPSlopeStrMap,   NULL          }, // TODO: Possibly one of these should be a mode - only expecting 5 params
     {moduleTypeFltLP,   paramType1Bypass,         paramType2Toggle, {{-10,   -3}, {5,  5}}, anchorBottomRight, NULL,        2,  1, NULL,               NULL          }, // 83 Bypass
     // 88 Sw1-4
     {moduleTypeSw1to4,   paramType1StandardToggle, paramType2Toggle, {{ 37, -3}, {7,  7}}, anchorBottomLeft,  NULL,        4,  0, out8StrMap,   NULL          }, // 88 Selector
@@ -758,7 +758,8 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeOscA,       paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, {7,  7}}, anchorBottomLeft,  "Kbt",       2,  1, offOnStrMap,        offOnColourMap}, // 97 Kbt
     {moduleTypeOscA,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, {7, 14}}, anchorBottomLeft,  "Pitch",   128,  0, NULL,               NULL          }, // 97 Pitch M
     {moduleTypeOscA,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, {5,  5}}, anchorBottomRight, "Bypass",    2,  0, NULL,               NULL          }, // 97 Bypass
-    {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{-20,   5}, {7,  7}}, anchorTopRight,    NULL,        5,  0, shapeOscATypeStrMap,    NULL   },     // 97 Waveform
+    {moduleTypeOscA,       paramType1StandardToggle, paramType2Toggle, {{-20,   5}, {7,  7}}, anchorTopRight,    NULL,        5,  0, shapeOscATypeStrMap,    NULL   },     // 97 Waveform
+    {moduleTypeOscA,       paramType1StandardToggle, paramType2Toggle, {{20,   5}, {7,  7}}, anchorTopLeft,    NULL,        128,  0, shapeOscATypeStrMap,    NULL   },     // TODO: 97 Dummy for now
     // 98 FreqShift
     {moduleTypeFreqShift,       paramType1Freq,     paramType2Dial,   {{ 32,  -3}, {7, 14}}, anchorBottomLeft,  "FreqShift",    128, 64, NULL,               NULL          }, // 98 FreqShift
     {moduleTypeFreqShift,       paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, {7, 14}}, anchorBottomLeft,  NULL,    128, 64, NULL,               NULL          }, // 98 Mod
