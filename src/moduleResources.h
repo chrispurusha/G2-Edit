@@ -161,7 +161,7 @@ const tModuleProperties gModuleProperties[] = {
     {"Unknown",      0, volumeTypeNone,     ledTypeNo },
     {"4-Out",        2, volumeTypeNone,     ledTypeNo },
     {"2-Out",        2, volumeTypeStereo,   ledTypeNo },
-    {"Invert",       2, volumeTypeNone,     ledTypeNo },
+    {"Invert",       2, volumeTypeNone,     ledTypeYes },
     {"Unknown",      0, volumeTypeNone,     ledTypeNo },
     {"OscB",         5, volumeTypeNone,     ledTypeNo },
     {"OscShpB",      4, volumeTypeNone,     ledTypeNo },
@@ -379,7 +379,7 @@ const tParamLocation paramLocationList[] = {
     {moduleType2toOut,     paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Out to",         6,   0, outToStrMap,            NULL          }, // 4 2-Out
     {moduleType2toOut,     paramType1Bypass,         paramType2Toggle, {{ 45,  -3}, { 5,  5}}, anchorBottomLeft,  "Bypass",         2,   0, NULL,                   NULL          },
     {moduleType2toOut,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Pad",            2,   0, padStrMap,              NULL          },
-    //  5 Invert
+    //  5 Invert -- No params
     //  6 Unknown
     //  7 OscB
     {moduleTypeOscB,       paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                   NULL          }, // 7 OscB
@@ -1267,10 +1267,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{-10,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   }, // 4
     {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },
     //  5 Invert
-    {moduleTypeInvert,      connectorDirIn,  connectorTypeLogic,   {{-24,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft }, // 5 Invert
-    {moduleTypeInvert,      connectorDirOut, connectorTypeLogic,   {{-17,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft }, // 5 Invert
-    {moduleTypeInvert,      connectorDirIn,  connectorTypeLogic,   {{-10,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft }, // 5 Invert
-    {moduleTypeInvert,      connectorDirOut, connectorTypeLogic,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft }, // 5 Invert
+    {moduleTypeInvert,      connectorDirIn,  connectorTypeLogic,   {{-48,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft }, // 5 In 1
+    {moduleTypeInvert,      connectorDirOut, connectorTypeLogic,   {{-33,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft }, // 5 Out 1
+    {moduleTypeInvert,      connectorDirIn,  connectorTypeLogic,   {{-18,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft }, // 5 In 2
+    {moduleTypeInvert,      connectorDirOut, connectorTypeLogic,   {{ -3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft }, // 5 Out 2
     //  6 Unknown
     //  7 OscB
     {moduleTypeOscB,        connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // 7 OscB Pitch
@@ -2140,6 +2140,9 @@ const tVolumeLocation volumeLocationList[] = {
     {moduleTypeMix4to1S, volumeTypeStereo,   {{-10, 13}, {3, 15}}, anchorTopRight}, };
 
 const tLedLocation    ledLocationList[] = {
-    {moduleTypeEnvADSR, ledTypeYes, {{3, 8}, {3, 3}}, anchorTopLeft}, };
+    {moduleTypeInvert,  ledTypeYes, {{-40, 10}, {3, 3}}, anchorTopRight},
+    {moduleTypeInvert,  ledTypeYes, {{-10, 10}, {3, 3}}, anchorTopRight},
+    {moduleTypeEnvADSR, ledTypeYes, {{3, 8}, {3, 3}}, anchorTopLeft},
+};
 
 #endif // __MODULE_RESOURCES_H__
