@@ -261,15 +261,120 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
+        case paramType1Int:
+        {
+            int val=0;
+            val = paramValue;
+            snprintf(buff, sizeof(buff), "%u", val);
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+ 
+        }
         case paramType1dB:
         {
             double dB = 0.0;
-
-            dB = round( ((double)paramValue-64.0)/64.0 * 18.0);
+            double dB_range = 1.0;
+            switch (module->type) {
+                case moduleTypeEq2Band:
+                case moduleTypeEq3band:
+                {
+                    dB_range = 18.0;
+                    break;
+                }
+                case moduleTypeLevScaler:
+                {
+                    dB_range = 8.0;
+                    break;
+                }
+                default:
+                {
+                }
+            }
+            dB = round( ((double)paramValue-64.0)/64.0 * dB_range);
             snprintf(buff, sizeof(buff), "%+.0fdB", dB);
             
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
+        }
+        case paramType1Time:
+        {
+            double time = 0.0;
+            double min_time, max_time;
+            switch (module->type) {
+                case moduleTypeGlide:
+                {
+                    min_time = 0.002;
+                    max_time = 22.4;
+                    break;
+                }
+                case moduleTypeDlySingleA:
+                case moduleTypeDlySingleB:
+                case moduleTypeDelayDual:
+                case moduleTypeDlyEight:
+                case moduleTypeDlyStereo:
+                {
+                    min_time = 0.001;
+                    switch (module->mode[0].value) {
+                        case 0: {max_time = 0.005; break;}
+                        case 1: {max_time = 0.025; break;}
+                        case 2: {max_time = 0.100; break;}
+                        case 3: {max_time = 0.500; break;}
+                        case 4: {max_time = 1.0; break;}
+                        case 5: {max_time = 2.0; break;}
+                        case 6: {max_time = 2.7; break;}
+                    }
+                    break;
+                }
+                default:
+                {
+                }
+            }
+            // scale 0 -> min_time and 127 -> max_time, exponentially
+            time = exp((double)paramValue/127 * log(max_time/min_time) )*min_time;
+            if (time < 1.0) {
+                snprintf(buff, sizeof(buff), "%.0fms", time*1000);
+            } else {
+                snprintf(buff, sizeof(buff), "%.1fs", time);
+            }
+            
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
+        case paramType1TimeClk:
+        {
+            double time = 0.0;
+            double min_time, max_time;
+            switch (module->type) {
+                case moduleTypeDelayQuad:
+                case moduleTypeDelayA:
+                case moduleTypeDelayB:
+                {
+                    min_time = 0.001;
+                    switch (module->mode[0].value) {
+                        case 0: {max_time = 0.005; break;}
+                        case 1: {max_time = 0.025; break;}
+                        case 2: {max_time = 0.100; break;}
+                        case 3: {max_time = 0.500; break;}
+                        case 4: {max_time = 1.0; break;}
+                        case 5: {max_time = 2.0; break;}
+                        case 6: {max_time = 2.7; break;}
+                    }
+                    break;
+                }
+                default:
+                {
+                }
+            }
+            // scale 0 -> min_time and 127 -> max_time, exponentially
+            time = exp((double)paramValue/127 * log(max_time/min_time) )*min_time;
+            if (time < 1.0) {
+                snprintf(buff, sizeof(buff), "%.0fms", time*1000);
+            } else {
+                snprintf(buff, sizeof(buff), "%.1fs", time);
+            }
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+
         }
         case paramType1ADRTime:
         {
@@ -324,6 +429,23 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
+        }
+        case paramType1NoteDial: // C-1 to G9
+        {
+            int noteoctave;
+            int noteval;
+            char * noteNameStrMap[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+            char * noteName;
+            
+            noteoctave = paramValue/12 - 1;
+            noteval = paramValue%12;
+            noteName = noteNameStrMap[noteval];
+            
+            snprintf(buff, sizeof(buff), "%s%i", noteName, noteoctave);
+            
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+
         }
         case paramType1CommonDial:         // Ultimately might not be a common dial, or could just be a default percent dial!?
         case paramType1LRDial: // Pan type dial, perhaps with reset triangle
@@ -403,6 +525,11 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 }
 
 void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef, uint32_t modeIndex) {
+    char     buff[16]                   = {0};
+    char     label[PARAM_NAME_SIZE + 1] = {0};
+    uint32_t modeValue                 = module->mode[modeIndex].value;
+
+    
     module->mode[0].modeRef = modeRef;
 
     switch (modeLocationList[modeRef].type1) {
@@ -412,6 +539,33 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
 
             snprintf(buff, sizeof(buff), "%u", module->mode[0].value);
             module->mode[modeIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)modeLocationList[modeRef].label, buff, module->mode[0].value, modeLocationList[modeRef].range, 0, RGB_GREY_5);  // TODO: Check if Mode can be morphed
+            break;
+        }
+        case paramType1StandardToggle:
+        {
+            char ** strMap     = (char **)modeLocationList[modeRef].strMap;
+            double  y          = rectangle.coord.y;
+            double  textHeight = rectangle.size.h / 2.0;
+            
+
+            if (strMap == NULL) {
+                LOG_ERROR("No strMap for module type %s\n", gModuleProperties[module->type].name);
+
+                //Debug help for value
+                char debug[64] = {0};
+                snprintf(debug, sizeof(debug), "modeRef %u", modeRef);
+                set_rgb_colour(RGB_BACKGROUND_GREY);
+                module->param[gVariation][modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {30, textHeight}}, debug);
+                return;
+            }
+
+            //if (paramLocationList[paramRef].colourMap != NULL) {
+            //    set_rgb_colour(paramLocationList[paramRef].colourMap[paramValue]);
+            //} else {
+            //    set_rgb_colour(RGB_BACKGROUND_GREY);
+            //}
+            set_rgb_colour(RGB_BACKGROUND_GREY);
+            module->mode[modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight), textHeight}}, strMap[modeValue]);
             break;
         }
         default:
@@ -671,7 +825,7 @@ void render_module(tModule * module) {
     tRgb       rgb                        = {0};
 
     tRectangle moduleRectangle = {{xPos, yPos}, {xWidth, yHeight}};
-
+    
     rgb = gModuleColourMap[module->colour];
     set_rgb_colour(rgb);
     module->rectangle = render_rectangle_with_border(moduleArea, moduleRectangle);

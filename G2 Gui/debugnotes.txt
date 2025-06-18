@@ -1,0 +1,5 @@
+8 OscShpB does not crash
+12 Reverb *** Had to comment out Type
+51 FltNord OK
+94 StChorus OK
+97 OscA OK
