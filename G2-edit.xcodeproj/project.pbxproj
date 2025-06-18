@@ -102,7 +102,7 @@
 		83C145292CFF6E5F004E572A = {
 			isa = PBXGroup;
 			children = (
-				83FF21B72D01F95300BB5253 /* G2-edit */,
+				83FF21B72D01F95300BB5253 /* src */,
 				83C1453C2CFF7104004E572A /* Frameworks */,
 				83C145332CFF6E5F004E572A /* Products */,
 			);
@@ -129,7 +129,7 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		83FF21B72D01F95300BB5253 /* G2-edit */ = {
+		83FF21B72D01F95300BB5253 /* src */ = {
 			isa = PBXGroup;
 			children = (
 				8BEF40BD2DFB28AA008CBE07 /* debugnotes.txt */,
@@ -165,7 +165,7 @@
 				83B565602D4A73B9001BC997 /* main.h */,
 				83673D932D5A50F90077A0B2 /* main.c */,
 			);
-			path = "G2-edit";
+			path = src;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -369,7 +369,7 @@
 		83C1453A2CFF6E5F004E572A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "G2-edit/G2-edit.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "src/G2-edit.entitlements";
 				CODE_SIGN_STYLE = Manual;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
@@ -403,7 +403,7 @@
 		83C1453B2CFF6E5F004E572A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "G2-edit/G2-edit.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "src/G2-edit.entitlements";
 				CODE_SIGN_STYLE = Manual;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
