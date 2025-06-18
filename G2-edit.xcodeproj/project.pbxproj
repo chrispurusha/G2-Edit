@@ -61,7 +61,6 @@
 		8376ECAC2D48FB6E008D1608 /* utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
 		8376ECAD2D48FB6E008D1608 /* utils.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = utils.c; sourceTree = "<group>"; };
 		8397E1352D2FE00000DDD420 /* libglfw3.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libglfw3.a; path = /opt/homebrew/Cellar/glfw/3.4/lib/libglfw3.a; sourceTree = "<absolute>"; };
-		8397E14B2D2FEF4500DDD420 /* G2 Gui.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "G2 Gui.entitlements"; sourceTree = "<group>"; };
 		8397E14C2D2FEF9300DDD420 /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = /opt/homebrew/Cellar/freetype/2.13.3/lib/libfreetype.a; sourceTree = "<absolute>"; };
 		83A016352D92F7F10041DF72 /* mouseHandle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mouseHandle.h; sourceTree = "<group>"; };
 		83B5655D2D4A71CF001BC997 /* usbComms.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = usbComms.c; sourceTree = "<group>"; };
@@ -71,7 +70,7 @@
 		83BE0C6A2D6C86DF007E9CD8 /* moduleGraphics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = moduleGraphics.h; sourceTree = "<group>"; };
 		83BE0C6C2D6C8A8D007E9CD8 /* moduleResources.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = moduleResources.h; sourceTree = "<group>"; };
 		83BE0C712D6C8BD0007E9CD8 /* utilsGraphics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utilsGraphics.h; sourceTree = "<group>"; };
-		83C145322CFF6E5F004E572A /* G2 Gui */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "G2 Gui"; sourceTree = BUILT_PRODUCTS_DIR; };
+		83C145322CFF6E5F004E572A /* G2-edit */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "G2-edit"; sourceTree = BUILT_PRODUCTS_DIR; };
 		83DB9C332DD346D200F9D2A5 /* globalVars.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = globalVars.h; sourceTree = "<group>"; };
 		83DB9C362DD3510600F9D2A5 /* globalVars.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = globalVars.c; sourceTree = "<group>"; };
 		83DB9C382DD3513E00F9D2A5 /* mouseHandle.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = mouseHandle.c; sourceTree = "<group>"; };
@@ -103,7 +102,7 @@
 		83C145292CFF6E5F004E572A = {
 			isa = PBXGroup;
 			children = (
-				83FF21B72D01F95300BB5253 /* G2 Gui */,
+				83FF21B72D01F95300BB5253 /* G2-edit */,
 				83C1453C2CFF7104004E572A /* Frameworks */,
 				83C145332CFF6E5F004E572A /* Products */,
 			);
@@ -112,7 +111,7 @@
 		83C145332CFF6E5F004E572A /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				83C145322CFF6E5F004E572A /* G2 Gui */,
+				83C145322CFF6E5F004E572A /* G2-edit */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -130,11 +129,10 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		83FF21B72D01F95300BB5253 /* G2 Gui */ = {
+		83FF21B72D01F95300BB5253 /* G2-edit */ = {
 			isa = PBXGroup;
 			children = (
 				8BEF40BD2DFB28AA008CBE07 /* debugnotes.txt */,
-				8397E14B2D2FEF4500DDD420 /* G2 Gui.entitlements */,
 				8347FD542DC7E772009751C4 /* fileDialogue.mm */,
 				8347FD562DC7EAAD009751C4 /* fileDialogue.h */,
 				833423482D5A613B00AA2AC9 /* sysIncludes.h */,
@@ -167,15 +165,15 @@
 				83B565602D4A73B9001BC997 /* main.h */,
 				83673D932D5A50F90077A0B2 /* main.c */,
 			);
-			path = "G2 Gui";
+			path = "G2-edit";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		83C145312CFF6E5F004E572A /* G2 Gui */ = {
+		83C145312CFF6E5F004E572A /* G2-edit */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 83C145392CFF6E5F004E572A /* Build configuration list for PBXNativeTarget "G2 Gui" */;
+			buildConfigurationList = 83C145392CFF6E5F004E572A /* Build configuration list for PBXNativeTarget "G2-edit" */;
 			buildPhases = (
 				83C1452E2CFF6E5F004E572A /* Sources */,
 				83C1452F2CFF6E5F004E572A /* Frameworks */,
@@ -185,11 +183,11 @@
 			);
 			dependencies = (
 			);
-			name = "G2 Gui";
+			name = "G2-edit";
 			packageProductDependencies = (
 			);
 			productName = "blfw test";
-			productReference = 83C145322CFF6E5F004E572A /* G2 Gui */;
+			productReference = 83C145322CFF6E5F004E572A /* G2-edit */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -206,7 +204,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 83C1452D2CFF6E5F004E572A /* Build configuration list for PBXProject "G2 Gui" */;
+			buildConfigurationList = 83C1452D2CFF6E5F004E572A /* Build configuration list for PBXProject "G2-edit" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -220,7 +218,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				83C145312CFF6E5F004E572A /* G2 Gui */,
+				83C145312CFF6E5F004E572A /* G2-edit */,
 			);
 		};
 /* End PBXProject section */
@@ -371,7 +369,7 @@
 		83C1453A2CFF6E5F004E572A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "G2 Gui/G2 Gui.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "G2-edit/G2-edit.entitlements";
 				CODE_SIGN_STYLE = Manual;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
@@ -405,7 +403,7 @@
 		83C1453B2CFF6E5F004E572A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "G2 Gui/G2 Gui.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "G2-edit/G2-edit.entitlements";
 				CODE_SIGN_STYLE = Manual;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
@@ -423,7 +421,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		83C1452D2CFF6E5F004E572A /* Build configuration list for PBXProject "G2 Gui" */ = {
+		83C1452D2CFF6E5F004E572A /* Build configuration list for PBXProject "G2-edit" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				83C145372CFF6E5F004E572A /* Debug */,
@@ -432,7 +430,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		83C145392CFF6E5F004E572A /* Build configuration list for PBXNativeTarget "G2 Gui" */ = {
+		83C145392CFF6E5F004E572A /* Build configuration list for PBXNativeTarget "G2-edit" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				83C1453A2CFF6E5F004E572A /* Debug */,

@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "83C145312CFF6E5F004E572A"
-               BuildableName = "G2 Gui"
-               BlueprintName = "G2 Gui"
-               ReferencedContainer = "container:G2 Gui.xcodeproj">
+               BuildableName = "G2-edit"
+               BlueprintName = "G2-edit"
+               ReferencedContainer = "container:G2-edit.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -52,9 +52,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "83C145312CFF6E5F004E572A"
-            BuildableName = "G2 Gui"
-            BlueprintName = "G2 Gui"
-            ReferencedContainer = "container:G2 Gui.xcodeproj">
+            BuildableName = "G2-edit"
+            BlueprintName = "G2-edit"
+            ReferencedContainer = "container:G2-edit.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <AdditionalOptions>
@@ -81,9 +81,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "83C145312CFF6E5F004E572A"
-            BuildableName = "G2 Gui"
-            BlueprintName = "G2 Gui"
-            ReferencedContainer = "container:G2 Gui.xcodeproj">
+            BuildableName = "G2-edit"
+            BlueprintName = "G2-edit"
+            ReferencedContainer = "container:G2-edit.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

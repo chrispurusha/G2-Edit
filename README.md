@@ -1,4 +1,4 @@
-# G2 Edit
+# G2-Edit
 
 Very much a work in-progress. Not yet tidied or rationalised.
 
