@@ -1210,8 +1210,8 @@ const tParamLocation paramLocationList[] = {
     // 193 Mix4-1A -- no params
     // 194 Mix2-1A
     {moduleTypeMix2to1A,   paramType1CommonDial,     paramType2Dial,   {{ 57,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 123 L1
-    {moduleTypeMix2to1A,   paramType1CommonDial,     paramType2Dial,   {{ 82,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 123 L2
     {moduleTypeMix2to1A,   paramType1Enable,         paramType2Toggle, {{ 37,  -3}, { 5,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 123 Enable1
+    {moduleTypeMix2to1A,   paramType1CommonDial,     paramType2Dial,   {{ 82,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 123 L2
     {moduleTypeMix2to1A,   paramType1Enable,         paramType2Toggle, {{ 67,  -3}, { 5,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 123 Enable2
     {moduleTypeMix2to1A,   paramType1StandardToggle, paramType2Toggle, {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,              NULL          }, // 123 Exp
     // 195 ModAmt
@@ -1229,7 +1229,6 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeOscPerc,    paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "Click",        128,  64, NULL,                   NULL          }, // 196 Click
     {moduleTypeOscPerc,    paramType1StandardToggle, paramType2Toggle, {{ 90, -10}, { 7,  7}}, anchorBottomLeft,  "Punch",          2,   1, offOnStrMap,            offOnColourMap}, // 196 Punch
     {moduleTypeOscPerc,    paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 196 Bypass
-
     // 197 Status -- No params
     // 198 PitchTrack
     {moduleTypePitchTrack, paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Threshold",    128,  64, NULL,                   NULL          }, // 198 Threshold
