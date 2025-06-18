@@ -959,6 +959,11 @@ void set_y_scroll_percent(double percent) {
 }
 
 void set_zoom_factor(double zoomFactor) {
+    if (zoomFactor < 0.25) {
+        zoomFactor = 0.25;
+    } else if (zoomFactor > 2.0) {
+        zoomFactor = 2.0;
+    }
     gZoomFactor = zoomFactor;
 }
 
