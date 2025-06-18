@@ -520,8 +520,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEq3band,    paramType1dB,             paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Hi (12kHz)",   128,  64, NULL,                   NULL          }, // 33 Hi Gain
     {moduleTypeEq3band,    paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128, 127, NULL,                   NULL          }, // 33 Level
     {moduleTypeEq3band,    paramType1Bypass,         paramType2Toggle, {{ -3,  -9}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 33 Bypass
-    {moduleTypeEq3band,    paramType1StandardToggle, paramType2Toggle, {{ 20,   5}, { 7,  7}}, anchorTopLeft,     NULL,           128,   0, NULL,                   NULL          }, // TODO: 33 Dummy for now
-    {moduleTypeEq3band,    paramType1StandardToggle, paramType2Toggle, {{ 20,   5}, { 7,  7}}, anchorTopLeft,     NULL,           128,   0, NULL,                   NULL          }, // TODO: 33 Dummy for now
+
     // 34 ShpExp
     {moduleTypeShpExp,     paramType1CommonDial,     paramType2Dial,   {{ 54,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 34 Amount
     {moduleTypeShpExp,     paramType1CommonDial,     paramType2Dial,   {{ 41,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 34 AmountMod
@@ -853,13 +852,13 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 85,  -3}, { 5,  7}}, anchorBottomLeft,  "16",            16,  15, int16StrMap,            NULL          }, // 108 BandSel 16
     {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{  3, -12}, { 7,  7}}, anchorBottomLeft,  "Emp",            2,   0, offOnStrMap,            NULL          }, // 108 Emphasis
     {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{  3, -24}, { 7,  7}}, anchorBottomLeft,  "Mon",            2,   0, offOnStrMap,            NULL          }, // 108 Monitor
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 10, -24}, { 7,  7}}, anchorBottomLeft,  "-2",             1,   0, presetStrMap,           NULL          }, // 108 Preset -2
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 17, -24}, { 7,  7}}, anchorBottomLeft,  "-1",             1,   0, presetStrMap,           NULL          }, // 108 Preset -1
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 24, -24}, { 7,  7}}, anchorBottomLeft,  "-0",             1,   0, presetStrMap,           NULL          }, // 108 Preset 0
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 31, -24}, { 7,  7}}, anchorBottomLeft,  "+1",             1,   0, presetStrMap,           NULL          }, // 108 Preset +1
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 38, -24}, { 7,  7}}, anchorBottomLeft,  "+2",             1,   0, presetStrMap,           NULL          }, // 108 Preset +2
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 45, -24}, { 7,  7}}, anchorBottomLeft,  "Inv",            1,   0, presetStrMap,           NULL          }, // 108 Preset Inv
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 52, -24}, { 7,  7}}, anchorBottomLeft,  "Rnd",            1,   0, presetStrMap,           NULL          }, // 108 Preset Rnd
+    //{moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 10, -24}, { 7,  7}}, anchorBottomLeft,  "-2",             1,   0, presetStrMap,           NULL          }, // 108 Preset -2  // TODO: should only be 18 parameters on this!
+    //{moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 17, -24}, { 7,  7}}, anchorBottomLeft,  "-1",             1,   0, presetStrMap,           NULL          }, // 108 Preset -1
+    //{moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 24, -24}, { 7,  7}}, anchorBottomLeft,  "-0",             1,   0, presetStrMap,           NULL          }, // 108 Preset 0
+    //{moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 31, -24}, { 7,  7}}, anchorBottomLeft,  "+1",             1,   0, presetStrMap,           NULL          }, // 108 Preset +1
+    //{moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 38, -24}, { 7,  7}}, anchorBottomLeft,  "+2",             1,   0, presetStrMap,           NULL          }, // 108 Preset +2
+    //{moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 45, -24}, { 7,  7}}, anchorBottomLeft,  "Inv",            1,   0, presetStrMap,           NULL          }, // 108 Preset Inv
+    //{moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 52, -24}, { 7,  7}}, anchorBottomLeft,  "Rnd",            1,   0, presetStrMap,           NULL          }, // 108 Preset Rnd
     // 109 Unknown
     // 110 Unknown
     // 111 Unknown
@@ -1174,6 +1173,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeNoiseGate,  paramType1ADRTime,        paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, NULL,                   NULL          }, // 189 Attack
     {moduleTypeNoiseGate,  paramType1ADRTime,        paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Release",      128,   0, NULL,                   NULL          }, // 189 Release
     {moduleTypeNoiseGate,  paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Threshold",    128,  64, NULL,                   NULL          }, // 188 Level
+    {moduleTypeNoiseGate,  paramType1StandardToggle, paramType2Toggle, {{ 20,   5}, { 7,  7}}, anchorTopLeft,     NULL,           128,   0, NULL,                   NULL          }, // TODO: 189 Dummy for now
 
     // 190 LfoB
     {moduleTypeLfoB,       paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 26 Rate  *** Could have Freq but tied to Range
@@ -1213,7 +1213,8 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeOscPerc,    paramType1ADRTime,        paramType2Dial,   {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,  64, NULL,                   NULL          }, // 196 Decay
     {moduleTypeOscPerc,    paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "Click",        128,  64, NULL,                   NULL          }, // 196 Click
     {moduleTypeOscPerc,    paramType1StandardToggle, paramType2Toggle, {{ 90, -10}, { 7,  7}}, anchorBottomLeft,  "Punch",          2,   1, offOnStrMap,            offOnColourMap}, // 196 Punch
-    {moduleTypeOscPM,      paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 196 Bypass
+    {moduleTypeOscPerc,    paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 196 Bypass
+
     // 197 Status -- No params
     // 198 PitchTrack
     {moduleTypePitchTrack, paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Threshold",    128,  64, NULL,                   NULL          }, // 198 Threshold
@@ -2093,7 +2094,7 @@ const tConnectorLocation connectorLocationList[] = {
 };
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
-const tModeLocation      modeLocationList[] = {
+const tModeLocation modeLocationList[] = {
     {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Dial,   {{ 20,   5}, { 7, 14}}, anchorTopLeft,     "Wave",  8, 0, oscShpBStrMap      }, // 8 OscShpB
     {moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7,  7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap}, // 9 Wave
     {moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14,  7}}, anchorBottomLeft,  "Type",  4, 0, reverbTypeStrMap   }, // 12 Reverb
