@@ -159,7 +159,7 @@ static void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffse
 
     LOG_DEBUG("Module list\n");
 
-    key.slot = slot;
+    key.slot     = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
     LOG_DEBUG("Location       0x%x\n", key.location);     // Discerns between FX and main, could put in the module itself
     uint32_t moduleCount = read_bit_stream(buff, subOffset, 8);
@@ -202,7 +202,7 @@ static void parse_cable_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset
 
     LOG_DEBUG("Cable list\n");
 
-    key.slot = slot;
+    key.slot     = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
     LOG_DEBUG("Location       0x%x\n", key.location);
     LOG_DEBUG("Unknown        0x%x\n", read_bit_stream(buff, subOffset, 12));
@@ -239,7 +239,7 @@ static void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset
     int        k              = 0;
 
     LOG_DEBUG("Param list\n");
-    key.slot = slot;
+    key.slot     = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
     LOG_DEBUG("Location       0x%x\n", key.location);     // 0..1 = param list, 2 = patch settings!?
     // SWITCH ON LOC BEING 0..1 or 2 2 = line 4112 in file.pas
@@ -263,9 +263,9 @@ static void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset
         if (read_module(key, &module) == false) {
             module.key = key;
         }
-        
+
         if ((module.type != moduleTypeUnknown0) && (module_param_count(module.type) > 0) && (paramCount != module_param_count(module.type))) {
-            LOG_ERROR("Incorrect number of parameters on module %u %s count from G2 = %u, our structures = %u\n",  module.type, gModuleProperties[module.type].name, paramCount, module_param_count(module.type));
+            LOG_ERROR("Incorrect number of parameters on module %u %s count from G2 = %u, our structures = %u\n", module.type, gModuleProperties[module.type].name, paramCount, module_param_count(module.type));
             exit(1);
         }
 
@@ -312,7 +312,7 @@ static void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffse
 
     LOG_DEBUG("Param names\n");
 
-    key.slot = slot;
+    key.slot     = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
     LOG_DEBUG("Location       0x%x\n", key.location);
     //LOG_DEBUG("Unknown        %d\n", read_bit_stream(buff, subOffset, 6));
@@ -379,7 +379,7 @@ static void parse_module_names(uint32_t slot, uint8_t * buff, uint32_t * subOffs
 
     LOG_DEBUG("Module names\n");
 
-    key.slot = slot;
+    key.slot     = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
     read_bit_stream(buff, subOffset, 6);
     LOG_DEBUG("Location 0x%x\n", key.location);
@@ -447,7 +447,7 @@ static void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffs
         LOG_DEBUG("Variation %u Morph param count %u\n", variation, morphParamCount);
 
         for (k = 0; k < morphParamCount; k++) {
-            key.slot = slot;
+            key.slot     = slot;
             key.location = read_bit_stream(buff, subOffset, 2);
             key.index    = read_bit_stream(buff, subOffset, 8);
             paramIndex   = read_bit_stream(buff, subOffset, 7);
@@ -492,7 +492,7 @@ static void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         assigned = read_bit_stream(buff, subOffset, 1);
 
         if (assigned == 1) {
-            key.slot = slot;
+            key.slot     = slot;
             key.location = read_bit_stream(buff, subOffset, 2);
             key.index    = read_bit_stream(buff, subOffset, 8);
             isLed        = read_bit_stream(buff, subOffset, 2);
@@ -657,7 +657,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) { // TODO: also acces
                 subOffset = tmpSubOffset;
                 break;
             }
-                
+
             case SUB_RESPONSE_CURRENT_NOTE_2:
             {
                 LOG_DEBUG("Current note 2\n");
@@ -669,7 +669,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) { // TODO: also acces
                 LOG_DEBUG("Patch notes\n");
                 break;
             }
-                
+
             default:
             {
                 LOG_DEBUG("Unprocessed type 0x%02x\n", type);
@@ -741,7 +741,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 
             for (int32_t location = 1; location >= 0; location--) {
                 for (int k = 0; k <= 255; k++) {
-                    module.key.slot = slot;
+                    module.key.slot     = slot;
                     module.key.location = location;
                     module.key.index    = k;
 
@@ -796,7 +796,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
             read_bit_stream(buff, bitPos, 8); // Seems to be a byte of padding
 
             for (int k = 0; k <= 255; k++) {
-                module.key.slot = slot;
+                module.key.slot     = slot;
                 module.key.location = gLocation;
                 module.key.index    = k;
 
@@ -889,18 +889,18 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
         case SUB_COMMAND_SELECT_SLOT:
         {
             uint32_t slot = 0;
-            
+
             LOG_DEBUG("Got slot select\n");
             slot = read_bit_stream(buff, bitPos, 8);
-            
+
             gSlot = slot;
-            
+
             for (uint32_t i = 0; i < MAX_SLOTS; i++) {
                 gMainButtonArray[(uint32_t)slotAButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
             }
 
             gMainButtonArray[slotAButtonId + slot].backgroundColour = (tRgb)RGB_GREEN_ON;
-            
+
             return EXIT_SUCCESS;
         }
 
@@ -1068,7 +1068,7 @@ static int send_command(int state) { // TODO: Can probably now flatten into a si
     uint16_t crc                     = 0;
     int      msgLength               = 0;
     int      pos                     = COMMAND_OFFSET;
-    
+
     switch (state) {
         case eStateInit: // Apparently resets the version numbers
             buff[pos++] = 0x80;
@@ -1147,21 +1147,21 @@ static int send_command(int state) { // TODO: Can probably now flatten into a si
                 case eStateGetPatchVersionSlotD:
                 {
                     uint32_t slot = state - eStateGetPatchVersionSlotA;
-                    
+
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x41;
                     buff[pos++] = SUB_COMMAND_GET_PATCH_VERSION;
                     buff[pos++] = slot;     // Slot 0=A
                     break;
                 }
-                    
+
                 case eStateGetPatchSlotA:
                 case eStateGetPatchSlotB:
                 case eStateGetPatchSlotC:
                 case eStateGetPatchSlotD:
                 {
                     uint32_t slot = state - eStateGetPatchSlotA;
-                    
+
                     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
                     buff[pos++] = slotVersion[slot];
                     buff[pos++] = SUB_COMMAND_GET_PATCH_SLOT;
@@ -1174,7 +1174,7 @@ static int send_command(int state) { // TODO: Can probably now flatten into a si
                 case eStateGetPatchNameSlotD:
                 {
                     uint32_t slot = state - eStateGetPatchNameSlotA;
-                    
+
                     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
                     buff[pos++] = slotVersion[slot];
                     buff[pos++] = SUB_COMMAND_GET_PATCH_NAME;
@@ -1213,6 +1213,7 @@ static int send_write_data(tMessageContent * messageContent) {
     uint16_t crc                     = 0;
     int      msgLength               = 0;
     int      pos                     = COMMAND_OFFSET;
+
     //uint32_t slot                    = 0;   // TODO: pass this via the message structure
 
     switch (messageContent->cmd) {
@@ -1340,14 +1341,14 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = SUB_COMMAND_SELECT_VARIATION;
             buff[pos++] = messageContent->variationData.variation;
             break;
-            
+
         case eMsgCmdSelectSlot:
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SYS;
             buff[pos++] = 0;
             buff[pos++] = SUB_COMMAND_SELECT_SLOT;
             buff[pos++] = messageContent->slotData.slot;
-            
+
             break;
 
         // 4418 mess.pas for assign/deassign knob

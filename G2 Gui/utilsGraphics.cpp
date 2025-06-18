@@ -852,7 +852,7 @@ double largest_text_width(int numItems, char ** text, double targetHeight) {
     int    i       = 0;
     double size    = 0;
     double maxSize = 0;
-    
+
     for (i = 0; i < numItems; i++) {
         size = get_text_width(text[i], targetHeight);
 

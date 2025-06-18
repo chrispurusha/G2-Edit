@@ -175,7 +175,7 @@ void update_module_up_rates(void) {
 
                 tMessageContent messageContent = {0};
                 messageContent.cmd                  = eMsgCmdSetModuleUpRate;
-                messageContent.slot                    = gSlot;
+                messageContent.slot                 = gSlot;
                 messageContent.moduleData.moduleKey = module.key;
                 messageContent.moduleData.upRate    = module.upRate;
                 msg_send(&gCommandQueue, &messageContent);
@@ -189,7 +189,7 @@ void send_module_move_msg(tModule * module) {
     tMessageContent messageContent = {0};
 
     messageContent.cmd                  = eMsgCmdMoveModule;
-    messageContent.slot                    = gSlot;
+    messageContent.slot                 = gSlot;
     messageContent.moduleData.moduleKey = module->key;
     messageContent.moduleData.row       = module->row;
     messageContent.moduleData.column    = module->column;
@@ -214,7 +214,7 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
 
             for (int i = 0; i < NUM_VARIATIONS; i++) {
                 messageContent.cmd                 = eMsgCmdSetValue;
-                messageContent.slot                    = gSlot;
+                messageContent.slot                = gSlot;
                 messageContent.paramData.moduleKey = module->key;
                 messageContent.paramData.param     = paramIndex;
                 messageContent.paramData.variation = i;
@@ -329,8 +329,8 @@ void handle_button(tButtonId buttonId) {
             gMainButtonArray[buttonId].backgroundColour = (tRgb)RGB_GREEN_ON;
 
             tMessageContent messageContent = {0};
-            messageContent.cmd                     = eMsgCmdSelectSlot;
-            messageContent.slot                    = gSlot;
+            messageContent.cmd           = eMsgCmdSelectSlot;
+            messageContent.slot          = gSlot;
             messageContent.slotData.slot = slot;
             msg_send(&gCommandQueue, &messageContent);
 
@@ -487,7 +487,7 @@ void menu_action_delete_cable(int index) {
                     tMessageContent messageContent = {0};
 
                     messageContent.cmd                            = eMsgCmdDeleteCable;
-                    messageContent.slot                    = gSlot;
+                    messageContent.slot                           = gSlot;
                     messageContent.cableData.location             = gLocation;
                     messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
                     messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
@@ -530,7 +530,7 @@ void menu_action_delete_module(int index) {
                     tMessageContent messageContent = {0};
 
                     messageContent.cmd                            = eMsgCmdDeleteCable;
-                    messageContent.slot                    = gSlot;
+                    messageContent.slot                           = gSlot;
                     messageContent.cableData.location             = gLocation;
                     messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
                     messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
@@ -563,7 +563,7 @@ uint32_t find_unique_module_id(uint32_t location) {
     tModule    module = {0};
     uint32_t   i      = 0;
 
-    key.slot = gSlot;     // TODO: Might need to pass this in as a parameter?
+    key.slot     = gSlot; // TODO: Might need to pass this in as a parameter?
     key.location = location;
 
     for (i = 1; i <= 255; i++) {
@@ -630,7 +630,7 @@ void menu_action_create(int index) {
         tMessageContent messageContent = {0};
         int32_t         uniqueIndex    = 0;
 
-        module.key.slot = gSlot;   // TODO: Possibly pass this into find_unique...
+        module.key.slot     = gSlot; // TODO: Possibly pass this into find_unique...
         module.key.location = gLocation;
         uniqueIndex         = find_unique_module_id(module.key.location);
 
@@ -643,7 +643,7 @@ void menu_action_create(int index) {
             module.name[sizeof(module.name) - 1] = '\0';
 
             messageContent.cmd                  = eMsgCmdWriteModule;
-            messageContent.slot                    = gSlot;
+            messageContent.slot                 = gSlot;
             messageContent.moduleData.moduleKey = module.key;
             messageContent.moduleData.type      = module.type;
             messageContent.moduleData.row       = module.row;
@@ -681,201 +681,201 @@ void menu_action_create(int index) {
 void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static structures into a module like globalVars.c
     static tMenuItem ioMenuItems[] = {
         {"Create Keyboard", menu_action_create, moduleTypeKeyboard, NULL},
-        {"Create 2-In",    menu_action_create, moduleType2toIn,   NULL},
-        {"Create 4-In",    menu_action_create, moduleType4toIn,   NULL},
+        {"Create 2-In",     menu_action_create, moduleType2toIn,    NULL},
+        {"Create 4-In",     menu_action_create, moduleType4toIn,    NULL},
         {"Create 2-Out",    menu_action_create, moduleType2toOut,   NULL},
         {"Create 4-Out",    menu_action_create, moduleType4toOut,   NULL},
-        {"Create Device",    menu_action_create, moduleTypeDevice,   NULL},
-        {"Create MonoKey",    menu_action_create, moduleTypeMonoKey,   NULL},
-        {"Create Status",    menu_action_create, moduleTypeStatus,   NULL},
+        {"Create Device",   menu_action_create, moduleTypeDevice,   NULL},
+        {"Create MonoKey",  menu_action_create, moduleTypeMonoKey,  NULL},
+        {"Create Status",   menu_action_create, moduleTypeStatus,   NULL},
         {"Create Name Bar", menu_action_create, moduleTypeName,     NULL},
         {NULL,              NULL,                                0, NULL}         // End of menu
     };
     static tMenuItem noteMenuItems[] = {
-        {"Create Glide", menu_action_create, moduleTypeGlide, NULL},
-        {"Create NoteQuant", menu_action_create, moduleTypeNoteQuant, NULL},
+        {"Create Glide",      menu_action_create, moduleTypeGlide,      NULL},
+        {"Create NoteQuant",  menu_action_create, moduleTypeNoteQuant,  NULL},
         {"Create NoteScaler", menu_action_create, moduleTypeNoteScaler, NULL},
-        {"Create LevScaler", menu_action_create, moduleTypeLevScaler, NULL},
+        {"Create LevScaler",  menu_action_create, moduleTypeLevScaler,  NULL},
         {"Create PitchTrack", menu_action_create, moduleTypePitchTrack, NULL},
-        {"Create ZeroCnt", menu_action_create, moduleTypeZeroCnt, NULL},
-        {NULL,                 NULL,                               0, NULL}       // End of menu
+        {"Create ZeroCnt",    menu_action_create, moduleTypeZeroCnt,    NULL},
+        {NULL,                NULL,                                  0, NULL}     // End of menu
     };
     static tMenuItem oscMenuItems[] = {
-        {"Create Osc A",       menu_action_create, moduleTypeOscA,    NULL},
-        {"Create Osc B",       menu_action_create, moduleTypeOscB,    NULL},
-        {"Create Osc C",       menu_action_create, moduleTypeOscC,    NULL},
-        {"Create Osc D",       menu_action_create, moduleTypeOscD,    NULL},
-        {"Create Osc PM",       menu_action_create, moduleTypeOscPM,    NULL},
-        {"Create Osc Shape A", menu_action_create, moduleTypeOscShpA, NULL},
-        {"Create Osc Shape B", menu_action_create, moduleTypeOscShpB, NULL},
+        {"Create Osc A",       menu_action_create, moduleTypeOscA,      NULL},
+        {"Create Osc B",       menu_action_create, moduleTypeOscB,      NULL},
+        {"Create Osc C",       menu_action_create, moduleTypeOscC,      NULL},
+        {"Create Osc D",       menu_action_create, moduleTypeOscD,      NULL},
+        {"Create Osc PM",      menu_action_create, moduleTypeOscPM,     NULL},
+        {"Create Osc Shape A", menu_action_create, moduleTypeOscShpA,   NULL},
+        {"Create Osc Shape B", menu_action_create, moduleTypeOscShpB,   NULL},
         {"Create Osc String",  menu_action_create, moduleTypeOscString, NULL},
-        {"Create Osc Dual",  menu_action_create, moduleTypeOscDual, NULL},
-        {"Create Noise",  menu_action_create, moduleTypeNoise, NULL},
-        {"Create Osc Noise",  menu_action_create, moduleTypeOscNoise, NULL},
-        {"Create Met Noise",  menu_action_create, moduleTypeMetNoise, NULL},
-        {"Create Operator",  menu_action_create, moduleTypeOperator, NULL},
-        {"Create DXRouter",  menu_action_create, moduleTypeDXRouter, NULL},
-        {"Create DrumSynth",  menu_action_create, moduleTypeDrumSynth, NULL},
-        {"Create OscPerc",  menu_action_create, moduleTypeOscPerc, NULL},
-        {"Create Osc Master",       menu_action_create, moduleTypeOscMaster,    NULL},
-        {NULL,                 NULL,                               0, NULL}       // End of menu
+        {"Create Osc Dual",    menu_action_create, moduleTypeOscDual,   NULL},
+        {"Create Noise",       menu_action_create, moduleTypeNoise,     NULL},
+        {"Create Osc Noise",   menu_action_create, moduleTypeOscNoise,  NULL},
+        {"Create Met Noise",   menu_action_create, moduleTypeMetNoise,  NULL},
+        {"Create Operator",    menu_action_create, moduleTypeOperator,  NULL},
+        {"Create DXRouter",    menu_action_create, moduleTypeDXRouter,  NULL},
+        {"Create DrumSynth",   menu_action_create, moduleTypeDrumSynth, NULL},
+        {"Create OscPerc",     menu_action_create, moduleTypeOscPerc,   NULL},
+        {"Create Osc Master",  menu_action_create, moduleTypeOscMaster, NULL},
+        {NULL,                 NULL,                                 0, NULL}     // End of menu
     };
     static tMenuItem randomMenuItems[] = {
-        {"Create RandomA",       menu_action_create, moduleTypeRandomA,    NULL},
-        {"Create RandomB",       menu_action_create, moduleTypeRandomB,    NULL},
-        {NULL,              NULL,                               0, NULL}          // End of menu
+        {"Create RandomA", menu_action_create, moduleTypeRandomA, NULL},
+        {"Create RandomB", menu_action_create, moduleTypeRandomB, NULL},
+        {NULL,             NULL,                               0, NULL}           // End of menu
     };
 
     static tMenuItem lfoMenuItems[] = {
-        {"Create LFO A", menu_action_create, moduleTypeLfoA, NULL},
-        {"Create LFO B", menu_action_create, moduleTypeLfoB, NULL},
-        {"Create LFO C", menu_action_create, moduleTypeLfoC, NULL},
+        {"Create LFO A",     menu_action_create, moduleTypeLfoA,    NULL},
+        {"Create LFO B",     menu_action_create, moduleTypeLfoB,    NULL},
+        {"Create LFO C",     menu_action_create, moduleTypeLfoC,    NULL},
         {"Create LFO Shp A", menu_action_create, moduleTypeLfoShpA, NULL},
-        {"Create ClkGen", menu_action_create, moduleTypeClkGen, NULL},
-        {NULL,              NULL,                               0, NULL}          // End of menu
+        {"Create ClkGen",    menu_action_create, moduleTypeClkGen,  NULL},
+        {NULL,               NULL,                               0, NULL}         // End of menu
     };
     static tMenuItem envMenuItems[] = {
-        {"Create Env ADSR", menu_action_create, moduleTypeEnvADSR, NULL},
-        {"Create Env AHD",  menu_action_create, moduleTypeEnvAHD,  NULL},
-        {"Create Env ADR",  menu_action_create, moduleTypeEnvADR,  NULL},
+        {"Create Env ADSR",  menu_action_create, moduleTypeEnvADSR,  NULL},
+        {"Create Env AHD",   menu_action_create, moduleTypeEnvAHD,   NULL},
+        {"Create Env ADR",   menu_action_create, moduleTypeEnvADR,   NULL},
         {"Create Env ADDSR", menu_action_create, moduleTypeEnvADDSR, NULL},
-        {"Create Env H",    menu_action_create, moduleTypeEnvH,    NULL},
-        {"Create Env D",    menu_action_create, moduleTypeEnvD,    NULL},
-        {"Create ModAHD",    menu_action_create, moduleTypeModAHD,    NULL},
-        {"Create Env Multi",menu_action_create, moduleTypeEnvMulti,NULL},
-        {NULL,              NULL,                               0, NULL}          // End of menu
+        {"Create Env H",     menu_action_create, moduleTypeEnvH,     NULL},
+        {"Create Env D",     menu_action_create, moduleTypeEnvD,     NULL},
+        {"Create ModAHD",    menu_action_create, moduleTypeModAHD,   NULL},
+        {"Create Env Multi", menu_action_create, moduleTypeEnvMulti, NULL},
+        {NULL,               NULL,                                0, NULL}        // End of menu
     };
     static tMenuItem filterMenuItems[] = {
-        {"Create LP Filter",      menu_action_create, moduleTypeFltLP, NULL},
-        {"Create HP Filter",      menu_action_create, moduleTypeFltHP, NULL},
+        {"Create LP Filter",      menu_action_create, moduleTypeFltLP,      NULL},
+        {"Create HP Filter",      menu_action_create, moduleTypeFltHP,      NULL},
         {"Create Nord Filter",    menu_action_create, moduleTypeFltNord,    NULL},
         {"Create Classic Filter", menu_action_create, moduleTypeFltClassic, NULL},
         {"Create Multi Filter",   menu_action_create, moduleTypeFltMulti,   NULL},
         {"Create Phase Filter",   menu_action_create, moduleTypeFltPhase,   NULL},
-        {"Create Comb Filter",   menu_action_create, moduleTypeFltComb,   NULL},
-        {"Create Static Filter",   menu_action_create, moduleTypeFltStatic,   NULL},
+        {"Create Comb Filter",    menu_action_create, moduleTypeFltComb,    NULL},
+        {"Create Static Filter",  menu_action_create, moduleTypeFltStatic,  NULL},
         {"Create FltVoice",       menu_action_create, moduleTypeFltVoice,   NULL},
-        {"Create WahWah",       menu_action_create, moduleTypeWahWah,   NULL},
-        {"Create Vocoder",       menu_action_create, moduleTypeVocoder,   NULL},
-        {"Create Eq 2-band",      menu_action_create, moduleTypeEq2Band, NULL},
-        {"Create Eq 3-band",      menu_action_create, moduleTypeEq3band, NULL},
-        {"Create Eq Peak",      menu_action_create, moduleTypeEqPeak, NULL},
+        {"Create WahWah",         menu_action_create, moduleTypeWahWah,     NULL},
+        {"Create Vocoder",        menu_action_create, moduleTypeVocoder,    NULL},
+        {"Create Eq 2-band",      menu_action_create, moduleTypeEq2Band,    NULL},
+        {"Create Eq 3-band",      menu_action_create, moduleTypeEq3band,    NULL},
+        {"Create Eq Peak",        menu_action_create, moduleTypeEqPeak,     NULL},
         {NULL,                    NULL,                                  0, NULL} // End of menu
     };
     static tMenuItem delayMenuItems[] = {
-        {"Create Delay Single A", menu_action_create,  moduleTypeDlySingleA, NULL},
-        {"Create Delay Single B", menu_action_create,  moduleTypeDlySingleB, NULL},
-        {"Create Delay Dual", menu_action_create,  moduleTypeDelayDual, NULL},
-        {"Create Delay Quad", menu_action_create,  moduleTypeDelayQuad, NULL},
-        {"Create Delay A", menu_action_create,  moduleTypeDelayA, NULL},
-        {"Create Delay B", menu_action_create,  moduleTypeDelayB, NULL},
-        {"Create Delay Stereo", menu_action_create,  moduleTypeDlyStereo, NULL},
-        {"Create Delay Clock", menu_action_create,  moduleTypeDlyClock, NULL},
-        {"Create Delay Eight", menu_action_create,  moduleTypeDlyEight, NULL},
-        {"Create DlyShiftReg", menu_action_create,  moduleTypeDlyShiftReg, NULL},
-        {NULL,                 NULL,                                 0, NULL}       // End of menu
+        {"Create Delay Single A", menu_action_create, moduleTypeDlySingleA,  NULL},
+        {"Create Delay Single B", menu_action_create, moduleTypeDlySingleB,  NULL},
+        {"Create Delay Dual",     menu_action_create, moduleTypeDelayDual,   NULL},
+        {"Create Delay Quad",     menu_action_create, moduleTypeDelayQuad,   NULL},
+        {"Create Delay A",        menu_action_create, moduleTypeDelayA,      NULL},
+        {"Create Delay B",        menu_action_create, moduleTypeDelayB,      NULL},
+        {"Create Delay Stereo",   menu_action_create, moduleTypeDlyStereo,   NULL},
+        {"Create Delay Clock",    menu_action_create, moduleTypeDlyClock,    NULL},
+        {"Create Delay Eight",    menu_action_create, moduleTypeDlyEight,    NULL},
+        {"Create DlyShiftReg",    menu_action_create, moduleTypeDlyShiftReg, NULL},
+        {NULL,                    NULL,                                   0, NULL}  // End of menu
     };
 
 
     static tMenuItem levelMenuItems[] = {
-        {"Create Constant",    menu_action_create,  moduleTypeConstant, NULL},
-        {"Create ConstSwM",    menu_action_create,  moduleTypeConstSwM, NULL},
-        {"Create ConstSwT",    menu_action_create,  moduleTypeConstSwT, NULL},
-        {"Create CompLev",    menu_action_create,  moduleTypeCompLev, NULL},
-        {"Create CompSig",    menu_action_create,  moduleTypeCompSig, NULL},
-        {"Create LevAdd",     menu_action_create,  moduleTypeLevAdd,  NULL},
-        {"Create LevAmp",     menu_action_create,  moduleTypeLevAmp,  NULL},
-        {"Create LevConv",     menu_action_create,  moduleTypeLevConv,  NULL},
-        {"Create LevMod",     menu_action_create,  moduleTypeLevMod,  NULL},
-        {"Create LevMult",     menu_action_create,  moduleTypeLevMult,  NULL},
-        {"Create MinMax",     menu_action_create,  moduleTypeMinMax,  NULL},
-        {"Create ModAmt",     menu_action_create,  moduleTypeModAmt,  NULL},
-        {"Create NoiseGate",     menu_action_create,  moduleTypeNoiseGate,  NULL},
-        {"Create EnvFollow",     menu_action_create,  moduleTypeEnvFollow,  NULL},
-        {NULL,                 NULL,                                 0, NULL}       // End of menu
+        {"Create Constant",  menu_action_create, moduleTypeConstant,  NULL},
+        {"Create ConstSwM",  menu_action_create, moduleTypeConstSwM,  NULL},
+        {"Create ConstSwT",  menu_action_create, moduleTypeConstSwT,  NULL},
+        {"Create CompLev",   menu_action_create, moduleTypeCompLev,   NULL},
+        {"Create CompSig",   menu_action_create, moduleTypeCompSig,   NULL},
+        {"Create LevAdd",    menu_action_create, moduleTypeLevAdd,    NULL},
+        {"Create LevAmp",    menu_action_create, moduleTypeLevAmp,    NULL},
+        {"Create LevConv",   menu_action_create, moduleTypeLevConv,   NULL},
+        {"Create LevMod",    menu_action_create, moduleTypeLevMod,    NULL},
+        {"Create LevMult",   menu_action_create, moduleTypeLevMult,   NULL},
+        {"Create MinMax",    menu_action_create, moduleTypeMinMax,    NULL},
+        {"Create ModAmt",    menu_action_create, moduleTypeModAmt,    NULL},
+        {"Create NoiseGate", menu_action_create, moduleTypeNoiseGate, NULL},
+        {"Create EnvFollow", menu_action_create, moduleTypeEnvFollow, NULL},
+        {NULL,               NULL,                                 0, NULL}         // End of menu
     };
 
     static tMenuItem switchMenuItems[] = {
-        {"Create SwOnOffM",   menu_action_create,  moduleTypeSwOnOffM, NULL},
-        {"Create SwOnOffT",   menu_action_create,  moduleTypeSwOnOffT, NULL},
-        {"Create Sw2-1",   menu_action_create,  moduleTypeSw2to1, NULL},
-        {"Create Sw2-1M",   menu_action_create,  moduleTypeSw2to1, NULL},
-        {"Create Sw4-1",   menu_action_create,  moduleTypeSw4to1, NULL},
-        {"Create Sw1-2",   menu_action_create,  moduleTypeSw1to2, NULL},
-        {"Create Sw1-2M",   menu_action_create,  moduleTypeSw1to2M, NULL},
-        {"Create Sw1-4",   menu_action_create,  moduleTypeSw1to4, NULL},
-        {"Create Sw1-8",   menu_action_create,  moduleTypeSw1to8, NULL},
-        {"Create ValSw2-1",   menu_action_create,  moduleTypeValSw2to1, NULL},
-        {"Create Mux8-1",   menu_action_create,  moduleTypeMux8to1, NULL},
-        {"Create Mux8-1X",   menu_action_create,  moduleTypeMux8to1X, NULL},
-        {"Create S&H",   menu_action_create,  moduleTypeSandH, NULL},
-        {"Create T&H",   menu_action_create,  moduleTypeTandH, NULL},
-        {"Create WindSw",   menu_action_create,  moduleTypeWindSw, NULL},
-        {NULL,                 NULL,                               0, NULL}       // End of menu
+        {"Create SwOnOffM", menu_action_create, moduleTypeSwOnOffM,  NULL},
+        {"Create SwOnOffT", menu_action_create, moduleTypeSwOnOffT,  NULL},
+        {"Create Sw2-1",    menu_action_create, moduleTypeSw2to1,    NULL},
+        {"Create Sw2-1M",   menu_action_create, moduleTypeSw2to1,    NULL},
+        {"Create Sw4-1",    menu_action_create, moduleTypeSw4to1,    NULL},
+        {"Create Sw1-2",    menu_action_create, moduleTypeSw1to2,    NULL},
+        {"Create Sw1-2M",   menu_action_create, moduleTypeSw1to2M,   NULL},
+        {"Create Sw1-4",    menu_action_create, moduleTypeSw1to4,    NULL},
+        {"Create Sw1-8",    menu_action_create, moduleTypeSw1to8,    NULL},
+        {"Create ValSw2-1", menu_action_create, moduleTypeValSw2to1, NULL},
+        {"Create Mux8-1",   menu_action_create, moduleTypeMux8to1,   NULL},
+        {"Create Mux8-1X",  menu_action_create, moduleTypeMux8to1X,  NULL},
+        {"Create S&H",      menu_action_create, moduleTypeSandH,     NULL},
+        {"Create T&H",      menu_action_create, moduleTypeTandH,     NULL},
+        {"Create WindSw",   menu_action_create, moduleTypeWindSw,    NULL},
+        {NULL,              NULL,                                 0, NULL}        // End of menu
     };
     static tMenuItem shaperMenuItems[] = {
-        {"Create Saturate",   menu_action_create,  moduleTypeSaturate, NULL},
-        {"Create Clip",   menu_action_create,  moduleTypeClip, NULL},
-        {"Create OverDrive",   menu_action_create,  moduleTypeOverdrive, NULL},
-        {"Create ShpExp",     menu_action_create,  moduleTypeShpExp,   NULL},
-        {"Create WaveWrap",     menu_action_create,  moduleTypeWaveWrap,   NULL},
-        {"Create ShpStatic",     menu_action_create,  moduleTypeShpStatic,   NULL},
-        {"Create Rect",     menu_action_create,  moduleTypeRect,   NULL},
-        {NULL,                 NULL,                               0, NULL}       // End of menu
+        {"Create Saturate",  menu_action_create, moduleTypeSaturate,  NULL},
+        {"Create Clip",      menu_action_create, moduleTypeClip,      NULL},
+        {"Create OverDrive", menu_action_create, moduleTypeOverdrive, NULL},
+        {"Create ShpExp",    menu_action_create, moduleTypeShpExp,    NULL},
+        {"Create WaveWrap",  menu_action_create, moduleTypeWaveWrap,  NULL},
+        {"Create ShpStatic", menu_action_create, moduleTypeShpStatic, NULL},
+        {"Create Rect",      menu_action_create, moduleTypeRect,      NULL},
+        {NULL,               NULL,                                 0, NULL}       // End of menu
     };
     static tMenuItem mixerMenuItems[] = {
-        {"Create Mixer 1-1 A", menu_action_create, moduleTypeMix1to1A, NULL},
-        {"Create Mixer 1-1 S", menu_action_create, moduleTypeMix1to1S, NULL},
-        {"Create Mixer 2-1 A", menu_action_create, moduleTypeMix2to1A, NULL},
-        {"Create Mixer 4-1 A", menu_action_create, moduleTypeMix4to1A, NULL},
-        {"Create Mixer 4-1 C", menu_action_create, moduleTypeMix4to1C, NULL},
-        {"Create Mixer 4-1 S", menu_action_create, moduleTypeMix4to1S, NULL},
-        {"Create Mixer 2-1 B", menu_action_create, moduleTypeMix2to1B, NULL},
-        {"Create Mixer 8-1 A", menu_action_create, moduleTypeMix8to1A, NULL},
-        {"Create Mixer 8-1 B", menu_action_create, moduleTypeMix8to1B, NULL},
-        {"Create MixStereo",   menu_action_create, moduleTypeMixStereo,NULL},
-        {"Create Fade 1-2",      menu_action_create, moduleTypeFade1to2,  NULL},
-        {"Create Fade 2-1",      menu_action_create, moduleTypeFade2to1,  NULL},
-        {"Create X-Fade",      menu_action_create, moduleTypeXtoFade,  NULL},
-        {"Create Pan",         menu_action_create, moduleTypePan,      NULL},
-        {NULL,                 NULL,                                0, NULL}      // End of menu
+        {"Create Mixer 1-1 A", menu_action_create, moduleTypeMix1to1A,  NULL},
+        {"Create Mixer 1-1 S", menu_action_create, moduleTypeMix1to1S,  NULL},
+        {"Create Mixer 2-1 A", menu_action_create, moduleTypeMix2to1A,  NULL},
+        {"Create Mixer 4-1 A", menu_action_create, moduleTypeMix4to1A,  NULL},
+        {"Create Mixer 4-1 C", menu_action_create, moduleTypeMix4to1C,  NULL},
+        {"Create Mixer 4-1 S", menu_action_create, moduleTypeMix4to1S,  NULL},
+        {"Create Mixer 2-1 B", menu_action_create, moduleTypeMix2to1B,  NULL},
+        {"Create Mixer 8-1 A", menu_action_create, moduleTypeMix8to1A,  NULL},
+        {"Create Mixer 8-1 B", menu_action_create, moduleTypeMix8to1B,  NULL},
+        {"Create MixStereo",   menu_action_create, moduleTypeMixStereo, NULL},
+        {"Create Fade 1-2",    menu_action_create, moduleTypeFade1to2,  NULL},
+        {"Create Fade 2-1",    menu_action_create, moduleTypeFade2to1,  NULL},
+        {"Create X-Fade",      menu_action_create, moduleTypeXtoFade,   NULL},
+        {"Create Pan",         menu_action_create, moduleTypePan,       NULL},
+        {NULL,                 NULL,                                 0, NULL}     // End of menu
     };
     static tMenuItem logicMenuItems[] = {
-        {"Create Invert",   menu_action_create,  moduleTypeInvert, NULL},
-        {"Create Pulse",   menu_action_create,  moduleTypePulse, NULL},
-        {"Create Delay",   menu_action_create,  moduleTypeDelay, NULL},
-        {"Create Gate",   menu_action_create,  moduleTypeGate, NULL},
-        {"Create FlipFlop",   menu_action_create,  moduleTypeFlipFlop, NULL},
-        {"Create ClkDiv",   menu_action_create,  moduleTypeClkDiv, NULL},
-        {"Create 8Counter",   menu_action_create,  moduleType8Counter, NULL},
-        {"Create BinCounter",   menu_action_create,  moduleTypeBinCounter, NULL},
-        {"Create ADConv",   menu_action_create,  moduleTypeADConv, NULL},
-        {"Create DAConv",   menu_action_create,  moduleTypeDAConv, NULL},
-        {NULL,                 NULL,                               0, NULL}       // End of menu
+        {"Create Invert",     menu_action_create, moduleTypeInvert,     NULL},
+        {"Create Pulse",      menu_action_create, moduleTypePulse,      NULL},
+        {"Create Delay",      menu_action_create, moduleTypeDelay,      NULL},
+        {"Create Gate",       menu_action_create, moduleTypeGate,       NULL},
+        {"Create FlipFlop",   menu_action_create, moduleTypeFlipFlop,   NULL},
+        {"Create ClkDiv",     menu_action_create, moduleTypeClkDiv,     NULL},
+        {"Create 8Counter",   menu_action_create, moduleType8Counter,   NULL},
+        {"Create BinCounter", menu_action_create, moduleTypeBinCounter, NULL},
+        {"Create ADConv",     menu_action_create, moduleTypeADConv,     NULL},
+        {"Create DAConv",     menu_action_create, moduleTypeDAConv,     NULL},
+        {NULL,                NULL,                                  0, NULL}     // End of menu
     };
     static tMenuItem fxMenuItems[] = {
-        {"Create Compressor", menu_action_create,  moduleTypeCompress, NULL},
-        {"Create Digitizer", menu_action_create,  moduleTypeDigitizer, NULL},
-        {"Create FreqShift", menu_action_create,  moduleTypeFreqShift, NULL},
-        {"Create Flanger", menu_action_create,  moduleTypeFlanger, NULL},
-        {"Create Chorus", menu_action_create,  moduleTypeStChorus, NULL},
-        {"Create Phaser", menu_action_create,  moduleTypePhaser, NULL},
-        {"Create PShift", menu_action_create,  moduleTypePShift, NULL},
-        {"Create Reverb",     menu_action_create,  moduleTypeReverb,   NULL},
-        {"Create Scratch",     menu_action_create,  moduleTypeScratch,   NULL},
-        {NULL,                NULL,                               0,   NULL}       // End of menu
+        {"Create Compressor", menu_action_create, moduleTypeCompress,  NULL},
+        {"Create Digitizer",  menu_action_create, moduleTypeDigitizer, NULL},
+        {"Create FreqShift",  menu_action_create, moduleTypeFreqShift, NULL},
+        {"Create Flanger",    menu_action_create, moduleTypeFlanger,   NULL},
+        {"Create Chorus",     menu_action_create, moduleTypeStChorus,  NULL},
+        {"Create Phaser",     menu_action_create, moduleTypePhaser,    NULL},
+        {"Create PShift",     menu_action_create, moduleTypePShift,    NULL},
+        {"Create Reverb",     menu_action_create, moduleTypeReverb,    NULL},
+        {"Create Scratch",    menu_action_create, moduleTypeScratch,   NULL},
+        {NULL,                NULL,                                 0, NULL}       // End of menu
     };
     static tMenuItem midiMenuItems[] = {
         {"Create CtrlSend", menu_action_create, moduleTypeCtrlSend, NULL},
-        {"Create PCSend", menu_action_create, moduleTypePCSend, NULL},
+        {"Create PCSend",   menu_action_create, moduleTypePCSend,   NULL},
         {"Create NoteSend", menu_action_create, moduleTypeNoteSend, NULL},
-        {"Create CtrlRcv", menu_action_create, moduleTypeCtrlRcv, NULL},
-        {"Create NoteRcv", menu_action_create, moduleTypeNoteRcv, NULL},
-        {"Create NoteDet", menu_action_create, moduleTypeNoteDet, NULL},
+        {"Create CtrlRcv",  menu_action_create, moduleTypeCtrlRcv,  NULL},
+        {"Create NoteRcv",  menu_action_create, moduleTypeNoteRcv,  NULL},
+        {"Create NoteDet",  menu_action_create, moduleTypeNoteDet,  NULL},
         {"Create NoteZone", menu_action_create, moduleTypeNoteZone, NULL},
-        {NULL,                 NULL,                               0, NULL}       // End of menu
+        {NULL,              NULL,                                0, NULL}         // End of menu
     };
- 
+
     static tMenuItem moduleMenuItems[] = {
         {"Create In/Out",   menu_action_create, 0, ioMenuItems    },
         {"Create Osc",      menu_action_create, 0, oscMenuItems   },
@@ -973,7 +973,7 @@ bool handle_module_click(tCoord coord, int button) {
                         }
 
                         if (paramType2 == paramType2Dial) {
-                            gParamDragging.moduleKey.slot    = gSlot;  // TODO: Think about this being best way of doing it?
+                            gParamDragging.moduleKey.slot     = gSlot; // TODO: Think about this being best way of doing it?
                             gParamDragging.moduleKey.index    = module.key.index;
                             gParamDragging.moduleKey.location = module.key.location;
                             gParamDragging.type3              = paramType3Param;
@@ -995,7 +995,7 @@ bool handle_module_click(tCoord coord, int button) {
 
                             tMessageContent messageContent = {0};
                             messageContent.cmd                 = eMsgCmdSetValue;
-                            messageContent.slot                    = gSlot;
+                            messageContent.slot                = gSlot;
                             messageContent.paramData.moduleKey = module.key;
                             messageContent.paramData.param     = i;
                             messageContent.paramData.variation = gVariation;
@@ -1016,7 +1016,7 @@ bool handle_module_click(tCoord coord, int button) {
                     if (within_rectangle(coord, module.mode[i].rectangle)) {
                         if (button == GLFW_MOUSE_BUTTON_LEFT) {
                             if ((modeLocationList[mode->modeRef].type2) == paramType2Dial) {
-                                gParamDragging.moduleKey.slot    = gSlot;  // TODO: Think about this being best way of doing it?
+                                gParamDragging.moduleKey.slot     = gSlot; // TODO: Think about this being best way of doing it?
                                 gParamDragging.moduleKey.index    = module.key.index;
                                 gParamDragging.moduleKey.location = module.key.location;
                                 gParamDragging.type3              = paramType3Mode;
@@ -1029,12 +1029,12 @@ bool handle_module_click(tCoord coord, int button) {
                                 write_module(module.key, &module);
                                 tMessageContent messageContent = {0};
                                 messageContent.cmd                 = eMsgCmdSetValue;
-                                messageContent.slot                    = gSlot;
+                                messageContent.slot                = gSlot;
                                 messageContent.paramData.moduleKey = module.key;
                                 //messageContent.paramData.mode     = i;
                                 messageContent.paramData.variation = 0;
                                 messageContent.paramData.value     = mode->value;
-                                
+
                                 msg_send(&gCommandQueue, &messageContent);
 
                                 retVal = true;
@@ -1260,7 +1260,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                                 tMessageContent messageContent = {0};
 
                                 messageContent.cmd                            = eMsgCmdWriteCable;
-                                messageContent.slot                    = gSlot;
+                                messageContent.slot                           = gSlot;
                                 messageContent.cableData.location             = gLocation;
                                 messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
                                 messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
@@ -1343,7 +1343,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                             write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
 
                             messageContent.cmd                 = eMsgCmdSetValue;
-                            messageContent.slot                    = gSlot;
+                            messageContent.slot                = gSlot;
                             messageContent.paramData.moduleKey = gParamDragging.moduleKey;
                             messageContent.paramData.param     = gParamDragging.param;
                             messageContent.paramData.variation = gVariation;
@@ -1361,7 +1361,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                             printf("Write to module %u variation %u\n", module.key.index, gVariation);
 
                             messageContent.cmd                       = eMsgCmdSetParamMorph;
-                            messageContent.slot                    = gSlot;
+                            messageContent.slot                      = gSlot;
                             messageContent.paramMorphData.moduleKey  = module.key;
                             messageContent.paramMorphData.param      = gParamDragging.param;
                             messageContent.paramMorphData.paramMorph = gMorphGroupFocus;
@@ -1385,7 +1385,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                         write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
 
                         messageContent.cmd                = eMsgCmdSetMode;
-                        messageContent.slot                    = gSlot;
+                        messageContent.slot               = gSlot;
                         messageContent.modeData.moduleKey = gParamDragging.moduleKey;
                         messageContent.modeData.mode      = gParamDragging.mode;
                         messageContent.modeData.value     = value;
@@ -1434,17 +1434,16 @@ void scroll_event(GLFWwindow * window, double x, double y) {
 //    get_global_gui_scaled_mouse_coord(&mouseCoord);
 
     if (x != 0) {
-        gScrollState.xBar -= x/2;
+        gScrollState.xBar -= x / 2;
         set_x_scroll_bar(gScrollState.xBar);
     }
-    
+
     if (y != 0) {
         gScrollState.yBar -= y;
         set_y_scroll_bar(gScrollState.yBar);
     }
-    
 //    LOG_DEBUG("Area: %f %f - size: %i %i - barY %f %f %f \n", moduleArea.size.w,moduleArea.size.h, width,height, gScrollState.yBar, gScrollState.yRectangle.size.h,gScrollState.yRectangle.coord.y);
-    
+
 
     gReDraw = true;
 }
@@ -1461,15 +1460,16 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GL_TRUE);
     }
-    
+
     // Keep status of left command key
     if (key == GLFW_KEY_LEFT_SUPER && action == GLFW_PRESS) {
         gCommandKeyPressed = true;
     }
+
     if (key == GLFW_KEY_LEFT_SUPER && action == GLFW_RELEASE) {
         gCommandKeyPressed = false;
     }
-    
+
     // React on command key with - + keys for zooming
     if (key == GLFW_KEY_MINUS && action == GLFW_PRESS && gCommandKeyPressed == true) {
         LOG_DEBUG("ZOOM OUT\n");
@@ -1477,13 +1477,13 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         zoomFactor -= zoomIncrement;
         set_zoom_factor(zoomFactor);
     }
+
     if (key == GLFW_KEY_EQUAL && action == GLFW_PRESS && gCommandKeyPressed == true) {
         LOG_DEBUG("ZOOM IN\n");
         zoomFactor  = get_zoom_factor();
         zoomFactor += zoomIncrement;
         set_zoom_factor(zoomFactor);
     }
-
     LOG_DEBUG("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
     gReDraw = true;
 }
