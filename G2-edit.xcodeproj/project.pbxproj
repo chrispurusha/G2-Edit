@@ -369,7 +369,7 @@
 		83C1453A2CFF6E5F004E572A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "src/G2-edit.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "G2-edit.entitlements";
 				CODE_SIGN_STYLE = Manual;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
@@ -403,7 +403,7 @@
 		83C1453B2CFF6E5F004E572A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "src/G2-edit.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "G2-edit.entitlements";
 				CODE_SIGN_STYLE = Manual;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
