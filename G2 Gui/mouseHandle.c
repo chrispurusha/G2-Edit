@@ -1344,11 +1344,12 @@ void scroll_event(GLFWwindow * window, double x, double y) {
     }
     
     if (y != 0) {
-        gScrollState.yBar += y;
+        gScrollState.yBar -= y;
         set_y_scroll_bar(gScrollState.yBar);
     }
     
-    LOG_DEBUG("SCROLL: x = %f y = %f\n", x, y);
+//    LOG_DEBUG("Area: %f %f - size: %i %i - barY %f %f %f \n", moduleArea.size.w,moduleArea.size.h, width,height, gScrollState.yBar, gScrollState.yRectangle.size.h,gScrollState.yRectangle.coord.y);
+    
 
     gReDraw = true;
 }
