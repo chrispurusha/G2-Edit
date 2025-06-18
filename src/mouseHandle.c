@@ -743,6 +743,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create Env H",     menu_action_create, moduleTypeEnvH,     NULL},
         {"Create Env D",     menu_action_create, moduleTypeEnvD,     NULL},
         {"Create ModAHD",    menu_action_create, moduleTypeModAHD,   NULL},
+        {"Create ModADSR",    menu_action_create, moduleTypeModADSR,   NULL},
         {"Create Env Multi", menu_action_create, moduleTypeEnvMulti, NULL},
         {NULL,               NULL,                                0, NULL}        // End of menu
     };

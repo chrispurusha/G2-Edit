@@ -457,6 +457,16 @@ const tParamLocation paramLocationList[] = {
     // 22 PartQuant
     {moduleTypePartQuant,    paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Range",           128,   100, NULL,                   NULL          }, // 22 Range
     // 23 ModADSR
+    {moduleTypeModADSR,     paramType1ADRTime,        paramType2Dial,   {{ 22, -17}, { 7, 14}}, anchorBottomLeft,  "A",       128,   0, NULL,                   NULL          }, // 22 A
+    {moduleTypeModADSR,     paramType1ADRTime,        paramType2Dial,   {{ 37, -17}, { 7, 14}}, anchorBottomLeft,  "D",         128,   0, NULL,                   NULL          }, // 22 D
+    {moduleTypeModADSR,     paramType1CommonDial,     paramType2Dial,   {{ 52,  -17}, { 7, 14}}, anchorBottomLeft,  "S",           128,   100, NULL,                   NULL          }, // 22 S
+    {moduleTypeModADSR,     paramType1ADRTime,        paramType2Dial,   {{ 67, -17}, { 7, 14}}, anchorBottomLeft,  "R",        128,   0, NULL,                   NULL          }, // 22 R
+    {moduleTypeModADSR,     paramType1CommonDial,     paramType2Dial,   {{ 27,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 22 Attack M
+    {moduleTypeModADSR,     paramType1CommonDial,     paramType2Dial,   {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 22 Decay M
+    {moduleTypeModADSR,     paramType1CommonDial,     paramType2Dial,   {{ 57,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 22 Sustain M
+    {moduleTypeModADSR,     paramType1CommonDial,     paramType2Dial,   {{ 72,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 22 Release M
+    {moduleTypeModADSR,     paramType1StandardToggle, paramType2Toggle, {{-15, -17}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,              NULL          }, // 22 Output Type
+    {moduleTypeModADSR,     paramType1StandardToggle, paramType2Toggle, {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, kbStrMap,               offOnColourMap}, // 22 KB
     // 24 LfoC
     {moduleTypeLfoC,       paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 24 Rate  *** Could have Freq but tied to Range
     {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,         NULL          }, // 24 Mode
@@ -1361,6 +1371,15 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypePartQuant,    connectorDirIn,  connectorTypeControl, {{ 85,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocUp   }, // 22 In
     {moduleTypePartQuant,      connectorDirOut, connectorTypeControl, {{  -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,          labelLocLeft }, // 22 Out
     // 23 ModADSR
+    {moduleTypeModADSR,      connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Gate",         labelLocRight   }, // 169 Gate
+    {moduleTypeModADSR,      connectorDirIn,  connectorTypeControl, {{ 20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 169 Attack M
+    {moduleTypeModADSR,      connectorDirIn,  connectorTypeControl, {{ 35,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 169 Decay M
+    {moduleTypeModADSR,      connectorDirIn,  connectorTypeControl, {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 169 Sustain M
+    {moduleTypeModADSR,      connectorDirIn,  connectorTypeControl, {{ 65,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 169 Release M
+    {moduleTypeModADSR,      connectorDirIn,  connectorTypeControl, {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // 169 In
+    {moduleTypeModADSR,      connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 169 AM
+    {moduleTypeModADSR,      connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",          labelLocUp }, // 169 Env
+    {moduleTypeModADSR,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // 169 Out
     // 24 LfoC
     {moduleTypeLfoC,        connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },
     {moduleTypeLfoC,        connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
