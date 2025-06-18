@@ -453,7 +453,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEnvADSR,    paramType1StandardToggle, paramType2Toggle, {{-26, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,              NULL          },
     {moduleTypeEnvADSR,    paramType1StandardToggle, paramType2Toggle, {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, kbStrMap,               offOnColourMap},
     {moduleTypeEnvADSR,    paramType1StandardToggle, paramType2Toggle, {{  5,  -8}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,      NULL          },
-    // 21 Mux1-8
+    // 21 Mux1-8 -- No params
     // 22 PartQuant
     // 23 ModADSR
     // 24 LfoC
@@ -1346,6 +1346,16 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeEnvADSR,     connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",          labelLocUp   },
     {moduleTypeEnvADSR,     connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
     // 21 Mux1-8
+    {moduleTypeMux1to8,    connectorDirIn,  connectorTypeControl, {{ 20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocUp   }, // 21 In
+    {moduleTypeMux1to8,    connectorDirIn,  connectorTypeControl, {{ 3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",            labelLocRight   }, // 21 Ctrl
+    {moduleTypeMux1to8,    connectorDirOut,  connectorTypeControl, {{30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   }, // 21 Out1
+    {moduleTypeMux1to8,    connectorDirOut,  connectorTypeControl, {{38,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   }, // 21 Out2
+    {moduleTypeMux1to8,    connectorDirOut,  connectorTypeControl, {{46,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   }, // 21 Out3
+    {moduleTypeMux1to8,    connectorDirOut,  connectorTypeControl, {{54,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   }, // 21 Out4
+    {moduleTypeMux1to8,    connectorDirOut,  connectorTypeControl, {{62,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",            labelLocUp   }, // 21 Out5
+    {moduleTypeMux1to8,    connectorDirOut,  connectorTypeControl, {{70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",            labelLocUp   }, // 21 Out6
+    {moduleTypeMux1to8,    connectorDirOut,  connectorTypeControl, {{78,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",            labelLocUp   }, // 21 Out7
+    {moduleTypeMux1to8,    connectorDirOut,  connectorTypeControl, {{86,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",            labelLocUp   }, // 21 Out8
     // 22 PartQuant
     // 23 ModADSR
     // 24 LfoC
