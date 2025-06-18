@@ -92,6 +92,15 @@ void window_close_callback(GLFWwindow * window) {
     glfwPostEmptyEvent();
 }
 
+void set_window_title(const char * title) {
+    const char * filename = strrchr(title, '/');
+    char newTitle [100];
+    strcpy(newTitle,WINDOW_TITLE);
+    strcat(newTitle," - ");
+    strcat(newTitle,filename + 1);
+    glfwSetWindowTitle(gWindow, newTitle);
+}
+
 void error_callback(int error, const char * description) {
     LOG_ERROR("GLFW error [%d]: %s\n", error, description);
 }
@@ -238,7 +247,7 @@ void init_graphics(void) {
     windowWidth  = TARGET_FRAME_BUFF_WIDTH / xScale;
     windowHeight = TARGET_FRAME_BUFF_HEIGHT / yScale;
 
-    gWindow = glfwCreateWindow(windowWidth, windowHeight, "G2 Editor", NULL, NULL);
+    gWindow = glfwCreateWindow(windowWidth, windowHeight, WINDOW_TITLE, NULL, NULL);
 
     if (!gWindow) {
         glfwTerminate();
@@ -341,6 +350,7 @@ void read_file_into_memory_and_process(const char * filepath) {
     } else {
         LOG_WARNING("CRC check failed\n");
     }
+        
     free(buff);
     fclose(file);
 }
@@ -350,8 +360,10 @@ void check_action_flags(void) {
         char * path = open_file_dialogue();
 
         if (path != NULL) {
-            LOG_INFO("Selected file: %s\n", path);
+            LOG_INFO("\n\nSelected file: %s\n", path);
 
+            set_window_title(path);
+            
             read_file_into_memory_and_process(path);
 
             free((void *)path);

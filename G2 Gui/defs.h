@@ -37,6 +37,8 @@
 #define TARGET_FRAME_BUFF_HEIGHT             (1440)
 #define GLOBAL_GUI_SCALE                     (2)
 
+#define WINDOW_TITLE                         "G2 Editor"
+
 #define NUM_VARIATIONS                       (10) // 10 variations per patch, but only fist 8 presented on the GUI
 #define NUM_GUI_VARIATIONS                   (8)
 #define NUM_MORPHS                           (8)  // Not sure if we can go higher with this, so remember to check
