@@ -439,6 +439,11 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeXtoFade,    paramType1CommonDial,     paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 18 X-fade *** should be another type of dial
     {moduleTypeXtoFade,    paramType1StandardToggle, paramType2Toggle, {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, logStrMap,              NULL          },
     // 19 Mix4-1B
+    {moduleTypeMix4to1B,    paramType1CommonDial,     paramType2Dial,   {{ 37,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   100, NULL,                   NULL          }, // 19 Lev1
+    {moduleTypeMix4to1B,    paramType1CommonDial,     paramType2Dial,   {{ 52,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   100, NULL,                   NULL          }, // 19 Lev2
+    {moduleTypeMix4to1B,    paramType1CommonDial,     paramType2Dial,   {{ 67,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   100, NULL,                   NULL          }, // 19 Lev3
+    {moduleTypeMix4to1B,    paramType1CommonDial,     paramType2Dial,   {{ 82,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   100, NULL,                   NULL          }, // 19 Lev4
+    {moduleTypeMix4to1B,   paramType1StandardToggle, paramType2Toggle, {{  20, -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,              NULL          }, // 19 ExpLinDB
     // 20 EnvvADSR
     {moduleTypeEnvADSR,    paramType1StandardToggle, paramType2Toggle, {{-26,  -3}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, envShapeStrMap,         NULL          }, // 20 EnvADSR
     {moduleTypeEnvADSR,    paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, NULL,                   NULL          },
@@ -1328,6 +1333,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeXtoFade,     connectorDirIn,  connectorTypeControl, {{ 33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 18 Mod
     {moduleTypeXtoFade,     connectorDirOut, connectorTypeControl, {{ 92,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 18 Out
     // 19 Mix4-1B
+    {moduleTypeMix4to1B,    connectorDirIn,  connectorTypeControl, {{  30, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",           labelLocUp }, // 19 In 1
+    {moduleTypeMix4to1B,    connectorDirIn,  connectorTypeControl, {{  45, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",           labelLocUp }, // 19 In 2
+    {moduleTypeMix4to1B,    connectorDirIn,  connectorTypeControl, {{  60, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",           labelLocUp }, // 19 In 3
+    {moduleTypeMix4to1B,    connectorDirIn,  connectorTypeControl, {{  75, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",           labelLocUp }, // 19 In 4
+    {moduleTypeMix4to1B,    connectorDirIn,  connectorTypeControl, {{  3, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Chain",           labelLocRight }, // 19 Chain
+    {moduleTypeMix4to1B,      connectorDirOut, connectorTypeControl, {{  -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,          labelLocLeft }, // 19 Out
     // 20 EnvADSR
     {moduleTypeEnvADSR,     connectorDirIn,  connectorTypeControl, {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   }, // 20
     {moduleTypeEnvADSR,     connectorDirIn,  connectorTypeLogic,   {{  3,  15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Gate",         labelLocRight},

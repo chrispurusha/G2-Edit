@@ -830,6 +830,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create Mixer 1-1 S", menu_action_create, moduleTypeMix1to1S,  NULL},
         {"Create Mixer 2-1 A", menu_action_create, moduleTypeMix2to1A,  NULL},
         {"Create Mixer 4-1 A", menu_action_create, moduleTypeMix4to1A,  NULL},
+        {"Create Mixer 4-1 B", menu_action_create, moduleTypeMix4to1B,  NULL},
         {"Create Mixer 4-1 C", menu_action_create, moduleTypeMix4to1C,  NULL},
         {"Create Mixer 4-1 S", menu_action_create, moduleTypeMix4to1S,  NULL},
         {"Create Mixer 2-1 B", menu_action_create, moduleTypeMix2to1B,  NULL},
