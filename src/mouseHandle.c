@@ -696,6 +696,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create NoteQuant",  menu_action_create, moduleTypeNoteQuant,  NULL},
         {"Create NoteScaler", menu_action_create, moduleTypeNoteScaler, NULL},
         {"Create LevScaler",  menu_action_create, moduleTypeLevScaler,  NULL},
+        {"Create PartQuant", menu_action_create, moduleTypePartQuant, NULL},
         {"Create PitchTrack", menu_action_create, moduleTypePitchTrack, NULL},
         {"Create ZeroCnt",    menu_action_create, moduleTypeZeroCnt,    NULL},
         {NULL,                NULL,                                  0, NULL}     // End of menu

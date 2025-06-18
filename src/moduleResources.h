@@ -455,6 +455,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEnvADSR,    paramType1StandardToggle, paramType2Toggle, {{  5,  -8}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,      NULL          },
     // 21 Mux1-8 -- No params
     // 22 PartQuant
+    {moduleTypePartQuant,    paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Range",           128,   100, NULL,                   NULL          }, // 22 Range
     // 23 ModADSR
     // 24 LfoC
     {moduleTypeLfoC,       paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 24 Rate  *** Could have Freq but tied to Range
@@ -1357,6 +1358,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMux1to8,    connectorDirOut,  connectorTypeControl, {{78,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",            labelLocUp   }, // 21 Out7
     {moduleTypeMux1to8,    connectorDirOut,  connectorTypeControl, {{86,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",            labelLocUp   }, // 21 Out8
     // 22 PartQuant
+    {moduleTypePartQuant,    connectorDirIn,  connectorTypeControl, {{ 85,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,            labelLocUp   }, // 22 In
+    {moduleTypePartQuant,      connectorDirOut, connectorTypeControl, {{  -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,          labelLocLeft }, // 22 Out
     // 23 ModADSR
     // 24 LfoC
     {moduleTypeLfoC,        connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },
