@@ -801,6 +801,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create Sw2-1",    menu_action_create, moduleTypeSw2to1,    NULL},
         {"Create Sw2-1M",   menu_action_create, moduleTypeSw2to1,    NULL},
         {"Create Sw4-1",    menu_action_create, moduleTypeSw4to1,    NULL},
+        {"Create Sw8-1",    menu_action_create, moduleTypeSw8to1,    NULL},
         {"Create Sw1-2",    menu_action_create, moduleTypeSw1to2,    NULL},
         {"Create Sw1-2M",   menu_action_create, moduleTypeSw1to2M,   NULL},
         {"Create Sw1-4",    menu_action_create, moduleTypeSw1to4,    NULL},

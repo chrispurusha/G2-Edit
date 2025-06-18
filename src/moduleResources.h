@@ -421,7 +421,6 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeReverb,     paramType1CommonDial,     paramType2Dial,   {{ 37,  -3}, { 7, 14}}, anchorBottomLeft,  "Brightness",   128,  64, NULL,                   NULL          },
     {moduleTypeReverb,     paramType1CommonDial,     paramType2Dial,   {{ 57,  -3}, { 7, 14}}, anchorBottomLeft,  "DryWet",       128,  64, NULL,                   NULL          },
     {moduleTypeReverb,     paramType1Bypass,         paramType2Toggle, {{-20,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          },
-
     // 13 OscString
     {moduleTypeOscString,  paramType1Freq,           paramType2Dial,   {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 13 OscString Coarse
     {moduleTypeOscString,  paramType1CommonDial,     paramType2Dial,   {{ 47,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                   NULL          }, // 13 OscString Fine
@@ -1307,6 +1306,16 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeOscString,   connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft }, // 13 OscString Audio Out
     // 14 Unknown
     // 15 Sw8-1
+    {moduleTypeSw8to1,      connectorDirIn,  connectorTypeControl, {{  30, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",           labelLocLeft }, // 15 In 1
+    {moduleTypeSw8to1,      connectorDirIn,  connectorTypeControl, {{  35, -15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",           labelLocLeft }, // 15 In 2
+    {moduleTypeSw8to1,      connectorDirIn,  connectorTypeControl, {{  45, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",           labelLocLeft }, // 15 In 3
+    {moduleTypeSw8to1,      connectorDirIn,  connectorTypeControl, {{  50, -15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",           labelLocLeft }, // 15 In 4
+    {moduleTypeSw8to1,      connectorDirIn,  connectorTypeControl, {{  60, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",           labelLocLeft }, // 15 In 5
+    {moduleTypeSw8to1,      connectorDirIn,  connectorTypeControl, {{  65, -15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",           labelLocLeft }, // 15 In 6
+    {moduleTypeSw8to1,      connectorDirIn,  connectorTypeControl, {{  75, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",           labelLocLeft }, // 15 In 7
+    {moduleTypeSw8to1,      connectorDirIn,  connectorTypeControl, {{  80, -15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",           labelLocLeft }, // 15 In 8
+    {moduleTypeSw8to1,      connectorDirOut, connectorTypeControl, {{  -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,          labelLocLeft }, // 13 Out
+    {moduleTypeSw8to1,      connectorDirOut, connectorTypeControl, {{   3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Control",     labelLocUp   }, // 13 Control
     // 16 Unknown
     // 17 ValSw1-2
     // 18 X-Fade
