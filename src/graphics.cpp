@@ -93,12 +93,15 @@ void window_close_callback(GLFWwindow * window) {
 }
 
 void set_window_title(const char * title) {
-    const char * filename = strrchr(title, '/');
-    char         newTitle[100];
+    char         newTitle[100] = {0};
+    const char * filename      = strrchr(title, '/');
 
-    strcpy(newTitle, WINDOW_TITLE);
-    strcat(newTitle, " - ");
-    strcat(newTitle, filename + 1);
+    if (filename) {
+        filename += 1;  // Skip the slash
+    } else {
+        filename = title;
+    }
+    snprintf(newTitle, sizeof(newTitle), "%s - %s", WINDOW_TITLE, filename);
     glfwSetWindowTitle(gWindow, newTitle);
 }
 
