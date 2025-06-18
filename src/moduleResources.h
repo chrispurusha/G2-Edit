@@ -1318,6 +1318,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSw8to1,      connectorDirOut, connectorTypeControl, {{   3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Control",     labelLocUp   }, // 13 Control
     // 16 Unknown
     // 17 ValSw1-2
+    {moduleTypeValSw1to2,   connectorDirIn,  connectorTypeControl, {{  70, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft }, // 17 In
+    {moduleTypeValSw1to2,   connectorDirIn,  connectorTypeControl, {{  3, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",           labelLocRight }, // 17 Ctrl
+    {moduleTypeValSw1to2,      connectorDirOut, connectorTypeControl, {{   -10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,     labelLocUp   }, // 17 Out1
+    {moduleTypeValSw1to2,      connectorDirOut, connectorTypeControl, {{   -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,     labelLocUp   }, // 17 Out2
     // 18 X-Fade
     {moduleTypeXtoFade,     connectorDirIn,  connectorTypeControl, {{ 70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocLeft }, // 18 In1
     {moduleTypeXtoFade,     connectorDirIn,  connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocLeft }, // 18 In2
