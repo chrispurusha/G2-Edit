@@ -804,7 +804,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeOscA,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                   NULL          }, // 97 Pitch M
     {moduleTypeOscA,       paramType1StandardToggle, paramType2Toggle, {{-20,   5}, { 7,  7}}, anchorTopRight,    NULL,             6,   0, shapeOscATypeStrMap,    NULL          }, // 97 Waveform
     {moduleTypeOscA,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 97 Bypass
-    {moduleTypeOscA,       paramType1StandardToggle, paramType2Toggle, {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,        NULL          }, // 97 Pitch Type
+    {moduleTypeOscA,       paramType1StandardToggle, paramType2Toggle, {{ 30,  10}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,        NULL          }, // 97 Pitch Type
 
     // 98 FreqShift
     {moduleTypeFreqShift,  paramType1Freq,           paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "FreqShift",    128,  64, NULL,                   NULL          }, // 98 FreqShift
