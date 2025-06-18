@@ -1329,27 +1329,27 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
 }
 
 void scroll_event(GLFWwindow * window, double x, double y) {
-    const double zoomIncrement = 0.025;  // Zoom sensitivity
-    double       zoomFactor    = 0.0;
-    tCoord       mouseCoord    = {0};
-    tRectangle   moduleArea    = module_area(); // Get the module display area
-    int          width         = 0;
-    int          height        = 0;
+//    tCoord       mouseCoord    = {0};
+//    tRectangle   moduleArea    = module_area(); // Get the module display area
+//    int          width         = 0;
+//    int          height        = 0;
+//
+//    glfwGetWindowSize(window, &width, &height);
 
-    glfwGetWindowSize(window, &width, &height);
+//    get_global_gui_scaled_mouse_coord(&mouseCoord);
 
-    get_global_gui_scaled_mouse_coord(&mouseCoord);
-
-    //mouseCoord.x = (mouseCoord.x * (double)get_render_width()) / (double)width;
-    //mouseCoord.y = (mouseCoord.y * (double)get_render_height()) / (double)height;
-
-//    LOG_DEBUG("Zoom = %f yEndMax = %f module area size = %f percent = %f\n", gZoomFactor, yEndMax, moduleArea.size.h, get_scroll_bar_percent(gScrollState.yBar, gRenderHeight));
-
-    if (within_rectangle(mouseCoord, moduleArea)) {
-        zoomFactor  = get_zoom_factor();
-        zoomFactor += y * zoomIncrement;
-        set_zoom_factor(zoomFactor);
+    if (x != 0) {
+        gScrollState.xBar -= x/2;
+        set_x_scroll_bar(gScrollState.xBar);
     }
+    
+    if (y != 0) {
+        gScrollState.yBar += y;
+        set_y_scroll_bar(gScrollState.yBar);
+    }
+    
+    LOG_DEBUG("SCROLL: x = %f y = %f\n", x, y);
+
     gReDraw = true;
 }
 
