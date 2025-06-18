@@ -27,6 +27,9 @@ GLFWwindow *    gWindow            = NULL;
 uint32_t        gLocation          = locationVa;
 uint32_t        gVariation         = 0;
 bool            gReDraw            = true;
+    
+bool            gCommandKeyPressed = false;
+    
 tButton         gMainButtonArray[] = {  // Must align with tButtonId enumaration
     {{400,  8}, NULL_RECTANGLE, anchorTopLeft, "VA",        RGB_GREEN_ON       },
     {{425,  8}, NULL_RECTANGLE, anchorTopLeft, "FX",        RGB_BACKGROUND_GREY},

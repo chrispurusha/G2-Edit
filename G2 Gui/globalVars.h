@@ -38,6 +38,7 @@ extern GLFWwindow *    gWindow;
 extern uint32_t        gLocation;
 extern uint32_t        gVariation;
 extern bool            gReDraw;
+extern bool            gCommandKeyPressed;
 extern tButton         gMainButtonArray[];
 extern bool            gShowOpenFileReadDialogue;
 extern tScrollState    gScrollState;
