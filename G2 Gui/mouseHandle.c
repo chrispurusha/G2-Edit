@@ -1343,17 +1343,11 @@ void scroll_event(GLFWwindow * window, double x, double y) {
     //mouseCoord.x = (mouseCoord.x * (double)get_render_width()) / (double)width;
     //mouseCoord.y = (mouseCoord.y * (double)get_render_height()) / (double)height;
 
-    //LOG_DEBUG("Zoom = %f yEndMax = %f module area size = %f percent = %f\n", gZoomFactor, yEndMax, moduleArea.size.h, get_scroll_bar_percent(gScrollState.yBar, gRenderHeight));
+//    LOG_DEBUG("Zoom = %f yEndMax = %f module area size = %f percent = %f\n", gZoomFactor, yEndMax, moduleArea.size.h, get_scroll_bar_percent(gScrollState.yBar, gRenderHeight));
 
     if (within_rectangle(mouseCoord, moduleArea)) {
         zoomFactor  = get_zoom_factor();
         zoomFactor += y * zoomIncrement;
-
-        if (zoomFactor < 0.25) {
-            zoomFactor = 0.25;
-        } else if (zoomFactor > 2.0) {
-            zoomFactor = 2.0;
-        }
         set_zoom_factor(zoomFactor);
     }
     gReDraw = true;
@@ -1365,9 +1359,35 @@ void char_event(GLFWwindow * window, unsigned int value) {
 }
 
 void key_callback(GLFWwindow * window, int key, int scancode, int action, int mods) {
+    const double zoomIncrement = 0.25;  // Zoom sensitivity
+    double       zoomFactor    = 0.0;
+
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GL_TRUE);
     }
+    
+    // Keep status of left command key
+    if (key == GLFW_KEY_LEFT_SUPER && action == GLFW_PRESS) {
+        gCommandKeyPressed = true;
+    }
+    if (key == GLFW_KEY_LEFT_SUPER && action == GLFW_RELEASE) {
+        gCommandKeyPressed = false;
+    }
+    
+    // React on command key with - + keys for zooming
+    if (key == GLFW_KEY_MINUS && action == GLFW_PRESS && gCommandKeyPressed == true) {
+        LOG_DEBUG("ZOOM OUT\n");
+        zoomFactor  = get_zoom_factor();
+        zoomFactor -= zoomIncrement;
+        set_zoom_factor(zoomFactor);
+    }
+    if (key == GLFW_KEY_EQUAL && action == GLFW_PRESS && gCommandKeyPressed == true) {
+        LOG_DEBUG("ZOOM IN\n");
+        zoomFactor  = get_zoom_factor();
+        zoomFactor += zoomIncrement;
+        set_zoom_factor(zoomFactor);
+    }
+
     LOG_DEBUG("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
     gReDraw = true;
 }
