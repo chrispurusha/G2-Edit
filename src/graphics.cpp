@@ -92,14 +92,14 @@ void window_close_callback(GLFWwindow * window) {
     glfwPostEmptyEvent();
 }
 
-void set_window_title(const char * title) {
+void set_window_title(const char * filePath) {
     char         newTitle[100] = {0};
-    const char * filename      = strrchr(title, '/');
+    const char * filename      = strrchr(filePath, '/');
 
     if (filename) {
         filename += 1;  // Skip the slash
     } else {
-        filename = title;
+        filename = filePath;
     }
     snprintf(newTitle, sizeof(newTitle), "%s - %s", WINDOW_TITLE, filename);
     glfwSetWindowTitle(gWindow, newTitle);
