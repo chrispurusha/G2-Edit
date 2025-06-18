@@ -94,10 +94,11 @@ void window_close_callback(GLFWwindow * window) {
 
 void set_window_title(const char * title) {
     const char * filename = strrchr(title, '/');
-    char newTitle [100];
-    strcpy(newTitle,WINDOW_TITLE);
-    strcat(newTitle," - ");
-    strcat(newTitle,filename + 1);
+    char         newTitle[100];
+
+    strcpy(newTitle, WINDOW_TITLE);
+    strcat(newTitle, " - ");
+    strcat(newTitle, filename + 1);
     glfwSetWindowTitle(gWindow, newTitle);
 }
 
@@ -350,7 +351,6 @@ void read_file_into_memory_and_process(const char * filepath) {
     } else {
         LOG_WARNING("CRC check failed\n");
     }
-        
     free(buff);
     fclose(file);
 }
@@ -363,7 +363,7 @@ void check_action_flags(void) {
             LOG_INFO("\n\nSelected file: %s\n", path);
 
             set_window_title(path);
-            
+
             read_file_into_memory_and_process(path);
 
             free((void *)path);

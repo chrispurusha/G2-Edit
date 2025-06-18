@@ -2,7 +2,7 @@
 
 # To run: ./do-uncrustify
 
-~/uncrustify -c uncrustify.cfg --no-backup G2-edit/*.h
-~/uncrustify -c uncrustify.cfg --no-backup G2-edit/*.c
-~/uncrustify -c uncrustify.cfg --no-backup G2-edit/*.cpp
-~/uncrustify -c uncrustify.cfg --no-backup G2-edit/*.mm
+~/uncrustify -c uncrustify.cfg --no-backup src/*.h
+~/uncrustify -c uncrustify.cfg --no-backup src/*.c
+~/uncrustify -c uncrustify.cfg --no-backup src/*.cpp
+~/uncrustify -c uncrustify.cfg --no-backup src/*.mm
