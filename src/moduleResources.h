@@ -407,13 +407,13 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeOscShpB,    paramType1Bypass,         paramType2Toggle, {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   0, NULL,                   NULL          }, // 8 Bypass
     {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Toggle, {{ 60,  15}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,           NULL          }, // 8 FM Type
     //  9 OscC
-    {moduleTypeOscC,       paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                   NULL          }, // 9 Coarse
+    {moduleTypeOscC,       paramType1OscFreq,     paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                   NULL          }, // 9 Coarse
     {moduleTypeOscC,       paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                   NULL          }, // 9 Fine
     {moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,            offOnColourMap}, // 9 Kbt
     {moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,        NULL          }, // 9 Tune Mode
     {moduleTypeOscC,       paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "FM",           128,   0, NULL,                   NULL          }, // FM
     {moduleTypeOscC,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 9 Bypass
-    {moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{ 60,  15}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,           NULL          }, // 9 FM Type
+    {moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{ 70,  15}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,           NULL          }, // 9 FM Type
     {moduleTypeOscC,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                   NULL          }, // Pitch Mode
 
     // 10 Unknown
