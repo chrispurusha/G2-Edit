@@ -341,6 +341,86 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
+        case paramType1LFORate:
+        {
+            double rate;
+            int rateModeParamIndex;
+            switch(module->type) {
+                case moduleTypeLfoC:
+                {
+                    rateModeParamIndex = 3;
+                    break;
+                }
+                default:
+                {
+                }
+            }
+            switch(module->param[gVariation][rateModeParamIndex].value) {
+                case 0: // Sub - compute range in s
+                {
+                    double range_start = 699.0;
+                    double range_end = 5.46;
+                    rate = range_start * exp((double)paramValue * log(range_end/range_start)/127.0);
+                    if (rate > 100.0) {
+                        snprintf(buff, sizeof(buff), "%.0fs", rate);
+                    } else if (rate > 10.0) {
+                        snprintf(buff, sizeof(buff), "%.1fs", rate);
+                    } else {
+                        snprintf(buff, sizeof(buff), "%.2fs", rate);
+                    }
+                    break;
+                }
+
+                case 1: // Rate Lo -- compute rate in s
+                {
+                    double range_start = 62.9;
+                    double range_end = 0.04098; // 24.4 Hz
+                    rate = range_start * exp((double)paramValue * log(range_end/range_start)/127.0);
+                    if (rate > 10.0) {
+                        snprintf(buff, sizeof(buff), "%.1fs", rate);
+                    } else if (rate > 0.1) {
+                        snprintf(buff, sizeof(buff), "%.2fHz", 1.0/rate);
+                    } else {
+                        snprintf(buff, sizeof(buff), "%.1fHz", 1.0/rate);
+                    }
+                    break;
+                }
+                case 2: // Rate Hi - compute rate in Hz
+                {
+                    double min_freq=0.26;
+                    double max_freq=392.0;
+                    double freq = min_freq * exp((double) paramValue * log(max_freq/min_freq)/127.0);
+                    if (freq < 10.0) {
+                        snprintf(buff, sizeof(buff), "%.2fHz", freq);
+                    } else if (freq < 100.0) {
+                        snprintf(buff, sizeof(buff), "%.1fHz", freq);
+                    } else {
+                        snprintf(buff, sizeof(buff), "%.0fHz", freq);
+                    }
+                    break;
+                }
+                case 3: // BPM
+                {
+                    int bpm;
+                    if (paramValue < 33) { // 0->24, 32->88 in steps of 2
+                        bpm = 24 + round(2 * paramValue);
+                    } else if (paramValue < 97) { // 33 -> 89, 96 -> 152 in steps of 1
+                        bpm = 56 + round(paramValue);
+                    } else { // 97 -> 154, 127 -> 214 in steps of 2
+                        bpm = 154 + round(2 * (paramValue - 97.0));
+                    }
+                    snprintf(buff, sizeof(buff), "%u", bpm);
+                    break;
+                }
+                default:
+                {
+                    LOG_ERROR("Wrong case in paramTypeLFORate");
+                }
+            }
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
+
         case paramType1Int:
         {
             int val = 0;

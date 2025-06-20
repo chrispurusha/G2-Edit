@@ -52,6 +52,7 @@ const char * shapeOscATypeStrMap[]    = {"sin", "tri", "saw", "squ", "p25", "p10
 const char * reverbTypeStrMap[]       = {"Small", "Medium", "Large", "Hall"};
 const char * polyMonoStrMap[]         = {"Poly", "Mono"};
 const char * rangeStrMap[]            = {"Rate Lo", "Rate Hi", "BPM", "Clk", "Rate Sub"};
+const char * rangeLfoCStrMap[]        = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM"};
 const char * lfoWaveStrMap[]          = {"Sin", "Tri", "Saw", "Squ", "RndSt", "Rnd"};
 const char * lfoAltWaveStrMap[]       = {"Sine", "CosBell", "TriBell", "Saw>Tri", "Tri>Squ", "Pulse"};
 const char * saturateCurveStrMap[]    = {"1", "2", "3", "4"};
@@ -469,10 +470,10 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeModADSR,     paramType1StandardToggle, paramType2Toggle, {{-15, -17}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,              NULL          }, // 22 Output Type
     {moduleTypeModADSR,     paramType1StandardToggle, paramType2Toggle, {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, kbStrMap,               offOnColourMap}, // 22 KB
     // 24 LfoC
-    {moduleTypeLfoC,       paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 24 Rate  *** Could have Freq but tied to Range
-    {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,         NULL          }, // 24 Mode
+    {moduleTypeLfoC,       paramType1LFORate,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 24 Rate  *** Could have Freq but tied to Range
+    {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,         NULL          }, // 24 Mode
     {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 76,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, posStrMap,              NULL          }, // 24 OutType
-    {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,            NULL          }, // 24 Range
+    {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, rangeLfoCStrMap,            NULL          }, // 24 Range
     {moduleTypeLfoC,       paramType1Bypass,         paramType2Toggle, {{-3,  -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 24 Bypass
     // 25 LfoShpA
     {moduleTypeLfoShpA,    paramType1CommonDial,     paramType2Dial,   {{ 36,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 25 Rate  *** Could have Freq but tied to Range
@@ -1379,7 +1380,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeModADSR,      connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",          labelLocUp }, // 169 Env
     {moduleTypeModADSR,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // 169 Out
     // 24 LfoC
-    {moduleTypeLfoC,        connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },
+    {moduleTypeLfoC,        connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rate",           labelLocRight   },
     {moduleTypeLfoC,        connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
     // 25 LfoShpA
     {moduleTypeLfoShpA,     connectorDirIn,  connectorTypeControl, {{ 10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // Rate

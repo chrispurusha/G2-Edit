@@ -313,6 +313,7 @@ typedef enum {
     paramType1OscFreq,
     paramType1FreqDrum,
     paramType1Int,
+    paramType1LFORate,
     paramType1Shape,
     paramType1dB,
     paramType1ADRTime,
