@@ -518,12 +518,26 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         case paramType1ADRTime:
         {
             double time = 0.0;
-            // scale 0 -> 5 ms and 127 -> 45 s, exponentially
-            time = exp((double)paramValue * 0.0717) * 0.005;
+            const double ADRTimeMap[] = {0.0005, 0.0006, 0.0007, 0.0009,  0.0011, 0.0013, 0.0015, 0.0018,  0.0021, 0.0025, 0.0030, 0.0035,  0.0040, 0.0047, 0.0055, 0.0063,
+                                         0.0073, 0.0084, 0.0097, 0.0111,  0.0127, 0.0145, 0.0165, 0.0187,  0.0212, 0.0240, 0.0271, 0.0306,  0.0344, 0.0387, 0.0434, 0.0486,
+                                         0.0543, 0.0606, 0.0676, 0.0752,  0.0836, 0.0928, 0.103,  0.114,   0.126,  0.139,  0.153,  0.169,   0.186,  0.204,  0.224,  0.246,
+                                         0.269,  0.295,  0.322,  0.352,   0.384,  0.419,  0.456,  0.496,   0.540,  0.586,  0.636,  0.690,   0.748,  0.810,  0.876,  0.947,
+                                         1.02, 1.10, 1.19, 1.28,  1.38, 1.49, 1.60, 1.72,  1.85, 1.99, 2.13, 2.28,  2.45, 2.62, 2.81, 3.00,
+                                         3.21, 3.43, 3.66, 2.91,  4.17, 4.45, 4.74, 5.05,  5.37, 5.72, 6.08, 6.47,  6.87, 7.30, 7.75, 8.22,
+                                         8.72, 9.25, 9.80, 10.4,  11.0, 11.6, 12.3, 13.0,  13.8, 14.6, 15.4, 16.2,  17.1, 18.1, 19.1, 20.1,
+                                         21.2, 22.4, 23.5, 24.8,  26.1, 27.5, 28.9, 30.4,  32.0, 33.6, 35.3, 37.1,  38.9, 40.9, 42.9, 45.0
+            };
+            // use table
+            time = ADRTimeMap[paramValue];
 
-            if (time < 1.0) {
+            if (time < 0.1) {
+                snprintf(buff, sizeof(buff), "%.1fms", time * 1000);
+            } else if (time < 1.0) {
                 snprintf(buff, sizeof(buff), "%.0fms", time * 1000);
-            } else {
+            } else if (time < 10.0) {
+                snprintf(buff, sizeof(buff), "%.2fs", time);
+            }
+            else {
                 snprintf(buff, sizeof(buff), "%.1fs", time);
             }
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
