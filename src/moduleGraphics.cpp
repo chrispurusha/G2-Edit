@@ -248,6 +248,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         }
         case paramType1OscFreq:
         {
+            // Frequency dial for oscillators. Uses PitchType param to control display of Tune
             int pitchTypeParamIndex = 0;
             
             switch(module->type) {
@@ -258,7 +259,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 }
             }
             switch(module->param[gVariation][pitchTypeParamIndex].value) {
-                case 0: { // Semi
+                case 0: { // Semi. -64 to 63
                     double res;
 
                     if (paramValue < 127) {
@@ -269,7 +270,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     snprintf(buff, sizeof(buff), "%.1f", res);
                     break;
                 }
-                case 1: { // Freq
+                case 1: { // Freq. 8.1758 Hz to 12.55 kHz
                     double res;
                     double min_freq = 8.1758;
                     double max_freq = 12550.0;
@@ -285,7 +286,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     }
                     break;
                 }
-                case 2: { // Factor
+                case 2: { // Factor. 0->0.0248, 127 -> 38.072
                     double res;
                     double min_factor = .0248;
                     double max_factor = 38.072;
@@ -293,7 +294,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     snprintf(buff, sizeof(buff), "%.4fHz", res);
                     break;
                 }
-                case 3: { // Partial
+                case 3: { // Partial. Displays partials for values from 33 upwards, Hz below.
                     double res;
                     if(paramValue == 0.0) {
                         snprintf(buff, sizeof(buff), "0 Hz");
@@ -565,6 +566,11 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             snprintf(buff, sizeof(buff), "%.2fx", lev);
 
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
+        case paramType1Pan:
+        {
+            module->param[gVariation][paramIndex].rectangle = render_dial(moduleArea, rectangle, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
         case paramType1NoteDial: // C-1 to G9
