@@ -51,10 +51,11 @@ const char * shapeTypeStrMap[]        = {"sin", "tri", "saw", "squ", "sup"};
 const char * shapeOscATypeStrMap[]    = {"sin", "tri", "saw", "squ", "p25", "p10"};
 const char * reverbTypeStrMap[]       = {"Small", "Medium", "Large", "Hall"};
 const char * polyMonoStrMap[]         = {"Poly", "Mono"};
-const char * rangeStrMap[]            = {"Rate Lo", "Rate Hi", "BPM", "Clk", "Rate Sub"};
+const char * rangeStrMap[]            = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM", "Clk", };
 const char * rangeLfoCStrMap[]        = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM"};
 const char * lfoWaveStrMap[]          = {"Sin", "Tri", "Saw", "Squ", "RndSt", "Rnd"};
 const char * lfoAltWaveStrMap[]       = {"Sine", "CosBell", "TriBell", "Saw>Tri", "Tri>Squ", "Pulse"};
+const char * lfoShpAWaveStrMap[]       = {"Sine", "CosBell", "TriBell", "Saw>Tri", "Squ>Tri", "Squ"};
 const char * saturateCurveStrMap[]    = {"1", "2", "3", "4"};
 const char * shpExpCurveStrMap[]      = {"x2", "x3", "x4", "x5"};
 const char * pulseRangeStrMap[]       = {"Sub", "Lo", "Hi"};
@@ -476,7 +477,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, rangeLfoCStrMap,            NULL          }, // 24 Range
     {moduleTypeLfoC,       paramType1Bypass,         paramType2Toggle, {{-3,  -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 24 Bypass
     // 25 LfoShpA
-    {moduleTypeLfoShpA,    paramType1CommonDial,     paramType2Dial,   {{ 36,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 25 Rate  *** Could have Freq but tied to Range
+    {moduleTypeLfoShpA,    paramType1LFORate,     paramType2Dial,   {{ 36,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 25 Rate  *** Could have Freq but tied to Range
     {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Toggle, {{ 36, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,            NULL          }, // 25 Range
     {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Toggle, {{ 25, -28}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,       NULL          }, // 25 Kbt
     {moduleTypeLfoShpA,    paramType1CommonDial,     paramType2Dial,   {{ 25,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 25 Rate M
@@ -487,7 +488,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeLfoShpA,    paramType1CommonDial,     paramType2Dial,   {{ 57,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 25 Shape M
     {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Toggle, {{ 25, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,         NULL          }, // 25 Mode
     {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Toggle, {{-10, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,              NULL          }, // 25 OutType
-    {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Toggle, {{ 57, -32}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, lfoAltWaveStrMap,       NULL          }, // 25 Wave
+    {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Toggle, {{ 57, -32}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, lfoShpAWaveStrMap,       NULL          }, // 25 Wave
     // 26 LfoA
     {moduleTypeLfoA,       paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 26 Rate  *** Could have Freq but tied to Range
     {moduleTypeLfoA,       paramType1StandardToggle, paramType2Toggle, {{ 17, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,         NULL          }, // 26 Mode

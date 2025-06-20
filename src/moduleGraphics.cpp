@@ -346,6 +346,11 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             double rate;
             int rateModeParamIndex;
             switch(module->type) {
+                case moduleTypeLfoShpA:
+                {
+                    rateModeParamIndex = 1;
+                    break;
+                }
                 case moduleTypeLfoC:
                 {
                     rateModeParamIndex = 3;
@@ -411,10 +416,19 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     }
                     snprintf(buff, sizeof(buff), "%u", bpm);
                     break;
+                case 4: // ClkSync. 32 values
+                    const char * clkSyncStrMap[] = {
+                        "64/1", "48/1", "32/1", "24/1",  "16/1", "12/1", "8/1", "6/1",   "4/1", "3/1", "2/1", "1/1D",
+                        "1/1", "1/2D", "1/1T", "1/2",    "1/4D", "1/2T", "1/4", "1/8D",  "1/4T", "1/8", "1/16D", "1/8T",
+                        "1/16", "1/32D", "1/16T", "1/32",  "1/64D", "1/32T", "1/64", "1/64T"
+                    };
+                    int posClkSyncStrMap = floor(paramValue/4);
+                    snprintf(buff, sizeof(buff), "%s\n", clkSyncStrMap[posClkSyncStrMap]);
+                    break;
                 }
                 default:
                 {
-                    LOG_ERROR("Wrong case in paramTypeLFORate");
+                    LOG_ERROR("Wrong case %u in paramTypeLFORate\n", module->param[gVariation][rateModeParamIndex].value);
                 }
             }
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
