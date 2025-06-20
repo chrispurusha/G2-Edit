@@ -2,6 +2,10 @@
 8 OK *** except Mode
 9 OK *** except Mode
 12 Reverb OK
+13 OscString OK
+15 Sw8-1 Needs more resources
+17 ValSw1-2 Needs more resources
+18 X-fade OK
 32 Added two params not in use
 33 Added two params not in use. Param7 can come from the synth with value 2.
 51 FltNord OK
