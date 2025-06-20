@@ -1,5 +1,5 @@
 7 OscB Params OK. All inputs and outputs tested OK.
-8 OscShpB does not crash
+8 OK *** except Mode
 12 Reverb *** Had to comment out Type
 32 Added two params not in use
 33 Added two params not in use. Param7 can come from the synth with value 2.
