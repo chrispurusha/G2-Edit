@@ -9,6 +9,7 @@
 19 Mix4-1B OK
 20 EnvADSR OK (new table for ADRTime values). *** LED doesn't work as intended.
 22 PartQuant OK *** Needs better dial values from 0 to plus minus 63
+23 ModADSR OK
 32 Added two params not in use
 33 Added two params not in use. Param7 can come from the synth with value 2.
 51 FltNord OK
