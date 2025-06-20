@@ -228,6 +228,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
     module->param[gVariation][paramIndex].paramRef = paramRef;
 
     switch (paramLocationList[paramRef].type1) {
+            LOG_DEBUG("param %u", paramValue);
         case paramType1Freq:
         {
             double freq = 0.0;
@@ -719,7 +720,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             //    set_rgb_colour(RGB_BACKGROUND_GREY);
             //}
             set_rgb_colour(RGB_BACKGROUND_GREY);
-            LOG_DEBUG("Reverb mode %u", modeValue);
+            
             module->mode[modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight), textHeight}}, strMap[modeValue]);
             break;
         }

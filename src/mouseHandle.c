@@ -1034,12 +1034,11 @@ bool handle_module_click(tCoord coord, int button) {
                                 mode->value = (mode->value + 1) % modeLocationList[mode->modeRef].range;
                                 write_module(module.key, &module);
                                 tMessageContent messageContent = {0};
-                                messageContent.cmd                 = eMsgCmdSetValue;
+                                messageContent.cmd                 = eMsgCmdSetMode;
                                 messageContent.slot                = gSlot;
-                                messageContent.paramData.moduleKey = module.key;
-                                //messageContent.paramData.mode     = i;
-                                messageContent.paramData.variation = 0;
-                                messageContent.paramData.value     = mode->value;
+                                messageContent.modeData.moduleKey  = module.key;
+                                messageContent.modeData.mode       = i;
+                                messageContent.modeData.value      = mode->value;
 
                                 msg_send(&gCommandQueue, &messageContent);
 

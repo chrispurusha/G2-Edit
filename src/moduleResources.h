@@ -473,7 +473,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,         NULL          }, // 24 Mode
     {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 76,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, posStrMap,              NULL          }, // 24 OutType
     {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,            NULL          }, // 24 Range
-    {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 64,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, lfoWaveStrMap,          NULL          }, // 24 Wave
+    {moduleTypeLfoC,       paramType1Bypass,         paramType2Toggle, {{-3,  -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 24 Bypass
     // 25 LfoShpA
     {moduleTypeLfoShpA,    paramType1CommonDial,     paramType2Dial,   {{ 36,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 25 Rate  *** Could have Freq but tied to Range
     {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Toggle, {{ 36, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,            NULL          }, // 25 Range
@@ -2152,7 +2152,7 @@ const tModeLocation modeLocationList[] = {
     {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Dial,   {{ 20,   5}, { 7, 14}}, anchorTopLeft,     "Wave",  8, 0, oscShpBStrMap      }, // 8 OscShpB
     {moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7,  7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap}, // 9 Wave
     {moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14,  7}}, anchorBottomLeft,  "Type",  4, 0, reverbTypeStrMap   }, // 12 Reverb
-    //{moduleTypeLfoC,    paramType1StandardToggle,  paramType2Toggle, {{64, -3}, {7, 7}}, anchorBottomLeft, "Wave", 6, 0, lfoWaveStrMap}, // 24 LfoC
+    {moduleTypeLfoC,    paramType1StandardToggle,  paramType2Toggle, {{64, -3}, {7, 7}}, anchorBottomLeft, "Wave", 6, 0, lfoWaveStrMap}, // 24 LfoC
     {moduleTypePulse,      paramType1StandardToggle, paramType2Toggle, {{-13,  -3}, { 7,  7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap    }, // 38 Mode
     {moduleTypeDelay,      paramType1StandardToggle, paramType2Toggle, {{-13,  -3}, { 7,  7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap    }, // 42 Mode
     {moduleTypeGate,       paramType1StandardToggle, paramType2Toggle, {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "G1",    6, 0, gateTypeStrMap     }, // 64 Gate 1 Type
