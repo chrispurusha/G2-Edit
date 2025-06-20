@@ -253,6 +253,11 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             int pitchTypeParamIndex = 0;
             
             switch(module->type) {
+                case moduleTypeOscMaster:
+                {
+                    pitchTypeParamIndex = 3;
+                    break;
+                }
                 case moduleTypeOscB:
                     pitchTypeParamIndex = 4;
                     break;
@@ -317,7 +322,14 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
-        case paramType1Shape:
+        case paramType1Fine:
+        {
+            double res = ((double)paramValue - 64.0)/64.0*50.0;
+            snprintf(buff, sizeof(buff), "%.1f", res);
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
+        case paramType1Shape: // 50.0->99.0
         {
             int val = 0;
             val = (int)(paramValue*49.0/127.0 + 50.0);
