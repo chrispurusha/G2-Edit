@@ -16,6 +16,8 @@
 27 OscMaster OK
 28 Saturate OK
 29 MetNoise OK
+31 Noise OK
+32 Eq2Band OK
 32 Added two params not in use
 33 Added two params not in use. Param7 can come from the synth with value 2.
 51 FltNord OK
