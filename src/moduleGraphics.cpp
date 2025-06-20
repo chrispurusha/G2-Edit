@@ -246,6 +246,76 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
+        case paramType1OscFreq:
+        {
+            int pitchTypeParamIndex = 0;
+            
+            switch(module->type) {
+                case moduleTypeOscB:
+                    pitchTypeParamIndex = 4;
+                    break;
+                default: {
+                }
+            }
+            switch(module->param[gVariation][pitchTypeParamIndex].value) {
+                case 0: { // Semi
+                    double res;
+
+                    if (paramValue < 127) {
+                        res = round((((double)paramValue-64.0) *10.0)) / 10.0;
+                    } else {
+                        res = 63.0;             // Clip
+                    }
+                    snprintf(buff, sizeof(buff), "%.1f", res);
+                    break;
+                }
+                case 1: { // Freq
+                    double res;
+                    double min_freq = 8.1758;
+                    double max_freq = 12550.0;
+                    res = exp((double)paramValue / 127.0 * log(max_freq / min_freq)) * min_freq;
+                    if (res < 100) {
+                        snprintf(buff, sizeof(buff), "%.2fHz", res);
+                    } else if (res < 1000) {
+                        snprintf(buff, sizeof(buff), "%.1fHz", res);
+                    } else if (res < 10000) {
+                        snprintf(buff, sizeof(buff), "%.2fkHz", res / 1000.0);
+                    } else {
+                        snprintf(buff, sizeof(buff), "%.1fkHz", res / 1000.0);
+                    }
+                    break;
+                }
+                case 2: { // Factor
+                    double res;
+                    double min_factor = .0248;
+                    double max_factor = 38.072;
+                    res = exp((double)paramValue / 127.0 * log(max_factor / min_factor)) * min_factor;
+                    snprintf(buff, sizeof(buff), "%.4fHz", res);
+                    break;
+                }
+                case 3: { // Partial
+                    double res;
+                    if(paramValue == 0.0) {
+                        snprintf(buff, sizeof(buff), "0 Hz");
+                    } else if(paramValue < 33.0) { // show value as Hz
+                        double min_freq = 0.005;
+                        double max_freq = 5.153;
+                        res = exp(((double)paramValue-1.0) / 31.0 * log(max_freq / min_freq)) * min_freq;
+                        snprintf(buff, sizeof(buff), "%.3fHz", res);
+                    } else if (paramValue < 64.0) {
+                        res = 64.0 - paramValue + 1.0;
+                        snprintf(buff, sizeof(buff), "1:%.0f", res);
+                    } else {
+                        res = paramValue - 64.0 + 1.0;
+                        snprintf(buff, sizeof(buff), "%.0f:1", res);
+                    }
+                    break;
+                }
+            }
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
+
         case paramType1FreqDrum:
         {
             double freq = 0.0;

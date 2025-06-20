@@ -1,3 +1,4 @@
+7 OscB Params OK
 8 OscShpB does not crash
 12 Reverb *** Had to comment out Type
 32 Added two params not in use
