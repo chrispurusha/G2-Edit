@@ -423,7 +423,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeReverb,     paramType1CommonDial,     paramType2Dial,   {{ 57,  -3}, { 7, 14}}, anchorBottomLeft,  "DryWet",       128,  64, NULL,                   NULL          }, // 12 DryWet
     {moduleTypeReverb,     paramType1Bypass,         paramType2Toggle, {{-20,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 12 Bypass
     // 13 OscString
-    {moduleTypeOscString,  paramType1Freq,           paramType2Dial,   {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 13 OscString Coarse
+    {moduleTypeOscString,  paramType1OscFreq,           paramType2Dial,   {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 13 OscString Tune
     {moduleTypeOscString,  paramType1CommonDial,     paramType2Dial,   {{ 47,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                   NULL          }, // 13 OscString Fine
     {moduleTypeOscString,  paramType1StandardToggle, paramType2Toggle, {{ 22,  -3}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,            offOnColourMap}, // 13 OscString Kbt
     {moduleTypeOscString,  paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                   NULL          }, // 13 OscString Pitch modulation
