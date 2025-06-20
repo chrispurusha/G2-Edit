@@ -437,7 +437,7 @@ const tParamLocation paramLocationList[] = {
     // 17 ValSw1-2 *** Could need more resources
     // 18 X-Fade
     {moduleTypeXtoFade,    paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 18 Mod
-    {moduleTypeXtoFade,    paramType1Pan,     paramType2Dial,   {{ 55,  4}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 18 X-fade *** should be another type of dial
+    {moduleTypeXtoFade,    paramType1Pan,     paramType2Dial,   {{ 55,  4}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 18 X-fade
     {moduleTypeXtoFade,    paramType1StandardToggle, paramType2Toggle, {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, logStrMap,              NULL          },
     // 19 Mix4-1B
     {moduleTypeMix4to1B,    paramType1CommonDial,     paramType2Dial,   {{ 37,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   100, NULL,                   NULL          }, // 19 Lev1
