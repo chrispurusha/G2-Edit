@@ -329,6 +329,26 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
+        case paramType1GeneralFreq:
+        {
+            double minFreq, maxFreq, freq;
+            switch(module->type) {
+                case moduleTypeEq3band: {
+                    minFreq = 100.0;
+                    maxFreq = 8000.0;
+                }
+                default: {
+                }
+            }
+            freq = minFreq * exp((double)paramValue * log(maxFreq/minFreq)/127.0);
+            if (freq<1000.0) {
+                snprintf(buff, sizeof(buff), "%.0fHz", freq);
+            } else {
+                snprintf(buff, sizeof(buff), "%.2fkHz", freq/1000.0);
+            }
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
         case paramType1Shape: // 50.0->99.0
         {
             int val = 0;

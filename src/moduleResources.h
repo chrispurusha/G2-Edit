@@ -520,8 +520,6 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeNoise,      paramType1CommonDial,     paramType2Dial,   {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "Color",        128,   0, NULL,                   NULL          }, // 31 Color  *** Or special dial
     {moduleTypeNoise,      paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 31 Bypass
     // 32 Eq2Band
-//    {moduleTypeEq2Band,    paramType1StandardToggle, paramType2Toggle, {{ 10, -6}, {7,  7}}, anchorBottomLeft,  "LoFreq",       1,  0, eq2BandLoStrMap, NULL},  // 32 Lo freq
-//    {moduleTypeEq2Band,    paramType1StandardToggle, paramType2Toggle, {{ 20, -6}, {7,  7}}, anchorBottomLeft,  "HiFreq",       1,  0, eq2BandHiStrMap, NULL},  // 32 Hi freq
     {moduleTypeEq2Band,    paramType1dB,             paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Lo (80Hz)",    128,  64, NULL,                   NULL          }, // 32 Lo Gain
     {moduleTypeEq2Band,    paramType1dB,             paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Hi (12kHz)",   128,  64, NULL,                   NULL          }, // 32 Hi Gain
     {moduleTypeEq2Band,    paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128, 127, NULL,                   NULL          }, // 32 Level
@@ -529,14 +527,14 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEq2Band,    paramType1StandardToggle, paramType2Toggle, {{ 30,  -17}, { 7, 7}}, anchorBottomLeft,  NULL,          3,  0, eq2BandLoStrMap,                   NULL          }, // 32 Lo Freq
     {moduleTypeEq2Band,    paramType1StandardToggle,             paramType2Toggle,   {{ 50,  -17}, { 7, 7}}, anchorBottomLeft,  NULL,          3,  2, eq2BandHiStrMap,                   NULL          }, // 32 Hi Freq
     // 33 Eq3Band
-    {moduleTypeEq3band,    paramType1dB,             paramType2Dial,   {{  5,  -3}, { 7, 14}}, anchorBottomLeft,  "Lo (80Hz)",    128,  64, NULL,                   NULL          }, // 33 Lo Gain
+    {moduleTypeEq3band,    paramType1dB,             paramType2Dial,   {{  5,  -3}, { 7, 14}}, anchorBottomLeft,  "Lo",    128,  64, NULL,                   NULL          }, // 33 Lo Gain
     {moduleTypeEq3band,    paramType1dB,             paramType2Dial,   {{ 24,  -3}, { 7, 14}}, anchorBottomLeft,  "MidGn",        128,  64, NULL,                   NULL          }, // 33 Mid Gain
-    {moduleTypeEq3band,    paramType1Freq,           paramType2Dial,   {{ 36,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,  64, NULL,                   NULL          }, // 33 Mid Freq
-    {moduleTypeEq3band,    paramType1dB,             paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Hi (12kHz)",   128,  64, NULL,                   NULL          }, // 33 Hi Gain
+    {moduleTypeEq3band,    paramType1GeneralFreq,           paramType2Dial,   {{ 36,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,  64, NULL,                   NULL          }, // 33 Mid Freq
+    {moduleTypeEq3band,    paramType1dB,             paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Hi",   128,  64, NULL,                   NULL          }, // 33 Hi Gain
     {moduleTypeEq3band,    paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128, 127, NULL,                   NULL          }, // 33 Level
     {moduleTypeEq3band,    paramType1Bypass,         paramType2Toggle, {{ -3,  -9}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 33 Bypass
-    {moduleTypeEq3band,    paramType1StandardToggle, paramType2Toggle, {{ 30,  -17}, { 7, 7}}, anchorBottomLeft,  NULL,          3,  0, eq3BandStrMap,                   NULL          }, // 33 Not in use
-    {moduleTypeEq3band,    paramType1StandardToggle,             paramType2Toggle,   {{ 50,  -17}, { 7, 7}}, anchorBottomLeft,  NULL,          3,  2, eq3BandStrMap,                   NULL          }, // 33 Not in use
+    {moduleTypeEq3band,    paramType1StandardToggle, paramType2Toggle, {{ 3,  -17}, { 7, 7}}, anchorBottomLeft,  NULL,          3,  0, eq2BandLoStrMap,                   NULL          }, // 33 Lo Freq
+    {moduleTypeEq3band,    paramType1StandardToggle,             paramType2Toggle,   {{ 53,  -17}, { 7, 7}}, anchorBottomLeft,  NULL,          3,  2, eq2BandHiStrMap,                   NULL          }, // 33 Hi Freq
     // 34 ShpExp
     {moduleTypeShpExp,     paramType1CommonDial,     paramType2Dial,   {{ 54,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 34 Amount
     {moduleTypeShpExp,     paramType1CommonDial,     paramType2Dial,   {{ 41,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 34 AmountMod
