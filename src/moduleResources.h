@@ -490,14 +490,14 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Toggle, {{-10, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,              NULL          }, // 25 OutType
     {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Toggle, {{ 57, -32}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, lfoShpAWaveStrMap,       NULL          }, // 25 Wave
     // 26 LfoA
-    {moduleTypeLfoA,       paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 26 Rate  *** Could have Freq but tied to Range
+    {moduleTypeLfoA,       paramType1LFORate,     paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 26 Rate  *** Could have Freq but tied to Range
     {moduleTypeLfoA,       paramType1StandardToggle, paramType2Toggle, {{ 17, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,         NULL          }, // 26 Mode
     {moduleTypeLfoA,       paramType1StandardToggle, paramType2Toggle, {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,       NULL          }, // 26 Kbt
     {moduleTypeLfoA,       paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 26 Rate M
     {moduleTypeLfoA,       paramType1StandardToggle, paramType2Toggle, {{ 65, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, lfoWaveStrMap,          NULL          }, // 26 Wave
     {moduleTypeLfoA,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 26 Bypass
     {moduleTypeLfoA,       paramType1StandardToggle, paramType2Toggle, {{-10, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,              NULL          }, // 26 OutType
-    {moduleTypeLfoA,       paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,            NULL          }, // 26 Range
+    {moduleTypeLfoA,       paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, rangeStrMap,            NULL          }, // 26 Range
     // 27 OscMaster
     {moduleTypeOscMaster,  paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,  64, NULL,                   NULL          }, // 27 Pitch
     {moduleTypeOscMaster,  paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                   NULL          }, // 27 Fine

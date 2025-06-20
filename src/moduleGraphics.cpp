@@ -356,6 +356,11 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     rateModeParamIndex = 3;
                     break;
                 }
+                case moduleTypeLfoA:
+                {
+                    rateModeParamIndex = 7;
+                    break;
+                }
                 default:
                 {
                 }
