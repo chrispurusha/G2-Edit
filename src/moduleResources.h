@@ -415,14 +415,13 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeOscC,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 9 Bypass
     {moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{ 70,  15}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,           NULL          }, // 9 FM Type
     {moduleTypeOscC,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                   NULL          }, // Pitch Mode
-
     // 10 Unknown
     // 11 Unknown
     // 12 Reverb
-    {moduleTypeReverb,     paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,  64, NULL,                   NULL          }, // 12 Reverb
-    {moduleTypeReverb,     paramType1CommonDial,     paramType2Dial,   {{ 37,  -3}, { 7, 14}}, anchorBottomLeft,  "Brightness",   128,  64, NULL,                   NULL          },
-    {moduleTypeReverb,     paramType1CommonDial,     paramType2Dial,   {{ 57,  -3}, { 7, 14}}, anchorBottomLeft,  "DryWet",       128,  64, NULL,                   NULL          },
-    {moduleTypeReverb,     paramType1Bypass,         paramType2Toggle, {{-20,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          },
+    {moduleTypeReverb,     paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,  64, NULL,                   NULL          }, // 12 Time. Needs to check range
+    {moduleTypeReverb,     paramType1CommonDial,     paramType2Dial,   {{ 37,  -3}, { 7, 14}}, anchorBottomLeft,  "Brightness",   128,  64, NULL,                   NULL          }, // 12 Brightness
+    {moduleTypeReverb,     paramType1CommonDial,     paramType2Dial,   {{ 57,  -3}, { 7, 14}}, anchorBottomLeft,  "DryWet",       128,  64, NULL,                   NULL          }, // 12 DryWet
+    {moduleTypeReverb,     paramType1Bypass,         paramType2Toggle, {{-20,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 12 Bypass
     // 13 OscString
     {moduleTypeOscString,  paramType1Freq,           paramType2Dial,   {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 13 OscString Coarse
     {moduleTypeOscString,  paramType1CommonDial,     paramType2Dial,   {{ 47,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                   NULL          }, // 13 OscString Fine

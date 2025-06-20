@@ -699,6 +699,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             //    set_rgb_colour(RGB_BACKGROUND_GREY);
             //}
             set_rgb_colour(RGB_BACKGROUND_GREY);
+            LOG_DEBUG("Reverb mode %u", modeValue);
             module->mode[modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight), textHeight}}, strMap[modeValue]);
             break;
         }
