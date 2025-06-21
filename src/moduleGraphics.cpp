@@ -259,8 +259,11 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     break;
                 }
                 case moduleTypeOscB:
+                case moduleTypeResonator:
+                {
                     pitchTypeParamIndex = 4;
                     break;
+                }
                 default: {
                 }
             }

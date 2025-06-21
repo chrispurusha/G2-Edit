@@ -551,7 +551,6 @@ const tParamLocation paramLocationList[] = {
     {moduleTypePulse,      paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                   NULL          }, // 38 Time
     {moduleTypePulse,      paramType1CommonDial,     paramType2Dial,   {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 38 TimeMod
     {moduleTypePulse,      paramType1StandardToggle, paramType2Toggle, {{ 52,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, pulseRangeStrMap,       NULL          }, // 38 Range
-
     // 39 Unknown
     // 40 Mix8-1B
     {moduleTypeMix8to1B,   paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In1
@@ -660,7 +659,17 @@ const tParamLocation paramLocationList[] = {
     // 55 EnvD
     {moduleTypeEnvD,       paramType1ADRTime,        paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,   0, NULL,                   NULL          }, // 55 Decay
     {moduleTypeEnvD,       paramType1StandardToggle, paramType2Toggle, {{ 55,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, posStrMap,              NULL          }, // 55 OutType
-    // 56 Resonator *** Which module is this?
+    // 56 Resonator (Not in Clavia editor)
+    {moduleTypeResonator,    paramType1OscFreq,     paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",        128,  64, NULL,                   NULL          }, // 56 Tune
+    {moduleTypeResonator,    paramType1Fine,     paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                   NULL          }, // 56 Cent
+    {moduleTypeResonator,    paramType1StandardToggle, paramType2Toggle, {{ 15, -20}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,            offOnColourMap}, // 56 Kbt
+    {moduleTypeResonator,    paramType1CommonDial,     paramType2Dial,   {{ 17,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",          128,   0, NULL,                   NULL          }, // 56 Pitch M
+    {moduleTypeResonator,    paramType1StandardToggle, paramType2Toggle, {{ 30,  12}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,        NULL          },  // 56 Pitch Type
+    {moduleTypeResonator,    paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "Decay",          128,   0, NULL,                   NULL          }, // 56 Decay
+    {moduleTypeResonator,    paramType1CommonDial,     paramType2Dial,   {{ 62,  -17}, { 7, 14}}, anchorBottomLeft,  "Damp",          128,   0, NULL,                   NULL          }, // 56 Damp
+    {moduleTypeResonator,    paramType1Bypass,         paramType2Toggle, {{ -3,   -3}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   0, NULL,                   NULL          }, // 56 Bypass
+    {moduleTypeResonator,    paramType1CommonDial,     paramType2Dial,   {{ 75,  -17}, { 7, 14}}, anchorBottomLeft,  "Pos",          128,   0, NULL,                   NULL          }, // 56 Pos
+    {moduleTypeResonator,    paramType1StandardToggle, paramType2Toggle, {{ 30,  20}, { 7,  7}}, anchorTopLeft,     "Alg",             4,   0, pitchTypeStrMap,        NULL          },  // 56 Algorithm *** Check values
     // 57 Automate *** We lack an UI element for the CTRL selector
     // 58 Drumsynth
     {moduleTypeDrumSynth,  paramType1FreqDrum,       paramType2Dial,   {{ 20, -22}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                   NULL          }, // 58 Master Freq
@@ -1531,6 +1540,11 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeEnvD,        connectorDirOut, connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",          labelLocLeft }, // 55 Env
     {moduleTypeEnvD,        connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // 55 Out
     // 56 Resonator
+    {moduleTypeResonator,        connectorDirIn,  connectorTypeControl, {{ 3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // 56 In1
+    {moduleTypeResonator,        connectorDirIn,  connectorTypeControl, {{ 10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // 56 In2
+    {moduleTypeResonator,        connectorDirIn,  connectorTypeControl, {{ -3,  -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,           labelLocRight}, // 56 In3
+    {moduleTypeResonator,        connectorDirOut,  connectorTypeControl, {{ -10,  -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,           labelLocRight}, // 56 Out1
+    {moduleTypeResonator,        connectorDirOut,  connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,           labelLocRight}, // 56 Out2
     // 57 Automate
     // 58 Drumsynth
     {moduleTypeDrumSynth,   connectorDirIn,  connectorTypeLogic,   {{  3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Trig",         labelLocUp   }, // 55 Trig
