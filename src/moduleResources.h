@@ -1160,8 +1160,8 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeGlide,      paramType1Time,           paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                   NULL          }, // 158 Time
     {moduleTypeGlide,      paramType1StandardToggle, paramType2Toggle, {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,            NULL          }, // 158 Glide on/off
     {moduleTypeGlide,      paramType1StandardToggle, paramType2Toggle, {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, logStrMap,              NULL          }, // 158 Shape
-    // 159 CompSig
-    // 160 ZeroCnt
+    // 159 CompSig -- no params
+    // 160 ZeroCnt -- no params
     // 161 MixFader -- skip for now
     // 162 FltComb
     {moduleTypeFltComb,    paramType1Freq,           paramType2Dial,   {{ 22, -10}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,   0, NULL,                   NULL          }, // 102 Freq
