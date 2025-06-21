@@ -112,14 +112,14 @@ const char * edgeStepStrMap[]         = {"100%", "75%", "50%", "25%", "0%", NULL
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
-const tRgb   cableColourMap[] = {  // TODO: implement a null termination mechanism for colour maps, so that we can get array size and do sanity check
-    {0.7, 0.1, 0.1},       // red
-    {0.1, 0.1, 0.7},       // blue
-    {0.7, 0.7, 0.1},       // yellow
-    {0.8, 0.3, 0.2},       // orange
-    {0.1, 0.7, 0.1},       // green
-    {0.7, 0.1, 0.7},       // purple
-    {0.9, 0.9, 0.9},       // white
+const tRgb   cableColourMap[] = { // TODO: implement a null termination mechanism for colour maps, so that we can get array size and do sanity check
+    {0.7, 0.1, 0.1},              // red
+    {0.1, 0.1, 0.7},              // blue
+    {0.7, 0.7, 0.1},              // yellow
+    {0.8, 0.3, 0.2},              // orange
+    {0.1, 0.7, 0.1},              // green
+    {0.7, 0.1, 0.7},              // purple
+    {0.9, 0.9, 0.9},              // white
 };
 
 const tRgb   gModuleColourMap[] = {

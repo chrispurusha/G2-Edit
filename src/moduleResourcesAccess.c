@@ -43,16 +43,15 @@ uint32_t array_size_volume_location_list(void) {
 uint32_t array_size_led_location_list(void) {
     return ARRAY_SIZE(ledLocationList);
 }
-    
+
 uint32_t array_size_str_map(char ** strMap) {
     uint32_t i = 0;
-    
+
     if (strMap != NULL) {
         while (strMap[i]) {
             i++;
         }
     }
-    
     return i;
 }
 
