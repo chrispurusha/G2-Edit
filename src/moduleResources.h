@@ -112,6 +112,7 @@ const char * invertStrMap[]           = {"m", "1-m"};
 const char * monoKeyStrMap[]          = {"Last", "Lo", "Hi"};
 const char * edgeStepStrMap[]         = {"100%", "75%", "50%", "25%", "0%"};
 const char * emptyStrMap[]             = {" "};
+const char * driverTypeStrMap[]       = {"Reed", "Bow", "-Lip-", "-Mallet-"};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
@@ -477,7 +478,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, rangeLfoCStrMap,            NULL          }, // 24 Range
     {moduleTypeLfoC,       paramType1Bypass,         paramType2Toggle, {{-3,  -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 24 Bypass
     // 25 LfoShpA
-    {moduleTypeLfoShpA,    paramType1LFORate,     paramType2Dial,   {{ 36,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 25 Rate  *** Could have Freq but tied to Range
+    {moduleTypeLfoShpA,    paramType1LFORate,     paramType2Dial,   {{ 36,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 25 Rate
     {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Toggle, {{ 36, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,            NULL          }, // 25 Range
     {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Toggle, {{ 25, -28}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,       NULL          }, // 25 Kbt
     {moduleTypeLfoShpA,    paramType1CommonDial,     paramType2Dial,   {{ 25,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 25 Rate M
@@ -490,7 +491,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Toggle, {{-10, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,              NULL          }, // 25 OutType
     {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Toggle, {{ 57, -32}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, lfoShpAWaveStrMap,       NULL          }, // 25 Wave
     // 26 LfoA
-    {moduleTypeLfoA,       paramType1LFORate,     paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 26 Rate  *** Could have Freq but tied to Range
+    {moduleTypeLfoA,       paramType1LFORate,     paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 26 Rate
     {moduleTypeLfoA,       paramType1StandardToggle, paramType2Toggle, {{ 17, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,         NULL          }, // 26 Mode
     {moduleTypeLfoA,       paramType1StandardToggle, paramType2Toggle, {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,       NULL          }, // 26 Kbt
     {moduleTypeLfoA,       paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 26 Rate M
@@ -540,7 +541,9 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeShpExp,     paramType1CommonDial,     paramType2Dial,   {{ 41,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 34 AmountMod
     {moduleTypeShpExp,     paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 34 Bypass
     {moduleTypeShpExp,     paramType1StandardToggle, paramType2Toggle, {{ 70,  -6}, { 7,  7}}, anchorBottomLeft,  "Curve",          4,   0, shpExpCurveStrMap,      NULL          }, // 34 Curve
-    // 35 Driver *** What module is this?
+    // 35 Driver (Not in the Clavia editor)
+    {moduleTypeDriver,     paramType1CommonDial,     paramType2Dial,   {{ 54,  -3}, { 7, 14}}, anchorBottomLeft,  "Embouchure",           128,   0, NULL,                   NULL          }, // 35 Embouchure
+    {moduleTypeDriver,     paramType1CommonDial,     paramType2Dial,   {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Stiffness",           128,   0, NULL,                   NULL          }, // 35 Stiffness
     // 36 SwOnOffM
     {moduleTypeSwOnOffM,   paramType1StandardToggle, paramType2Toggle, {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,            NULL          }, // 36 On
     // 37 Unknown
@@ -1426,7 +1429,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeShpExp,      connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // 34 In
     {moduleTypeShpExp,      connectorDirIn,  connectorTypeControl, {{ 35,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 34 Mod
     {moduleTypeShpExp,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // 34 Out
-    // 35 Driver *** What Module is this?
+    // 35 Driver
+    {moduleTypeDriver,     connectorDirIn,  connectorTypeAudio,   {{ 3, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,           labelLocUp   }, // 35 In1
+    {moduleTypeDriver,     connectorDirIn,  connectorTypeAudio,   {{ -10, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // 35 In2
+    {moduleTypeDriver,     connectorDirOut,  connectorTypeAudio,   {{ -3, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // 35 Out
     // 36 SwOnOffM
     {moduleTypeSwOnOffM,    connectorDirIn,  connectorTypeControl, {{-20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // 36 In
     {moduleTypeSwOnOffM,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // 36 Out
@@ -2153,6 +2159,7 @@ const tModeLocation modeLocationList[] = {
     {moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7,  7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap}, // 9 Wave
     {moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14,  7}}, anchorBottomLeft,  "Type",  4, 0, reverbTypeStrMap   }, // 12 Reverb
     {moduleTypeLfoC,    paramType1StandardToggle,  paramType2Toggle, {{64, -3}, {7, 7}}, anchorBottomLeft, "Wave", 6, 0, lfoWaveStrMap}, // 24 LfoC
+    {moduleTypeDriver,      paramType1StandardToggle, paramType2Toggle, {{35,  -3}, { 7,  7}}, anchorBottomLeft, "Type",  4, 0, driverTypeStrMap    }, // 35 Type
     {moduleTypePulse,      paramType1StandardToggle, paramType2Toggle, {{-13,  -3}, { 7,  7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap    }, // 38 Mode
     {moduleTypeDelay,      paramType1StandardToggle, paramType2Toggle, {{-13,  -3}, { 7,  7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap    }, // 42 Mode
     {moduleTypeGate,       paramType1StandardToggle, paramType2Toggle, {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "G1",    6, 0, gateTypeStrMap     }, // 64 Gate 1 Type

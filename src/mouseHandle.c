@@ -718,6 +718,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create DXRouter",    menu_action_create, moduleTypeDXRouter,  NULL},
         {"Create DrumSynth",   menu_action_create, moduleTypeDrumSynth, NULL},
         {"Create OscPerc",     menu_action_create, moduleTypeOscPerc,   NULL},
+        {"Create Driver",     menu_action_create, moduleTypeDriver,   NULL},
         {"Create Osc Master",  menu_action_create, moduleTypeOscMaster, NULL},
         {NULL,                 NULL,                                 0, NULL}     // End of menu
     };
