@@ -1071,6 +1071,45 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeSeqVal,   paramType1StandardToggle,         paramType2Toggle, {{ 35,  -60}, { 10,  7}}, anchorBottomLeft,     "Clr",             1,   0, emptyStrMap,                   NULL}, // 144 Clear
     {moduleTypeSeqVal,   paramType1StandardToggle,         paramType2Toggle, {{45,  -60}, { 10,  7}}, anchorBottomLeft,     "Rnd",             1,   0, emptyStrMap,                   NULL}, // 144 Randomize
     // 146 SeqLev
+    {moduleTypeSeqLev,   paramType1UpDown,         paramType2UpDown, {{20,  -38}, {10, 10}}, anchorBottomLeft,  NULL,            128, 0, bip128StrMap, NULL}, // Step1-1
+    {moduleTypeSeqLev,   paramType1UpDown,         paramType2UpDown, {{29,  -38}, {10, 10}}, anchorBottomLeft,  NULL,            128, 0, bip128StrMap, NULL}, // Step1-1
+    {moduleTypeSeqLev,   paramType1UpDown,         paramType2UpDown, {{38,  -38}, {10, 10}}, anchorBottomLeft,  NULL,            128, 0, bip128StrMap, NULL}, // Step1-1
+    {moduleTypeSeqLev,   paramType1UpDown,         paramType2UpDown, {{47,  -38}, {10, 10}}, anchorBottomLeft,  NULL,            128, 0, bip128StrMap, NULL}, // Step1-1
+    {moduleTypeSeqLev,   paramType1UpDown,         paramType2UpDown, {{56,  -38}, {10, 10}}, anchorBottomLeft,  NULL,            128, 0, bip128StrMap, NULL}, // Step1-1
+    {moduleTypeSeqLev,   paramType1UpDown,         paramType2UpDown, {{65,  -38}, {10, 10}}, anchorBottomLeft,  NULL,            128, 0, bip128StrMap, NULL}, // Step1-1
+    {moduleTypeSeqLev,   paramType1UpDown,         paramType2UpDown, {{74,  -38}, {10, 10}}, anchorBottomLeft,  NULL,            128, 0, bip128StrMap, NULL}, // Step1-1
+    {moduleTypeSeqLev,   paramType1UpDown,         paramType2UpDown, {{83,  -38}, {10, 10}}, anchorBottomLeft,  NULL,            128, 0, bip128StrMap, NULL}, // Step1-1
+    {moduleTypeSeqLev,   paramType1UpDown,         paramType2UpDown, {{20,  -24}, {10, 10}}, anchorBottomLeft,  NULL,            128, 0, bip128StrMap, NULL}, // Step1-1
+    {moduleTypeSeqLev,   paramType1UpDown,         paramType2UpDown, {{29,  -24}, {10, 10}}, anchorBottomLeft,  NULL,            128, 0, bip128StrMap, NULL}, // Step1-1
+    {moduleTypeSeqLev,   paramType1UpDown,         paramType2UpDown, {{38,  -24}, {10, 10}}, anchorBottomLeft,  NULL,            128, 0, bip128StrMap, NULL}, // Step1-1
+    {moduleTypeSeqLev,   paramType1UpDown,         paramType2UpDown, {{47,  -24}, {10, 10}}, anchorBottomLeft,  NULL,            128, 0, bip128StrMap, NULL}, // Step1-1
+    {moduleTypeSeqLev,   paramType1UpDown,         paramType2UpDown, {{56,  -24}, {10, 10}}, anchorBottomLeft,  NULL,            128, 0, bip128StrMap, NULL}, // Step1-1
+    {moduleTypeSeqLev,   paramType1UpDown,         paramType2UpDown, {{65,  -24}, {10, 10}}, anchorBottomLeft,  NULL,            128, 0, bip128StrMap, NULL}, // Step1-1
+    {moduleTypeSeqLev,   paramType1UpDown,         paramType2UpDown, {{74,  -24}, {10, 10}}, anchorBottomLeft,  NULL,            128, 0, bip128StrMap, NULL}, // Step1-1
+    {moduleTypeSeqLev,   paramType1UpDown,         paramType2UpDown, {{83,  -24}, {10, 10}}, anchorBottomLeft,  NULL,            128, 0, bip128StrMap, NULL}, // Step1-1
+    {moduleTypeSeqLev,   paramType1Enable,         paramType2Toggle, {{ 20,  -15}, {8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 144 Step2-1
+    {moduleTypeSeqLev,   paramType1Enable,         paramType2Toggle, {{ 29,  -15}, {8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 144 Step2-2
+    {moduleTypeSeqLev,   paramType1Enable,         paramType2Toggle, {{ 38,  -15}, {8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 144 Step2-3
+    {moduleTypeSeqLev,   paramType1Enable,         paramType2Toggle, {{ 47,  -15}, {8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 144 Step2-4
+    {moduleTypeSeqLev,   paramType1Enable,         paramType2Toggle, {{ 56,  -15}, {8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 144 Step2-5
+    {moduleTypeSeqLev,   paramType1Enable,         paramType2Toggle, {{ 65,  -15}, {8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 144 Step2-68
+    {moduleTypeSeqLev,   paramType1Enable,         paramType2Toggle, {{ 74,  -15}, {8, 8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 144 Step2-7
+    {moduleTypeSeqLev,   paramType1Enable,         paramType2Toggle, {{ 83,  -15}, {8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 144 Step2-8
+    {moduleTypeSeqLev,   paramType1Enable,         paramType2Toggle, {{ 20,  -3}, {8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 144 Step2-9
+    {moduleTypeSeqLev,   paramType1Enable,         paramType2Toggle, {{ 29,  -3}, {8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 144 Step2-10
+    {moduleTypeSeqLev,   paramType1Enable,         paramType2Toggle, {{ 38,  -3}, {8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 144 Step2-11
+    {moduleTypeSeqLev,   paramType1Enable,         paramType2Toggle, {{ 47,  -3}, {8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 144 Step2-12
+    {moduleTypeSeqLev,   paramType1Enable,         paramType2Toggle, {{ 56,  -3}, {8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 144 Step2-13
+    {moduleTypeSeqLev,   paramType1Enable,         paramType2Toggle, {{ 65,  -3}, {8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 144 Step2-14
+    {moduleTypeSeqLev,   paramType1Enable,         paramType2Toggle, {{ 74,  -3}, {8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 144 Step2-15
+    {moduleTypeSeqLev,   paramType1Enable,         paramType2Toggle, {{ 83,  -3}, {8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                   offOnColourMap}, // 144 Step2-16
+    {moduleTypeSeqLev,   paramType1StandardToggle,         paramType2Toggle, {{ 3,  10}, { 7,  7}}, anchorTopLeft,     "Cycl",             2,   0, offOnStrMap,                   offOnColourMap}, // 144 Cycle
+    {moduleTypeSeqLev,   paramType1UpDown,     paramType2UpDown,   {{ -15,  -55}, { 14, 14}}, anchorBottomRight,     "Length",           16,   15, int16StrMap,                   NULL          }, // 144 Length
+    {moduleTypeSeqLev,   paramType1StandardToggle,         paramType2Toggle, {{ 3,  20}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                   NULL}, // 144 Cycle
+    {moduleTypeSeqLev,   paramType1StandardToggle,         paramType2Toggle, {{ 3,  -4}, {7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                   NULL}, // 144 T down
+    {moduleTypeSeqLev,   paramType1StandardToggle,         paramType2Toggle, {{ 35,  -60}, { 10,  7}}, anchorBottomLeft,     "Clr",             1,   0, emptyStrMap,                   NULL}, // 144 Clear
+    {moduleTypeSeqLev,   paramType1StandardToggle,         paramType2Toggle, {{45,  -60}, { 10,  7}}, anchorBottomLeft,     "Rnd",             1,   0, emptyStrMap,                   NULL}, // 144 Randomize
+
     // 147 CtrRcv
     {moduleTypeCtrlRcv,    paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Ctrl",         128,  64, NULL,                   NULL          }, // 147 Ctrl
     {moduleTypeCtrlRcv,    paramType1StandardToggle, paramType2Toggle, {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          18,  17, midiChanRcvStrMap,      NULL          }, // 147 Channel
@@ -2007,6 +2046,16 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSeqVal,    connectorDirOut,  connectorTypeLogic,   {{  -3,  -5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,         labelLocLeft}, // 145 Out2
 
     // 146 SeqLev
+    {moduleTypeSeqLev,    connectorDirIn,  connectorTypeLogic,   {{  3,  -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",         labelLocRight}, // 145 Clk
+    {moduleTypeSeqLev,    connectorDirIn,  connectorTypeLogic,   {{  3,  -30}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",         labelLocRight}, // 145 Rst
+    {moduleTypeSeqLev,    connectorDirIn,  connectorTypeLogic,   {{  3,  -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Lp",         labelLocRight}, // 145 Lp
+    {moduleTypeSeqLev,    connectorDirIn,  connectorTypeLogic,   {{  20,  -60}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Park",         labelLocRight}, // 145 Park
+    {moduleTypeSeqLev,    connectorDirIn,  connectorTypeControl,   {{  13,  -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,         labelLocRight}, // 145 Val
+    {moduleTypeSeqLev,    connectorDirIn,  connectorTypeLogic,   {{  13,  -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,         labelLocRight}, // 145 Trig1
+    {moduleTypeSeqLev,    connectorDirOut,  connectorTypeLogic,   {{  -3,  -60}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  "Link",         labelLocLeft}, // 145 Link
+    {moduleTypeSeqLev,    connectorDirOut,  connectorTypeLogic,   {{  -3,  -35}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,         labelLocLeft}, // 145 Out1
+    {moduleTypeSeqLev,    connectorDirOut,  connectorTypeLogic,   {{  -3,  -5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,         labelLocLeft}, // 145 Out2
+
     // 147 CtrRcv
     {moduleTypeCtrlRcv,     connectorDirOut, connectorTypeLogic,   {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rcv",          labelLocUp   }, // 147 Rcv
     {moduleTypeCtrlRcv,     connectorDirOut, connectorTypeControl, {{ 92,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Val",          labelLocUp   }, // 147 Value
