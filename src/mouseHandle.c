@@ -823,6 +823,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
     static tMenuItem seqMenuItems[] = {
         {"Create SeqEvent", menu_action_create, moduleTypeSeqEvent,  NULL},
         {"Create SeqNote", menu_action_create, moduleTypeSeqNote,  NULL},
+        {"Create SeqVal", menu_action_create, moduleTypeSeqVal,  NULL},
         {NULL,              NULL,                                 0, NULL}        // End of menu
     };
     static tMenuItem shaperMenuItems[] = {

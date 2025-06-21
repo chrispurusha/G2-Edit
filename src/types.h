@@ -333,7 +333,9 @@ typedef enum {
     paramType1OscWave,
     paramType1Enable,
     paramType1StandardToggle,
-    paramType1UpDown
+    paramType1UpDown,
+    paramType1UpDownSeqValOdd,
+    paramType1UpDownSeqValEven
 } tParamType1;
 
 typedef enum {
