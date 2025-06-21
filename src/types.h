@@ -332,12 +332,14 @@ typedef enum {
     paramType1LRDial,
     paramType1OscWave,
     paramType1Enable,
-    paramType1StandardToggle
+    paramType1StandardToggle,
+    paramType1UpDown
 } tParamType1;
 
 typedef enum {
     paramType2Dial,
     paramType2Toggle,
+    paramType2UpDown,
     paramType2Other // Could add button, slider etc.
 } tParamType2;
 

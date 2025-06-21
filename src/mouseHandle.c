@@ -820,6 +820,11 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create WindSw",   menu_action_create, moduleTypeWindSw,    NULL},
         {NULL,              NULL,                                 0, NULL}        // End of menu
     };
+    static tMenuItem seqMenuItems[] = {
+        {"Create SeqEvent", menu_action_create, moduleTypeSeqEvent,  NULL},
+        {"Create SeqNote", menu_action_create, moduleTypeSeqNote,  NULL},
+        {NULL,              NULL,                                 0, NULL}        // End of menu
+    };
     static tMenuItem shaperMenuItems[] = {
         {"Create Saturate",  menu_action_create, moduleTypeSaturate,  NULL},
         {"Create Clip",      menu_action_create, moduleTypeClip,      NULL},
@@ -892,7 +897,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create Delay",    menu_action_create, 0, delayMenuItems },
         {"Create Level",    menu_action_create, 0, levelMenuItems },
         {"Create Switch",   menu_action_create, 0, switchMenuItems},
-        {"Create Sequence", menu_action_create, 0, NULL           },
+        {"Create Sequence", menu_action_create, 0, seqMenuItems   },
         {"Create Note",     menu_action_create, 0, noteMenuItems  },
         {"Create LFO",      menu_action_create, 0, lfoMenuItems   },
         {"Create Env",      menu_action_create, 0, envMenuItems   },
@@ -991,6 +996,24 @@ bool handle_module_click(tCoord coord, int button) {
                             if (module.key.location == locationMorph) {
                                 gMorphGroupFocus = i;
                             }
+                            retVal = true;
+                        } else if (paramType2 == paramType2UpDown) {
+                            range = paramLocationList[param->paramRef].range;
+                            if(within_lower_half_of_rectangle(coord, param->rectangle)) {
+                                param->value = (param->value - 1) % range;
+                            } else {
+                                param->value = (param->value + 1) % range;
+                            }
+                            write_module(module.key, &module);
+                            tMessageContent messageContent = {0};
+                            messageContent.cmd                 = eMsgCmdSetValue;
+                            messageContent.slot                = gSlot;
+                            messageContent.paramData.moduleKey = module.key;
+                            messageContent.paramData.param     = i;
+                            messageContent.paramData.variation = gVariation;
+                            messageContent.paramData.value     = param->value;
+
+                            msg_send(&gCommandQueue, &messageContent);
                             retVal = true;
                         } else {
                             if (module.key.location == locationMorph) {   // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?

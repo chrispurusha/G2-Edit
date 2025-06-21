@@ -39,6 +39,7 @@ tRectangle render_circle_part_angle(tArea area, tCoord coord, double radius, dou
 tRectangle render_radial_line(tArea area, tCoord coord, double radius, double angleDegrees, double thickness);
 tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active);
 tRectangle draw_button(tArea area, tRectangle rectangle, char * text);
+tRectangle draw_updown(tArea area, tRectangle rectangle, char * text);
 tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord end, double thickness, int segments);
 tRectangle render_text(tArea area, tRectangle rectangle, char * text);
 bool preload_glyph_textures(const char * fontPath, double fontSize);
@@ -51,6 +52,7 @@ double set_scroll_bar_percent(double percent, double renderSize);
 uint32_t angle_to_value(double angle, uint32_t range);
 double calculate_mouse_angle(tCoord mouseCoord, tRectangle rectangle);
 bool within_rectangle(tCoord coord, tRectangle rectangle);
+bool within_lower_half_of_rectangle(tCoord coord, tRectangle rectangle);
 double clamp_scroll_bar(double value, double max_value);
 void set_x_scroll_percent(double percent);
 void set_y_scroll_percent(double percent);

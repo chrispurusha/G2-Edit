@@ -23,6 +23,7 @@ extern "C" {
 
 // System header files
 #include <math.h>
+#include <png.h>
 
 // Disable warnings from external library headers etc.
 #pragma clang diagnostic push
@@ -34,6 +35,8 @@ extern "C" {
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #pragma clang diagnostic pop
+
+#include <stdio.h>
 
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
@@ -674,6 +677,75 @@ tRectangle draw_button(tArea area, tRectangle rectangle, char * text) { // TODO:
     return retRectangle;
 }
 
+tRectangle draw_updown(tArea area, tRectangle rectangle, char * text) {
+    tRectangle retRectangle    = {0};
+    double     borderLineWidth = 1.0;
+    double     margin          = 2.0;
+    tRectangle textRectangleUp   = rectangle;
+    tRectangle textRectangleDown = rectangle;
+    tRectangle textRectangleVal  = rectangle;
+
+    rectangle.size.w       = rectangle.size.w + (2 * margin);
+    rectangle.size.h       = rectangle.size.h + (2 * margin);
+    textRectangleDown.coord.x += margin;
+    textRectangleDown.coord.y += rectangle.size.h/2;
+    textRectangleDown.size.h /= 2;
+    textRectangleDown.size.w /= 2;
+    textRectangleUp.coord.x += margin;
+    textRectangleUp.coord.y += margin;
+    textRectangleUp.size.h /= 2;
+    textRectangleUp.size.w /= 2;
+    textRectangleVal.coord.x += rectangle.size.w / 2;
+    textRectangleVal.coord.y += rectangle.size.h / 4;
+    textRectangleVal.size.w /= 2;
+    textRectangleVal.size.h /= 2;
+    
+    if (area == moduleArea) {
+        rectangle     = scale_scroll_adjust_rectangle(rectangle);
+        textRectangleUp = scale_scroll_adjust_rectangle(textRectangleUp);
+        textRectangleDown = scale_scroll_adjust_rectangle(textRectangleDown);
+        textRectangleVal = scale_scroll_adjust_rectangle(textRectangleVal);
+    }
+    retRectangle = rectangle;
+
+    rectangle     = global_scale_rectangle(rectangle);
+    textRectangleUp = global_scale_rectangle(textRectangleUp);
+    textRectangleDown = global_scale_rectangle(textRectangleDown);
+    textRectangleVal = global_scale_rectangle(textRectangleVal);
+    internal_render_rectangle(rectangle);
+
+    set_rgb_colour(RGB_BLACK);
+
+    tRectangle line = {0};
+    line = (tRectangle){{
+                            rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth
+                        }, {rectangle.size.w / 2, borderLineWidth}};
+    internal_render_rectangle(line); // Bottom
+    line = (tRectangle){{
+                            rectangle.coord.x, rectangle.coord.y
+                        }, {borderLineWidth, rectangle.size.h}};
+    internal_render_rectangle(line); // Left
+    line = (tRectangle){{
+                            rectangle.coord.x, rectangle.coord.y
+                        }, {rectangle.size.w / 2, borderLineWidth}};
+    internal_render_rectangle(line); // Top
+    line = (tRectangle){{
+                            rectangle.coord.x + rectangle.size.w / 2 - borderLineWidth, rectangle.coord.y
+                        }, {borderLineWidth, rectangle.size.h}};
+    internal_render_rectangle(line); // Right
+    line = (tRectangle){{
+        rectangle.coord.x, rectangle.coord.y + rectangle.size.h /2 - borderLineWidth
+    }, {rectangle.size.w / 2, borderLineWidth}};
+    internal_render_rectangle(line); // Mid
+
+    internal_render_text(textRectangleUp, "+1");
+    internal_render_text(textRectangleDown, "-1");
+    internal_render_text(textRectangleVal, text);
+
+    return retRectangle;
+}
+
+
 tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
     tRectangle retRectangle = {0};
 
@@ -721,7 +793,7 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
         return false;
     }
     // Initialize texture atlas
-    glGenTextures(1, &textureAtlas);
+        (1, &textureAtlas);
     glBindTexture(GL_TEXTURE_2D, textureAtlas);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, atlasWidth, atlasHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -868,6 +940,7 @@ void free_textures(void) {
     glDeleteTextures(1, &textureAtlas);
 }
 
+
 // Converts normalized value [0,127] back to an angle (-135° to 135°)
 double value_to_angle(uint32_t value, uint32_t range) {
     if (range < 2) {
@@ -950,6 +1023,11 @@ bool within_rectangle(tCoord coord, tRectangle rectangle) {
            && coord.y <= rectangle.coord.y + rectangle.size.h;
 }
 
+bool within_lower_half_of_rectangle(tCoord coord, tRectangle rectangle) {
+    return within_rectangle(coord, rectangle)
+        && coord.y >= rectangle.coord.y + rectangle.size.h/2;
+}
+
 void set_x_scroll_percent(double percent) {
     gXScrollPercent = percent;
 }
@@ -1001,6 +1079,8 @@ tRectangle rectangle_scale_from_percent(tRectangle rectangle) {
 
     return rectangle;
 }
+
+
 
 #define X_POS_FROM_PERCENT(x)    ((MODULE_WIDTH * (double)x) / 100.0)
 #define Y_POS_FROM_PERCENT(x)    ((MODULE_HEIGHT * (double)x) / 100.0)
