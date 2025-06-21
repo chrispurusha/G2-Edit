@@ -693,6 +693,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
     };
     static tMenuItem noteMenuItems[] = {
         {"Create Glide",      menu_action_create, moduleTypeGlide,      NULL},
+        {"Create KeyQuant",      menu_action_create, moduleTypeKeyQuant,      NULL},
         {"Create NoteQuant",  menu_action_create, moduleTypeNoteQuant,  NULL},
         {"Create NoteScaler", menu_action_create, moduleTypeNoteScaler, NULL},
         {"Create LevScaler",  menu_action_create, moduleTypeLevScaler,  NULL},
