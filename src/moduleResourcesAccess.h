@@ -38,6 +38,7 @@ uint32_t array_size_connector_location_list(void);
 uint32_t array_size_mode_location_list(void);
 uint32_t array_size_volume_location_list(void);
 uint32_t array_size_led_location_list(void);
+uint32_t array_size_str_map(char ** strMap);
 uint32_t module_param_count(tModuleType moduleType);
 uint32_t module_connector_count(tModuleType moduleType);
 uint32_t module_mode_count(tModuleType moduleType);

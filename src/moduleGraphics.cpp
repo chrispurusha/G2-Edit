@@ -493,7 +493,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         {
             int    noteoctave;
             int    noteval;
-            char * noteNameStrMap[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+            char * noteNameStrMap[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"}; // TODO: should be in the module resources file
             char * noteName;
 
             noteoctave = paramValue / 12 - 1;
@@ -527,9 +527,9 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             double  y          = rectangle.coord.y;
             double  textHeight = rectangle.size.h / 2.0;
 
-            if (strMap == NULL) {
-                LOG_ERROR("No strMap for module type %s\n", gModuleProperties[module->type].name);
-
+            if (paramValue >= array_size_str_map(strMap)) {
+                LOG_ERROR("Bad strMap for module type %s ParamRef %u ParamIndex %u, map pointer = 0x%lx, Value %u >= Map array size %u\n", gModuleProperties[module->type].name, paramRef, paramIndex, strMap, paramValue, array_size_str_map(strMap));
+                
                 //Debug help for value
                 char debug[64] = {0};
                 snprintf(debug, sizeof(debug), "%u", paramValue);
@@ -537,7 +537,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 module->param[gVariation][paramIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {30, textHeight}}, debug);
                 return;
             }
-
+            
             if (strlen(label) > 0) {
                 set_rgb_colour(RGB_BLACK);
                 render_text(moduleArea, {{rectangle.coord.x, y}, {BLANK_SIZE, textHeight}}, label);
