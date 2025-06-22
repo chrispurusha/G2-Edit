@@ -265,6 +265,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     break;
                 }
                 default: {
+                    LOG_ERROR("paramType1OscFreq missing module->type implementation");
                 }
             }
             switch(module->param[gVariation][pitchTypeParamIndex].value) {
@@ -341,6 +342,9 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     maxFreq = 8000.0;
                 }
                 default: {
+                    minFreq = NULL;
+                    maxFreq = NULL;
+                    LOG_ERROR("paramType1GeneralFreq missing module->type implementation");
                 }
             }
             freq = minFreq * exp((double)paramValue * log(maxFreq/minFreq)/127.0);
@@ -398,6 +402,9 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 }
                 default:
                 {
+                    rateModeParamIndex = NULL;
+                    LOG_ERROR("paramType1LFORate missing module->type implementation");
+
                 }
             }
             switch(module->param[gVariation][rateModeParamIndex].value) {
@@ -502,6 +509,8 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 }
                 default:
                 {
+                    dB_range = NULL;
+                    LOG_ERROR("paramType1dB missing module->type implementation");
                 }
             }
             dB = round(((double)paramValue - 64.0) / 64.0 * dB_range);
@@ -571,6 +580,8 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 }
                 default:
                 {
+                    max_time = NULL;
+                    LOG_ERROR("paramType1Time missing module->type implementation");
                 }
             }
             // scale 0 -> min_time and 127 -> max_time, exponentially
@@ -632,11 +643,19 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                             max_time = 2.7;
                             break;
                         }
+                        default:
+                        {
+                            max_time = NULL;
+                            LOG_ERROR("paramType1TimeClk module[0]->value wrong value");
+                        }
                     }
                     break;
                 }
                 default:
                 {
+                    min_time = NULL;
+                    max_time = NULL;
+                    LOG_ERROR("paramType1TimeClk missing module->type implementation");
                 }
             }
             // scale 0 -> min_time and 127 -> max_time, exponentially
