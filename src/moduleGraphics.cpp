@@ -340,11 +340,12 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 case moduleTypeEq3band: {
                     minFreq = 100.0;
                     maxFreq = 8000.0;
+                    break;
                 }
                 default: {
                     minFreq = NULL;
                     maxFreq = NULL;
-                    LOG_ERROR("paramType1GeneralFreq missing module->type implementation");
+                    LOG_ERROR("paramType1GeneralFreq missing module->type implementation, %u", module->type);
                 }
             }
             freq = minFreq * exp((double)paramValue * log(maxFreq/minFreq)/127.0);
@@ -604,6 +605,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 case moduleTypeDelayQuad:
                 case moduleTypeDelayA:
                 case moduleTypeDelayB:
+                case moduleTypeDlyStereo:
                 {
                     min_time = 0.001;
 
@@ -646,7 +648,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                         default:
                         {
                             max_time = NULL;
-                            LOG_ERROR("paramType1TimeClk module[0]->value wrong value");
+                            LOG_ERROR("paramType1TimeClk module[0]->value wrong value, %u", module->type);
                         }
                     }
                     break;
@@ -655,7 +657,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 {
                     min_time = NULL;
                     max_time = NULL;
-                    LOG_ERROR("paramType1TimeClk missing module->type implementation");
+                    LOG_ERROR("paramType1TimeClk missing module->type implementation, %u", module->type);
                 }
             }
             // scale 0 -> min_time and 127 -> max_time, exponentially

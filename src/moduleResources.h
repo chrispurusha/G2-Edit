@@ -73,6 +73,7 @@ const char * gateTypeStrMap[]         = {"AND", "NAND", "OR", "NOR", "XOR", "NXO
 const char * invStrMap[]              = {"+", "Inv"};
 const char * clkSrcStrMap[]           = {"Internal", "Master"};
 const char * int16StrMap[]            = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"};
+const char * vocoderStrMap[]          = {"Off", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"};
 const char * divModeStrMap[]          = {"Gated", "Toggled"};
 const char * out8StrMap[]             = {"Out1", "Out2", "Out3", "Out4", "Out5", "Out6", "Out7", "Out8"};
 const char * in8StrMap[]              = {"In1", "In2", "In3", "In4", "In5", "In6", "In7", "In8"};
@@ -864,22 +865,22 @@ const tParamLocation paramLocationList[] = {
 
     // 107 Unknown
     // 108 Vocoder
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 5,  7}}, anchorBottomLeft,  "1",             16,   0, int16StrMap,            NULL          }, // 108 BandSel 1
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 15,  -3}, { 5,  7}}, anchorBottomLeft,  "2",             16,   1, int16StrMap,            NULL          }, // 108 BandSel 2
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 20,  -3}, { 5,  7}}, anchorBottomLeft,  "3",             16,   2, int16StrMap,            NULL          }, // 108 BandSel 3
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, { 5,  7}}, anchorBottomLeft,  "4",             16,   3, int16StrMap,            NULL          }, // 108 BandSel 4
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 30,  -3}, { 5,  7}}, anchorBottomLeft,  "5",             16,   4, int16StrMap,            NULL          }, // 108 BandSel 5
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 35,  -3}, { 5,  7}}, anchorBottomLeft,  "6",             16,   5, int16StrMap,            NULL          }, // 108 BandSel 6
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 40,  -3}, { 5,  7}}, anchorBottomLeft,  "7",             16,   6, int16StrMap,            NULL          }, // 108 BandSel 7
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 45,  -3}, { 5,  7}}, anchorBottomLeft,  "8",             16,   7, int16StrMap,            NULL          }, // 108 BandSel 8
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 50,  -3}, { 5,  7}}, anchorBottomLeft,  "9",             16,   8, int16StrMap,            NULL          }, // 108 BandSel 9
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 55,  -3}, { 5,  7}}, anchorBottomLeft,  "10",            16,   9, int16StrMap,            NULL          }, // 108 BandSel 10
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 60,  -3}, { 5,  7}}, anchorBottomLeft,  "11",            16,  10, int16StrMap,            NULL          }, // 108 BandSel 11
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 65,  -3}, { 5,  7}}, anchorBottomLeft,  "12",            16,  11, int16StrMap,            NULL          }, // 108 BandSel 12
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 70,  -3}, { 5,  7}}, anchorBottomLeft,  "13",            16,  12, int16StrMap,            NULL          }, // 108 BandSel 13
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 75,  -3}, { 5,  7}}, anchorBottomLeft,  "14",            16,  13, int16StrMap,            NULL          }, // 108 BandSel 14
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 5,  7}}, anchorBottomLeft,  "15",            16,  14, int16StrMap,            NULL          }, // 108 BandSel 15
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 85,  -3}, { 5,  7}}, anchorBottomLeft,  "16",            16,  15, int16StrMap,            NULL          }, // 108 BandSel 16
+    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 5,  7}}, anchorBottomLeft,  "1",             17,   1, vocoderStrMap,            NULL          }, // 108 BandSel 1
+    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 15,  -3}, { 5,  7}}, anchorBottomLeft,  "2",             17,   2, vocoderStrMap,            NULL          }, // 108 BandSel 2
+    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 20,  -3}, { 5,  7}}, anchorBottomLeft,  "3",             17,   3, vocoderStrMap,            NULL          }, // 108 BandSel 3
+    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, { 5,  7}}, anchorBottomLeft,  "4",             17,   4, vocoderStrMap,            NULL          }, // 108 BandSel 4
+    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 30,  -3}, { 5,  7}}, anchorBottomLeft,  "5",             17,   5, vocoderStrMap,            NULL          }, // 108 BandSel 5
+    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 35,  -3}, { 5,  7}}, anchorBottomLeft,  "6",             17,   6, vocoderStrMap,            NULL          }, // 108 BandSel 6
+    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 40,  -3}, { 5,  7}}, anchorBottomLeft,  "7",             17,   7, vocoderStrMap,            NULL          }, // 108 BandSel 7
+    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 45,  -3}, { 5,  7}}, anchorBottomLeft,  "8",             17,   8, vocoderStrMap,            NULL          }, // 108 BandSel 8
+    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 50,  -3}, { 5,  7}}, anchorBottomLeft,  "9",             17,   9, vocoderStrMap,            NULL          }, // 108 BandSel 9
+    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 55,  -3}, { 5,  7}}, anchorBottomLeft,  "10",            17,   10, vocoderStrMap,            NULL          }, // 108 BandSel 10
+    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 60,  -3}, { 5,  7}}, anchorBottomLeft,  "11",            17,  11, vocoderStrMap,            NULL          }, // 108 BandSel 11
+    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 65,  -3}, { 5,  7}}, anchorBottomLeft,  "12",            17,  12, vocoderStrMap,            NULL          }, // 108 BandSel 12
+    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 70,  -3}, { 5,  7}}, anchorBottomLeft,  "13",            17,  13, vocoderStrMap,            NULL          }, // 108 BandSel 13
+    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 75,  -3}, { 5,  7}}, anchorBottomLeft,  "14",            17,  14, vocoderStrMap,            NULL          }, // 108 BandSel 14
+    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 5,  7}}, anchorBottomLeft,  "15",            17,  15, vocoderStrMap,            NULL          }, // 108 BandSel 15
+    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 85,  -3}, { 5,  7}}, anchorBottomLeft,  "16",            17,  16, vocoderStrMap,            NULL          }, // 108 BandSel 16
     {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{  3, -12}, { 7,  7}}, anchorBottomLeft,  "Emp",            2,   0, offOnStrMap,            NULL          }, // 108 Emphasis
     {moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{  3, -24}, { 7,  7}}, anchorBottomLeft,  "Mon",            2,   0, offOnStrMap,            NULL          }, // 108 Monitor
     //{moduleTypeVocoder,    paramType1StandardToggle, paramType2Toggle, {{ 10, -24}, { 7,  7}}, anchorBottomLeft,  "-2",             1,   0, presetStrMap,           NULL          }, // 108 Preset -2  // TODO: should only be 18 parameters on this!
@@ -1332,11 +1333,10 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeConstSwM,   paramType1StandardToggle, paramType2Toggle, {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,            NULL          }, // 188 Selector *** needs new UI element
     {moduleTypeConstSwM,   paramType1StandardToggle, paramType2Toggle, {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, bipUniStrMap,           NULL          }, // 188 Bip/Uni
     // 189 NoiseGate
+    {moduleTypeNoiseGate,  paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Threshold",    128,  64, NULL,                   NULL          }, // 188 Level
     {moduleTypeNoiseGate,  paramType1ADRTime,        paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, NULL,                   NULL          }, // 189 Attack
     {moduleTypeNoiseGate,  paramType1ADRTime,        paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Release",      128,   0, NULL,                   NULL          }, // 189 Release
-    {moduleTypeNoiseGate,  paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Threshold",    128,  64, NULL,                   NULL          }, // 188 Level
-    {moduleTypeNoiseGate,  paramType1StandardToggle, paramType2Toggle, {{ 20,   5}, { 7,  7}}, anchorTopLeft,     NULL,           128,   0, NULL,                   NULL          }, // TODO: 189 Dummy for now
-
+    {moduleTypeNoiseGate,      paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 9 Bypass 
     // 190 LfoB
     {moduleTypeLfoB,       paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 26 Rate  *** Could have Freq but tied to Range
     {moduleTypeLfoB,       paramType1CommonDial,     paramType2Dial,   {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 26 Rate M
