@@ -699,6 +699,59 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
+        case paramType1PulseTime:
+        {
+            double time_to_display;
+            const double pulseLoTime[] = {
+                .00104, .00111, .00119, .00128,  .00137, .00147, .00157, .00169,
+                .00181, .00194, .00208, .00223,  .00239, .00256, .00275, .00294,
+                .00316, .00338, .00363, .00389,  .00417, .00448, .00480, .00515,
+                .00552, .00593, .00636, .00682,  .00732, .00785, .00842, .00904,
+                .00970, .01040, .01120, .01200,  .01290, .01380, .01480, .01590,
+                .0171, .0183, .0197, .0211,  .0227, .0244, .0262, .0281,
+                .0302, .0324, .0348, .0374,  .0402, .0432, .0464, .0498,
+                .0535, .0575, .0618, .0664,  .0713, .0767, .0824, .0886,
+                .0952, .1020, .1100, .1180,  .1270, .1370, .1470, .1580,
+                .170, .183, .196, .211,  .227, .244, .263, .283,
+                .304, .327, .352, .379,  .408, .439, .472, .508,
+                .547, .588, .633, .681,  .734, .790, .850, .915,
+                .985, 1.07, 1.15, 1.24,  1.33, 1.43, 1.54, 1.66,
+                1.79, 1.93, 2.07, 2.23,  2.41, 2.59, 2.79, 3.01,
+                3.24, 3.49, 3.76, 4.06,  4.37, 4.71, 5.08, 5.48,
+                5.90, 6.36, 6.86, 7.40,  7.98, 8.60, 9.28, 10.0
+            };
+            time_to_display = pulseLoTime[paramValue]; // in s
+            switch (module->param[gVariation][2].value) {
+                case 0: { // Sub
+                    time_to_display /= 10.0;
+                    break;
+                }
+                case 1: { // Lo
+                    break;
+                }
+                case 2: { // Hi
+                    time_to_display *= 10.0;
+                    break;
+                }
+                default: {
+                    LOG_ERROR("Wrong range in paramType1PulseTime: %u", module->param[2]->value);
+                }
+            }
+            if (time_to_display < 0.01) {
+                snprintf(buff, sizeof(buff), "%.2fms", time_to_display * 1000);
+            }  else  if (time_to_display < 0.1) {
+                snprintf(buff, sizeof(buff), "%.1fms", time_to_display * 1000);
+            } else if (time_to_display < 1.0) {
+                snprintf(buff, sizeof(buff), "%.0fms", time_to_display * 1000);
+            } else if (time_to_display < 10.0) {
+                snprintf(buff, sizeof(buff), "%.2fs", time_to_display);
+            }
+            else {
+                snprintf(buff, sizeof(buff), "%.1fs", time_to_display);
+            }
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
         case paramType1Pitch:
         {
             double percent = 0.0;

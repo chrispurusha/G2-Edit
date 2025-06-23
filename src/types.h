@@ -319,6 +319,7 @@ typedef enum {
     paramType1Shape,
     paramType1dB,
     paramType1ADRTime,
+    paramType1PulseTime,
     paramType1Time,
     paramType1TimeClk,
     paramType1Resonance,
