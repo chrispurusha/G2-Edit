@@ -679,40 +679,40 @@ tRectangle draw_button(tArea area, tRectangle rectangle, char * text) { // TODO:
 }
 
 tRectangle draw_updown(tArea area, tRectangle rectangle, char * text) {
-    tRectangle retRectangle    = {0};
-    double     borderLineWidth = 1.0;
-    double     margin          = 2.0;
+    tRectangle retRectangle      = {0};
+    double     borderLineWidth   = 1.0;
+    double     margin            = 2.0;
     tRectangle textRectangleUp   = rectangle;
     tRectangle textRectangleDown = rectangle;
     tRectangle textRectangleVal  = rectangle;
 
-    rectangle.size.w       = rectangle.size.w + (2 * margin);
-    rectangle.size.h       = rectangle.size.h + (2 * margin);
+    rectangle.size.w           = rectangle.size.w + (2 * margin);
+    rectangle.size.h           = rectangle.size.h + (2 * margin);
     textRectangleDown.coord.x += margin;
-    textRectangleDown.coord.y += rectangle.size.h/2;
-    textRectangleDown.size.h /= 2;
-    textRectangleDown.size.w /= 2;
-    textRectangleUp.coord.x += margin;
-    textRectangleUp.coord.y += margin;
-    textRectangleUp.size.h /= 2;
-    textRectangleUp.size.w /= 2;
-    textRectangleVal.coord.x += rectangle.size.w / 2;
-    textRectangleVal.coord.y += rectangle.size.h / 4;
-    textRectangleVal.size.w /= 2;
-    textRectangleVal.size.h /= 2;
-    
+    textRectangleDown.coord.y += rectangle.size.h / 2;
+    textRectangleDown.size.h  /= 2;
+    textRectangleDown.size.w  /= 2;
+    textRectangleUp.coord.x   += margin;
+    textRectangleUp.coord.y   += margin;
+    textRectangleUp.size.h    /= 2;
+    textRectangleUp.size.w    /= 2;
+    textRectangleVal.coord.x  += rectangle.size.w / 2;
+    textRectangleVal.coord.y  += rectangle.size.h / 4;
+    textRectangleVal.size.w   /= 2;
+    textRectangleVal.size.h   /= 2;
+
     if (area == moduleArea) {
-        rectangle     = scale_scroll_adjust_rectangle(rectangle);
-        textRectangleUp = scale_scroll_adjust_rectangle(textRectangleUp);
+        rectangle         = scale_scroll_adjust_rectangle(rectangle);
+        textRectangleUp   = scale_scroll_adjust_rectangle(textRectangleUp);
         textRectangleDown = scale_scroll_adjust_rectangle(textRectangleDown);
-        textRectangleVal = scale_scroll_adjust_rectangle(textRectangleVal);
+        textRectangleVal  = scale_scroll_adjust_rectangle(textRectangleVal);
     }
     retRectangle = rectangle;
 
-    rectangle     = global_scale_rectangle(rectangle);
-    textRectangleUp = global_scale_rectangle(textRectangleUp);
+    rectangle         = global_scale_rectangle(rectangle);
+    textRectangleUp   = global_scale_rectangle(textRectangleUp);
     textRectangleDown = global_scale_rectangle(textRectangleDown);
-    textRectangleVal = global_scale_rectangle(textRectangleVal);
+    textRectangleVal  = global_scale_rectangle(textRectangleVal);
     internal_render_rectangle(rectangle);
 
     set_rgb_colour(RGB_BLACK);
@@ -735,8 +735,8 @@ tRectangle draw_updown(tArea area, tRectangle rectangle, char * text) {
                         }, {borderLineWidth, rectangle.size.h}};
     internal_render_rectangle(line); // Right
     line = (tRectangle){{
-        rectangle.coord.x, rectangle.coord.y + rectangle.size.h /2 - borderLineWidth
-    }, {rectangle.size.w / 2, borderLineWidth}};
+                            rectangle.coord.x, rectangle.coord.y + rectangle.size.h / 2 - borderLineWidth
+                        }, {rectangle.size.w / 2, borderLineWidth}};
     internal_render_rectangle(line); // Mid
 
     internal_render_text(textRectangleUp, "+1");
@@ -745,7 +745,6 @@ tRectangle draw_updown(tArea area, tRectangle rectangle, char * text) {
 
     return retRectangle;
 }
-
 
 tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
     tRectangle retRectangle = {0};
@@ -794,7 +793,7 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
         return false;
     }
     // Initialize texture atlas
-        (1, &textureAtlas);
+    (1, &textureAtlas);
     glBindTexture(GL_TEXTURE_2D, textureAtlas);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, atlasWidth, atlasHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -941,7 +940,6 @@ void free_textures(void) {
     glDeleteTextures(1, &textureAtlas);
 }
 
-
 // Converts normalized value [0,127] back to an angle (-135° to 135°)
 double value_to_angle(uint32_t value, uint32_t range) {
     if (range < 2) {
@@ -1026,7 +1024,7 @@ bool within_rectangle(tCoord coord, tRectangle rectangle) {
 
 bool within_lower_half_of_rectangle(tCoord coord, tRectangle rectangle) {
     return within_rectangle(coord, rectangle)
-        && coord.y >= rectangle.coord.y + rectangle.size.h/2;
+           && coord.y >= rectangle.coord.y + rectangle.size.h / 2;
 }
 
 void set_x_scroll_percent(double percent) {
@@ -1080,7 +1078,6 @@ tRectangle rectangle_scale_from_percent(tRectangle rectangle) {
 
     return rectangle;
 }
-
 
 
 #define X_POS_FROM_PERCENT(x)    ((MODULE_WIDTH * (double)x) / 100.0)

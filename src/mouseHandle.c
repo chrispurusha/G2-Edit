@@ -693,11 +693,11 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
     };
     static tMenuItem noteMenuItems[] = {
         {"Create Glide",      menu_action_create, moduleTypeGlide,      NULL},
-        {"Create KeyQuant",      menu_action_create, moduleTypeKeyQuant,      NULL},
+        {"Create KeyQuant",   menu_action_create, moduleTypeKeyQuant,   NULL},
         {"Create NoteQuant",  menu_action_create, moduleTypeNoteQuant,  NULL},
         {"Create NoteScaler", menu_action_create, moduleTypeNoteScaler, NULL},
         {"Create LevScaler",  menu_action_create, moduleTypeLevScaler,  NULL},
-        {"Create PartQuant", menu_action_create, moduleTypePartQuant, NULL},
+        {"Create PartQuant",  menu_action_create, moduleTypePartQuant,  NULL},
         {"Create PitchTrack", menu_action_create, moduleTypePitchTrack, NULL},
         {"Create ZeroCnt",    menu_action_create, moduleTypeZeroCnt,    NULL},
         {NULL,                NULL,                                  0, NULL}     // End of menu
@@ -719,8 +719,8 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create DXRouter",    menu_action_create, moduleTypeDXRouter,  NULL},
         {"Create DrumSynth",   menu_action_create, moduleTypeDrumSynth, NULL},
         {"Create OscPerc",     menu_action_create, moduleTypeOscPerc,   NULL},
-        {"Create Driver",     menu_action_create, moduleTypeDriver,   NULL},
-        {"Create Resonator",     menu_action_create, moduleTypeResonator,   NULL},
+        {"Create Driver",      menu_action_create, moduleTypeDriver,    NULL},
+        {"Create Resonator",   menu_action_create, moduleTypeResonator, NULL},
         {"Create Osc Master",  menu_action_create, moduleTypeOscMaster, NULL},
         {NULL,                 NULL,                                 0, NULL}     // End of menu
     };
@@ -746,7 +746,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create Env H",     menu_action_create, moduleTypeEnvH,     NULL},
         {"Create Env D",     menu_action_create, moduleTypeEnvD,     NULL},
         {"Create ModAHD",    menu_action_create, moduleTypeModAHD,   NULL},
-        {"Create ModADSR",    menu_action_create, moduleTypeModADSR,   NULL},
+        {"Create ModADSR",   menu_action_create, moduleTypeModADSR,  NULL},
         {"Create Env Multi", menu_action_create, moduleTypeEnvMulti, NULL},
         {NULL,               NULL,                                0, NULL}        // End of menu
     };
@@ -822,10 +822,10 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {NULL,              NULL,                                 0, NULL}        // End of menu
     };
     static tMenuItem seqMenuItems[] = {
-        {"Create SeqEvent", menu_action_create, moduleTypeSeqEvent,  NULL},
-        {"Create SeqNote", menu_action_create, moduleTypeSeqNote,  NULL},
-        {"Create SeqVal", menu_action_create, moduleTypeSeqVal,  NULL},
-        {NULL,              NULL,                                 0, NULL}        // End of menu
+        {"Create SeqEvent", menu_action_create, moduleTypeSeqEvent, NULL},
+        {"Create SeqNote",  menu_action_create, moduleTypeSeqNote,  NULL},
+        {"Create SeqVal",   menu_action_create, moduleTypeSeqVal,   NULL},
+        {NULL,              NULL,                                0, NULL}         // End of menu
     };
     static tMenuItem shaperMenuItems[] = {
         {"Create Saturate",  menu_action_create, moduleTypeSaturate,  NULL},
@@ -1001,7 +1001,8 @@ bool handle_module_click(tCoord coord, int button) {
                             retVal = true;
                         } else if (paramType2 == paramType2UpDown) {
                             range = paramLocationList[param->paramRef].range;
-                            if(within_lower_half_of_rectangle(coord, param->rectangle)) {
+
+                            if (within_lower_half_of_rectangle(coord, param->rectangle)) {
                                 param->value = (param->value - 1) % range;
                             } else {
                                 param->value = (param->value + 1) % range;
@@ -1061,11 +1062,11 @@ bool handle_module_click(tCoord coord, int button) {
                                 mode->value = (mode->value + 1) % modeLocationList[mode->modeRef].range;
                                 write_module(module.key, &module);
                                 tMessageContent messageContent = {0};
-                                messageContent.cmd                 = eMsgCmdSetMode;
-                                messageContent.slot                = gSlot;
-                                messageContent.modeData.moduleKey  = module.key;
-                                messageContent.modeData.mode       = i;
-                                messageContent.modeData.value      = mode->value;
+                                messageContent.cmd                = eMsgCmdSetMode;
+                                messageContent.slot               = gSlot;
+                                messageContent.modeData.moduleKey = module.key;
+                                messageContent.modeData.mode      = i;
+                                messageContent.modeData.value     = mode->value;
 
                                 msg_send(&gCommandQueue, &messageContent);
 
