@@ -60,6 +60,8 @@ const char * polyMonoStrMap[]         = {"Poly", "Mono", NULL};
 const char * rangeStrMap[]            = {"Rate Lo", "Rate Hi", "BPM", "Clk", "Rate Sub", NULL};
 const char * lfoWaveStrMap[]          = {"Sin", "Tri", "Saw", "Squ", "RndSt", "Rnd", NULL};
 const char * lfoAltWaveStrMap[]       = {"Sine", "CosBell", "TriBell", "Saw>Tri", "Tri>Squ", "Pulse", NULL};
+const char * lfoShpAWaveStrMap[]      = {"Sine", "CosBell", "TriBell", "Saw>Tri", "Squ>Tri", "Sqr", NULL};
+const char * rangeLfoCStrMap[]        = {"Rate Lo", "Rate Hi", "BPM", "Rate Sub", NULL};
 const char * saturateCurveStrMap[]    = {"1", "2", "3", "4", NULL};
 const char * shpExpCurveStrMap[]      = {"x2", "x3", "x4", "x5", NULL};
 const char * pulseRangeStrMap[]       = {"Sub", "Lo", "Hi", NULL};
@@ -114,7 +116,7 @@ const char * phaserTypeStrMap[]       = {"Type I", "Type II", NULL};
 const char * invertStrMap[]           = {"m", "1-m", NULL};
 const char * monoKeyStrMap[]          = {"Last", "Lo", "Hi", NULL};
 const char * edgeStepStrMap[]         = {"100%", "75%", "50%", "25%", "0%", NULL};
-
+const char * vocoderStrMap[]          = {"Off", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", NULL};
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
 const tRgb   cableColourMap[] = { // TODO: implement a null termination mechanism for colour maps, so that we can get array size and do sanity check
