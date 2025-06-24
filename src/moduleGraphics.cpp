@@ -520,6 +520,49 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
             break;
         }
+        case paramType1MixLevel:
+        {
+            double level = 0.0;
+            const double dbLvlMap[] = {
+                -100.0, -99.9, -99.0, -72.1, -69.2, -66.9, -64.8, -62.9,
+                -61.1, -59,5, -57.9, -56.4,  -55.0, -53.6, -52.3, -51.0,
+                -49.8, -48.6, -47.5, -46.4,  -45.3, -44.3, -43.3, -42.3,
+                -41.3, -40.4, -39.5, -38.7,  -37.8, -37.0, -36.2, -35.5,
+                -34.7, -34.0, -33.3, -32.6,  -31.9, -31.2, -30.6, -30.0,
+                -29.3, -28.7, -28.2, -27.6,  -27.0, -26.5, -25.9, -25.4,
+                -24.8, -24.3, -23.8, -23.3,  -22.8, -22.4, -21.9, -21.4,
+                -21.0, -20.5, -20.1, -19.7,  -19.2, -18.8, -18.4, -18.0,
+                -17.6, -17.2, -16.8, -16.4,  -16.1, -15.7, -15.3, -15.0,
+                -14.6, -14.3, -13.9, -13.6,  -13.2, -12.9, -12.6, -12.2,
+                -11.9, -11.6, -11.3, -11.0,  -10.7, -10.4, -10.1,  -9.8,
+                -9.5, -9.2, -8.9, -8.6, -8.3,  -8.0, -7.8, -7.5,
+                -7.2, -7.0, -6.7, -6.4, -6.2,  -5.9, -5.7, -5.4,
+                -5.2, -4.9, -4.7, -4.4, -4.2,  -4.0, -3.7, -3.5,
+                -3.3, -3.0, -2.8, -2.6, -2.3,  -2.1, -1.9, -1.7,
+                -1.5, -1.3, -1.0, -0.8, -0.6,  -0.4, -0.2, 0.0
+            };
+            int expLinDBparam;
+            switch (module->type) {
+                case moduleTypeMix8to1B:
+                {
+                    expLinDBparam = 8;
+                    break;
+                }
+            }
+            level = paramValue;
+            if (module->param[gVariation][expLinDBparam].value == 2) // display dB
+            {
+                if (paramValue == 0.0)
+                {
+                    snprintf(buff, sizeof(buff), "-oodB");
+                } else {
+                    snprintf(buff, sizeof(buff), "%.1f", dbLvlMap[(int)paramValue])
+                }
+                    
+            }
+            module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
+            break;
+        }
         case paramType1Time:
         {
             double time = 0.0;
