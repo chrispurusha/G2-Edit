@@ -310,28 +310,40 @@ typedef enum {
 typedef enum {
     paramType1None,
     paramType1Freq,
+    paramType1OscFreq,
+    paramType1Fine,
+    paramType1GeneralFreq,
     paramType1FreqDrum,
     paramType1Int,
+    paramType1LFORate,
+    paramType1Shape,
     paramType1dB,
     paramType1ADRTime,
+    paramType1PulseTime,
     paramType1Time,
     paramType1TimeClk,
     paramType1Resonance,
     paramType1Pitch,
     paramType1Bypass,
     paramType1BipLevel,
+    paramType1MixLevel,
     paramType1LevAmpDial,
     paramType1NoteDial,
+    paramType1Pan,
     paramType1CommonDial,
     paramType1LRDial,
     paramType1OscWave,
     paramType1Enable,
-    paramType1StandardToggle
+    paramType1StandardToggle,
+    paramType1UpDown,
+    paramType1UpDownSeqValOdd,
+    paramType1UpDownSeqValEven
 } tParamType1;
 
 typedef enum {
     paramType2Dial,
     paramType2Toggle,
+    paramType2UpDown,
     paramType2Other // Could add button, slider etc.
 } tParamType2;
 

@@ -693,9 +693,11 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
     };
     static tMenuItem noteMenuItems[] = {
         {"Create Glide",      menu_action_create, moduleTypeGlide,      NULL},
+        {"Create KeyQuant",      menu_action_create, moduleTypeKeyQuant,      NULL},
         {"Create NoteQuant",  menu_action_create, moduleTypeNoteQuant,  NULL},
         {"Create NoteScaler", menu_action_create, moduleTypeNoteScaler, NULL},
         {"Create LevScaler",  menu_action_create, moduleTypeLevScaler,  NULL},
+        {"Create PartQuant", menu_action_create, moduleTypePartQuant, NULL},
         {"Create PitchTrack", menu_action_create, moduleTypePitchTrack, NULL},
         {"Create ZeroCnt",    menu_action_create, moduleTypeZeroCnt,    NULL},
         {NULL,                NULL,                                  0, NULL}     // End of menu
@@ -717,6 +719,8 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create DXRouter",    menu_action_create, moduleTypeDXRouter,  NULL},
         {"Create DrumSynth",   menu_action_create, moduleTypeDrumSynth, NULL},
         {"Create OscPerc",     menu_action_create, moduleTypeOscPerc,   NULL},
+        {"Create Driver",     menu_action_create, moduleTypeDriver,   NULL},
+        {"Create Resonator",     menu_action_create, moduleTypeResonator,   NULL},
         {"Create Osc Master",  menu_action_create, moduleTypeOscMaster, NULL},
         {NULL,                 NULL,                                 0, NULL}     // End of menu
     };
@@ -742,6 +746,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create Env H",     menu_action_create, moduleTypeEnvH,     NULL},
         {"Create Env D",     menu_action_create, moduleTypeEnvD,     NULL},
         {"Create ModAHD",    menu_action_create, moduleTypeModAHD,   NULL},
+        {"Create ModADSR",    menu_action_create, moduleTypeModADSR,   NULL},
         {"Create Env Multi", menu_action_create, moduleTypeEnvMulti, NULL},
         {NULL,               NULL,                                0, NULL}        // End of menu
     };
@@ -801,16 +806,25 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create Sw2-1",    menu_action_create, moduleTypeSw2to1,    NULL},
         {"Create Sw2-1M",   menu_action_create, moduleTypeSw2to1,    NULL},
         {"Create Sw4-1",    menu_action_create, moduleTypeSw4to1,    NULL},
+        {"Create Sw8-1",    menu_action_create, moduleTypeSw8to1,    NULL},
         {"Create Sw1-2",    menu_action_create, moduleTypeSw1to2,    NULL},
         {"Create Sw1-2M",   menu_action_create, moduleTypeSw1to2M,   NULL},
         {"Create Sw1-4",    menu_action_create, moduleTypeSw1to4,    NULL},
         {"Create Sw1-8",    menu_action_create, moduleTypeSw1to8,    NULL},
         {"Create ValSw2-1", menu_action_create, moduleTypeValSw2to1, NULL},
+        {"Create ValSw1-2", menu_action_create, moduleTypeValSw1to2, NULL},
         {"Create Mux8-1",   menu_action_create, moduleTypeMux8to1,   NULL},
+        {"Create Mux1-8",   menu_action_create, moduleTypeMux1to8,   NULL},
         {"Create Mux8-1X",  menu_action_create, moduleTypeMux8to1X,  NULL},
         {"Create S&H",      menu_action_create, moduleTypeSandH,     NULL},
         {"Create T&H",      menu_action_create, moduleTypeTandH,     NULL},
         {"Create WindSw",   menu_action_create, moduleTypeWindSw,    NULL},
+        {NULL,              NULL,                                 0, NULL}        // End of menu
+    };
+    static tMenuItem seqMenuItems[] = {
+        {"Create SeqEvent", menu_action_create, moduleTypeSeqEvent,  NULL},
+        {"Create SeqNote", menu_action_create, moduleTypeSeqNote,  NULL},
+        {"Create SeqVal", menu_action_create, moduleTypeSeqVal,  NULL},
         {NULL,              NULL,                                 0, NULL}        // End of menu
     };
     static tMenuItem shaperMenuItems[] = {
@@ -828,6 +842,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create Mixer 1-1 S", menu_action_create, moduleTypeMix1to1S,  NULL},
         {"Create Mixer 2-1 A", menu_action_create, moduleTypeMix2to1A,  NULL},
         {"Create Mixer 4-1 A", menu_action_create, moduleTypeMix4to1A,  NULL},
+        {"Create Mixer 4-1 B", menu_action_create, moduleTypeMix4to1B,  NULL},
         {"Create Mixer 4-1 C", menu_action_create, moduleTypeMix4to1C,  NULL},
         {"Create Mixer 4-1 S", menu_action_create, moduleTypeMix4to1S,  NULL},
         {"Create Mixer 2-1 B", menu_action_create, moduleTypeMix2to1B,  NULL},
@@ -884,7 +899,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create Delay",    menu_action_create, 0, delayMenuItems },
         {"Create Level",    menu_action_create, 0, levelMenuItems },
         {"Create Switch",   menu_action_create, 0, switchMenuItems},
-        {"Create Sequence", menu_action_create, 0, NULL           },
+        {"Create Sequence", menu_action_create, 0, seqMenuItems   },
         {"Create Note",     menu_action_create, 0, noteMenuItems  },
         {"Create LFO",      menu_action_create, 0, lfoMenuItems   },
         {"Create Env",      menu_action_create, 0, envMenuItems   },
@@ -984,6 +999,24 @@ bool handle_module_click(tCoord coord, int button) {
                                 gMorphGroupFocus = i;
                             }
                             retVal = true;
+                        } else if (paramType2 == paramType2UpDown) {
+                            range = paramLocationList[param->paramRef].range;
+                            if(within_lower_half_of_rectangle(coord, param->rectangle)) {
+                                param->value = (param->value - 1) % range;
+                            } else {
+                                param->value = (param->value + 1) % range;
+                            }
+                            write_module(module.key, &module);
+                            tMessageContent messageContent = {0};
+                            messageContent.cmd                 = eMsgCmdSetValue;
+                            messageContent.slot                = gSlot;
+                            messageContent.paramData.moduleKey = module.key;
+                            messageContent.paramData.param     = i;
+                            messageContent.paramData.variation = gVariation;
+                            messageContent.paramData.value     = param->value;
+
+                            msg_send(&gCommandQueue, &messageContent);
+                            retVal = true;
                         } else {
                             if (module.key.location == locationMorph) {   // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
                                 range = 2;
@@ -1028,12 +1061,11 @@ bool handle_module_click(tCoord coord, int button) {
                                 mode->value = (mode->value + 1) % modeLocationList[mode->modeRef].range;
                                 write_module(module.key, &module);
                                 tMessageContent messageContent = {0};
-                                messageContent.cmd                 = eMsgCmdSetValue;
+                                messageContent.cmd                 = eMsgCmdSetMode;
                                 messageContent.slot                = gSlot;
-                                messageContent.paramData.moduleKey = module.key;
-                                //messageContent.paramData.mode     = i;
-                                messageContent.paramData.variation = 0;
-                                messageContent.paramData.value     = mode->value;
+                                messageContent.modeData.moduleKey  = module.key;
+                                messageContent.modeData.mode       = i;
+                                messageContent.modeData.value      = mode->value;
 
                                 msg_send(&gCommandQueue, &messageContent);
 

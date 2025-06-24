@@ -1,5 +1,27 @@
-8 OscShpB does not crash
-12 Reverb *** Had to comment out Type
+7 OscB Params OK. All inputs and outputs tested OK.
+8 OK *** except Mode
+9 OK *** except Mode
+12 Reverb OK
+13 OscString OK
+15 Sw8-1 Needs more resources
+17 ValSw1-2 Needs more resources
+18 X-fade OK
+19 Mix4-1B OK
+20 EnvADSR OK (new table for ADRTime values). *** LED doesn't work as intended.
+22 PartQuant OK *** Needs better dial values from 0 to plus minus 63
+23 ModADSR OK
+24 LfoC OK *** Needs to check Range Sub parameter values
+25 LfoShpA OK
+26 LfoA OK
+27 OscMaster OK
+28 Saturate OK
+29 MetNoise OK
+31 Noise OK
+32 Eq2Band OK
+33 Eq3Band OK
+34 ShpExp OK
+38 Pulse OK
 51 FltNord OK
 94 StChorus OK
-97 OscA OK
+97 OscA Works. Needs new UI element for the Freq control (param 0) which takes into account the value of param 6 Pitch Type.
+194 Mix2-1A OK
