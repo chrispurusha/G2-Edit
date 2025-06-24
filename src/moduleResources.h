@@ -2334,7 +2334,7 @@ const tConnectorLocation connectorLocationList[] = {
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
 const tModeLocation modeLocationList[] = {
-    {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Dial,   {{ 20,   5}, { 7, 14}}, anchorTopLeft,     "Wave",  8, 0, oscShpBStrMap      }, // 8 OscShpB
+    {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Dial,   {{ 20,   5}, { 7, 7}}, anchorTopLeft,     "Wave",  8, 0, oscShpBStrMap      }, // 8 OscShpB
     {moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7,  7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap}, // 9 Wave
     {moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14,  7}}, anchorBottomLeft,  "Type",  4, 0, reverbTypeStrMap   }, // 12 Reverb
     {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 64,  -3}, { 7,  7}}, anchorBottomLeft,  "Wave",  6, 0, lfoWaveStrMap      }, // 24 LfoC
