@@ -26,109 +26,105 @@
 #include "defs.h"
 #include "types.h"
 
-const char * fltClassicDbStrMap[]     = {"12db", "18db", "24db"};
+// Terminate the string maps with a NULL, so that we can work out array size
+const char * fltClassicDbStrMap[]     = {"12db", "18db", "24db", NULL};
 const char * fltMultiDbStrMap[]       = {"6db", "12db", NULL};
-const char * fltNordDbStrMap[]        = {"12dB", "24dB"};
-const char * offTo100KbStrMap[]       = {"Off", "25%", "50%", "75%", "100%"};
-const char * offOnStrMap[]            = {"Off", "On"};
-const char * expStrMap[]              = {"Exp", "Lin", "dB"};
-const char * logStrMap[]              = {"Log", "Lin"};
-const char * padStrMap[]              = {"0dB", "+6dB"};
-const char * db12PadStrMap[]          = {"+6dB", "0dB", "-6dB", "-12dB"};
-const char * db12BPadStrMap[]         = {"0dB", "-6dB", "-12dB"};
-const char * gcStrMap[]               = {"GC", "GC"};
-const char * kbStrMap[]               = {"KB", "KB"};
-const char * sideChainStrMap[]        = {"Side Chain", "Side Chain"};
-const char * pitchTypeStrMap[]        = {"Semi", "Freq", "Factor", "Partial"};
-const char * fmTypeStrMap[]           = {"FM Lin", "FM Trk"};
-const char * envShapeStrMap[]         = {"LogExp", "LinExp", "ExpExp", "LinLin"};
-const char * normalResetStrMap[]      = {"Normal", "Reset"};
-const char * posStrMap[]              = {"Pos", "PosInv", "Neg", "NegInv", "Bip", "BipInv"};
-const char * outToStrMap[]            = {"Main 1/2", "Main 3/4", "FX 1/2", "FX 3/4", "Bus 1/2", "Bus 3/4", };
-const char * outTo4OutStrMap[]        = {"Main", "Fx", "Bus"};
-const char * inFxStrMap[]             = {"1/2", "3/4"};
-const char * shapeTypeStrMap[]        = {"sin", "tri", "saw", "squ", "sup"};
-const char * shapeOscATypeStrMap[]    = {"sin", "tri", "saw", "squ", "p25", "p10"};
-const char * reverbTypeStrMap[]       = {"Small", "Medium", "Large", "Hall"};
-const char * polyMonoStrMap[]         = {"Poly", "Mono"};
-const char * rangeStrMap[]            = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM", "Clk", };
-const char * rangeLfoCStrMap[]        = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM"};
-const char * lfoWaveStrMap[]          = {"Sin", "Tri", "Saw", "Squ", "RndSt", "Rnd"};
-const char * lfoAltWaveStrMap[]       = {"Sine", "CosBell", "TriBell", "Saw>Tri", "Tri>Squ", "Pulse"};
-const char * lfoShpAWaveStrMap[]       = {"Sine", "CosBell", "TriBell", "Saw>Tri", "Squ>Tri", "Squ"};
-const char * saturateCurveStrMap[]    = {"1", "2", "3", "4"};
-const char * shpExpCurveStrMap[]      = {"x2", "x3", "x4", "x5"};
-const char * pulseRangeStrMap[]       = {"Sub", "Lo", "Hi"};
-const char * pulseModeStrMap[]        = {"Plus", "Minus"};
-const char * bipUniStrMap[]           = {"Bip", "Uni"};
-const char * vowelStrMap[]            = {"A", "E", "I", "O", "U", "Y", "AA", "AE", "OE"};
-const char * nordFilterTypeStrMap[]   = {"LP", "BP", "HP", "BR"};
-const char * staticFilterTypeStrMap[] = {"LP", "BP", "HP"};
-const char * multiEnvSustainStrMap[]  = {"None", "L1", "L2", "L3", "L4"};
-const char * drSynthPresetStrMap[]    = {"Kick 1"}; // *** Don't have the list
-const char * asymSymStrMap[]          = {"Asym", "Sym"};
-const char * odTypeStrMap[]           = {"Soft", "Hard", "Heavy", "Fat"};
-const char * delayStrMap[]            = {"50ms", "?", "?", "?"}; // *** For Scratch module; don't have the list
-const char * gateTypeStrMap[]         = {"AND", "NAND", "OR", "NOR", "XOR", "NXOR"};
-const char * invStrMap[]              = {"+", "Inv"};
-const char * clkSrcStrMap[]           = {"Internal", "Master"};
-const char * int16StrMap[]            = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"};
-const char * vocoderStrMap[]          = {"Off", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"};
-const char * divModeStrMap[]          = {"Gated", "Toggled"};
-const char * out8StrMap[]             = {"Out1", "Out2", "Out3", "Out4", "Out5", "Out6", "Out7", "Out8"};
-const char * in8StrMap[]              = {"In1", "In2", "In3", "In4", "In5", "In6", "In7", "In8"};
-const char * rectStrMap[]             = {"Half wave pos.", "Half wave neg.", "Full wave pos.", "Full wave neg."};
-const char * shpStaticStrMap[]        = {"Inv x3", "Inv x2", "x2", "x3"};
-const char * trigGateStrMap[]         = {"Trig", "Gate"};
-const char * decayReleaseStrMap[]     = {"Decay", "Release"};
-const char * fltLPSlopeStrMap[]       = {"6db", "12db", "18db", "24db", "30db", "36db"};
-const char * flipFlopStrMap[]         = {"D-type", "RS-type"};
-const char * freqShiftRangeStrMap[]   = {"Hi", "Lo", "Sub"};
-const char * fltPhaseTypeStrMap[]     = {"Notch", "Peak", "Deep"};
-const char * eq2BandLoStrMap[]        = {"80Hz", "110Hz", "160Hz"};
-const char * eq2BandHiStrMap[]        = {"6 kHz", "8 kHz", "12kHz"};
-const char * eq3BandStrMap[]          = {"80Hz", "Mid", "12kHz"};
-const char * presetStrMap[]           = {"Set"};
-const char * bitsStrMap[]             = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "Off"};
-const char * sustainStrMap[]          = {"L1", "L2"};
-const char * midiChanStrMap[]         = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "SlotA", "SlotB", "SlotC", "SlotD"};
-const char * midiChanRcvStrMap[]      = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "Keyb"};
-const char * thruStrMap[]             = {"Notes only", "Notes+Ctrls"};
-const char * levConvStrMap[]          = {"Bip", "Pos", "Neg"};
-const char * oscShpAStrMap[]          = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "SymPulse"};
-const char * oscShpBStrMap[]          = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "DblSaw", "Pulse", "SymPulse"};
-const char * dxFeedbackStrMap[]       = {"0", "1", "2", "3", "4", "5", "6", "7", };
-const char * dxAlgStrMap[]            = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32"};
-const char * pShiftDelayStrMod[]      = {"50ms", "?", "?", "?", "?"};
-const char * twoToInSourceStrMap[]    = {"In1/2", "In3/4", "Bus1/2", "Bus3/4"};
-const char * fourToInSourceStrMap[]   = {"In", "Bus"};
-const char * delayRangeStrMap[]       = {"5ms", "25ms", "100ms", "500ms", "1.0s", "2.0s", "2.7s"};
-const char * timeClkStrMap[]          = {"Time", "Clk"};
-const char * ratioFixedStrMap[]       = {"Ratio", "Fixed"};
-const char * detuneStrMap[]           = {"-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "+1", "+2", "+3", "+4", "+5", "+6", "+7"};
-const char * operator07StrMap[]       = {"0", "1", "2", "3", "4", "5", "6", "7"};
-const char * operatorDepthStrMap[]    = {"-Lin", "-Exp", "+Exp", "+Lin"};
-const char * phaserTypeStrMap[]       = {"Type I", "Type II"};
-const char * invertStrMap[]           = {"m", "1-m"};
-const char * monoKeyStrMap[]          = {"Last", "Lo", "Hi"};
-const char * edgeStepStrMap[]         = {"100%", "75%", "50%", "25%", "0%"};
-const char * emptyStrMap[]             = {" "};
-const char * driverTypeStrMap[]       = {"Reed", "Bow", "-Lip-", "-Mallet-"};
-const char * octaveStrMap[]           = {"C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7"};
-const char * bip128StrMap[]           = {"-64", "-63", "-62", "-61", "-60", "-59", "-58", "-57", "-56", "-55", "-54", "-53", "-52", "-51", "-50", "-49", "-48", "-47", "-46", "-45", "-44", "-43", "-42", "-41", "-40", "-39", "-38", "-37", "-36", "-35", "-34", "-33", "-32", "-31", "-30", "-29", "-28", "-27", "-26", "-25", "-24", "-23", "-22", "-21", "-20", "-19", "-18", "-17", "-16", "-15", "-14", "-13", "-12", "-11", "-10", "-9", "-8", "-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63"};
-const char * captureStrMap[]          = {"Closest", "Evenly"};
-
+const char * emptyStrMap[]             = {" ", NULL};
+const char * driverTypeStrMap[]       = {"Reed", "Bow", "-Lip-", "-Mallet-", NULL};
+const char * octaveStrMap[]           = {"C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", NULL};
+const char * bip128StrMap[]           = {"-64", "-63", "-62", "-61", "-60", "-59", "-58", "-57", "-56", "-55", "-54", "-53", "-52", "-51", "-50", "-49", "-48", "-47", "-46", "-45", "-44", "-43", "-42", "-41", "-40", "-39", "-38", "-37", "-36", "-35", "-34", "-33", "-32", "-31", "-30", "-29", "-28", "-27", "-26", "-25", "-24", "-23", "-22", "-21", "-20", "-19", "-18", "-17", "-16", "-15", "-14", "-13", "-12", "-11", "-10", "-9", "-8", "-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", NULL};
+const char * captureStrMap[]          = {"Closest", "Evenly", NULL};
+const char * fltNordDbStrMap[]        = {"12dB", "24dB", NULL};
+const char * offTo100KbStrMap[]       = {"Off", "25%", "50%", "75%", "100%", NULL};
+const char * offOnStrMap[]            = {"Off", "On", NULL};
+const char * expStrMap[]              = {"Exp", "Lin", "dB", NULL};
+const char * logStrMap[]              = {"Log", "Lin", NULL};
+const char * padStrMap[]              = {"0dB", "+6dB", NULL};
+const char * db12PadStrMap[]          = {"+6dB", "0dB", "-6dB", "-12dB", NULL};
+const char * db12BPadStrMap[]         = {"0dB", "-6dB", "-12dB", NULL};
+const char * gcStrMap[]               = {"GC", "GC", NULL};
+const char * kbStrMap[]               = {"KB", "KB", NULL};
+const char * sideChainStrMap[]        = {"Side Chain", "Side Chain", NULL};
+const char * pitchTypeStrMap[]        = {"Semi", "Freq", "Factor", "Partial", NULL};
+const char * fmTypeStrMap[]           = {"FM Lin", "FM Trk", NULL};
+const char * envShapeStrMap[]         = {"LogExp", "LinExp", "ExpExp", "LinLin", NULL};
+const char * normalResetStrMap[]      = {"Normal", "Reset", NULL};
+const char * posStrMap[]              = {"Pos", "PosInv", "Neg", "NegInv", "Bip", "BipInv", NULL};
+const char * outToStrMap[]            = {"Main 1/2", "Main 3/4", "FX 1/2", "FX 3/4", "Bus 1/2", "Bus 3/4", NULL};
+const char * outTo4OutStrMap[]        = {"Main", "Fx", "Bus", NULL};
+const char * inFxStrMap[]             = {"1/2", "3/4", NULL};
+const char * shapeTypeStrMap[]        = {"sin", "tri", "saw", "squ", "sup", NULL};
+const char * shapeOscATypeStrMap[]    = {"sin", "tri", "saw", "squ", "p25", "p10", NULL};
+const char * reverbTypeStrMap[]       = {"Small", "Medium", "Large", "Hall", NULL};
+const char * polyMonoStrMap[]         = {"Poly", "Mono", NULL};
+const char * rangeStrMap[]            = {"Rate Lo", "Rate Hi", "BPM", "Clk", "Rate Sub", NULL};
+const char * lfoWaveStrMap[]          = {"Sin", "Tri", "Saw", "Squ", "RndSt", "Rnd", NULL};
+const char * lfoAltWaveStrMap[]       = {"Sine", "CosBell", "TriBell", "Saw>Tri", "Tri>Squ", "Pulse", NULL};
+const char * saturateCurveStrMap[]    = {"1", "2", "3", "4", NULL};
+const char * shpExpCurveStrMap[]      = {"x2", "x3", "x4", "x5", NULL};
+const char * pulseRangeStrMap[]       = {"Sub", "Lo", "Hi", NULL};
+const char * pulseModeStrMap[]        = {"Plus", "Minus", NULL};
+const char * bipUniStrMap[]           = {"Bip", "Uni", NULL};
+const char * vowelStrMap[]            = {"A", "E", "I", "O", "U", "Y", "AA", "AE", "OE", NULL};
+const char * nordFilterTypeStrMap[]   = {"LP", "BP", "HP", "BR", NULL};
+const char * staticFilterTypeStrMap[] = {"LP", "BP", "HP", NULL};
+const char * multiEnvSustainStrMap[]  = {"None", "L1", "L2", "L3", "L4", NULL};
+const char * drSynthPresetStrMap[]    = {"Kick 1", NULL}; // *** Don't have the list
+const char * asymSymStrMap[]          = {"Asym", "Sym", NULL};
+const char * odTypeStrMap[]           = {"Soft", "Hard", "Heavy", "Fat", NULL};
+const char * delayStrMap[]            = {"50ms", "?", "?", "?", NULL}; // *** For Scratch module; don't have the list
+const char * gateTypeStrMap[]         = {"AND", "NAND", "OR", "NOR", "XOR", "NXOR", NULL};
+const char * invStrMap[]              = {"+", "Inv", NULL};
+const char * clkSrcStrMap[]           = {"Internal", "Master", NULL};
+const char * int16StrMap[]            = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", NULL};
+const char * divModeStrMap[]          = {"Gated", "Toggled", NULL};
+const char * out8StrMap[]             = {"Out1", "Out2", "Out3", "Out4", "Out5", "Out6", "Out7", "Out8", NULL};
+const char * in8StrMap[]              = {"In1", "In2", "In3", "In4", "In5", "In6", "In7", "In8", NULL};
+const char * rectStrMap[]             = {"Half wave pos.", "Half wave neg.", "Full wave pos.", "Full wave neg.", NULL};
+const char * shpStaticStrMap[]        = {"Inv x3", "Inv x2", "x2", "x3", NULL};
+const char * trigGateStrMap[]         = {"Trig", "Gate", NULL};
+const char * decayReleaseStrMap[]     = {"Decay", "Release", NULL};
+const char * fltLPSlopeStrMap[]       = {"6db", "12db", "18db", "24db", "30db", "36db", NULL};
+const char * flipFlopStrMap[]         = {"D-type", "RS-type", NULL};
+const char * freqShiftRangeStrMap[]   = {"Hi", "Lo", "Sub", NULL};
+const char * fltPhaseTypeStrMap[]     = {"Notch", "Peak", "Deep", NULL};
+const char * eq2BandLoStrMap[]        = {"80Hz", NULL};
+const char * eq2BandHiStrMap[]        = {"12kHz", NULL};
+const char * presetStrMap[]           = {"Set", NULL};
+const char * bitsStrMap[]             = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "Off", NULL};
+const char * sustainStrMap[]          = {"L1", "L2", NULL};
+const char * midiChanStrMap[]         = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "SlotA", "SlotB", "SlotC", "SlotD", NULL};
+const char * midiChanRcvStrMap[]      = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "Keyb", NULL};
+const char * thruStrMap[]             = {"Notes only", "Notes+Ctrls", NULL};
+const char * levConvStrMap[]          = {"Bip", "Pos", "Neg", NULL};
+const char * oscShpAStrMap[]          = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "SymPulse", NULL};
+const char * oscShpBStrMap[]          = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "DblSaw", "Pulse", "SymPulse", NULL};
+const char * dxFeedbackStrMap[]       = {"0", "1", "2", "3", "4", "5", "6", "7", NULL};
+const char * dxAlgStrMap[]            = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", NULL};
+const char * pShiftDelayStrMod[]      = {"50ms", "?", "?", "?", "?", NULL};
+const char * twoToInSourceStrMap[]    = {"In1/2", "In3/4", "Bus1/2", "Bus3/4", NULL};
+const char * fourToInSourceStrMap[]   = {"In", "Bus", NULL};
+const char * delayRangeStrMap[]       = {"5ms", "25ms", "100ms", "500ms", "1.0s", "2.0s", "2.7s", NULL};
+const char * timeClkStrMap[]          = {"Time", "Clk", NULL};
+const char * ratioFixedStrMap[]       = {"Ratio", "Fixed", NULL};
+const char * detuneStrMap[]           = {"-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "+1", "+2", "+3", "+4", "+5", "+6", "+7", NULL};
+const char * operator07StrMap[]       = {"0", "1", "2", "3", "4", "5", "6", "7", NULL};
+const char * operatorDepthStrMap[]    = {"-Lin", "-Exp", "+Exp", "+Lin", NULL};
+const char * phaserTypeStrMap[]       = {"Type I", "Type II", NULL};
+const char * invertStrMap[]           = {"m", "1-m", NULL};
+const char * monoKeyStrMap[]          = {"Last", "Lo", "Hi", NULL};
+const char * edgeStepStrMap[]         = {"100%", "75%", "50%", "25%", "0%", NULL};
 
 const tRgb   offOnColourMap[] = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
-const tRgb   cableColourMap[] = {
-    {0.7, 0.1, 0.1},       // red
-    {0.1, 0.1, 0.7},       // blue
-    {0.7, 0.7, 0.1},       // yellow
-    {0.8, 0.3, 0.2},       // orange
-    {0.1, 0.7, 0.1},       // green
-    {0.7, 0.1, 0.7},       // purple
-    {0.9, 0.9, 0.9},       // white
+const tRgb   cableColourMap[] = { // TODO: implement a null termination mechanism for colour maps, so that we can get array size and do sanity check
+    {0.7, 0.1, 0.1},              // red
+    {0.1, 0.1, 0.7},              // blue
+    {0.7, 0.7, 0.1},              // yellow
+    {0.8, 0.3, 0.2},              // orange
+    {0.1, 0.7, 0.1},              // green
+    {0.7, 0.1, 0.7},              // purple
+    {0.9, 0.9, 0.9},              // white
 };
 
 const tRgb   gModuleColourMap[] = {
