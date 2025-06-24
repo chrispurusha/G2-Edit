@@ -23,6 +23,7 @@ extern "C" {
 
 // System header files
 #include <math.h>
+// #include <png.h>
 
 // Disable warnings from external library headers etc.
 #pragma clang diagnostic push
