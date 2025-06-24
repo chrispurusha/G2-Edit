@@ -941,6 +941,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             double  y          = rectangle.coord.y;
             double  textHeight = rectangle.size.h / 2.0;
 
+            //LOG_DEBUG("Mode for module %s\n", gModuleProperties[module->type].name);
             if (strMap == NULL) {
                 LOG_ERROR("No strMap for module type %s\n", gModuleProperties[module->type].name);
 
