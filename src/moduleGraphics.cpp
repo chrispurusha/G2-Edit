@@ -228,7 +228,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 
     module->param[gVariation][paramIndex].paramRef = paramRef;
     
-    LOG_DEBUG("param %u", paramValue);
+    LOG_DEBUG("param %u\n", paramValue);
 
     switch (paramLocationList[paramRef].type1) {
         case paramType1Freq:

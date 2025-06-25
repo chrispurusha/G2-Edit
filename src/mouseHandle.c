@@ -1391,7 +1391,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                                 module.param[gVariation][gParamDragging.param].morphRange[gMorphGroupFocus] = 256 - (module.param[gVariation][gParamDragging.param].value - value);
                             }
                             write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
-                            printf("Write to module %u variation %u\n", module.key.index, gVariation);
+                            LOG_DEBUG("Write to module %u variation %u\n", module.key.index, gVariation);
 
                             messageContent.cmd                       = eMsgCmdSetParamMorph;
                             messageContent.slot                      = gSlot;
