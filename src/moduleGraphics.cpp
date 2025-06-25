@@ -892,8 +892,8 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             double  y          = rectangle.coord.y;
             double  textHeight = rectangle.size.h / 2.0;
 
-            if (paramValue >= array_size_str_map(strMap)) {
-                LOG_ERROR("Bad strMap for module type %s ParamRef %u ParamIndex %u, map pointer = 0x%lx, Value %u >= Map array size %u\n", gModuleProperties[module->type].name, paramRef, paramIndex, strMap, paramValue, array_size_str_map(strMap));
+            if ((paramLocationList[paramRef].range > array_size_str_map(strMap)) || (paramValue >= array_size_str_map(strMap))) {
+                LOG_ERROR("Bad strMap for module type %s ParamRef %u ParamIndex %u, Value Range %u, map pointer = 0x%lx, Value %u, Map array size %u\n", gModuleProperties[module->type].name, paramRef, paramIndex, paramLocationList[paramRef].range, strMap, paramValue, array_size_str_map(strMap));
 
                 //Debug help for value
                 char debug[64] = {0};
