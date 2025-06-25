@@ -163,7 +163,7 @@
 #define MODULE_X_GAP                         (10.0)
 #define MODULE_X_SPAN                        (MODULE_WIDTH + MODULE_X_GAP)
 #define MODULE_TITLE_X_OFFSET                (3.0)
-#define MODULE_HEIGHT                        (30.0) // 1 row
+#define MODULE_HEIGHT                        (38.0) // 1 row
 #define MODULE_MARGIN                        (5.0)
 #define MODULE_Y_GAP                         (5.0)
 #define MODULE_Y_SPAN                        (MODULE_HEIGHT + MODULE_Y_GAP)
@@ -172,6 +172,9 @@
 #define MODULE_AREA_Y_MARGINS                ((MODULE_MARGIN * 2.0) + TOP_BAR_HEIGHT + SCROLLBAR_WIDTH)
 #define MODULE_AREA_X_WIDTH                  ((double)renderWidth - (MODULE_AREA_X_MARGINS))
 #define MODULE_AREA_Y_HEIGHT                 ((double)renderHeight - (MODULE_AREA_Y_MARGINS))
+
+#define NO_ZOOM                              (1.0)
+#define ZOOM_DELTA                           (0.1)
 
 #define COMP_MARGIN                          (5.0)
 
