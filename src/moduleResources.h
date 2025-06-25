@@ -2334,29 +2334,29 @@ const tConnectorLocation connectorLocationList[] = {
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
 const tModeLocation modeLocationList[] = {
-    {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Toggle,   {{ 20,   5}, { 7, 7}}, anchorTopLeft,     "Wave",  8, 0, oscShpBStrMap      }, // 8 OscShpB
-    {moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7,  7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap}, // 9 Wave
-    {moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14,  7}}, anchorBottomLeft,  "Type",  4, 0, reverbTypeStrMap   }, // 12 Reverb
-    {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 64,  -3}, { 7,  7}}, anchorBottomLeft,  "Wave",  6, 0, lfoWaveStrMap      }, // 24 LfoC
-    {moduleTypeDriver,     paramType1StandardToggle, paramType2Toggle, {{ 35,  -3}, { 7,  7}}, anchorBottomLeft,  "Type",  4, 0, driverTypeStrMap   }, // 35 Type
-    {moduleTypePulse,      paramType1StandardToggle, paramType2Toggle, {{-13,  -3}, { 7,  7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap    }, // 38 Mode
-    {moduleTypeDelay,      paramType1StandardToggle, paramType2Toggle, {{-13,  -3}, { 7,  7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap    }, // 42 Mode
-    {moduleTypeGate,       paramType1StandardToggle, paramType2Toggle, {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "G1",    6, 0, gateTypeStrMap     }, // 64 Gate 1 Type
-    {moduleTypeGate,       paramType1StandardToggle, paramType2Toggle, {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  "G2",    6, 0, gateTypeStrMap     }, // 64 Gate 2 Type
-    {moduleTypeClkDiv,     paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  "Mode",  2, 0, divModeStrMap      }, // 69 DivMode
-    {moduleTypeFltLP,      paramType1StandardToggle, paramType2Toggle, {{ 67,  -3}, { 7,  7}}, anchorBottomLeft,  "Slope", 6, 2, fltLPSlopeStrMap   }, // 87 FltLP
-    {moduleTypeFlipFlop,   paramType1StandardToggle, paramType2Toggle, {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Type",  2, 0, flipFlopStrMap     }, // 91 Selector
-    {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7,  7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap}, // 96 Wave
-    {moduleTypeFltHP,      paramType1StandardToggle, paramType2Toggle, {{ 67,  -3}, { 7,  7}}, anchorBottomLeft,  "Slope", 6, 2, fltLPSlopeStrMap   }, // 134 FltLP
-    {moduleTypeDlySingleA, paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   }, // 172 Delay Range
-    {moduleTypeDlySingleB, paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   }, // 173 Delay Range
-    {moduleTypeDelayDual,  paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   }, // 174 Delay Range
-    {moduleTypeDelayQuad,  paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   }, // 175 Delay Range
-    {moduleTypeDelayA,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   }, // 176 Delay Range
-    {moduleTypeDelayB,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   }, // 177 Delay Range
-    {moduleTypeDlyStereo,  paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   }, // 178 Delay Range
-    {moduleTypeDlyEight,   paramType1StandardToggle, paramType2Toggle, {{ 10, -10}, { 7,  7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   }, // 178 Delay Range
-    {moduleTypeOscPM,      paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7,  7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap}, // 183 Wave
+    {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Toggle, {{ 20,   5}, { 7, 7}}, anchorTopLeft,     "Wave",  8, 0, oscShpBStrMap      },  // 8 OscShpB
+    {moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap},  // 9 Wave
+    {moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14, 7}}, anchorBottomLeft,  "Type",  4, 0, reverbTypeStrMap   },  // 12 Reverb
+    {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 64,  -3}, { 7, 7}}, anchorBottomLeft,  "Wave",  6, 0, lfoWaveStrMap      },  // 24 LfoC
+    {moduleTypeDriver,     paramType1StandardToggle, paramType2Toggle, {{ 35,  -3}, { 7, 7}}, anchorBottomLeft,  "Type",  4, 0, driverTypeStrMap   },  // 35 Type
+    {moduleTypePulse,      paramType1StandardToggle, paramType2Toggle, {{-13,  -3}, { 7, 7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap    },  // 38 Mode
+    {moduleTypeDelay,      paramType1StandardToggle, paramType2Toggle, {{-13,  -3}, { 7, 7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap    },  // 42 Mode
+    {moduleTypeGate,       paramType1StandardToggle, paramType2Toggle, {{ 40,  -3}, { 7, 7}}, anchorBottomLeft,  "G1",    6, 0, gateTypeStrMap     },  // 64 Gate 1 Type
+    {moduleTypeGate,       paramType1StandardToggle, paramType2Toggle, {{ 70,  -3}, { 7, 7}}, anchorBottomLeft,  "G2",    6, 0, gateTypeStrMap     },  // 64 Gate 2 Type
+    {moduleTypeClkDiv,     paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 7, 7}}, anchorBottomLeft,  "Mode",  2, 0, divModeStrMap      },  // 69 DivMode
+    {moduleTypeFltLP,      paramType1StandardToggle, paramType2Toggle, {{ 67,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 6, 2, fltLPSlopeStrMap   },  // 87 FltLP
+    {moduleTypeFlipFlop,   paramType1StandardToggle, paramType2Toggle, {{ 45,  -3}, { 7, 7}}, anchorBottomLeft,  "Type",  2, 0, flipFlopStrMap     },  // 91 Selector
+    {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap},  // 96 Wave
+    {moduleTypeFltHP,      paramType1StandardToggle, paramType2Toggle, {{ 67,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 6, 2, fltLPSlopeStrMap   },  // 134 FltLP
+    {moduleTypeDlySingleA, paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   },  // 172 Delay Range
+    {moduleTypeDlySingleB, paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   },  // 173 Delay Range
+    {moduleTypeDelayDual,  paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   },  // 174 Delay Range
+    {moduleTypeDelayQuad,  paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   },  // 175 Delay Range
+    {moduleTypeDelayA,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   },  // 176 Delay Range
+    {moduleTypeDelayB,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   },  // 177 Delay Range
+    {moduleTypeDlyStereo,  paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   },  // 178 Delay Range
+    {moduleTypeDlyEight,   paramType1StandardToggle, paramType2Toggle, {{ 10, -10}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   },  // 178 Delay Range
+    {moduleTypeOscPM,      paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap},  // 183 Wave
 };
 
 //{moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14, 7}}, anchorBottomLeft,  "Type",      4, 0, reverbTypeStrMap,    NULL          },

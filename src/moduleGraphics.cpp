@@ -227,7 +227,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
     label[sizeof(label) - 1] = '\0';
 
     module->param[gVariation][paramIndex].paramRef = paramRef;
-    
+
     LOG_DEBUG("param %u\n", paramValue);
 
     switch (paramLocationList[paramRef].type1) {
@@ -748,7 +748,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 snprintf(buff, sizeof(buff), "%.0fms", time * 1000);
             } else if (time < 10.0) {
                 snprintf(buff, sizeof(buff), "%.2fs", time);
-            } else   {
+            } else {
                 snprintf(buff, sizeof(buff), "%.1fs", time);
             }
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);
@@ -804,7 +804,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 snprintf(buff, sizeof(buff), "%.0fms", time_to_display * 1000);
             } else if (time_to_display < 10.0) {
                 snprintf(buff, sizeof(buff), "%.2fs", time_to_display);
-            } else   {
+            } else {
                 snprintf(buff, sizeof(buff), "%.1fs", time_to_display);
             }
             module->param[gVariation][paramIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5);

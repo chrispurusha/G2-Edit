@@ -56,97 +56,97 @@ uint32_t array_size_str_map(char ** strMap) {
 }
 
 uint32_t module_param_count(tModuleType moduleType) {
-    static uint32_t cache[moduleTypeMax] = {0};
-    static bool validCache[moduleTypeMax] = {0};
+    static uint32_t cache[moduleTypeMax]      = {0};
+    static bool     validCache[moduleTypeMax] = {0};
 
     if (validCache[moduleType] == false) {
         uint32_t count = 0;
-        
+
         for (int i = 0; i < array_size_param_location_list(); i++) {
             if (paramLocationList[i].moduleType == moduleType) {
                 count++;
             }
         }
-        cache[moduleType] = count;
+
+        cache[moduleType]      = count;
         validCache[moduleType] = true;
     }
-
     return cache[moduleType];
 }
-    
+
 uint32_t module_connector_count(tModuleType moduleType) {
-    static uint32_t cache[moduleTypeMax] = {0};
-    static bool validCache[moduleTypeMax] = {0};
+    static uint32_t cache[moduleTypeMax]      = {0};
+    static bool     validCache[moduleTypeMax] = {0};
 
     if (validCache[moduleType] == false) {
         uint32_t count = 0;
-        
+
         for (int i = 0; i < array_size_connector_location_list(); i++) {
             if (connectorLocationList[i].moduleType == moduleType) {
                 count++;
             }
         }
-        cache[moduleType] = count;
+
+        cache[moduleType]      = count;
         validCache[moduleType] = true;
     }
-
     return cache[moduleType];
 }
-    
+
 uint32_t module_mode_count(tModuleType moduleType) {
-    static uint32_t cache[moduleTypeMax] = {0};
-    static bool validCache[moduleTypeMax] = {0};
+    static uint32_t cache[moduleTypeMax]      = {0};
+    static bool     validCache[moduleTypeMax] = {0};
 
     if (validCache[moduleType] == false) {
         uint32_t count = 0;
-        
+
         for (int i = 0; i < array_size_mode_location_list(); i++) {
             if (modeLocationList[i].moduleType == moduleType) {
                 count++;
             }
         }
-        cache[moduleType] = count;
+
+        cache[moduleType]      = count;
         validCache[moduleType] = true;
     }
-
     return cache[moduleType];
 }
-    
+
 uint32_t module_volume_count(tModuleType moduleType) {
-    static uint32_t cache[moduleTypeMax] = {0};
-    static bool validCache[moduleTypeMax] = {0};
+    static uint32_t cache[moduleTypeMax]      = {0};
+    static bool     validCache[moduleTypeMax] = {0};
 
     if (validCache[moduleType] == false) {
         uint32_t count = 0;
-        
+
         for (int i = 0; i < array_size_volume_location_list(); i++) {
             if (volumeLocationList[i].moduleType == moduleType) {
                 count++;
             }
         }
-        cache[moduleType] = count;
+
+        cache[moduleType]      = count;
         validCache[moduleType] = true;
     }
-
     return cache[moduleType];
 }
 
 uint32_t module_led_count(tModuleType moduleType) {
-    static uint32_t cache[moduleTypeMax] = {0};
-    static bool validCache[moduleTypeMax] = {0};
+    static uint32_t cache[moduleTypeMax]      = {0};
+    static bool     validCache[moduleTypeMax] = {0};
 
     if (validCache[moduleType] == false) {
         uint32_t count = 0;
-        
+
         for (int i = 0; i < array_size_led_location_list(); i++) {
             if (ledLocationList[i].moduleType == moduleType) {
                 count++;
             }
         }
-        cache[moduleType] = count;
+
+        cache[moduleType]      = count;
         validCache[moduleType] = true;
     }
-
     return cache[moduleType];
 }
 
