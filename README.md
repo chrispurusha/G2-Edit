@@ -21,3 +21,4 @@ brew install --build-from-source freetype2
 
 Todo: Many mechanisms yet to implement - including copying, file writing, etc. 200+ modules to implement and test. Graphical representation of filter curves / oscillator waves etc.
 
+See [THIRD_PARTY.md](./THIRD_PARTY.md) for open-source acknowledgments.
