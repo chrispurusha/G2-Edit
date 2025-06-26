@@ -231,7 +231,8 @@ typedef enum {
     moduleTypeRndTrig,
     moduleTypeRndClkB,
     moduleTypeUnknown207,
-    moduleTypeRndPattern
+    moduleTypeRndPattern,
+    moduleTypeMax
 } tModuleType;
 
 typedef struct {

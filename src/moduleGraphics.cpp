@@ -228,7 +228,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
     label[sizeof(label) - 1] = '\0';
 
     module->param[gVariation][paramIndex].paramRef = paramRef;
-    
+
     LOG_DEBUG("param %u\n", paramValue);
 
     tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char* label, char* buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramRef);
