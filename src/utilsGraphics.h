@@ -23,8 +23,6 @@
 #include "sysIncludes.h"
 #include "types.h"
 
-#define NO_ZOOM    (1.0)
-
 void set_rgb_colour(tRgb rgb);
 void set_rgba_colour(tRgba rgba);
 
