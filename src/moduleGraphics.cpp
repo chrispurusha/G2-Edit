@@ -243,80 +243,99 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             case paramType1OscFreq:
             {
                 render_param_function = &render_paramType1OscFreq;
+                break;
             }
             case paramType1Fine:
             {
                 render_param_function = &render_paramType1Fine;
+                break;
             }
             case paramType1GeneralFreq:
             {
                 render_param_function = &render_paramType1GeneralFreq;
+                break;
             }
             case paramType1Shape:
             {
                 render_param_function = &render_paramType1Shape;
+                break;
             }
             case paramType1FreqDrum:
             {
                 render_param_function = &render_paramType1FreqDrum;
+                break;
             }
             case paramType1LFORate:
             {
                 render_param_function = &render_paramType1LFORate;
+                break;
             }
             case paramType1Int:
             {
                 render_param_function = &render_paramType1Int;
+                break;
             }
             case paramType1dB:
             {
                 render_param_function = &render_paramType1dB;
+                break;
             }
             case paramType1MixLevel:
             {
                 render_param_function = &render_paramType1MixLevel;
+                break;
             }
             case paramType1Time:
             {
                 render_param_function = &render_paramType1Time;
+                break;
             }
             case paramType1TimeClk:
             {
                 render_param_function = &render_paramType1TimeClk;
+                break;
             }
             case paramType1ADRTime:
             {
                 render_param_function = &render_paramType1ADRTime;
+                break;
             }
             case paramType1PulseTime:
             {
                 render_param_function = &render_paramType1PulseTime;
+                break;
             }
             case paramType1Pitch:
             {
                 render_param_function = &render_paramType1Pitch;
+                break;
             }
             case paramType1BipLevel:
             {
                 render_param_function = &render_paramType1BipLevel;
+                break;
             }
             case paramType1LevAmpDial:
             {
                 render_param_function = &render_paramType1LevAmpDial;
+                break;
             }
             case paramType1Pan:
             {
                 render_param_function = &render_paramType1Pan;
+                break;
             }
             case paramType1NoteDial:
             {
                 render_param_function = &render_paramType1NoteDial;
+                break;
             }
             case paramType1CommonDial: // Ultimately might not be a common dial, or could just be a default percent dial!?
             case paramType1LRDial:     // Pan type dial, perhaps with reset triangle
             case paramType1Resonance:
             {
                 render_param_function = &render_paramType1Resonance;
+                break;
             }
         }
         module->param[gVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramRef);
