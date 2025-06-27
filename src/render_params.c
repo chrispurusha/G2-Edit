@@ -21,6 +21,7 @@ extern "C" {
 
 #pragma clang diagnostic pop
 
+#include "defs.h"
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "utilsGraphics.h"
@@ -667,10 +668,79 @@ tRectangle render_paramType1Resonance(tModule * module, tRectangle rectangle, ch
     return render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
+tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangle, char* label, char* buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
+    double  y          = rectangle.coord.y;
+    double  textHeight = rectangle.size.h / 2.0;
+        
+    if (paramValue >= array_size_str_map(strMap)) {
+        LOG_ERROR("Bad strMap for module type %s ParamRef %u ParamIndex %u, map pointer = 0x%lx, Value %u >= Map array size %u\n", gModuleProperties[module->type].name, paramRef, paramIndex, (unsigned long)strMap, (int)paramValue, array_size_str_map(strMap));
+        
+        //Debug help for value
+        char debug[64] = {0};
+        snprintf(debug, sizeof(debug), "%u", (int)paramValue);
+    
+        tRectangle text_rectangle = {{rectangle.coord.x, y}, {30, textHeight}};
+        set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
+        return draw_button(moduleArea, text_rectangle, debug);
+    }
+    
+    if (strlen(label) > 0) {
+        set_rgb_colour((tRgb)RGB_BLACK);
+        render_text(moduleArea, (tRectangle){{rectangle.coord.x, y}, {BLANK_SIZE, textHeight}}, label);
+        y += textHeight;
+    }
+    
+    if (paramLocationList[paramRef].colourMap != NULL) {
+        set_rgb_colour(paramLocationList[paramRef].colourMap[(int)paramValue]);
+    } else {
+        set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
+    }
+    return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[(int)paramValue]);
+}
 
-
+tRectangle render_paramType1UpDown(tModule * module, tRectangle rectangle, char* label, char* buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
+    double  y          = rectangle.coord.y;
+    double  textHeight = rectangle.size.h / 2.0;
+    
+    if (strMap == NULL) {
+        LOG_ERROR("No strMap for module type %s\n", gModuleProperties[module->type].name);
+        
+        //Debug help for value
+        char debug[64] = {0};
+        snprintf(debug, sizeof(debug), "%u", paramValue);
+        set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
+        return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {30, textHeight}}, debug);
+    }
+    
+    if (strlen(label) > 0) {
+        set_rgb_colour((tRgb)RGB_BLACK);
+        render_text(moduleArea, (tRectangle){{rectangle.coord.x, y}, {BLANK_SIZE, textHeight / 2}}, label);
+        y += textHeight;
+    }
+    
+    if (paramLocationList[paramRef].colourMap != NULL) {
+        set_rgb_colour(paramLocationList[paramRef].colourMap[(int)paramValue]);
+    } else {
+        set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
+    }
+    return draw_updown(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[(int)paramValue]);
+}
     
     
+tRectangle render_paramType1Bypass(tModule * module, tRectangle rectangle, char* label, char* buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
+    
+    return draw_power_button(moduleArea, rectangle, paramValue != 0);
+}
+
+tRectangle render_paramType1Enable(tModule * module, tRectangle rectangle, char* label, char* buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
+    if (paramLocationList[paramRef].colourMap != NULL) {
+        set_rgb_colour(paramLocationList[paramRef].colourMap[(int)paramValue]);
+    } else {
+        set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);          // Grey when OFF
+    }
+    return draw_button(moduleArea, rectangle, NULL);  // TODO: Add label!
+}
+
 #ifdef __cplusplus
 }
 #endif

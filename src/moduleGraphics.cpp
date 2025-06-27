@@ -231,208 +231,156 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 
     LOG_DEBUG("param %u\n", paramValue);
 
-    tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char* label, char* buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramRef);
         
-    if (paramLocationList[paramRef].type2 == paramType2Dial) {
-        switch (paramLocationList[paramRef].type1) {
-            case paramType1Freq:
-            {
-                render_param_function = &render_paramType1Freq;
-                break;
-            }
-            case paramType1OscFreq:
-            {
-                render_param_function = &render_paramType1OscFreq;
-                break;
-            }
-            case paramType1Fine:
-            {
-                render_param_function = &render_paramType1Fine;
-                break;
-            }
-            case paramType1GeneralFreq:
-            {
-                render_param_function = &render_paramType1GeneralFreq;
-                break;
-            }
-            case paramType1Shape:
-            {
-                render_param_function = &render_paramType1Shape;
-                break;
-            }
-            case paramType1FreqDrum:
-            {
-                render_param_function = &render_paramType1FreqDrum;
-                break;
-            }
-            case paramType1LFORate:
-            {
-                render_param_function = &render_paramType1LFORate;
-                break;
-            }
-            case paramType1Int:
-            {
-                render_param_function = &render_paramType1Int;
-                break;
-            }
-            case paramType1dB:
-            {
-                render_param_function = &render_paramType1dB;
-                break;
-            }
-            case paramType1MixLevel:
-            {
-                render_param_function = &render_paramType1MixLevel;
-                break;
-            }
-            case paramType1Time:
-            {
-                render_param_function = &render_paramType1Time;
-                break;
-            }
-            case paramType1TimeClk:
-            {
-                render_param_function = &render_paramType1TimeClk;
-                break;
-            }
-            case paramType1ADRTime:
-            {
-                render_param_function = &render_paramType1ADRTime;
-                break;
-            }
-            case paramType1PulseTime:
-            {
-                render_param_function = &render_paramType1PulseTime;
-                break;
-            }
-            case paramType1Pitch:
-            {
-                render_param_function = &render_paramType1Pitch;
-                break;
-            }
-            case paramType1BipLevel:
-            {
-                render_param_function = &render_paramType1BipLevel;
-                break;
-            }
-            case paramType1LevAmpDial:
-            {
-                render_param_function = &render_paramType1LevAmpDial;
-                break;
-            }
-            case paramType1Pan:
-            {
-                render_param_function = &render_paramType1Pan;
-                break;
-            }
-            case paramType1NoteDial:
-            {
-                render_param_function = &render_paramType1NoteDial;
-                break;
-            }
-            case paramType1CommonDial: // Ultimately might not be a common dial, or could just be a default percent dial!?
-            case paramType1LRDial:     // Pan type dial, perhaps with reset triangle
-            case paramType1Resonance:
-            {
-                render_param_function = &render_paramType1Resonance;
-                break;
-            }
-        }
-        module->param[gVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramRef);
-    } else
+    switch(paramLocationList[paramRef].type2) {
+        case paramType2Dial:
         {
+            tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char* label, char* buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramRef);
             switch (paramLocationList[paramRef].type1) {
+                case paramType1Freq:
+                {
+                    render_param_function = &render_paramType1Freq;
+                    break;
+                }
+                case paramType1OscFreq:
+                {
+                    render_param_function = &render_paramType1OscFreq;
+                    break;
+                }
+                case paramType1Fine:
+                {
+                    render_param_function = &render_paramType1Fine;
+                    break;
+                }
+                case paramType1GeneralFreq:
+                {
+                    render_param_function = &render_paramType1GeneralFreq;
+                    break;
+                }
+                case paramType1Shape:
+                {
+                    render_param_function = &render_paramType1Shape;
+                    break;
+                }
+                case paramType1FreqDrum:
+                {
+                    render_param_function = &render_paramType1FreqDrum;
+                    break;
+                }
+                case paramType1LFORate:
+                {
+                    render_param_function = &render_paramType1LFORate;
+                    break;
+                }
+                case paramType1Int:
+                {
+                    render_param_function = &render_paramType1Int;
+                    break;
+                }
+                case paramType1dB:
+                {
+                    render_param_function = &render_paramType1dB;
+                    break;
+                }
+                case paramType1MixLevel:
+                {
+                    render_param_function = &render_paramType1MixLevel;
+                    break;
+                }
+                case paramType1Time:
+                {
+                    render_param_function = &render_paramType1Time;
+                    break;
+                }
+                case paramType1TimeClk:
+                {
+                    render_param_function = &render_paramType1TimeClk;
+                    break;
+                }
+                case paramType1ADRTime:
+                {
+                    render_param_function = &render_paramType1ADRTime;
+                    break;
+                }
+                case paramType1PulseTime:
+                {
+                    render_param_function = &render_paramType1PulseTime;
+                    break;
+                }
+                case paramType1Pitch:
+                {
+                    render_param_function = &render_paramType1Pitch;
+                    break;
+                }
+                case paramType1BipLevel:
+                {
+                    render_param_function = &render_paramType1BipLevel;
+                    break;
+                }
+                case paramType1LevAmpDial:
+                {
+                    render_param_function = &render_paramType1LevAmpDial;
+                    break;
+                }
+                case paramType1Pan:
+                {
+                    render_param_function = &render_paramType1Pan;
+                    break;
+                }
+                case paramType1NoteDial:
+                {
+                    render_param_function = &render_paramType1NoteDial;
+                    break;
+                }
+                case paramType1CommonDial: // Ultimately might not be a common dial, or could just be a default percent dial!?
+                case paramType1LRDial:     // Pan type dial, perhaps with reset triangle
+                case paramType1Resonance:
+                {
+                    render_param_function = &render_paramType1Resonance;
+                    break;
+                }
+            }
+            module->param[gVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramRef);
+            break;
+            
+        }
+        case paramType2Toggle:
+        case paramType2UpDown:
+        {
+            tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char* label, char* buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char** strMap);
+            
+            switch(paramLocationList[paramRef].type1) {
                 case paramType1StandardToggle:
                 {
-                    char ** strMap     = (char **)paramLocationList[paramRef].strMap;
-                    double  y          = rectangle.coord.y;
-                    double  textHeight = rectangle.size.h / 2.0;
-                    
-                    if (paramValue >= array_size_str_map(strMap)) {
-                        LOG_ERROR("Bad strMap for module type %s ParamRef %u ParamIndex %u, map pointer = 0x%lx, Value %u >= Map array size %u\n", gModuleProperties[module->type].name, paramRef, paramIndex, strMap, paramValue, array_size_str_map(strMap));
-                        
-                        //Debug help for value
-                        char debug[64] = {0};
-                        snprintf(debug, sizeof(debug), "%u", paramValue);
-                        set_rgb_colour(RGB_BACKGROUND_GREY);
-                        module->param[gVariation][paramIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {30, textHeight}}, debug);
-                        return;
-                    }
-                    
-                    if (strlen(label) > 0) {
-                        set_rgb_colour(RGB_BLACK);
-                        render_text(moduleArea, {{rectangle.coord.x, y}, {BLANK_SIZE, textHeight}}, label);
-                        y += textHeight;
-                    }
-                    
-                    if (paramLocationList[paramRef].colourMap != NULL) {
-                        set_rgb_colour(paramLocationList[paramRef].colourMap[paramValue]);
-                    } else {
-                        set_rgb_colour(RGB_BACKGROUND_GREY);
-                    }
-                    module->param[gVariation][paramIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[paramValue]);
+                    render_param_function = &render_paramType1StandardToggle;
                     break;
                 }
                 case paramType1UpDown:
                 {
-                    char ** strMap     = (char **)paramLocationList[paramRef].strMap;
-                    double  y          = rectangle.coord.y;
-                    double  textHeight = rectangle.size.h / 2.0;
-                    
-                    if (strMap == NULL) {
-                        LOG_ERROR("No strMap for module type %s\n", gModuleProperties[module->type].name);
-                        
-                        //Debug help for value
-                        char debug[64] = {0};
-                        snprintf(debug, sizeof(debug), "%u", paramValue);
-                        set_rgb_colour(RGB_BACKGROUND_GREY);
-                        module->param[gVariation][paramIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {30, textHeight}}, debug);
-                        return;
-                    }
-                    
-                    if (strlen(label) > 0) {
-                        set_rgb_colour(RGB_BLACK);
-                        render_text(moduleArea, {{rectangle.coord.x, y}, {BLANK_SIZE, textHeight / 2}}, label);
-                        y += textHeight;
-                    }
-                    
-                    if (paramLocationList[paramRef].colourMap != NULL) {
-                        set_rgb_colour(paramLocationList[paramRef].colourMap[paramValue]);
-                    } else {
-                        set_rgb_colour(RGB_BACKGROUND_GREY);
-                    }
-                    module->param[gVariation][paramIndex].rectangle = draw_updown(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[paramValue]);
+                    render_param_function = &render_paramType1UpDown;
                     break;
                 }
                 case paramType1Bypass:
                 {
-                    module->param[gVariation][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
-                    return;
+                    render_param_function = &render_paramType1Bypass;
+                    break;
                 }
                 case paramType1Enable:
                 {
-                    //module->param[gVariation][paramIndex].rectangle = draw_power_button(moduleArea, rectangle, paramValue != 0);
-                    
-                    if (paramLocationList[paramRef].colourMap != NULL) {
-                        set_rgb_colour(paramLocationList[paramRef].colourMap[paramValue]);
-                    } else {
-                        set_rgb_colour(RGB_BACKGROUND_GREY);          // Grey when OFF
-                    }
-                    module->param[gVariation][paramIndex].rectangle = draw_button(moduleArea, rectangle, NULL);  // TODO: Add label!
-                    return;
-                }
-                default:
-                {
-                }
+                    render_param_function = &render_paramType1Enable;
                     break;
+                }
+                default: {
+                    LOG_ERROR("Reached wrong switch in case paramType2Toggle or paramType2UpDown");
+                }
             }
+            module->param[gVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
+            break;
         }
-    //{
-    //    char debug[64] = {0};
-    //
-    //    snprintf(debug, sizeof(debug), "%u %u\n", module->param[gVariation][paramIndex].range[0], module->param[gVariation][paramIndex].range[1]);
-    //    render_text(moduleArea, {{rectangle.coord.x, rectangle.coord.y + 40}, {BLANK_SIZE, 12}}, debug);
-    //}
+        default: {
+            LOG_ERROR("Reached wrong switch in switch paramType2");
+        }
+    }
 }
 
 void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef, uint32_t modeIndex) {
