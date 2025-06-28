@@ -612,11 +612,45 @@ tRectangle render_paramType1BipLevel(tModule * module, tRectangle rectangle, cha
     // -64 to 63
     double res    = 0.0;
     double maxVal = 64.0;
+    int typeParamIndex;
     
-    if (paramValue < 127) {
-        res = round((((double)paramValue - 64.0) * maxVal * 10.0) / 64.0) / 10.0;
+    switch (module->type) {
+        case moduleTypeConstant:
+        {
+            typeParamIndex = 1;
+            break;
+        }
+        default:
+        {
+            typeParamIndex = -1; // Only bipolar values
+        }
+    }
+    if (typeParamIndex == -1) {
+        if (paramValue < 127) {
+            res = round((((double)paramValue - 64.0) * maxVal * 10.0) / 64.0) / 10.0;
+        } else {
+            res = maxVal;             // Clip
+        }
     } else {
-        res = maxVal;             // Clip
+        switch (module->param[gVariation][typeParamIndex].value) {
+            case 0: // Bip
+            {
+                if (paramValue < 127) {
+                    res = round((((double)paramValue - 64.0) * maxVal * 10.0) / 64.0) / 10.0;
+                } else {
+                    res = maxVal;             // Clip
+                }
+                break;
+            }
+            case 1:
+            {
+                if (paramValue < 127) {
+                    res = round((double)paramValue / 2.0 * 10.0) / 10.0;
+                } else {
+                    res = maxVal;
+                }
+            }
+        }
     }
     snprintf(buff, sizeof(buff), "%.1f", res);
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);

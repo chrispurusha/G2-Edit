@@ -577,7 +577,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeDelay,      paramType1StandardToggle, paramType2Toggle, {{ 52,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, pulseRangeStrMap,       NULL          }, // 42 Range
 
     // 43 Constant
-    {moduleTypeConstant,   paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 43 Value
+    {moduleTypeConstant,   paramType1BipLevel,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 43 Value
     {moduleTypeConstant,   paramType1StandardToggle, paramType2Toggle, {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, bipUniStrMap,           NULL          }, // 43 Bip/Uni
     // 44 LevMult  - No Controls
     // 45 FltVoice
