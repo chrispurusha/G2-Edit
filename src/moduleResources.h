@@ -441,7 +441,7 @@ const tParamLocation paramLocationList[] = {
     // 14 Unknown
     // 15 Sw8-1 *** Needs more resources
     // 16 Unknown
-    // 17 ValSw1-2 *** Could need more resources
+    // 17 ValSw1-2
     {moduleTypeValSw1to2,    paramType1UpDown,     paramType2UpDown,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, u128StrMap,                   NULL          }, // 17 Val
     // 18 X-Fade
     {moduleTypeXtoFade,    paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 18 Mod
@@ -558,14 +558,14 @@ const tParamLocation paramLocationList[] = {
     {moduleTypePulse,      paramType1StandardToggle, paramType2Toggle, {{ 52,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, pulseRangeStrMap,       NULL          }, // 38 Range
     // 39 Unknown
     // 40 Mix8-1B
-    {moduleTypeMix8to1B,   paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In1
-    {moduleTypeMix8to1B,   paramType1CommonDial,     paramType2Dial,   {{ 29,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In2
-    {moduleTypeMix8to1B,   paramType1CommonDial,     paramType2Dial,   {{ 38,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In3
-    {moduleTypeMix8to1B,   paramType1CommonDial,     paramType2Dial,   {{ 47,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In4
-    {moduleTypeMix8to1B,   paramType1CommonDial,     paramType2Dial,   {{ 56,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In5
-    {moduleTypeMix8to1B,   paramType1CommonDial,     paramType2Dial,   {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In6
-    {moduleTypeMix8to1B,   paramType1CommonDial,     paramType2Dial,   {{ 74,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In7
-    {moduleTypeMix8to1B,   paramType1CommonDial,     paramType2Dial,   {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In8
+    {moduleTypeMix8to1B,   paramType1MixLevel,     paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In1
+    {moduleTypeMix8to1B,   paramType1MixLevel,     paramType2Dial,   {{ 29,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In2
+    {moduleTypeMix8to1B,   paramType1MixLevel,     paramType2Dial,   {{ 38,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In3
+    {moduleTypeMix8to1B,   paramType1MixLevel,     paramType2Dial,   {{ 47,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In4
+    {moduleTypeMix8to1B,   paramType1MixLevel,     paramType2Dial,   {{ 56,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In5
+    {moduleTypeMix8to1B,   paramType1MixLevel,     paramType2Dial,   {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In6
+    {moduleTypeMix8to1B,   paramType1MixLevel,     paramType2Dial,   {{ 74,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In7
+    {moduleTypeMix8to1B,   paramType1MixLevel,     paramType2Dial,   {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 40 In8
     {moduleTypeMix8to1B,   paramType1StandardToggle, paramType2Toggle, {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,              NULL          }, // 40 ExpLinDB
     {moduleTypeMix8to1B,   paramType1StandardToggle, paramType2Toggle, {{  3, -10}, { 7,  7}}, anchorBottomLeft,  "Pad",            2,   0, db12BPadStrMap,         NULL          }, // 40 Pad *** Check range of Pad
     // 41 EnvH

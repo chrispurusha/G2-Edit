@@ -328,7 +328,7 @@ tRectangle render_paramType1dB(tModule * module, tRectangle rectangle, char* lab
 tRectangle render_paramType1MixLevel(tModule * module, tRectangle rectangle, char* label, char* buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double       level      = 0.0;
     const double dbLvlMap[] = {-100.0, -99.9, -99.0, -72.1, -69.2, -66.9, -64.8, -62.9,
-        -61.1,    -59,     5, -57.9, -56.4, -55.0, -53.6, -52.3,-51.0,
+        -61.1,    -59,  -57.9, -56.4, -55.0, -53.6, -52.3,-51.0,
         -49.8,  -48.6, -47.5, -46.4, -45.3, -44.3, -43.3, -42.3,
         -41.3,  -40.4, -39.5, -38.7, -37.8, -37.0, -36.2, -35.5,
         -34.7,  -34.0, -33.3, -32.6, -31.9, -31.2, -30.6, -30.0,
