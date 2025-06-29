@@ -30,5 +30,8 @@ void render_morph_groups(void);
 void calculate_module_bounds(double * xEndMax, double * yEndMax, tRectangle moduleArea);
 void render_cable_from_to(tConnector from, tConnector to);
 tRectangle module_area(void);
+tRectangle render_dial_with_text(tArea area, tRectangle rectangle, char * label, char * buff, uint32_t value, uint32_t range, uint32_t morphRange, tRgb colour);
+tRectangle render_dial(tArea area, tRectangle rectangle, uint32_t value, uint32_t range, uint32_t morphRange, tRgb colour);  // Drop down into utilsGraphics?
+
 
 #endif // __MODULE_GRAPHICS_H__

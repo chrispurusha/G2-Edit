@@ -21,6 +21,14 @@
 33 Eq3Band OK
 34 ShpExp OK
 38 Pulse OK
+40 Mix8-1B OK
+41 EnvH OK
+42 Delay OK
+43 Constant OK
+45 FltVowel OK
+46 EnvAHD OK
+47 Pan OK
+48 MixStereo OK
 51 FltNord OK
 94 StChorus OK
 97 OscA Works. Needs new UI element for the Freq control (param 0) which takes into account the value of param 6 Pitch Type.

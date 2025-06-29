@@ -26,6 +26,7 @@
 		83DB9C3D2DD3570A00F9D2A5 /* utilsGraphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83DB9C3C2DD3570A00F9D2A5 /* utilsGraphics.cpp */; };
 		83DB9C412DD3580100F9D2A5 /* graphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83DB9C402DD3580100F9D2A5 /* graphics.cpp */; };
 		83EDF68E2D64D84C0052CE9F /* msgQueue.c in Sources */ = {isa = PBXBuildFile; fileRef = 83EDF68D2D64D84C0052CE9F /* msgQueue.c */; };
+		8BBF9D702E0C1C7A00738B0D /* render_params.c in Sources */ = {isa = PBXBuildFile; fileRef = 8BBF9D6F2E0C1C7800738B0D /* render_params.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -79,6 +80,8 @@
 		83EDF68D2D64D84C0052CE9F /* msgQueue.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = msgQueue.c; sourceTree = "<group>"; };
 		83EDF68F2D64D8550052CE9F /* msgQueue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = msgQueue.h; sourceTree = "<group>"; };
 		83F363872D5BD96E00F5F627 /* types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
+		8BBF9D6E2E0C1BB400738B0D /* render_params.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = render_params.h; sourceTree = "<group>"; };
+		8BBF9D6F2E0C1C7800738B0D /* render_params.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = render_params.c; sourceTree = "<group>"; };
 		8BEF40BD2DFB28AA008CBE07 /* debugnotes.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = debugnotes.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -158,6 +161,8 @@
 				833734542DB1033200ACF41F /* moduleResourcesAccess.c */,
 				83BE0C6A2D6C86DF007E9CD8 /* moduleGraphics.h */,
 				83BE0C682D6C86D6007E9CD8 /* moduleGraphics.cpp */,
+				8BBF9D6E2E0C1BB400738B0D /* render_params.h */,
+				8BBF9D6F2E0C1C7800738B0D /* render_params.c */,
 				83673D8E2D5A461E0077A0B2 /* graphics.h */,
 				83DB9C402DD3580100F9D2A5 /* graphics.cpp */,
 				83DB9C332DD346D200F9D2A5 /* globalVars.h */,
@@ -241,6 +246,7 @@
 				8347FD552DC7E77E009751C4 /* fileDialogue.mm in Sources */,
 				8352A5752D4BE22300CD5AD9 /* dataBase.c in Sources */,
 				83EDF68E2D64D84C0052CE9F /* msgQueue.c in Sources */,
+				8BBF9D702E0C1C7A00738B0D /* render_params.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
