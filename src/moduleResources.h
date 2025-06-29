@@ -596,7 +596,7 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeEnvAHD,     paramType1ADRTime,        paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, NULL,                   NULL          }, // 46 Attack
     {moduleTypeEnvAHD,     paramType1ADRTime,     paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Hold",         128,   0, NULL,                   NULL          }, // 46 Hold
     {moduleTypeEnvAHD,     paramType1StandardToggle, paramType2Toggle, {{  5, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,      NULL          }, // 46 Reset
-    {moduleTypeEnvAHD,     paramType1ADRTime,        paramType2Dial,   {{ 44,  -3}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,   0, NULL,                   NULL          }, // 46 Decay
+    {moduleTypeEnvAHD,     paramType1ADRTime,        paramType2Dial,   {{ 44,  -3}, { 7, 14}}, anchorBottomLeft,  "Release",        128,   0, NULL,                   NULL          }, // 46 Release
     {moduleTypeEnvAHD,     paramType1StandardToggle, paramType2Toggle, {{-26, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,              NULL          },
     {moduleTypeEnvAHD,     paramType1StandardToggle, paramType2Toggle, {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, kbStrMap,               offOnColourMap},
     // 47 Pan

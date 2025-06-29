@@ -27,6 +27,8 @@
 43 Constant OK
 45 FltVowel OK
 46 EnvAHD OK
+47 Pan OK
+48 MixStereo OK
 51 FltNord OK
 94 StChorus OK
 97 OscA Works. Needs new UI element for the Freq control (param 0) which takes into account the value of param 6 Pitch Type.
