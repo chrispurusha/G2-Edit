@@ -585,16 +585,16 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeFltVoice,   paramType1StandardToggle, paramType2Toggle, {{ 50, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             9,   1, vowelStrMap,            NULL          }, // 45 Vowel2
     {moduleTypeFltVoice,   paramType1StandardToggle, paramType2Toggle, {{ 60, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             9,   2, vowelStrMap,            NULL          }, // 45 Vowel3
     {moduleTypeFltVoice,   paramType1CommonDial,     paramType2Dial,   {{-15, -17}, { 7, 14}}, anchorBottomRight, NULL,           128,  80, NULL,                   NULL          }, // 45 Level
-    {moduleTypeFltVoice,   paramType1CommonDial,     paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 45 Vowel
+    {moduleTypeFltVoice,   paramType1BipLevel,     paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                   NULL          }, // 45 Vowel
     {moduleTypeFltVoice,   paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 45 VowelMod
-    {moduleTypeFltVoice,   paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,  80, NULL,                   NULL          }, // 45 Freq
+    {moduleTypeFltVoice,   paramType1BipLevel,     paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,  80, NULL,                   NULL          }, // 45 Freq
     {moduleTypeFltVoice,   paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 45 FreqMod
-    {moduleTypeFltVoice,   paramType1CommonDial,     paramType2Dial,   {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  "Res",          128,   0, NULL,                   NULL          }, // 45 Res
+    {moduleTypeFltVoice,   paramType1BipLevel,     paramType2Dial,   {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  "Res",          128,   0, NULL,                   NULL          }, // 45 Res
     {moduleTypeFltVoice,   paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 45 Bypass
     // 46 EnvAHD
     {moduleTypeEnvAHD,     paramType1StandardToggle, paramType2Toggle, {{-26,  -3}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, envShapeStrMap,         NULL          }, // 46 Shape
     {moduleTypeEnvAHD,     paramType1ADRTime,        paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, NULL,                   NULL          }, // 46 Attack
-    {moduleTypeEnvAHD,     paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Hold",         128,   0, NULL,                   NULL          }, // 46 Hold
+    {moduleTypeEnvAHD,     paramType1ADRTime,     paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Hold",         128,   0, NULL,                   NULL          }, // 46 Hold
     {moduleTypeEnvAHD,     paramType1StandardToggle, paramType2Toggle, {{  5, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,      NULL          }, // 46 Reset
     {moduleTypeEnvAHD,     paramType1ADRTime,        paramType2Dial,   {{ 44,  -3}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,   0, NULL,                   NULL          }, // 46 Decay
     {moduleTypeEnvAHD,     paramType1StandardToggle, paramType2Toggle, {{-26, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,              NULL          },
