@@ -38,7 +38,7 @@ extern "C" {
 #include "utilsGraphics.h"
 #include "moduleGraphics.h"
 #include "globalVars.h"
-#include "render_params.h"
+#include "renderParams.h"
 
 void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) { // TODO: move to utilsgraphics!?
     switch (volumeType) {
@@ -232,7 +232,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
     LOG_DEBUG("param %u\n", paramValue);
 
         
-    switch(paramLocationList[paramRef].type2) {
+    switch(paramLocationList[paramRef].type2) { // TODO: These function parameters can go straight into the auto-initialised structures in moduleResources.h
         case paramType2Dial:
         {
             tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char* label, char* buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramRef);
