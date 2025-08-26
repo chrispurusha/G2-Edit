@@ -217,7 +217,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 
     if (paramValue >= paramLocationList[paramRef].range) {
         LOG_ERROR("Module index %u name %s ParamRef %u ParamIndex %u Value %u > Range %u\n", module->key.index, module->name, paramRef, paramIndex, paramValue, paramLocationList[paramRef].range);
-        exit(1);
+        paramValue = 0;  // If we hit this, the module config needs fixing, but letting it through for now
     }
 
     if (strlen(module->paramName[paramIndex]) > 0) {
