@@ -1457,26 +1457,24 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
 }
 
 void scroll_event(GLFWwindow * window, double x, double y) {
-//    tCoord       mouseCoord    = {0};
-//    tRectangle   moduleArea    = module_area(); // Get the module display area
-//    int          width         = 0;
-//    int          height        = 0;
-//
-//    glfwGetWindowSize(window, &width, &height);
+    double       zoomFactor    = 0.0;
 
-//    get_global_gui_scaled_mouse_coord(&mouseCoord);
-
-    if (x != 0) {
-        gScrollState.xBar -= x / 2;
-        set_x_scroll_bar(gScrollState.xBar);
-    }
-
-    if (y != 0) {
-        gScrollState.yBar -= y;
-        set_y_scroll_bar(gScrollState.yBar);
+    if (gCommandKeyPressed == true) {
+        zoomFactor  = get_zoom_factor();
+        zoomFactor += y*ZOOM_DELTA;
+        set_zoom_factor(zoomFactor);
+    } else {
+        if (x != 0) {
+            gScrollState.xBar -= x / 2;
+            set_x_scroll_bar(gScrollState.xBar);
+        }
+        
+        if (y != 0) {
+            gScrollState.yBar -= y;
+            set_y_scroll_bar(gScrollState.yBar);
+        }
     }
 //    LOG_DEBUG("Area: %f %f - size: %i %i - barY %f %f %f \n", moduleArea.size.w,moduleArea.size.h, width,height, gScrollState.yBar, gScrollState.yRectangle.size.h,gScrollState.yRectangle.coord.y);
-
 
     gReDraw = true;
 }

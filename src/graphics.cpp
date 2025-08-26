@@ -372,6 +372,8 @@ void check_action_flags(void) {
             free((void *)path);
         }
         gShowOpenFileReadDialogue = false;
+
+        glfwFocusWindow(gWindow);
     }
 }
 
