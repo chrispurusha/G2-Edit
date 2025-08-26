@@ -937,6 +937,38 @@ const tParamLocation paramLocationList[] = {
     {moduleTypeSeqNote,    paramType1UpDown,         paramType2UpDown, {{  0, -50}, {14, 14}}, anchorBottomRight, "Length",        16,  15, int16StrMap,            NULL          },         // 121 Octave
     {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, -40}, {10,  7}}, anchorBottomRight, "Clr",            1,   0, emptyStrMap,            NULL          },         // 121 Clear
     {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, -30}, {10,  7}}, anchorBottomRight, "Rnd",            1,   0, emptyStrMap,            NULL          },         // 121 Randomize
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, 0}, {1,  1}}, anchorBottomRight, NULL,            1,   0, emptyStrMap,            NULL          },         // 121 Dummy for now
     // 122 Unknown
     // 123 Mix4-1C
     {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 20,  15}, { 7, 14}}, anchorTopLeft,     NULL,           128,   0, NULL,                   NULL          }, // 123 L1
