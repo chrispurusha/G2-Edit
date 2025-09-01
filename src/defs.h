@@ -68,6 +68,7 @@
 #define SUB_COMMAND_CLEAR                    (0x0c)
 #define SUB_RESPONSE_STORE                   (0x0d)
 #define SUB_COMMAND_CLEAR_BANK               (0x0e)
+#define SUB_COMMAND_PERFORMANCE_SETTINGS     (0x10)
 #define SUB_RESPONSE_GLOBAL_PAGE             (0x1e)
 #define SUB_RESPONSE_PATCH_DESCRIPTION       (0x21)
 #define SUB_COMMAND_ASSIGN_KNOB              (0x25)  // S_ASSIGN_KNOB
@@ -77,6 +78,7 @@
 #define SUB_RESPONSE_PERFORMANCE_NAME        (0x29)
 #define SUB_COMMAND_SET_MODULE_UPRATE        (0x2a)
 #define SUB_COMMAND_SET_MODE                 (0x2b)
+#define SUB_COMMAND_GET_SELECTED_PARAM       (0x2e)
 #define SUB_COMMAND_ADD_MODULE               (0x30)
 #define SUB_COMMAND_SET_MODULE_COLOUR        (0x31)
 #define SUB_COMMAND_DELETE_MODULE            (0x32)
@@ -99,11 +101,13 @@
 #define SUB_COMMAND_DELETE_CABLE             (0x51)
 #define SUB_RESPONSE_CABLE_LIST              (0x52)
 #define SUB_COMMAND_WRITE_CABLE_COLOUR       (0x54)
+#define SUB_COMMAND_UNKNOWN_2                (0x59)
 #define SUB_RESPONSE_MODULE_NAMES            (0x5a)
 #define SUB_RESPONSE_PARAM_NAMES             (0x5b)
 #define SUB_RESPONSE_CONTROLLERS             (0x60)
 #define SUB_RESPONSE_KNOBS                   (0x62)
 #define SUB_RESPONSE_MORPH_PARAMS            (0x65)
+#define SUB_COMMAND_CURRENT_NOTE             (0x68)
 #define SUB_RESPONSE_CURRENT_NOTE_2          (0x69)
 #define SUB_COMMAND_SELECT_VARIATION         (0x6a)
 #define SUB_RESPONSE_PATCH_NOTES             (0x6f)
@@ -112,6 +116,7 @@
 #define SUB_RESPONSE_ERROR                   (0x7e)
 #define SUB_RESPONSE_OK                      (0x7f)
 #define SUB_RESPONSE_MIDI_CC                 (0x80)
+#define SUB_COMMAND_UNKNOWN_1                (0x81) // Slot related?
 
 #define COMMAND_REQ                          (0x20) // High nibble, expects response
 #define COMMAND_WRITE_NO_RESP                (0x30) // High nibble, expects response
