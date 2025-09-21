@@ -16,10 +16,10 @@
 		8352A5752D4BE22300CD5AD9 /* dataBase.c in Sources */ = {isa = PBXBuildFile; fileRef = 8352A5742D4BE22300CD5AD9 /* dataBase.c */; };
 		835C6EB12E13F77300BDEDB0 /* renderParams.c in Sources */ = {isa = PBXBuildFile; fileRef = 835C6EB02E13F77300BDEDB0 /* renderParams.c */; };
 		83673D942D5A50F90077A0B2 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 83673D932D5A50F90077A0B2 /* main.c */; };
+		83683E322E801D7300451413 /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 83683E312E801D7300451413 /* libglfw3.a */; };
+		83683E342E801D8700451413 /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 83683E332E801D8700451413 /* libfreetype.a */; };
 		8376ECAB2D48FB52008D1608 /* iokit.c in Sources */ = {isa = PBXBuildFile; fileRef = 8376ECAA2D48FB52008D1608 /* iokit.c */; };
 		8376ECAE2D48FB6E008D1608 /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = 8376ECAD2D48FB6E008D1608 /* utils.c */; };
-		8397E1362D2FE00000DDD420 /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8397E1352D2FE00000DDD420 /* libglfw3.a */; };
-		8397E14D2D2FEF9300DDD420 /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8397E14C2D2FEF9300DDD420 /* libfreetype.a */; };
 		83B5655E2D4A71CF001BC997 /* usbComms.c in Sources */ = {isa = PBXBuildFile; fileRef = 83B5655D2D4A71CF001BC997 /* usbComms.c */; };
 		83BE0C692D6C86D6007E9CD8 /* moduleGraphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83BE0C682D6C86D6007E9CD8 /* moduleGraphics.cpp */; };
 		83DB9C372DD3510600F9D2A5 /* globalVars.c in Sources */ = {isa = PBXBuildFile; fileRef = 83DB9C362DD3510600F9D2A5 /* globalVars.c */; };
@@ -58,13 +58,13 @@
 		835D853C2D74AF5E008D5E46 /* constData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = constData.h; sourceTree = "<group>"; };
 		83673D8E2D5A461E0077A0B2 /* graphics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = graphics.h; sourceTree = "<group>"; };
 		83673D932D5A50F90077A0B2 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		83683E312E801D7300451413 /* libglfw3.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libglfw3.a; path = ../../../../../usr/local/Cellar/glfw/3.4/lib/libglfw3.a; sourceTree = "<group>"; };
+		83683E332E801D8700451413 /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = ../../../../../usr/local/Cellar/freetype/2.14.1_1/lib/libfreetype.a; sourceTree = "<group>"; };
 		8376ECA82D48FB41008D1608 /* defs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = defs.h; sourceTree = "<group>"; };
 		8376ECA92D48FB52008D1608 /* iokit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iokit.h; sourceTree = "<group>"; };
 		8376ECAA2D48FB52008D1608 /* iokit.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = iokit.c; sourceTree = "<group>"; };
 		8376ECAC2D48FB6E008D1608 /* utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
 		8376ECAD2D48FB6E008D1608 /* utils.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = utils.c; sourceTree = "<group>"; };
-		8397E1352D2FE00000DDD420 /* libglfw3.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libglfw3.a; path = /opt/homebrew/Cellar/glfw/3.4/lib/libglfw3.a; sourceTree = "<absolute>"; };
-		8397E14C2D2FEF9300DDD420 /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = /opt/homebrew/Cellar/freetype/2.13.3/lib/libfreetype.a; sourceTree = "<absolute>"; };
 		83A016352D92F7F10041DF72 /* mouseHandle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mouseHandle.h; sourceTree = "<group>"; };
 		83B5655D2D4A71CF001BC997 /* usbComms.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = usbComms.c; sourceTree = "<group>"; };
 		83B5655F2D4A7243001BC997 /* usbComms.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = usbComms.h; sourceTree = "<group>"; };
@@ -90,10 +90,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				83683E342E801D8700451413 /* libfreetype.a in Frameworks */,
+				83683E322E801D7300451413 /* libglfw3.a in Frameworks */,
 				832FC5DE2D01F7840084A230 /* Quartz.framework in Frameworks */,
-				8397E1362D2FE00000DDD420 /* libglfw3.a in Frameworks */,
 				832FC5DC2D01F70A0084A230 /* IOKit.framework in Frameworks */,
-				8397E14D2D2FEF9300DDD420 /* libfreetype.a in Frameworks */,
 				832FC5D92D01F6C20084A230 /* Cocoa.framework in Frameworks */,
 				832FC5D32D01F6190084A230 /* OpenGL.framework in Frameworks */,
 			);
@@ -122,12 +122,12 @@
 		83C1453C2CFF7104004E572A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				83683E332E801D8700451413 /* libfreetype.a */,
+				83683E312E801D7300451413 /* libglfw3.a */,
 				832FC5DD2D01F7840084A230 /* Quartz.framework */,
 				832FC5D82D01F6C20084A230 /* Cocoa.framework */,
 				832FC5D62D01F68C0084A230 /* IOKit.framework */,
 				832FC5D22D01F6190084A230 /* OpenGL.framework */,
-				8397E14C2D2FEF9300DDD420 /* libfreetype.a */,
-				8397E1352D2FE00000DDD420 /* libglfw3.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -387,8 +387,8 @@
 					/opt/homebrew/Cellar/libpng/1.6.50/include,
 				);
 				"HEADER_SEARCH_PATHS[arch=x86_64]" = (
-					/usr/local/Cellar/glfw/3.4/include,
-					/usr/local/Cellar/freetype/2.14.1_1/include/freetype2,
+					/usr/local/include,
+					/usr/local/include/freetype2,
 				);
 				LIBRARY_SEARCH_PATHS = "";
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = (
@@ -396,10 +396,7 @@
 					/opt/homebrew/Cellar/freetype/2.14.1_1/lib,
 					/opt/homebrew/Cellar/libpng/1.6.50/lib,
 				);
-				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
-					/usr/local/Cellar/glfw/3.4/lib,
-					/usr/local/Cellar/freetype/2.14.1_1/lib,
-				);
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = /usr/local/lib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
@@ -419,17 +416,17 @@
 					/opt/homebrew/Cellar/freetype/2.14.1_1/include/freetype2,
 					/opt/homebrew/Cellar/libpng/1.6.50/include,
 				);
-				"HEADER_SEARCH_PATHS[arch=x86_64]" = "\"/usr/local/Cellar/glfw/3.4/include /usr/local/Cellar/freetype/2.14.1_1/include/freetype2\"";
+				"HEADER_SEARCH_PATHS[arch=x86_64]" = (
+					/usr/local/include,
+					/usr/local/include/freetype2,
+				);
 				LIBRARY_SEARCH_PATHS = "";
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = (
 					/opt/homebrew/Cellar/glfw/3.4/lib,
 					/opt/homebrew/Cellar/freetype/2.14.1_1/lib,
 					/opt/homebrew/Cellar/libpng/1.6.50/lib,
 				);
-				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
-					/usr/local/Cellar/glfw/3.4/lib,
-					/usr/local/Cellar/freetype/2.14.1_1/lib,
-				);
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = /usr/local/lib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
