@@ -384,7 +384,7 @@
 				"HEADER_SEARCH_PATHS[arch=arm64]" = (
 					/opt/homebrew/Cellar/glfw/3.4/include,
 					/opt/homebrew/Cellar/freetype/2.14.1_1/include/freetype2,
-					/opt/homebrew/Cellar/libpng/1.6.49/include,
+					/opt/homebrew/Cellar/libpng/1.6.50/include,
 				);
 				"HEADER_SEARCH_PATHS[arch=x86_64]" = (
 					/usr/local/Cellar/glfw/3.4/include,
@@ -394,7 +394,7 @@
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = (
 					/opt/homebrew/Cellar/glfw/3.4/lib,
 					/opt/homebrew/Cellar/freetype/2.14.1_1/lib,
-					/opt/homebrew/Cellar/libpng/1.6.49/lib,
+					/opt/homebrew/Cellar/libpng/1.6.50/lib,
 				);
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
 					/usr/local/Cellar/glfw/3.4/lib,
@@ -417,14 +417,14 @@
 				"HEADER_SEARCH_PATHS[arch=arm64]" = (
 					/opt/homebrew/Cellar/glfw/3.4/include,
 					/opt/homebrew/Cellar/freetype/2.14.1_1/include/freetype2,
-					/opt/homebrew/Cellar/libpng/1.6.49/include,
+					/opt/homebrew/Cellar/libpng/1.6.50/include,
 				);
 				"HEADER_SEARCH_PATHS[arch=x86_64]" = "\"/usr/local/Cellar/glfw/3.4/include /usr/local/Cellar/freetype/2.14.1_1/include/freetype2\"";
 				LIBRARY_SEARCH_PATHS = "";
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = (
 					/opt/homebrew/Cellar/glfw/3.4/lib,
 					/opt/homebrew/Cellar/freetype/2.14.1_1/lib,
-					/opt/homebrew/Cellar/libpng/1.6.49/lib,
+					/opt/homebrew/Cellar/libpng/1.6.50/lib,
 				);
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
 					/usr/local/Cellar/glfw/3.4/lib,

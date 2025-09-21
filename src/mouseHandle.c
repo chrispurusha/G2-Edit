@@ -1324,8 +1324,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
 void cursor_pos(GLFWwindow * window, double x, double y) {
     tCoord          coord          = {0};
-    int             width          = 0;
-    int             height         = 0;
     double          angle          = 0.0;
     uint32_t        range          = 0;
     uint32_t        value          = 0;

@@ -793,7 +793,7 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
         return false;
     }
     // Initialize texture atlas
-    (1, &textureAtlas);
+    glGenTextures(1, &textureAtlas);
     glBindTexture(GL_TEXTURE_2D, textureAtlas);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, atlasWidth, atlasHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -1086,3 +1086,4 @@ tRectangle rectangle_scale_from_percent(tRectangle rectangle) {
 #ifdef __cplusplus
 }
 #endif
+

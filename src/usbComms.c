@@ -425,7 +425,6 @@ static void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffs
     uint32_t   range           = 0;
     int        j               = 0;
     int        k               = 0;
-    uint32_t   bitsLeft        = 0;
 
     variationCount = read_bit_stream(buff, subOffset, 8);
     morphCount     = read_bit_stream(buff, subOffset, 4);
@@ -1504,3 +1503,4 @@ void start_usb_thread(void) {
 #ifdef __cplusplus
 }
 #endif
+
