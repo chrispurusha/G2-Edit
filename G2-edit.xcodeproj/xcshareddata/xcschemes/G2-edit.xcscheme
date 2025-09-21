@@ -59,13 +59,13 @@
       </BuildableProductRunnable>
       <AdditionalOptions>
          <AdditionalOption
-            key = "NSZombieEnabled"
-            value = "YES"
+            key = "MallocScribble"
+            value = ""
             isEnabled = "YES">
          </AdditionalOption>
          <AdditionalOption
-            key = "MallocScribble"
-            value = ""
+            key = "NSZombieEnabled"
+            value = "YES"
             isEnabled = "YES">
          </AdditionalOption>
       </AdditionalOptions>
