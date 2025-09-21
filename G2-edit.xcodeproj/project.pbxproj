@@ -16,8 +16,8 @@
 		8352A5752D4BE22300CD5AD9 /* dataBase.c in Sources */ = {isa = PBXBuildFile; fileRef = 8352A5742D4BE22300CD5AD9 /* dataBase.c */; };
 		835C6EB12E13F77300BDEDB0 /* renderParams.c in Sources */ = {isa = PBXBuildFile; fileRef = 835C6EB02E13F77300BDEDB0 /* renderParams.c */; };
 		83673D942D5A50F90077A0B2 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 83673D932D5A50F90077A0B2 /* main.c */; };
-		83683E322E801D7300451413 /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 83683E312E801D7300451413 /* libglfw3.a */; };
-		83683E342E801D8700451413 /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 83683E332E801D8700451413 /* libfreetype.a */; };
+		8373AA5A2E803A72004F8CD1 /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8373AA592E803A72004F8CD1 /* libfreetype.a */; };
+		8373AA5C2E803AA4004F8CD1 /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8373AA5B2E803AA4004F8CD1 /* libglfw3.a */; };
 		8376ECAB2D48FB52008D1608 /* iokit.c in Sources */ = {isa = PBXBuildFile; fileRef = 8376ECAA2D48FB52008D1608 /* iokit.c */; };
 		8376ECAE2D48FB6E008D1608 /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = 8376ECAD2D48FB6E008D1608 /* utils.c */; };
 		83B5655E2D4A71CF001BC997 /* usbComms.c in Sources */ = {isa = PBXBuildFile; fileRef = 83B5655D2D4A71CF001BC997 /* usbComms.c */; };
@@ -58,8 +58,8 @@
 		835D853C2D74AF5E008D5E46 /* constData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = constData.h; sourceTree = "<group>"; };
 		83673D8E2D5A461E0077A0B2 /* graphics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = graphics.h; sourceTree = "<group>"; };
 		83673D932D5A50F90077A0B2 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
-		83683E312E801D7300451413 /* libglfw3.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libglfw3.a; path = ../../../../../usr/local/Cellar/glfw/3.4/lib/libglfw3.a; sourceTree = "<group>"; };
-		83683E332E801D8700451413 /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = ../../../../../usr/local/Cellar/freetype/2.14.1_1/lib/libfreetype.a; sourceTree = "<group>"; };
+		8373AA592E803A72004F8CD1 /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libfreetype.a; sourceTree = "<group>"; };
+		8373AA5B2E803AA4004F8CD1 /* libglfw3.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libglfw3.a; sourceTree = "<group>"; };
 		8376ECA82D48FB41008D1608 /* defs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = defs.h; sourceTree = "<group>"; };
 		8376ECA92D48FB52008D1608 /* iokit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iokit.h; sourceTree = "<group>"; };
 		8376ECAA2D48FB52008D1608 /* iokit.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = iokit.c; sourceTree = "<group>"; };
@@ -90,12 +90,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				83683E342E801D8700451413 /* libfreetype.a in Frameworks */,
-				83683E322E801D7300451413 /* libglfw3.a in Frameworks */,
 				832FC5DE2D01F7840084A230 /* Quartz.framework in Frameworks */,
 				832FC5DC2D01F70A0084A230 /* IOKit.framework in Frameworks */,
 				832FC5D92D01F6C20084A230 /* Cocoa.framework in Frameworks */,
 				832FC5D32D01F6190084A230 /* OpenGL.framework in Frameworks */,
+				8373AA5C2E803AA4004F8CD1 /* libglfw3.a in Frameworks */,
+				8373AA5A2E803A72004F8CD1 /* libfreetype.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -122,12 +122,12 @@
 		83C1453C2CFF7104004E572A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				83683E332E801D8700451413 /* libfreetype.a */,
-				83683E312E801D7300451413 /* libglfw3.a */,
 				832FC5DD2D01F7840084A230 /* Quartz.framework */,
 				832FC5D82D01F6C20084A230 /* Cocoa.framework */,
 				832FC5D62D01F68C0084A230 /* IOKit.framework */,
 				832FC5D22D01F6190084A230 /* OpenGL.framework */,
+				8373AA5B2E803AA4004F8CD1 /* libglfw3.a */,
+				8373AA592E803A72004F8CD1 /* libfreetype.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
