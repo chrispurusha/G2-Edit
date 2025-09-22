@@ -19,7 +19,6 @@
 		8352A5752D4BE22300CD5AD9 /* dataBase.c in Sources */ = {isa = PBXBuildFile; fileRef = 8352A5742D4BE22300CD5AD9 /* dataBase.c */; };
 		835C6EB12E13F77300BDEDB0 /* renderParams.c in Sources */ = {isa = PBXBuildFile; fileRef = 835C6EB02E13F77300BDEDB0 /* renderParams.c */; };
 		83673D942D5A50F90077A0B2 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 83673D932D5A50F90077A0B2 /* main.c */; };
-		8376ECAB2D48FB52008D1608 /* iokit.c in Sources */ = {isa = PBXBuildFile; fileRef = 8376ECAA2D48FB52008D1608 /* iokit.c */; };
 		8376ECAE2D48FB6E008D1608 /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = 8376ECAD2D48FB6E008D1608 /* utils.c */; };
 		83B5655E2D4A71CF001BC997 /* usbComms.c in Sources */ = {isa = PBXBuildFile; fileRef = 83B5655D2D4A71CF001BC997 /* usbComms.c */; };
 		83BE0C692D6C86D6007E9CD8 /* moduleGraphics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83BE0C682D6C86D6007E9CD8 /* moduleGraphics.cpp */; };
@@ -63,8 +62,6 @@
 		83673D8E2D5A461E0077A0B2 /* graphics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = graphics.h; sourceTree = "<group>"; };
 		83673D932D5A50F90077A0B2 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		8376ECA82D48FB41008D1608 /* defs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = defs.h; sourceTree = "<group>"; };
-		8376ECA92D48FB52008D1608 /* iokit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iokit.h; sourceTree = "<group>"; };
-		8376ECAA2D48FB52008D1608 /* iokit.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = iokit.c; sourceTree = "<group>"; };
 		8376ECAC2D48FB6E008D1608 /* utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
 		8376ECAD2D48FB6E008D1608 /* utils.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = utils.c; sourceTree = "<group>"; };
 		83A016352D92F7F10041DF72 /* mouseHandle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mouseHandle.h; sourceTree = "<group>"; };
@@ -146,8 +143,6 @@
 				83F363872D5BD96E00F5F627 /* types.h */,
 				8376ECA82D48FB41008D1608 /* defs.h */,
 				835D853C2D74AF5E008D5E46 /* constData.h */,
-				8376ECA92D48FB52008D1608 /* iokit.h */,
-				8376ECAA2D48FB52008D1608 /* iokit.c */,
 				8376ECAC2D48FB6E008D1608 /* utils.h */,
 				8376ECAD2D48FB6E008D1608 /* utils.c */,
 				83EDF68F2D64D8550052CE9F /* msgQueue.h */,
@@ -246,7 +241,6 @@
 				83DB9C412DD3580100F9D2A5 /* graphics.cpp in Sources */,
 				83673D942D5A50F90077A0B2 /* main.c in Sources */,
 				83BE0C692D6C86D6007E9CD8 /* moduleGraphics.cpp in Sources */,
-				8376ECAB2D48FB52008D1608 /* iokit.c in Sources */,
 				835C6EB12E13F77300BDEDB0 /* renderParams.c in Sources */,
 				8347FD552DC7E77E009751C4 /* fileDialogue.mm in Sources */,
 				8352A5752D4BE22300CD5AD9 /* dataBase.c in Sources */,
