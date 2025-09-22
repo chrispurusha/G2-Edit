@@ -231,11 +231,11 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 
     LOG_DEBUG("param %u\n", paramValue);
 
-        
-    switch(paramLocationList[paramRef].type2) { // TODO: These function parameters can go straight into the auto-initialised structures in moduleResources.h
+    switch (paramLocationList[paramRef].type2) { // TODO: These function parameters can go straight into the auto-initialised structures in moduleResources.h
         case paramType2Dial:
         {
-            tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char* label, char* buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramRef);
+            tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramRef);
+
             switch (paramLocationList[paramRef].type1) {
                 case paramType1Freq:
                 {
@@ -342,14 +342,13 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             }
             module->param[gVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramRef);
             break;
-            
         }
         case paramType2Toggle:
         case paramType2UpDown:
         {
-            tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char* label, char* buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char** strMap);
-            
-            switch(paramLocationList[paramRef].type1) {
+            tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap);
+
+            switch (paramLocationList[paramRef].type1) {
                 case paramType1StandardToggle:
                 {
                     render_param_function = &render_paramType1StandardToggle;
@@ -370,14 +369,16 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     render_param_function = &render_paramType1Enable;
                     break;
                 }
-                default: {
+                default:
+                {
                     LOG_ERROR("Reached wrong switch in case paramType2Toggle or paramType2UpDown");
                 }
             }
             module->param[gVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
             break;
         }
-        default: {
+        default:
+        {
             LOG_ERROR("Reached wrong switch in switch paramType2");
         }
     }
