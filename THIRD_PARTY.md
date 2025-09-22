@@ -26,4 +26,14 @@ This project uses the following third-party open-source libraries. All licenses 
 
 ---
 
+## libusb
+- **Description**: A cross-platform library that provides generic access to USB devices. It allows user-space applications to communicate with USB hardware without requiring kernel-mode drivers.
+- **Website**: https://libusb.info
+- **Source Code**: https://github.com/libusb/libusb
+- **License**: LGPL v2.1
+
+> This project uses **libusb**, an actively maintained open-source USB library. It is licensed under the GNU Lesser General Public License v2.1, which permits both open-source and proprietary use as long as modifications to the library itself are released under the same license. Applications may link to it without being subject to full GPL copyleft provisions.
+
+---
+
 For detailed license terms, please refer to the license files provided with each library or visit their official license pages.

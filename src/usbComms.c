@@ -30,7 +30,7 @@ extern "C" {
 
 #include "defs.h"
 #include "types.h"
-#include "iokit.h"
+#include <libusb-1.0/libusb.h>
 #include "utils.h"
 #include "msgQueue.h"
 #include "usbComms.h"
@@ -38,6 +38,9 @@ extern "C" {
 #include "moduleResourcesAccess.h"
 #include "globalVars.h"
 
+#define VENDOR_ID     (0xffc)
+#define PRODUCT_ID    (2)
+    
 typedef enum {
     eStateNone,
     eStateFindDevice,
@@ -70,6 +73,8 @@ static uint8_t   slotVersion[MAX_SLOTS]     = {0};
 static pthread_t usbThread                  = NULL;
 static void      (*wake_glfw_func_ptr)(void) = NULL;
 static void      (*full_patch_change_notify_func_ptr)(void) = NULL;
+    static libusb_context * libUsbCtx = NULL;
+static libusb_device_handle * devHandle         = NULL;
 
 void register_glfw_wake_cb(void ( *func_ptr )(void)) {
     wake_glfw_func_ptr = func_ptr;
@@ -988,18 +993,29 @@ static int rcv_extended(int dataLength) {
     int      tries                       = 0;
     uint8_t  responseType                = 0;
 
-    for (tries = 0; tries < 5; tries++) {
+    for (tries = 1; tries < 5; tries++)
+    {
         memset(buff, 0, sizeof(buff));
-        readLength = read_usb_extended(buff, sizeof(buff));
-
-        if (readLength > 0) {
-            responseType = buff[0];
-
-            if ((responseType == RESPONSE_TYPE_INIT) || (responseType == RESPONSE_TYPE_COMMAND)) {
-                break;
+        readLength = 0;
+        retVal = libusb_bulk_transfer(devHandle, 0x82, buff, sizeof(buff), &readLength, 100);
+        if (retVal == LIBUSB_SUCCESS) {
+            if (readLength > 0) {
+                
+                responseType = buff[0];
+                
+                if ((responseType == RESPONSE_TYPE_INIT) || (responseType == RESPONSE_TYPE_COMMAND)) {
+                    break;
+                }
             }
+        } else if (retVal == LIBUSB_ERROR_NO_DEVICE) {
+            readLength = 0;
+            gotBadConnectionIndication = true;
+            break;
         }
+        
+        usleep(1000);
     }
+
 
     if (readLength == dataLength) {
         bitPos = SIGNED_BYTE_TO_BIT(dataLength - 2);
@@ -1012,6 +1028,7 @@ static int rcv_extended(int dataLength) {
         }
     } else {
         LOG_DEBUG("Read ext problem! Read length = %d, data length = %d\n", readLength, dataLength);
+        retVal = -1;
     }
     return retVal;
 }
@@ -1025,10 +1042,25 @@ static int int_rec(void) {
     int      type                         = 0;
     int      i                            = 0;
     bool     foundNoneZero                = false;
+	int     tries                        = 0;
 
-
-    memset(buff, 0, sizeof(buff));
-    readLength = read_usb_interrupt(buff, sizeof(buff));
+    for (tries = 1; tries < 5; tries++)
+    {
+        memset(buff, 0, sizeof(buff));
+        readLength = 0;
+        retVal = libusb_bulk_transfer(devHandle, 0x81, buff, sizeof(buff), &readLength, 100);
+        if (retVal == LIBUSB_SUCCESS) {
+            if (readLength > 0)
+            {
+                break;
+            }
+        } else if (retVal == LIBUSB_ERROR_NO_DEVICE) {
+            readLength = 0;
+            gotBadConnectionIndication = true;
+            break;
+        }
+        usleep(1000);
+    }
 
     if (readLength > 0) {
         dataLength = read_bit_stream(buff, &bitPos, 4);
@@ -1055,9 +1087,8 @@ static int int_rec(void) {
             // If Embedded, can call the process incoming, but skip the first byte
             retVal = parse_incoming(buff + 1, dataLength);
         }
-    } else if (readLength < 0) {
-        gotBadConnectionIndication = true;
     }
+    
     return retVal;
 }
 
@@ -1067,6 +1098,7 @@ static int send_command(int state) { // TODO: Can probably now flatten into a si
     uint16_t crc                     = 0;
     int      msgLength               = 0;
     int      pos                     = COMMAND_OFFSET;
+    int     actualLength                 = 0;
 
     switch (state) {
         case eStateInit: // Apparently resets the version numbers
@@ -1199,8 +1231,11 @@ static int send_command(int state) { // TODO: Can probably now flatten into a si
 
         write_uint16(&buff[0], msgLength);
 
-        if (write_usb(buff, msgLength) > 0) {
+        if (libusb_bulk_transfer(devHandle, 3, buff, msgLength, &actualLength, 100) == 0)
+        {
             retVal = EXIT_SUCCESS;
+        } else {
+            gotBadConnectionIndication = true;
         }
     }
     return retVal;
@@ -1212,6 +1247,7 @@ static int send_write_data(tMessageContent * messageContent) {
     uint16_t crc                     = 0;
     int      msgLength               = 0;
     int      pos                     = COMMAND_OFFSET;
+	int      actualLength            = 0;
 
     //uint32_t slot                    = 0;   // TODO: pass this via the message structure
 
@@ -1363,8 +1399,11 @@ static int send_write_data(tMessageContent * messageContent) {
 
         write_uint16(&buff[0], msgLength);
 
-        if (write_usb(buff, msgLength) > 0) {
-            retVal = EXIT_SUCCESS;
+	    if (libusb_bulk_transfer(devHandle, 3, buff, msgLength, &actualLength, 100) == 0)
+	    {
+	        retVal = EXIT_SUCCESS;
+        } else {
+            gotBadConnectionIndication = true;
         }
     }
     return retVal;
@@ -1376,12 +1415,19 @@ static void state_handler(void) {
 
     switch (state) {
         case eStateFindDevice:
-
-            if (open_usb() == EXIT_SUCCESS) {
-                state = eStateInit;
-            } else {
-                usleep(100000);
+            devHandle = libusb_open_device_with_vid_pid(NULL, VENDOR_ID, PRODUCT_ID);
+            if (devHandle != NULL) {
+                if (libusb_reset_device(devHandle) == LIBUSB_SUCCESS) {
+                    if (libusb_claim_interface(devHandle, 0) == LIBUSB_SUCCESS) {
+                        state = eStateInit;
+                        //newStateRequest = eStateStart; // Also works to kick off comms, without grabbing data obvs.
+                    }
+                }
             }
+			
+			if (state != eStateInit) {
+            	usleep(100000);
+			}
             break;
 
         case eStateInit:
@@ -1487,11 +1533,19 @@ static void * usb_thread_loop(void * arg) {
 
     msg_init(&gCommandQueue, "command");
 
-    init_usb();
+	if (libusb_init(&libUsbCtx) != LIBUSB_SUCCESS)
+    {
+        return NULL;
+    }
+    libusb_set_option(libUsbCtx, LIBUSB_OPTION_LOG_LEVEL, 1);
+    //libusb_set_option(libUsbCtx, LIBUSB_OPTION_AUTO_DETACH_KERNEL_DRIVER, 1); // Note - couldn't find this macro, although it's recommended
+    //libusb_set_debug(NULL, 5);
 
     for ( ; ;) {
         state_handler();
     }
+	
+	libusb_exit(libUsbCtx);
 }
 
 void start_usb_thread(void) {
