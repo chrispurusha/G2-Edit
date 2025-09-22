@@ -18,6 +18,8 @@ brew install --build-from-source glfw
 
 brew install --build-from-source freetype2
 
+brew install --build-from-source libusb
+
 If you have those installed already and want to update, here's the sequence I ran to update:
 
 brew update
