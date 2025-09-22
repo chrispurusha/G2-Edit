@@ -1455,18 +1455,18 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
 }
 
 void scroll_event(GLFWwindow * window, double x, double y) {
-    double       zoomFactor    = 0.0;
+    double zoomFactor = 0.0;
 
     if (gCommandKeyPressed == true) {
         zoomFactor  = get_zoom_factor();
-        zoomFactor += y*ZOOM_DELTA;
+        zoomFactor += y * ZOOM_DELTA;
         set_zoom_factor(zoomFactor);
     } else {
         if (x != 0) {
             gScrollState.xBar -= x / 2;
             set_x_scroll_bar(gScrollState.xBar);
         }
-        
+
         if (y != 0) {
             gScrollState.yBar -= y;
             set_y_scroll_bar(gScrollState.yBar);
@@ -1483,10 +1483,10 @@ void char_event(GLFWwindow * window, unsigned int value) {
 }
 
 void key_callback(GLFWwindow * window, int key, int scancode, int action, int mods) {
-    double       zoomFactor    = 0.0;
+    double zoomFactor = 0.0;
 
     LOG_DEBUG("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
-    
+
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GL_TRUE);
     }
@@ -1508,7 +1508,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
             zoomFactor -= ZOOM_DELTA;
             set_zoom_factor(zoomFactor);
         }
-            
+
         if (key == GLFW_KEY_EQUAL) {
             LOG_DEBUG("ZOOM IN\n");
             zoomFactor  = get_zoom_factor();
@@ -1516,7 +1516,6 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
             set_zoom_factor(zoomFactor);
         }
     }
-
     gReDraw = true;
 }
 
