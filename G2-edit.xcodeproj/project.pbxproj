@@ -14,11 +14,11 @@
 		833734552DB1033200ACF41F /* moduleResourcesAccess.c in Sources */ = {isa = PBXBuildFile; fileRef = 833734542DB1033200ACF41F /* moduleResourcesAccess.c */; };
 		8347FD552DC7E77E009751C4 /* fileDialogue.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8347FD542DC7E772009751C4 /* fileDialogue.mm */; };
 		83496B5A2E81BC1100999B36 /* libusb-1.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 83496B592E81BC1100999B36 /* libusb-1.0.a */; };
+		83496B5C2E81E10400999B36 /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 83496B5B2E81E10400999B36 /* libglfw3.a */; };
+		83496B5E2E81E11300999B36 /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 83496B5D2E81E11300999B36 /* libfreetype.a */; };
 		8352A5752D4BE22300CD5AD9 /* dataBase.c in Sources */ = {isa = PBXBuildFile; fileRef = 8352A5742D4BE22300CD5AD9 /* dataBase.c */; };
 		835C6EB12E13F77300BDEDB0 /* renderParams.c in Sources */ = {isa = PBXBuildFile; fileRef = 835C6EB02E13F77300BDEDB0 /* renderParams.c */; };
 		83673D942D5A50F90077A0B2 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 83673D932D5A50F90077A0B2 /* main.c */; };
-		8373AA5A2E803A72004F8CD1 /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8373AA592E803A72004F8CD1 /* libfreetype.a */; };
-		8373AA5C2E803AA4004F8CD1 /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8373AA5B2E803AA4004F8CD1 /* libglfw3.a */; };
 		8376ECAB2D48FB52008D1608 /* iokit.c in Sources */ = {isa = PBXBuildFile; fileRef = 8376ECAA2D48FB52008D1608 /* iokit.c */; };
 		8376ECAE2D48FB6E008D1608 /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = 8376ECAD2D48FB6E008D1608 /* utils.c */; };
 		83B5655E2D4A71CF001BC997 /* usbComms.c in Sources */ = {isa = PBXBuildFile; fileRef = 83B5655D2D4A71CF001BC997 /* usbComms.c */; };
@@ -53,6 +53,8 @@
 		8347FD542DC7E772009751C4 /* fileDialogue.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = fileDialogue.mm; sourceTree = "<group>"; };
 		8347FD562DC7EAAD009751C4 /* fileDialogue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = fileDialogue.h; sourceTree = "<group>"; };
 		83496B592E81BC1100999B36 /* libusb-1.0.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libusb-1.0.a"; path = "/opt/homebrew/lib/libusb-1.0.a"; sourceTree = "<absolute>"; };
+		83496B5B2E81E10400999B36 /* libglfw3.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libglfw3.a; path = /opt/homebrew/lib/libglfw3.a; sourceTree = "<absolute>"; };
+		83496B5D2E81E11300999B36 /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = /opt/homebrew/lib/libfreetype.a; sourceTree = "<absolute>"; };
 		8352A5732D4BE21D00CD5AD9 /* dataBase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dataBase.h; sourceTree = "<group>"; };
 		8352A5742D4BE22300CD5AD9 /* dataBase.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = dataBase.c; sourceTree = "<group>"; };
 		835C6EB02E13F77300BDEDB0 /* renderParams.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = renderParams.c; sourceTree = "<group>"; };
@@ -60,8 +62,6 @@
 		835D853C2D74AF5E008D5E46 /* constData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = constData.h; sourceTree = "<group>"; };
 		83673D8E2D5A461E0077A0B2 /* graphics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = graphics.h; sourceTree = "<group>"; };
 		83673D932D5A50F90077A0B2 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
-		8373AA592E803A72004F8CD1 /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libfreetype.a; sourceTree = "<group>"; };
-		8373AA5B2E803AA4004F8CD1 /* libglfw3.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libglfw3.a; sourceTree = "<group>"; };
 		8376ECA82D48FB41008D1608 /* defs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = defs.h; sourceTree = "<group>"; };
 		8376ECA92D48FB52008D1608 /* iokit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iokit.h; sourceTree = "<group>"; };
 		8376ECAA2D48FB52008D1608 /* iokit.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = iokit.c; sourceTree = "<group>"; };
@@ -94,11 +94,11 @@
 			files = (
 				832FC5DE2D01F7840084A230 /* Quartz.framework in Frameworks */,
 				832FC5DC2D01F70A0084A230 /* IOKit.framework in Frameworks */,
+				83496B5E2E81E11300999B36 /* libfreetype.a in Frameworks */,
 				832FC5D92D01F6C20084A230 /* Cocoa.framework in Frameworks */,
+				83496B5C2E81E10400999B36 /* libglfw3.a in Frameworks */,
 				832FC5D32D01F6190084A230 /* OpenGL.framework in Frameworks */,
 				83496B5A2E81BC1100999B36 /* libusb-1.0.a in Frameworks */,
-				8373AA5C2E803AA4004F8CD1 /* libglfw3.a in Frameworks */,
-				8373AA5A2E803A72004F8CD1 /* libfreetype.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -130,8 +130,8 @@
 				832FC5D62D01F68C0084A230 /* IOKit.framework */,
 				832FC5D22D01F6190084A230 /* OpenGL.framework */,
 				83496B592E81BC1100999B36 /* libusb-1.0.a */,
-				8373AA5B2E803AA4004F8CD1 /* libglfw3.a */,
-				8373AA592E803A72004F8CD1 /* libfreetype.a */,
+				83496B5B2E81E10400999B36 /* libglfw3.a */,
+				83496B5D2E81E11300999B36 /* libfreetype.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
