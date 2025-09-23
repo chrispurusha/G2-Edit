@@ -14,11 +14,13 @@ To add these to the host build system, here is an example of the commands I used
 
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-brew install --build-from-source glfw
+brew install glfw
 
-brew install --build-from-source freetype2
+brew install freetype2
 
-brew install --build-from-source libusb
+brew install libusb
+
+(Note - seems I no longer have to use ...install --build-from-source <library>)
 
 If you have those installed already and want to update, here's the sequence I ran to update:
 
