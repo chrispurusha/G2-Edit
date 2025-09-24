@@ -288,7 +288,9 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
             }
             snprintf(buff, sizeof(buff), "%u", bpm);
             break;
+        }
         case 4: // ClkSync. 32 values
+        {
             const char * clkSyncStrMap[] = {"64/1", "48/1",  "32/1",  "24/1", "16/1",  "12/1",  "8/1",  "6/1",  "4/1",  "3/1", "2/1",   "1/1D",
                 "1/1",  "1/2D",  "1/1T",  "1/2",  "1/4D",  "1/2T",  "1/4",  "1/8D", "1/4T", "1/8", "1/16D", "1/8T",
                 "1/16", "1/32D", "1/16T", "1/32", "1/64D", "1/32T", "1/64", "1/64T"};
@@ -363,6 +365,10 @@ tRectangle render_paramType1MixLevel(tModule * module, tRectangle rectangle, cha
         case moduleTypeMix8to1B:
         {
             expLinDBparam = 8;
+            break;
+        }
+        default:
+        {
             break;
         }
     }
@@ -647,7 +653,7 @@ tRectangle render_paramType1BipLevel(tModule * module, tRectangle rectangle, cha
             res = maxVal;             // Clip
         }
     } else {
-        switch (module->param[gVariation][typeParamIndex].value) {
+        switch (module->param[gVariation][typeParamIndex].value) {
             case 0: // Bip
             {
                 if (paramValue < 127) {
