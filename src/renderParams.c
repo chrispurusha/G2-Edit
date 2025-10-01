@@ -342,7 +342,7 @@ tRectangle render_paramType1dB(tModule * module, tRectangle rectangle, char* lab
 }
     
 tRectangle render_paramType1MixLevel(tModule * module, tRectangle rectangle, char* label, char* buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
-    double       level      = 0.0;
+    //double       level      = 0.0;
     const double dbLvlMap[] = {-100.0, -99.9, -99.0, -72.1, -69.2, -66.9, -64.8, -62.9,
         -61.1,    -59,  -57.9, -56.4, -55.0, -53.6, -52.3,-51.0,
         -49.8,  -48.6, -47.5, -46.4, -45.3, -44.3, -43.3, -42.3,
@@ -372,7 +372,7 @@ tRectangle render_paramType1MixLevel(tModule * module, tRectangle rectangle, cha
             break;
         }
     }
-    level = paramValue;
+    //level = paramValue;
     
     if (module->param[gVariation][expLinDBparam].value == 2) { // display dB
         if (paramValue == 0.0) {
@@ -762,7 +762,7 @@ tRectangle render_paramType1UpDown(tModule * module, tRectangle rectangle, char*
         
         //Debug help for value
         char debug[64] = {0};
-        snprintf(debug, sizeof(debug), "%u", paramValue);
+        snprintf(debug, sizeof(debug), "%f", paramValue);
         set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
         return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {30, textHeight}}, debug);
     }

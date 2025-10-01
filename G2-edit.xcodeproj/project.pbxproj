@@ -201,7 +201,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastUpgradeCheck = 1620;
+				LastUpgradeCheck = 2600;
 				TargetAttributes = {
 					83C145312CFF6E5F004E572A = {
 						CreatedOnToolsVersion = 16.1;
@@ -390,6 +390,7 @@
 				LIBRARY_SEARCH_PATHS = /opt/homebrew/lib;
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = /opt/homebrew/lib;
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = /usr/local/lib;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
@@ -415,6 +416,7 @@
 				LIBRARY_SEARCH_PATHS = /opt/homebrew/lib;
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = /opt/homebrew/lib;
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = /usr/local/lib;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 			};

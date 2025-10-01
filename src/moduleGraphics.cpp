@@ -74,15 +74,15 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
         case volumeTypeMono:
         case volumeTypeStereo:
         {
-            uint32_t top3Bits = 0;
+            //uint32_t top3Bits = 0;
 
             value    = ((value & 0xff00) >> 8) | ((value & 0xff) << 8); // Swap bytes
-            top3Bits = (value >> 5) & 0x7;
+            //top3Bits = (value >> 5) & 0x7;
             value   &= 0x1f;
             //LOG_DEBUG("Top 3 bits = %u val = %u\n", top3Bits, value); // Val of 10 or 11 = Yellow, 12 = red?, top bits 3 = clip?
 
             double fullHeight  = rectangle.size.h;
-            double scaledValue = (rectangle.size.h * value) / 12.0; // 128 usually, but one example of 300!? Maybe the leading nibble denotes a type? val of 1 changes scale!?
+            //double scaledValue = (rectangle.size.h * value) / 12.0; // 128 usually, but one example of 300!? Maybe the leading nibble denotes a type? val of 1 changes scale!?
 
             int    valueThresholds[] = {7, 11, 12};                 // Exclusive upper bounds for green/yellow/red
             tRgb   colours[]         = {RGB_GREEN_7, RGB_YELLOW_7, RGB_RED_7};
@@ -97,7 +97,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
                 int    segmentBottomVal = (i == 0) ? 0 : valueThresholds[i - 1];
                 int    segmentRange     = segmentTopVal - segmentBottomVal;
 
-                double segmentHeight = (segmentRange * fullHeight) / 12.0;
+                //double segmentHeight = (segmentRange * fullHeight) / 12.0;
 
                 // Determine how much of this segment to draw
                 double segmentDrawHeight = 0;
@@ -235,6 +235,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         case paramType2Dial:
         {
             tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramRef);
+            render_param_function = NULL;
 
             switch (paramLocationList[paramRef].type1) {
                 case paramType1Freq:
@@ -339,6 +340,11 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     render_param_function = &render_paramType1Resonance;
                     break;
                 }
+                default:
+                {
+                    LOG_ERROR("Unrecognised type1 %d\n", paramLocationList[paramRef].type1);
+                    break;
+                }
             }
             module->param[gVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramRef);
             break;
@@ -347,6 +353,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         case paramType2UpDown:
         {
             tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap);
+            render_param_function = NULL;
 
             switch (paramLocationList[paramRef].type1) {
                 case paramType1StandardToggle:
@@ -385,8 +392,6 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 }
 
 void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef, uint32_t modeIndex) {
-    char     buff[16]                   = {0};
-    char     label[PARAM_NAME_SIZE + 1] = {0};
     uint32_t modeValue                  = module->mode[modeIndex].value;
 
 
