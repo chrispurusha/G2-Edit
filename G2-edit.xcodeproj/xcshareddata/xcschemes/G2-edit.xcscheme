@@ -44,8 +44,6 @@
       debugServiceExtension = "internal"
       enableGPUFrameCaptureMode = "3"
       enableGPUValidationMode = "1"
-      enableGPUShaderValidationMode = "2"
-      showGraphicsOverview = "Yes"
       allowLocationSimulation = "YES"
       viewDebuggingEnabled = "No">
       <BuildableProductRunnable
