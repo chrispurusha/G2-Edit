@@ -1541,6 +1541,7 @@ static void * usb_thread_loop(void * arg) {
     //libusb_set_option(libUsbCtx, LIBUSB_OPTION_AUTO_DETACH_KERNEL_DRIVER, 1); // Note - couldn't find this macro, although it's recommended
     //libusb_set_debug(NULL, 5);
 
+    // TODO - set a global var in hte signal handler for exiting here
     for ( ; ;) {
         state_handler();
     }

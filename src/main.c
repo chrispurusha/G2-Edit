@@ -25,7 +25,7 @@ extern "C" {
 
 #include "defs.h"
 #include "graphics.h"
-#include "database.h"
+#include "dataBase.h"
 #include "usbComms.h"
 #include "main.h"
 
