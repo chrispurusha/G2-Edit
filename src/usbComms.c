@@ -1415,7 +1415,7 @@ static void state_handler(void) {
 
     switch (state) {
         case eStateFindDevice:
-            devHandle = libusb_open_device_with_vid_pid(NULL, VENDOR_ID, PRODUCT_ID);
+            devHandle = libusb_open_device_with_vid_pid(libUsbCtx, VENDOR_ID, PRODUCT_ID);
             if (devHandle != NULL) {
                 if (libusb_reset_device(devHandle) == LIBUSB_SUCCESS) {
                     if (libusb_claim_interface(devHandle, 0) == LIBUSB_SUCCESS) {

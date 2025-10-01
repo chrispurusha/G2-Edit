@@ -390,7 +390,7 @@
 				LIBRARY_SEARCH_PATHS = /opt/homebrew/lib;
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = /opt/homebrew/lib;
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = /usr/local/lib;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 11.5;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
@@ -416,7 +416,7 @@
 				LIBRARY_SEARCH_PATHS = /opt/homebrew/lib;
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = /opt/homebrew/lib;
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = /usr/local/lib;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 11.5;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
