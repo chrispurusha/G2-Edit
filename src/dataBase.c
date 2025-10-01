@@ -30,20 +30,20 @@ static tModule *       walkModule  = NULL;
 static tCable *        firstCable  = NULL;
 static tCable *        walkCable   = NULL;
 
-static void mutex_lock(void) {
-    if (pthread_mutex_lock(&dbMutex) != 0) {
-        pthread_mutexattr_t attr = {0};
+static void database_mutex_init(void) {
+    pthread_mutexattr_t attr = {0};
 
-        pthread_mutexattr_init(&attr);
-        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-        pthread_mutex_init(&dbMutex, &attr);
-        pthread_mutexattr_destroy(&attr);
-
-        pthread_mutex_lock(&dbMutex);
-    }
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&dbMutex, &attr);
+    pthread_mutexattr_destroy(&attr);
+}
+    
+static void database_mutex_lock(void) {
+    pthread_mutex_lock(&dbMutex);
 }
 
-static void mutex_unlock(void) {
+static void database_mutex_unlock(void) {
     pthread_mutex_unlock(&dbMutex);
 }
 
@@ -51,7 +51,7 @@ void dump_modules(void) {
     tModule * module = NULL;
     uint32_t  count  = 0;
 
-    mutex_lock();
+    database_mutex_lock();
 
     module = firstModule;
 
@@ -74,13 +74,13 @@ void dump_modules(void) {
     LOG_DEBUG("\nModule Count=%u\n", count);
     LOG_DEBUG("\n\n");
 
-    mutex_unlock();
+    database_mutex_unlock();
 }
 
 static tModule * find_module(tModuleKey key) {
     tModule * module = NULL;
 
-    mutex_lock();
+    database_mutex_lock();
 
     module = firstModule;
 
@@ -90,7 +90,7 @@ static tModule * find_module(tModuleKey key) {
         }
         module = module->next;
     }
-    mutex_unlock();
+    database_mutex_unlock();
 
     return module;
 }
@@ -101,7 +101,7 @@ bool read_module(tModuleKey key, tModule * module) {
 
     memset(module, 0, sizeof(*module));
 
-    mutex_lock();
+    database_mutex_lock();
 
     foundModule = find_module(key);
 
@@ -109,7 +109,7 @@ bool read_module(tModuleKey key, tModule * module) {
         memcpy(module, foundModule, sizeof(*module));
         retVal = true;
     }
-    mutex_unlock();
+    database_mutex_unlock();
 
     return retVal;
 }
@@ -120,7 +120,7 @@ void write_module(tModuleKey key, tModule * module) {
 
     module->key = key;  // Ensure key is set
 
-    mutex_lock();
+    database_mutex_lock();
 
     dbModule = find_module(key);
 
@@ -158,13 +158,13 @@ void write_module(tModuleKey key, tModule * module) {
         LOG_ERROR("Module generation or update failed\n");
         exit(1);
     }
-    mutex_unlock();
+    database_mutex_unlock();
 }
 
 void delete_module(tModuleKey key) {
     tModule * dbModule = NULL;
 
-    mutex_lock();
+    database_mutex_lock();
 
     dbModule = find_module(key);
 
@@ -183,16 +183,16 @@ void delete_module(tModuleKey key) {
         memset(dbModule, 0, sizeof(*dbModule));  // Protection against using stale data
         free(dbModule);
     }
-    mutex_unlock();
+    database_mutex_unlock();
 }
 
 void reset_walk_module(void) {
-    mutex_lock();
+    database_mutex_lock();
     walkModule = NULL;
 }
 
 void finish_walk_module(void) {
-    mutex_unlock();
+    database_mutex_unlock();
 }
 
 bool walk_next_module(tModule * module) {
@@ -200,7 +200,7 @@ bool walk_next_module(tModule * module) {
 
     memset(module, 0, sizeof(*module));
 
-    mutex_lock();
+    database_mutex_lock();
 
     if (walkModule == NULL) {
         walkModule = firstModule;
@@ -212,7 +212,7 @@ bool walk_next_module(tModule * module) {
         memcpy(module, walkModule, sizeof(*module));
         validModule = true;
     }
-    mutex_unlock();
+    database_mutex_unlock();
 
     return validModule;
 }
@@ -220,7 +220,7 @@ bool walk_next_module(tModule * module) {
 void dump_cables(void) {
     tCable * cable = NULL;
 
-    mutex_lock();
+    database_mutex_lock();
 
     cable = firstCable;
 
@@ -240,13 +240,13 @@ void dump_cables(void) {
     }
     LOG_DEBUG("\n\n\n");
 
-    mutex_unlock();
+    database_mutex_unlock();
 }
 
 static tCable * find_cable(tCableKey key) {
     tCable * cable = NULL;
 
-    mutex_lock();
+    database_mutex_lock();
 
     cable = firstCable;
 
@@ -256,7 +256,7 @@ static tCable * find_cable(tCableKey key) {
         }
         cable = cable->next;
     }
-    mutex_unlock();
+    database_mutex_unlock();
 
     return cable;
 }
@@ -267,7 +267,7 @@ bool read_cable(tCableKey key, tCable * cable) {
 
     memset(cable, 0, sizeof(*cable));
 
-    mutex_lock();
+    database_mutex_lock();
 
     foundCable = find_cable(key);
 
@@ -275,7 +275,7 @@ bool read_cable(tCableKey key, tCable * cable) {
         memcpy(cable, foundCable, sizeof(*cable));
         retVal = true;
     }
-    mutex_unlock();
+    database_mutex_unlock();
 
     return retVal;
 }
@@ -286,7 +286,7 @@ void write_cable(tCableKey key, tCable * cable) {
 
     cable->key = key;
 
-    mutex_lock();
+    database_mutex_lock();
 
     dbCable = find_cable(key);
 
@@ -322,13 +322,13 @@ void write_cable(tCableKey key, tCable * cable) {
         LOG_DEBUG("Cable generation or update failed\n");
         exit(1);
     }
-    mutex_unlock();
+    database_mutex_unlock();
 }
 
 void delete_cable(tCableKey key) {
     tCable * dbCable = NULL;
 
-    mutex_lock();
+    database_mutex_lock();
 
     dbCable = find_cable(key);
 
@@ -347,16 +347,16 @@ void delete_cable(tCableKey key) {
         memset(dbCable, 0, sizeof(*dbCable));  // Protection against using stale data
         free(dbCable);
     }
-    mutex_unlock();
+    database_mutex_unlock();
 }
 
 void reset_walk_cable(void) {
-    mutex_lock();
+    database_mutex_lock();
     walkCable = NULL;
 }
 
 void finish_walk_cable(void) {
-    mutex_unlock();
+    database_mutex_unlock();
 }
 
 bool walk_next_cable(tCable * cable) {
@@ -364,7 +364,7 @@ bool walk_next_cable(tCable * cable) {
 
     memset(cable, 0, sizeof(*cable));
 
-    mutex_lock();
+    database_mutex_lock();
 
     if (walkCable == NULL) {
         walkCable = firstCable;
@@ -376,7 +376,7 @@ bool walk_next_cable(tCable * cable) {
         memcpy(cable, walkCable, sizeof(*cable));
         validCable = true;
     }
-    mutex_unlock();
+    database_mutex_unlock();
 
     return validCable;
 }
@@ -385,7 +385,7 @@ void database_clear_modules(void) {
     tModule * module     = NULL;
     tModule * nextModule = NULL;
 
-    mutex_lock();
+    database_mutex_lock();
 
     module = firstModule;
 
@@ -396,14 +396,14 @@ void database_clear_modules(void) {
     }
     firstModule = NULL;
 
-    mutex_unlock();
+    database_mutex_unlock();
 }
 
 void database_clear_cables(void) {
     tCable * cable     = NULL;
     tCable * nextCable = NULL;
 
-    mutex_lock();
+    database_mutex_lock();
 
     cable = firstCable;
 
@@ -414,7 +414,7 @@ void database_clear_cables(void) {
     }
     firstCable = NULL;
 
-    mutex_unlock();
+    database_mutex_unlock();
 }
 
 int find_io_count_from_index(tModule * module, tConnectorDir dir, int index) {
@@ -444,6 +444,10 @@ int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCoun
     }
 
     return -1;  // Not found
+}
+    
+void init_database(void) {
+    database_mutex_init();
 }
 
 #ifdef __cplusplus

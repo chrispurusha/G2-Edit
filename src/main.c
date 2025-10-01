@@ -25,6 +25,7 @@ extern "C" {
 
 #include "defs.h"
 #include "graphics.h"
+#include "database.h"
 #include "usbComms.h"
 #include "main.h"
 
@@ -64,6 +65,8 @@ int main(int argc, char ** argv) {
 
     init_signals();
 
+    init_database();
+    
     init_graphics();
 
     start_usb_thread();
