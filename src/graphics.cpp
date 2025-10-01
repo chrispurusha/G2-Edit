@@ -252,6 +252,8 @@ void init_graphics(void) {
     windowWidth  = TARGET_FRAME_BUFF_WIDTH / xScale;
     windowHeight = TARGET_FRAME_BUFF_HEIGHT / yScale;
 
+    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
+    glfwWindowHint(GLFW_COCOA_GRAPHICS_SWITCHING, GLFW_TRUE); 
     gWindow = glfwCreateWindow(windowWidth, windowHeight, WINDOW_TITLE, NULL, NULL);
 
     if (!gWindow) {
