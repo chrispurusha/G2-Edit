@@ -49,18 +49,17 @@ static FT_Library      gLibrary     = {0};
 static FT_Face         gFace        = {0};
 static pthread_mutex_t gReDrawMutex = {0};
 
+static void re_draw_mutex_init(void) {
+    pthread_mutexattr_t attr = {0};
+
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&gReDrawMutex, &attr);
+    pthread_mutexattr_destroy(&attr);
+}
+
 static void re_draw_mutex_lock(void) {
-    // TODO: implement a generic utility function for this, passing the mutex?
-    if (pthread_mutex_lock(&gReDrawMutex) != 0) {
-        pthread_mutexattr_t attr = {0};
-
-        pthread_mutexattr_init(&attr);
-        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-        pthread_mutex_init(&gReDrawMutex, &attr);
-        pthread_mutexattr_destroy(&attr);
-
-        pthread_mutex_lock(&gReDrawMutex);
-    }
+    pthread_mutex_lock(&gReDrawMutex);
 }
 
 static void re_draw_mutex_unlock(void) {
@@ -234,6 +233,8 @@ void init_graphics(void) {
     GLFWmonitor * monitor      = NULL;
     float         xScale       = 1;
     float         yScale       = 1;
+
+    re_draw_mutex_init();
 
     glfwSetErrorCallback(error_callback);
 
