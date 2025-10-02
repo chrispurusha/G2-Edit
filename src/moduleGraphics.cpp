@@ -346,7 +346,10 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     break;
                 }
             }
-            module->param[gVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramRef);
+            
+            if (render_param_function != NULL) {
+                module->param[gVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramRef);
+            }
             break;
         }
         case paramType2Toggle:
@@ -381,7 +384,9 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     LOG_ERROR("Reached wrong switch in case paramType2Toggle or paramType2UpDown");
                 }
             }
-            module->param[gVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
+            if (render_param_function != NULL) {
+                module->param[gVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
+            }
             break;
         }
         default:
