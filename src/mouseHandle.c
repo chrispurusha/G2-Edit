@@ -267,6 +267,11 @@ void handle_button(tButtonId buttonId) {
             gShowOpenFileReadDialogue = true;
             break;
         }
+        case openWriteFileButtonId:
+        {
+            gShowOpenFileWriteDialogue = true;
+            break;
+        }
         case variation1ButtonId:
         case variation2ButtonId:
         case variation3ButtonId:

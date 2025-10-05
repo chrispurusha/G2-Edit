@@ -34,6 +34,7 @@ tButton         gMainButtonArray[] = {  // Must align with tButtonId enumaration
     {{400,  8}, NULL_RECTANGLE, anchorTopLeft, "VA",        RGB_GREEN_ON       },
     {{425,  8}, NULL_RECTANGLE, anchorTopLeft, "FX",        RGB_BACKGROUND_GREY},
     {{ 20,  8}, NULL_RECTANGLE, anchorTopLeft, "Read File", RGB_BACKGROUND_GREY},
+    {{ 20,  28}, NULL_RECTANGLE, anchorTopLeft, "Write File", RGB_BACKGROUND_GREY},
     {{400, 60}, NULL_RECTANGLE, anchorTopLeft, "1",         RGB_GREEN_ON       },
     {{412, 60}, NULL_RECTANGLE, anchorTopLeft, "2",         RGB_BACKGROUND_GREY},
     {{424, 60}, NULL_RECTANGLE, anchorTopLeft, "3",         RGB_BACKGROUND_GREY},
@@ -50,6 +51,8 @@ tButton         gMainButtonArray[] = {  // Must align with tButtonId enumaration
 };
 
 bool            gShowOpenFileReadDialogue = false;
+bool            gShowOpenFileWriteDialogue = false;
+    
 
 tScrollState    gScrollState     = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE};
 tContextMenu    gContextMenu     = {0};

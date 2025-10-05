@@ -361,9 +361,26 @@ void read_file_into_memory_and_process(const char * filepath) {
     fclose(file);
 }
 
+void write_database_to_file(const char * filepath) {
+    FILE *    file       = NULL;
+    size_t    writtenSize   = 0;
+
+    file = fopen(filepath, "wb");
+
+    if (!file) {
+        LOG_ERROR("Error opening file\n");
+        return;
+    }
+    
+    // TODO - walk through database contents and write. Commonalise the wrote protocol functions
+    writtenSize = fwrite("test", 1, 5, file);
+
+    fclose(file);
+}
+
 void check_action_flags(void) {
     if (gShowOpenFileReadDialogue == true) { // TODO: move to a function
-        char * path = open_file_dialogue();
+        char * path = open_file_read_dialogue();
 
         if (path != NULL) {
             LOG_INFO("\n\nSelected file: %s\n", path);
@@ -375,6 +392,22 @@ void check_action_flags(void) {
             free((void *)path);
         }
         gShowOpenFileReadDialogue = false;
+
+        glfwFocusWindow(gWindow);
+    }
+    if (gShowOpenFileWriteDialogue == true) { // TODO: move to a function
+        char * path = open_file_write_dialogue();
+
+        if (path != NULL) {
+            LOG_INFO("\n\nSelected file: %s\n", path);
+
+            write_database_to_file(path);
+            
+            set_window_title(path);
+            
+            free((void *)path);
+        }
+        gShowOpenFileWriteDialogue = false;
 
         glfwFocusWindow(gWindow);
     }
