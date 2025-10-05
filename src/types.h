@@ -430,6 +430,7 @@ typedef enum {
     vaButtonId,
     fxButtonId,
     openReadFileButtonId,
+    openWriteFileButtonId,
     variation1ButtonId,
     variation2ButtonId,
     variation3ButtonId,

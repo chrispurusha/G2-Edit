@@ -41,6 +41,7 @@ extern bool            gReDraw;
 extern bool            gCommandKeyPressed;
 extern tButton         gMainButtonArray[];
 extern bool            gShowOpenFileReadDialogue;
+extern bool            gShowOpenFileWriteDialogue;
 extern tScrollState    gScrollState;
 extern tContextMenu    gContextMenu;
 extern tCableDragging  gCableDrag;
