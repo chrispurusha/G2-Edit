@@ -87,6 +87,30 @@ uint32_t read_bit_stream(uint8_t * buff, uint32_t * bitPos, uint32_t numBits) {
 
     return val;
 }
+    
+void write_bit_stream(uint8_t *buff, uint32_t *bitPos, uint32_t numBits, uint32_t val)
+{
+    if ((buff == NULL) || (bitPos == NULL) || (numBits == 0) || (numBits > 32)) {
+        return;
+    }
+
+    for (uint32_t i = 0; i < numBits; i++) {
+        // Extract bit from 'val', MSB first
+        uint8_t bit = (val >> ((numBits - 1) - i)) & 0x01;
+
+        // Compute current byte and bit positions
+        uint32_t byteIndex = (*bitPos) >> 3;
+        uint32_t bitIndex  = (7 - (*bitPos & 0x07));  // mirror of your read_bit_stream()
+
+        // Clear the bit position in the buffer
+        buff[byteIndex] &= ~(1u << bitIndex);
+
+        // Set the bit if needed
+        buff[byteIndex] |= (bit << bitIndex);
+
+        (*bitPos)++;
+    }
+}
 
 double get_time_delta(void) {
     struct timespec        currentTime = {0};
