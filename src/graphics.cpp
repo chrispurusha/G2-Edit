@@ -313,7 +313,8 @@ void read_file_into_memory_and_process(const char * filepath) {
     }
     fseek(file, 0, SEEK_END);
     fileSize = ftell(file);
-    rewind(file);
+    fseek(file, 0, SEEK_SET);
+    clearerr(file);
 
     buff = (uint8_t *)malloc(fileSize);
 
@@ -416,7 +417,7 @@ void check_action_flags(void) {
 void do_graphics_loop(void) {
     bool reDraw = false;
 
-    while (!glfwWindowShouldClose(gWindow)) {
+    while ((gQuitAll == false) && (!glfwWindowShouldClose(gWindow))) {
         check_action_flags();
 
         re_draw_mutex_lock(); // Only really protecting the gap between setting redraw and clearing the global flag, may need re-think

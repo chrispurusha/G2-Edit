@@ -34,6 +34,7 @@
 #include "types.h"
 #include "msgQueue.h"
 
+extern bool            gQuitAll;
 extern GLFWwindow *    gWindow;
 extern uint32_t        gLocation;
 extern uint32_t        gVariation;
