@@ -301,6 +301,7 @@ void read_file_into_memory_and_process(const char * filepath) {
     FILE *    file       = NULL;
     uint8_t * buff       = NULL;
     size_t    readSize   = 0;
+    uint8_t   version    = 23;
     uint8_t   type       = 0;
     uint32_t  readCrc    = 0;
     uint32_t  calcCrc    = 0;
@@ -343,11 +344,10 @@ void read_file_into_memory_and_process(const char * filepath) {
     calcCrc = calc_crc16(buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
 
     if (readCrc == calcCrc) {
-        //uint8_t version = buffer[byteOffset++];
-        byteOffset++; // Version
+        version = buff[byteOffset++];
         type = buff[byteOffset++];
-        //LOG_DEBUG("Version %u\n", version);
-        //LOG_DEBUG("Type %u\n", type);
+        LOG_DEBUG("Version %u\n", version);
+        LOG_DEBUG("Type %u\n", type);
 
         database_clear_cables();
         database_clear_modules();
@@ -364,6 +364,7 @@ void read_file_into_memory_and_process(const char * filepath) {
 
 void write_database_to_file(const char * filepath) {
     FILE *    file       = NULL;
+    uint8_t   ch         = 0;
     size_t    writtenSize   = 0;
 
     file = fopen(filepath, "wb");
@@ -373,8 +374,11 @@ void write_database_to_file(const char * filepath) {
         return;
     }
     
+    ch = 23;  // Version
+    writtenSize = fwrite(&ch, 1, 1, file);
+    ch = 0;  // Type
+    writtenSize = fwrite(&ch, 1, 1, file);
     // TODO - walk through database contents and write. Commonalise the wrote protocol functions
-    writtenSize = fwrite("test", 1, 5, file);
 
     fclose(file);
 }
