@@ -253,7 +253,7 @@ void init_graphics(void) {
     windowHeight = TARGET_FRAME_BUFF_HEIGHT / yScale;
 
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
-    glfwWindowHint(GLFW_COCOA_GRAPHICS_SWITCHING, GLFW_TRUE); 
+    glfwWindowHint(GLFW_COCOA_GRAPHICS_SWITCHING, GLFW_TRUE);
     gWindow = glfwCreateWindow(windowWidth, windowHeight, WINDOW_TITLE, NULL, NULL);
 
     if (!gWindow) {
@@ -345,7 +345,7 @@ void read_file_into_memory_and_process(const char * filepath) {
 
     if (readCrc == calcCrc) {
         version = buff[byteOffset++];
-        type = buff[byteOffset++];
+        type    = buff[byteOffset++];
         LOG_DEBUG("Version %u\n", version);
         LOG_DEBUG("Type %u\n", type);
 
@@ -363,9 +363,9 @@ void read_file_into_memory_and_process(const char * filepath) {
 }
 
 void write_database_to_file(const char * filepath) {
-    FILE *    file       = NULL;
-    uint8_t   ch         = 0;
-    size_t    writtenSize   = 0;
+    FILE *  file        = NULL;
+    uint8_t ch          = 0;
+    size_t  writtenSize = 0;
 
     file = fopen(filepath, "wb");
 
@@ -373,10 +373,9 @@ void write_database_to_file(const char * filepath) {
         LOG_ERROR("Error opening file\n");
         return;
     }
-    
-    ch = 23;  // Version
+    ch          = 23; // Version
     writtenSize = fwrite(&ch, 1, 1, file);
-    ch = 0;  // Type
+    ch          = 0;  // Type
     writtenSize = fwrite(&ch, 1, 1, file);
     // TODO - walk through database contents and write. Commonalise the wrote protocol functions
 
@@ -400,6 +399,7 @@ void check_action_flags(void) {
 
         glfwFocusWindow(gWindow);
     }
+
     if (gShowOpenFileWriteDialogue == true) { // TODO: move to a function
         char * path = open_file_write_dialogue();
 
@@ -407,9 +407,9 @@ void check_action_flags(void) {
             LOG_INFO("\n\nSelected file: %s\n", path);
 
             write_database_to_file(path);
-            
+
             set_window_title(path);
-            
+
             free((void *)path);
         }
         gShowOpenFileWriteDialogue = false;

@@ -32,9 +32,9 @@ extern "C" {
 
 static void signal_handler(int sigraised) {
     LOG_DEBUG("\nSig Handler!!! %d\n", sigraised);
-    
+
     gQuitAll = true;
-    
+
     _exit(0);
 }
 
@@ -69,7 +69,7 @@ int main(int argc, char ** argv) {
     init_signals();
 
     init_database();
-    
+
     init_graphics();
 
     start_usb_thread();

@@ -40,7 +40,7 @@ extern "C" {
 
 #define VENDOR_ID     (0xffc)
 #define PRODUCT_ID    (2)
-    
+
 typedef enum {
     eStateNone,
     eStateFindDevice,
@@ -67,14 +67,14 @@ typedef enum {
     eStateExit
 } eState;
 
-static bool      gotBadConnectionIndication = false;
-static bool      gotPatchChangeIndication   = false;
-static uint8_t   slotVersion[MAX_SLOTS]     = {0};
-static pthread_t usbThread                  = NULL;
-static void      (*wake_glfw_func_ptr)(void) = NULL;
-static void      (*full_patch_change_notify_func_ptr)(void) = NULL;
-    static libusb_context * libUsbCtx = NULL;
-static libusb_device_handle * devHandle         = NULL;
+static bool                   gotBadConnectionIndication = false;
+static bool                   gotPatchChangeIndication   = false;
+static uint8_t                slotVersion[MAX_SLOTS]     = {0};
+static pthread_t              usbThread                  = NULL;
+static void                   (*wake_glfw_func_ptr)(void) = NULL;
+static void                   (*full_patch_change_notify_func_ptr)(void) = NULL;
+static libusb_context *       libUsbCtx = NULL;
+static libusb_device_handle * devHandle = NULL;
 
 void register_glfw_wake_cb(void ( *func_ptr )(void)) {
     wake_glfw_func_ptr = func_ptr;
@@ -993,29 +993,26 @@ static int rcv_extended(int dataLength) {
     int      tries                       = 0;
     uint8_t  responseType                = 0;
 
-    for (tries = 1; tries < 5; tries++)
-    {
+    for (tries = 1; tries < 5; tries++) {
         memset(buff, 0, sizeof(buff));
         readLength = 0;
-        retVal = libusb_bulk_transfer(devHandle, 0x82, buff, sizeof(buff), &readLength, 100);
+        retVal     = libusb_bulk_transfer(devHandle, 0x82, buff, sizeof(buff), &readLength, 100);
+
         if (retVal == LIBUSB_SUCCESS) {
             if (readLength > 0) {
-                
                 responseType = buff[0];
-                
+
                 if ((responseType == RESPONSE_TYPE_INIT) || (responseType == RESPONSE_TYPE_COMMAND)) {
                     break;
                 }
             }
         } else if (retVal == LIBUSB_ERROR_NO_DEVICE) {
-            readLength = 0;
+            readLength                 = 0;
             gotBadConnectionIndication = true;
             break;
         }
-        
         usleep(1000);
     }
-
 
     if (readLength == dataLength) {
         bitPos = SIGNED_BYTE_TO_BIT(dataLength - 2);
@@ -1042,20 +1039,19 @@ static int int_rec(void) {
     int      type                         = 0;
     int      i                            = 0;
     bool     foundNoneZero                = false;
-	int     tries                        = 0;
+    int      tries                        = 0;
 
-    for (tries = 1; tries < 5; tries++)
-    {
+    for (tries = 1; tries < 5; tries++) {
         memset(buff, 0, sizeof(buff));
         readLength = 0;
-        retVal = libusb_bulk_transfer(devHandle, 0x81, buff, sizeof(buff), &readLength, 100);
+        retVal     = libusb_bulk_transfer(devHandle, 0x81, buff, sizeof(buff), &readLength, 100);
+
         if (retVal == LIBUSB_SUCCESS) {
-            if (readLength > 0)
-            {
+            if (readLength > 0) {
                 break;
             }
         } else if (retVal == LIBUSB_ERROR_NO_DEVICE) {
-            readLength = 0;
+            readLength                 = 0;
             gotBadConnectionIndication = true;
             break;
         }
@@ -1088,7 +1084,6 @@ static int int_rec(void) {
             retVal = parse_incoming(buff + 1, dataLength);
         }
     }
-    
     return retVal;
 }
 
@@ -1098,7 +1093,7 @@ static int send_command(int state) { // TODO: Can probably now flatten into a si
     uint16_t crc                     = 0;
     int      msgLength               = 0;
     int      pos                     = COMMAND_OFFSET;
-    int     actualLength                 = 0;
+    int      actualLength            = 0;
 
     switch (state) {
         case eStateInit: // Apparently resets the version numbers
@@ -1231,8 +1226,7 @@ static int send_command(int state) { // TODO: Can probably now flatten into a si
 
         write_uint16(&buff[0], msgLength);
 
-        if (libusb_bulk_transfer(devHandle, 3, buff, msgLength, &actualLength, 100) == 0)
-        {
+        if (libusb_bulk_transfer(devHandle, 3, buff, msgLength, &actualLength, 100) == 0) {
             retVal = EXIT_SUCCESS;
         } else {
             gotBadConnectionIndication = true;
@@ -1247,9 +1241,7 @@ static int send_write_data(tMessageContent * messageContent) {
     uint16_t crc                     = 0;
     int      msgLength               = 0;
     int      pos                     = COMMAND_OFFSET;
-	int      actualLength            = 0;
-
-    //uint32_t slot                    = 0;   // TODO: pass this via the message structure
+    int      actualLength            = 0;
 
     switch (messageContent->cmd) {
         case eMsgCmdSetValue:
@@ -1383,7 +1375,6 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = 0;
             buff[pos++] = SUB_COMMAND_SELECT_SLOT;
             buff[pos++] = messageContent->slotData.slot;
-
             break;
 
         // 4418 mess.pas for assign/deassign knob
@@ -1399,9 +1390,8 @@ static int send_write_data(tMessageContent * messageContent) {
 
         write_uint16(&buff[0], msgLength);
 
-	    if (libusb_bulk_transfer(devHandle, 3, buff, msgLength, &actualLength, 100) == 0)
-	    {
-	        retVal = EXIT_SUCCESS;
+        if (libusb_bulk_transfer(devHandle, 3, buff, msgLength, &actualLength, 100) == 0) {
+            retVal = EXIT_SUCCESS;
         } else {
             gotBadConnectionIndication = true;
         }
@@ -1416,6 +1406,7 @@ static void state_handler(void) {
     switch (state) {
         case eStateFindDevice:
             devHandle = libusb_open_device_with_vid_pid(libUsbCtx, VENDOR_ID, PRODUCT_ID);
+
             if (devHandle != NULL) {
                 if (libusb_reset_device(devHandle) == LIBUSB_SUCCESS) {
                     if (libusb_claim_interface(devHandle, 0) == LIBUSB_SUCCESS) {
@@ -1424,10 +1415,10 @@ static void state_handler(void) {
                     }
                 }
             }
-			
-			if (state != eStateInit) {
-            	usleep(100000);
-			}
+
+            if (state != eStateInit) {
+                usleep(100000);
+            }
             break;
 
         case eStateInit:
@@ -1533,8 +1524,7 @@ static void * usb_thread_loop(void * arg) {
 
     msg_init(&gCommandQueue, "command");
 
-	if (libusb_init(&libUsbCtx) != LIBUSB_SUCCESS)
-    {
+    if (libusb_init(&libUsbCtx) != LIBUSB_SUCCESS) {
         return NULL;
     }
     libusb_set_option(libUsbCtx, LIBUSB_OPTION_LOG_LEVEL, 1);
@@ -1544,9 +1534,8 @@ static void * usb_thread_loop(void * arg) {
     while (gQuitAll == false) {
         state_handler();
     }
-	
-	libusb_exit(libUsbCtx);
-    
+    libusb_exit(libUsbCtx);
+
     return NULL;
 }
 

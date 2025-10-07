@@ -23,37 +23,37 @@ extern "C" {
 
 #include "globalVars.h"
 
-bool            gQuitAll   = false;
-GLFWwindow *    gWindow    = NULL;
-uint32_t        gLocation  = locationVa;
-uint32_t        gVariation = 0;
-bool            gReDraw    = true;
+bool         gQuitAll   = false;
+GLFWwindow * gWindow    = NULL;
+uint32_t     gLocation  = locationVa;
+uint32_t     gVariation = 0;
+bool         gReDraw    = true;
 
-bool            gCommandKeyPressed = false;
+bool         gCommandKeyPressed = false;
 
-tButton         gMainButtonArray[] = {  // Must align with tButtonId enumaration
-    {{400,  8}, NULL_RECTANGLE, anchorTopLeft, "VA",        RGB_GREEN_ON       },
-    {{425,  8}, NULL_RECTANGLE, anchorTopLeft, "FX",        RGB_BACKGROUND_GREY},
-    {{ 20,  8}, NULL_RECTANGLE, anchorTopLeft, "Read File", RGB_BACKGROUND_GREY},
-    {{ 20,  28}, NULL_RECTANGLE, anchorTopLeft, "Write File", RGB_BACKGROUND_GREY},
-    {{400, 60}, NULL_RECTANGLE, anchorTopLeft, "1",         RGB_GREEN_ON       },
-    {{412, 60}, NULL_RECTANGLE, anchorTopLeft, "2",         RGB_BACKGROUND_GREY},
-    {{424, 60}, NULL_RECTANGLE, anchorTopLeft, "3",         RGB_BACKGROUND_GREY},
-    {{436, 60}, NULL_RECTANGLE, anchorTopLeft, "4",         RGB_BACKGROUND_GREY},
-    {{448, 60}, NULL_RECTANGLE, anchorTopLeft, "5",         RGB_BACKGROUND_GREY},
-    {{460, 60}, NULL_RECTANGLE, anchorTopLeft, "6",         RGB_BACKGROUND_GREY},
-    {{472, 60}, NULL_RECTANGLE, anchorTopLeft, "7",         RGB_BACKGROUND_GREY},
-    {{484, 60}, NULL_RECTANGLE, anchorTopLeft, "8",         RGB_BACKGROUND_GREY},
-    {{500, 60}, NULL_RECTANGLE, anchorTopLeft, "Init",      RGB_BACKGROUND_GREY},
-    {{600,  8}, NULL_RECTANGLE, anchorTopLeft, "A",         RGB_GREEN_ON       },
-    {{615,  8}, NULL_RECTANGLE, anchorTopLeft, "B",         RGB_BACKGROUND_GREY},
-    {{630,  8}, NULL_RECTANGLE, anchorTopLeft, "C",         RGB_BACKGROUND_GREY},
-    {{645,  8}, NULL_RECTANGLE, anchorTopLeft, "D",         RGB_BACKGROUND_GREY},
+tButton      gMainButtonArray[] = {     // Must align with tButtonId enumaration
+    {{400,  8}, NULL_RECTANGLE, anchorTopLeft, "VA",         RGB_GREEN_ON       },
+    {{425,  8}, NULL_RECTANGLE, anchorTopLeft, "FX",         RGB_BACKGROUND_GREY},
+    {{ 20,  8}, NULL_RECTANGLE, anchorTopLeft, "Read File",  RGB_BACKGROUND_GREY},
+    {{ 20, 28}, NULL_RECTANGLE, anchorTopLeft, "Write File", RGB_BACKGROUND_GREY},
+    {{400, 60}, NULL_RECTANGLE, anchorTopLeft, "1",          RGB_GREEN_ON       },
+    {{412, 60}, NULL_RECTANGLE, anchorTopLeft, "2",          RGB_BACKGROUND_GREY},
+    {{424, 60}, NULL_RECTANGLE, anchorTopLeft, "3",          RGB_BACKGROUND_GREY},
+    {{436, 60}, NULL_RECTANGLE, anchorTopLeft, "4",          RGB_BACKGROUND_GREY},
+    {{448, 60}, NULL_RECTANGLE, anchorTopLeft, "5",          RGB_BACKGROUND_GREY},
+    {{460, 60}, NULL_RECTANGLE, anchorTopLeft, "6",          RGB_BACKGROUND_GREY},
+    {{472, 60}, NULL_RECTANGLE, anchorTopLeft, "7",          RGB_BACKGROUND_GREY},
+    {{484, 60}, NULL_RECTANGLE, anchorTopLeft, "8",          RGB_BACKGROUND_GREY},
+    {{500, 60}, NULL_RECTANGLE, anchorTopLeft, "Init",       RGB_BACKGROUND_GREY},
+    {{600,  8}, NULL_RECTANGLE, anchorTopLeft, "A",          RGB_GREEN_ON       },
+    {{615,  8}, NULL_RECTANGLE, anchorTopLeft, "B",          RGB_BACKGROUND_GREY},
+    {{630,  8}, NULL_RECTANGLE, anchorTopLeft, "C",          RGB_BACKGROUND_GREY},
+    {{645,  8}, NULL_RECTANGLE, anchorTopLeft, "D",          RGB_BACKGROUND_GREY},
 };
 
-bool            gShowOpenFileReadDialogue = false;
-bool            gShowOpenFileWriteDialogue = false;
-    
+bool         gShowOpenFileReadDialogue  = false;
+bool         gShowOpenFileWriteDialogue = false;
+
 
 tScrollState    gScrollState     = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE};
 tContextMenu    gContextMenu     = {0};

@@ -38,7 +38,7 @@ static void database_mutex_init(void) {
     pthread_mutex_init(&dbMutex, &attr);
     pthread_mutexattr_destroy(&attr);
 }
-    
+
 static void database_mutex_lock(void) {
     pthread_mutex_lock(&dbMutex);
 }
@@ -445,7 +445,7 @@ int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCoun
 
     return -1;  // Not found
 }
-    
+
 void init_database(void) {
     database_mutex_init();
 }
