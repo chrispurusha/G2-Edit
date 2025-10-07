@@ -87,9 +87,8 @@ uint32_t read_bit_stream(uint8_t * buff, uint32_t * bitPos, uint32_t numBits) {
 
     return val;
 }
-    
-void write_bit_stream(uint8_t *buff, uint32_t *bitPos, uint32_t numBits, uint32_t val)
-{
+
+void write_bit_stream(uint8_t * buff, uint32_t * bitPos, uint32_t numBits, uint32_t val) {
     if ((buff == NULL) || (bitPos == NULL) || (numBits == 0) || (numBits > 32)) {
         return;
     }

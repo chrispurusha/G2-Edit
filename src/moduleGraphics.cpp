@@ -76,16 +76,16 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
         {
             //uint32_t top3Bits = 0;
 
-            value    = ((value & 0xff00) >> 8) | ((value & 0xff) << 8); // Swap bytes
+            value = ((value & 0xff00) >> 8) | ((value & 0xff) << 8);    // Swap bytes
             //top3Bits = (value >> 5) & 0x7;
-            value   &= 0x1f;
+            value &= 0x1f;
             //LOG_DEBUG("Top 3 bits = %u val = %u\n", top3Bits, value); // Val of 10 or 11 = Yellow, 12 = red?, top bits 3 = clip?
 
-            double fullHeight  = rectangle.size.h;
+            double fullHeight = rectangle.size.h;
             //double scaledValue = (rectangle.size.h * value) / 12.0; // 128 usually, but one example of 300!? Maybe the leading nibble denotes a type? val of 1 changes scale!?
 
-            int    valueThresholds[] = {7, 11, 12};                 // Exclusive upper bounds for green/yellow/red
-            tRgb   colours[]         = {RGB_GREEN_7, RGB_YELLOW_7, RGB_RED_7};
+            int  valueThresholds[] = {7, 11, 12};                   // Exclusive upper bounds for green/yellow/red
+            tRgb colours[]         = {RGB_GREEN_7, RGB_YELLOW_7, RGB_RED_7};
 
             set_rgb_colour(RGB_BLACK);
             render_rectangle(moduleArea, rectangle);
@@ -93,9 +93,9 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
             double previousHeight = 0;
 
             for (int i = 0; i < 3; i++) {
-                int    segmentTopVal    = valueThresholds[i];
-                int    segmentBottomVal = (i == 0) ? 0 : valueThresholds[i - 1];
-                int    segmentRange     = segmentTopVal - segmentBottomVal;
+                int segmentTopVal    = valueThresholds[i];
+                int segmentBottomVal = (i == 0) ? 0 : valueThresholds[i - 1];
+                int segmentRange     = segmentTopVal - segmentBottomVal;
 
                 //double segmentHeight = (segmentRange * fullHeight) / 12.0;
 
@@ -346,7 +346,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     break;
                 }
             }
-            
+
             if (render_param_function != NULL) {
                 module->param[gVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramRef);
             }
@@ -384,6 +384,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     LOG_ERROR("Reached wrong switch in case paramType2Toggle or paramType2UpDown");
                 }
             }
+
             if (render_param_function != NULL) {
                 module->param[gVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
             }
@@ -397,7 +398,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 }
 
 void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef, uint32_t modeIndex) {
-    uint32_t modeValue                  = module->mode[modeIndex].value;
+    uint32_t modeValue = module->mode[modeIndex].value;
 
 
     module->mode[0].modeRef = modeRef;
