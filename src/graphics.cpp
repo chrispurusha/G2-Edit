@@ -366,6 +366,10 @@ void write_database_to_file(const char * filepath) {
     FILE *  file        = NULL;
     uint8_t ch          = 0;
     size_t  writtenSize = 0;
+    char charBuff[1024] = {0};
+    char eol[] = {0x0d, 0x0a, 0x00};
+    uint8_t buff[1024] = {0};
+    uint32_t bitPos  = 0;
 
     file = fopen(filepath, "wb");
 
@@ -373,12 +377,70 @@ void write_database_to_file(const char * filepath) {
         LOG_ERROR("Error opening file\n");
         return;
     }
-    ch          = 23; // Version
-    writtenSize = fwrite(&ch, 1, 1, file);
-    ch          = 0;  // Type
-    writtenSize = fwrite(&ch, 1, 1, file);
+    
+    //ch          = 23; // Version
+    //writtenSize = fwrite(&ch, 1, 1, file);
+    //ch          = 0;  // Type
+    //writtenSize = fwrite(&ch, 1, 1, file);
     // TODO - walk through database contents and write. Commonalise the wrote protocol functions
+    
+    // TODO - move the protocol stuff to a protocol file, this is pure test!
 
+    snprintf(charBuff, sizeof(charBuff)-1, "Version=Nord Modular G2 File Format 1");
+    fwrite(charBuff, 1, strlen(charBuff), file);
+    fwrite(eol, 1, strlen(eol), file);
+    snprintf(charBuff, sizeof(charBuff)-1, "Type=Patch");
+    fwrite(charBuff, 1, strlen(charBuff), file);
+    fwrite(eol, 1, strlen(eol), file);
+    snprintf(charBuff, sizeof(charBuff)-1, "Version=23");
+    fwrite(charBuff, 1, strlen(charBuff), file);
+    fwrite(eol, 1, strlen(eol), file);
+    snprintf(charBuff, sizeof(charBuff)-1, "Info=BUILD 320");
+    fwrite(charBuff, 1, strlen(charBuff), file);
+    fwrite(eol, 1, strlen(eol), file);
+
+    write_bit_stream(buff, &bitPos, 8, 1/*perfMode*/);
+    write_bit_stream(buff, &bitPos, 8, 2/*perfBank*/);
+    write_bit_stream(buff, &bitPos, 8, 3/*perfLocation*/);
+
+    write_bit_stream(buff, &bitPos, 1, 1/*memoryProtect & 0x1*/);
+    write_bit_stream(buff, &bitPos, 7, 0);  // padding
+
+    write_bit_stream(buff, &bitPos, 8, 4/*midiChanA*/);
+    write_bit_stream(buff, &bitPos, 8, 5/*midiChanB*/);
+    write_bit_stream(buff, &bitPos, 8, 6/*midiChanC*/);
+    write_bit_stream(buff, &bitPos, 8, 7/*midiChanD*/);
+
+    write_bit_stream(buff, &bitPos, 8, 8/*globalChan*/);
+    write_bit_stream(buff, &bitPos, 8, 9/*sysexID*/);
+
+    write_bit_stream(buff, &bitPos, 1, 1/*localOn & 0x1*/);
+    write_bit_stream(buff, &bitPos, 7, 0);  // padding
+
+    write_bit_stream(buff, &bitPos, 6, 0);  // padding
+    write_bit_stream(buff, &bitPos, 1, 1/*progChangeRcv & 0x1*/);
+    write_bit_stream(buff, &bitPos, 1, 1/*progChangeSnd & 0x1*/);
+    write_bit_stream(buff, &bitPos, 6, 0);  // padding
+
+    write_bit_stream(buff, &bitPos, 1, 1/*controllersRcv & 0x1*/);
+    write_bit_stream(buff, &bitPos, 1, 1/*controllersSnd & 0x1*/);
+
+    write_bit_stream(buff, &bitPos, 8, 1/*sendClockFlags*/);
+    write_bit_stream(buff, &bitPos, 8, 1/*tuneCent*/);
+    write_bit_stream(buff, &bitPos, 8, 1/*globalShiftActive*/);
+    write_bit_stream(buff, &bitPos, 8, 1/*globalOctaveShift*/);
+    write_bit_stream(buff, &bitPos, 8, 1/*tuneSemi*/);
+    write_bit_stream(buff, &bitPos, 8, 1/*filler*/);
+    write_bit_stream(buff, &bitPos, 8, 1/*pedalPolarity*/);
+    write_bit_stream(buff, &bitPos, 8, 1/*controlPedalGain*/);
+
+    // Add remaining 17 unknown bytes as zero for now
+    for (int i = 0; i < 17; i++) {
+        write_bit_stream(buff, &bitPos, 8, 0);
+    }
+
+    writtenSize = fwrite(buff, 1, BIT_TO_BYTE_ROUND_UP(bitPos), file);
+    
     fclose(file);
 }
 

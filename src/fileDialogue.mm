@@ -46,28 +46,16 @@ char * open_file_write_dialogue(void) {
         [panel setCanCreateDirectories:YES];
         [panel setNameFieldStringValue:@"untitled"];
         [panel setMessage:@"Choose where to save your file."];
-        
+
+        // ✅ Let NSSavePanel handle overwrite confirmation automatically
+        [panel setShowsTagField:NO]; // optional
+        [panel setExtensionHidden:NO];
+
         if ([panel runModal] == NSModalResponseOK) {
             NSURL *selectedURL = panel.URL;
-            NSString *path = selectedURL.path;
-            
-            // Check if file exists and confirm overwrite
-            NSFileManager *fm = [NSFileManager defaultManager];
-            if ([fm fileExistsAtPath:path]) {
-                NSAlert *alert = [[NSAlert alloc] init];
-                [alert setMessageText:@"File already exists"];
-                [alert setInformativeText:@"Do you want to overwrite the existing file?"];
-                [alert addButtonWithTitle:@"Overwrite"];
-                [alert addButtonWithTitle:@"Cancel"];
-                [alert setAlertStyle:NSAlertStyleWarning];
-                
-                if ([alert runModal] != NSAlertFirstButtonReturn) {
-                    return NULL;
-                }
-            }
-            
-            return strdup(path.UTF8String); // caller must free
+            return strdup(selectedURL.path.UTF8String); // caller must free
         }
         return NULL;
     }
 }
+
