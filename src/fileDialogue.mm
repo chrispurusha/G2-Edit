@@ -40,56 +40,34 @@ char * open_file_read_dialogue(void) {
 
 char * open_file_write_dialogue(void) {
     @autoreleasepool {
-        NSOpenPanel *panel = [NSOpenPanel openPanel];
+        NSSavePanel *panel = [NSSavePanel savePanel];
         [panel setTitle:@"Save File As"];
         [panel setPrompt:@"Save"];
-        [panel setCanChooseFiles:YES];
-        [panel setCanChooseDirectories:NO];
-        [panel setAllowsMultipleSelection:NO];
         [panel setCanCreateDirectories:YES];
-        [panel setMessage:@"Select an existing file to overwrite or choose a folder and type a new filename."];
-
+        [panel setNameFieldStringValue:@"untitled"];
+        [panel setMessage:@"Choose where to save your file."];
+        
         if ([panel runModal] == NSModalResponseOK) {
             NSURL *selectedURL = panel.URL;
-
-            // ✅ If the user picked a folder, prompt for filename
-            BOOL isDir = NO;
-            [[NSFileManager defaultManager] fileExistsAtPath:selectedURL.path isDirectory:&isDir];
-
-            NSString *path = nil;
-            if (isDir) {
-                // Prompt user for a new filename
+            NSString *path = selectedURL.path;
+            
+            // Check if file exists and confirm overwrite
+            NSFileManager *fm = [NSFileManager defaultManager];
+            if ([fm fileExistsAtPath:path]) {
                 NSAlert *alert = [[NSAlert alloc] init];
-                [alert setMessageText:@"Enter new filename"];
-                [alert setInformativeText:@"You selected a folder. Enter a filename to save inside it:"];
-                NSTextField *input = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 300, 24)];
-                [alert setAccessoryView:input];
-                [alert addButtonWithTitle:@"OK"];
+                [alert setMessageText:@"File already exists"];
+                [alert setInformativeText:@"Do you want to overwrite the existing file?"];
+                [alert addButtonWithTitle:@"Overwrite"];
                 [alert addButtonWithTitle:@"Cancel"];
-
-                if ([alert runModal] != NSAlertFirstButtonReturn) return NULL;
-
-                NSString *filename = [input stringValue];
-                if (filename.length == 0) return NULL;
-
-                path = [selectedURL.path stringByAppendingPathComponent:filename];
-            } else {
-                // ✅ If existing file, confirm overwrite
-                NSFileManager *fm = [NSFileManager defaultManager];
-                if ([fm fileExistsAtPath:selectedURL.path]) {
-                    NSAlert *alert = [[NSAlert alloc] init];
-                    [alert setMessageText:@"File already exists"];
-                    [alert setInformativeText:@"Do you want to overwrite the existing file?"];
-                    [alert addButtonWithTitle:@"Overwrite"];
-                    [alert addButtonWithTitle:@"Cancel"];
-                    if ([alert runModal] != NSAlertFirstButtonReturn) return NULL;
+                [alert setAlertStyle:NSAlertStyleWarning];
+                
+                if ([alert runModal] != NSAlertFirstButtonReturn) {
+                    return NULL;
                 }
-                path = selectedURL.path;
             }
-
+            
             return strdup(path.UTF8String); // caller must free
         }
-
         return NULL;
     }
 }
