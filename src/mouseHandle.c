@@ -283,7 +283,7 @@ void handle_button(tButtonId buttonId) {
         {
             uint32_t variation = (uint32_t)buttonId - (uint32_t)variation1ButtonId;
 
-            gVariation = variation;
+            gPatchDescr[gSlot].activeVariation = variation;
 
             for (uint32_t i = 0; i < NUM_GUI_VARIATIONS; i++) {
                 gMainButtonArray[(uint32_t)variation1ButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
@@ -310,7 +310,7 @@ void handle_button(tButtonId buttonId) {
                 validModule = walk_next_module(&module);
 
                 if (validModule) {
-                    init_params_on_module(&module, gLocation, gVariation); // TODO: take init value from the 9th (init) variation, or at least check our init values are the same
+                    init_params_on_module(&module, gLocation, gPatchDescr[gSlot].activeVariation); // TODO: take init value from the 9th (init) variation, or at least check our init values are the same
                 }
             } while (validModule);
 
@@ -339,6 +339,11 @@ void handle_button(tButtonId buttonId) {
             messageContent.slotData.slot = slot;
             msg_send(&gCommandQueue, &messageContent);
 
+            for (uint32_t i = 0; i < NUM_GUI_VARIATIONS; i++) {
+                gMainButtonArray[(uint32_t)variation1ButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            }
+
+            gMainButtonArray[gPatchDescr[gSlot].activeVariation+(uint32_t)variation1ButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
             break;
         }
     }
@@ -978,7 +983,7 @@ bool handle_module_click(tCoord coord, int button) {
 
             // Deal with click on param
             for (int i = 0; (i < paramCount) && (retVal == false); i++) {
-                tParam * param = &module.param[gVariation][i];
+                tParam * param = &module.param[gPatchDescr[gSlot].activeVariation][i];
 
                 if (within_rectangle(coord, param->rectangle)) {
                     if (button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -1018,7 +1023,7 @@ bool handle_module_click(tCoord coord, int button) {
                             messageContent.slot                = gSlot;
                             messageContent.paramData.moduleKey = module.key;
                             messageContent.paramData.param     = i;
-                            messageContent.paramData.variation = gVariation;
+                            messageContent.paramData.variation = gPatchDescr[gSlot].activeVariation;
                             messageContent.paramData.value     = param->value;
 
                             msg_send(&gCommandQueue, &messageContent);
@@ -1037,7 +1042,7 @@ bool handle_module_click(tCoord coord, int button) {
                             messageContent.slot                = gSlot;
                             messageContent.paramData.moduleKey = module.key;
                             messageContent.paramData.param     = i;
-                            messageContent.paramData.variation = gVariation;
+                            messageContent.paramData.variation = gPatchDescr[gSlot].activeVariation;
                             messageContent.paramData.value     = param->value;
 
                             msg_send(&gCommandQueue, &messageContent);
@@ -1360,21 +1365,21 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                 if (module.key.location == locationMorph) {
                     paramType2 = paramType2Dial;
                 } else {
-                    paramType2 = paramLocationList[module.param[gVariation][gParamDragging.param].paramRef].type2;
+                    paramType2 = paramLocationList[module.param[gPatchDescr[gSlot].activeVariation][gParamDragging.param].paramRef].type2;
                 }
 
                 if (paramType2 == paramType2Dial) {
                     if (module.key.location == locationMorph) {
                         range = 128;
                     } else {
-                        range = paramLocationList[module.param[gVariation][gParamDragging.param].paramRef].range;
+                        range = paramLocationList[module.param[gPatchDescr[gSlot].activeVariation][gParamDragging.param].paramRef].range;
                     }
-                    angle = calculate_mouse_angle((tCoord){x, y}, module.param[gVariation][gParamDragging.param].rectangle);                                                            // possible add half size
+                    angle = calculate_mouse_angle((tCoord){x, y}, module.param[gPatchDescr[gSlot].activeVariation][gParamDragging.param].rectangle);                                                            // possible add half size
                     value = angle_to_value(angle, range);
 
                     if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) != GLFW_PRESS) {
-                        if (module.param[gVariation][gParamDragging.param].value != value) {
-                            module.param[gVariation][gParamDragging.param].value = value;
+                        if (module.param[gPatchDescr[gSlot].activeVariation][gParamDragging.param].value != value) {
+                            module.param[gPatchDescr[gSlot].activeVariation][gParamDragging.param].value = value;
 
                             write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
 
@@ -1382,28 +1387,28 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                             messageContent.slot                = gSlot;
                             messageContent.paramData.moduleKey = gParamDragging.moduleKey;
                             messageContent.paramData.param     = gParamDragging.param;
-                            messageContent.paramData.variation = gVariation;
+                            messageContent.paramData.variation = gPatchDescr[gSlot].activeVariation;
                             messageContent.paramData.value     = value;
                             msg_send(&gCommandQueue, &messageContent);
                         }
                     } else {
-                        if (module.param[gVariation][gParamDragging.param].morphRange[gMorphGroupFocus] != value) {
-                            if (value >= module.param[gVariation][gParamDragging.param].value) {
-                                module.param[gVariation][gParamDragging.param].morphRange[gMorphGroupFocus] = value - module.param[gVariation][gParamDragging.param].value;
+                        if (module.param[gPatchDescr[gSlot].activeVariation][gParamDragging.param].morphRange[gMorphGroupFocus] != value) {
+                            if (value >= module.param[gPatchDescr[gSlot].activeVariation][gParamDragging.param].value) {
+                                module.param[gPatchDescr[gSlot].activeVariation][gParamDragging.param].morphRange[gMorphGroupFocus] = value - module.param[gPatchDescr[gSlot].activeVariation][gParamDragging.param].value;
                             } else {
-                                module.param[gVariation][gParamDragging.param].morphRange[gMorphGroupFocus] = 256 - (module.param[gVariation][gParamDragging.param].value - value);
+                                module.param[gPatchDescr[gSlot].activeVariation][gParamDragging.param].morphRange[gMorphGroupFocus] = 256 - (module.param[gPatchDescr[gSlot].activeVariation][gParamDragging.param].value - value);
                             }
                             write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
-                            LOG_DEBUG("Write to module %u variation %u\n", module.key.index, gVariation);
+                            LOG_DEBUG("Write to module %u variation %u\n", module.key.index, gPatchDescr[gSlot].activeVariation);
 
                             messageContent.cmd                       = eMsgCmdSetParamMorph;
                             messageContent.slot                      = gSlot;
                             messageContent.paramMorphData.moduleKey  = module.key;
                             messageContent.paramMorphData.param      = gParamDragging.param;
                             messageContent.paramMorphData.paramMorph = gMorphGroupFocus;
-                            messageContent.paramMorphData.value      = module.param[gVariation][gParamDragging.param].morphRange[gMorphGroupFocus];
+                            messageContent.paramMorphData.value      = module.param[gPatchDescr[gSlot].activeVariation][gParamDragging.param].morphRange[gMorphGroupFocus];
                             messageContent.paramMorphData.negative   = 0;
-                            messageContent.paramMorphData.variation  = gVariation;
+                            messageContent.paramMorphData.variation  = gPatchDescr[gSlot].activeVariation;
                             msg_send(&gCommandQueue, &messageContent);
                         }
                     }
