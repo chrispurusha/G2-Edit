@@ -16,6 +16,7 @@
 		83496B5A2E81BC1100999B36 /* libusb-1.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 83496B592E81BC1100999B36 /* libusb-1.0.a */; };
 		83496B5C2E81E10400999B36 /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 83496B5B2E81E10400999B36 /* libglfw3.a */; };
 		83496B5E2E81E11300999B36 /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 83496B5D2E81E11300999B36 /* libfreetype.a */; };
+		834EF30B2EA58DD400DD0407 /* protocol.c in Sources */ = {isa = PBXBuildFile; fileRef = 834EF30A2EA58DD400DD0407 /* protocol.c */; };
 		8352A5752D4BE22300CD5AD9 /* dataBase.c in Sources */ = {isa = PBXBuildFile; fileRef = 8352A5742D4BE22300CD5AD9 /* dataBase.c */; };
 		835C6EB12E13F77300BDEDB0 /* renderParams.c in Sources */ = {isa = PBXBuildFile; fileRef = 835C6EB02E13F77300BDEDB0 /* renderParams.c */; };
 		83673D942D5A50F90077A0B2 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 83673D932D5A50F90077A0B2 /* main.c */; };
@@ -54,6 +55,8 @@
 		83496B592E81BC1100999B36 /* libusb-1.0.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libusb-1.0.a"; path = "/opt/homebrew/lib/libusb-1.0.a"; sourceTree = "<absolute>"; };
 		83496B5B2E81E10400999B36 /* libglfw3.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libglfw3.a; path = /opt/homebrew/lib/libglfw3.a; sourceTree = "<absolute>"; };
 		83496B5D2E81E11300999B36 /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = /opt/homebrew/lib/libfreetype.a; sourceTree = "<absolute>"; };
+		834EF30A2EA58DD400DD0407 /* protocol.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = protocol.c; sourceTree = "<group>"; };
+		834EF30C2EA58DE300DD0407 /* protocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = protocol.h; sourceTree = "<group>"; };
 		8352A5732D4BE21D00CD5AD9 /* dataBase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dataBase.h; sourceTree = "<group>"; };
 		8352A5742D4BE22300CD5AD9 /* dataBase.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = dataBase.c; sourceTree = "<group>"; };
 		835C6EB02E13F77300BDEDB0 /* renderParams.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = renderParams.c; sourceTree = "<group>"; };
@@ -147,6 +150,8 @@
 				8376ECAD2D48FB6E008D1608 /* utils.c */,
 				83EDF68F2D64D8550052CE9F /* msgQueue.h */,
 				83EDF68D2D64D84C0052CE9F /* msgQueue.c */,
+				834EF30C2EA58DE300DD0407 /* protocol.h */,
+				834EF30A2EA58DD400DD0407 /* protocol.c */,
 				83B5655F2D4A7243001BC997 /* usbComms.h */,
 				83B5655D2D4A71CF001BC997 /* usbComms.c */,
 				8352A5732D4BE21D00CD5AD9 /* dataBase.h */,
@@ -239,6 +244,7 @@
 				83DB9C3D2DD3570A00F9D2A5 /* utilsGraphics.cpp in Sources */,
 				8376ECAE2D48FB6E008D1608 /* utils.c in Sources */,
 				83DB9C412DD3580100F9D2A5 /* graphics.cpp in Sources */,
+				834EF30B2EA58DD400DD0407 /* protocol.c in Sources */,
 				83673D942D5A50F90077A0B2 /* main.c in Sources */,
 				83BE0C692D6C86D6007E9CD8 /* moduleGraphics.cpp in Sources */,
 				835C6EB12E13F77300BDEDB0 /* renderParams.c in Sources */,
