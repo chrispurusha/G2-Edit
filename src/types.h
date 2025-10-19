@@ -645,8 +645,11 @@ typedef struct {
 } tButton;
 
 typedef struct {
+    uint32_t  unknown1;
+    uint32_t  unknown2;
     uint8_t  voiceCount;
     uint16_t barPosition;
+    uint8_t  unknown3;
     uint8_t  redVisible;
     uint8_t  blueVisible;
     uint8_t  yellowVisible;
@@ -657,6 +660,7 @@ typedef struct {
     uint8_t  monoPoly;
     uint8_t  activeVariation;
     uint8_t  category;
+    uint16_t unknown4;
 } tPatchDescr;
 
 

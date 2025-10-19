@@ -36,6 +36,7 @@ extern "C" {
 #include "types.h"
 #include "utils.h"
 #include "msgQueue.h"
+#include "protocol.h"
 #include "usbComms.h"
 #include "graphics.h"
 #include "utilsGraphics.h"
@@ -378,13 +379,7 @@ void write_database_to_file(const char * filepath) {
         return;
     }
     
-    //ch          = 23; // Version
-    //writtenSize = fwrite(&ch, 1, 1, file);
-    //ch          = 0;  // Type
-    //writtenSize = fwrite(&ch, 1, 1, file);
     // TODO - walk through database contents and write. Commonalise the wrote protocol functions
-    
-    // TODO - move the protocol stuff to a protocol file, this is pure test!
 
     snprintf(charBuff, sizeof(charBuff)-1, "Version=Nord Modular G2 File Format 1");
     fwrite(charBuff, 1, strlen(charBuff), file);
@@ -399,41 +394,25 @@ void write_database_to_file(const char * filepath) {
     fwrite(charBuff, 1, strlen(charBuff), file);
     fwrite(eol, 1, strlen(eol), file);
     write_bit_stream(buff, &bitPos, 8, 0);
-
-    write_bit_stream(buff, &bitPos, 8, 23); // Version
-    write_bit_stream(buff, &bitPos, 8, 0); // Type (1 = performance when we get round to implementing that)
-    
-    // TODO - This will go into a write patch_descr function, in a new protocol source file
-    write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_PATCH_DESCRIPTION); // Type 0x21
-    write_bit_stream(buff, &bitPos, 16, 15); // Length
-    
-    for (int i=0; i<7; i++) {
-        write_bit_stream(buff, &bitPos, 8, 0); // Unknown
-    }
-    write_bit_stream(buff, &bitPos, 5, 0); // Unknown
-    
-    write_bit_stream(buff, &bitPos, 5, gPatchDescr[gSlot].voiceCount); // Voice count
-    write_bit_stream(buff, &bitPos, 14, gPatchDescr[gSlot].barPosition); // Bar position
-    write_bit_stream(buff, &bitPos, 3, 2); // Unknown, but seems to consistently be value of 2
-    write_bit_stream(buff, &bitPos, 1, gPatchDescr[gSlot].redVisible); // visible
-    write_bit_stream(buff, &bitPos, 1, gPatchDescr[gSlot].blueVisible); // visible
-    write_bit_stream(buff, &bitPos, 1, gPatchDescr[gSlot].yellowVisible); // visible
-    write_bit_stream(buff, &bitPos, 1, gPatchDescr[gSlot].orangeVisible); // visible
-    write_bit_stream(buff, &bitPos, 1, gPatchDescr[gSlot].greenVisible); // visible
-    write_bit_stream(buff, &bitPos, 1, gPatchDescr[gSlot].purpleVisible); // visible
-    write_bit_stream(buff, &bitPos, 1, gPatchDescr[gSlot].whiteVisible); // visible
-    write_bit_stream(buff, &bitPos, 2, gPatchDescr[gSlot].monoPoly); // Monopoly
-    write_bit_stream(buff, &bitPos, 8, gPatchDescr[gSlot].activeVariation); // Active variation
-    write_bit_stream(buff, &bitPos, 8, gPatchDescr[gSlot].category); // category
-    write_bit_stream(buff, &bitPos, 12, 0); // Unknown
-    
-    // TODO - This will go into a write module list function, in a new protocol source file
-    
-    write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_MODULE_LIST); // Type 0x4a
-    write_bit_stream(buff, &bitPos, 16, 66); // Length
-    
     writtenSize = fwrite(buff, 1, BIT_TO_BYTE_ROUND_UP(bitPos), file);
     
+    bitPos = 0;
+    memset(buff, 0, sizeof(buff));
+    write_bit_stream(buff, &bitPos, 8, 23); // Version
+    write_bit_stream(buff, &bitPos, 8, 0); // Type (0 = patch, 1 = performance when we get round to implementing that)
+    writtenSize = fwrite(buff, 1, BIT_TO_BYTE_ROUND_UP(bitPos), file);
+    
+    bitPos = 0;
+    memset(buff, 0, sizeof(buff));
+    write_patch_descr(buff, &bitPos);
+    writtenSize = fwrite(buff, 1, BIT_TO_BYTE_ROUND_UP(bitPos), file);
+    
+    bitPos = 0;
+    memset(buff, 0, sizeof(buff));
+    write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_MODULE_LIST);
+    write_bit_stream(buff, &bitPos, 16, 66); // Length
+    writtenSize = fwrite(buff, 1, BIT_TO_BYTE_ROUND_UP(bitPos), file);
+
     fclose(file);
 }
 
