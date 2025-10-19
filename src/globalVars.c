@@ -26,7 +26,6 @@ extern "C" {
 bool         gQuitAll   = false;
 GLFWwindow * gWindow    = NULL;
 uint32_t     gLocation  = locationVa;
-uint32_t     gVariation = 0;
 bool         gReDraw    = true;
 
 bool         gCommandKeyPressed = false;
@@ -63,6 +62,7 @@ tModuleDragging gModuleDrag      = {0};
 tMessageQueue   gCommandQueue    = {0};
 uint32_t        gMorphGroupFocus = 0;
 uint32_t        gSlot            = 0;
+tPatchDescr     gPatchDescr[MAX_SLOTS] = {0};
 
 uint32_t array_size_main_button_array(void) {
     return ARRAY_SIZE(gMainButtonArray);

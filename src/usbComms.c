@@ -512,49 +512,41 @@ static void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
 }
 
 static void parse_patch_descr(uint8_t * buff, uint32_t * subOffset) {
-    uint32_t barPosition     = 0;
-    uint32_t voiceCount      = 0;
-    uint32_t redVisible      = 0;
-    uint32_t blueVisible     = 0;
-    uint32_t yellowVisible   = 0;
-    uint32_t orangeVisible   = 0;
-    uint32_t greenVisible    = 0;
-    uint32_t purpleVisible   = 0;
-    uint32_t whiteVisible    = 0;
-    uint32_t monoPoly        = 0;
-    uint32_t activeVariation = 0;
-    uint32_t category        = 0;
-
     read_bit_stream(buff, subOffset, 61);  // Unknown - may need to write to file or back to synth?
-    voiceCount  = read_bit_stream(buff, subOffset, 5);
-    barPosition = read_bit_stream(buff, subOffset, 14);
+    gPatchDescr[gSlot].voiceCount = read_bit_stream(buff, subOffset, 5);
+    gPatchDescr[gSlot].barPosition = read_bit_stream(buff, subOffset, 14);
     read_bit_stream(buff, subOffset, 3);   // Unknown - may need to write to file or back to synth?
-    redVisible      = read_bit_stream(buff, subOffset, 1);
-    blueVisible     = read_bit_stream(buff, subOffset, 1);
-    yellowVisible   = read_bit_stream(buff, subOffset, 1);
-    orangeVisible   = read_bit_stream(buff, subOffset, 1);
-    greenVisible    = read_bit_stream(buff, subOffset, 1);
-    purpleVisible   = read_bit_stream(buff, subOffset, 1);
-    whiteVisible    = read_bit_stream(buff, subOffset, 1);
-    monoPoly        = read_bit_stream(buff, subOffset, 2);
-    activeVariation = read_bit_stream(buff, subOffset, 8);
-    category        = read_bit_stream(buff, subOffset, 8);
+    gPatchDescr[gSlot].redVisible      = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[gSlot].blueVisible     = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[gSlot].yellowVisible   = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[gSlot].orangeVisible   = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[gSlot].greenVisible    = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[gSlot].purpleVisible   = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[gSlot].whiteVisible    = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[gSlot].monoPoly        = read_bit_stream(buff, subOffset, 2);
+    gPatchDescr[gSlot].activeVariation = read_bit_stream(buff, subOffset, 8);
+    gPatchDescr[gSlot].category        = read_bit_stream(buff, subOffset, 8);
     read_bit_stream(buff, subOffset, 12);  // Unknown or padding - may need to write to file or back to synth?
 
-    LOG_DEBUG("  Voice Count %u\n", voiceCount);
-    LOG_DEBUG("  Bar Position %u\n", barPosition);
-    LOG_DEBUG("  Red %u\n", redVisible);
-    LOG_DEBUG("  Blue %u\n", blueVisible);
-    LOG_DEBUG("  Yellow %u\n", yellowVisible);
-    LOG_DEBUG("  Orange %u\n", orangeVisible);
-    LOG_DEBUG("  Green %u\n", greenVisible);
-    LOG_DEBUG("  Purple %u\n", purpleVisible);
-    LOG_DEBUG("  White %u\n", whiteVisible);
-    LOG_DEBUG("  Mono Poly %u\n", monoPoly);
-    LOG_DEBUG("  Active Variation %u\n", activeVariation);
-    LOG_DEBUG("  Category %u\n", category);
+    LOG_DEBUG("  Voice Count %u\n", gPatchDescr[gSlot].voiceCount);
+    LOG_DEBUG("  Bar Position %u\n", gPatchDescr[gSlot].barPosition);
+    LOG_DEBUG("  Red %u\n", gPatchDescr[gSlot].redVisible);
+    LOG_DEBUG("  Blue %u\n", gPatchDescr[gSlot].blueVisible);
+    LOG_DEBUG("  Yellow %u\n", gPatchDescr[gSlot].yellowVisible);
+    LOG_DEBUG("  Orange %u\n", gPatchDescr[gSlot].orangeVisible);
+    LOG_DEBUG("  Green %u\n", gPatchDescr[gSlot].greenVisible);
+    LOG_DEBUG("  Purple %u\n", gPatchDescr[gSlot].purpleVisible);
+    LOG_DEBUG("  White %u\n", gPatchDescr[gSlot].whiteVisible);
+    LOG_DEBUG("  Mono Poly %u\n", gPatchDescr[gSlot].monoPoly);
+    LOG_DEBUG("  Active Variation %u\n", gPatchDescr[gSlot].activeVariation);
+    LOG_DEBUG("  Category %u\n", gPatchDescr[gSlot].category);
+    
+    // TODO - Might want to reconsider how we do this, since there's multiple cases of this setting of colour
+    for (uint32_t i = 0; i < NUM_GUI_VARIATIONS; i++) {
+        gMainButtonArray[(uint32_t)variation1ButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+    }
 
-    gVariation = activeVariation;
+    gMainButtonArray[gPatchDescr[gSlot].activeVariation+(uint32_t)variation1ButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
 }
 
 int parse_patch(uint32_t slot, uint8_t * buff, int length) { // TODO: also accessed from file, so need to decide how to access from USB and file

@@ -82,7 +82,7 @@ tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char
         }
     }
 
-    switch (module->param[gVariation][pitchTypeParamIndex].value) {
+    switch (module->param[gPatchDescr[gSlot].activeVariation][pitchTypeParamIndex].value) {
         case 0:   // Semi. -64 to 63
         {
             double res;
@@ -230,7 +230,7 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
         }
     }
 
-    switch (module->param[gVariation][rateModeParamIndex].value) {
+    switch (module->param[gPatchDescr[gSlot].activeVariation][rateModeParamIndex].value) {
         case 0: // Sub - compute range in s
         {
             double range_start = 699.0;
@@ -304,7 +304,7 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
         }
         default:
         {
-            LOG_ERROR("Wrong case %u in paramTypeLFORate\n", module->param[gVariation][rateModeParamIndex].value);
+            LOG_ERROR("Wrong case %u in paramTypeLFORate\n", module->param[gPatchDescr[gSlot].activeVariation][rateModeParamIndex].value);
         }
     }
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
@@ -381,7 +381,7 @@ tRectangle render_paramType1MixLevel(tModule * module, tRectangle rectangle, cha
     }
     //level = paramValue;
 
-    if (module->param[gVariation][expLinDBparam].value == 2) { // display dB
+    if (module->param[gPatchDescr[gSlot].activeVariation][expLinDBparam].value == 2) { // display dB
         if (paramValue == 0.0) {
             snprintf(buff, sizeof(buff), "-oodB");
         } else {
@@ -592,7 +592,7 @@ tRectangle render_paramType1PulseTime(tModule * module, tRectangle rectangle, ch
 
     time_to_display = pulseLoTime[(int)paramValue]; // in s
 
-    switch (module->param[gVariation][2].value) {
+    switch (module->param[gPatchDescr[gSlot].activeVariation][2].value) {
         case 0:   // Sub
         {
             time_to_display /= 10.0;
@@ -665,7 +665,7 @@ tRectangle render_paramType1BipLevel(tModule * module, tRectangle rectangle, cha
             res = maxVal;             // Clip
         }
     } else {
-        switch (module->param[gVariation][typeParamIndex].value) {
+        switch (module->param[gPatchDescr[gSlot].activeVariation][typeParamIndex].value) {
             case 0: // Bip
             {
                 if (paramValue < 127) {

@@ -644,4 +644,20 @@ typedef struct {
     tRgb          backgroundColour;
 } tButton;
 
+typedef struct {
+    uint8_t  voiceCount;
+    uint16_t barPosition;
+    uint8_t  redVisible;
+    uint8_t  blueVisible;
+    uint8_t  yellowVisible;
+    uint8_t  orangeVisible;
+    uint8_t  greenVisible;
+    uint8_t  purpleVisible;
+    uint8_t  whiteVisible;
+    uint8_t  monoPoly;
+    uint8_t  activeVariation;
+    uint8_t  category;
+} tPatchDescr;
+
+
 #endif // __TYPES_H__

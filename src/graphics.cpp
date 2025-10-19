@@ -412,19 +412,19 @@ void write_database_to_file(const char * filepath) {
     }
     write_bit_stream(buff, &bitPos, 5, 0); // Unknown
     
-    write_bit_stream(buff, &bitPos, 5, 1); // Voice count
-    write_bit_stream(buff, &bitPos, 14, 499); // Bar position
+    write_bit_stream(buff, &bitPos, 5, gPatchDescr[gSlot].voiceCount); // Voice count
+    write_bit_stream(buff, &bitPos, 14, gPatchDescr[gSlot].barPosition); // Bar position
     write_bit_stream(buff, &bitPos, 3, 2); // Unknown, but seems to consistently be value of 2
-    write_bit_stream(buff, &bitPos, 1, 1); // visible
-    write_bit_stream(buff, &bitPos, 1, 1); // visible
-    write_bit_stream(buff, &bitPos, 1, 1); // visible
-    write_bit_stream(buff, &bitPos, 1, 1); // visible
-    write_bit_stream(buff, &bitPos, 1, 1); // visible
-    write_bit_stream(buff, &bitPos, 1, 1); // visible
-    write_bit_stream(buff, &bitPos, 1, 1); // visible
-    write_bit_stream(buff, &bitPos, 2, 1); // Monopoly
-    write_bit_stream(buff, &bitPos, 8, 0); // Active variation
-    write_bit_stream(buff, &bitPos, 8, 14); // category
+    write_bit_stream(buff, &bitPos, 1, gPatchDescr[gSlot].redVisible); // visible
+    write_bit_stream(buff, &bitPos, 1, gPatchDescr[gSlot].blueVisible); // visible
+    write_bit_stream(buff, &bitPos, 1, gPatchDescr[gSlot].yellowVisible); // visible
+    write_bit_stream(buff, &bitPos, 1, gPatchDescr[gSlot].orangeVisible); // visible
+    write_bit_stream(buff, &bitPos, 1, gPatchDescr[gSlot].greenVisible); // visible
+    write_bit_stream(buff, &bitPos, 1, gPatchDescr[gSlot].purpleVisible); // visible
+    write_bit_stream(buff, &bitPos, 1, gPatchDescr[gSlot].whiteVisible); // visible
+    write_bit_stream(buff, &bitPos, 2, gPatchDescr[gSlot].monoPoly); // Monopoly
+    write_bit_stream(buff, &bitPos, 8, gPatchDescr[gSlot].activeVariation); // Active variation
+    write_bit_stream(buff, &bitPos, 8, gPatchDescr[gSlot].category); // category
     write_bit_stream(buff, &bitPos, 12, 0); // Unknown
     
     // TODO - This will go into a write module list function, in a new protocol source file

@@ -37,7 +37,6 @@
 extern bool            gQuitAll;
 extern GLFWwindow *    gWindow;
 extern uint32_t        gLocation;
-extern uint32_t        gVariation;
 extern bool            gReDraw;
 extern bool            gCommandKeyPressed;
 extern tButton         gMainButtonArray[];
@@ -51,6 +50,7 @@ extern tModuleDragging gModuleDrag;
 extern tMessageQueue   gCommandQueue;
 extern uint32_t        gMorphGroupFocus;
 extern uint32_t        gSlot;
+extern tPatchDescr     gPatchDescr[MAX_SLOTS];
 
 uint32_t array_size_main_button_array(void);
 
