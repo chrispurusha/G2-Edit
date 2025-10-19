@@ -398,47 +398,40 @@ void write_database_to_file(const char * filepath) {
     snprintf(charBuff, sizeof(charBuff)-1, "Info=BUILD 320");
     fwrite(charBuff, 1, strlen(charBuff), file);
     fwrite(eol, 1, strlen(eol), file);
+    write_bit_stream(buff, &bitPos, 8, 0);
 
-    write_bit_stream(buff, &bitPos, 8, 1/*perfMode*/);
-    write_bit_stream(buff, &bitPos, 8, 2/*perfBank*/);
-    write_bit_stream(buff, &bitPos, 8, 3/*perfLocation*/);
-
-    write_bit_stream(buff, &bitPos, 1, 1/*memoryProtect & 0x1*/);
-    write_bit_stream(buff, &bitPos, 7, 0);  // padding
-
-    write_bit_stream(buff, &bitPos, 8, 4/*midiChanA*/);
-    write_bit_stream(buff, &bitPos, 8, 5/*midiChanB*/);
-    write_bit_stream(buff, &bitPos, 8, 6/*midiChanC*/);
-    write_bit_stream(buff, &bitPos, 8, 7/*midiChanD*/);
-
-    write_bit_stream(buff, &bitPos, 8, 8/*globalChan*/);
-    write_bit_stream(buff, &bitPos, 8, 9/*sysexID*/);
-
-    write_bit_stream(buff, &bitPos, 1, 1/*localOn & 0x1*/);
-    write_bit_stream(buff, &bitPos, 7, 0);  // padding
-
-    write_bit_stream(buff, &bitPos, 6, 0);  // padding
-    write_bit_stream(buff, &bitPos, 1, 1/*progChangeRcv & 0x1*/);
-    write_bit_stream(buff, &bitPos, 1, 1/*progChangeSnd & 0x1*/);
-    write_bit_stream(buff, &bitPos, 6, 0);  // padding
-
-    write_bit_stream(buff, &bitPos, 1, 1/*controllersRcv & 0x1*/);
-    write_bit_stream(buff, &bitPos, 1, 1/*controllersSnd & 0x1*/);
-
-    write_bit_stream(buff, &bitPos, 8, 1/*sendClockFlags*/);
-    write_bit_stream(buff, &bitPos, 8, 1/*tuneCent*/);
-    write_bit_stream(buff, &bitPos, 8, 1/*globalShiftActive*/);
-    write_bit_stream(buff, &bitPos, 8, 1/*globalOctaveShift*/);
-    write_bit_stream(buff, &bitPos, 8, 1/*tuneSemi*/);
-    write_bit_stream(buff, &bitPos, 8, 1/*filler*/);
-    write_bit_stream(buff, &bitPos, 8, 1/*pedalPolarity*/);
-    write_bit_stream(buff, &bitPos, 8, 1/*controlPedalGain*/);
-
-    // Add remaining 17 unknown bytes as zero for now
-    for (int i = 0; i < 17; i++) {
-        write_bit_stream(buff, &bitPos, 8, 0);
+    write_bit_stream(buff, &bitPos, 8, 23); // Version
+    write_bit_stream(buff, &bitPos, 8, 0); // Type (1 = performance when we get round to implementing that)
+    
+    // TODO - This will go into a write patch_descr function, in a new protocol source file
+    write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_PATCH_DESCRIPTION); // Type 0x21
+    write_bit_stream(buff, &bitPos, 16, 15); // Length
+    
+    for (int i=0; i<7; i++) {
+        write_bit_stream(buff, &bitPos, 8, 0); // Unknown
     }
-
+    write_bit_stream(buff, &bitPos, 5, 0); // Unknown
+    
+    write_bit_stream(buff, &bitPos, 5, 1); // Voice count
+    write_bit_stream(buff, &bitPos, 14, 499); // Bar position
+    write_bit_stream(buff, &bitPos, 3, 2); // Unknown, but seems to consistently be value of 2
+    write_bit_stream(buff, &bitPos, 1, 1); // visible
+    write_bit_stream(buff, &bitPos, 1, 1); // visible
+    write_bit_stream(buff, &bitPos, 1, 1); // visible
+    write_bit_stream(buff, &bitPos, 1, 1); // visible
+    write_bit_stream(buff, &bitPos, 1, 1); // visible
+    write_bit_stream(buff, &bitPos, 1, 1); // visible
+    write_bit_stream(buff, &bitPos, 1, 1); // visible
+    write_bit_stream(buff, &bitPos, 2, 1); // Monopoly
+    write_bit_stream(buff, &bitPos, 8, 0); // Active variation
+    write_bit_stream(buff, &bitPos, 8, 14); // category
+    write_bit_stream(buff, &bitPos, 12, 0); // Unknown
+    
+    // TODO - This will go into a write module list function, in a new protocol source file
+    
+    write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_MODULE_LIST); // Type 0x4a
+    write_bit_stream(buff, &bitPos, 16, 66); // Length
+    
     writtenSize = fwrite(buff, 1, BIT_TO_BYTE_ROUND_UP(bitPos), file);
     
     fclose(file);
@@ -447,6 +440,7 @@ void write_database_to_file(const char * filepath) {
 void check_action_flags(void) {
     if (gShowOpenFileReadDialogue == true) { // TODO: move to a function
         char * path = open_file_read_dialogue();
+        usleep(1000000);
 
         if (path != NULL) {
             LOG_INFO("\n\nSelected file: %s\n", path);
@@ -464,6 +458,7 @@ void check_action_flags(void) {
 
     if (gShowOpenFileWriteDialogue == true) { // TODO: move to a function
         char * path = open_file_write_dialogue();
+        usleep(1000000);
 
         if (path != NULL) {
             LOG_INFO("\n\nSelected file: %s\n", path);
