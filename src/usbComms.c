@@ -156,37 +156,6 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     return retVal;
 }
 
-static void parse_cable_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
-    tCableKey key   = {0};
-    tCable    cable = {0};
-
-    LOG_DEBUG("Cable list\n");
-
-    key.slot     = slot;
-    key.location = read_bit_stream(buff, subOffset, 2);
-    LOG_DEBUG("Location       0x%x\n", key.location);
-    LOG_DEBUG("Unknown        0x%x\n", read_bit_stream(buff, subOffset, 12));
-    uint32_t cableCount = read_bit_stream(buff, subOffset, 10);
-    LOG_DEBUG("Cable Count    %d\n", cableCount);
-
-    for (uint32_t i = 0; i < cableCount; i++) {
-        cable.colour = read_bit_stream(buff, subOffset, 3);
-        //LOG_DEBUG(" Colour         0x%x\n", cable.colour);
-        key.moduleFromIndex = read_bit_stream(buff, subOffset, 8);         // key will get written into struct on write
-        //LOG_DEBUG(" Module From    %d\n", key.moduleFromIndex);
-        key.connectorFromIoCount = read_bit_stream(buff, subOffset, 6);
-        //LOG_DEBUG(" Connector From %d\n", key.connectorFromIoCount);
-        key.linkType = read_bit_stream(buff, subOffset, 1);   // 1 = output to input, 0 = input to input
-        //LOG_DEBUG(" Link Type      0x%x\n", key.linkType);
-        key.moduleToIndex = read_bit_stream(buff, subOffset, 8);
-        //LOG_DEBUG(" Module To      %d\n", key.moduleToIndex);
-        key.connectorToIoCount = read_bit_stream(buff, subOffset, 6);
-        //LOG_DEBUG(" Connector To   %d\n", key.connectorToIoCount);
-
-        write_cable(key, &cable);
-    }
-}
-
 static void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     uint32_t   variationCount = 0;
     uint32_t   paramCount     = 0;
