@@ -156,52 +156,6 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     return retVal;
 }
 
-static void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
-    uint32_t   i      = 0;
-    uint32_t   j      = 0;
-    uint32_t   type   = 0;
-    tModuleKey key    = {0};
-    tModule    module = {0};
-
-    LOG_DEBUG("Module list\n");
-
-    key.slot     = slot;
-    key.location = read_bit_stream(buff, subOffset, 2);
-    LOG_DEBUG("Location       0x%x\n", key.location);     // Discerns between FX and main, could put in the module itself
-    uint32_t moduleCount = read_bit_stream(buff, subOffset, 8);
-    LOG_DEBUG("Module Count   %d\n", moduleCount);
-
-    for (i = 0; i < moduleCount; i++) {
-        type      = read_bit_stream(buff, subOffset, 8);
-        key.index = read_bit_stream(buff, subOffset, 8);
-
-        if (read_module(key, &module) == true) {
-            LOG_DEBUG("Module already created\n");
-        }
-        module.type      = type;
-        module.column    = read_bit_stream(buff, subOffset, 7);        // 7
-        module.row       = read_bit_stream(buff, subOffset, 7);        // 7
-        module.colour    = read_bit_stream(buff, subOffset, 8);        // 8
-        module.upRate    = read_bit_stream(buff, subOffset, 1);        // 1
-        module.isLed     = read_bit_stream(buff, subOffset, 1);        // 1
-        module.unknown1  = read_bit_stream(buff, subOffset, 6);        // 6
-        module.modeCount = read_bit_stream(buff, subOffset, 4);        // 4
-
-        LOG_DEBUG("Module type %u\n", module.type);
-        LOG_DEBUG("Module column %u\n", module.column);
-        LOG_DEBUG("Module row %u\n", module.row);
-
-        for (j = 0; j < module.modeCount; j++) {
-            module.mode[j].value = read_bit_stream(buff, subOffset, 6);
-            LOG_DEBUG("Mode index %u = %u\n", j, module.mode[j].value);
-            LOG_DEBUG("MODE %u %u\n", j, module.mode[j].value);
-        }
-
-        LOG_DEBUG("Number connectors for module %u\n", module_connector_count(type));
-        write_module(key, &module);
-    }
-}
-
 static void parse_cable_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     tCableKey key   = {0};
     tCable    cable = {0};

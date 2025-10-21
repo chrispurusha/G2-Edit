@@ -100,6 +100,117 @@ void write_patch_descr(uint8_t * buff, uint32_t * bitPos) {
     // TODO: Possibly pad, using something similar to BIT_TO_BYTE_ROUND_UP(bitPos). Maybe pass in buffer size, for over-write checks
 }
 
+void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
+    uint32_t   i      = 0;
+    uint32_t   j      = 0;
+    uint32_t   type   = 0;
+    tModuleKey key    = {0};
+    tModule    module = {0};
+
+    LOG_DEBUG("Module list\n");
+
+    key.slot     = slot;
+    key.location = read_bit_stream(buff, subOffset, 2);
+    LOG_DEBUG("Location       0x%x\n", key.location);     // Discerns between FX and main, could put in the module itself
+    uint32_t moduleCount = read_bit_stream(buff, subOffset, 8);
+    LOG_DEBUG("Module Count   %d\n", moduleCount);
+
+    for (i = 0; i < moduleCount; i++) {
+        type      = read_bit_stream(buff, subOffset, 8);
+        key.index = read_bit_stream(buff, subOffset, 8);
+
+        if (read_module(key, &module) == true) {
+            LOG_DEBUG("Module already created\n");
+        }
+        module.type      = type;
+        module.column    = read_bit_stream(buff, subOffset, 7);        // 7
+        module.row       = read_bit_stream(buff, subOffset, 7);        // 7
+        module.colour    = read_bit_stream(buff, subOffset, 8);        // 8
+        module.upRate    = read_bit_stream(buff, subOffset, 1);        // 1
+        module.isLed     = read_bit_stream(buff, subOffset, 1);        // 1
+        module.unknown1  = read_bit_stream(buff, subOffset, 6);        // 6
+        module.modeCount = read_bit_stream(buff, subOffset, 4);        // 4
+
+        LOG_DEBUG("Module type %u\n", module.type);
+        LOG_DEBUG("Module column %u\n", module.column);
+        LOG_DEBUG("Module row %u\n", module.row);
+
+        for (j = 0; j < module.modeCount; j++) {
+            module.mode[j].value = read_bit_stream(buff, subOffset, 6);
+            LOG_DEBUG("Mode index %u = %u\n", j, module.mode[j].value);
+            LOG_DEBUG("MODE %u %u\n", j, module.mode[j].value);
+        }
+
+        LOG_DEBUG("Number connectors for module %u\n", module_connector_count(type));
+        write_module(key, &module);
+    }
+}
+    
+void write_module_list(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
+    tModule    module      = {0};
+    uint32_t   moduleCount = 0;
+    bool       validModule = false;
+    int32_t   location = 1;
+    uint32_t   sizeBitPos = 0;
+    uint32_t i = 0;
+    uint32_t   j      = 0;
+    
+    for (location = 1; location>=0; location--) {
+        LOG_DEBUG("Location %d\n", location);
+        write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_MODULE_LIST);
+        sizeBitPos = *bitPos;
+        write_bit_stream(buff, bitPos, 16, 8); // Length of following in bytes
+        
+        moduleCount = 0;
+        reset_walk_module();
+        
+        do {
+            validModule = walk_next_module(&module);
+            if (validModule == true) {  // Possibly only want modules of a type / location
+                if (module.key.location == location) {
+                    moduleCount++;
+                }
+            }
+        } while (validModule);
+        
+        LOG_DEBUG("Module count on location %d = %u\n", location, moduleCount);
+        
+        finish_walk_module();
+        
+        write_bit_stream(buff, bitPos, 2, location);  // Location
+        write_bit_stream(buff, bitPos, 8, moduleCount);   // 1 on this location!?
+        
+        reset_walk_module();
+        
+        do {
+            validModule = walk_next_module(&module);
+            if (validModule == true) {
+                if (module.key.location == location) {
+                    write_bit_stream(buff, bitPos, 8, module.type); // Type
+                    write_bit_stream(buff, bitPos, 8, module.key.index); // Type
+                    write_bit_stream(buff, bitPos, 7, module.column);
+                    write_bit_stream(buff, bitPos, 7, module.row);
+                    write_bit_stream(buff, bitPos, 8, module.colour);
+                    write_bit_stream(buff, bitPos, 1, module.upRate);
+                    write_bit_stream(buff, bitPos, 1, module.isLed);
+                    write_bit_stream(buff, bitPos, 6, module.unknown1);
+                    write_bit_stream(buff, bitPos, 4, module.modeCount);
+                    
+                    for (j = 0; j < module.modeCount; j++) {
+                        write_bit_stream(buff, bitPos, 6, module.mode[j].value);
+                    }
+                }
+            }
+        } while (validModule);
+        
+        finish_walk_module();
+        
+        *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+        write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos-sizeBitPos)-2);
+    }
+    LOG_DEBUG("Write buff for module list complete\n");
+}
+    
 #ifdef __cplusplus
 }
 #endif
