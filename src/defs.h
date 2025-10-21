@@ -33,6 +33,7 @@
 #define LOG_DEBUG_DIRECT(fmt, ...)    ((void)0)
 #endif
 
+#define PATCH_FILE_SIZE                      (10*1024*1024)
 #define TARGET_FRAME_BUFF_WIDTH              (2560)
 #define TARGET_FRAME_BUFF_HEIGHT             (1440)
 #define GLOBAL_GUI_SCALE                     (2)
