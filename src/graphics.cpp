@@ -369,7 +369,7 @@ void write_database_to_file(const char * filepath) {
     size_t  writtenSize = 0;
     char charBuff[1024] = {0};
     char eol[] = {0x0d, 0x0a, 0x00};
-    uint8_t buff[1024] = {0};
+    uint8_t * buff = NULL;
     uint32_t bitPos  = 0;
 
     file = fopen(filepath, "wb");
@@ -378,6 +378,15 @@ void write_database_to_file(const char * filepath) {
         LOG_ERROR("Error opening file\n");
         return;
     }
+    
+    // Couldn't really find a nice way to construct the write buffer, so allocating on the heap
+    buff = (uint8_t *)malloc(PATCH_FILE_SIZE);
+    if (buff==NULL) {
+        LOG_ERROR("Failed to allocate buffer\n");
+        fclose(file);
+        return;
+    }
+    memset(buff, 0, PATCH_FILE_SIZE);
     
     // TODO - walk through database contents and write. Commonalise the wrote protocol functions
 
@@ -393,26 +402,26 @@ void write_database_to_file(const char * filepath) {
     snprintf(charBuff, sizeof(charBuff)-1, "Info=BUILD 320");
     fwrite(charBuff, 1, strlen(charBuff), file);
     fwrite(eol, 1, strlen(eol), file);
-    write_bit_stream(buff, &bitPos, 8, 0);
-    writtenSize = fwrite(buff, 1, BIT_TO_BYTE_ROUND_UP(bitPos), file);
+    charBuff[0] = '\0';
+    fwrite(charBuff, 1, 1, file);
     
-    bitPos = 0;
-    memset(buff, 0, sizeof(buff));
+    // Think CRC calculation starts here, so from start of buff
+    
     write_bit_stream(buff, &bitPos, 8, 23); // Version
     write_bit_stream(buff, &bitPos, 8, 0); // Type (0 = patch, 1 = performance when we get round to implementing that)
-    writtenSize = fwrite(buff, 1, BIT_TO_BYTE_ROUND_UP(bitPos), file);
     
-    bitPos = 0;
-    memset(buff, 0, sizeof(buff));
     write_patch_descr(buff, &bitPos);
-    writtenSize = fwrite(buff, 1, BIT_TO_BYTE_ROUND_UP(bitPos), file);
     
-    bitPos = 0;
-    memset(buff, 0, sizeof(buff));
     write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_MODULE_LIST);
     write_bit_stream(buff, &bitPos, 16, 66); // Length
+    
+    if (BIT_TO_BYTE_ROUND_UP(bitPos) > ((PATCH_FILE_SIZE*3)/4)) {
+        LOG_ERROR("Write file size > 3/4 of %d\n", PATCH_FILE_SIZE);
+    }
+    
     writtenSize = fwrite(buff, 1, BIT_TO_BYTE_ROUND_UP(bitPos), file);
 
+    free(buff);
     fclose(file);
 }
 
