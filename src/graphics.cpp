@@ -416,7 +416,7 @@ void write_database_to_file(const char * filepath) {
     
     write_cable_list(0, buff, &bitPos);
     
-    // Do SUB_RESPONSE_CABLE_LIST = 0x52
+    write_param_list(0, buff, &bitPos);
     
     if (BIT_TO_BYTE_ROUND_UP(bitPos) > ((PATCH_FILE_SIZE*3)/4)) {
         LOG_ERROR("Write file size > 3/4 of %d\n", PATCH_FILE_SIZE);
