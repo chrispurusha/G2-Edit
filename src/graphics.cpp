@@ -414,6 +414,8 @@ void write_database_to_file(const char * filepath) {
     
     write_module_list(0, buff, &bitPos);
     
+    write_cable_list(0, buff, &bitPos);
+    
     // Do SUB_RESPONSE_CABLE_LIST = 0x52
     
     if (BIT_TO_BYTE_ROUND_UP(bitPos) > ((PATCH_FILE_SIZE*3)/4)) {
