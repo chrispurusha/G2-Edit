@@ -94,7 +94,7 @@ void write_patch_descr(uint8_t * buff, uint32_t * bitPos) {
     write_bit_stream(buff, bitPos, 8, gPatchDescr[gSlot].category);
     write_bit_stream(buff, bitPos, 12, gPatchDescr[gSlot].unknown4);
     
-    // TODO: Possibly pad, using something similar to BIT_TO_BYTE_ROUND_UP(bitPos). Maybe pass in buffer size, for over-write checks
+    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 }
 
 void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
