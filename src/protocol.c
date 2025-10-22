@@ -258,7 +258,7 @@ void write_cable_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos-sizeBitPos)-2);
-    write_bit_stream(buff, &cableCountBitPos, 8, cableCount);
+    write_bit_stream(buff, &cableCountBitPos, 10, cableCount);
 }
     
 void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
