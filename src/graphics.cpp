@@ -365,12 +365,14 @@ void read_file_into_memory_and_process(const char * filepath) {
 
 void write_database_to_file(const char * filepath) {
     FILE *  file        = NULL;
-    uint8_t ch          = 0;
+    //uint8_t ch          = 0;
     size_t  writtenSize = 0;
     char charBuff[1024] = {0};
     char eol[] = {0x0d, 0x0a, 0x00};
+    uint8_t dummyNot2[] = {0x69, 0x00, 0x09, 0x80, 0x00, 0x00, 0x60, 0x00, 0x01, 0x00, 0x00, 0x00};
     uint8_t * buff = NULL;
     uint32_t bitPos  = 0;
+    int i = 0;
 
     file = fopen(filepath, "wb");
 
@@ -412,11 +414,19 @@ void write_database_to_file(const char * filepath) {
     
     write_patch_descr(buff, &bitPos);
     
-    write_module_list(0, buff, &bitPos);
+    write_module_list(gSlot, locationVa, buff, &bitPos);
+    write_module_list(gSlot, locationFx, buff, &bitPos);
     
-    write_cable_list(0, buff, &bitPos);
+    for(i=0; i<sizeof(dummyNot2); i++) {
+        write_bit_stream(buff, &bitPos, 8, dummyNot2[i]);
+    }
     
-    write_param_list(0, buff, &bitPos);
+    write_cable_list(gSlot, locationVa, buff, &bitPos);
+    write_cable_list(gSlot, locationFx, buff, &bitPos);
+    
+    write_param_list(gSlot, locationMorph, buff, &bitPos);
+    write_param_list(gSlot, locationVa, buff, &bitPos);
+    write_param_list(gSlot, locationFx, buff, &bitPos);
     
     if (BIT_TO_BYTE_ROUND_UP(bitPos) > ((PATCH_FILE_SIZE*3)/4)) {
         LOG_ERROR("Write file size > 3/4 of %d\n", PATCH_FILE_SIZE);

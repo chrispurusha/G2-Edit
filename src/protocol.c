@@ -143,57 +143,55 @@ void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     }
 }
     
-void write_module_list(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
+void write_module_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos) {
     tModule    module      = {0};
     uint32_t   moduleCount = 0;
     bool       validModule = false;
-    int32_t   location = 0;
+    //int32_t   location = 0;
     uint32_t   sizeBitPos = 0;
     uint32_t   moduleCountBitPos = 0;
     uint32_t   j      = 0;
     
-    for (location = 1; location>=0; location--) {
-        write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_MODULE_LIST);
-        
-        sizeBitPos = *bitPos;
-        write_bit_stream(buff, bitPos, 16, 0);  // Populated later
-        
-        write_bit_stream(buff, bitPos, 2, location);
-        
-        moduleCountBitPos = *bitPos;
-        write_bit_stream(buff, bitPos, 8, 0);  // Populated later
-        
-        moduleCount = 0;
-        reset_walk_module();
-        
-        do {
-            validModule = walk_next_module(&module);
-            if (validModule == true) {
-                if (module.key.location == location) {
-                    moduleCount++;
-                    write_bit_stream(buff, bitPos, 8, module.type);
-                    write_bit_stream(buff, bitPos, 8, module.key.index);
-                    write_bit_stream(buff, bitPos, 7, module.column);
-                    write_bit_stream(buff, bitPos, 7, module.row);
-                    write_bit_stream(buff, bitPos, 8, module.colour);
-                    write_bit_stream(buff, bitPos, 1, module.upRate);
-                    write_bit_stream(buff, bitPos, 1, module.isLed);
-                    write_bit_stream(buff, bitPos, 6, module.unknown1);
-                    write_bit_stream(buff, bitPos, 4, module.modeCount);
-                    
-                    for (j = 0; j < module.modeCount; j++) {
-                        write_bit_stream(buff, bitPos, 6, module.mode[j].value);
-                    }
+    write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_MODULE_LIST);
+    
+    sizeBitPos = *bitPos;
+    write_bit_stream(buff, bitPos, 16, 0);  // Populated later
+    
+    write_bit_stream(buff, bitPos, 2, location);
+    
+    moduleCountBitPos = *bitPos;
+    write_bit_stream(buff, bitPos, 8, 0);  // Populated later
+    
+    moduleCount = 0;
+    reset_walk_module();
+    
+    do {
+        validModule = walk_next_module(&module);
+        if (validModule == true) {
+            if ((module.key.slot == slot) && (module.key.location == location)) {
+                moduleCount++;
+                write_bit_stream(buff, bitPos, 8, module.type);
+                write_bit_stream(buff, bitPos, 8, module.key.index);
+                write_bit_stream(buff, bitPos, 7, module.column);
+                write_bit_stream(buff, bitPos, 7, module.row);
+                write_bit_stream(buff, bitPos, 8, module.colour);
+                write_bit_stream(buff, bitPos, 1, module.upRate);
+                write_bit_stream(buff, bitPos, 1, module.isLed);
+                write_bit_stream(buff, bitPos, 6, module.unknown1);
+                write_bit_stream(buff, bitPos, 4, module.modeCount);
+                
+                for (j = 0; j < module.modeCount; j++) {
+                    write_bit_stream(buff, bitPos, 6, module.mode[j].value);
                 }
             }
-        } while (validModule);
-        
-        finish_walk_module();
-        
-        *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
-        write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos-sizeBitPos)-2);
-        write_bit_stream(buff, &moduleCountBitPos, 8, moduleCount);
-    }
+        }
+    } while (validModule);
+    
+    finish_walk_module();
+    
+    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+    write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos-sizeBitPos)-2);
+    write_bit_stream(buff, &moduleCountBitPos, 8, moduleCount);
 }
 
 void parse_cable_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
@@ -221,49 +219,46 @@ void parse_cable_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
-void write_cable_list(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
+void write_cable_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos) {
     tCable    cable      = {0};
     uint32_t   cableCount = 0;
     bool       validCable = false;
-    int32_t   location = 0;
     uint32_t   sizeBitPos = 0;
     uint32_t   cableCountBitPos = 0;
     
-    for (location = 1; location>=0; location--) {
-        write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_CABLE_LIST);
-        
-        sizeBitPos = *bitPos;
-        write_bit_stream(buff, bitPos, 16, 0);  // Populated later
-        write_bit_stream(buff, bitPos, 2, location);
-        write_bit_stream(buff, bitPos, 12, 0);  // Unknown - TODO, store
-        
-        cableCountBitPos = *bitPos;
-        write_bit_stream(buff, bitPos, 10, 0);  // Populated later
-        
-        cableCount = 0;
-        reset_walk_cable();
-        
-        do {
-            validCable = walk_next_cable(&cable);
-            if (validCable == true) {
-                if (cable.key.location == location) {
-                    cableCount++;
-                    write_bit_stream(buff, bitPos, 3, cable.colour);
-                    write_bit_stream(buff, bitPos, 8, cable.key.moduleFromIndex);
-                    write_bit_stream(buff, bitPos, 6, cable.key.connectorFromIoCount);
-                    write_bit_stream(buff, bitPos, 1, cable.key.linkType);
-                    write_bit_stream(buff, bitPos, 8, cable.key.moduleToIndex);
-                    write_bit_stream(buff, bitPos, 6, cable.key.connectorToIoCount);
-                }
+    write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_CABLE_LIST);
+    
+    sizeBitPos = *bitPos;
+    write_bit_stream(buff, bitPos, 16, 0);  // Populated later
+    write_bit_stream(buff, bitPos, 2, location);
+    write_bit_stream(buff, bitPos, 12, 0);  // Unknown - TODO, store
+    
+    cableCountBitPos = *bitPos;
+    write_bit_stream(buff, bitPos, 10, 0);  // Populated later
+    
+    cableCount = 0;
+    reset_walk_cable();
+    
+    do {
+        validCable = walk_next_cable(&cable);
+        if (validCable == true) {
+            if ((cable.key.slot == slot) && (cable.key.location == location)) {
+                cableCount++;
+                write_bit_stream(buff, bitPos, 3, cable.colour);
+                write_bit_stream(buff, bitPos, 8, cable.key.moduleFromIndex);
+                write_bit_stream(buff, bitPos, 6, cable.key.connectorFromIoCount);
+                write_bit_stream(buff, bitPos, 1, cable.key.linkType);
+                write_bit_stream(buff, bitPos, 8, cable.key.moduleToIndex);
+                write_bit_stream(buff, bitPos, 6, cable.key.connectorToIoCount);
             }
-        } while (validCable);
-        
-        finish_walk_cable();
-        
-        *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
-        write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos-sizeBitPos)-2);
-        write_bit_stream(buff, &cableCountBitPos, 8, cableCount);
-    }
+        }
+    } while (validCable);
+    
+    finish_walk_cable();
+    
+    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+    write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos-sizeBitPos)-2);
+    write_bit_stream(buff, &cableCountBitPos, 8, cableCount);
 }
     
 void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
@@ -333,45 +328,94 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
-void write_param_list(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
+void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos) {
     tModule    module      = {0};
     uint32_t   moduleCount = 0;
     bool       validModule = false;
-    int32_t   location = 0;
+    //int32_t   location = 0;
     uint32_t   sizeBitPos = 0;
     uint32_t   moduleCountBitPos = 0;
+    uint32_t paramCount = 0;
+    uint32_t variations = 0;
+    uint32_t i = 0;
     uint32_t   j      = 0;
     
-    for (location = 1; location>=0; location--) {
-        write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_PARAM_LIST);
+    write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_PARAM_LIST);
+    
+    sizeBitPos = *bitPos;
+    write_bit_stream(buff, bitPos, 16, 0);  // Populated later
+    
+    write_bit_stream(buff, bitPos, 2, location);
+    
+    moduleCountBitPos = *bitPos;
+    write_bit_stream(buff, bitPos, 8, 0);  // Populated later
+    
+    // See if there's at least one valid module on the location and set variations to non-zero if so
+    reset_walk_module();
+    do {
+        validModule = walk_next_module(&module);
+        if (validModule == true) {
+            if ((module.key.slot == slot) && (module.key.location == location)) {
+                // We found a valid module on that location, so can set variations to non-zero
+                variations = NUM_VARIATIONS-1;
+                break;
+            }
+        }
+    } while (validModule);
+    finish_walk_module();
+    
+    write_bit_stream(buff, bitPos, 8, variations);  // Variation count - always 10 for synth, 9 for file?
         
-        sizeBitPos = *bitPos;
-        write_bit_stream(buff, bitPos, 16, 0);  // Populated later
-
-        write_bit_stream(buff, bitPos, 2, location);
-        
-        moduleCountBitPos = *bitPos;
-        write_bit_stream(buff, bitPos, 8, 0);  // Populated later
-        write_bit_stream(buff, bitPos, 8, 10);  // Variation count - always 10
-        
-        reset_walk_module();
-        
-        do {
-            validModule = walk_next_module(&module);
-            if (validModule == true) {
-                if (module.key.location == location) {
+    reset_walk_module();
+    
+    do {
+        validModule = walk_next_module(&module);
+        if (validModule == true) {
+            if ((module.key.slot == slot) && (module.key.location == location)) {
+                
+                if (location == 2) {   // Move all these down to module_param_count for unknowntype0
+                    if (module.key.index==1) {
+                        paramCount = 16;
+                    } else if (module.key.index==2) {
+                        paramCount = 2;
+                    } else if (module.key.index==3) {
+                        paramCount = 2;
+                    } else if (module.key.index==4) {
+                        paramCount = 2;
+                    } else if (module.key.index==5) {
+                        paramCount = 3;
+                    } else if (module.key.index==6) {
+                        paramCount = 4;
+                    } else if (module.key.index==7) {
+                        paramCount = 2;
+                    }
+                } else {
+                    paramCount = module_param_count(module.type);
+                }
+                
+                if (paramCount > 0) {
                     moduleCount++;
                     write_bit_stream(buff, bitPos, 8, module.key.index);
+                    
+                    write_bit_stream(buff, bitPos, 7, paramCount);
+                    
+                    for (i=0; i<(NUM_VARIATIONS-1); i++) {
+                        write_bit_stream(buff, bitPos, 8, i);
+                        for (j=0; j<paramCount; j++) {
+                            write_bit_stream(buff, bitPos, 7, module.param[i][j].value);
+                        }
+                    }
                 }
             }
-        } while (validModule);
-        
-        finish_walk_module();
-        
-        *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
-        write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos-sizeBitPos)-2);
-        write_bit_stream(buff, &moduleCountBitPos, 8, moduleCount);
-    }
+        }
+    } while (validModule);
+    
+    finish_walk_module();
+    
+    write_bit_stream(buff, &moduleCountBitPos, 8, moduleCount);
+    
+    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+    write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos-sizeBitPos)-2);
 }
         
 #ifdef __cplusplus
