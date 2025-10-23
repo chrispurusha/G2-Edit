@@ -428,6 +428,16 @@ void write_database_to_file(const char * filepath) {
     write_param_list(gSlot, locationVa, buff, &bitPos);
     write_param_list(gSlot, locationFx, buff, &bitPos);
     
+    write_morph_params(gSlot, locationMorph, buff, &bitPos);
+    
+    write_param_names(gSlot, locationMorph, buff, &bitPos);
+    write_param_names(gSlot, locationVa, buff, &bitPos);
+    write_param_names(gSlot, locationFx, buff, &bitPos);
+    
+    //write_module_names(gSlot, locationMorph, buff, &bitPos);
+    write_module_names(gSlot, locationVa, buff, &bitPos);
+    write_module_names(gSlot, locationFx, buff, &bitPos);
+    
     if (BIT_TO_BYTE_ROUND_UP(bitPos) > ((PATCH_FILE_SIZE*3)/4)) {
         LOG_ERROR("Write file size > 3/4 of %d\n", PATCH_FILE_SIZE);
     }
