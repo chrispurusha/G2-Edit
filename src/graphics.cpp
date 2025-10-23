@@ -369,10 +369,10 @@ void write_database_to_file(const char * filepath) {
     size_t  writtenSize = 0;
     char charBuff[1024] = {0};
     char eol[] = {0x0d, 0x0a, 0x00};
-    uint8_t dummyNot2[] = {0x69, 0x00, 0x09, 0x80, 0x00, 0x00, 0x60, 0x00, 0x01, 0x00, 0x00, 0x00};
     uint8_t * buff = NULL;
     uint32_t bitPos  = 0;
     int i = 0;
+    uint32_t  calcCrc    = 0;
 
     file = fopen(filepath, "wb");
 
@@ -388,10 +388,10 @@ void write_database_to_file(const char * filepath) {
         fclose(file);
         return;
     }
-    memset(buff, 0, PATCH_FILE_SIZE);
     
-    // TODO - walk through database contents and write. Commonalise the wrote protocol functions
+    memset(buff, 0, PATCH_FILE_SIZE);
 
+    // Header text, which seems to be constant across latest patch files
     snprintf(charBuff, sizeof(charBuff)-1, "Version=Nord Modular G2 File Format 1");
     fwrite(charBuff, 1, strlen(charBuff), file);
     fwrite(eol, 1, strlen(eol), file);
@@ -407,8 +407,6 @@ void write_database_to_file(const char * filepath) {
     charBuff[0] = '\0';
     fwrite(charBuff, 1, 1, file);
     
-    // Think CRC calculation starts here, so from start of buff
-    
     write_bit_stream(buff, &bitPos, 8, 23); // Version
     write_bit_stream(buff, &bitPos, 8, 0); // Type (0 = patch, 1 = performance when we get round to implementing that)
     
@@ -417,9 +415,7 @@ void write_database_to_file(const char * filepath) {
     write_module_list(gSlot, locationVa, buff, &bitPos);
     write_module_list(gSlot, locationFx, buff, &bitPos);
     
-    for(i=0; i<sizeof(dummyNot2); i++) {
-        write_bit_stream(buff, &bitPos, 8, dummyNot2[i]);
-    }
+    // 0x69 note2 write goes here
     
     write_cable_list(gSlot, locationVa, buff, &bitPos);
     write_cable_list(gSlot, locationFx, buff, &bitPos);
@@ -430,20 +426,27 @@ void write_database_to_file(const char * filepath) {
     
     write_morph_params(gSlot, locationMorph, buff, &bitPos);
     
+    // 0x62, 0x60 knobs and controllers possible go here
+    
     write_param_names(gSlot, locationMorph, buff, &bitPos);
     write_param_names(gSlot, locationVa, buff, &bitPos);
     write_param_names(gSlot, locationFx, buff, &bitPos);
     
-    //write_module_names(gSlot, locationMorph, buff, &bitPos);
     write_module_names(gSlot, locationVa, buff, &bitPos);
     write_module_names(gSlot, locationFx, buff, &bitPos);
     
-    if (BIT_TO_BYTE_ROUND_UP(bitPos) > ((PATCH_FILE_SIZE*3)/4)) {
-        LOG_ERROR("Write file size > 3/4 of %d\n", PATCH_FILE_SIZE);
-    }
+    bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos)); // Final byte alignment round-up
+    
+    calcCrc = calc_crc16(buff, BIT_TO_BYTE_ROUND_UP(bitPos));
+    
+    write_bit_stream(buff, &bitPos, 16, calcCrc);
     
     writtenSize = fwrite(buff, 1, BIT_TO_BYTE_ROUND_UP(bitPos), file);
 
+    if (BIT_TO_BYTE_ROUND_UP(bitPos) > ((PATCH_FILE_SIZE*3)/4)) {
+        LOG_ERROR("Write file size > 3/4 of %d, might need to increase PATCH_FILE_SIZE\n", PATCH_FILE_SIZE);
+    }
+    
     free(buff);
     fclose(file);
 }
