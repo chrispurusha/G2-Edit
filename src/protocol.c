@@ -685,52 +685,7 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
     uint32_t   labelIndex = 0;
     uint32_t   numLabels = 0;
     uint32_t   paramLength = 0;
-    uint32_t   startBitPos = *bitPos;
     
-    // First pass: check if there's any data to write
-    uint32_t totalModulesWithNames = 0;
-    reset_walk_module();
-    do {
-        validModule = walk_next_module(&module);
-        if (validModule == true) {
-            if ((module.key.slot == slot) && (module.key.location == location)) {
-                if (location == locationMorph) {
-                    switch (module.key.index) {
-                        case 1: paramCount = 16; break;
-                        case 2: case 3: case 4: case 7: paramCount = 2; break;
-                        case 5: paramCount = 3; break;
-                        case 6: paramCount = 4; break;
-                        default: paramCount = 0; break;
-                    }
-                } else {
-                    paramCount = module_param_count(module.type);
-                }
-                
-                if (paramCount > 0) {
-                    for (j = 0; j < paramCount; j++) {
-                        bool hasName = false;
-                        for (k = 0; k < PROTOCOL_PARAM_NAME_SIZE && !hasName; k++) {
-                            if (module.paramName[j][k] != 0) {
-                                hasName = true;
-                            }
-                        }
-                        if (hasName) {
-                            totalModulesWithNames++;
-                            break;  // This module has at least one named param
-                        }
-                    }
-                }
-            }
-        }
-    } while (validModule);
-    finish_walk_module();
-    
-    //// If no modules with names, don't write anything
-    //if (totalModulesWithNames == 0) {
-    //    return;
-    //}
-    
-    // Now actually write the data
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_PARAM_NAMES);
     
     sizeBitPos = *bitPos;
@@ -825,7 +780,6 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos-sizeBitPos)-2);
 }
-
     
 void parse_module_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     tModule    module = {0};
@@ -878,27 +832,6 @@ void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint3
     uint32_t   itemCountBitPos = 0;
     uint32_t   k = 0;
     
-    // First pass: check if there's any data to write
-    uint32_t totalModulesWithNames = 0;
-    reset_walk_module();
-    do {
-        validModule = walk_next_module(&module);
-        if (validModule == true) {
-            if ((module.key.slot == slot) && (module.key.location == location)) {
-                if (module.name[0] != '\0') {
-                    totalModulesWithNames++;
-                }
-            }
-        }
-    } while (validModule);
-    finish_walk_module();
-    
-    // If no modules with names, don't write anything
-    //if (totalModulesWithNames == 0) {
-    //    return;
-    //}
-    
-    // Now actually write the data
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_MODULE_NAMES);
     
     sizeBitPos = *bitPos;
@@ -917,9 +850,7 @@ void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint3
         validModule = walk_next_module(&module);
         if (validModule == true) {
             if ((module.key.slot == slot) && (module.key.location == location)) {
-                bool hasName = (module.name[0] != '\0');
-                
-                if (hasName) {
+                if (module.name[0] != '\0') {
                     moduleCount++;
                     write_bit_stream(buff, bitPos, 8, module.key.index);
                     
