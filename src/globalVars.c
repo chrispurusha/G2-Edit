@@ -63,6 +63,7 @@ tMessageQueue   gCommandQueue    = {0};
 uint32_t        gMorphGroupFocus = 0;
 uint32_t        gSlot            = 0;
 tPatchDescr     gPatchDescr[MAX_SLOTS] = {0};
+uint32_t        gMorphCount[MAX_SLOTS] = {0};
 
 uint32_t array_size_main_button_array(void) {
     return ARRAY_SIZE(gMainButtonArray);

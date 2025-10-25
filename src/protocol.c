@@ -429,7 +429,6 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     tModuleKey key             = {0};
     uint32_t   variationCount  = 0;
     uint32_t   variation       = 0;
-    uint32_t   morphCount      = 0;
     uint32_t   morphParamCount = 0;
     uint32_t   paramIndex      = 0;
     uint32_t   morph           = 0;
@@ -438,10 +437,10 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     int        k               = 0;
 
     variationCount = read_bit_stream(buff, subOffset, 8);
-    morphCount     = read_bit_stream(buff, subOffset, 4);
+    gMorphCount[slot]     = read_bit_stream(buff, subOffset, 4);
     read_bit_stream(buff, subOffset, 20);  // Reserved data
 
-    LOG_DEBUG("Variations %u Morphs %u\n", variationCount, morphCount);
+    LOG_DEBUG("Variations %u Morphs %u\n", variationCount, gMorphCount[slot]);
 
     for (j = 0; j < variationCount; j++) {    // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
         variation = read_bit_stream(buff, subOffset, 4);
@@ -490,6 +489,7 @@ void write_morph_params(uint32_t slot, tLocation location, uint8_t * buff, uint3
     uint32_t   sizeBitPos = 0;
     uint32_t   morphParamCountBitPos = 0;
     uint32_t   morphParamCount = 0;
+    uint32_t paramCount = 0;
     uint32_t   i = 0;
     uint32_t   j = 0;
     uint32_t   m = 0;
@@ -500,7 +500,7 @@ void write_morph_params(uint32_t slot, tLocation location, uint8_t * buff, uint3
     write_bit_stream(buff, bitPos, 16, 0);  // Populated later
     
     write_bit_stream(buff, bitPos, 8, NUM_VARIATIONS-1);  // Variation count (9)
-    write_bit_stream(buff, bitPos, 4, NUM_MORPHS);        // Morph count (typically 4)
+    write_bit_stream(buff, bitPos, 4, gMorphCount[slot]);        // Morph count (typically 4)
     write_bit_stream(buff, bitPos, 20, 0);                // Reserved data
     
     // For each variation
@@ -525,15 +525,24 @@ void write_morph_params(uint32_t slot, tLocation location, uint8_t * buff, uint3
         do {
             validModule = walk_next_module(&module);
             if (validModule == true) {
-                if ((module.key.slot == slot) &&
-                    (module.key.location == location || module.key.location == locationVa || module.key.location == locationFx)) {
+                if ((module.key.slot == slot) && (module.key.location == location)) {
                     
-                    uint32_t paramCount = module_param_count(module.type);
+                    if (location == locationMorph) {
+                        switch (module.key.index) {
+                            case 1: paramCount = 16; break;
+                            case 2: case 3: case 4: case 7: paramCount = 2; break;
+                            case 5: paramCount = 3; break;
+                            case 6: paramCount = 4; break;
+                            default: paramCount = 0; break;
+                        }
+                    } else {
+                        paramCount = module_param_count(module.type);
+                    }
                     
                     // Check each parameter for morph assignments
                     for (j = 0; j < paramCount; j++) {
                         // Check if any morph is assigned to this parameter
-                        for (m = 0; m < NUM_MORPHS; m++) {
+                        for (m = 0; m < gMorphCount[slot]; m++) {
                             if (module.param[i][j].morphRange[m] != 0) {
                                 morphParamCount++;
                                 write_bit_stream(buff, bitPos, 2, module.key.location);
