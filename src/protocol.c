@@ -27,14 +27,49 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+    
 #include "defs.h"
 #include "types.h"
 #include "utils.h"
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "globalVars.h"
-
+    
+uint32_t get_param_count(tLocation location, uint32_t index, tModuleType type) {
+    uint32_t paramCount = 0;
+    
+    if (location == locationMorph) {
+        switch (index) {
+            case 1: {
+                paramCount = 16;
+                break;
+            }
+            case 2:
+            case 3:
+            case 4:
+            case 7: {
+                paramCount = 2;
+                break;
+            }
+            case 5: {
+                paramCount = 3;
+                break;
+            }
+            case 6: {
+                paramCount = 4;
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    } else {
+        paramCount = module_param_count(type);
+    }
+    
+    return paramCount;
+}
+    
 void parse_patch_descr(uint8_t * buff, uint32_t * subOffset) {
     gPatchDescr[gSlot].unknown1        = read_bit_stream(buff, subOffset, 32);
     gPatchDescr[gSlot].unknown2        = read_bit_stream(buff, subOffset, 29);
@@ -258,10 +293,11 @@ void write_cable_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     } while (validCable);
 
     finish_walk_cable();
-
+    
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
     
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
+    
     write_bit_stream(buff, &cableCountBitPos, 10, cableCount);
 }
 
@@ -380,30 +416,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 
         if (validModule == true) {
             if ((module.key.slot == slot) && (module.key.location == location)) {
-                if (location == locationMorph) {
-                    switch (module.key.index) { // TODO: turn this into a resources function
-                        case 1:
-                            paramCount = 16;
-                            break;
-                        case 2:
-                        case 3:
-                        case 4:
-                        case 7:
-                            paramCount = 2;
-                            break;
-                        case 5:
-                            paramCount = 3;
-                            break;
-                        case 6:
-                            paramCount = 4;
-                            break;
-                        default:
-                            paramCount = 0;
-                            break;
-                    }
-                } else {
-                    paramCount = module_param_count(module.type);
-                }
+                paramCount = get_param_count(location, module.key.index, module.type);
 
                 if (paramCount > 0) {
                     moduleCount++;
@@ -534,22 +547,7 @@ void write_morph_params(uint32_t slot, tLocation location, uint8_t * buff, uint3
             if (validModule == true) {
                 // Only filter by slot, not by location - morph params are for ALL locations
                 if (module.key.slot == slot) {
-                    if (module.key.location == locationMorph) {
-                        switch (module.key.index) {
-                            case 1: paramCount = 16;
-                                break;
-                            case 2: case 3: case 4: case 7: paramCount = 2;
-                                break;
-                            case 5: paramCount = 3;
-                                break;
-                            case 6: paramCount = 4;
-                                break;
-                            default: paramCount = 0;
-                                break;
-                        }
-                    } else {
-                        paramCount = module_param_count(module.type);
-                    }
+                    paramCount = get_param_count(location, module.key.index, module.type);
 
                     // Check each parameter for morph assignments
                     for (j = 0; j < paramCount; j++) {
@@ -725,22 +723,7 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
 
         if (validModule == true) {
             if ((module.key.slot == slot) && (module.key.location == location)) {
-                if (location == locationMorph) {
-                    switch (module.key.index) {
-                        case 1: paramCount = 16;
-                            break;
-                        case 2: case 3: case 4: case 7: paramCount = 2;
-                            break;
-                        case 5: paramCount = 3;
-                            break;
-                        case 6: paramCount = 4;
-                            break;
-                        default: paramCount = 0;
-                            break;
-                    }
-                } else {
-                    paramCount = module_param_count(module.type);
-                }
+                paramCount = get_param_count(location, module.key.index, module.type);
 
                 if (paramCount > 0) {
                     // Check if this module has any named parameters

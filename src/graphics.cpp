@@ -414,7 +414,12 @@ void write_database_to_file(const char * filepath) {
     write_module_list(gSlot, locationVa, buff, &bitPos);
     write_module_list(gSlot, locationFx, buff, &bitPos);
 
-    // 0x69 note2 write goes here
+    // 0x69 note2 write goes here - hacky for now
+    write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_CURRENT_NOTE_2);
+    write_bit_stream(buff, &bitPos, 16, gNote2Size[gSlot]);
+    for (uint32_t i=0; i<gNote2Size[gSlot]; i++) {
+        write_bit_stream(buff, &bitPos, 8, gNote2[gSlot][i]);
+    }
 
     write_cable_list(gSlot, locationVa, buff, &bitPos);
     write_cable_list(gSlot, locationFx, buff, &bitPos);
@@ -425,7 +430,6 @@ void write_database_to_file(const char * filepath) {
 
     write_morph_params(gSlot, locationMorph, buff, &bitPos);
 
-#if 0
     // 0x62, 0x60 knobs and controllers possible go here
 
     write_param_names(gSlot, locationMorph, buff, &bitPos);
@@ -434,7 +438,6 @@ void write_database_to_file(const char * filepath) {
 
     write_module_names(gSlot, locationVa, buff, &bitPos);
     write_module_names(gSlot, locationFx, buff, &bitPos);
-#endif
     
     bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos)); // Final byte alignment round-up
 
@@ -458,6 +461,8 @@ static void on_file_opened(const char * path) {
         read_file_into_memory_and_process(path);
     }
     glfwFocusWindow(gWindow);
+    
+    wake_glfw();
 }
 
 static void on_file_saved(const char * path) {
@@ -467,6 +472,8 @@ static void on_file_saved(const char * path) {
         set_window_title(path);
     }
     glfwFocusWindow(gWindow);
+    
+    wake_glfw();
 }
 
 static void check_action_flags(void) {

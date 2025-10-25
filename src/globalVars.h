@@ -52,6 +52,8 @@ extern uint32_t        gMorphGroupFocus;
 extern uint32_t        gSlot;
 extern tPatchDescr     gPatchDescr[MAX_SLOTS];
 extern uint32_t        gMorphCount[MAX_SLOTS];
+extern uint32_t        gNote2Size[MAX_SLOTS];
+extern uint8_t         gNote2[MAX_SLOTS][1024];
 
 uint32_t array_size_main_button_array(void);
 
