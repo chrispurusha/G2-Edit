@@ -23,10 +23,10 @@ extern "C" {
 
 #include "globalVars.h"
 
-bool         gQuitAll   = false;
-GLFWwindow * gWindow    = NULL;
-uint32_t     gLocation  = locationVa;
-bool         gReDraw    = true;
+bool         gQuitAll  = false;
+GLFWwindow * gWindow   = NULL;
+uint32_t     gLocation = locationVa;
+bool         gReDraw   = true;
 
 bool         gCommandKeyPressed = false;
 
@@ -54,14 +54,14 @@ bool         gShowOpenFileReadDialogue  = false;
 bool         gShowOpenFileWriteDialogue = false;
 
 
-tScrollState    gScrollState     = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE};
-tContextMenu    gContextMenu     = {0};
-tCableDragging  gCableDrag       = {0};
-tParamDragging  gParamDragging   = {0};
-tModuleDragging gModuleDrag      = {0};
-tMessageQueue   gCommandQueue    = {0};
-uint32_t        gMorphGroupFocus = 0;
-uint32_t        gSlot            = 0;
+tScrollState    gScrollState           = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE};
+tContextMenu    gContextMenu           = {0};
+tCableDragging  gCableDrag             = {0};
+tParamDragging  gParamDragging         = {0};
+tModuleDragging gModuleDrag            = {0};
+tMessageQueue   gCommandQueue          = {0};
+uint32_t        gMorphGroupFocus       = 0;
+uint32_t        gSlot                  = 0;
 tPatchDescr     gPatchDescr[MAX_SLOTS] = {0};
 uint32_t        gMorphCount[MAX_SLOTS] = {0};
 

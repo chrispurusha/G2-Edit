@@ -364,15 +364,15 @@ void read_file_into_memory_and_process(const char * filepath) {
 }
 
 void write_database_to_file(const char * filepath) {
-    FILE *  file        = NULL;
+    FILE *    file = NULL;
     //uint8_t ch          = 0;
-    size_t  writtenSize = 0;
-    char charBuff[1024] = {0};
-    char eol[] = {0x0d, 0x0a, 0x00};
-    uint8_t * buff = NULL;
-    uint32_t bitPos  = 0;
-    int i = 0;
-    uint32_t  calcCrc    = 0;
+    size_t    writtenSize    = 0;
+    char      charBuff[1024] = {0};
+    char      eol[]          = {0x0d, 0x0a, 0x00};
+    uint8_t * buff           = NULL;
+    uint32_t  bitPos         = 0;
+    int       i              = 0;
+    uint32_t  calcCrc        = 0;
 
     file = fopen(filepath, "wb");
 
@@ -380,112 +380,102 @@ void write_database_to_file(const char * filepath) {
         LOG_ERROR("Error opening file\n");
         return;
     }
-    
     // Couldn't really find a nice way to construct the write buffer, so allocating on the heap
     buff = (uint8_t *)malloc(PATCH_FILE_SIZE);
-    if (buff==NULL) {
+
+    if (buff == NULL) {
         LOG_ERROR("Failed to allocate buffer\n");
         fclose(file);
         return;
     }
-    
     memset(buff, 0, PATCH_FILE_SIZE);
 
     // Header text, which seems to be constant across latest patch files
-    snprintf(charBuff, sizeof(charBuff)-1, "Version=Nord Modular G2 File Format 1");
+    snprintf(charBuff, sizeof(charBuff) - 1, "Version=Nord Modular G2 File Format 1");
     fwrite(charBuff, 1, strlen(charBuff), file);
     fwrite(eol, 1, strlen(eol), file);
-    snprintf(charBuff, sizeof(charBuff)-1, "Type=Patch");
+    snprintf(charBuff, sizeof(charBuff) - 1, "Type=Patch");
     fwrite(charBuff, 1, strlen(charBuff), file);
     fwrite(eol, 1, strlen(eol), file);
-    snprintf(charBuff, sizeof(charBuff)-1, "Version=23");
+    snprintf(charBuff, sizeof(charBuff) - 1, "Version=23");
     fwrite(charBuff, 1, strlen(charBuff), file);
     fwrite(eol, 1, strlen(eol), file);
-    snprintf(charBuff, sizeof(charBuff)-1, "Info=BUILD 320");
+    snprintf(charBuff, sizeof(charBuff) - 1, "Info=BUILD 320");
     fwrite(charBuff, 1, strlen(charBuff), file);
     fwrite(eol, 1, strlen(eol), file);
     charBuff[0] = '\0';
     fwrite(charBuff, 1, 1, file);
-    
+
     write_bit_stream(buff, &bitPos, 8, 23); // Version
-    write_bit_stream(buff, &bitPos, 8, 0); // Type (0 = patch, 1 = performance when we get round to implementing that)
-    
+    write_bit_stream(buff, &bitPos, 8, 0);  // Type (0 = patch, 1 = performance when we get round to implementing that)
+
     write_patch_descr(buff, &bitPos);
-    
+
     write_module_list(gSlot, locationVa, buff, &bitPos);
     write_module_list(gSlot, locationFx, buff, &bitPos);
-    
+
     // 0x69 note2 write goes here
-    
+
     write_cable_list(gSlot, locationVa, buff, &bitPos);
     write_cable_list(gSlot, locationFx, buff, &bitPos);
-    
+
     write_param_list(gSlot, locationMorph, buff, &bitPos);
     write_param_list(gSlot, locationVa, buff, &bitPos);
     write_param_list(gSlot, locationFx, buff, &bitPos);
-    
+
     write_morph_params(gSlot, locationMorph, buff, &bitPos);
-    
+
     // 0x62, 0x60 knobs and controllers possible go here
-    
+
     write_param_names(gSlot, locationMorph, buff, &bitPos);
     write_param_names(gSlot, locationVa, buff, &bitPos);
     write_param_names(gSlot, locationFx, buff, &bitPos);
-    
+
     write_module_names(gSlot, locationVa, buff, &bitPos);
     write_module_names(gSlot, locationFx, buff, &bitPos);
-    
+
     bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos)); // Final byte alignment round-up
-    
+
     calcCrc = calc_crc16(buff, BIT_TO_BYTE_ROUND_UP(bitPos));
-    
+
     write_bit_stream(buff, &bitPos, 16, calcCrc);
-    
+
     writtenSize = fwrite(buff, 1, BIT_TO_BYTE_ROUND_UP(bitPos), file);
 
-    if (BIT_TO_BYTE_ROUND_UP(bitPos) > ((PATCH_FILE_SIZE*3)/4)) {
+    if (BIT_TO_BYTE_ROUND_UP(bitPos) > ((PATCH_FILE_SIZE * 3) / 4)) {
         LOG_ERROR("Write file size > 3/4 of %d, might need to increase PATCH_FILE_SIZE\n", PATCH_FILE_SIZE);
     }
-    
     free(buff);
     fclose(file);
 }
 
-void check_action_flags(void) {
+static void on_file_opened(const char * path) {
+    if (path) {
+        LOG_INFO("Selected file: %s", path);
+        set_window_title(path);
+        read_file_into_memory_and_process(path);
+    }
+    glfwFocusWindow(gWindow);
+}
+
+static void on_file_saved(const char * path) {
+    if (path) {
+        LOG_INFO("Saving file: %s", path);
+        write_database_to_file(path);
+        set_window_title(path);
+    }
+    glfwFocusWindow(gWindow);
+}
+
+static void check_action_flags(void) {
     if (gShowOpenFileReadDialogue) {
-        gShowOpenFileReadDialogue = false; // reset flag early
-
-        char *path = open_file_read_dialogue();
-
-        if (path) {
-            LOG_INFO("\n\nSelected file: %s\n", path);
-            set_window_title(path);
-            read_file_into_memory_and_process(path);
-            free(path);
-        }
-
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)),
-                       dispatch_get_main_queue(), ^{
-            glfwFocusWindow(gWindow);
-        });
+        gShowOpenFileReadDialogue = false;
+        open_file_read_dialogue_async(on_file_opened);
     }
 
     if (gShowOpenFileWriteDialogue) {
-        gShowOpenFileWriteDialogue = false; // reset flag early
-
-        char *path = open_file_write_dialogue();
-
-        if (path) {
-            LOG_INFO("\n\nSelected file: %s\n", path);
-            write_database_to_file(path);
-            set_window_title(path);
-            free(path);
-        }
-
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)),
-                       dispatch_get_main_queue(), ^{
-            glfwFocusWindow(gWindow);
-        });
+        gShowOpenFileWriteDialogue = false;
+        open_file_write_dialogue_async(on_file_saved);
     }
 }
 

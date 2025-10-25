@@ -645,8 +645,8 @@ typedef struct {
 } tButton;
 
 typedef struct {
-    uint32_t  unknown1;
-    uint32_t  unknown2;
+    uint32_t unknown1;
+    uint32_t unknown2;
     uint8_t  voiceCount;
     uint16_t barPosition;
     uint8_t  unknown3;

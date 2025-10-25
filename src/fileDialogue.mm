@@ -21,41 +21,54 @@
 #import <Cocoa/Cocoa.h>
 #import <AppKit/AppKit.h>
 
-char * open_file_read_dialogue(void) {
-    @autoreleasepool {
+void open_file_read_dialogue_async(tFileDialogueCallback callback) {
+    dispatch_async(dispatch_get_main_queue(), ^{
         NSOpenPanel * panel = [NSOpenPanel openPanel];
         [panel setCanChooseFiles:YES];
         [panel setCanChooseDirectories:NO];
         [panel setAllowsMultipleSelection:NO];
         [panel setTitle:@"Select a File"];
 
-        if ([panel runModal] == NSModalResponseOK) {
-            NSString * path = [panel.URL path];
-            return strdup([path UTF8String]); // Caller must free this
-        } else {
-            return NULL;
-        }
-    }
+        [panel beginWithCompletionHandler:^(NSModalResponse result) {
+             if (result == NSModalResponseOK) {
+                 NSString * path = [panel.URL path];
+
+                 if (callback) {
+                     callback([path UTF8String]);
+                 }
+             } else {
+                 if (callback) {
+                     callback(NULL);
+                 }
+             }
+         }];
+    });
 }
 
-char * open_file_write_dialogue(void) {
-    @autoreleasepool {
-        NSSavePanel *panel = [NSSavePanel savePanel];
+void open_file_write_dialogue_async(tFileDialogueCallback callback) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSSavePanel * panel = [NSSavePanel savePanel];
         [panel setTitle:@"Save File As"];
         [panel setPrompt:@"Save"];
         [panel setCanCreateDirectories:YES];
         [panel setNameFieldStringValue:@"untitled"];
         [panel setMessage:@"Choose where to save your file."];
-
-        // ✅ Let NSSavePanel handle overwrite confirmation automatically
-        [panel setShowsTagField:NO]; // optional
+        [panel setShowsTagField:NO];
         [panel setExtensionHidden:NO];
 
-        if ([panel runModal] == NSModalResponseOK) {
-            NSURL *selectedURL = panel.URL;
-            return strdup(selectedURL.path.UTF8String); // caller must free
-        }
-        return NULL;
-    }
+        [panel beginWithCompletionHandler:^(NSModalResponse result) {
+             if (result == NSModalResponseOK) {
+                 NSString * path = panel.URL.path;
+
+                 if (callback) {
+                     callback([path UTF8String]);
+                 }
+             } else {
+                 if (callback) {
+                     callback(NULL);
+                 }
+             }
+         }];
+    });
 }
 
