@@ -575,7 +575,7 @@ void write_morph_params(uint32_t slot, tLocation location, uint8_t * buff, uint3
 
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
     
-    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE(*bitPos)); // Round down
 }
     
 void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
@@ -869,10 +869,10 @@ void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint3
                     write_bit_stream(buff, bitPos, 8, module.key.index);
 
                     for (k = 0; k < MODULE_NAME_SIZE; k++) {
+                        write_bit_stream(buff, bitPos, 8, module.name[k]);
                         if (module.name[k] == '\0') {
                             break;
                         }
-                        write_bit_stream(buff, bitPos, 8, module.name[k]);
                     }
                 }
             }
