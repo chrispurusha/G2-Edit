@@ -263,7 +263,14 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) { // TODO: also acces
 
             case SUB_RESPONSE_CURRENT_NOTE_2:
             {
+                uint32_t i = 0;
                 LOG_DEBUG("Current note 2\n");
+                
+                for (i=0; i<count; i++) {
+                    gNote2[slot][i] = read_bit_stream(buff, &subOffset, 8);
+                }
+                gNote2Size[slot] = count;
+                
                 break;
             }
 
