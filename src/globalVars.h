@@ -51,6 +51,7 @@ extern tMessageQueue   gCommandQueue;
 extern uint32_t        gMorphGroupFocus;
 extern uint32_t        gSlot;
 extern tPatchDescr     gPatchDescr[MAX_SLOTS];
+extern uint32_t        gMorphCount[MAX_SLOTS];
 
 uint32_t array_size_main_button_array(void);
 
