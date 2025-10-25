@@ -425,6 +425,7 @@ void write_database_to_file(const char * filepath) {
 
     write_morph_params(gSlot, locationMorph, buff, &bitPos);
 
+#if 0
     // 0x62, 0x60 knobs and controllers possible go here
 
     write_param_names(gSlot, locationMorph, buff, &bitPos);
@@ -433,7 +434,8 @@ void write_database_to_file(const char * filepath) {
 
     write_module_names(gSlot, locationVa, buff, &bitPos);
     write_module_names(gSlot, locationFx, buff, &bitPos);
-
+#endif
+    
     bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos)); // Final byte alignment round-up
 
     calcCrc = calc_crc16(buff, BIT_TO_BYTE_ROUND_UP(bitPos));
