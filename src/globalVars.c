@@ -66,6 +66,10 @@ tPatchDescr     gPatchDescr[MAX_SLOTS] = {0};
 uint32_t        gMorphCount[MAX_SLOTS] = {0};
 uint32_t        gNote2Size[MAX_SLOTS]  = {0};      // Temporary store, until we work this out
 uint8_t         gNote2[MAX_SLOTS][1024] = {0};  // Temporary store, until we work this out
+uint32_t        gKnobSize[MAX_SLOTS]  = {0};      // Temporary store, until we work this out
+uint8_t         gKnob[MAX_SLOTS][1024] = {0};  // Temporary store, until we work this out
+uint32_t        gControllerSize[MAX_SLOTS]  = {0};      // Temporary store, until we work this out
+uint8_t         gController[MAX_SLOTS][1024] = {0};  // Temporary store, until we work this out
 
 uint32_t array_size_main_button_array(void) {
     return ARRAY_SIZE(gMainButtonArray);

@@ -431,6 +431,17 @@ void write_database_to_file(const char * filepath) {
     write_morph_params(gSlot, locationMorph, buff, &bitPos);
 
     // 0x62, 0x60 knobs and controllers possible go here
+    write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_KNOBS);
+    write_bit_stream(buff, &bitPos, 16, gKnobSize[gSlot]);
+    for (uint32_t i=0; i<gKnobSize[gSlot]; i++) {
+        write_bit_stream(buff, &bitPos, 8, gKnob[gSlot][i]);
+    }
+    
+    write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_CONTROLLERS);
+    write_bit_stream(buff, &bitPos, 16, gControllerSize[gSlot]);
+    for (uint32_t i=0; i<gControllerSize[gSlot]; i++) {
+        write_bit_stream(buff, &bitPos, 8, gController[gSlot][i]);
+    }
 
     write_param_names(gSlot, locationMorph, buff, &bitPos);
     write_param_names(gSlot, locationVa, buff, &bitPos);
@@ -438,6 +449,10 @@ void write_database_to_file(const char * filepath) {
 
     write_module_names(gSlot, locationVa, buff, &bitPos);
     write_module_names(gSlot, locationFx, buff, &bitPos);
+    
+    // 0x6f write goes here - hacky for now
+    write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_PATCH_NOTES);
+    write_bit_stream(buff, &bitPos, 16, 0);
     
     bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos)); // Final byte alignment round-up
 
