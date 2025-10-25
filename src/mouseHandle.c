@@ -343,7 +343,7 @@ void handle_button(tButtonId buttonId) {
                 gMainButtonArray[(uint32_t)variation1ButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
             }
 
-            gMainButtonArray[gPatchDescr[gSlot].activeVariation+(uint32_t)variation1ButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
+            gMainButtonArray[gPatchDescr[gSlot].activeVariation + (uint32_t)variation1ButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
             break;
         }
     }

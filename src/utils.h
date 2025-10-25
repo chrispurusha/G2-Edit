@@ -22,10 +22,10 @@
 
 #include "sysIncludes.h"
 
-#define BIT_TO_BYTE(x)           ((x) >> 3) // Divide by 8
-#define BYTE_TO_BIT(x)           ((x) << 3) // Multiply by 8
-#define SIGNED_BYTE_TO_BIT(x)    ((x) * 8)
-#define BIT_TO_BYTE_ROUND_UP(x)  (((x) + 7) >> 3)
+#define BIT_TO_BYTE(x)             ((x) >> 3) // Divide by 8
+#define BYTE_TO_BIT(x)             ((x) << 3) // Multiply by 8
+#define SIGNED_BYTE_TO_BIT(x)      ((x) * 8)
+#define BIT_TO_BYTE_ROUND_UP(x)    (((x) + 7) >> 3)
 
 
 uint16_t crc_iterator(int32_t seed, int32_t val);
