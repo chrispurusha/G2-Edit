@@ -452,40 +452,40 @@ void write_database_to_file(const char * filepath) {
 }
 
 void check_action_flags(void) {
-    if (gShowOpenFileReadDialogue == true) { // TODO: move to a function
-        char * path = open_file_read_dialogue();
-        usleep(1000000);
+    if (gShowOpenFileReadDialogue) {
+        gShowOpenFileReadDialogue = false; // reset flag early
 
-        if (path != NULL) {
+        char *path = open_file_read_dialogue();
+
+        if (path) {
             LOG_INFO("\n\nSelected file: %s\n", path);
-
             set_window_title(path);
-
             read_file_into_memory_and_process(path);
-
-            free((void *)path);
+            free(path);
         }
-        gShowOpenFileReadDialogue = false;
 
-        glfwFocusWindow(gWindow);
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)),
+                       dispatch_get_main_queue(), ^{
+            glfwFocusWindow(gWindow);
+        });
     }
 
-    if (gShowOpenFileWriteDialogue == true) { // TODO: move to a function
-        char * path = open_file_write_dialogue();
-        usleep(1000000);
+    if (gShowOpenFileWriteDialogue) {
+        gShowOpenFileWriteDialogue = false; // reset flag early
 
-        if (path != NULL) {
+        char *path = open_file_write_dialogue();
+
+        if (path) {
             LOG_INFO("\n\nSelected file: %s\n", path);
-
             write_database_to_file(path);
-
             set_window_title(path);
-
-            free((void *)path);
+            free(path);
         }
-        gShowOpenFileWriteDialogue = false;
 
-        glfwFocusWindow(gWindow);
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)),
+                       dispatch_get_main_queue(), ^{
+            glfwFocusWindow(gWindow);
+        });
     }
 }
 
