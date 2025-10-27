@@ -428,7 +428,7 @@ void write_database_to_file(const char * filepath) {
     write_param_list(gSlot, locationVa, buff, &bitPos);
     write_param_list(gSlot, locationFx, buff, &bitPos);
 
-    write_morph_params(gSlot, locationMorph, buff, &bitPos);
+    write_morph_params(gSlot, buff, &bitPos);
 
     // 0x62, 0x60 knobs and controllers possible go here
     write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_KNOBS);
