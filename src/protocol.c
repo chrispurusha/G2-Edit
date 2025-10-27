@@ -384,6 +384,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     tModule  module      = {0};
     uint32_t moduleCount = 0;
     bool     validModule = false;
+    uint32_t variations       = 0;
     uint32_t sizeBitPos        = 0;
     uint32_t moduleCountBitPos = 0;
     uint32_t paramCount        = 0;
@@ -399,8 +400,23 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 
     moduleCountBitPos = *bitPos;
     write_bit_stream(buff, bitPos, 8, 0);  // Populated later
+    
+    reset_walk_module();
 
-    write_bit_stream(buff, bitPos, 8, NUM_VARIATIONS - 1);  // Write 9 for files, not 10!
+    do {
+        validModule = walk_next_module(&module);
+
+        if (validModule == true) {
+            if ((module.key.slot == slot) && (module.key.location == location)) {
+                variations = NUM_VARIATIONS - 1;
+                break;
+          }
+        }
+    } while (validModule);
+
+    finish_walk_module();
+  
+    write_bit_stream(buff, bitPos, 8, variations);  // Write 9 for files, not 10!
 
     reset_walk_module();
 
@@ -572,9 +588,9 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
         write_bit_stream(buff, bitPos, 4, 0);  // Trailing unknown bits
     }
 
-    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
-    
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
+    
+    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE(*bitPos));
 }
     
 void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
