@@ -324,11 +324,14 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
 
     for (i = 0; i < moduleCount; i++) {
         key.index = read_bit_stream(buff, subOffset, 8);
-        LOG_DEBUG(" Module Index        %u\n", key.index);
+        //LOG_DEBUG(" Module Index        %u\n", key.index);
 
         paramCount = read_bit_stream(buff, subOffset, 7);
-        LOG_DEBUG("  variation list param count = %u\n", paramCount);
+        //LOG_DEBUG("  variation list param count = %u\n", paramCount);
 
+        LOG_DEBUG("CT Reading module location=%u index=%u paramCount=%u\n",
+                  key.location, key.index, paramCount);
+        
         if (paramCount >= MAX_NUM_PARAMETERS) {
             LOG_ERROR("MAX_NUM_PARAMETERS needs increasing to >= %u\n", paramCount + 1);
             exit(1);
@@ -338,6 +341,8 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             module.key = key;
         }
 
+        module.actualParamCount = paramCount;
+        
         if ((module.type != moduleTypeUnknown0) && (module_param_count(module.type) > 0) && (paramCount != module_param_count(module.type))) {
             LOG_ERROR("Incorrect number of parameters on module %u %s count from G2 = %u, our structures = %u\n", module.type, gModuleProperties[module.type].name, paramCount, module_param_count(module.type));
             exit(1);
@@ -362,6 +367,13 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                 }
                 module.param[j][k].value = paramValue;
             }
+            
+            // ADD THIS AFTER THE INNER LOOP ENDS:
+            if (j == 0) {  // Log first variation
+                LOG_DEBUG("CT Storing module loc=%u idx=%u paramCount=%u first_param=%u\n",
+                          key.location, key.index, paramCount,
+                          paramCount > 0 ? module.param[0][0].value : 0);
+            }
         }
 
         write_module(key, &module);         // Careful with type 2, morphs!
@@ -372,11 +384,9 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     tModule  module      = {0};
     uint32_t moduleCount = 0;
     bool     validModule = false;
-    //int32_t   location = 0;
     uint32_t sizeBitPos        = 0;
     uint32_t moduleCountBitPos = 0;
     uint32_t paramCount        = 0;
-    uint32_t variations        = 0;
     uint32_t i                 = 0;
     uint32_t j                 = 0;
 
@@ -390,24 +400,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     moduleCountBitPos = *bitPos;
     write_bit_stream(buff, bitPos, 8, 0);  // Populated later
 
-    // See if there's at least one valid module on the location and set variations to non-zero if so
-    reset_walk_module();
-
-    do {
-        validModule = walk_next_module(&module);
-
-        if (validModule == true) {
-            if ((module.key.slot == slot) && (module.key.location == location)) {
-                // We found a valid module on that location, so can set variations to non-zero
-                variations = NUM_VARIATIONS - 1;
-                break;
-            }
-        }
-    } while (validModule);
-
-    finish_walk_module();
-
-    write_bit_stream(buff, bitPos, 8, variations);  // Variation count - always 10 for synth, 9 for file?
+    write_bit_stream(buff, bitPos, 8, NUM_VARIATIONS - 1);  // Write 9 for files, not 10!
 
     reset_walk_module();
 
@@ -416,18 +409,24 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 
         if (validModule == true) {
             if ((module.key.slot == slot) && (module.key.location == location)) {
-                paramCount = get_param_count(location, module.key.index, module.type);
-
+                paramCount = module.actualParamCount;
+                
                 if (paramCount > 0) {
                     moduleCount++;
+                    LOG_DEBUG("CT Writing module location=%u index=%u paramCount=%u\n",
+                              location, module.key.index, paramCount);
+                    
                     write_bit_stream(buff, bitPos, 8, module.key.index);
-
                     write_bit_stream(buff, bitPos, 7, paramCount);
 
+                    // Write 9 variations (0-8) for file format
                     for (i = 0; i < (NUM_VARIATIONS - 1); i++) {
                         write_bit_stream(buff, bitPos, 8, i);
 
                         for (j = 0; j < paramCount; j++) {
+                            if (i == 0) {  // Log first variation
+                                LOG_DEBUG("CT Writing param[%u][%u]=%u\n", i, j, module.param[i][j].value);
+                            }
                             write_bit_stream(buff, bitPos, 7, module.param[i][j].value);
                         }
                     }
@@ -438,12 +437,12 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 
     finish_walk_module();
     
-    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
-    
     write_bit_stream(buff, &moduleCountBitPos, 8, moduleCount);
-    write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
+    write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE_ROUND_UP(*bitPos - sizeBitPos) - 2);
+    
+    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 }
-
+    
 void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     // line 3754 in file.pas
     tModule    module          = {0};
@@ -573,9 +572,9 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
         write_bit_stream(buff, bitPos, 4, 0);  // Trailing unknown bits
     }
 
-    write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
+    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
     
-    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE(*bitPos)); // Round down
+    write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
     
 void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
