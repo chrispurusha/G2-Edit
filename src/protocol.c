@@ -502,7 +502,7 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
-void write_morph_params(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos) {
+void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     tModule  module                = {0};
     bool     validModule           = false;
     uint32_t sizeBitPos            = 0;
@@ -547,7 +547,7 @@ void write_morph_params(uint32_t slot, tLocation location, uint8_t * buff, uint3
             if (validModule == true) {
                 // Only filter by slot, not by location - morph params are for ALL locations
                 if (module.key.slot == slot) {
-                    paramCount = get_param_count(location, module.key.index, module.type);
+                    paramCount = get_param_count(module.key.location, module.key.index, module.type);
 
                     // Check each parameter for morph assignments
                     for (j = 0; j < paramCount; j++) {

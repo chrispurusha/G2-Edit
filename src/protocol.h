@@ -31,7 +31,7 @@ void write_cable_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset);
 void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos);
 void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset);
-void write_morph_params(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos);
+void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos);
 void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset);
 void write_knobs(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos);
 void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset, int count);
