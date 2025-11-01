@@ -588,9 +588,10 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
         write_bit_stream(buff, bitPos, 4, 0);  // Trailing unknown bits
     }
 
-    write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
+    *bitPos -= 4;  // Seems we don't want that spare 4 bits on the last run through
+    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
     
-    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE(*bitPos));
+    write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
     
 void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
