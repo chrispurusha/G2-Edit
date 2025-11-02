@@ -54,22 +54,24 @@ bool         gShowOpenFileReadDialogue  = false;
 bool         gShowOpenFileWriteDialogue = false;
 
 
-tScrollState    gScrollState           = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE};
-tContextMenu    gContextMenu           = {0};
-tCableDragging  gCableDrag             = {0};
-tParamDragging  gParamDragging         = {0};
-tModuleDragging gModuleDrag            = {0};
-tMessageQueue   gCommandQueue          = {0};
-uint32_t        gMorphGroupFocus       = 0;
-uint32_t        gSlot                  = 0;
-tPatchDescr     gPatchDescr[MAX_SLOTS] = {0};
-uint32_t        gMorphCount[MAX_SLOTS] = {0};
-uint32_t        gNote2Size[MAX_SLOTS]  = {0};      // Temporary store, until we work this out
-uint8_t         gNote2[MAX_SLOTS][1024] = {0};  // Temporary store, until we work this out
-uint32_t        gKnobSize[MAX_SLOTS]  = {0};      // Temporary store, until we work this out
-uint8_t         gKnob[MAX_SLOTS][1024] = {0};  // Temporary store, until we work this out
-uint32_t        gControllerSize[MAX_SLOTS]  = {0};      // Temporary store, until we work this out
-uint8_t         gController[MAX_SLOTS][1024] = {0};  // Temporary store, until we work this out
+tScrollState    gScrollState                      = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE};
+tContextMenu    gContextMenu                      = {0};
+tCableDragging  gCableDrag                        = {0};
+tParamDragging  gParamDragging                    = {0};
+tModuleDragging gModuleDrag                       = {0};
+tMessageQueue   gCommandQueue                     = {0};
+uint32_t        gMorphGroupFocus                  = 0;
+uint32_t        gSlot                             = 0;
+tPatchDescr     gPatchDescr[MAX_SLOTS]            = {0};
+uint32_t        gMorphCount[MAX_SLOTS]            = {0};
+uint32_t        gNote2Size[MAX_SLOTS]             = {0}; // Temporary store, until we work this out
+uint8_t         gNote2[MAX_SLOTS][1024]           = {0}; // Temporary store, until we work this out
+uint32_t        gKnobSize[MAX_SLOTS]              = {0}; // Temporary store, until we work this out
+uint8_t         gKnob[MAX_SLOTS][1024]            = {0}; // Temporary store, until we work this out
+uint32_t        gControllerSize[MAX_SLOTS]        = {0}; // Temporary store, until we work this out
+uint8_t         gController[MAX_SLOTS][1024]      = {0}; // Temporary store, until we work this out
+uint32_t        gPatchNotesSize[MAX_SLOTS]        = {0}; // Temporary store, until we work this out
+uint8_t         gPatchNotes[MAX_SLOTS][MAX_16BIT] = {0}; // Temporary store, until we work this out
 
 uint32_t array_size_main_button_array(void) {
     return ARRAY_SIZE(gMainButtonArray);

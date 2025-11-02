@@ -58,6 +58,8 @@ extern uint32_t        gKnobSize[MAX_SLOTS];
 extern uint8_t         gKnob[MAX_SLOTS][1024];
 extern uint32_t        gControllerSize[MAX_SLOTS];
 extern uint8_t         gController[MAX_SLOTS][1024];
+extern uint32_t        gPatchNotesSize[MAX_SLOTS];
+extern uint8_t         gPatchNotes[MAX_SLOTS][MAX_16BIT];
 
 uint32_t array_size_main_button_array(void);
 

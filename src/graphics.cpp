@@ -371,7 +371,6 @@ void write_database_to_file(const char * filepath) {
     char      eol[]          = {0x0d, 0x0a, 0x00};
     uint8_t * buff           = NULL;
     uint32_t  bitPos         = 0;
-    int       i              = 0;
     uint32_t  calcCrc        = 0;
 
     file = fopen(filepath, "wb");
@@ -417,7 +416,8 @@ void write_database_to_file(const char * filepath) {
     // 0x69 note2 write goes here - hacky for now
     write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_CURRENT_NOTE_2);
     write_bit_stream(buff, &bitPos, 16, gNote2Size[gSlot]);
-    for (uint32_t i=0; i<gNote2Size[gSlot]; i++) {
+
+    for (uint32_t i = 0; i < gNote2Size[gSlot]; i++) {
         write_bit_stream(buff, &bitPos, 8, gNote2[gSlot][i]);
     }
 
@@ -433,13 +433,15 @@ void write_database_to_file(const char * filepath) {
     // 0x62, 0x60 knobs and controllers possible go here
     write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_KNOBS);
     write_bit_stream(buff, &bitPos, 16, gKnobSize[gSlot]);
-    for (uint32_t i=0; i<gKnobSize[gSlot]; i++) {
+
+    for (uint32_t i = 0; i < gKnobSize[gSlot]; i++) {
         write_bit_stream(buff, &bitPos, 8, gKnob[gSlot][i]);
     }
-    
+
     write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_CONTROLLERS);
     write_bit_stream(buff, &bitPos, 16, gControllerSize[gSlot]);
-    for (uint32_t i=0; i<gControllerSize[gSlot]; i++) {
+
+    for (uint32_t i = 0; i < gControllerSize[gSlot]; i++) {
         write_bit_stream(buff, &bitPos, 8, gController[gSlot][i]);
     }
 
@@ -449,11 +451,9 @@ void write_database_to_file(const char * filepath) {
 
     write_module_names(gSlot, locationVa, buff, &bitPos);
     write_module_names(gSlot, locationFx, buff, &bitPos);
-    
-    // 0x6f write goes here - hacky for now
-    write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_PATCH_NOTES);
-    write_bit_stream(buff, &bitPos, 16, 0);
-    
+
+    write_patch_notes(gSlot, buff, &bitPos);
+
     bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos)); // Final byte alignment round-up
 
     calcCrc = calc_crc16(buff, BIT_TO_BYTE_ROUND_UP(bitPos));
@@ -461,6 +461,10 @@ void write_database_to_file(const char * filepath) {
     write_bit_stream(buff, &bitPos, 16, calcCrc);
 
     writtenSize = fwrite(buff, 1, BIT_TO_BYTE_ROUND_UP(bitPos), file);
+
+    if (writtenSize != BIT_TO_BYTE_ROUND_UP(bitPos)) {
+        LOG_ERROR("Written %d of %u\n", writtenSize, BIT_TO_BYTE_ROUND_UP(bitPos));
+    }
 
     if (BIT_TO_BYTE_ROUND_UP(bitPos) > ((PATCH_FILE_SIZE * 3) / 4)) {
         LOG_ERROR("Write file size > 3/4 of %d, might need to increase PATCH_FILE_SIZE\n", PATCH_FILE_SIZE);
@@ -476,7 +480,7 @@ static void on_file_opened(const char * path) {
         read_file_into_memory_and_process(path);
     }
     glfwFocusWindow(gWindow);
-    
+
     wake_glfw();
 }
 
@@ -487,7 +491,7 @@ static void on_file_saved(const char * path) {
         set_window_title(path);
     }
     glfwFocusWindow(gWindow);
-    
+
     wake_glfw();
 }
 

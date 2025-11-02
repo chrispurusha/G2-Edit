@@ -194,6 +194,7 @@
 #define MAX_COLUMNS                          (127)
 #define MAX_ROWS_MODULE                      (12) // Operator type is 12 rows - largest we have
 
+#define MAX_16BIT                            (0x10000)
 #define NULL_RECTANGLE                       {{0.0, 0.0}, {0.0, 0.0}}
 #define ARRAY_SIZE(arr)    (sizeof(arr) / sizeof(arr[0]))
 
