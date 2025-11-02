@@ -331,10 +331,7 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         //LOG_DEBUG(" Module Index        %u\n", key.index);
 
         paramCount = read_bit_stream(buff, subOffset, 7);
-        //LOG_DEBUG("  variation list param count = %u\n", paramCount);
-
-        LOG_DEBUG("CT Reading module location=%u index=%u paramCount=%u\n",
-                  key.location, key.index, paramCount);
+        LOG_DEBUG("  variation list param count = %u\n", paramCount);
 
         if (paramCount >= MAX_NUM_PARAMETERS) {
             LOG_ERROR("MAX_NUM_PARAMETERS needs increasing to >= %u\n", paramCount + 1);
@@ -369,13 +366,6 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                     LOG_DEBUG("   Param number %02d param value %02d\n", k, paramValue);
                 }
                 module.param[j][k].value = paramValue;
-            }
-
-            // ADD THIS AFTER THE INNER LOOP ENDS:
-            if (j == 0) {  // Log first variation
-                LOG_DEBUG("CT Storing module loc=%u idx=%u paramCount=%u first_param=%u\n",
-                          key.location, key.index, paramCount,
-                          paramCount > 0 ? module.param[0][0].value : 0);
             }
         }
 
@@ -432,8 +422,6 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 
                 if (paramCount > 0) {
                     moduleCount++;
-                    LOG_DEBUG("CT Writing module location=%u index=%u paramCount=%u\n",
-                              location, module.key.index, paramCount);
 
                     write_bit_stream(buff, bitPos, 8, module.key.index);
                     write_bit_stream(buff, bitPos, 7, paramCount);
@@ -443,9 +431,6 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
                         write_bit_stream(buff, bitPos, 8, i);
 
                         for (j = 0; j < paramCount; j++) {
-                            if (i == 0) {  // Log first variation
-                                LOG_DEBUG("CT Writing param[%u][%u]=%u\n", i, j, module.param[i][j].value);
-                            }
                             write_bit_stream(buff, bitPos, 7, module.param[i][j].value);
                         }
                     }
@@ -457,7 +442,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     finish_walk_module();
 
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
-    
+
     write_bit_stream(buff, &moduleCountBitPos, 8, moduleCount);
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
@@ -644,7 +629,6 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset, int 
     int        j            = 0;
     int        labelIndex   = 0;
     int        k            = 0;
-    int        variation    = 0;
     uint32_t   isString     = 0;
     uint32_t   paramIndex   = 0;
     uint32_t   numLabels    = 0;
@@ -654,12 +638,9 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset, int 
     key.slot     = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
     LOG_DEBUG("Location       0x%x\n", key.location);
-    //LOG_DEBUG("Unknown        %d\n", read_bit_stream(buff, subOffset, 6));
     nameCount = read_bit_stream(buff, subOffset, 8);
     LOG_DEBUG("NameCount      %d\n", nameCount);
-    //LOG_DEBUG("Module count      %d\n", read_bit_stream(buff, subOffset, 8));
 
-    // SWITCH ON LOC BEING 0..1 or 2
     for (i = 0; i < nameCount; i++) {
         key.index = read_bit_stream(buff, subOffset, 8);
         LOG_DEBUG("Module index      %d\n", key.index);
@@ -668,7 +649,7 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset, int 
             write_module(key, &module);
         }
         moduleLength = read_bit_stream(buff, subOffset, 8);
-        LOG_DEBUG("Module length     %d\n", moduleLength);         // 5004
+        LOG_DEBUG("Module length     %d\n\n", moduleLength);         // 5004
 
         for (j = 0; j < moduleLength;) {
             isString = read_bit_stream(buff, subOffset, 8);
@@ -683,26 +664,28 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset, int 
             if (paramLength > 0) {
                 numLabels = (paramLength - 1) / PROTOCOL_PARAM_NAME_SIZE;
 
+                module.paramNumLabels[paramIndex] = numLabels;
 
                 memset(&module.paramName[paramIndex], 0, sizeof(module.paramName[paramIndex]));
 
                 for (labelIndex = 0; labelIndex < numLabels; labelIndex++) {
+                    module.paramNameSet[paramIndex][labelIndex] = true;
+
                     for (k = 0; k < PROTOCOL_PARAM_NAME_SIZE; k++) {
                         uint8_t ch = read_bit_stream(buff, subOffset, 8);
 
                         if ((ch >= 0x20) && (ch <= 0x7f)) {
                             LOG_DEBUG_DIRECT("%c", ch);
+                        } else {
+                            LOG_DEBUG_DIRECT(" ");
                         }
-
-                        for (variation = 0; variation < NUM_VARIATIONS; variation++) {
-                            module.paramName[paramIndex][k] = ch;
-                        }
+                        module.paramName[paramIndex][labelIndex][k] = ch;
                     }
                 }
 
-                LOG_DEBUG_DIRECT("\n");
                 j += paramLength - 1;
             }
+            LOG_DEBUG_DIRECT(";\n");
         }
 
         write_module(key, &module);
@@ -711,12 +694,13 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset, int 
 
 void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos) {
     tModule  module             = {0};
-    uint32_t moduleCount        = 0;
+    uint32_t nameCount          = 0;
     bool     validModule        = false;
     uint32_t sizeBitPos         = 0;
     uint32_t nameCountBitPos    = 0;
     uint32_t moduleLengthBitPos = 0;
     uint32_t moduleLength       = 0;
+    bool     moduleHasNames     = false;
     uint32_t paramCount         = 0;
     uint32_t j                  = 0;
     uint32_t k                  = 0;
@@ -734,7 +718,9 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
     nameCountBitPos = *bitPos;
     write_bit_stream(buff, bitPos, 8, 0);  // Populated later
 
-    moduleCount = 0;
+    LOG_DEBUG("Write param names for location %d\n", location);
+
+    nameCount = 0;
     reset_walk_module();
 
     do {
@@ -742,15 +728,14 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
 
         if (validModule == true) {
             if ((module.key.slot == slot) && (module.key.location == location)) {
-                paramCount = get_param_count(location, module.key.index, module.type);
+                paramCount = module.actualParamCount;
 
                 if (paramCount > 0) {
-                    // Check if this module has any named parameters
-                    bool moduleHasNames = false;
+                    moduleHasNames = false;
 
                     for (j = 0; j < paramCount; j++) {
-                        for (k = 0; k < PROTOCOL_PARAM_NAME_SIZE; k++) {
-                            if (module.paramName[j][k] != 0) {
+                        for (labelIndex = 0; labelIndex < MAX_NUM_LABELS; labelIndex++) {
+                            if (module.paramNameSet[j][labelIndex] == true) {
                                 moduleHasNames = true;
                                 break;
                             }
@@ -762,7 +747,7 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
                     }
 
                     if (moduleHasNames) {
-                        moduleCount++;
+                        nameCount++;
                         write_bit_stream(buff, bitPos, 8, module.key.index);
 
                         moduleLengthBitPos = *bitPos;
@@ -771,16 +756,9 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
                         moduleLength = 0;
 
                         for (j = 0; j < paramCount; j++) {
-                            bool hasName = false;
+                            numLabels = module.paramNumLabels[j];
 
-                            for (k = 0; k < PROTOCOL_PARAM_NAME_SIZE && !hasName; k++) {
-                                if (module.paramName[j][k] != 0) {
-                                    hasName = true;
-                                }
-                            }
-
-                            if (hasName) {
-                                numLabels   = 1;
+                            if (numLabels > 0) {
                                 paramLength = 1 + (numLabels * PROTOCOL_PARAM_NAME_SIZE);
 
                                 write_bit_stream(buff, bitPos, 8, 1);  // isString
@@ -790,9 +768,18 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
                                 moduleLength += 3;
 
                                 for (labelIndex = 0; labelIndex < numLabels; labelIndex++) {
+                                    LOG_DEBUG("Write param Name: ");
+
                                     for (k = 0; k < PROTOCOL_PARAM_NAME_SIZE; k++) {
-                                        write_bit_stream(buff, bitPos, 8, module.paramName[j][k]);
+                                        if ((module.paramName[j][labelIndex][k] >= 0x20) && (module.paramName[j][labelIndex][k] <= 0x7f)) {
+                                            LOG_DEBUG_DIRECT("%c", module.paramName[j][labelIndex][k]);
+                                        } else {
+                                            LOG_DEBUG_DIRECT(" ");
+                                        }
+                                        write_bit_stream(buff, bitPos, 8, module.paramName[j][labelIndex][k]);
                                     }
+
+                                    LOG_DEBUG_DIRECT(";\n");
                                 }
 
                                 moduleLength += paramLength - 1;
@@ -810,7 +797,8 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
 
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 
-    write_bit_stream(buff, &nameCountBitPos, 8, moduleCount);
+    LOG_DEBUG("nameCount = %d\n\n", nameCount);
+    write_bit_stream(buff, &nameCountBitPos, 8, nameCount);  // UNCOMMENTED!
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
 
@@ -832,9 +820,9 @@ void parse_module_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
 
     for (i = 0; i < items; i++) {
         key.index = read_bit_stream(buff, subOffset, 8);
-        LOG_DEBUG(" Module Name Index %u\n", key.index);
+        //LOG_DEBUG(" Module Name Index %u\n", key.index);
 
-        LOG_DEBUG(" Module loc %u index %u\n", module.key.location, module.key.index);
+        //LOG_DEBUG(" Module loc %u index %u\n", module.key.location, module.key.index);
 
         memset(&name, 0, sizeof(name));
 
@@ -846,7 +834,7 @@ void parse_module_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             }
         }
 
-        LOG_DEBUG("%s\n", name);
+        //LOG_DEBUG("%s\n", name);
 
         if (read_module(key, &module) == true) {
             strncpy(module.name, name, sizeof(module.name));

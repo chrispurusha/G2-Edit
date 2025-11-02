@@ -220,8 +220,8 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         paramValue = 0;  // If we hit this, the module config needs fixing, but letting it through for now
     }
 
-    if (strlen(module->paramName[paramIndex]) > 0) {
-        strncpy(label, module->paramName[paramIndex], sizeof(label));
+    if (strlen(module->paramName[paramIndex][0]) > 0) {  // TODO - Work out how labels array works
+        strncpy(label, module->paramName[paramIndex][0], sizeof(label));
     } else if (paramLocationList[paramRef].label != NULL) {
         strncpy(label, paramLocationList[paramRef].label, sizeof(label));
     }
@@ -229,7 +229,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 
     module->param[gPatchDescr[gSlot].activeVariation][paramIndex].paramRef = paramRef;
 
-    LOG_DEBUG("param %u\n", paramValue);
+    //LOG_DEBUG("param %u\n", paramValue);
 
     switch (paramLocationList[paramRef].type2) { // TODO: These function parameters can go straight into the auto-initialised structures in moduleResources.h
         case paramType2Dial:
