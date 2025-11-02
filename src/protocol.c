@@ -27,49 +27,53 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 #include "defs.h"
 #include "types.h"
 #include "utils.h"
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "globalVars.h"
-    
+
 uint32_t get_param_count(tLocation location, uint32_t index, tModuleType type) {
     uint32_t paramCount = 0;
-    
+
     if (location == locationMorph) {
         switch (index) {
-            case 1: {
+            case 1:
+            {
                 paramCount = 16;
                 break;
             }
             case 2:
             case 3:
             case 4:
-            case 7: {
+            case 7:
+            {
                 paramCount = 2;
                 break;
             }
-            case 5: {
+            case 5:
+            {
                 paramCount = 3;
                 break;
             }
-            case 6: {
+            case 6:
+            {
                 paramCount = 4;
                 break;
             }
-            default: {
+            default:
+            {
                 break;
             }
         }
     } else {
         paramCount = module_param_count(type);
     }
-    
     return paramCount;
 }
-    
+
 void parse_patch_descr(uint8_t * buff, uint32_t * subOffset) {
     gPatchDescr[gSlot].unknown1        = read_bit_stream(buff, subOffset, 32);
     gPatchDescr[gSlot].unknown2        = read_bit_stream(buff, subOffset, 29);
@@ -226,7 +230,7 @@ void write_module_list(uint32_t slot, tLocation location, uint8_t * buff, uint32
     finish_walk_module();
 
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
-    
+
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
     write_bit_stream(buff, &moduleCountBitPos, 8, moduleCount);
 }
@@ -293,11 +297,11 @@ void write_cable_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     } while (validCable);
 
     finish_walk_cable();
-    
+
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
-    
+
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
-    
+
     write_bit_stream(buff, &cableCountBitPos, 10, cableCount);
 }
 
@@ -331,7 +335,7 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
 
         LOG_DEBUG("CT Reading module location=%u index=%u paramCount=%u\n",
                   key.location, key.index, paramCount);
-        
+
         if (paramCount >= MAX_NUM_PARAMETERS) {
             LOG_ERROR("MAX_NUM_PARAMETERS needs increasing to >= %u\n", paramCount + 1);
             exit(1);
@@ -340,9 +344,8 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         if (read_module(key, &module) == false) {
             module.key = key;
         }
-
         module.actualParamCount = paramCount;
-        
+
         if ((module.type != moduleTypeUnknown0) && (module_param_count(module.type) > 0) && (paramCount != module_param_count(module.type))) {
             LOG_ERROR("Incorrect number of parameters on module %u %s count from G2 = %u, our structures = %u\n", module.type, gModuleProperties[module.type].name, paramCount, module_param_count(module.type));
             exit(1);
@@ -367,7 +370,7 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                 }
                 module.param[j][k].value = paramValue;
             }
-            
+
             // ADD THIS AFTER THE INNER LOOP ENDS:
             if (j == 0) {  // Log first variation
                 LOG_DEBUG("CT Storing module loc=%u idx=%u paramCount=%u first_param=%u\n",
@@ -381,10 +384,10 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
 }
 
 void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos) {
-    tModule  module      = {0};
-    uint32_t moduleCount = 0;
-    bool     validModule = false;
-    uint32_t variations       = 0;
+    tModule  module            = {0};
+    uint32_t moduleCount       = 0;
+    bool     validModule       = false;
+    uint32_t variations        = 0;
     uint32_t sizeBitPos        = 0;
     uint32_t moduleCountBitPos = 0;
     uint32_t paramCount        = 0;
@@ -400,7 +403,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 
     moduleCountBitPos = *bitPos;
     write_bit_stream(buff, bitPos, 8, 0);  // Populated later
-    
+
     reset_walk_module();
 
     do {
@@ -410,12 +413,12 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
             if ((module.key.slot == slot) && (module.key.location == location)) {
                 variations = NUM_VARIATIONS - 1;
                 break;
-          }
+            }
         }
     } while (validModule);
 
     finish_walk_module();
-  
+
     write_bit_stream(buff, bitPos, 8, variations);  // Write 9 for files, not 10!
 
     reset_walk_module();
@@ -426,12 +429,12 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
         if (validModule == true) {
             if ((module.key.slot == slot) && (module.key.location == location)) {
                 paramCount = module.actualParamCount;
-                
+
                 if (paramCount > 0) {
                     moduleCount++;
                     LOG_DEBUG("CT Writing module location=%u index=%u paramCount=%u\n",
                               location, module.key.index, paramCount);
-                    
+
                     write_bit_stream(buff, bitPos, 8, module.key.index);
                     write_bit_stream(buff, bitPos, 7, paramCount);
 
@@ -452,13 +455,13 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     } while (validModule);
 
     finish_walk_module();
+
+    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
     
     write_bit_stream(buff, &moduleCountBitPos, 8, moduleCount);
-    write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE_ROUND_UP(*bitPos - sizeBitPos) - 2);
-    
-    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+    write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
-    
+
 void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     // line 3754 in file.pas
     tModule    module          = {0};
@@ -589,11 +592,11 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     }
 
     *bitPos -= 4;  // Seems we don't want that spare 4 bits on the last run through
-    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
-    
+    *bitPos  = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
-    
+
 void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     // line 4268 in file.pas
 
@@ -806,7 +809,7 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
     finish_walk_module();
 
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
-    
+
     write_bit_stream(buff, &nameCountBitPos, 8, moduleCount);
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
@@ -886,6 +889,7 @@ void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint3
 
                     for (k = 0; k < MODULE_NAME_SIZE; k++) {
                         write_bit_stream(buff, bitPos, 8, module.name[k]);
+
                         if (module.name[k] == '\0') {
                             break;
                         }
@@ -898,8 +902,30 @@ void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint3
     finish_walk_module();
 
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
-    
+
     write_bit_stream(buff, &itemCountBitPos, 8, moduleCount);
+    write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
+}
+
+void write_patch_notes(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
+    tModule  module          = {0};
+    uint32_t moduleCount     = 0;
+    bool     validModule     = false;
+    uint32_t sizeBitPos      = 0;
+    uint32_t itemCountBitPos = 0;
+    uint32_t i               = 0;
+
+    write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_PATCH_NOTES);
+
+    sizeBitPos = *bitPos;
+    write_bit_stream(buff, bitPos, 16, 0);  // Populated later
+
+    for (i = 0; i < gPatchNotesSize[slot]; i++) {
+        write_bit_stream(buff, bitPos, 8, gPatchNotes[slot][i]);
+    }
+
+    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
 
