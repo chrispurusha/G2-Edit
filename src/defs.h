@@ -48,6 +48,7 @@
 #define MAX_SLOTS                            (4)
 #define MAX_NUM_MODES                        (16)
 #define MAX_NUM_PARAMETERS                   (39)
+#define MAX_NUM_LABELS                       (32)
 #define MAX_NUM_CONNECTORS                   (13)
 
 #define INTERRUPT_MESSAGE_SIZE               (16)
