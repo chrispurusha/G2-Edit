@@ -619,7 +619,6 @@ void write_knobs(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
 }
 
 void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset, int count) {
-    //uint32_t location = 0;
     uint32_t   nameCount    = 0;
     uint32_t   paramLength  = 0;
     uint32_t   moduleLength = 0;
@@ -797,8 +796,7 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
 
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 
-    LOG_DEBUG("nameCount = %d\n\n", nameCount);
-    write_bit_stream(buff, &nameCountBitPos, 8, nameCount);  // UNCOMMENTED!
+    write_bit_stream(buff, &nameCountBitPos, 8, nameCount);
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
 
