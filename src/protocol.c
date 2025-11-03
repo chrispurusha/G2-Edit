@@ -35,45 +35,6 @@ extern "C" {
 #include "moduleResourcesAccess.h"
 #include "globalVars.h"
 
-uint32_t get_param_count(tLocation location, uint32_t index, tModuleType type) {
-    uint32_t paramCount = 0;
-
-    if (location == locationMorph) {
-        switch (index) {
-            case 1:
-            {
-                paramCount = 16;
-                break;
-            }
-            case 2:
-            case 3:
-            case 4:
-            case 7:
-            {
-                paramCount = 2;
-                break;
-            }
-            case 5:
-            {
-                paramCount = 3;
-                break;
-            }
-            case 6:
-            {
-                paramCount = 4;
-                break;
-            }
-            default:
-            {
-                break;
-            }
-        }
-    } else {
-        paramCount = module_param_count(type);
-    }
-    return paramCount;
-}
-
 void parse_patch_descr(uint8_t * buff, uint32_t * subOffset) {
     gPatchDescr[gSlot].unknown1        = read_bit_stream(buff, subOffset, 32);
     gPatchDescr[gSlot].unknown2        = read_bit_stream(buff, subOffset, 29);
@@ -377,10 +338,11 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     tModule  module            = {0};
     uint32_t moduleCount       = 0;
     bool     validModule       = false;
-    uint32_t variations        = 0;
     uint32_t sizeBitPos        = 0;
     uint32_t moduleCountBitPos = 0;
+    uint32_t variationsBitPos  = 0;
     uint32_t paramCount        = 0;
+    uint32_t variations        = 0;
     uint32_t i                 = 0;
     uint32_t j                 = 0;
 
@@ -394,22 +356,8 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     moduleCountBitPos = *bitPos;
     write_bit_stream(buff, bitPos, 8, 0);  // Populated later
 
-    reset_walk_module();
-
-    do {
-        validModule = walk_next_module(&module);
-
-        if (validModule == true) {
-            if ((module.key.slot == slot) && (module.key.location == location)) {
-                variations = NUM_VARIATIONS - 1;
-                break;
-            }
-        }
-    } while (validModule);
-
-    finish_walk_module();
-
-    write_bit_stream(buff, bitPos, 8, variations);  // Write 9 for files, not 10!
+    variationsBitPos = *bitPos;
+    write_bit_stream(buff, bitPos, 8, 0);  // Write 9 for files, not 10!
 
     reset_walk_module();
 
@@ -418,6 +366,8 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 
         if (validModule == true) {
             if ((module.key.slot == slot) && (module.key.location == location)) {
+                variations = NUM_VARIATIONS - 1; // At least one valid module, so we have variations
+
                 paramCount = module.actualParamCount;
 
                 if (paramCount > 0) {
@@ -426,7 +376,6 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
                     write_bit_stream(buff, bitPos, 8, module.key.index);
                     write_bit_stream(buff, bitPos, 7, paramCount);
 
-                    // Write 9 variations (0-8) for file format
                     for (i = 0; i < (NUM_VARIATIONS - 1); i++) {
                         write_bit_stream(buff, bitPos, 8, i);
 
@@ -443,12 +392,12 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 
+    write_bit_stream(buff, &variationsBitPos, 8, variations);
     write_bit_stream(buff, &moduleCountBitPos, 8, moduleCount);
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
 
 void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
-    // line 3754 in file.pas
     tModule    module          = {0};
     tModuleKey key             = {0};
     uint32_t   variationCount  = 0;
@@ -462,7 +411,7 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
 
     variationCount    = read_bit_stream(buff, subOffset, 8);
     gMorphCount[slot] = read_bit_stream(buff, subOffset, 4);
-    read_bit_stream(buff, subOffset, 20);  // Reserved data
+    read_bit_stream(buff, subOffset, 20);  // Reserved
 
     LOG_DEBUG("Variations %u Morph Count %u\n", variationCount, gMorphCount[slot]);
 
@@ -525,7 +474,6 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     write_bit_stream(buff, bitPos, 4, gMorphCount[slot]);  // Morph count (typically 4)
     write_bit_stream(buff, bitPos, 20, 0);                 // Reserved data
 
-    // For each variation
     for (i = 0; i < (NUM_VARIATIONS - 1); i++) {
         write_bit_stream(buff, bitPos, 4, i);  // Variation number
         write_bit_stream(buff, bitPos, 4, 0);  // Unknown
@@ -543,18 +491,14 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
         morphParamCount = 0;
         reset_walk_module();
 
-        // Walk through all modules to find parameters with morph ranges
         do {
             validModule = walk_next_module(&module);
 
             if (validModule == true) {
-                // Only filter by slot, not by location - morph params are for ALL locations
                 if (module.key.slot == slot) {
-                    paramCount = get_param_count(module.key.location, module.key.index, module.type);
+                    paramCount = module.actualParamCount;
 
-                    // Check each parameter for morph assignments
                     for (j = 0; j < paramCount; j++) {
-                        // Write ALL morphs assigned to this parameter
                         for (m = 0; m < gMorphCount[slot]; m++) {
                             if (module.param[i][j].morphRange[m] != 0) {
                                 morphParamCount++;
@@ -573,18 +517,20 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
         finish_walk_module();
 
         write_bit_stream(buff, &morphParamCountBitPos, 8, morphParamCount);
-        write_bit_stream(buff, bitPos, 4, 0);  // Trailing unknown bits
+        LOG_DEBUG("WRITE %d %d\n", i, NUM_VARIATIONS - 1);
+
+        if ((i + 1) < (NUM_VARIATIONS - 1)) {
+            LOG_DEBUG("ACTUALLY DO WRITE\n");
+            write_bit_stream(buff, bitPos, 4, 0);  // Trailing unknown bits, don't do on last run-through
+        }
     }
 
-    *bitPos -= 4;  // Seems we don't want that spare 4 bits on the last run through
-    *bitPos  = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
 
 void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
-    // line 4268 in file.pas
-
     tModuleKey key        = {0};
     uint32_t   knobCount  = 0;
     uint32_t   isLed      = 0;
@@ -648,7 +594,7 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset, int 
             write_module(key, &module);
         }
         moduleLength = read_bit_stream(buff, subOffset, 8);
-        LOG_DEBUG("Module length     %d\n\n", moduleLength);         // 5004
+        LOG_DEBUG("Module length     %d\n\n", moduleLength);
 
         for (j = 0; j < moduleLength;) {
             isString = read_bit_stream(buff, subOffset, 8);
