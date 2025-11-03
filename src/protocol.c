@@ -609,9 +609,24 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset, int 
             if (paramLength > 0) {
                 numLabels = (paramLength - 1) / PROTOCOL_PARAM_NAME_SIZE;
 
-                module.paramNumLabels[paramIndex] = numLabels;
+                if (numLabels > MAX_NUM_LABELS) {
+                    LOG_ERROR("numLabels %u exceeds maximum %u for param %u\n", numLabels, MAX_NUM_LABELS, paramIndex);
+                    exit(1);
+                }
 
-                memset(&module.paramName[paramIndex], 0, sizeof(module.paramName[paramIndex]));
+                if (paramIndex >= MAX_NUM_PARAMETERS) {
+                    LOG_ERROR("paramIndex %u exceeds maximum %u\n", paramIndex, MAX_NUM_PARAMETERS);
+                    exit(1);
+                }
+
+                if (sizeof(module.paramName[0]) < (numLabels * PROTOCOL_PARAM_NAME_SIZE)) {
+                    LOG_ERROR("paramName array too small for %u labels\n", numLabels);
+                    exit(1);
+                }
+                
+                memset(&module.paramName[paramIndex], 0, sizeof(module.paramName[0]));
+                
+                module.paramNumLabels[paramIndex] = numLabels;
 
                 for (labelIndex = 0; labelIndex < numLabels; labelIndex++) {
                     module.paramNameSet[paramIndex][labelIndex] = true;
