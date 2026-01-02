@@ -48,7 +48,7 @@ typedef enum {
     eStateInit,     // Items from here increment in order for init sequence states
     eStateStop,
     eStateGetSynthSettings,
-    eStateGetUnknown1,
+    eStateGetMidiCc, // A.k.a. Unknown 1!?
     eStateGetUnknown2,
     eStateSelectSlot,
     eStateGetPatchVersionSlotA,
@@ -150,6 +150,33 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     LOG_DEBUG("Pedal Polarity (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 8));     //0xC0 (1100) = closed, 0x40 (0100) = open therefore bit 7
     LOG_DEBUG("Control Pedal Gain 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     //17 other unknown bytes to go
+
+    retVal = EXIT_SUCCESS;
+
+    return retVal;
+}
+    
+static int parse_midi_cc(uint8_t * buff, int length) {
+    int      retVal = EXIT_FAILURE;
+    int      i      = 0;
+    uint32_t bitPos = 0;
+    uint8_t  subResponse     = 0;
+    bool quitLoop = false;
+    
+    if (buff == NULL) {
+        return retVal;
+    }
+    
+    while (quitLoop == false) {
+        LOG_DEBUG("MIDI Chan 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("CC Numb (and value?) 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+        subResponse = read_bit_stream(buff, &bitPos, 8);
+        
+        if ((subResponse != SUB_RESPONSE_MIDI_CC) || (BIT_TO_BYTE_ROUND_UP(bitPos) > length)) {
+            LOG_DEBUG("MIDI CC stream finishing on 0x%02x bitPos (byte) = %u, length = %d\n", subResponse, BIT_TO_BYTE_ROUND_UP(bitPos), length);
+            quitLoop = true;
+        }
+    }
 
     retVal = EXIT_SUCCESS;
 
@@ -466,13 +493,22 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 
         case SUB_RESPONSE_MIDI_CC:
         {
-            LOG_DEBUG("Got MIDI cc response\n");
-            return EXIT_SUCCESS;
+            LOG_DEBUG("Got MIDI cc response for slot %u\n", slot);
+            return parse_midi_cc(&buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
         }
 
         case SUB_RESPONSE_GLOBAL_PAGE:
         {
             LOG_DEBUG("Got Global page\n");
+            {
+                uint32_t tmpBitPos = *bitPos;
+            
+                for (int i = 0; i < length; i++) {
+                    LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, bitPos, 8));
+                }
+                LOG_DEBUG_DIRECT("\n");
+                *bitPos = tmpBitPos;
+            }
             return EXIT_SUCCESS;
         }
 
@@ -552,6 +588,12 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
         case SUB_RESPONSE_OK:
         {
             //LOG_DEBUG("Got 0x7f OK\n");
+            return EXIT_SUCCESS;
+        }
+            
+        case SUB_RESPONSE_SELECT_PARAM:
+        {
+            LOG_DEBUG("Got select param\n");
             return EXIT_SUCCESS;
         }
 
@@ -725,7 +767,7 @@ static int send_command(int state) { // TODO: Can probably now flatten into a si
         case eStateGetPatchVersionSlotC:
         case eStateGetPatchVersionSlotD:
         case eStateGetSynthSettings:
-        case eStateGetUnknown1:
+        case eStateGetMidiCc:
         case eStateGetUnknown2:
         case eStateGetPatchSlotA:
         case eStateGetPatchSlotB:
@@ -772,16 +814,16 @@ static int send_command(int state) { // TODO: Can probably now flatten into a si
                     buff[pos++] = SUB_COMMAND_GET_SYNTH_SETTINGS;
                     break;
 
-                case eStateGetUnknown1:
+                case eStateGetMidiCc:
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x41;
-                    buff[pos++] = 0x81;
+                    buff[pos++] = SUB_COMMAND_GET_MIDI_CC;
                     break;
 
                 case eStateGetUnknown2:
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x00;
-                    buff[pos++] = 0x59;
+                    buff[pos++] = SUB_COMMAND_UNKNOWN_2;
                     break;
 
                 case eStateGetPatchVersionSlotA:
@@ -1054,7 +1096,7 @@ static void state_handler(void) {
         case eStateGetPatchNameSlotC:
         case eStateGetPatchNameSlotD:
         case eStateGetSynthSettings:
-        case eStateGetUnknown1:
+        case eStateGetMidiCc:
         case eStateGetUnknown2:
         case eStateStart:
 
