@@ -81,6 +81,7 @@
 #define SUB_COMMAND_SET_MODULE_UPRATE        (0x2a)
 #define SUB_COMMAND_SET_MODE                 (0x2b)
 #define SUB_COMMAND_GET_SELECTED_PARAM       (0x2e)
+#define SUB_RESPONSE_SELECT_PARAM            (0x2F)
 #define SUB_COMMAND_ADD_MODULE               (0x30)
 #define SUB_COMMAND_SET_MODULE_COLOUR        (0x31)
 #define SUB_COMMAND_DELETE_MODULE            (0x32)
@@ -118,7 +119,7 @@
 #define SUB_RESPONSE_ERROR                   (0x7e)
 #define SUB_RESPONSE_OK                      (0x7f)
 #define SUB_RESPONSE_MIDI_CC                 (0x80)
-#define SUB_COMMAND_UNKNOWN_1                (0x81) // Slot related?
+#define SUB_COMMAND_GET_MIDI_CC              (0x81) // A.k.a. Unknown 1!?
 
 #define COMMAND_REQ                          (0x20) // High nibble, expects response
 #define COMMAND_WRITE_NO_RESP                (0x30) // High nibble, expects response
