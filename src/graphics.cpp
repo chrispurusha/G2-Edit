@@ -463,7 +463,7 @@ void write_database_to_file(const char * filepath) {
     writtenSize = fwrite(buff, 1, BIT_TO_BYTE_ROUND_UP(bitPos), file);
 
     if (writtenSize != BIT_TO_BYTE_ROUND_UP(bitPos)) {
-        LOG_ERROR("Written %d of %u\n", writtenSize, BIT_TO_BYTE_ROUND_UP(bitPos));
+        LOG_ERROR("Written %zu of %u\n", writtenSize, BIT_TO_BYTE_ROUND_UP(bitPos));
     }
 
     if (BIT_TO_BYTE_ROUND_UP(bitPos) > ((PATCH_FILE_SIZE * 3) / 4)) {

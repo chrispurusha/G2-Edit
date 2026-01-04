@@ -158,7 +158,6 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     
 static int parse_midi_cc(uint8_t * buff, int length) {
     int      retVal = EXIT_FAILURE;
-    int      i      = 0;
     uint32_t bitPos = 0;
     uint8_t  subResponse     = 0;
     bool quitLoop = false;

@@ -355,7 +355,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         case paramType2Toggle:
         case paramType2UpDown:
         {
-            tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap);
+            tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, char ** strMap);
             render_param_function = NULL;
 
             switch (paramLocationList[paramRef].type1) {
@@ -386,7 +386,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             }
 
             if (render_param_function != NULL) {
-                module->param[gPatchDescr[gSlot].activeVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
+                module->param[gPatchDescr[gSlot].activeVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, (char **)paramLocationList[paramRef].strMap);
             }
             break;
         }
@@ -836,7 +836,7 @@ void render_morph_groups(void) {
                 snprintf(buff, sizeof(buff), "%u", module.param[gPatchDescr[gSlot].activeVariation][i].value);
 
                 if (module.param[gPatchDescr[gSlot].activeVariation][i + NUM_MORPHS].value != 0) {
-                    snprintf(label, sizeof(label), "%s", module.paramName[i + NUM_MORPHS]);
+                    snprintf(label, sizeof(label), "%s", module.paramName[i + NUM_MORPHS][0]);
                 } else {
                     snprintf(label, sizeof(label), "Knob");
                 }
@@ -866,3 +866,4 @@ void render_morph_groups(void) {
 #ifdef __cplusplus
 }
 #endif
+

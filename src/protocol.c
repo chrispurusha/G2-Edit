@@ -855,11 +855,7 @@ void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint3
 }
 
 void write_patch_notes(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
-    tModule  module          = {0};
-    uint32_t moduleCount     = 0;
-    bool     validModule     = false;
     uint32_t sizeBitPos      = 0;
-    uint32_t itemCountBitPos = 0;
     uint32_t i               = 0;
 
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_PATCH_NOTES);
