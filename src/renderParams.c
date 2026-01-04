@@ -734,7 +734,7 @@ tRectangle render_paramType1Resonance(tModule * module, tRectangle rectangle, ch
     return render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
+tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, char ** strMap) {
     double y          = rectangle.coord.y;
     double textHeight = rectangle.size.h / 2.0;
 
@@ -764,7 +764,7 @@ tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangl
     return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[(int)paramValue]);
 }
 
-tRectangle render_paramType1UpDown(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
+tRectangle render_paramType1UpDown(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, char ** strMap) {
     double y          = rectangle.coord.y;
     double textHeight = rectangle.size.h / 2.0;
 
