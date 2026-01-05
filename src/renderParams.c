@@ -43,24 +43,24 @@ extern "C" {
 #include "globalVars.h"
 #include "moduleGraphics.h"
 
-tRectangle render_paramType1Freq(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1Freq(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double freq = 0.0;
 
     freq = round(13.75 * pow(2, (double)paramValue / 12.0) * 100.0) / 100.0;
 
     if (freq < 100) {
-        snprintf(buff, sizeof(buff), "%.2fHz", freq);
+        snprintf(buff, buffSize, "%.2fHz", freq);
     } else if (freq < 1000) {
-        snprintf(buff, sizeof(buff), "%.1fHz", freq);
+        snprintf(buff, buffSize, "%.1fHz", freq);
     } else if (freq < 10000) {
-        snprintf(buff, sizeof(buff), "%.2fkHz", freq / 1000.0);
+        snprintf(buff, buffSize, "%.2fkHz", freq / 1000.0);
     } else {
-        snprintf(buff, sizeof(buff), "%.1fkHz", freq / 1000.0);
+        snprintf(buff, buffSize, "%.1fkHz", freq / 1000.0);
     }
     return render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     // Frequency dial for oscillators. Uses PitchType param to control display of Tune
     int pitchTypeParamIndex = 0;
 
@@ -92,7 +92,7 @@ tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char
             } else {
                 res = 63.0;             // Clip
             }
-            snprintf(buff, sizeof(buff), "%.1f", res);
+            snprintf(buff, buffSize, "%.1f", res);
             break;
         }
         case 1:   // Freq. 8.1758 Hz to 12.55 kHz
@@ -103,13 +103,13 @@ tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char
             res = exp((double)paramValue / 127.0 * log(max_freq / min_freq)) * min_freq;
 
             if (res < 100) {
-                snprintf(buff, sizeof(buff), "%.2fHz", res);
+                snprintf(buff, buffSize, "%.2fHz", res);
             } else if (res < 1000) {
-                snprintf(buff, sizeof(buff), "%.1fHz", res);
+                snprintf(buff, buffSize, "%.1fHz", res);
             } else if (res < 10000) {
-                snprintf(buff, sizeof(buff), "%.2fkHz", res / 1000.0);
+                snprintf(buff, buffSize, "%.2fkHz", res / 1000.0);
             } else {
-                snprintf(buff, sizeof(buff), "%.1fkHz", res / 1000.0);
+                snprintf(buff, buffSize, "%.1fkHz", res / 1000.0);
             }
             break;
         }
@@ -119,7 +119,7 @@ tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char
             double min_factor = .0248;
             double max_factor = 38.072;
             res = exp((double)paramValue / 127.0 * log(max_factor / min_factor)) * min_factor;
-            snprintf(buff, sizeof(buff), "%.4fHz", res);
+            snprintf(buff, buffSize, "%.4fHz", res);
             break;
         }
         case 3:   // Partial. Displays partials for values from 33 upwards, Hz below.
@@ -127,18 +127,18 @@ tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char
             double res;
 
             if (paramValue == 0.0) {
-                snprintf(buff, sizeof(buff), "0 Hz");
+                snprintf(buff, buffSize, "0 Hz");
             } else if (paramValue < 33.0) { // show value as Hz
                 double min_freq = 0.005;
                 double max_freq = 5.153;
                 res = exp(((double)paramValue - 1.0) / 31.0 * log(max_freq / min_freq)) * min_freq;
-                snprintf(buff, sizeof(buff), "%.3fHz", res);
+                snprintf(buff, buffSize, "%.3fHz", res);
             } else if (paramValue < 64.0) {
                 res = 64.0 - paramValue + 1.0;
-                snprintf(buff, sizeof(buff), "1:%.0f", res);
+                snprintf(buff, buffSize, "1:%.0f", res);
             } else {
                 res = paramValue - 64.0 + 1.0;
-                snprintf(buff, sizeof(buff), "%.0f:1", res);
+                snprintf(buff, buffSize, "%.0f:1", res);
             }
             break;
         }
@@ -146,14 +146,14 @@ tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char
     return render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1Fine(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1Fine(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double res = ((double)paramValue - 64.0) / 64.0 * 50.0;
 
-    snprintf(buff, sizeof(buff), "%.1f", res);
+    snprintf(buff, buffSize, "%.1f", res);
     return render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1GeneralFreq(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1GeneralFreq(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double minFreq, maxFreq, freq;
 
     switch (module->type) {
@@ -173,37 +173,37 @@ tRectangle render_paramType1GeneralFreq(tModule * module, tRectangle rectangle, 
     freq = minFreq * exp((double)paramValue * log(maxFreq / minFreq) / 127.0);
 
     if (freq < 1000.0) {
-        snprintf(buff, sizeof(buff), "%.0fHz", freq);
+        snprintf(buff, buffSize, "%.0fHz", freq);
     } else {
-        snprintf(buff, sizeof(buff), "%.2fkHz", freq / 1000.0);
+        snprintf(buff, buffSize, "%.2fkHz", freq / 1000.0);
     }
     return render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1Shape(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1Shape(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     // 50.0->99.9
     int val = 0;
 
     val = (int)(paramValue * 49.0 / 127.0 + 50.0);
-    snprintf(buff, sizeof(buff), "%u", val);
+    snprintf(buff, buffSize, "%u", val);
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1FreqDrum(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1FreqDrum(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double freq = 0.0;
 
     // 0 -> 20 Hz, 127 -> 784 Hz
     freq = round(20.0 * pow(2, (double)paramValue * 0.041675) * 100.0) / 100.0;
 
     if (freq < 100) {
-        snprintf(buff, sizeof(buff), "%.2fHz", freq);
+        snprintf(buff, buffSize, "%.2fHz", freq);
     } else {
-        snprintf(buff, sizeof(buff), "%.1fHz", freq);
+        snprintf(buff, buffSize, "%.1fHz", freq);
     }
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double rate;
     int    rateModeParamIndex;
 
@@ -238,11 +238,11 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
             rate = range_start * exp((double)paramValue * log(range_end / range_start) / 127.0);
 
             if (rate > 100.0) {
-                snprintf(buff, sizeof(buff), "%.0fs", rate);
+                snprintf(buff, buffSize, "%.0fs", rate);
             } else if (rate > 10.0) {
-                snprintf(buff, sizeof(buff), "%.1fs", rate);
+                snprintf(buff, buffSize, "%.1fs", rate);
             } else {
-                snprintf(buff, sizeof(buff), "%.2fs", rate);
+                snprintf(buff, buffSize, "%.2fs", rate);
             }
             break;
         }
@@ -254,11 +254,11 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
             rate = range_start * exp((double)paramValue * log(range_end / range_start) / 127.0);
 
             if (rate > 10.0) {
-                snprintf(buff, sizeof(buff), "%.1fs", rate);
+                snprintf(buff, buffSize, "%.1fs", rate);
             } else if (rate > 0.1) {
-                snprintf(buff, sizeof(buff), "%.2fHz", 1.0 / rate);
+                snprintf(buff, buffSize, "%.2fHz", 1.0 / rate);
             } else {
-                snprintf(buff, sizeof(buff), "%.1fHz", 1.0 / rate);
+                snprintf(buff, buffSize, "%.1fHz", 1.0 / rate);
             }
             break;
         }
@@ -269,11 +269,11 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
             double freq     = min_freq * exp((double)paramValue * log(max_freq / min_freq) / 127.0);
 
             if (freq < 10.0) {
-                snprintf(buff, sizeof(buff), "%.2fHz", freq);
+                snprintf(buff, buffSize, "%.2fHz", freq);
             } else if (freq < 100.0) {
-                snprintf(buff, sizeof(buff), "%.1fHz", freq);
+                snprintf(buff, buffSize, "%.1fHz", freq);
             } else {
-                snprintf(buff, sizeof(buff), "%.0fHz", freq);
+                snprintf(buff, buffSize, "%.0fHz", freq);
             }
             break;
         }
@@ -288,7 +288,7 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
             } else {                      // 97 -> 154, 127 -> 214 in steps of 2
                 bpm = 154 + round(2 * (paramValue - 97.0));
             }
-            snprintf(buff, sizeof(buff), "%u", bpm);
+            snprintf(buff, buffSize, "%u", bpm);
             break;
         }
         case 4: // ClkSync. 32 values
@@ -299,7 +299,7 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
                 "1/16", "1/32D", "1/16T", "1/32", "1/64D", "1/32T", "1/64", "1/64T"
             };
             int          posClkSyncStrMap = floor(paramValue / 4);
-            snprintf(buff, sizeof(buff), "%s\n", clkSyncStrMap[posClkSyncStrMap]);
+            snprintf(buff, buffSize, "%s\n", clkSyncStrMap[posClkSyncStrMap]);
             break;
         }
         default:
@@ -310,15 +310,15 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1Int(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1Int(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     int val = 0;
 
     val = paramValue;
-    snprintf(buff, sizeof(buff), "%u", val);
+    snprintf(buff, buffSize, "%u", val);
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1dB(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1dB(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double dB       = 0.0;
     double dB_range = 1.0;
 
@@ -341,12 +341,12 @@ tRectangle render_paramType1dB(tModule * module, tRectangle rectangle, char * la
         }
     }
     dB = round(((double)paramValue - 64.0) / 64.0 * dB_range);
-    snprintf(buff, sizeof(buff), "%+.0fdB", dB);
+    snprintf(buff, buffSize, "%+.0fdB", dB);
 
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1MixLevel(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1MixLevel(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     //double       level      = 0.0;
     const double dbLvlMap[] = {
         -100.0, -99.9, -99.0, -72.1, -69.2, -66.9, -64.8, -62.9,
@@ -383,15 +383,15 @@ tRectangle render_paramType1MixLevel(tModule * module, tRectangle rectangle, cha
 
     if (module->param[gPatchDescr[gSlot].activeVariation][expLinDBparam].value == 2) { // display dB
         if (paramValue == 0.0) {
-            snprintf(buff, sizeof(buff), "-oodB");
+            snprintf(buff, buffSize, "-oodB");
         } else {
-            snprintf(buff, sizeof(buff), "%.1f", dbLvlMap[(int)paramValue]);
+            snprintf(buff, buffSize, "%.1f", dbLvlMap[(int)paramValue]);
         }
     }
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1Time(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1Time(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double time     = 0.0;
     double min_time = 0;
     double max_time = 0.0;
@@ -460,14 +460,14 @@ tRectangle render_paramType1Time(tModule * module, tRectangle rectangle, char * 
     time = exp((double)paramValue / 127 * log(max_time / min_time)) * min_time;
 
     if (time < 1.0) {
-        snprintf(buff, sizeof(buff), "%.0fms", time * 1000);
+        snprintf(buff, buffSize, "%.0fms", time * 1000);
     } else {
-        snprintf(buff, sizeof(buff), "%.1fs", time);
+        snprintf(buff, buffSize, "%.1fs", time);
     }
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1TimeClk(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1TimeClk(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double time = 0.0;
     double min_time, max_time;
 
@@ -534,14 +534,14 @@ tRectangle render_paramType1TimeClk(tModule * module, tRectangle rectangle, char
     time = exp((double)paramValue / 127 * log(max_time / min_time)) * min_time;
 
     if (time < 1.0) {
-        snprintf(buff, sizeof(buff), "%.0fms", time * 1000);
+        snprintf(buff, buffSize, "%.0fms", time * 1000);
     } else {
-        snprintf(buff, sizeof(buff), "%.1fs", time);
+        snprintf(buff, buffSize, "%.1fs", time);
     }
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1ADRTime(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1ADRTime(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double       time         = 0.0;
     const double ADRTimeMap[] = {
         0.0005, 0.0006, 0.0007, 0.0009, 0.0011, 0.0013, 0.0015, 0.0018, 0.0021, 0.0025, 0.0030, 0.0035, 0.0040, 0.0047, 0.0055, 0.0063,
@@ -558,18 +558,18 @@ tRectangle render_paramType1ADRTime(tModule * module, tRectangle rectangle, char
     time = ADRTimeMap[(int)paramValue];
 
     if (time < 0.1) {
-        snprintf(buff, sizeof(buff), "%.1fms", time * 1000);
+        snprintf(buff, buffSize, "%.1fms", time * 1000);
     } else if (time < 1.0) {
-        snprintf(buff, sizeof(buff), "%.0fms", time * 1000);
+        snprintf(buff, buffSize, "%.0fms", time * 1000);
     } else if (time < 10.0) {
-        snprintf(buff, sizeof(buff), "%.2fs", time);
+        snprintf(buff, buffSize, "%.2fs", time);
     } else {
-        snprintf(buff, sizeof(buff), "%.1fs", time);
+        snprintf(buff, buffSize, "%.1fs", time);
     }
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1PulseTime(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1PulseTime(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double       time_to_display;
     const double pulseLoTime[] = {
         .00104, .00111, .00119, .00128, .00137, .00147, .00157, .00169,
@@ -614,20 +614,20 @@ tRectangle render_paramType1PulseTime(tModule * module, tRectangle rectangle, ch
     }
 
     if (time_to_display < 0.01) {
-        snprintf(buff, sizeof(buff), "%.2fms", time_to_display * 1000);
+        snprintf(buff, buffSize, "%.2fms", time_to_display * 1000);
     } else if (time_to_display < 0.1) {
-        snprintf(buff, sizeof(buff), "%.1fms", time_to_display * 1000);
+        snprintf(buff, buffSize, "%.1fms", time_to_display * 1000);
     } else if (time_to_display < 1.0) {
-        snprintf(buff, sizeof(buff), "%.0fms", time_to_display * 1000);
+        snprintf(buff, buffSize, "%.0fms", time_to_display * 1000);
     } else if (time_to_display < 10.0) {
-        snprintf(buff, sizeof(buff), "%.2fs", time_to_display);
+        snprintf(buff, buffSize, "%.2fs", time_to_display);
     } else {
-        snprintf(buff, sizeof(buff), "%.1fs", time_to_display);
+        snprintf(buff, buffSize, "%.1fs", time_to_display);
     }
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1Pitch(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1Pitch(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double percent = 0.0;
     double maxVal  = 200.0;
 
@@ -636,11 +636,11 @@ tRectangle render_paramType1Pitch(tModule * module, tRectangle rectangle, char *
     } else {
         percent = maxVal;             // Clip
     }
-    snprintf(buff, sizeof(buff), "%.1f%%", percent);
+    snprintf(buff, buffSize, "%.1f%%", percent);
     return render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1BipLevel(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1BipLevel(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     // -64 to 63
     double res    = 0.0;
     double maxVal = 64.0;
@@ -685,27 +685,27 @@ tRectangle render_paramType1BipLevel(tModule * module, tRectangle rectangle, cha
             }
         }
     }
-    snprintf(buff, sizeof(buff), "%.1f", res);
+    snprintf(buff, buffSize, "%.1f", res);
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1LevAmpDial(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1LevAmpDial(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     // 0.25 to 4.0
     double lev = 1.0;
 
     // scale 0 -> 0.25x and 127 -> 4.0x, exponentially
     lev = round(exp((double)paramValue * 0.0218) * 0.25 * 100.0) / 100.0;
 
-    snprintf(buff, sizeof(buff), "%.2fx", lev);
+    snprintf(buff, buffSize, "%.2fx", lev);
 
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1Pan(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1Pan(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     return render_dial(moduleArea, rectangle, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1NoteDial(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1NoteDial(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     // C-1 to G9
     int    noteoctave;
     int    noteval;
@@ -716,12 +716,12 @@ tRectangle render_paramType1NoteDial(tModule * module, tRectangle rectangle, cha
     noteval    = ((int)paramValue) % 12;
     noteName   = noteNameStrMap[noteval];
 
-    snprintf(buff, sizeof(buff), "%s%i", noteName, noteoctave);
+    snprintf(buff, buffSize, "%s%i", noteName, noteoctave);
 
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1Resonance(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+tRectangle render_paramType1Resonance(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double res    = 0.0;
     double maxVal = 100.0;
 
@@ -730,11 +730,11 @@ tRectangle render_paramType1Resonance(tModule * module, tRectangle rectangle, ch
     } else {
         res = maxVal;             // Clip
     }
-    snprintf(buff, sizeof(buff), "%.1f", res);
+    snprintf(buff, buffSize, "%.1f", res);
     return render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
-tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, char ** strMap) {
+tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, char ** strMap) {
     double y          = rectangle.coord.y;
     double textHeight = rectangle.size.h / 2.0;
 
@@ -764,7 +764,7 @@ tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangl
     return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[(int)paramValue]);
 }
 
-tRectangle render_paramType1UpDown(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, char ** strMap) {
+tRectangle render_paramType1UpDown(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, char ** strMap) {
     double y          = rectangle.coord.y;
     double textHeight = rectangle.size.h / 2.0;
 
@@ -792,11 +792,11 @@ tRectangle render_paramType1UpDown(tModule * module, tRectangle rectangle, char 
     return draw_updown(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[(int)paramValue]);
 }
 
-tRectangle render_paramType1Bypass(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
+tRectangle render_paramType1Bypass(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
     return draw_power_button(moduleArea, rectangle, paramValue != 0);
 }
 
-tRectangle render_paramType1Enable(tModule * module, tRectangle rectangle, char * label, char * buff, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
+tRectangle render_paramType1Enable(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
     if (paramLocationList[paramRef].colourMap != NULL) {
         set_rgb_colour(paramLocationList[paramRef].colourMap[(int)paramValue]);
     } else {
