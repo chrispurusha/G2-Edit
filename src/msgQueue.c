@@ -48,8 +48,8 @@ void msg_init(tMessageQueue * msgQueue, char * semName) {
             return;
         }
     }
-    // Remove semaphore on exit
-    sem_unlink(semName);
+    // NOTE: Do NOT unlink semaphore here - it should only be unlinked during shutdown
+    // to avoid race conditions with other threads/processes
 }
 
 int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageContent) {
