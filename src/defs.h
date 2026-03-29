@@ -88,6 +88,7 @@
 #define SUB_COMMAND_MOVE_MODULE              (0x34)
 #define SUB_COMMAND_GET_PATCH_VERSION        (0x35)
 #define SUB_RESPONSE_PATCH_VERSION           (0x36)
+#define SUB_COMMAND_SET                      (0x37) // Upload patch to slot, so send all the data clearing existing patch!?
 #define SUB_RESPONSE_PATCH_VERSION_CHANGE    (0x38)
 #define SUB_RESPONSE_LED_DATA                (0x39)
 #define SUB_RESPONSE_VOLUME_INDICATOR        (0x3a)
