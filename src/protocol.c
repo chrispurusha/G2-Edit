@@ -623,9 +623,8 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset, int 
                     LOG_ERROR("paramName array too small for %u labels\n", numLabels);
                     exit(1);
                 }
-                
                 memset(&module.paramName[paramIndex], 0, sizeof(module.paramName[0]));
-                
+
                 module.paramNumLabels[paramIndex] = numLabels;
 
                 for (labelIndex = 0; labelIndex < numLabels; labelIndex++) {
@@ -855,8 +854,8 @@ void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint3
 }
 
 void write_patch_notes(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
-    uint32_t sizeBitPos      = 0;
-    uint32_t i               = 0;
+    uint32_t sizeBitPos = 0;
+    uint32_t i          = 0;
 
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_PATCH_NOTES);
 
