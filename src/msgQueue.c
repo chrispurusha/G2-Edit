@@ -36,20 +36,17 @@ void msg_init(tMessageQueue * msgQueue, char * semName) {
     msgQueue->head = NULL;
     msgQueue->tail = NULL;
 
-    // Try opening semaphore if it exists, or create a new one
-    msgQueue->semaphore = sem_open(semName, O_CREAT | O_EXCL, 0, 0);
+    // IMPORTANT: Unlink any stale semaphore from previous runs FIRST
+    sem_unlink(semName);
+    
+    // Now create a fresh semaphore
+    msgQueue->semaphore = sem_open(semName, O_CREAT | O_EXCL, 0644, 0);
 
     if (msgQueue->semaphore == SEM_FAILED) {
-        // Handle existing semaphore (retry without O_EXCL)
-        msgQueue->semaphore = sem_open(semName, 0);
-
-        if (msgQueue->semaphore == SEM_FAILED) {
-            LOG_ERROR("Semaphore '%s' create/open failed\n", semName);
-            return;
-        }
+        LOG_ERROR("Semaphore '%s' creation failed\n", semName);
+        LOG_ERROR("Error: %s\n", strerror(errno));
+        return;
     }
-    // NOTE: Do NOT unlink semaphore here - it should only be unlinked during shutdown
-    // to avoid race conditions with other threads/processes
 }
 
 int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageContent) {

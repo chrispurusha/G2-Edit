@@ -203,19 +203,27 @@ void render_top_bar(void) {
 }
 
 void wake_glfw(void) {
+    // Update the redraw flag (protected by its own mutex)
     re_draw_mutex_lock();
-
     if (gReDraw == false) {
         gReDraw = true;
     }
     re_draw_mutex_unlock();
+    
+    // Safe GLFW call from any thread
     glfwPostEmptyEvent();
 }
 
 void notify_full_patch_change(void) {
-    gLocation                                     = locationVa;
+    // CRITICAL: This modifies global state from USB thread
+    // Must be protected by gGlobalVarsMutex
+    pthread_mutex_lock(&gGlobalVarsMutex);
+    
+    gLocation = locationVa;
     gMainButtonArray[vaButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
     gMainButtonArray[fxButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+    
+    pthread_mutex_unlock(&gGlobalVarsMutex);
 }
 
 void setup_render_context(void) {
