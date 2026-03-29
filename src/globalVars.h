@@ -33,6 +33,7 @@
 #include "defs.h"
 #include "types.h"
 #include "msgQueue.h"
+#include <pthread.h>
 
 extern bool            gQuitAll;
 extern GLFWwindow *    gWindow;
@@ -60,6 +61,9 @@ extern uint32_t        gControllerSize[MAX_SLOTS];
 extern uint8_t         gController[MAX_SLOTS][1024];
 extern uint32_t        gPatchNotesSize[MAX_SLOTS];
 extern uint8_t         gPatchNotes[MAX_SLOTS][MAX_16BIT];
+
+// Thread synchronization mutex for global variables
+extern pthread_mutex_t gGlobalVarsMutex;
 
 uint32_t array_size_main_button_array(void);
 
