@@ -38,7 +38,7 @@ void msg_init(tMessageQueue * msgQueue, char * semName) {
 
     // IMPORTANT: Unlink any stale semaphore from previous runs FIRST
     sem_unlink(semName);
-    
+
     // Now create a fresh semaphore
     msgQueue->semaphore = sem_open(semName, O_CREAT | O_EXCL, 0644, 0);
 

@@ -20,6 +20,10 @@ brew install freetype2
 
 brew install libusb
 
+// For uncrustify, which is a 'C' beautifier
+
+brew install uncrustify
+
 (Note - seems I no longer have to use ...install --build-from-source <library>)
 
 If you have those installed already and want to update, here's the sequence I ran to update:
