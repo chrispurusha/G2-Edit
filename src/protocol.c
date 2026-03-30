@@ -557,6 +557,7 @@ void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             LOG_DEBUG("  Module Index %u\n", key.index);
             LOG_DEBUG("  IsLed %u\n", isLed);
             LOG_DEBUG("  Param Index %u\n", paramIndex);
+            //gKnob[slot][i] = read_bit_stream(buff, &subOffset, 8);
         }
     }
 }
