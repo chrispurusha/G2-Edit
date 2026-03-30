@@ -665,6 +665,11 @@ static int rcv_extended(int dataLength) {
     devHandle_local = devHandle;
     pthread_mutex_unlock(&usbStaticMutex);
 
+    if (devHandle_local == NULL) {
+        LOG_ERROR("Attempted to use uninitialized USB device handle\n");
+        return EXIT_FAILURE;
+    }
+
     for (tries = 1; tries < 5; tries++) {
         memset(buff, 0, sizeof(buff));
         readLength = 0;
@@ -717,6 +722,11 @@ static int int_rec(void) {
     pthread_mutex_lock(&usbStaticMutex);
     devHandle_local = devHandle;
     pthread_mutex_unlock(&usbStaticMutex);
+
+    if (devHandle_local == NULL) {
+        LOG_ERROR("Attempted to use uninitialized USB device handle\n");
+        return EXIT_FAILURE;
+    }
 
     for (tries = 1; tries < 5; tries++) {
         memset(buff, 0, sizeof(buff));
@@ -773,6 +783,11 @@ static int send_command(int state) {
     memcpy(slotVersion_local, slotVersion, sizeof(slotVersion));
     devHandle_local = devHandle;
     pthread_mutex_unlock(&usbStaticMutex);
+
+    if (devHandle_local == NULL) {
+        LOG_ERROR("Attempted to use uninitialized USB device handle\n");
+        return EXIT_FAILURE;
+    }
 
     switch (state) {
         case eStateInit:
@@ -928,6 +943,11 @@ static int send_write_data(tMessageContent * messageContent) {
     memcpy(slotVersion_local, slotVersion, sizeof(slotVersion));
     devHandle_local = devHandle;
     pthread_mutex_unlock(&usbStaticMutex);
+
+    if (devHandle_local == NULL) {
+        LOG_ERROR("Attempted to use uninitialized USB device handle\n");
+        return EXIT_FAILURE;
+    }
 
     switch (messageContent->cmd) {
         case eMsgCmdSetValue:
