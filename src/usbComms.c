@@ -1039,10 +1039,10 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
             buff[pos++] = slotVersion_local[messageContent->slot];
             buff[pos++] = SUB_COMMAND_MOVE_MODULE;
-            buff[pos++] = messageContent->moduleMoveData.moduleKey.location;
-            buff[pos++] = messageContent->moduleMoveData.moduleKey.index;
-            buff[pos++] = messageContent->moduleMoveData.column;
-            buff[pos++] = messageContent->moduleMoveData.row;
+            buff[pos++] = messageContent->moduleData.moduleKey.location;
+            buff[pos++] = messageContent->moduleData.moduleKey.index;
+            buff[pos++] = messageContent->moduleData.column;
+            buff[pos++] = messageContent->moduleData.row;
             break;
 
         case eMsgCmdDeleteModule:
@@ -1050,8 +1050,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
             buff[pos++] = slotVersion_local[messageContent->slot];
             buff[pos++] = SUB_COMMAND_DELETE_MODULE;
-            buff[pos++] = messageContent->moduleMoveData.moduleKey.location;
-            buff[pos++] = messageContent->moduleMoveData.moduleKey.index;
+            buff[pos++] = messageContent->moduleData.moduleKey.location;
+            buff[pos++] = messageContent->moduleData.moduleKey.index;
             break;
 
         case eMsgCmdSetModuleUpRate:
@@ -1059,9 +1059,9 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
             buff[pos++] = slotVersion_local[messageContent->slot];
             buff[pos++] = SUB_COMMAND_SET_MODULE_UPRATE;
-            buff[pos++] = messageContent->moduleMoveData.moduleKey.location;
-            buff[pos++] = messageContent->moduleMoveData.moduleKey.index;
-            buff[pos++] = messageContent->moduleMoveData.upRate;
+            buff[pos++] = messageContent->moduleData.moduleKey.location;
+            buff[pos++] = messageContent->moduleData.moduleKey.index;
+            buff[pos++] = messageContent->moduleData.upRate;
             break;
 
         case eMsgCmdDeleteCable:

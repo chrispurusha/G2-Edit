@@ -117,7 +117,6 @@ typedef struct {
         tParamMorphData paramMorphData;
         tModeData       modeData;
         tModuleData     moduleData;
-        tModuleData     moduleMoveData;
         tCableData      cableData;
         tVariationData  variationData;
         tSlotData       slotData;
