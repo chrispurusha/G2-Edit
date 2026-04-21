@@ -747,7 +747,7 @@ tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangl
 
         tRectangle text_rectangle = {{rectangle.coord.x, y}, {30, textHeight}};
         set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
-        return draw_button(moduleArea, text_rectangle, debug);
+        return draw_button(moduleArea, text_rectangle, debug, false);
     }
 
     if (strlen(label) > 0) {
@@ -761,7 +761,7 @@ tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangl
     } else {
         set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
     }
-    return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[(int)paramValue]);
+    return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[(int)paramValue], false);
 }
 
 tRectangle render_paramType1UpDown(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, char ** strMap) {
@@ -775,7 +775,7 @@ tRectangle render_paramType1UpDown(tModule * module, tRectangle rectangle, char 
         char debug[64] = {0};
         snprintf(debug, sizeof(debug), "%f", paramValue);
         set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
-        return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {30, textHeight}}, debug);
+        return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {30, textHeight}}, debug, false);
     }
 
     if (strlen(label) > 0) {
@@ -802,7 +802,7 @@ tRectangle render_paramType1Enable(tModule * module, tRectangle rectangle, char 
     } else {
         set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);          // Grey when OFF
     }
-    return draw_button(moduleArea, rectangle, NULL);  // TODO: Add label!
+    return draw_button(moduleArea, rectangle, NULL, false);  // TODO: Add label!
 }
 
 #ifdef __cplusplus

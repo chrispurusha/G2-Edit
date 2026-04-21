@@ -198,7 +198,7 @@ void render_top_bar(void) {
                 break;
             }
         }
-        gMainButtonArray[i].rectangle = draw_button(mainArea, rectangle, gMainButtonArray[i].text);
+        gMainButtonArray[i].rectangle = draw_button(mainArea, rectangle, gMainButtonArray[i].text, gMainButtonArray[i].isPressed);
     }
 }
 

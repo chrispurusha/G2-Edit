@@ -426,7 +426,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
                 char debug[64] = {0};
                 snprintf(debug, sizeof(debug), "modeRef %u", modeRef);
                 set_rgb_colour(RGB_BACKGROUND_GREY);
-                module->param[gPatchDescr[gSlot].activeVariation][modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {30, textHeight}}, debug);
+                module->param[gPatchDescr[gSlot].activeVariation][modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {30, textHeight}}, debug, false);
                 return;
             }
             //if (paramLocationList[paramRef].colourMap != NULL) {
@@ -436,7 +436,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             //}
             set_rgb_colour(RGB_BACKGROUND_GREY);
 
-            module->mode[modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight), textHeight}}, strMap[modeValue]);
+            module->mode[modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight), textHeight}}, strMap[modeValue], false);
             break;
         }
         default:
@@ -851,7 +851,7 @@ void render_morph_groups(void) {
                 textHeight = rectangle.size.h / 4.0;
 
                 set_rgb_colour(RGB_BACKGROUND_GREY);
-                module.param[gPatchDescr[gSlot].activeVariation][i + NUM_MORPHS].rectangle = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y - 8}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label);
+                module.param[gPatchDescr[gSlot].activeVariation][i + NUM_MORPHS].rectangle = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y - 8}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, false);
 
                 rectangle.coord.x += (STANDARD_TEXT_HEIGHT * 4) + 5;
             }

@@ -1256,9 +1256,22 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
     if (action == GLFW_PRESS) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            if (gContextMenu.active == false) { // Don't check left button press on non-menu items
-                if (!handle_scrollbar_click(coord)) {
-                    handle_module_click(coord, button);
+            bool found = false;
+            
+            for (uint32_t i = 0; i < array_size_main_button_array(); i++) {
+                if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
+                    handle_button((tButtonId)i);
+                    found = true;
+                    gMainButtonArray[i].isPressed = true;
+                    break;
+                }
+            }
+            
+            if (found == false) {
+                if (gContextMenu.active == false) {
+                    if (!handle_scrollbar_click(coord)) {
+                        handle_module_click(coord, button);
+                    }
                 }
             }
         }
@@ -1267,14 +1280,19 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             bool found = false;
 
             for (uint32_t i = 0; i < array_size_main_button_array(); i++) {
+                gMainButtonArray[i].isPressed = false;
+            }
+            
+            for (uint32_t i = 0; i < array_size_main_button_array(); i++) {
                 if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
                     handle_button((tButtonId)i);
                     found = true;
+                    break;
                 }
             }
 
             if (found == false) {
-                if (gContextMenu.active) {
+                if (gContextMenu.active == true) {
                     if (!handle_context_menu_click(coord)) {
                         gContextMenu.active = false;  // Close if clicked outside - TODO: think if this is the right thing to do here
                     }
