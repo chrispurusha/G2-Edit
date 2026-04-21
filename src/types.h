@@ -646,6 +646,7 @@ typedef struct {
     const tAnchor anchor;
     char *        text;
     tRgb          backgroundColour;
+    bool          isPressed;
 } tButton;
 
 typedef struct {
@@ -669,3 +670,4 @@ typedef struct {
 
 
 #endif // __TYPES_H__
+
