@@ -38,6 +38,7 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "globalVars.h"
+#include "mouseHandle.h"
 #include <stdatomic.h>
 #include <pthread.h>
 
@@ -574,12 +575,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 
             pthread_mutex_lock(&gGlobalVarsMutex);
             gSlot = newSlot;
-
-            for (uint32_t i = 0; i < MAX_SLOTS; i++) {
-                gMainButtonArray[(uint32_t)slotAButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
-            }
-
-            gMainButtonArray[slotAButtonId + newSlot].backgroundColour = (tRgb)RGB_GREEN_ON;
+            set_exclusive_button_highlight(slotAButtonId, slotDButtonId, (tButtonId)(slotAButtonId + newSlot));
             pthread_mutex_unlock(&gGlobalVarsMutex);
 
             return EXIT_SUCCESS;

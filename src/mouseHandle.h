@@ -22,6 +22,7 @@
 
 #include "sysIncludes.h"
 
+void set_exclusive_button_highlight(tButtonId first, tButtonId last, tButtonId active);
 bool handle_context_menu_click(tCoord coord);
 bool handle_scrollbar_click(tCoord coord);
 void set_x_scroll_bar(double x);
