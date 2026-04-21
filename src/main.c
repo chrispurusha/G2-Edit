@@ -64,7 +64,9 @@ static int init_signals(void) {
 }
 
 int main(int argc, char ** argv) {
-    usleep(2000000);     // Purely required by XCode debugging and can be removed for production
+    #ifdef ENABLE_DEBUG
+    usleep(2000000);     // Delay required for XCode debugger to attach
+    #endif
 
     init_signals();
 
