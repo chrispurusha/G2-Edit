@@ -38,6 +38,7 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "globalVars.h"
+#include "mouseHandle.h"
 #include <stdatomic.h>
 #include <pthread.h>
 
@@ -216,8 +217,20 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
 
     while (BIT_TO_BYTE(bitOffset) < length) {
         uint8_t  type      = read_bit_stream(buff, &bitOffset, 8);
-        int16_t  count     = read_bit_stream(buff, &bitOffset, 16);
+        int16_t  count     = (int16_t)read_bit_stream(buff, &bitOffset, 16);
         uint32_t subOffset = bitOffset;
+
+        // Validate count before using it to advance bitOffset or index arrays.
+        // A negative or oversized count from malformed data would cause reads
+        // past the end of the buffer.
+        if (count < 0) {
+            LOG_ERROR("parse_patch: negative count %d for type 0x%02x, aborting\n", count, type);
+            return EXIT_FAILURE;
+        }
+        if (BIT_TO_BYTE(bitOffset) + count > length) {
+            LOG_ERROR("parse_patch: count %d for type 0x%02x would exceed buffer length %d, aborting\n", count, type, length);
+            return EXIT_FAILURE;
+        }
 
         LOG_DEBUG("Type = 0x%x, Count = %d\n", type, count);
 
@@ -299,15 +312,18 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
 
             case SUB_RESPONSE_CONTROLLERS:
             {
-                uint32_t i = 0;
+                uint32_t safeCount = 0;
                 LOG_DEBUG("Controllers\n");
 
-                for (i = 0; i < count; i++) {
-                    gController[slot][i] = read_bit_stream(buff, &subOffset, 8);
-                    LOG_DEBUG_DIRECT("0x%02x ", gController[slot][i]);
-                }
+                if (slot < MAX_SLOTS) {
+                    safeCount = ((uint32_t)count < sizeof(gController[slot])) ? (uint32_t)count : sizeof(gController[slot]);
 
-                gControllerSize[slot] = count;
+                    for (uint32_t i = 0; i < safeCount; i++) {
+                        gController[slot][i] = read_bit_stream(buff, &subOffset, 8);
+                        LOG_DEBUG_DIRECT("0x%02x ", gController[slot][i]);
+                    }
+                    gControllerSize[slot] = safeCount;
+                }
 
                 LOG_DEBUG_DIRECT("\n");
                 break;
@@ -315,29 +331,32 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
 
             case SUB_RESPONSE_CURRENT_NOTE_2:
             {
-                uint32_t i = 0;
                 LOG_DEBUG("Current note 2\n");
 
-                for (i = 0; i < count; i++) {
-                    gNote2[slot][i] = read_bit_stream(buff, &subOffset, 8);
-                }
+                if (slot < MAX_SLOTS) {
+                    uint32_t safeCount = ((uint32_t)count < sizeof(gNote2[slot])) ? (uint32_t)count : sizeof(gNote2[slot]);
 
-                gNote2Size[slot] = count;
+                    for (uint32_t i = 0; i < safeCount; i++) {
+                        gNote2[slot][i] = read_bit_stream(buff, &subOffset, 8);
+                    }
+                    gNote2Size[slot] = safeCount;
+                }
 
                 break;
             }
 
             case SUB_RESPONSE_PATCH_NOTES:
             {
-                uint32_t i = 0;
-
                 LOG_DEBUG("Patch notes\n");
 
-                for (i = 0; i < count; i++) {
-                    gPatchNotes[slot][i] = read_bit_stream(buff, &subOffset, 8);
-                }
+                if (slot < MAX_SLOTS) {
+                    uint32_t safeCount = ((uint32_t)count < sizeof(gPatchNotes[slot])) ? (uint32_t)count : sizeof(gPatchNotes[slot]);
 
-                gPatchNotesSize[slot] = count;
+                    for (uint32_t i = 0; i < safeCount; i++) {
+                        gPatchNotes[slot][i] = read_bit_stream(buff, &subOffset, 8);
+                    }
+                    gPatchNotesSize[slot] = safeCount;
+                }
 
                 break;
             }
@@ -371,7 +390,7 @@ static int parse_patch_version(uint8_t * buff, int length) {
     return EXIT_SUCCESS;
 }
 
-static void parse_param_change(uint8_t * buff, int length) {
+static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
     uint32_t   bitPos    = 0;
     tModule    module    = {0};
     tModuleKey key       = {0};
@@ -379,6 +398,7 @@ static void parse_param_change(uint8_t * buff, int length) {
     uint32_t   variation = 0;
     uint32_t   value     = 0;
 
+    key.slot     = slot;
     key.location = read_bit_stream(buff, &bitPos, 8);
     key.index    = read_bit_stream(buff, &bitPos, 8);
     param        = read_bit_stream(buff, &bitPos, 8);
@@ -482,7 +502,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
         }
         case SUB_RESPONSE_PARAM_CHANGE:
         {
-            parse_param_change(&buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
+            parse_param_change(slot, &buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
             return EXIT_SUCCESS;
         }
 
@@ -560,12 +580,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 
             pthread_mutex_lock(&gGlobalVarsMutex);
             gSlot = newSlot;
-
-            for (uint32_t i = 0; i < MAX_SLOTS; i++) {
-                gMainButtonArray[(uint32_t)slotAButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
-            }
-
-            gMainButtonArray[slotAButtonId + newSlot].backgroundColour = (tRgb)RGB_GREEN_ON;
+            set_exclusive_button_highlight(slotAButtonId, slotDButtonId, (tButtonId)(slotAButtonId + newSlot));
             pthread_mutex_unlock(&gGlobalVarsMutex);
 
             return EXIT_SUCCESS;
@@ -1025,10 +1040,10 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
             buff[pos++] = slotVersion_local[messageContent->slot];
             buff[pos++] = SUB_COMMAND_MOVE_MODULE;
-            buff[pos++] = messageContent->moduleMoveData.moduleKey.location;
-            buff[pos++] = messageContent->moduleMoveData.moduleKey.index;
-            buff[pos++] = messageContent->moduleMoveData.column;
-            buff[pos++] = messageContent->moduleMoveData.row;
+            buff[pos++] = messageContent->moduleData.moduleKey.location;
+            buff[pos++] = messageContent->moduleData.moduleKey.index;
+            buff[pos++] = messageContent->moduleData.column;
+            buff[pos++] = messageContent->moduleData.row;
             break;
 
         case eMsgCmdDeleteModule:
@@ -1036,8 +1051,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
             buff[pos++] = slotVersion_local[messageContent->slot];
             buff[pos++] = SUB_COMMAND_DELETE_MODULE;
-            buff[pos++] = messageContent->moduleMoveData.moduleKey.location;
-            buff[pos++] = messageContent->moduleMoveData.moduleKey.index;
+            buff[pos++] = messageContent->moduleData.moduleKey.location;
+            buff[pos++] = messageContent->moduleData.moduleKey.index;
             break;
 
         case eMsgCmdSetModuleUpRate:
@@ -1045,9 +1060,9 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
             buff[pos++] = slotVersion_local[messageContent->slot];
             buff[pos++] = SUB_COMMAND_SET_MODULE_UPRATE;
-            buff[pos++] = messageContent->moduleMoveData.moduleKey.location;
-            buff[pos++] = messageContent->moduleMoveData.moduleKey.index;
-            buff[pos++] = messageContent->moduleMoveData.upRate;
+            buff[pos++] = messageContent->moduleData.moduleKey.location;
+            buff[pos++] = messageContent->moduleData.moduleKey.index;
+            buff[pos++] = messageContent->moduleData.upRate;
             break;
 
         case eMsgCmdDeleteCable:
