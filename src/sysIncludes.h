@@ -30,6 +30,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <stdatomic.h>
 #include <dispatch/dispatch.h>
 
 #pragma clang diagnostic ignored "-Wwrite-strings"

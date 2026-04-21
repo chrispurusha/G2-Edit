@@ -371,7 +371,7 @@ static int parse_patch_version(uint8_t * buff, int length) {
     return EXIT_SUCCESS;
 }
 
-static void parse_param_change(uint8_t * buff, int length) {
+static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
     uint32_t   bitPos    = 0;
     tModule    module    = {0};
     tModuleKey key       = {0};
@@ -379,6 +379,7 @@ static void parse_param_change(uint8_t * buff, int length) {
     uint32_t   variation = 0;
     uint32_t   value     = 0;
 
+    key.slot     = slot;
     key.location = read_bit_stream(buff, &bitPos, 8);
     key.index    = read_bit_stream(buff, &bitPos, 8);
     param        = read_bit_stream(buff, &bitPos, 8);
@@ -482,7 +483,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
         }
         case SUB_RESPONSE_PARAM_CHANGE:
         {
-            parse_param_change(&buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
+            parse_param_change(slot, &buff[BIT_TO_BYTE(*bitPos)], length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
             return EXIT_SUCCESS;
         }
 

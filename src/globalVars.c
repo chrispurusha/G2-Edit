@@ -23,7 +23,7 @@ extern "C" {
 
 #include "globalVars.h"
 
-bool         gQuitAll  = false;
+_Atomic bool gQuitAll  = false;
 GLFWwindow * gWindow   = NULL;
 uint32_t     gLocation = locationVa;
 bool         gReDraw   = true;
