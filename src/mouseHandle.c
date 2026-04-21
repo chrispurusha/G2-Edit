@@ -201,6 +201,7 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
     uint32_t        paramIndex        = 0;
     uint32_t        numParams         = module_param_count(module->type);
     tMessageContent messageContent    = {0};
+    bool            anyParamSet       = false;
 
     if (location != gLocation) {
         return;
@@ -209,8 +210,7 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
     for (locationListIndex = 0; locationListIndex < array_size_param_location_list(); locationListIndex++) {
         if (paramLocationList[locationListIndex].moduleType == module->type) {
             module->param[variation][paramIndex].value = paramLocationList[locationListIndex].defaultValue;
-
-            write_module(module->key, module);
+            anyParamSet = true;
 
             for (int i = 0; i < NUM_VARIATIONS; i++) {
                 messageContent.cmd                 = eMsgCmdSetValue;
@@ -229,6 +229,11 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
                 break;
             }
         }
+    }
+
+    // Write the module once after all params are updated, not once per param
+    if (anyParamSet) {
+        write_module(module->key, module);
     }
 }
 
