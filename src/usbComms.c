@@ -216,8 +216,20 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
 
     while (BIT_TO_BYTE(bitOffset) < length) {
         uint8_t  type      = read_bit_stream(buff, &bitOffset, 8);
-        int16_t  count     = read_bit_stream(buff, &bitOffset, 16);
+        int16_t  count     = (int16_t)read_bit_stream(buff, &bitOffset, 16);
         uint32_t subOffset = bitOffset;
+
+        // Validate count before using it to advance bitOffset or index arrays.
+        // A negative or oversized count from malformed data would cause reads
+        // past the end of the buffer.
+        if (count < 0) {
+            LOG_ERROR("parse_patch: negative count %d for type 0x%02x, aborting\n", count, type);
+            return EXIT_FAILURE;
+        }
+        if (BIT_TO_BYTE(bitOffset) + count > length) {
+            LOG_ERROR("parse_patch: count %d for type 0x%02x would exceed buffer length %d, aborting\n", count, type, length);
+            return EXIT_FAILURE;
+        }
 
         LOG_DEBUG("Type = 0x%x, Count = %d\n", type, count);
 
@@ -282,32 +294,24 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
 
             case SUB_RESPONSE_KNOBS:
             {
-                //uint32_t i = 0;
-                //LOG_DEBUG("Knobs\n");
-
-                //for (i = 0; i < count; i++) {
-                //    gKnob[slot][i] = read_bit_stream(buff, &subOffset, 8);
-                //    LOG_DEBUG_DIRECT("0x%02x ", gKnob[slot][i]);
-                //}
-
-                //gKnobSize[slot] = count;
-
-                //LOG_DEBUG_DIRECT("\n");
                 parse_knobs(slot, buff, &subOffset);
                 break;
             }
 
             case SUB_RESPONSE_CONTROLLERS:
             {
-                uint32_t i = 0;
+                uint32_t safeCount = 0;
                 LOG_DEBUG("Controllers\n");
 
-                for (i = 0; i < count; i++) {
-                    gController[slot][i] = read_bit_stream(buff, &subOffset, 8);
-                    LOG_DEBUG_DIRECT("0x%02x ", gController[slot][i]);
-                }
+                if (slot < MAX_SLOTS) {
+                    safeCount = ((uint32_t)count < sizeof(gController[slot])) ? (uint32_t)count : sizeof(gController[slot]);
 
-                gControllerSize[slot] = count;
+                    for (uint32_t i = 0; i < safeCount; i++) {
+                        gController[slot][i] = read_bit_stream(buff, &subOffset, 8);
+                        LOG_DEBUG_DIRECT("0x%02x ", gController[slot][i]);
+                    }
+                    gControllerSize[slot] = safeCount;
+                }
 
                 LOG_DEBUG_DIRECT("\n");
                 break;
@@ -315,29 +319,32 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
 
             case SUB_RESPONSE_CURRENT_NOTE_2:
             {
-                uint32_t i = 0;
                 LOG_DEBUG("Current note 2\n");
 
-                for (i = 0; i < count; i++) {
-                    gNote2[slot][i] = read_bit_stream(buff, &subOffset, 8);
-                }
+                if (slot < MAX_SLOTS) {
+                    uint32_t safeCount = ((uint32_t)count < sizeof(gNote2[slot])) ? (uint32_t)count : sizeof(gNote2[slot]);
 
-                gNote2Size[slot] = count;
+                    for (uint32_t i = 0; i < safeCount; i++) {
+                        gNote2[slot][i] = read_bit_stream(buff, &subOffset, 8);
+                    }
+                    gNote2Size[slot] = safeCount;
+                }
 
                 break;
             }
 
             case SUB_RESPONSE_PATCH_NOTES:
             {
-                uint32_t i = 0;
-
                 LOG_DEBUG("Patch notes\n");
 
-                for (i = 0; i < count; i++) {
-                    gPatchNotes[slot][i] = read_bit_stream(buff, &subOffset, 8);
-                }
+                if (slot < MAX_SLOTS) {
+                    uint32_t safeCount = ((uint32_t)count < sizeof(gPatchNotes[slot])) ? (uint32_t)count : sizeof(gPatchNotes[slot]);
 
-                gPatchNotesSize[slot] = count;
+                    for (uint32_t i = 0; i < safeCount; i++) {
+                        gPatchNotes[slot][i] = read_bit_stream(buff, &subOffset, 8);
+                    }
+                    gPatchNotesSize[slot] = safeCount;
+                }
 
                 break;
             }
@@ -347,6 +354,12 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
                 LOG_DEBUG("Unprocessed type 0x%02x\n", type);
                 break;
             }
+        }
+
+        // Special case: type 0x2d resets count to -1 as a sentinel meaning
+        // "end of stream". Break out rather than adding a negative bit offset.
+        if (count == -1) {
+            break;
         }
         bitOffset += SIGNED_BYTE_TO_BIT(count);
     }
