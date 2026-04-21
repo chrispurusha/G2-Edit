@@ -189,11 +189,10 @@ void delete_module(tModuleKey key) {
 void reset_walk_module(void) {
     database_mutex_lock();
     walkModule = NULL;
-    database_mutex_unlock();
 }
 
 void finish_walk_module(void) {
-    // No-op: retained for API compatibility. The walk is now self-contained.
+    database_mutex_unlock();
 }
 
 bool walk_next_module(tModule * module) {
@@ -354,11 +353,10 @@ void delete_cable(tCableKey key) {
 void reset_walk_cable(void) {
     database_mutex_lock();
     walkCable = NULL;
-    database_mutex_unlock();
 }
 
 void finish_walk_cable(void) {
-    // No-op: retained for API compatibility. The walk is now self-contained.
+    database_mutex_unlock();
 }
 
 bool walk_next_cable(tCable * cable) {

@@ -201,7 +201,6 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
     uint32_t        paramIndex        = 0;
     uint32_t        numParams         = module_param_count(module->type);
     tMessageContent messageContent    = {0};
-    bool            anyParamSet       = false;
 
     if (location != gLocation) {
         return;
@@ -210,7 +209,8 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
     for (locationListIndex = 0; locationListIndex < array_size_param_location_list(); locationListIndex++) {
         if (paramLocationList[locationListIndex].moduleType == module->type) {
             module->param[variation][paramIndex].value = paramLocationList[locationListIndex].defaultValue;
-            anyParamSet = true;
+
+            write_module(module->key, module);
 
             for (int i = 0; i < NUM_VARIATIONS; i++) {
                 messageContent.cmd                 = eMsgCmdSetValue;
@@ -230,11 +230,6 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
             }
         }
     }
-
-    // Write the module once after all params are updated, not once per param
-    if (anyParamSet) {
-        write_module(module->key, module);
-    }
 }
 
 void init_params_on_module_all_variations(tModule * module, uint32_t location) {
@@ -247,27 +242,22 @@ void init_params_on_module_all_variations(tModule * module, uint32_t location) {
     }
 }
 
-void set_exclusive_button_highlight(tButtonId first, tButtonId last, tButtonId active) {
-    for (tButtonId i = first; i <= last; i++) {
-        gMainButtonArray[i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
-    }
-    gMainButtonArray[active].backgroundColour = (tRgb)RGB_GREEN_ON;
-}
-
 void handle_button(tButtonId buttonId) {
     switch (buttonId) {
         case vaButtonId:
         {
-            gLocation = locationVa;
-            set_exclusive_button_highlight(vaButtonId, fxButtonId, buttonId);
+            gLocation                                     = locationVa;
+            gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
+            gMainButtonArray[fxButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
             set_x_scroll_bar(0); // or different scroll positions for va and fx!?
             set_y_scroll_bar(0);
             break;
         }
         case fxButtonId:
         {
-            gLocation = locationFx;
-            set_exclusive_button_highlight(vaButtonId, fxButtonId, buttonId);
+            gLocation                                     = locationFx;
+            gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
+            gMainButtonArray[vaButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
             set_x_scroll_bar(0);
             set_y_scroll_bar(0);
             break;
@@ -295,7 +285,11 @@ void handle_button(tButtonId buttonId) {
 
             gPatchDescr[gSlot].activeVariation = variation;
 
-            set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId, buttonId);
+            for (uint32_t i = 0; i < NUM_GUI_VARIATIONS; i++) {
+                gMainButtonArray[(uint32_t)variation1ButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            }
+
+            gMainButtonArray[buttonId].backgroundColour = (tRgb)RGB_GREEN_ON;
 
             tMessageContent messageContent = {0};
             messageContent.cmd                     = eMsgCmdSelectVariation;
@@ -333,7 +327,11 @@ void handle_button(tButtonId buttonId) {
 
             gSlot = slot;
 
-            set_exclusive_button_highlight(slotAButtonId, slotDButtonId, buttonId);
+            for (uint32_t i = 0; i < MAX_SLOTS; i++) {  // TODO: commonalise this with USB message receipt on slot select
+                gMainButtonArray[(uint32_t)slotAButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            }
+
+            gMainButtonArray[buttonId].backgroundColour = (tRgb)RGB_GREEN_ON;
 
             tMessageContent messageContent = {0};
             messageContent.cmd           = eMsgCmdSelectSlot;
@@ -341,8 +339,11 @@ void handle_button(tButtonId buttonId) {
             messageContent.slotData.slot = slot;
             msg_send(&gCommandQueue, &messageContent);
 
-            set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId,
-                                           (tButtonId)((uint32_t)variation1ButtonId + gPatchDescr[gSlot].activeVariation));
+            for (uint32_t i = 0; i < NUM_GUI_VARIATIONS; i++) {
+                gMainButtonArray[(uint32_t)variation1ButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+            }
+
+            gMainButtonArray[gPatchDescr[gSlot].activeVariation + (uint32_t)variation1ButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
             break;
         }
         case newPatchId:
