@@ -30,7 +30,7 @@ bool         gReDraw   = true;
 
 bool         gCommandKeyPressed = false;
 
-tButton      gMainButtonArray[] = {     // Must align with tButtonId enumaration
+tButton      gMainButtonArray[] = {     // Must align with tButtonId enumaration (in types.h)
     {{400,  8}, NULL_RECTANGLE, anchorTopLeft, "VA",         RGB_GREEN_ON       },
     {{425,  8}, NULL_RECTANGLE, anchorTopLeft, "FX",         RGB_BACKGROUND_GREY},
     {{ 20,  8}, NULL_RECTANGLE, anchorTopLeft, "Read File",  RGB_BACKGROUND_GREY},
@@ -48,6 +48,7 @@ tButton      gMainButtonArray[] = {     // Must align with tButtonId enumaration
     {{615,  8}, NULL_RECTANGLE, anchorTopLeft, "B",          RGB_BACKGROUND_GREY},
     {{630,  8}, NULL_RECTANGLE, anchorTopLeft, "C",          RGB_BACKGROUND_GREY},
     {{645,  8}, NULL_RECTANGLE, anchorTopLeft, "D",          RGB_BACKGROUND_GREY},
+    {{ 80,  8}, NULL_RECTANGLE, anchorTopLeft, "New Patch",   RGB_BACKGROUND_GREY},
 };
 
 bool         gShowOpenFileReadDialogue  = false;

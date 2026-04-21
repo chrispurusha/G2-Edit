@@ -580,8 +580,19 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 
         case SUB_RESPONSE_PATCH_NAME:
         {
-            LOG_DEBUG("Got Patch name (length %d)'", length);
+            uint32_t   tmpBitPos    = *bitPos;
+            LOG_DEBUG("Got Patch name (length %d)\n", length);
 
+            for (int i = 0; i < (length - 6); i++) {
+                uint8_t ch = read_bit_stream(buff, bitPos, 8);
+
+                    LOG_DEBUG_DIRECT("0x%02x ", ch);
+            }
+            LOG_DEBUG_DIRECT("\n");
+            
+            LOG_DEBUG_DIRECT("'");
+            *bitPos = tmpBitPos;
+            
             for (int i = 0; i < (length - 6); i++) {
                 uint8_t ch = read_bit_stream(buff, bitPos, 8);
 
@@ -1080,6 +1091,33 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = SUB_COMMAND_SELECT_SLOT;
             buff[pos++] = messageContent->slotData.slot;
             break;
+            
+        case eMsgCmdInitPatch:
+            buff[pos++] = 0x01;
+            buff[pos++] = COMMAND_REQ | COMMAND_SYS | messageContent->slot;
+            buff[pos++] = slotVersion_local[messageContent->slot];
+            buff[pos++] = SUB_COMMAND_SET; // 0x37
+            buff[pos++] = 0;
+            buff[pos++] = 0;
+            buff[pos++] = 0;
+            buff[pos++] = 'N';
+            buff[pos++] = 'o';
+            buff[pos++] = ' ';
+            buff[pos++] = 'N';
+            buff[pos++] = 'a';
+            buff[pos++] = 'm';
+            buff[pos++] = 'e';
+            buff[pos++] = 0;
+            buff[pos++] = 0x21;
+            buff[pos++] = 0;
+            buff[pos++] = 0xf;
+            buff[pos++] = 0;
+            buff[pos++] = 0;
+            // Name length = 16
+            
+            // Todo - obvs.
+            break;
+
 
         default:
             break;

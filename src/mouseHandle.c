@@ -346,6 +346,15 @@ void handle_button(tButtonId buttonId) {
             gMainButtonArray[gPatchDescr[gSlot].activeVariation + (uint32_t)variation1ButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
             break;
         }
+        case newPatchId:
+        {
+            //gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
+            tMessageContent messageContent = {0};
+            messageContent.cmd           = eMsgCmdInitPatch;
+            messageContent.slot          = gSlot;
+            msg_send(&gCommandQueue, &messageContent);
+            break;
+        }
     }
 }
 

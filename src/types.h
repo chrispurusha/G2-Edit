@@ -443,7 +443,8 @@ typedef enum {
     slotAButtonId,
     slotBButtonId,
     slotCButtonId,
-    slotDButtonId
+    slotDButtonId,
+    newPatchId
 } tButtonId;
 
 typedef struct {
