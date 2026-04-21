@@ -577,7 +577,7 @@ void menu_action_delete_module(int index) {
     }
 }
 
-uint32_t find_unique_module_id(uint32_t location) {
+int32_t find_unique_module_id(uint32_t location) {
     tModuleKey key    = {0};
     tModule    module = {0};
     uint32_t   i      = 0;

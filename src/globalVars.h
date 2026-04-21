@@ -35,7 +35,7 @@
 #include "msgQueue.h"
 #include <pthread.h>
 
-extern bool            gQuitAll;
+extern _Atomic bool    gQuitAll;
 extern GLFWwindow *    gWindow;
 extern uint32_t        gLocation;
 extern bool            gReDraw;
