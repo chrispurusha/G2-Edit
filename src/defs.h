@@ -80,6 +80,7 @@
 #define SUB_RESPONSE_PERFORMANCE_NAME        (0x29)
 #define SUB_COMMAND_SET_MODULE_UPRATE        (0x2a)
 #define SUB_COMMAND_SET_MODE                 (0x2b)
+#define SUB_SEL_PARAM_PAGE                   (0x2d)
 #define SUB_COMMAND_GET_SELECTED_PARAM       (0x2e)
 #define SUB_RESPONSE_SELECT_PARAM            (0x2F)
 #define SUB_COMMAND_ADD_MODULE               (0x30)

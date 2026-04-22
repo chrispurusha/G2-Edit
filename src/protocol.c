@@ -284,8 +284,12 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     // SWITCH ON LOC BEING 0..1 or 2 2 = line 4112 in file.pas
     moduleCount = read_bit_stream(buff, subOffset, 8);
     LOG_DEBUG("Module Count      %u\n", moduleCount);
-    variationCount = read_bit_stream(buff, subOffset, 8);     // Should always be 10 (VARIATIONS) - TODO: sanity check
+    variationCount = read_bit_stream(buff, subOffset, 8);     // Should always be 10 on USB or 9 in a file - TODO: sanity check
     LOG_DEBUG("Variation Count      %u\n", variationCount);
+    if (variationCount > 10) {
+        LOG_DEBUG("Variation Count > 10\n");
+        return;
+    }
 
     for (i = 0; i < moduleCount; i++) {
         key.index = read_bit_stream(buff, subOffset, 8);

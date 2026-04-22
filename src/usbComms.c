@@ -219,12 +219,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
         uint8_t  type      = read_bit_stream(buff, &bitOffset, 8);
         int16_t  count     = (int16_t)read_bit_stream(buff, &bitOffset, 16);
         uint32_t subOffset = bitOffset;
-		
-		// Type 0x2d is a protocol anomaly / bug reportedly only affecting USB comms
-        if (type == 0x2d) {
-            bitOffset -= SIGNED_BYTE_TO_BIT(1);
-            continue;
-        }
+
 
         // Validate count before using it to advance bitOffset or index arrays.
         // A negative or oversized count from malformed data would cause reads
@@ -268,6 +263,15 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
             case SUB_RESPONSE_MODULE_NAMES:
             {
                 parse_module_names(slot, buff, &subOffset);
+                break;
+            }
+
+            case SUB_SEL_PARAM_PAGE:
+            {
+				/* TODO - read the param page single byte here */
+				/* No count for this one, so back up 1 byte */
+                count = 0;
+				bitOffset -= SIGNED_BYTE_TO_BIT(1);
                 break;
             }
 
