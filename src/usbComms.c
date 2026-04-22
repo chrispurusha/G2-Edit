@@ -217,21 +217,26 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
 
     while (BIT_TO_BYTE(bitOffset) < length) {
         uint8_t  type      = read_bit_stream(buff, &bitOffset, 8);
-        int16_t  count     = (int16_t)read_bit_stream(buff, &bitOffset, 16);
-        uint32_t subOffset = bitOffset;
-
+        int16_t  count     = 0;
+        uint32_t subOffset = 0;
 
         // Validate count before using it to advance bitOffset or index arrays.
         // A negative or oversized count from malformed data would cause reads
         // past the end of the buffer.
-        if (count < 0) {
-            LOG_ERROR("parse_patch: negative count %d for type 0x%02x, aborting\n", count, type);
-            return EXIT_FAILURE;
+        if (type != SUB_SEL_PARAM_PAGE) {
+            count = (int16_t)read_bit_stream(buff, &bitOffset, 16);
+            
+            if (count < 0) {
+                LOG_ERROR("parse_patch: negative count %d for type 0x%02x, aborting\n", count, type);
+                return EXIT_FAILURE;
+            }
+            if (BIT_TO_BYTE(bitOffset) + count > length) {
+                LOG_ERROR("parse_patch: count %d for type 0x%02x would exceed buffer length %d, aborting\n", count, type, length);
+                return EXIT_FAILURE;
+            }
         }
-        if (BIT_TO_BYTE(bitOffset) + count > length) {
-            LOG_ERROR("parse_patch: count %d for type 0x%02x would exceed buffer length %d, aborting\n", count, type, length);
-            return EXIT_FAILURE;
-        }
+        
+        subOffset = bitOffset;
 
         LOG_DEBUG("Type = 0x%x, Count = %d\n", type, count);
 
@@ -268,10 +273,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
 
             case SUB_SEL_PARAM_PAGE:
             {
-				/* TODO - read the param page single byte here */
-				/* No count for this one, so back up 1 byte */
-                count = 0;
-				bitOffset -= SIGNED_BYTE_TO_BIT(1);
+                read_bit_stream(buff, &bitOffset, 8);  /* TODO - read the param page single byte here */
                 break;
             }
 
