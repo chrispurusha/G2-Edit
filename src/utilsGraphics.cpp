@@ -573,16 +573,8 @@ tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord 
         double x = (1 - t) * (1 - t) * start.x + 2 * (1 - t) * t * control.x + t * t * end.x;
         double y = (1 - t) * (1 - t) * start.y + 2 * (1 - t) * t * control.y + t * t * end.y;
 
-        if (start.x == end.x) {
-            tx = 0.0;
-            ty = 1.0;
-            //} else if (start.y == end.y) {  // This was causing tapering on lines
-            //    tx = 1.0;
-            //    ty = 0.0;
-        } else {
-            tx = 2 * (1 - t) * (control.x - start.x) + 2 * t * (end.x - control.x);
-            ty = 2 * (1 - t) * (control.y - start.y) + 2 * t * (end.y - control.y);
-        }
+        tx = 2 * (1 - t) * (control.x - start.x) + 2 * t * (end.x - control.x);
+        ty = 2 * (1 - t) * (control.y - start.y) + 2 * t * (end.y - control.y);
         double length = sqrt(tx * tx + ty * ty);
         tx /= length;
         ty /= length;
