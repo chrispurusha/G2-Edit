@@ -668,6 +668,19 @@ typedef struct {
     uint16_t unknown4;
 } tPatchDescr;
 
+#define KNOB_COUNT    (120)    // G2 always has exactly 120 knob slots
+
+typedef struct {
+    bool     assigned;
+    uint32_t location;
+    uint32_t moduleIndex;
+    uint32_t isLed;            // 0 = regular param, 1 = LED/button param
+    uint32_t paramIndex;
+} tKnob;
+
+typedef struct {
+    tKnob knob[KNOB_COUNT];
+} tKnobList;
 
 #endif // __TYPES_H__
 

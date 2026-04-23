@@ -301,17 +301,6 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
 
             case SUB_RESPONSE_KNOBS:
             {
-                //uint32_t i = 0;
-                //LOG_DEBUG("Knobs\n");
-
-                //for (i = 0; i < count; i++) {
-                //    gKnob[slot][i] = read_bit_stream(buff, &subOffset, 8);
-                //    LOG_DEBUG_DIRECT("0x%02x ", gKnob[slot][i]);
-                //}
-
-                //gKnobSize[slot] = count;
-
-                //LOG_DEBUG_DIRECT("\n");
                 parse_knobs(slot, buff, &subOffset);
                 break;
             }
