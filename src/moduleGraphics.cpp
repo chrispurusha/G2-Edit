@@ -759,13 +759,19 @@ void render_cable_from_to(tConnector from, tConnector to) {
     to.coord.x   += scale_from_percent(CONNECTOR_SIZE / 2.0);
     to.coord.y   += scale_from_percent(CONNECTOR_SIZE / 2.0);
 
+    double dy        = to.coord.y - from.coord.y;
+    double bowAmount = fmin(fabs(dy) * 0.3, 80.0);
+
     if (from.coord.x == to.coord.x) {
-        control.x = from.coord.x;
-        control.y = fmin(from.coord.y, to.coord.y);
+        // Exactly vertical — bow horizontally so the cable is visible
+        control.x = fmax(from.coord.x, to.coord.x) + bowAmount;
     } else {
-        control.x = ((from.coord.x + to.coord.x) / 2.0);
-        control.y = fmax(from.coord.y, to.coord.y) + 40.0;
+        // All other cables — gravity sag downward
+        control.x = (from.coord.x + to.coord.x) / 2.0;
     }
+    
+    control.y = fmax(from.coord.y, to.coord.y) + 40.0;
+    
     render_bezier_curve(moduleArea, from.coord, control, to.coord, 4.0, 15);
 }
 
