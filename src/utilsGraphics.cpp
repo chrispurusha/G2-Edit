@@ -550,6 +550,32 @@ void set_rgba_colour(tRgba rgba) {
 tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord end, double thickness, int segments) {
     tRectangle retRectangle = {0};
 
+    // Capture the current colour for lighting calculations before any GL calls
+    float baseR = 0.0f, baseG = 0.0f, baseB = 0.0f;
+    glGetFloatv(GL_CURRENT_COLOR, (float[]){baseR, baseG, baseB, 0.0f});
+    // glGetFloatv with GL_CURRENT_COLOR fills all 4 components; use a proper array
+    float rgba[4] = {0};
+    glGetFloatv(GL_CURRENT_COLOR, rgba);
+    baseR = rgba[0];
+    baseG = rgba[1];
+    baseB = rgba[2];
+
+    // Derive highlight (top-lit) and shadow colours from base
+    // Light source assumed at top — normal pointing up (negative screen-y) = highlight
+    const double highlightBoost = 0.20;
+    const double shadowDrop     = 0.15;
+
+    tRgb highlight = {
+        fmin(1.0, (double)baseR + highlightBoost),
+        fmin(1.0, (double)baseG + highlightBoost),
+        fmin(1.0, (double)baseB + highlightBoost)
+    };
+    tRgb shadow = {
+        fmax(0.0, (double)baseR - shadowDrop),
+        fmax(0.0, (double)baseG - shadowDrop),
+        fmax(0.0, (double)baseB - shadowDrop)
+    };
+
     if (area == moduleArea) {
         start     = scale_scroll_adjust_coord(start);
         control   = scale_scroll_adjust_coord(control);
@@ -566,28 +592,50 @@ tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord 
     glBegin(GL_TRIANGLE_STRIP);
 
     for (int i = 0; i <= segments; i++) {
-        double tx = 0.0;
-        double ty = 0.0;
         double t  = (double)i / (double)segments;
 
         double x = (1 - t) * (1 - t) * start.x + 2 * (1 - t) * t * control.x + t * t * end.x;
         double y = (1 - t) * (1 - t) * start.y + 2 * (1 - t) * t * control.y + t * t * end.y;
 
-        tx = 2 * (1 - t) * (control.x - start.x) + 2 * t * (end.x - control.x);
-        ty = 2 * (1 - t) * (control.y - start.y) + 2 * t * (end.y - control.y);
-        double length = sqrt(tx * tx + ty * ty);
-        tx /= length;
-        ty /= length;
+        double tx = 2 * (1 - t) * (control.x - start.x) + 2 * t * (end.x - control.x);
+        double ty = 2 * (1 - t) * (control.y - start.y) + 2 * t * (end.y - control.y);
 
+        double len = sqrt(tx * tx + ty * ty);
+        if (len > 0.0) {
+            tx /= len;
+            ty /= len;
+        }
+
+        // Normal perpendicular to tangent: (-ty, tx)
+        // Vertex A: normal pointing in (-ty, tx) direction
+        // Vertex B: normal pointing in (+ty, -tx) direction
+        // In screen space, negative y = upward = towards light source
         double nx = -ty * thickness * 0.5;
-        double ny = tx * thickness * 0.5;
+        double ny =  tx * thickness * 0.5;
 
-        glVertex2f(x + nx, y + ny);
-        glVertex2f(x - nx, y - ny);
+        // The vertex whose normal has a more negative y component faces the light
+        // ny for vertex A = tx * thickness * 0.5
+        // ny for vertex B = -tx * thickness * 0.5
+        // So if tx > 0, vertex A faces up (highlight); if tx < 0, vertex B faces up
+        if (ny < 0.0) {
+            // Vertex A faces upward — highlight
+            glColor3f(highlight.red, highlight.green, highlight.blue);
+            glVertex2f(x + nx, y + ny);
+            glColor3f(shadow.red, shadow.green, shadow.blue);
+            glVertex2f(x - nx, y - ny);
+        } else {
+            // Vertex B faces upward — highlight
+            glColor3f(shadow.red, shadow.green, shadow.blue);
+            glVertex2f(x + nx, y + ny);
+            glColor3f(highlight.red, highlight.green, highlight.blue);
+            glVertex2f(x - nx, y - ny);
+        }
     }
 
     glEnd();
 
+    // Restore base colour for end caps
+    glColor3f(baseR, baseG, baseB);
     internal_render_circle_part(start, thickness / 2.0, 10, 0, 10);
     internal_render_circle_part(end, thickness / 2.0, 10, 0, 10);
 
