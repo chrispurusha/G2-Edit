@@ -439,13 +439,9 @@ void write_database_to_file(const char * filepath) {
 
     write_morph_params(gSlot, buff, &bitPos);
 
-    // 0x62, 0x60 knobs and controllers possible go here
-    write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_KNOBS);
-    write_bit_stream(buff, &bitPos, 16, gKnobSize[gSlot]);
-
-    for (uint32_t i = 0; i < gKnobSize[gSlot]; i++) {
-        write_bit_stream(buff, &bitPos, 8, gKnob[gSlot][i]);
-    }
+    // Knobs — written for both locations (location param ignored internally,
+    // knob list is per-slot not per-location)
+    write_knobs(gSlot, locationVa, buff, &bitPos);
 
     write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_CONTROLLERS);
     write_bit_stream(buff, &bitPos, 16, gControllerSize[gSlot]);

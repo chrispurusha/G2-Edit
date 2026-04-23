@@ -535,38 +535,74 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
 }
 
 void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
-    tModuleKey key        = {0};
-    uint32_t   knobCount  = 0;
-    uint32_t   isLed      = 0;
-    uint32_t   paramIndex = 0;
-    uint32_t   assigned   = 0;
-    int        i          = 0;
+    uint32_t knobCount = 0;
+    int      i         = 0;
 
+    if (slot >= MAX_SLOTS) {
+        return;
+    }
 
     knobCount = read_bit_stream(buff, subOffset, 16);
     LOG_DEBUG("  Knob Count %u\n", knobCount);
 
-    for (i = 0; i < knobCount; i++) {
-        assigned = read_bit_stream(buff, subOffset, 1);
+    // The G2 always sends exactly KNOB_COUNT (120) entries; guard against
+    // malformed data sending more than we have storage for.
+    if (knobCount > KNOB_COUNT) {
+        LOG_ERROR("parse_knobs: knobCount %u exceeds KNOB_COUNT %u\n", knobCount, KNOB_COUNT);
+        knobCount = KNOB_COUNT;
+    }
 
-        if (assigned == 1) {
-            key.slot     = slot;
-            key.location = read_bit_stream(buff, subOffset, 2);
-            key.index    = read_bit_stream(buff, subOffset, 8);
-            isLed        = read_bit_stream(buff, subOffset, 2);
-            paramIndex   = read_bit_stream(buff, subOffset, 7);
+    // Clear the list before repopulating
+    memset(&gKnobList[slot], 0, sizeof(tKnobList));
 
-            LOG_DEBUG("Knob %d\n", i);
-            LOG_DEBUG("  Module Location %u\n", key.location);
-            LOG_DEBUG("  Module Index %u\n", key.index);
-            LOG_DEBUG("  IsLed %u\n", isLed);
-            LOG_DEBUG("  Param Index %u\n", paramIndex);
-            //gKnob[slot][i] = read_bit_stream(buff, &subOffset, 8);
+    for (i = 0; i < (int)knobCount; i++) {
+        gKnobList[slot].knob[i].assigned = read_bit_stream(buff, subOffset, 1);
+
+        if (gKnobList[slot].knob[i].assigned) {
+            gKnobList[slot].knob[i].location    = read_bit_stream(buff, subOffset, 2);
+            gKnobList[slot].knob[i].moduleIndex = read_bit_stream(buff, subOffset, 8);
+            gKnobList[slot].knob[i].isLed       = read_bit_stream(buff, subOffset, 2);
+            gKnobList[slot].knob[i].paramIndex  = read_bit_stream(buff, subOffset, 7);
+
+            LOG_DEBUG("  Knob %d: location %u module %u isLed %u param %u\n",
+                      i,
+                      gKnobList[slot].knob[i].location,
+                      gKnobList[slot].knob[i].moduleIndex,
+                      gKnobList[slot].knob[i].isLed,
+                      gKnobList[slot].knob[i].paramIndex);
         }
     }
 }
 
-void write_knobs(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
+void write_knobs(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos) {
+    int      i         = 0;
+    uint32_t sizeBitPos = 0;
+
+    if (slot >= MAX_SLOTS) {
+        return;
+    }
+
+    write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_KNOBS);
+
+    sizeBitPos = *bitPos;
+    write_bit_stream(buff, bitPos, 16, 0);  // Populated later
+
+    write_bit_stream(buff, bitPos, 16, KNOB_COUNT);
+
+    for (i = 0; i < KNOB_COUNT; i++) {
+        write_bit_stream(buff, bitPos, 1, gKnobList[slot].knob[i].assigned ? 1 : 0);
+
+        if (gKnobList[slot].knob[i].assigned) {
+            write_bit_stream(buff, bitPos, 2, gKnobList[slot].knob[i].location);
+            write_bit_stream(buff, bitPos, 8, gKnobList[slot].knob[i].moduleIndex);
+            write_bit_stream(buff, bitPos, 2, gKnobList[slot].knob[i].isLed);
+            write_bit_stream(buff, bitPos, 7, gKnobList[slot].knob[i].paramIndex);
+        }
+    }
+
+    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+
+    write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
 
 void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset, int count) {
