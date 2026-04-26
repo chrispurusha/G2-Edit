@@ -381,6 +381,44 @@ bool walk_next_cable(tCable * cable) {
     return validCable;
 }
 
+void database_delete_modules_by_slot(uint32_t slot) {
+    tModule * module     = NULL;
+    tModule * nextModule = NULL;
+
+    database_mutex_lock();
+
+    module = firstModule;
+
+    while (module != NULL) {
+        nextModule = module->next;
+        if (module->key.slot == slot) {
+            delete_module(module->key);
+        }
+        module = nextModule;
+    }
+
+    database_mutex_unlock();
+}
+
+void database_delete_cables_by_slot(uint32_t slot) {
+    tCable * cable     = NULL;
+    tCable * nextCable = NULL;
+
+    database_mutex_lock();
+
+    cable = firstCable;
+
+    while (cable != NULL) {
+        nextCable = cable->next;
+        if (cable->key.slot == slot) {
+            delete_cable(cable->key);
+        }
+        cable = nextCable;
+    }
+    
+    database_mutex_unlock();
+}
+    
 void database_clear_modules(void) {
     tModule * module     = NULL;
     tModule * nextModule = NULL;
