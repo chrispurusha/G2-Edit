@@ -547,9 +547,9 @@ void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
 
     // The G2 always sends exactly KNOB_COUNT (120) entries; guard against
     // malformed data sending more than we have storage for.
-    if (knobCount > KNOB_COUNT) {
-        LOG_ERROR("parse_knobs: knobCount %u exceeds KNOB_COUNT %u\n", knobCount, KNOB_COUNT);
-        knobCount = KNOB_COUNT;
+    if (knobCount > MAX_NUM_KNOBS) {
+        LOG_ERROR("parse_knobs: knobCount %u exceeds KNOB_COUNT %u\n", knobCount, MAX_NUM_KNOBS);
+        knobCount = MAX_NUM_KNOBS;
     }
 
     // Clear the list before repopulating
@@ -587,9 +587,9 @@ void write_knobs(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * b
     sizeBitPos = *bitPos;
     write_bit_stream(buff, bitPos, 16, 0);  // Populated later
 
-    write_bit_stream(buff, bitPos, 16, KNOB_COUNT);
+    write_bit_stream(buff, bitPos, 16, MAX_NUM_KNOBS);
 
-    for (i = 0; i < KNOB_COUNT; i++) {
+    for (i = 0; i < MAX_NUM_KNOBS; i++) {
         write_bit_stream(buff, bitPos, 1, gKnobList[slot].knob[i].assigned ? 1 : 0);
 
         if (gKnobList[slot].knob[i].assigned) {
@@ -602,6 +602,77 @@ void write_knobs(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * b
 
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 
+    write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
+}
+
+void parse_controllers(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
+    tModuleKey key             = {0};
+    tModule    module          = {0};
+    uint32_t   controllerCount = 0;
+    uint32_t   paramIndex      = 0;
+    int        i               = 0;
+
+    LOG_DEBUG("Controllers\n");
+
+    controllerCount = read_bit_stream(buff, subOffset, 7);
+    LOG_DEBUG("  Controller Count %u\n", controllerCount);
+
+    if (controllerCount > MAX_NUM_CONTROLLERS) {
+        LOG_ERROR("Controller count %u exceeds MAX_NUM_CONTROLLERS %u\n", controllerCount, MAX_NUM_CONTROLLERS);
+        controllerCount = MAX_NUM_CONTROLLERS;
+    }
+
+    for (i = 0; i < controllerCount; i++) {
+        gControllers[slot][i].midiCC      = read_bit_stream(buff, subOffset, 7);
+        key.slot                          = slot;
+        key.location                      = read_bit_stream(buff, subOffset, 2);
+        key.index                         = read_bit_stream(buff, subOffset, 8);
+        paramIndex                        = read_bit_stream(buff, subOffset, 7);
+        gControllers[slot][i].location    = key.location;
+        gControllers[slot][i].moduleIndex = key.index;
+        gControllers[slot][i].paramIndex  = paramIndex;
+
+        LOG_DEBUG("  Controller %d: MidiCC %u Location %u ModuleIndex %u ParamIndex %u\n",
+                  i, gControllers[slot][i].midiCC, key.location, key.index, paramIndex);
+
+        // Shadow onto the module param for convenient per-param lookup
+        if (read_module(key, &module) == true) {
+            if (paramIndex < MAX_NUM_PARAMETERS) {
+                module.param[0][paramIndex].midiCC    = gControllers[slot][i].midiCC;
+                module.param[0][paramIndex].hasMidiCC = true;
+                write_module(key, &module);
+            } else {
+                LOG_ERROR("Controller paramIndex %u out of range for module %u\n", paramIndex, key.index);
+            }
+        }
+    }
+
+    gControllerCount[slot] = controllerCount;
+}
+
+void write_controllers(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
+    uint32_t sizeBitPos            = 0;
+    uint32_t controllerCountBitPos = 0;
+    uint32_t i                     = 0;
+
+    write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_CONTROLLERS);
+
+    sizeBitPos = *bitPos;
+    write_bit_stream(buff, bitPos, 16, 0);  // Populated later
+
+    controllerCountBitPos = *bitPos;
+    write_bit_stream(buff, bitPos, 7, 0);   // Populated later
+
+    for (i = 0; i < gControllerCount[slot]; i++) {
+        write_bit_stream(buff, bitPos, 7, gControllers[slot][i].midiCC);
+        write_bit_stream(buff, bitPos, 2, gControllers[slot][i].location);
+        write_bit_stream(buff, bitPos, 8, gControllers[slot][i].moduleIndex);
+        write_bit_stream(buff, bitPos, 7, gControllers[slot][i].paramIndex);
+    }
+
+    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+
+    write_bit_stream(buff, &controllerCountBitPos, 7, gControllerCount[slot]);
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
 

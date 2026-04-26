@@ -307,20 +307,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
 
             case SUB_RESPONSE_CONTROLLERS:
             {
-                uint32_t safeCount = 0;
-                LOG_DEBUG("Controllers\n");
-
-                if (slot < MAX_SLOTS) {
-                    safeCount = ((uint32_t)count < sizeof(gController[slot])) ? (uint32_t)count : sizeof(gController[slot]);
-
-                    for (uint32_t i = 0; i < safeCount; i++) {
-                        gController[slot][i] = read_bit_stream(buff, &subOffset, 8);
-                        LOG_DEBUG_DIRECT("0x%02x ", gController[slot][i]);
-                    }
-                    gControllerSize[slot] = safeCount;
-                }
-
-                LOG_DEBUG_DIRECT("\n");
+				parse_controllers(slot, buff, &subOffset);
                 break;
             }
 

@@ -376,8 +376,9 @@ typedef struct __attribute__((packed)) {  // TODO: Pack more of the structures i
     tRectangle rectangle;
     uint8_t    value;
     uint8_t    morphRange[8]; // 8 seems to be number of morphs. Not sure we can go higher, but
-}
-tParam;
+	uint8_t    midiCC;    // MIDI CC number assigned to this param (0 if unassigned)
+    bool       hasMidiCC; // true if a CC is assigned to this param
+} tParam;
 
 typedef struct {
     uint32_t   modeRef;
@@ -668,8 +669,6 @@ typedef struct {
     uint16_t unknown4;
 } tPatchDescr;
 
-#define KNOB_COUNT    (120)    // G2 always has exactly 120 knob slots
-
 typedef struct {
     bool     assigned;
     uint32_t location;
@@ -679,8 +678,17 @@ typedef struct {
 } tKnob;
 
 typedef struct {
-    tKnob knob[KNOB_COUNT];
+    tKnob knob[MAX_NUM_KNOBS];
 } tKnobList;
+
+typedef struct {
+    uint8_t  midiCC;
+    uint32_t location;
+    uint32_t moduleIndex;
+    uint32_t paramIndex;
+} tController;
+
+// TODO - add a list type as per knobs
 
 #endif // __TYPES_H__
 

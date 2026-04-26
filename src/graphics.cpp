@@ -439,16 +439,9 @@ void write_database_to_file(const char * filepath) {
 
     write_morph_params(gSlot, buff, &bitPos);
 
-    // Knobs — written for both locations (location param ignored internally,
-    // knob list is per-slot not per-location)
     write_knobs(gSlot, locationVa, buff, &bitPos);
 
-    write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_CONTROLLERS);
-    write_bit_stream(buff, &bitPos, 16, gControllerSize[gSlot]);
-
-    for (uint32_t i = 0; i < gControllerSize[gSlot]; i++) {
-        write_bit_stream(buff, &bitPos, 8, gController[gSlot][i]);
-    }
+    write_controllers(gSlot, buff, &bitPos);
 
     write_param_names(gSlot, locationMorph, buff, &bitPos);
     write_param_names(gSlot, locationVa, buff, &bitPos);
