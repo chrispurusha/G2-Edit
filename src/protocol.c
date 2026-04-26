@@ -553,28 +553,28 @@ void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     }
 
     // Clear the list before repopulating
-    memset(&gKnobList[slot], 0, sizeof(tKnobList));
+    memset(&gKnobArray[slot], 0, sizeof(tKnobArray));
 
     for (i = 0; i < (int)knobCount; i++) {
-        gKnobList[slot].knob[i].assigned = read_bit_stream(buff, subOffset, 1);
+        gKnobArray[slot].knob[i].assigned = read_bit_stream(buff, subOffset, 1);
 
-        if (gKnobList[slot].knob[i].assigned) {
-            gKnobList[slot].knob[i].location    = read_bit_stream(buff, subOffset, 2);
-            gKnobList[slot].knob[i].moduleIndex = read_bit_stream(buff, subOffset, 8);
-            gKnobList[slot].knob[i].isLed       = read_bit_stream(buff, subOffset, 2);
-            gKnobList[slot].knob[i].paramIndex  = read_bit_stream(buff, subOffset, 7);
+        if (gKnobArray[slot].knob[i].assigned) {
+            gKnobArray[slot].knob[i].location    = read_bit_stream(buff, subOffset, 2);
+            gKnobArray[slot].knob[i].moduleIndex = read_bit_stream(buff, subOffset, 8);
+            gKnobArray[slot].knob[i].isLed       = read_bit_stream(buff, subOffset, 2);
+            gKnobArray[slot].knob[i].paramIndex  = read_bit_stream(buff, subOffset, 7);
 
             LOG_DEBUG("  Knob %d: location %u module %u isLed %u param %u\n",
                       i,
-                      gKnobList[slot].knob[i].location,
-                      gKnobList[slot].knob[i].moduleIndex,
-                      gKnobList[slot].knob[i].isLed,
-                      gKnobList[slot].knob[i].paramIndex);
+                      gKnobArray[slot].knob[i].location,
+                      gKnobArray[slot].knob[i].moduleIndex,
+                      gKnobArray[slot].knob[i].isLed,
+                      gKnobArray[slot].knob[i].paramIndex);
         }
     }
 }
 
-void write_knobs(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos) {
+void write_knobs(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     int      i         = 0;
     uint32_t sizeBitPos = 0;
 
@@ -590,13 +590,13 @@ void write_knobs(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * b
     write_bit_stream(buff, bitPos, 16, MAX_NUM_KNOBS);
 
     for (i = 0; i < MAX_NUM_KNOBS; i++) {
-        write_bit_stream(buff, bitPos, 1, gKnobList[slot].knob[i].assigned ? 1 : 0);
+        write_bit_stream(buff, bitPos, 1, gKnobArray[slot].knob[i].assigned ? 1 : 0);
 
-        if (gKnobList[slot].knob[i].assigned) {
-            write_bit_stream(buff, bitPos, 2, gKnobList[slot].knob[i].location);
-            write_bit_stream(buff, bitPos, 8, gKnobList[slot].knob[i].moduleIndex);
-            write_bit_stream(buff, bitPos, 2, gKnobList[slot].knob[i].isLed);
-            write_bit_stream(buff, bitPos, 7, gKnobList[slot].knob[i].paramIndex);
+        if (gKnobArray[slot].knob[i].assigned) {
+            write_bit_stream(buff, bitPos, 2, gKnobArray[slot].knob[i].location);
+            write_bit_stream(buff, bitPos, 8, gKnobArray[slot].knob[i].moduleIndex);
+            write_bit_stream(buff, bitPos, 2, gKnobArray[slot].knob[i].isLed);
+            write_bit_stream(buff, bitPos, 7, gKnobArray[slot].knob[i].paramIndex);
         }
     }
 
@@ -623,22 +623,22 @@ void parse_controllers(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     }
 
     for (i = 0; i < controllerCount; i++) {
-        gControllers[slot][i].midiCC      = read_bit_stream(buff, subOffset, 7);
+        gControllerArray[slot].controller[i].midiCC   = read_bit_stream(buff, subOffset, 7);
         key.slot                          = slot;
         key.location                      = read_bit_stream(buff, subOffset, 2);
         key.index                         = read_bit_stream(buff, subOffset, 8);
         paramIndex                        = read_bit_stream(buff, subOffset, 7);
-        gControllers[slot][i].location    = key.location;
-        gControllers[slot][i].moduleIndex = key.index;
-        gControllers[slot][i].paramIndex  = paramIndex;
+        gControllerArray[slot].controller[i].location    = key.location;
+        gControllerArray[slot].controller[i].moduleIndex = key.index;
+        gControllerArray[slot].controller[i].paramIndex  = paramIndex;
 
         LOG_DEBUG("  Controller %d: MidiCC %u Location %u ModuleIndex %u ParamIndex %u\n",
-                  i, gControllers[slot][i].midiCC, key.location, key.index, paramIndex);
+                  i, gControllerArray[slot].controller[i].midiCC, key.location, key.index, paramIndex);
 
         // Shadow onto the module param for convenient per-param lookup
         if (read_module(key, &module) == true) {
             if (paramIndex < MAX_NUM_PARAMETERS) {
-                module.param[0][paramIndex].midiCC    = gControllers[slot][i].midiCC;
+                module.param[0][paramIndex].midiCC    = gControllerArray[slot].controller[i].midiCC;
                 module.param[0][paramIndex].hasMidiCC = true;
                 write_module(key, &module);
             } else {
@@ -664,10 +664,10 @@ void write_controllers(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     write_bit_stream(buff, bitPos, 7, 0);   // Populated later
 
     for (i = 0; i < gControllerCount[slot]; i++) {
-        write_bit_stream(buff, bitPos, 7, gControllers[slot][i].midiCC);
-        write_bit_stream(buff, bitPos, 2, gControllers[slot][i].location);
-        write_bit_stream(buff, bitPos, 8, gControllers[slot][i].moduleIndex);
-        write_bit_stream(buff, bitPos, 7, gControllers[slot][i].paramIndex);
+        write_bit_stream(buff, bitPos, 7, gControllerArray[slot].controller[i].midiCC);
+        write_bit_stream(buff, bitPos, 2, gControllerArray[slot].controller[i].location);
+        write_bit_stream(buff, bitPos, 8, gControllerArray[slot].controller[i].moduleIndex);
+        write_bit_stream(buff, bitPos, 7, gControllerArray[slot].controller[i].paramIndex);
     }
 
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));

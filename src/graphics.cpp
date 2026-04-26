@@ -359,9 +359,20 @@ void read_file_into_memory_and_process(const char * filepath) {
         LOG_DEBUG("Version %u\n", version);
         LOG_DEBUG("Type %u\n", type);
 
+        // TODO - should possibly be clear by slot if only loading into current slot?
         database_clear_cables();
         database_clear_modules();
-
+        
+        gMorphCount[gSlot]      = 0;
+        gNote2Size[gSlot]       = 0;
+        gControllerCount[gSlot] = 0;
+        gPatchNotesSize[gSlot]  = 0;
+        memset(&(gPatchDescr[gSlot]), 0, sizeof(gPatchDescr[gSlot]));
+        memset(&(gKnobArray[gSlot]), 0, sizeof(gKnobArray[gSlot]));
+        memset(gNote2[gSlot], 0, sizeof(gNote2[gSlot]));
+        memset(&(gControllerArray[gSlot]), 0, sizeof(gControllerArray[gSlot]));
+        memset(gPatchNotes[gSlot], 0,sizeof(gPatchNotes[gSlot]));
+        
         if (type == 0) {
             parse_patch(gSlot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // TODO: parse_patch should really be in a commonly accessible source file, for file or USB access
         } // 1 = performance
@@ -439,7 +450,7 @@ void write_database_to_file(const char * filepath) {
 
     write_morph_params(gSlot, buff, &bitPos);
 
-    write_knobs(gSlot, locationVa, buff, &bitPos);
+    write_knobs(gSlot, buff, &bitPos);
 
     write_controllers(gSlot, buff, &bitPos);
 

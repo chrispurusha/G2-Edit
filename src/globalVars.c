@@ -64,12 +64,12 @@ tMessageQueue   gCommandQueue                     = {0};
 uint32_t        gMorphGroupFocus                  = 0;
 uint32_t        gSlot                             = 0;
 tPatchDescr     gPatchDescr[MAX_SLOTS]            = {0};
-tKnobList       gKnobList[MAX_SLOTS]              = {0};
+tKnobArray       gKnobArray[MAX_SLOTS]              = {0};
 uint32_t        gMorphCount[MAX_SLOTS]            = {0};
 uint32_t        gNote2Size[MAX_SLOTS]             = {0};
 uint8_t         gNote2[MAX_SLOTS][1024]           = {0};
-tController 	gControllers[MAX_SLOTS][MAX_NUM_CONTROLLERS] = {0};
-uint32_t    	gControllerCount[MAX_SLOTS]                  = {0};
+tControllerArray gControllerArray[MAX_SLOTS]       = {0};
+uint32_t    	gControllerCount[MAX_SLOTS]       = {0};
 uint32_t        gPatchNotesSize[MAX_SLOTS]        = {0};
 uint8_t         gPatchNotes[MAX_SLOTS][MAX_16BIT] = {0};
 

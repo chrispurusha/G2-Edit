@@ -1186,9 +1186,11 @@ static void state_handler(void) {
             if (send_command(state) == EXIT_SUCCESS) {
                 if (int_rec() == EXIT_SUCCESS) {
                     if (state == eStateStop) {
+
+                        // TODO - Should possibly just be per slot and clear global vars? Review below
                         database_clear_cables();
                         database_clear_modules();
-
+                        
                         call_full_patch_change_notify();
                         call_wake_glfw();
                     } else if (state == eStateStart) {
@@ -1286,3 +1288,4 @@ void start_usb_thread(void) {
 #ifdef __cplusplus
 }
 #endif
+

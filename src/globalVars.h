@@ -52,12 +52,12 @@ extern tMessageQueue   gCommandQueue;
 extern uint32_t        gMorphGroupFocus;
 extern uint32_t        gSlot;
 extern tPatchDescr     gPatchDescr[MAX_SLOTS];
-extern tKnobList       gKnobList[MAX_SLOTS];
+extern tKnobArray      gKnobArray[MAX_SLOTS];  // TODO - Don't forget to nullify on new load
 extern uint32_t        gMorphCount[MAX_SLOTS];
 extern uint32_t        gNote2Size[MAX_SLOTS];
 extern uint8_t         gNote2[MAX_SLOTS][1024];
-extern tController 	   gControllers[MAX_SLOTS][MAX_NUM_CONTROLLERS];  // TODO - use a list type as per knobs
-extern uint32_t    	   gControllerCount[MAX_SLOTS];
+extern tControllerArray gControllerArray[MAX_SLOTS];  // TODO - Don't forget to nullify on new load
+extern uint32_t    	   gControllerCount[MAX_SLOTS];  // TODO - Don't forget to nullify on new load
 extern uint32_t        gPatchNotesSize[MAX_SLOTS];
 extern uint8_t         gPatchNotes[MAX_SLOTS][MAX_16BIT];
 

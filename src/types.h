@@ -679,7 +679,7 @@ typedef struct {
 
 typedef struct {
     tKnob knob[MAX_NUM_KNOBS];
-} tKnobList;
+} tKnobArray;
 
 typedef struct {
     uint8_t  midiCC;
@@ -688,7 +688,9 @@ typedef struct {
     uint32_t paramIndex;
 } tController;
 
-// TODO - add a list type as per knobs
+typedef struct {
+    tController controller[MAX_NUM_CONTROLLERS];
+} tControllerArray;
 
 #endif // __TYPES_H__
 
