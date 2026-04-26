@@ -359,10 +359,9 @@ void read_file_into_memory_and_process(const char * filepath) {
         LOG_DEBUG("Version %u\n", version);
         LOG_DEBUG("Type %u\n", type);
 
-        // TODO - should possibly be clear by slot if only loading into current slot?
-        database_clear_cables();
-        database_clear_modules();
-        
+        /* TODO - implement clear down commands as an init/clear slot function? */
+        database_delete_cables_by_slot(gSlot);
+        database_delete_modules_by_slot(gSlot);
         gMorphCount[gSlot]      = 0;
         gNote2Size[gSlot]       = 0;
         gControllerCount[gSlot] = 0;
