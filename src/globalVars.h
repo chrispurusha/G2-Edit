@@ -56,8 +56,8 @@ extern tKnobList       gKnobList[MAX_SLOTS];
 extern uint32_t        gMorphCount[MAX_SLOTS];
 extern uint32_t        gNote2Size[MAX_SLOTS];
 extern uint8_t         gNote2[MAX_SLOTS][1024];
-extern uint32_t        gControllerSize[MAX_SLOTS];
-extern uint8_t         gController[MAX_SLOTS][1024];
+extern tController 	   gControllers[MAX_SLOTS][MAX_NUM_CONTROLLERS];  // TODO - use a list type as per knobs
+extern uint32_t    	   gControllerCount[MAX_SLOTS];
 extern uint32_t        gPatchNotesSize[MAX_SLOTS];
 extern uint8_t         gPatchNotes[MAX_SLOTS][MAX_16BIT];
 
