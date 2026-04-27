@@ -212,7 +212,7 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
             module->param[variation][paramIndex].value = paramLocationList[locationListIndex].defaultValue;
             anyParamSet = true;
 
-            for (int i = 0; i < NUM_VARIATIONS; i++) {
+            for (int i = 0; i < NUM_VARIATIONS_USB; i++) {
                 messageContent.cmd                 = eMsgCmdSetValue;
                 messageContent.slot                = gSlot;
                 messageContent.paramData.moduleKey = module->key;
@@ -242,7 +242,7 @@ void init_params_on_module_all_variations(tModule * module, uint32_t location) {
         return;
     }
 
-    for (uint32_t variation = 0; variation < NUM_VARIATIONS; variation++) {
+    for (uint32_t variation = 0; variation < NUM_VARIATIONS_USB; variation++) {
         init_params_on_module(module, location, variation);
     }
 }

@@ -832,7 +832,7 @@ void render_morph_groups(void) {
 
         if ((validModule && module.key.slot == gSlot && module.key.location == locationMorph) && (module.key.index == 1)) {
             // Make sure all rectangles (for mouse click) are nullified
-            for (i = 0; i < NUM_VARIATIONS; i++) {
+            for (i = 0; i < NUM_VARIATIONS_USB; i++) {
                 for (j = 0; j < (NUM_MORPHS * 2); j++) {
                     module.param[i][j].rectangle = NULL_RECTANGLE;
                 }

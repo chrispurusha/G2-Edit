@@ -477,7 +477,7 @@ typedef struct _struct_module {
     uint32_t                actualParamCount;
     tMode                   mode[MAX_NUM_MODES]; // Might not need to be an array, since only seeing one mode so far
     char                    name[MODULE_NAME_SIZE + 1];
-    tParam                  param[NUM_VARIATIONS][MAX_NUM_PARAMETERS];
+    tParam                  param[NUM_VARIATIONS_USB][MAX_NUM_PARAMETERS];
     uint32_t                paramNumLabels[MAX_NUM_PARAMETERS];
     bool                    paramNameSet[MAX_NUM_PARAMETERS][MAX_NUM_LABELS];
     char                    paramName[MAX_NUM_PARAMETERS][MAX_NUM_LABELS][PARAM_NAME_SIZE + 1];

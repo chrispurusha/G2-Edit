@@ -1090,30 +1090,63 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
             
         case eMsgCmdInitPatch:
-            buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SYS | messageContent->slot;
-            buff[pos++] = slotVersion_local[messageContent->slot];
-            buff[pos++] = SUB_COMMAND_SET; // 0x37
-            buff[pos++] = 0;
-            buff[pos++] = 0;
-            buff[pos++] = 0;
-            buff[pos++] = 'N';
-            buff[pos++] = 'o';
-            buff[pos++] = ' ';
-            buff[pos++] = 'N';
-            buff[pos++] = 'a';
-            buff[pos++] = 'm';
-            buff[pos++] = 'e';
-            buff[pos++] = 0;
-            buff[pos++] = 0x21;
-            buff[pos++] = 0;
-            buff[pos++] = 0xf;
-            buff[pos++] = 0;
-            buff[pos++] = 0;
-            // Name length = 16
+        {
+            uint32_t i = 0;
+            uint32_t bitPos = 0;
+            const char patchName[] = "Init";
             
-            // Todo - obvs.
+            database_delete_cables_by_slot(messageContent->slot);
+            database_delete_modules_by_slot(messageContent->slot);
+            gMorphCount[messageContent->slot]      = 0;
+            gNote2Size[messageContent->slot]       = 0;
+            gControllerCount[messageContent->slot] = 0;
+            gPatchNotesSize[messageContent->slot]  = 0;
+            gPatchDescr[messageContent->slot].voiceCount      = 4;  // TODO - check if this is correct
+            gPatchDescr[messageContent->slot].activeVariation = 0;
+            memset(&(gPatchDescr[messageContent->slot]), 0, sizeof(gPatchDescr[messageContent->slot]));
+            memset(&(gKnobArray[messageContent->slot]), 0, sizeof(gKnobArray[messageContent->slot]));
+            memset(gNote2[messageContent->slot], 0, sizeof(gNote2[messageContent->slot]));
+            memset(&(gControllerArray[messageContent->slot]), 0, sizeof(gControllerArray[messageContent->slot]));
+            memset(gPatchNotes[messageContent->slot], 0,sizeof(gPatchNotes[messageContent->slot]));
+            
+            buff[pos++] = 0x01;
+            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
+            buff[pos++] = UPLOAD_PATCH_VERSION;     // 0x53
+            buff[pos++] = SUB_COMMAND_SET;
+            buff[pos++] = 0x00;
+            buff[pos++] = 0x00;
+            buff[pos++] = 0x00;
+            
+            // Patch name: up to 16 bytes, null-terminated if shorter (WriteClaviaString)
+            
+            while ((i < 16) && (patchName[i] != '\0')) {
+                buff[pos++] = (uint8_t)patchName[i++];
+            }
+            buff[pos++] = 0x00;  // null terminator (always written even at len 16)
+            
+            bitPos = BYTE_TO_BIT(pos);
+            
+            write_patch_descr(buff, &bitPos);
+            
+            write_module_list(messageContent->slot, locationVa, buff, &bitPos);
+            write_module_list(messageContent->slot, locationFx, buff, &bitPos);
+            write_cable_list(messageContent->slot, locationVa, buff, &bitPos);
+            write_cable_list(messageContent->slot, locationFx, buff, &bitPos);
+            write_param_list(messageContent->slot, locationVa, buff, &bitPos, NUM_VARIATIONS_USB);
+            write_param_list(messageContent->slot, locationFx, buff, &bitPos, NUM_VARIATIONS_USB);
+            write_param_list(messageContent->slot, locationMorph, buff, &bitPos, NUM_VARIATIONS_USB);
+            write_morph_params(messageContent->slot, buff, &bitPos, NUM_VARIATIONS_USB);
+            write_knobs(messageContent->slot, buff, &bitPos);
+            write_controllers(messageContent->slot, buff, &bitPos);
+            write_param_names(messageContent->slot, locationVa, buff, &bitPos);
+            write_param_names(messageContent->slot, locationFx, buff, &bitPos);
+            write_module_names(messageContent->slot, locationVa, buff, &bitPos);
+            write_module_names(messageContent->slot, locationFx, buff, &bitPos);
+            write_patch_notes(messageContent->slot, buff, &bitPos);
+            
+            pos = BIT_TO_BYTE(bitPos);
             break;
+        }
 
 
         default:

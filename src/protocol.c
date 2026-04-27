@@ -267,7 +267,7 @@ void write_cable_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 }
 
 void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
-    uint32_t   variationCount = 0;
+    uint32_t   numVariations = 0;
     uint32_t   paramCount     = 0;
     uint32_t   moduleCount    = 0;
     uint32_t   paramValue     = 0;
@@ -284,9 +284,9 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     // SWITCH ON LOC BEING 0..1 or 2 2 = line 4112 in file.pas
     moduleCount = read_bit_stream(buff, subOffset, 8);
     LOG_DEBUG("Module Count      %u\n", moduleCount);
-    variationCount = read_bit_stream(buff, subOffset, 8);     // Should always be 10 on USB or 9 in a file - TODO: sanity check
-    LOG_DEBUG("Variation Count      %u\n", variationCount);
-    if (variationCount > 10) {
+    numVariations = read_bit_stream(buff, subOffset, 8);     // Should always be 10 on USB or 9 in a file - TODO: sanity check
+    LOG_DEBUG("Variation Count      %u\n", numVariations);
+    if (numVariations > 10) {
         LOG_DEBUG("Variation Count > 10\n");
         return;
     }
@@ -313,7 +313,7 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             exit(1);
         }
 
-        for (j = 0; j < variationCount; j++) {                                                          // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
+        for (j = 0; j < numVariations; j++) {                                                          // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
             uint32_t variation = read_bit_stream(buff, subOffset, 8);
 
             if (variation == 0) { // Limit to just 1st variation for now
@@ -338,7 +338,7 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
-void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos) {
+void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos, uint32_t numVariations) {
     tModule  module            = {0};
     uint32_t moduleCount       = 0;
     bool     validModule       = false;
@@ -370,7 +370,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 
         if (validModule == true) {
             if ((module.key.slot == slot) && (module.key.location == location)) {
-                variations = NUM_VARIATIONS - 1; // At least one valid module, so we have variations
+                variations = numVariations; // At least one valid module, so we have variations
 
                 paramCount = module.actualParamCount;
 
@@ -380,7 +380,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
                     write_bit_stream(buff, bitPos, 8, module.key.index);
                     write_bit_stream(buff, bitPos, 7, paramCount);
 
-                    for (i = 0; i < (NUM_VARIATIONS - 1); i++) {
+                    for (i = 0; i < numVariations; i++) {
                         write_bit_stream(buff, bitPos, 8, i);
 
                         for (j = 0; j < paramCount; j++) {
@@ -404,7 +404,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset, uint32_t chunkBitEnd) {
     tModule    module          = {0};
     tModuleKey key             = {0};
-    uint32_t   variationCount  = 0;
+    uint32_t   numVariations  = 0;
     uint32_t   variation       = 0;
     uint32_t   morphParamCount = 0;
     uint32_t   paramIndex      = 0;
@@ -413,13 +413,13 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset, uin
     int        j               = 0;
     int        k               = 0;
 
-    variationCount    = read_bit_stream(buff, subOffset, 8);
+    numVariations    = read_bit_stream(buff, subOffset, 8);
     gMorphCount[slot] = read_bit_stream(buff, subOffset, 4);
     read_bit_stream(buff, subOffset, 20);  // Reserved
 
-    LOG_DEBUG("Variations %u Morph Count %u\n", variationCount, gMorphCount[slot]);
+    LOG_DEBUG("Variations %u Morph Count %u\n", numVariations, gMorphCount[slot]);
 
-    for (j = 0; j < variationCount; j++) {    // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
+    for (j = 0; j < numVariations; j++) {    // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
         variation = read_bit_stream(buff, subOffset, 4);
         read_bit_stream(buff, subOffset, 4);  // Lots of unknown stuff
         read_bit_stream(buff, subOffset, 8);
@@ -459,7 +459,7 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset, uin
     }
 }
 
-void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
+void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32_t numVariations) {
     tModule  module                = {0};
     bool     validModule           = false;
     uint32_t sizeBitPos            = 0;
@@ -475,11 +475,11 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     sizeBitPos = *bitPos;
     write_bit_stream(buff, bitPos, 16, 0);                 // Populated later
 
-    write_bit_stream(buff, bitPos, 8, NUM_VARIATIONS - 1); // Variation count (9)
+    write_bit_stream(buff, bitPos, 8, numVariations); // Variation count (9)
     write_bit_stream(buff, bitPos, 4, gMorphCount[slot]);  // Morph count (typically 4)
     write_bit_stream(buff, bitPos, 20, 0);                 // Reserved data
 
-    for (i = 0; i < (NUM_VARIATIONS - 1); i++) {
+    for (i = 0; i < numVariations; i++) {
         write_bit_stream(buff, bitPos, 4, i);  // Variation number
         write_bit_stream(buff, bitPos, 4, 0);  // Unknown
         write_bit_stream(buff, bitPos, 8, 0);  // Unknown
@@ -522,9 +522,9 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
         finish_walk_module();
 
         write_bit_stream(buff, &morphParamCountBitPos, 8, morphParamCount);
-        LOG_DEBUG("WRITE %d %d\n", i, NUM_VARIATIONS - 1);
+        LOG_DEBUG("WRITE %d %d\n", i, numVariations);
 
-        if ((i + 1) < (NUM_VARIATIONS - 1)) {
+        if ((i + 1) < numVariations) {
             LOG_DEBUG("ACTUALLY DO WRITE\n");
             write_bit_stream(buff, bitPos, 4, 0);  // Trailing unknown bits, don't do on last run-through
         }
@@ -983,7 +983,7 @@ void write_patch_notes(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
 
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
-
+    
 #ifdef __cplusplus
 }
 #endif
