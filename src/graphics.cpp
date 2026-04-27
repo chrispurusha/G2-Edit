@@ -443,11 +443,11 @@ void write_database_to_file(const char * filepath) {
     write_cable_list(gSlot, locationVa, buff, &bitPos);
     write_cable_list(gSlot, locationFx, buff, &bitPos);
 
-    write_param_list(gSlot, locationMorph, buff, &bitPos);
-    write_param_list(gSlot, locationVa, buff, &bitPos);
-    write_param_list(gSlot, locationFx, buff, &bitPos);
+    write_param_list(gSlot, locationMorph, buff, &bitPos, NUM_VARIATIONS_FILE);
+    write_param_list(gSlot, locationVa, buff, &bitPos, NUM_VARIATIONS_FILE);
+    write_param_list(gSlot, locationFx, buff, &bitPos, NUM_VARIATIONS_FILE);
 
-    write_morph_params(gSlot, buff, &bitPos);
+    write_morph_params(gSlot, buff, &bitPos, NUM_VARIATIONS_FILE);
 
     write_knobs(gSlot, buff, &bitPos);
 
