@@ -676,7 +676,7 @@ void write_controllers(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
 
-void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset, int count) {
+void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     uint32_t   nameCount    = 0;
     uint32_t   paramLength  = 0;
     uint32_t   moduleLength = 0;

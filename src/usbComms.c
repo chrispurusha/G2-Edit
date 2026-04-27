@@ -261,7 +261,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
 
             case SUB_RESPONSE_PARAM_NAMES:
             {
-                parse_param_names(slot, buff, &subOffset, count);
+                parse_param_names(slot, buff, &subOffset);
                 break;
             }
 
