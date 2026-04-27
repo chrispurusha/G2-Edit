@@ -295,7 +295,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
 
             case SUB_RESPONSE_MORPH_PARAMS:
             {
-                parse_morph_params(slot, buff, &subOffset);
+                parse_morph_params(slot, buff, &subOffset, subOffset + BYTE_TO_BIT(count));
                 break;
             }
 

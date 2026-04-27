@@ -401,7 +401,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
 
-void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
+void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset, uint32_t chunkBitEnd) {
     tModule    module          = {0};
     tModuleKey key             = {0};
     uint32_t   variationCount  = 0;
@@ -454,7 +454,8 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             write_module(key, &module);
         }
 
-        read_bit_stream(buff, subOffset, 4);
+        uint32_t bitsLeft = chunkBitEnd - *subOffset;
+        read_bit_stream(buff, subOffset, (bitsLeft < 4) ? bitsLeft : 4);
     }
 }
 
