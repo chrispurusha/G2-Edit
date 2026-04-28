@@ -577,28 +577,19 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 
         case SUB_RESPONSE_PATCH_NAME:
         {
-            uint32_t   tmpBitPos    = *bitPos;
             LOG_DEBUG("Got Patch name (length %d)\n", length);
 
-            for (int i = 0; i < (length - 6); i++) {
-                uint8_t ch = read_bit_stream(buff, bitPos, 8);
+            pthread_mutex_lock(&gGlobalVarsMutex);
+            memset(gPatchName[slot], 0, PATCH_NAME_SIZE+1);
 
-                    LOG_DEBUG_DIRECT("0x%02x ", ch);
+            for (int i = 0; i < (length - 6) && i < (PATCH_NAME_SIZE); i++) {
+                uint8_t ch = read_bit_stream(buff, bitPos, 8);
+                gPatchName[slot][i] = (ch >= 0x20 && ch <= 0x7f) ? (char)ch : ' ';
+                LOG_DEBUG_DIRECT("%c", gPatchName[slot][i]);
             }
             LOG_DEBUG_DIRECT("\n");
-            
-            LOG_DEBUG_DIRECT("'");
-            *bitPos = tmpBitPos;
-            
-            for (int i = 0; i < (length - 6); i++) {
-                uint8_t ch = read_bit_stream(buff, bitPos, 8);
+            pthread_mutex_unlock(&gGlobalVarsMutex);
 
-                if (ch <= 0x7F) {
-                    LOG_DEBUG_DIRECT("%c", ch);
-                }
-            }
-
-            LOG_DEBUG_DIRECT("'\n");
             return EXIT_SUCCESS;
         }
 
@@ -1093,21 +1084,22 @@ static int send_write_data(tMessageContent * messageContent) {
         {
             uint32_t i = 0;
             uint32_t bitPos = 0;
-            const char patchName[] = "Init";
+            //const char patchName[] = "Init";
             
             database_delete_cables_by_slot(messageContent->slot);
             database_delete_modules_by_slot(messageContent->slot);
-            gMorphCount[messageContent->slot]      = 0;
+            gMorphCount[messageContent->slot]      = 8;  // Check default!?
             gNote2Size[messageContent->slot]       = 0;
-            gControllerCount[messageContent->slot] = 0;
+            gControllerCount[messageContent->slot] = 0; // Seems to default to 2, so might need to set up defaults
             gPatchNotesSize[messageContent->slot]  = 0;
-            gPatchDescr[messageContent->slot].voiceCount      = 4;  // TODO - check if this is correct
+            gPatchDescr[messageContent->slot].voiceCount      = 0;  // TODO - check if this is correct
             gPatchDescr[messageContent->slot].activeVariation = 0;
             memset(&(gPatchDescr[messageContent->slot]), 0, sizeof(gPatchDescr[messageContent->slot]));
             memset(&(gKnobArray[messageContent->slot]), 0, sizeof(gKnobArray[messageContent->slot]));
             memset(gNote2[messageContent->slot], 0, sizeof(gNote2[messageContent->slot]));
             memset(&(gControllerArray[messageContent->slot]), 0, sizeof(gControllerArray[messageContent->slot]));
             memset(gPatchNotes[messageContent->slot], 0,sizeof(gPatchNotes[messageContent->slot]));
+            strncpy(gPatchName[messageContent->slot], "Init", PATCH_NAME_SIZE+1);
             
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
@@ -1119,8 +1111,8 @@ static int send_write_data(tMessageContent * messageContent) {
             
             // Patch name: up to 16 bytes, null-terminated if shorter (WriteClaviaString)
             
-            while ((i < 16) && (patchName[i] != '\0')) {
-                buff[pos++] = (uint8_t)patchName[i++];
+            while ((i < PATCH_NAME_SIZE) && (gPatchName[messageContent->slot][i] != '\0')) {
+                buff[pos++] = (uint8_t)gPatchName[messageContent->slot][i++];
             }
             buff[pos++] = 0x00;  // null terminator (always written even at len 16)
             
@@ -1130,14 +1122,17 @@ static int send_write_data(tMessageContent * messageContent) {
             
             write_module_list(messageContent->slot, locationVa, buff, &bitPos);
             write_module_list(messageContent->slot, locationFx, buff, &bitPos);
+            write_current_note_2(buff, &bitPos);
             write_cable_list(messageContent->slot, locationVa, buff, &bitPos);
             write_cable_list(messageContent->slot, locationFx, buff, &bitPos);
+            //write_patch_settings(messageContent->slot, buff, &bitPos);  // Might need this?
             write_param_list(messageContent->slot, locationVa, buff, &bitPos, NUM_VARIATIONS_USB);
             write_param_list(messageContent->slot, locationFx, buff, &bitPos, NUM_VARIATIONS_USB);
             write_param_list(messageContent->slot, locationMorph, buff, &bitPos, NUM_VARIATIONS_USB);
             write_morph_params(messageContent->slot, buff, &bitPos, NUM_VARIATIONS_USB);
             write_knobs(messageContent->slot, buff, &bitPos);
             write_controllers(messageContent->slot, buff, &bitPos);
+            write_param_names(messageContent->slot, locationMorph, buff, &bitPos);
             write_param_names(messageContent->slot, locationVa, buff, &bitPos);
             write_param_names(messageContent->slot, locationFx, buff, &bitPos);
             write_module_names(messageContent->slot, locationVa, buff, &bitPos);

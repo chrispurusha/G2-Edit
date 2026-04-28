@@ -455,6 +455,9 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset, uin
         }
 
         uint32_t bitsLeft = chunkBitEnd - *subOffset;
+        
+        LOG_DEBUG("subOffset before pad: %u, chunk end: %u\n", *subOffset, chunkBitEnd);
+        
         read_bit_stream(buff, subOffset, (bitsLeft < 4) ? bitsLeft : 4);
     }
 }
@@ -469,14 +472,14 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32
     uint32_t i                     = 0;
     uint32_t j                     = 0;
     uint32_t m                     = 0;
-
+    
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_MORPH_PARAMS);
 
     sizeBitPos = *bitPos;
     write_bit_stream(buff, bitPos, 16, 0);                 // Populated later
 
     write_bit_stream(buff, bitPos, 8, numVariations); // Variation count (9)
-    write_bit_stream(buff, bitPos, 4, gMorphCount[slot]);  // Morph count (typically 4)
+    write_bit_stream(buff, bitPos, 4, gMorphCount[slot]);
     write_bit_stream(buff, bitPos, 20, 0);                 // Reserved data
 
     for (i = 0; i < numVariations; i++) {
@@ -982,6 +985,18 @@ void write_patch_notes(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
+}
+
+void write_current_note_2(uint8_t * buff, uint32_t * bitPos) {
+    // Fixed payload for now
+    write_bit_stream(buff, bitPos, 8,  SUB_RESPONSE_CURRENT_NOTE_2);
+    write_bit_stream(buff, bitPos, 16, 6);
+    write_bit_stream(buff, bitPos, 8,  0x80);
+    write_bit_stream(buff, bitPos, 8,  0x00);
+    write_bit_stream(buff, bitPos, 8,  0x00);
+    write_bit_stream(buff, bitPos, 8,  0x20);
+    write_bit_stream(buff, bitPos, 8,  0x00);
+    write_bit_stream(buff, bitPos, 8,  0x00);
 }
     
 #ifdef __cplusplus

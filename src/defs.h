@@ -57,7 +57,7 @@
 
 #define INTERRUPT_MESSAGE_SIZE               (16)
 #define EXTENDED_MESSAGE_SIZE                (8192)
-#define SEND_MESSAGE_SIZE                    (256)
+#define SEND_MESSAGE_SIZE                    (8192)
 
 #define RESPONSE_TYPE_EXTENDED               (0x1)
 #define RESPONSE_TYPE_EMBEDDED               (0x2)
@@ -138,6 +138,7 @@
 
 #define CRC_BYTES                            (2)
 
+#define PATCH_NAME_SIZE                      (16)   // Don't forget to add null terminator where necessary
 #define MODULE_NAME_SIZE                     (16)
 #define PARAM_NAME_SIZE                      (16)
 #define PROTOCOL_PARAM_NAME_SIZE             (7)

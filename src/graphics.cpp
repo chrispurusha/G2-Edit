@@ -182,6 +182,20 @@ void render_top_bar(void) {
     set_rgb_colour(RGB_BLACK);
     render_text(mainArea, {{400.0, 43.0}, {NULL, STANDARD_TEXT_HEIGHT}}, "Variation");
 
+    // Patch name — centred in the left portion of the bar
+    pthread_mutex_lock(&gGlobalVarsMutex);
+    char patchNameCopy[PATCH_NAME_SIZE+1] = {0};
+    strncpy(patchNameCopy, gPatchName[gSlot], PATCH_NAME_SIZE);
+    pthread_mutex_unlock(&gGlobalVarsMutex);
+
+    if (patchNameCopy[0] == '\0') {
+        strncpy(patchNameCopy, "---", PATCH_NAME_SIZE);
+    }
+    
+    set_rgb_colour(RGB_BACKGROUND_GREY);
+    rectangle = {{150, 8}, {150, STANDARD_TEXT_HEIGHT}};
+    draw_button(mainArea, rectangle, patchNameCopy, false);
+
     for (int i = 0; i < array_size_main_button_array(); i++) {
         set_rgb_colour(gMainButtonArray[i].backgroundColour);
 
