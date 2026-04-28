@@ -322,6 +322,32 @@ void init_graphics(void) {
     setup_render_context();
 }
 
+void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
+    const char * base  = filepath;
+    const char * p     = filepath;
+
+    // Find last path separator
+    while (*p != '\0') {
+        if (*p == '/' || *p == '\\') {
+            base = p + 1;
+        }
+        p++;
+    }
+
+    // Copy up to PATCH_NAME_SIZE chars, stop at '.' (extension)
+    pthread_mutex_lock(&gGlobalVarsMutex);
+    memset(gPatchName[slot], 0, PATCH_NAME_SIZE + 1);
+
+    int i = 0;
+    while (i < PATCH_NAME_SIZE && base[i] != '\0' && base[i] != '.') {
+        gPatchName[slot][i] = base[i];
+        i++;
+    }
+    pthread_mutex_unlock(&gGlobalVarsMutex);
+
+    LOG_DEBUG("Patch name from file: '%s'\n", gPatchName[slot]);
+}
+
 void read_file_into_memory_and_process(const char * filepath) {
     int64_t   byteOffset = 0;
     int64_t   fileSize   = 0;
@@ -392,6 +418,8 @@ void read_file_into_memory_and_process(const char * filepath) {
         if (type == 0) {
             parse_patch(gSlot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // TODO: parse_patch should really be in a commonly accessible source file, for file or USB access
         } // 1 = performance
+        
+        set_patch_name_from_filename(gSlot, filepath);
     } else {
         LOG_WARNING("CRC check failed\n");
     }
