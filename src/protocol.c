@@ -35,64 +35,64 @@ extern "C" {
 #include "moduleResourcesAccess.h"
 #include "globalVars.h"
 
-void parse_patch_descr(uint8_t * buff, uint32_t * subOffset) {
-    gPatchDescr[gSlot].unknown1        = read_bit_stream(buff, subOffset, 32);
-    gPatchDescr[gSlot].unknown2        = read_bit_stream(buff, subOffset, 29);
-    gPatchDescr[gSlot].voiceCount      = read_bit_stream(buff, subOffset, 5);
-    gPatchDescr[gSlot].barPosition     = read_bit_stream(buff, subOffset, 14);
-    gPatchDescr[gSlot].unknown3        = read_bit_stream(buff, subOffset, 3);
-    gPatchDescr[gSlot].redVisible      = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[gSlot].blueVisible     = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[gSlot].yellowVisible   = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[gSlot].orangeVisible   = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[gSlot].greenVisible    = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[gSlot].purpleVisible   = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[gSlot].whiteVisible    = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[gSlot].monoPoly        = read_bit_stream(buff, subOffset, 2);
-    gPatchDescr[gSlot].activeVariation = read_bit_stream(buff, subOffset, 8);
-    gPatchDescr[gSlot].category        = read_bit_stream(buff, subOffset, 8);
-    gPatchDescr[gSlot].unknown4        = read_bit_stream(buff, subOffset, 12);
+void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
+    gPatchDescr[slot].unknown1        = read_bit_stream(buff, subOffset, 32);
+    gPatchDescr[slot].unknown2        = read_bit_stream(buff, subOffset, 29);
+    gPatchDescr[slot].voiceCount      = read_bit_stream(buff, subOffset, 5);
+    gPatchDescr[slot].barPosition     = read_bit_stream(buff, subOffset, 14);
+    gPatchDescr[slot].unknown3        = read_bit_stream(buff, subOffset, 3);
+    gPatchDescr[slot].redVisible      = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].blueVisible     = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].yellowVisible   = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].orangeVisible   = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].greenVisible    = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].purpleVisible   = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].whiteVisible    = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].monoPoly        = read_bit_stream(buff, subOffset, 2);
+    gPatchDescr[slot].activeVariation = read_bit_stream(buff, subOffset, 8);
+    gPatchDescr[slot].category        = read_bit_stream(buff, subOffset, 8);
+    gPatchDescr[slot].unknown4        = read_bit_stream(buff, subOffset, 12);
 
-    LOG_DEBUG("  Voice Count %u\n", gPatchDescr[gSlot].voiceCount);
-    LOG_DEBUG("  Bar Position %u\n", gPatchDescr[gSlot].barPosition);
-    LOG_DEBUG("  Red %u\n", gPatchDescr[gSlot].redVisible);
-    LOG_DEBUG("  Blue %u\n", gPatchDescr[gSlot].blueVisible);
-    LOG_DEBUG("  Yellow %u\n", gPatchDescr[gSlot].yellowVisible);
-    LOG_DEBUG("  Orange %u\n", gPatchDescr[gSlot].orangeVisible);
-    LOG_DEBUG("  Green %u\n", gPatchDescr[gSlot].greenVisible);
-    LOG_DEBUG("  Purple %u\n", gPatchDescr[gSlot].purpleVisible);
-    LOG_DEBUG("  White %u\n", gPatchDescr[gSlot].whiteVisible);
-    LOG_DEBUG("  Mono Poly %u\n", gPatchDescr[gSlot].monoPoly);
-    LOG_DEBUG("  Active Variation %u\n", gPatchDescr[gSlot].activeVariation);
-    LOG_DEBUG("  Category %u\n", gPatchDescr[gSlot].category);
+    LOG_DEBUG("  Voice Count %u\n", gPatchDescr[slot].voiceCount);
+    LOG_DEBUG("  Bar Position %u\n", gPatchDescr[slot].barPosition);
+    LOG_DEBUG("  Red %u\n", gPatchDescr[slot].redVisible);
+    LOG_DEBUG("  Blue %u\n", gPatchDescr[slot].blueVisible);
+    LOG_DEBUG("  Yellow %u\n", gPatchDescr[slot].yellowVisible);
+    LOG_DEBUG("  Orange %u\n", gPatchDescr[slot].orangeVisible);
+    LOG_DEBUG("  Green %u\n", gPatchDescr[slot].greenVisible);
+    LOG_DEBUG("  Purple %u\n", gPatchDescr[slot].purpleVisible);
+    LOG_DEBUG("  White %u\n", gPatchDescr[slot].whiteVisible);
+    LOG_DEBUG("  Mono Poly %u\n", gPatchDescr[slot].monoPoly);
+    LOG_DEBUG("  Active Variation %u\n", gPatchDescr[slot].activeVariation);
+    LOG_DEBUG("  Category %u\n", gPatchDescr[slot].category);
 
     // TODO - Might want to reconsider how we do this, since there's multiple cases of this setting of button colour
     for (uint32_t i = 0; i < NUM_GUI_VARIATIONS; i++) {
         gMainButtonArray[(uint32_t)variation1ButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
     }
 
-    gMainButtonArray[gPatchDescr[gSlot].activeVariation + (uint32_t)variation1ButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
+    gMainButtonArray[gPatchDescr[slot].activeVariation + (uint32_t)variation1ButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
 }
 
-void write_patch_descr(uint8_t * buff, uint32_t * bitPos) {
+void write_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_PATCH_DESCRIPTION);
     write_bit_stream(buff, bitPos, 16, 15); // Length of following in bytes
-    write_bit_stream(buff, bitPos, 32, gPatchDescr[gSlot].unknown1);
-    write_bit_stream(buff, bitPos, 29, gPatchDescr[gSlot].unknown2);
-    write_bit_stream(buff, bitPos, 5, gPatchDescr[gSlot].voiceCount);
-    write_bit_stream(buff, bitPos, 14, gPatchDescr[gSlot].barPosition);
-    write_bit_stream(buff, bitPos, 3, gPatchDescr[gSlot].unknown3);
-    write_bit_stream(buff, bitPos, 1, gPatchDescr[gSlot].redVisible);
-    write_bit_stream(buff, bitPos, 1, gPatchDescr[gSlot].blueVisible);
-    write_bit_stream(buff, bitPos, 1, gPatchDescr[gSlot].yellowVisible);
-    write_bit_stream(buff, bitPos, 1, gPatchDescr[gSlot].orangeVisible);
-    write_bit_stream(buff, bitPos, 1, gPatchDescr[gSlot].greenVisible);
-    write_bit_stream(buff, bitPos, 1, gPatchDescr[gSlot].purpleVisible);
-    write_bit_stream(buff, bitPos, 1, gPatchDescr[gSlot].whiteVisible);
-    write_bit_stream(buff, bitPos, 2, gPatchDescr[gSlot].monoPoly);
-    write_bit_stream(buff, bitPos, 8, gPatchDescr[gSlot].activeVariation);
-    write_bit_stream(buff, bitPos, 8, gPatchDescr[gSlot].category);
-    write_bit_stream(buff, bitPos, 12, gPatchDescr[gSlot].unknown4);
+    write_bit_stream(buff, bitPos, 32, gPatchDescr[slot].unknown1);
+    write_bit_stream(buff, bitPos, 29, gPatchDescr[slot].unknown2);
+    write_bit_stream(buff, bitPos, 5, gPatchDescr[slot].voiceCount);
+    write_bit_stream(buff, bitPos, 14, gPatchDescr[slot].barPosition);
+    write_bit_stream(buff, bitPos, 3, gPatchDescr[slot].unknown3);
+    write_bit_stream(buff, bitPos, 1, gPatchDescr[slot].redVisible);
+    write_bit_stream(buff, bitPos, 1, gPatchDescr[slot].blueVisible);
+    write_bit_stream(buff, bitPos, 1, gPatchDescr[slot].yellowVisible);
+    write_bit_stream(buff, bitPos, 1, gPatchDescr[slot].orangeVisible);
+    write_bit_stream(buff, bitPos, 1, gPatchDescr[slot].greenVisible);
+    write_bit_stream(buff, bitPos, 1, gPatchDescr[slot].purpleVisible);
+    write_bit_stream(buff, bitPos, 1, gPatchDescr[slot].whiteVisible);
+    write_bit_stream(buff, bitPos, 2, gPatchDescr[slot].monoPoly);
+    write_bit_stream(buff, bitPos, 8, gPatchDescr[slot].activeVariation);
+    write_bit_stream(buff, bitPos, 8, gPatchDescr[slot].category);
+    write_bit_stream(buff, bitPos, 12, gPatchDescr[slot].unknown4);
 
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 }
@@ -987,7 +987,7 @@ void write_patch_notes(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
 
-void write_current_note_2(uint8_t * buff, uint32_t * bitPos) {
+void write_current_note_2(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     // Fixed payload for now
     write_bit_stream(buff, bitPos, 8,  SUB_RESPONSE_CURRENT_NOTE_2);
     write_bit_stream(buff, bitPos, 16, 6);
