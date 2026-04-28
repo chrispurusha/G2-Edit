@@ -41,5 +41,6 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
 void parse_module_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset);
 void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos);
 void write_patch_notes(uint32_t slot, uint8_t * buff, uint32_t * bitPos);
+void write_current_note_2(uint8_t * buff, uint32_t * bitPos);
 
 #endif // __PROTOCOL_H__

@@ -72,7 +72,8 @@ tControllerArray gControllerArray[MAX_SLOTS]       = {0};
 uint32_t    	gControllerCount[MAX_SLOTS]       = {0};
 uint32_t        gPatchNotesSize[MAX_SLOTS]        = {0};
 uint8_t         gPatchNotes[MAX_SLOTS][MAX_16BIT] = {0};
-uint8_t        gPatchVersion[MAX_SLOTS]           = {0};
+uint8_t        gPatchVersion[MAX_SLOTS]           = {0};  // Check we don't have this elsewhere
+char           gPatchName[MAX_SLOTS][PATCH_NAME_SIZE+1] = {0};
 
 // Thread synchronization mutex for global variables
 pthread_mutex_t gGlobalVarsMutex = PTHREAD_MUTEX_INITIALIZER;
