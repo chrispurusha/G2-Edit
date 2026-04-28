@@ -444,39 +444,23 @@ void write_database_to_file(const char * filepath) {
     write_bit_stream(buff, &bitPos, 8, 23); // Version
     write_bit_stream(buff, &bitPos, 8, 0);  // Type (0 = patch, 1 = performance when we get round to implementing that)
 
-    write_patch_descr(buff, &bitPos);
-
+    write_patch_descr(gSlot, buff, &bitPos);
     write_module_list(gSlot, locationVa, buff, &bitPos);
     write_module_list(gSlot, locationFx, buff, &bitPos);
-
-    // 0x69 note2 write goes here - hacky for now
-    write_bit_stream(buff, &bitPos, 8, SUB_RESPONSE_CURRENT_NOTE_2);
-    write_bit_stream(buff, &bitPos, 16, gNote2Size[gSlot]);
-
-    for (uint32_t i = 0; i < gNote2Size[gSlot]; i++) {
-        write_bit_stream(buff, &bitPos, 8, gNote2[gSlot][i]);
-    }
-
+    write_current_note_2(gSlot, buff, &bitPos);
     write_cable_list(gSlot, locationVa, buff, &bitPos);
     write_cable_list(gSlot, locationFx, buff, &bitPos);
-
     write_param_list(gSlot, locationMorph, buff, &bitPos, NUM_VARIATIONS_FILE);
     write_param_list(gSlot, locationVa, buff, &bitPos, NUM_VARIATIONS_FILE);
     write_param_list(gSlot, locationFx, buff, &bitPos, NUM_VARIATIONS_FILE);
-
     write_morph_params(gSlot, buff, &bitPos, NUM_VARIATIONS_FILE);
-
     write_knobs(gSlot, buff, &bitPos);
-
     write_controllers(gSlot, buff, &bitPos);
-
     write_param_names(gSlot, locationMorph, buff, &bitPos);
     write_param_names(gSlot, locationVa, buff, &bitPos);
     write_param_names(gSlot, locationFx, buff, &bitPos);
-
     write_module_names(gSlot, locationVa, buff, &bitPos);
     write_module_names(gSlot, locationFx, buff, &bitPos);
-
     write_patch_notes(gSlot, buff, &bitPos);
 
     bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos)); // Final byte alignment round-up

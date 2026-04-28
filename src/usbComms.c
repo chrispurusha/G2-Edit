@@ -80,7 +80,7 @@ static uint8_t                slotVersion[MAX_SLOTS] = {0};
 static pthread_t              usbThread              = NULL;
 static libusb_context *       libUsbCtx              = NULL;
 static libusb_device_handle * devHandle              = NULL;
-static char *                 usbSemName             = NULL;
+//static char *                 usbSemName             = NULL;
 
 // Callback pointers protected by callbackMutex
 static void (*wake_glfw_func_ptr)(void) = NULL;
@@ -289,7 +289,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
 
                 LOG_DEBUG_DIRECT("\n");
                 subOffset = tmpSubOffset;
-                parse_patch_descr(buff, &subOffset);
+                parse_patch_descr(slot, buff, &subOffset);
                 break;
             }
 
@@ -1118,17 +1118,16 @@ static int send_write_data(tMessageContent * messageContent) {
             
             bitPos = BYTE_TO_BIT(pos);
             
-            write_patch_descr(buff, &bitPos);
-            
+            write_patch_descr(messageContent->slot, buff, &bitPos);
             write_module_list(messageContent->slot, locationVa, buff, &bitPos);
             write_module_list(messageContent->slot, locationFx, buff, &bitPos);
-            write_current_note_2(buff, &bitPos);
+            write_current_note_2(messageContent->slot, buff, &bitPos);
             write_cable_list(messageContent->slot, locationVa, buff, &bitPos);
             write_cable_list(messageContent->slot, locationFx, buff, &bitPos);
             //write_patch_settings(messageContent->slot, buff, &bitPos);  // Might need this?
+            write_param_list(messageContent->slot, locationMorph, buff, &bitPos, NUM_VARIATIONS_USB);
             write_param_list(messageContent->slot, locationVa, buff, &bitPos, NUM_VARIATIONS_USB);
             write_param_list(messageContent->slot, locationFx, buff, &bitPos, NUM_VARIATIONS_USB);
-            write_param_list(messageContent->slot, locationMorph, buff, &bitPos, NUM_VARIATIONS_USB);
             write_morph_params(messageContent->slot, buff, &bitPos, NUM_VARIATIONS_USB);
             write_knobs(messageContent->slot, buff, &bitPos);
             write_controllers(messageContent->slot, buff, &bitPos);
