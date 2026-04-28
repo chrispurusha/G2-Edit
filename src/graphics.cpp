@@ -180,7 +180,7 @@ void render_top_bar(void) {
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {(get_render_width() / GLOBAL_GUI_SCALE) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
 
     set_rgb_colour(RGB_BLACK);
-    render_text(mainArea, {{400.0, 43.0}, {NULL, STANDARD_TEXT_HEIGHT}}, "Variation");
+    render_text(mainArea, {{400, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Variation");
 
     // Patch name — centred in the left portion of the bar
     pthread_mutex_lock(&gGlobalVarsMutex);
@@ -192,8 +192,11 @@ void render_top_bar(void) {
         strncpy(patchNameCopy, "---", PATCH_NAME_SIZE);
     }
     
+    set_rgb_colour(RGB_BLACK);
+    render_text(mainArea, {{180, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Patch Name");
+    
     set_rgb_colour(RGB_BACKGROUND_GREY);
-    rectangle = {{150, 8}, {150, STANDARD_TEXT_HEIGHT}};
+    rectangle = {{180, 60}, {get_text_width("XXXXXXXXXXXXXXXX", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
     draw_button(mainArea, rectangle, patchNameCopy, false);
 
     for (int i = 0; i < array_size_main_button_array(); i++) {
