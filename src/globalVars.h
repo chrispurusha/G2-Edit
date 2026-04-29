@@ -62,6 +62,7 @@ extern uint32_t        gPatchNotesSize[MAX_SLOTS];
 extern uint8_t         gPatchNotes[MAX_SLOTS][MAX_16BIT];
 extern uint8_t        gPatchVersion[MAX_SLOTS];
 extern char           gPatchName[MAX_SLOTS][PATCH_NAME_SIZE+1];
+extern _Atomic tCommsState gCommsState;
 
 // Thread synchronization mutex for global variables
 extern pthread_mutex_t gGlobalVarsMutex;

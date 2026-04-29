@@ -76,7 +76,7 @@ static _Atomic bool gotBadConnectionIndication = false;
 static _Atomic bool gotPatchChangeIndication   = false;
 
 // Protected by usbStaticMutex
-static uint8_t                slotVersion[MAX_SLOTS] = {0};
+//static uint8_t                slotVersion[MAX_SLOTS] = {0};
 static pthread_t              usbThread              = NULL;
 static libusb_context *       libUsbCtx              = NULL;
 static libusb_device_handle * devHandle              = NULL;
@@ -366,7 +366,7 @@ static int parse_patch_version(uint8_t * buff, int length) {
         return EXIT_FAILURE;
     }
     pthread_mutex_lock(&usbStaticMutex);
-    slotVersion[slot] = version;
+    gPatchVersion[slot] = version;
     pthread_mutex_unlock(&usbStaticMutex);
 
     return EXIT_SUCCESS;
@@ -779,7 +779,7 @@ static int send_command(int state) {
     libusb_device_handle * devHandle_local = NULL;
 
     pthread_mutex_lock(&usbStaticMutex);
-    memcpy(slotVersion_local, slotVersion, sizeof(slotVersion));
+    memcpy(slotVersion_local, gPatchVersion, sizeof(slotVersion_local));
     devHandle_local = devHandle;
     pthread_mutex_unlock(&usbStaticMutex);
 
@@ -928,6 +928,23 @@ static int send_command(int state) {
     return retVal;
 }
 
+void init_patch_descr(uint32_t slot) {
+    memset(&gPatchDescr[slot], 0, sizeof(tPatchDescr));
+    gPatchDescr[slot].voiceCount      = 1;
+    gPatchDescr[slot].barPosition     = 600;
+    gPatchDescr[slot].unknown3        = 2;   // unknown9 in Delphi
+    gPatchDescr[slot].redVisible      = 1;
+    gPatchDescr[slot].blueVisible     = 1;
+    gPatchDescr[slot].yellowVisible   = 1;
+    gPatchDescr[slot].orangeVisible   = 1;
+    gPatchDescr[slot].greenVisible    = 1;
+    gPatchDescr[slot].purpleVisible   = 1;
+    gPatchDescr[slot].whiteVisible    = 1;
+    gPatchDescr[slot].monoPoly        = 1;
+    gPatchDescr[slot].activeVariation = 0;
+    gPatchDescr[slot].category        = 0;
+}
+    
 static int send_write_data(tMessageContent * messageContent) {
     int                    retVal                  = EXIT_FAILURE;
     uint8_t                buff[SEND_MESSAGE_SIZE] = {0};
@@ -939,7 +956,7 @@ static int send_write_data(tMessageContent * messageContent) {
     libusb_device_handle * devHandle_local = NULL;
 
     pthread_mutex_lock(&usbStaticMutex);
-    memcpy(slotVersion_local, slotVersion, sizeof(slotVersion));
+    memcpy(slotVersion_local, gPatchVersion, sizeof(slotVersion_local));
     devHandle_local = devHandle;
     pthread_mutex_unlock(&usbStaticMutex);
 
@@ -1084,16 +1101,15 @@ static int send_write_data(tMessageContent * messageContent) {
         {
             uint32_t i = 0;
             uint32_t bitPos = 0;
-            //const char patchName[] = "Init";
             
+            // TODO - sequence a stop / start around this
+            init_patch_descr(messageContent->slot);
             database_delete_cables_by_slot(messageContent->slot);
             database_delete_modules_by_slot(messageContent->slot);
             gMorphCount[messageContent->slot]      = 8;  // Check default!?
             gNote2Size[messageContent->slot]       = 0;
             gControllerCount[messageContent->slot] = 0; // Seems to default to 2, so might need to set up defaults
             gPatchNotesSize[messageContent->slot]  = 0;
-            gPatchDescr[messageContent->slot].voiceCount      = 0;  // TODO - check if this is correct
-            gPatchDescr[messageContent->slot].activeVariation = 0;
             memset(&(gPatchDescr[messageContent->slot]), 0, sizeof(gPatchDescr[messageContent->slot]));
             memset(&(gKnobArray[messageContent->slot]), 0, sizeof(gKnobArray[messageContent->slot]));
             memset(gNote2[messageContent->slot], 0, sizeof(gNote2[messageContent->slot]));
@@ -1221,6 +1237,7 @@ static void state_handler(void) {
                         call_full_patch_change_notify();
                         call_wake_glfw();
                     } else if (state == eStateStart) {
+                        atomic_store(&gCommsState, eCommsOnline);
                         call_full_patch_change_notify();
                         call_wake_glfw();
                     }
@@ -1246,8 +1263,10 @@ static void state_handler(void) {
 
     if (atomic_load(&gotBadConnectionIndication)) {
         LOG_DEBUG("Bad connection indication\n");
+        atomic_store(&gCommsState, eCommsReconnecting);
         state = eStateFindDevice;
         atomic_store(&gotBadConnectionIndication, false);
+        call_wake_glfw();
     }
 
     if (atomic_load(&gotPatchChangeIndication)) {

@@ -175,6 +175,9 @@ void render_scrollbars(GLFWwindow * window) {
 
 void render_top_bar(void) {
     tRectangle rectangle = {0};
+    tCommsState commsState = atomic_load(&gCommsState);
+    char * commsStateText = "Unknown";
+    tRgb commsStateColour = RGB_RED_7;
 
     set_rgb_colour(RGB_GREY_5);
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {(get_render_width() / GLOBAL_GUI_SCALE) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
@@ -217,6 +220,28 @@ void render_top_bar(void) {
         }
         gMainButtonArray[i].rectangle = draw_button(mainArea, rectangle, gMainButtonArray[i].text, gMainButtonArray[i].isPressed);
     }
+
+    switch (commsState) {
+        case eCommsSearching:
+            commsStateText     = "Searching";
+            break;
+        case eCommsConnecting:
+            commsStateText     = "Connecting";
+            break;
+        case eCommsOnline:
+            commsStateText     = "Online";
+            commsStateColour = RGB_GREEN_7;
+            break;
+        case eCommsReconnecting:
+            commsStateText    = "Reconnecting";
+            break;
+        default:
+            break;
+    }
+
+    set_rgb_colour(commsStateColour);
+    rectangle = {{200, 8}, {get_text_width("Reconnecting", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
+    draw_button(mainArea, rectangle, commsStateText, false);
 }
 
 void wake_glfw(void) {

@@ -692,5 +692,12 @@ typedef struct {
     tController controller[MAX_NUM_CONTROLLERS];
 } tControllerArray;
 
+typedef enum {
+    eCommsSearching,    // No hardware found yet
+    eCommsConnecting,   // Init sequence running
+    eCommsOnline,       // In poll, fully synced
+    eCommsReconnecting  // Lost connection
+} tCommsState;
+
 #endif // __TYPES_H__
 
