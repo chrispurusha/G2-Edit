@@ -755,13 +755,73 @@ static int int_rec(void) {
     return retVal;
 }
 
+static int send_message(uint8_t * buff, int pos) {
+    int actualLength = 0;
+    int msgLength    = pos - COMMAND_OFFSET;
+
+    if (msgLength <= 0) {
+        return EXIT_FAILURE;
+    }
+
+    uint16_t crc = calc_crc16(&buff[COMMAND_OFFSET], msgLength);
+    write_uint16(&buff[msgLength + 2], crc);
+    msgLength += 4;
+
+    write_uint16(&buff[0], msgLength);
+
+    pthread_mutex_lock(&usbStaticMutex);
+    libusb_device_handle * handle = devHandle;
+    pthread_mutex_unlock(&usbStaticMutex);
+
+    if (handle == NULL) {
+        atomic_store(&gotBadConnectionIndication, true);
+        return EXIT_FAILURE;
+    }
+
+    if (libusb_bulk_transfer(handle, 3, buff, msgLength, &actualLength, 100) == 0) {
+        return EXIT_SUCCESS;
+    }
+
+    atomic_store(&gotBadConnectionIndication, true);
+    return EXIT_FAILURE;
+}
+
+static int send_stop(void) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int retVal = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
+    buff[pos++] = 0x41;
+    buff[pos++] = SUB_COMMAND_START_STOP;
+    buff[pos++] = 0x01;
+
+    retVal = send_message(buff, pos);
+    
+    return retVal;
+}
+    
+static int send_start(void) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int retVal = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
+    buff[pos++] = 0x41;
+    buff[pos++] = SUB_COMMAND_START_STOP;
+    buff[pos++] = 0x00;
+
+    retVal = send_message(buff, pos);
+    
+    return retVal;
+}
+    
 static int send_command(int state) {
     int                    retVal                  = EXIT_FAILURE;
     uint8_t                buff[SEND_MESSAGE_SIZE] = {0};
-    uint16_t               crc                     = 0;
-    int                    msgLength               = 0;
     int                    pos                     = COMMAND_OFFSET;
-    int                    actualLength            = 0;
     uint8_t                slotVersion_local[MAX_SLOTS];
     libusb_device_handle * devHandle_local = NULL;
 
@@ -778,6 +838,8 @@ static int send_command(int state) {
     switch (state) {
         case eStateInit:
             buff[pos++] = 0x80;
+            
+            retVal = send_message(buff, pos);
             break;
 
         case eStateStop:
@@ -798,53 +860,51 @@ static int send_command(int state) {
         case eStateGetPatchNameSlotB:
         case eStateGetPatchNameSlotC:
         case eStateGetPatchNameSlotD:
-            buff[pos++] = 0x01;
 
             switch (state) {
                 case eStateStop:
+                    retVal = send_stop();
+
+                    break;
                 case eStateStart:
-                    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-                    buff[pos++] = 0x41;
-                    buff[pos++] = SUB_COMMAND_START_STOP;
-
-                    switch (state) {
-                        case eStateStop:
-                            buff[pos++] = 0x01;
-                            break;
-
-                        case eStateStart:
-                            buff[pos++] = 0x00;
-                            break;
-
-                        default:
-                            LOG_DEBUG("Unknown state %d\n", state);
-                            break;
-                    }
+                    retVal = send_start();
                     break;
 
                 case eStateSelectSlot:
+                    buff[pos++] = 0x01;
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x00;
                     buff[pos++] = SUB_COMMAND_SELECT_SLOT;
                     buff[pos++] = 0;
+                    
+                    retVal = send_message(buff, pos);
                     break;
 
                 case eStateGetSynthSettings:
+                    buff[pos++] = 0x01;
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x41;
                     buff[pos++] = SUB_COMMAND_GET_SYNTH_SETTINGS;
+                    
+                    retVal = send_message(buff, pos);
                     break;
 
                 case eStateGetMidiCc:
+                    buff[pos++] = 0x01;
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x41;
                     buff[pos++] = SUB_COMMAND_GET_MIDI_CC;
+                    
+                    retVal = send_message(buff, pos);
                     break;
 
                 case eStateGetUnknown2:
+                    buff[pos++] = 0x01;
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x00;
                     buff[pos++] = SUB_COMMAND_UNKNOWN_2;
+                    
+                    retVal = send_message(buff, pos);
                     break;
 
                 case eStateGetPatchVersionSlotA:
@@ -854,10 +914,13 @@ static int send_command(int state) {
                 {
                     uint32_t slot = state - eStateGetPatchVersionSlotA;
 
+                    buff[pos++] = 0x01;
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x41;
                     buff[pos++] = SUB_COMMAND_GET_PATCH_VERSION;
                     buff[pos++] = slot;
+                    
+                    retVal = send_message(buff, pos);
                     break;
                 }
 
@@ -868,9 +931,12 @@ static int send_command(int state) {
                 {
                     uint32_t slot = state - eStateGetPatchSlotA;
 
+                    buff[pos++] = 0x01;
                     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
                     buff[pos++] = slotVersion_local[slot];
                     buff[pos++] = SUB_COMMAND_GET_PATCH_SLOT;
+                    
+                    retVal = send_message(buff, pos);
                     break;
                 }
 
@@ -881,9 +947,12 @@ static int send_command(int state) {
                 {
                     uint32_t slot = state - eStateGetPatchNameSlotA;
 
+                    buff[pos++] = 0x01;
                     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
                     buff[pos++] = slotVersion_local[slot];
                     buff[pos++] = SUB_COMMAND_GET_PATCH_NAME;
+                    
+                    retVal = send_message(buff, pos);
                     break;
                 }
 
@@ -897,21 +966,7 @@ static int send_command(int state) {
             LOG_DEBUG("Unknown state %d\n", state);
             break;
     }
-    msgLength = pos - COMMAND_OFFSET;
-
-    if (msgLength > 0) {
-        crc = calc_crc16(&buff[COMMAND_OFFSET], msgLength);
-        write_uint16(&buff[msgLength + 2], crc);
-        msgLength += 4;
-
-        write_uint16(&buff[0], msgLength);
-
-        if (libusb_bulk_transfer(devHandle_local, 3, buff, msgLength, &actualLength, 100) == 0) {
-            retVal = EXIT_SUCCESS;
-        } else {
-            atomic_store(&gotBadConnectionIndication, true);
-        }
-    }
+    
     return retVal;
 }
     
@@ -946,6 +1001,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->paramData.param;
             buff[pos++] = messageContent->paramData.value;
             buff[pos++] = messageContent->paramData.variation;
+            
+            retVal = send_message(buff, pos);
             break;
 
         case eMsgCmdSetMode:
@@ -958,6 +1015,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->modeData.mode;
             buff[pos++] = messageContent->modeData.value;
             LOG_DEBUG("SET MODE %u %u\n", messageContent->modeData.mode, messageContent->modeData.value);
+            
+            retVal = send_message(buff, pos);
             break;
 
         case eMsgCmdWriteCable:
@@ -970,6 +1029,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex;
             buff[pos++] = messageContent->cableData.moduleToIndex;
             buff[pos++] = messageContent->cableData.connectorToIoIndex;
+            
+            retVal = send_message(buff, pos);
             break;
 
         case eMsgCmdWriteModule:
@@ -993,6 +1054,8 @@ static int send_write_data(tMessageContent * messageContent) {
 
             strcpy((char *)&buff[pos], messageContent->moduleData.name);
             pos += strlen(messageContent->moduleData.name) + 1;
+            
+            retVal = send_message(buff, pos);
             break;
 
         case eMsgCmdMoveModule:
@@ -1004,6 +1067,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.moduleKey.index;
             buff[pos++] = messageContent->moduleData.column;
             buff[pos++] = messageContent->moduleData.row;
+            
+            retVal = send_message(buff, pos);
             break;
 
         case eMsgCmdDeleteModule:
@@ -1013,6 +1078,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = SUB_COMMAND_DELETE_MODULE;
             buff[pos++] = messageContent->moduleData.moduleKey.location;
             buff[pos++] = messageContent->moduleData.moduleKey.index;
+            
+            retVal = send_message(buff, pos);
             break;
 
         case eMsgCmdSetModuleUpRate:
@@ -1023,6 +1090,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.moduleKey.location;
             buff[pos++] = messageContent->moduleData.moduleKey.index;
             buff[pos++] = messageContent->moduleData.upRate;
+            
+            retVal = send_message(buff, pos);
             break;
 
         case eMsgCmdDeleteCable:
@@ -1035,6 +1104,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex;
             buff[pos++] = messageContent->cableData.moduleToIndex;
             buff[pos++] = messageContent->cableData.connectorToIoIndex;
+            
+            retVal = send_message(buff, pos);
             break;
 
         case eMsgCmdSetParamMorph:
@@ -1049,6 +1120,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->paramMorphData.value;
             buff[pos++] = messageContent->paramMorphData.negative;
             buff[pos++] = messageContent->paramMorphData.variation;
+            
+            retVal = send_message(buff, pos);
             break;
 
         case eMsgCmdSelectVariation:
@@ -1057,6 +1130,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = slotVersion_local[messageContent->slot];
             buff[pos++] = SUB_COMMAND_SELECT_VARIATION;
             buff[pos++] = messageContent->variationData.variation;
+            
+            retVal = send_message(buff, pos);
             break;
 
         case eMsgCmdSelectSlot:
@@ -1065,12 +1140,18 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = 0;
             buff[pos++] = SUB_COMMAND_SELECT_SLOT;
             buff[pos++] = messageContent->slotData.slot;
+            
+            retVal = send_message(buff, pos);
             break;
             
         case eMsgCmdWritePatch:
         {
             uint32_t i = 0;
             uint32_t bitPos = 0;
+            
+            if (send_stop() == EXIT_SUCCESS) {
+                int_rec();
+            }
             
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
@@ -1110,28 +1191,23 @@ static int send_write_data(tMessageContent * messageContent) {
             write_patch_notes(messageContent->slot, buff, &bitPos);
             
             pos = BIT_TO_BYTE(bitPos);
+
+            retVal = send_message(buff, pos);
+            if (retVal == EXIT_SUCCESS) {
+                retVal = int_rec();
+            }
+            
+            if (send_start() == EXIT_SUCCESS) {
+                int_rec();
+            }
+            
             break;
         }
-
 
         default:
             break;
     }
-    msgLength = pos - COMMAND_OFFSET;
-
-    if (msgLength > 0) {
-        crc = calc_crc16(&buff[COMMAND_OFFSET], msgLength);
-        write_uint16(&buff[msgLength + 2], crc);
-        msgLength += 4;
-
-        write_uint16(&buff[0], msgLength);
-
-        if (libusb_bulk_transfer(devHandle_local, 3, buff, msgLength, &actualLength, 100) == 0) {
-            retVal = EXIT_SUCCESS;
-        } else {
-            atomic_store(&gotBadConnectionIndication, true);
-        }
-    }
+    
     return retVal;
 }
 
