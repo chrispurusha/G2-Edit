@@ -254,6 +254,36 @@ void set_exclusive_button_highlight(tButtonId first, tButtonId last, tButtonId a
     gMainButtonArray[active].backgroundColour = (tRgb)RGB_GREEN_ON;
 }
 
+void init_patch(uint32_t slot) {  // Todo - think where this should really go
+    memset(&gPatchDescr[slot], 0, sizeof(tPatchDescr));
+    gPatchDescr[slot].voiceCount      = 1;
+    gPatchDescr[slot].barPosition     = 600;
+    gPatchDescr[slot].unknown3        = 2;   // unknown9 in Delphi
+    gPatchDescr[slot].redVisible      = 1;
+    gPatchDescr[slot].blueVisible     = 1;
+    gPatchDescr[slot].yellowVisible   = 1;
+    gPatchDescr[slot].orangeVisible   = 1;
+    gPatchDescr[slot].greenVisible    = 1;
+    gPatchDescr[slot].purpleVisible   = 1;
+    gPatchDescr[slot].whiteVisible    = 1;
+    gPatchDescr[slot].monoPoly        = 1;
+    gPatchDescr[slot].activeVariation = 0;
+    gPatchDescr[slot].category        = 0;
+    
+    database_delete_cables_by_slot(slot);
+    database_delete_modules_by_slot(slot);
+    gMorphCount[slot]      = 8;  // Check default!?
+    gNote2Size[slot]       = 0;
+    gControllerCount[slot] = 0; // Seems to default to 2, so might need to set up defaults
+    gPatchNotesSize[slot]  = 0;
+    memset(&(gPatchDescr[slot]), 0, sizeof(gPatchDescr[0]));
+    memset(&(gKnobArray[slot]), 0, sizeof(gKnobArray[0]));
+    memset(gNote2[slot], 0, sizeof(gNote2[0]));
+    memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
+    memset(gPatchNotes[slot], 0,sizeof(gPatchNotes[0]));
+    strncpy(gPatchName[slot], "Init", PATCH_NAME_SIZE+1);
+}
+    
 void handle_button(tButtonId buttonId) {
     switch (buttonId) {
         case vaButtonId:
@@ -345,11 +375,22 @@ void handle_button(tButtonId buttonId) {
                                            (tButtonId)((uint32_t)variation1ButtonId + gPatchDescr[gSlot].activeVariation));
             break;
         }
-        case newPatchId:
+        case initPatchId:
+        {
+            init_patch(gSlot);
+            
+            //gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
+            tMessageContent messageContent = {0};
+            messageContent.cmd           = eMsgCmdWritePatch;
+            messageContent.slot          = gSlot;
+            msg_send(&gCommandQueue, &messageContent);
+            break;
+        }
+        case writePatchId:
         {
             //gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
             tMessageContent messageContent = {0};
-            messageContent.cmd           = eMsgCmdInitPatch;
+            messageContent.cmd           = eMsgCmdWritePatch;
             messageContent.slot          = gSlot;
             msg_send(&gCommandQueue, &messageContent);
             break;

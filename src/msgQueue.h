@@ -46,7 +46,7 @@ typedef enum {
     eMsgCmdDeleteCable,
     eMsgCmdSelectVariation,
     eMsgCmdSelectSlot,
-    eMsgCmdInitPatch
+    eMsgCmdWritePatch
 } eMsgCmd;
 
 typedef struct {

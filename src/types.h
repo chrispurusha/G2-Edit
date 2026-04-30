@@ -445,7 +445,8 @@ typedef enum {
     slotBButtonId,
     slotCButtonId,
     slotDButtonId,
-    newPatchId
+    initPatchId,
+    writePatchId
 } tButtonId;
 
 typedef struct {

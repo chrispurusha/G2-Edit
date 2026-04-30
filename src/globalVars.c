@@ -49,6 +49,7 @@ tButton      gMainButtonArray[] = {     // Must align with tButtonId enumaration
     {{630,  8}, NULL_RECTANGLE, anchorTopLeft, "C",          RGB_BACKGROUND_GREY, false},
     {{645,  8}, NULL_RECTANGLE, anchorTopLeft, "D",          RGB_BACKGROUND_GREY, false},
     {{ 80,  8}, NULL_RECTANGLE, anchorTopLeft, "New Patch",   RGB_BACKGROUND_GREY, false},
+    {{ 80, 28}, NULL_RECTANGLE, anchorTopLeft, "Write Patch",  RGB_BACKGROUND_GREY, false},
 };
 
 bool         gShowOpenFileReadDialogue  = false;

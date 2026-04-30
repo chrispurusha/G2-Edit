@@ -914,23 +914,6 @@ static int send_command(int state) {
     }
     return retVal;
 }
-
-void init_patch_descr(uint32_t slot) {
-    memset(&gPatchDescr[slot], 0, sizeof(tPatchDescr));
-    gPatchDescr[slot].voiceCount      = 1;
-    gPatchDescr[slot].barPosition     = 600;
-    gPatchDescr[slot].unknown3        = 2;   // unknown9 in Delphi
-    gPatchDescr[slot].redVisible      = 1;
-    gPatchDescr[slot].blueVisible     = 1;
-    gPatchDescr[slot].yellowVisible   = 1;
-    gPatchDescr[slot].orangeVisible   = 1;
-    gPatchDescr[slot].greenVisible    = 1;
-    gPatchDescr[slot].purpleVisible   = 1;
-    gPatchDescr[slot].whiteVisible    = 1;
-    gPatchDescr[slot].monoPoly        = 1;
-    gPatchDescr[slot].activeVariation = 0;
-    gPatchDescr[slot].category        = 0;
-}
     
 static int send_write_data(tMessageContent * messageContent) {
     int                    retVal                  = EXIT_FAILURE;
@@ -1084,25 +1067,10 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->slotData.slot;
             break;
             
-        case eMsgCmdInitPatch:
+        case eMsgCmdWritePatch:
         {
             uint32_t i = 0;
             uint32_t bitPos = 0;
-            
-            // TODO - sequence a stop / start around this
-            init_patch_descr(messageContent->slot);
-            database_delete_cables_by_slot(messageContent->slot);
-            database_delete_modules_by_slot(messageContent->slot);
-            gMorphCount[messageContent->slot]      = 8;  // Check default!?
-            gNote2Size[messageContent->slot]       = 0;
-            gControllerCount[messageContent->slot] = 0; // Seems to default to 2, so might need to set up defaults
-            gPatchNotesSize[messageContent->slot]  = 0;
-            memset(&(gPatchDescr[messageContent->slot]), 0, sizeof(gPatchDescr[messageContent->slot]));
-            memset(&(gKnobArray[messageContent->slot]), 0, sizeof(gKnobArray[messageContent->slot]));
-            memset(gNote2[messageContent->slot], 0, sizeof(gNote2[messageContent->slot]));
-            memset(&(gControllerArray[messageContent->slot]), 0, sizeof(gControllerArray[messageContent->slot]));
-            memset(gPatchNotes[messageContent->slot], 0,sizeof(gPatchNotes[messageContent->slot]));
-            strncpy(gPatchName[messageContent->slot], "Init", PATCH_NAME_SIZE+1);
             
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
