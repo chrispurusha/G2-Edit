@@ -56,8 +56,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
             set_rgb_colour(RGB_BLACK);
             render_rectangle(moduleArea, rectangle);
 
-            value  = ((value & 0xff00) >> 8) | ((value & 0xff) << 8); // Swap bytes
-            value &= 0x03ff;                                          // There's a value of 3 in the high nibble, which is unknown use. Might be an indication of this being individual bit per LED?
+            value &= 0x0ff;                                          // There's a value of 3 in the high nibble, which is unknown use. Might be an indication of this being individual bit per LED?
 
             for (int i = 0; i < leds; i++) {
                 if ((value >> i) & 0x01) {
@@ -74,10 +73,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
         case volumeTypeMono:
         case volumeTypeStereo:
         {
-            //uint32_t top3Bits = 0;
 
-            value = ((value & 0xff00) >> 8) | ((value & 0xff) << 8);    // Swap bytes
-            //top3Bits = (value >> 5) & 0x7;
             value &= 0x1f;
             //LOG_DEBUG("Top 3 bits = %u val = %u\n", top3Bits, value); // Val of 10 or 11 = Yellow, 12 = red?, top bits 3 = clip?
 

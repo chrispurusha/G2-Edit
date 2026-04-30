@@ -401,8 +401,6 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
     switch (subCommand) {
         case SUB_RESPONSE_VOLUME_INDICATOR:
         {
-            read_bit_stream(buff, bitPos, 8);
-
             for (int32_t location = 1; location >= 0; location--) {
                 for (int k = 0; k <= 255; k++) {
                     module.key.slot     = slot;
@@ -410,38 +408,23 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     module.key.index    = k;
 
                     if (read_module(module.key, &module) == true) {
-                        switch (gModuleProperties[module.type].volumeType) {
-                            case volumeTypeStereo:
-                            {
-                                module.volume.value1 = read_bit_stream(buff, bitPos, 16);
-                                module.volume.value2 = read_bit_stream(buff, bitPos, 16);
-                                break;
-                            }
-                            case volumeTypeMono:
-                            {
-                                module.volume.value1 = read_bit_stream(buff, bitPos, 16);
-                                module.volume.value2 = 0;
-                                break;
-                            }
-                            case volumeTypeCompress:
-                            {
-                                module.volume.value1 = read_bit_stream(buff, bitPos, 16);
-                                module.volume.value2 = 0;
-                                break;
-                            }
-                            default:
-                            {
-                                break;
-                            }
+                        if (gModuleProperties[module.type].volumeType == volumeTypeNone) {
+                            continue;
                         }
+                        read_bit_stream(buff, bitPos, 8);  // unknown — per entry, not once at start
 
-                        if (gModuleProperties[module.type].volumeType != volumeTypeNone) {
-                            write_module(module.key, &module);
+                        module.volume.value1 = read_bit_stream(buff, bitPos, 8);
+
+                        if (gModuleProperties[module.type].volumeType == volumeTypeStereo) {
+                            read_bit_stream(buff, bitPos, 8);  // second unknown
+                            module.volume.value2 = read_bit_stream(buff, bitPos, 8);
+                        } else {
+                            module.volume.value2 = 0;
                         }
+                        write_module(module.key, &module);
                     }
                 }
             }
-
             return EXIT_SUCCESS;
         }
 
@@ -451,23 +434,27 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                 buff[i] = reverse_bits_in_byte(buff[i]);
             }
 
-            read_bit_stream(buff, bitPos, 8);
+            read_bit_stream(buff, bitPos, 8);  // unknown byte
 
-            for (int k = 0; k <= 255; k++) {
-                module.key.slot     = slot;
-                module.key.location = gLocation;
-                module.key.index    = k;
+            // Must iterate BOTH locations in VA-first order to match wire order
+            for (int32_t location = 1; location >= 0; location--) {
+                for (int k = 0; k <= 255; k++) {
+                    module.key.slot     = slot;
+                    module.key.location = location;
+                    module.key.index    = k;
 
-                if (read_module(module.key, &module) == true) {
-                    if (gModuleProperties[module.type].ledType == ledTypeYes) {
-                        module.led.value = read_bit_stream(buff, bitPos, 1);
-                        read_bit_stream(buff, bitPos, 1);
+                    if (read_module(module.key, &module) == true) {
+                        if (gModuleProperties[module.type].ledType == ledTypeYes) {
+                            module.led.value = read_bit_stream(buff, bitPos, 1);
+                            read_bit_stream(buff, bitPos, 1);  // spare bit
 
-                        write_module(module.key, &module);
+                            if (module.key.location == (uint32_t)gLocation) {
+                                write_module(module.key, &module);  // only persist for displayed location
+                            }
+                        }
                     }
                 }
             }
-
             return EXIT_SUCCESS;
         }
 
