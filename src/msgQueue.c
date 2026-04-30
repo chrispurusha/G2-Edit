@@ -33,8 +33,8 @@ void msg_init(tMessageQueue * msgQueue, char * semName) {
     pthread_mutex_init(&msgQueue->mutex, &attr);
     pthread_mutexattr_destroy(&attr);
 
-    msgQueue->head = NULL;
-    msgQueue->tail = NULL;
+    msgQueue->head      = NULL;
+    msgQueue->tail      = NULL;
 
     // IMPORTANT: Unlink any stale semaphore from previous runs FIRST
     sem_unlink(semName);
@@ -93,7 +93,7 @@ int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageCon
         if (msgQueue->head == NULL) {
             msgQueue->tail = NULL;
         }
-        retVal = EXIT_SUCCESS;         // Return success when message is processed
+        retVal         = EXIT_SUCCESS; // Return success when message is processed
     }
     pthread_mutex_unlock(&msgQueue->mutex);
 

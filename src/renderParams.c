@@ -293,7 +293,7 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
         }
         case 4: // ClkSync. 32 values
         {
-            const char * clkSyncStrMap[] = {
+            const char * clkSyncStrMap[]  = {
                 "64/1", "48/1",  "32/1",  "24/1", "16/1",  "12/1",  "8/1",  "6/1",  "4/1",  "3/1", "2/1",   "1/1D",
                 "1/1",  "1/2D",  "1/1T",  "1/2",  "1/4D",  "1/2T",  "1/4",  "1/8D", "1/4T", "1/8", "1/16D", "1/8T",
                 "1/16", "1/32D", "1/16T", "1/32", "1/64D", "1/32T", "1/64", "1/64T"
@@ -348,7 +348,7 @@ tRectangle render_paramType1dB(tModule * module, tRectangle rectangle, char * la
 
 tRectangle render_paramType1MixLevel(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     //double       level      = 0.0;
-    const double dbLvlMap[] = {
+    const double dbLvlMap[]    = {
         -100.0, -99.9, -99.0, -72.1, -69.2, -66.9, -64.8, -62.9,
         -61.1,    -59, -57.9, -56.4, -55.0, -53.6, -52.3, -51.0,
         -49.8,  -48.6, -47.5, -46.4, -45.3, -44.3, -43.3, -42.3,
@@ -742,7 +742,7 @@ tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangl
         LOG_ERROR("Bad strMap for module type %s ParamRef %u ParamIndex %u, map pointer = 0x%lx, Value %u >= Map array size %u\n", gModuleProperties[module->type].name, paramRef, paramIndex, (unsigned long)strMap, (int)paramValue, array_size_str_map(strMap));
 
         //Debug help for value
-        char debug[64] = {0};
+        char       debug[64]      = {0};
         snprintf(debug, sizeof(debug), "%u", (int)paramValue);
 
         tRectangle text_rectangle = {{rectangle.coord.x, y}, {30, textHeight}};

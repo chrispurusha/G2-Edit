@@ -56,7 +56,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
             set_rgb_colour(RGB_BLACK);
             render_rectangle(moduleArea, rectangle);
 
-            value &= 0x0ff;                                          // There's a value of 3 in the high nibble, which is unknown use. Might be an indication of this being individual bit per LED?
+            value                  &= 0x0ff;                         // There's a value of 3 in the high nibble, which is unknown use. Might be an indication of this being individual bit per LED?
 
             for (int i = 0; i < leds; i++) {
                 if ((value >> i) & 0x01) {
@@ -73,25 +73,24 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
         case volumeTypeMono:
         case volumeTypeStereo:
         {
-
             value &= 0x1f;
             //LOG_DEBUG("Top 3 bits = %u val = %u\n", top3Bits, value); // Val of 10 or 11 = Yellow, 12 = red?, top bits 3 = clip?
 
-            double fullHeight = rectangle.size.h;
+            double fullHeight        = rectangle.size.h;
             //double scaledValue = (rectangle.size.h * value) / 12.0; // 128 usually, but one example of 300!? Maybe the leading nibble denotes a type? val of 1 changes scale!?
 
-            int  valueThresholds[] = {7, 11, 12};                   // Exclusive upper bounds for green/yellow/red
-            tRgb colours[]         = {RGB_GREEN_7, RGB_YELLOW_7, RGB_RED_7};
+            int    valueThresholds[] = {7, 11, 12};                 // Exclusive upper bounds for green/yellow/red
+            tRgb   colours[]         = {RGB_GREEN_7, RGB_YELLOW_7, RGB_RED_7};
 
             set_rgb_colour(RGB_BLACK);
             render_rectangle(moduleArea, rectangle);
 
-            double previousHeight = 0;
+            double previousHeight    = 0;
 
             for (int i = 0; i < 3; i++) {
-                int segmentTopVal    = valueThresholds[i];
-                int segmentBottomVal = (i == 0) ? 0 : valueThresholds[i - 1];
-                int segmentRange     = segmentTopVal - segmentBottomVal;
+                int    segmentTopVal     = valueThresholds[i];
+                int    segmentBottomVal  = (i == 0) ? 0 : valueThresholds[i - 1];
+                int    segmentRange      = segmentTopVal - segmentBottomVal;
 
                 //double segmentHeight = (segmentRange * fullHeight) / 12.0;
 
@@ -109,7 +108,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
                             rectangle.coord.y + fullHeight - previousHeight - segmentDrawHeight},
                             {rectangle.size.w,
                              segmentDrawHeight}});
-                    previousHeight += segmentDrawHeight;
+                    previousHeight   += segmentDrawHeight;
                 }
             }
         }
@@ -158,14 +157,14 @@ tRectangle render_dial(tArea area, tRectangle rectangle, uint32_t value, uint32_
         } else {
             signedMorphRange = (int32_t)morphRange - 256;
         }
-        morphPos = signedValue + signedMorphRange;
+        morphPos    = signedValue + signedMorphRange;
 
         if (morphPos < 0) {
             morphPos = 0;
         } else if (morphPos > (range - 1)) {
             morphPos = range - 1;
         }
-        morphAngle = value_to_angle((uint32_t)morphPos, range);
+        morphAngle  = value_to_angle((uint32_t)morphPos, range);
         set_rgb_colour(RGB_ORANGE_1);
 
         if (morphAngle > angle) {
@@ -221,7 +220,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
     } else if (paramLocationList[paramRef].label != NULL) {
         strncpy(label, paramLocationList[paramRef].label, sizeof(label));
     }
-    label[sizeof(label) - 1] = '\0';
+    label[sizeof(label) - 1]                                               = '\0';
 
     module->param[gPatchDescr[gSlot].activeVariation][paramIndex].paramRef = paramRef;
 
@@ -691,15 +690,15 @@ void render_module(tModule * module) {
     char       buff[MODULE_NAME_SIZE + 1] = {0};
     tRgb       rgb                        = {0};
 
-    tRectangle moduleRectangle = {{xPos, yPos}, {xWidth, yHeight}};
+    tRectangle moduleRectangle            = {{xPos, yPos}, {xWidth, yHeight}};
 
-    rgb = gModuleColourMap[module->colour];
+    rgb               = gModuleColourMap[module->colour];
     set_rgb_colour(rgb);
     module->rectangle = render_rectangle_with_border(moduleArea, moduleRectangle);
 
-    rgb = {rgb.red * 1.05, rgb.green * 1.05, rgb.blue * 1.05};
+    rgb               = {rgb.red * 1.05, rgb.green * 1.05, rgb.blue * 1.05};
     set_rgb_colour(rgb);
-    module->dragArea = render_rectangle(moduleArea, {{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3}, {moduleRectangle.size.w - 6, STANDARD_TEXT_HEIGHT + 2}});
+    module->dragArea  = render_rectangle(moduleArea, {{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3}, {moduleRectangle.size.w - 6, STANDARD_TEXT_HEIGHT + 2}});
 
     render_module_common(moduleRectangle, module);
     write_module(module->key, module);                                             // Save calculated coords
@@ -748,7 +747,7 @@ void render_modules(void) {
 }
 
 void render_cable_from_to(tConnector from, tConnector to) {
-    tCoord control = {0};
+    tCoord control   = {0};
 
     from.coord.x += scale_from_percent(CONNECTOR_SIZE / 2.0);
     from.coord.y += scale_from_percent(CONNECTOR_SIZE / 2.0);
@@ -765,15 +764,14 @@ void render_cable_from_to(tConnector from, tConnector to) {
         // All other cables — gravity sag downward
         control.x = (from.coord.x + to.coord.x) / 2.0;
     }
-    
-    control.y = fmax(from.coord.y, to.coord.y) + 40.0;
-    
+    control.y     = fmax(from.coord.y, to.coord.y) + 40.0;
+
     render_bezier_curve(moduleArea, from.coord, control, to.coord, 4.0, 15);
 }
 
 void render_cable(tCable * cable) {
-    tModule moduleFrom = {0};
-    tModule moduleTo   = {0};
+    tModule moduleFrom         = {0};
+    tModule moduleTo           = {0};
 
     if (read_module({cable->key.slot, cable->key.location, cable->key.moduleFromIndex}, &moduleFrom) == false) {
         return;
@@ -784,9 +782,9 @@ void render_cable(tCable * cable) {
     }
     set_rgb_colour(cableColourMap[cable->colour]);
 
-    int fromConnectorIndex = find_index_from_io_count(&moduleFrom, (tConnectorDir)cable->key.linkType, cable->key.connectorFromIoCount);
+    int     fromConnectorIndex = find_index_from_io_count(&moduleFrom, (tConnectorDir)cable->key.linkType, cable->key.connectorFromIoCount);
 
-    int toConnectorIndex = find_index_from_io_count(&moduleTo, connectorDirIn, cable->key.connectorToIoCount);
+    int     toConnectorIndex   = find_index_from_io_count(&moduleTo, connectorDirIn, cable->key.connectorToIoCount);
 
     if (fromConnectorIndex != -1 && toConnectorIndex != -1) {
         render_cable_from_to(moduleFrom.connector[fromConnectorIndex], moduleTo.connector[toConnectorIndex]);
@@ -848,14 +846,14 @@ void render_morph_groups(void) {
                 } else {
                     dialColour = RGB_GREY_3;
                 }
-                module.param[gPatchDescr[gSlot].activeVariation][i].rectangle = render_dial_with_text(mainArea, rectangle, NULL, buff, module.param[gPatchDescr[gSlot].activeVariation][i].value, 128, module.param[gPatchDescr[gSlot].activeVariation][i].morphRange[gMorphGroupFocus], dialColour);
+                module.param[gPatchDescr[gSlot].activeVariation][i].rectangle              = render_dial_with_text(mainArea, rectangle, NULL, buff, module.param[gPatchDescr[gSlot].activeVariation][i].value, 128, module.param[gPatchDescr[gSlot].activeVariation][i].morphRange[gMorphGroupFocus], dialColour);
 
-                textHeight = rectangle.size.h / 4.0;
+                textHeight                                                                 = rectangle.size.h / 4.0;
 
                 set_rgb_colour(RGB_BACKGROUND_GREY);
                 module.param[gPatchDescr[gSlot].activeVariation][i + NUM_MORPHS].rectangle = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y - 8}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, false);
 
-                rectangle.coord.x += (STANDARD_TEXT_HEIGHT * 4) + 5;
+                rectangle.coord.x                                                         += (STANDARD_TEXT_HEIGHT * 4) + 5;
             }
 
             write_module(module.key, &module);

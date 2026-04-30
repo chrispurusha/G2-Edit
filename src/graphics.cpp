@@ -174,10 +174,10 @@ void render_scrollbars(GLFWwindow * window) {
 }
 
 void render_top_bar(void) {
-    tRectangle rectangle = {0};
-    tCommsState commsState = atomic_load(&gCommsState);
-    char * commsStateText = "Unknown";
-    tRgb commsStateColour = RGB_RED_7;
+    tRectangle  rectangle                          = {0};
+    tCommsState commsState                         = atomic_load(&gCommsState);
+    char *      commsStateText                     = "Unknown";
+    tRgb        commsStateColour                   = RGB_RED_7;
 
     set_rgb_colour(RGB_GREY_5);
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {(get_render_width() / GLOBAL_GUI_SCALE) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
@@ -187,17 +187,16 @@ void render_top_bar(void) {
 
     // Patch name — centred in the left portion of the bar
     pthread_mutex_lock(&gGlobalVarsMutex);
-    char patchNameCopy[PATCH_NAME_SIZE+1] = {0};
+    char        patchNameCopy[PATCH_NAME_SIZE + 1] = {0};
     strncpy(patchNameCopy, gPatchName[gSlot], PATCH_NAME_SIZE);
     pthread_mutex_unlock(&gGlobalVarsMutex);
 
     if (patchNameCopy[0] == '\0') {
         strncpy(patchNameCopy, "---", PATCH_NAME_SIZE);
     }
-    
     set_rgb_colour(RGB_BLACK);
     render_text(mainArea, {{180, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Patch Name");
-    
+
     set_rgb_colour(RGB_BACKGROUND_GREY);
     rectangle = {{180, 60}, {get_text_width("XXXXXXXXXXXXXXXX", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
     draw_button(mainArea, rectangle, patchNameCopy, false);
@@ -205,7 +204,7 @@ void render_top_bar(void) {
     for (int i = 0; i < array_size_main_button_array(); i++) {
         set_rgb_colour(gMainButtonArray[i].backgroundColour);
 
-        rectangle = {gMainButtonArray[i].coord, {get_text_width(gMainButtonArray[i].text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
+        rectangle                     = {gMainButtonArray[i].coord, {get_text_width(gMainButtonArray[i].text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
 
         switch (gMainButtonArray[i].anchor) {
             case anchorTopRight:
@@ -223,22 +222,21 @@ void render_top_bar(void) {
 
     switch (commsState) {
         case eCommsSearching:
-            commsStateText     = "Searching";
+            commsStateText   = "Searching";
             break;
         case eCommsConnecting:
-            commsStateText     = "Connecting";
+            commsStateText   = "Connecting";
             break;
         case eCommsOnline:
-            commsStateText     = "Online";
+            commsStateText   = "Online";
             commsStateColour = RGB_GREEN_7;
             break;
         case eCommsReconnecting:
-            commsStateText    = "Reconnecting";
+            commsStateText   = "Reconnecting";
             break;
         default:
             break;
     }
-
     set_rgb_colour(commsStateColour);
     rectangle = {{200, 8}, {get_text_width("Reconnecting", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
     draw_button(mainArea, rectangle, commsStateText, false);
@@ -296,7 +294,7 @@ void init_graphics(void) {
     register_glfw_wake_cb(wake_glfw);
     register_full_patch_change_notify_cb(notify_full_patch_change);
 
-    monitor = glfwGetPrimaryMonitor();
+    monitor      = glfwGetPrimaryMonitor();
 
     glfwGetMonitorContentScale(monitor, &xScale, &yScale);
     //xScale *= 0.4;
@@ -306,7 +304,7 @@ void init_graphics(void) {
 
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
     glfwWindowHint(GLFW_COCOA_GRAPHICS_SWITCHING, GLFW_TRUE);
-    gWindow = glfwCreateWindow(windowWidth, windowHeight, WINDOW_TITLE, NULL, NULL);
+    gWindow      = glfwCreateWindow(windowWidth, windowHeight, WINDOW_TITLE, NULL, NULL);
 
     if (!gWindow) {
         glfwTerminate();
@@ -348,8 +346,8 @@ void init_graphics(void) {
 }
 
 void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
-    const char * base  = filepath;
-    const char * p     = filepath;
+    const char * base = filepath;
+    const char * p    = filepath;
 
     // Find last path separator
     while (*p != '\0') {
@@ -358,12 +356,12 @@ void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
         }
         p++;
     }
-
     // Copy up to PATCH_NAME_SIZE chars, stop at '.' (extension)
     pthread_mutex_lock(&gGlobalVarsMutex);
     memset(gPatchName[slot], 0, PATCH_NAME_SIZE + 1);
 
-    int i = 0;
+    int          i    = 0;
+
     while (i < PATCH_NAME_SIZE && base[i] != '\0' && base[i] != '.') {
         gPatchName[slot][i] = base[i];
         i++;
@@ -384,7 +382,7 @@ void read_file_into_memory_and_process(const char * filepath) {
     uint32_t  readCrc    = 0;
     uint32_t  calcCrc    = 0;
 
-    file = fopen(filepath, "rb");
+    file     = fopen(filepath, "rb");
 
     if (!file) {
         LOG_ERROR("Error opening file\n");
@@ -395,7 +393,7 @@ void read_file_into_memory_and_process(const char * filepath) {
     fseek(file, 0, SEEK_SET);
     clearerr(file);
 
-    buff = (uint8_t *)malloc(fileSize);
+    buff     = (uint8_t *)malloc(fileSize);
 
     if (buff == NULL) {
         LOG_ERROR("Memory allocation failed\n");
@@ -418,12 +416,12 @@ void read_file_into_memory_and_process(const char * filepath) {
         }
     }
 
-    readCrc = buff[fileSize - 2] << 8 | buff[fileSize - 1];
-    calcCrc = calc_crc16(buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
+    readCrc  = buff[fileSize - 2] << 8 | buff[fileSize - 1];
+    calcCrc  = calc_crc16(buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
 
     if (readCrc == calcCrc) {
-        version = buff[byteOffset++];
-        type    = buff[byteOffset++];
+        version                 = buff[byteOffset++];
+        type                    = buff[byteOffset++];
         LOG_DEBUG("Version %u\n", version);
         LOG_DEBUG("Type %u\n", type);
 
@@ -438,12 +436,12 @@ void read_file_into_memory_and_process(const char * filepath) {
         memset(&(gKnobArray[gSlot]), 0, sizeof(gKnobArray[gSlot]));
         memset(gNote2[gSlot], 0, sizeof(gNote2[gSlot]));
         memset(&(gControllerArray[gSlot]), 0, sizeof(gControllerArray[gSlot]));
-        memset(gPatchNotes[gSlot], 0,sizeof(gPatchNotes[gSlot]));
-        
+        memset(gPatchNotes[gSlot], 0, sizeof(gPatchNotes[gSlot]));
+
         if (type == 0) {
             parse_patch(gSlot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // TODO: parse_patch should really be in a commonly accessible source file, for file or USB access
         } // 1 = performance
-        
+
         set_patch_name_from_filename(gSlot, filepath);
     } else {
         LOG_WARNING("CRC check failed\n");
@@ -453,7 +451,7 @@ void read_file_into_memory_and_process(const char * filepath) {
 }
 
 void write_database_to_file(const char * filepath) {
-    FILE *    file = NULL;
+    FILE *    file           = NULL;
     //uint8_t ch          = 0;
     size_t    writtenSize    = 0;
     char      charBuff[1024] = {0};
@@ -516,9 +514,9 @@ void write_database_to_file(const char * filepath) {
     write_module_names(gSlot, locationFx, buff, &bitPos);
     write_patch_notes(gSlot, buff, &bitPos);
 
-    bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos)); // Final byte alignment round-up
+    bitPos      = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos)); // Final byte alignment round-up
 
-    calcCrc = calc_crc16(buff, BIT_TO_BYTE_ROUND_UP(bitPos));
+    calcCrc     = calc_crc16(buff, BIT_TO_BYTE_ROUND_UP(bitPos));
 
     write_bit_stream(buff, &bitPos, 16, calcCrc);
 

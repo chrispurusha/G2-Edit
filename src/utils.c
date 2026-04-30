@@ -95,7 +95,7 @@ void write_bit_stream(uint8_t * buff, uint32_t * bitPos, uint32_t numBits, uint3
 
     for (uint32_t i = 0; i < numBits; i++) {
         // Extract bit from 'val', MSB first
-        uint8_t bit = (val >> ((numBits - 1) - i)) & 0x01;
+        uint8_t  bit       = (val >> ((numBits - 1) - i)) & 0x01;
 
         // Compute current byte and bit positions
         uint32_t byteIndex = (*bitPos) >> 3;
@@ -122,8 +122,8 @@ double get_time_delta(void) {
         lastTime = currentTime;
         return 0.0;
     }
-    double elapsedMS = (currentTime.tv_sec - lastTime.tv_sec) * 1000.0 +  // Convert seconds to milliseconds
-                       (currentTime.tv_nsec - lastTime.tv_nsec) / 1.0e6;  // Convert nanoseconds to milliseconds
+    double                 elapsedMS   = (currentTime.tv_sec - lastTime.tv_sec) * 1000.0 + // Convert seconds to milliseconds
+                                         (currentTime.tv_nsec - lastTime.tv_nsec) / 1.0e6; // Convert nanoseconds to milliseconds
     lastTime = currentTime;
     return elapsedMS;
 }

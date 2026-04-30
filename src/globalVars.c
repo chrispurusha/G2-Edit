@@ -23,62 +23,62 @@ extern "C" {
 
 #include "globalVars.h"
 
-_Atomic bool gQuitAll  = false;
-GLFWwindow * gWindow   = NULL;
-uint32_t     gLocation = locationVa;
-bool         gReDraw   = true;
+_Atomic bool        gQuitAll           = false;
+GLFWwindow *        gWindow            = NULL;
+uint32_t            gLocation          = locationVa;
+bool                gReDraw            = true;
 
-bool         gCommandKeyPressed = false;
+bool                gCommandKeyPressed = false;
 
-tButton      gMainButtonArray[] = {     // Must align with tButtonId enumaration (in types.h)
-    {{400,  8}, NULL_RECTANGLE, anchorTopLeft, "VA",         RGB_GREEN_ON,        false},
-    {{425,  8}, NULL_RECTANGLE, anchorTopLeft, "FX",         RGB_BACKGROUND_GREY, false},
-    {{ 20,  8}, NULL_RECTANGLE, anchorTopLeft, "Read File",  RGB_BACKGROUND_GREY, false},
-    {{ 20, 28}, NULL_RECTANGLE, anchorTopLeft, "Write File", RGB_BACKGROUND_GREY, false},
-    {{400, 60}, NULL_RECTANGLE, anchorTopLeft, "1",          RGB_GREEN_ON,        false},
-    {{412, 60}, NULL_RECTANGLE, anchorTopLeft, "2",          RGB_BACKGROUND_GREY, false},
-    {{424, 60}, NULL_RECTANGLE, anchorTopLeft, "3",          RGB_BACKGROUND_GREY, false},
-    {{436, 60}, NULL_RECTANGLE, anchorTopLeft, "4",          RGB_BACKGROUND_GREY, false},
-    {{448, 60}, NULL_RECTANGLE, anchorTopLeft, "5",          RGB_BACKGROUND_GREY, false},
-    {{460, 60}, NULL_RECTANGLE, anchorTopLeft, "6",          RGB_BACKGROUND_GREY, false},
-    {{472, 60}, NULL_RECTANGLE, anchorTopLeft, "7",          RGB_BACKGROUND_GREY, false},
-    {{484, 60}, NULL_RECTANGLE, anchorTopLeft, "8",          RGB_BACKGROUND_GREY, false},
-    {{500, 60}, NULL_RECTANGLE, anchorTopLeft, "Init",       RGB_BACKGROUND_GREY, false},
-    {{600,  8}, NULL_RECTANGLE, anchorTopLeft, "A",          RGB_GREEN_ON,        false},
-    {{615,  8}, NULL_RECTANGLE, anchorTopLeft, "B",          RGB_BACKGROUND_GREY, false},
-    {{630,  8}, NULL_RECTANGLE, anchorTopLeft, "C",          RGB_BACKGROUND_GREY, false},
-    {{645,  8}, NULL_RECTANGLE, anchorTopLeft, "D",          RGB_BACKGROUND_GREY, false},
+tButton             gMainButtonArray[] = { // Must align with tButtonId enumaration (in types.h)
+    {{400,  8}, NULL_RECTANGLE, anchorTopLeft, "VA",          RGB_GREEN_ON,        false},
+    {{425,  8}, NULL_RECTANGLE, anchorTopLeft, "FX",          RGB_BACKGROUND_GREY, false},
+    {{ 20,  8}, NULL_RECTANGLE, anchorTopLeft, "Read File",   RGB_BACKGROUND_GREY, false},
+    {{ 20, 28}, NULL_RECTANGLE, anchorTopLeft, "Write File",  RGB_BACKGROUND_GREY, false},
+    {{400, 60}, NULL_RECTANGLE, anchorTopLeft, "1",           RGB_GREEN_ON,        false},
+    {{412, 60}, NULL_RECTANGLE, anchorTopLeft, "2",           RGB_BACKGROUND_GREY, false},
+    {{424, 60}, NULL_RECTANGLE, anchorTopLeft, "3",           RGB_BACKGROUND_GREY, false},
+    {{436, 60}, NULL_RECTANGLE, anchorTopLeft, "4",           RGB_BACKGROUND_GREY, false},
+    {{448, 60}, NULL_RECTANGLE, anchorTopLeft, "5",           RGB_BACKGROUND_GREY, false},
+    {{460, 60}, NULL_RECTANGLE, anchorTopLeft, "6",           RGB_BACKGROUND_GREY, false},
+    {{472, 60}, NULL_RECTANGLE, anchorTopLeft, "7",           RGB_BACKGROUND_GREY, false},
+    {{484, 60}, NULL_RECTANGLE, anchorTopLeft, "8",           RGB_BACKGROUND_GREY, false},
+    {{500, 60}, NULL_RECTANGLE, anchorTopLeft, "Init",        RGB_BACKGROUND_GREY, false},
+    {{600,  8}, NULL_RECTANGLE, anchorTopLeft, "A",           RGB_GREEN_ON,        false},
+    {{615,  8}, NULL_RECTANGLE, anchorTopLeft, "B",           RGB_BACKGROUND_GREY, false},
+    {{630,  8}, NULL_RECTANGLE, anchorTopLeft, "C",           RGB_BACKGROUND_GREY, false},
+    {{645,  8}, NULL_RECTANGLE, anchorTopLeft, "D",           RGB_BACKGROUND_GREY, false},
     {{ 80,  8}, NULL_RECTANGLE, anchorTopLeft, "New Patch",   RGB_BACKGROUND_GREY, false},
-    {{ 80, 28}, NULL_RECTANGLE, anchorTopLeft, "Write Patch",  RGB_BACKGROUND_GREY, false},
+    {{ 80, 28}, NULL_RECTANGLE, anchorTopLeft, "Write Patch", RGB_BACKGROUND_GREY, false},
 };
 
-bool         gShowOpenFileReadDialogue  = false;
-bool         gShowOpenFileWriteDialogue = false;
+bool                gShowOpenFileReadDialogue                  = false;
+bool                gShowOpenFileWriteDialogue                 = false;
 
 
-tScrollState    gScrollState                      = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE};
-tContextMenu    gContextMenu                      = {0};
-tCableDragging  gCableDrag                        = {0};
-tParamDragging  gParamDragging                    = {0};
-tModuleDragging gModuleDrag                       = {0};
-tMessageQueue   gCommandQueue                     = {0};
-uint32_t        gMorphGroupFocus                  = 0;
-uint32_t        gSlot                             = 0;
-tPatchDescr     gPatchDescr[MAX_SLOTS]            = {0};
-tKnobArray       gKnobArray[MAX_SLOTS]              = {0};
-uint32_t        gMorphCount[MAX_SLOTS]            = {0};
-uint32_t        gNote2Size[MAX_SLOTS]             = {0};
-uint8_t         gNote2[MAX_SLOTS][1024]           = {0};
-tControllerArray gControllerArray[MAX_SLOTS]       = {0};
-uint32_t    	gControllerCount[MAX_SLOTS]       = {0};
-uint32_t        gPatchNotesSize[MAX_SLOTS]        = {0};
-uint8_t         gPatchNotes[MAX_SLOTS][MAX_16BIT] = {0};
-uint8_t        gPatchVersion[MAX_SLOTS]           = {0};  // Check we don't have this elsewhere
-char           gPatchName[MAX_SLOTS][PATCH_NAME_SIZE+1] = {0};
-_Atomic tCommsState gCommsState = eCommsSearching;
+tScrollState        gScrollState                               = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE};
+tContextMenu        gContextMenu                               = {0};
+tCableDragging      gCableDrag                                 = {0};
+tParamDragging      gParamDragging                             = {0};
+tModuleDragging     gModuleDrag                                = {0};
+tMessageQueue       gCommandQueue                              = {0};
+uint32_t            gMorphGroupFocus                           = 0;
+uint32_t            gSlot                                      = 0;
+tPatchDescr         gPatchDescr[MAX_SLOTS]                     = {0};
+tKnobArray          gKnobArray[MAX_SLOTS]                      = {0};
+uint32_t            gMorphCount[MAX_SLOTS]                     = {0};
+uint32_t            gNote2Size[MAX_SLOTS]                      = {0};
+uint8_t             gNote2[MAX_SLOTS][1024]                    = {0};
+tControllerArray    gControllerArray[MAX_SLOTS]                = {0};
+uint32_t            gControllerCount[MAX_SLOTS]                = {0};
+uint32_t            gPatchNotesSize[MAX_SLOTS]                 = {0};
+uint8_t             gPatchNotes[MAX_SLOTS][MAX_16BIT]          = {0};
+uint8_t             gPatchVersion[MAX_SLOTS]                   = {0}; // Check we don't have this elsewhere
+char                gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1] = {0};
+_Atomic tCommsState gCommsState                                = eCommsSearching;
 
 // Thread synchronization mutex for global variables
-pthread_mutex_t gGlobalVarsMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t     gGlobalVarsMutex                           = PTHREAD_MUTEX_INITIALIZER;
 
 uint32_t array_size_main_button_array(void) {
     return ARRAY_SIZE(gMainButtonArray);

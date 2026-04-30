@@ -167,12 +167,12 @@ static void internal_render_line(tCoord start, tCoord end, double thickness) {
         return;
     }
     // Normalize direction
-    double nx = dx / length;
-    double ny = dy / length;
+    double nx             = dx / length;
+    double ny             = dy / length;
 
     // Perpendicular vector (for thickness)
-    double px = -ny * half_thickness;
-    double py = nx * half_thickness;
+    double px             = -ny * half_thickness;
+    double py             = nx * half_thickness;
 
     // Draw the thick line as a rectangle
     glBegin(GL_TRIANGLE_STRIP);
@@ -216,12 +216,12 @@ static void internal_render_circle_part(tCoord coord, double radius, int segment
 }
 
 static void internal_render_circle_line_part_angle(tCoord coord, double radius, double startAngle, double endAngle, double thickness, int numSteps) {
-    const double DEG_TO_RAD = M_PI / 180.0;
+    const double DEG_TO_RAD     = M_PI / 180.0;
     double       angle, x_inner, y_inner, x_outer, y_outer;
     double       half_thickness = thickness * 0.5;
 
     // Normalize angle range
-    double sweep = fmod((endAngle - startAngle + 360.0), 360.0);
+    double       sweep          = fmod((endAngle - startAngle + 360.0), 360.0);
 
     if (sweep == 0) {
         return;                    // Avoid rendering nothing
@@ -231,7 +231,7 @@ static void internal_render_circle_line_part_angle(tCoord coord, double radius, 
 
     for (int i = 0; i <= numSteps; i++) {
         double interpAngle = startAngle + (sweep * (double)i / (double)numSteps);
-        angle = (interpAngle - 90.0) * DEG_TO_RAD;     // 0° is at the top
+        angle   = (interpAngle - 90.0) * DEG_TO_RAD;   // 0° is at the top
 
         // Inner edge
         x_inner = coord.x + cos(angle) * (radius - half_thickness);
@@ -273,23 +273,23 @@ static void internal_render_text(tRectangle rectangle, char * text) {
 
     double xCharOffset = 0.0;
 
-    ch = text;
+    ch          = text;
 
     while (*ch) {
         char        character = *ch;
         GlyphInfo * glyph     = &glyphInfo[character];
 
         // Texture coordinates for the glyph
-        double u1 = glyph->u1;
-        double v1 = glyph->v1;
-        double u2 = glyph->u2;
-        double v2 = glyph->v2;
+        double      u1        = glyph->u1;
+        double      v1        = glyph->v1;
+        double      u2        = glyph->u2;
+        double      v2        = glyph->v2;
 
         // Character position and size
-        double xPos = glyph->offset_x + xCharOffset;
-        double yPos = (gMaxAscent - glyph->offset_y);
-        double w    = glyph->width;
-        double h    = glyph->height;
+        double      xPos      = glyph->offset_x + xCharOffset;
+        double      yPos      = (gMaxAscent - glyph->offset_y);
+        double      w         = glyph->width;
+        double      h         = glyph->height;
 
         // Render the character quad
         glBegin(GL_QUADS);
@@ -325,9 +325,9 @@ tRectangle render_line(tArea area, tCoord start, tCoord end, double thickness) {
     }
     retRectangle = {{0.0, 0.0}, {0.0, 0.0}};
 
-    start     = global_scale_coord(start);
-    end       = global_scale_coord(end);
-    thickness = global_scale(thickness);
+    start        = global_scale_coord(start);
+    end          = global_scale_coord(end);
+    thickness    = global_scale(thickness);
 
     internal_render_line(start, end, thickness);
 
@@ -342,7 +342,7 @@ tRectangle render_rectangle(tArea area, tRectangle rectangle) {
     }
     retRectangle = rectangle;
 
-    rectangle = global_scale_rectangle(rectangle);
+    rectangle    = global_scale_rectangle(rectangle);
 
     internal_render_rectangle(rectangle);
 
@@ -350,7 +350,7 @@ tRectangle render_rectangle(tArea area, tRectangle rectangle) {
 }
 
 tRectangle render_rectangle_with_border(tArea area, tRectangle rectangle) {
-    tRectangle retRectangle = {0};
+    tRectangle retRectangle    = {0};
 
     double     borderLineWidth = BORDER_LINE_WIDTH;
 
@@ -358,26 +358,26 @@ tRectangle render_rectangle_with_border(tArea area, tRectangle rectangle) {
         rectangle       = scale_scroll_adjust_rectangle(rectangle);
         borderLineWidth = scale(borderLineWidth);
     }
-    retRectangle = rectangle;
+    retRectangle    = rectangle;
 
     rectangle       = global_scale_rectangle(rectangle);
     borderLineWidth = global_scale(borderLineWidth);
 
-    tRectangle line = {0};
+    tRectangle line            = {0};
 
     internal_render_rectangle(rectangle);
 
     set_rgb_colour(RGB_BLACK);
-    line = {{rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth}, {rectangle.size.w, borderLineWidth}};
+    line            = {{rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth}, {rectangle.size.w, borderLineWidth}};
     internal_render_rectangle(line); //Bottom
     set_rgb_colour(RGB_WHITE);
-    line = {{rectangle.coord.x, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
+    line            = {{rectangle.coord.x, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
     internal_render_rectangle(line); //Left
     set_rgb_colour(RGB_WHITE);
-    line = {{rectangle.coord.x, rectangle.coord.y}, {rectangle.size.w, borderLineWidth}};
+    line            = {{rectangle.coord.x, rectangle.coord.y}, {rectangle.size.w, borderLineWidth}};
     internal_render_rectangle(line); // Top
     set_rgb_colour(RGB_BLACK);
-    line = {{rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
+    line            = {{rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y}, {borderLineWidth, rectangle.size.h}};
     internal_render_rectangle(line); // Right
 
     return retRectangle;
@@ -391,7 +391,7 @@ tRectangle render_triangle(tArea area, tTriangle triangle) {
         triangle.coord2rel = scale_scroll_adjust_coord(triangle.coord2rel);
         triangle.coord3rel = scale_scroll_adjust_coord(triangle.coord3rel);
     }
-    retRectangle = {{0.0, 0.0}, {0.0, 0.0}};
+    retRectangle       = {{0.0, 0.0}, {0.0, 0.0}};
 
     triangle.coord1    = global_scale_coord(triangle.coord1);
     triangle.coord2rel = global_scale_coord(triangle.coord2rel);
@@ -407,7 +407,7 @@ tRectangle render_triangle(tArea area, tTriangle triangle) {
 }
 
 tRectangle render_circle_line(tArea area, tCoord coord, double radius, int segments, double thickness) {
-    tRectangle retRectangle = {0};
+    tRectangle   retRectangle   = {0};
 
     if (area == moduleArea) {
         coord     = scale_scroll_adjust_coord(coord);
@@ -416,9 +416,9 @@ tRectangle render_circle_line(tArea area, tCoord coord, double radius, int segme
     }
     retRectangle = {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
 
-    coord     = global_scale_coord(coord);
-    radius    = global_scale(radius);
-    thickness = global_scale(thickness);
+    coord        = global_scale_coord(coord);
+    radius       = global_scale(radius);
+    thickness    = global_scale(thickness);
 
     const double DEG_TO_RAD     = 2.0 * M_PI / (double)segments;
     double       half_thickness = thickness * 0.5;
@@ -453,8 +453,8 @@ tRectangle render_circle_part(tArea area, tCoord coord, double radius, int segme
     }
     retRectangle = {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
 
-    coord  = global_scale_coord(coord);
-    radius = global_scale(radius);
+    coord        = global_scale_coord(coord);
+    radius       = global_scale(radius);
 
     internal_render_circle_part(coord, radius, segments, startSeg, numSegs);
 
@@ -470,13 +470,13 @@ tRectangle render_circle_part_angle(tArea area, tCoord coord, double radius, dou
     }
     retRectangle = {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
 
-    coord  = global_scale_coord(coord);
-    radius = global_scale(radius);
+    coord        = global_scale_coord(coord);
+    radius       = global_scale(radius);
 
-    double angle = 0.0;
-    double x     = 0.0;
-    double y     = 0.0;
-    int    i     = 0;
+    double     angle        = 0.0;
+    double     x            = 0.0;
+    double     y            = 0.0;
+    int        i            = 0;
 
     glBegin(GL_TRIANGLE_FAN);
     glVertex2f(coord.x, coord.y);  // Center of the circle
@@ -497,8 +497,8 @@ tRectangle render_circle_part_angle(tArea area, tCoord coord, double radius, dou
         angle = (interpAngle - 90.0) * (M_PI / 180.0);
 
         // Compute vertex position
-        x = coord.x + cos(angle) * radius;
-        y = coord.y + sin(angle) * radius;
+        x     = coord.x + cos(angle) * radius;
+        y     = coord.y + sin(angle) * radius;
         glVertex2f(x, y);
     }
 
@@ -517,20 +517,20 @@ tRectangle render_radial_line(tArea area, tCoord coord, double radius, double an
     }
     retRectangle = {{coord.x - radius, coord.y - radius}, {radius *2.0, radius *2.0}};
 
-    coord     = global_scale_coord(coord);
-    radius    = global_scale(radius);
-    thickness = global_scale(thickness);
+    coord        = global_scale_coord(coord);
+    radius       = global_scale(radius);
+    thickness    = global_scale(thickness);
 
-    double angle = 0.0;
-    double x     = 0.0;
-    double y     = 0.0;
+    double     angle        = 0.0;
+    double     x            = 0.0;
+    double     y            = 0.0;
 
     // Adjust so 0° is at the top
-    angle = (angleDegrees - 90.0) * (M_PI / 180.0);
+    angle        = (angleDegrees - 90.0) * (M_PI / 180.0);
 
     // Calculate endpoint of the line
-    x = coord.x + cos(angle) * radius;
-    y = coord.y + sin(angle) * radius;
+    x            = coord.x + cos(angle) * radius;
+    y            = coord.y + sin(angle) * radius;
 
     // Draw the line
     //render_line(xPos, yPos, x, y, thickness);
@@ -548,33 +548,30 @@ void set_rgba_colour(tRgba rgba) {
 }
 
 tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord end, double thickness, int segments) {
-    tRectangle retRectangle = {0};
+    tRectangle   retRectangle   = {0};
 
     // Capture the current colour for lighting calculations before any GL calls
-    float baseR = 0.0f, baseG = 0.0f, baseB = 0.0f;
+    float        baseR = 0.0f, baseG = 0.0f, baseB = 0.0f;
+
     glGetFloatv(GL_CURRENT_COLOR, (float[]){baseR, baseG, baseB, 0.0f});
     // glGetFloatv with GL_CURRENT_COLOR fills all 4 components; use a proper array
-    float rgba[4] = {0};
+    float        rgba[4]        = {0};
     glGetFloatv(GL_CURRENT_COLOR, rgba);
-    baseR = rgba[0];
-    baseG = rgba[1];
-    baseB = rgba[2];
+    baseR        = rgba[0];
+    baseG        = rgba[1];
+    baseB        = rgba[2];
 
     // Derive highlight (top-lit) and shadow colours from base
     // Light source assumed at top — normal pointing up (negative screen-y) = highlight
     const double highlightBoost = 0.20;
     const double shadowDrop     = 0.15;
 
-    tRgb highlight = {
-        fmin(1.0, (double)baseR + highlightBoost),
-        fmin(1.0, (double)baseG + highlightBoost),
-        fmin(1.0, (double)baseB + highlightBoost)
-    };
-    tRgb shadow = {
-        fmax(0.0, (double)baseR - shadowDrop),
-        fmax(0.0, (double)baseG - shadowDrop),
-        fmax(0.0, (double)baseB - shadowDrop)
-    };
+    tRgb         highlight      = {fmin(1.0, (double)baseR + highlightBoost),
+                                   fmin(1.0,              (double)baseG + highlightBoost),
+                                   fmin(1.0,              (double)baseB + highlightBoost)};
+    tRgb         shadow         = {fmax(0.0, (double)baseR - shadowDrop),
+                                   fmax(0.0,                 (double)baseG - shadowDrop),
+                                   fmax(0.0,                 (double)baseB - shadowDrop)};
 
     if (area == moduleArea) {
         start     = scale_scroll_adjust_coord(start);
@@ -584,34 +581,34 @@ tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord 
     }
     retRectangle = {{0.0, 0.0}, {0.0, 0.0}};
 
-    start     = global_scale_coord(start);
-    control   = global_scale_coord(control);
-    end       = global_scale_coord(end);
-    thickness = global_scale(thickness);
+    start        = global_scale_coord(start);
+    control      = global_scale_coord(control);
+    end          = global_scale_coord(end);
+    thickness    = global_scale(thickness);
 
     glBegin(GL_TRIANGLE_STRIP);
 
     for (int i = 0; i <= segments; i++) {
-        double t  = (double)i / (double)segments;
+        double t   = (double)i / (double)segments;
 
-        double x = (1 - t) * (1 - t) * start.x + 2 * (1 - t) * t * control.x + t * t * end.x;
-        double y = (1 - t) * (1 - t) * start.y + 2 * (1 - t) * t * control.y + t * t * end.y;
+        double x   = (1 - t) * (1 - t) * start.x + 2 * (1 - t) * t * control.x + t * t * end.x;
+        double y   = (1 - t) * (1 - t) * start.y + 2 * (1 - t) * t * control.y + t * t * end.y;
 
-        double tx = 2 * (1 - t) * (control.x - start.x) + 2 * t * (end.x - control.x);
-        double ty = 2 * (1 - t) * (control.y - start.y) + 2 * t * (end.y - control.y);
+        double tx  = 2 * (1 - t) * (control.x - start.x) + 2 * t * (end.x - control.x);
+        double ty  = 2 * (1 - t) * (control.y - start.y) + 2 * t * (end.y - control.y);
 
         double len = sqrt(tx * tx + ty * ty);
+
         if (len > 0.0) {
             tx /= len;
             ty /= len;
         }
-
         // Normal perpendicular to tangent: (-ty, tx)
         // Vertex A: normal pointing in (-ty, tx) direction
         // Vertex B: normal pointing in (+ty, -tx) direction
         // In screen space, negative y = upward = towards light source
-        double nx = -ty * thickness * 0.5;
-        double ny =  tx * thickness * 0.5;
+        double nx  = -ty * thickness * 0.5;
+        double ny  = tx * thickness * 0.5;
 
         // The vertex whose normal has a more negative y component faces the light
         // ny for vertex A = tx * thickness * 0.5
@@ -649,9 +646,9 @@ tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active) {
     if (area == moduleArea) {
         rectangle = scale_scroll_adjust_rectangle(rectangle);
     }
-    retRectangle = rectangle;
+    retRectangle  = rectangle;
 
-    rectangle = global_scale_rectangle(rectangle);
+    rectangle     = global_scale_rectangle(rectangle);
 
     if (active) {
         set_rgb_colour(RGB_GREEN_ON);         // Green when ON
@@ -661,8 +658,8 @@ tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active) {
     internal_render_rectangle(rectangle);
 
     set_rgb_colour(RGB_BLACK);
-    tCoord circleCentre = {rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)};
-    double circleRadius = (rectangle.size.h / 2.0);
+    tCoord     circleCentre = {rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)};
+    double     circleRadius = (rectangle.size.h / 2.0);
     circleRadius *= 0.75;
 
     internal_render_circle_line_part_angle(circleCentre, circleRadius, 30.0, 330.0, rectangle.size.w * 0.1, 10);
@@ -686,35 +683,34 @@ tRectangle draw_button(tArea area, tRectangle rectangle, char * text, bool isPre
         rectangle     = scale_scroll_adjust_rectangle(rectangle);
         textRectangle = scale_scroll_adjust_rectangle(textRectangle);
     }
-    retRectangle = rectangle;
+    retRectangle           = rectangle;
 
-    rectangle     = global_scale_rectangle(rectangle);
-    textRectangle = global_scale_rectangle(textRectangle);
+    rectangle              = global_scale_rectangle(rectangle);
+    textRectangle          = global_scale_rectangle(textRectangle);
 
     if (isPressed == true) {
         set_rgb_colour((tRgb)RGB_GREY_7);
     }
-    
     internal_render_rectangle(rectangle);
 
     set_rgb_colour(RGB_BLACK);
 
     tRectangle line = {0};
-    line = (tRectangle){{
-                            rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth
-                        }, {rectangle.size.w, borderLineWidth}};
+    line                   = (tRectangle){{
+                                              rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth
+                                          }, {rectangle.size.w, borderLineWidth}};
     internal_render_rectangle(line); // Bottom
-    line = (tRectangle){{
-                            rectangle.coord.x, rectangle.coord.y
-                        }, {borderLineWidth, rectangle.size.h}};
+    line                   = (tRectangle){{
+                                              rectangle.coord.x, rectangle.coord.y
+                                          }, {borderLineWidth, rectangle.size.h}};
     internal_render_rectangle(line); // Left
-    line = (tRectangle){{
-                            rectangle.coord.x, rectangle.coord.y
-                        }, {rectangle.size.w, borderLineWidth}};
+    line                   = (tRectangle){{
+                                              rectangle.coord.x, rectangle.coord.y
+                                          }, {rectangle.size.w, borderLineWidth}};
     internal_render_rectangle(line); // Top
-    line = (tRectangle){{
-                            rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y
-                        }, {borderLineWidth, rectangle.size.h}};
+    line                   = (tRectangle){{
+                                              rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y
+                                          }, {borderLineWidth, rectangle.size.h}};
     internal_render_rectangle(line); // Right
 
     internal_render_text(textRectangle, text);
@@ -751,36 +747,36 @@ tRectangle draw_updown(tArea area, tRectangle rectangle, char * text) {
         textRectangleDown = scale_scroll_adjust_rectangle(textRectangleDown);
         textRectangleVal  = scale_scroll_adjust_rectangle(textRectangleVal);
     }
-    retRectangle = rectangle;
+    retRectangle               = rectangle;
 
-    rectangle         = global_scale_rectangle(rectangle);
-    textRectangleUp   = global_scale_rectangle(textRectangleUp);
-    textRectangleDown = global_scale_rectangle(textRectangleDown);
-    textRectangleVal  = global_scale_rectangle(textRectangleVal);
+    rectangle                  = global_scale_rectangle(rectangle);
+    textRectangleUp            = global_scale_rectangle(textRectangleUp);
+    textRectangleDown          = global_scale_rectangle(textRectangleDown);
+    textRectangleVal           = global_scale_rectangle(textRectangleVal);
     internal_render_rectangle(rectangle);
 
     set_rgb_colour(RGB_BLACK);
 
     tRectangle line = {0};
-    line = (tRectangle){{
-                            rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth
-                        }, {rectangle.size.w / 2, borderLineWidth}};
+    line                       = (tRectangle){{
+                                                  rectangle.coord.x, rectangle.coord.y + rectangle.size.h - borderLineWidth
+                                              }, {rectangle.size.w / 2, borderLineWidth}};
     internal_render_rectangle(line); // Bottom
-    line = (tRectangle){{
-                            rectangle.coord.x, rectangle.coord.y
-                        }, {borderLineWidth, rectangle.size.h}};
+    line                       = (tRectangle){{
+                                                  rectangle.coord.x, rectangle.coord.y
+                                              }, {borderLineWidth, rectangle.size.h}};
     internal_render_rectangle(line); // Left
-    line = (tRectangle){{
-                            rectangle.coord.x, rectangle.coord.y
-                        }, {rectangle.size.w / 2, borderLineWidth}};
+    line                       = (tRectangle){{
+                                                  rectangle.coord.x, rectangle.coord.y
+                                              }, {rectangle.size.w / 2, borderLineWidth}};
     internal_render_rectangle(line); // Top
-    line = (tRectangle){{
-                            rectangle.coord.x + rectangle.size.w / 2 - borderLineWidth, rectangle.coord.y
-                        }, {borderLineWidth, rectangle.size.h}};
+    line                       = (tRectangle){{
+                                                  rectangle.coord.x + rectangle.size.w / 2 - borderLineWidth, rectangle.coord.y
+                                              }, {borderLineWidth, rectangle.size.h}};
     internal_render_rectangle(line); // Right
-    line = (tRectangle){{
-                            rectangle.coord.x, rectangle.coord.y + rectangle.size.h / 2 - borderLineWidth
-                        }, {rectangle.size.w / 2, borderLineWidth}};
+    line                       = (tRectangle){{
+                                                  rectangle.coord.x, rectangle.coord.y + rectangle.size.h / 2 - borderLineWidth
+                                              }, {rectangle.size.w / 2, borderLineWidth}};
     internal_render_rectangle(line); // Mid
 
     internal_render_text(textRectangleUp, "+1");
@@ -798,7 +794,7 @@ tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
     }
     retRectangle = rectangle;
 
-    rectangle = global_scale_rectangle(rectangle);
+    rectangle    = global_scale_rectangle(rectangle);
 
     internal_render_text(rectangle, text);
 
@@ -867,7 +863,7 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
             continue;
         }
         // Track the highest ascent and lowest descent
-        double glyphAscent = face->glyph->bitmap_top;
+        double glyphAscent  = face->glyph->bitmap_top;
 
         if (glyphAscent < 0.0) {
             glyphAscent = 0.0;
@@ -887,9 +883,9 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
         }
         gMetricsHeight = (double)face->size->metrics.height / 64.0;
 
-        bitmap = &face->glyph->bitmap;
-        int texWidth  = bitmap->width;
-        int texHeight = bitmap->rows;
+        bitmap         = &face->glyph->bitmap;
+        int    texWidth     = bitmap->width;
+        int    texHeight    = bitmap->rows;
 
         if ((texWidth * texHeight * 4) > 0) {
             // RGBA Conversion
@@ -901,7 +897,7 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
                     int           bufferIndex = y * bitmap->pitch + x;       // Use pitch for alignment
                     int           rgbaIndex   = (y * texWidth + x) * 4;
 
-                    unsigned char value = (x < bitmap->width && y < bitmap->rows) ? bitmap->buffer[bufferIndex] : 0;
+                    unsigned char value       = (x < bitmap->width && y < bitmap->rows) ? bitmap->buffer[bufferIndex] : 0;
                     rgbaBuffer[rgbaIndex + 0] = 255;                   // Red
                     rgbaBuffer[rgbaIndex + 1] = 255;                   // Green
                     rgbaBuffer[rgbaIndex + 2] = 255;                   // Blue
@@ -924,7 +920,7 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
         glyphInfo[charCode].offset_x  = face->glyph->bitmap_left;
         glyphInfo[charCode].offset_y  = face->glyph->bitmap_top;
 
-        atlasX += texWidth + padding;        // Add padding to the X offset
+        atlasX                       += texWidth + padding; // Add padding to the X offset
 
         if (texHeight + padding > rowHeight) {
             rowHeight = texHeight + padding; // Add padding to the row height
@@ -938,12 +934,12 @@ bool preload_glyph_textures(const char * fontPath, double fontSize) {
 }
 
 double get_char_width(char ch, double targetHeight) {
-    double      width = 0.0;
-    GlyphInfo * glyph = &glyphInfo[ch];
+    double      width    = 0.0;
+    GlyphInfo * glyph    = &glyphInfo[ch];
 
     width = glyph->advance_x;
 
-    double scaleVal = targetHeight / (gMaxAscent + gMaxDescent);
+    double      scaleVal = targetHeight / (gMaxAscent + gMaxDescent);
     return width * scaleVal;
 }
 
@@ -1051,10 +1047,10 @@ double calculate_mouse_angle(tCoord mouseCoord, tRectangle rectangle) {
     double centerX = rectangle.coord.x + (rectangle.size.w / 2.0);
     double centerY = rectangle.coord.y + (rectangle.size.h / 2.0);
 
-    double dx = mouseCoord.x - centerX;
-    double dy = mouseCoord.y - centerY;
+    double dx      = mouseCoord.x - centerX;
+    double dy      = mouseCoord.y - centerY;
 
-    double angle = atan2(dx, -dy) * (180.0 / M_PI);  // 0° at top
+    double angle   = atan2(dx, -dy) * (180.0 / M_PI); // 0° at top
 
     return (angle < 0) ? angle + 360.0 : angle;
 }

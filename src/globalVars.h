@@ -35,37 +35,37 @@
 #include "msgQueue.h"
 #include <pthread.h>
 
-extern _Atomic bool    gQuitAll;
-extern GLFWwindow *    gWindow;
-extern uint32_t        gLocation;
-extern bool            gReDraw;
-extern bool            gCommandKeyPressed;
-extern tButton         gMainButtonArray[];
-extern bool            gShowOpenFileReadDialogue;
-extern bool            gShowOpenFileWriteDialogue;
-extern tScrollState    gScrollState;
-extern tContextMenu    gContextMenu;
-extern tCableDragging  gCableDrag;
-extern tParamDragging  gParamDragging;
-extern tModuleDragging gModuleDrag;
-extern tMessageQueue   gCommandQueue;
-extern uint32_t        gMorphGroupFocus;
-extern uint32_t        gSlot;
-extern tPatchDescr     gPatchDescr[MAX_SLOTS];
-extern tKnobArray      gKnobArray[MAX_SLOTS];  // TODO - Don't forget to nullify on new load
-extern uint32_t        gMorphCount[MAX_SLOTS];
-extern uint32_t        gNote2Size[MAX_SLOTS];
-extern uint8_t         gNote2[MAX_SLOTS][1024];
-extern tControllerArray gControllerArray[MAX_SLOTS];  // TODO - Don't forget to nullify on new load
-extern uint32_t    	   gControllerCount[MAX_SLOTS];  // TODO - Don't forget to nullify on new load
-extern uint32_t        gPatchNotesSize[MAX_SLOTS];
-extern uint8_t         gPatchNotes[MAX_SLOTS][MAX_16BIT];
-extern uint8_t        gPatchVersion[MAX_SLOTS];
-extern char           gPatchName[MAX_SLOTS][PATCH_NAME_SIZE+1];
+extern _Atomic bool        gQuitAll;
+extern GLFWwindow *        gWindow;
+extern uint32_t            gLocation;
+extern bool                gReDraw;
+extern bool                gCommandKeyPressed;
+extern tButton             gMainButtonArray[];
+extern bool                gShowOpenFileReadDialogue;
+extern bool                gShowOpenFileWriteDialogue;
+extern tScrollState        gScrollState;
+extern tContextMenu        gContextMenu;
+extern tCableDragging      gCableDrag;
+extern tParamDragging      gParamDragging;
+extern tModuleDragging     gModuleDrag;
+extern tMessageQueue       gCommandQueue;
+extern uint32_t            gMorphGroupFocus;
+extern uint32_t            gSlot;
+extern tPatchDescr         gPatchDescr[MAX_SLOTS];
+extern tKnobArray          gKnobArray[MAX_SLOTS]; // TODO - Don't forget to nullify on new load
+extern uint32_t            gMorphCount[MAX_SLOTS];
+extern uint32_t            gNote2Size[MAX_SLOTS];
+extern uint8_t             gNote2[MAX_SLOTS][1024];
+extern tControllerArray    gControllerArray[MAX_SLOTS]; // TODO - Don't forget to nullify on new load
+extern uint32_t            gControllerCount[MAX_SLOTS]; // TODO - Don't forget to nullify on new load
+extern uint32_t            gPatchNotesSize[MAX_SLOTS];
+extern uint8_t             gPatchNotes[MAX_SLOTS][MAX_16BIT];
+extern uint8_t             gPatchVersion[MAX_SLOTS];
+extern char                gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1];
 extern _Atomic tCommsState gCommsState;
 
 // Thread synchronization mutex for global variables
-extern pthread_mutex_t gGlobalVarsMutex;
+extern pthread_mutex_t     gGlobalVarsMutex;
 
 uint32_t array_size_main_button_array(void);
 

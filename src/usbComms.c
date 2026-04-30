@@ -72,23 +72,23 @@ typedef enum {
 } eState;
 
 // Atomic flags for state synchronization
-static _Atomic bool gotBadConnectionIndication = false;
-static _Atomic bool gotPatchChangeIndication   = false;
+static _Atomic bool           gotBadConnectionIndication = false;
+static _Atomic bool           gotPatchChangeIndication   = false;
 
 // Protected by usbStaticMutex
 //static uint8_t                slotVersion[MAX_SLOTS] = {0};
-static pthread_t              usbThread              = NULL;
-static libusb_context *       libUsbCtx              = NULL;
-static libusb_device_handle * devHandle              = NULL;
+static pthread_t              usbThread                  = NULL;
+static libusb_context *       libUsbCtx                  = NULL;
+static libusb_device_handle * devHandle                  = NULL;
 //static char *                 usbSemName             = NULL;
 
 // Callback pointers protected by callbackMutex
-static void (*wake_glfw_func_ptr)(void) = NULL;
-static void (*full_patch_change_notify_func_ptr)(void) = NULL;
+static void                   (*wake_glfw_func_ptr)(void) = NULL;
+static void                   (*full_patch_change_notify_func_ptr)(void) = NULL;
 
 // Mutexes for synchronization
-static pthread_mutex_t usbStaticMutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t callbackMutex  = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t        usbStaticMutex             = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t        callbackMutex              = PTHREAD_MUTEX_INITIALIZER;
 
 void register_glfw_wake_cb(void ( *func_ptr )(void)) {
     pthread_mutex_lock(&callbackMutex);
@@ -225,17 +225,17 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
         // past the end of the buffer.
         if (type != SUB_SEL_PARAM_PAGE) {
             count = (int16_t)read_bit_stream(buff, &bitOffset, 16);
-            
+
             if (count < 0) {
                 LOG_ERROR("parse_patch: negative count %d for type 0x%02x, aborting\n", count, type);
                 return EXIT_FAILURE;
             }
+
             if (BIT_TO_BYTE(bitOffset) + count > length) {
                 LOG_ERROR("parse_patch: count %d for type 0x%02x would exceed buffer length %d, aborting\n", count, type, length);
                 return EXIT_FAILURE;
             }
         }
-        
         subOffset = bitOffset;
 
         LOG_DEBUG("Type = 0x%x, Count = %d\n", type, count);
@@ -307,7 +307,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
 
             case SUB_RESPONSE_CONTROLLERS:
             {
-				parse_controllers(slot, buff, &subOffset);
+                parse_controllers(slot, buff, &subOffset);
                 break;
             }
 
@@ -321,9 +321,9 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
                     for (uint32_t i = 0; i < safeCount; i++) {
                         gNote2[slot][i] = read_bit_stream(buff, &subOffset, 8);
                     }
+
                     gNote2Size[slot] = safeCount;
                 }
-
                 break;
             }
 
@@ -337,9 +337,9 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
                     for (uint32_t i = 0; i < safeCount; i++) {
                         gPatchNotes[slot][i] = read_bit_stream(buff, &subOffset, 8);
                     }
+
                     gPatchNotesSize[slot] = safeCount;
                 }
-
                 break;
             }
 
@@ -380,12 +380,12 @@ static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
     uint32_t   variation = 0;
     uint32_t   value     = 0;
 
-    key.slot     = slot;
-    key.location = read_bit_stream(buff, &bitPos, 8);
-    key.index    = read_bit_stream(buff, &bitPos, 8);
-    param        = read_bit_stream(buff, &bitPos, 8);
-    value        = read_bit_stream(buff, &bitPos, 8);
-    variation    = read_bit_stream(buff, &bitPos, 8);
+    key.slot                             = slot;
+    key.location                         = read_bit_stream(buff, &bitPos, 8);
+    key.index                            = read_bit_stream(buff, &bitPos, 8);
+    param                                = read_bit_stream(buff, &bitPos, 8);
+    value                                = read_bit_stream(buff, &bitPos, 8);
+    variation                            = read_bit_stream(buff, &bitPos, 8);
 
     read_module(key, &module);
     module.param[variation][param].value = value;
@@ -425,6 +425,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     }
                 }
             }
+
             return EXIT_SUCCESS;
         }
 
@@ -455,6 +456,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
                     }
                 }
             }
+
             return EXIT_SUCCESS;
         }
 
@@ -548,7 +550,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
             newSlot = read_bit_stream(buff, bitPos, 8);
 
             pthread_mutex_lock(&gGlobalVarsMutex);
-            gSlot = newSlot;
+            gSlot   = newSlot;
             set_exclusive_button_highlight(slotAButtonId, slotDButtonId, (tButtonId)(slotAButtonId + newSlot));
             pthread_mutex_unlock(&gGlobalVarsMutex);
 
@@ -567,13 +569,14 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
             LOG_DEBUG("Got Patch name (length %d)\n", length);
 
             pthread_mutex_lock(&gGlobalVarsMutex);
-            memset(gPatchName[slot], 0, PATCH_NAME_SIZE+1);
+            memset(gPatchName[slot], 0, PATCH_NAME_SIZE + 1);
 
             for (int i = 0; i < (length - 6) && i < (PATCH_NAME_SIZE); i++) {
                 uint8_t ch = read_bit_stream(buff, bitPos, 8);
                 gPatchName[slot][i] = (ch >= 0x20 && ch <= 0x7f) ? (char)ch : ' ';
                 LOG_DEBUG_DIRECT("%c", gPatchName[slot][i]);
             }
+
             LOG_DEBUG_DIRECT("\n");
             pthread_mutex_unlock(&gGlobalVarsMutex);
 
@@ -600,7 +603,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos, uint8_t com
 }
 
 static int parse_incoming(uint8_t * buff, int length) {
-    int ret = EXIT_FAILURE;
+    int      ret          = EXIT_FAILURE;
 
     if ((buff == NULL) || (length <= 0)) {
         return EXIT_FAILURE;
@@ -621,7 +624,7 @@ static int parse_incoming(uint8_t * buff, int length) {
         {
             uint8_t commandResponse = read_bit_stream(buff, &bitPos, 8);
             /*uint8_t version         =*/ read_bit_stream(buff, &bitPos, 8);
-            uint8_t subCommand = read_bit_stream(buff, &bitPos, 8);
+            uint8_t subCommand      = read_bit_stream(buff, &bitPos, 8);
 
             ret = parse_command_response(buff, &bitPos, commandResponse, subCommand, length);
             break;
@@ -746,7 +749,7 @@ static int int_rec(void) {
             if (foundNoneZero == false) {
                 dataLength = read_bit_stream(buff, &bitPos, 16);
 
-                retVal = rcv_extended(dataLength);
+                retVal     = rcv_extended(dataLength);
             }
         } else if (type == RESPONSE_TYPE_EMBEDDED) {
             retVal = parse_incoming(buff + 1, dataLength);
@@ -756,21 +759,20 @@ static int int_rec(void) {
 }
 
 static int send_message(uint8_t * buff, int pos) {
-    int actualLength = 0;
-    int msgLength    = pos - COMMAND_OFFSET;
+    int                    actualLength = 0;
+    int                    msgLength    = pos - COMMAND_OFFSET;
 
     if (msgLength <= 0) {
         return EXIT_FAILURE;
     }
-
-    uint16_t crc = calc_crc16(&buff[COMMAND_OFFSET], msgLength);
+    uint16_t               crc          = calc_crc16(&buff[COMMAND_OFFSET], msgLength);
     write_uint16(&buff[msgLength + 2], crc);
     msgLength += 4;
 
     write_uint16(&buff[0], msgLength);
 
     pthread_mutex_lock(&usbStaticMutex);
-    libusb_device_handle * handle = devHandle;
+    libusb_device_handle * handle       = devHandle;
     pthread_mutex_unlock(&usbStaticMutex);
 
     if (handle == NULL) {
@@ -781,7 +783,6 @@ static int send_message(uint8_t * buff, int pos) {
     if (libusb_bulk_transfer(handle, 3, buff, msgLength, &actualLength, 100) == 0) {
         return EXIT_SUCCESS;
     }
-
     atomic_store(&gotBadConnectionIndication, true);
     return EXIT_FAILURE;
 }
@@ -789,7 +790,7 @@ static int send_message(uint8_t * buff, int pos) {
 static int send_stop(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int retVal = EXIT_FAILURE;
+    int     retVal                  = EXIT_FAILURE;
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
@@ -797,15 +798,15 @@ static int send_stop(void) {
     buff[pos++] = SUB_COMMAND_START_STOP;
     buff[pos++] = 0x01;
 
-    retVal = send_message(buff, pos);
-    
+    retVal      = send_message(buff, pos);
+
     return retVal;
 }
-    
+
 static int send_start(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int retVal = EXIT_FAILURE;
+    int     retVal                  = EXIT_FAILURE;
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
@@ -813,17 +814,33 @@ static int send_start(void) {
     buff[pos++] = SUB_COMMAND_START_STOP;
     buff[pos++] = 0x00;
 
-    retVal = send_message(buff, pos);
-    
+    retVal      = send_message(buff, pos);
+
     return retVal;
 }
-    
+
+static int send_select_slot(uint32_t slot) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
+    buff[pos++] = 0x00;
+    buff[pos++] = SUB_COMMAND_SELECT_SLOT;
+    buff[pos++] = slot;
+
+    retVal      = send_message(buff, pos);
+
+    return retVal;
+}
+
 static int send_command(int state) {
     int                    retVal                  = EXIT_FAILURE;
     uint8_t                buff[SEND_MESSAGE_SIZE] = {0};
     int                    pos                     = COMMAND_OFFSET;
     uint8_t                slotVersion_local[MAX_SLOTS];
-    libusb_device_handle * devHandle_local = NULL;
+    libusb_device_handle * devHandle_local         = NULL;
 
     pthread_mutex_lock(&usbStaticMutex);
     memcpy(slotVersion_local, gPatchVersion, sizeof(slotVersion_local));
@@ -838,8 +855,8 @@ static int send_command(int state) {
     switch (state) {
         case eStateInit:
             buff[pos++] = 0x80;
-            
-            retVal = send_message(buff, pos);
+
+            retVal      = send_message(buff, pos);
             break;
 
         case eStateStop:
@@ -863,21 +880,15 @@ static int send_command(int state) {
 
             switch (state) {
                 case eStateStop:
-                    retVal = send_stop();
+                    retVal      = send_stop();
 
                     break;
                 case eStateStart:
-                    retVal = send_start();
+                    retVal      = send_start();
                     break;
 
                 case eStateSelectSlot:
-                    buff[pos++] = 0x01;
-                    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-                    buff[pos++] = 0x00;
-                    buff[pos++] = SUB_COMMAND_SELECT_SLOT;
-                    buff[pos++] = 0;
-                    
-                    retVal = send_message(buff, pos);
+                    retVal      = send_select_slot(0);
                     break;
 
                 case eStateGetSynthSettings:
@@ -885,8 +896,8 @@ static int send_command(int state) {
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x41;
                     buff[pos++] = SUB_COMMAND_GET_SYNTH_SETTINGS;
-                    
-                    retVal = send_message(buff, pos);
+
+                    retVal      = send_message(buff, pos);
                     break;
 
                 case eStateGetMidiCc:
@@ -894,8 +905,8 @@ static int send_command(int state) {
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x41;
                     buff[pos++] = SUB_COMMAND_GET_MIDI_CC;
-                    
-                    retVal = send_message(buff, pos);
+
+                    retVal      = send_message(buff, pos);
                     break;
 
                 case eStateGetUnknown2:
@@ -903,8 +914,8 @@ static int send_command(int state) {
                     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
                     buff[pos++] = 0x00;
                     buff[pos++] = SUB_COMMAND_UNKNOWN_2;
-                    
-                    retVal = send_message(buff, pos);
+
+                    retVal      = send_message(buff, pos);
                     break;
 
                 case eStateGetPatchVersionSlotA:
@@ -919,8 +930,8 @@ static int send_command(int state) {
                     buff[pos++] = 0x41;
                     buff[pos++] = SUB_COMMAND_GET_PATCH_VERSION;
                     buff[pos++] = slot;
-                    
-                    retVal = send_message(buff, pos);
+
+                    retVal      = send_message(buff, pos);
                     break;
                 }
 
@@ -935,8 +946,8 @@ static int send_command(int state) {
                     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
                     buff[pos++] = slotVersion_local[slot];
                     buff[pos++] = SUB_COMMAND_GET_PATCH_SLOT;
-                    
-                    retVal = send_message(buff, pos);
+
+                    retVal      = send_message(buff, pos);
                     break;
                 }
 
@@ -951,8 +962,8 @@ static int send_command(int state) {
                     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
                     buff[pos++] = slotVersion_local[slot];
                     buff[pos++] = SUB_COMMAND_GET_PATCH_NAME;
-                    
-                    retVal = send_message(buff, pos);
+
+                    retVal      = send_message(buff, pos);
                     break;
                 }
 
@@ -966,19 +977,15 @@ static int send_command(int state) {
             LOG_DEBUG("Unknown state %d\n", state);
             break;
     }
-    
     return retVal;
 }
-    
+
 static int send_write_data(tMessageContent * messageContent) {
-    int                    retVal                  = EXIT_FAILURE;
-    uint8_t                buff[SEND_MESSAGE_SIZE] = {0};
-    uint16_t               crc                     = 0;
-    int                    msgLength               = 0;
-    int                    pos                     = COMMAND_OFFSET;
-    int                    actualLength            = 0;
-    uint8_t                slotVersion_local[MAX_SLOTS];
-    libusb_device_handle * devHandle_local = NULL;
+    int                    retVal                       = EXIT_FAILURE;
+    uint8_t                buff[SEND_MESSAGE_SIZE]      = {0};
+    int                    pos                          = COMMAND_OFFSET;
+    uint8_t                slotVersion_local[MAX_SLOTS] = {0};
+    libusb_device_handle * devHandle_local              = NULL;
 
     pthread_mutex_lock(&usbStaticMutex);
     memcpy(slotVersion_local, gPatchVersion, sizeof(slotVersion_local));
@@ -1001,8 +1008,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->paramData.param;
             buff[pos++] = messageContent->paramData.value;
             buff[pos++] = messageContent->paramData.variation;
-            
-            retVal = send_message(buff, pos);
+
+            retVal      = send_message(buff, pos);
             break;
 
         case eMsgCmdSetMode:
@@ -1015,8 +1022,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->modeData.mode;
             buff[pos++] = messageContent->modeData.value;
             LOG_DEBUG("SET MODE %u %u\n", messageContent->modeData.mode, messageContent->modeData.value);
-            
-            retVal = send_message(buff, pos);
+
+            retVal      = send_message(buff, pos);
             break;
 
         case eMsgCmdWriteCable:
@@ -1029,8 +1036,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex;
             buff[pos++] = messageContent->cableData.moduleToIndex;
             buff[pos++] = messageContent->cableData.connectorToIoIndex;
-            
-            retVal = send_message(buff, pos);
+
+            retVal      = send_message(buff, pos);
             break;
 
         case eMsgCmdWriteModule:
@@ -1053,9 +1060,9 @@ static int send_write_data(tMessageContent * messageContent) {
             }
 
             strcpy((char *)&buff[pos], messageContent->moduleData.name);
-            pos += strlen(messageContent->moduleData.name) + 1;
-            
-            retVal = send_message(buff, pos);
+            pos        += strlen(messageContent->moduleData.name) + 1;
+
+            retVal      = send_message(buff, pos);
             break;
 
         case eMsgCmdMoveModule:
@@ -1067,8 +1074,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.moduleKey.index;
             buff[pos++] = messageContent->moduleData.column;
             buff[pos++] = messageContent->moduleData.row;
-            
-            retVal = send_message(buff, pos);
+
+            retVal      = send_message(buff, pos);
             break;
 
         case eMsgCmdDeleteModule:
@@ -1078,8 +1085,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = SUB_COMMAND_DELETE_MODULE;
             buff[pos++] = messageContent->moduleData.moduleKey.location;
             buff[pos++] = messageContent->moduleData.moduleKey.index;
-            
-            retVal = send_message(buff, pos);
+
+            retVal      = send_message(buff, pos);
             break;
 
         case eMsgCmdSetModuleUpRate:
@@ -1090,8 +1097,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.moduleKey.location;
             buff[pos++] = messageContent->moduleData.moduleKey.index;
             buff[pos++] = messageContent->moduleData.upRate;
-            
-            retVal = send_message(buff, pos);
+
+            retVal      = send_message(buff, pos);
             break;
 
         case eMsgCmdDeleteCable:
@@ -1104,8 +1111,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex;
             buff[pos++] = messageContent->cableData.moduleToIndex;
             buff[pos++] = messageContent->cableData.connectorToIoIndex;
-            
-            retVal = send_message(buff, pos);
+
+            retVal      = send_message(buff, pos);
             break;
 
         case eMsgCmdSetParamMorph:
@@ -1120,8 +1127,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->paramMorphData.value;
             buff[pos++] = messageContent->paramMorphData.negative;
             buff[pos++] = messageContent->paramMorphData.variation;
-            
-            retVal = send_message(buff, pos);
+
+            retVal      = send_message(buff, pos);
             break;
 
         case eMsgCmdSelectVariation:
@@ -1130,8 +1137,8 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = slotVersion_local[messageContent->slot];
             buff[pos++] = SUB_COMMAND_SELECT_VARIATION;
             buff[pos++] = messageContent->variationData.variation;
-            
-            retVal = send_message(buff, pos);
+
+            retVal      = send_message(buff, pos);
             break;
 
         case eMsgCmdSelectSlot:
@@ -1140,19 +1147,18 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = 0;
             buff[pos++] = SUB_COMMAND_SELECT_SLOT;
             buff[pos++] = messageContent->slotData.slot;
-            
-            retVal = send_message(buff, pos);
+
+            retVal      = send_message(buff, pos);
             break;
-            
+
         case eMsgCmdWritePatch:
         {
-            uint32_t i = 0;
+            uint32_t i      = 0;
             uint32_t bitPos = 0;
-            
+
             if (send_stop() == EXIT_SUCCESS) {
                 int_rec();
             }
-            
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
             buff[pos++] = UPLOAD_PATCH_VERSION;     // 0x53
@@ -1160,16 +1166,16 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = 0x00;
             buff[pos++] = 0x00;
             buff[pos++] = 0x00;
-            
+
             // Patch name: up to 16 bytes, null-terminated if shorter (WriteClaviaString)
-            
+
             while ((i < PATCH_NAME_SIZE) && (gPatchName[messageContent->slot][i] != '\0')) {
                 buff[pos++] = (uint8_t)gPatchName[messageContent->slot][i++];
             }
             buff[pos++] = 0x00;  // null terminator (always written even at len 16)
-            
-            bitPos = BYTE_TO_BIT(pos);
-            
+
+            bitPos      = BYTE_TO_BIT(pos);
+
             write_patch_descr(messageContent->slot, buff, &bitPos);
             write_module_list(messageContent->slot, locationVa, buff, &bitPos);
             write_module_list(messageContent->slot, locationFx, buff, &bitPos);
@@ -1189,25 +1195,24 @@ static int send_write_data(tMessageContent * messageContent) {
             write_module_names(messageContent->slot, locationVa, buff, &bitPos);
             write_module_names(messageContent->slot, locationFx, buff, &bitPos);
             write_patch_notes(messageContent->slot, buff, &bitPos);
-            
-            pos = BIT_TO_BYTE(bitPos);
+
+            pos    = BIT_TO_BYTE(bitPos);
 
             retVal = send_message(buff, pos);
+
             if (retVal == EXIT_SUCCESS) {
                 retVal = int_rec();
             }
-            
+
             if (send_start() == EXIT_SUCCESS) {
                 int_rec();
             }
-            
             break;
         }
 
         default:
             break;
     }
-    
     return retVal;
 }
 
@@ -1226,7 +1231,7 @@ static void state_handler(void) {
                         pthread_mutex_lock(&usbStaticMutex);
                         devHandle = devHandle_local;
                         pthread_mutex_unlock(&usbStaticMutex);
-                        state = eStateInit;
+                        state     = eStateInit;
                     }
                 }
             }
@@ -1260,11 +1265,10 @@ static void state_handler(void) {
             if (send_command(state) == EXIT_SUCCESS) {
                 if (int_rec() == EXIT_SUCCESS) {
                     if (state == eStateStop) {
-
                         // TODO - Should possibly just be per slot and clear global vars? Review below
                         database_clear_cables();
                         database_clear_modules();
-                        
+
                         call_full_patch_change_notify();
                         call_wake_glfw();
                     } else if (state == eStateStart) {

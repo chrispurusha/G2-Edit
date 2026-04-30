@@ -67,8 +67,8 @@ void adjust_scroll_for_drag(void) {
     tRectangle area          = module_area();
 
     get_global_gui_scaled_mouse_coord(&coord);
-    x = coord.x;
-    y = coord.y;
+    x              = coord.x;
+    y              = coord.y;
 
 
     xAdjustAmount *= timeDelta;
@@ -96,9 +96,9 @@ void adjust_scroll_for_drag(void) {
 }
 
 void update_module_up_rates(void) {
-    tModule  module   = {0};
-    uint32_t location = gLocation;
-    uint32_t slot     = gSlot;  // TODO: Might need to pass this in as a parameter
+    tModule  module      = {0};
+    uint32_t location    = gLocation;
+    uint32_t slot        = gSlot; // TODO: Might need to pass this in as a parameter
 
 
     // Step 1 - initialise the old and new fields
@@ -115,7 +115,7 @@ void update_module_up_rates(void) {
 
     // Step - run through cables and see if to module needs up-rating
 
-    bool changesMade = false;
+    bool     changesMade = false;
 
     do {
         changesMade = false;
@@ -148,12 +148,12 @@ void update_module_up_rates(void) {
                                 //LOG_DEBUG("From module is uprated from = %u %u\n", fromModule.key.location, fromModule.key.index);
                                 toModule.newUpRate = 1;
                                 write_module(toModuleKey, &toModule);
-                                changesMade = true;
+                                changesMade        = true;
                             } else if ((fromModule.connector[fromConnIndex].type == connectorTypeAudio) && (toModule.connector[toConnIndex].type != connectorTypeAudio)) {
                                 //LOG_DEBUG("From module from is audio and to is control\n");
                                 toModule.newUpRate = 1;
                                 write_module(toModuleKey, &toModule);
-                                changesMade = true;
+                                changesMade        = true;
                             }
                         }
                     }
@@ -169,7 +169,7 @@ void update_module_up_rates(void) {
     while (walk_next_module(&module)) {
         if ((module.key.slot == slot) && (module.key.location == location)) {
             if (module.newUpRate != module.upRate) {
-                module.upRate = module.newUpRate;
+                module.upRate                       = module.newUpRate;
 
                 write_module(module.key, &module);
 
@@ -210,7 +210,7 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
     for (locationListIndex = 0; locationListIndex < array_size_param_location_list(); locationListIndex++) {
         if (paramLocationList[locationListIndex].moduleType == module->type) {
             module->param[variation][paramIndex].value = paramLocationList[locationListIndex].defaultValue;
-            anyParamSet = true;
+            anyParamSet                                = true;
 
             for (int i = 0; i < NUM_VARIATIONS_USB; i++) {
                 messageContent.cmd                 = eMsgCmdSetValue;
@@ -251,6 +251,7 @@ void set_exclusive_button_highlight(tButtonId first, tButtonId last, tButtonId a
     for (tButtonId i = first; i <= last; i++) {
         gMainButtonArray[i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
     }
+
     gMainButtonArray[active].backgroundColour = (tRgb)RGB_GREEN_ON;
 }
 
@@ -269,21 +270,21 @@ void init_patch(uint32_t slot) {  // Todo - think where this should really go
     gPatchDescr[slot].monoPoly        = 1;
     gPatchDescr[slot].activeVariation = 0;
     gPatchDescr[slot].category        = 0;
-    
+
     database_delete_cables_by_slot(slot);
     database_delete_modules_by_slot(slot);
-    gMorphCount[slot]      = 8;  // Check default!?
-    gNote2Size[slot]       = 0;
-    gControllerCount[slot] = 0; // Seems to default to 2, so might need to set up defaults
-    gPatchNotesSize[slot]  = 0;
+    gMorphCount[slot]                 = 8; // Check default!?
+    gNote2Size[slot]                  = 0;
+    gControllerCount[slot]            = 0; // Seems to default to 2, so might need to set up defaults
+    gPatchNotesSize[slot]             = 0;
     memset(&(gPatchDescr[slot]), 0, sizeof(gPatchDescr[0]));
     memset(&(gKnobArray[slot]), 0, sizeof(gKnobArray[0]));
     memset(gNote2[slot], 0, sizeof(gNote2[0]));
     memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
-    memset(gPatchNotes[slot], 0,sizeof(gPatchNotes[0]));
-    strncpy(gPatchName[slot], "Init", PATCH_NAME_SIZE+1);
+    memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
+    strncpy(gPatchName[slot], "Init", PATCH_NAME_SIZE + 1);
 }
-    
+
 void handle_button(tButtonId buttonId) {
     switch (buttonId) {
         case vaButtonId:
@@ -321,9 +322,9 @@ void handle_button(tButtonId buttonId) {
         case variation7ButtonId:
         case variation8ButtonId:
         {
-            uint32_t variation = (uint32_t)buttonId - (uint32_t)variation1ButtonId;
+            uint32_t        variation      = (uint32_t)buttonId - (uint32_t)variation1ButtonId;
 
-            gPatchDescr[gSlot].activeVariation = variation;
+            gPatchDescr[gSlot].activeVariation     = variation;
 
             set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId, buttonId);
 
@@ -359,9 +360,9 @@ void handle_button(tButtonId buttonId) {
         case slotCButtonId:
         case slotDButtonId:
         {
-            uint32_t slot = (uint32_t)buttonId - (uint32_t)slotAButtonId;
+            uint32_t        slot           = (uint32_t)buttonId - (uint32_t)slotAButtonId;
 
-            gSlot = slot;
+            gSlot                        = slot;
 
             set_exclusive_button_highlight(slotAButtonId, slotDButtonId, buttonId);
 
@@ -378,11 +379,11 @@ void handle_button(tButtonId buttonId) {
         case initPatchId:
         {
             init_patch(gSlot);
-            
+
             //gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
             tMessageContent messageContent = {0};
-            messageContent.cmd           = eMsgCmdWritePatch;
-            messageContent.slot          = gSlot;
+            messageContent.cmd  = eMsgCmdWritePatch;
+            messageContent.slot = gSlot;
             msg_send(&gCommandQueue, &messageContent);
             break;
         }
@@ -390,8 +391,8 @@ void handle_button(tButtonId buttonId) {
         {
             //gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
             tMessageContent messageContent = {0};
-            messageContent.cmd           = eMsgCmdWritePatch;
-            messageContent.slot          = gSlot;
+            messageContent.cmd  = eMsgCmdWritePatch;
+            messageContent.slot = gSlot;
             msg_send(&gCommandQueue, &messageContent);
             break;
         }
@@ -416,7 +417,7 @@ void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already o
         if ((walk.column == module.column) && (walk.key.slot == key.slot) && (walk.key.location == key.location)) {
             if (walk.key.index != key.index) {
                 if ((module.row > walk.row) && (module.row < walk.row + gModuleProperties[walk.type].height)) {
-                    module.row = walk.row + gModuleProperties[walk.type].height;
+                    module.row       = walk.row + gModuleProperties[walk.type].height;
                     write_module(module.key, &module);
                     send_module_move_msg(&module);
                     moduleRePosition = true;
@@ -520,7 +521,7 @@ void menu_action_delete_cable(int index) {
                         outIndex = find_io_count_from_index(&module, connectorDirOut, gContextMenu.connectorIndex);
                         break;
                     case connectorDirIn:
-                        inIndex = find_io_count_from_index(&module, connectorDirIn, gContextMenu.connectorIndex);
+                        inIndex  = find_io_count_from_index(&module, connectorDirIn, gContextMenu.connectorIndex);
                         break;
                 }
 
@@ -641,10 +642,10 @@ void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row,
     tRectangle area = module_area();
 
     if (column != NULL) {
-        val  = coord.x - area.coord.x;
-        val += calc_scroll_x();
-        val /= MODULE_X_SPAN;
-        val /= get_zoom_factor();
+        val     = coord.x - area.coord.x;
+        val    += calc_scroll_x();
+        val    /= MODULE_X_SPAN;
+        val    /= get_zoom_factor();
 
         if (val < 0.0) {
             val = 0.0;
@@ -694,24 +695,24 @@ void menu_action_create(int index) {
         uniqueIndex         = find_unique_module_id(module.key.location);
 
         if (uniqueIndex > 0) {
-            module.key.index = (uint32_t)uniqueIndex;
-            module.type      = (tModuleType)gContextMenu.items[index].param;
+            module.key.index                                                           = (uint32_t)uniqueIndex;
+            module.type                                                                = (tModuleType)gContextMenu.items[index].param;
             convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.coord);
 
             strncpy(module.name, gModuleProperties[module.type].name, sizeof(module.name));
-            module.name[sizeof(module.name) - 1] = '\0';
+            module.name[sizeof(module.name) - 1]                                       = '\0';
 
-            messageContent.cmd                  = eMsgCmdWriteModule;
-            messageContent.slot                 = gSlot;
-            messageContent.moduleData.moduleKey = module.key;
-            messageContent.moduleData.type      = module.type;
-            messageContent.moduleData.row       = module.row;
-            messageContent.moduleData.column    = module.column;
-            messageContent.moduleData.colour    = module.colour;
-            messageContent.moduleData.upRate    = module.upRate;
-            messageContent.moduleData.isLed     = module.isLed;
-            messageContent.moduleData.unknown1  = module.unknown1;
-            messageContent.moduleData.modeCount = module_mode_count(module.type);
+            messageContent.cmd                                                         = eMsgCmdWriteModule;
+            messageContent.slot                                                        = gSlot;
+            messageContent.moduleData.moduleKey                                        = module.key;
+            messageContent.moduleData.type                                             = module.type;
+            messageContent.moduleData.row                                              = module.row;
+            messageContent.moduleData.column                                           = module.column;
+            messageContent.moduleData.colour                                           = module.colour;
+            messageContent.moduleData.upRate                                           = module.upRate;
+            messageContent.moduleData.isLed                                            = module.isLed;
+            messageContent.moduleData.unknown1                                         = module.unknown1;
+            messageContent.moduleData.modeCount                                        = module_mode_count(module.type);
 
             for (int i = 0; i < module_mode_count(module.type); i++) {
                 messageContent.moduleData.mode[i] = module.mode[i].value;
@@ -738,7 +739,7 @@ void menu_action_create(int index) {
 }
 
 void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static structures into a module like globalVars.c
-    static tMenuItem ioMenuItems[] = {
+    static tMenuItem ioMenuItems[]   = {
         {"Create Keyboard", menu_action_create, moduleTypeKeyboard, NULL},
         {"Create 2-In",     menu_action_create, moduleType2toIn,    NULL},
         {"Create 4-In",     menu_action_create, moduleType4toIn,    NULL},
@@ -761,7 +762,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create ZeroCnt",    menu_action_create, moduleTypeZeroCnt,    NULL},
         {NULL,                NULL,                                  0, NULL}     // End of menu
     };
-    static tMenuItem oscMenuItems[] = {
+    static tMenuItem oscMenuItems[]  = {
         {"Create Osc A",       menu_action_create, moduleTypeOscA,      NULL},
         {"Create Osc B",       menu_action_create, moduleTypeOscB,      NULL},
         {"Create Osc C",       menu_action_create, moduleTypeOscC,      NULL},
@@ -789,7 +790,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {NULL,             NULL,                               0, NULL}           // End of menu
     };
 
-    static tMenuItem lfoMenuItems[] = {
+    static tMenuItem lfoMenuItems[]    = {
         {"Create LFO A",     menu_action_create, moduleTypeLfoA,    NULL},
         {"Create LFO B",     menu_action_create, moduleTypeLfoB,    NULL},
         {"Create LFO C",     menu_action_create, moduleTypeLfoC,    NULL},
@@ -797,7 +798,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create ClkGen",    menu_action_create, moduleTypeClkGen,  NULL},
         {NULL,               NULL,                               0, NULL}         // End of menu
     };
-    static tMenuItem envMenuItems[] = {
+    static tMenuItem envMenuItems[]    = {
         {"Create Env ADSR",  menu_action_create, moduleTypeEnvADSR,  NULL},
         {"Create Env AHD",   menu_action_create, moduleTypeEnvAHD,   NULL},
         {"Create Env ADR",   menu_action_create, moduleTypeEnvADR,   NULL},
@@ -826,7 +827,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create Eq Peak",        menu_action_create, moduleTypeEqPeak,     NULL},
         {NULL,                    NULL,                                  0, NULL} // End of menu
     };
-    static tMenuItem delayMenuItems[] = {
+    static tMenuItem delayMenuItems[]  = {
         {"Create Delay Single A", menu_action_create, moduleTypeDlySingleA,  NULL},
         {"Create Delay Single B", menu_action_create, moduleTypeDlySingleB,  NULL},
         {"Create Delay Dual",     menu_action_create, moduleTypeDelayDual,   NULL},
@@ -841,7 +842,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
     };
 
 
-    static tMenuItem levelMenuItems[] = {
+    static tMenuItem levelMenuItems[]  = {
         {"Create Constant",  menu_action_create, moduleTypeConstant,  NULL},
         {"Create ConstSwM",  menu_action_create, moduleTypeConstSwM,  NULL},
         {"Create ConstSwT",  menu_action_create, moduleTypeConstSwT,  NULL},
@@ -880,7 +881,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create WindSw",   menu_action_create, moduleTypeWindSw,    NULL},
         {NULL,              NULL,                                 0, NULL}        // End of menu
     };
-    static tMenuItem seqMenuItems[] = {
+    static tMenuItem seqMenuItems[]    = {
         {"Create SeqEvent", menu_action_create, moduleTypeSeqEvent, NULL},
         {"Create SeqNote",  menu_action_create, moduleTypeSeqNote,  NULL},
         {"Create SeqVal",   menu_action_create, moduleTypeSeqVal,   NULL},
@@ -896,7 +897,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create Rect",      menu_action_create, moduleTypeRect,      NULL},
         {NULL,               NULL,                                 0, NULL}       // End of menu
     };
-    static tMenuItem mixerMenuItems[] = {
+    static tMenuItem mixerMenuItems[]  = {
         {"Create Mixer 1-1 A", menu_action_create, moduleTypeMix1to1A,  NULL},
         {"Create Mixer 1-1 S", menu_action_create, moduleTypeMix1to1S,  NULL},
         {"Create Mixer 2-1 A", menu_action_create, moduleTypeMix2to1A,  NULL},
@@ -914,7 +915,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create Pan",         menu_action_create, moduleTypePan,       NULL},
         {NULL,                 NULL,                                 0, NULL}     // End of menu
     };
-    static tMenuItem logicMenuItems[] = {
+    static tMenuItem logicMenuItems[]  = {
         {"Create Invert",     menu_action_create, moduleTypeInvert,     NULL},
         {"Create Pulse",      menu_action_create, moduleTypePulse,      NULL},
         {"Create Delay",      menu_action_create, moduleTypeDelay,      NULL},
@@ -927,7 +928,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create DAConv",     menu_action_create, moduleTypeDAConv,     NULL},
         {NULL,                NULL,                                  0, NULL}     // End of menu
     };
-    static tMenuItem fxMenuItems[] = {
+    static tMenuItem fxMenuItems[]     = {
         {"Create Compressor", menu_action_create, moduleTypeCompress,  NULL},
         {"Create Digitizer",  menu_action_create, moduleTypeDigitizer, NULL},
         {"Create FreqShift",  menu_action_create, moduleTypeFreqShift, NULL},
@@ -939,7 +940,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create Scratch",    menu_action_create, moduleTypeScratch,   NULL},
         {NULL,                NULL,                                 0, NULL}       // End of menu
     };
-    static tMenuItem midiMenuItems[] = {
+    static tMenuItem midiMenuItems[]   = {
         {"Create CtrlSend", menu_action_create, moduleTypeCtrlSend, NULL},
         {"Create PCSend",   menu_action_create, moduleTypePCSend,   NULL},
         {"Create NoteSend", menu_action_create, moduleTypeNoteSend, NULL},
@@ -969,7 +970,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Create Midi",     menu_action_create, 0, midiMenuItems  },
         {NULL,              NULL,               0, NULL           } // End of menu
     };
-    static tMenuItem menuItems[] = {
+    static tMenuItem menuItems[]       = {
         {"Create module", menu_action_create, 0, moduleMenuItems},
         {NULL,            NULL,               0, NULL           }  // End of menu
     };
@@ -1016,7 +1017,7 @@ bool handle_module_click(tCoord coord, int button) {
     // Since morph parameters are in top banner area, no longer need to check if (!within_rectangle(coord, module_area()))
 
     reset_walk_module();
-    tModule module = {0};
+    tModule     module     = {0};
 
     while (walk_next_module(&module) && (retVal == false)) {
         if (module.key.slot == gSlot && (module.key.location == gLocation || module.key.location == locationMorph)) {
@@ -1057,9 +1058,9 @@ bool handle_module_click(tCoord coord, int button) {
                             if (module.key.location == locationMorph) {
                                 gMorphGroupFocus = i;
                             }
-                            retVal = true;
+                            retVal                            = true;
                         } else if (paramType2 == paramType2UpDown) {
-                            range = paramLocationList[param->paramRef].range;
+                            range                              = paramLocationList[param->paramRef].range;
 
                             if (within_lower_half_of_rectangle(coord, param->rectangle)) {
                                 param->value = (param->value - 1) % range;
@@ -1076,14 +1077,14 @@ bool handle_module_click(tCoord coord, int button) {
                             messageContent.paramData.value     = param->value;
 
                             msg_send(&gCommandQueue, &messageContent);
-                            retVal = true;
+                            retVal                             = true;
                         } else {
                             if (module.key.location == locationMorph) {   // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
                                 range = 2;
                             } else {
                                 range = paramLocationList[param->paramRef].range;
                             }
-                            param->value = (param->value + 1) % range;
+                            param->value                       = (param->value + 1) % range;
                             write_module(module.key, &module);
 
                             tMessageContent messageContent = {0};
@@ -1095,7 +1096,7 @@ bool handle_module_click(tCoord coord, int button) {
                             messageContent.paramData.value     = param->value;
 
                             msg_send(&gCommandQueue, &messageContent);
-                            retVal = true;
+                            retVal                             = true;
                         }
                     }
                 }
@@ -1118,7 +1119,7 @@ bool handle_module_click(tCoord coord, int button) {
                                 retVal                            = true;
                             } else {
                                 // Toggle
-                                mode->value = (mode->value + 1) % modeLocationList[mode->modeRef].range;
+                                mode->value                       = (mode->value + 1) % modeLocationList[mode->modeRef].range;
                                 write_module(module.key, &module);
                                 tMessageContent messageContent = {0};
                                 messageContent.cmd                = eMsgCmdSetMode;
@@ -1129,7 +1130,7 @@ bool handle_module_click(tCoord coord, int button) {
 
                                 msg_send(&gCommandQueue, &messageContent);
 
-                                retVal = true;
+                                retVal                            = true;
                                 /*param->value = (param->value + 1) % paramLocationList[param->paramRef].range;
                                  * write_module(module.key, &module);
                                  *
@@ -1160,8 +1161,8 @@ bool handle_module_click(tCoord coord, int button) {
 
                             convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, coord);
 
-                            gCableDrag.active = true;
-                            retVal            = true;
+                            gCableDrag.active             = true;
+                            retVal                        = true;
                         } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
                             open_connector_context_menu(coord, module.key, i);
                             finish_walk_module();
@@ -1231,7 +1232,7 @@ bool handle_context_menu_click(tCoord coord) {
         }
     }
 
-    int yOffset = 0;
+    int    yOffset     = 0;
 
     for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
         tRectangle itemRect = {
@@ -1297,15 +1298,15 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     if (action == GLFW_PRESS) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
             bool found = false;
-            
+
             for (uint32_t i = 0; i < array_size_main_button_array(); i++) {
                 if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
-                    found = true;
+                    found                         = true;
                     gMainButtonArray[i].isPressed = true;
                     break;
                 }
             }
-            
+
             if (found == false) {
                 if (gContextMenu.active == false) {
                     if (!handle_scrollbar_click(coord)) {
@@ -1321,7 +1322,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             for (uint32_t i = 0; i < array_size_main_button_array(); i++) {
                 gMainButtonArray[i].isPressed = false;
             }
-            
+
             for (uint32_t i = 0; i < array_size_main_button_array(); i++) {
                 if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
                     handle_button((tButtonId)i);
@@ -1363,7 +1364,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                                     quitLoop = true;
                                     break;
                                 }
-                                cable.colour = 0; // TODO: choose colour from menu or calculate
+                                cable.colour                                  = 0; // TODO: choose colour from menu or calculate
                                 write_cable(cableKey, &cable);
 
                                 tMessageContent messageContent = {0};
@@ -1379,7 +1380,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                                 messageContent.cableData.colour               = cable.colour;
                                 msg_send(&gCommandQueue, &messageContent);
 
-                                quitLoop = true;
+                                quitLoop                                      = true;
                                 break;
                             }
                         }
@@ -1449,12 +1450,12 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
 
                             write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
 
-                            messageContent.cmd                 = eMsgCmdSetValue;
-                            messageContent.slot                = gSlot;
-                            messageContent.paramData.moduleKey = gParamDragging.moduleKey;
-                            messageContent.paramData.param     = gParamDragging.param;
-                            messageContent.paramData.variation = gPatchDescr[gSlot].activeVariation;
-                            messageContent.paramData.value     = value;
+                            messageContent.cmd                                                           = eMsgCmdSetValue;
+                            messageContent.slot                                                          = gSlot;
+                            messageContent.paramData.moduleKey                                           = gParamDragging.moduleKey;
+                            messageContent.paramData.param                                               = gParamDragging.param;
+                            messageContent.paramData.variation                                           = gPatchDescr[gSlot].activeVariation;
+                            messageContent.paramData.value                                               = value;
                             msg_send(&gCommandQueue, &messageContent);
                         }
                     } else {
@@ -1491,11 +1492,11 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
 
                         write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
 
-                        messageContent.cmd                = eMsgCmdSetMode;
-                        messageContent.slot               = gSlot;
-                        messageContent.modeData.moduleKey = gParamDragging.moduleKey;
-                        messageContent.modeData.mode      = gParamDragging.mode;
-                        messageContent.modeData.value     = value;
+                        messageContent.cmd                     = eMsgCmdSetMode;
+                        messageContent.slot                    = gSlot;
+                        messageContent.modeData.moduleKey      = gParamDragging.moduleKey;
+                        messageContent.modeData.mode           = gParamDragging.mode;
+                        messageContent.modeData.value          = value;
                         msg_send(&gCommandQueue, &messageContent);
                     }
                 }

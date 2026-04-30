@@ -36,22 +36,22 @@ extern "C" {
 #include "globalVars.h"
 
 void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
-    gPatchDescr[slot].unknown1        = read_bit_stream(buff, subOffset, 32);
-    gPatchDescr[slot].unknown2        = read_bit_stream(buff, subOffset, 29);
-    gPatchDescr[slot].voiceCount      = read_bit_stream(buff, subOffset, 5);
-    gPatchDescr[slot].barPosition     = read_bit_stream(buff, subOffset, 14);
-    gPatchDescr[slot].unknown3        = read_bit_stream(buff, subOffset, 3);
-    gPatchDescr[slot].redVisible      = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].blueVisible     = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].yellowVisible   = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].orangeVisible   = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].greenVisible    = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].purpleVisible   = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].whiteVisible    = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].monoPoly        = read_bit_stream(buff, subOffset, 2);
-    gPatchDescr[slot].activeVariation = read_bit_stream(buff, subOffset, 8);
-    gPatchDescr[slot].category        = read_bit_stream(buff, subOffset, 8);
-    gPatchDescr[slot].unknown4        = read_bit_stream(buff, subOffset, 12);
+    gPatchDescr[slot].unknown1                                                                          = read_bit_stream(buff, subOffset, 32);
+    gPatchDescr[slot].unknown2                                                                          = read_bit_stream(buff, subOffset, 29);
+    gPatchDescr[slot].voiceCount                                                                        = read_bit_stream(buff, subOffset, 5);
+    gPatchDescr[slot].barPosition                                                                       = read_bit_stream(buff, subOffset, 14);
+    gPatchDescr[slot].unknown3                                                                          = read_bit_stream(buff, subOffset, 3);
+    gPatchDescr[slot].redVisible                                                                        = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].blueVisible                                                                       = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].yellowVisible                                                                     = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].orangeVisible                                                                     = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].greenVisible                                                                      = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].purpleVisible                                                                     = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].whiteVisible                                                                      = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].monoPoly                                                                          = read_bit_stream(buff, subOffset, 2);
+    gPatchDescr[slot].activeVariation                                                                   = read_bit_stream(buff, subOffset, 8);
+    gPatchDescr[slot].category                                                                          = read_bit_stream(buff, subOffset, 8);
+    gPatchDescr[slot].unknown4                                                                          = read_bit_stream(buff, subOffset, 12);
 
     LOG_DEBUG("  Voice Count %u\n", gPatchDescr[slot].voiceCount);
     LOG_DEBUG("  Bar Position %u\n", gPatchDescr[slot].barPosition);
@@ -98,23 +98,23 @@ void write_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
 }
 
 void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
-    uint32_t   i      = 0;
-    uint32_t   j      = 0;
-    uint32_t   type   = 0;
-    tModuleKey key    = {0};
-    tModule    module = {0};
+    uint32_t   i           = 0;
+    uint32_t   j           = 0;
+    uint32_t   type        = 0;
+    tModuleKey key         = {0};
+    tModule    module      = {0};
 
     LOG_DEBUG("Module list\n");
 
     key.slot     = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
     LOG_DEBUG("Location       0x%x\n", key.location);     // Discerns between FX and main, could put in the module itself
-    uint32_t moduleCount = read_bit_stream(buff, subOffset, 8);
+    uint32_t   moduleCount = read_bit_stream(buff, subOffset, 8);
     LOG_DEBUG("Module Count   %d\n", moduleCount);
 
     for (i = 0; i < moduleCount; i++) {
-        type      = read_bit_stream(buff, subOffset, 8);
-        key.index = read_bit_stream(buff, subOffset, 8);
+        type             = read_bit_stream(buff, subOffset, 8);
+        key.index        = read_bit_stream(buff, subOffset, 8);
 
         if (read_module(key, &module) == true) {
             LOG_DEBUG("Module already created\n");
@@ -144,9 +144,9 @@ void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
 }
 
 void write_module_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos) {
-    tModule  module      = {0};
-    uint32_t moduleCount = 0;
-    bool     validModule = false;
+    tModule  module            = {0};
+    uint32_t moduleCount       = 0;
+    bool     validModule       = false;
     //int32_t   location = 0;
     uint32_t sizeBitPos        = 0;
     uint32_t moduleCountBitPos = 0;
@@ -154,7 +154,7 @@ void write_module_list(uint32_t slot, tLocation location, uint8_t * buff, uint32
 
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_MODULE_LIST);
 
-    sizeBitPos = *bitPos;
+    sizeBitPos        = *bitPos;
     write_bit_stream(buff, bitPos, 16, 0);  // Populated later
 
     write_bit_stream(buff, bitPos, 2, location);
@@ -162,7 +162,7 @@ void write_module_list(uint32_t slot, tLocation location, uint8_t * buff, uint32
     moduleCountBitPos = *bitPos;
     write_bit_stream(buff, bitPos, 8, 0);  // Populated later
 
-    moduleCount = 0;
+    moduleCount       = 0;
     reset_walk_module();
 
     do {
@@ -197,8 +197,8 @@ void write_module_list(uint32_t slot, tLocation location, uint8_t * buff, uint32
 }
 
 void parse_cable_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
-    tCableKey key   = {0};
-    tCable    cable = {0};
+    tCableKey key        = {0};
+    tCable    cable      = {0};
 
     LOG_DEBUG("Cable list\n");
 
@@ -206,7 +206,7 @@ void parse_cable_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     key.location = read_bit_stream(buff, subOffset, 2);
     LOG_DEBUG("Location       0x%x\n", key.location);
     LOG_DEBUG("Unknown        0x%x\n", read_bit_stream(buff, subOffset, 12));  // TODO, store
-    uint32_t cableCount = read_bit_stream(buff, subOffset, 10);
+    uint32_t  cableCount = read_bit_stream(buff, subOffset, 10);
     LOG_DEBUG("Cable Count    %d\n", cableCount);
 
     for (uint32_t i = 0; i < cableCount; i++) {
@@ -230,7 +230,7 @@ void write_cable_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_CABLE_LIST);
 
-    sizeBitPos = *bitPos;
+    sizeBitPos       = *bitPos;
     write_bit_stream(buff, bitPos, 16, 0);  // Populated later
     write_bit_stream(buff, bitPos, 2, location);
     write_bit_stream(buff, bitPos, 12, 0);  // Unknown - TODO, store
@@ -238,7 +238,7 @@ void write_cable_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     cableCountBitPos = *bitPos;
     write_bit_stream(buff, bitPos, 10, 0);  // Populated later
 
-    cableCount = 0;
+    cableCount       = 0;
     reset_walk_cable();
 
     do {
@@ -268,34 +268,35 @@ void write_cable_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 
 void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     uint32_t   numVariations = 0;
-    uint32_t   paramCount     = 0;
-    uint32_t   moduleCount    = 0;
-    uint32_t   paramValue     = 0;
-    tModuleKey key            = {0};
-    tModule    module         = {0};
-    int        i              = 0;
-    int        j              = 0;
-    int        k              = 0;
+    uint32_t   paramCount    = 0;
+    uint32_t   moduleCount   = 0;
+    uint32_t   paramValue    = 0;
+    tModuleKey key           = {0};
+    tModule    module        = {0};
+    int        i             = 0;
+    int        j             = 0;
+    int        k             = 0;
 
     LOG_DEBUG("Param list\n");
-    key.slot     = slot;
-    key.location = read_bit_stream(buff, subOffset, 2);
+    key.slot      = slot;
+    key.location  = read_bit_stream(buff, subOffset, 2);
     LOG_DEBUG("Location       0x%x\n", key.location);     // 0..1 = param list, 2 = patch settings!?
     // SWITCH ON LOC BEING 0..1 or 2 2 = line 4112 in file.pas
-    moduleCount = read_bit_stream(buff, subOffset, 8);
+    moduleCount   = read_bit_stream(buff, subOffset, 8);
     LOG_DEBUG("Module Count      %u\n", moduleCount);
     numVariations = read_bit_stream(buff, subOffset, 8);     // Should always be 10 on USB or 9 in a file - TODO: sanity check
     LOG_DEBUG("Variation Count      %u\n", numVariations);
+
     if (numVariations > 10) {
         LOG_DEBUG("Variation Count > 10\n");
         return;
     }
 
     for (i = 0; i < moduleCount; i++) {
-        key.index = read_bit_stream(buff, subOffset, 8);
+        key.index               = read_bit_stream(buff, subOffset, 8);
         //LOG_DEBUG(" Module Index        %u\n", key.index);
 
-        paramCount = read_bit_stream(buff, subOffset, 7);
+        paramCount              = read_bit_stream(buff, subOffset, 7);
         LOG_DEBUG("  variation list param count = %u\n", paramCount);
 
         if (paramCount >= MAX_NUM_PARAMETERS) {
@@ -325,7 +326,7 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             }
 
             for (k = 0; k < paramCount; k++) {
-                paramValue = read_bit_stream(buff, subOffset, 7);
+                paramValue               = read_bit_stream(buff, subOffset, 7);
 
                 if (variation == 0) { // Limit to just 1st variation for now
                     LOG_DEBUG("   Param number %02d param value %02d\n", k, paramValue);
@@ -352,7 +353,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_PARAM_LIST);
 
-    sizeBitPos = *bitPos;
+    sizeBitPos        = *bitPos;
     write_bit_stream(buff, bitPos, 16, 0);  // Populated later
 
     write_bit_stream(buff, bitPos, 2, location);
@@ -360,7 +361,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     moduleCountBitPos = *bitPos;
     write_bit_stream(buff, bitPos, 8, 0);  // Populated later
 
-    variationsBitPos = *bitPos;
+    variationsBitPos  = *bitPos;
     write_bit_stream(buff, bitPos, 8, 0);  // Write 9 for files, not 10!
 
     reset_walk_module();
@@ -404,7 +405,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset, uint32_t chunkBitEnd) {
     tModule    module          = {0};
     tModuleKey key             = {0};
-    uint32_t   numVariations  = 0;
+    uint32_t   numVariations   = 0;
     uint32_t   variation       = 0;
     uint32_t   morphParamCount = 0;
     uint32_t   paramIndex      = 0;
@@ -413,15 +414,15 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset, uin
     int        j               = 0;
     int        k               = 0;
 
-    numVariations    = read_bit_stream(buff, subOffset, 8);
+    numVariations     = read_bit_stream(buff, subOffset, 8);
     gMorphCount[slot] = read_bit_stream(buff, subOffset, 4);
     read_bit_stream(buff, subOffset, 20);  // Reserved
 
     LOG_DEBUG("Variations %u Morph Count %u\n", numVariations, gMorphCount[slot]);
 
     for (j = 0; j < numVariations; j++) {    // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
-        variation = read_bit_stream(buff, subOffset, 4);
-        read_bit_stream(buff, subOffset, 4);  // Lots of unknown stuff
+        variation       = read_bit_stream(buff, subOffset, 4);
+        read_bit_stream(buff, subOffset, 4); // Lots of unknown stuff
         read_bit_stream(buff, subOffset, 8);
         read_bit_stream(buff, subOffset, 8);
         read_bit_stream(buff, subOffset, 8);
@@ -433,12 +434,12 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset, uin
         LOG_DEBUG("Variation %u Morph param count %u\n", variation, morphParamCount);
 
         for (k = 0; k < morphParamCount; k++) {
-            key.slot     = slot;
-            key.location = read_bit_stream(buff, subOffset, 2);
-            key.index    = read_bit_stream(buff, subOffset, 8);
-            paramIndex   = read_bit_stream(buff, subOffset, 7);
-            morph        = read_bit_stream(buff, subOffset, 4);
-            range        = read_bit_stream(buff, subOffset, 8);
+            key.slot                                      = slot;
+            key.location                                  = read_bit_stream(buff, subOffset, 2);
+            key.index                                     = read_bit_stream(buff, subOffset, 8);
+            paramIndex                                    = read_bit_stream(buff, subOffset, 7);
+            morph                                         = read_bit_stream(buff, subOffset, 4);
+            range                                         = read_bit_stream(buff, subOffset, 8);
 
             LOG_DEBUG("  Location %u\n", key.location);
             LOG_DEBUG("  Module index %u\n", key.index);
@@ -455,9 +456,9 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset, uin
         }
 
         uint32_t bitsLeft = chunkBitEnd - *subOffset;
-        
+
         LOG_DEBUG("subOffset before pad: %u, chunk end: %u\n", *subOffset, chunkBitEnd);
-        
+
         read_bit_stream(buff, subOffset, (bitsLeft < 4) ? bitsLeft : 4);
     }
 }
@@ -472,15 +473,15 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32
     uint32_t i                     = 0;
     uint32_t j                     = 0;
     uint32_t m                     = 0;
-    
+
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_MORPH_PARAMS);
 
     sizeBitPos = *bitPos;
-    write_bit_stream(buff, bitPos, 16, 0);                 // Populated later
+    write_bit_stream(buff, bitPos, 16, 0);            // Populated later
 
     write_bit_stream(buff, bitPos, 8, numVariations); // Variation count (9)
     write_bit_stream(buff, bitPos, 4, gMorphCount[slot]);
-    write_bit_stream(buff, bitPos, 20, 0);                 // Reserved data
+    write_bit_stream(buff, bitPos, 20, 0);            // Reserved data
 
     for (i = 0; i < numVariations; i++) {
         write_bit_stream(buff, bitPos, 4, i);  // Variation number
@@ -496,7 +497,7 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32
         morphParamCountBitPos = *bitPos;
         write_bit_stream(buff, bitPos, 8, 0);  // Populated later
 
-        morphParamCount = 0;
+        morphParamCount       = 0;
         reset_walk_module();
 
         do {
@@ -545,7 +546,6 @@ void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     if (slot >= MAX_SLOTS) {
         return;
     }
-
     knobCount = read_bit_stream(buff, subOffset, 16);
     LOG_DEBUG("  Knob Count %u\n", knobCount);
 
@@ -555,7 +555,6 @@ void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         LOG_ERROR("parse_knobs: knobCount %u exceeds KNOB_COUNT %u\n", knobCount, MAX_NUM_KNOBS);
         knobCount = MAX_NUM_KNOBS;
     }
-
     // Clear the list before repopulating
     memset(&gKnobArray[slot], 0, sizeof(tKnobArray));
 
@@ -579,13 +578,12 @@ void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
 }
 
 void write_knobs(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
-    int      i         = 0;
+    int      i          = 0;
     uint32_t sizeBitPos = 0;
 
     if (slot >= MAX_SLOTS) {
         return;
     }
-
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_KNOBS);
 
     sizeBitPos = *bitPos;
@@ -604,7 +602,7 @@ void write_knobs(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
         }
     }
 
-    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+    *bitPos    = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
@@ -627,11 +625,11 @@ void parse_controllers(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     }
 
     for (i = 0; i < controllerCount; i++) {
-        gControllerArray[slot].controller[i].midiCC   = read_bit_stream(buff, subOffset, 7);
-        key.slot                          = slot;
-        key.location                      = read_bit_stream(buff, subOffset, 2);
-        key.index                         = read_bit_stream(buff, subOffset, 8);
-        paramIndex                        = read_bit_stream(buff, subOffset, 7);
+        gControllerArray[slot].controller[i].midiCC      = read_bit_stream(buff, subOffset, 7);
+        key.slot                                         = slot;
+        key.location                                     = read_bit_stream(buff, subOffset, 2);
+        key.index                                        = read_bit_stream(buff, subOffset, 8);
+        paramIndex                                       = read_bit_stream(buff, subOffset, 7);
         gControllerArray[slot].controller[i].location    = key.location;
         gControllerArray[slot].controller[i].moduleIndex = key.index;
         gControllerArray[slot].controller[i].paramIndex  = paramIndex;
@@ -661,7 +659,7 @@ void write_controllers(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
 
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_CONTROLLERS);
 
-    sizeBitPos = *bitPos;
+    sizeBitPos            = *bitPos;
     write_bit_stream(buff, bitPos, 16, 0);  // Populated later
 
     controllerCountBitPos = *bitPos;
@@ -674,7 +672,7 @@ void write_controllers(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
         write_bit_stream(buff, bitPos, 7, gControllerArray[slot].controller[i].paramIndex);
     }
 
-    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+    *bitPos               = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 
     write_bit_stream(buff, &controllerCountBitPos, 7, gControllerCount[slot]);
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
@@ -699,11 +697,11 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     key.slot     = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
     LOG_DEBUG("Location       0x%x\n", key.location);
-    nameCount = read_bit_stream(buff, subOffset, 8);
+    nameCount    = read_bit_stream(buff, subOffset, 8);
     LOG_DEBUG("NameCount      %d\n", nameCount);
 
     for (i = 0; i < nameCount; i++) {
-        key.index = read_bit_stream(buff, subOffset, 8);
+        key.index    = read_bit_stream(buff, subOffset, 8);
         LOG_DEBUG("Module index      %d\n", key.index);
 
         if (read_module(key, &module) == false) {
@@ -713,17 +711,17 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         LOG_DEBUG("Module length     %d\n\n", moduleLength);
 
         for (j = 0; j < moduleLength;) {
-            isString = read_bit_stream(buff, subOffset, 8);
+            isString    = read_bit_stream(buff, subOffset, 8);
             LOG_DEBUG("IsString     %d\n", isString);
             paramLength = read_bit_stream(buff, subOffset, 8);
             LOG_DEBUG("ParamLen     %d\n", paramLength);
-            paramIndex = read_bit_stream(buff, subOffset, 8);
+            paramIndex  = read_bit_stream(buff, subOffset, 8);
             LOG_DEBUG("Param Index  %d\n", paramIndex);
-            j += 3;
+            j          += 3;
             LOG_DEBUG("Param name: ");
 
             if (paramLength > 0) {
-                numLabels = (paramLength - 1) / PROTOCOL_PARAM_NAME_SIZE;
+                numLabels                         = (paramLength - 1) / PROTOCOL_PARAM_NAME_SIZE;
 
                 if (numLabels > MAX_NUM_LABELS) {
                     LOG_ERROR("numLabels %u exceeds maximum %u for param %u\n", numLabels, MAX_NUM_LABELS, paramIndex);
@@ -758,7 +756,7 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                     }
                 }
 
-                j += paramLength - 1;
+                j                                += paramLength - 1;
             }
             LOG_DEBUG_DIRECT(";\n");
         }
@@ -785,7 +783,7 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
 
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_PARAM_NAMES);
 
-    sizeBitPos = *bitPos;
+    sizeBitPos      = *bitPos;
     write_bit_stream(buff, bitPos, 16, 0);  // Populated later
 
     write_bit_stream(buff, bitPos, 2, location);
@@ -795,7 +793,7 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
 
     LOG_DEBUG("Write param names for location %d\n", location);
 
-    nameCount = 0;
+    nameCount       = 0;
     reset_walk_module();
 
     do {
@@ -828,13 +826,13 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
                         moduleLengthBitPos = *bitPos;
                         write_bit_stream(buff, bitPos, 8, 0);  // Populated later
 
-                        moduleLength = 0;
+                        moduleLength       = 0;
 
                         for (j = 0; j < paramCount; j++) {
                             numLabels = module.paramNumLabels[j];
 
                             if (numLabels > 0) {
-                                paramLength = 1 + (numLabels * PROTOCOL_PARAM_NAME_SIZE);
+                                paramLength   = 1 + (numLabels * PROTOCOL_PARAM_NAME_SIZE);
 
                                 write_bit_stream(buff, bitPos, 8, 1);  // isString
                                 write_bit_stream(buff, bitPos, 8, paramLength);
@@ -889,7 +887,7 @@ void parse_module_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     key.location = read_bit_stream(buff, subOffset, 2);
     read_bit_stream(buff, subOffset, 6);
     LOG_DEBUG("Location 0x%x\n", key.location);
-    uint32_t items = read_bit_stream(buff, subOffset, 8);
+    uint32_t   items  = read_bit_stream(buff, subOffset, 8);
     LOG_DEBUG("Items %u\n", items);
 
     for (i = 0; i < items; i++) {
@@ -928,7 +926,7 @@ void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint3
 
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_MODULE_NAMES);
 
-    sizeBitPos = *bitPos;
+    sizeBitPos      = *bitPos;
     write_bit_stream(buff, bitPos, 16, 0);  // Populated later
 
     write_bit_stream(buff, bitPos, 2, location);
@@ -937,7 +935,7 @@ void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint3
     itemCountBitPos = *bitPos;
     write_bit_stream(buff, bitPos, 8, 0);  // Populated later
 
-    moduleCount = 0;
+    moduleCount     = 0;
     reset_walk_module();
 
     do {
@@ -982,23 +980,23 @@ void write_patch_notes(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
         write_bit_stream(buff, bitPos, 8, gPatchNotes[slot][i]);
     }
 
-    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+    *bitPos    = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
 
 void write_current_note_2(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     // Fixed payload for now
-    write_bit_stream(buff, bitPos, 8,  SUB_RESPONSE_CURRENT_NOTE_2);
+    write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_CURRENT_NOTE_2);
     write_bit_stream(buff, bitPos, 16, 6);
-    write_bit_stream(buff, bitPos, 8,  0x80);
-    write_bit_stream(buff, bitPos, 8,  0x00);
-    write_bit_stream(buff, bitPos, 8,  0x00);
-    write_bit_stream(buff, bitPos, 8,  0x20);
-    write_bit_stream(buff, bitPos, 8,  0x00);
-    write_bit_stream(buff, bitPos, 8,  0x00);
+    write_bit_stream(buff, bitPos, 8, 0x80);
+    write_bit_stream(buff, bitPos, 8, 0x00);
+    write_bit_stream(buff, bitPos, 8, 0x00);
+    write_bit_stream(buff, bitPos, 8, 0x20);
+    write_bit_stream(buff, bitPos, 8, 0x00);
+    write_bit_stream(buff, bitPos, 8, 0x00);
 }
-    
+
 #ifdef __cplusplus
 }
 #endif

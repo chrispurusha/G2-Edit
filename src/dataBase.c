@@ -122,7 +122,7 @@ void write_module(tModuleKey key, tModule * module) {
 
     database_mutex_lock();
 
-    dbModule = find_module(key);
+    dbModule    = find_module(key);
 
     if (dbModule == NULL) {
         dbModule = (tModule *)malloc(sizeof(tModule));
@@ -136,7 +136,7 @@ void write_module(tModuleKey key, tModule * module) {
         if (firstModule == NULL) {
             firstModule = dbModule;
         } else {
-            iterateModule = firstModule;
+            iterateModule       = firstModule;
 
             while (iterateModule->next != NULL) {
                 iterateModule = iterateModule->next;
@@ -288,7 +288,7 @@ void write_cable(tCableKey key, tCable * cable) {
 
     database_mutex_lock();
 
-    dbCable = find_cable(key);
+    dbCable    = find_cable(key);
 
     if (dbCable == NULL) {
         dbCable = (tCable *)malloc(sizeof(tCable));
@@ -302,7 +302,7 @@ void write_cable(tCableKey key, tCable * cable) {
         if (firstCable == NULL) {
             firstCable = dbCable;
         } else {
-            iterateCable = firstCable;
+            iterateCable       = firstCable;
 
             while (iterateCable->next != NULL) {
                 iterateCable = iterateCable->next;
@@ -391,12 +391,12 @@ void database_delete_modules_by_slot(uint32_t slot) {
 
     while (module != NULL) {
         nextModule = module->next;
+
         if (module->key.slot == slot) {
             delete_module(module->key);
         }
-        module = nextModule;
+        module     = nextModule;
     }
-
     database_mutex_unlock();
 }
 
@@ -410,27 +410,27 @@ void database_delete_cables_by_slot(uint32_t slot) {
 
     while (cable != NULL) {
         nextCable = cable->next;
+
         if (cable->key.slot == slot) {
             delete_cable(cable->key);
         }
-        cable = nextCable;
+        cable     = nextCable;
     }
-    
     database_mutex_unlock();
 }
-    
+
 void database_clear_modules(void) {
     tModule * module     = NULL;
     tModule * nextModule = NULL;
 
     database_mutex_lock();
 
-    module = firstModule;
+    module      = firstModule;
 
     while (module != NULL) {
         nextModule = module->next;
         free(module);
-        module = nextModule;
+        module     = nextModule;
     }
     firstModule = NULL;
 
@@ -443,12 +443,12 @@ void database_clear_cables(void) {
 
     database_mutex_lock();
 
-    cable = firstCable;
+    cable      = firstCable;
 
     while (cable != NULL) {
         nextCable = cable->next;
         free(cable);
-        cable = nextCable;
+        cable     = nextCable;
     }
     firstCable = NULL;
 
