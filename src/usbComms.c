@@ -1156,9 +1156,15 @@ static int send_write_data(tMessageContent * messageContent) {
             uint32_t i      = 0;
             uint32_t bitPos = 0;
 
-            if (send_stop() == EXIT_SUCCESS) {
-                int_rec();
+            retVal = send_stop();
+            if (retVal != EXIT_SUCCESS) {
+                break;
             }
+            retVal = int_rec();
+            if (retVal != EXIT_SUCCESS) {
+                break;
+            }
+            
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
             buff[pos++] = UPLOAD_PATCH_VERSION;     // 0x53
@@ -1200,12 +1206,21 @@ static int send_write_data(tMessageContent * messageContent) {
 
             retVal = send_message(buff, pos);
 
-            if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec();
+            if (retVal != EXIT_SUCCESS) {
+                break;
+            }
+            retVal = int_rec();
+            if (retVal != EXIT_SUCCESS) {
+                break;
             }
 
-            if (send_start() == EXIT_SUCCESS) {
-                int_rec();
+            retVal = send_start();
+            if (retVal != EXIT_SUCCESS) {
+                break;
+            }
+            retVal = int_rec();
+            if (retVal != EXIT_SUCCESS) {
+                break;
             }
             break;
         }
