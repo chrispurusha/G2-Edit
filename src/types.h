@@ -695,10 +695,10 @@ typedef struct {
 } tControllerArray;
 
 typedef enum {
-    eCommsSearching,    // No hardware found yet
-    eCommsConnecting,   // Init sequence running
-    eCommsOnline,       // In poll, fully synced
-    eCommsReconnecting  // Lost connection
+    eCommsNeverConnected,
+    eCommsReconnecting,
+    eCommsInitialising,
+    eCommsOnLine
 } tCommsState;
 
 #endif // __TYPES_H__

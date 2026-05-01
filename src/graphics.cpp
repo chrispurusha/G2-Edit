@@ -220,25 +220,20 @@ void render_top_bar(void) {
         gMainButtonArray[i].rectangle = draw_button(mainArea, rectangle, gMainButtonArray[i].text, gMainButtonArray[i].isPressed);
     }
 
+    commsStateColour = RGB_BACKGROUND_GREY;
+    
     switch (commsState) {
-        case eCommsSearching:
-            commsStateText   = "Searching";
+        case eCommsNeverConnected:
+        case eCommsReconnecting:
+            commsStateText   = "Offline";
             break;
-        case eCommsConnecting:
-            commsStateText   = "Connecting";
-            break;
-        case eCommsOnline:
+        case eCommsOnLine:
             commsStateText   = "Online";
             commsStateColour = RGB_GREEN_7;
             break;
-        case eCommsReconnecting:
-            commsStateText   = "Reconnecting";
-            break;
-        default:
-            break;
     }
     set_rgb_colour(commsStateColour);
-    rectangle = {{200, 8}, {get_text_width("Reconnecting", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
+    rectangle = {{200, 8}, {get_text_width("Offline", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
     draw_button(mainArea, rectangle, commsStateText, false);
 }
 
