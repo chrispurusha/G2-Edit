@@ -47,7 +47,7 @@ extern "C" {
 
 // USB transfer timeouts (milliseconds)
 #define USB_SEND_TIMEOUT_MS    (100)
-#define USB_RECV_TIMEOUT_MS    (500)   // Extra headroom for G2 patch computation
+#define USB_RECV_TIMEOUT_MS    (100)   // Extra headroom for G2 patch computation
 #define USB_INIT_TIMEOUT_MS    (1000)  // Extra headroom during init sequence
 
 // Atomic flags for cross-thread signalling
@@ -136,8 +136,6 @@ static void close_device(void) {
 
 // Opens the G2 and claims interface 0. Returns true on success.
 // On macOS: no kernel driver detach needed — libusb uses IOKit directly.
-// No libusb_reset_device: it invalidates the handle on macOS and is not
-// needed for the G2 which is always in a known state after power-on.
 static bool open_and_claim_device(void) {
     devHandle = libusb_open_device_with_vid_pid(libUsbCtx, VENDOR_ID, PRODUCT_ID);
 
@@ -688,6 +686,11 @@ static int int_rec(void) {
     int                    readLength                   = 0;
     int                    retVal                       = EXIT_FAILURE;
     libusb_device_handle * devHandle_local              = NULL;
+    int timeout = USB_RECV_TIMEOUT_MS;
+    
+    if (atomic_load(&gCommsState) != eCommsOnLine) {
+        timeout = USB_INIT_TIMEOUT_MS;
+    }
 
     pthread_mutex_lock(&usbStaticMutex);
     devHandle_local = devHandle;
@@ -703,12 +706,15 @@ static int int_rec(void) {
         readLength = 0;
         retVal     = libusb_bulk_transfer(devHandle_local, 0x81, buff,
                                           sizeof(buff), &readLength,
-                                          USB_RECV_TIMEOUT_MS);
+                                          timeout);
 
         if (retVal == LIBUSB_SUCCESS) {
             if (readLength > 0) {
                 break;
             }
+        } else if (retVal == LIBUSB_ERROR_TIMEOUT) {
+            // Normal in poll — G2 has nothing to send, not an error
+            return EXIT_SUCCESS;   // ← was falling through to retry loop
         } else if (is_disconnect_error(retVal)) {
             LOG_DEBUG("int_rec: disconnect error %s\n", libusb_error_name(retVal));
             atomic_store(&gotBadConnectionIndication, true);
@@ -1234,7 +1240,7 @@ static void state_handler(void) {
     // -----------------------------------------------------------------------
     // Not online — attempt to find and initialise the device
     // -----------------------------------------------------------------------
-    if (gCommsState != eCommsOnLine) {
+    if (atomic_load(&gCommsState) != eCommsOnLine) {
         bool opened = false;
 
         pthread_mutex_lock(&usbStaticMutex);
@@ -1317,11 +1323,8 @@ static void * usb_thread_loop(void * arg) {
         return NULL;
     }
 
-#ifdef ENABLE_DEBUG
-    libusb_set_option(libUsbCtx, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_WARNING);
-#else
-    libusb_set_option(libUsbCtx, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_WARNING);
-#endif
+    // Only if needed: libusb_set_option(libUsbCtx, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_WARNING);
+
 
     while (atomic_load(&gQuitAll) == false) {
         state_handler();
