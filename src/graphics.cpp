@@ -438,6 +438,14 @@ void read_file_into_memory_and_process(const char * filepath) {
         } // 1 = performance
 
         set_patch_name_from_filename(gSlot, filepath);
+        
+        // If online, push to device immediately
+        if (atomic_load(&gCommsState) == eCommsOnLine) {
+            tMessageContent msg = {0};
+            msg.cmd  = eMsgCmdWritePatch;
+            msg.slot = gSlot;
+            msg_send(&gCommandQueue, &msg);
+        }
     } else {
         LOG_WARNING("CRC check failed\n");
     }

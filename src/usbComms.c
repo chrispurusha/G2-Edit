@@ -944,12 +944,82 @@ static int fetch_slot_data(uint32_t slot) {
 }
 
 // ---------------------------------------------------------------------------
-// Init sequence — linear, no state machine
+// Patch upload helper — builds and sends one slot to the device.
+// Synth must already be stopped before calling.
+// Consumes the SUB_RESPONSE_PATCH_VERSION_CHANGE reply internally.
 // ---------------------------------------------------------------------------
 
-static int send_init_sequence(void) {
-    LOG_DEBUG("Starting init sequence\n");
+static int push_slot_to_device(uint32_t slot) {
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    int      pos                     = COMMAND_OFFSET;
+    uint32_t bitPos                  = 0;
+    uint32_t i                       = 0;
+
+    LOG_DEBUG("Pushing slot %u to device\n", slot);
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
+    buff[pos++] = UPLOAD_PATCH_VERSION;
+    buff[pos++] = SUB_COMMAND_SET;
+    buff[pos++] = 0x00;
+    buff[pos++] = 0x00;
+    buff[pos++] = 0x00;
+
+    // Patch name: up to 16 bytes, null-terminated
+    pthread_mutex_lock(&gGlobalVarsMutex);
+    while ((i < PATCH_NAME_SIZE) && (gPatchName[slot][i] != '\0')) {
+        buff[pos++] = (uint8_t)gPatchName[slot][i++];
+    }
+    pthread_mutex_unlock(&gGlobalVarsMutex);
+    buff[pos++] = 0x00;
+
+    bitPos = BYTE_TO_BIT(pos);
+
+    write_patch_descr(slot, buff, &bitPos);
+    write_module_list(slot, locationVa,    buff, &bitPos);
+    write_module_list(slot, locationFx,    buff, &bitPos);
+    write_current_note_2(slot, buff, &bitPos);
+    write_cable_list(slot, locationVa,     buff, &bitPos);
+    write_cable_list(slot, locationFx,     buff, &bitPos);
+    write_param_list(slot, locationMorph,  buff, &bitPos, NUM_VARIATIONS_USB);
+    write_param_list(slot, locationVa,     buff, &bitPos, NUM_VARIATIONS_USB);
+    write_param_list(slot, locationFx,     buff, &bitPos, NUM_VARIATIONS_USB);
+    write_morph_params(slot, buff, &bitPos, NUM_VARIATIONS_USB);
+    write_knobs(slot, buff, &bitPos);
+    write_controllers(slot, buff, &bitPos);
+    write_param_names(slot, locationMorph, buff, &bitPos);
+    write_param_names(slot, locationVa,    buff, &bitPos);
+    write_param_names(slot, locationFx,    buff, &bitPos);
+    write_module_names(slot, locationVa,   buff, &bitPos);
+    write_module_names(slot, locationFx,   buff, &bitPos);
+    write_patch_notes(slot, buff, &bitPos);
+
+    pos = BIT_TO_BYTE(bitPos);
+
+    if (send_message(buff, pos) != EXIT_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+
+    // Consume SUB_RESPONSE_PATCH_VERSION_CHANGE — updates gPatchVersion[slot]
+    if (int_rec() != EXIT_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+// ---------------------------------------------------------------------------
+// Init sequences — linear, no state machine
+// ---------------------------------------------------------------------------
+
+// First connection: G2 is authoritative — pull all patch data from hardware.
+static int send_init_sequence_pull(void) {
+    LOG_DEBUG("Init sequence: pulling from G2\n");
     atomic_store(&gCommsState, eCommsInitialising);
+
+    // Clear any stale data before pulling fresh state
+    database_clear_cables();
+    database_clear_modules();
 
     SEND_RECV(send_init());
     SEND_RECV(send_stop());
@@ -970,7 +1040,32 @@ static int send_init_sequence(void) {
 
     SEND_RECV(send_start());
 
-    LOG_DEBUG("Init sequence complete\n");
+    LOG_DEBUG("Pull init sequence complete\n");
+    atomic_store(&gCommsState, eCommsOnLine);
+    call_full_patch_change_notify();
+    call_wake_glfw();
+
+    return EXIT_SUCCESS;
+}
+
+// Reconnection: editor is authoritative — push all slots to the hardware.
+static int send_init_sequence_push(void) {
+    LOG_DEBUG("Init sequence: pushing editor data to G2\n");
+    atomic_store(&gCommsState, eCommsInitialising);
+
+    SEND_RECV(send_init());
+    SEND_RECV(send_stop());
+
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        if (push_slot_to_device(slot) != EXIT_SUCCESS) {
+            atomic_store(&gCommsState, eCommsReconnecting);
+            return EXIT_FAILURE;
+        }
+    }
+
+    SEND_RECV(send_start());
+
+    LOG_DEBUG("Push init sequence complete\n");
     atomic_store(&gCommsState, eCommsOnLine);
     call_full_patch_change_notify();
     call_wake_glfw();
@@ -1135,71 +1230,22 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdWritePatch:
         {
-            uint32_t slot   = messageContent->slot;
-            uint32_t i      = 0;
-            uint32_t bitPos = 0;
+            uint32_t slot = messageContent->slot;
 
             // Stop synth before upload to suppress unsolicited messages
             if (send_stop() != EXIT_SUCCESS) break;
-            if (int_rec()   != EXIT_SUCCESS) break;
+            if (int_rec()   != EXIT_SUCCESS) { send_start(); int_rec(); break; }
 
-            buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-            buff[pos++] = UPLOAD_PATCH_VERSION;
-            buff[pos++] = SUB_COMMAND_SET;
-            buff[pos++] = 0x00;
-            buff[pos++] = 0x00;
-            buff[pos++] = 0x00;
+            retVal = push_slot_to_device(slot);
 
-            // Patch name: up to 16 bytes, null-terminated
-            pthread_mutex_lock(&gGlobalVarsMutex);
-            while ((i < PATCH_NAME_SIZE) && (gPatchName[slot][i] != '\0')) {
-                buff[pos++] = (uint8_t)gPatchName[slot][i++];
+            // Always restart even if push failed
+            send_start();
+            int_rec();
+
+            if (retVal == EXIT_SUCCESS) {
+                call_full_patch_change_notify();
+                call_wake_glfw();
             }
-            pthread_mutex_unlock(&gGlobalVarsMutex);
-            buff[pos++] = 0x00;
-
-            bitPos = BYTE_TO_BIT(pos);
-
-            write_patch_descr(slot, buff, &bitPos);
-            write_module_list(slot, locationVa,    buff, &bitPos);
-            write_module_list(slot, locationFx,    buff, &bitPos);
-            write_current_note_2(slot, buff, &bitPos);
-            write_cable_list(slot, locationVa,     buff, &bitPos);
-            write_cable_list(slot, locationFx,     buff, &bitPos);
-            write_param_list(slot, locationMorph,  buff, &bitPos, NUM_VARIATIONS_USB);
-            write_param_list(slot, locationVa,     buff, &bitPos, NUM_VARIATIONS_USB);
-            write_param_list(slot, locationFx,     buff, &bitPos, NUM_VARIATIONS_USB);
-            write_morph_params(slot, buff, &bitPos, NUM_VARIATIONS_USB);
-            write_knobs(slot, buff, &bitPos);
-            write_controllers(slot, buff, &bitPos);
-            write_param_names(slot, locationMorph, buff, &bitPos);
-            write_param_names(slot, locationVa,    buff, &bitPos);
-            write_param_names(slot, locationFx,    buff, &bitPos);
-            write_module_names(slot, locationVa,   buff, &bitPos);
-            write_module_names(slot, locationFx,   buff, &bitPos);
-            write_patch_notes(slot, buff, &bitPos);
-
-            pos    = BIT_TO_BYTE(bitPos);
-            retVal = send_message(buff, pos);
-
-            if (retVal != EXIT_SUCCESS) {
-                send_start();
-                int_rec();
-                break;
-            }
-
-            // Consume SUB_RESPONSE_PATCH_VERSION_CHANGE
-            if (int_rec() != EXIT_SUCCESS) {
-                send_start();
-                int_rec();
-                break;
-            }
-
-            if (send_start() != EXIT_SUCCESS) break;
-            if (int_rec()    != EXIT_SUCCESS) break;
-
-            retVal = EXIT_SUCCESS;
             break;
         }
 
@@ -1229,8 +1275,8 @@ static void state_handler(void) {
         close_device();
         pthread_mutex_unlock(&usbStaticMutex);
 
-        database_clear_cables();
-        database_clear_modules();
+        // Do NOT clear the database — editor data is preserved so it can be
+        // pushed back to the hardware on reconnection.
 
         call_full_patch_change_notify();
         call_wake_glfw();
@@ -1248,14 +1294,22 @@ static void state_handler(void) {
         pthread_mutex_unlock(&usbStaticMutex);
 
         if (opened) {
-            if (send_init_sequence() != EXIT_SUCCESS) {
-                // Init failed — close device and wait before retrying
+            int result = EXIT_FAILURE;
+
+            if (atomic_load(&gCommsState) == eCommsNeverConnected) {
+                // First ever connection — G2 is authoritative, pull everything
+                result = send_init_sequence_pull();
+            } else {
+                // Reconnection after disconnect — editor is authoritative, push all slots
+                result = send_init_sequence_push();
+            }
+
+            if (result != EXIT_SUCCESS) {
                 LOG_DEBUG("Init sequence failed — will retry\n");
                 pthread_mutex_lock(&usbStaticMutex);
                 close_device();
                 pthread_mutex_unlock(&usbStaticMutex);
                 atomic_store(&gCommsState, eCommsReconnecting);
-                atomic_store(&gotBadConnectionIndication, false);  // already handled above
             }
         } else {
             usleep(500000);  // 500ms between open attempts — don't hammer the bus
