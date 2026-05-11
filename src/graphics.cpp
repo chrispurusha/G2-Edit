@@ -553,8 +553,7 @@ static void on_file_saved(const char * path) {
         write_database_to_file(path);
         //set_window_title(path);
     }
-    glfwFocusWindow(gWindow);
-
+    atomic_store(&gNeedFocus, true);
     wake_glfw();
 }
 
