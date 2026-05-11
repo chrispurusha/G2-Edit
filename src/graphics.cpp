@@ -48,7 +48,8 @@ extern "C" {
 
 static FT_Library      gLibrary     = {0};
 static FT_Face         gFace        = {0};
-static pthread_mutex_t gReDrawMutex = {0};
+static pthread_mutex_t  gReDrawMutex = {0};
+static _Atomic bool   gNeedFocus = false;
 
 static void re_draw_mutex_init(void) {
     pthread_mutexattr_t attr = {0};
@@ -539,11 +540,10 @@ void write_database_to_file(const char * filepath) {
 static void on_file_opened(const char * path) {
     if (path) {
         LOG_INFO("Selected file: %s", path);
-        set_window_title(path);
         read_file_into_memory_and_process(path);
+        //set_window_title(path);
     }
-    glfwFocusWindow(gWindow);
-
+    atomic_store(&gNeedFocus, true);
     wake_glfw();
 }
 
@@ -551,7 +551,7 @@ static void on_file_saved(const char * path) {
     if (path) {
         LOG_INFO("Saving file: %s", path);
         write_database_to_file(path);
-        set_window_title(path);
+        //set_window_title(path);
     }
     glfwFocusWindow(gWindow);
 
@@ -568,6 +568,11 @@ static void check_action_flags(void) {
         gShowOpenFileWriteDialogue = false;
         open_file_write_dialogue_async(on_file_saved);
     }
+	
+	if (atomic_load(&gNeedFocus)) {
+	    atomic_store(&gNeedFocus, false);
+	    glfwFocusWindow(gWindow);
+	}
 }
 
 void do_graphics_loop(void) {
