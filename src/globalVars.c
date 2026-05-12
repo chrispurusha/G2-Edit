@@ -77,6 +77,7 @@ uint8_t             gPatchVersion[MAX_SLOTS]                   = {0}; // Check w
 char                gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1] = {0};
 _Atomic tCommsState gCommsState                                = eCommsNeverConnected;
 _Atomic uint32_t    gChangedSlot                               = 0;
+tNameEdit           gPatchNameEdit                             = {0};
 
 // Thread synchronization mutex for global variables
 pthread_mutex_t     gGlobalVarsMutex                           = PTHREAD_MUTEX_INITIALIZER;

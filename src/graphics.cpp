@@ -198,9 +198,20 @@ void render_top_bar(void) {
     set_rgb_colour(RGB_BLACK);
     render_text(mainArea, {{180, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Patch Name");
 
-    set_rgb_colour(RGB_BACKGROUND_GREY);
-    rectangle = {{180, 60}, {get_text_width("XXXXXXXXXXXXXXXX", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
-    draw_button(mainArea, rectangle, patchNameCopy, false);
+    if (gPatchNameEdit.active && gPatchNameEdit.slot == gSlot) {
+        // Show edit buffer with cursor
+        char displayBuf[PATCH_NAME_SIZE + 2] = {0};
+        snprintf(displayBuf, sizeof(displayBuf), "%s|", gPatchNameEdit.buffer);
+
+        set_rgb_colour(RGB_WHITE);
+        rectangle = {{180, 60}, {get_text_width("XXXXXXXXXXXXXXXX", STANDARD_BUTTON_TEXT_HEIGHT),
+                                 STANDARD_TEXT_HEIGHT}}; // Todo - need to store this rectangle definition somehwre global
+        draw_button(mainArea, rectangle, displayBuf, true);  // isPressed=true gives visual feedback
+    } else {
+        set_rgb_colour(RGB_BACKGROUND_GREY);
+        rectangle = {{180, 60}, {get_text_width("XXXXXXXXXXXXXXXX", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
+        draw_button(mainArea, rectangle, patchNameCopy, false);
+    }
 
     for (int i = 0; i < array_size_main_button_array(); i++) {
         set_rgb_colour(gMainButtonArray[i].backgroundColour);
@@ -551,6 +562,7 @@ static void on_file_saved(const char * path) {
     if (path) {
         LOG_INFO("Saving file: %s", path);
         write_database_to_file(path);
+        set_patch_name_from_filename(gSlot, path);
         //set_window_title(path);
     }
     atomic_store(&gNeedFocus, true);
@@ -565,7 +577,18 @@ static void check_action_flags(void) {
 
     if (gShowOpenFileWriteDialogue) {
         gShowOpenFileWriteDialogue = false;
-        open_file_write_dialogue_async(on_file_saved);
+
+        char defaultName[PATCH_NAME_SIZE + 6] = {0};  // name + ".pch2\0"
+
+        pthread_mutex_lock(&gGlobalVarsMutex);
+        if (gPatchName[gSlot][0] != '\0') {
+            snprintf(defaultName, sizeof(defaultName), "%s.pch2", gPatchName[gSlot]);
+        } else {
+            strncpy(defaultName, "patch.pch2", sizeof(defaultName) - 1);
+        }
+        pthread_mutex_unlock(&gGlobalVarsMutex);
+
+        open_file_write_dialogue_async(on_file_saved, defaultName);
     }
 	
 	if (atomic_load(&gNeedFocus)) {

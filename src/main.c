@@ -64,10 +64,6 @@ static int init_signals(void) {
 }
 
 int main(int argc, char ** argv) {
-#ifdef ENABLE_DEBUG
-    usleep(2000000);     // Delay required for XCode debugger to attach
-#endif
-
     init_signals();
 
     init_database();

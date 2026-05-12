@@ -45,13 +45,18 @@ void open_file_read_dialogue_async(tFileDialogueCallback callback) {
     });
 }
 
-void open_file_write_dialogue_async(tFileDialogueCallback callback) {
+void open_file_write_dialogue_async(tFileDialogueCallback callback, const char * defaultName) {
+    // Capture defaultName before dispatching — it may be stack-allocated
+    NSString * nameString = (defaultName && defaultName[0] != '\0')
+                          ? [NSString stringWithUTF8String:defaultName]
+                          : @"patch.pch2";
+
     dispatch_async(dispatch_get_main_queue(), ^{
         NSSavePanel * panel = [NSSavePanel savePanel];
         [panel setTitle:@"Save File As"];
         [panel setPrompt:@"Save"];
         [panel setCanCreateDirectories:YES];
-        [panel setNameFieldStringValue:@"untitled"];
+        [panel setNameFieldStringValue:nameString];
         [panel setMessage:@"Choose where to save your file."];
         [panel setShowsTagField:NO];
         [panel setExtensionHidden:NO];

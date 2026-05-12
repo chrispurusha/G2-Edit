@@ -1314,6 +1314,28 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     }
                 }
             }
+            
+            tRectangle nameRect = {{180, 60},
+                                   {get_text_width("XXXXXXXXXXXXXXXX", STANDARD_BUTTON_TEXT_HEIGHT),
+                                    STANDARD_TEXT_HEIGHT}};  // Should really get this from the button
+
+            if (within_rectangle(coord, nameRect)) {
+                if (!gPatchNameEdit.active) {
+                    // Start editing
+                    gPatchNameEdit.active = true;
+                    gPatchNameEdit.slot   = gSlot;
+                    pthread_mutex_lock(&gGlobalVarsMutex);
+                    strncpy(gPatchNameEdit.buffer, gPatchName[gSlot], PATCH_NAME_SIZE);
+                    pthread_mutex_unlock(&gGlobalVarsMutex);
+                }
+            } else if (gPatchNameEdit.active) {
+                gPatchNameEdit.active = false;
+                pthread_mutex_lock(&gGlobalVarsMutex);
+                strncpy(gPatchName[gPatchNameEdit.slot], gPatchNameEdit.buffer, PATCH_NAME_SIZE);
+                pthread_mutex_unlock(&gGlobalVarsMutex);
+                // TODO: if online, enqueue eMsgCmdWritePatch or a dedicated name update command
+            }
+
         }
     } else if (action == GLFW_RELEASE) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -1555,6 +1577,17 @@ void scroll_event(GLFWwindow * window, double x, double y) {
 }
 
 void char_event(GLFWwindow * window, unsigned int value) {
+    if (gPatchNameEdit.active) {
+        size_t len = strlen(gPatchNameEdit.buffer);
+
+        // Accept printable ASCII only, up to PATCH_NAME_SIZE
+        if ((value >= 0x20) && (value <= 0x7e) && (len < PATCH_NAME_SIZE)) {
+            gPatchNameEdit.buffer[len]     = (char)value;
+            gPatchNameEdit.buffer[len + 1] = '\0';
+        }
+        gReDraw = true;
+        return;
+    }
     LOG_DEBUG("char=%d\n", value);
     gReDraw = true;
 }
@@ -1564,20 +1597,32 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 
     LOG_DEBUG("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
 
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+    if (gPatchNameEdit.active) {
+        if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+            if (key == GLFW_KEY_BACKSPACE) {
+                size_t len = strlen(gPatchNameEdit.buffer);
+                if (len > 0) {
+                    gPatchNameEdit.buffer[len - 1] = '\0';
+                }
+            } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
+                // Commit
+                gPatchNameEdit.active = false;
+                pthread_mutex_lock(&gGlobalVarsMutex);
+                strncpy(gPatchName[gPatchNameEdit.slot], gPatchNameEdit.buffer, PATCH_NAME_SIZE);
+                pthread_mutex_unlock(&gGlobalVarsMutex);
+                // TODO: enqueue patch name update command if online
+            } else if (key == GLFW_KEY_ESCAPE) {
+                // Cancel — discard edits
+                gPatchNameEdit.active = false;
+            }
+        }
+    } else if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GL_TRUE);
-    }
-
-    // Keep status of left command key
-    if (key == GLFW_KEY_LEFT_SUPER && action == GLFW_PRESS) {
+    } else if (key == GLFW_KEY_LEFT_SUPER && action == GLFW_PRESS) {
         gCommandKeyPressed = true;
-    }
-
-    if (key == GLFW_KEY_LEFT_SUPER && action == GLFW_RELEASE) {
+    } else if (key == GLFW_KEY_LEFT_SUPER && action == GLFW_RELEASE) {
         gCommandKeyPressed = false;
-    }
-
-    if (action == GLFW_PRESS && gCommandKeyPressed == true) {
+    } else if (action == GLFW_PRESS && gCommandKeyPressed == true) {
         // React on command key with - + keys for zooming
         if (key == GLFW_KEY_MINUS) {
             LOG_DEBUG("ZOOM OUT\n");

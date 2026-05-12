@@ -701,5 +701,11 @@ typedef enum {
     eCommsOnLine
 } tCommsState;
 
+typedef struct {
+    bool     active;
+    char     buffer[PATCH_NAME_SIZE + 1];  // TODO: May need to cope with module name too
+    uint32_t slot;
+} tNameEdit;
+
 #endif // __TYPES_H__
 
