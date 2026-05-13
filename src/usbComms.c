@@ -60,7 +60,7 @@ static libusb_context *       libUsbCtx                  = NULL;
 static libusb_device_handle * devHandle                  = NULL;
 
 // Callback pointers protected by callbackMutex
-static void                   (*wake_glfw_func_ptr)(void)               = NULL;
+static void                   (*wake_glfw_func_ptr)(void) = NULL;
 static void                   (*full_patch_change_notify_func_ptr)(void) = NULL;
 
 // Mutexes
@@ -71,13 +71,13 @@ static pthread_mutex_t        callbackMutex              = PTHREAD_MUTEX_INITIAL
 // Callback registration
 // ---------------------------------------------------------------------------
 
-void register_glfw_wake_cb(void (*func_ptr)(void)) {
+void register_glfw_wake_cb(void ( *func_ptr )(void)) {
     pthread_mutex_lock(&callbackMutex);
     wake_glfw_func_ptr = func_ptr;
     pthread_mutex_unlock(&callbackMutex);
 }
 
-void register_full_patch_change_notify_cb(void (*func_ptr)(void)) {
+void register_full_patch_change_notify_cb(void ( *func_ptr )(void)) {
     pthread_mutex_lock(&callbackMutex);
     full_patch_change_notify_func_ptr = func_ptr;
     pthread_mutex_unlock(&callbackMutex);
@@ -118,9 +118,9 @@ static void call_full_patch_change_notify(void) {
 // On macOS, LIBUSB_ERROR_OTHER is typically a genuine protocol error rather
 // than a disconnect, so it is excluded here and logged separately.
 static bool is_disconnect_error(int err) {
-    return (err == LIBUSB_ERROR_NO_DEVICE ||
-            err == LIBUSB_ERROR_IO        ||
-            err == LIBUSB_ERROR_PIPE);
+    return err == LIBUSB_ERROR_NO_DEVICE
+           || err == LIBUSB_ERROR_IO
+           || err == LIBUSB_ERROR_PIPE;
 }
 
 // Must be called with usbStaticMutex held, or from a context where devHandle
@@ -142,7 +142,6 @@ static bool open_and_claim_device(void) {
     if (devHandle == NULL) {
         return false;  // Device not found — normal while searching
     }
-
     int result = libusb_claim_interface(devHandle, 0);
 
     if (result != LIBUSB_SUCCESS) {
@@ -152,8 +151,8 @@ static bool open_and_claim_device(void) {
         devHandle = NULL;
         return false;
     }
-    
-    result = libusb_reset_device(devHandle);
+    result    = libusb_reset_device(devHandle);
+
     if (result != LIBUSB_SUCCESS) {
         LOG_ERROR("Failed to reset device: %s\n", libusb_error_name(result));
         // Close cleanly — don't leak the opened handle
@@ -161,7 +160,6 @@ static bool open_and_claim_device(void) {
         devHandle = NULL;
         return false;
     }
-
     LOG_DEBUG("Device opened and interface claimed\n");
     return true;
 }
@@ -177,11 +175,11 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     if (buff == NULL) {
         return EXIT_FAILURE;
     }
-
     LOG_DEBUG("Clavia string '");
 
     for (int i = 0; i < 11; i++) {
         ch = read_bit_stream(buff, &bitPos, 8);
+
         if ((ch >= 0x20) && (ch <= 0x7f)) {
             LOG_DEBUG_DIRECT("%c", ch);
         }
@@ -189,33 +187,33 @@ static int parse_synth_settings(uint8_t * buff, int length) {
 
     LOG_DEBUG_DIRECT("'\n");
 
-    LOG_DEBUG("Perf Mode 0x%x\n",                                   read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Perf Bank 0x%x\n",                                   read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Perf Location 0x%x\n",                               read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Memory Protect (bit 0) 0x%x\n",                      read_bit_stream(buff, &bitPos, 1));
+    LOG_DEBUG("Perf Mode 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Perf Bank 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Perf Location 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Memory Protect (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 1));
     read_bit_stream(buff, &bitPos, 7);
-    LOG_DEBUG("MIDI chan Slot A 0x%x\n",                             read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("MIDI chan Slot B 0x%x\n",                             read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("MIDI chan Slot C 0x%x\n",                             read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("MIDI chan Slot D 0x%x\n",                             read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Global chan 0x%x\n",                                  read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Sysex ID 0x%x\n",                                     read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Local on (bit 0) 0x%x\n",                             read_bit_stream(buff, &bitPos, 1));
+    LOG_DEBUG("MIDI chan Slot A 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("MIDI chan Slot B 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("MIDI chan Slot C 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("MIDI chan Slot D 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Global chan 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Sysex ID 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Local on (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 1));
     read_bit_stream(buff, &bitPos, 7);
     read_bit_stream(buff, &bitPos, 6);
-    LOG_DEBUG("Prog Change Rcv 0x%x\n",                              read_bit_stream(buff, &bitPos, 1));
-    LOG_DEBUG("Prog Change Snd 0x%x\n",                              read_bit_stream(buff, &bitPos, 1));
+    LOG_DEBUG("Prog Change Rcv 0x%x\n", read_bit_stream(buff, &bitPos, 1));
+    LOG_DEBUG("Prog Change Snd 0x%x\n", read_bit_stream(buff, &bitPos, 1));
     read_bit_stream(buff, &bitPos, 6);
-    LOG_DEBUG("Controllers Rcv 0x%x\n",                              read_bit_stream(buff, &bitPos, 1));
-    LOG_DEBUG("Controllers Snd 0x%x\n",                              read_bit_stream(buff, &bitPos, 1));
+    LOG_DEBUG("Controllers Rcv 0x%x\n", read_bit_stream(buff, &bitPos, 1));
+    LOG_DEBUG("Controllers Snd 0x%x\n", read_bit_stream(buff, &bitPos, 1));
     LOG_DEBUG("Send Clock (bit 1) ignore ext clock (bit 2) 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Tune cent 0x%x\n",                                    read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Global Shift Active (bit 0) 0x%x\n",                  read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Global Octave Shift 0x%x\n",                          read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Tune semi 0x%x\n",                                    read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Filler 0x%x\n",                                       read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Pedal Polarity (bit 0) 0x%x\n",                       read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Control Pedal Gain 0x%x\n",                           read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Tune cent 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Global Shift Active (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Global Octave Shift 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Tune semi 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Filler 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Pedal Polarity (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Control Pedal Gain 0x%x\n", read_bit_stream(buff, &bitPos, 8));
 
     return EXIT_SUCCESS;
 }
@@ -229,8 +227,8 @@ static int parse_midi_cc(uint8_t * buff, int length) {
     }
 
     while (true) {
-        LOG_DEBUG("MIDI Chan 0x%x\n",       read_bit_stream(buff, &bitPos, 8));
-        LOG_DEBUG("CC Numb/value 0x%x\n",   read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("MIDI Chan 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("CC Numb/value 0x%x\n", read_bit_stream(buff, &bitPos, 8));
         subResponse = read_bit_stream(buff, &bitPos, 8);
 
         if ((subResponse != SUB_RESPONSE_MIDI_CC) || (BIT_TO_BYTE_ROUND_UP(bitPos) > length)) {
@@ -260,6 +258,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
                 LOG_ERROR("parse_patch: negative count %d for type 0x%02x, aborting\n", count, type);
                 return EXIT_FAILURE;
             }
+
             if (BIT_TO_BYTE(bitOffset) + count > length) {
                 LOG_ERROR("parse_patch: count %d for type 0x%02x would exceed buffer length %d, aborting\n",
                           count, type, length);
@@ -299,9 +298,11 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
             {
                 LOG_DEBUG("Patch Descr\n");
                 uint32_t tmpSubOffset = subOffset;
+
                 for (int i = 0; i < 32; i++) {
                     LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, &subOffset, 8));
                 }
+
                 LOG_DEBUG_DIRECT("\n");
                 subOffset = tmpSubOffset;
                 parse_patch_descr(slot, buff, &subOffset);
@@ -323,12 +324,15 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
             case SUB_RESPONSE_CURRENT_NOTE_2:
             {
                 LOG_DEBUG("Current note 2\n");
+
                 if (slot < MAX_SLOTS) {
                     uint32_t safeCount = ((uint32_t)count < sizeof(gNote2[slot]))
                                        ? (uint32_t)count : sizeof(gNote2[slot]);
+
                     for (uint32_t i = 0; i < safeCount; i++) {
                         gNote2[slot][i] = read_bit_stream(buff, &subOffset, 8);
                     }
+
                     gNote2Size[slot] = safeCount;
                 }
                 break;
@@ -337,12 +341,15 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
             case SUB_RESPONSE_PATCH_NOTES:
             {
                 LOG_DEBUG("Patch notes\n");
+
                 if (slot < MAX_SLOTS) {
                     uint32_t safeCount = ((uint32_t)count < sizeof(gPatchNotes[slot]))
                                        ? (uint32_t)count : sizeof(gPatchNotes[slot]);
+
                     for (uint32_t i = 0; i < safeCount; i++) {
                         gPatchNotes[slot][i] = read_bit_stream(buff, &subOffset, 8);
                     }
+
                     gPatchNotesSize[slot] = safeCount;
                 }
                 break;
@@ -368,7 +375,6 @@ static int parse_patch_version(uint8_t * buff, int length) {
     if (slot >= MAX_SLOTS) {
         return EXIT_FAILURE;
     }
-
     pthread_mutex_lock(&gGlobalVarsMutex);
     gPatchVersion[slot] = version;
     pthread_mutex_unlock(&gGlobalVarsMutex);
@@ -385,12 +391,12 @@ static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
     uint32_t   variation = 0;
     uint32_t   value     = 0;
 
-    key.slot     = slot;
-    key.location = read_bit_stream(buff, &bitPos, 8);
-    key.index    = read_bit_stream(buff, &bitPos, 8);
-    param        = read_bit_stream(buff, &bitPos, 8);
-    value        = read_bit_stream(buff, &bitPos, 8);
-    variation    = read_bit_stream(buff, &bitPos, 8);
+    key.slot                             = slot;
+    key.location                         = read_bit_stream(buff, &bitPos, 8);
+    key.index                            = read_bit_stream(buff, &bitPos, 8);
+    param                                = read_bit_stream(buff, &bitPos, 8);
+    value                                = read_bit_stream(buff, &bitPos, 8);
+    variation                            = read_bit_stream(buff, &bitPos, 8);
 
     read_module(key, &module);
     module.param[variation][param].value = value;
@@ -432,6 +438,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                     }
                 }
             }
+
             return EXIT_SUCCESS;
         }
 
@@ -463,6 +470,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                     }
                 }
             }
+
             return EXIT_SUCCESS;
         }
 
@@ -498,9 +506,11 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         {
             LOG_DEBUG("Got global page\n");
             uint32_t tmpBitPos = *bitPos;
+
             for (int i = 0; i < length; i++) {
                 LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, bitPos, 8));
             }
+
             LOG_DEBUG_DIRECT("\n");
             *bitPos = tmpBitPos;
             return EXIT_SUCCESS;
@@ -564,11 +574,13 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("Got patch name (length %d)\n", length);
             pthread_mutex_lock(&gGlobalVarsMutex);
             memset(gPatchName[slot], 0, PATCH_NAME_SIZE + 1);
+
             for (int i = 0; i < (length - 6) && i < PATCH_NAME_SIZE; i++) {
                 uint8_t ch = read_bit_stream(buff, bitPos, 8);
                 gPatchName[slot][i] = (ch >= 0x20 && ch <= 0x7f) ? (char)ch : ' ';
                 LOG_DEBUG_DIRECT("%c", gPatchName[slot][i]);
             }
+
             LOG_DEBUG_DIRECT("\n");
             pthread_mutex_unlock(&gGlobalVarsMutex);
             return EXIT_SUCCESS;
@@ -591,7 +603,6 @@ static int parse_incoming(uint8_t * buff, int length) {
     if ((buff == NULL) || (length <= 0)) {
         return EXIT_FAILURE;
     }
-
     uint32_t bitPos       = 0;
     uint8_t  responseType = read_bit_stream(buff, &bitPos, 8);
     int      ret          = EXIT_FAILURE;
@@ -616,7 +627,6 @@ static int parse_incoming(uint8_t * buff, int length) {
             ret = EXIT_FAILURE;
             break;
     }
-
     call_wake_glfw();
     return ret;
 }
@@ -650,8 +660,9 @@ static int rcv_extended(int dataLength) {
         if (retVal == LIBUSB_SUCCESS) {
             if (readLength > 0) {
                 uint8_t responseType = buff[0];
-                if ((responseType == RESPONSE_TYPE_INIT) ||
-                    (responseType == RESPONSE_TYPE_COMMAND)) {
+
+                if (  (responseType == RESPONSE_TYPE_INIT)
+                   || (responseType == RESPONSE_TYPE_COMMAND)) {
                     break;
                 }
             }
@@ -670,14 +681,12 @@ static int rcv_extended(int dataLength) {
                   readLength, dataLength);
         return EXIT_FAILURE;
     }
-
     uint32_t bitPos = SIGNED_BYTE_TO_BIT(dataLength - 2);
 
     if (calc_crc16(buff, dataLength - 2) != read_bit_stream(buff, &bitPos, 16)) {
         LOG_DEBUG("rcv_extended: bad CRC\n");
         return EXIT_FAILURE;
     }
-
     return parse_incoming(buff, dataLength);
 }
 
@@ -686,12 +695,11 @@ static int int_rec(void) {
     int                    readLength                   = 0;
     int                    retVal                       = EXIT_FAILURE;
     libusb_device_handle * devHandle_local              = NULL;
-    int timeout = USB_RECV_TIMEOUT_MS;
-    
+    int                    timeout                      = USB_RECV_TIMEOUT_MS;
+
     if (atomic_load(&gCommsState) != eCommsOnLine) {
         timeout = USB_INIT_TIMEOUT_MS;
     }
-
     pthread_mutex_lock(&usbStaticMutex);
     devHandle_local = devHandle;
     pthread_mutex_unlock(&usbStaticMutex);
@@ -728,8 +736,7 @@ static int int_rec(void) {
     if (readLength <= 0) {
         return EXIT_FAILURE;
     }
-
-    uint32_t bitPos    = 0;
+    uint32_t bitPos     = 0;
     int      dataLength = read_bit_stream(buff, &bitPos, 4);
     int      type       = read_bit_stream(buff, &bitPos, 4);
 
@@ -750,7 +757,6 @@ static int int_rec(void) {
     } else if (type == RESPONSE_TYPE_EMBEDDED) {
         retVal = parse_incoming(buff + 1, dataLength);
     }
-
     return retVal;
 }
 
@@ -759,29 +765,28 @@ static int int_rec(void) {
 // ---------------------------------------------------------------------------
 
 static int send_message(uint8_t * buff, int pos) {
-    int      msgLength   = pos - COMMAND_OFFSET;
-    int      actualLength = 0;
+    int                    msgLength    = pos - COMMAND_OFFSET;
+    int                    actualLength = 0;
 
     if (msgLength <= 0) {
         return EXIT_FAILURE;
     }
-
-    uint16_t crc = calc_crc16(&buff[COMMAND_OFFSET], msgLength);
+    uint16_t               crc          = calc_crc16(&buff[COMMAND_OFFSET], msgLength);
     write_uint16(&buff[msgLength + 2], crc);
     msgLength += 4;
     write_uint16(&buff[0], msgLength);
 
     pthread_mutex_lock(&usbStaticMutex);
-    libusb_device_handle * handle = devHandle;
+    libusb_device_handle * handle       = devHandle;
     pthread_mutex_unlock(&usbStaticMutex);
 
     if (handle == NULL) {
         atomic_store(&gotBadConnectionIndication, true);
         return EXIT_FAILURE;
     }
+    int                    result       = libusb_bulk_transfer(handle, 3, buff, msgLength,
+                                                               &actualLength, USB_SEND_TIMEOUT_MS);
 
-    int result = libusb_bulk_transfer(handle, 3, buff, msgLength,
-                                      &actualLength, USB_SEND_TIMEOUT_MS);
     if (result == 0) {
         return EXIT_SUCCESS;
     }
@@ -796,11 +801,11 @@ static int send_message(uint8_t * buff, int pos) {
 }
 
 // Convenience: send then immediately receive
-#define SEND_RECV(fn) \
-    do { \
-        if ((fn) != EXIT_SUCCESS) { LOG_DEBUG("SEND_RECV failed at %s:%d\n", __func__, __LINE__); return EXIT_FAILURE; } \
-        if (int_rec() != EXIT_SUCCESS) { LOG_DEBUG("int_rec failed at %s:%d\n", __func__, __LINE__); return EXIT_FAILURE; } \
-    } while (0)
+#define SEND_RECV(fn)                                                                                                    \
+   do {                                                                                                                  \
+       if ((fn) != EXIT_SUCCESS) {LOG_DEBUG("SEND_RECV failed at %s:%d\n", __func__, __LINE__); return EXIT_FAILURE;}    \
+       if (int_rec() != EXIT_SUCCESS) {LOG_DEBUG("int_rec failed at %s:%d\n", __func__, __LINE__); return EXIT_FAILURE;} \
+   } while (0)
 
 static int send_init(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
@@ -922,9 +927,9 @@ static void clear_slot_data(uint32_t slot) {
     database_delete_cables_by_slot(slot);
 
     pthread_mutex_lock(&gGlobalVarsMutex);
-    memset(&gPatchDescr[slot],        0, sizeof(tPatchDescr));
-    memset(&gKnobArray[slot],         0, sizeof(tKnobArray));
-    memset(&gControllerArray[slot],   0, sizeof(tControllerArray));
+    memset(&gPatchDescr[slot], 0, sizeof(tPatchDescr));
+    memset(&gKnobArray[slot], 0, sizeof(tKnobArray));
+    memset(&gControllerArray[slot], 0, sizeof(tControllerArray));
     gControllerCount[slot] = 0;
     gMorphCount[slot]      = 8;
     gPatchNotesSize[slot]  = 0;
@@ -967,31 +972,32 @@ static int push_slot_to_device(uint32_t slot) {
 
     // Patch name: up to 16 bytes, null-terminated
     pthread_mutex_lock(&gGlobalVarsMutex);
+
     while ((i < PATCH_NAME_SIZE) && (gPatchName[slot][i] != '\0')) {
         buff[pos++] = (uint8_t)gPatchName[slot][i++];
     }
     pthread_mutex_unlock(&gGlobalVarsMutex);
     buff[pos++] = 0x00;
 
-    bitPos = BYTE_TO_BIT(pos);
+    bitPos      = BYTE_TO_BIT(pos);
 
     write_patch_descr(slot, buff, &bitPos);
-    write_module_list(slot, locationVa,    buff, &bitPos);
-    write_module_list(slot, locationFx,    buff, &bitPos);
+    write_module_list(slot, locationVa, buff, &bitPos);
+    write_module_list(slot, locationFx, buff, &bitPos);
     write_current_note_2(slot, buff, &bitPos);
-    write_cable_list(slot, locationVa,     buff, &bitPos);
-    write_cable_list(slot, locationFx,     buff, &bitPos);
-    write_param_list(slot, locationMorph,  buff, &bitPos, NUM_VARIATIONS_USB);
-    write_param_list(slot, locationVa,     buff, &bitPos, NUM_VARIATIONS_USB);
-    write_param_list(slot, locationFx,     buff, &bitPos, NUM_VARIATIONS_USB);
+    write_cable_list(slot, locationVa, buff, &bitPos);
+    write_cable_list(slot, locationFx, buff, &bitPos);
+    write_param_list(slot, locationMorph, buff, &bitPos, NUM_VARIATIONS_USB);
+    write_param_list(slot, locationVa, buff, &bitPos, NUM_VARIATIONS_USB);
+    write_param_list(slot, locationFx, buff, &bitPos, NUM_VARIATIONS_USB);
     write_morph_params(slot, buff, &bitPos, NUM_VARIATIONS_USB);
     write_knobs(slot, buff, &bitPos);
     write_controllers(slot, buff, &bitPos);
     write_param_names(slot, locationMorph, buff, &bitPos);
-    write_param_names(slot, locationVa,    buff, &bitPos);
-    write_param_names(slot, locationFx,    buff, &bitPos);
-    write_module_names(slot, locationVa,   buff, &bitPos);
-    write_module_names(slot, locationFx,   buff, &bitPos);
+    write_param_names(slot, locationVa, buff, &bitPos);
+    write_param_names(slot, locationFx, buff, &bitPos);
+    write_module_names(slot, locationVa, buff, &bitPos);
+    write_module_names(slot, locationFx, buff, &bitPos);
     write_patch_notes(slot, buff, &bitPos);
 
     pos = BIT_TO_BYTE(bitPos);
@@ -1004,7 +1010,6 @@ static int push_slot_to_device(uint32_t slot) {
     if (int_rec() != EXIT_SUCCESS) {
         return EXIT_FAILURE;
     }
-
     return EXIT_SUCCESS;
 }
 
@@ -1031,6 +1036,7 @@ static int send_init_sequence_pull(void) {
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         SEND_RECV(send_get_patch_version(slot));
     }
+
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         if (fetch_slot_data(slot) != EXIT_SUCCESS) {
             atomic_store(&gCommsState, eCommsReconnecting);
@@ -1078,10 +1084,10 @@ static int send_init_sequence_push(void) {
 // ---------------------------------------------------------------------------
 
 static int send_write_data(tMessageContent * messageContent) {
-    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
-    int      pos                     = COMMAND_OFFSET;
-    int      retVal                  = EXIT_FAILURE;
-    uint8_t  slotVersion_local[MAX_SLOTS];
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
+    uint8_t slotVersion_local[MAX_SLOTS];
 
     pthread_mutex_lock(&gGlobalVarsMutex);
     memcpy(slotVersion_local, gPatchVersion, sizeof(slotVersion_local));
@@ -1141,12 +1147,14 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.colour;
             buff[pos++] = messageContent->moduleData.upRate;
             buff[pos++] = messageContent->moduleData.isLed;
+
             for (int i = 0; i < messageContent->moduleData.modeCount; i++) {
                 buff[pos++] = messageContent->moduleData.mode[i];
             }
+
             strcpy((char *)&buff[pos], messageContent->moduleData.name);
-            pos   += strlen(messageContent->moduleData.name) + 1;
-            retVal = send_message(buff, pos);
+            pos        += strlen(messageContent->moduleData.name) + 1;
+            retVal      = send_message(buff, pos);
             break;
 
         case eMsgCmdMoveModule:
@@ -1233,9 +1241,15 @@ static int send_write_data(tMessageContent * messageContent) {
             uint32_t slot = messageContent->slot;
 
             // Stop synth before upload to suppress unsolicited messages
-            if (send_stop() != EXIT_SUCCESS) break;
-            if (int_rec()   != EXIT_SUCCESS) { send_start(); int_rec(); break; }
+            if (send_stop() != EXIT_SUCCESS) {
+                break;
+            }
 
+            if (int_rec() != EXIT_SUCCESS) {
+                send_start();
+                int_rec();
+                break;
+            }
             retVal = push_slot_to_device(slot);
 
             // Always restart even if push failed
@@ -1316,7 +1330,6 @@ static void state_handler(void) {
         }
         return;
     }
-
     // -----------------------------------------------------------------------
     // Online — poll loop
     // -----------------------------------------------------------------------
@@ -1334,7 +1347,6 @@ static void state_handler(void) {
             send_start();
             int_rec();
         }
-
         call_full_patch_change_notify();
         call_wake_glfw();
         return;
@@ -1345,7 +1357,6 @@ static void state_handler(void) {
         send_write_data(&messageContent);
         return;
     }
-
     // Nothing to do — poll for unsolicited messages (LED, volume, param change)
     int_rec();
 }
@@ -1360,8 +1371,8 @@ static void usb_comms_signal_handler(int sigraised) {
 }
 
 static int usb_comms_init_signals(void) {
-    signal(SIGINT,  usb_comms_signal_handler);
-    signal(SIGBUS,  usb_comms_signal_handler);
+    signal(SIGINT, usb_comms_signal_handler);
+    signal(SIGBUS, usb_comms_signal_handler);
     signal(SIGSEGV, usb_comms_signal_handler);
     signal(SIGTERM, usb_comms_signal_handler);
     signal(SIGABRT, usb_comms_signal_handler);
@@ -1376,14 +1387,11 @@ static void * usb_thread_loop(void * arg) {
         LOG_ERROR("libusb_init failed\n");
         return NULL;
     }
-
     // Only if needed: libusb_set_option(libUsbCtx, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_WARNING);
-
 
     while (atomic_load(&gQuitAll) == false) {
         state_handler();
     }
-
     pthread_mutex_lock(&usbStaticMutex);
     close_device();
     pthread_mutex_unlock(&usbStaticMutex);

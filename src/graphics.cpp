@@ -48,8 +48,8 @@ extern "C" {
 
 static FT_Library      gLibrary     = {0};
 static FT_Face         gFace        = {0};
-static pthread_mutex_t  gReDrawMutex = {0};
-static _Atomic bool   gNeedFocus = false;
+static pthread_mutex_t gReDrawMutex = {0};
+static _Atomic bool    gNeedFocus   = false;
 
 static void re_draw_mutex_init(void) {
     pthread_mutexattr_t attr = {0};
@@ -205,8 +205,8 @@ void render_top_bar(void) {
 
         set_rgb_colour(RGB_WHITE);
         rectangle = {{180, 60}, {get_text_width("XXXXXXXXXXXXXXXX", STANDARD_BUTTON_TEXT_HEIGHT),
-                                 STANDARD_TEXT_HEIGHT}}; // Todo - need to store this rectangle definition somehwre global
-        draw_button(mainArea, rectangle, displayBuf, true);  // isPressed=true gives visual feedback
+                                 STANDARD_TEXT_HEIGHT}};    // Todo - need to store this rectangle definition somehwre global
+        draw_button(mainArea, rectangle, displayBuf, true); // isPressed=true gives visual feedback
     } else {
         set_rgb_colour(RGB_BACKGROUND_GREY);
         rectangle = {{180, 60}, {get_text_width("XXXXXXXXXXXXXXXX", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
@@ -233,7 +233,7 @@ void render_top_bar(void) {
     }
 
     commsStateColour = RGB_BACKGROUND_GREY;
-    
+
     switch (commsState) {
         case eCommsNeverConnected:
         case eCommsReconnecting:
@@ -245,7 +245,7 @@ void render_top_bar(void) {
             break;
     }
     set_rgb_colour(commsStateColour);
-    rectangle = {{200, 8}, {get_text_width("Offline", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
+    rectangle        = {{200, 8}, {get_text_width("Offline", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
     draw_button(mainArea, rectangle, commsStateText, false);
 }
 
@@ -450,7 +450,7 @@ void read_file_into_memory_and_process(const char * filepath) {
         } // 1 = performance
 
         set_patch_name_from_filename(gSlot, filepath);
-        
+
         // If online, push to device immediately
         if (atomic_load(&gCommsState) == eCommsOnLine) {
             tMessageContent msg = {0};
@@ -581,6 +581,7 @@ static void check_action_flags(void) {
         char defaultName[PATCH_NAME_SIZE + 6] = {0};  // name + ".pch2\0"
 
         pthread_mutex_lock(&gGlobalVarsMutex);
+
         if (gPatchName[gSlot][0] != '\0') {
             snprintf(defaultName, sizeof(defaultName), "%s.pch2", gPatchName[gSlot]);
         } else {
@@ -590,11 +591,11 @@ static void check_action_flags(void) {
 
         open_file_write_dialogue_async(on_file_saved, defaultName);
     }
-	
-	if (atomic_load(&gNeedFocus)) {
-	    atomic_store(&gNeedFocus, false);
-	    glfwFocusWindow(gWindow);
-	}
+
+    if (atomic_load(&gNeedFocus)) {
+        atomic_store(&gNeedFocus, false);
+        glfwFocusWindow(gWindow);
+    }
 }
 
 void do_graphics_loop(void) {

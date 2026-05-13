@@ -1297,7 +1297,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
     if (action == GLFW_PRESS) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            bool found = false;
+            bool       found    = false;
 
             for (uint32_t i = 0; i < array_size_main_button_array(); i++) {
                 if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
@@ -1314,10 +1314,11 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     }
                 }
             }
-            
             tRectangle nameRect = {{180, 60},
-                                   {get_text_width("XXXXXXXXXXXXXXXX", STANDARD_BUTTON_TEXT_HEIGHT),
-                                    STANDARD_TEXT_HEIGHT}};  // Should really get this from the button
+                                   {
+                                       get_text_width("XXXXXXXXXXXXXXXX", STANDARD_BUTTON_TEXT_HEIGHT),
+                                       STANDARD_TEXT_HEIGHT
+                                   }};                       // Should really get this from the button
 
             if (within_rectangle(coord, nameRect)) {
                 if (!gPatchNameEdit.active) {
@@ -1335,7 +1336,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 pthread_mutex_unlock(&gGlobalVarsMutex);
                 // TODO: if online, enqueue eMsgCmdWritePatch or a dedicated name update command
             }
-
         }
     } else if (action == GLFW_RELEASE) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -1601,6 +1601,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         if (action == GLFW_PRESS || action == GLFW_REPEAT) {
             if (key == GLFW_KEY_BACKSPACE) {
                 size_t len = strlen(gPatchNameEdit.buffer);
+
                 if (len > 0) {
                     gPatchNameEdit.buffer[len - 1] = '\0';
                 }
