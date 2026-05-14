@@ -703,10 +703,30 @@ void render_module(tModule * module) {
     render_module_common(moduleRectangle, module);
     write_module(module->key, module);                                             // Save calculated coords
 
-    snprintf(buff, sizeof(buff), "%s", module->name);
-    set_rgba_colour(RGBA_BLACK_ON_TRANSPARENT);
-    render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    if (gModuleNameEdit.active &&
+        gModuleNameEdit.moduleKey.slot     == module->key.slot     &&
+        gModuleNameEdit.moduleKey.location == module->key.location &&
+        gModuleNameEdit.moduleKey.index    == module->key.index) {
 
+        char editBuf[MODULE_NAME_SIZE + 2] = {0};
+        snprintf(editBuf, sizeof(editBuf), "%s|", gModuleNameEdit.buffer);
+
+        // Highlight the drag area to show edit mode
+        set_rgb_colour(RGB_WHITE);
+        render_rectangle(moduleArea, {{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3},
+                                      {get_text_width("XXXXXXXXXXXXXXXX", STANDARD_BUTTON_TEXT_HEIGHT)+5, STANDARD_TEXT_HEIGHT + 2}});
+
+        set_rgba_colour(RGBA_BLACK_ON_TRANSPARENT);
+        render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0},
+                                 {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, editBuf);
+    } else {
+        snprintf(buff, sizeof(buff), "%s", module->name);
+        set_rgba_colour(RGBA_BLACK_ON_TRANSPARENT);
+        render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0},
+                                 {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    }
+    
+    
     // Temporary items purely for development debug
     snprintf(buff, sizeof(buff), "(%s)", gModuleProperties[module->type].name);
 

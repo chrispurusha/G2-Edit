@@ -65,6 +65,7 @@ extern char                gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1];
 extern _Atomic tCommsState gCommsState;
 extern _Atomic uint32_t    gChangedSlot;
 extern tNameEdit           gPatchNameEdit;
+extern tModuleNameEdit      gModuleNameEdit;
 
 // Thread synchronization mutex for global variables
 extern pthread_mutex_t     gGlobalVarsMutex;

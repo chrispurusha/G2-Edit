@@ -703,9 +703,15 @@ typedef enum {
 
 typedef struct {
     bool     active;
-    char     buffer[PATCH_NAME_SIZE + 1];  // TODO: May need to cope with module name too
+    char     buffer[PATCH_NAME_SIZE + 1];
     uint32_t slot;
-} tNameEdit;
+} tNameEdit;  // Todo - rename to patch name edit
+
+typedef struct {
+    bool       active;
+    tModuleKey moduleKey;
+    char       buffer[MODULE_NAME_SIZE + 1];
+} tModuleNameEdit;
 
 #endif // __TYPES_H__
 
