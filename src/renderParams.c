@@ -735,8 +735,9 @@ tRectangle render_paramType1Resonance(tModule * module, tRectangle rectangle, ch
 }
 
 tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, char ** strMap) {
-    double y          = rectangle.coord.y;
-    double textHeight = rectangle.size.h / 2.0;
+    double y                      = rectangle.coord.y;
+    double textHeight             = rectangle.size.h / 2.0;
+    tRgb   buttonBackgroundColour = RGB_BACKGROUND_GREY;
 
     if (paramValue >= array_size_str_map(strMap)) {
         LOG_ERROR("Bad strMap for module type %s ParamRef %u ParamIndex %u, map pointer = 0x%lx, Value %u >= Map array size %u\n", gModuleProperties[module->type].name, paramRef, paramIndex, (unsigned long)strMap, (int)paramValue, array_size_str_map(strMap));
@@ -746,8 +747,8 @@ tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangl
         snprintf(debug, sizeof(debug), "%u", (int)paramValue);
 
         tRectangle text_rectangle = {{rectangle.coord.x, y}, {30, textHeight}};
-        set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
-        return draw_button(moduleArea, text_rectangle, debug, false);
+        //set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
+        return draw_button(moduleArea, text_rectangle, debug, (tRgb)RGB_BACKGROUND_GREY);
     }
 
     if (strlen(label) > 0) {
@@ -757,11 +758,9 @@ tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangl
     }
 
     if (paramLocationList[paramRef].colourMap != NULL) {
-        set_rgb_colour(paramLocationList[paramRef].colourMap[(int)paramValue]);
-    } else {
-        set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
+        buttonBackgroundColour = paramLocationList[paramRef].colourMap[(int)paramValue];
     }
-    return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[(int)paramValue], false);
+    return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[(int)paramValue], buttonBackgroundColour);
 }
 
 tRectangle render_paramType1UpDown(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, char ** strMap) {
@@ -774,8 +773,7 @@ tRectangle render_paramType1UpDown(tModule * module, tRectangle rectangle, char 
         //Debug help for value
         char debug[64] = {0};
         snprintf(debug, sizeof(debug), "%f", paramValue);
-        set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
-        return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {30, textHeight}}, debug, false);
+        return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {30, textHeight}}, debug, (tRgb)RGB_BACKGROUND_GREY);
     }
 
     if (strlen(label) > 0) {
@@ -797,12 +795,12 @@ tRectangle render_paramType1Bypass(tModule * module, tRectangle rectangle, char 
 }
 
 tRectangle render_paramType1Enable(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
+    tRgb buttonBackgroundColour = RGB_BACKGROUND_GREY;
+
     if (paramLocationList[paramRef].colourMap != NULL) {
-        set_rgb_colour(paramLocationList[paramRef].colourMap[(int)paramValue]);
-    } else {
-        set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);          // Grey when OFF
+        buttonBackgroundColour = paramLocationList[paramRef].colourMap[(int)paramValue];
     }
-    return draw_button(moduleArea, rectangle, NULL, false);  // TODO: Add label!
+    return draw_button(moduleArea, rectangle, NULL, buttonBackgroundColour);  // TODO: Add label!
 }
 
 #ifdef __cplusplus

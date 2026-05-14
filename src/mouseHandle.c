@@ -620,16 +620,17 @@ void menu_action_delete_module(int index) {
 
 static void action_rename_module(int index) {
     tModule module = {0};
+
     if (read_module(gContextMenu.moduleKey, &module)) {
-        gModuleNameEdit.active    = true;
-        gModuleNameEdit.moduleKey = gContextMenu.moduleKey;
+        gModuleNameEdit.active                   = true;
+        gModuleNameEdit.moduleKey                = gContextMenu.moduleKey;
         strncpy(gModuleNameEdit.buffer, module.name, MODULE_NAME_SIZE);
         gModuleNameEdit.buffer[MODULE_NAME_SIZE] = '\0';
     }
     gContextMenu.active = false;
-    gReDraw = true;
+    gReDraw             = true;
 }
-    
+
 uint32_t find_unique_module_id(uint32_t location) {
     tModuleKey key    = {0};
     tModule    module = {0};
@@ -1009,7 +1010,7 @@ void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t co
 
 void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     static tMenuItem menuItems[] = {
-        {"Rename",        action_rename_module, 0, NULL},
+        {"Rename",        action_rename_module,      0, NULL},
         {"Delete module", menu_action_delete_module, 0, NULL},
         {NULL,            NULL,                      0, NULL}       // End of menu
     };
@@ -1599,15 +1600,15 @@ void char_event(GLFWwindow * window, unsigned int value) {
             gPatchNameEdit.buffer[len + 1] = '\0';
         }
     }
-    
+
     if (gModuleNameEdit.active) {
         size_t len = strlen(gModuleNameEdit.buffer);
+
         if ((value >= 0x20) && (value <= 0x7e) && (len < MODULE_NAME_SIZE)) {
             gModuleNameEdit.buffer[len]     = (char)value;
             gModuleNameEdit.buffer[len + 1] = '\0';
         }
     }
-    
     LOG_DEBUG("char=%d\n", value);
     gReDraw = true;
 }
@@ -1621,7 +1622,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         if (action == GLFW_PRESS || action == GLFW_REPEAT) {
             if (key == GLFW_KEY_BACKSPACE) {
                 size_t len = strlen(gPatchNameEdit.buffer);
-                
+
                 if (len > 0) {
                     gPatchNameEdit.buffer[len - 1] = '\0';
                 }
@@ -1641,12 +1642,16 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         if (action == GLFW_PRESS || action == GLFW_REPEAT) {
             if (key == GLFW_KEY_BACKSPACE) {
                 size_t len = strlen(gModuleNameEdit.buffer);
-                if (len > 0) gModuleNameEdit.buffer[len - 1] = '\0';
+
+                if (len > 0) {
+                    gModuleNameEdit.buffer[len - 1] = '\0';
+                }
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
-                tModule    module = {0};
-                
+                tModule module = {0};
+
                 gModuleNameEdit.active = false;
-                module.key = gModuleNameEdit.moduleKey;
+                module.key             = gModuleNameEdit.moduleKey;
+
                 if (read_module(module.key, &module) == true) {
                     strncpy(module.name, gModuleNameEdit.buffer, sizeof(module.name));
                     module.name[sizeof(module.name) - 1] = '\0';

@@ -420,8 +420,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
                 //Debug help for value
                 char debug[64] = {0};
                 snprintf(debug, sizeof(debug), "modeRef %u", modeRef);
-                set_rgb_colour(RGB_BACKGROUND_GREY);
-                module->param[gPatchDescr[gSlot].activeVariation][modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {30, textHeight}}, debug, false);
+                module->param[gPatchDescr[gSlot].activeVariation][modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {30, textHeight}}, debug, RGB_BACKGROUND_GREY);
                 return;
             }
             //if (paramLocationList[paramRef].colourMap != NULL) {
@@ -429,9 +428,8 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             //} else {
             //    set_rgb_colour(RGB_BACKGROUND_GREY);
             //}
-            set_rgb_colour(RGB_BACKGROUND_GREY);
 
-            module->mode[modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight), textHeight}}, strMap[modeValue], false);
+            module->mode[modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight), textHeight}}, strMap[modeValue], RGB_BACKGROUND_GREY);
             break;
         }
         default:
@@ -703,30 +701,27 @@ void render_module(tModule * module) {
     render_module_common(moduleRectangle, module);
     write_module(module->key, module);                                             // Save calculated coords
 
-    if (gModuleNameEdit.active &&
-        gModuleNameEdit.moduleKey.slot     == module->key.slot     &&
-        gModuleNameEdit.moduleKey.location == module->key.location &&
-        gModuleNameEdit.moduleKey.index    == module->key.index) {
-
+    if (  gModuleNameEdit.active
+       && gModuleNameEdit.moduleKey.slot == module->key.slot
+       && gModuleNameEdit.moduleKey.location == module->key.location
+       && gModuleNameEdit.moduleKey.index == module->key.index) {
         char editBuf[MODULE_NAME_SIZE + 2] = {0};
         snprintf(editBuf, sizeof(editBuf), "%s|", gModuleNameEdit.buffer);
 
         // Highlight the drag area to show edit mode
         set_rgb_colour(RGB_WHITE);
         render_rectangle(moduleArea, {{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3},
-                                      {get_text_width(LONGEST_MODULE_NAME, STANDARD_BUTTON_TEXT_HEIGHT)+5, STANDARD_TEXT_HEIGHT + 2}});
+                             {get_text_width(LONGEST_MODULE_NAME, STANDARD_BUTTON_TEXT_HEIGHT) + 5, STANDARD_TEXT_HEIGHT + 2}});
 
         set_rgba_colour(RGBA_BLACK_ON_TRANSPARENT);
         render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0},
-                                 {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, editBuf);
+                        {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, editBuf);
     } else {
         snprintf(buff, sizeof(buff), "%s", module->name);
         set_rgba_colour(RGBA_BLACK_ON_TRANSPARENT);
         render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0},
-                                 {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+                        {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     }
-    
-    
     // Temporary items purely for development debug
     snprintf(buff, sizeof(buff), "(%s)", gModuleProperties[module->type].name);
 
@@ -870,8 +865,7 @@ void render_morph_groups(void) {
 
                 textHeight                                                                 = rectangle.size.h / 4.0;
 
-                set_rgb_colour(RGB_BACKGROUND_GREY);
-                module.param[gPatchDescr[gSlot].activeVariation][i + NUM_MORPHS].rectangle = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y - 8}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, false);
+                module.param[gPatchDescr[gSlot].activeVariation][i + NUM_MORPHS].rectangle = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y - 8}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, RGB_BACKGROUND_GREY);
 
                 rectangle.coord.x                                                         += (STANDARD_TEXT_HEIGHT * 4) + 5;
             }

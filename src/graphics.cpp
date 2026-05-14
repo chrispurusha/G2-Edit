@@ -179,6 +179,7 @@ void render_top_bar(void) {
     tCommsState commsState                         = atomic_load(&gCommsState);
     char *      commsStateText                     = "Unknown";
     tRgb        commsStateColour                   = RGB_RED_7;
+    tRgb        buttonBackgroundColour             = (tRgb)RGB_BACKGROUND_GREY;
 
     set_rgb_colour(RGB_GREY_5);
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {(get_render_width() / GLOBAL_GUI_SCALE) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
@@ -205,17 +206,15 @@ void render_top_bar(void) {
 
         set_rgb_colour(RGB_WHITE);
         rectangle = {{180, 60}, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT),
-                                 STANDARD_TEXT_HEIGHT}};    // Todo - need to store this rectangle definition somehwre global
-        draw_button(mainArea, rectangle, displayBuf, true); // isPressed=true gives visual feedback
+                                 STANDARD_TEXT_HEIGHT}};               // Todo - need to store this rectangle definition somehwre global
+        draw_button(mainArea, rectangle, displayBuf, (tRgb)RGB_WHITE); // isPressed=true gives visual feedback
     } else {
         set_rgb_colour(RGB_BACKGROUND_GREY);
         rectangle = {{180, 60}, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
-        draw_button(mainArea, rectangle, patchNameCopy, false);
+        draw_button(mainArea, rectangle, patchNameCopy, (tRgb)RGB_BACKGROUND_GREY);
     }
 
     for (int i = 0; i < array_size_main_button_array(); i++) {
-        set_rgb_colour(gMainButtonArray[i].backgroundColour);
-
         rectangle                     = {gMainButtonArray[i].coord, {get_text_width(gMainButtonArray[i].text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
 
         switch (gMainButtonArray[i].anchor) {
@@ -229,24 +228,29 @@ void render_top_bar(void) {
                 break;
             }
         }
-        gMainButtonArray[i].rectangle = draw_button(mainArea, rectangle, gMainButtonArray[i].text, gMainButtonArray[i].isPressed);
+
+        if (gMainButtonArray[i].isPressed) {
+            buttonBackgroundColour = (tRgb)RGB_GREY_7;
+        } else {
+            buttonBackgroundColour = gMainButtonArray[i].backgroundColour;
+        }
+        gMainButtonArray[i].rectangle = draw_button(mainArea, rectangle, gMainButtonArray[i].text, buttonBackgroundColour);
     }
 
     commsStateColour = RGB_BACKGROUND_GREY;
 
     switch (commsState) {
-        case eCommsNeverConnected:
-        case eCommsReconnecting:
-            commsStateText   = "Offline";
-            break;
         case eCommsOnLine:
             commsStateText   = "Online";
             commsStateColour = RGB_GREEN_7;
             break;
+        default:
+            commsStateText   = "Offline";
+            break;
     }
     set_rgb_colour(commsStateColour);
     rectangle        = {{200, 8}, {get_text_width("Offline", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
-    draw_button(mainArea, rectangle, commsStateText, false);
+    draw_button(mainArea, rectangle, commsStateText, commsStateColour);
 }
 
 void wake_glfw(void) {
