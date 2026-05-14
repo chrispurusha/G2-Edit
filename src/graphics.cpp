@@ -204,12 +204,12 @@ void render_top_bar(void) {
         snprintf(displayBuf, sizeof(displayBuf), "%s|", gPatchNameEdit.buffer);
 
         set_rgb_colour(RGB_WHITE);
-        rectangle = {{180, 60}, {get_text_width("XXXXXXXXXXXXXXXX", STANDARD_BUTTON_TEXT_HEIGHT),
+        rectangle = {{180, 60}, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT),
                                  STANDARD_TEXT_HEIGHT}};    // Todo - need to store this rectangle definition somehwre global
         draw_button(mainArea, rectangle, displayBuf, true); // isPressed=true gives visual feedback
     } else {
         set_rgb_colour(RGB_BACKGROUND_GREY);
-        rectangle = {{180, 60}, {get_text_width("XXXXXXXXXXXXXXXX", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
+        rectangle = {{180, 60}, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
         draw_button(mainArea, rectangle, patchNameCopy, false);
     }
 

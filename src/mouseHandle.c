@@ -1329,7 +1329,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
             tRectangle nameRect = {{180, 60},
                                    {
-                                       get_text_width("XXXXXXXXXXXXXXXX", STANDARD_BUTTON_TEXT_HEIGHT),
+                                       get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT),
                                        STANDARD_TEXT_HEIGHT
                                    }};                       // Should really get this from the button
 
