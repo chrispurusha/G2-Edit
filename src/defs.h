@@ -75,13 +75,13 @@
 #define SUB_RESPONSE_STORE                   (0x0d)
 #define SUB_COMMAND_CLEAR_BANK               (0x0e)
 #define SUB_COMMAND_PERFORMANCE_SETTINGS     (0x10)
-#define SUB_COMMAND_ASSIGN_GLOBAL_KNOB       (0x1c)  // S_ASS_GLOBAL_KNOB
-#define SUB_COMMAND_DEASSIGN_GLOBAL_KNOB     (0x1d)  // S_DEASS_GLOB_KNOB
+#define SUB_COMMAND_ASSIGN_GLOBAL_KNOB       (0x1c)
+#define SUB_COMMAND_DEASSIGN_GLOBAL_KNOB     (0x1d)
 #define SUB_RESPONSE_GLOBAL_PAGE             (0x1e)
 #define SUB_RESPONSE_PATCH_DESCRIPTION       (0x21)
-#define SUB_COMMAND_ASSIGN_MIDICC            (0x22)  // S_ASSIGN_MIDICC
-#define SUB_COMMAND_DEASSIGN_MIDICC          (0x23)  // S_DEASSIGN_MIDICC
-#define SUB_COMMAND_ASSIGN_KNOB              (0x25)  // S_ASSIGN_KNOB
+#define SUB_COMMAND_ASSIGN_MIDICC            (0x22)
+#define SUB_COMMAND_DEASSIGN_MIDICC          (0x23)
+#define SUB_COMMAND_ASSIGN_KNOB              (0x25)
 #define SUB_COMMAND_DEASSIGN_KNOB            (0x26)
 #define SUB_RESPONSE_PATCH_NAME              (0x27)
 #define SUB_COMMAND_GET_PATCH_NAME           (0x28)
@@ -94,7 +94,7 @@
 #define SUB_COMMAND_ADD_MODULE               (0x30)
 #define SUB_COMMAND_SET_MODULE_COLOUR        (0x31)
 #define SUB_COMMAND_DELETE_MODULE            (0x32)
-#define SUB_COMMAND_SET_MODULE_LABEL         (0x33)  // S_SET_MODULE_LABEL — module rename command
+#define SUB_COMMAND_SET_MODULE_LABEL         (0x33)
 #define SUB_COMMAND_MOVE_MODULE              (0x34)
 #define SUB_COMMAND_GET_PATCH_VERSION        (0x35)
 #define SUB_RESPONSE_PATCH_VERSION           (0x36)
@@ -102,10 +102,10 @@
 #define SUB_RESPONSE_PATCH_VERSION_CHANGE    (0x38)
 #define SUB_RESPONSE_LED_DATA                (0x39)
 #define SUB_RESPONSE_VOLUME_INDICATOR        (0x3a)
-#define SUB_COMMAND_QUERY_MASTER_CLOCK       (0x3b)  // Q_MASTER_CLOCK
+#define SUB_COMMAND_QUERY_MASTER_CLOCK       (0x3b)
 #define SUB_COMMAND_GET_PATCH_SLOT           (0x3c)
-#define SUB_COMMAND_MIDI_DUMP                (0x3d)  // S_MIDI_DUMP
-#define SUB_COMMAND_SET_PARAM_MODE           (0x3e)  // S_SET_PARAM_MODE
+#define SUB_COMMAND_MIDI_DUMP                (0x3d)
+#define SUB_COMMAND_SET_PARAM_MODE           (0x3e)
 #define SUB_RESPONSE_MASTER_CLOCK            (0x3f)
 #define SUB_RESPONSE_PARAM_CHANGE            (0x40) // Seems to be used for response and set command
 #define SUB_COMMAND_SET_PARAM                (0x40)
@@ -113,19 +113,19 @@
 #define SUB_COMMAND_SET_MORPH_RANGE          (0x43)
 #define SUB_COMMAND_COPY_VARIATION           (0x44)
 #define SUB_RESPONSE_MODULE_LIST             (0x4a)
-#define SUB_COMMAND_QUERY_PARAMS             (0x4c)  // Q_PARAMS
+#define SUB_COMMAND_QUERY_PARAMS             (0x4c)
 #define SUB_RESPONSE_PARAM_LIST              (0x4d)
-#define SUB_COMMAND_QUERY_PARAM_NAMES        (0x4f)  // Q_PARAM_NAMES
+#define SUB_COMMAND_QUERY_PARAM_NAMES        (0x4f)
 #define SUB_COMMAND_WRITE_CABLE              (0x50)
 #define SUB_COMMAND_DELETE_CABLE             (0x51)
 #define SUB_RESPONSE_CABLE_LIST              (0x52)
 #define SUB_COMMAND_WRITE_CABLE_COLOUR       (0x54)
-#define SUB_COMMAND_CTRL_SNAPSHOT            (0x55)  // S_CTRL_SNAPSHOT
-#define SUB_COMMAND_PLAY_NOTE                (0x56)  // S_PLAY_NOTE
+#define SUB_COMMAND_CTRL_SNAPSHOT            (0x55)
+#define SUB_COMMAND_PLAY_NOTE                (0x56)
 #define SUB_COMMAND_UNKNOWN_2                (0x59)
 #define SUB_RESPONSE_MODULE_NAMES            (0x5a)
 #define SUB_RESPONSE_PARAM_NAMES             (0x5b)
-#define SUB_RESPONSE_EXT_MASTER_CLOCK        (0x5d)  // R_EXT_MASTER_CLOCK
+#define SUB_RESPONSE_EXT_MASTER_CLOCK        (0x5d)
 #define SUB_RESPONSE_GLOBAL_KNOBS            (0x5e) // Not yet sure if this is a response or a query command, or both
 #define SUB_COMMAND_GLOBAL_KNOBS             (0x5f)
 #define SUB_RESPONSE_CONTROLLERS             (0x60)
@@ -134,16 +134,26 @@
 #define SUB_COMMAND_CURRENT_NOTE             (0x68)
 #define SUB_RESPONSE_CURRENT_NOTE_2          (0x69)
 #define SUB_COMMAND_SELECT_VARIATION         (0x6a)
-#define SUB_COMMAND_QUERY_PATCH_TEXT         (0x6e)  // Q_PATCH_TEXT
+#define SUB_COMMAND_QUERY_PATCH_TEXT         (0x6e)
 #define SUB_RESPONSE_PATCH_NOTES             (0x6f)
-#define SUB_COMMAND_KNOB_SNAPSHOT            (0x70)  // M_UNKNOWN_6 — sends 0x70, receives C_KNOBS
-#define SUB_COMMAND_QUERY_RESOURCES          (0x71)  // Q_RESOURCES_USED
+#define SUB_COMMAND_KNOB_SNAPSHOT            (0x70)  // Unknown 6, receives C_KNOBS ?
+#define SUB_COMMAND_QUERY_RESOURCES          (0x71)
 #define SUB_RESPONSE_RESOURCES_USED          (0x72)
 #define SUB_COMMAND_START_STOP               (0x7d)
 #define SUB_RESPONSE_ERROR                   (0x7e)
 #define SUB_RESPONSE_OK                      (0x7f)
 #define SUB_RESPONSE_MIDI_CC                 (0x80)
 #define SUB_COMMAND_GET_MIDI_CC              (0x81) // A.k.a. Unknown 1!?
+
+#define SUB_RESPONSE_PERF_SETTINGS           (0x11)
+#define SUB_RESPONSE_CLEAR_BANK              (0x12)
+#define SUB_RESPONSE_LIST_NAMES              (0x13)
+#define SUB_COMMAND_LIST_NAMES               (0x14)
+#define SUB_RESPONSE_CLEAR                   (0x15)
+#define SUB_RESPONSE_ADD_NAMES               (0x16)
+#define SUB_COMMAND_PATCH_BANK_UPLOAD        (0x17)
+#define SUB_RESPONSE_PATCH_BANK_UPLOAD       (0x18)
+#define SUB_COMMAND_PATCH_BANK_DATA          (0x19)
 
 #define COMMAND_REQ                          (0x20) // High nibble, expects response
 #define COMMAND_WRITE_NO_RESP                (0x30) // High nibble, expects response
