@@ -800,22 +800,22 @@ static int send_message(uint8_t * buff, int pos) {
     return EXIT_FAILURE;
 }
 
-// Convenience: send then immediately receive
-#define SEND_RECV(fn)                                                                                                    \
-   do {                                                                                                                  \
-       if ((fn) != EXIT_SUCCESS) {LOG_DEBUG("SEND_RECV failed at %s:%d\n", __func__, __LINE__); return EXIT_FAILURE;}    \
-       if (int_rec() != EXIT_SUCCESS) {LOG_DEBUG("int_rec failed at %s:%d\n", __func__, __LINE__); return EXIT_FAILURE;} \
-   } while (0)
-
 static int send_init(void) {
+    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
     buff[pos++] = 0x80;
-    return send_message(buff, pos);
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec();
+    }
+    return retVal;
 }
 
 static int send_stop(void) {
+    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
@@ -824,10 +824,16 @@ static int send_stop(void) {
     buff[pos++] = 0x41;
     buff[pos++] = SUB_COMMAND_START_STOP;
     buff[pos++] = 0x01;
-    return send_message(buff, pos);
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec();
+    }
+    return retVal;
 }
 
 static int send_start(void) {
+    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
@@ -836,10 +842,16 @@ static int send_start(void) {
     buff[pos++] = 0x41;
     buff[pos++] = SUB_COMMAND_START_STOP;
     buff[pos++] = 0x00;
-    return send_message(buff, pos);
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec();
+    }
+    return retVal;
 }
 
 static int send_select_slot(uint32_t slot) {
+    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
@@ -848,10 +860,16 @@ static int send_select_slot(uint32_t slot) {
     buff[pos++] = 0x00;
     buff[pos++] = SUB_COMMAND_SELECT_SLOT;
     buff[pos++] = (uint8_t)slot;
-    return send_message(buff, pos);
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec();
+    }
+    return retVal;
 }
 
 static int send_get_synth_settings(void) {
+    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
@@ -859,10 +877,16 @@ static int send_get_synth_settings(void) {
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
     buff[pos++] = 0x41;
     buff[pos++] = SUB_COMMAND_GET_SYNTH_SETTINGS;
-    return send_message(buff, pos);
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec();
+    }
+    return retVal;
 }
 
 static int send_get_midi_cc(void) {
+    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
@@ -870,10 +894,16 @@ static int send_get_midi_cc(void) {
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
     buff[pos++] = 0x41;
     buff[pos++] = SUB_COMMAND_GET_MIDI_CC;
-    return send_message(buff, pos);
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec();
+    }
+    return retVal;
 }
 
 static int send_get_unknown2(void) {
+    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
@@ -881,10 +911,16 @@ static int send_get_unknown2(void) {
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
     buff[pos++] = 0x00;
     buff[pos++] = SUB_COMMAND_UNKNOWN_2;
-    return send_message(buff, pos);
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec();
+    }
+    return retVal;
 }
 
 static int send_get_patch_version(uint32_t slot) {
+    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
@@ -893,10 +929,16 @@ static int send_get_patch_version(uint32_t slot) {
     buff[pos++] = 0x41;
     buff[pos++] = SUB_COMMAND_GET_PATCH_VERSION;
     buff[pos++] = (uint8_t)slot;
-    return send_message(buff, pos);
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec();
+    }
+    return retVal;
 }
 
 static int send_get_patch(uint32_t slot) {
+    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
@@ -904,10 +946,16 @@ static int send_get_patch(uint32_t slot) {
     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
     buff[pos++] = gPatchVersion[slot];
     buff[pos++] = SUB_COMMAND_GET_PATCH_SLOT;
-    return send_message(buff, pos);
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec();
+    }
+    return retVal;
 }
 
 static int send_get_patch_name(uint32_t slot) {
+    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
@@ -915,7 +963,12 @@ static int send_get_patch_name(uint32_t slot) {
     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
     buff[pos++] = gPatchVersion[slot];
     buff[pos++] = SUB_COMMAND_GET_PATCH_NAME;
-    return send_message(buff, pos);
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec();
+    }
+    return retVal;
 }
 
 // ---------------------------------------------------------------------------
@@ -941,9 +994,9 @@ static void clear_slot_data(uint32_t slot) {
 static int fetch_slot_data(uint32_t slot) {
     clear_slot_data(slot);
 
-    SEND_RECV(send_get_patch_version(slot));
-    SEND_RECV(send_get_patch(slot));
-    SEND_RECV(send_get_patch_name(slot));
+    send_get_patch_version(slot);
+    send_get_patch(slot);
+    send_get_patch_name(slot);
 
     return EXIT_SUCCESS;
 }
@@ -959,6 +1012,7 @@ static int push_slot_to_device(uint32_t slot) {
     int      pos                     = COMMAND_OFFSET;
     uint32_t bitPos                  = 0;
     uint32_t i                       = 0;
+    int      retVal                  = EXIT_FAILURE;
 
     LOG_DEBUG("Pushing slot %u to device\n", slot);
 
@@ -1000,17 +1054,14 @@ static int push_slot_to_device(uint32_t slot) {
     write_module_names(slot, locationFx, buff, &bitPos);
     write_patch_notes(slot, buff, &bitPos);
 
-    pos = BIT_TO_BYTE(bitPos);
+    pos    = BIT_TO_BYTE(bitPos);
 
-    if (send_message(buff, pos) != EXIT_SUCCESS) {
-        return EXIT_FAILURE;
-    }
+    retVal = send_message(buff, pos) != EXIT_SUCCESS;
 
-    // Consume SUB_RESPONSE_PATCH_VERSION_CHANGE — updates gPatchVersion[slot]
-    if (int_rec() != EXIT_SUCCESS) {
-        return EXIT_FAILURE;
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec();
     }
-    return EXIT_SUCCESS;
+    return retVal;
 }
 
 // ---------------------------------------------------------------------------
@@ -1026,15 +1077,15 @@ static int send_init_sequence_pull(void) {
     database_clear_cables();
     database_clear_modules();
 
-    SEND_RECV(send_init());
-    SEND_RECV(send_stop());
-    SEND_RECV(send_get_synth_settings());
-    SEND_RECV(send_get_midi_cc());
-    SEND_RECV(send_get_unknown2());
-    SEND_RECV(send_select_slot(0));
+    send_init();
+    send_stop();
+    send_get_synth_settings();
+    send_get_midi_cc();
+    send_get_unknown2();
+    send_select_slot(0);
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-        SEND_RECV(send_get_patch_version(slot));
+        send_get_patch_version(slot);
     }
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
@@ -1044,7 +1095,7 @@ static int send_init_sequence_pull(void) {
         }
     }
 
-    SEND_RECV(send_start());
+    send_start();
 
     LOG_DEBUG("Pull init sequence complete\n");
     atomic_store(&gCommsState, eCommsOnLine);
@@ -1059,8 +1110,8 @@ static int send_init_sequence_push(void) {
     LOG_DEBUG("Init sequence: pushing editor data to G2\n");
     atomic_store(&gCommsState, eCommsInitialising);
 
-    SEND_RECV(send_init());
-    SEND_RECV(send_stop());
+    send_init();
+    send_stop();
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         if (push_slot_to_device(slot) != EXIT_SUCCESS) {
@@ -1069,7 +1120,7 @@ static int send_init_sequence_push(void) {
         }
     }
 
-    SEND_RECV(send_start());
+    send_start();
 
     LOG_DEBUG("Push init sequence complete\n");
     atomic_store(&gCommsState, eCommsOnLine);
@@ -1093,6 +1144,7 @@ static int send_write_data(tMessageContent * messageContent) {
     memcpy(slotVersion_local, gPatchVersion, sizeof(slotVersion_local));
     pthread_mutex_unlock(&gGlobalVarsMutex);
 
+    // TODO - these should move to functions where we can do: SEND_RECV(function());
     switch (messageContent->cmd) {
         case eMsgCmdSetValue:
             buff[pos++] = 0x01;
@@ -1105,6 +1157,10 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->paramData.value;
             buff[pos++] = messageContent->paramData.variation;
             retVal      = send_message(buff, pos);
+
+            if (retVal == EXIT_SUCCESS) {
+                retVal = int_rec();
+            }
             break;
 
         case eMsgCmdSetMode:
@@ -1118,6 +1174,10 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->modeData.value;
             LOG_DEBUG("SET MODE %u %u\n", messageContent->modeData.mode, messageContent->modeData.value);
             retVal      = send_message(buff, pos);
+
+            if (retVal == EXIT_SUCCESS) {
+                retVal = int_rec();
+            }
             break;
 
         case eMsgCmdWriteCable:
@@ -1131,6 +1191,10 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->cableData.moduleToIndex;
             buff[pos++] = messageContent->cableData.connectorToIoIndex;
             retVal      = send_message(buff, pos);
+
+            if (retVal == EXIT_SUCCESS) {
+                retVal = int_rec();
+            }
             break;
 
         case eMsgCmdWriteModule:
@@ -1155,6 +1219,10 @@ static int send_write_data(tMessageContent * messageContent) {
             strcpy((char *)&buff[pos], messageContent->moduleData.name);
             pos        += strlen(messageContent->moduleData.name) + 1;
             retVal      = send_message(buff, pos);
+
+            if (retVal == EXIT_SUCCESS) {
+                retVal = int_rec();
+            }
             break;
 
         case eMsgCmdMoveModule:
@@ -1167,6 +1235,10 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.column;
             buff[pos++] = messageContent->moduleData.row;
             retVal      = send_message(buff, pos);
+
+            if (retVal == EXIT_SUCCESS) {
+                retVal = int_rec();
+            }
             break;
 
         case eMsgCmdDeleteModule:
@@ -1177,6 +1249,10 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.moduleKey.location;
             buff[pos++] = messageContent->moduleData.moduleKey.index;
             retVal      = send_message(buff, pos);
+
+            if (retVal == EXIT_SUCCESS) {
+                retVal = int_rec();
+            }
             break;
 
         case eMsgCmdSetModuleUpRate:
@@ -1188,6 +1264,10 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.moduleKey.index;
             buff[pos++] = messageContent->moduleData.upRate;
             retVal      = send_message(buff, pos);
+
+            if (retVal == EXIT_SUCCESS) {
+                retVal = int_rec();
+            }
             break;
 
         case eMsgCmdDeleteCable:
@@ -1201,6 +1281,10 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->cableData.moduleToIndex;
             buff[pos++] = messageContent->cableData.connectorToIoIndex;
             retVal      = send_message(buff, pos);
+
+            if (retVal == EXIT_SUCCESS) {
+                retVal = int_rec();
+            }
             break;
 
         case eMsgCmdSetParamMorph:
@@ -1216,6 +1300,10 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->paramMorphData.negative;
             buff[pos++] = messageContent->paramMorphData.variation;
             retVal      = send_message(buff, pos);
+
+            if (retVal == EXIT_SUCCESS) {
+                retVal = int_rec();
+            }
             break;
 
         case eMsgCmdSelectVariation:
@@ -1225,6 +1313,10 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = SUB_COMMAND_SELECT_VARIATION;
             buff[pos++] = messageContent->variationData.variation;
             retVal      = send_message(buff, pos);
+
+            if (retVal == EXIT_SUCCESS) {
+                retVal = int_rec();
+            }
             break;
 
         case eMsgCmdSelectSlot:
@@ -1234,32 +1326,30 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = SUB_COMMAND_SELECT_SLOT;
             buff[pos++] = messageContent->slotData.slot;
             retVal      = send_message(buff, pos);
+
+            if (retVal == EXIT_SUCCESS) {
+                retVal = int_rec();
+            }
             break;
 
         case eMsgCmdWritePatch:
         {
-            uint32_t slot = messageContent->slot;
-
             // Stop synth before upload to suppress unsolicited messages
-            if (send_stop() != EXIT_SUCCESS) {
-                break;
-            }
-
-            if (int_rec() != EXIT_SUCCESS) {
-                send_start();
-                int_rec();
-                break;
-            }
-            retVal = push_slot_to_device(slot);
-
-            // Always restart even if push failed
-            send_start();
-            int_rec();
+            retVal = send_stop();
 
             if (retVal == EXIT_SUCCESS) {
-                call_full_patch_change_notify();
-                call_wake_glfw();
+                retVal = int_rec();
             }
+            push_slot_to_device(messageContent->slot);
+
+            retVal = send_start();
+
+            if (retVal == EXIT_SUCCESS) {
+                retVal = int_rec();
+            }
+
+            call_full_patch_change_notify();
+            call_wake_glfw();
             break;
         }
 
@@ -1277,9 +1367,8 @@ static int send_write_data(tMessageContent * messageContent) {
 static void state_handler(void) {
     tMessageContent messageContent = {0};
 
-    // -----------------------------------------------------------------------
-    // Disconnect takes priority — clean up before anything else
-    // -----------------------------------------------------------------------
+    //TODO - Don't like early returns. Use retVal
+    
     if (atomic_load(&gotBadConnectionIndication)) {
         LOG_DEBUG("Bad connection — closing device\n");
         atomic_store(&gotBadConnectionIndication, false);
@@ -1297,9 +1386,6 @@ static void state_handler(void) {
         return;
     }
 
-    // -----------------------------------------------------------------------
-    // Not online — attempt to find and initialise the device
-    // -----------------------------------------------------------------------
     if (atomic_load(&gCommsState) != eCommsOnLine) {
         bool opened = false;
 
@@ -1330,9 +1416,6 @@ static void state_handler(void) {
         }
         return;
     }
-    // -----------------------------------------------------------------------
-    // Online — poll loop
-    // -----------------------------------------------------------------------
 
     // Patch changed on the hardware (e.g. user loaded a patch from the G2 panel)
     if (atomic_load(&gotPatchChangeIndication)) {
