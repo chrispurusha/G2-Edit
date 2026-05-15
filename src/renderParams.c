@@ -72,13 +72,14 @@ tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char
         }
         case moduleTypeOscB:
         case moduleTypeResonator:
+        case moduleTypeOscShpB:
         {
             pitchTypeParamIndex = 4;
             break;
         }
         default:
         {
-            LOG_ERROR("paramType1OscFreq missing module->type implementation");
+            LOG_ERROR("paramType1OscFreq missing module->type implementation %d\n", module->type);
         }
     }
 

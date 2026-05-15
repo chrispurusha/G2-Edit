@@ -583,7 +583,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
             for (int i = 0; i < (length - 6) && i < PATCH_NAME_SIZE; i++) {
                 uint8_t ch = read_bit_stream(buff, bitPos, 8);
-                gPatchName[slot][i] = (ch >= 0x20 && ch <= 0x7f) ? (char)ch : ' ';
+                gPatchName[slot][i] = ch;
                 LOG_DEBUG_DIRECT("%c", gPatchName[slot][i]);
             }
 
