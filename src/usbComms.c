@@ -408,10 +408,12 @@ static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
 
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                                   uint8_t commandResponse, uint8_t subCommand,
-                                  int length) {
+                                  int length, bool * unsolicited) {
     tModule  module = {0};
     uint32_t slot   = commandResponse & 0x03;
 
+    *unsolicited = false;
+    
     switch (subCommand) {
         case SUB_RESPONSE_VOLUME_INDICATOR:
         {
@@ -439,6 +441,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                 }
             }
 
+            *unsolicited = true;
             return EXIT_SUCCESS;
         }
 
@@ -470,7 +473,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                     }
                 }
             }
-
+            
+            *unsolicited = true;
             return EXIT_SUCCESS;
         }
 
@@ -485,6 +489,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         case SUB_RESPONSE_PARAM_CHANGE:
             parse_param_change(slot, &buff[BIT_TO_BYTE(*bitPos)],
                                length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
+            
+            *unsolicited = true;
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_PATCH_VERSION:
@@ -599,7 +605,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
     }
 }
 
-static int parse_incoming(uint8_t * buff, int length) {
+static int parse_incoming(uint8_t * buff, int length, bool * unsolicited) {
     if ((buff == NULL) || (length <= 0)) {
         return EXIT_FAILURE;
     }
@@ -618,7 +624,7 @@ static int parse_incoming(uint8_t * buff, int length) {
             uint8_t commandResponse = read_bit_stream(buff, &bitPos, 8);
             /* version */            read_bit_stream(buff, &bitPos, 8);
             uint8_t subCommand      = read_bit_stream(buff, &bitPos, 8);
-            ret = parse_command_response(buff, &bitPos, commandResponse, subCommand, length);
+            ret = parse_command_response(buff, &bitPos, commandResponse, subCommand, length, unsolicited);
             break;
         }
 
@@ -635,7 +641,7 @@ static int parse_incoming(uint8_t * buff, int length) {
 // USB receive functions
 // ---------------------------------------------------------------------------
 
-static int rcv_extended(int dataLength) {
+static int rcv_extended(int dataLength, bool * unsolicited) {
     uint8_t                buff[EXTENDED_MESSAGE_SIZE] = {0};
     int                    readLength                  = 0;
     int                    retVal                      = EXIT_FAILURE;
@@ -687,75 +693,83 @@ static int rcv_extended(int dataLength) {
         LOG_DEBUG("rcv_extended: bad CRC\n");
         return EXIT_FAILURE;
     }
-    return parse_incoming(buff, dataLength);
+    return parse_incoming(buff, dataLength, unsolicited);
 }
 
-static int int_rec(void) {
+static int int_rec(tPoll poll) {
     uint8_t                buff[INTERRUPT_MESSAGE_SIZE] = {0};
     int                    readLength                   = 0;
     int                    retVal                       = EXIT_FAILURE;
     libusb_device_handle * devHandle_local              = NULL;
     int                    timeout                      = USB_RECV_TIMEOUT_MS;
+    bool                    unsolicited = false;
+    bool                   doLoop = true;
 
-    if (atomic_load(&gCommsState) != eCommsOnLine) {
-        timeout = USB_INIT_TIMEOUT_MS;
-    }
-    pthread_mutex_lock(&usbStaticMutex);
-    devHandle_local = devHandle;
-    pthread_mutex_unlock(&usbStaticMutex);
+    while (doLoop == true) {
+        unsolicited = false;
+	    if (atomic_load(&gCommsState) != eCommsOnLine) {
+	        timeout = USB_INIT_TIMEOUT_MS;
+	    }
+	    pthread_mutex_lock(&usbStaticMutex);
+	    devHandle_local = devHandle;
+	    pthread_mutex_unlock(&usbStaticMutex);
 
-    if (devHandle_local == NULL) {
-        LOG_ERROR("int_rec: device handle is NULL\n");
-        return EXIT_FAILURE;
-    }
+	    if (devHandle_local == NULL) {
+	        LOG_ERROR("int_rec: device handle is NULL\n");
+	        return EXIT_FAILURE;
+	    }
 
-    for (int tries = 0; tries < 5; tries++) {
-        memset(buff, 0, sizeof(buff));
-        readLength = 0;
-        retVal     = libusb_bulk_transfer(devHandle_local, 0x81, buff,
-                                          sizeof(buff), &readLength,
-                                          timeout);
+	    for (int tries = 0; tries < 5; tries++) {
+	        memset(buff, 0, sizeof(buff));
+	        readLength = 0;
+	        retVal     = libusb_bulk_transfer(devHandle_local, 0x81, buff,
+	                                          sizeof(buff), &readLength,
+	                                          timeout);
 
-        if (retVal == LIBUSB_SUCCESS) {
-            if (readLength > 0) {
-                break;
-            }
-        } else if (retVal == LIBUSB_ERROR_TIMEOUT) {
-            // Normal in poll — G2 has nothing to send, not an error
-            return EXIT_SUCCESS;   // ← was falling through to retry loop
-        } else if (is_disconnect_error(retVal)) {
-            LOG_DEBUG("int_rec: disconnect error %s\n", libusb_error_name(retVal));
-            atomic_store(&gotBadConnectionIndication, true);
-            return EXIT_FAILURE;
-        } else {
-            LOG_DEBUG("int_rec: transfer error %s\n", libusb_error_name(retVal));
+	        if (retVal == LIBUSB_SUCCESS) {
+	            if (readLength > 0) {
+	                break;
+	            }
+	        } else if (retVal == LIBUSB_ERROR_TIMEOUT) {
+	            // Normal in poll — G2 has nothing to send, not an error
+	            return EXIT_SUCCESS;   // ← was falling through to retry loop
+	        } else if (is_disconnect_error(retVal)) {
+	            LOG_DEBUG("int_rec: disconnect error %s\n", libusb_error_name(retVal));
+	            atomic_store(&gotBadConnectionIndication, true);
+	            return EXIT_FAILURE;
+	        } else {
+	            LOG_DEBUG("int_rec: transfer error %s\n", libusb_error_name(retVal));
+	        }
+	        usleep(1000);
+	    }
+
+	    if (readLength <= 0) {
+	        return EXIT_FAILURE;
+	    }
+	    uint32_t bitPos     = 0;
+	    int      dataLength = read_bit_stream(buff, &bitPos, 4);
+	    int      type       = read_bit_stream(buff, &bitPos, 4);
+
+	    if (type == RESPONSE_TYPE_EXTENDED) {
+	        bool foundNoneZero = false;
+
+	        for (int i = 3; i < readLength; i++) {
+	            if (buff[i] != 0) {
+	                foundNoneZero = true;
+	                break;
+	            }
+	        }
+
+	        if (!foundNoneZero) {
+	            dataLength = read_bit_stream(buff, &bitPos, 16);
+	            retVal     = rcv_extended(dataLength, &unsolicited);
+	        }
+	    } else if (type == RESPONSE_TYPE_EMBEDDED) {
+	        retVal = parse_incoming(buff + 1, dataLength, &unsolicited);
+		}
+        if ((unsolicited == false) || (poll == ePollYes)) {
+            doLoop = false;
         }
-        usleep(1000);
-    }
-
-    if (readLength <= 0) {
-        return EXIT_FAILURE;
-    }
-    uint32_t bitPos     = 0;
-    int      dataLength = read_bit_stream(buff, &bitPos, 4);
-    int      type       = read_bit_stream(buff, &bitPos, 4);
-
-    if (type == RESPONSE_TYPE_EXTENDED) {
-        bool foundNoneZero = false;
-
-        for (int i = 3; i < readLength; i++) {
-            if (buff[i] != 0) {
-                foundNoneZero = true;
-                break;
-            }
-        }
-
-        if (!foundNoneZero) {
-            dataLength = read_bit_stream(buff, &bitPos, 16);
-            retVal     = rcv_extended(dataLength);
-        }
-    } else if (type == RESPONSE_TYPE_EMBEDDED) {
-        retVal = parse_incoming(buff + 1, dataLength);
     }
     return retVal;
 }
@@ -809,7 +823,7 @@ static int send_init(void) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec();
+        retVal = int_rec(ePollNo);
     }
     return retVal;
 }
@@ -827,7 +841,7 @@ static int send_stop(void) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec();
+        retVal = int_rec(ePollNo);
     }
     return retVal;
 }
@@ -845,7 +859,7 @@ static int send_start(void) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec();
+        retVal = int_rec(ePollNo);
     }
     return retVal;
 }
@@ -863,7 +877,7 @@ static int send_select_slot(uint32_t slot) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec();
+        retVal = int_rec(ePollNo);
     }
     return retVal;
 }
@@ -880,7 +894,7 @@ static int send_get_synth_settings(void) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec();
+        retVal = int_rec(ePollNo);
     }
     return retVal;
 }
@@ -897,7 +911,7 @@ static int send_get_midi_cc(void) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec();
+        retVal = int_rec(ePollNo);
     }
     return retVal;
 }
@@ -914,7 +928,7 @@ static int send_get_unknown2(void) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec();
+        retVal = int_rec(ePollNo);
     }
     return retVal;
 }
@@ -932,7 +946,7 @@ static int send_get_patch_version(uint32_t slot) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec();
+        retVal = int_rec(ePollNo);
     }
     return retVal;
 }
@@ -949,7 +963,7 @@ static int send_get_patch(uint32_t slot) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec();
+        retVal = int_rec(ePollNo);
     }
     return retVal;
 }
@@ -966,7 +980,7 @@ static int send_get_patch_name(uint32_t slot) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec();
+        retVal = int_rec(ePollNo);
     }
     return retVal;
 }
@@ -1059,7 +1073,7 @@ static int push_slot_to_device(uint32_t slot) {
     retVal = send_message(buff, pos) != EXIT_SUCCESS;
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec();
+        retVal = int_rec(ePollNo);
     }
     return retVal;
 }
@@ -1159,7 +1173,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec();
+                retVal = int_rec(ePollNo);
             }
             break;
 
@@ -1176,7 +1190,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec();
+                retVal = int_rec(ePollNo);
             }
             break;
 
@@ -1193,7 +1207,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec();
+                retVal = int_rec(ePollNo);
             }
             break;
 
@@ -1221,7 +1235,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec();
+                retVal = int_rec(ePollNo);
             }
             break;
 
@@ -1237,7 +1251,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec();
+                retVal = int_rec(ePollNo);
             }
             break;
 
@@ -1251,7 +1265,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec();
+                retVal = int_rec(ePollNo);
             }
             break;
 
@@ -1266,7 +1280,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec();
+                retVal = int_rec(ePollNo);
             }
             break;
 
@@ -1283,7 +1297,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec();
+                retVal = int_rec(ePollNo);
             }
             break;
 
@@ -1302,7 +1316,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec();
+                retVal = int_rec(ePollNo);
             }
             break;
 
@@ -1315,7 +1329,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec();
+                retVal = int_rec(ePollNo);
             }
             break;
 
@@ -1328,7 +1342,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec();
+                retVal = int_rec(ePollNo);
             }
             break;
 
@@ -1338,14 +1352,14 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal = send_stop();
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec();
+                retVal = int_rec(ePollNo);
             }
             push_slot_to_device(messageContent->slot);
 
             retVal = send_start();
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec();
+                retVal = int_rec(ePollNo);
             }
 
             call_full_patch_change_notify();
@@ -1425,11 +1439,15 @@ static void state_handler(void) {
         LOG_DEBUG("Patch change on slot %u — reloading\n", slot);
 
         // Stop, reload, start
-        if (send_stop() == EXIT_SUCCESS && int_rec() == EXIT_SUCCESS) {
+        if (send_stop() == EXIT_SUCCESS) {
+            int_rec(ePollNo);
             fetch_slot_data(slot);
-            send_start();
-            int_rec();
         }
+        
+        if (send_start() == EXIT_SUCCESS) {
+            int_rec(ePollNo);
+        }
+        
         call_full_patch_change_notify();
         call_wake_glfw();
         return;
@@ -1441,7 +1459,7 @@ static void state_handler(void) {
         return;
     }
     // Nothing to do — poll for unsolicited messages (LED, volume, param change)
-    int_rec();
+    int_rec(ePollYes);
 }
 
 // ---------------------------------------------------------------------------

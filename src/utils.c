@@ -111,6 +111,13 @@ void write_bit_stream(uint8_t * buff, uint32_t * bitPos, uint32_t numBits, uint3
     }
 }
 
+double get_time_ms(void) {
+    struct timespec        currentTime = {0};
+    
+    clock_gettime(CLOCK_MONOTONIC, &currentTime);
+    return (currentTime.tv_sec) * 1000.0 + (currentTime.tv_nsec) / 1.0e6;;
+}
+    
 double get_time_delta(void) {
     struct timespec        currentTime = {0};
     static struct timespec lastTime    = {0};

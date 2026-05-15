@@ -701,6 +701,11 @@ typedef enum {
     eCommsOnLine
 } tCommsState;
 
+typedef enum {
+    ePollNo,
+    ePollYes
+} tPoll;
+
 typedef struct {
     bool     active;
     char     buffer[PATCH_NAME_SIZE + 1];
