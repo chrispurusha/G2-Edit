@@ -984,6 +984,36 @@ static int send_get_patch_name(uint32_t slot) {
     }
     return retVal;
 }
+    
+static int send_set_module_label(uint32_t slot, uint32_t location,
+                                 uint32_t moduleIndex, const char * name) {
+    int     retVal                  = EXIT_FAILURE;
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     i                       = 0;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
+    buff[pos++] = gPatchVersion[slot];
+    buff[pos++] = SUB_COMMAND_SET_MODULE_LABEL;
+    buff[pos++] = (uint8_t)location;
+    buff[pos++] = (uint8_t)moduleIndex;
+
+    // WriteClaviaString: chars up to 16, then null terminator if < 16
+    while (i < MODULE_NAME_SIZE && name[i] != '\0') {
+        buff[pos++] = (uint8_t)name[i++];
+    }
+    if (i < MODULE_NAME_SIZE) {
+        buff[pos++] = 0x00;
+    }
+
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo);
+    }
+    return retVal;
+}
 
 // ---------------------------------------------------------------------------
 // Slot data management
@@ -1346,6 +1376,14 @@ static int send_write_data(tMessageContent * messageContent) {
             }
             break;
 
+        case eMsgCmdSetModuleLabel:
+            retVal = send_set_module_label(
+                         messageContent->slot,
+                         messageContent->moduleLabelData.moduleKey.location,
+                         messageContent->moduleLabelData.moduleKey.index,
+                         messageContent->moduleLabelData.name);
+            break;
+            
         case eMsgCmdWritePatch:
         {
             // Stop synth before upload to suppress unsolicited messages

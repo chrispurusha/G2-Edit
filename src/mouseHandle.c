@@ -1653,10 +1653,17 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 module.key             = gModuleNameEdit.moduleKey;
 
                 if (read_module(module.key, &module) == true) {
+                    tMessageContent msg = {0};
+                    
                     strncpy(module.name, gModuleNameEdit.buffer, sizeof(module.name));
                     module.name[sizeof(module.name) - 1] = '\0';
                     write_module(module.key, &module);
-                    //commit_module_name_edit();
+                    
+                    msg.cmd                         = eMsgCmdSetModuleLabel;
+                    msg.slot                        = gModuleNameEdit.moduleKey.slot;
+                    msg.moduleLabelData.moduleKey   = gModuleNameEdit.moduleKey;
+                    strncpy(msg.moduleLabelData.name, gModuleNameEdit.buffer, MODULE_NAME_SIZE);
+                    msg_send(&gCommandQueue, &msg);
                 }
             } else if (key == GLFW_KEY_ESCAPE) {
                 gModuleNameEdit.active = false;  // discard
