@@ -537,6 +537,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                 atomic_store(&gChangedSlot, (uint32_t)changedSlot);
             }
             atomic_store(&gotPatchChangeIndication, true);
+            *unsolicited = true;
             return EXIT_SUCCESS;
         }
 
