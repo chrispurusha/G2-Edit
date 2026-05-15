@@ -413,7 +413,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
     uint32_t slot   = commandResponse & 0x03;
 
     *unsolicited = false;
-    
+
     switch (subCommand) {
         case SUB_RESPONSE_VOLUME_INDICATOR:
         {
@@ -473,7 +473,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                     }
                 }
             }
-            
+
             *unsolicited = true;
             return EXIT_SUCCESS;
         }
@@ -489,7 +489,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         case SUB_RESPONSE_PARAM_CHANGE:
             parse_param_change(slot, &buff[BIT_TO_BYTE(*bitPos)],
                                length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
-            
+
             *unsolicited = true;
             return EXIT_SUCCESS;
 
@@ -594,7 +594,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         }
 
         case SUB_RESPONSE_OK:
-            printf("GOT OK %f\n", get_time_ms());
+            //printf("GOT OK %f\n", get_time_ms());
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_SELECT_PARAM:
@@ -607,7 +607,11 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
     }
 }
 
-static int parse_incoming(uint8_t * buff, int length, bool * unsolicited) {
+static int parse_incoming(uint8_t * buff, int length, int * response, bool * unsolicited) {
+    if (response != NULL) {
+        *response = SUB_RESPONSE_ERROR;
+    }
+
     if ((buff == NULL) || (length <= 0)) {
         return EXIT_FAILURE;
     }
@@ -618,6 +622,10 @@ static int parse_incoming(uint8_t * buff, int length, bool * unsolicited) {
     switch (responseType) {
         case RESPONSE_TYPE_INIT:
             LOG_DEBUG("Got response init\n");
+
+            if (response != NULL) {
+                *response = SUB_RESPONSE_OK;
+            }
             ret = EXIT_SUCCESS;
             break;
 
@@ -627,6 +635,12 @@ static int parse_incoming(uint8_t * buff, int length, bool * unsolicited) {
             /* version */            read_bit_stream(buff, &bitPos, 8);
             uint8_t subCommand      = read_bit_stream(buff, &bitPos, 8);
             ret = parse_command_response(buff, &bitPos, commandResponse, subCommand, length, unsolicited);
+
+            if (ret == EXIT_SUCCESS) {
+                if (response != NULL) {
+                    *response = (int)subCommand;
+                }
+            }
             break;
         }
 
@@ -643,7 +657,7 @@ static int parse_incoming(uint8_t * buff, int length, bool * unsolicited) {
 // USB receive functions
 // ---------------------------------------------------------------------------
 
-static int rcv_extended(int dataLength, bool * unsolicited) {
+static int rcv_extended(int dataLength, int * response, bool * unsolicited) {
     uint8_t                buff[EXTENDED_MESSAGE_SIZE] = {0};
     int                    readLength                  = 0;
     int                    retVal                      = EXIT_FAILURE;
@@ -695,80 +709,82 @@ static int rcv_extended(int dataLength, bool * unsolicited) {
         LOG_DEBUG("rcv_extended: bad CRC\n");
         return EXIT_FAILURE;
     }
-    return parse_incoming(buff, dataLength, unsolicited);
+    return parse_incoming(buff, dataLength, response, unsolicited);
 }
 
-static int int_rec(tPoll poll) {
+static int int_rec(tPoll poll, int * response) {
     uint8_t                buff[INTERRUPT_MESSAGE_SIZE] = {0};
     int                    readLength                   = 0;
     int                    retVal                       = EXIT_FAILURE;
     libusb_device_handle * devHandle_local              = NULL;
     int                    timeout                      = USB_RECV_TIMEOUT_MS;
-    bool                    unsolicited = false;
-    bool                   doLoop = true;
+    bool                   unsolicited                  = false;
+    bool                   doLoop                       = true;
 
     while (doLoop == true) {
-        unsolicited = false;
-	    if (atomic_load(&gCommsState) != eCommsOnLine) {
-	        timeout = USB_INIT_TIMEOUT_MS;
-	    }
-	    pthread_mutex_lock(&usbStaticMutex);
-	    devHandle_local = devHandle;
-	    pthread_mutex_unlock(&usbStaticMutex);
+        unsolicited     = false;
 
-	    if (devHandle_local == NULL) {
-	        LOG_ERROR("int_rec: device handle is NULL\n");
-	        return EXIT_FAILURE;
-	    }
+        if (atomic_load(&gCommsState) != eCommsOnLine) {
+            timeout = USB_INIT_TIMEOUT_MS;
+        }
+        pthread_mutex_lock(&usbStaticMutex);
+        devHandle_local = devHandle;
+        pthread_mutex_unlock(&usbStaticMutex);
 
-	    for (int tries = 0; tries < 5; tries++) {
-	        memset(buff, 0, sizeof(buff));
-	        readLength = 0;
-	        retVal     = libusb_bulk_transfer(devHandle_local, 0x81, buff,
-	                                          sizeof(buff), &readLength,
-	                                          timeout);
+        if (devHandle_local == NULL) {
+            LOG_ERROR("int_rec: device handle is NULL\n");
+            return EXIT_FAILURE;
+        }
 
-	        if (retVal == LIBUSB_SUCCESS) {
-	            if (readLength > 0) {
-	                break;
-	            }
-	        } else if (retVal == LIBUSB_ERROR_TIMEOUT) {
-	            // Normal in poll — G2 has nothing to send, not an error
-	            return EXIT_SUCCESS;   // ← was falling through to retry loop
-	        } else if (is_disconnect_error(retVal)) {
-	            LOG_DEBUG("int_rec: disconnect error %s\n", libusb_error_name(retVal));
-	            atomic_store(&gotBadConnectionIndication, true);
-	            return EXIT_FAILURE;
-	        } else {
-	            LOG_DEBUG("int_rec: transfer error %s\n", libusb_error_name(retVal));
-	        }
-	        usleep(1000);
-	    }
+        for (int tries = 0; tries < 5; tries++) {
+            memset(buff, 0, sizeof(buff));
+            readLength = 0;
+            retVal     = libusb_bulk_transfer(devHandle_local, 0x81, buff,
+                                              sizeof(buff), &readLength,
+                                              timeout);
 
-	    if (readLength <= 0) {
-	        return EXIT_FAILURE;
-	    }
-	    uint32_t bitPos     = 0;
-	    int      dataLength = read_bit_stream(buff, &bitPos, 4);
-	    int      type       = read_bit_stream(buff, &bitPos, 4);
+            if (retVal == LIBUSB_SUCCESS) {
+                if (readLength > 0) {
+                    break;
+                }
+            } else if (retVal == LIBUSB_ERROR_TIMEOUT) {
+                // Normal in poll — G2 has nothing to send, not an error
+                return EXIT_SUCCESS;       // ← was falling through to retry loop
+            } else if (is_disconnect_error(retVal)) {
+                LOG_DEBUG("int_rec: disconnect error %s\n", libusb_error_name(retVal));
+                atomic_store(&gotBadConnectionIndication, true);
+                return EXIT_FAILURE;
+            } else {
+                LOG_DEBUG("int_rec: transfer error %s\n", libusb_error_name(retVal));
+            }
+            usleep(1000);
+        }
 
-	    if (type == RESPONSE_TYPE_EXTENDED) {
-	        bool foundNoneZero = false;
+        if (readLength <= 0) {
+            return EXIT_FAILURE;
+        }
+        uint32_t bitPos     = 0;
+        int      dataLength = read_bit_stream(buff, &bitPos, 4);
+        int      type       = read_bit_stream(buff, &bitPos, 4);
 
-	        for (int i = 3; i < readLength; i++) {
-	            if (buff[i] != 0) {
-	                foundNoneZero = true;
-	                break;
-	            }
-	        }
+        if (type == RESPONSE_TYPE_EXTENDED) {
+            bool foundNoneZero = false;
 
-	        if (!foundNoneZero) {
-	            dataLength = read_bit_stream(buff, &bitPos, 16);
-	            retVal     = rcv_extended(dataLength, &unsolicited);
-	        }
-	    } else if (type == RESPONSE_TYPE_EMBEDDED) {
-	        retVal = parse_incoming(buff + 1, dataLength, &unsolicited);
-		}
+            for (int i = 3; i < readLength; i++) {
+                if (buff[i] != 0) {
+                    foundNoneZero = true;
+                    break;
+                }
+            }
+
+            if (!foundNoneZero) {
+                dataLength = read_bit_stream(buff, &bitPos, 16);
+                retVal     = rcv_extended(dataLength, response, &unsolicited);
+            }
+        } else if (type == RESPONSE_TYPE_EMBEDDED) {
+            retVal = parse_incoming(buff + 1, dataLength, response, &unsolicited);
+        }
+
         if ((unsolicited == false) || (poll == ePollYes)) {
             doLoop = false;
         }
@@ -820,12 +836,18 @@ static int send_init(void) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
+    int     response                = SUB_RESPONSE_ERROR;
 
     buff[pos++] = 0x80;
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo);
+        retVal = int_rec(ePollNo, &response);
+        LOG_DEBUG("INIT RESPONSE = 0x%02x\n", response);
+
+        if (response != SUB_RESPONSE_OK) {
+            retVal = EXIT_FAILURE;
+        }
     }
     return retVal;
 }
@@ -834,6 +856,7 @@ static int send_stop(void) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
+    int     response                = SUB_RESPONSE_ERROR;
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
@@ -843,7 +866,12 @@ static int send_stop(void) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo);
+        retVal = int_rec(ePollNo, &response);
+        LOG_DEBUG("STOP RESPONSE = 0x%02x\n", response);
+
+        if (response != SUB_RESPONSE_OK) {
+            retVal = EXIT_FAILURE;
+        }
     }
     return retVal;
 }
@@ -852,6 +880,7 @@ static int send_start(void) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
+    int     response                = SUB_RESPONSE_ERROR;
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
@@ -861,7 +890,12 @@ static int send_start(void) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo);
+        retVal = int_rec(ePollNo, &response);
+        LOG_DEBUG("START RESPONSE = 0x%02x\n", response);
+
+        if (response != SUB_RESPONSE_OK) {
+            retVal = EXIT_FAILURE;
+        }
     }
     return retVal;
 }
@@ -870,6 +904,7 @@ static int send_select_slot(uint32_t slot) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
+    int     response                = SUB_RESPONSE_ERROR;
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
@@ -879,7 +914,12 @@ static int send_select_slot(uint32_t slot) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo);
+        retVal = int_rec(ePollNo, &response);
+        LOG_DEBUG("SELECT SLOT RESPONSE = 0x%02x\n", response);
+
+        if (response != SUB_RESPONSE_OK) {
+            retVal = EXIT_FAILURE;
+        }
     }
     return retVal;
 }
@@ -888,6 +928,7 @@ static int send_get_synth_settings(void) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
+    int     response                = SUB_RESPONSE_ERROR;
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
@@ -896,7 +937,12 @@ static int send_get_synth_settings(void) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo);
+        retVal = int_rec(ePollNo, &response);
+        LOG_DEBUG("GET STNTH SETTINGS RESPONSE = 0x%02x\n", response);
+
+        if (response != SUB_RESPONSE_SYNTH_SETTINGS) {
+            retVal = EXIT_FAILURE;
+        }
     }
     return retVal;
 }
@@ -905,6 +951,7 @@ static int send_get_midi_cc(void) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
+    int     response                = SUB_RESPONSE_ERROR;
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
@@ -913,7 +960,12 @@ static int send_get_midi_cc(void) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo);
+        retVal = int_rec(ePollNo, &response);
+        LOG_DEBUG("GET MIDI CC RESPONSE = 0x%02x\n", response);
+
+        if (response != SUB_RESPONSE_MIDI_CC) {
+            retVal = EXIT_FAILURE;
+        }
     }
     return retVal;
 }
@@ -922,6 +974,7 @@ static int send_get_unknown2(void) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
+    int     response                = SUB_RESPONSE_ERROR;
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
@@ -930,7 +983,12 @@ static int send_get_unknown2(void) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo);
+        retVal = int_rec(ePollNo, &response);
+        LOG_DEBUG("GET UNKNOWN 2 RESPONSE = 0x%02x\n", response);
+
+        if (response != SUB_RESPONSE_GLOBAL_PAGE) {
+            retVal = EXIT_FAILURE;
+        }
     }
     return retVal;
 }
@@ -939,6 +997,7 @@ static int send_get_patch_version(uint32_t slot) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
+    int     response                = SUB_RESPONSE_ERROR;
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
@@ -948,7 +1007,12 @@ static int send_get_patch_version(uint32_t slot) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo);
+        retVal = int_rec(ePollNo, &response);
+        LOG_DEBUG("GET PATCH VERSION RESPONSE = 0x%02x\n", response);
+
+        if (response != SUB_RESPONSE_PATCH_VERSION) {
+            retVal = EXIT_FAILURE;
+        }
     }
     return retVal;
 }
@@ -957,6 +1021,7 @@ static int send_get_patch(uint32_t slot) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
+    int     response                = SUB_RESPONSE_ERROR;
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
@@ -965,7 +1030,12 @@ static int send_get_patch(uint32_t slot) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo);
+        retVal = int_rec(ePollNo, &response);
+        LOG_DEBUG("GET PATCH RESPONSE = 0x%02x\n", response);
+
+        if (response != SUB_RESPONSE_PATCH_DESCRIPTION) {
+            retVal = EXIT_FAILURE;
+        }
     }
     return retVal;
 }
@@ -974,6 +1044,7 @@ static int send_get_patch_name(uint32_t slot) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
+    int     response                = SUB_RESPONSE_ERROR;
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
@@ -982,38 +1053,67 @@ static int send_get_patch_name(uint32_t slot) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo);
+        retVal = int_rec(ePollNo, &response);
+        LOG_DEBUG("GET PATCH NAME RESPONSE = 0x%02x\n", response);
+
+        if (response != SUB_RESPONSE_PATCH_NAME) {
+            retVal = EXIT_FAILURE;
+        }
     }
     return retVal;
 }
-    
-static int send_set_module_label(uint32_t slot, uint32_t location,
-                                 uint32_t moduleIndex, const char * name) {
+
+static int send_set_module_label(uint32_t slot, tModuleKey moduleKey, const char * name) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
     int     i                       = 0;
+    int     response                = SUB_RESPONSE_ERROR;
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
     buff[pos++] = gPatchVersion[slot];
     buff[pos++] = SUB_COMMAND_SET_MODULE_LABEL;
-    buff[pos++] = (uint8_t)location;
-    buff[pos++] = (uint8_t)moduleIndex;
+    buff[pos++] = moduleKey.location;
+    buff[pos++] = moduleKey.index;
 
     // WriteClaviaString: chars up to 16, then null terminator if < 16
     while (i < MODULE_NAME_SIZE && name[i] != '\0') {
         buff[pos++] = (uint8_t)name[i++];
     }
+
     if (i < MODULE_NAME_SIZE) {
         buff[pos++] = 0x00;
     }
-
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo);
+        retVal = int_rec(ePollNo, &response);
+        LOG_DEBUG("SET MODULE LABEL RESPONSE = 0x%02x\n", response);
+
+        if (response != SUB_RESPONSE_OK) {
+            retVal = EXIT_FAILURE;
+        }
     }
+    return retVal;
+}
+
+static int send_set_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t param, uint32_t value, uint32_t variation) {
+    int     retVal                  = EXIT_FAILURE;
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | slot;
+    buff[pos++] = gPatchVersion[slot];
+    buff[pos++] = SUB_COMMAND_SET_PARAM;
+    buff[pos++] = moduleKey.location;
+    buff[pos++] = moduleKey.index;
+    buff[pos++] = param;
+    buff[pos++] = value;
+    buff[pos++] = variation;
+    retVal      = send_message(buff, pos);
+
     return retVal;
 }
 
@@ -1105,7 +1205,7 @@ static int push_slot_to_device(uint32_t slot) {
     retVal = send_message(buff, pos) != EXIT_SUCCESS;
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo);
+        retVal = int_rec(ePollNo, NULL);
     }
     return retVal;
 }
@@ -1185,6 +1285,7 @@ static int send_write_data(tMessageContent * messageContent) {
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_FAILURE;
     uint8_t slotVersion_local[MAX_SLOTS];
+    int     response                = SUB_RESPONSE_ERROR;
 
     pthread_mutex_lock(&gGlobalVarsMutex);
     memcpy(slotVersion_local, gPatchVersion, sizeof(slotVersion_local));
@@ -1193,20 +1294,12 @@ static int send_write_data(tMessageContent * messageContent) {
     // TODO - these should move to functions where we can do: SEND_RECV(function());
     switch (messageContent->cmd) {
         case eMsgCmdSetValue:
-            buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | messageContent->slot;
-            buff[pos++] = slotVersion_local[messageContent->slot];
-            buff[pos++] = SUB_COMMAND_SET_PARAM;
-            buff[pos++] = messageContent->paramData.moduleKey.location;
-            buff[pos++] = messageContent->paramData.moduleKey.index;
-            buff[pos++] = messageContent->paramData.param;
-            buff[pos++] = messageContent->paramData.value;
-            buff[pos++] = messageContent->paramData.variation;
-            retVal      = send_message(buff, pos);
-
-            //if (retVal == EXIT_SUCCESS) {  // TODO - check this. Don't think there's a response to this message!
-            //    retVal = int_rec(ePollNo);
-            //}
+            retVal      = send_set_param_value(
+                messageContent->slot,
+                messageContent->paramData.moduleKey,
+                messageContent->paramData.param,
+                messageContent->paramData.value,
+                messageContent->paramData.variation);
             break;
 
         case eMsgCmdSetMode:
@@ -1222,7 +1315,12 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo);
+                retVal = int_rec(ePollNo, &response);
+                LOG_DEBUG("SET MODE RESPONSE = 0x%02x\n", response);
+
+                if (response != SUB_RESPONSE_OK) {
+                    retVal = EXIT_FAILURE;
+                }
             }
             break;
 
@@ -1239,7 +1337,12 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo);
+                retVal = int_rec(ePollNo, &response);
+                LOG_DEBUG("WRITE CABLE RESPONSE = 0x%02x\n", response);
+
+                if (response != SUB_RESPONSE_OK) {
+                    retVal = EXIT_FAILURE;
+                }
             }
             break;
 
@@ -1267,7 +1370,12 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo);
+                retVal = int_rec(ePollNo, &response);
+                LOG_DEBUG("WRITE MODULE RESPONSE = 0x%02x\n", response);
+
+                if (response != SUB_RESPONSE_OK) {
+                    retVal = EXIT_FAILURE;
+                }
             }
             break;
 
@@ -1283,7 +1391,12 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo);
+                retVal = int_rec(ePollNo, &response);
+                LOG_DEBUG("MOVE MODULE LABEL RESPONSE = 0x%02x\n", response);
+
+                if (response != SUB_RESPONSE_OK) {
+                    retVal = EXIT_FAILURE;
+                }
             }
             break;
 
@@ -1297,7 +1410,12 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo);
+                retVal = int_rec(ePollNo, &response);
+                LOG_DEBUG("DELETE MODULE RESPONSE = 0x%02x\n", response);
+
+                if (response != SUB_RESPONSE_OK) {
+                    retVal = EXIT_FAILURE;
+                }
             }
             break;
 
@@ -1312,7 +1430,12 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo);
+                retVal = int_rec(ePollNo, &response);
+                LOG_DEBUG("SET MODULE UPRATE RESPONSE = 0x%02x\n", response);
+
+                if (response != SUB_RESPONSE_OK) {
+                    retVal = EXIT_FAILURE;
+                }
             }
             break;
 
@@ -1329,7 +1452,12 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo);
+                retVal = int_rec(ePollNo, &response);
+                LOG_DEBUG("DELETE CABLE RESPONSE = 0x%02x\n", response);
+
+                if (response != SUB_RESPONSE_OK) {
+                    retVal = EXIT_FAILURE;
+                }
             }
             break;
 
@@ -1347,9 +1475,13 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->paramMorphData.variation;
             retVal      = send_message(buff, pos);
 
-            if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo);
-            }
+            //if (retVal == EXIT_SUCCESS) {   // Check, but don't think this has a response
+            //    retVal = int_rec(ePollNo, &response);
+            //    LOG_DEBUG("SET PARAM MORPH RESPONSE = 0x%02x\n", response);
+            //    if (response != SUB_RESPONSE_OK) {
+            //        retVal = EXIT_FAILURE;
+            //    }
+            //}
             break;
 
         case eMsgCmdSelectVariation:
@@ -1361,7 +1493,12 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo);
+                retVal = int_rec(ePollNo, &response);
+                LOG_DEBUG("SELECT VARIATION RESPONSE = 0x%02x\n", response);
+
+                if (response != SUB_RESPONSE_OK) {
+                    retVal = EXIT_FAILURE;
+                }
             }
             break;
 
@@ -1374,34 +1511,45 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo);
+                retVal = int_rec(ePollNo, &response);
+                LOG_DEBUG("SELECT SLOT RESPONSE = 0x%02x\n", response);
+
+                if (response != SUB_RESPONSE_OK) {
+                    retVal = EXIT_FAILURE;
+                }
             }
             break;
 
         case eMsgCmdSetModuleLabel:
-            retVal = send_set_module_label(
-                         messageContent->slot,
-                         messageContent->moduleLabelData.moduleKey.location,
-                         messageContent->moduleLabelData.moduleKey.index,
-                         messageContent->moduleLabelData.name);
+            retVal      = send_set_module_label(
+                messageContent->slot,
+                messageContent->moduleLabelData.moduleKey,
+                messageContent->moduleLabelData.name);
             break;
-            
+
         case eMsgCmdWritePatch:
         {
             // Stop synth before upload to suppress unsolicited messages
             retVal = send_stop();
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo);
+                retVal = int_rec(ePollNo, &response);
+
+                if (response != SUB_RESPONSE_OK) {
+                    retVal = EXIT_FAILURE;
+                }
             }
             push_slot_to_device(messageContent->slot);
 
             retVal = send_start();
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo);
-            }
+                retVal = int_rec(ePollNo, &response);
 
+                if (response != SUB_RESPONSE_OK) {
+                    retVal = EXIT_FAILURE;
+                }
+            }
             call_full_patch_change_notify();
             call_wake_glfw();
             break;
@@ -1420,9 +1568,10 @@ static int send_write_data(tMessageContent * messageContent) {
 
 static void state_handler(void) {
     tMessageContent messageContent = {0};
+    int             response       = SUB_RESPONSE_ERROR;
 
     //TODO - Don't like early returns. Use retVal
-    
+
     if (atomic_load(&gotBadConnectionIndication)) {
         LOG_DEBUG("Bad connection — closing device\n");
         atomic_store(&gotBadConnectionIndication, false);
@@ -1480,14 +1629,13 @@ static void state_handler(void) {
 
         // Stop, reload, start
         if (send_stop() == EXIT_SUCCESS) {
-            int_rec(ePollNo);
+            int_rec(ePollNo, &response);
             fetch_slot_data(slot);
         }
-        
+
         if (send_start() == EXIT_SUCCESS) {
-            int_rec(ePollNo);
+            int_rec(ePollNo, &response);
         }
-        
         call_full_patch_change_notify();
         call_wake_glfw();
         return;
@@ -1499,7 +1647,7 @@ static void state_handler(void) {
         return;
     }
     // Nothing to do — poll for unsolicited messages (LED, volume, param change)
-    int_rec(ePollYes);
+    int_rec(ePollYes, NULL);
 }
 
 // ---------------------------------------------------------------------------

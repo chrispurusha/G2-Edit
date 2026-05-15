@@ -119,13 +119,13 @@ typedef struct {
     uint32_t cmd;
     uint32_t slot;
     union {
-        tParamData      paramData;
-        tParamMorphData paramMorphData;
-        tModeData       modeData;
-        tModuleData     moduleData;
-        tCableData      cableData;
-        tVariationData  variationData;
-        tSlotData       slotData;
+        tParamData       paramData;
+        tParamMorphData  paramMorphData;
+        tModeData        modeData;
+        tModuleData      moduleData;
+        tCableData       cableData;
+        tVariationData   variationData;
+        tSlotData        slotData;
         tModuleLabelData moduleLabelData;
     };
 } tMessageContent;

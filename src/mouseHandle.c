@@ -1654,14 +1654,14 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 
                 if (read_module(module.key, &module) == true) {
                     tMessageContent msg = {0};
-                    
+
                     strncpy(module.name, gModuleNameEdit.buffer, sizeof(module.name));
                     module.name[sizeof(module.name) - 1] = '\0';
                     write_module(module.key, &module);
-                    
-                    msg.cmd                         = eMsgCmdSetModuleLabel;
-                    msg.slot                        = gModuleNameEdit.moduleKey.slot;
-                    msg.moduleLabelData.moduleKey   = gModuleNameEdit.moduleKey;
+
+                    msg.cmd                              = eMsgCmdSetModuleLabel;
+                    msg.slot                             = gModuleNameEdit.moduleKey.slot;
+                    msg.moduleLabelData.moduleKey        = gModuleNameEdit.moduleKey;
                     strncpy(msg.moduleLabelData.name, gModuleNameEdit.buffer, MODULE_NAME_SIZE);
                     msg_send(&gCommandQueue, &msg);
                 }

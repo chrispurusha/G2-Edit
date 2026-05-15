@@ -81,7 +81,7 @@ tNameEdit           gPatchNameEdit                             = {0};
 tModuleNameEdit     gModuleNameEdit                            = {0};
 
 // Thread synchronization mutex for global variables
-pthread_mutex_t     gGlobalVarsMutex                           = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t     gGlobalVarsMutex                           = PTHREAD_MUTEX_INITIALIZER;  // TODO - don't need this if we use atomic
 
 uint32_t array_size_main_button_array(void) {
     return ARRAY_SIZE(gMainButtonArray);
