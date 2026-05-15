@@ -594,6 +594,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         }
 
         case SUB_RESPONSE_OK:
+            printf("GOT OK %f\n", get_time_ms());
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_SELECT_PARAM:
@@ -1203,9 +1204,9 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->paramData.variation;
             retVal      = send_message(buff, pos);
 
-            if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo);
-            }
+            //if (retVal == EXIT_SUCCESS) {  // TODO - check this. Don't think there's a response to this message!
+            //    retVal = int_rec(ePollNo);
+            //}
             break;
 
         case eMsgCmdSetMode:
