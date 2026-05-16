@@ -1202,7 +1202,7 @@ static int push_slot_to_device(uint32_t slot) {
 
     pos    = BIT_TO_BYTE(bitPos);
 
-    retVal = send_message(buff, pos) != EXIT_SUCCESS;
+    retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, NULL);
@@ -1244,6 +1244,7 @@ static int send_init_sequence_pull(void) {
     send_start();
 
     LOG_DEBUG("Pull init sequence complete\n");
+    atomic_store(&gotPatchChangeIndication, false);
     atomic_store(&gCommsState, eCommsOnLine);
     call_full_patch_change_notify();
     call_wake_glfw();
@@ -1269,6 +1270,7 @@ static int send_init_sequence_push(void) {
     send_start();
 
     LOG_DEBUG("Push init sequence complete\n");
+    atomic_store(&gotPatchChangeIndication, false);
     atomic_store(&gCommsState, eCommsOnLine);
     call_full_patch_change_notify();
     call_wake_glfw();
@@ -1532,24 +1534,10 @@ static int send_write_data(tMessageContent * messageContent) {
             // Stop synth before upload to suppress unsolicited messages
             retVal = send_stop();
 
-            if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, &response);
-
-                if (response != SUB_RESPONSE_OK) {
-                    retVal = EXIT_FAILURE;
-                }
-            }
             push_slot_to_device(messageContent->slot);
 
             retVal = send_start();
 
-            if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, &response);
-
-                if (response != SUB_RESPONSE_OK) {
-                    retVal = EXIT_FAILURE;
-                }
-            }
             call_full_patch_change_notify();
             call_wake_glfw();
             break;
@@ -1627,15 +1615,10 @@ static void state_handler(void) {
 
         LOG_DEBUG("Patch change on slot %u — reloading\n", slot);
 
-        // Stop, reload, start
-        if (send_stop() == EXIT_SUCCESS) {
-            int_rec(ePollNo, &response);
-            fetch_slot_data(slot);
-        }
-
-        if (send_start() == EXIT_SUCCESS) {
-            int_rec(ePollNo, &response);
-        }
+        send_stop();
+        fetch_slot_data(slot);
+        send_start();
+        
         call_full_patch_change_notify();
         call_wake_glfw();
         return;
