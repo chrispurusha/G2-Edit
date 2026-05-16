@@ -37,8 +37,8 @@
 
 extern _Atomic bool        gQuitAll;
 extern GLFWwindow *        gWindow;
-extern uint32_t            gLocation;
-extern bool                gReDraw;
+extern _Atomic uint32_t    gLocation;
+extern _Atomic bool        gReDraw;
 extern bool                gCommandKeyPressed;
 extern tButton             gMainButtonArray[];
 extern bool                gShowOpenFileReadDialogue;
@@ -50,7 +50,7 @@ extern tParamDragging      gParamDragging;
 extern tModuleDragging     gModuleDrag;
 extern tMessageQueue       gCommandQueue;
 extern uint32_t            gMorphGroupFocus;
-extern uint32_t            gSlot;
+extern _Atomic uint32_t    gSlot;
 extern tPatchDescr         gPatchDescr[MAX_SLOTS];
 extern tKnobArray          gKnobArray[MAX_SLOTS]; // TODO - Don't forget to nullify on new load
 extern uint32_t            gMorphCount[MAX_SLOTS];
@@ -60,7 +60,7 @@ extern tControllerArray    gControllerArray[MAX_SLOTS]; // TODO - Don't forget t
 extern uint32_t            gControllerCount[MAX_SLOTS]; // TODO - Don't forget to nullify on new load
 extern uint32_t            gPatchNotesSize[MAX_SLOTS];
 extern uint8_t             gPatchNotes[MAX_SLOTS][MAX_16BIT];
-extern uint8_t             gPatchVersion[MAX_SLOTS];
+extern _Atomic uint8_t     gPatchVersion[MAX_SLOTS];
 extern char                gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1];
 extern _Atomic tCommsState gCommsState;
 extern _Atomic uint32_t    gChangedSlot;

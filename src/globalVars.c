@@ -25,8 +25,8 @@ extern "C" {
 
 _Atomic bool        gQuitAll           = false;
 GLFWwindow *        gWindow            = NULL;
-uint32_t            gLocation          = locationVa;
-bool                gReDraw            = true;
+_Atomic uint32_t    gLocation          = locationVa;
+_Atomic bool        gReDraw            = true;
 
 bool                gCommandKeyPressed = false;
 
@@ -63,7 +63,7 @@ tParamDragging      gParamDragging                             = {0};
 tModuleDragging     gModuleDrag                                = {0};
 tMessageQueue       gCommandQueue                              = {0};
 uint32_t            gMorphGroupFocus                           = 0;
-uint32_t            gSlot                                      = 0;
+_Atomic uint32_t    gSlot                                      = 0;
 tPatchDescr         gPatchDescr[MAX_SLOTS]                     = {0};
 tKnobArray          gKnobArray[MAX_SLOTS]                      = {0};
 uint32_t            gMorphCount[MAX_SLOTS]                     = {0};
@@ -73,7 +73,7 @@ tControllerArray    gControllerArray[MAX_SLOTS]                = {0};
 uint32_t            gControllerCount[MAX_SLOTS]                = {0};
 uint32_t            gPatchNotesSize[MAX_SLOTS]                 = {0};
 uint8_t             gPatchNotes[MAX_SLOTS][MAX_16BIT]          = {0};
-uint8_t             gPatchVersion[MAX_SLOTS]                   = {0}; // Check we don't have this elsewhere
+_Atomic uint8_t     gPatchVersion[MAX_SLOTS]                   = {0};
 char                gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1] = {0};
 _Atomic tCommsState gCommsState                                = eCommsNeverConnected;
 _Atomic uint32_t    gChangedSlot                               = 0;
@@ -81,7 +81,7 @@ tNameEdit           gPatchNameEdit                             = {0};
 tModuleNameEdit     gModuleNameEdit                            = {0};
 
 // Thread synchronization mutex for global variables
-pthread_mutex_t     gGlobalVarsMutex                           = PTHREAD_MUTEX_INITIALIZER;  // TODO - don't need this if we use atomic
+pthread_mutex_t     gGlobalVarsMutex                           = PTHREAD_MUTEX_INITIALIZER;
 
 uint32_t array_size_main_button_array(void) {
     return ARRAY_SIZE(gMainButtonArray);

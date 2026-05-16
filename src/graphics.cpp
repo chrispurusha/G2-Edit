@@ -72,13 +72,13 @@ static void re_draw_mutex_unlock(void) {
 void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
     glViewport(0, 0, width, height);
     re_draw_mutex_lock();
-    gReDraw = true;
+    atomic_store(&gReDraw, true);
     re_draw_mutex_unlock();
 }
 
 void window_close_callback(GLFWwindow * window) {
     re_draw_mutex_lock();
-    gReDraw = false;
+    atomic_store(&gReDraw, false);
     re_draw_mutex_unlock();
 
     glfwSetFramebufferSizeCallback(gWindow, NULL);
@@ -190,7 +190,7 @@ void render_top_bar(void) {
     // Patch name — centred in the left portion of the bar
     pthread_mutex_lock(&gGlobalVarsMutex);
     char        patchNameCopy[PATCH_NAME_SIZE + 1] = {0};
-    strncpy(patchNameCopy, gPatchName[gSlot], PATCH_NAME_SIZE);
+    strncpy(patchNameCopy, gPatchName[atomic_load(&gSlot)], PATCH_NAME_SIZE);
     pthread_mutex_unlock(&gGlobalVarsMutex);
 
     if (patchNameCopy[0] == '\0') {
@@ -199,7 +199,7 @@ void render_top_bar(void) {
     set_rgb_colour(RGB_BLACK);
     render_text(mainArea, {{180, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Patch Name");
 
-    if (gPatchNameEdit.active && gPatchNameEdit.slot == gSlot) {
+    if (gPatchNameEdit.active && gPatchNameEdit.slot == atomic_load(&gSlot)) {
         // Show edit buffer with cursor
         char displayBuf[PATCH_NAME_SIZE + 2] = {0};
         snprintf(displayBuf, sizeof(displayBuf), "%s|", gPatchNameEdit.buffer);
@@ -257,8 +257,8 @@ void wake_glfw(void) {
     // Update the redraw flag (protected by its own mutex)
     re_draw_mutex_lock();
 
-    if (gReDraw == false) {
-        gReDraw = true;
+    if (atomic_load(&gReDraw) == false) {
+        atomic_store(&gReDraw, true);
     }
     re_draw_mutex_unlock();
 
@@ -271,7 +271,7 @@ void notify_full_patch_change(void) {
     // Must be protected by gGlobalVarsMutex
     pthread_mutex_lock(&gGlobalVarsMutex);
 
-    gLocation                                     = locationVa;
+    atomic_store(&gLocation, locationVa);
     gMainButtonArray[vaButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
     gMainButtonArray[fxButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
 
@@ -431,35 +431,35 @@ void read_file_into_memory_and_process(const char * filepath) {
     calcCrc  = calc_crc16(buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
 
     if (readCrc == calcCrc) {
-        version                 = buff[byteOffset++];
-        type                    = buff[byteOffset++];
+        version                               = buff[byteOffset++];
+        type                                  = buff[byteOffset++];
         LOG_DEBUG("Version %u\n", version);
         LOG_DEBUG("Type %u\n", type);
 
         /* TODO - implement clear down commands as an init/clear slot function? */
-        database_delete_cables_by_slot(gSlot);
-        database_delete_modules_by_slot(gSlot);
-        gMorphCount[gSlot]      = 0;
-        gNote2Size[gSlot]       = 0;
-        gControllerCount[gSlot] = 0;
-        gPatchNotesSize[gSlot]  = 0;
-        memset(&(gPatchDescr[gSlot]), 0, sizeof(gPatchDescr[gSlot]));
-        memset(&(gKnobArray[gSlot]), 0, sizeof(gKnobArray[gSlot]));
-        memset(gNote2[gSlot], 0, sizeof(gNote2[gSlot]));
-        memset(&(gControllerArray[gSlot]), 0, sizeof(gControllerArray[gSlot]));
-        memset(gPatchNotes[gSlot], 0, sizeof(gPatchNotes[gSlot]));
+        database_delete_cables_by_slot(atomic_load(&gSlot));
+        database_delete_modules_by_slot(atomic_load(&gSlot));
+        gMorphCount[atomic_load(&gSlot)]      = 0;
+        gNote2Size[atomic_load(&gSlot)]       = 0;
+        gControllerCount[atomic_load(&gSlot)] = 0;
+        gPatchNotesSize[atomic_load(&gSlot)]  = 0;
+        memset(&(gPatchDescr[atomic_load(&gSlot)]), 0, sizeof(gPatchDescr[atomic_load(&gSlot)]));
+        memset(&(gKnobArray[atomic_load(&gSlot)]), 0, sizeof(gKnobArray[atomic_load(&gSlot)]));
+        memset(gNote2[atomic_load(&gSlot)], 0, sizeof(gNote2[atomic_load(&gSlot)]));
+        memset(&(gControllerArray[atomic_load(&gSlot)]), 0, sizeof(gControllerArray[atomic_load(&gSlot)]));
+        memset(gPatchNotes[atomic_load(&gSlot)], 0, sizeof(gPatchNotes[atomic_load(&gSlot)]));
 
         if (type == 0) {
-            parse_patch(gSlot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // TODO: parse_patch should really be in a commonly accessible source file, for file or USB access
+            parse_patch(atomic_load(&gSlot), buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // TODO: parse_patch should really be in a commonly accessible source file, for file or USB access
         } // 1 = performance
 
-        set_patch_name_from_filename(gSlot, filepath);
+        set_patch_name_from_filename(atomic_load(&gSlot), filepath);
 
         // If online, push to device immediately
         if (atomic_load(&gCommsState) == eCommsOnLine) {
             tMessageContent msg = {0};
             msg.cmd  = eMsgCmdWritePatch;
-            msg.slot = gSlot;
+            msg.slot = atomic_load(&gSlot);
             msg_send(&gCommandQueue, &msg);
         }
     } else {
@@ -514,24 +514,24 @@ void write_database_to_file(const char * filepath) {
     write_bit_stream(buff, &bitPos, 8, 23); // Version
     write_bit_stream(buff, &bitPos, 8, 0);  // Type (0 = patch, 1 = performance when we get round to implementing that)
 
-    write_patch_descr(gSlot, buff, &bitPos);
-    write_module_list(gSlot, locationVa, buff, &bitPos);
-    write_module_list(gSlot, locationFx, buff, &bitPos);
-    write_current_note_2(gSlot, buff, &bitPos);
-    write_cable_list(gSlot, locationVa, buff, &bitPos);
-    write_cable_list(gSlot, locationFx, buff, &bitPos);
-    write_param_list(gSlot, locationMorph, buff, &bitPos, NUM_VARIATIONS_FILE);
-    write_param_list(gSlot, locationVa, buff, &bitPos, NUM_VARIATIONS_FILE);
-    write_param_list(gSlot, locationFx, buff, &bitPos, NUM_VARIATIONS_FILE);
-    write_morph_params(gSlot, buff, &bitPos, NUM_VARIATIONS_FILE);
-    write_knobs(gSlot, buff, &bitPos);
-    write_controllers(gSlot, buff, &bitPos);
-    write_param_names(gSlot, locationMorph, buff, &bitPos);
-    write_param_names(gSlot, locationVa, buff, &bitPos);
-    write_param_names(gSlot, locationFx, buff, &bitPos);
-    write_module_names(gSlot, locationVa, buff, &bitPos);
-    write_module_names(gSlot, locationFx, buff, &bitPos);
-    write_patch_notes(gSlot, buff, &bitPos);
+    write_patch_descr(atomic_load(&gSlot), buff, &bitPos);
+    write_module_list(atomic_load(&gSlot), locationVa, buff, &bitPos);
+    write_module_list(atomic_load(&gSlot), locationFx, buff, &bitPos);
+    write_current_note_2(atomic_load(&gSlot), buff, &bitPos);
+    write_cable_list(atomic_load(&gSlot), locationVa, buff, &bitPos);
+    write_cable_list(atomic_load(&gSlot), locationFx, buff, &bitPos);
+    write_param_list(atomic_load(&gSlot), locationMorph, buff, &bitPos, NUM_VARIATIONS_FILE);
+    write_param_list(atomic_load(&gSlot), locationVa, buff, &bitPos, NUM_VARIATIONS_FILE);
+    write_param_list(atomic_load(&gSlot), locationFx, buff, &bitPos, NUM_VARIATIONS_FILE);
+    write_morph_params(atomic_load(&gSlot), buff, &bitPos, NUM_VARIATIONS_FILE);
+    write_knobs(atomic_load(&gSlot), buff, &bitPos);
+    write_controllers(atomic_load(&gSlot), buff, &bitPos);
+    write_param_names(atomic_load(&gSlot), locationMorph, buff, &bitPos);
+    write_param_names(atomic_load(&gSlot), locationVa, buff, &bitPos);
+    write_param_names(atomic_load(&gSlot), locationFx, buff, &bitPos);
+    write_module_names(atomic_load(&gSlot), locationVa, buff, &bitPos);
+    write_module_names(atomic_load(&gSlot), locationFx, buff, &bitPos);
+    write_patch_notes(atomic_load(&gSlot), buff, &bitPos);
 
     bitPos      = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos)); // Final byte alignment round-up
 
@@ -566,7 +566,7 @@ static void on_file_saved(const char * path) {
     if (path) {
         LOG_INFO("Saving file: %s", path);
         write_database_to_file(path);
-        set_patch_name_from_filename(gSlot, path);
+        set_patch_name_from_filename(atomic_load(&gSlot), path);
         //set_window_title(path);
     }
     atomic_store(&gNeedFocus, true);
@@ -586,8 +586,8 @@ static void check_action_flags(void) {
 
         pthread_mutex_lock(&gGlobalVarsMutex);
 
-        if (gPatchName[gSlot][0] != '\0') {
-            snprintf(defaultName, sizeof(defaultName), "%s.pch2", gPatchName[gSlot]);
+        if (gPatchName[atomic_load(&gSlot)][0] != '\0') {
+            snprintf(defaultName, sizeof(defaultName), "%s.pch2", gPatchName[atomic_load(&gSlot)]);
         } else {
             strncpy(defaultName, "patch.pch2", sizeof(defaultName) - 1);
         }
@@ -609,8 +609,8 @@ void do_graphics_loop(void) {
         check_action_flags();
 
         re_draw_mutex_lock(); // Only really protecting the gap between setting redraw and clearing the global flag, may need re-think
-        reDraw  = gReDraw;
-        gReDraw = false;
+        reDraw = atomic_load(&gReDraw);
+        atomic_store(&gReDraw, false);
         re_draw_mutex_unlock();
 
         if (reDraw == true) {

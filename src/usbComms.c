@@ -376,7 +376,7 @@ static int parse_patch_version(uint8_t * buff, int length) {
         return EXIT_FAILURE;
     }
     pthread_mutex_lock(&gGlobalVarsMutex);
-    gPatchVersion[slot] = version;
+    atomic_store(&gPatchVersion[slot], version);
     pthread_mutex_unlock(&gGlobalVarsMutex);
 
     LOG_DEBUG("Patch version slot %u = 0x%02x\n", slot, version);
@@ -466,7 +466,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                             module.led.value = read_bit_stream(buff, bitPos, 1);
                             read_bit_stream(buff, bitPos, 1);  // spare bit
 
-                            if (module.key.location == (uint32_t)gLocation) {
+                            if (module.key.location == atomic_load(&gLocation)) {
                                 write_module(module.key, &module);
                             }
                         }
@@ -531,7 +531,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
             if (changedSlot < MAX_SLOTS) {
                 pthread_mutex_lock(&gGlobalVarsMutex);
-                gPatchVersion[changedSlot] = newVersion;
+                atomic_store(&gPatchVersion[changedSlot], newVersion);
                 pthread_mutex_unlock(&gGlobalVarsMutex);
 
                 atomic_store(&gChangedSlot, (uint32_t)changedSlot);
@@ -563,7 +563,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("Got slot select %u\n", newSlot);
 
             pthread_mutex_lock(&gGlobalVarsMutex);
-            gSlot = newSlot;
+            atomic_store(&gSlot, newSlot);
             set_exclusive_button_highlight(slotAButtonId, slotDButtonId,
                                            (tButtonId)(slotAButtonId + newSlot));
             pthread_mutex_unlock(&gGlobalVarsMutex);
@@ -1025,7 +1025,7 @@ static int send_get_patch(uint32_t slot) {
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = gPatchVersion[slot];
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
     buff[pos++] = SUB_COMMAND_GET_PATCH_SLOT;
     retVal      = send_message(buff, pos);
 
@@ -1048,7 +1048,7 @@ static int send_get_patch_name(uint32_t slot) {
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = gPatchVersion[slot];
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
     buff[pos++] = SUB_COMMAND_GET_PATCH_NAME;
     retVal      = send_message(buff, pos);
 
@@ -1072,7 +1072,7 @@ static int send_set_module_label(uint32_t slot, tModuleKey moduleKey, const char
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = gPatchVersion[slot];
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
     buff[pos++] = SUB_COMMAND_SET_MODULE_LABEL;
     buff[pos++] = moduleKey.location;
     buff[pos++] = moduleKey.index;
@@ -1105,7 +1105,7 @@ static int send_set_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t pa
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | slot;
-    buff[pos++] = gPatchVersion[slot];
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
     buff[pos++] = SUB_COMMAND_SET_PARAM;
     buff[pos++] = moduleKey.location;
     buff[pos++] = moduleKey.index;
@@ -1283,14 +1283,19 @@ static int send_init_sequence_push(void) {
 // ---------------------------------------------------------------------------
 
 static int send_write_data(tMessageContent * messageContent) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
-    uint8_t slotVersion_local[MAX_SLOTS];
-    int     response                = SUB_RESPONSE_ERROR;
+    uint8_t buff[SEND_MESSAGE_SIZE]      = {0};
+    int     pos                          = COMMAND_OFFSET;
+    int     retVal                       = EXIT_FAILURE;
+    uint8_t slotVersion_local[MAX_SLOTS] = {0};
+    int     i                            = 0;
+    int     response                     = SUB_RESPONSE_ERROR;
 
     pthread_mutex_lock(&gGlobalVarsMutex);
-    memcpy(slotVersion_local, gPatchVersion, sizeof(slotVersion_local));
+
+    for (i = 0; i < MAX_SLOTS; i++) {
+        slotVersion_local[i] = atomic_load(&gPatchVersion[i]);
+    }
+
     pthread_mutex_unlock(&gGlobalVarsMutex);
 
     // TODO - these should move to functions where we can do: SEND_RECV(function());
@@ -1618,7 +1623,7 @@ static void state_handler(void) {
         send_stop();
         fetch_slot_data(slot);
         send_start();
-        
+
         call_full_patch_change_notify();
         call_wake_glfw();
         return;
