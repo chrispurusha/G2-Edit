@@ -153,10 +153,12 @@ void render_scrollbars(GLFWwindow * window) {
 
 void render_top_bar(void) {
     tRectangle  rectangle                          = {0};
+    char        patchNameCopy[PATCH_NAME_SIZE + 1] = {0};
     tCommsState commsState                         = atomic_load(&gCommsState);
     char *      commsStateText                     = "Unknown";
     tRgb        commsStateColour                   = RGB_RED_7;
     tRgb        buttonBackgroundColour             = (tRgb)RGB_BACKGROUND_GREY;
+    uint32_t    slot                               = atomic_load(&gSlot);
 
     set_rgb_colour(RGB_GREY_5);
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {(get_render_width() / GLOBAL_GUI_SCALE) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
@@ -164,11 +166,7 @@ void render_top_bar(void) {
     set_rgb_colour(RGB_BLACK);
     render_text(mainArea, {{400, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Variation");
 
-    // Patch name — centred in the left portion of the bar
-    pthread_mutex_lock(&gGlobalVarsMutex);
-    char        patchNameCopy[PATCH_NAME_SIZE + 1] = {0};
-    strncpy(patchNameCopy, gPatchName[atomic_load(&gSlot)], PATCH_NAME_SIZE);
-    pthread_mutex_unlock(&gGlobalVarsMutex);
+    patch_name_get(slot, patchNameCopy, sizeof(patchNameCopy));
 
     if (patchNameCopy[0] == '\0') {
         strncpy(patchNameCopy, "---", PATCH_NAME_SIZE);
@@ -176,7 +174,7 @@ void render_top_bar(void) {
     set_rgb_colour(RGB_BLACK);
     render_text(mainArea, {{180, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Patch Name");
 
-    if (gPatchNameEdit.active && gPatchNameEdit.slot == atomic_load(&gSlot)) {
+    if (gPatchNameEdit.active && gPatchNameEdit.slot == slot) {
         // Show edit buffer with cursor
         char displayBuf[PATCH_NAME_SIZE + 2] = {0};
         snprintf(displayBuf, sizeof(displayBuf), "%s|", gPatchNameEdit.buffer);
@@ -320,8 +318,10 @@ void init_graphics(void) {
 }
 
 void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
-    const char * base = filepath;
-    const char * p    = filepath;
+    const char * base                           = filepath;
+    const char * p                              = filepath;
+    char         patchName[PATCH_NAME_SIZE + 1] = {0};
+    int          i                              = 0;
 
     // Find last path separator
     while (*p != '\0') {
@@ -331,18 +331,15 @@ void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
         p++;
     }
     // Copy up to PATCH_NAME_SIZE chars, stop at '.' (extension)
-    pthread_mutex_lock(&gGlobalVarsMutex);
-    memset(gPatchName[slot], 0, PATCH_NAME_SIZE + 1);
-
-    int          i    = 0;
+    memset(patchName, 0, sizeof(patchName));
 
     while (i < PATCH_NAME_SIZE && base[i] != '\0' && base[i] != '.') {
-        gPatchName[slot][i] = base[i];
+        patchName[i] = base[i];
         i++;
     }
-    pthread_mutex_unlock(&gGlobalVarsMutex);
+    patch_name_set(slot, patchName);
 
-    LOG_DEBUG("Patch name from file: '%s'\n", gPatchName[slot]);
+    LOG_DEBUG("Patch name from file: '%s'\n", patchName);
 }
 
 void read_file_into_memory_and_process(const char * filepath) {
@@ -423,7 +420,7 @@ void read_file_into_memory_and_process(const char * filepath) {
         if (atomic_load(&gCommsState) == eCommsOnLine) {
             tMessageContent msg = {0};
             msg.cmd  = eMsgCmdWritePatch;
-            msg.slot = atomic_load(&gSlot);
+            msg.slot = slot;
             msg_send(&gCommandQueue, &msg);
         }
     } else {
@@ -528,10 +525,12 @@ static void on_file_opened(const char * path) {
 }
 
 static void on_file_saved(const char * path) {
+    uint32_t slot = atomic_load(&gSlot);
+
     if (path) {
         LOG_INFO("Saving file: %s", path);
         write_database_to_file(path);
-        set_patch_name_from_filename(atomic_load(&gSlot), path);
+        set_patch_name_from_filename(slot, path);
         //set_window_title(path);
     }
     atomic_store(&gNeedFocus, true);
@@ -539,6 +538,10 @@ static void on_file_saved(const char * path) {
 }
 
 static void check_action_flags(void) {
+    uint32_t slot                             = atomic_load(&gSlot);
+    char     patchName[PATCH_NAME_SIZE + 1]   = {0};
+    char     defaultName[PATCH_NAME_SIZE + 6] = {0}; // name + ".pch2\0"
+
     if (gShowOpenFileReadDialogue) {
         gShowOpenFileReadDialogue = false;
         open_file_read_dialogue_async(on_file_opened);
@@ -547,17 +550,13 @@ static void check_action_flags(void) {
     if (gShowOpenFileWriteDialogue) {
         gShowOpenFileWriteDialogue = false;
 
-        char defaultName[PATCH_NAME_SIZE + 6] = {0};  // name + ".pch2\0"
+        patch_name_get(slot, patchName, sizeof(patchName));
 
-        pthread_mutex_lock(&gGlobalVarsMutex);
-
-        if (gPatchName[atomic_load(&gSlot)][0] != '\0') {
-            snprintf(defaultName, sizeof(defaultName), "%s.pch2", gPatchName[atomic_load(&gSlot)]);
+        if (patchName[0] != '\0') {
+            snprintf(defaultName, sizeof(defaultName), "%s.pch2", patchName);
         } else {
             strncpy(defaultName, "patch.pch2", sizeof(defaultName) - 1);
         }
-        pthread_mutex_unlock(&gGlobalVarsMutex);
-
         open_file_write_dialogue_async(on_file_saved, defaultName);
     }
 

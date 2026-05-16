@@ -61,15 +61,15 @@ extern uint32_t            gControllerCount[MAX_SLOTS]; // TODO - Don't forget t
 extern uint32_t            gPatchNotesSize[MAX_SLOTS];
 extern uint8_t             gPatchNotes[MAX_SLOTS][MAX_16BIT];
 extern _Atomic uint8_t     gPatchVersion[MAX_SLOTS];
-extern char                gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1];
+//extern char                gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1];
 extern _Atomic tCommsState gCommsState;
 extern _Atomic uint32_t    gChangedSlot;
 extern tNameEdit           gPatchNameEdit;
 extern tModuleNameEdit     gModuleNameEdit;
 
-// Thread synchronization mutex for global variables
-extern pthread_mutex_t     gGlobalVarsMutex;
-
 uint32_t array_size_main_button_array(void);
+
+void patch_name_set(uint32_t slot, const char * name);
+void patch_name_get(uint32_t slot, char * name, size_t size);
 
 #endif // __GLOBAL_VARS_H__

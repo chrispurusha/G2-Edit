@@ -74,17 +74,38 @@ uint32_t            gControllerCount[MAX_SLOTS]                = {0};
 uint32_t            gPatchNotesSize[MAX_SLOTS]                 = {0};
 uint8_t             gPatchNotes[MAX_SLOTS][MAX_16BIT]          = {0};
 _Atomic uint8_t     gPatchVersion[MAX_SLOTS]                   = {0};
-char                gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1] = {0};
 _Atomic tCommsState gCommsState                                = eCommsNeverConnected;
 _Atomic uint32_t    gChangedSlot                               = 0;
 tNameEdit           gPatchNameEdit                             = {0};
 tModuleNameEdit     gModuleNameEdit                            = {0};
 
-// Thread synchronization mutex for global variables
-pthread_mutex_t     gGlobalVarsMutex                           = PTHREAD_MUTEX_INITIALIZER;
+/* Stored here, but don't access directly, use functions to access instead */
+char                gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1] = {0};
+pthread_mutex_t     gPatchNameMutex                            = PTHREAD_MUTEX_INITIALIZER;
 
 uint32_t array_size_main_button_array(void) {
     return ARRAY_SIZE(gMainButtonArray);
+}
+
+void patch_name_set(uint32_t slot, const char * name) {
+    pthread_mutex_lock(&gPatchNameMutex);
+
+    strncpy(gPatchName[slot], name, sizeof(gPatchName[0]) - 1);
+    gPatchName[slot][sizeof(gPatchName[0]) - 1] = '\0';
+
+    pthread_mutex_unlock(&gPatchNameMutex);
+}
+
+void patch_name_get(uint32_t slot, char * name, size_t size) {
+    pthread_mutex_lock(&gPatchNameMutex);
+
+    strncpy(name,
+            gPatchName[slot],
+            size - 1);
+
+    name[size - 1] = '\0';
+
+    pthread_mutex_unlock(&gPatchNameMutex);
 }
 
 #ifdef __cplusplus

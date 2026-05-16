@@ -97,9 +97,8 @@ void adjust_scroll_for_drag(void) {
 
 void update_module_up_rates(void) {
     tModule  module      = {0};
-    uint32_t location    = atomic_load(&gLocation);
     uint32_t slot        = atomic_load(&gSlot); // TODO: Might need to pass this in as a parameter
-
+    uint32_t location    = atomic_load(&gLocation);
 
     // Step 1 - initialise the old and new fields
     reset_walk_module();
@@ -187,9 +186,10 @@ void update_module_up_rates(void) {
 
 void send_module_move_msg(tModule * module) {
     tMessageContent messageContent = {0};
+    uint32_t        slot           = atomic_load(&gSlot);
 
     messageContent.cmd                  = eMsgCmdMoveModule;
-    messageContent.slot                 = atomic_load(&gSlot);
+    messageContent.slot                 = slot;
     messageContent.moduleData.moduleKey = module->key;
     messageContent.moduleData.row       = module->row;
     messageContent.moduleData.column    = module->column;
@@ -202,6 +202,7 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
     uint32_t        numParams         = module_param_count(module->type);
     tMessageContent messageContent    = {0};
     bool            anyParamSet       = false;
+    uint32_t        slot              = atomic_load(&gSlot);
 
     if (location != atomic_load(&gLocation)) {
         return;
@@ -214,7 +215,7 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
 
             for (int i = 0; i < NUM_VARIATIONS_USB; i++) {
                 messageContent.cmd                 = eMsgCmdSetValue;
-                messageContent.slot                = atomic_load(&gSlot);
+                messageContent.slot                = slot;
                 messageContent.paramData.moduleKey = module->key;
                 messageContent.paramData.param     = paramIndex;
                 messageContent.paramData.variation = i;
@@ -282,10 +283,14 @@ void init_patch(uint32_t slot) {  // Todo - think where this should really go
     memset(gNote2[slot], 0, sizeof(gNote2[0]));
     memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
     memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
-    strncpy(gPatchName[slot], "Init", PATCH_NAME_SIZE + 1);
+    patch_name_set(slot, "Init");
 }
 
 void handle_button(tButtonId buttonId) {
+    uint32_t slot      = atomic_load(&gSlot);
+    uint32_t location  = atomic_load(&gLocation);
+    uint32_t variation = gPatchDescr[slot].activeVariation;
+
     switch (buttonId) {
         case vaButtonId:
         {
@@ -324,14 +329,14 @@ void handle_button(tButtonId buttonId) {
         {
             uint32_t        variation      = (uint32_t)buttonId - (uint32_t)variation1ButtonId;
 
-            gPatchDescr[atomic_load(&gSlot)].activeVariation = variation;
+            gPatchDescr[slot].activeVariation      = variation;
 
             set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId, buttonId);
 
             tMessageContent messageContent = {0};
-            messageContent.cmd                               = eMsgCmdSelectVariation;
-            messageContent.slot                              = atomic_load(&gSlot);
-            messageContent.variationData.variation           = variation;
+            messageContent.cmd                     = eMsgCmdSelectVariation;
+            messageContent.slot                    = slot;
+            messageContent.variationData.variation = variation;
             msg_send(&gCommandQueue, &messageContent);
 
             break;
@@ -347,7 +352,7 @@ void handle_button(tButtonId buttonId) {
                 validModule = walk_next_module(&module);
 
                 if (validModule) {
-                    init_params_on_module(&module, atomic_load(&gLocation), gPatchDescr[atomic_load(&gSlot)].activeVariation); // TODO: take init value from the 9th (init) variation, or at least check our init values are the same
+                    init_params_on_module(&module, location, variation); // TODO: take init value from the 9th (init) variation, or at least check our init values are the same
                 }
             } while (validModule);
 
@@ -368,22 +373,22 @@ void handle_button(tButtonId buttonId) {
 
             tMessageContent messageContent = {0};
             messageContent.cmd           = eMsgCmdSelectSlot;
-            messageContent.slot          = atomic_load(&gSlot);
+            messageContent.slot          = slot;
             messageContent.slotData.slot = slot;
             msg_send(&gCommandQueue, &messageContent);
 
             set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId,
-                                           (tButtonId)((uint32_t)variation1ButtonId + gPatchDescr[atomic_load(&gSlot)].activeVariation));
+                                           (tButtonId)((uint32_t)variation1ButtonId + variation));
             break;
         }
         case initPatchId:
         {
-            init_patch(atomic_load(&gSlot));
+            init_patch(slot);
 
             //gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
             tMessageContent messageContent = {0};
             messageContent.cmd  = eMsgCmdWritePatch;
-            messageContent.slot = atomic_load(&gSlot);
+            messageContent.slot = slot;
             msg_send(&gCommandQueue, &messageContent);
             break;
         }
@@ -392,7 +397,7 @@ void handle_button(tButtonId buttonId) {
             //gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
             tMessageContent messageContent = {0};
             messageContent.cmd  = eMsgCmdWritePatch;
-            messageContent.slot = atomic_load(&gSlot);
+            messageContent.slot = slot;
             msg_send(&gCommandQueue, &messageContent);
             break;
         }
@@ -501,13 +506,15 @@ bool swap_cable_to_from_if_needed(tCableKey * cableKey, tModule * fromModule, tM
 }
 
 void menu_action_delete_cable(int index) {
-    tModule module     = {0};
-    tCable  walk       = {0};
-    int     outIndex   = -1;
-    int     inIndex    = -1;
-    bool    deleteWalk = false;
+    tModule  module     = {0};
+    tCable   walk       = {0};
+    int      outIndex   = -1;
+    int      inIndex    = -1;
+    bool     deleteWalk = false;
+    uint32_t slot       = atomic_load(&gSlot);
+    uint32_t location   = atomic_load(&gLocation);
 
-    if ((gContextMenu.moduleKey.slot == atomic_load(&gSlot)) && (gContextMenu.moduleKey.location == atomic_load(&gLocation))) {
+    if ((gContextMenu.moduleKey.slot == slot) && (gContextMenu.moduleKey.location == location)) {
         read_module(gContextMenu.moduleKey, &module);
 
         reset_walk_cable();
@@ -515,7 +522,7 @@ void menu_action_delete_cable(int index) {
         while (walk_next_cable(&walk)) {
             deleteWalk = false;
 
-            if (walk.key.slot == atomic_load(&gSlot) && walk.key.location == gContextMenu.moduleKey.location) {
+            if (walk.key.slot == slot && walk.key.location == gContextMenu.moduleKey.location) {
                 switch (module.connector[gContextMenu.connectorIndex].dir) {
                     case connectorDirOut:
                         outIndex = find_io_count_from_index(&module, connectorDirOut, gContextMenu.connectorIndex);
@@ -547,8 +554,8 @@ void menu_action_delete_cable(int index) {
                     tMessageContent messageContent = {0};
 
                     messageContent.cmd                            = eMsgCmdDeleteCable;
-                    messageContent.slot                           = atomic_load(&gSlot);
-                    messageContent.cableData.location             = atomic_load(&gLocation);
+                    messageContent.slot                           = slot;
+                    messageContent.cableData.location             = location;
                     messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
                     messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
                     messageContent.cableData.moduleToIndex        = walk.key.moduleToIndex;
@@ -567,11 +574,13 @@ void menu_action_delete_cable(int index) {
 }
 
 void menu_action_delete_module(int index) {
-    tModule module     = {0};
-    tCable  walk       = {0};
-    bool    deleteWalk = false;
+    tModule  module     = {0};
+    tCable   walk       = {0};
+    bool     deleteWalk = false;
+    uint32_t slot       = atomic_load(&gSlot);
+    uint32_t location   = atomic_load(&gLocation);
 
-    if (gContextMenu.moduleKey.slot == atomic_load(&gSlot) && gContextMenu.moduleKey.location == atomic_load(&gLocation)) {
+    if (gContextMenu.moduleKey.slot == slot && gContextMenu.moduleKey.location == location) {
         read_module(gContextMenu.moduleKey, &module);
 
         reset_walk_cable();
@@ -579,7 +588,7 @@ void menu_action_delete_module(int index) {
         while (walk_next_cable(&walk)) {
             deleteWalk = false;
 
-            if (walk.key.slot == atomic_load(&gSlot) && walk.key.location == gContextMenu.moduleKey.location) {
+            if (walk.key.slot == slot && walk.key.location == gContextMenu.moduleKey.location) {
                 if (walk.key.moduleFromIndex == gContextMenu.moduleKey.index) {
                     deleteWalk = true;
                 } else if (walk.key.moduleToIndex == gContextMenu.moduleKey.index) {
@@ -590,8 +599,8 @@ void menu_action_delete_module(int index) {
                     tMessageContent messageContent = {0};
 
                     messageContent.cmd                            = eMsgCmdDeleteCable;
-                    messageContent.slot                           = atomic_load(&gSlot);
-                    messageContent.cableData.location             = atomic_load(&gLocation);
+                    messageContent.slot                           = slot;
+                    messageContent.cableData.location             = location;
                     messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
                     messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
                     messageContent.cableData.moduleToIndex        = walk.key.moduleToIndex;
@@ -635,8 +644,9 @@ uint32_t find_unique_module_id(uint32_t location) {
     tModuleKey key    = {0};
     tModule    module = {0};
     uint32_t   i      = 0;
+    uint32_t   slot   = atomic_load(&gSlot);
 
-    key.slot     = atomic_load(&gSlot); // TODO: Might need to pass this in as a parameter?
+    key.slot     = slot; // TODO: Might need to pass this in as a parameter?
     key.location = location;
 
     for (i = 1; i <= 255; i++) {
@@ -698,13 +708,16 @@ void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord
 }
 
 void menu_action_create(int index) {
+    uint32_t slot     = atomic_load(&gSlot);
+    uint32_t location = atomic_load(&gLocation);
+
     if (gContextMenu.items[index].param != 0) {
         tModule         module         = {0};
         tMessageContent messageContent = {0};
         int32_t         uniqueIndex    = 0;
 
-        module.key.slot     = atomic_load(&gSlot); // TODO: Possibly pass this into find_unique...
-        module.key.location = atomic_load(&gLocation);
+        module.key.slot     = slot; // TODO: Possibly pass this into find_unique...
+        module.key.location = location;
         uniqueIndex         = find_unique_module_id(module.key.location);
 
         if (uniqueIndex > 0) {
@@ -716,7 +729,7 @@ void menu_action_create(int index) {
             module.name[sizeof(module.name) - 1]                                       = '\0';
 
             messageContent.cmd                                                         = eMsgCmdWriteModule;
-            messageContent.slot                                                        = atomic_load(&gSlot);
+            messageContent.slot                                                        = slot;
             messageContent.moduleData.moduleKey                                        = module.key;
             messageContent.moduleData.type                                             = module.type;
             messageContent.moduleData.row                                              = module.row;
@@ -738,7 +751,7 @@ void menu_action_create(int index) {
 
             write_module(module.key, &module);
 
-            init_params_on_module_all_variations(&module, atomic_load(&gLocation));
+            init_params_on_module_all_variations(&module, location);
 
             shift_modules_down(module.key);
         }
@@ -1027,6 +1040,9 @@ bool handle_module_click(tCoord coord, int button) {
     uint32_t    paramCount = 0;
     tParamType2 paramType2 = paramType2Dial;
     uint32_t    range      = 0;
+    uint32_t    slot       = atomic_load(&gSlot);
+    uint32_t    location   = atomic_load(&gLocation);
+    uint32_t    variation  = gPatchDescr[slot].activeVariation;
 
     // Since morph parameters are in top banner area, no longer need to check if (!within_rectangle(coord, module_area()))
 
@@ -1034,7 +1050,7 @@ bool handle_module_click(tCoord coord, int button) {
     tModule     module     = {0};
 
     while (walk_next_module(&module) && (retVal == false)) {
-        if (module.key.slot == atomic_load(&gSlot) && (module.key.location == atomic_load(&gLocation) || module.key.location == locationMorph)) {
+        if (module.key.slot == slot && (module.key.location == location || module.key.location == locationMorph)) {
             if (module.key.location == locationMorph) {
                 if (module.key.index == 1) {  // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
                     paramCount = NUM_MORPHS * 2;
@@ -1047,7 +1063,7 @@ bool handle_module_click(tCoord coord, int button) {
 
             // Deal with click on param
             for (int i = 0; (i < paramCount) && (retVal == false); i++) {
-                tParam * param = &module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][i];
+                tParam * param = &module.param[variation][i];
 
                 if (within_rectangle(coord, param->rectangle)) {
                     if (button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -1062,7 +1078,7 @@ bool handle_module_click(tCoord coord, int button) {
                         }
 
                         if (paramType2 == paramType2Dial) {
-                            gParamDragging.moduleKey.slot     = atomic_load(&gSlot); // TODO: Think about this being best way of doing it?
+                            gParamDragging.moduleKey.slot     = slot; // TODO: Think about this being best way of doing it?
                             gParamDragging.moduleKey.index    = module.key.index;
                             gParamDragging.moduleKey.location = module.key.location;
                             gParamDragging.type3              = paramType3Param;
@@ -1084,10 +1100,10 @@ bool handle_module_click(tCoord coord, int button) {
                             write_module(module.key, &module);
                             tMessageContent messageContent = {0};
                             messageContent.cmd                 = eMsgCmdSetValue;
-                            messageContent.slot                = atomic_load(&gSlot);
+                            messageContent.slot                = slot;
                             messageContent.paramData.moduleKey = module.key;
                             messageContent.paramData.param     = i;
-                            messageContent.paramData.variation = gPatchDescr[atomic_load(&gSlot)].activeVariation;
+                            messageContent.paramData.variation = variation;
                             messageContent.paramData.value     = param->value;
 
                             msg_send(&gCommandQueue, &messageContent);
@@ -1103,10 +1119,10 @@ bool handle_module_click(tCoord coord, int button) {
 
                             tMessageContent messageContent = {0};
                             messageContent.cmd                 = eMsgCmdSetValue;
-                            messageContent.slot                = atomic_load(&gSlot);
+                            messageContent.slot                = slot;
                             messageContent.paramData.moduleKey = module.key;
                             messageContent.paramData.param     = i;
-                            messageContent.paramData.variation = gPatchDescr[atomic_load(&gSlot)].activeVariation;
+                            messageContent.paramData.variation = variation;
                             messageContent.paramData.value     = param->value;
 
                             msg_send(&gCommandQueue, &messageContent);
@@ -1124,7 +1140,7 @@ bool handle_module_click(tCoord coord, int button) {
                     if (within_rectangle(coord, module.mode[i].rectangle)) {
                         if (button == GLFW_MOUSE_BUTTON_LEFT) {
                             if ((modeLocationList[mode->modeRef].type2) == paramType2Dial) {
-                                gParamDragging.moduleKey.slot     = atomic_load(&gSlot); // TODO: Think about this being best way of doing it?
+                                gParamDragging.moduleKey.slot     = slot; // TODO: Think about this being best way of doing it?
                                 gParamDragging.moduleKey.index    = module.key.index;
                                 gParamDragging.moduleKey.location = module.key.location;
                                 gParamDragging.type3              = paramType3Mode;
@@ -1137,7 +1153,7 @@ bool handle_module_click(tCoord coord, int button) {
                                 write_module(module.key, &module);
                                 tMessageContent messageContent = {0};
                                 messageContent.cmd                = eMsgCmdSetMode;
-                                messageContent.slot               = atomic_load(&gSlot);
+                                messageContent.slot               = slot;
                                 messageContent.modeData.moduleKey = module.key;
                                 messageContent.modeData.mode      = i;
                                 messageContent.modeData.value     = mode->value;
@@ -1150,7 +1166,7 @@ bool handle_module_click(tCoord coord, int button) {
                                  *
                                  * tMessageContent messageContent = {0};
                                  * messageContent.cmd                 = eMsgCmdSetValue;
-                                 * messageContent.slot                    = atomic_load(&gSlot);
+                                 * messageContent.slot                    = slot;
                                  * messageContent.paramData.moduleKey = module.key;
                                  * messageContent.paramData.mode     = i;
                                  * messageContent.paramData.variation = 0;
@@ -1298,10 +1314,12 @@ void stop_dragging(void) {
 }
 
 void mouse_button(GLFWwindow * window, int button, int action, int mods) {
-    int    width    = 0;
-    int    height   = 0;
-    tCoord coord    = {0};
-    bool   quitLoop = false;
+    int      width    = 0;
+    int      height   = 0;
+    tCoord   coord    = {0};
+    bool     quitLoop = false;
+    uint32_t slot     = atomic_load(&gSlot);
+    uint32_t location = atomic_load(&gLocation);
 
     glfwGetWindowSize(window, &width, &height);
 
@@ -1338,16 +1356,12 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 if (!gPatchNameEdit.active) {
                     // Start editing
                     gPatchNameEdit.active = true;
-                    gPatchNameEdit.slot   = atomic_load(&gSlot);
-                    pthread_mutex_lock(&gGlobalVarsMutex);
-                    strncpy(gPatchNameEdit.buffer, gPatchName[atomic_load(&gSlot)], PATCH_NAME_SIZE);
-                    pthread_mutex_unlock(&gGlobalVarsMutex);
+                    gPatchNameEdit.slot   = slot;
+                    patch_name_get(slot, gPatchNameEdit.buffer, sizeof(gPatchNameEdit.buffer));
                 }
             } else if (gPatchNameEdit.active) {
                 gPatchNameEdit.active = false;
-                pthread_mutex_lock(&gGlobalVarsMutex);
-                strncpy(gPatchName[gPatchNameEdit.slot], gPatchNameEdit.buffer, PATCH_NAME_SIZE);
-                pthread_mutex_unlock(&gGlobalVarsMutex);
+                patch_name_set(gPatchNameEdit.slot, gPatchNameEdit.buffer);
                 // TODO: if online, enqueue eMsgCmdWritePatch or a dedicated name update command
             }
         }
@@ -1383,7 +1397,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     reset_walk_module();
 
                     while (walk_next_module(&toModule) && !quitLoop) {
-                        if (toModule.key.slot == atomic_load(&gSlot) && toModule.key.location == atomic_load(&gLocation)) {
+                        if (toModule.key.slot == slot && toModule.key.location == location) {
                             for (int i = 0; i < module_connector_count(toModule.type); i++) {
                                 if (!within_rectangle(coord, toModule.connector[i].rectangle)) {
                                     continue;
@@ -1406,7 +1420,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                                 tMessageContent messageContent = {0};
 
                                 messageContent.cmd                            = eMsgCmdWriteCable;
-                                messageContent.slot                           = atomic_load(&gSlot);
+                                messageContent.slot                           = slot;
                                 messageContent.cableData.location             = gLocation;
                                 messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
                                 messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
@@ -1444,6 +1458,9 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     tMessageContent messageContent = {0};
     bool            noAction       = false;
     tParamType2     paramType2     = paramType2Dial;
+    uint32_t        slot           = atomic_load(&gSlot);
+    uint32_t        variation      = gPatchDescr[slot].activeVariation;
+
 
     get_global_gui_scaled_mouse_coord(&coord);
     x = coord.x;
@@ -1468,50 +1485,50 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                 if (module.key.location == locationMorph) {
                     paramType2 = paramType2Dial;
                 } else {
-                    paramType2 = paramLocationList[module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][gParamDragging.param].paramRef].type2;
+                    paramType2 = paramLocationList[module.param[variation][gParamDragging.param].paramRef].type2;
                 }
 
                 if (paramType2 == paramType2Dial) {
                     if (module.key.location == locationMorph) {
                         range = 128;
                     } else {
-                        range = paramLocationList[module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][gParamDragging.param].paramRef].range;
+                        range = paramLocationList[module.param[variation][gParamDragging.param].paramRef].range;
                     }
-                    angle = calculate_mouse_angle((tCoord){x, y}, module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][gParamDragging.param].rectangle);                                                            // possible add half size
+                    angle = calculate_mouse_angle((tCoord){x, y}, module.param[variation][gParamDragging.param].rectangle);                                                            // possible add half size
                     value = angle_to_value(angle, range);
 
                     if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) != GLFW_PRESS) {
-                        if (module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][gParamDragging.param].value != value) {
-                            module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][gParamDragging.param].value = value;
+                        if (module.param[variation][gParamDragging.param].value != value) {
+                            module.param[variation][gParamDragging.param].value = value;
 
                             write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
 
-                            messageContent.cmd                                                                         = eMsgCmdSetValue;
-                            messageContent.slot                                                                        = atomic_load(&gSlot);
-                            messageContent.paramData.moduleKey                                                         = gParamDragging.moduleKey;
-                            messageContent.paramData.param                                                             = gParamDragging.param;
-                            messageContent.paramData.variation                                                         = gPatchDescr[atomic_load(&gSlot)].activeVariation;
-                            messageContent.paramData.value                                                             = value;
+                            messageContent.cmd                                  = eMsgCmdSetValue;
+                            messageContent.slot                                 = slot;
+                            messageContent.paramData.moduleKey                  = gParamDragging.moduleKey;
+                            messageContent.paramData.param                      = gParamDragging.param;
+                            messageContent.paramData.variation                  = variation;
+                            messageContent.paramData.value                      = value;
                             msg_send(&gCommandQueue, &messageContent);
                         }
                     } else {
-                        if (module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][gParamDragging.param].morphRange[gMorphGroupFocus] != value) {
-                            if (value >= module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][gParamDragging.param].value) {
-                                module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][gParamDragging.param].morphRange[gMorphGroupFocus] = value - module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][gParamDragging.param].value;
+                        if (module.param[variation][gParamDragging.param].morphRange[gMorphGroupFocus] != value) {
+                            if (value >= module.param[variation][gParamDragging.param].value) {
+                                module.param[variation][gParamDragging.param].morphRange[gMorphGroupFocus] = value - module.param[variation][gParamDragging.param].value;
                             } else {
-                                module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][gParamDragging.param].morphRange[gMorphGroupFocus] = 256 - (module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][gParamDragging.param].value - value);
+                                module.param[variation][gParamDragging.param].morphRange[gMorphGroupFocus] = 256 - (module.param[variation][gParamDragging.param].value - value);
                             }
                             write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
-                            LOG_DEBUG("Write to module %u variation %u\n", module.key.index, gPatchDescr[atomic_load(&gSlot)].activeVariation);
+                            LOG_DEBUG("Write to module %u variation %u\n", module.key.index, variation);
 
                             messageContent.cmd                       = eMsgCmdSetParamMorph;
-                            messageContent.slot                      = atomic_load(&gSlot);
+                            messageContent.slot                      = slot;
                             messageContent.paramMorphData.moduleKey  = module.key;
                             messageContent.paramMorphData.param      = gParamDragging.param;
                             messageContent.paramMorphData.paramMorph = gMorphGroupFocus;
-                            messageContent.paramMorphData.value      = module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][gParamDragging.param].morphRange[gMorphGroupFocus];
+                            messageContent.paramMorphData.value      = module.param[variation][gParamDragging.param].morphRange[gMorphGroupFocus];
                             messageContent.paramMorphData.negative   = 0;
-                            messageContent.paramMorphData.variation  = gPatchDescr[atomic_load(&gSlot)].activeVariation;
+                            messageContent.paramMorphData.variation  = variation;
                             msg_send(&gCommandQueue, &messageContent);
                         }
                     }
@@ -1529,7 +1546,7 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
                         write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
 
                         messageContent.cmd                     = eMsgCmdSetMode;
-                        messageContent.slot                    = atomic_load(&gSlot);
+                        messageContent.slot                    = slot;
                         messageContent.modeData.moduleKey      = gParamDragging.moduleKey;
                         messageContent.modeData.mode           = gParamDragging.mode;
                         messageContent.modeData.value          = value;
@@ -1629,9 +1646,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
                 // Commit
                 gPatchNameEdit.active = false;
-                pthread_mutex_lock(&gGlobalVarsMutex);
-                strncpy(gPatchName[gPatchNameEdit.slot], gPatchNameEdit.buffer, PATCH_NAME_SIZE);
-                pthread_mutex_unlock(&gGlobalVarsMutex);
+                patch_name_set(gPatchNameEdit.slot, gPatchNameEdit.buffer);
                 // TODO: enqueue patch name update command if online
             } else if (key == GLFW_KEY_ESCAPE) {
                 // Cancel — discard edits

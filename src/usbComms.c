@@ -407,8 +407,9 @@ static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                                   uint8_t commandResponse, uint8_t subCommand,
                                   int length, bool * unsolicited) {
-    tModule  module = {0};
-    uint32_t slot   = commandResponse & 0x03;
+    tModule  module   = {0};
+    uint32_t slot     = commandResponse & 0x03;
+    uint32_t location = atomic_load(&gLocation);
 
     *unsolicited = false;
 
@@ -464,7 +465,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                             module.led.value = read_bit_stream(buff, bitPos, 1);
                             read_bit_stream(buff, bitPos, 1);  // spare bit
 
-                            if (module.key.location == atomic_load(&gLocation)) {
+                            if (module.key.location == location) {
                                 write_module(module.key, &module);
                             }
                         }
@@ -571,18 +572,22 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_PATCH_NAME:
         {
+            char patchName[PATCH_NAME_SIZE + 1] = {0};
+
             LOG_DEBUG("Got patch name (length %d)\n", length);
-            pthread_mutex_lock(&gGlobalVarsMutex);
-            memset(gPatchName[slot], 0, PATCH_NAME_SIZE + 1);
+
+            memset(patchName, 0, sizeof(patchName));
 
             for (int i = 0; i < (length - 6) && i < PATCH_NAME_SIZE; i++) {
                 uint8_t ch = read_bit_stream(buff, bitPos, 8);
-                gPatchName[slot][i] = ch;
-                LOG_DEBUG_DIRECT("%c", gPatchName[slot][i]);
+                patchName[i] = ch;
+                LOG_DEBUG_DIRECT("%c", patchName[i]);
             }
 
             LOG_DEBUG_DIRECT("\n");
-            pthread_mutex_unlock(&gGlobalVarsMutex);
+
+            patch_name_set(slot, patchName);
+
             return EXIT_SUCCESS;
         }
 
@@ -1118,7 +1123,6 @@ static void clear_slot_data(uint32_t slot) {
     database_delete_modules_by_slot(slot);
     database_delete_cables_by_slot(slot);
 
-    pthread_mutex_lock(&gGlobalVarsMutex);
     memset(&gPatchDescr[slot], 0, sizeof(tPatchDescr));
     memset(&gKnobArray[slot], 0, sizeof(tKnobArray));
     memset(&gControllerArray[slot], 0, sizeof(tControllerArray));
@@ -1126,7 +1130,6 @@ static void clear_slot_data(uint32_t slot) {
     gMorphCount[slot]      = 8;
     gPatchNotesSize[slot]  = 0;
     gNote2Size[slot]       = 0;
-    pthread_mutex_unlock(&gGlobalVarsMutex);
 }
 
 // Fetch patch data for a single slot. Synth must be stopped before calling.
@@ -1147,11 +1150,12 @@ static int fetch_slot_data(uint32_t slot) {
 // ---------------------------------------------------------------------------
 
 static int push_slot_to_device(uint32_t slot) {
-    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
-    int      pos                     = COMMAND_OFFSET;
-    uint32_t bitPos                  = 0;
-    uint32_t i                       = 0;
-    int      retVal                  = EXIT_FAILURE;
+    uint8_t  buff[SEND_MESSAGE_SIZE]        = {0};
+    int      pos                            = COMMAND_OFFSET;
+    uint32_t bitPos                         = 0;
+    uint32_t i                              = 0;
+    int      retVal                         = EXIT_FAILURE;
+    char     patchName[PATCH_NAME_SIZE + 1] = {0};
 
     LOG_DEBUG("Pushing slot %u to device\n", slot);
 
@@ -1163,13 +1167,11 @@ static int push_slot_to_device(uint32_t slot) {
     buff[pos++] = 0x00;
     buff[pos++] = 0x00;
 
-    // Patch name: up to 16 bytes, null-terminated
-    pthread_mutex_lock(&gGlobalVarsMutex);
+    patch_name_get(slot, patchName, sizeof(patchName));
 
-    while ((i < PATCH_NAME_SIZE) && (gPatchName[slot][i] != '\0')) {
-        buff[pos++] = (uint8_t)gPatchName[slot][i++];
+    while ((i < PATCH_NAME_SIZE) && (patchName[i] != '\0')) {
+        buff[pos++] = patchName[i++];
     }
-    pthread_mutex_unlock(&gGlobalVarsMutex);
     buff[pos++] = 0x00;
 
     bitPos      = BYTE_TO_BIT(pos);
