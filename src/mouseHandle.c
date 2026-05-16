@@ -362,7 +362,7 @@ void handle_button(tButtonId buttonId) {
         {
             uint32_t        slot           = (uint32_t)buttonId - (uint32_t)slotAButtonId;
 
-            gSlot                        = slot;
+            atomic_store(&gSlot, slot);
 
             set_exclusive_button_highlight(slotAButtonId, slotDButtonId, buttonId);
 

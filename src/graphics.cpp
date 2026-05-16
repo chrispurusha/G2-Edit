@@ -46,40 +46,17 @@ extern "C" {
 #include "fileDialogue.h"
 #include "globalVars.h"
 
-static FT_Library      gLibrary     = {0};
-static FT_Face         gFace        = {0};
-static pthread_mutex_t gReDrawMutex = {0};
-static _Atomic bool    gNeedFocus   = false;
-
-static void re_draw_mutex_init(void) {
-    pthread_mutexattr_t attr = {0};
-
-    pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-    pthread_mutex_init(&gReDrawMutex, &attr);
-    pthread_mutexattr_destroy(&attr);
-}
-
-static void re_draw_mutex_lock(void) {
-    pthread_mutex_lock(&gReDrawMutex);
-}
-
-static void re_draw_mutex_unlock(void) {
-    // TODO: implement a generic utility function for this, passing the mutex?
-    pthread_mutex_unlock(&gReDrawMutex);
-}
+static FT_Library   gLibrary   = {0};
+static FT_Face      gFace      = {0};
+static _Atomic bool gNeedFocus = false;
 
 void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
     glViewport(0, 0, width, height);
-    re_draw_mutex_lock();
     atomic_store(&gReDraw, true);
-    re_draw_mutex_unlock();
 }
 
 void window_close_callback(GLFWwindow * window) {
-    re_draw_mutex_lock();
     atomic_store(&gReDraw, false);
-    re_draw_mutex_unlock();
 
     glfwSetFramebufferSizeCallback(gWindow, NULL);
     glfwSetWindowCloseCallback(gWindow, NULL);
@@ -254,28 +231,16 @@ void render_top_bar(void) {
 }
 
 void wake_glfw(void) {
-    // Update the redraw flag (protected by its own mutex)
-    re_draw_mutex_lock();
-
-    if (atomic_load(&gReDraw) == false) {
-        atomic_store(&gReDraw, true);
-    }
-    re_draw_mutex_unlock();
+    atomic_store(&gReDraw, true);
 
     // Safe GLFW call from any thread
     glfwPostEmptyEvent();
 }
 
 void notify_full_patch_change(void) {
-    // CRITICAL: This modifies global state from USB thread
-    // Must be protected by gGlobalVarsMutex
-    pthread_mutex_lock(&gGlobalVarsMutex);
-
     atomic_store(&gLocation, locationVa);
     gMainButtonArray[vaButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
     gMainButtonArray[fxButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
-
-    pthread_mutex_unlock(&gGlobalVarsMutex);
 }
 
 void setup_render_context(void) {
@@ -294,8 +259,6 @@ void init_graphics(void) {
     GLFWmonitor * monitor      = NULL;
     float         xScale       = 1;
     float         yScale       = 1;
-
-    re_draw_mutex_init();
 
     glfwSetErrorCallback(error_callback);
 
@@ -610,10 +573,8 @@ void do_graphics_loop(void) {
     while ((gQuitAll == false) && (!glfwWindowShouldClose(gWindow))) {
         check_action_flags();
 
-        re_draw_mutex_lock(); // Only really protecting the gap between setting redraw and clearing the global flag, may need re-think
         reDraw = atomic_load(&gReDraw);
         atomic_store(&gReDraw, false);
-        re_draw_mutex_unlock();
 
         if (reDraw == true) {
             glClearColor(0.8, 0.8, 0.8, 1.0);

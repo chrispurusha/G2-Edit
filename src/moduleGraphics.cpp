@@ -207,8 +207,10 @@ tRectangle render_dial_with_text(tArea area, tRectangle rectangle, char * label,
 void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramRef, uint32_t paramIndex) {
     char     buff[16]                   = {0};
     char     label[PARAM_NAME_SIZE + 1] = {0};
-    uint32_t paramValue                 = module->param[gPatchDescr[atomic_load(&gSlot)].activeVariation][paramIndex].value;
-    uint32_t morphRange                 = module->param[gPatchDescr[atomic_load(&gSlot)].activeVariation][paramIndex].morphRange[gMorphGroupFocus];
+    uint32_t slot                       = atomic_load(&gSlot);
+    uint32_t variation                  = gPatchDescr[slot].activeVariation;
+    uint32_t paramValue                 = module->param[variation][paramIndex].value;
+    uint32_t morphRange                 = module->param[variation][paramIndex].morphRange[gMorphGroupFocus];
 
     if (paramValue >= paramLocationList[paramRef].range) {
         LOG_ERROR("Module index %u name %s ParamRef %u ParamIndex %u Value %u > Range %u\n", module->key.index, module->name, paramRef, paramIndex, paramValue, paramLocationList[paramRef].range);
@@ -220,9 +222,9 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
     } else if (paramLocationList[paramRef].label != NULL) {
         strncpy(label, paramLocationList[paramRef].label, sizeof(label));
     }
-    label[sizeof(label) - 1]                                                             = '\0';
+    label[sizeof(label) - 1]                      = '\0';
 
-    module->param[gPatchDescr[atomic_load(&gSlot)].activeVariation][paramIndex].paramRef = paramRef;
+    module->param[variation][paramIndex].paramRef = paramRef;
 
     //LOG_DEBUG("param %u\n", paramValue);
 
@@ -343,7 +345,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             }
 
             if (render_param_function != NULL) {
-                module->param[gPatchDescr[atomic_load(&gSlot)].activeVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramRef);
+                module->param[variation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramRef);
             }
             break;
         }
@@ -381,7 +383,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             }
 
             if (render_param_function != NULL) {
-                module->param[gPatchDescr[atomic_load(&gSlot)].activeVariation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, (char **)paramLocationList[paramRef].strMap);
+                module->param[variation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, (char **)paramLocationList[paramRef].strMap);
             }
             break;
         }
@@ -394,7 +396,8 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 
 void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef, uint32_t modeIndex) {
     uint32_t modeValue = module->mode[modeIndex].value;
-
+    uint32_t slot      = atomic_load(&gSlot);
+    uint32_t variation = gPatchDescr[slot].activeVariation;
 
     module->mode[0].modeRef = modeRef;
 
@@ -420,7 +423,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
                 //Debug help for value
                 char debug[64] = {0};
                 snprintf(debug, sizeof(debug), "modeRef %u", modeRef);
-                module->param[gPatchDescr[atomic_load(&gSlot)].activeVariation][modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {30, textHeight}}, debug, RGB_BACKGROUND_GREY);
+                module->param[variation][modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {30, textHeight}}, debug, RGB_BACKGROUND_GREY);
                 return;
             }
             //if (paramLocationList[paramRef].colourMap != NULL) {
@@ -737,15 +740,17 @@ void render_module(tModule * module) {
 }
 
 void render_modules(void) {
-    tModule module      = {0};
-    bool    validModule = false;
+    tModule  module      = {0};
+    bool     validModule = false;
+    uint32_t slot        = atomic_load(&gSlot);
+    uint32_t location    = atomic_load(&gLocation);
 
     reset_walk_module();
 
     do {
         validModule = walk_next_module(&module);
 
-        if (validModule && module.key.slot == atomic_load(&gSlot) && module.key.location == atomic_load(&gLocation) && module.type != moduleTypeUnknown0) {
+        if (validModule && module.key.slot == slot && module.key.location == location && module.type != moduleTypeUnknown0) {
             render_module(&module);
         }
     } while (validModule);
@@ -807,15 +812,17 @@ void render_cable(tCable * cable) {
 }
 
 void render_cables(void) {
-    tCable cable      = {0};
-    bool   validCable = false;
+    tCable   cable      = {0};
+    bool     validCable = false;
+    uint32_t slot       = atomic_load(&gSlot);
+    uint32_t location   = atomic_load(&gLocation);
 
     reset_walk_cable();
 
     do {
         validCable = walk_next_cable(&cable);
 
-        if (validCable && cable.key.slot == atomic_load(&gSlot) && cable.key.location == atomic_load(&gLocation)) {
+        if (validCable && cable.key.slot == slot && cable.key.location == location) {
             render_cable(&cable);
         }
     } while (validCable);
@@ -833,13 +840,15 @@ void render_morph_groups(void) {
     uint32_t   j           = 0;
     double     textHeight  = 0.0;
     bool       validModule = false;
+    uint32_t   slot        = atomic_load(&gSlot);
+    uint32_t   variation   = gPatchDescr[slot].activeVariation;
 
     reset_walk_module();
 
     do {
         validModule = walk_next_module(&module);
 
-        if ((validModule && module.key.slot == atomic_load(&gSlot) && module.key.location == locationMorph) && (module.key.index == 1)) {
+        if ((validModule && module.key.slot == slot && module.key.location == locationMorph) && (module.key.index == 1)) {
             // Make sure all rectangles (for mouse click) are nullified
             for (i = 0; i < NUM_VARIATIONS_USB; i++) {
                 for (j = 0; j < (NUM_MORPHS * 2); j++) {
@@ -848,9 +857,9 @@ void render_morph_groups(void) {
             }
 
             for (i = 0; i < NUM_MORPHS; i++) {
-                snprintf(buff, sizeof(buff), "%u", module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][i].value);
+                snprintf(buff, sizeof(buff), "%u", module.param[variation][i].value);
 
-                if (module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][i + NUM_MORPHS].value != 0) {
+                if (module.param[variation][i + NUM_MORPHS].value != 0) {
                     snprintf(label, sizeof(label), "%s", module.paramName[i + NUM_MORPHS][0]);
                 } else {
                     snprintf(label, sizeof(label), "Knob");
@@ -861,13 +870,13 @@ void render_morph_groups(void) {
                 } else {
                     dialColour = RGB_GREY_3;
                 }
-                module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][i].rectangle              = render_dial_with_text(mainArea, rectangle, NULL, buff, module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][i].value, 128, module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][i].morphRange[gMorphGroupFocus], dialColour);
+                module.param[variation][i].rectangle              = render_dial_with_text(mainArea, rectangle, NULL, buff, module.param[variation][i].value, 128, module.param[variation][i].morphRange[gMorphGroupFocus], dialColour);
 
-                textHeight                                                                               = rectangle.size.h / 4.0;
+                textHeight                                        = rectangle.size.h / 4.0;
 
-                module.param[gPatchDescr[atomic_load(&gSlot)].activeVariation][i + NUM_MORPHS].rectangle = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y - 8}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, RGB_BACKGROUND_GREY);
+                module.param[variation][i + NUM_MORPHS].rectangle = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y - 8}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, RGB_BACKGROUND_GREY);
 
-                rectangle.coord.x                                                                       += (STANDARD_TEXT_HEIGHT * 4) + 5;
+                rectangle.coord.x                                += (STANDARD_TEXT_HEIGHT * 4) + 5;
             }
 
             write_module(module.key, &module);

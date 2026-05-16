@@ -62,7 +62,10 @@ tRectangle render_paramType1Freq(tModule * module, tRectangle rectangle, char * 
 
 tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     // Frequency dial for oscillators. Uses PitchType param to control display of Tune
-    int pitchTypeParamIndex = 0;
+    int      pitchTypeParamIndex = 0;
+    uint32_t slot                = atomic_load(&gSlot);
+    //uint32_t location            = atomic_load(&gLocation);
+    uint32_t variation           = gPatchDescr[slot].activeVariation;
 
     switch (module->type) {
         case moduleTypeOscMaster:
@@ -83,7 +86,7 @@ tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char
         }
     }
 
-    switch (module->param[gPatchDescr[atomic_load(&gSlot)].activeVariation][pitchTypeParamIndex].value) {
+    switch (module->param[variation][pitchTypeParamIndex].value) {
         case 0:   // Semi. -64 to 63
         {
             double res;
@@ -205,8 +208,10 @@ tRectangle render_paramType1FreqDrum(tModule * module, tRectangle rectangle, cha
 }
 
 tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
-    double rate;
-    int    rateModeParamIndex;
+    double   rate;
+    int      rateModeParamIndex;
+    uint32_t slot      = atomic_load(&gSlot);
+    uint32_t variation = gPatchDescr[slot].activeVariation;
 
     switch (module->type) {
         case moduleTypeLfoShpA:
@@ -231,7 +236,7 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
         }
     }
 
-    switch (module->param[gPatchDescr[atomic_load(&gSlot)].activeVariation][rateModeParamIndex].value) {
+    switch (module->param[variation][rateModeParamIndex].value) {
         case 0: // Sub - compute range in s
         {
             double range_start = 699.0;
@@ -305,7 +310,7 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
         }
         default:
         {
-            LOG_ERROR("Wrong case %u in paramTypeLFORate\n", module->param[gPatchDescr[atomic_load(&gSlot)].activeVariation][rateModeParamIndex].value);
+            LOG_ERROR("Wrong case %u in paramTypeLFORate\n", module->param[variation][rateModeParamIndex].value);
         }
     }
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
@@ -368,6 +373,8 @@ tRectangle render_paramType1MixLevel(tModule * module, tRectangle rectangle, cha
         -1.5,    -1.3,  -1.0,  -0.8,  -0.6,  -0.4,  -0.2, 0.0
     };
     int          expLinDBparam = 0;
+    uint32_t     slot          = atomic_load(&gSlot);
+    uint32_t     variation     = gPatchDescr[slot].activeVariation;
 
     switch (module->type) {
         case moduleTypeMix8to1B:
@@ -382,7 +389,7 @@ tRectangle render_paramType1MixLevel(tModule * module, tRectangle rectangle, cha
     }
     //level = paramValue;
 
-    if (module->param[gPatchDescr[atomic_load(&gSlot)].activeVariation][expLinDBparam].value == 2) { // display dB
+    if (module->param[variation][expLinDBparam].value == 2) { // display dB
         if (paramValue == 0.0) {
             snprintf(buff, buffSize, "-oodB");
         } else {
@@ -590,10 +597,12 @@ tRectangle render_paramType1PulseTime(tModule * module, tRectangle rectangle, ch
         3.24,     3.49,   3.76,   4.06,   4.37,   4.71,   5.08,   5.48,
         5.90,     6.36,   6.86,   7.40,   7.98,   8.60,   9.28, 10.0
     };
+    uint32_t     slot          = atomic_load(&gSlot);
+    uint32_t     variation     = gPatchDescr[slot].activeVariation;
 
     time_to_display = pulseLoTime[(int)paramValue]; // in s
 
-    switch (module->param[gPatchDescr[atomic_load(&gSlot)].activeVariation][2].value) {
+    switch (module->param[variation][2].value) {
         case 0:   // Sub
         {
             time_to_display /= 10.0;
@@ -643,9 +652,11 @@ tRectangle render_paramType1Pitch(tModule * module, tRectangle rectangle, char *
 
 tRectangle render_paramType1BipLevel(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     // -64 to 63
-    double res    = 0.0;
-    double maxVal = 64.0;
-    int    typeParamIndex;
+    double   res            = 0.0;
+    double   maxVal         = 64.0;
+    int      typeParamIndex = 0;
+    uint32_t slot           = atomic_load(&gSlot);
+    uint32_t variation      = gPatchDescr[slot].activeVariation;
 
     switch (module->type) {
         case moduleTypeConstant:
@@ -666,7 +677,7 @@ tRectangle render_paramType1BipLevel(tModule * module, tRectangle rectangle, cha
             res = maxVal;             // Clip
         }
     } else {
-        switch (module->param[gPatchDescr[atomic_load(&gSlot)].activeVariation][typeParamIndex].value) {
+        switch (module->param[variation][typeParamIndex].value) {
             case 0: // Bip
             {
                 if (paramValue < 127) {

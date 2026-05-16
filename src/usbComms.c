@@ -375,9 +375,7 @@ static int parse_patch_version(uint8_t * buff, int length) {
     if (slot >= MAX_SLOTS) {
         return EXIT_FAILURE;
     }
-    pthread_mutex_lock(&gGlobalVarsMutex);
     atomic_store(&gPatchVersion[slot], version);
-    pthread_mutex_unlock(&gGlobalVarsMutex);
 
     LOG_DEBUG("Patch version slot %u = 0x%02x\n", slot, version);
     return EXIT_SUCCESS;
@@ -530,10 +528,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("Patch version change: slot %u new version 0x%02x\n", changedSlot, newVersion);
 
             if (changedSlot < MAX_SLOTS) {
-                pthread_mutex_lock(&gGlobalVarsMutex);
                 atomic_store(&gPatchVersion[changedSlot], newVersion);
-                pthread_mutex_unlock(&gGlobalVarsMutex);
-
                 atomic_store(&gChangedSlot, (uint32_t)changedSlot);
             }
             atomic_store(&gotPatchChangeIndication, true);
@@ -562,11 +557,9 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             uint32_t newSlot = read_bit_stream(buff, bitPos, 8);
             LOG_DEBUG("Got slot select %u\n", newSlot);
 
-            pthread_mutex_lock(&gGlobalVarsMutex);
             atomic_store(&gSlot, newSlot);
             set_exclusive_button_highlight(slotAButtonId, slotDButtonId,
                                            (tButtonId)(slotAButtonId + newSlot));
-            pthread_mutex_unlock(&gGlobalVarsMutex);
             return EXIT_SUCCESS;
         }
 
@@ -1290,23 +1283,14 @@ static int send_write_data(tMessageContent * messageContent) {
     int     i                       = 0;
     int     response                = SUB_RESPONSE_ERROR;
 
-    pthread_mutex_lock(&gGlobalVarsMutex);
-
     for (i = 0; i < MAX_SLOTS; i++) {
         patchVersion[i] = atomic_load(&gPatchVersion[i]);
     }
 
-    pthread_mutex_unlock(&gGlobalVarsMutex);
-
     // TODO - these should move to functions where we can do: SEND_RECV(function());
     switch (messageContent->cmd) {
         case eMsgCmdSetValue:
-            retVal      = send_set_param_value(
-                messageContent->slot,
-                messageContent->paramData.moduleKey,
-                messageContent->paramData.param,
-                messageContent->paramData.value,
-                messageContent->paramData.variation);
+            retVal      = send_set_param_value(messageContent->slot, messageContent->paramData.moduleKey, messageContent->paramData.param, messageContent->paramData.value, messageContent->paramData.variation);
             break;
 
         case eMsgCmdSetMode:
@@ -1399,7 +1383,7 @@ static int send_write_data(tMessageContent * messageContent) {
 
             if (retVal == EXIT_SUCCESS) {
                 retVal = int_rec(ePollNo, &response);
-                LOG_DEBUG("MOVE MODULE LABEL RESPONSE = 0x%02x\n", response);
+                LOG_DEBUG("MOVE MODULE RESPONSE = 0x%02x\n", response);
 
                 if (response != SUB_RESPONSE_OK) {
                     retVal = EXIT_FAILURE;
@@ -1481,14 +1465,6 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->paramMorphData.negative;
             buff[pos++] = messageContent->paramMorphData.variation;
             retVal      = send_message(buff, pos);
-
-            //if (retVal == EXIT_SUCCESS) {   // Check, but don't think this has a response
-            //    retVal = int_rec(ePollNo, &response);
-            //    LOG_DEBUG("SET PARAM MORPH RESPONSE = 0x%02x\n", response);
-            //    if (response != SUB_RESPONSE_OK) {
-            //        retVal = EXIT_FAILURE;
-            //    }
-            //}
             break;
 
         case eMsgCmdSelectVariation:
@@ -1528,23 +1504,18 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdSetModuleLabel:
-            retVal      = send_set_module_label(
-                messageContent->slot,
-                messageContent->moduleLabelData.moduleKey,
-                messageContent->moduleLabelData.name);
+            retVal      = send_set_module_label(messageContent->slot, messageContent->moduleLabelData.moduleKey, messageContent->moduleLabelData.name);
             break;
 
         case eMsgCmdWritePatch:
         {
-            // Stop synth before upload to suppress unsolicited messages
-            retVal = send_stop();
-
+            send_stop();
             push_slot_to_device(messageContent->slot);
+            send_start();
 
-            retVal = send_start();
-
-            call_full_patch_change_notify();
+            call_full_patch_change_notify(); // TODO - not sure we need to do this here
             call_wake_glfw();
+            retVal = EXIT_SUCCESS;
             break;
         }
 
