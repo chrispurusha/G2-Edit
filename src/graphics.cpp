@@ -392,6 +392,7 @@ void read_file_into_memory_and_process(const char * filepath) {
     uint8_t   type       = 0;
     uint32_t  readCrc    = 0;
     uint32_t  calcCrc    = 0;
+    uint32_t  slot       = atomic_load(&gSlot);
 
     file     = fopen(filepath, "rb");
 
@@ -431,29 +432,29 @@ void read_file_into_memory_and_process(const char * filepath) {
     calcCrc  = calc_crc16(buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
 
     if (readCrc == calcCrc) {
-        version                               = buff[byteOffset++];
-        type                                  = buff[byteOffset++];
+        version                = buff[byteOffset++];
+        type                   = buff[byteOffset++];
         LOG_DEBUG("Version %u\n", version);
         LOG_DEBUG("Type %u\n", type);
 
         /* TODO - implement clear down commands as an init/clear slot function? */
-        database_delete_cables_by_slot(atomic_load(&gSlot));
-        database_delete_modules_by_slot(atomic_load(&gSlot));
-        gMorphCount[atomic_load(&gSlot)]      = 0;
-        gNote2Size[atomic_load(&gSlot)]       = 0;
-        gControllerCount[atomic_load(&gSlot)] = 0;
-        gPatchNotesSize[atomic_load(&gSlot)]  = 0;
-        memset(&(gPatchDescr[atomic_load(&gSlot)]), 0, sizeof(gPatchDescr[atomic_load(&gSlot)]));
-        memset(&(gKnobArray[atomic_load(&gSlot)]), 0, sizeof(gKnobArray[atomic_load(&gSlot)]));
-        memset(gNote2[atomic_load(&gSlot)], 0, sizeof(gNote2[atomic_load(&gSlot)]));
-        memset(&(gControllerArray[atomic_load(&gSlot)]), 0, sizeof(gControllerArray[atomic_load(&gSlot)]));
-        memset(gPatchNotes[atomic_load(&gSlot)], 0, sizeof(gPatchNotes[atomic_load(&gSlot)]));
+        database_delete_cables_by_slot(slot);
+        database_delete_modules_by_slot(slot);
+        gMorphCount[slot]      = 0;
+        gNote2Size[slot]       = 0;
+        gControllerCount[slot] = 0;
+        gPatchNotesSize[slot]  = 0;
+        memset(&(gPatchDescr[slot]), 0, sizeof(gPatchDescr[0]));
+        memset(&(gKnobArray[slot]), 0, sizeof(gKnobArray[0]));
+        memset(gNote2[slot], 0, sizeof(gNote2[0]));
+        memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
+        memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
 
         if (type == 0) {
-            parse_patch(atomic_load(&gSlot), buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // TODO: parse_patch should really be in a commonly accessible source file, for file or USB access
+            parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // TODO: parse_patch should really be in a commonly accessible source file, for file or USB access
         } // 1 = performance
 
-        set_patch_name_from_filename(atomic_load(&gSlot), filepath);
+        set_patch_name_from_filename(slot, filepath);
 
         // If online, push to device immediately
         if (atomic_load(&gCommsState) == eCommsOnLine) {
@@ -478,6 +479,7 @@ void write_database_to_file(const char * filepath) {
     uint8_t * buff           = NULL;
     uint32_t  bitPos         = 0;
     uint32_t  calcCrc        = 0;
+    uint32_t  slot           = atomic_load(&gSlot);
 
     file = fopen(filepath, "wb");
 
@@ -514,24 +516,24 @@ void write_database_to_file(const char * filepath) {
     write_bit_stream(buff, &bitPos, 8, 23); // Version
     write_bit_stream(buff, &bitPos, 8, 0);  // Type (0 = patch, 1 = performance when we get round to implementing that)
 
-    write_patch_descr(atomic_load(&gSlot), buff, &bitPos);
-    write_module_list(atomic_load(&gSlot), locationVa, buff, &bitPos);
-    write_module_list(atomic_load(&gSlot), locationFx, buff, &bitPos);
-    write_current_note_2(atomic_load(&gSlot), buff, &bitPos);
-    write_cable_list(atomic_load(&gSlot), locationVa, buff, &bitPos);
-    write_cable_list(atomic_load(&gSlot), locationFx, buff, &bitPos);
-    write_param_list(atomic_load(&gSlot), locationMorph, buff, &bitPos, NUM_VARIATIONS_FILE);
-    write_param_list(atomic_load(&gSlot), locationVa, buff, &bitPos, NUM_VARIATIONS_FILE);
-    write_param_list(atomic_load(&gSlot), locationFx, buff, &bitPos, NUM_VARIATIONS_FILE);
-    write_morph_params(atomic_load(&gSlot), buff, &bitPos, NUM_VARIATIONS_FILE);
-    write_knobs(atomic_load(&gSlot), buff, &bitPos);
-    write_controllers(atomic_load(&gSlot), buff, &bitPos);
-    write_param_names(atomic_load(&gSlot), locationMorph, buff, &bitPos);
-    write_param_names(atomic_load(&gSlot), locationVa, buff, &bitPos);
-    write_param_names(atomic_load(&gSlot), locationFx, buff, &bitPos);
-    write_module_names(atomic_load(&gSlot), locationVa, buff, &bitPos);
-    write_module_names(atomic_load(&gSlot), locationFx, buff, &bitPos);
-    write_patch_notes(atomic_load(&gSlot), buff, &bitPos);
+    write_patch_descr(slot, buff, &bitPos);
+    write_module_list(slot, locationVa, buff, &bitPos);
+    write_module_list(slot, locationFx, buff, &bitPos);
+    write_current_note_2(slot, buff, &bitPos);
+    write_cable_list(slot, locationVa, buff, &bitPos);
+    write_cable_list(slot, locationFx, buff, &bitPos);
+    write_param_list(slot, locationMorph, buff, &bitPos, NUM_VARIATIONS_FILE);
+    write_param_list(slot, locationVa, buff, &bitPos, NUM_VARIATIONS_FILE);
+    write_param_list(slot, locationFx, buff, &bitPos, NUM_VARIATIONS_FILE);
+    write_morph_params(slot, buff, &bitPos, NUM_VARIATIONS_FILE);
+    write_knobs(slot, buff, &bitPos);
+    write_controllers(slot, buff, &bitPos);
+    write_param_names(slot, locationMorph, buff, &bitPos);
+    write_param_names(slot, locationVa, buff, &bitPos);
+    write_param_names(slot, locationFx, buff, &bitPos);
+    write_module_names(slot, locationVa, buff, &bitPos);
+    write_module_names(slot, locationFx, buff, &bitPos);
+    write_patch_notes(slot, buff, &bitPos);
 
     bitPos      = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos)); // Final byte alignment round-up
 

@@ -175,7 +175,7 @@ void update_module_up_rates(void) {
 
                 tMessageContent messageContent = {0};
                 messageContent.cmd                  = eMsgCmdSetModuleUpRate;
-                messageContent.slot                 = atomic_load(&gSlot);
+                messageContent.slot                 = slot;
                 messageContent.moduleData.moduleKey = module.key;
                 messageContent.moduleData.upRate    = module.upRate;
                 msg_send(&gCommandQueue, &messageContent);
