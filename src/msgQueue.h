@@ -117,7 +117,7 @@ typedef struct {
 } tModuleLabelData;
 
 typedef struct {
-    char       name[PATCH_NAME_SIZE + 1];
+    char name[PATCH_NAME_SIZE + 1];
 } tPatchName;
 
 typedef struct {

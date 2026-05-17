@@ -1209,7 +1209,7 @@ static int send_set_patch_name(uint32_t slot, const char * name) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
     int     i                       = 0;
-    int      retVal                         = EXIT_FAILURE;
+    int     retVal                  = EXIT_FAILURE;
     int     response                = SUB_RESPONSE_ERROR;
 
     buff[pos++] = 0x01;
@@ -1223,19 +1223,19 @@ static int send_set_patch_name(uint32_t slot, const char * name) {
     }
     buff[pos++] = 0x00;
 
-    retVal = send_message(buff, pos);
+    retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, &response);
         LOG_DEBUG("SET PATCH NAME RESPONSE = 0x%02x\n", response);
-        
+
         if (response != SUB_RESPONSE_OK) {
             retVal = EXIT_FAILURE;
         }
     }
     return retVal;
 }
-    
+
 // ---------------------------------------------------------------------------
 // Init sequences — linear, no state machine
 // ---------------------------------------------------------------------------
@@ -1541,9 +1541,9 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdSetPatchName:
-            retVal = send_set_patch_name(messageContent->slot, messageContent->patchName.name);
+            retVal      = send_set_patch_name(messageContent->slot, messageContent->patchName.name);
             break;
-            
+
         case eMsgCmdWritePatch:
         {
             send_stop();
