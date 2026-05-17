@@ -78,12 +78,12 @@
 #define SUB_COMMAND_ASSIGN_GLOBAL_KNOB       (0x1c)
 #define SUB_COMMAND_DEASSIGN_GLOBAL_KNOB     (0x1d)
 #define SUB_RESPONSE_GLOBAL_PAGE             (0x1e)
-#define SUB_RESPONSE_PATCH_DESCRIPTION       (0x21)
+#define SUB_RESPONSE_PATCH_DESCRIPTION       (0x21) // Think this is also used for set patch description also response to 0x3c 'get patch slot'
 #define SUB_COMMAND_ASSIGN_MIDICC            (0x22)
 #define SUB_COMMAND_DEASSIGN_MIDICC          (0x23)
 #define SUB_COMMAND_ASSIGN_KNOB              (0x25)
 #define SUB_COMMAND_DEASSIGN_KNOB            (0x26)
-#define SUB_RESPONSE_PATCH_NAME              (0x27)
+#define SUB_COMMAND_SET_PATCH_NAME           (0x27) // Also the response for 0x28 'get patch name'
 #define SUB_COMMAND_GET_PATCH_NAME           (0x28)
 #define SUB_RESPONSE_PERFORMANCE_NAME        (0x29)
 #define SUB_COMMAND_SET_MODULE_UPRATE        (0x2a)
@@ -98,7 +98,7 @@
 #define SUB_COMMAND_MOVE_MODULE              (0x34)
 #define SUB_COMMAND_GET_PATCH_VERSION        (0x35)
 #define SUB_RESPONSE_PATCH_VERSION           (0x36)
-#define SUB_COMMAND_SET                      (0x37) // Upload patch to slot, so send all the data clearing existing patch!?
+#define SUB_COMMAND_SET_PATCH                (0x37) // Upload patch to slot, so send all the data clearing existing patch!?
 #define SUB_RESPONSE_PATCH_VERSION_CHANGE    (0x38)
 #define SUB_RESPONSE_LED_DATA                (0x39)
 #define SUB_RESPONSE_VOLUME_INDICATOR        (0x3a)
@@ -122,7 +122,7 @@
 #define SUB_COMMAND_WRITE_CABLE_COLOUR       (0x54)
 #define SUB_COMMAND_CTRL_SNAPSHOT            (0x55)
 #define SUB_COMMAND_PLAY_NOTE                (0x56)
-#define SUB_COMMAND_UNKNOWN_2                (0x59)
+#define SUB_COMMAND_GET_GLOBAL_PAGE          (0x59) // Possibly read global page, since response indicates that coming back
 #define SUB_RESPONSE_MODULE_NAMES            (0x5a)
 #define SUB_RESPONSE_PARAM_NAMES             (0x5b)
 #define SUB_RESPONSE_EXT_MASTER_CLOCK        (0x5d)

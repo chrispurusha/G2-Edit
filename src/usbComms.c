@@ -570,7 +570,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                         (length - BIT_TO_BYTE(*bitPos) - CRC_BYTES) + 1);
             return EXIT_SUCCESS;
 
-        case SUB_RESPONSE_PATCH_NAME:
+        case SUB_COMMAND_SET_PATCH_NAME:
         {
             char patchName[PATCH_NAME_SIZE + 1] = {0};
 
@@ -968,7 +968,7 @@ static int send_get_midi_cc(void) {
     return retVal;
 }
 
-static int send_get_unknown2(void) {
+static int send_get_global_page(void) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
@@ -977,7 +977,7 @@ static int send_get_unknown2(void) {
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
     buff[pos++] = 0x00;
-    buff[pos++] = SUB_COMMAND_UNKNOWN_2;
+    buff[pos++] = SUB_COMMAND_GET_GLOBAL_PAGE;
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
@@ -1054,7 +1054,7 @@ static int send_get_patch_name(uint32_t slot) {
         retVal = int_rec(ePollNo, &response);
         LOG_DEBUG("GET PATCH NAME RESPONSE = 0x%02x\n", response);
 
-        if (response != SUB_RESPONSE_PATCH_NAME) {
+        if (response != SUB_COMMAND_SET_PATCH_NAME) {
             retVal = EXIT_FAILURE;
         }
     }
@@ -1133,7 +1133,7 @@ static void clear_slot_data(uint32_t slot) {
 }
 
 // Fetch patch data for a single slot. Synth must be stopped before calling.
-static int fetch_slot_data(uint32_t slot) {
+static int send_get_patch_data(uint32_t slot) {
     clear_slot_data(slot);
 
     send_get_patch_version(slot);
@@ -1162,7 +1162,7 @@ static int push_slot_to_device(uint32_t slot) {
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
     buff[pos++] = UPLOAD_PATCH_VERSION;
-    buff[pos++] = SUB_COMMAND_SET;
+    buff[pos++] = SUB_COMMAND_SET_PATCH;
     buff[pos++] = 0x00;
     buff[pos++] = 0x00;
     buff[pos++] = 0x00;
@@ -1215,7 +1215,7 @@ static int send_set_patch_name(uint32_t slot, const char * name) {
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
     buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_RESPONSE_PATCH_NAME;  // 0x27 — used for set AND response
+    buff[pos++] = SUB_COMMAND_SET_PATCH_NAME;  // 0x27 — used for set AND response
 
     // Null-terminated string, max 16 chars
     while (i < PATCH_NAME_SIZE && name[i] != '\0') {
@@ -1253,7 +1253,7 @@ static int send_init_sequence_pull(void) {
     send_stop();
     send_get_synth_settings();
     send_get_midi_cc();
-    send_get_unknown2();
+    send_get_global_page();
     send_select_slot(0);
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
@@ -1261,7 +1261,7 @@ static int send_init_sequence_pull(void) {
     }
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-        if (fetch_slot_data(slot) != EXIT_SUCCESS) {
+        if (send_get_patch_data(slot) != EXIT_SUCCESS) {
             atomic_store(&gCommsState, eCommsReconnecting);
             return EXIT_FAILURE;
         }
@@ -1629,7 +1629,7 @@ static void state_handler(void) {
         LOG_DEBUG("Patch change on slot %u — reloading\n", slot);
 
         send_stop();
-        fetch_slot_data(slot);
+        send_get_patch_data(slot);
         send_start();
 
         call_full_patch_change_notify();
