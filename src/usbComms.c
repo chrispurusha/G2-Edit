@@ -570,7 +570,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                         (length - BIT_TO_BYTE(*bitPos) - CRC_BYTES) + 1);
             return EXIT_SUCCESS;
 
-        case SUB_COMMAND_SET_PATCH_NAME:
+        case SUB_RESPONSE_GET_PATCH_NAME:
         {
             char patchName[PATCH_NAME_SIZE + 1] = {0};
 
@@ -1054,7 +1054,7 @@ static int send_get_patch_name(uint32_t slot) {
         retVal = int_rec(ePollNo, &response);
         LOG_DEBUG("GET PATCH NAME RESPONSE = 0x%02x\n", response);
 
-        if (response != SUB_COMMAND_SET_PATCH_NAME) {
+        if (response != SUB_RESPONSE_GET_PATCH_NAME) {
             retVal = EXIT_FAILURE;
         }
     }

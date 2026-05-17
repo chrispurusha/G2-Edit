@@ -83,7 +83,8 @@
 #define SUB_COMMAND_DEASSIGN_MIDICC          (0x23)
 #define SUB_COMMAND_ASSIGN_KNOB              (0x25)
 #define SUB_COMMAND_DEASSIGN_KNOB            (0x26)
-#define SUB_COMMAND_SET_PATCH_NAME           (0x27) // Also the response for 0x28 'get patch name'
+#define SUB_COMMAND_SET_PATCH_NAME           (0x27)
+#define SUB_RESPONSE_GET_PATCH_NAME          (0x27) // Note - same value as command to set patch name
 #define SUB_COMMAND_GET_PATCH_NAME           (0x28)
 #define SUB_RESPONSE_PERFORMANCE_NAME        (0x29)
 #define SUB_COMMAND_SET_MODULE_UPRATE        (0x2a)
