@@ -392,15 +392,6 @@ void handle_button(tButtonId buttonId) {
             msg_send(&gCommandQueue, &messageContent);
             break;
         }
-        case writePatchId:
-        {
-            //gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
-            tMessageContent messageContent = {0};
-            messageContent.cmd  = eMsgCmdWritePatch;
-            messageContent.slot = slot;
-            msg_send(&gCommandQueue, &messageContent);
-            break;
-        }
     }
 }
 
