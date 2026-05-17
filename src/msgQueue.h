@@ -47,7 +47,8 @@ typedef enum {
     eMsgCmdSelectVariation,
     eMsgCmdSelectSlot,
     eMsgCmdWritePatch,
-    eMsgCmdSetModuleLabel
+    eMsgCmdSetModuleLabel,
+    eMsgCmdSetPatchName
 } eMsgCmd;
 
 typedef struct {
@@ -116,6 +117,10 @@ typedef struct {
 } tModuleLabelData;
 
 typedef struct {
+    char       name[PATCH_NAME_SIZE + 1];
+} tPatchName;
+
+typedef struct {
     uint32_t cmd;
     uint32_t slot;
     union {
@@ -127,6 +132,7 @@ typedef struct {
         tVariationData   variationData;
         tSlotData        slotData;
         tModuleLabelData moduleLabelData;
+        tPatchName       patchName;
     };
 } tMessageContent;
 

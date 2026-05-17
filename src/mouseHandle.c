@@ -1361,8 +1361,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             } else if (gPatchNameEdit.active) {
                 gPatchNameEdit.active = false;
-                patch_name_set(gPatchNameEdit.slot, gPatchNameEdit.buffer);
-                // TODO: if online, enqueue eMsgCmdWritePatch or a dedicated name update command
+                //patch_name_set(gPatchNameEdit.slot, gPatchNameEdit.buffer); //
             }
         }
     } else if (action == GLFW_RELEASE) {
@@ -1647,7 +1646,13 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 // Commit
                 gPatchNameEdit.active = false;
                 patch_name_set(gPatchNameEdit.slot, gPatchNameEdit.buffer);
-                // TODO: enqueue patch name update command if online
+                
+                tMessageContent messageContent = {0};
+                messageContent.cmd                 = eMsgCmdSetPatchName;
+                messageContent.slot                = gPatchNameEdit.slot;
+                patch_name_get(gPatchNameEdit.slot, messageContent.patchName.name, sizeof(messageContent.patchName.name));
+
+                msg_send(&gCommandQueue, &messageContent);
             } else if (key == GLFW_KEY_ESCAPE) {
                 // Cancel — discard edits
                 gPatchNameEdit.active = false;

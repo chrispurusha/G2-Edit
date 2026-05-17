@@ -1205,6 +1205,37 @@ static int push_slot_to_device(uint32_t slot) {
     return retVal;
 }
 
+static int send_set_patch_name(uint32_t slot, const char * name) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     i                       = 0;
+    int      retVal                         = EXIT_FAILURE;
+    int     response                = SUB_RESPONSE_ERROR;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
+    buff[pos++] = SUB_RESPONSE_PATCH_NAME;  // 0x27 — used for set AND response
+
+    // Null-terminated string, max 16 chars
+    while (i < PATCH_NAME_SIZE && name[i] != '\0') {
+        buff[pos++] = (uint8_t)name[i++];
+    }
+    buff[pos++] = 0x00;
+
+    retVal = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, &response);
+        LOG_DEBUG("SET PATCH NAME RESPONSE = 0x%02x\n", response);
+        
+        if (response != SUB_RESPONSE_OK) {
+            retVal = EXIT_FAILURE;
+        }
+    }
+    return retVal;
+}
+    
 // ---------------------------------------------------------------------------
 // Init sequences — linear, no state machine
 // ---------------------------------------------------------------------------
@@ -1509,6 +1540,10 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_set_module_label(messageContent->slot, messageContent->moduleLabelData.moduleKey, messageContent->moduleLabelData.name);
             break;
 
+        case eMsgCmdSetPatchName:
+            retVal = send_set_patch_name(messageContent->slot, messageContent->patchName.name);
+            break;
+            
         case eMsgCmdWritePatch:
         {
             send_stop();
