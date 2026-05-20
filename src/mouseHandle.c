@@ -1410,6 +1410,13 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     found = true;
                     break;
                 }
+                
+                if (within_rectangle(coord, gCableColourSelectRect[i])) {
+                    gCableColour = i;
+                    atomic_store(&gReDraw, true);
+                    found = true;
+                    break;
+                }
             }
 
             if (found == false) {
@@ -1445,7 +1452,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                                     quitLoop = true;
                                     break;
                                 }
-                                cable.colour                                  = 0; // TODO: choose colour from menu or calculate
+                                cable.colour                                  = gCableColour;
                                 write_cable(cableKey, &cable);
 
                                 tMessageContent messageContent = {0};

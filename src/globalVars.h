@@ -68,6 +68,8 @@ extern tNameEdit           gPatchNameEdit;
 extern tModuleNameEdit     gModuleNameEdit;
 extern _Atomic uint32_t    gHiddenCableMask;
 extern tRectangle          gCableColourToggleRect[NUM_CABLE_COLOURS];
+extern tRectangle          gCableColourSelectRect[NUM_CABLE_COLOURS];
+extern uint32_t            gCableColour;
 
 uint32_t array_size_main_button_array(void);
 

@@ -234,19 +234,24 @@ void render_top_bar(void) {
     for (int i = 0; i < NUM_CABLE_COLOURS; i++) {
         bool   hidden = (hiddenMask >> i) & 1;
         tRgb   colour = gCableColourMap[i];
-        double x      = 700.0 + (i * 14.0);
-
+        double x      = 700.0 + (i * (get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT) + 5));
+        
         if (hidden) {
-            // Draw dim/greyed outline only when hidden
-            set_rgb_colour(RGB_GREY_5);
-            render_rectangle(mainArea, {{x, 10.0}, {10.0, 10.0}});
+            gCableColourToggleRect[i] = draw_button(mainArea, {{x, 10.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, " ", colour);
         } else {
-            // Draw filled square in cable colour when visible
-            set_rgb_colour(colour);
-            render_rectangle(mainArea, {{x, 10.0}, {10.0, 10.0}});
+            gCableColourToggleRect[i] = draw_button(mainArea, {{x, 10.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, "X", colour);
         }
-        // Store rectangle for click handling
-        gCableColourToggleRect[i] = {{x, 10.0}, {10.0, 10.0}};
+    }
+    
+    for (int i = 0; i < NUM_CABLE_COLOURS; i++) {
+        tRgb   colour = gCableColourMap[i];
+        double x      = 700.0 + (i * (get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT) + 5));
+        
+        if (i == gCableColour) {
+            gCableColourSelectRect[i] = draw_button(mainArea, {{x, 25.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, "X", colour);
+        } else {
+            gCableColourSelectRect[i] = draw_button(mainArea, {{x, 25.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, " ", colour);
+        }
     }
 }
 

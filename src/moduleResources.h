@@ -122,7 +122,7 @@ const tRgb               offOnColourMap[]         = {RGB_BACKGROUND_GREY, RGB_GR
 
 const tRgb               gCableColourMap[]        = {   // TODO: implement a null termination mechanism for colour maps, so that we can get array size and do sanity check
     {0.7, 0.1, 0.1},                                    // red
-    {0.1, 0.1, 0.7},                                    // blue
+    {0.3, 0.3, 0.7},                                    // blue
     {0.7, 0.7, 0.1},                                    // yellow
     {0.8, 0.3, 0.2},                                    // orange
     {0.1, 0.7, 0.1},                                    // green
