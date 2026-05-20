@@ -66,6 +66,8 @@ extern _Atomic tCommsState gCommsState;
 extern _Atomic uint32_t    gChangedSlot;
 extern tNameEdit           gPatchNameEdit;
 extern tModuleNameEdit     gModuleNameEdit;
+extern _Atomic uint32_t    gHiddenCableMask;
+extern tRectangle          gCableColourToggleRect[NUM_CABLE_COLOURS];
 
 uint32_t array_size_main_button_array(void);
 

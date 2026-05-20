@@ -800,7 +800,7 @@ void render_cable(tCable * cable) {
     if (read_module({cable->key.slot, cable->key.location, cable->key.moduleToIndex}, &moduleTo) == false) {
         return;
     }
-    set_rgb_colour(cableColourMap[cable->colour]);
+    set_rgb_colour(gCableColourMap[cable->colour]);
 
     int     fromConnectorIndex = find_index_from_io_count(&moduleFrom, (tConnectorDir)cable->key.linkType, cable->key.connectorFromIoCount);
 
@@ -816,6 +816,7 @@ void render_cables(void) {
     bool     validCable = false;
     uint32_t slot       = atomic_load(&gSlot);
     uint32_t location   = atomic_load(&gLocation);
+    uint32_t hiddenMask = atomic_load(&gHiddenCableMask);
 
     reset_walk_cable();
 
@@ -823,7 +824,13 @@ void render_cables(void) {
         validCable = walk_next_cable(&cable);
 
         if (validCable && cable.key.slot == slot && cable.key.location == location) {
-            render_cable(&cable);
+            bool colourHidden = (hiddenMask >> cable.colour) & 1;
+            bool isHovered    = false /*gHoverConnector.active &&
+                                       * cable_touches_connector(&cable, gHoverConnector)*/; // TODO
+
+            if (!colourHidden || isHovered) {
+                render_cable(&cable);
+            }
         }
     } while (validCable);
 

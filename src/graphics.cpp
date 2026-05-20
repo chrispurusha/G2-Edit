@@ -44,6 +44,7 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleGraphics.h"
 #include "fileDialogue.h"
+#include "moduleResourcesAccess.h"
 #include "globalVars.h"
 
 static FT_Library   gLibrary   = {0};
@@ -226,6 +227,27 @@ void render_top_bar(void) {
     set_rgb_colour(commsStateColour);
     rectangle        = {{200, 8}, {get_text_width("Offline", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
     draw_button(mainArea, rectangle, commsStateText, commsStateColour);
+
+    // Cable colour visibility toggles — 6 small squares
+    uint32_t hiddenMask = atomic_load(&gHiddenCableMask);
+
+    for (int i = 0; i < NUM_CABLE_COLOURS; i++) {
+        bool   hidden = (hiddenMask >> i) & 1;
+        tRgb   colour = gCableColourMap[i];
+        double x      = 700.0 + (i * 14.0);
+
+        if (hidden) {
+            // Draw dim/greyed outline only when hidden
+            set_rgb_colour(RGB_GREY_5);
+            render_rectangle(mainArea, {{x, 10.0}, {10.0, 10.0}});
+        } else {
+            // Draw filled square in cable colour when visible
+            set_rgb_colour(colour);
+            render_rectangle(mainArea, {{x, 10.0}, {10.0, 10.0}});
+        }
+        // Store rectangle for click handling
+        gCableColourToggleRect[i] = {{x, 10.0}, {10.0, 10.0}};
+    }
 }
 
 void wake_glfw(void) {

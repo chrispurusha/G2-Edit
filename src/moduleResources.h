@@ -120,7 +120,7 @@ const char *             edgeStepStrMap[]         = {"100%", "75%", "50%", "25%"
 const char *             vocoderStrMap[]          = {"Off", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", NULL};
 const tRgb               offOnColourMap[]         = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
-const tRgb               cableColourMap[]         = {   // TODO: implement a null termination mechanism for colour maps, so that we can get array size and do sanity check
+const tRgb               gCableColourMap[]        = {   // TODO: implement a null termination mechanism for colour maps, so that we can get array size and do sanity check
     {0.7, 0.1, 0.1},                                    // red
     {0.1, 0.1, 0.7},                                    // blue
     {0.7, 0.7, 0.1},                                    // yellow

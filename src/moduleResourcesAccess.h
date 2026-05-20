@@ -23,7 +23,7 @@
 #include "sysIncludes.h"
 #include "types.h"
 
-extern const tRgb               cableColourMap[];
+extern const tRgb               gCableColourMap[];
 extern const tRgb               gModuleColourMap[];
 extern const tRgb               connectorColourMap[];
 extern const tModuleProperties  gModuleProperties[];

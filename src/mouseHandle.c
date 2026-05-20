@@ -1401,6 +1401,17 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             }
 
+            for (int i = 0; i < NUM_CABLE_COLOURS; i++) {
+                if (within_rectangle(coord, gCableColourToggleRect[i])) {
+                    uint32_t mask = atomic_load(&gHiddenCableMask);
+                    mask ^= (1u << i);  // toggle bit
+                    atomic_store(&gHiddenCableMask, mask);
+                    atomic_store(&gReDraw, true);
+                    found = true;
+                    break;
+                }
+            }
+
             if (found == false) {
                 if (gContextMenu.active == true) {
                     if (!handle_context_menu_click(coord)) {
