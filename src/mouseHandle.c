@@ -1410,12 +1410,32 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     found = true;
                     break;
                 }
-                
+
                 if (within_rectangle(coord, gCableColourSelectRect[i])) {
                     gCableColour = i;
                     atomic_store(&gReDraw, true);
-                    found = true;
+                    found        = true;
                     break;
+                }
+            }
+
+            if (found == false) {
+                if (within_rectangle(coord, gHideAllCablesRect)) {
+                    bool current = atomic_load(&gCablesHideAll);
+                    atomic_store(&gCablesHideAll, !current);
+                    atomic_store(&gCablesTransparent, false);
+                    atomic_store(&gReDraw, true);
+                    found = true;
+                }
+            }
+
+            if (found == false) {
+                if (within_rectangle(coord, gTransparentCablesRect)) {
+                    bool current = atomic_load(&gCablesTransparent);
+                    atomic_store(&gCablesTransparent, !current);
+                    atomic_store(&gCablesHideAll, false);
+                    atomic_store(&gReDraw, true);
+                    found = true;
                 }
             }
 

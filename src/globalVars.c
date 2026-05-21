@@ -80,7 +80,11 @@ tModuleNameEdit        gModuleNameEdit                            = {0};
 _Atomic uint32_t       gHiddenCableMask                           = 0;
 tRectangle             gCableColourToggleRect[NUM_CABLE_COLOURS]  = {0};
 tRectangle             gCableColourSelectRect[NUM_CABLE_COLOURS]  = {0};
-uint32_t              gCableColour = 0;
+uint32_t               gCableColour                               = 0;
+_Atomic bool           gCablesTransparent                         = false;
+_Atomic bool           gCablesHideAll                             = false;
+tRectangle             gHideAllCablesRect                         = {0};
+tRectangle             gTransparentCablesRect                     = {0};
 
 /* Stored here, but don't access directly, use functions to access instead */
 static char            gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1] = {0};

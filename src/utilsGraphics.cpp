@@ -551,7 +551,7 @@ tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord 
     tRectangle   retRectangle   = {0};
 
     // Capture the current colour for lighting calculations before any GL calls
-    float        baseR = 0.0f, baseG = 0.0f, baseB = 0.0f;
+    float        baseR = 0.0f, baseG = 0.0f, baseB = 0.0f, baseA = 0.0f;
 
     glGetFloatv(GL_CURRENT_COLOR, (float[]){baseR, baseG, baseB, 0.0f});
     // glGetFloatv with GL_CURRENT_COLOR fills all 4 components; use a proper array
@@ -560,6 +560,7 @@ tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord 
     baseR        = rgba[0];
     baseG        = rgba[1];
     baseB        = rgba[2];
+    baseA        = rgba[3];
 
     // Derive highlight (top-lit) and shadow colours from base
     // Light source assumed at top — normal pointing up (negative screen-y) = highlight
@@ -616,15 +617,15 @@ tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord 
         // So if tx > 0, vertex A faces up (highlight); if tx < 0, vertex B faces up
         if (ny < 0.0) {
             // Vertex A faces upward — highlight
-            glColor3f(highlight.red, highlight.green, highlight.blue);
+            glColor4f(highlight.red, highlight.green, highlight.blue, baseA);
             glVertex2f(x + nx, y + ny);
-            glColor3f(shadow.red, shadow.green, shadow.blue);
+            glColor4f(shadow.red, shadow.green, shadow.blue, baseA);
             glVertex2f(x - nx, y - ny);
         } else {
             // Vertex B faces upward — highlight
-            glColor3f(shadow.red, shadow.green, shadow.blue);
+            glColor4f(shadow.red, shadow.green, shadow.blue, baseA);
             glVertex2f(x + nx, y + ny);
-            glColor3f(highlight.red, highlight.green, highlight.blue);
+            glColor4f(highlight.red, highlight.green, highlight.blue, baseA);
             glVertex2f(x - nx, y - ny);
         }
     }
@@ -632,7 +633,7 @@ tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord 
     glEnd();
 
     // Restore base colour for end caps
-    glColor3f(baseR, baseG, baseB);
+    glColor4f(baseR, baseG, baseB, baseA);
     internal_render_circle_part(start, thickness / 2.0, 10, 0, 10);
     internal_render_circle_part(end, thickness / 2.0, 10, 0, 10);
 

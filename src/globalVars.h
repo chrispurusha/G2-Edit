@@ -70,6 +70,11 @@ extern _Atomic uint32_t    gHiddenCableMask;
 extern tRectangle          gCableColourToggleRect[NUM_CABLE_COLOURS];
 extern tRectangle          gCableColourSelectRect[NUM_CABLE_COLOURS];
 extern uint32_t            gCableColour;
+extern _Atomic bool        gCablesTransparent; // true = draw all cables semi-transparent
+extern _Atomic bool        gCablesHideAll;     // true = hide all cables completely
+extern tRectangle          gHideAllCablesRect;
+extern tRectangle          gTransparentCablesRect;
+
 
 uint32_t array_size_main_button_array(void);
 

@@ -789,9 +789,10 @@ void render_cable_from_to(tConnector from, tConnector to) {
     render_bezier_curve(moduleArea, from.coord, control, to.coord, 4.0, 15);
 }
 
-void render_cable(tCable * cable) {
+void render_cable(tCable * cable, bool transparent) {
     tModule moduleFrom         = {0};
     tModule moduleTo           = {0};
+    tRgb    colour             = gCableColourMap[cable->colour];
 
     if (read_module({cable->key.slot, cable->key.location, cable->key.moduleFromIndex}, &moduleFrom) == false) {
         return;
@@ -800,8 +801,14 @@ void render_cable(tCable * cable) {
     if (read_module({cable->key.slot, cable->key.location, cable->key.moduleToIndex}, &moduleTo) == false) {
         return;
     }
-    set_rgb_colour(gCableColourMap[cable->colour]);
 
+    if (transparent) {
+        glEnable(GL_BLEND);  // TODO - move blend enables to graphics routines
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        set_rgba_colour({colour.red, colour.green, colour.blue, 0.5});
+    } else {
+        set_rgb_colour(colour);
+    }
     int     fromConnectorIndex = find_index_from_io_count(&moduleFrom, (tConnectorDir)cable->key.linkType, cable->key.connectorFromIoCount);
 
     int     toConnectorIndex   = find_index_from_io_count(&moduleTo, connectorDirIn, cable->key.connectorToIoCount);
@@ -809,14 +816,20 @@ void render_cable(tCable * cable) {
     if (fromConnectorIndex != -1 && toConnectorIndex != -1) {
         render_cable_from_to(moduleFrom.connector[fromConnectorIndex], moduleTo.connector[toConnectorIndex]);
     }
+
+    if (transparent) {
+        glDisable(GL_BLEND);  // TODO - move blend disable to graphics routines
+    }
 }
 
 void render_cables(void) {
-    tCable   cable      = {0};
-    bool     validCable = false;
-    uint32_t slot       = atomic_load(&gSlot);
-    uint32_t location   = atomic_load(&gLocation);
-    uint32_t hiddenMask = atomic_load(&gHiddenCableMask);
+    tCable   cable          = {0};
+    bool     validCable     = false;
+    uint32_t slot           = atomic_load(&gSlot);
+    uint32_t location       = atomic_load(&gLocation);
+    uint32_t hiddenMask     = atomic_load(&gHiddenCableMask);
+    bool     hideAll        = atomic_load(&gCablesHideAll);
+    bool     allTransparent = atomic_load(&gCablesTransparent);
 
     reset_walk_cable();
 
@@ -828,9 +841,10 @@ void render_cables(void) {
             bool isHovered    = false /*gHoverConnector.active &&
                                        * cable_touches_connector(&cable, gHoverConnector)*/; // TODO
 
-            if (!colourHidden || isHovered) {
-                render_cable(&cable);
+            if (hideAll || colourHidden) {
+                continue;
             }
+            render_cable(&cable, allTransparent);
         }
     } while (validCable);
 

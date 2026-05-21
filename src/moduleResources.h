@@ -121,13 +121,13 @@ const char *             vocoderStrMap[]          = {"Off", "1", "2", "3", "4", 
 const tRgb               offOnColourMap[]         = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
 const tRgb               gCableColourMap[]        = {   // TODO: implement a null termination mechanism for colour maps, so that we can get array size and do sanity check
-    {0.7, 0.1, 0.1},                                    // red
-    {0.3, 0.3, 0.7},                                    // blue
-    {0.7, 0.7, 0.1},                                    // yellow
-    {0.8, 0.3, 0.2},                                    // orange
-    {0.1, 0.7, 0.1},                                    // green
-    {0.7, 0.1, 0.7},                                    // purple
-    {0.9, 0.9, 0.9},                                    // white
+    {0.7, 0.1, 0.1},                                    // red a.k.a Audio
+    {0.3, 0.3, 0.7},                                    // blue a.k.a Control
+    {0.7, 0.7, 0.1},                                    // yellow a.k.a Logic BG
+    {0.8, 0.3, 0.2},                                    // orange a.k.a Logic FG
+    {0.1, 0.7, 0.1},                                    // green a.k.a User 1
+    {0.7, 0.1, 0.7},                                    // purple a.k.a User 2
+    {0.9, 0.9, 0.9},                                    // white - apparently not user selectable
 };
 
 const tRgb               gModuleColourMap[]       = {
