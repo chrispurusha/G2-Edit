@@ -237,9 +237,9 @@ void render_top_bar(void) {
         double x      = 700.0 + (i * (get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT) + 5));
 
         if (hidden) {
-            gCableColourToggleRect[i] = draw_button(mainArea, {{x, 10.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, " ", colour);
+            gCableColourToggleRect[i] = draw_button(mainArea, {{x, 40.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, " ", colour);
         } else {
-            gCableColourToggleRect[i] = draw_button(mainArea, {{x, 10.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, "X", colour);
+            gCableColourToggleRect[i] = draw_button(mainArea, {{x, 40.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, "X", colour);
         }
     }
 
@@ -248,22 +248,21 @@ void render_top_bar(void) {
         double x      = 700.0 + (i * (get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT) + 5));
 
         if (i == gCableColour) {
-            gCableColourSelectRect[i] = draw_button(mainArea, {{x, 25.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, "X", colour);
+            gCableColourSelectRect[i] = draw_button(mainArea, {{x, 60}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, "X", colour);
         } else {
-            gCableColourSelectRect[i] = draw_button(mainArea, {{x, 25.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, " ", colour);
+            gCableColourSelectRect[i] = draw_button(mainArea, {{x, 60}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, " ", colour);
         }
     }
 
-    bool   hideAll = atomic_load(&gCablesHideAll);
-    bool   transp  = atomic_load(&gCablesTransparent);
-    double hideX   = 700.0 + (NUM_CABLE_COLOURS * (get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT) + 5)) + 10.0;
+    bool hideAll = atomic_load(&gCablesHideAll);
+    bool transp  = atomic_load(&gCablesTransparent);
 
     gHideAllCablesRect     = draw_button(mainArea,
-                                         {{hideX, 10.0}, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}},
+                                         {{700, 20}, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}},
                                          "Hide", hideAll ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
     gTransparentCablesRect = draw_button(mainArea,
-                                         {{hideX, 25.0}, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}},
+                                         {{740, 20}, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}},
                                          "Dim", transp ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 }
 
