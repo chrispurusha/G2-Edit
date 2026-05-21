@@ -483,6 +483,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_RESOURCES_USED:
             LOG_DEBUG("Got resources in use slot %u\n", commandResponse);
+            *unsolicited = true;
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_PARAM_CHANGE:
