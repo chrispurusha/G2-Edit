@@ -1336,6 +1336,28 @@ void stop_dragging(void) {
     memset(&gCableDrag, 0, sizeof(gCableDrag));
 }
 
+static bool input_connector_has_cable(uint32_t slot, uint32_t location,
+                                      uint32_t moduleIndex, uint32_t ioCount) {
+    tCable cable = {0};
+    bool   found = false;
+
+    reset_walk_cable();
+
+    while (walk_next_cable(&cable) && !found) {
+        if (  cable.key.slot == slot
+           && cable.key.location == location) {
+            // Check the TO end (always an input)
+            if (  cable.key.moduleToIndex == moduleIndex
+               && cable.key.connectorToIoCount == ioCount) {
+                found = true;
+            }
+        }
+    }
+    finish_walk_cable();
+
+    return found;
+}
+
 void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     int      width    = 0;
     int      height   = 0;
@@ -1469,6 +1491,14 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                                 if (  (cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i)
                                    || (  fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
                                       && toModule.connector[i].dir == connectorDirOut)) {
+                                    quitLoop = true;
+                                    break;
+                                }
+
+                                // Note that this call will walk the cables, which we can't nest
+                                if (input_connector_has_cable(slot, location,
+                                                              cableKey.moduleToIndex,
+                                                              cableKey.connectorToIoCount)) {
                                     quitLoop = true;
                                     break;
                                 }

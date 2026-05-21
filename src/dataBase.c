@@ -24,11 +24,13 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 
-static pthread_mutex_t dbMutex     = {0};
-static tModule *       firstModule = NULL;
-static tModule *       walkModule  = NULL;
-static tCable *        firstCable  = NULL;
-static tCable *        walkCable   = NULL;
+static pthread_mutex_t dbMutex             = {0};
+static tModule *       firstModule         = NULL;
+static tModule *       walkModule          = NULL;
+static tCable *        firstCable          = NULL;
+static tCable *        walkCable           = NULL;
+static int32_t         moduleWalkNestCount = 0;
+static int32_t         cableWalkNestCount  = 0;
 
 static void database_mutex_init(void) {
     pthread_mutexattr_t attr = {0};
@@ -188,10 +190,17 @@ void delete_module(tModuleKey key) {
 
 void reset_walk_module(void) {
     database_mutex_lock();
+    moduleWalkNestCount++;
+
+    if (moduleWalkNestCount > 1) {
+        LOG_ERROR("Attempted to nest module walk - can't do that\n");
+        exit(1);
+    }
     walkModule = NULL;
 }
 
 void finish_walk_module(void) {
+    moduleWalkNestCount--;
     database_mutex_unlock();
 }
 
@@ -352,10 +361,17 @@ void delete_cable(tCableKey key) {
 
 void reset_walk_cable(void) {
     database_mutex_lock();
+    cableWalkNestCount++;
+
+    if (cableWalkNestCount > 1) {
+        LOG_ERROR("Attempted to nest cable walk - can't do that\n");
+        exit(1);
+    }
     walkCable = NULL;
 }
 
 void finish_walk_cable(void) {
+    cableWalkNestCount--;
     database_mutex_unlock();
 }
 
