@@ -375,9 +375,9 @@ typedef struct __attribute__((packed)) {  // TODO: Pack more of the structures i
     uint32_t   paramRef;
     tRectangle rectangle;
     uint8_t    value;
-    uint8_t    morphRange[8]; // 8 seems to be number of morphs. Not sure we can go higher, but
-    uint8_t    midiCC;        // MIDI CC number assigned to this param (0 if unassigned)
-    bool       hasMidiCC;     // true if a CC is assigned to this param
+    uint8_t    morphRange[NUM_MORPHS]; // 8 seems to be number of morphs. Not sure we can go higher, but
+    uint8_t    midiCC;                 // MIDI CC number assigned to this param (0 if unassigned)
+    bool       hasMidiCC;              // true if a CC is assigned to this param
 }
 tParam;
 
@@ -481,7 +481,7 @@ typedef struct _struct_module {
     tParam                  param[NUM_VARIATIONS_USB][MAX_NUM_PARAMETERS];
     uint32_t                paramNumLabels[MAX_NUM_PARAMETERS];
     bool                    paramNameSet[MAX_NUM_PARAMETERS][MAX_NUM_LABELS];
-    char                    paramName[MAX_NUM_PARAMETERS][MAX_NUM_LABELS][PARAM_NAME_SIZE + 1];
+    char                    paramName[MAX_NUM_PARAMETERS][MAX_NUM_LABELS][PROTOCOL_PARAM_NAME_SIZE + 1];
     tConnector              connector[MAX_NUM_CONNECTORS];
     bool                    gotParamIndexCache;
     uint32_t                paramIndexCache;

@@ -59,7 +59,7 @@ extern uint8_t             gNote2[MAX_SLOTS][1024];
 extern tControllerArray    gControllerArray[MAX_SLOTS]; // TODO - Don't forget to nullify on new load
 extern uint32_t            gControllerCount[MAX_SLOTS]; // TODO - Don't forget to nullify on new load
 extern uint32_t            gPatchNotesSize[MAX_SLOTS];
-extern uint8_t             gPatchNotes[MAX_SLOTS][MAX_16BIT];
+extern uint8_t             gPatchNotes[MAX_SLOTS][PATCH_NOTES_SIZE + 1];
 extern _Atomic uint8_t     gPatchVersion[MAX_SLOTS];
 //extern char                gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1];
 extern _Atomic tCommsState gCommsState;

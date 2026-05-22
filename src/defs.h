@@ -170,6 +170,7 @@
 #define MODULE_NAME_SIZE                     (16)
 #define PARAM_NAME_SIZE                      (16)
 #define PROTOCOL_PARAM_NAME_SIZE             (7)
+#define PATCH_NOTES_SIZE                     (1080) // OG editor gets to about 1084 before crashing
 
 #define MAX_GLYPH_CHAR                       (127)
 
@@ -236,7 +237,6 @@
 #define LONGEST_PATCH_NAME                   "XXXXXXXXXXXXXXXX"
 #define LONGEST_MODULE_NAME                  "XXXXXXXXXXXXXXXX"
 
-#define MAX_16BIT                            (0x10000)
 #define NULL_RECTANGLE                       {{0.0, 0.0}, {0.0, 0.0}}
 #define ARRAY_SIZE(arr)    (sizeof(arr) / sizeof(arr[0]))
 

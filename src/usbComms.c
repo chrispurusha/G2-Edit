@@ -343,14 +343,20 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
                 LOG_DEBUG("Patch notes\n");
 
                 if (slot < MAX_SLOTS) {
-                    uint32_t safeCount = ((uint32_t)count < sizeof(gPatchNotes[slot]))
-                                       ? (uint32_t)count : sizeof(gPatchNotes[slot]);
+                    uint32_t notesSize = count;
+                    int32_t  i         = 0;
 
-                    for (uint32_t i = 0; i < safeCount; i++) {
+                    if (notesSize > sizeof(gPatchNotes[0]) - 1) {
+                        notesSize = sizeof(gPatchNotes[0]) - 1;
+                    }
+                    gPatchNotesSize[slot] = 0;
+                    memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
+
+                    for (i = 0; i < notesSize; i++) {
                         gPatchNotes[slot][i] = read_bit_stream(buff, &subOffset, 8);
                     }
 
-                    gPatchNotesSize[slot] = safeCount;
+                    gPatchNotesSize[slot] = notesSize;
                 }
                 break;
             }
