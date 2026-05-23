@@ -1741,7 +1741,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeResonator,   connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocRight},          // 56 Out2
     // 57 Automate
     // 58 Drumsynth
-    {moduleTypeDrumSynth,   connectorDirIn,  connectorTypeLogic,   {{  3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Trig",         labelLocUp   },          // 55 Trig
+    {moduleTypeDrumSynth,   connectorDirIn,  connectorTypeLogic,   {{  3,   10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Trig",         labelLocUp   },          // 55 Trig
     {moduleTypeDrumSynth,   connectorDirIn,  connectorTypeControl, {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Pitch",        labelLocUp   },          // 55 Pitch M
     {moduleTypeDrumSynth,   connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",          labelLocUp   },          // 55 Velocity
     {moduleTypeDrumSynth,   connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 55 Out

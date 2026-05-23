@@ -304,7 +304,10 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
                 "1/1",  "1/2D",  "1/1T",  "1/2",  "1/4D",  "1/2T",  "1/4",  "1/8D", "1/4T", "1/8", "1/16D", "1/8T",
                 "1/16", "1/32D", "1/16T", "1/32", "1/64D", "1/32T", "1/64", "1/64T"
             };
-            int          posClkSyncStrMap = floor(paramValue / 4);
+            int posClkSyncStrMap = (int)(paramValue / 4.0);
+            if (posClkSyncStrMap > 31) {
+                posClkSyncStrMap = 31;
+            }
             snprintf(buff, buffSize, "%s\n", clkSyncStrMap[posClkSyncStrMap]);
             break;
         }
@@ -465,7 +468,11 @@ tRectangle render_paramType1Time(tModule * module, tRectangle rectangle, char * 
         }
     }
     // scale 0 -> min_time and 127 -> max_time, exponentially
-    time = exp((double)paramValue / 127 * log(max_time / min_time)) * min_time;
+    if (min_time <= 0.0 || max_time <= 0.0) {
+        snprintf(buff, buffSize, "???");
+    } else {
+        time = exp((double)paramValue / 127 * log(max_time / min_time)) * min_time;
+    }
 
     if (time < 1.0) {
         snprintf(buff, buffSize, "%.0fms", time * 1000);
@@ -619,7 +626,7 @@ tRectangle render_paramType1PulseTime(tModule * module, tRectangle rectangle, ch
         }
         default:
         {
-            LOG_ERROR("Wrong range in paramType1PulseTime: %u", module->param[2]->value);
+            LOG_ERROR("Wrong range in paramType1PulseTime: %u", module->param[variation][2].value);
         }
     }
 

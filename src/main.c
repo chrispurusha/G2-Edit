@@ -33,7 +33,7 @@ extern "C" {
 static void signal_handler(int sigraised) {
     LOG_DEBUG("\nSig Handler!!! %d\n", sigraised);
 
-    gQuitAll = true;
+    atomic_store(&gQuitAll, true);
 
     _exit(0);
 }

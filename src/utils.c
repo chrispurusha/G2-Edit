@@ -118,7 +118,7 @@ double get_time_ms(void) {
     return (currentTime.tv_sec) * 1000.0 + (currentTime.tv_nsec) / 1.0e6;
 }
 
-double get_time_delta(void) {
+double get_time_delta(void) {  // TODO - make thread safe, caller maintaining last time
     struct timespec        currentTime = {0};
     static struct timespec lastTime    = {0};
 

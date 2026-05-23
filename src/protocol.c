@@ -450,8 +450,14 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset, uin
             if (read_module(key, &module) == false) {
                 write_module(key, &module);
             }
-            module.param[j][paramIndex].morphRange[morph] = range;
-
+            //module.param[j][paramIndex].morphRange[morph] = range;
+            module.param[variation][paramIndex].morphRange[morph] = range;  // Todo - Check this is correct and it's not the commented out line above which is needed
+            if (morph < NUM_MORPHS) {
+                module.param[j][paramIndex].morphRange[morph] = range;
+                
+            } else {
+                LOG_ERROR("morph index %u out of range\n", morph);
+            }
             write_module(key, &module);
         }
 

@@ -27,6 +27,7 @@ extern "C" {
 
 void msg_init(tMessageQueue * msgQueue, char * semName) {
     pthread_mutexattr_t attr = {0};
+    char semNameWithPid[64] = {0};
 
     pthread_mutexattr_init(&attr);
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
@@ -36,14 +37,16 @@ void msg_init(tMessageQueue * msgQueue, char * semName) {
     msgQueue->head      = NULL;
     msgQueue->tail      = NULL;
 
+    snprintf(semNameWithPid, sizeof(semNameWithPid), "/%s_%d", semName, getpid());
+    
     // IMPORTANT: Unlink any stale semaphore from previous runs FIRST
-    sem_unlink(semName);
+    sem_unlink(semNameWithPid);
 
     // Now create a fresh semaphore
-    msgQueue->semaphore = sem_open(semName, O_CREAT | O_EXCL, 0644, 0);
+    msgQueue->semaphore = sem_open(semNameWithPid, O_CREAT | O_EXCL, 0644, 0);
 
     if (msgQueue->semaphore == SEM_FAILED) {
-        LOG_ERROR("Semaphore '%s' creation failed\n", semName);
+        LOG_ERROR("Semaphore '%s' creation failed\n", semNameWithPid);
         LOG_ERROR("Error: %s\n", strerror(errno));
         return;
     }

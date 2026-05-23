@@ -132,7 +132,7 @@ uint32_t module_volume_count(tModuleType moduleType) {
 }
 
 uint32_t module_led_count(tModuleType moduleType) {
-    static uint32_t cache[moduleTypeMax]      = {0};
+    static uint32_t cache[moduleTypeMax]      = {0};  //TODO - make this atomic, or thread safe along with other similar statics
     static bool     validCache[moduleTypeMax] = {0};
 
     if (validCache[moduleType] == false) {
