@@ -1360,7 +1360,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
             buff[pos++] = patchVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_WRITE_CABLE;
-            buff[pos++] = 0x10 | (messageContent->cableData.location << 3) | 0x00;
+            buff[pos++] = 0x10 | (messageContent->cableData.location << 3) | messageContent->cableData.colour;
             buff[pos++] = messageContent->cableData.moduleFromIndex;
             buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex;
             buff[pos++] = messageContent->cableData.moduleToIndex;
