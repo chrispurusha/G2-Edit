@@ -347,6 +347,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
                     int32_t  i         = 0;
 
                     if (notesSize > sizeof(gPatchNotes[0]) - 1) {
+                        LOG_ERROR("Patch notes size is greater than %lu\n", sizeof(gPatchNotes[0]) - 1);
                         notesSize = sizeof(gPatchNotes[0]) - 1;
                     }
                     gPatchNotesSize[slot] = 0;
