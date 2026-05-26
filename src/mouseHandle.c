@@ -1025,6 +1025,14 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
     gContextMenu.coord  = coord;
     gContextMenu.items  = menuItems;
     gContextMenu.active = true;
+
+    double           menuHeight        = (((sizeof(oscMenuItems) / sizeof(oscMenuItems[0])) - 1) * (STANDARD_TEXT_HEIGHT + (5 * 2))); // Reference biggest array
+    double           renderHeight      = get_render_height() / GLOBAL_GUI_SCALE;
+
+    // Shift upwards if too far towards end of screen
+    if (gContextMenu.coord.y + menuHeight > (renderHeight - SCROLLBAR_WIDTH)) {
+        gContextMenu.coord.y = (renderHeight - SCROLLBAR_WIDTH) - menuHeight;
+    }
 }
 
 void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t connectorIndex) {
@@ -1043,43 +1051,35 @@ void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t co
 
 void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     static tMenuItem colourMenuItems[] = {
-        {"      ", MODULE_STANDARD_GREY, action_set_module_colour,  0, NULL}, // TODO - maybe an extra property to denote column?
-        {"",       MODULE_RED_1,         action_set_module_colour,  6, NULL},
-        {"",       MODULE_GREEN_1,       action_set_module_colour, 10, NULL},
-        {"",       MODULE_BLUE_1,        action_set_module_colour,  5, NULL},
-        {"",       MODULE_YELLOW_1,      action_set_module_colour,  9, NULL},
-        {"",       MODULE_PURPLE_1,      action_set_module_colour, 21, NULL},
-        {"",       MODULE_CYAN_1,        action_set_module_colour, 17, NULL},
-        {"",       MODULE_RED_2,         action_set_module_colour, 13, NULL},
-        {"",       MODULE_GREEN_2,       action_set_module_colour,  8, NULL},
-        {"",       MODULE_BLUE_2,        action_set_module_colour, 20, NULL},
-        {"",       MODULE_YELLOW_2,      action_set_module_colour, 11, NULL},
-        {"",       MODULE_PURPLE_2,      action_set_module_colour, 22, NULL},
-        {"",       MODULE_CYAN_2,        action_set_module_colour,  7, NULL},
-        {"",       MODULE_RED_3,         action_set_module_colour, 14, NULL},
-        {"",       MODULE_GREEN_3,       action_set_module_colour, 16, NULL},
-        {"",       MODULE_BLUE_3,        action_set_module_colour, 12, NULL},
-        {"",       MODULE_YELLOW_3,      action_set_module_colour, 15, NULL},
-        {"",       MODULE_PURPLE_3,      action_set_module_colour, 23, NULL},
-        {"",       MODULE_CYAN_3,        action_set_module_colour, 18, NULL},
-        {"",       MODULE_RED_4,         action_set_module_colour,  1, NULL},
-        {"",       MODULE_GREEN_4,       action_set_module_colour,  2, NULL},
-        {"",       MODULE_BLUE_4,        action_set_module_colour,  3, NULL},
-        {"",       MODULE_YELLOW_4,      action_set_module_colour,  4, NULL},
-        {"",       MODULE_PURPLE_4,      action_set_module_colour, 24, NULL},
-        {"",       MODULE_CYAN_4,        action_set_module_colour, 19, NULL},
-        {NULL,     RGB_BLACK,            NULL,                      0, NULL}   // End of menu
+        {"         ", MODULE_STANDARD_GREY, action_set_module_colour,  0, NULL}, // TODO - maybe an extra property to denote column?
+        {"",          MODULE_RED_1,         action_set_module_colour,  6, NULL},
+        {"",          MODULE_GREEN_1,       action_set_module_colour, 10, NULL},
+        {"",          MODULE_BLUE_1,        action_set_module_colour,  5, NULL},
+        {"",          MODULE_YELLOW_1,      action_set_module_colour,  9, NULL},
+        {"",          MODULE_PURPLE_1,      action_set_module_colour, 21, NULL},
+        {"",          MODULE_CYAN_1,        action_set_module_colour, 17, NULL},
+        {"",          MODULE_RED_2,         action_set_module_colour, 13, NULL},
+        {"",          MODULE_GREEN_2,       action_set_module_colour,  8, NULL},
+        {"",          MODULE_BLUE_2,        action_set_module_colour, 20, NULL},
+        {"",          MODULE_YELLOW_2,      action_set_module_colour, 11, NULL},
+        {"",          MODULE_PURPLE_2,      action_set_module_colour, 22, NULL},
+        {"",          MODULE_CYAN_2,        action_set_module_colour,  7, NULL},
+        {"",          MODULE_RED_3,         action_set_module_colour, 14, NULL},
+        {"",          MODULE_GREEN_3,       action_set_module_colour, 16, NULL},
+        {"",          MODULE_BLUE_3,        action_set_module_colour, 12, NULL},
+        {"",          MODULE_YELLOW_3,      action_set_module_colour, 15, NULL},
+        {"",          MODULE_PURPLE_3,      action_set_module_colour, 23, NULL},
+        {"",          MODULE_CYAN_3,        action_set_module_colour, 18, NULL},
+        {"",          MODULE_RED_4,         action_set_module_colour,  1, NULL},
+        {"",          MODULE_GREEN_4,       action_set_module_colour,  2, NULL},
+        {"",          MODULE_BLUE_4,        action_set_module_colour,  3, NULL},
+        {"",          MODULE_YELLOW_4,      action_set_module_colour,  4, NULL},
+        {"",          MODULE_PURPLE_4,      action_set_module_colour, 24, NULL},
+        {"",          MODULE_CYAN_4,        action_set_module_colour, 19, NULL},
+        {NULL,        RGB_BLACK,            NULL,                      0, NULL} // End of menu
     };
 
-#if 0
-    MODULE_PURPLE_1,
-    MODULE_PURPLE_2,
-    MODULE_PURPLE_3,
-    MODULE_PURPLE_4
-}
-#endif
-
-    static tMenuItem menuItems[] = {
+    static tMenuItem menuItems[]  = {
         {"Rename",        RGB_GREY_3, action_rename_module,      0, NULL},
         {"Set colour",    RGB_GREY_3, action_set_module_colour,  0, colourMenuItems,},
         {"Delete module", RGB_GREY_3, menu_action_delete_module, 0, NULL},
@@ -1091,6 +1091,14 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     gContextMenu.items     = menuItems;
     gContextMenu.moduleKey = moduleKey;
     gContextMenu.active    = true;
+
+    double           menuHeight   = (((sizeof(colourMenuItems) / sizeof(colourMenuItems[0])) - 1) * (STANDARD_TEXT_HEIGHT + (5 * 2)));
+    double           renderHeight = get_render_height() / GLOBAL_GUI_SCALE;
+
+    // Shift upwards if too far towards end of screen
+    if (gContextMenu.coord.y + menuHeight > (renderHeight - SCROLLBAR_WIDTH)) {
+        gContextMenu.coord.y = (renderHeight - SCROLLBAR_WIDTH) - menuHeight;
+    }
 }
 
 bool handle_module_press(tCoord coord, int button) {
