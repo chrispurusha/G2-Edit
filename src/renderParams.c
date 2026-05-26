@@ -304,7 +304,8 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
                 "1/1",  "1/2D",  "1/1T",  "1/2",  "1/4D",  "1/2T",  "1/4",  "1/8D", "1/4T", "1/8", "1/16D", "1/8T",
                 "1/16", "1/32D", "1/16T", "1/32", "1/64D", "1/32T", "1/64", "1/64T"
             };
-            int posClkSyncStrMap = (int)(paramValue / 4.0);
+            int          posClkSyncStrMap = (int)(paramValue / 4.0);
+
             if (posClkSyncStrMap > 31) {
                 posClkSyncStrMap = 31;
             }
@@ -467,6 +468,7 @@ tRectangle render_paramType1Time(tModule * module, tRectangle rectangle, char * 
             LOG_ERROR("paramType1Time missing module->type implementation");
         }
     }
+
     // scale 0 -> min_time and 127 -> max_time, exponentially
     if (min_time <= 0.0 || max_time <= 0.0) {
         snprintf(buff, buffSize, "???");

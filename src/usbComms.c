@@ -1123,6 +1123,22 @@ static int send_set_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t pa
     return retVal;
 }
 
+static int send_set_module_colour(uint32_t slot, uint32_t location,
+                                  uint32_t moduleIndex, uint32_t colour) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
+    buff[pos++] = SUB_COMMAND_SET_MODULE_COLOUR;
+    buff[pos++] = (uint8_t)location;
+    buff[pos++] = (uint8_t)moduleIndex;
+    buff[pos++] = (uint8_t)colour;
+
+    return send_message(buff, pos);
+}
+
 // ---------------------------------------------------------------------------
 // Slot data management
 // ---------------------------------------------------------------------------
@@ -1550,6 +1566,10 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdSetPatchName:
             retVal      = send_set_patch_name(messageContent->slot, messageContent->patchName.name);
+            break;
+
+        case eMsgCmdSetModuleColour:
+            retVal      = send_set_module_colour(messageContent->slot, messageContent->moduleColourData.moduleKey.location, messageContent->moduleColourData.moduleKey.index, messageContent->moduleColourData.colour);
             break;
 
         case eMsgCmdWritePatch:

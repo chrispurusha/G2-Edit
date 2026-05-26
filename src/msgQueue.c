@@ -26,8 +26,8 @@ extern "C" {
 #include "msgQueue.h"
 
 void msg_init(tMessageQueue * msgQueue, char * semName) {
-    pthread_mutexattr_t attr = {0};
-    char semNameWithPid[64] = {0};
+    pthread_mutexattr_t attr               = {0};
+    char                semNameWithPid[64] = {0};
 
     pthread_mutexattr_init(&attr);
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
@@ -38,7 +38,7 @@ void msg_init(tMessageQueue * msgQueue, char * semName) {
     msgQueue->tail      = NULL;
 
     snprintf(semNameWithPid, sizeof(semNameWithPid), "/%s_%d", semName, getpid());
-    
+
     // IMPORTANT: Unlink any stale semaphore from previous runs FIRST
     sem_unlink(semNameWithPid);
 

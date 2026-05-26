@@ -48,7 +48,8 @@ typedef enum {
     eMsgCmdSelectSlot,
     eMsgCmdWritePatch,
     eMsgCmdSetModuleLabel,
-    eMsgCmdSetPatchName
+    eMsgCmdSetPatchName,
+    eMsgCmdSetModuleColour
 } eMsgCmd;
 
 typedef struct {
@@ -121,18 +122,24 @@ typedef struct {
 } tPatchName;
 
 typedef struct {
+    tModuleKey moduleKey;
+    uint32_t   colour;
+} tModuleColourData;
+
+typedef struct {
     uint32_t cmd;
     uint32_t slot;
     union {
-        tParamData       paramData;
-        tParamMorphData  paramMorphData;
-        tModeData        modeData;
-        tModuleData      moduleData;
-        tCableData       cableData;
-        tVariationData   variationData;
-        tSlotData        slotData;
-        tModuleLabelData moduleLabelData;
-        tPatchName       patchName;
+        tParamData        paramData;
+        tParamMorphData   paramMorphData;
+        tModeData         modeData;
+        tModuleData       moduleData;
+        tCableData        cableData;
+        tVariationData    variationData;
+        tSlotData         slotData;
+        tModuleLabelData  moduleLabelData;
+        tPatchName        patchName;
+        tModuleColourData moduleColourData;
     };
 } tMessageContent;
 
