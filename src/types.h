@@ -532,6 +532,7 @@ typedef struct {
 
 typedef struct _struct_menuItem {
     char *                    label;
+    tRgb                      colour;
     void (*action)(int index);
     uint32_t                  param;
     struct _struct_menuItem * subMenu;

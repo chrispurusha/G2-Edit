@@ -130,33 +130,31 @@ const tRgb               gCableColourMap[]        = {   // TODO: implement a nul
     {0.9, 0.9, 0.9},                                    // white - apparently not user selectable
 };
 
-const tRgb               gModuleColourMap[]       = {
-    {0.7, 0.7, 0.7},       // standard grey
-    {0.8, 0.6, 0.6},       // red 4
-    {0.6, 0.8, 0.6},       // green 4
-    {0.6, 0.6, 0.8},       // blue 4
-    {0.8, 0.8, 0.6},       // yellow 4
-    {0.3, 0.3, 0.8},       // blue 1
-    {0.8, 0.3, 0.3},       // red 1
-    {0.4, 0.8, 0.8},       // cyan 2
-    {0.4, 0.8, 0.4},       // green 2
-    {0.8, 0.8, 0.3},       // yellow 1
-    {0.3, 0.8, 0.3},       // green 1
-    {0.8, 0.8, 0.4},       // yellow 2
-    {0.5, 0.5, 0.8},       // blue 3
-    {0.8, 0.4, 0.4},       // red 2
-    {0.8, 0.5, 0.5},       // red 3
-    {0.8, 0.8, 0.5},       // yellow 3
-    {0.5, 0.8, 0.5},       // green 3
-    {0.3, 0.8, 0.8},       // cyan 1
-    {0.5, 0.8, 0.8},       // cyan 3
-    {0.6, 0.8, 0.8},       // cyan 4
-    {0.4, 0.4, 0.8},       // blue 2
-    {0.8, 0.3, 0.8},       // purple 1
-    {0.8, 0.4, 0.8},       // purple 2
-    {0.8, 0.5, 0.8},       // purple 3
-    {0.8, 0.6, 0.8},       // purple 4
-};
+const tRgb               gModuleColourMap[]       = {MODULE_STANDARD_GREY,
+                                                     MODULE_RED_4,
+                                                     MODULE_GREEN_4,
+                                                     MODULE_BLUE_4,
+                                                     MODULE_YELLOW_4,
+                                                     MODULE_BLUE_1,
+                                                     MODULE_RED_1,
+                                                     MODULE_CYAN_2,
+                                                     MODULE_GREEN_2,
+                                                     MODULE_YELLOW_1,
+                                                     MODULE_GREEN_1,
+                                                     MODULE_YELLOW_2,
+                                                     MODULE_BLUE_3,
+                                                     MODULE_RED_2,
+                                                     MODULE_RED_3,
+                                                     MODULE_YELLOW_3,
+                                                     MODULE_GREEN_3,
+                                                     MODULE_CYAN_1,
+                                                     MODULE_CYAN_3,
+                                                     MODULE_CYAN_4,
+                                                     MODULE_BLUE_2,
+                                                     MODULE_PURPLE_1,
+                                                     MODULE_PURPLE_2,
+                                                     MODULE_PURPLE_3,
+                                                     MODULE_PURPLE_4};
 
 const tRgb               connectorColourMap[] = {
     {0.7, 0.2, 0.2},

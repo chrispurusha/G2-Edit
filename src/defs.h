@@ -199,6 +199,32 @@
 #define RGB_ORANGE_2                         {0.8, 0.5, 0.2}
 #define RGBA_BLACK_ON_TRANSPARENT            {0.0, 0.0, 0.0, 1.0}
 
+#define MODULE_STANDARD_GREY                 {0.7, 0.7, 0.7}
+#define MODULE_RED_4                         {0.8, 0.6, 0.6}
+#define MODULE_GREEN_4                       {0.6, 0.8, 0.6}
+#define MODULE_BLUE_4                        {0.6, 0.6, 0.8}
+#define MODULE_YELLOW_4                      {0.8, 0.8, 0.6}
+#define MODULE_BLUE_1                        {0.3, 0.3, 0.8}
+#define MODULE_RED_1                         {0.8, 0.3, 0.3}
+#define MODULE_CYAN_2                        {0.4, 0.8, 0.8}
+#define MODULE_GREEN_2                       {0.4, 0.8, 0.4}
+#define MODULE_YELLOW_1                      {0.8, 0.8, 0.3}
+#define MODULE_GREEN_1                       {0.3, 0.8, 0.3}
+#define MODULE_YELLOW_2                      {0.8, 0.8, 0.4}
+#define MODULE_BLUE_3                        {0.5, 0.5, 0.8}
+#define MODULE_RED_2                         {0.8, 0.4, 0.4}
+#define MODULE_RED_3                         {0.8, 0.5, 0.5}
+#define MODULE_YELLOW_3                      {0.8, 0.8, 0.5}
+#define MODULE_GREEN_3                       {0.5, 0.8, 0.5}
+#define MODULE_CYAN_1                        {0.3, 0.8, 0.8}
+#define MODULE_CYAN_3                        {0.5, 0.8, 0.8}
+#define MODULE_CYAN_4                        {0.6, 0.8, 0.8}
+#define MODULE_BLUE_2                        {0.4, 0.4, 0.8}
+#define MODULE_PURPLE_1                      {0.8, 0.3, 0.8}
+#define MODULE_PURPLE_2                      {0.8, 0.4, 0.8}
+#define MODULE_PURPLE_3                      {0.8, 0.5, 0.8}
+#define MODULE_PURPLE_4                      {0.8, 0.6, 0.8}
+
 // TODO: rationalise this lot
 #define TOP_BAR_HEIGHT                       (80.0)
 #define SCROLLBAR_WIDTH                      (15.0)
