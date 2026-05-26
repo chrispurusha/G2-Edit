@@ -118,7 +118,7 @@ void render_context_menu(void) {
 
         for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
             menuItem = {{gContextMenu.coord.x, gContextMenu.coord.y + yOffset}, {largestSize + (5 * 2), itemHeight + (5 * 2)}};
-
+            // TODO - possibly needs scaling!?
             if (within_rectangle(mouseCoord, menuItem)) {
                 set_rgb_colour(RGB_CONTEXT_MENU_GREEN); // TODO - work out why this is no longer working
             } else {
