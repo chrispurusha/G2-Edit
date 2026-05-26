@@ -118,16 +118,31 @@ void render_context_menu(void) {
         for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
             menuItem = {{gContextMenu.coord.x, gContextMenu.coord.y + yOffset}, {largestSize + (5 * 2), itemHeight + (5 * 2)}};
 
-            if (within_rectangle(mouseCoord, menuItem)) {
-                set_rgb_colour(RGB_CONTEXT_MENU_GREEN);  // TODO - Deal with coloured cells, maybe with outline rather than colour
-            } else {
-                //set_rgb_colour(RGB_GREY_3);    // Background
-                set_rgb_colour(gContextMenu.items[i].colour);
-            }
+            set_rgb_colour(gContextMenu.items[i].colour);
             render_rectangle(mainArea, menuItem);
 
             set_rgb_colour(RGB_GREY_9);    // White text
             render_text(mainArea, {{gContextMenu.coord.x + 5, gContextMenu.coord.y + 5 + yOffset}, {BLANK_SIZE, itemHeight}}, gContextMenu.items[i].label);
+            yOffset += itemHeight + (5 * 2);
+        }
+
+        yOffset = 0;
+
+        for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
+            menuItem = {{gContextMenu.coord.x, gContextMenu.coord.y + yOffset}, {largestSize + (5 * 2), itemHeight + (5 * 2)}};
+
+            if (within_rectangle(mouseCoord, menuItem)) {
+                set_rgb_colour(RGB_BLACK);
+                render_line(mainArea, {menuItem.coord.x, menuItem.coord.y}, {menuItem.coord.x + menuItem.size.w, menuItem.coord.y}, 1);
+                render_line(mainArea, {menuItem.coord.x + menuItem.size.w, menuItem.coord.y}, {menuItem.coord.x + menuItem.size.w, menuItem.coord.y + menuItem.size.h}, 1);
+                render_line(mainArea, {menuItem.coord.x, menuItem.coord.y}, {menuItem.coord.x, menuItem.coord.y + menuItem.size.h}, 1);
+                render_line(mainArea, {menuItem.coord.x, menuItem.coord.y + menuItem.size.h}, {menuItem.coord.x + menuItem.size.w, menuItem.coord.y + menuItem.size.h}, 1);
+                set_rgb_colour(RGB_WHITE);
+                render_line(mainArea, {menuItem.coord.x + 1, menuItem.coord.y + 1}, {(menuItem.coord.x + menuItem.size.w) - 1, menuItem.coord.y + 1}, 1);
+                render_line(mainArea, {(menuItem.coord.x + menuItem.size.w - 1), menuItem.coord.y + 1}, {(menuItem.coord.x + menuItem.size.w) - 1, (menuItem.coord.y + menuItem.size.h) - 1}, 1);
+                render_line(mainArea, {menuItem.coord.x + 1, menuItem.coord.y + 1}, {menuItem.coord.x + 1, (menuItem.coord.y + menuItem.size.h) - 1}, 1);
+                render_line(mainArea, {menuItem.coord.x + 1, (menuItem.coord.y + menuItem.size.h) - 1}, {(menuItem.coord.x + menuItem.size.w) - 1, (menuItem.coord.y + menuItem.size.h) - 1}, 1);
+            }
             yOffset += itemHeight + (5 * 2);
         }
     }
