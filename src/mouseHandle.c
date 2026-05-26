@@ -505,7 +505,7 @@ void menu_action_delete_cable(int index) {
     uint32_t slot       = atomic_load(&gSlot);
     uint32_t location   = atomic_load(&gLocation);
 
-    if ((gContextMenu.moduleKey.slot == slot) && (gContextMenu.moduleKey.location == location)) {
+    if ((gContextMenu.moduleKey.slot == slot) && (gContextMenu.moduleKey.location == location)) { // TODO - probably don't need to do this check?
         read_module(gContextMenu.moduleKey, &module);
 
         reset_walk_cable();
@@ -571,7 +571,7 @@ void menu_action_delete_module(int index) {
     uint32_t slot       = atomic_load(&gSlot);
     uint32_t location   = atomic_load(&gLocation);
 
-    if (gContextMenu.moduleKey.slot == slot && gContextMenu.moduleKey.location == location) {
+    if (gContextMenu.moduleKey.slot == slot && gContextMenu.moduleKey.location == location) { // TODO - probably don't need to do this check?
         read_module(gContextMenu.moduleKey, &module);
 
         reset_walk_cable();
@@ -702,7 +702,7 @@ void menu_action_create(int index) {
     uint32_t slot     = atomic_load(&gSlot);
     uint32_t location = atomic_load(&gLocation);
 
-    if (gContextMenu.items[index].param != 0) {
+    if (gContextMenu.items[index].param != 0) { //TODO - should this be based on gContextMenu.items[index].subMenu being NULL or not?
         tModule         module         = {0};
         tMessageContent messageContent = {0};
         int32_t         uniqueIndex    = 0;
@@ -746,6 +746,35 @@ void menu_action_create(int index) {
 
             shift_modules_down(module.key);
         }
+    } else {
+        gContextMenu.items = gContextMenu.items[index].subMenu;
+
+        if (gContextMenu.items != NULL) {
+            gContextMenu.active = true;
+        }
+    }
+}
+
+void action_set_module_colour(int index) {
+    //uint32_t slot     = atomic_load(&gSlot);
+    //uint32_t location = atomic_load(&gLocation);
+
+    if (gContextMenu.items[index].subMenu == NULL) {
+        tModule         module         = {0};
+        tMessageContent messageContent = {0};
+
+        read_module(gContextMenu.moduleKey, &module);
+
+        module.colour                             = gContextMenu.items[index].param;
+
+        write_module(module.key, &module);
+
+        messageContent.cmd                        = eMsgCmdSetModuleColour;
+        messageContent.slot                       = module.key.slot;                                  // TODO - possible better method for other functions, since slot is part of module key - might not even need this in the type
+        messageContent.moduleColourData.moduleKey = module.key;
+        messageContent.moduleColourData.colour    = module.colour;
+
+        msg_send(&gCommandQueue, &messageContent);
     } else {
         gContextMenu.items = gContextMenu.items[index].subMenu;
 
@@ -1013,8 +1042,44 @@ void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t co
 }
 
 void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
-    static tMenuItem menuItems[] = {
+    //{0.7, 0.7, 0.7},       // standard grey
+    //{0.8, 0.6, 0.6},       // red 4
+    //{0.6, 0.8, 0.6},       // green 4
+    //{0.6, 0.6, 0.8},       // blue 4
+    //{0.8, 0.8, 0.6},       // yellow 4
+    //{0.3, 0.3, 0.8},       // blue 1
+    //{0.8, 0.3, 0.3},       // red 1
+    //{0.4, 0.8, 0.8},       // cyan 2
+    //{0.4, 0.8, 0.4},       // green 2
+    //{0.8, 0.8, 0.3},       // yellow 1
+    //{0.3, 0.8, 0.3},       // green 1
+    //{0.8, 0.8, 0.4},       // yellow 2
+    //{0.5, 0.5, 0.8},       // blue 3
+    //{0.8, 0.4, 0.4},       // red 2
+    //{0.8, 0.5, 0.5},       // red 3
+    //{0.8, 0.8, 0.5},       // yellow 3
+    //{0.5, 0.8, 0.5},       // green 3
+    //{0.3, 0.8, 0.8},       // cyan 1
+    //{0.5, 0.8, 0.8},       // cyan 3
+    //{0.6, 0.8, 0.8},       // cyan 4
+    //{0.4, 0.4, 0.8},       // blue 2
+    //{0.8, 0.3, 0.8},       // purple 1
+    //{0.8, 0.4, 0.8},       // purple 2
+    //{0.8, 0.5, 0.8},       // purple 3
+    //{0.8, 0.6, 0.8},       // purple 4
+
+    static tMenuItem colourMenuItems[] = {
+        {"Standard Grey", action_set_module_colour, 0, NULL},              // TODO - add background colour as an option
+        {"Red 4",         action_set_module_colour, 1, NULL},
+        {"Green 4",       action_set_module_colour, 2, NULL},
+        {"Blue 4",        action_set_module_colour, 3, NULL},
+        {"Yellow 4",      action_set_module_colour, 4, NULL},
+        {NULL,            NULL,                     0, NULL}        // End of menu
+    };
+
+    static tMenuItem menuItems[]       = {
         {"Rename",        action_rename_module,      0, NULL},
+        {"Set colour",    action_set_module_colour,  0, colourMenuItems,},
         {"Delete module", menu_action_delete_module, 0, NULL},
         {NULL,            NULL,                      0, NULL}       // End of menu
     };
