@@ -1036,7 +1036,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
 }
 
 void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t connectorIndex) {
-    static tMenuItem menuItems[] = {
+    static tMenuItem menuItems[]  = {
         {"Delete cable", RGB_GREY_3, menu_action_delete_cable, 0, NULL},
         {NULL,           RGB_BLACK,  NULL,                     0, NULL}        // End of menu
     };
@@ -1047,6 +1047,14 @@ void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t co
     gContextMenu.moduleKey      = moduleKey;
     gContextMenu.connectorIndex = connectorIndex;
     gContextMenu.active         = true;
+
+    double           menuHeight   = (((sizeof(menuItems) / sizeof(menuItems[0])) - 1) * (STANDARD_TEXT_HEIGHT + (5 * 2)));
+    double           renderHeight = get_render_height() / GLOBAL_GUI_SCALE;
+
+    // Shift upwards if too far towards end of screen
+    if (gContextMenu.coord.y + menuHeight > (renderHeight - SCROLLBAR_WIDTH)) {
+        gContextMenu.coord.y = (renderHeight - SCROLLBAR_WIDTH) - menuHeight;
+    }
 }
 
 void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
