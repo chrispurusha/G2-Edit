@@ -22,6 +22,7 @@
 
 #include "sysIncludes.h"
 
+void get_global_gui_scaled_mouse_coord(tCoord * coord);
 void set_exclusive_button_highlight(tButtonId first, tButtonId last, tButtonId active);
 bool handle_context_menu_click(tCoord coord);
 bool handle_scrollbar_click(tCoord coord);

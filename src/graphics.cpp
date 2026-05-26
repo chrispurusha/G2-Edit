@@ -102,8 +102,7 @@ void render_context_menu(void) {
     glfwGetWindowSize(gWindow, &width, &height);
     glfwGetCursorPos(gWindow, &mouseCoord.x, &mouseCoord.y);
 
-    mouseCoord.x = (mouseCoord.x * (double)get_render_width()) / (double)width;
-    mouseCoord.y = (mouseCoord.y * (double)get_render_height()) / (double)height;
+    get_global_gui_scaled_mouse_coord(&mouseCoord);
 
     if (gContextMenu.items != NULL) {
         for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
@@ -118,9 +117,9 @@ void render_context_menu(void) {
 
         for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
             menuItem = {{gContextMenu.coord.x, gContextMenu.coord.y + yOffset}, {largestSize + (5 * 2), itemHeight + (5 * 2)}};
-            // TODO - possibly needs scaling!?
+
             if (within_rectangle(mouseCoord, menuItem)) {
-                set_rgb_colour(RGB_CONTEXT_MENU_GREEN); // TODO - work out why this is no longer working
+                set_rgb_colour(RGB_CONTEXT_MENU_GREEN);  // TODO - Deal with coloured cells, maybe with outline rather than colour
             } else {
                 //set_rgb_colour(RGB_GREY_3);    // Background
                 set_rgb_colour(gContextMenu.items[i].colour);

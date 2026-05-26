@@ -43,7 +43,7 @@ extern "C" {
 #include "mouseHandle.h"
 #include "globalVars.h"
 
-static void get_global_gui_scaled_mouse_coord(tCoord * coord) {
+void get_global_gui_scaled_mouse_coord(tCoord * coord) {
     int fbWidth  = 0;
     int fbHeight = 0;
 
