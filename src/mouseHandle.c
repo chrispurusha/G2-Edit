@@ -1167,6 +1167,7 @@ bool handle_module_press(tCoord coord, int button) {
 
                     if (within_rectangle(coord, module.mode[i].rectangle) && button == GLFW_MOUSE_BUTTON_LEFT) {
                         if ((modeLocationList[mode->modeRef].type2) == paramType2Dial) {
+                            memset(&gParamDragging, 0, sizeof(gParamDragging));
                             gParamDragging.moduleKey = module.key;
                             gParamDragging.type3     = paramType3Mode;
                             gParamDragging.mode      = i;
@@ -1731,10 +1732,10 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                 }
                 break;
             case paramType3Mode:
-
-                if (modeLocationList[module.mode[gParamDragging.param].modeRef].type2 == paramType2Dial) {
-                    angle = calculate_mouse_angle((tCoord){x, y}, module.mode[gParamDragging.param].rectangle);                                                            // possible add half size
-                    value = angle_to_value(angle, modeLocationList[module.mode[gParamDragging.param].modeRef].range);
+                // Not currently being used for anything, but could ultimately be. In some cases, could be better as a drop down menu
+                if (modeLocationList[module.mode[gParamDragging.mode].modeRef].type2 == paramType2Dial) {
+                    angle = calculate_mouse_angle((tCoord){x, y}, module.mode[gParamDragging.mode].rectangle);                                                            // possible add half size
+                    value = angle_to_value(angle, modeLocationList[module.mode[gParamDragging.mode].modeRef].range);
 
                     if (module.mode[gParamDragging.mode].value != value) {
                         module.mode[gParamDragging.mode].value = value;
