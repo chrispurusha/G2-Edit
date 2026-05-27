@@ -1334,12 +1334,13 @@ bool handle_module_release(tCoord coord, int button) {
 }
 
 bool handle_module_area_click(tCoord coord, int button) {
-    if (!within_rectangle(coord, module_area())) {
-        return false;
-    }
-    open_module_area_context_menu(coord);
+    bool found = false;
 
-    return true;
+    if (within_rectangle(coord, module_area())) {
+        open_module_area_context_menu(coord);
+        found = true;
+    }
+    return found;
 }
 
 void set_x_scroll_bar(double x) {
@@ -1446,6 +1447,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     int      height   = 0;
     tCoord   coord    = {0};
     bool     quitLoop = false;
+    bool     found    = false;
+    tModule  module   = {0};
     uint32_t slot     = atomic_load(&gSlot);
     uint32_t location = atomic_load(&gLocation);
 
@@ -1455,7 +1458,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
     if (action == GLFW_PRESS) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            bool       found    = false;
+            found = false;
 
             for (uint32_t i = 0; i < array_size_main_button_array(); i++) {
                 if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
@@ -1476,23 +1479,21 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                                    {
                                        get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT),
                                        STANDARD_TEXT_HEIGHT
-                                   }};                       // Should really get this from the button
+                                   }};                       // TODO - Should really get this from the button
 
             if (within_rectangle(coord, nameRect)) {
                 if (!gPatchNameEdit.active) {
-                    // Start editing
                     gPatchNameEdit.active = true;
                     gPatchNameEdit.slot   = slot;
                     patch_name_get(slot, gPatchNameEdit.buffer, sizeof(gPatchNameEdit.buffer));
                 }
             } else if (gPatchNameEdit.active) {
                 gPatchNameEdit.active = false;
-                //patch_name_set(gPatchNameEdit.slot, gPatchNameEdit.buffer); //
             }
         }
     } else if (action == GLFW_RELEASE) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            bool found = false;
+            found = false;
 
             for (uint32_t i = 0; i < array_size_main_button_array(); i++) {
                 gMainButtonArray[i].isPressed = false;
@@ -1613,34 +1614,34 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             }
         } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-            bool    handled  = false;
-            tModule rmModule = {0};
+            quitLoop = false;
+            found    = false;
 
             reset_walk_module();
 
-            while (walk_next_module(&rmModule) && !handled) {
-                if (rmModule.key.slot == slot && rmModule.key.location == location) {
-                    for (int i = 0; i < module_connector_count(rmModule.type); i++) {
-                        if (within_rectangle(coord, rmModule.connector[i].rectangle)) {
-                            open_connector_context_menu(coord, rmModule.key, i);
-                            finish_walk_module();
-                            handled = true;
+            while (!quitLoop && walk_next_module(&module)) {
+                if (module.key.slot == slot && module.key.location == location) {
+                    for (int i = 0; i < module_connector_count(module.type); i++) {
+                        if (within_rectangle(coord, module.connector[i].rectangle)) {
+                            open_connector_context_menu(coord, module.key, i);
+                            found    = true;
+                            quitLoop = true;
                             break;
                         }
                     }
 
-                    if (!handled && within_rectangle(coord, rmModule.dragArea)) {
-                        open_module_context_menu(coord, rmModule.key);
-                        finish_walk_module();
-                        handled = true;
+                    if (!found && within_rectangle(coord, module.dragArea)) {
+                        open_module_context_menu(coord, module.key);
+                        found    = true;
+                        quitLoop = true;
                     }
                 }
             }
 
-            if (!handled) {
-                finish_walk_module();
+            if (!found) {
                 handle_module_area_click(coord, button);
             }
+            finish_walk_module();
         }
         stop_dragging();
     }
