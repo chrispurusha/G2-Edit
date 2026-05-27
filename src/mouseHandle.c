@@ -631,16 +631,16 @@ static void action_rename_module(int index) {
     atomic_store(&gReDraw, true);
 }
 
-uint32_t find_unique_module_id(uint32_t location) {
+int32_t find_unique_module_id(uint32_t location) {
     tModuleKey key    = {0};
     tModule    module = {0};
-    uint32_t   i      = 0;
+    int32_t    i      = 0;
     uint32_t   slot   = atomic_load(&gSlot);
 
     key.slot     = slot; // TODO: Might need to pass this in as a parameter?
     key.location = location;
 
-    for (i = 1; i <= 255; i++) {
+    for (i = 0; i <= 255; i++) {
         key.index = i;
 
         if (read_module(key, &module) == false) {
@@ -711,7 +711,7 @@ void menu_action_create(int index) {
         module.key.location = location;
         uniqueIndex         = find_unique_module_id(module.key.location);
 
-        if (uniqueIndex > 0) {
+        if (uniqueIndex >= 0) {
             module.key.index                                                           = (uint32_t)uniqueIndex;
             module.type                                                                = (tModuleType)gContextMenu.items[index].param;
             convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.coord);
@@ -756,9 +756,6 @@ void menu_action_create(int index) {
 }
 
 void action_set_module_colour(int index) {
-    //uint32_t slot     = atomic_load(&gSlot);
-    //uint32_t location = atomic_load(&gLocation);
-
     if (gContextMenu.items[index].subMenu == NULL) {
         tModule         module         = {0};
         tMessageContent messageContent = {0};
@@ -770,7 +767,7 @@ void action_set_module_colour(int index) {
         write_module(module.key, &module);
 
         messageContent.cmd                        = eMsgCmdSetModuleColour;
-        messageContent.slot                       = module.key.slot;                                  // TODO - possible better method for other functions, since slot is part of module key - might not even need this in the type
+        messageContent.slot                       = module.key.slot; // TODO - possible better method for other functions, since slot is part of module key - might not even need this in the type
         messageContent.moduleColourData.moduleKey = module.key;
         messageContent.moduleColourData.colour    = module.colour;
 
@@ -1149,17 +1146,15 @@ bool handle_module_press(tCoord coord, int button) {
                     }
 
                     if (paramType2 == paramType2Dial) {
-                        gParamDragging.moduleKey.slot     = slot;
-                        gParamDragging.moduleKey.index    = module.key.index;
-                        gParamDragging.moduleKey.location = module.key.location;
-                        gParamDragging.type3              = paramType3Param;
-                        gParamDragging.param              = i;
-                        gParamDragging.active             = true;
+                        gParamDragging.moduleKey = module.key;
+                        gParamDragging.type3     = paramType3Param;
+                        gParamDragging.param     = i;
+                        gParamDragging.active    = true;
 
                         if (module.key.location == locationMorph) {
                             gMorphGroupFocus = i;
                         }
-                        retVal                            = true;
+                        retVal                   = true;
                     }
                     // Toggle and UpDown: retVal stays false, handled on release
                 }
@@ -1172,13 +1167,11 @@ bool handle_module_press(tCoord coord, int button) {
 
                     if (within_rectangle(coord, module.mode[i].rectangle) && button == GLFW_MOUSE_BUTTON_LEFT) {
                         if ((modeLocationList[mode->modeRef].type2) == paramType2Dial) {
-                            gParamDragging.moduleKey.slot     = slot;
-                            gParamDragging.moduleKey.index    = module.key.index;
-                            gParamDragging.moduleKey.location = module.key.location;
-                            gParamDragging.type3              = paramType3Mode;
-                            gParamDragging.mode               = i;
-                            gParamDragging.active             = true;
-                            retVal                            = true;
+                            gParamDragging.moduleKey = module.key;
+                            gParamDragging.type3     = paramType3Mode;
+                            gParamDragging.mode      = i;
+                            gParamDragging.active    = true;
+                            retVal                   = true;
                         }
                         // Mode toggle: handled on release
                     }
@@ -1204,11 +1197,9 @@ bool handle_module_press(tCoord coord, int button) {
             // Module drag area — start drag on press
             if (retVal == false) {
                 if (within_rectangle(coord, module.dragArea) && button == GLFW_MOUSE_BUTTON_LEFT) {
-                    tModule tmpModule = {0};
-                    read_module(module.key, &tmpModule);
                     delete_module(module.key);
-                    write_module(tmpModule.key, &tmpModule);
-                    gModuleDrag.moduleKey = tmpModule.key;
+                    write_module(module.key, &module);
+                    gModuleDrag.moduleKey = module.key;
                     gModuleDrag.active    = true;
                     retVal                = true;
                 }
@@ -1560,7 +1551,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
                     reset_walk_module();
 
-                    while (walk_next_module(&toModule) && !quitLoop) {
+                    while (!quitLoop && walk_next_module(&toModule)) {
                         if (toModule.key.slot == slot && toModule.key.location == location) {
                             for (int i = 0; i < module_connector_count(toModule.type); i++) {
                                 if (!within_rectangle(coord, toModule.connector[i].rectangle)) {
@@ -1648,7 +1639,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     atomic_store(&gReDraw, true);
 }
 
-void cursor_pos(GLFWwindow * window, double x, double y) {
+void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     tCoord          coord          = {0};
     double          angle          = 0.0;
     uint32_t        range          = 0;
@@ -1659,6 +1650,8 @@ void cursor_pos(GLFWwindow * window, double x, double y) {
     tParamType2     paramType2     = paramType2Dial;
     uint32_t        slot           = atomic_load(&gSlot);
     uint32_t        variation      = gPatchDescr[slot].activeVariation;
+    double          x              = 0;
+    double          y              = 0;
 
 
     get_global_gui_scaled_mouse_coord(&coord);
