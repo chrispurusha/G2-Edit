@@ -1113,10 +1113,10 @@ bool handle_module_press(tCoord coord, int button) {
     uint32_t    slot       = atomic_load(&gSlot);
     uint32_t    location   = atomic_load(&gLocation);
     uint32_t    variation  = gPatchDescr[slot].activeVariation;
+    tModule     module     = {0};
 
     // Since morph parameters are in top banner area, no longer need to check if (!within_rectangle(coord, module_area()))
     reset_walk_module();
-    tModule     module     = {0};
 
     while (walk_next_module(&module) && (retVal == false)) {
         if (module.key.slot == slot && (module.key.location == location || module.key.location == locationMorph)) {
@@ -1439,63 +1439,68 @@ static bool input_connector_has_cable(uint32_t slot, uint32_t location,
 }
 
 void mouse_button(GLFWwindow * window, int button, int action, int mods) {
-    int      width    = 0;
-    int      height   = 0;
-    tCoord   coord    = {0};
-    bool     quitLoop = false;
-    bool     found    = false;
-    tModule  module   = {0};
-    uint32_t slot     = atomic_load(&gSlot);
-    uint32_t location = atomic_load(&gLocation);
+    int          width       = 0;
+    int          height      = 0;
+    tCoord       coord       = {0};
+    tMouseButton mouseButton = mouseButtonNone;
+    bool         quitLoop    = false;
+    bool         found       = false;
+    tModule      module      = {0};
+    uint32_t     slot        = atomic_load(&gSlot);
+    uint32_t     location    = atomic_load(&gLocation);
+    int32_t      i           = 0;
 
+    if (action == GLFW_PRESS) {
+        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+            mouseButton = mouseButtonLeftDown;
+        } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+            mouseButton = mouseButtonRightDown;
+        }
+    } else if (action == GLFW_RELEASE) {
+        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+            mouseButton = mouseButtonLeftUp;
+        } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+            mouseButton = mouseButtonRightUp;
+        }
+    }
     glfwGetWindowSize(window, &width, &height);
 
     get_global_gui_scaled_mouse_coord(&coord);
 
-    if (action == GLFW_PRESS) {
-        if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            found = false;
-
-            for (uint32_t i = 0; i < array_size_main_button_array(); i++) {
+    switch (mouseButton) {
+        case mouseButtonLeftDown:
+        {
+            // Button down should only ever deal with start of drag, or graphical indication of button down
+            // TODO - may want to gate on if (gContextMenu.active == false) {
+            for (i = 0; i < array_size_main_button_array(); i++) {
                 if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
                     found                         = true;
-                    gMainButtonArray[i].isPressed = true;
+                    gMainButtonArray[i].isPressed = true; // Used only to change button colour
                     break;
                 }
             }
 
             if (found == false) {
-                if (gContextMenu.active == false) {
-                    if (!handle_scrollbar_click(coord)) {
-                        handle_module_press(coord, button);
-                    }
+                if (handle_scrollbar_click(coord)) {
+                    found = true;
                 }
             }
-            tRectangle nameRect = {{180, 60},
-                                   {
-                                       get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT),
-                                       STANDARD_TEXT_HEIGHT
-                                   }};                       // TODO - Should really get this from the button
 
-            if (within_rectangle(coord, nameRect)) {
-                if (!gPatchNameEdit.active) {
-                    gPatchNameEdit.active = true;
-                    gPatchNameEdit.slot   = slot;
-                    patch_name_get(slot, gPatchNameEdit.buffer, sizeof(gPatchNameEdit.buffer));
+            if (found == false) {
+                if (handle_module_press(coord, button)) {
+                    found = true;
                 }
-            } else if (gPatchNameEdit.active) {
-                gPatchNameEdit.active = false;
             }
         }
-    } else if (action == GLFW_RELEASE) {
-        if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            found = false;
+        break;
 
-            for (uint32_t i = 0; i < array_size_main_button_array(); i++) {
+        case mouseButtonLeftUp:
+        {
+            for (i = 0; i < array_size_main_button_array(); i++) {
                 gMainButtonArray[i].isPressed = false;
             }
 
-            for (uint32_t i = 0; i < array_size_main_button_array(); i++) {
+            for (i = 0; i < array_size_main_button_array(); i++) {
                 if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
                     handle_button((tButtonId)i);
                     found = true;
@@ -1503,7 +1508,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             }
 
-            for (int i = 0; i < NUM_CABLE_COLOURS; i++) {
+            for (i = 0; i < NUM_CABLE_COLOURS; i++) {
                 if (within_rectangle(coord, gCableColourToggleRect[i])) {
                     uint32_t mask = atomic_load(&gHiddenCableMask);
                     mask ^= (1u << i);  // toggle bit
@@ -1542,6 +1547,21 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
+                tRectangle nameRect = {{180, 60},
+                                       {
+                                           get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT),
+                                           STANDARD_TEXT_HEIGHT
+                                       }};    // TODO - Should really get this from the button
+
+                if (within_rectangle(coord, nameRect)) {
+                    gPatchNameEdit.active = true;
+                    gPatchNameEdit.slot   = slot;
+                    patch_name_get(slot, gPatchNameEdit.buffer, sizeof(gPatchNameEdit.buffer));
+                    found                 = true;
+                }
+            }
+
+            if (found == false) {
                 if (gContextMenu.active == true) {
                     if (!handle_context_menu_click(coord)) {
                         gContextMenu.active = false;  // Close if clicked outside - TODO: think if this is the right thing to do here
@@ -1558,7 +1578,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
                     while (!quitLoop && walk_next_module(&toModule)) {
                         if (toModule.key.slot == slot && toModule.key.location == location) {
-                            for (int i = 0; i < module_connector_count(toModule.type); i++) {
+                            for (i = 0; i < module_connector_count(toModule.type); i++) {
                                 if (!within_rectangle(coord, toModule.connector[i].rectangle)) {
                                     continue;
                                 }
@@ -1606,40 +1626,54 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     finish_walk_module();
                     update_module_up_rates();
                 } else {
-                    handle_module_release(coord, button);
+                    if (handle_module_release(coord, button)) {
+                        found = true;
+                    }
+                }
+                stop_dragging();
+
+                if (found == false) {
+                    gPatchNameEdit.active = false; // TODO - implement stop_patch_name_editing to nullify structure?
                 }
             }
-        } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-            quitLoop = false;
-            found    = false;
+        }
+        break;
 
+        case mouseButtonRightUp:
+        {
             reset_walk_module();
 
-            while (!quitLoop && walk_next_module(&module)) {
+            while (!found && walk_next_module(&module)) {
                 if (module.key.slot == slot && module.key.location == location) {
-                    for (int i = 0; i < module_connector_count(module.type); i++) {
+                    for (i = 0; i < module_connector_count(module.type); i++) {
                         if (within_rectangle(coord, module.connector[i].rectangle)) {
                             open_connector_context_menu(coord, module.key, i);
-                            found    = true;
-                            quitLoop = true;
+                            found = true;
                             break;
                         }
                     }
 
-                    if (!found && within_rectangle(coord, module.rectangle)) {
-                        open_module_context_menu(coord, module.key);
-                        found    = true;
-                        quitLoop = true;
+                    if (!found) {
+                        if (within_rectangle(coord, module.rectangle)) {
+                            open_module_context_menu(coord, module.key);
+                            found = true;
+                        }
                     }
                 }
             }
+            finish_walk_module();
 
             if (!found) {
-                handle_module_area_click(coord, button);
+                if (handle_module_area_click(coord, button)) {
+                    found = true;
+                }
             }
-            finish_walk_module();
+            gPatchNameEdit.active = false;     // TODO - implement stop_patch_name_editing?
         }
-        stop_dragging();
+        break;
+
+        default:
+            break;
     }
     atomic_store(&gReDraw, true);
 }
@@ -1732,6 +1766,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                 }
                 break;
             case paramType3Mode:
+
                 // Not currently being used for anything, but could ultimately be. In some cases, could be better as a drop down menu
                 if (modeLocationList[module.mode[gParamDragging.mode].modeRef].type2 == paramType2Dial) {
                     angle = calculate_mouse_angle((tCoord){x, y}, module.mode[gParamDragging.mode].rectangle);                                                            // possible add half size

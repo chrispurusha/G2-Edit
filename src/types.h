@@ -235,6 +235,14 @@ typedef enum {
     moduleTypeMax
 } tModuleType;
 
+typedef enum {
+    mouseButtonNone,
+    mouseButtonLeftDown,
+    mouseButtonLeftUp,
+    mouseButtonRightDown,
+    mouseButtonRightUp
+} tMouseButton;
+
 typedef struct {
     uint8_t * buffPtr;
     uint32_t  buffSize;
