@@ -84,7 +84,7 @@ _Atomic bool           gCablesTransparent                           = false;
 _Atomic bool           gCablesHideAll                               = false;
 tRectangle             gHideAllCablesRect                           = {0};
 tRectangle             gTransparentCablesRect                       = {0};
-tRectangle             gPatchNameRectangle                          = {0};
+tRectangle             gPatchNameRectangle                          = {{180, 60}, {0, 0}};
 
 /* Stored here, but don't access directly, use functions to access instead */
 static char            gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1]   = {0};

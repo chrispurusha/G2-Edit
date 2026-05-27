@@ -714,7 +714,7 @@ void render_module(tModule * module) {
         // Highlight the drag area to show edit mode
         set_rgb_colour(RGB_WHITE);
         render_rectangle(moduleArea, {{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3},
-                             {get_text_width(LONGEST_MODULE_NAME, STANDARD_BUTTON_TEXT_HEIGHT) + 5, STANDARD_TEXT_HEIGHT + 2}});
+                             {get_text_width(LONGEST_MODULE_NAME, STANDARD_BUTTON_TEXT_HEIGHT) + 5, STANDARD_BUTTON_TEXT_HEIGHT + 2}});
 
         set_rgba_colour(RGBA_BLACK_ON_TRANSPARENT);
         render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0},

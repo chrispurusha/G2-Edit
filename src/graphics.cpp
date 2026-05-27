@@ -178,7 +178,7 @@ void render_top_bar(void) {
     static bool firstTimeRender                    = true;
 
     if (firstTimeRender == true) {
-        gPatchNameRectangle = {{180, 60}, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
+        gPatchNameRectangle = {gPatchNameRectangle.coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
         firstTimeRender     = false;
     }
     set_rgb_colour(RGB_GREY_5);
@@ -206,7 +206,7 @@ void render_top_bar(void) {
     }
 
     for (int i = 0; i < array_size_main_button_array(); i++) {
-        rectangle                     = {gMainButtonArray[i].coord, {get_text_width(gMainButtonArray[i].text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
+        rectangle                     = {gMainButtonArray[i].coord, {get_text_width(gMainButtonArray[i].text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
 
         switch (gMainButtonArray[i].anchor) {
             case anchorTopRight:
@@ -240,7 +240,7 @@ void render_top_bar(void) {
             break;
     }
     set_rgb_colour(commsStateColour);
-    rectangle        = {{200, 8}, {get_text_width("Offline", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
+    rectangle        = {{200, 8}, {get_text_width("Offline", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
     draw_button(mainArea, rectangle, commsStateText, commsStateColour);
 
     // Cable colour visibility toggles — 6 small squares
@@ -252,9 +252,9 @@ void render_top_bar(void) {
         double x      = 700.0 + (i * (get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT) + 5));
 
         if (hidden) {
-            gCableColourToggleRect[i] = draw_button(mainArea, {{x, 40.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, " ", colour);
+            gCableColourToggleRect[i] = draw_button(mainArea, {{x, 40.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, " ", colour);
         } else {
-            gCableColourToggleRect[i] = draw_button(mainArea, {{x, 40.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, "X", colour);
+            gCableColourToggleRect[i] = draw_button(mainArea, {{x, 40.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, "X", colour);
         }
     }
 
@@ -263,9 +263,9 @@ void render_top_bar(void) {
         double x      = 700.0 + (i * (get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT) + 5));
 
         if (i == gCableColour) {
-            gCableColourSelectRect[i] = draw_button(mainArea, {{x, 60}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, "X", colour);
+            gCableColourSelectRect[i] = draw_button(mainArea, {{x, 60}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, "X", colour);
         } else {
-            gCableColourSelectRect[i] = draw_button(mainArea, {{x, 60}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}}, " ", colour);
+            gCableColourSelectRect[i] = draw_button(mainArea, {{x, 60}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, " ", colour);
         }
     }
 
@@ -273,11 +273,11 @@ void render_top_bar(void) {
     bool transp  = atomic_load(&gCablesTransparent);
 
     gHideAllCablesRect     = draw_button(mainArea,
-                                         {{700, 20}, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}},
+                                         {{700, 20}, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
                                          "Hide", hideAll ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
     gTransparentCablesRect = draw_button(mainArea,
-                                         {{740, 20}, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}},
+                                         {{740, 20}, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
                                          "Dim", transp ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 }
 
