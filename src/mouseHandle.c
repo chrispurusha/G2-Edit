@@ -1630,7 +1630,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                         }
                     }
 
-                    if (!found && within_rectangle(coord, module.dragArea)) {
+                    if (!found && within_rectangle(coord, module.rectangle)) {
                         open_module_context_menu(coord, module.key);
                         found    = true;
                         quitLoop = true;
