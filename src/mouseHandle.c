@@ -257,7 +257,7 @@ void set_exclusive_button_highlight(tButtonId first, tButtonId last, tButtonId a
 }
 
 void init_patch(uint32_t slot) {  // Todo - think where this should really go
-    memset(&gPatchDescr[slot], 0, sizeof(tPatchDescr));
+    memset(&gPatchDescr[slot], 0, sizeof(gPatchDescr[0]));
     gPatchDescr[slot].voiceCount      = 1;
     gPatchDescr[slot].barPosition     = 600;
     gPatchDescr[slot].unknown3        = 2;   // unknown9 in Delphi
@@ -278,7 +278,6 @@ void init_patch(uint32_t slot) {  // Todo - think where this should really go
     gNote2Size[slot]                  = 0;
     gControllerCount[slot]            = 0; // Seems to default to 2, so might need to set up defaults
     gPatchNotesSize[slot]             = 0;
-    memset(&(gPatchDescr[slot]), 0, sizeof(gPatchDescr[0]));
     memset(&(gKnobArray[slot]), 0, sizeof(gKnobArray[0]));
     memset(gNote2[slot], 0, sizeof(gNote2[0]));
     memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
@@ -565,11 +564,12 @@ void menu_action_delete_cable(int index) {
 }
 
 void menu_action_delete_module(int index) {
-    tModule  module     = {0};
-    tCable   walk       = {0};
-    bool     deleteWalk = false;
-    uint32_t slot       = atomic_load(&gSlot);
-    uint32_t location   = atomic_load(&gLocation);
+    tModule         module         = {0};
+    tCable          walk           = {0};
+    bool            deleteWalk     = false;
+    uint32_t        slot           = atomic_load(&gSlot);
+    uint32_t        location       = atomic_load(&gLocation);
+    tMessageContent messageContent = {0};
 
     if (gContextMenu.moduleKey.slot == slot && gContextMenu.moduleKey.location == location) { // TODO - probably don't need to do this check?
         read_module(gContextMenu.moduleKey, &module);
@@ -587,8 +587,7 @@ void menu_action_delete_module(int index) {
                 }
 
                 if (deleteWalk == true) {
-                    tMessageContent messageContent = {0};
-
+                    memset(&messageContent, 0, sizeof(messageContent));
                     messageContent.cmd                            = eMsgCmdDeleteCable;
                     messageContent.slot                           = slot;
                     messageContent.cableData.location             = location;
@@ -605,9 +604,10 @@ void menu_action_delete_module(int index) {
             }
         }
         finish_walk_cable();
-        tMessageContent messageContent = {0};
 
+        memset(&messageContent, 0, sizeof(messageContent));
         messageContent.cmd                  = eMsgCmdDeleteModule;
+        messageContent.slot                 = slot;
         messageContent.moduleData.moduleKey = module.key;
 
         msg_send(&gCommandQueue, &messageContent);
@@ -1257,10 +1257,14 @@ bool handle_module_release(tCoord coord, int button) {
                     if (paramType2 == paramType2UpDown) {
                         range                              = paramLocationList[param->paramRef].range;
 
-                        if (within_lower_half_of_rectangle(coord, param->rectangle)) {
-                            param->value = (param->value - 1) % range;
+                        if (within_lower_half_of_rectangle(coord, param->rectangle)) {  // TODO - check this.
+                            if (param->value > 1) {
+                                param->value--;
+                            }
                         } else {
-                            param->value = (param->value + 1) % range;
+                            if (param->value < (range - 1)) {
+                                param->value++;
+                            }
                         }
                         write_module(module.key, &module);
 
@@ -1584,7 +1588,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
                                 messageContent.cmd                            = eMsgCmdWriteCable;
                                 messageContent.slot                           = slot;
-                                messageContent.cableData.location             = gLocation;
+                                messageContent.cableData.location             = location;
                                 messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
                                 messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
                                 messageContent.cableData.moduleToIndex        = cableKey.moduleToIndex;
