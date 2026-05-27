@@ -175,7 +175,12 @@ void render_top_bar(void) {
     tRgb        commsStateColour                   = RGB_RED_7;
     tRgb        buttonBackgroundColour             = (tRgb)RGB_BACKGROUND_GREY;
     uint32_t    slot                               = atomic_load(&gSlot);
+    static bool firstTimeRender                    = true;
 
+    if (firstTimeRender == true) {
+        gPatchNameRectangle = {{180, 60}, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
+        firstTimeRender     = false;
+    }
     set_rgb_colour(RGB_GREY_5);
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {(get_render_width() / GLOBAL_GUI_SCALE) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
 
@@ -195,14 +200,9 @@ void render_top_bar(void) {
         char displayBuf[PATCH_NAME_SIZE + 2] = {0};
         snprintf(displayBuf, sizeof(displayBuf), "%s|", gPatchNameEdit.buffer);
 
-        set_rgb_colour(RGB_WHITE);
-        rectangle = {{180, 60}, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT),
-                                 STANDARD_TEXT_HEIGHT}};               // Todo - need to store this rectangle definition somehwre global
-        draw_button(mainArea, rectangle, displayBuf, (tRgb)RGB_WHITE); // isPressed=true gives visual feedback
+        draw_button(mainArea, gPatchNameRectangle, displayBuf, (tRgb)RGB_WHITE);
     } else {
-        set_rgb_colour(RGB_BACKGROUND_GREY);
-        rectangle = {{180, 60}, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_TEXT_HEIGHT}};
-        draw_button(mainArea, rectangle, patchNameCopy, (tRgb)RGB_BACKGROUND_GREY);
+        draw_button(mainArea, gPatchNameRectangle, patchNameCopy, (tRgb)RGB_BACKGROUND_GREY);
     }
 
     for (int i = 0; i < array_size_main_button_array(); i++) {

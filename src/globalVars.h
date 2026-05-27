@@ -74,7 +74,7 @@ extern _Atomic bool        gCablesTransparent; // true = draw all cables semi-tr
 extern _Atomic bool        gCablesHideAll;     // true = hide all cables completely
 extern tRectangle          gHideAllCablesRect;
 extern tRectangle          gTransparentCablesRect;
-
+extern tRectangle          gPatchNameRectangle;
 
 uint32_t array_size_main_button_array(void);
 

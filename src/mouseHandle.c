@@ -1106,7 +1106,7 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     }
 }
 
-bool handle_module_press(tCoord coord, int button) {
+bool handle_module_press(tCoord coord, tMouseButton mouseButton) {
     bool        retVal     = false;
     uint32_t    paramCount = 0;
     tParamType2 paramType2 = paramType2Dial;
@@ -1134,7 +1134,7 @@ bool handle_module_press(tCoord coord, int button) {
             for (int i = 0; (i < paramCount) && (retVal == false); i++) {
                 tParam * param = &module.param[variation][i];
 
-                if (within_rectangle(coord, param->rectangle) && button == GLFW_MOUSE_BUTTON_LEFT) {
+                if (within_rectangle(coord, param->rectangle) && mouseButton == mouseButtonLeftDown) {
                     if (module.key.location == locationMorph) {      // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
                         if (i < NUM_MORPHS) {
                             paramType2 = paramType2Dial;
@@ -1165,7 +1165,7 @@ bool handle_module_press(tCoord coord, int button) {
                 for (int i = 0; (i < module.modeCount) && (retVal == false); i++) {
                     tMode * mode = &module.mode[i];
 
-                    if (within_rectangle(coord, module.mode[i].rectangle) && button == GLFW_MOUSE_BUTTON_LEFT) {
+                    if (within_rectangle(coord, module.mode[i].rectangle) && mouseButton == mouseButtonLeftDown) {
                         if ((modeLocationList[mode->modeRef].type2) == paramType2Dial) {
                             memset(&gParamDragging, 0, sizeof(gParamDragging));
                             gParamDragging.moduleKey = module.key;
@@ -1185,7 +1185,7 @@ bool handle_module_press(tCoord coord, int button) {
                     if (within_rectangle(coord, module.connector[i].rectangle)) {
                         gCableDrag.fromModuleKey = module.key;
 
-                        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+                        if (mouseButton == mouseButtonLeftDown) {
                             gCableDrag.fromConnectorIndex = i;
                             convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, coord);
                             gCableDrag.active             = true;
@@ -1197,7 +1197,7 @@ bool handle_module_press(tCoord coord, int button) {
 
             // Module drag area — start drag on press
             if (retVal == false) {
-                if (within_rectangle(coord, module.dragArea) && button == GLFW_MOUSE_BUTTON_LEFT) {
+                if (within_rectangle(coord, module.dragArea) && mouseButton == mouseButtonLeftDown) {
                     delete_module(module.key);
                     write_module(module.key, &module);
                     gModuleDrag.moduleKey = module.key;
@@ -1211,7 +1211,7 @@ bool handle_module_press(tCoord coord, int button) {
     return retVal;
 }
 
-bool handle_module_release(tCoord coord, int button) {
+bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
     bool        retVal     = false;
     uint32_t    paramCount = 0;
     tParamType2 paramType2 = paramType2Dial;
@@ -1244,7 +1244,7 @@ bool handle_module_release(tCoord coord, int button) {
             for (int i = 0; (i < paramCount) && (retVal == false); i++) {
                 tParam * param = &module.param[variation][i];
 
-                if (within_rectangle(coord, param->rectangle) && button == GLFW_MOUSE_BUTTON_LEFT) {
+                if (within_rectangle(coord, param->rectangle) && mouseButton == mouseButtonLeftUp) {
                     if (module.key.location == locationMorph) {  // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
                         if (i < NUM_MORPHS) {
                             paramType2 = paramType2Dial;
@@ -1306,7 +1306,7 @@ bool handle_module_release(tCoord coord, int button) {
                 for (int i = 0; (i < module.modeCount) && (retVal == false); i++) {
                     tMode * mode = &module.mode[i];
 
-                    if (within_rectangle(coord, module.mode[i].rectangle) && button == GLFW_MOUSE_BUTTON_LEFT) {
+                    if (within_rectangle(coord, module.mode[i].rectangle) && mouseButton == mouseButtonLeftUp) {
                         if ((modeLocationList[mode->modeRef].type2) != paramType2Dial) {
                             mode->value                       = (mode->value + 1) % modeLocationList[mode->modeRef].range;
                             write_module(module.key, &module);
@@ -1419,11 +1419,11 @@ void stop_dragging(void) {
 void stop_patch_name_editing(void) {
     memset(&gPatchNameEdit, 0, sizeof(gPatchNameEdit));
 }
-    
+
 void stop_module_name_editing(void) {
     memset(&gModuleNameEdit, 0, sizeof(gModuleNameEdit));
 }
-    
+
 static bool input_connector_has_cable(uint32_t slot, uint32_t location,
                                       uint32_t moduleIndex, uint32_t ioCount) {
     tCable cable = {0};
@@ -1446,14 +1446,68 @@ static bool input_connector_has_cable(uint32_t slot, uint32_t location,
     return found;
 }
 
-void mouse_button(GLFWwindow * window, int button, int action, int mods) {
-    tCoord       coord       = {0};
+bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {
+    bool      found      = false;
+    int32_t   i          = 0;
+    tModule   fromModule = {0};
+    tModule   toModule   = {0};
+    tCableKey cableKey   = {0};
+    tCable    cable      = {0};
+
+    reset_walk_module();
+
+    while (found == false && walk_next_module(&toModule)) {
+        if (toModule.key.slot == slot && toModule.key.location == location) {
+            for (i = 0; i < module_connector_count(toModule.type); i++) {
+                if (within_rectangle(coord, toModule.connector[i].rectangle) == true) {
+                    found                                         = true;
+                    read_module(gCableDrag.fromModuleKey, &fromModule);
+                    set_up_cable_key(&cableKey, &fromModule, &toModule, i);
+
+                    swap_cable_to_from_if_needed(&cableKey, &fromModule, &toModule, i);
+
+                    // Prevent self-connections and invalid connections
+                    if (  (cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i)
+                       || (  fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
+                          && toModule.connector[i].dir == connectorDirOut)) {
+                        break;
+                    }
+
+                    // Note that this call will walk the cables, which we can't nest
+                    if (input_connector_has_cable(slot, location,
+                                                  cableKey.moduleToIndex,
+                                                  cableKey.connectorToIoCount)) {
+                        break;
+                    }
+                    cable.colour                                  = gCableColour;
+                    write_cable(cableKey, &cable);
+
+                    tMessageContent messageContent = {0};
+
+                    messageContent.cmd                            = eMsgCmdWriteCable;
+                    messageContent.slot                           = slot;
+                    messageContent.cableData.location             = location;
+                    messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
+                    messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
+                    messageContent.cableData.moduleToIndex        = cableKey.moduleToIndex;
+                    messageContent.cableData.connectorToIoIndex   = cableKey.connectorToIoCount;
+                    messageContent.cableData.linkType             = cableKey.linkType;
+                    messageContent.cableData.colour               = cable.colour;
+                    msg_send(&gCommandQueue, &messageContent);
+
+                    break;
+                }
+            }
+        }
+    }
+    finish_walk_module();
+    update_module_up_rates();
+
+    return found;
+}
+
+tMouseButton convert_to_mouse_button(int button, int action) {
     tMouseButton mouseButton = mouseButtonNone;
-    bool         found       = false;
-    tModule      module      = {0};
-    int32_t      i           = 0;
-    uint32_t     slot        = atomic_load(&gSlot);
-    uint32_t     location    = atomic_load(&gLocation);
 
     if (action == GLFW_PRESS) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -1468,12 +1522,25 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             mouseButton = mouseButtonRightUp;
         }
     }
+    return mouseButton;
+}
+
+void mouse_button(GLFWwindow * window, int button, int action, int mods) {
+    tCoord       coord       = {0};
+    tMouseButton mouseButton = mouseButtonNone;
+    bool         found       = false;
+    tModule      module      = {0};
+    int32_t      i           = 0;
+    uint32_t     slot        = atomic_load(&gSlot);
+    uint32_t     location    = atomic_load(&gLocation);
+
+    mouseButton = convert_to_mouse_button(button, action);
 
     get_global_gui_scaled_mouse_coord(&coord);
 
     stop_patch_name_editing();
     stop_module_name_editing();
-    
+
     switch (mouseButton) {
         case mouseButtonLeftDown:
         {
@@ -1494,7 +1561,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                if (handle_module_press(coord, button)) {
+                if (handle_module_press(coord, mouseButton)) {
                     found = true;
                 }
             }
@@ -1516,7 +1583,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     }
                 }
             }
-            
+
             if (found == false) {
                 for (i = 0; i < array_size_main_button_array(); i++) {
                     if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
@@ -1572,88 +1639,32 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                tRectangle nameRect = {{180, 60},
-                                       {
-                                           get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT),
-                                           STANDARD_TEXT_HEIGHT
-                                       }};    // TODO - Should really get this from the button
-
-                if (within_rectangle(coord, nameRect)) {
+                if (within_rectangle(coord, gPatchNameRectangle)) {
                     gPatchNameEdit.active = true;
                     gPatchNameEdit.slot   = slot;
                     patch_name_get(slot, gPatchNameEdit.buffer, sizeof(gPatchNameEdit.buffer));
                     found                 = true;
                 }
             }
-            
+
             if (found == false) {
                 if (gModuleDrag.active == true) {
                     shift_modules_down(gModuleDrag.moduleKey);
                     found = true;
                 }
             }
-            
+
             if (found == false) {
                 if (gCableDrag.active) {
-                    tModule   fromModule = {0}; // TODO - move this block into a new function
-                    tModule   toModule   = {0};
-                    tCableKey cableKey   = {0};
-                    tCable    cable      = {0};
-
-                    reset_walk_module();
-
-                    while (found == false && walk_next_module(&toModule)) {
-                        if (toModule.key.slot == slot && toModule.key.location == location) {
-                            for (i = 0; i < module_connector_count(toModule.type); i++) {
-                                if (within_rectangle(coord, toModule.connector[i].rectangle) == true) {
-                                    found = true;
-                                    read_module(gCableDrag.fromModuleKey, &fromModule);
-                                    set_up_cable_key(&cableKey, &fromModule, &toModule, i);
-                                    
-                                    swap_cable_to_from_if_needed(&cableKey, &fromModule, &toModule, i);
-                                    
-                                    // Prevent self-connections and invalid connections
-                                    if (  (cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i)
-                                        || (  fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
-                                            && toModule.connector[i].dir == connectorDirOut)) {
-                                        break;
-                                    }
-                                    
-                                    // Note that this call will walk the cables, which we can't nest
-                                    if (input_connector_has_cable(slot, location,
-                                                                  cableKey.moduleToIndex,
-                                                                  cableKey.connectorToIoCount)) {
-                                        break;
-                                    }
-                                    cable.colour                                  = gCableColour;
-                                    write_cable(cableKey, &cable);
-                                    
-                                    tMessageContent messageContent = {0};
-                                    
-                                    messageContent.cmd                            = eMsgCmdWriteCable;
-                                    messageContent.slot                           = slot;
-                                    messageContent.cableData.location             = location;
-                                    messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
-                                    messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
-                                    messageContent.cableData.moduleToIndex        = cableKey.moduleToIndex;
-                                    messageContent.cableData.connectorToIoIndex   = cableKey.connectorToIoCount;
-                                    messageContent.cableData.linkType             = cableKey.linkType;
-                                    messageContent.cableData.colour               = cable.colour;
-                                    msg_send(&gCommandQueue, &messageContent);
-                                    
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    finish_walk_module();
-                    update_module_up_rates();
-                }
-                
-                if (found == false) {
-                    if (handle_module_release(coord, button)) {
+                    if (handle_cable_connect(coord, slot, location) == true) {
                         found = true;
                     }
+                }
+            }
+
+            if (found == false) {
+                if (handle_module_release(coord, mouseButton) == true) {
+                    found = true;
                 }
             }
             stop_dragging();
@@ -1662,10 +1673,12 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
         case mouseButtonRightDown:
         {
+            // Currently no use for right button down
+
             stop_dragging();
         }
         break;
-            
+
         case mouseButtonRightUp:
         {
             reset_walk_module();
@@ -1695,7 +1708,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     found = true;
                 }
             }
-            
             stop_dragging();
         }
         break;
