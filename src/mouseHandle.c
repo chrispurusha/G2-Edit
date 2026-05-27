@@ -1416,6 +1416,14 @@ void stop_dragging(void) {
     memset(&gCableDrag, 0, sizeof(gCableDrag));
 }
 
+void stop_patch_name_editing(void) {
+    memset(&gPatchNameEdit, 0, sizeof(gPatchNameEdit));
+}
+    
+void stop_module_name_editing(void) {
+    memset(&gModuleNameEdit, 0, sizeof(gModuleNameEdit));
+}
+    
 static bool input_connector_has_cable(uint32_t slot, uint32_t location,
                                       uint32_t moduleIndex, uint32_t ioCount) {
     tCable cable = {0};
@@ -1439,16 +1447,13 @@ static bool input_connector_has_cable(uint32_t slot, uint32_t location,
 }
 
 void mouse_button(GLFWwindow * window, int button, int action, int mods) {
-    int          width       = 0;
-    int          height      = 0;
     tCoord       coord       = {0};
     tMouseButton mouseButton = mouseButtonNone;
-    bool         quitLoop    = false;
     bool         found       = false;
     tModule      module      = {0};
+    int32_t      i           = 0;
     uint32_t     slot        = atomic_load(&gSlot);
     uint32_t     location    = atomic_load(&gLocation);
-    int32_t      i           = 0;
 
     if (action == GLFW_PRESS) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -1463,15 +1468,17 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             mouseButton = mouseButtonRightUp;
         }
     }
-    glfwGetWindowSize(window, &width, &height);
 
     get_global_gui_scaled_mouse_coord(&coord);
 
+    stop_patch_name_editing();
+    stop_module_name_editing();
+    
     switch (mouseButton) {
         case mouseButtonLeftDown:
         {
             // Button down should only ever deal with start of drag, or graphical indication of button down
-            // TODO - may want to gate on if (gContextMenu.active == false) {
+
             for (i = 0; i < array_size_main_button_array(); i++) {
                 if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
                     found                         = true;
@@ -1500,29 +1507,47 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 gMainButtonArray[i].isPressed = false;
             }
 
-            for (i = 0; i < array_size_main_button_array(); i++) {
-                if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
-                    handle_button((tButtonId)i);
-                    found = true;
-                    break;
+            if (found == false) {
+                if (gContextMenu.active == true) {
+                    if (handle_context_menu_click(coord)) {
+                        found = true;
+                    } else {
+                        gContextMenu.active = false;  // Close if clicked outside - TODO: think if this is the right thing to do here
+                    }
+                }
+            }
+            
+            if (found == false) {
+                for (i = 0; i < array_size_main_button_array(); i++) {
+                    if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
+                        handle_button((tButtonId)i);
+                        found = true;
+                        break;
+                    }
                 }
             }
 
-            for (i = 0; i < NUM_CABLE_COLOURS; i++) {
-                if (within_rectangle(coord, gCableColourToggleRect[i])) {
-                    uint32_t mask = atomic_load(&gHiddenCableMask);
-                    mask ^= (1u << i);  // toggle bit
-                    atomic_store(&gHiddenCableMask, mask);
-                    atomic_store(&gReDraw, true);
-                    found = true;
-                    break;
+            if (found == false) {
+                for (i = 0; i < NUM_CABLE_COLOURS; i++) {
+                    if (within_rectangle(coord, gCableColourToggleRect[i])) {
+                        uint32_t mask = atomic_load(&gHiddenCableMask);
+                        mask ^= (1u << i);  // toggle bit
+                        atomic_store(&gHiddenCableMask, mask);
+                        atomic_store(&gReDraw, true);
+                        found = true;
+                        break;
+                    }
                 }
+            }
 
-                if (within_rectangle(coord, gCableColourSelectRect[i])) {
-                    gCableColour = i;
-                    atomic_store(&gReDraw, true);
-                    found        = true;
-                    break;
+            if (found == false) {
+                for (i = 0; i < NUM_CABLE_COLOURS; i++) {
+                    if (within_rectangle(coord, gCableColourSelectRect[i])) {
+                        gCableColour = i;
+                        atomic_store(&gReDraw, true);
+                        found        = true;
+                        break;
+                    }
                 }
             }
 
@@ -1560,90 +1585,92 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     found                 = true;
                 }
             }
-
+            
             if (found == false) {
-                if (gContextMenu.active == true) {
-                    if (!handle_context_menu_click(coord)) {
-                        gContextMenu.active = false;  // Close if clicked outside - TODO: think if this is the right thing to do here
-                    }
-                } else if (gModuleDrag.active == true) {
+                if (gModuleDrag.active == true) {
                     shift_modules_down(gModuleDrag.moduleKey);
-                } else if (gCableDrag.active) {
-                    tModule   fromModule = {0};
+                    found = true;
+                }
+            }
+            
+            if (found == false) {
+                if (gCableDrag.active) {
+                    tModule   fromModule = {0}; // TODO - move this block into a new function
                     tModule   toModule   = {0};
                     tCableKey cableKey   = {0};
                     tCable    cable      = {0};
 
                     reset_walk_module();
 
-                    while (!quitLoop && walk_next_module(&toModule)) {
+                    while (found == false && walk_next_module(&toModule)) {
                         if (toModule.key.slot == slot && toModule.key.location == location) {
                             for (i = 0; i < module_connector_count(toModule.type); i++) {
-                                if (!within_rectangle(coord, toModule.connector[i].rectangle)) {
-                                    continue;
-                                }
-                                read_module(gCableDrag.fromModuleKey, &fromModule);
-                                set_up_cable_key(&cableKey, &fromModule, &toModule, i);
-
-                                swap_cable_to_from_if_needed(&cableKey, &fromModule, &toModule, i);
-
-                                // Prevent self-connections and invalid connections
-                                if (  (cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i)
-                                   || (  fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
-                                      && toModule.connector[i].dir == connectorDirOut)) {
-                                    quitLoop = true;
+                                if (within_rectangle(coord, toModule.connector[i].rectangle) == true) {
+                                    found = true;
+                                    read_module(gCableDrag.fromModuleKey, &fromModule);
+                                    set_up_cable_key(&cableKey, &fromModule, &toModule, i);
+                                    
+                                    swap_cable_to_from_if_needed(&cableKey, &fromModule, &toModule, i);
+                                    
+                                    // Prevent self-connections and invalid connections
+                                    if (  (cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i)
+                                        || (  fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
+                                            && toModule.connector[i].dir == connectorDirOut)) {
+                                        break;
+                                    }
+                                    
+                                    // Note that this call will walk the cables, which we can't nest
+                                    if (input_connector_has_cable(slot, location,
+                                                                  cableKey.moduleToIndex,
+                                                                  cableKey.connectorToIoCount)) {
+                                        break;
+                                    }
+                                    cable.colour                                  = gCableColour;
+                                    write_cable(cableKey, &cable);
+                                    
+                                    tMessageContent messageContent = {0};
+                                    
+                                    messageContent.cmd                            = eMsgCmdWriteCable;
+                                    messageContent.slot                           = slot;
+                                    messageContent.cableData.location             = location;
+                                    messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
+                                    messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
+                                    messageContent.cableData.moduleToIndex        = cableKey.moduleToIndex;
+                                    messageContent.cableData.connectorToIoIndex   = cableKey.connectorToIoCount;
+                                    messageContent.cableData.linkType             = cableKey.linkType;
+                                    messageContent.cableData.colour               = cable.colour;
+                                    msg_send(&gCommandQueue, &messageContent);
+                                    
                                     break;
                                 }
-
-                                // Note that this call will walk the cables, which we can't nest
-                                if (input_connector_has_cable(slot, location,
-                                                              cableKey.moduleToIndex,
-                                                              cableKey.connectorToIoCount)) {
-                                    quitLoop = true;
-                                    break;
-                                }
-                                cable.colour                                  = gCableColour;
-                                write_cable(cableKey, &cable);
-
-                                tMessageContent messageContent = {0};
-
-                                messageContent.cmd                            = eMsgCmdWriteCable;
-                                messageContent.slot                           = slot;
-                                messageContent.cableData.location             = location;
-                                messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
-                                messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
-                                messageContent.cableData.moduleToIndex        = cableKey.moduleToIndex;
-                                messageContent.cableData.connectorToIoIndex   = cableKey.connectorToIoCount;
-                                messageContent.cableData.linkType             = cableKey.linkType;
-                                messageContent.cableData.colour               = cable.colour;
-                                msg_send(&gCommandQueue, &messageContent);
-
-                                quitLoop                                      = true;
-                                break;
                             }
                         }
                     }
                     finish_walk_module();
                     update_module_up_rates();
-                } else {
+                }
+                
+                if (found == false) {
                     if (handle_module_release(coord, button)) {
                         found = true;
                     }
                 }
-                stop_dragging();
-
-                if (found == false) {
-                    gPatchNameEdit.active = false; // TODO - implement stop_patch_name_editing to nullify structure?
-                }
             }
+            stop_dragging();
         }
         break;
 
+        case mouseButtonRightDown:
+        {
+            stop_dragging();
+        }
+        break;
+            
         case mouseButtonRightUp:
         {
             reset_walk_module();
 
-            while (!found && walk_next_module(&module)) {
+            while (found == false && walk_next_module(&module)) {
                 if (module.key.slot == slot && module.key.location == location) {
                     for (i = 0; i < module_connector_count(module.type); i++) {
                         if (within_rectangle(coord, module.connector[i].rectangle)) {
@@ -1653,7 +1680,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                         }
                     }
 
-                    if (!found) {
+                    if (found == false) {
                         if (within_rectangle(coord, module.rectangle)) {
                             open_module_context_menu(coord, module.key);
                             found = true;
@@ -1663,12 +1690,13 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
             finish_walk_module();
 
-            if (!found) {
+            if (found == false) {
                 if (handle_module_area_click(coord, button)) {
                     found = true;
                 }
             }
-            gPatchNameEdit.active = false;     // TODO - implement stop_patch_name_editing?
+            
+            stop_dragging();
         }
         break;
 
