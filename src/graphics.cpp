@@ -192,8 +192,8 @@ void render_top_bar(void) {
     if (patchNameCopy[0] == '\0') {
         strncpy(patchNameCopy, "---", PATCH_NAME_SIZE);
     }
-    set_rgb_colour(RGB_BLACK);
-    render_text(mainArea, {{180, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Patch Name");
+    //set_rgb_colour(RGB_BLACK);
+    //render_text(mainArea, {{80, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Patch Name");
 
     if (gPatchNameEdit.active && gPatchNameEdit.slot == slot) {
         // Show edit buffer with cursor
@@ -240,7 +240,7 @@ void render_top_bar(void) {
             break;
     }
     set_rgb_colour(commsStateColour);
-    rectangle        = {{200, 8}, {get_text_width("Offline", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
+    rectangle        = {{220, 8}, {get_text_width("Offline", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
     draw_button(mainArea, rectangle, commsStateText, commsStateColour);
 
     // Cable colour visibility toggles — 6 small squares

@@ -34,7 +34,7 @@ tButton                gMainButtonArray[] = { // Must align with tButtonId enuma
     {{400,  8}, NULL_RECTANGLE, anchorTopLeft, "VA",         RGB_GREEN_ON,        false},
     {{425,  8}, NULL_RECTANGLE, anchorTopLeft, "FX",         RGB_BACKGROUND_GREY, false},
     {{ 20,  8}, NULL_RECTANGLE, anchorTopLeft, "Read File",  RGB_BACKGROUND_GREY, false},
-    {{ 20, 28}, NULL_RECTANGLE, anchorTopLeft, "Write File", RGB_BACKGROUND_GREY, false},
+    {{ 80,  8}, NULL_RECTANGLE, anchorTopLeft, "Write File", RGB_BACKGROUND_GREY, false},
     {{400, 60}, NULL_RECTANGLE, anchorTopLeft, "1",          RGB_GREEN_ON,        false},
     {{412, 60}, NULL_RECTANGLE, anchorTopLeft, "2",          RGB_BACKGROUND_GREY, false},
     {{424, 60}, NULL_RECTANGLE, anchorTopLeft, "3",          RGB_BACKGROUND_GREY, false},
@@ -48,7 +48,7 @@ tButton                gMainButtonArray[] = { // Must align with tButtonId enuma
     {{615,  8}, NULL_RECTANGLE, anchorTopLeft, "B",          RGB_BACKGROUND_GREY, false},
     {{630,  8}, NULL_RECTANGLE, anchorTopLeft, "C",          RGB_BACKGROUND_GREY, false},
     {{645,  8}, NULL_RECTANGLE, anchorTopLeft, "D",          RGB_BACKGROUND_GREY, false},
-    {{ 80,  8}, NULL_RECTANGLE, anchorTopLeft, "New Patch",  RGB_BACKGROUND_GREY, false},
+    {{140,  8}, NULL_RECTANGLE, anchorTopLeft, "New Patch",  RGB_BACKGROUND_GREY, false},
 };
 
 bool                   gShowOpenFileReadDialogue                    = false;
@@ -84,7 +84,7 @@ _Atomic bool           gCablesTransparent                           = false;
 _Atomic bool           gCablesHideAll                               = false;
 tRectangle             gHideAllCablesRect                           = {0};
 tRectangle             gTransparentCablesRect                       = {0};
-tRectangle             gPatchNameRectangle                          = {{180, 60}, {0, 0}};
+tRectangle             gPatchNameRectangle                          = {{20, 60}, {0, 0}};
 
 /* Stored here, but don't access directly, use functions to access instead */
 static char            gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1]   = {0};

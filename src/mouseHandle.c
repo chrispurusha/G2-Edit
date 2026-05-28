@@ -783,16 +783,18 @@ void action_set_module_colour(int index) {
 
 void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static structures into a module like globalVars.c
     static tMenuItem ioMenuItems[]   = {
-        {"Create Keyboard", RGB_GREY_3, menu_action_create, moduleTypeKeyboard, NULL},
-        {"Create 2-In",     RGB_GREY_3, menu_action_create, moduleType2toIn,    NULL},
-        {"Create 4-In",     RGB_GREY_3, menu_action_create, moduleType4toIn,    NULL},
-        {"Create 2-Out",    RGB_GREY_3, menu_action_create, moduleType2toOut,   NULL},
-        {"Create 4-Out",    RGB_GREY_3, menu_action_create, moduleType4toOut,   NULL},
-        {"Create Device",   RGB_GREY_3, menu_action_create, moduleTypeDevice,   NULL},
-        {"Create MonoKey",  RGB_GREY_3, menu_action_create, moduleTypeMonoKey,  NULL},
-        {"Create Status",   RGB_GREY_3, menu_action_create, moduleTypeStatus,   NULL},
-        {"Create Name Bar", RGB_GREY_3, menu_action_create, moduleTypeName,     NULL},
-        {NULL,              RGB_BLACK,  NULL,                                0, NULL}        // End of menu
+        {"2 Outputs",           RGB_GREY_3, menu_action_create, moduleType2toOut,   NULL},
+        {"4 Outputs",           RGB_GREY_3, menu_action_create, moduleType4toOut,   NULL},
+        {"2 Inputs",            RGB_GREY_3, menu_action_create, moduleType2toIn,    NULL},
+        {"4 Inputs",            RGB_GREY_3, menu_action_create, moduleType4toIn,    NULL},
+        {"FX Input",            RGB_GREY_3, menu_action_create, moduleTypeFxtoIn,   NULL},
+        {"Keyboard",            RGB_GREY_3, menu_action_create, moduleTypeKeyboard, NULL},
+        {"Monophonic Keyboard", RGB_GREY_3, menu_action_create, moduleTypeMonoKey,  NULL},
+        {"Device",              RGB_GREY_3, menu_action_create, moduleTypeDevice,   NULL},
+        {"Status",              RGB_GREY_3, menu_action_create, moduleTypeStatus,   NULL},
+        {"Note Detector",       RGB_GREY_3, menu_action_create, moduleTypeNoteDet,  NULL},
+        {"Name Bar",            RGB_GREY_3, menu_action_create, moduleTypeName,     NULL},
+        {NULL,                  RGB_BLACK,  NULL,                                0, NULL}    // End of menu
     };
     static tMenuItem noteMenuItems[] = {
         {"Create Glide",      RGB_GREY_3, menu_action_create, moduleTypeGlide,      NULL},
@@ -925,10 +927,12 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {NULL,              RGB_BLACK,  NULL,                                 0, NULL}       // End of menu
     };
     static tMenuItem seqMenuItems[]    = {
-        {"Create SeqEvent", RGB_GREY_3, menu_action_create, moduleTypeSeqEvent, NULL},
-        {"Create SeqNote",  RGB_GREY_3, menu_action_create, moduleTypeSeqNote,  NULL},
-        {"Create SeqVal",   RGB_GREY_3, menu_action_create, moduleTypeSeqVal,   NULL},
-        {NULL,              RGB_BLACK,  NULL,                                0, NULL}        // End of menu
+        {"Sequencer Event",      RGB_GREY_3, menu_action_create, moduleTypeSeqEvent, NULL},
+        {"Sequencer Values",     RGB_GREY_3, menu_action_create, moduleTypeSeqVal,   NULL},
+        {"Sequencer Level",      RGB_GREY_3, menu_action_create, moduleTypeSeqLev,   NULL},
+        {"Sequencer Note",       RGB_GREY_3, menu_action_create, moduleTypeSeqNote,  NULL},
+        {"Sequencer Controlled", RGB_GREY_3, menu_action_create, moduleTypeSeqCtr,   NULL},
+        {NULL,                   RGB_BLACK,  NULL,                                0, NULL}   // End of menu
     };
     static tMenuItem shaperMenuItems[] = {
         {"Create Saturate",  RGB_GREY_3, menu_action_create, moduleTypeSaturate,  NULL},
