@@ -547,12 +547,14 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_ASSIGNED_VOICES:
         {
+            int i = 0;
             LOG_DEBUG("Got assigned voices response\n");
-            gAssignedVoices[0] = read_bit_stream(buff, bitPos, 8);
-            gAssignedVoices[1] = read_bit_stream(buff, bitPos, 8);
-            gAssignedVoices[2] = read_bit_stream(buff, bitPos, 8);
-            gAssignedVoices[3] = read_bit_stream(buff, bitPos, 8);
-            *unsolicited       = true;
+
+            for (i = 0; i < MAX_SLOTS; i++) {
+                gAssignedVoices[i] = read_bit_stream(buff, bitPos, 8);
+            }
+
+            *unsolicited = true;
             return EXIT_SUCCESS;
         }
 
@@ -1274,7 +1276,6 @@ static int send_set_patch_descr(uint32_t slot) { // Note - currently using value
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     int      pos                     = COMMAND_OFFSET;
     uint32_t bitPos                  = 0;
-    int      i                       = 0;
     int      retVal                  = EXIT_FAILURE;
     int      response                = SUB_RESPONSE_ERROR;
 
@@ -1292,7 +1293,15 @@ static int send_set_patch_descr(uint32_t slot) { // Note - currently using value
 
         if (response != SUB_RESPONSE_OK) {
             LOG_DEBUG("SET PATCH DESCR = 0x%02x\n", response);
-            retVal = EXIT_FAILURE;
+            gPatchDescr[slot].voiceCount--; // TODO - Note - Should only do if specifically updating voice count, so might need a specific msg queue message for that
+
+            tMessageContent messageContent = {0};
+
+            messageContent.cmd  = eMsgCmdWritePatchDescr;
+            messageContent.slot = slot;
+            msg_send(&gCommandQueue, &messageContent);
+
+            retVal              = EXIT_FAILURE;
         }
     }
     return retVal;

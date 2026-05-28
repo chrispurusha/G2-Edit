@@ -179,10 +179,11 @@ void render_top_bar(void) {
     static bool firstTimeRender                    = true;
 
     if (firstTimeRender == true) {
-        gPatchNameRectangle = {gPatchNameRectangle.coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
-        gPatchTypeRectangle = {gPatchTypeRectangle.coord, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
-        gMonoPolyRectangle  = {gMonoPolyRectangle.coord, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
-        firstTimeRender     = false;
+        gPatchNameRectangle  = {gPatchNameRectangle.coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
+        gPatchTypeRectangle  = {gPatchTypeRectangle.coord, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
+        gVoiceCountRectangle = {gVoiceCountRectangle.coord, {get_text_width("32", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
+        gMonoPolyRectangle   = {gMonoPolyRectangle.coord, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
+        firstTimeRender      = false;
     }
     set_rgb_colour(RGB_GREY_5);
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {(get_render_width() / GLOBAL_GUI_SCALE) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
@@ -211,8 +212,9 @@ void render_top_bar(void) {
     draw_button(mainArea, gMonoPolyRectangle, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], (tRgb)RGB_BACKGROUND_GREY);
 
     snprintf(voiceCountStr, sizeof(voiceCountStr), "%u", gPatchDescr[slot].voiceCount + 1);
-    render_text(mainArea, {{gVoiceDialRect.coord.x + 2, gVoiceDialRect.coord.y - 12}, {NULL, STANDARD_TEXT_HEIGHT}}, voiceCountStr);
-    render_dial(mainArea, gVoiceDialRect, gPatchDescr[slot].voiceCount + 1, 32, 0, RGB_GREY_7);
+    draw_button(mainArea, gVoiceCountRectangle, voiceCountStr, (tRgb)RGB_BACKGROUND_GREY);
+    //render_text(mainArea, {{gVoiceDialRect.coord.x + 2, gVoiceDialRect.coord.y - 12}, {NULL, STANDARD_TEXT_HEIGHT}}, voiceCountStr);
+    //render_dial(mainArea, gVoiceDialRect, gPatchDescr[slot].voiceCount + 1, 32, 0, RGB_GREY_7);
 
     snprintf(voiceCountStr, sizeof(voiceCountStr), "%u", gAssignedVoices[slot]);
     render_text(mainArea, {{300, 40}, {NULL, STANDARD_TEXT_HEIGHT}}, voiceCountStr);

@@ -1459,7 +1459,6 @@ void stop_dragging(void) {
     memset(&gModuleDrag, 0, sizeof(gModuleDrag));
     memset(&gParamDragging, 0, sizeof(gParamDragging));
     memset(&gCableDrag, 0, sizeof(gCableDrag));
-    gVoiceDialDragging        = false;
 }
 
 void stop_patch_name_editing(void) {
@@ -1611,13 +1610,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     found = true;
                 }
             }
-
-            if (found == false) {
-                if (within_rectangle(coord, gVoiceDialRect)) {
-                    gVoiceDialDragging = true;
-                    found              = true;
-                }
-            }
         }
         break;
 
@@ -1725,6 +1717,23 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
+                if (within_rectangle(coord, gVoiceCountRectangle)) {
+                    tMessageContent messageContent = {0};
+                    uint32_t        voiceCount     = gPatchDescr[slot].voiceCount;
+                    voiceCount++;
+
+                    if (voiceCount >= 32) {
+                        voiceCount = 1;
+                    }
+                    gPatchDescr[slot].voiceCount = voiceCount;
+                    messageContent.cmd           = eMsgCmdWritePatchDescr;
+                    messageContent.slot          = slot;
+                    msg_send(&gCommandQueue, &messageContent);
+                    found                        = true;
+                }
+            }
+
+            if (found == false) {
                 if (gModuleDrag.active == true) {
                     shift_modules_down(gModuleDrag.moduleKey);
                     found = true;
@@ -1823,13 +1832,14 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         set_y_scroll_bar(y);
     } else if (gScrollState.xBarDragging == true) {
         set_x_scroll_bar(x);
-    } else if (gVoiceDialDragging == true) {
-        angle                        = calculate_mouse_angle((tCoord){x, y}, gVoiceDialRect);
-        value                        = angle_to_value(angle, 31);
-        gPatchDescr[slot].voiceCount = value + 1; // Note G2 won't let me set less than a value of 1, can't set to zero for zero based
-        messageContent.cmd           = eMsgCmdWritePatchDescr;
-        messageContent.slot          = slot;
-        msg_send(&gCommandQueue, &messageContent);
+        //} else if (gVoiceDialDragging == true) {  // Use this for patch level...?
+        //
+        //angle                        = calculate_mouse_angle((tCoord){x, y}, gVoiceDialRect);
+        //value                        = angle_to_value(angle, 31);
+        //gPatchDescr[slot].voiceCount = value + 1; // Note G2 won't let me set less than a value of 1, can't set to zero for zero based
+        //messageContent.cmd           = eMsgCmdWritePatchDescr;
+        // messageContent.slot          = slot;
+        // msg_send(&gCommandQueue, &messageContent);
     } else if (gParamDragging.active == true) {
         read_module(gParamDragging.moduleKey, &module);
 

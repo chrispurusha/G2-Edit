@@ -90,8 +90,7 @@ tRectangle             gHideAllCablesRect                           = {0};
 tRectangle             gTransparentCablesRect                       = {0};
 tRectangle             gPatchNameRectangle                          = {{20, 60}, {0, 0}};
 tRectangle             gPatchTypeRectangle                          = {{170, 60}, {0, 0}};  // TODO - potentially roll these non-standard buttons into the main button mechanism with special types
-tRectangle             gVoiceDialRect                               = {{245, 58}, {18, 18}};
-bool                   gVoiceDialDragging                           = false;
+tRectangle             gVoiceCountRectangle                         = {{245, 60}, {0, 0}};
 tRectangle             gMonoPolyRectangle                           = {{270, 60}, {0, 0}};
 
 /* Stored here, but don't access directly, use functions to access instead */
