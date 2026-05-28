@@ -205,7 +205,6 @@ void render_top_bar(void) {
     } else {
         draw_button(mainArea, gPatchNameRectangle, patchNameCopy, (tRgb)RGB_BACKGROUND_GREY);
     }
-    
     draw_button(mainArea, gPatchTypeRectangle, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
 
     for (int i = 0; i < array_size_main_button_array(); i++) {

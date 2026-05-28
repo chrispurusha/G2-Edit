@@ -393,11 +393,6 @@ void handle_button(tButtonId buttonId) {
             msg_send(&gCommandQueue, &messageContent);
             break;
         }
-        case patchType:
-        {
-            open_patch_type_context_menu(gMainButtonArray[buttonId].coord);
-            break;
-        }
     }
 }
 
@@ -1696,6 +1691,14 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     found                 = true;
                 }
             }
+
+            if (found == false) {
+                if (within_rectangle(coord, gPatchTypeRectangle)) {
+                    open_patch_type_context_menu(gPatchTypeRectangle.coord);
+                    found = true;
+                }
+            }
+            draw_button(mainArea, gPatchTypeRectangle, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
 
             if (found == false) {
                 if (gModuleDrag.active == true) {
