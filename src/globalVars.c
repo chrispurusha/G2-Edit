@@ -88,9 +88,11 @@ _Atomic bool           gCablesTransparent                           = false;
 _Atomic bool           gCablesHideAll                               = false;
 tRectangle             gHideAllCablesRect                           = {0};
 tRectangle             gTransparentCablesRect                       = {0};
-tRectangle             gPatchNameRectangle                          = {{20, 60}, {0, 0}};
+tRectangle             gPatchNameRectangle                          = {0};
 tRectangle             gPatchTypeRectangle                          = {{170, 60}, {0, 0}};  // TODO - potentially roll these non-standard buttons into the main button mechanism with special types
-tRectangle             gVoiceCountRectangle                         = {{245, 60}, {0, 0}};
+tRectangle             gVoiceCountRectangle                         = {{248, 60}, {0, 0}};
+    tRectangle         gVoiceCountIncRectangle ={0};
+    tRectangle         gVoiceCountDecRectangle ={0};
 tRectangle             gMonoPolyRectangle                           = {{270, 60}, {0, 0}};
 
 /* Stored here, but don't access directly, use functions to access instead */

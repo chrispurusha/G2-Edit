@@ -170,16 +170,15 @@ void render_scrollbars(GLFWwindow * window) {
 void render_top_bar(void) {
     tRectangle  rectangle                          = {0};
     char        patchNameCopy[PATCH_NAME_SIZE + 1] = {0};
-    char        voiceCountStr[16]                  = {0};
+    char        buff[32]                  = {0};
     tCommsState commsState                         = atomic_load(&gCommsState);
     char *      commsStateText                     = "Unknown";
     tRgb        commsStateColour                   = RGB_RED_7;
     tRgb        buttonBackgroundColour             = (tRgb)RGB_BACKGROUND_GREY;
     uint32_t    slot                               = atomic_load(&gSlot);
-    static bool firstTimeRender                    = true;
+    static bool firstTimeRender                    = true; // TODO - needs to be removed
 
-    if (firstTimeRender == true) {
-        gPatchNameRectangle  = {gPatchNameRectangle.coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
+    if (firstTimeRender == true) { // TODO - all this needs to come out! Doesn't work! Do as per inc and dec
         gPatchTypeRectangle  = {gPatchTypeRectangle.coord, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
         gVoiceCountRectangle = {gVoiceCountRectangle.coord, {get_text_width("32", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
         gMonoPolyRectangle   = {gMonoPolyRectangle.coord, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
@@ -204,20 +203,22 @@ void render_top_bar(void) {
         char displayBuf[PATCH_NAME_SIZE + 2] = {0};
         snprintf(displayBuf, sizeof(displayBuf), "%s|", gPatchNameEdit.buffer);
 
-        draw_button(mainArea, gPatchNameRectangle, displayBuf, (tRgb)RGB_WHITE);
+        gPatchNameRectangle = draw_button(mainArea, {{20, 60}, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, displayBuf, (tRgb)RGB_WHITE);
     } else {
-        draw_button(mainArea, gPatchNameRectangle, patchNameCopy, (tRgb)RGB_BACKGROUND_GREY);
+        gPatchNameRectangle = draw_button(mainArea, {{20, 60}, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, patchNameCopy, (tRgb)RGB_BACKGROUND_GREY);
     }
     draw_button(mainArea, gPatchTypeRectangle, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
     draw_button(mainArea, gMonoPolyRectangle, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], (tRgb)RGB_BACKGROUND_GREY);
 
-    snprintf(voiceCountStr, sizeof(voiceCountStr), "%u", gPatchDescr[slot].voiceCount + 1);
-    draw_button(mainArea, gVoiceCountRectangle, voiceCountStr, (tRgb)RGB_BACKGROUND_GREY);
+    snprintf(buff, sizeof(buff), "%u", gPatchDescr[slot].voiceCount + 1);
+    draw_button(mainArea, gVoiceCountRectangle, buff, (tRgb)RGB_BACKGROUND_GREY);
     //render_text(mainArea, {{gVoiceDialRect.coord.x + 2, gVoiceDialRect.coord.y - 12}, {NULL, STANDARD_TEXT_HEIGHT}}, voiceCountStr);
     //render_dial(mainArea, gVoiceDialRect, gPatchDescr[slot].voiceCount + 1, 32, 0, RGB_GREY_7);
+    gVoiceCountIncRectangle = draw_button(mainArea, {{240, 55}, {get_text_width("+", STANDARD_BUTTON_TEXT_HEIGHT)*0.5, STANDARD_BUTTON_TEXT_HEIGHT*0.5}}, "+", (tRgb)RGB_BACKGROUND_GREY);
+    gVoiceCountDecRectangle = draw_button(mainArea, {{240, 66}, {get_text_width("+", STANDARD_BUTTON_TEXT_HEIGHT)*0.5, STANDARD_BUTTON_TEXT_HEIGHT*0.5}}, "-", (tRgb)RGB_BACKGROUND_GREY);
 
-    snprintf(voiceCountStr, sizeof(voiceCountStr), "%u", gAssignedVoices[slot]);
-    render_text(mainArea, {{300, 40}, {NULL, STANDARD_TEXT_HEIGHT}}, voiceCountStr);
+    snprintf(buff, sizeof(buff), "%u", gAssignedVoices[slot]);
+    render_text(mainArea, {{300, 40}, {NULL, STANDARD_TEXT_HEIGHT}}, buff);
 
     for (int i = 0; i < array_size_main_button_array(); i++) {
         rectangle                     = {gMainButtonArray[i].coord, {get_text_width(gMainButtonArray[i].text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
