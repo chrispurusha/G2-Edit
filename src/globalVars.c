@@ -49,7 +49,10 @@ tButton                gMainButtonArray[] = { // Must align with tButtonId enuma
     {{630,  8}, NULL_RECTANGLE, anchorTopLeft, "C",          RGB_BACKGROUND_GREY, false},
     {{645,  8}, NULL_RECTANGLE, anchorTopLeft, "D",          RGB_BACKGROUND_GREY, false},
     {{140,  8}, NULL_RECTANGLE, anchorTopLeft, "New Patch",  RGB_BACKGROUND_GREY, false},
+    {{300,  8}, NULL_RECTANGLE, anchorTopLeft, "Set Type",   RGB_BACKGROUND_GREY, false},
 };
+
+const char *           patchTypeStrMap[patchTypeUserMax]            = {"No Cat", "Acoustic", "Sequencer", "Bass", "Classic", "Drum", "Fantasy", "Fx", "Lead", "Organ", "Pad", "Piano", "Synth", "Audio In", "User 1", "User 2"};
 
 bool                   gShowOpenFileReadDialogue                    = false;
 bool                   gShowOpenFileWriteDialogue                   = false;
@@ -85,6 +88,7 @@ _Atomic bool           gCablesHideAll                               = false;
 tRectangle             gHideAllCablesRect                           = {0};
 tRectangle             gTransparentCablesRect                       = {0};
 tRectangle             gPatchNameRectangle                          = {{20, 60}, {0, 0}};
+tRectangle             gPatchTypeRectangle                          = {{200, 60}, {0, 0}};
 
 /* Stored here, but don't access directly, use functions to access instead */
 static char            gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1]   = {0};

@@ -35,6 +35,8 @@
 #include "msgQueue.h"
 #include <pthread.h>
 
+extern const char *        patchTypeStrMap[patchTypeUserMax];
+
 extern _Atomic bool        gQuitAll;
 extern GLFWwindow *        gWindow;
 extern _Atomic uint32_t    gLocation;
@@ -75,6 +77,7 @@ extern _Atomic bool        gCablesHideAll;     // true = hide all cables complet
 extern tRectangle          gHideAllCablesRect;
 extern tRectangle          gTransparentCablesRect;
 extern tRectangle          gPatchNameRectangle;
+extern tRectangle          gPatchTypeRectangle;
 
 uint32_t array_size_main_button_array(void);
 

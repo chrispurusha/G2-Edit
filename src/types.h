@@ -243,6 +243,26 @@ typedef enum {
     mouseButtonRightUp
 } tMouseButton;
 
+typedef enum {
+    patchTypeNoCat,
+    patchTypeAcoustic,
+    patchTypeSequencer,
+    patchTypeBass,
+    patchTypeClassic,
+    patchTypeDrum,
+    patchTypeFantasy,
+    patchTypeFx,
+    patchTypeLead,
+    patchTypeOrgan,
+    patchTypePad,
+    patchTypePiano,
+    patchTypeSynth,
+    patchTypeAudioIn,
+    patchTypeUser1,
+    patchTypeUser2,
+    patchTypeUserMax
+} tPatchType;
+
 typedef struct {
     uint8_t * buffPtr;
     uint32_t  buffSize;
@@ -455,6 +475,7 @@ typedef enum {
     slotCButtonId,
     slotDButtonId,
     initPatchId,
+    patchType,
 } tButtonId;
 
 typedef struct {

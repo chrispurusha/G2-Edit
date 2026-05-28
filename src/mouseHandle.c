@@ -43,6 +43,8 @@ extern "C" {
 #include "mouseHandle.h"
 #include "globalVars.h"
 
+void open_patch_type_context_menu(tCoord coord);
+
 void get_global_gui_scaled_mouse_coord(tCoord * coord) {
     int fbWidth  = 0;
     int fbHeight = 0;
@@ -389,6 +391,11 @@ void handle_button(tButtonId buttonId) {
             messageContent.cmd  = eMsgCmdWritePatch;
             messageContent.slot = slot;
             msg_send(&gCommandQueue, &messageContent);
+            break;
+        }
+        case patchType:
+        {
+            open_patch_type_context_menu(gMainButtonArray[buttonId].coord);
             break;
         }
     }
@@ -1108,6 +1115,45 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     if (gContextMenu.coord.y + menuHeight > (renderHeight - SCROLLBAR_WIDTH)) {
         gContextMenu.coord.y = (renderHeight - SCROLLBAR_WIDTH) - menuHeight;
     }
+}
+
+static void action_set_patch_type(int index) {
+    uint32_t        slot           = atomic_load(&gSlot);
+    tMessageContent messageContent = {0};
+
+    gPatchDescr[slot].category = gContextMenu.items[index].param;
+
+    messageContent.cmd         = eMsgCmdWritePatch; // or whatever sets category
+    messageContent.slot        = slot;
+    msg_send(&gCommandQueue, &messageContent);
+
+    gContextMenu.active        = false;
+}
+
+void open_patch_type_context_menu(tCoord coord) {
+    static tMenuItem menuItems[] = {
+        {"No Cat",    RGB_GREY_3, action_set_patch_type, patchTypeNoCat,     NULL},
+        {"Acoustic",  RGB_GREY_3, action_set_patch_type, patchTypeAcoustic,  NULL},
+        {"Sequencer", RGB_GREY_3, action_set_patch_type, patchTypeSequencer, NULL},
+        {"Bass",      RGB_GREY_3, action_set_patch_type, patchTypeBass,      NULL},
+        {"Classic",   RGB_GREY_3, action_set_patch_type, patchTypeClassic,   NULL},
+        {"Drum",      RGB_GREY_3, action_set_patch_type, patchTypeDrum,      NULL},
+        {"Fantasy",   RGB_GREY_3, action_set_patch_type, patchTypeFantasy,   NULL},
+        {"Fx",        RGB_GREY_3, action_set_patch_type, patchTypeFx,        NULL},
+        {"Lead",      RGB_GREY_3, action_set_patch_type, patchTypeLead,      NULL},
+        {"Organ",     RGB_GREY_3, action_set_patch_type, patchTypeOrgan,     NULL},
+        {"Pad",       RGB_GREY_3, action_set_patch_type, patchTypePad,       NULL},
+        {"Piano",     RGB_GREY_3, action_set_patch_type, patchTypePiano,     NULL},
+        {"Synth",     RGB_GREY_3, action_set_patch_type, patchTypeSynth,     NULL},
+        {"Audio In",  RGB_GREY_3, action_set_patch_type, patchTypeAudioIn,   NULL},
+        {"User 1",    RGB_GREY_3, action_set_patch_type, patchTypeUser1,     NULL},
+        {"User 2",    RGB_GREY_3, action_set_patch_type, patchTypeUser2,     NULL},
+        {NULL,        RGB_BLACK,  NULL,                                   0, NULL}
+    };
+
+    gContextMenu.coord  = coord;
+    gContextMenu.items  = menuItems;
+    gContextMenu.active = true;
 }
 
 bool handle_module_press(tCoord coord, tMouseButton mouseButton) {
