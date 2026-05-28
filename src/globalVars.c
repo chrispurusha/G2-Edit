@@ -52,6 +52,7 @@ tButton                gMainButtonArray[] = { // Must align with tButtonId enuma
 };
 
 const char *           patchTypeStrMap[patchTypeUserMax]            = {"No Cat", "Acoustic", "Sequencer", "Bass", "Classic", "Drum", "Fantasy", "Fx", "Lead", "Organ", "Pad", "Piano", "Synth", "Audio In", "User 1", "User 2"};
+const char *           monoPolyStrMap[monoPolyMax]                  = {"Poly", "Mono", "Legato"};
 
 bool                   gShowOpenFileReadDialogue                    = false;
 bool                   gShowOpenFileWriteDialogue                   = false;
@@ -69,6 +70,7 @@ tKnobArray             gKnobArray[MAX_SLOTS]                        = {0};
 uint32_t               gMorphCount[MAX_SLOTS]                       = {0};
 uint32_t               gNote2Size[MAX_SLOTS]                        = {0};
 uint8_t                gNote2[MAX_SLOTS][1024]                      = {0};
+uint32_t               gAssignedVoices[MAX_SLOTS]                   = {0};
 tControllerArray       gControllerArray[MAX_SLOTS]                  = {0};
 uint32_t               gControllerCount[MAX_SLOTS]                  = {0};
 uint32_t               gPatchNotesSize[MAX_SLOTS]                   = {0};
@@ -78,7 +80,7 @@ _Atomic tCommsState    gCommsState                                  = eCommsNeve
 _Atomic uint32_t       gChangedSlot                                 = 0;
 tNameEdit              gPatchNameEdit                               = {0};
 tModuleNameEdit        gModuleNameEdit                              = {0};
-_Atomic uint32_t       gHiddenCableMask                             = 0;
+_Atomic uint32_t       gHiddenCableMask                             = 0; // TODO - Send to G2 when changes
 tRectangle             gCableColourToggleRect[NUM_CABLE_COLOURS]    = {0};
 tRectangle             gCableColourSelectRect[NUM_CABLE_COLOURS]    = {0};
 uint32_t               gCableColour                                 = 0;
@@ -87,9 +89,10 @@ _Atomic bool           gCablesHideAll                               = false;
 tRectangle             gHideAllCablesRect                           = {0};
 tRectangle             gTransparentCablesRect                       = {0};
 tRectangle             gPatchNameRectangle                          = {{20, 60}, {0, 0}};
-tRectangle             gPatchTypeRectangle                          = {{170, 60}, {0, 0}};
-tRectangle             gVoiceDialRect                               = {{240, 40}, {24, 24}};
+tRectangle             gPatchTypeRectangle                          = {{170, 60}, {0, 0}};  // TODO - potentially roll these non-standard buttons into the main button mechanism with special types
+tRectangle             gVoiceDialRect                               = {{245, 58}, {18, 18}};
 bool                   gVoiceDialDragging                           = false;
+tRectangle             gMonoPolyRectangle                           = {{270, 60}, {0, 0}};
 
 /* Stored here, but don't access directly, use functions to access instead */
 static char            gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1]   = {0};

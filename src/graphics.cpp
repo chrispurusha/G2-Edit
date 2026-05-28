@@ -181,6 +181,7 @@ void render_top_bar(void) {
     if (firstTimeRender == true) {
         gPatchNameRectangle = {gPatchNameRectangle.coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
         gPatchTypeRectangle = {gPatchTypeRectangle.coord, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
+        gMonoPolyRectangle  = {gMonoPolyRectangle.coord, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
         firstTimeRender     = false;
     }
     set_rgb_colour(RGB_GREY_5);
@@ -207,10 +208,14 @@ void render_top_bar(void) {
         draw_button(mainArea, gPatchNameRectangle, patchNameCopy, (tRgb)RGB_BACKGROUND_GREY);
     }
     draw_button(mainArea, gPatchTypeRectangle, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
+    draw_button(mainArea, gMonoPolyRectangle, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], (tRgb)RGB_BACKGROUND_GREY);
 
     snprintf(voiceCountStr, sizeof(voiceCountStr), "%u", gPatchDescr[slot].voiceCount + 1);
-    render_text(mainArea, {{gVoiceDialRect.coord.x, gVoiceDialRect.coord.y - 10}, {NULL, STANDARD_TEXT_HEIGHT}}, voiceCountStr);
-    render_dial(mainArea, gVoiceDialRect, gPatchDescr[slot].voiceCount + 1, 32, 0, RGB_GREY_5);
+    render_text(mainArea, {{gVoiceDialRect.coord.x + 2, gVoiceDialRect.coord.y - 12}, {NULL, STANDARD_TEXT_HEIGHT}}, voiceCountStr);
+    render_dial(mainArea, gVoiceDialRect, gPatchDescr[slot].voiceCount + 1, 32, 0, RGB_GREY_7);
+
+    snprintf(voiceCountStr, sizeof(voiceCountStr), "%u", gAssignedVoices[slot]);
+    render_text(mainArea, {{300, 40}, {NULL, STANDARD_TEXT_HEIGHT}}, voiceCountStr);
 
     for (int i = 0; i < array_size_main_button_array(); i++) {
         rectangle                     = {gMainButtonArray[i].coord, {get_text_width(gMainButtonArray[i].text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};

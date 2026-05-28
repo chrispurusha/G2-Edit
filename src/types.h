@@ -266,7 +266,8 @@ typedef enum {
 typedef enum {
     monoPolyPoly,
     monoPolyMono,
-    monoPolyLegato
+    monoPolyLegato,
+    monoPolyMax
 } tMonoPoly;
 
 typedef struct {

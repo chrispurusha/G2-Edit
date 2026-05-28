@@ -546,9 +546,15 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         }
 
         case SUB_RESPONSE_ASSIGNED_VOICES:
+        {
             LOG_DEBUG("Got assigned voices response\n");
-            *unsolicited = true;
+            gAssignedVoices[0] = read_bit_stream(buff, bitPos, 8);
+            gAssignedVoices[1] = read_bit_stream(buff, bitPos, 8);
+            gAssignedVoices[2] = read_bit_stream(buff, bitPos, 8);
+            gAssignedVoices[3] = read_bit_stream(buff, bitPos, 8);
+            *unsolicited       = true;
             return EXIT_SUCCESS;
+        }
 
         case SUB_COMMAND_SET_ASSIGNED_VOICES:
             LOG_DEBUG("Got assigned voices command — unexpected\n");
@@ -559,8 +565,11 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_MASTER_CLOCK:
+        {
             LOG_DEBUG("Got master clock\n");
+            *unsolicited = true;
             return EXIT_SUCCESS;
+        }
 
         case SUB_COMMAND_SELECT_SLOT:
         {
@@ -1280,9 +1289,9 @@ static int send_set_patch_descr(uint32_t slot) { // Note - currently using value
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, &response);
-        LOG_DEBUG("SET PATCH DESCR = 0x%02x\n", response);
 
         if (response != SUB_RESPONSE_OK) {
+            LOG_DEBUG("SET PATCH DESCR = 0x%02x\n", response);
             retVal = EXIT_FAILURE;
         }
     }

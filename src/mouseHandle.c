@@ -1706,7 +1706,23 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     found = true;
                 }
             }
-            draw_button(mainArea, gPatchTypeRectangle, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
+
+            if (found == false) {
+                if (within_rectangle(coord, gMonoPolyRectangle)) {
+                    tMessageContent messageContent = {0};
+                    uint32_t        monoPoly       = gPatchDescr[slot].monoPoly;
+                    monoPoly++;
+
+                    if (monoPoly >= monoPolyMax) {
+                        monoPoly = 0;
+                    }
+                    gPatchDescr[slot].monoPoly = monoPoly;
+                    messageContent.cmd         = eMsgCmdWritePatchDescr;
+                    messageContent.slot        = slot;
+                    msg_send(&gCommandQueue, &messageContent);
+                    found                      = true;
+                }
+            }
 
             if (found == false) {
                 if (gModuleDrag.active == true) {
