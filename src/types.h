@@ -263,6 +263,12 @@ typedef enum {
     patchTypeUserMax
 } tPatchType;
 
+typedef enum {
+    monoPolyPoly,
+    monoPolyMono,
+    monoPolyLegato
+} tMonoPoly;
+
 typedef struct {
     uint8_t * buffPtr;
     uint32_t  buffSize;
@@ -546,7 +552,7 @@ typedef struct {
 typedef struct {
     bool        active;
     tModuleKey  moduleKey;
-    tParamType3 type3;      // Denotes param or mode, which shoul maybe be union-ed?
+    tParamType3 type3;      // Denotes param or mode, which should maybe be union-ed?
     uint32_t    param;
     uint32_t    mode;
 } tParamDragging;

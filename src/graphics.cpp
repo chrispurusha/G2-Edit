@@ -170,6 +170,7 @@ void render_scrollbars(GLFWwindow * window) {
 void render_top_bar(void) {
     tRectangle  rectangle                          = {0};
     char        patchNameCopy[PATCH_NAME_SIZE + 1] = {0};
+    char        voiceCountStr[16]                  = {0};
     tCommsState commsState                         = atomic_load(&gCommsState);
     char *      commsStateText                     = "Unknown";
     tRgb        commsStateColour                   = RGB_RED_7;
@@ -206,6 +207,10 @@ void render_top_bar(void) {
         draw_button(mainArea, gPatchNameRectangle, patchNameCopy, (tRgb)RGB_BACKGROUND_GREY);
     }
     draw_button(mainArea, gPatchTypeRectangle, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
+
+    snprintf(voiceCountStr, sizeof(voiceCountStr), "%u", gPatchDescr[slot].voiceCount + 1);
+    render_text(mainArea, {{gVoiceDialRect.coord.x, gVoiceDialRect.coord.y - 10}, {NULL, STANDARD_TEXT_HEIGHT}}, voiceCountStr);
+    render_dial(mainArea, gVoiceDialRect, gPatchDescr[slot].voiceCount + 1, 32, 0, RGB_GREY_5);
 
     for (int i = 0; i < array_size_main_button_array(); i++) {
         rectangle                     = {gMainButtonArray[i].coord, {get_text_width(gMainButtonArray[i].text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};

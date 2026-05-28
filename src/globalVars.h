@@ -78,6 +78,8 @@ extern tRectangle          gHideAllCablesRect;
 extern tRectangle          gTransparentCablesRect;
 extern tRectangle          gPatchNameRectangle;
 extern tRectangle          gPatchTypeRectangle;
+extern tRectangle          gVoiceDialRect;
+extern bool                gVoiceDialDragging;
 
 uint32_t array_size_main_button_array(void);
 

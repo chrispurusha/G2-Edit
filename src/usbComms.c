@@ -547,6 +547,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_ASSIGNED_VOICES:
             LOG_DEBUG("Got assigned voices response\n");
+            *unsolicited = true;
             return EXIT_SUCCESS;
 
         case SUB_COMMAND_SET_ASSIGNED_VOICES:
@@ -1260,6 +1261,34 @@ static int send_set_patch_name(uint32_t slot, const char * name) {
     return retVal;
 }
 
+static int send_set_patch_descr(uint32_t slot) { // Note - currently using values straight from patchDescr in sub-function
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    int      pos                     = COMMAND_OFFSET;
+    uint32_t bitPos                  = 0;
+    int      i                       = 0;
+    int      retVal                  = EXIT_FAILURE;
+    int      response                = SUB_RESPONSE_ERROR;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
+    bitPos      = BYTE_TO_BIT(pos);
+    write_patch_descr(slot, buff, &bitPos);
+    pos         = BIT_TO_BYTE(bitPos);
+
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, &response);
+        LOG_DEBUG("SET PATCH DESCR = 0x%02x\n", response);
+
+        if (response != SUB_RESPONSE_OK) {
+            retVal = EXIT_FAILURE;
+        }
+    }
+    return retVal;
+}
+
 // ---------------------------------------------------------------------------
 // Init sequences — linear, no state machine
 // ---------------------------------------------------------------------------
@@ -1581,6 +1610,12 @@ static int send_write_data(tMessageContent * messageContent) {
             call_full_patch_change_notify(); // TODO - not sure we need to do this here
             call_wake_glfw();
             retVal = EXIT_SUCCESS;
+            break;
+        }
+
+        case eMsgCmdWritePatchDescr:
+        {
+            retVal = send_set_patch_descr(messageContent->slot);
             break;
         }
 

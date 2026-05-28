@@ -49,7 +49,8 @@ typedef enum {
     eMsgCmdWritePatch,
     eMsgCmdSetModuleLabel,
     eMsgCmdSetPatchName,
-    eMsgCmdSetModuleColour
+    eMsgCmdSetModuleColour,
+    eMsgCmdWritePatchDescr
 } eMsgCmd;
 
 typedef struct {
