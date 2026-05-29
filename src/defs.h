@@ -166,6 +166,45 @@
 
 #define CRC_BYTES                            (2)
 
+// Patch settings module indices (locationMorph, location 2)
+// These are module indices within the patch settings location
+#define PATCH_MORPH          (0x01)
+#define PATCH_VOLUME         (0x02)
+#define PATCH_GLIDE          (0x03)
+#define PATCH_BEND           (0x04)
+#define PATCH_VIBRATO        (0x05)
+#define PATCH_ARPEGGIATOR    (0x06)
+#define PATCH_SUSTAIN        (0x07)
+#define PATCH_MASTERCLOCK    (0x08)
+#define PATCH_VOICES         (0x09)
+
+// PATCH_VOLUME param indices
+#define VOLUME_LEVEL         (0x00)
+#define VOLUME_MUTE          (0x01)
+
+// PATCH_GLIDE param indices
+#define GLIDE_TYPE           (0x00)
+#define GLIDE_SPEED          (0x01)
+
+// PATCH_BEND param indices
+#define BEND_ON_OFF          (0x00)
+#define BEND_RANGE           (0x01)
+
+// PATCH_VIBRATO param indices
+#define VIBRATO_MOD          (0x00)
+#define VIBRATO_DEPTH        (0x01)
+#define VIBRATO_RATE         (0x02)
+
+// PATCH_ARPEGGIATOR param indices
+#define ARP_ON_OFF           (0x00)
+#define ARP_SPEED            (0x01)
+#define ARP_DIRECTION        (0x02)
+#define ARP_OCTAVES          (0x03)
+
+// PATCH_SUSTAIN param indices
+#define OCTAVE_SHIFT         (0x00)
+#define SUSTAIN_PEDAL        (0x01)
+
 #define PATCH_NAME_SIZE                      (16)   // Don't forget to add null terminator where necessary
 #define MODULE_NAME_SIZE                     (16)
 #define PARAM_NAME_SIZE                      (16)
