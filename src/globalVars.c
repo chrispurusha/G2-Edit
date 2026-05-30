@@ -94,7 +94,7 @@ tRectangle             gVoiceCountRectangle                         = {0};
 tRectangle             gVoiceCountIncRectangle                      = {0};
 tRectangle             gVoiceCountDecRectangle                      = {0};
 tRectangle             gMonoPolyRectangle                           = {0};
-tRectangle             gPatchVolumeRectangle                        = {{320, 45}, {20, 20}};
+tRectangle             gPatchVolumeRectangle                        = {{320, 56}, {20, 20}};
 
 /* Stored here, but don't access directly, use functions to access instead */
 static char            gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1]   = {0};
