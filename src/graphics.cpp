@@ -177,14 +177,7 @@ void render_top_bar(void) {
     tRgb        buttonBackgroundColour             = (tRgb)RGB_BACKGROUND_GREY;
     uint32_t    slot                               = atomic_load(&gSlot);
     uint32_t    variation                          = gPatchDescr[slot].activeVariation;
-    static bool firstTimeRender                    = true; // TODO - needs to be removed
 
-    if (firstTimeRender == true) { // TODO - all this needs to come out! Doesn't work! Do as per inc and dec
-        gPatchTypeRectangle  = {gPatchTypeRectangle.coord, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
-        gVoiceCountRectangle = {gVoiceCountRectangle.coord, {get_text_width("32", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
-        gMonoPolyRectangle   = {gMonoPolyRectangle.coord, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
-        firstTimeRender      = false;
-    }
     set_rgb_colour(RGB_GREY_5);
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {(get_render_width() / GLOBAL_GUI_SCALE) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
 
@@ -208,24 +201,24 @@ void render_top_bar(void) {
     } else {
         gPatchNameRectangle = draw_button(mainArea, {{20, 60}, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, patchNameCopy, (tRgb)RGB_BACKGROUND_GREY);
     }
-    draw_button(mainArea, gPatchTypeRectangle, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
-    draw_button(mainArea, gMonoPolyRectangle, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], (tRgb)RGB_BACKGROUND_GREY);
+    gPatchTypeRectangle     = draw_button(mainArea, {{170, 60}, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
+    gMonoPolyRectangle      = draw_button(mainArea, {{270, 60}, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], (tRgb)RGB_BACKGROUND_GREY);
 
     snprintf(buff, sizeof(buff), "%u", gPatchDescr[slot].voiceCount + 1);
-    draw_button(mainArea, gVoiceCountRectangle, buff, (tRgb)RGB_BACKGROUND_GREY);
-    //render_text(mainArea, {{gVoiceDialRect.coord.x + 2, gVoiceDialRect.coord.y - 12}, {NULL, STANDARD_TEXT_HEIGHT}}, voiceCountStr);
-    //render_dial(mainArea, gVoiceDialRect, gPatchDescr[slot].voiceCount + 1, 32, 0, RGB_GREY_7);
+    gVoiceCountRectangle    = draw_button(mainArea, {{248, 60}, {get_text_width("XX", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
     gVoiceCountIncRectangle = draw_button(mainArea, {{240, 55}, {get_text_width("+", STANDARD_BUTTON_TEXT_HEIGHT) * 0.5, STANDARD_BUTTON_TEXT_HEIGHT * 0.5}}, "+", (tRgb)RGB_BACKGROUND_GREY);
     gVoiceCountDecRectangle = draw_button(mainArea, {{240, 66}, {get_text_width("+", STANDARD_BUTTON_TEXT_HEIGHT) * 0.5, STANDARD_BUTTON_TEXT_HEIGHT * 0.5}}, "-", (tRgb)RGB_BACKGROUND_GREY);
     {
-        tModule  module = {0};
-        module.key.slot                                 = slot;
-        module.key.location                             = locationMorph;
-        module.key.index                                = PATCH_VOLUME;
-        read_module(module.key, &module);
-        uint32_t level  = module.param[variation][VOLUME_LEVEL].value;
-        module.param[variation][VOLUME_LEVEL].rectangle = render_dial(mainArea, gPatchVolumeRectangle, level, 127, 0, RGB_GREY_7);
-        write_module(module.key, &module);
+        tModule module = {0};
+        module.key.slot     = slot;
+        module.key.location = locationMorph;
+        module.key.index    = PATCH_VOLUME;
+
+        if (read_module(module.key, &module) == true) {
+            snprintf(buff, sizeof(buff), "%u", module.param[variation][VOLUME_LEVEL].value);
+            module.param[variation][VOLUME_LEVEL].rectangle = render_dial_with_text(mainArea, gPatchVolumeRectangle, NULL, buff, module.param[variation][VOLUME_LEVEL].value, 127, 0, RGB_GREY_7);
+            write_module(module.key, &module);
+        }
     }
 
     snprintf(buff, sizeof(buff), "%u", gAssignedVoices[slot]);

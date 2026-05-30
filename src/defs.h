@@ -167,7 +167,7 @@
 #define CRC_BYTES                            (2)
 
 // Patch settings module indices (locationMorph, location 2)
-// These are module indices within the patch settings location
+// These are module indices within the patch settings location - TODO - should probably be enumerations in types.h
 #define PATCH_MORPH                    (0x01)
 #define PATCH_VOLUME                   (0x02)
 #define PATCH_GLIDE                    (0x03)
