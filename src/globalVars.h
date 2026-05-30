@@ -85,7 +85,7 @@ extern tRectangle          gVoiceCountIncRectangle;
 extern tRectangle          gVoiceCountDecRectangle;
 extern tRectangle          gMonoPolyRectangle;
 extern tRectangle          gPatchVolumeRectangle;
-extern bool                gPatchVolumeDragging;
+//extern bool                gPatchVolumeDragging;
 
 uint32_t array_size_main_button_array(void);
 

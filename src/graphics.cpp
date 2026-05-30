@@ -218,11 +218,14 @@ void render_top_bar(void) {
     gVoiceCountIncRectangle = draw_button(mainArea, {{240, 55}, {get_text_width("+", STANDARD_BUTTON_TEXT_HEIGHT) * 0.5, STANDARD_BUTTON_TEXT_HEIGHT * 0.5}}, "+", (tRgb)RGB_BACKGROUND_GREY);
     gVoiceCountDecRectangle = draw_button(mainArea, {{240, 66}, {get_text_width("+", STANDARD_BUTTON_TEXT_HEIGHT) * 0.5, STANDARD_BUTTON_TEXT_HEIGHT * 0.5}}, "-", (tRgb)RGB_BACKGROUND_GREY);
     {
-        tModuleKey key    = {.slot = slot, .location = locationMorph, .index = PATCH_VOLUME};
-        tModule    module = {0};
-        read_module(key, &module);
-        uint32_t   level  = module.param[variation][VOLUME_LEVEL].value;
-        render_dial(mainArea, gPatchVolumeRectangle, level, 127, 0, RGB_GREY_7);
+        tModule  module = {0};
+        module.key.slot                                 = slot;
+        module.key.location                             = locationMorph;
+        module.key.index                                = PATCH_VOLUME;
+        read_module(module.key, &module);
+        uint32_t level  = module.param[variation][VOLUME_LEVEL].value;
+        module.param[variation][VOLUME_LEVEL].rectangle = render_dial(mainArea, gPatchVolumeRectangle, level, 127, 0, RGB_GREY_7);
+        write_module(module.key, &module);
     }
 
     snprintf(buff, sizeof(buff), "%u", gAssignedVoices[slot]);
