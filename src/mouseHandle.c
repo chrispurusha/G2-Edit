@@ -1459,6 +1459,7 @@ void stop_dragging(void) {
     memset(&gModuleDrag, 0, sizeof(gModuleDrag));
     memset(&gParamDragging, 0, sizeof(gParamDragging));
     memset(&gCableDrag, 0, sizeof(gCableDrag));
+    gPatchVolumeDragging      = false;
 }
 
 void stop_patch_name_editing(void) {
@@ -1606,8 +1607,9 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                if (handle_module_press(coord, mouseButton)) {
-                    found = true;
+                if (within_rectangle(coord, gPatchVolumeRectangle)) {
+                    gPatchVolumeDragging = true;
+                    found                = true;
                 }
             }
         }
@@ -1720,6 +1722,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 if (within_rectangle(coord, gVoiceCountIncRectangle)) {
                     tMessageContent messageContent = {0};
                     uint32_t        voiceCount     = gPatchDescr[slot].voiceCount;
+
                     if (voiceCount < 31) {
                         voiceCount++;
                     }
@@ -1730,15 +1733,15 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     found                        = true;
                 }
             }
-            
+
             if (found == false) {
                 if (within_rectangle(coord, gVoiceCountDecRectangle)) {
                     tMessageContent messageContent = {0};
                     uint32_t        voiceCount     = gPatchDescr[slot].voiceCount;
+
                     if (voiceCount > 0) {
                         voiceCount--;
                     }
-
                     gPatchDescr[slot].voiceCount = voiceCount;
                     messageContent.cmd           = eMsgCmdWritePatchDescr;
                     messageContent.slot          = slot;
@@ -1954,6 +1957,26 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         adjust_scroll_for_drag();
     } else if (gContextMenu.active == true) {
         // Dummy
+    } else if (gPatchVolumeDragging == true) {
+        angle               = calculate_mouse_angle((tCoord){x, y}, gPatchVolumeRectangle);
+        value               = angle_to_value(angle, 127);
+        module.key.location = locationMorph;
+        module.key.slot     = slot;
+        module.key.index    = PATCH_VOLUME;
+        read_module(module.key, &module);
+
+        if (module.param[variation][VOLUME_LEVEL].value != value) {
+            module.param[variation][VOLUME_LEVEL].value = value;
+            write_module(module.key, &module);
+
+            messageContent.cmd                          = eMsgCmdSetValue;
+            messageContent.slot                         = slot;
+            messageContent.paramData.moduleKey          = module.key;
+            messageContent.paramData.param              = VOLUME_LEVEL;
+            messageContent.paramData.variation          = variation;
+            messageContent.paramData.value              = value;
+            msg_send(&gCommandQueue, &messageContent);
+        }
     } else {
         noAction = true;
     }

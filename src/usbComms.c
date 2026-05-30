@@ -1293,15 +1293,15 @@ static int send_set_patch_descr(uint32_t slot) { // Note - currently using value
 
         if (response != SUB_RESPONSE_OK) {
             LOG_DEBUG("SET PATCH DESCR = 0x%02x\n", response);
-            gPatchDescr[slot].voiceCount--; // TODO - Note - Should only do if specifically updating voice count, so might need a specific msg queue message for that
+            //gPatchDescr[slot].voiceCount--; // TODO - Note - Should only do if specifically updating voice count, so might need a specific msg queue message for that
 
-            tMessageContent messageContent = {0};
+            //tMessageContent messageContent = {0};
 
-            messageContent.cmd  = eMsgCmdWritePatchDescr;
-            messageContent.slot = slot;
-            msg_send(&gCommandQueue, &messageContent);
+            //messageContent.cmd  = eMsgCmdWritePatchDescr;
+            //messageContent.slot = slot;
+            //msg_send(&gCommandQueue, &messageContent);
 
-            retVal              = EXIT_FAILURE;
+            retVal = EXIT_FAILURE;
         }
     }
     return retVal;

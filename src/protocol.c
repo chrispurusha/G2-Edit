@@ -434,12 +434,12 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset, uin
         LOG_DEBUG("Variation %u Morph param count %u\n", variation, morphParamCount);
 
         for (k = 0; k < morphParamCount; k++) {
-            key.slot                                              = slot;
-            key.location                                          = read_bit_stream(buff, subOffset, 2);
-            key.index                                             = read_bit_stream(buff, subOffset, 8);
-            paramIndex                                            = read_bit_stream(buff, subOffset, 7);
-            morph                                                 = read_bit_stream(buff, subOffset, 4);
-            range                                                 = read_bit_stream(buff, subOffset, 8);
+            key.slot     = slot;
+            key.location = read_bit_stream(buff, subOffset, 2);
+            key.index    = read_bit_stream(buff, subOffset, 8);
+            paramIndex   = read_bit_stream(buff, subOffset, 7);
+            morph        = read_bit_stream(buff, subOffset, 4);
+            range        = read_bit_stream(buff, subOffset, 8);
 
             LOG_DEBUG("  Location %u\n", key.location);
             LOG_DEBUG("  Module index %u\n", key.index);
@@ -458,7 +458,7 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset, uin
             //} else {
             //    LOG_ERROR("morph index %u out of range\n", morph);
             //}
-            
+
             if (morph < NUM_MORPHS) {
                 module.param[variation][paramIndex].morphRange[morph] = range;
             } else {

@@ -170,12 +170,13 @@ void render_scrollbars(GLFWwindow * window) {
 void render_top_bar(void) {
     tRectangle  rectangle                          = {0};
     char        patchNameCopy[PATCH_NAME_SIZE + 1] = {0};
-    char        buff[32]                  = {0};
+    char        buff[32]                           = {0};
     tCommsState commsState                         = atomic_load(&gCommsState);
     char *      commsStateText                     = "Unknown";
     tRgb        commsStateColour                   = RGB_RED_7;
     tRgb        buttonBackgroundColour             = (tRgb)RGB_BACKGROUND_GREY;
     uint32_t    slot                               = atomic_load(&gSlot);
+    uint32_t    variation                          = gPatchDescr[slot].activeVariation;
     static bool firstTimeRender                    = true; // TODO - needs to be removed
 
     if (firstTimeRender == true) { // TODO - all this needs to come out! Doesn't work! Do as per inc and dec
@@ -214,8 +215,15 @@ void render_top_bar(void) {
     draw_button(mainArea, gVoiceCountRectangle, buff, (tRgb)RGB_BACKGROUND_GREY);
     //render_text(mainArea, {{gVoiceDialRect.coord.x + 2, gVoiceDialRect.coord.y - 12}, {NULL, STANDARD_TEXT_HEIGHT}}, voiceCountStr);
     //render_dial(mainArea, gVoiceDialRect, gPatchDescr[slot].voiceCount + 1, 32, 0, RGB_GREY_7);
-    gVoiceCountIncRectangle = draw_button(mainArea, {{240, 55}, {get_text_width("+", STANDARD_BUTTON_TEXT_HEIGHT)*0.5, STANDARD_BUTTON_TEXT_HEIGHT*0.5}}, "+", (tRgb)RGB_BACKGROUND_GREY);
-    gVoiceCountDecRectangle = draw_button(mainArea, {{240, 66}, {get_text_width("+", STANDARD_BUTTON_TEXT_HEIGHT)*0.5, STANDARD_BUTTON_TEXT_HEIGHT*0.5}}, "-", (tRgb)RGB_BACKGROUND_GREY);
+    gVoiceCountIncRectangle = draw_button(mainArea, {{240, 55}, {get_text_width("+", STANDARD_BUTTON_TEXT_HEIGHT) * 0.5, STANDARD_BUTTON_TEXT_HEIGHT * 0.5}}, "+", (tRgb)RGB_BACKGROUND_GREY);
+    gVoiceCountDecRectangle = draw_button(mainArea, {{240, 66}, {get_text_width("+", STANDARD_BUTTON_TEXT_HEIGHT) * 0.5, STANDARD_BUTTON_TEXT_HEIGHT * 0.5}}, "-", (tRgb)RGB_BACKGROUND_GREY);
+    {
+        tModuleKey key    = {.slot = slot, .location = locationMorph, .index = PATCH_VOLUME};
+        tModule    module = {0};
+        read_module(key, &module);
+        uint32_t   level  = module.param[variation][VOLUME_LEVEL].value;
+        render_dial(mainArea, gPatchVolumeRectangle, level, 127, 0, RGB_GREY_7);
+    }
 
     snprintf(buff, sizeof(buff), "%u", gAssignedVoices[slot]);
     render_text(mainArea, {{300, 40}, {NULL, STANDARD_TEXT_HEIGHT}}, buff);

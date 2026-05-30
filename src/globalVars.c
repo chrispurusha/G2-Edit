@@ -91,9 +91,11 @@ tRectangle             gTransparentCablesRect                       = {0};
 tRectangle             gPatchNameRectangle                          = {0};
 tRectangle             gPatchTypeRectangle                          = {{170, 60}, {0, 0}};  // TODO - potentially roll these non-standard buttons into the main button mechanism with special types
 tRectangle             gVoiceCountRectangle                         = {{248, 60}, {0, 0}};
-    tRectangle         gVoiceCountIncRectangle ={0};
-    tRectangle         gVoiceCountDecRectangle ={0};
+tRectangle             gVoiceCountIncRectangle                      = {0};
+tRectangle             gVoiceCountDecRectangle                      = {0};
 tRectangle             gMonoPolyRectangle                           = {{270, 60}, {0, 0}};
+tRectangle             gPatchVolumeRectangle                        = {{320, 56}, {20, 20}}; // TODO - use one of the dragging structures for this and the dragging flag
+bool                   gPatchVolumeDragging                         = false;
 
 /* Stored here, but don't access directly, use functions to access instead */
 static char            gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1]   = {0};

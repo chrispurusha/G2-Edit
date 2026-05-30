@@ -168,141 +168,141 @@
 
 // Patch settings module indices (locationMorph, location 2)
 // These are module indices within the patch settings location
-#define PATCH_MORPH          (0x01)
-#define PATCH_VOLUME         (0x02)
-#define PATCH_GLIDE          (0x03)
-#define PATCH_BEND           (0x04)
-#define PATCH_VIBRATO        (0x05)
-#define PATCH_ARPEGGIATOR    (0x06)
-#define PATCH_SUSTAIN        (0x07)
-#define PATCH_MASTERCLOCK    (0x08)
-#define PATCH_VOICES         (0x09)
+#define PATCH_MORPH                    (0x01)
+#define PATCH_VOLUME                   (0x02)
+#define PATCH_GLIDE                    (0x03)
+#define PATCH_BEND                     (0x04)
+#define PATCH_VIBRATO                  (0x05)
+#define PATCH_ARPEGGIATOR              (0x06)
+#define PATCH_SUSTAIN                  (0x07)
+#define PATCH_MASTERCLOCK              (0x08)
+#define PATCH_VOICES                   (0x09)
 
 // PATCH_VOLUME param indices
-#define VOLUME_LEVEL         (0x00)
-#define VOLUME_MUTE          (0x01)
+#define VOLUME_LEVEL                   (0x00)
+#define VOLUME_MUTE                    (0x01)
 
 // PATCH_GLIDE param indices
-#define GLIDE_TYPE           (0x00)
-#define GLIDE_SPEED          (0x01)
+#define GLIDE_TYPE                     (0x00)
+#define GLIDE_SPEED                    (0x01)
 
 // PATCH_BEND param indices
-#define BEND_ON_OFF          (0x00)
-#define BEND_RANGE           (0x01)
+#define BEND_ON_OFF                    (0x00)
+#define BEND_RANGE                     (0x01)
 
 // PATCH_VIBRATO param indices
-#define VIBRATO_MOD          (0x00)
-#define VIBRATO_DEPTH        (0x01)
-#define VIBRATO_RATE         (0x02)
+#define VIBRATO_MOD                    (0x00)
+#define VIBRATO_DEPTH                  (0x01)
+#define VIBRATO_RATE                   (0x02)
 
 // PATCH_ARPEGGIATOR param indices
-#define ARP_ON_OFF           (0x00)
-#define ARP_SPEED            (0x01)
-#define ARP_DIRECTION        (0x02)
-#define ARP_OCTAVES          (0x03)
+#define ARP_ON_OFF                     (0x00)
+#define ARP_SPEED                      (0x01)
+#define ARP_DIRECTION                  (0x02)
+#define ARP_OCTAVES                    (0x03)
 
 // PATCH_SUSTAIN param indices
-#define OCTAVE_SHIFT         (0x00)
-#define SUSTAIN_PEDAL        (0x01)
+#define OCTAVE_SHIFT                   (0x00)
+#define SUSTAIN_PEDAL                  (0x01)
 
-#define PATCH_NAME_SIZE                      (16)   // Don't forget to add null terminator where necessary
-#define MODULE_NAME_SIZE                     (16)
-#define PARAM_NAME_SIZE                      (16)
-#define PROTOCOL_PARAM_NAME_SIZE             (7)
-#define PATCH_NOTES_SIZE                     (1024) // OG editor gets to about 1084 before crashing
+#define PATCH_NAME_SIZE                (16)         // Don't forget to add null terminator where necessary
+#define MODULE_NAME_SIZE               (16)
+#define PARAM_NAME_SIZE                (16)
+#define PROTOCOL_PARAM_NAME_SIZE       (7)
+#define PATCH_NOTES_SIZE               (1024)       // OG editor gets to about 1084 before crashing
 
-#define MAX_GLYPH_CHAR                       (127)
+#define MAX_GLYPH_CHAR                 (127)
 
-#define MAX_PARAM_RANGE                      (128)
+#define MAX_PARAM_RANGE                (128)
 
-#define MAX_COMPONENTS_PER_MODULE            (32)
+#define MAX_COMPONENTS_PER_MODULE      (32)
 
-#define BORDER_LINE_WIDTH                    (2.0)
+#define BORDER_LINE_WIDTH              (2.0)
 
-#define RGB_BLACK                            {0.0, 0.0, 0.0}
-#define RGB_WHITE                            {1.0, 1.0, 1.0}
-#define RGB_GREEN                            {0.0, 0.8, 0.0}
-#define RGB_BACKGROUND_GREY                  {0.8, 0.8, 0.8}
-#define RGB_GREY_2                           {0.2, 0.2, 0.2}
-#define RGB_GREY_3                           {0.3, 0.3, 0.3}
-#define RGB_GREY_5                           {0.5, 0.5, 0.5}
-#define RGB_GREY_7                           {0.7, 0.7, 0.7}
-#define RGB_GREY_9                           {0.9, 0.9, 0.9}
-#define RGB_GREEN_ON                         {0.3, 0.7, 0.3}
-#define RGB_GREEN_3                          {0.0, 0.3, 0.0}
-#define RGB_GREEN_7                          {0.0, 0.7, 0.0}
-#define RGB_CONTEXT_MENU_GREEN               {0.2, 0.6, 0.2}
-#define RGB_YELLOW_7                         {0.7, 0.7, 0.0}
-#define RGB_RED_7                            {0.7, 0.0, 0.0}
-#define RGB_ORANGE_1                         {0.8, 0.3, 0.1}
-#define RGB_ORANGE_2                         {0.8, 0.5, 0.2}
-#define RGBA_BLACK_ON_TRANSPARENT            {0.0, 0.0, 0.0, 1.0}
+#define RGB_BLACK                      {0.0, 0.0, 0.0}
+#define RGB_WHITE                      {1.0, 1.0, 1.0}
+#define RGB_GREEN                      {0.0, 0.8, 0.0}
+#define RGB_BACKGROUND_GREY            {0.8, 0.8, 0.8}
+#define RGB_GREY_2                     {0.2, 0.2, 0.2}
+#define RGB_GREY_3                     {0.3, 0.3, 0.3}
+#define RGB_GREY_5                     {0.5, 0.5, 0.5}
+#define RGB_GREY_7                     {0.7, 0.7, 0.7}
+#define RGB_GREY_9                     {0.9, 0.9, 0.9}
+#define RGB_GREEN_ON                   {0.3, 0.7, 0.3}
+#define RGB_GREEN_3                    {0.0, 0.3, 0.0}
+#define RGB_GREEN_7                    {0.0, 0.7, 0.0}
+#define RGB_CONTEXT_MENU_GREEN         {0.2, 0.6, 0.2}
+#define RGB_YELLOW_7                   {0.7, 0.7, 0.0}
+#define RGB_RED_7                      {0.7, 0.0, 0.0}
+#define RGB_ORANGE_1                   {0.8, 0.3, 0.1}
+#define RGB_ORANGE_2                   {0.8, 0.5, 0.2}
+#define RGBA_BLACK_ON_TRANSPARENT      {0.0, 0.0, 0.0, 1.0}
 
-#define MODULE_STANDARD_GREY                 {0.7, 0.7, 0.7}
-#define MODULE_RED_4                         {0.8, 0.6, 0.6}
-#define MODULE_GREEN_4                       {0.6, 0.8, 0.6}
-#define MODULE_BLUE_4                        {0.6, 0.6, 0.8}
-#define MODULE_YELLOW_4                      {0.8, 0.8, 0.6}
-#define MODULE_BLUE_1                        {0.3, 0.3, 0.8}
-#define MODULE_RED_1                         {0.8, 0.3, 0.3}
-#define MODULE_CYAN_2                        {0.4, 0.8, 0.8}
-#define MODULE_GREEN_2                       {0.4, 0.8, 0.4}
-#define MODULE_YELLOW_1                      {0.8, 0.8, 0.3}
-#define MODULE_GREEN_1                       {0.3, 0.8, 0.3}
-#define MODULE_YELLOW_2                      {0.8, 0.8, 0.4}
-#define MODULE_BLUE_3                        {0.5, 0.5, 0.8}
-#define MODULE_RED_2                         {0.8, 0.4, 0.4}
-#define MODULE_RED_3                         {0.8, 0.5, 0.5}
-#define MODULE_YELLOW_3                      {0.8, 0.8, 0.5}
-#define MODULE_GREEN_3                       {0.5, 0.8, 0.5}
-#define MODULE_CYAN_1                        {0.3, 0.8, 0.8}
-#define MODULE_CYAN_3                        {0.5, 0.8, 0.8}
-#define MODULE_CYAN_4                        {0.6, 0.8, 0.8}
-#define MODULE_BLUE_2                        {0.4, 0.4, 0.8}
-#define MODULE_PURPLE_1                      {0.8, 0.3, 0.8}
-#define MODULE_PURPLE_2                      {0.8, 0.4, 0.8}
-#define MODULE_PURPLE_3                      {0.8, 0.5, 0.8}
-#define MODULE_PURPLE_4                      {0.8, 0.6, 0.8}
+#define MODULE_STANDARD_GREY           {0.7, 0.7, 0.7}
+#define MODULE_RED_4                   {0.8, 0.6, 0.6}
+#define MODULE_GREEN_4                 {0.6, 0.8, 0.6}
+#define MODULE_BLUE_4                  {0.6, 0.6, 0.8}
+#define MODULE_YELLOW_4                {0.8, 0.8, 0.6}
+#define MODULE_BLUE_1                  {0.3, 0.3, 0.8}
+#define MODULE_RED_1                   {0.8, 0.3, 0.3}
+#define MODULE_CYAN_2                  {0.4, 0.8, 0.8}
+#define MODULE_GREEN_2                 {0.4, 0.8, 0.4}
+#define MODULE_YELLOW_1                {0.8, 0.8, 0.3}
+#define MODULE_GREEN_1                 {0.3, 0.8, 0.3}
+#define MODULE_YELLOW_2                {0.8, 0.8, 0.4}
+#define MODULE_BLUE_3                  {0.5, 0.5, 0.8}
+#define MODULE_RED_2                   {0.8, 0.4, 0.4}
+#define MODULE_RED_3                   {0.8, 0.5, 0.5}
+#define MODULE_YELLOW_3                {0.8, 0.8, 0.5}
+#define MODULE_GREEN_3                 {0.5, 0.8, 0.5}
+#define MODULE_CYAN_1                  {0.3, 0.8, 0.8}
+#define MODULE_CYAN_3                  {0.5, 0.8, 0.8}
+#define MODULE_CYAN_4                  {0.6, 0.8, 0.8}
+#define MODULE_BLUE_2                  {0.4, 0.4, 0.8}
+#define MODULE_PURPLE_1                {0.8, 0.3, 0.8}
+#define MODULE_PURPLE_2                {0.8, 0.4, 0.8}
+#define MODULE_PURPLE_3                {0.8, 0.5, 0.8}
+#define MODULE_PURPLE_4                {0.8, 0.6, 0.8}
 
 // TODO: rationalise this lot
-#define TOP_BAR_HEIGHT                       (80.0)
-#define SCROLLBAR_WIDTH                      (15.0)
-#define SCROLLBAR_LENGTH                     (100.0)
-#define SCROLLBAR_MARGIN                     SCROLLBAR_WIDTH
+#define TOP_BAR_HEIGHT                 (80.0)
+#define SCROLLBAR_WIDTH                (15.0)
+#define SCROLLBAR_LENGTH               (100.0)
+#define SCROLLBAR_MARGIN               SCROLLBAR_WIDTH
 
-#define MODULE_WIDTH                         (350.0)
-#define MODULE_X_GAP                         (10.0)
-#define MODULE_X_SPAN                        (MODULE_WIDTH + MODULE_X_GAP)
-#define MODULE_TITLE_X_OFFSET                (3.0)
-#define MODULE_HEIGHT                        (38.0) // 1 row
-#define MODULE_MARGIN                        (5.0)
-#define MODULE_Y_GAP                         (5.0)
-#define MODULE_Y_SPAN                        (MODULE_HEIGHT + MODULE_Y_GAP)
-#define MODULE_TITLE_Y_OFFSET                (20.0)
-#define MODULE_AREA_X_MARGINS                ((MODULE_MARGIN * 2.0) + SCROLLBAR_WIDTH)
-#define MODULE_AREA_Y_MARGINS                ((MODULE_MARGIN * 2.0) + TOP_BAR_HEIGHT + SCROLLBAR_WIDTH)
-#define MODULE_AREA_X_WIDTH                  ((double)renderWidth - (MODULE_AREA_X_MARGINS))
-#define MODULE_AREA_Y_HEIGHT                 ((double)renderHeight - (MODULE_AREA_Y_MARGINS))
+#define MODULE_WIDTH                   (350.0)
+#define MODULE_X_GAP                   (10.0)
+#define MODULE_X_SPAN                  (MODULE_WIDTH + MODULE_X_GAP)
+#define MODULE_TITLE_X_OFFSET          (3.0)
+#define MODULE_HEIGHT                  (38.0)       // 1 row
+#define MODULE_MARGIN                  (5.0)
+#define MODULE_Y_GAP                   (5.0)
+#define MODULE_Y_SPAN                  (MODULE_HEIGHT + MODULE_Y_GAP)
+#define MODULE_TITLE_Y_OFFSET          (20.0)
+#define MODULE_AREA_X_MARGINS          ((MODULE_MARGIN * 2.0) + SCROLLBAR_WIDTH)
+#define MODULE_AREA_Y_MARGINS          ((MODULE_MARGIN * 2.0) + TOP_BAR_HEIGHT + SCROLLBAR_WIDTH)
+#define MODULE_AREA_X_WIDTH            ((double)renderWidth - (MODULE_AREA_X_MARGINS))
+#define MODULE_AREA_Y_HEIGHT           ((double)renderHeight - (MODULE_AREA_Y_MARGINS))
 
-#define NO_ZOOM                              (1.0)
-#define ZOOM_DELTA                           (0.1)
+#define NO_ZOOM                        (1.0)
+#define ZOOM_DELTA                     (0.1)
 
-#define COMP_MARGIN                          (5.0)
+#define COMP_MARGIN                    (5.0)
 
-#define BLANK_SIZE                           (0.0) // Not used directly by calling function, or needs calculation in following calls
-#define STANDARD_TEXT_HEIGHT                 (12.0)
-#define STANDARD_BUTTON_TEXT_HEIGHT          (12.0)
+#define BLANK_SIZE                     (0.0)       // Not used directly by calling function, or needs calculation in following calls
+#define STANDARD_TEXT_HEIGHT           (12.0)
+#define STANDARD_BUTTON_TEXT_HEIGHT    (12.0)
 
-#define CONNECTOR_SIZE                       (5)
+#define CONNECTOR_SIZE                 (5)
 
-#define MAX_ROWS                             (127)
-#define MAX_COLUMNS                          (127)
-#define MAX_ROWS_MODULE                      (12) // Operator type is 12 rows - largest we have
+#define MAX_ROWS                       (127)
+#define MAX_COLUMNS                    (127)
+#define MAX_ROWS_MODULE                (12)       // Operator type is 12 rows - largest we have
 
-#define LONGEST_PATCH_NAME                   "XXXXXXXXXXXXXXXX"
-#define LONGEST_MODULE_NAME                  "XXXXXXXXXXXXXXXX"
+#define LONGEST_PATCH_NAME             "XXXXXXXXXXXXXXXX"
+#define LONGEST_MODULE_NAME            "XXXXXXXXXXXXXXXX"
 
-#define NULL_RECTANGLE                       {{0.0, 0.0}, {0.0, 0.0}}
+#define NULL_RECTANGLE                 {{0.0, 0.0}, {0.0, 0.0}}
 #define ARRAY_SIZE(arr)    (sizeof(arr) / sizeof(arr[0]))
 
 #endif // #define __DEFS_H__
