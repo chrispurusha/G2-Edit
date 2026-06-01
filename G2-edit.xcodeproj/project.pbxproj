@@ -371,7 +371,7 @@
 		83C1453A2CFF6E5F004E572A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = arm64;
+				ARCHS = "$(ARCHS_STANDARD)";
 				CODE_SIGN_ENTITLEMENTS = "G2-edit.entitlements";
 				CODE_SIGN_STYLE = Manual;
 				DEAD_CODE_STRIPPING = YES;
@@ -382,15 +382,9 @@
 					"$(PROJECT_DIR)/ThirdParty/glfw/include",
 					"$(PROJECT_DIR)/ThirdParty/libusb/libusb",
 				);
-				LIBRARY_SEARCH_PATHS = (
-					/opt/homebrew/lib,
-					"$(PROJECT_DIR)/ThirdParty/glfw/build/src",
-					"$(PROJECT_DIR)/ThirdParty/freetype/build",
-					"$(PROJECT_DIR)/ThirdParty/libusb/libusb/.libs",
-					"$(PROJECT_DIR)/ThirdParty/libusb",
-				);
-				"LIBRARY_SEARCH_PATHS[arch=arm64]" = /opt/homebrew/lib;
-				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = /usr/local/lib;
+				LIBRARY_SEARCH_PATHS = "";
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "";
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "";
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
 				ONLY_ACTIVE_ARCH = NO;
 				"OTHER_LDFLAGS[arch=*]" = (
@@ -407,25 +401,27 @@
 		83C1453B2CFF6E5F004E572A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = arm64;
+				ARCHS = "$(ARCHS_STANDARD)";
 				CODE_SIGN_ENTITLEMENTS = "G2-edit.entitlements";
 				CODE_SIGN_STYLE = Manual;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
-				HEADER_SEARCH_PATHS = "";
-				LIBRARY_SEARCH_PATHS = (
-					/opt/homebrew/lib,
-					"$(PROJECT_DIR)/ThirdParty/glfw/build/src",
-					"$(PROJECT_DIR)/ThirdParty/freetype/build",
-					"$(PROJECT_DIR)/ThirdParty/libusb/libusb/.libs",
-					"$(PROJECT_DIR)/ThirdParty/libusb",
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/ThirdParty/freetype/include",
+					"$(PROJECT_DIR)/ThirdParty/glfw/include",
+					"$(PROJECT_DIR)/ThirdParty/libusb/libusb",
 				);
-				"LIBRARY_SEARCH_PATHS[arch=arm64]" = /opt/homebrew/lib;
-				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = /usr/local/lib;
+				LIBRARY_SEARCH_PATHS = "";
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "";
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "";
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
 				ONLY_ACTIVE_ARCH = YES;
-				"OTHER_LDFLAGS[arch=*]" = "";
+				"OTHER_LDFLAGS[arch=*]" = (
+					"$(PROJECT_DIR)/ThirdParty/glfw/build/src/libglfw3.a",
+					"$(PROJECT_DIR)/ThirdParty/freetype/build/libfreetype.a",
+					"$(PROJECT_DIR)/ThirdParty/libusb/libusb/.libs/libusb-1.0.a",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"USER_HEADER_SEARCH_PATHS[arch=*]" = "";
