@@ -263,13 +263,13 @@ void init_patch(uint32_t slot) {  // Todo - think where this should really go
     gPatchDescr[slot].voiceCount      = 1;
     gPatchDescr[slot].barPosition     = 600;
     gPatchDescr[slot].unknown3        = 2;   // unknown9 in Delphi
-    gPatchDescr[slot].redVisible      = 1;
-    gPatchDescr[slot].blueVisible     = 1;
-    gPatchDescr[slot].yellowVisible   = 1;
-    gPatchDescr[slot].orangeVisible   = 1;
-    gPatchDescr[slot].greenVisible    = 1;
-    gPatchDescr[slot].purpleVisible   = 1;
-    gPatchDescr[slot].whiteVisible    = 1;
+    gPatchDescr[slot].visible[0]      = 1;
+    gPatchDescr[slot].visible[1]     = 1;
+    gPatchDescr[slot].visible[2]   = 1;
+    gPatchDescr[slot].visible[3]   = 1;
+    gPatchDescr[slot].visible[4]    = 1;
+    gPatchDescr[slot].visible[5]   = 1;
+    gPatchDescr[slot].visible[6]    = 1;
     gPatchDescr[slot].monoPoly        = 1;
     gPatchDescr[slot].activeVariation = 0;
     gPatchDescr[slot].category        = 0;
@@ -1618,6 +1618,11 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     found                    = true;
                 }
             }
+            if (found == false) {
+                if (handle_module_press(coord, mouseButton) == true) {
+                    found                    = true;
+                }
+            }
         }
         break;
 
@@ -1650,10 +1655,14 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             if (found == false) {
                 for (i = 0; i < NUM_CABLE_COLOURS; i++) {
                     if (within_rectangle(coord, gCableColourToggleRect[i])) {
-                        uint32_t mask = atomic_load(&gHiddenCableMask);
-                        mask ^= (1u << i);  // toggle bit
-                        atomic_store(&gHiddenCableMask, mask);
+                        for (int colour=0; colour<7; colour++) {
+                            gPatchDescr[slot].visible[i]      = !gPatchDescr[slot].visible[i];
+                        }
                         atomic_store(&gReDraw, true);
+                        tMessageContent messageContent = {0};
+                        messageContent.cmd         = eMsgCmdWritePatchDescr;
+                        messageContent.slot        = slot;
+                        msg_send(&gCommandQueue, &messageContent);
                         found = true;
                         break;
                     }
@@ -1673,10 +1682,17 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (within_rectangle(coord, gHideAllCablesRect)) {
-                    bool current = atomic_load(&gCablesHideAll);
-                    atomic_store(&gCablesHideAll, !current);
+                    for (int colour=0; colour<7; colour++) {
+                        gPatchDescr[slot].visible[colour]      = 0;
+                    }
+                    
+                    //atomic_store(&gCablesHideAll, !current);
                     atomic_store(&gCablesTransparent, false);
                     atomic_store(&gReDraw, true);
+                    tMessageContent messageContent = {0};
+                    messageContent.cmd         = eMsgCmdWritePatchDescr;
+                    messageContent.slot        = slot;
+                    msg_send(&gCommandQueue, &messageContent);
                     found = true;
                 }
             }
@@ -1685,7 +1701,10 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 if (within_rectangle(coord, gTransparentCablesRect)) {
                     bool current = atomic_load(&gCablesTransparent);
                     atomic_store(&gCablesTransparent, !current);
-                    atomic_store(&gCablesHideAll, false);
+                    //for (int colour=0; colour<7; colour++) {
+                    //    gPatchDescr[slot].visible[i]      = 1;
+                    //}
+                    //atomic_store(&gCablesHideAll, false);
                     atomic_store(&gReDraw, true);
                     found = true;
                 }

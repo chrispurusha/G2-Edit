@@ -70,12 +70,12 @@ extern _Atomic tCommsState gCommsState;
 extern _Atomic uint32_t    gChangedSlot;
 extern tNameEdit           gPatchNameEdit;
 extern tModuleNameEdit     gModuleNameEdit;
-extern _Atomic uint32_t    gHiddenCableMask;
+//extern _Atomic uint32_t    gHiddenCableMask;
 extern tRectangle          gCableColourToggleRect[NUM_CABLE_COLOURS];
 extern tRectangle          gCableColourSelectRect[NUM_CABLE_COLOURS];
 extern uint32_t            gCableColour;
 extern _Atomic bool        gCablesTransparent; // true = draw all cables semi-transparent
-extern _Atomic bool        gCablesHideAll;     // true = hide all cables completely
+//extern _Atomic bool        gCablesHideAll;     // true = hide all cables completely
 extern tRectangle          gHideAllCablesRect;
 extern tRectangle          gTransparentCablesRect;
 extern tRectangle          gPatchNameRectangle;

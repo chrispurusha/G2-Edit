@@ -827,8 +827,8 @@ void render_cables(void) {
     bool     validCable     = false;
     uint32_t slot           = atomic_load(&gSlot);
     uint32_t location       = atomic_load(&gLocation);
-    uint32_t hiddenMask     = atomic_load(&gHiddenCableMask);
-    bool     hideAll        = atomic_load(&gCablesHideAll);
+    //uint32_t hiddenMask     = atomic_load(&gHiddenCableMask);
+    //bool     hideAll        = atomic_load(&gCablesHideAll);
     bool     allTransparent = atomic_load(&gCablesTransparent);
 
     reset_walk_cable();
@@ -837,11 +837,11 @@ void render_cables(void) {
         validCable = walk_next_cable(&cable);
 
         if (validCable && cable.key.slot == slot && cable.key.location == location) {
-            bool colourHidden = (hiddenMask >> cable.colour) & 1;
-            bool isHovered    = false /*gHoverConnector.active &&
-                                       * cable_touches_connector(&cable, gHoverConnector)*/; // TODO
+            bool colourVisible = gPatchDescr[slot].visible[cable.colour];
+            //bool isHovered    = false /*gHoverConnector.active &&
+            //                           * cable_touches_connector(&cable, gHoverConnector)*/; // TODO
 
-            if (hideAll || colourHidden) {
+            if (/*hideAll || */!colourVisible) {
                 continue;
             }
             render_cable(&cable, allTransparent);

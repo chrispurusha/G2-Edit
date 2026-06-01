@@ -693,13 +693,7 @@ typedef struct {
     uint8_t  voiceCount;
     uint16_t barPosition;
     uint8_t  unknown3;
-    uint8_t  redVisible;
-    uint8_t  blueVisible;
-    uint8_t  yellowVisible;
-    uint8_t  orangeVisible;
-    uint8_t  greenVisible;
-    uint8_t  purpleVisible;
-    uint8_t  whiteVisible;
+    uint8_t  visible[7]; // TODO - add the enumeration for colours and use a max value to set this
     uint8_t  monoPoly;
     uint8_t  activeVariation;
     uint8_t  category;
