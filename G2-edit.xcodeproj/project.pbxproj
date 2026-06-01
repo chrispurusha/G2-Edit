@@ -7,15 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		830BFBC12FCDE5440006DA88 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 830BFBC02FCDE5440006DA88 /* Security.framework */; };
 		832FC5D32D01F6190084A230 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 832FC5D22D01F6190084A230 /* OpenGL.framework */; };
 		832FC5D92D01F6C20084A230 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 832FC5D82D01F6C20084A230 /* Cocoa.framework */; };
 		832FC5DC2D01F70A0084A230 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 832FC5D62D01F68C0084A230 /* IOKit.framework */; };
 		832FC5DE2D01F7840084A230 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 832FC5DD2D01F7840084A230 /* Quartz.framework */; };
 		833734552DB1033200ACF41F /* moduleResourcesAccess.c in Sources */ = {isa = PBXBuildFile; fileRef = 833734542DB1033200ACF41F /* moduleResourcesAccess.c */; };
 		8347FD552DC7E77E009751C4 /* fileDialogue.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8347FD542DC7E772009751C4 /* fileDialogue.mm */; };
-		83496B5A2E81BC1100999B36 /* libusb-1.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 83496B592E81BC1100999B36 /* libusb-1.0.a */; };
-		83496B5C2E81E10400999B36 /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 83496B5B2E81E10400999B36 /* libglfw3.a */; };
-		83496B5E2E81E11300999B36 /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 83496B5D2E81E11300999B36 /* libfreetype.a */; };
 		834EF30B2EA58DD400DD0407 /* protocol.c in Sources */ = {isa = PBXBuildFile; fileRef = 834EF30A2EA58DD400DD0407 /* protocol.c */; };
 		8352A5752D4BE22300CD5AD9 /* dataBase.c in Sources */ = {isa = PBXBuildFile; fileRef = 8352A5742D4BE22300CD5AD9 /* dataBase.c */; };
 		835C6EB12E13F77300BDEDB0 /* renderParams.c in Sources */ = {isa = PBXBuildFile; fileRef = 835C6EB02E13F77300BDEDB0 /* renderParams.c */; };
@@ -43,6 +41,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		830BFBC02FCDE5440006DA88 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		832FC5D22D01F6190084A230 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		832FC5D62D01F68C0084A230 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		832FC5D82D01F6C20084A230 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
@@ -52,9 +51,6 @@
 		833734542DB1033200ACF41F /* moduleResourcesAccess.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = moduleResourcesAccess.c; sourceTree = "<group>"; };
 		8347FD542DC7E772009751C4 /* fileDialogue.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = fileDialogue.mm; sourceTree = "<group>"; };
 		8347FD562DC7EAAD009751C4 /* fileDialogue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = fileDialogue.h; sourceTree = "<group>"; };
-		83496B592E81BC1100999B36 /* libusb-1.0.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libusb-1.0.a"; path = "/opt/homebrew/lib/libusb-1.0.a"; sourceTree = "<absolute>"; };
-		83496B5B2E81E10400999B36 /* libglfw3.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libglfw3.a; path = /opt/homebrew/lib/libglfw3.a; sourceTree = "<absolute>"; };
-		83496B5D2E81E11300999B36 /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = /opt/homebrew/lib/libfreetype.a; sourceTree = "<absolute>"; };
 		834EF30A2EA58DD400DD0407 /* protocol.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = protocol.c; sourceTree = "<group>"; };
 		834EF30C2EA58DE300DD0407 /* protocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = protocol.h; sourceTree = "<group>"; };
 		8352A5732D4BE21D00CD5AD9 /* dataBase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dataBase.h; sourceTree = "<group>"; };
@@ -92,13 +88,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				830BFBC12FCDE5440006DA88 /* Security.framework in Frameworks */,
 				832FC5DE2D01F7840084A230 /* Quartz.framework in Frameworks */,
 				832FC5DC2D01F70A0084A230 /* IOKit.framework in Frameworks */,
-				83496B5E2E81E11300999B36 /* libfreetype.a in Frameworks */,
 				832FC5D92D01F6C20084A230 /* Cocoa.framework in Frameworks */,
-				83496B5C2E81E10400999B36 /* libglfw3.a in Frameworks */,
 				832FC5D32D01F6190084A230 /* OpenGL.framework in Frameworks */,
-				83496B5A2E81BC1100999B36 /* libusb-1.0.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -125,13 +119,11 @@
 		83C1453C2CFF7104004E572A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				830BFBC02FCDE5440006DA88 /* Security.framework */,
 				832FC5DD2D01F7840084A230 /* Quartz.framework */,
 				832FC5D82D01F6C20084A230 /* Cocoa.framework */,
 				832FC5D62D01F68C0084A230 /* IOKit.framework */,
 				832FC5D22D01F6190084A230 /* OpenGL.framework */,
-				83496B592E81BC1100999B36 /* libusb-1.0.a */,
-				83496B5B2E81E10400999B36 /* libglfw3.a */,
-				83496B5D2E81E11300999B36 /* libfreetype.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -399,6 +391,14 @@
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = /usr/local/lib;
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
 				ONLY_ACTIVE_ARCH = NO;
+				"OTHER_LDFLAGS[arch=*]" = (
+					/opt/homebrew/cellar/zlib/1.3.2/lib/libz.a,
+					/opt/homebrew/cellar/bzip2/1.0.8/lib/libbz2.a,
+					/opt/homebrew/lib/libpng.a,
+					/opt/homebrew/lib/libfreetype.a,
+					"/opt/homebrew/lib/libusb-1.0.a",
+					/opt/homebrew/lib/libglfw3.a,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
@@ -427,6 +427,14 @@
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = /usr/local/lib;
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
 				ONLY_ACTIVE_ARCH = YES;
+				"OTHER_LDFLAGS[arch=*]" = (
+					/opt/homebrew/cellar/zlib/1.3.2/lib/libz.a,
+					/opt/homebrew/cellar/bzip2/1.0.8/lib/libbz2.a,
+					/opt/homebrew/lib/libpng.a,
+					/opt/homebrew/lib/libfreetype.a,
+					"/opt/homebrew/lib/libusb-1.0.a",
+					/opt/homebrew/lib/libglfw3.a,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
