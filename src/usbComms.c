@@ -30,7 +30,7 @@ extern "C" {
 
 #include "defs.h"
 #include "types.h"
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 #include "utils.h"
 #include "msgQueue.h"
 #include "protocol.h"
