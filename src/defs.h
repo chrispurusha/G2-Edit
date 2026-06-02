@@ -40,7 +40,6 @@
 
 #define WINDOW_TITLE                         "G2 Editor"
 
-#define UPLOAD_PATCH_VERSION                 (0x53)
 #define NUM_VARIATIONS_USB                   (10)                     // 10 variations per patch, but only fist 8 presented on the GUI
 #define NUM_VARIATIONS_FILE                  (NUM_VARIATIONS_USB - 1) // One less variation for file access = 9
 #define NUM_GUI_VARIATIONS                   (8)
@@ -54,7 +53,6 @@
 #define MAX_NUM_CONNECTORS                   (13)
 #define MAX_NUM_KNOBS                        (120)                        // G2 always has exactly 120 knob slots
 #define MAX_NUM_CONTROLLERS                  (128)
-#define NUM_CABLE_COLOURS                    (7)
 
 #define INTERRUPT_MESSAGE_SIZE               (16)
 #define EXTENDED_MESSAGE_SIZE                (8192)

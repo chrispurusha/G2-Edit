@@ -841,7 +841,7 @@ void render_cables(void) {
             //bool isHovered    = false /*gHoverConnector.active &&
             //                           * cable_touches_connector(&cable, gHoverConnector)*/; // TODO
 
-            if (/*hideAll || */!colourVisible) {
+            if (/*hideAll || */ !colourVisible) {
                 continue;
             }
             render_cable(&cable, allTransparent);

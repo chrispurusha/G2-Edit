@@ -261,12 +261,12 @@ void init_patch(uint32_t slot) {  // Todo - think where this should really go
     gPatchDescr[slot].barPosition     = 600;
     gPatchDescr[slot].unknown3        = 2;   // unknown9 in Delphi
     gPatchDescr[slot].visible[0]      = 1;
-    gPatchDescr[slot].visible[1]     = 1;
-    gPatchDescr[slot].visible[2]   = 1;
-    gPatchDescr[slot].visible[3]   = 1;
-    gPatchDescr[slot].visible[4]    = 1;
-    gPatchDescr[slot].visible[5]   = 1;
-    gPatchDescr[slot].visible[6]    = 1;
+    gPatchDescr[slot].visible[1]      = 1;
+    gPatchDescr[slot].visible[2]      = 1;
+    gPatchDescr[slot].visible[3]      = 1;
+    gPatchDescr[slot].visible[4]      = 1;
+    gPatchDescr[slot].visible[5]      = 1;
+    gPatchDescr[slot].visible[6]      = 1;
     gPatchDescr[slot].monoPoly        = 1;
     gPatchDescr[slot].activeVariation = 0;
     gPatchDescr[slot].category        = 0;
@@ -639,7 +639,8 @@ int32_t find_unique_module_id(uint32_t location) {
     key.slot     = slot; // TODO: Might need to pass this in as a parameter?
     key.location = location;
 
-    for (i = 0; i <= 255; i++) {
+    // Note that index 0 is *not* valid
+    for (i = 1; i <= 255; i++) {
         key.index = i;
 
         if (read_module(key, &module) == false) {
@@ -796,134 +797,138 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {NULL,                  RGB_BLACK,  NULL,                                0, NULL}    // End of menu
     };
     static tMenuItem noteMenuItems[] = {
-        {"Create Glide",      RGB_GREY_3, menu_action_create, moduleTypeGlide,      NULL},
-        {"Create KeyQuant",   RGB_GREY_3, menu_action_create, moduleTypeKeyQuant,   NULL},
-        {"Create NoteQuant",  RGB_GREY_3, menu_action_create, moduleTypeNoteQuant,  NULL},
-        {"Create NoteScaler", RGB_GREY_3, menu_action_create, moduleTypeNoteScaler, NULL},
-        {"Create LevScaler",  RGB_GREY_3, menu_action_create, moduleTypeLevScaler,  NULL},
-        {"Create PartQuant",  RGB_GREY_3, menu_action_create, moduleTypePartQuant,  NULL},
-        {"Create PitchTrack", RGB_GREY_3, menu_action_create, moduleTypePitchTrack, NULL},
-        {"Create ZeroCnt",    RGB_GREY_3, menu_action_create, moduleTypeZeroCnt,    NULL},
-        {NULL,                RGB_BLACK,  NULL,                                  0, NULL}    // End of menu
+        {"Note Quantiser",        RGB_GREY_3, menu_action_create, moduleTypeNoteQuant,  NULL},
+        {"Key Quantiser",         RGB_GREY_3, menu_action_create, moduleTypeKeyQuant,   NULL},
+        {"Partial Quantiser",     RGB_GREY_3, menu_action_create, moduleTypePartQuant,  NULL},
+        {"Note Scaler",           RGB_GREY_3, menu_action_create, moduleTypeNoteScaler, NULL},
+        {"Glide",                 RGB_GREY_3, menu_action_create, moduleTypeGlide,      NULL},
+        {"Pitch Tracker",         RGB_GREY_3, menu_action_create, moduleTypePitchTrack, NULL},
+        {"Zero Crossing Counter", RGB_GREY_3, menu_action_create, moduleTypeZeroCnt,    NULL},
+        {"Level Scaler",          RGB_GREY_3, menu_action_create, moduleTypeLevScaler,  NULL},
+        {NULL,                    RGB_BLACK,  NULL,                                  0, NULL} // End of menu
     };
     static tMenuItem oscMenuItems[]  = {
-        {"Create Osc A",       RGB_GREY_3, menu_action_create, moduleTypeOscA,      NULL},
-        {"Create Osc B",       RGB_GREY_3, menu_action_create, moduleTypeOscB,      NULL},
-        {"Create Osc C",       RGB_GREY_3, menu_action_create, moduleTypeOscC,      NULL},
-        {"Create Osc D",       RGB_GREY_3, menu_action_create, moduleTypeOscD,      NULL},
-        {"Create Osc PM",      RGB_GREY_3, menu_action_create, moduleTypeOscPM,     NULL},
-        {"Create Osc Shape A", RGB_GREY_3, menu_action_create, moduleTypeOscShpA,   NULL},
-        {"Create Osc Shape B", RGB_GREY_3, menu_action_create, moduleTypeOscShpB,   NULL},
-        {"Create Osc String",  RGB_GREY_3, menu_action_create, moduleTypeOscString, NULL},
-        {"Create Osc Dual",    RGB_GREY_3, menu_action_create, moduleTypeOscDual,   NULL},
-        {"Create Noise",       RGB_GREY_3, menu_action_create, moduleTypeNoise,     NULL},
-        {"Create Osc Noise",   RGB_GREY_3, menu_action_create, moduleTypeOscNoise,  NULL},
-        {"Create Met Noise",   RGB_GREY_3, menu_action_create, moduleTypeMetNoise,  NULL},
-        {"Create Operator",    RGB_GREY_3, menu_action_create, moduleTypeOperator,  NULL},
-        {"Create DXRouter",    RGB_GREY_3, menu_action_create, moduleTypeDXRouter,  NULL},
-        {"Create DrumSynth",   RGB_GREY_3, menu_action_create, moduleTypeDrumSynth, NULL},
-        {"Create OscPerc",     RGB_GREY_3, menu_action_create, moduleTypeOscPerc,   NULL},
-        {"Create Driver",      RGB_GREY_3, menu_action_create, moduleTypeDriver,    NULL},
-        {"Create Resonator",   RGB_GREY_3, menu_action_create, moduleTypeResonator, NULL},
-        {"Create Osc Master",  RGB_GREY_3, menu_action_create, moduleTypeOscMaster, NULL},
-        {NULL,                 RGB_BLACK,  NULL,                                 0, NULL}    // End of menu
+        {"Osc A",          RGB_GREY_3, menu_action_create, moduleTypeOscA,      NULL},
+        {"Osc B",          RGB_GREY_3, menu_action_create, moduleTypeOscB,      NULL},
+        {"Osc C",          RGB_GREY_3, menu_action_create, moduleTypeOscC,      NULL},
+        {"Osc D",          RGB_GREY_3, menu_action_create, moduleTypeOscD,      NULL},
+        {"Osc Phase Mod",  RGB_GREY_3, menu_action_create, moduleTypeOscPM,     NULL},
+        {"Osc Shape A",    RGB_GREY_3, menu_action_create, moduleTypeOscShpA,   NULL},
+        {"Osc Shape B",    RGB_GREY_3, menu_action_create, moduleTypeOscShpB,   NULL},
+        {"Osc Dual",       RGB_GREY_3, menu_action_create, moduleTypeOscDual,   NULL},
+        {"Noise Osc",      RGB_GREY_3, menu_action_create, moduleTypeOscNoise,  NULL},
+        {"Noise",          RGB_GREY_3, menu_action_create, moduleTypeNoise,     NULL},
+        {"Metallic Noise", RGB_GREY_3, menu_action_create, moduleTypeMetNoise,  NULL},
+        {"Osc Percussion", RGB_GREY_3, menu_action_create, moduleTypeOscPerc,   NULL},
+        {"Drum Synth",     RGB_GREY_3, menu_action_create, moduleTypeDrumSynth, NULL},
+        {"Osc String",     RGB_GREY_3, menu_action_create, moduleTypeOscString, NULL},
+        {"FM Operator",    RGB_GREY_3, menu_action_create, moduleTypeOperator,  NULL},
+        {"DX Router",      RGB_GREY_3, menu_action_create, moduleTypeDXRouter,  NULL},
+        {"Driver",         RGB_GREY_3, menu_action_create, moduleTypeDriver,    NULL},
+        {"Resonator",      RGB_GREY_3, menu_action_create, moduleTypeResonator, NULL},
+        {"Osc Master",     RGB_GREY_3, menu_action_create, moduleTypeOscMaster, NULL},
+        {NULL,             RGB_BLACK,  NULL,                                 0, NULL}        // End of menu
     };
     static tMenuItem randomMenuItems[] = {
-        {"Create RandomA", RGB_GREY_3, menu_action_create, moduleTypeRandomA, NULL},
-        {"Create RandomB", RGB_GREY_3, menu_action_create, moduleTypeRandomB, NULL},
-        {NULL,             RGB_BLACK,  NULL,                               0, NULL}         // End of menu
+        {"Random A", RGB_GREY_3, menu_action_create, moduleTypeRandomA, NULL},
+        {"Random B", RGB_GREY_3, menu_action_create, moduleTypeRandomB, NULL},
+        //{"Random Clock A", RGB_GREY_3, menu_action_create, NULL, NULL},
+        //{"Random Clock B", RGB_GREY_3, menu_action_create, NULL, NULL},
+        //{"Random Trig", RGB_GREY_3, menu_action_create, NULL, NULL},
+        //{"Random Pattern", RGB_GREY_3, menu_action_create, NULL, NULL},
+        {NULL,       RGB_BLACK,  NULL,                               0, NULL}               // End of menu
     };
 
     static tMenuItem lfoMenuItems[]    = {
-        {"Create LFO A",     RGB_GREY_3, menu_action_create, moduleTypeLfoA,    NULL},
-        {"Create LFO B",     RGB_GREY_3, menu_action_create, moduleTypeLfoB,    NULL},
-        {"Create LFO C",     RGB_GREY_3, menu_action_create, moduleTypeLfoC,    NULL},
-        {"Create LFO Shp A", RGB_GREY_3, menu_action_create, moduleTypeLfoShpA, NULL},
-        {"Create ClkGen",    RGB_GREY_3, menu_action_create, moduleTypeClkGen,  NULL},
-        {NULL,               RGB_BLACK,  NULL,                               0, NULL}        // End of menu
+        {"LFO A",           RGB_GREY_3, menu_action_create, moduleTypeLfoA,    NULL},
+        {"LFO B",           RGB_GREY_3, menu_action_create, moduleTypeLfoB,    NULL},
+        {"LFO C",           RGB_GREY_3, menu_action_create, moduleTypeLfoC,    NULL},
+        {"LFO Shp A",       RGB_GREY_3, menu_action_create, moduleTypeLfoShpA, NULL},
+        {"Clock Generator", RGB_GREY_3, menu_action_create, moduleTypeClkGen,  NULL},
+        {NULL,              RGB_BLACK,  NULL,                               0, NULL}         // End of menu
     };
     static tMenuItem envMenuItems[]    = {
-        {"Create Env ADSR",  RGB_GREY_3, menu_action_create, moduleTypeEnvADSR,  NULL},
-        {"Create Env AHD",   RGB_GREY_3, menu_action_create, moduleTypeEnvAHD,   NULL},
-        {"Create Env ADR",   RGB_GREY_3, menu_action_create, moduleTypeEnvADR,   NULL},
-        {"Create Env ADDSR", RGB_GREY_3, menu_action_create, moduleTypeEnvADDSR, NULL},
-        {"Create Env H",     RGB_GREY_3, menu_action_create, moduleTypeEnvH,     NULL},
-        {"Create Env D",     RGB_GREY_3, menu_action_create, moduleTypeEnvD,     NULL},
-        {"Create ModAHD",    RGB_GREY_3, menu_action_create, moduleTypeModAHD,   NULL},
-        {"Create ModADSR",   RGB_GREY_3, menu_action_create, moduleTypeModADSR,  NULL},
-        {"Create Env Multi", RGB_GREY_3, menu_action_create, moduleTypeEnvMulti, NULL},
-        {NULL,               RGB_BLACK,  NULL,                                0, NULL}       // End of menu
+        {"Envelope ADSR",     RGB_GREY_3, menu_action_create, moduleTypeEnvADSR,  NULL}, // TODO - Match these up with OG edirot
+        {"Envelope AHD",      RGB_GREY_3, menu_action_create, moduleTypeEnvAHD,   NULL},
+        {"Envelope ADR",      RGB_GREY_3, menu_action_create, moduleTypeEnvADR,   NULL},
+        {"Envelop ADDSR",     RGB_GREY_3, menu_action_create, moduleTypeEnvADDSR, NULL},
+        {"Envelope H",        RGB_GREY_3, menu_action_create, moduleTypeEnvH,     NULL},
+        {"Envelope D",        RGB_GREY_3, menu_action_create, moduleTypeEnvD,     NULL},
+        {"Envelope Multi",    RGB_GREY_3, menu_action_create, moduleTypeEnvMulti, NULL},
+        {"Envelope Mod AHD",  RGB_GREY_3, menu_action_create, moduleTypeModAHD,   NULL},
+        {"Envelope Mod ADSR", RGB_GREY_3, menu_action_create, moduleTypeModADSR,  NULL},
+        {NULL,                RGB_BLACK,  NULL,                                0, NULL}      // End of menu
     };
     static tMenuItem filterMenuItems[] = {
-        {"Create LP Filter",      RGB_GREY_3, menu_action_create, moduleTypeFltLP,      NULL},
-        {"Create HP Filter",      RGB_GREY_3, menu_action_create, moduleTypeFltHP,      NULL},
-        {"Create Nord Filter",    RGB_GREY_3, menu_action_create, moduleTypeFltNord,    NULL},
-        {"Create Classic Filter", RGB_GREY_3, menu_action_create, moduleTypeFltClassic, NULL},
-        {"Create Multi Filter",   RGB_GREY_3, menu_action_create, moduleTypeFltMulti,   NULL},
-        {"Create Phase Filter",   RGB_GREY_3, menu_action_create, moduleTypeFltPhase,   NULL},
-        {"Create Comb Filter",    RGB_GREY_3, menu_action_create, moduleTypeFltComb,    NULL},
-        {"Create Static Filter",  RGB_GREY_3, menu_action_create, moduleTypeFltStatic,  NULL},
-        {"Create FltVoice",       RGB_GREY_3, menu_action_create, moduleTypeFltVoice,   NULL},
-        {"Create WahWah",         RGB_GREY_3, menu_action_create, moduleTypeWahWah,     NULL},
-        {"Create Vocoder",        RGB_GREY_3, menu_action_create, moduleTypeVocoder,    NULL},
-        {"Create Eq 2-band",      RGB_GREY_3, menu_action_create, moduleTypeEq2Band,    NULL},
-        {"Create Eq 3-band",      RGB_GREY_3, menu_action_create, moduleTypeEq3band,    NULL},
-        {"Create Eq Peak",        RGB_GREY_3, menu_action_create, moduleTypeEqPeak,     NULL},
-        {NULL,                    RGB_BLACK,  NULL,                                  0, NULL} // End of menu
+        {"LP Filter",      RGB_GREY_3, menu_action_create, moduleTypeFltLP,      NULL},
+        {"HP Filter",      RGB_GREY_3, menu_action_create, moduleTypeFltHP,      NULL},
+        {"Nord Filter",    RGB_GREY_3, menu_action_create, moduleTypeFltNord,    NULL},
+        {"Classic Filter", RGB_GREY_3, menu_action_create, moduleTypeFltClassic, NULL},
+        {"Multi Filter",   RGB_GREY_3, menu_action_create, moduleTypeFltMulti,   NULL},
+        {"Phase Filter",   RGB_GREY_3, menu_action_create, moduleTypeFltPhase,   NULL},
+        {"Comb Filter",    RGB_GREY_3, menu_action_create, moduleTypeFltComb,    NULL},
+        {"Static Filter",  RGB_GREY_3, menu_action_create, moduleTypeFltStatic,  NULL},
+        {"FltVoice",       RGB_GREY_3, menu_action_create, moduleTypeFltVoice,   NULL},
+        {"WahWah",         RGB_GREY_3, menu_action_create, moduleTypeWahWah,     NULL},
+        {"Vocoder",        RGB_GREY_3, menu_action_create, moduleTypeVocoder,    NULL},
+        {"Eq 2-band",      RGB_GREY_3, menu_action_create, moduleTypeEq2Band,    NULL},
+        {"Eq 3-band",      RGB_GREY_3, menu_action_create, moduleTypeEq3band,    NULL},
+        {"Eq Peak",        RGB_GREY_3, menu_action_create, moduleTypeEqPeak,     NULL},
+        {NULL,             RGB_BLACK,  NULL,                                  0, NULL}        // End of menu
     };
     static tMenuItem delayMenuItems[]  = {
-        {"Create Delay Single A", RGB_GREY_3, menu_action_create, moduleTypeDlySingleA,  NULL},
-        {"Create Delay Single B", RGB_GREY_3, menu_action_create, moduleTypeDlySingleB,  NULL},
-        {"Create Delay Dual",     RGB_GREY_3, menu_action_create, moduleTypeDelayDual,   NULL},
-        {"Create Delay Quad",     RGB_GREY_3, menu_action_create, moduleTypeDelayQuad,   NULL},
-        {"Create Delay A",        RGB_GREY_3, menu_action_create, moduleTypeDelayA,      NULL},
-        {"Create Delay B",        RGB_GREY_3, menu_action_create, moduleTypeDelayB,      NULL},
-        {"Create Delay Stereo",   RGB_GREY_3, menu_action_create, moduleTypeDlyStereo,   NULL},
-        {"Create Delay Clock",    RGB_GREY_3, menu_action_create, moduleTypeDlyClock,    NULL},
-        {"Create Delay Eight",    RGB_GREY_3, menu_action_create, moduleTypeDlyEight,    NULL},
-        {"Create DlyShiftReg",    RGB_GREY_3, menu_action_create, moduleTypeDlyShiftReg, NULL},
-        {NULL,                    RGB_BLACK,  NULL,                                   0, NULL} // End of menu
+        {"Delay Single A", RGB_GREY_3, menu_action_create, moduleTypeDlySingleA,  NULL},
+        {"Delay Single B", RGB_GREY_3, menu_action_create, moduleTypeDlySingleB,  NULL},
+        {"Delay Dual",     RGB_GREY_3, menu_action_create, moduleTypeDelayDual,   NULL},
+        {"Delay Quad",     RGB_GREY_3, menu_action_create, moduleTypeDelayQuad,   NULL},
+        {"Delay A",        RGB_GREY_3, menu_action_create, moduleTypeDelayA,      NULL},
+        {"Delay B",        RGB_GREY_3, menu_action_create, moduleTypeDelayB,      NULL},
+        {"Delay Stereo",   RGB_GREY_3, menu_action_create, moduleTypeDlyStereo,   NULL},
+        {"Delay Clock",    RGB_GREY_3, menu_action_create, moduleTypeDlyClock,    NULL},
+        {"Delay Eight",    RGB_GREY_3, menu_action_create, moduleTypeDlyEight,    NULL},
+        {"DlyShiftReg",    RGB_GREY_3, menu_action_create, moduleTypeDlyShiftReg, NULL},
+        {NULL,             RGB_BLACK,  NULL,                                   0, NULL}        // End of menu
     };
 
 
     static tMenuItem levelMenuItems[]  = {
-        {"Create Constant",  RGB_GREY_3, menu_action_create, moduleTypeConstant,  NULL},
-        {"Create ConstSwM",  RGB_GREY_3, menu_action_create, moduleTypeConstSwM,  NULL},
-        {"Create ConstSwT",  RGB_GREY_3, menu_action_create, moduleTypeConstSwT,  NULL},
-        {"Create CompLev",   RGB_GREY_3, menu_action_create, moduleTypeCompLev,   NULL},
-        {"Create CompSig",   RGB_GREY_3, menu_action_create, moduleTypeCompSig,   NULL},
-        {"Create LevAdd",    RGB_GREY_3, menu_action_create, moduleTypeLevAdd,    NULL},
-        {"Create LevAmp",    RGB_GREY_3, menu_action_create, moduleTypeLevAmp,    NULL},
-        {"Create LevConv",   RGB_GREY_3, menu_action_create, moduleTypeLevConv,   NULL},
-        {"Create LevMod",    RGB_GREY_3, menu_action_create, moduleTypeLevMod,    NULL},
-        {"Create LevMult",   RGB_GREY_3, menu_action_create, moduleTypeLevMult,   NULL},
-        {"Create MinMax",    RGB_GREY_3, menu_action_create, moduleTypeMinMax,    NULL},
-        {"Create ModAmt",    RGB_GREY_3, menu_action_create, moduleTypeModAmt,    NULL},
-        {"Create NoiseGate", RGB_GREY_3, menu_action_create, moduleTypeNoiseGate, NULL},
-        {"Create EnvFollow", RGB_GREY_3, menu_action_create, moduleTypeEnvFollow, NULL},
-        {NULL,               RGB_BLACK,  NULL,                                 0, NULL}        // End of menu
+        {"Constant",  RGB_GREY_3, menu_action_create, moduleTypeConstant,  NULL},
+        {"ConstSwM",  RGB_GREY_3, menu_action_create, moduleTypeConstSwM,  NULL},
+        {"ConstSwT",  RGB_GREY_3, menu_action_create, moduleTypeConstSwT,  NULL},
+        {"CompLev",   RGB_GREY_3, menu_action_create, moduleTypeCompLev,   NULL},
+        {"CompSig",   RGB_GREY_3, menu_action_create, moduleTypeCompSig,   NULL},
+        {"LevAdd",    RGB_GREY_3, menu_action_create, moduleTypeLevAdd,    NULL},
+        {"LevAmp",    RGB_GREY_3, menu_action_create, moduleTypeLevAmp,    NULL},
+        {"LevConv",   RGB_GREY_3, menu_action_create, moduleTypeLevConv,   NULL},
+        {"LevMod",    RGB_GREY_3, menu_action_create, moduleTypeLevMod,    NULL},
+        {"LevMult",   RGB_GREY_3, menu_action_create, moduleTypeLevMult,   NULL},
+        {"MinMax",    RGB_GREY_3, menu_action_create, moduleTypeMinMax,    NULL},
+        {"ModAmt",    RGB_GREY_3, menu_action_create, moduleTypeModAmt,    NULL},
+        {"NoiseGate", RGB_GREY_3, menu_action_create, moduleTypeNoiseGate, NULL},
+        {"EnvFollow", RGB_GREY_3, menu_action_create, moduleTypeEnvFollow, NULL},
+        {NULL,        RGB_BLACK,  NULL,                                 0, NULL}               // End of menu
     };
 
     static tMenuItem switchMenuItems[] = {
-        {"Create SwOnOffM", RGB_GREY_3, menu_action_create, moduleTypeSwOnOffM,  NULL},
-        {"Create SwOnOffT", RGB_GREY_3, menu_action_create, moduleTypeSwOnOffT,  NULL},
-        {"Create Sw2-1",    RGB_GREY_3, menu_action_create, moduleTypeSw2to1,    NULL},
-        {"Create Sw2-1M",   RGB_GREY_3, menu_action_create, moduleTypeSw2to1,    NULL},
-        {"Create Sw4-1",    RGB_GREY_3, menu_action_create, moduleTypeSw4to1,    NULL},
-        {"Create Sw8-1",    RGB_GREY_3, menu_action_create, moduleTypeSw8to1,    NULL},
-        {"Create Sw1-2",    RGB_GREY_3, menu_action_create, moduleTypeSw1to2,    NULL},
-        {"Create Sw1-2M",   RGB_GREY_3, menu_action_create, moduleTypeSw1to2M,   NULL},
-        {"Create Sw1-4",    RGB_GREY_3, menu_action_create, moduleTypeSw1to4,    NULL},
-        {"Create Sw1-8",    RGB_GREY_3, menu_action_create, moduleTypeSw1to8,    NULL},
-        {"Create ValSw2-1", RGB_GREY_3, menu_action_create, moduleTypeValSw2to1, NULL},
-        {"Create ValSw1-2", RGB_GREY_3, menu_action_create, moduleTypeValSw1to2, NULL},
-        {"Create Mux8-1",   RGB_GREY_3, menu_action_create, moduleTypeMux8to1,   NULL},
-        {"Create Mux1-8",   RGB_GREY_3, menu_action_create, moduleTypeMux1to8,   NULL},
-        {"Create Mux8-1X",  RGB_GREY_3, menu_action_create, moduleTypeMux8to1X,  NULL},
-        {"Create S&H",      RGB_GREY_3, menu_action_create, moduleTypeSandH,     NULL},
-        {"Create T&H",      RGB_GREY_3, menu_action_create, moduleTypeTandH,     NULL},
-        {"Create WindSw",   RGB_GREY_3, menu_action_create, moduleTypeWindSw,    NULL},
-        {NULL,              RGB_BLACK,  NULL,                                 0, NULL}       // End of menu
+        {"SwOnOffM", RGB_GREY_3, menu_action_create, moduleTypeSwOnOffM,  NULL},
+        {"SwOnOffT", RGB_GREY_3, menu_action_create, moduleTypeSwOnOffT,  NULL},
+        {"Sw2-1",    RGB_GREY_3, menu_action_create, moduleTypeSw2to1,    NULL},
+        {"Sw2-1M",   RGB_GREY_3, menu_action_create, moduleTypeSw2to1,    NULL},
+        {"Sw4-1",    RGB_GREY_3, menu_action_create, moduleTypeSw4to1,    NULL},
+        {"Sw8-1",    RGB_GREY_3, menu_action_create, moduleTypeSw8to1,    NULL},
+        {"Sw1-2",    RGB_GREY_3, menu_action_create, moduleTypeSw1to2,    NULL},
+        {"Sw1-2M",   RGB_GREY_3, menu_action_create, moduleTypeSw1to2M,   NULL},
+        {"Sw1-4",    RGB_GREY_3, menu_action_create, moduleTypeSw1to4,    NULL},
+        {"Sw1-8",    RGB_GREY_3, menu_action_create, moduleTypeSw1to8,    NULL},
+        {"ValSw2-1", RGB_GREY_3, menu_action_create, moduleTypeValSw2to1, NULL},
+        {"ValSw1-2", RGB_GREY_3, menu_action_create, moduleTypeValSw1to2, NULL},
+        {"Mux8-1",   RGB_GREY_3, menu_action_create, moduleTypeMux8to1,   NULL},
+        {"Mux1-8",   RGB_GREY_3, menu_action_create, moduleTypeMux1to8,   NULL},
+        {"Mux8-1X",  RGB_GREY_3, menu_action_create, moduleTypeMux8to1X,  NULL},
+        {"S&H",      RGB_GREY_3, menu_action_create, moduleTypeSandH,     NULL},
+        {"T&H",      RGB_GREY_3, menu_action_create, moduleTypeTandH,     NULL},
+        {"WindSw",   RGB_GREY_3, menu_action_create, moduleTypeWindSw,    NULL},
+        {NULL,       RGB_BLACK,  NULL,                                 0, NULL}              // End of menu
     };
     static tMenuItem seqMenuItems[]    = {
         {"Sequencer Event",      RGB_GREY_3, menu_action_create, moduleTypeSeqEvent, NULL},
@@ -934,87 +939,87 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {NULL,                   RGB_BLACK,  NULL,                                0, NULL}   // End of menu
     };
     static tMenuItem shaperMenuItems[] = {
-        {"Create Saturate",  RGB_GREY_3, menu_action_create, moduleTypeSaturate,  NULL},
-        {"Create Clip",      RGB_GREY_3, menu_action_create, moduleTypeClip,      NULL},
-        {"Create OverDrive", RGB_GREY_3, menu_action_create, moduleTypeOverdrive, NULL},
-        {"Create ShpExp",    RGB_GREY_3, menu_action_create, moduleTypeShpExp,    NULL},
-        {"Create WaveWrap",  RGB_GREY_3, menu_action_create, moduleTypeWaveWrap,  NULL},
-        {"Create ShpStatic", RGB_GREY_3, menu_action_create, moduleTypeShpStatic, NULL},
-        {"Create Rect",      RGB_GREY_3, menu_action_create, moduleTypeRect,      NULL},
-        {NULL,               RGB_BLACK,  NULL,                                 0, NULL}      // End of menu
+        {"Saturate",  RGB_GREY_3, menu_action_create, moduleTypeSaturate,  NULL},
+        {"Clip",      RGB_GREY_3, menu_action_create, moduleTypeClip,      NULL},
+        {"OverDrive", RGB_GREY_3, menu_action_create, moduleTypeOverdrive, NULL},
+        {"ShpExp",    RGB_GREY_3, menu_action_create, moduleTypeShpExp,    NULL},
+        {"WaveWrap",  RGB_GREY_3, menu_action_create, moduleTypeWaveWrap,  NULL},
+        {"ShpStatic", RGB_GREY_3, menu_action_create, moduleTypeShpStatic, NULL},
+        {"Rect",      RGB_GREY_3, menu_action_create, moduleTypeRect,      NULL},
+        {NULL,        RGB_BLACK,  NULL,                                 0, NULL}             // End of menu
     };
     static tMenuItem mixerMenuItems[]  = {
-        {"Create Mixer 1-1 A", RGB_GREY_3, menu_action_create, moduleTypeMix1to1A,  NULL},
-        {"Create Mixer 1-1 S", RGB_GREY_3, menu_action_create, moduleTypeMix1to1S,  NULL},
-        {"Create Mixer 2-1 A", RGB_GREY_3, menu_action_create, moduleTypeMix2to1A,  NULL},
-        {"Create Mixer 4-1 A", RGB_GREY_3, menu_action_create, moduleTypeMix4to1A,  NULL},
-        {"Create Mixer 4-1 B", RGB_GREY_3, menu_action_create, moduleTypeMix4to1B,  NULL},
-        {"Create Mixer 4-1 C", RGB_GREY_3, menu_action_create, moduleTypeMix4to1C,  NULL},
-        {"Create Mixer 4-1 S", RGB_GREY_3, menu_action_create, moduleTypeMix4to1S,  NULL},
-        {"Create Mixer 2-1 B", RGB_GREY_3, menu_action_create, moduleTypeMix2to1B,  NULL},
-        {"Create Mixer 8-1 A", RGB_GREY_3, menu_action_create, moduleTypeMix8to1A,  NULL},
-        {"Create Mixer 8-1 B", RGB_GREY_3, menu_action_create, moduleTypeMix8to1B,  NULL},
-        {"Create MixStereo",   RGB_GREY_3, menu_action_create, moduleTypeMixStereo, NULL},
-        {"Create Fade 1-2",    RGB_GREY_3, menu_action_create, moduleTypeFade1to2,  NULL},
-        {"Create Fade 2-1",    RGB_GREY_3, menu_action_create, moduleTypeFade2to1,  NULL},
-        {"Create X-Fade",      RGB_GREY_3, menu_action_create, moduleTypeXtoFade,   NULL},
-        {"Create Pan",         RGB_GREY_3, menu_action_create, moduleTypePan,       NULL},
-        {NULL,                 RGB_BLACK,  NULL,                                 0, NULL}    // End of menu
+        {"Mixer 1-1 A", RGB_GREY_3, menu_action_create, moduleTypeMix1to1A,  NULL},
+        {"Mixer 1-1 S", RGB_GREY_3, menu_action_create, moduleTypeMix1to1S,  NULL},
+        {"Mixer 2-1 A", RGB_GREY_3, menu_action_create, moduleTypeMix2to1A,  NULL},
+        {"Mixer 4-1 A", RGB_GREY_3, menu_action_create, moduleTypeMix4to1A,  NULL},
+        {"Mixer 4-1 B", RGB_GREY_3, menu_action_create, moduleTypeMix4to1B,  NULL},
+        {"Mixer 4-1 C", RGB_GREY_3, menu_action_create, moduleTypeMix4to1C,  NULL},
+        {"Mixer 4-1 S", RGB_GREY_3, menu_action_create, moduleTypeMix4to1S,  NULL},
+        {"Mixer 2-1 B", RGB_GREY_3, menu_action_create, moduleTypeMix2to1B,  NULL},
+        {"Mixer 8-1 A", RGB_GREY_3, menu_action_create, moduleTypeMix8to1A,  NULL},
+        {"Mixer 8-1 B", RGB_GREY_3, menu_action_create, moduleTypeMix8to1B,  NULL},
+        {"MixStereo",   RGB_GREY_3, menu_action_create, moduleTypeMixStereo, NULL},
+        {"Fade 1-2",    RGB_GREY_3, menu_action_create, moduleTypeFade1to2,  NULL},
+        {"Fade 2-1",    RGB_GREY_3, menu_action_create, moduleTypeFade2to1,  NULL},
+        {"X-Fade",      RGB_GREY_3, menu_action_create, moduleTypeXtoFade,   NULL},
+        {"Pan",         RGB_GREY_3, menu_action_create, moduleTypePan,       NULL},
+        {NULL,          RGB_BLACK,  NULL,                                 0, NULL}           // End of menu
     };
     static tMenuItem logicMenuItems[]  = {
-        {"Create Invert",     RGB_GREY_3, menu_action_create, moduleTypeInvert,     NULL},
-        {"Create Pulse",      RGB_GREY_3, menu_action_create, moduleTypePulse,      NULL},
-        {"Create Delay",      RGB_GREY_3, menu_action_create, moduleTypeDelay,      NULL},
-        {"Create Gate",       RGB_GREY_3, menu_action_create, moduleTypeGate,       NULL},
-        {"Create FlipFlop",   RGB_GREY_3, menu_action_create, moduleTypeFlipFlop,   NULL},
-        {"Create ClkDiv",     RGB_GREY_3, menu_action_create, moduleTypeClkDiv,     NULL},
-        {"Create 8Counter",   RGB_GREY_3, menu_action_create, moduleType8Counter,   NULL},
-        {"Create BinCounter", RGB_GREY_3, menu_action_create, moduleTypeBinCounter, NULL},
-        {"Create ADConv",     RGB_GREY_3, menu_action_create, moduleTypeADConv,     NULL},
-        {"Create DAConv",     RGB_GREY_3, menu_action_create, moduleTypeDAConv,     NULL},
-        {NULL,                RGB_BLACK,  NULL,                                  0, NULL}    // End of menu
+        {"Invert",     RGB_GREY_3, menu_action_create, moduleTypeInvert,     NULL},
+        {"Pulse",      RGB_GREY_3, menu_action_create, moduleTypePulse,      NULL},
+        {"Delay",      RGB_GREY_3, menu_action_create, moduleTypeDelay,      NULL},
+        {"Gate",       RGB_GREY_3, menu_action_create, moduleTypeGate,       NULL},
+        {"FlipFlop",   RGB_GREY_3, menu_action_create, moduleTypeFlipFlop,   NULL},
+        {"ClkDiv",     RGB_GREY_3, menu_action_create, moduleTypeClkDiv,     NULL},
+        {"8Counter",   RGB_GREY_3, menu_action_create, moduleType8Counter,   NULL},
+        {"BinCounter", RGB_GREY_3, menu_action_create, moduleTypeBinCounter, NULL},
+        {"ADConv",     RGB_GREY_3, menu_action_create, moduleTypeADConv,     NULL},
+        {"DAConv",     RGB_GREY_3, menu_action_create, moduleTypeDAConv,     NULL},
+        {NULL,         RGB_BLACK,  NULL,                                  0, NULL}           // End of menu
     };
     static tMenuItem fxMenuItems[]     = {
-        {"Create Compressor", RGB_GREY_3, menu_action_create, moduleTypeCompress,  NULL},
-        {"Create Digitizer",  RGB_GREY_3, menu_action_create, moduleTypeDigitizer, NULL},
-        {"Create FreqShift",  RGB_GREY_3, menu_action_create, moduleTypeFreqShift, NULL},
-        {"Create Flanger",    RGB_GREY_3, menu_action_create, moduleTypeFlanger,   NULL},
-        {"Create Chorus",     RGB_GREY_3, menu_action_create, moduleTypeStChorus,  NULL},
-        {"Create Phaser",     RGB_GREY_3, menu_action_create, moduleTypePhaser,    NULL},
-        {"Create PShift",     RGB_GREY_3, menu_action_create, moduleTypePShift,    NULL},
-        {"Create Reverb",     RGB_GREY_3, menu_action_create, moduleTypeReverb,    NULL},
-        {"Create Scratch",    RGB_GREY_3, menu_action_create, moduleTypeScratch,   NULL},
-        {NULL,                RGB_BLACK,  NULL,                                 0, NULL}      // End of menu
+        {"Compressor", RGB_GREY_3, menu_action_create, moduleTypeCompress,  NULL},
+        {"Digitizer",  RGB_GREY_3, menu_action_create, moduleTypeDigitizer, NULL},
+        {"FreqShift",  RGB_GREY_3, menu_action_create, moduleTypeFreqShift, NULL},
+        {"Flanger",    RGB_GREY_3, menu_action_create, moduleTypeFlanger,   NULL},
+        {"Chorus",     RGB_GREY_3, menu_action_create, moduleTypeStChorus,  NULL},
+        {"Phaser",     RGB_GREY_3, menu_action_create, moduleTypePhaser,    NULL},
+        {"PShift",     RGB_GREY_3, menu_action_create, moduleTypePShift,    NULL},
+        {"Reverb",     RGB_GREY_3, menu_action_create, moduleTypeReverb,    NULL},
+        {"Scratch",    RGB_GREY_3, menu_action_create, moduleTypeScratch,   NULL},
+        {NULL,         RGB_BLACK,  NULL,                                 0, NULL}             // End of menu
     };
     static tMenuItem midiMenuItems[]   = {
-        {"Create CtrlSend", RGB_GREY_3, menu_action_create, moduleTypeCtrlSend, NULL},
-        {"Create PCSend",   RGB_GREY_3, menu_action_create, moduleTypePCSend,   NULL},
-        {"Create NoteSend", RGB_GREY_3, menu_action_create, moduleTypeNoteSend, NULL},
-        {"Create CtrlRcv",  RGB_GREY_3, menu_action_create, moduleTypeCtrlRcv,  NULL},
-        {"Create NoteRcv",  RGB_GREY_3, menu_action_create, moduleTypeNoteRcv,  NULL},
-        {"Create NoteDet",  RGB_GREY_3, menu_action_create, moduleTypeNoteDet,  NULL},
-        {"Create NoteZone", RGB_GREY_3, menu_action_create, moduleTypeNoteZone, NULL},
-        {NULL,              RGB_BLACK,  NULL,                                0, NULL}        // End of menu
+        {"CtrlSend", RGB_GREY_3, menu_action_create, moduleTypeCtrlSend, NULL},
+        {"PCSend",   RGB_GREY_3, menu_action_create, moduleTypePCSend,   NULL},
+        {"NoteSend", RGB_GREY_3, menu_action_create, moduleTypeNoteSend, NULL},
+        {"CtrlRcv",  RGB_GREY_3, menu_action_create, moduleTypeCtrlRcv,  NULL},
+        {"NoteRcv",  RGB_GREY_3, menu_action_create, moduleTypeNoteRcv,  NULL},
+        {"NoteDet",  RGB_GREY_3, menu_action_create, moduleTypeNoteDet,  NULL},
+        {"NoteZone", RGB_GREY_3, menu_action_create, moduleTypeNoteZone, NULL},
+        {NULL,       RGB_BLACK,  NULL,                                0, NULL}               // End of menu
     };
 
     static tMenuItem moduleMenuItems[] = {
-        {"Create In/Out",   RGB_GREY_3, menu_action_create, 0, ioMenuItems    },
-        {"Create Osc",      RGB_GREY_3, menu_action_create, 0, oscMenuItems   },
-        {"Create Random",   RGB_GREY_3, menu_action_create, 0, randomMenuItems},
-        {"Create Filter",   RGB_GREY_3, menu_action_create, 0, filterMenuItems},
-        {"Create Delay",    RGB_GREY_3, menu_action_create, 0, delayMenuItems },
-        {"Create Level",    RGB_GREY_3, menu_action_create, 0, levelMenuItems },
-        {"Create Switch",   RGB_GREY_3, menu_action_create, 0, switchMenuItems},
-        {"Create Sequence", RGB_GREY_3, menu_action_create, 0, seqMenuItems   },
-        {"Create Note",     RGB_GREY_3, menu_action_create, 0, noteMenuItems  },
-        {"Create LFO",      RGB_GREY_3, menu_action_create, 0, lfoMenuItems   },
-        {"Create Env",      RGB_GREY_3, menu_action_create, 0, envMenuItems   },
-        {"Create FX",       RGB_GREY_3, menu_action_create, 0, fxMenuItems    },
-        {"Create Shaper",   RGB_GREY_3, menu_action_create, 0, shaperMenuItems},
-        {"Create Mixer",    RGB_GREY_3, menu_action_create, 0, mixerMenuItems },
-        {"Create Logic",    RGB_GREY_3, menu_action_create, 0, logicMenuItems },
-        {"Create Midi",     RGB_GREY_3, menu_action_create, 0, midiMenuItems  },
-        {NULL,              RGB_BLACK,  NULL,               0, NULL           } // End of menu
+        {"In/Out",   RGB_GREY_3, menu_action_create, 0, ioMenuItems    },
+        {"Osc",      RGB_GREY_3, menu_action_create, 0, oscMenuItems   },
+        {"Random",   RGB_GREY_3, menu_action_create, 0, randomMenuItems},
+        {"Filter",   RGB_GREY_3, menu_action_create, 0, filterMenuItems},
+        {"Delay",    RGB_GREY_3, menu_action_create, 0, delayMenuItems },
+        {"Level",    RGB_GREY_3, menu_action_create, 0, levelMenuItems },
+        {"Switch",   RGB_GREY_3, menu_action_create, 0, switchMenuItems},
+        {"Sequence", RGB_GREY_3, menu_action_create, 0, seqMenuItems   },
+        {"Note",     RGB_GREY_3, menu_action_create, 0, noteMenuItems  },
+        {"LFO",      RGB_GREY_3, menu_action_create, 0, lfoMenuItems   },
+        {"Env",      RGB_GREY_3, menu_action_create, 0, envMenuItems   },
+        {"FX",       RGB_GREY_3, menu_action_create, 0, fxMenuItems    },
+        {"Shaper",   RGB_GREY_3, menu_action_create, 0, shaperMenuItems},
+        {"Mixer",    RGB_GREY_3, menu_action_create, 0, mixerMenuItems },
+        {"Logic",    RGB_GREY_3, menu_action_create, 0, logicMenuItems },
+        {"Midi",     RGB_GREY_3, menu_action_create, 0, midiMenuItems  },
+        {NULL,       RGB_BLACK,  NULL,               0, NULL           }        // End of menu
     };
     static tMenuItem menuItems[]       = {
         {"Create module", RGB_GREY_3, menu_action_create, 0, moduleMenuItems},
@@ -1615,9 +1620,10 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     found                    = true;
                 }
             }
+
             if (found == false) {
                 if (handle_module_press(coord, mouseButton) == true) {
-                    found                    = true;
+                    found = true;
                 }
             }
         }
@@ -1650,24 +1656,25 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                for (i = 0; i < NUM_CABLE_COLOURS; i++) {
+                for (i = 0; i < cableColourMax; i++) {
                     if (within_rectangle(coord, gCableColourToggleRect[i])) {
-                        for (int colour=0; colour<7; colour++) {
-                            gPatchDescr[slot].visible[i]      = !gPatchDescr[slot].visible[i];
+                        for (int colour = 0; colour < cableColourMax; colour++) {
+                            gPatchDescr[slot].visible[i] = !gPatchDescr[slot].visible[i];
                         }
+
                         atomic_store(&gReDraw, true);
                         tMessageContent messageContent = {0};
-                        messageContent.cmd         = eMsgCmdWritePatchDescr;
-                        messageContent.slot        = slot;
+                        messageContent.cmd  = eMsgCmdWritePatchDescr;
+                        messageContent.slot = slot;
                         msg_send(&gCommandQueue, &messageContent);
-                        found = true;
+                        found               = true;
                         break;
                     }
                 }
             }
 
             if (found == false) {
-                for (i = 0; i < NUM_CABLE_COLOURS; i++) {
+                for (i = 0; i < cableColourMax; i++) {
                     if (within_rectangle(coord, gCableColourSelectRect[i])) {
                         gCableColour = i;
                         atomic_store(&gReDraw, true);
@@ -1679,18 +1686,30 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (within_rectangle(coord, gHideAllCablesRect)) {
-                    for (int colour=0; colour<7; colour++) {
-                        gPatchDescr[slot].visible[colour]      = 0;
+                    int             colour         = 0;
+                    int             visibleCount   = 0;
+
+                    for (int colour = 0; colour < cableColourMax; colour++) {
+                        if (gPatchDescr[slot].visible[colour]) {
+                            visibleCount++;
+                        }
                     }
-                    
-                    //atomic_store(&gCablesHideAll, !current);
-                    atomic_store(&gCablesTransparent, false);
+
+                    if (visibleCount == 0) {
+                        for (colour = 0; colour < cableColourMax; colour++) {
+                            gPatchDescr[slot].visible[colour] = 1;
+                        }
+                    } else {
+                        for (colour = 0; colour < cableColourMax; colour++) {
+                            gPatchDescr[slot].visible[colour] = 0;
+                        }
+                    }
                     atomic_store(&gReDraw, true);
                     tMessageContent messageContent = {0};
-                    messageContent.cmd         = eMsgCmdWritePatchDescr;
-                    messageContent.slot        = slot;
+                    messageContent.cmd  = eMsgCmdWritePatchDescr;
+                    messageContent.slot = slot;
                     msg_send(&gCommandQueue, &messageContent);
-                    found = true;
+                    found               = true;
                 }
             }
 
@@ -1698,10 +1717,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 if (within_rectangle(coord, gTransparentCablesRect)) {
                     bool current = atomic_load(&gCablesTransparent);
                     atomic_store(&gCablesTransparent, !current);
-                    //for (int colour=0; colour<7; colour++) {
-                    //    gPatchDescr[slot].visible[i]      = 1;
-                    //}
-                    //atomic_store(&gCablesHideAll, false);
                     atomic_store(&gReDraw, true);
                     found = true;
                 }

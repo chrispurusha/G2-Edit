@@ -151,7 +151,9 @@ typedef struct _message {
 
 typedef struct {
     pthread_mutex_t mutex;
-    sem_t *         semaphore;
+    pthread_mutex_t semMutex; // TODO - use this
+    pthread_cond_t  semCond;
+    int             semCount; // Tracks your semaphore state
     tMessage *      head;
     tMessage *      tail;
 } tMessageQueue;
