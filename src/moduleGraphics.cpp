@@ -853,7 +853,7 @@ void render_cables(void) {
 
 void render_morph_groups(void) {
     tModule    module      = {0};
-    tRectangle rectangle   = {{((get_render_width() / 2) - SCROLLBAR_MARGIN) - (((STANDARD_TEXT_HEIGHT * 4) + 5) * 8), 26}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
+    tRectangle rectangle   = {{830, 26}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
     char       buff[16]    = {0};
     char       label[16]   = {0};
     tRgb       dialColour  = RGB_BACKGROUND_GREY;
