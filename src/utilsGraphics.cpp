@@ -42,6 +42,7 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "utilsGraphics.h"
+#include "globalVars.h"
 
 static GlyphInfo glyphInfo[MAX_GLYPH_CHAR] = {0};              // Array to store glyph metadata TODO: Not being freed!?
 static GLuint    textureAtlas              = 0;                // OpenGL texture handle
@@ -61,7 +62,7 @@ static inline double scale(double value) {
 }
 
 static inline double global_scale(double value) {
-    return value * GLOBAL_GUI_SCALE;
+    return value * gGlobalGuiScale;
 }
 
 double calc_scroll_x(void) {
@@ -151,8 +152,8 @@ static tRectangle scale_scroll_adjust_rectangle(tRectangle rectangle) {
 tRectangle module_area(void) {
     double left   = MODULE_MARGIN;
     double top    = TOP_BAR_HEIGHT + MODULE_MARGIN;
-    double width  = (gRenderWidth / GLOBAL_GUI_SCALE) - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
-    double height = (gRenderHeight / GLOBAL_GUI_SCALE) - TOP_BAR_HEIGHT - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
+    double width  = (gRenderWidth / gGlobalGuiScale) - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
+    double height = (gRenderHeight / gGlobalGuiScale) - TOP_BAR_HEIGHT - SCROLLBAR_WIDTH - (MODULE_MARGIN * 2.0);
 
     return {{left, top}, {width, height}};
 }
@@ -992,7 +993,7 @@ double value_to_angle(uint32_t value, uint32_t range) {
 }
 
 double clamp_scroll_bar(double value, double max_value) {
-    max_value /= GLOBAL_GUI_SCALE;
+    max_value /= gGlobalGuiScale;
 
     double half_length = SCROLLBAR_LENGTH / 2.0;
     double min_limit   = half_length + SCROLLBAR_MARGIN;

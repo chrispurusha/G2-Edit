@@ -52,8 +52,8 @@ void get_global_gui_scaled_mouse_coord(tCoord * coord) {
     glfwGetCursorPos(gWindow, &(coord->x), &(coord->y));
     glfwGetWindowSize(gWindow, &winWidth, &winHeight);
 
-    coord->x = (coord->x / (double)winWidth)  * (get_render_width()  / (double)GLOBAL_GUI_SCALE);
-    coord->y = (coord->y / (double)winHeight) * (get_render_height() / (double)GLOBAL_GUI_SCALE);
+    coord->x = (coord->x / (double)winWidth)  * (get_render_width()  / gGlobalGuiScale);
+    coord->y = (coord->y / (double)winHeight) * (get_render_height() / gGlobalGuiScale);
 }
 
 void adjust_scroll_for_drag(void) {
@@ -1032,7 +1032,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
     gContextMenu.active = true;
 
     double           menuHeight        = (((sizeof(oscMenuItems) / sizeof(oscMenuItems[0])) - 1) * (STANDARD_TEXT_HEIGHT + (5 * 2))); // Reference biggest array
-    double           renderHeight      = get_render_height() / GLOBAL_GUI_SCALE;
+    double           renderHeight      = get_render_height() / gGlobalGuiScale;
 
     // Shift upwards if too far towards end of screen
     if (gContextMenu.coord.y + menuHeight > (renderHeight - SCROLLBAR_WIDTH)) {
@@ -1054,7 +1054,7 @@ void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t co
     gContextMenu.active         = true;
 
     double           menuHeight   = (((sizeof(menuItems) / sizeof(menuItems[0])) - 1) * (STANDARD_TEXT_HEIGHT + (5 * 2)));
-    double           renderHeight = get_render_height() / GLOBAL_GUI_SCALE;
+    double           renderHeight = get_render_height() / gGlobalGuiScale;
 
     // Shift upwards if too far towards end of screen
     if (gContextMenu.coord.y + menuHeight > (renderHeight - SCROLLBAR_WIDTH)) {
@@ -1106,7 +1106,7 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     gContextMenu.active    = true;
 
     double           menuHeight   = (((sizeof(colourMenuItems) / sizeof(colourMenuItems[0])) - 1) * (STANDARD_TEXT_HEIGHT + (5 * 2)));
-    double           renderHeight = get_render_height() / GLOBAL_GUI_SCALE;
+    double           renderHeight = get_render_height() / gGlobalGuiScale;
 
     // Shift upwards if too far towards end of screen
     if (gContextMenu.coord.y + menuHeight > (renderHeight - SCROLLBAR_WIDTH)) {
@@ -1388,12 +1388,12 @@ bool handle_module_area_click(tCoord coord, int button) {
 
 void set_x_scroll_bar(double x) {
     gScrollState.xBar = clamp_scroll_bar(x, get_render_width());
-    set_x_scroll_percent(get_scroll_bar_percent(gScrollState.xBar, get_render_width() / GLOBAL_GUI_SCALE));
+    set_x_scroll_percent(get_scroll_bar_percent(gScrollState.xBar, get_render_width() / gGlobalGuiScale));
 }
 
 void set_y_scroll_bar(double y) {
     gScrollState.yBar = clamp_scroll_bar(y, get_render_height());
-    set_y_scroll_percent(get_scroll_bar_percent(gScrollState.yBar, get_render_height() / GLOBAL_GUI_SCALE));
+    set_y_scroll_percent(get_scroll_bar_percent(gScrollState.yBar, get_render_height() / gGlobalGuiScale));
 }
 
 bool handle_context_menu_click(tCoord coord) {

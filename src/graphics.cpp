@@ -32,6 +32,7 @@ extern "C" {
 #include FT_FREETYPE_H
 #pragma clang diagnostic pop
 
+#include "math.h"
 #include "defs.h"
 #include "types.h"
 #include "utils.h"
@@ -149,8 +150,8 @@ void render_context_menu(void) {
 }
 
 void render_scrollbars(GLFWwindow * window) {
-    double renderWidth  = get_render_width() / GLOBAL_GUI_SCALE;
-    double renderHeight = get_render_height() / GLOBAL_GUI_SCALE;
+    double renderWidth  = get_render_width() / gGlobalGuiScale;
+    double renderHeight = get_render_height() / gGlobalGuiScale;
 
     // Scrollbar background
     set_rgb_colour(RGB_GREY_7);
@@ -179,7 +180,7 @@ void render_top_bar(void) {
     uint32_t    variation                          = gPatchDescr[slot].activeVariation;
 
     set_rgb_colour(RGB_GREY_5);
-    render_rectangle_with_border(mainArea, {{0.0, 0.0}, {(get_render_width() / GLOBAL_GUI_SCALE) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
+    render_rectangle_with_border(mainArea, {{0.0, 0.0}, {(get_render_width() / gGlobalGuiScale) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
 
     set_rgb_colour(RGB_BLACK);
     render_text(mainArea, {{400, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Variation");
@@ -231,7 +232,7 @@ void render_top_bar(void) {
         switch (gMainButtonArray[i].anchor) {
             case anchorTopRight:
             {
-                rectangle.coord.x = (get_render_width() / GLOBAL_GUI_SCALE) + gMainButtonArray[i].coord.x;
+                rectangle.coord.x = (get_render_width() / gGlobalGuiScale) + gMainButtonArray[i].coord.x;
                 break;
             }
             default:
@@ -341,12 +342,30 @@ void init_graphics(void) {
 
     monitor      = glfwGetPrimaryMonitor();
 
+    int x, y, width, height;
+    double widthScaleFactor = 1;
+    double heightScaleFactor = 1;
+    double scaleFactor = 1;
+    glfwGetMonitorWorkarea(monitor, &x, &y, &width, &height);
     glfwGetMonitorContentScale(monitor, &xScale, &yScale);
-    //xScale *= 0.4;
-    //yScale *= 0.4;
     windowWidth  = TARGET_FRAME_BUFF_WIDTH / xScale;
     windowHeight = TARGET_FRAME_BUFF_HEIGHT / yScale;
 
+    if ((windowWidth > width) || (windowHeight > height)) {
+        heightScaleFactor = (double)windowHeight / (double)height;
+        widthScaleFactor = (double)windowWidth / (double)width;
+        
+        if (heightScaleFactor >= widthScaleFactor) {
+            scaleFactor = heightScaleFactor;
+        } else {
+            scaleFactor = widthScaleFactor;
+        }
+        
+        windowWidth  = (int)((double)windowWidth  / scaleFactor);
+        windowHeight = (int)((double)windowHeight / scaleFactor);
+        gGlobalGuiScale = gGlobalGuiScale / scaleFactor;
+    }
+    
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
     glfwWindowHint(GLFW_COCOA_GRAPHICS_SWITCHING, GLFW_TRUE);
     gWindow      = glfwCreateWindow(windowWidth, windowHeight, WINDOW_TITLE, NULL, NULL);
@@ -355,9 +374,9 @@ void init_graphics(void) {
         glfwTerminate();
         exit(EXIT_FAILURE);
     }
-    glfwSetWindowSizeLimits(gWindow, windowWidth / GLOBAL_GUI_SCALE, windowHeight / GLOBAL_GUI_SCALE, GLFW_DONT_CARE, GLFW_DONT_CARE);
+    glfwSetWindowSizeLimits(gWindow, windowWidth / gGlobalGuiScale, windowHeight / gGlobalGuiScale, GLFW_DONT_CARE, GLFW_DONT_CARE);
     glfwSetWindowAspectRatio(gWindow, windowWidth, windowHeight);
-
+    
     glfwMakeContextCurrent(gWindow);
 
     glfwGetFramebufferSize(gWindow, &fbWidth, &fbHeight);
