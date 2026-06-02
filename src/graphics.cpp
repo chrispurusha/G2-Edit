@@ -266,10 +266,10 @@ void render_top_bar(void) {
     // Cable colour visibility toggles — 6 small squares
     //uint32_t hiddenMask = atomic_load(&gHiddenCableMask);
 
-    for (int i = 0; i < NUM_CABLE_COLOURS; i++) {
-        bool visible = gPatchDescr[slot].visible[i];
-        tRgb   colour = gCableColourMap[i];
-        double x      = 700.0 + (i * (get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT) + 5));
+    for (int i = 0; i < cableColourMax; i++) {
+        bool   visible = gPatchDescr[slot].visible[i];
+        tRgb   colour  = gCableColourMap[i];
+        double x       = 700.0 + (i * (get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT) + 5));
 
         if (visible) {
             gCableColourToggleRect[i] = draw_button(mainArea, {{x, 40.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, "X", colour);
@@ -278,7 +278,7 @@ void render_top_bar(void) {
         }
     }
 
-    for (int i = 0; i < NUM_CABLE_COLOURS; i++) {
+    for (int i = 0; i < cableColourMax; i++) {
         tRgb   colour = gCableColourMap[i];
         double x      = 700.0 + (i * (get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT) + 5));
 
@@ -290,7 +290,7 @@ void render_top_bar(void) {
     }
 
     //bool hideAll = atomic_load(&gCablesHideAll);
-    bool transp  = atomic_load(&gCablesTransparent);
+    bool transp = atomic_load(&gCablesTransparent);
 
     gHideAllCablesRect     = draw_button(mainArea,
                                          {{700, 20}, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},

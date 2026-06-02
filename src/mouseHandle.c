@@ -264,12 +264,12 @@ void init_patch(uint32_t slot) {  // Todo - think where this should really go
     gPatchDescr[slot].barPosition     = 600;
     gPatchDescr[slot].unknown3        = 2;   // unknown9 in Delphi
     gPatchDescr[slot].visible[0]      = 1;
-    gPatchDescr[slot].visible[1]     = 1;
-    gPatchDescr[slot].visible[2]   = 1;
-    gPatchDescr[slot].visible[3]   = 1;
-    gPatchDescr[slot].visible[4]    = 1;
-    gPatchDescr[slot].visible[5]   = 1;
-    gPatchDescr[slot].visible[6]    = 1;
+    gPatchDescr[slot].visible[1]      = 1;
+    gPatchDescr[slot].visible[2]      = 1;
+    gPatchDescr[slot].visible[3]      = 1;
+    gPatchDescr[slot].visible[4]      = 1;
+    gPatchDescr[slot].visible[5]      = 1;
+    gPatchDescr[slot].visible[6]      = 1;
     gPatchDescr[slot].monoPoly        = 1;
     gPatchDescr[slot].activeVariation = 0;
     gPatchDescr[slot].category        = 0;
@@ -800,37 +800,37 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {NULL,                  RGB_BLACK,  NULL,                                0, NULL}    // End of menu
     };
     static tMenuItem noteMenuItems[] = {
-        {"Note Quantiser",  RGB_GREY_3, menu_action_create, moduleTypeNoteQuant,  NULL},
-        {"Key Quantiser",   RGB_GREY_3, menu_action_create, moduleTypeKeyQuant,   NULL},
-        {"Partial Quantiser",  RGB_GREY_3, menu_action_create, moduleTypePartQuant,  NULL},
-        {"Note Scaler", RGB_GREY_3, menu_action_create, moduleTypeNoteScaler, NULL},
-        {"Glide",      RGB_GREY_3, menu_action_create, moduleTypeGlide,      NULL},
-        {"Pitch Tracker", RGB_GREY_3, menu_action_create, moduleTypePitchTrack, NULL},
-        {"Zero Crossing Counter",    RGB_GREY_3, menu_action_create, moduleTypeZeroCnt,    NULL},
-        {"Level Scaler",  RGB_GREY_3, menu_action_create, moduleTypeLevScaler,  NULL},
-        {NULL,                RGB_BLACK,  NULL,                                  0, NULL}    // End of menu
+        {"Note Quantiser",        RGB_GREY_3, menu_action_create, moduleTypeNoteQuant,  NULL},
+        {"Key Quantiser",         RGB_GREY_3, menu_action_create, moduleTypeKeyQuant,   NULL},
+        {"Partial Quantiser",     RGB_GREY_3, menu_action_create, moduleTypePartQuant,  NULL},
+        {"Note Scaler",           RGB_GREY_3, menu_action_create, moduleTypeNoteScaler, NULL},
+        {"Glide",                 RGB_GREY_3, menu_action_create, moduleTypeGlide,      NULL},
+        {"Pitch Tracker",         RGB_GREY_3, menu_action_create, moduleTypePitchTrack, NULL},
+        {"Zero Crossing Counter", RGB_GREY_3, menu_action_create, moduleTypeZeroCnt,    NULL},
+        {"Level Scaler",          RGB_GREY_3, menu_action_create, moduleTypeLevScaler,  NULL},
+        {NULL,                    RGB_BLACK,  NULL,                                  0, NULL} // End of menu
     };
     static tMenuItem oscMenuItems[]  = {
-        {"Osc A",       RGB_GREY_3, menu_action_create, moduleTypeOscA,      NULL},
-        {"Osc B",       RGB_GREY_3, menu_action_create, moduleTypeOscB,      NULL},
-        {"Osc C",       RGB_GREY_3, menu_action_create, moduleTypeOscC,      NULL},
-        {"Osc D",       RGB_GREY_3, menu_action_create, moduleTypeOscD,      NULL},
-        {"Osc Phase Mod",      RGB_GREY_3, menu_action_create, moduleTypeOscPM,     NULL},
-        {"Osc Shape A", RGB_GREY_3, menu_action_create, moduleTypeOscShpA,   NULL},
-        {"Osc Shape B", RGB_GREY_3, menu_action_create, moduleTypeOscShpB,   NULL},
-        {"Osc Dual",    RGB_GREY_3, menu_action_create, moduleTypeOscDual,   NULL},
-        {"Noise Osc",   RGB_GREY_3, menu_action_create, moduleTypeOscNoise,  NULL},
-        {"Noise",       RGB_GREY_3, menu_action_create, moduleTypeNoise,     NULL},
-        {"Metallic Noise",   RGB_GREY_3, menu_action_create, moduleTypeMetNoise,  NULL},
-        {"Osc Percussion",     RGB_GREY_3, menu_action_create, moduleTypeOscPerc,   NULL},
-        {"Drum Synth",   RGB_GREY_3, menu_action_create, moduleTypeDrumSynth, NULL},
-        {"Osc String",  RGB_GREY_3, menu_action_create, moduleTypeOscString, NULL},
+        {"Osc A",          RGB_GREY_3, menu_action_create, moduleTypeOscA,      NULL},
+        {"Osc B",          RGB_GREY_3, menu_action_create, moduleTypeOscB,      NULL},
+        {"Osc C",          RGB_GREY_3, menu_action_create, moduleTypeOscC,      NULL},
+        {"Osc D",          RGB_GREY_3, menu_action_create, moduleTypeOscD,      NULL},
+        {"Osc Phase Mod",  RGB_GREY_3, menu_action_create, moduleTypeOscPM,     NULL},
+        {"Osc Shape A",    RGB_GREY_3, menu_action_create, moduleTypeOscShpA,   NULL},
+        {"Osc Shape B",    RGB_GREY_3, menu_action_create, moduleTypeOscShpB,   NULL},
+        {"Osc Dual",       RGB_GREY_3, menu_action_create, moduleTypeOscDual,   NULL},
+        {"Noise Osc",      RGB_GREY_3, menu_action_create, moduleTypeOscNoise,  NULL},
+        {"Noise",          RGB_GREY_3, menu_action_create, moduleTypeNoise,     NULL},
+        {"Metallic Noise", RGB_GREY_3, menu_action_create, moduleTypeMetNoise,  NULL},
+        {"Osc Percussion", RGB_GREY_3, menu_action_create, moduleTypeOscPerc,   NULL},
+        {"Drum Synth",     RGB_GREY_3, menu_action_create, moduleTypeDrumSynth, NULL},
+        {"Osc String",     RGB_GREY_3, menu_action_create, moduleTypeOscString, NULL},
         {"FM Operator",    RGB_GREY_3, menu_action_create, moduleTypeOperator,  NULL},
-        {"DX Router",    RGB_GREY_3, menu_action_create, moduleTypeDXRouter,  NULL},
-        {"Driver",      RGB_GREY_3, menu_action_create, moduleTypeDriver,    NULL},
-        {"Resonator",   RGB_GREY_3, menu_action_create, moduleTypeResonator, NULL},
-        {"Osc Master",  RGB_GREY_3, menu_action_create, moduleTypeOscMaster, NULL},
-        {NULL,                 RGB_BLACK,  NULL,                                 0, NULL}    // End of menu
+        {"DX Router",      RGB_GREY_3, menu_action_create, moduleTypeDXRouter,  NULL},
+        {"Driver",         RGB_GREY_3, menu_action_create, moduleTypeDriver,    NULL},
+        {"Resonator",      RGB_GREY_3, menu_action_create, moduleTypeResonator, NULL},
+        {"Osc Master",     RGB_GREY_3, menu_action_create, moduleTypeOscMaster, NULL},
+        {NULL,             RGB_BLACK,  NULL,                                 0, NULL}        // End of menu
     };
     static tMenuItem randomMenuItems[] = {
         {"Random A", RGB_GREY_3, menu_action_create, moduleTypeRandomA, NULL},
@@ -839,28 +839,28 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         //{"Random Clock B", RGB_GREY_3, menu_action_create, NULL, NULL},
         //{"Random Trig", RGB_GREY_3, menu_action_create, NULL, NULL},
         //{"Random Pattern", RGB_GREY_3, menu_action_create, NULL, NULL},
-        {NULL,             RGB_BLACK,  NULL,                               0, NULL}         // End of menu
+        {NULL,       RGB_BLACK,  NULL,                               0, NULL}               // End of menu
     };
 
     static tMenuItem lfoMenuItems[]    = {
-        {"LFO A",     RGB_GREY_3, menu_action_create, moduleTypeLfoA,    NULL},
-        {"LFO B",     RGB_GREY_3, menu_action_create, moduleTypeLfoB,    NULL},
-        {"LFO C",     RGB_GREY_3, menu_action_create, moduleTypeLfoC,    NULL},
-        {"LFO Shp A", RGB_GREY_3, menu_action_create, moduleTypeLfoShpA, NULL},
-        {"Clock Generator",    RGB_GREY_3, menu_action_create, moduleTypeClkGen,  NULL},
-        {NULL,               RGB_BLACK,  NULL,                               0, NULL}        // End of menu
+        {"LFO A",           RGB_GREY_3, menu_action_create, moduleTypeLfoA,    NULL},
+        {"LFO B",           RGB_GREY_3, menu_action_create, moduleTypeLfoB,    NULL},
+        {"LFO C",           RGB_GREY_3, menu_action_create, moduleTypeLfoC,    NULL},
+        {"LFO Shp A",       RGB_GREY_3, menu_action_create, moduleTypeLfoShpA, NULL},
+        {"Clock Generator", RGB_GREY_3, menu_action_create, moduleTypeClkGen,  NULL},
+        {NULL,              RGB_BLACK,  NULL,                               0, NULL}         // End of menu
     };
     static tMenuItem envMenuItems[]    = {
-        {"Envelope ADSR",  RGB_GREY_3, menu_action_create, moduleTypeEnvADSR,  NULL},  // TODO - Match these up with OG edirot
-        {"Envelope AHD",   RGB_GREY_3, menu_action_create, moduleTypeEnvAHD,   NULL},
-        {"Envelope ADR",   RGB_GREY_3, menu_action_create, moduleTypeEnvADR,   NULL},
-        {"Envelop ADDSR", RGB_GREY_3, menu_action_create, moduleTypeEnvADDSR, NULL},
-        {"Envelope H",     RGB_GREY_3, menu_action_create, moduleTypeEnvH,     NULL},
-        {"Envelope D",     RGB_GREY_3, menu_action_create, moduleTypeEnvD,     NULL},
-        {"Envelope Multi", RGB_GREY_3, menu_action_create, moduleTypeEnvMulti, NULL},
-        {"Envelope Mod AHD",    RGB_GREY_3, menu_action_create, moduleTypeModAHD,   NULL},
-        {"Envelope Mod ADSR",   RGB_GREY_3, menu_action_create, moduleTypeModADSR,  NULL},
-        {NULL,               RGB_BLACK,  NULL,                                0, NULL}       // End of menu
+        {"Envelope ADSR",     RGB_GREY_3, menu_action_create, moduleTypeEnvADSR,  NULL}, // TODO - Match these up with OG edirot
+        {"Envelope AHD",      RGB_GREY_3, menu_action_create, moduleTypeEnvAHD,   NULL},
+        {"Envelope ADR",      RGB_GREY_3, menu_action_create, moduleTypeEnvADR,   NULL},
+        {"Envelop ADDSR",     RGB_GREY_3, menu_action_create, moduleTypeEnvADDSR, NULL},
+        {"Envelope H",        RGB_GREY_3, menu_action_create, moduleTypeEnvH,     NULL},
+        {"Envelope D",        RGB_GREY_3, menu_action_create, moduleTypeEnvD,     NULL},
+        {"Envelope Multi",    RGB_GREY_3, menu_action_create, moduleTypeEnvMulti, NULL},
+        {"Envelope Mod AHD",  RGB_GREY_3, menu_action_create, moduleTypeModAHD,   NULL},
+        {"Envelope Mod ADSR", RGB_GREY_3, menu_action_create, moduleTypeModADSR,  NULL},
+        {NULL,                RGB_BLACK,  NULL,                                0, NULL}      // End of menu
     };
     static tMenuItem filterMenuItems[] = {
         {"LP Filter",      RGB_GREY_3, menu_action_create, moduleTypeFltLP,      NULL},
@@ -877,7 +877,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Eq 2-band",      RGB_GREY_3, menu_action_create, moduleTypeEq2Band,    NULL},
         {"Eq 3-band",      RGB_GREY_3, menu_action_create, moduleTypeEq3band,    NULL},
         {"Eq Peak",        RGB_GREY_3, menu_action_create, moduleTypeEqPeak,     NULL},
-        {NULL,                    RGB_BLACK,  NULL,                                  0, NULL} // End of menu
+        {NULL,             RGB_BLACK,  NULL,                                  0, NULL}        // End of menu
     };
     static tMenuItem delayMenuItems[]  = {
         {"Delay Single A", RGB_GREY_3, menu_action_create, moduleTypeDlySingleA,  NULL},
@@ -890,7 +890,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Delay Clock",    RGB_GREY_3, menu_action_create, moduleTypeDlyClock,    NULL},
         {"Delay Eight",    RGB_GREY_3, menu_action_create, moduleTypeDlyEight,    NULL},
         {"DlyShiftReg",    RGB_GREY_3, menu_action_create, moduleTypeDlyShiftReg, NULL},
-        {NULL,                    RGB_BLACK,  NULL,                                   0, NULL} // End of menu
+        {NULL,             RGB_BLACK,  NULL,                                   0, NULL}        // End of menu
     };
 
 
@@ -909,7 +909,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"ModAmt",    RGB_GREY_3, menu_action_create, moduleTypeModAmt,    NULL},
         {"NoiseGate", RGB_GREY_3, menu_action_create, moduleTypeNoiseGate, NULL},
         {"EnvFollow", RGB_GREY_3, menu_action_create, moduleTypeEnvFollow, NULL},
-        {NULL,               RGB_BLACK,  NULL,                                 0, NULL}        // End of menu
+        {NULL,        RGB_BLACK,  NULL,                                 0, NULL}               // End of menu
     };
 
     static tMenuItem switchMenuItems[] = {
@@ -931,7 +931,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"S&H",      RGB_GREY_3, menu_action_create, moduleTypeSandH,     NULL},
         {"T&H",      RGB_GREY_3, menu_action_create, moduleTypeTandH,     NULL},
         {"WindSw",   RGB_GREY_3, menu_action_create, moduleTypeWindSw,    NULL},
-        {NULL,              RGB_BLACK,  NULL,                                 0, NULL}       // End of menu
+        {NULL,       RGB_BLACK,  NULL,                                 0, NULL}              // End of menu
     };
     static tMenuItem seqMenuItems[]    = {
         {"Sequencer Event",      RGB_GREY_3, menu_action_create, moduleTypeSeqEvent, NULL},
@@ -949,7 +949,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"WaveWrap",  RGB_GREY_3, menu_action_create, moduleTypeWaveWrap,  NULL},
         {"ShpStatic", RGB_GREY_3, menu_action_create, moduleTypeShpStatic, NULL},
         {"Rect",      RGB_GREY_3, menu_action_create, moduleTypeRect,      NULL},
-        {NULL,               RGB_BLACK,  NULL,                                 0, NULL}      // End of menu
+        {NULL,        RGB_BLACK,  NULL,                                 0, NULL}             // End of menu
     };
     static tMenuItem mixerMenuItems[]  = {
         {"Mixer 1-1 A", RGB_GREY_3, menu_action_create, moduleTypeMix1to1A,  NULL},
@@ -967,7 +967,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Fade 2-1",    RGB_GREY_3, menu_action_create, moduleTypeFade2to1,  NULL},
         {"X-Fade",      RGB_GREY_3, menu_action_create, moduleTypeXtoFade,   NULL},
         {"Pan",         RGB_GREY_3, menu_action_create, moduleTypePan,       NULL},
-        {NULL,                 RGB_BLACK,  NULL,                                 0, NULL}    // End of menu
+        {NULL,          RGB_BLACK,  NULL,                                 0, NULL}           // End of menu
     };
     static tMenuItem logicMenuItems[]  = {
         {"Invert",     RGB_GREY_3, menu_action_create, moduleTypeInvert,     NULL},
@@ -980,7 +980,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"BinCounter", RGB_GREY_3, menu_action_create, moduleTypeBinCounter, NULL},
         {"ADConv",     RGB_GREY_3, menu_action_create, moduleTypeADConv,     NULL},
         {"DAConv",     RGB_GREY_3, menu_action_create, moduleTypeDAConv,     NULL},
-        {NULL,                RGB_BLACK,  NULL,                                  0, NULL}    // End of menu
+        {NULL,         RGB_BLACK,  NULL,                                  0, NULL}           // End of menu
     };
     static tMenuItem fxMenuItems[]     = {
         {"Compressor", RGB_GREY_3, menu_action_create, moduleTypeCompress,  NULL},
@@ -992,7 +992,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"PShift",     RGB_GREY_3, menu_action_create, moduleTypePShift,    NULL},
         {"Reverb",     RGB_GREY_3, menu_action_create, moduleTypeReverb,    NULL},
         {"Scratch",    RGB_GREY_3, menu_action_create, moduleTypeScratch,   NULL},
-        {NULL,                RGB_BLACK,  NULL,                                 0, NULL}      // End of menu
+        {NULL,         RGB_BLACK,  NULL,                                 0, NULL}             // End of menu
     };
     static tMenuItem midiMenuItems[]   = {
         {"CtrlSend", RGB_GREY_3, menu_action_create, moduleTypeCtrlSend, NULL},
@@ -1002,7 +1002,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"NoteRcv",  RGB_GREY_3, menu_action_create, moduleTypeNoteRcv,  NULL},
         {"NoteDet",  RGB_GREY_3, menu_action_create, moduleTypeNoteDet,  NULL},
         {"NoteZone", RGB_GREY_3, menu_action_create, moduleTypeNoteZone, NULL},
-        {NULL,              RGB_BLACK,  NULL,                                0, NULL}        // End of menu
+        {NULL,       RGB_BLACK,  NULL,                                0, NULL}               // End of menu
     };
 
     static tMenuItem moduleMenuItems[] = {
@@ -1022,7 +1022,7 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
         {"Mixer",    RGB_GREY_3, menu_action_create, 0, mixerMenuItems },
         {"Logic",    RGB_GREY_3, menu_action_create, 0, logicMenuItems },
         {"Midi",     RGB_GREY_3, menu_action_create, 0, midiMenuItems  },
-        {NULL,              RGB_BLACK,  NULL,               0, NULL           } // End of menu
+        {NULL,       RGB_BLACK,  NULL,               0, NULL           }        // End of menu
     };
     static tMenuItem menuItems[]       = {
         {"Create module", RGB_GREY_3, menu_action_create, 0, moduleMenuItems},
@@ -1623,9 +1623,10 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     found                    = true;
                 }
             }
+
             if (found == false) {
                 if (handle_module_press(coord, mouseButton) == true) {
-                    found                    = true;
+                    found = true;
                 }
             }
         }
@@ -1658,24 +1659,25 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                for (i = 0; i < NUM_CABLE_COLOURS; i++) {
+                for (i = 0; i < cableColourMax; i++) {
                     if (within_rectangle(coord, gCableColourToggleRect[i])) {
-                        for (int colour=0; colour<7; colour++) {
-                            gPatchDescr[slot].visible[i]      = !gPatchDescr[slot].visible[i];
+                        for (int colour = 0; colour < cableColourMax; colour++) {
+                            gPatchDescr[slot].visible[i] = !gPatchDescr[slot].visible[i];
                         }
+
                         atomic_store(&gReDraw, true);
                         tMessageContent messageContent = {0};
-                        messageContent.cmd         = eMsgCmdWritePatchDescr;
-                        messageContent.slot        = slot;
+                        messageContent.cmd  = eMsgCmdWritePatchDescr;
+                        messageContent.slot = slot;
                         msg_send(&gCommandQueue, &messageContent);
-                        found = true;
+                        found               = true;
                         break;
                     }
                 }
             }
 
             if (found == false) {
-                for (i = 0; i < NUM_CABLE_COLOURS; i++) {
+                for (i = 0; i < cableColourMax; i++) {
                     if (within_rectangle(coord, gCableColourSelectRect[i])) {
                         gCableColour = i;
                         atomic_store(&gReDraw, true);
@@ -1687,18 +1689,30 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (within_rectangle(coord, gHideAllCablesRect)) {
-                    for (int colour=0; colour<7; colour++) {
-                        gPatchDescr[slot].visible[colour]      = 0;
+                    int             colour         = 0;
+                    int             visibleCount   = 0;
+
+                    for (int colour = 0; colour < cableColourMax; colour++) {
+                        if (gPatchDescr[slot].visible[colour]) {
+                            visibleCount++;
+                        }
                     }
-                    
-                    //atomic_store(&gCablesHideAll, !current);
-                    atomic_store(&gCablesTransparent, false);
+
+                    if (visibleCount == 0) {
+                        for (colour = 0; colour < cableColourMax; colour++) {
+                            gPatchDescr[slot].visible[colour] = 1;
+                        }
+                    } else {
+                        for (colour = 0; colour < cableColourMax; colour++) {
+                            gPatchDescr[slot].visible[colour] = 0;
+                        }
+                    }
                     atomic_store(&gReDraw, true);
                     tMessageContent messageContent = {0};
-                    messageContent.cmd         = eMsgCmdWritePatchDescr;
-                    messageContent.slot        = slot;
+                    messageContent.cmd  = eMsgCmdWritePatchDescr;
+                    messageContent.slot = slot;
                     msg_send(&gCommandQueue, &messageContent);
-                    found = true;
+                    found               = true;
                 }
             }
 
@@ -1706,10 +1720,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 if (within_rectangle(coord, gTransparentCablesRect)) {
                     bool current = atomic_load(&gCablesTransparent);
                     atomic_store(&gCablesTransparent, !current);
-                    //for (int colour=0; colour<7; colour++) {
-                    //    gPatchDescr[slot].visible[i]      = 1;
-                    //}
-                    //atomic_store(&gCablesHideAll, false);
                     atomic_store(&gReDraw, true);
                     found = true;
                 }

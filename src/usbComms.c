@@ -1040,7 +1040,7 @@ static int send_get_patch(uint32_t slot) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
     int     response                = SUB_RESPONSE_ERROR;
-    
+
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
     buff[pos++] = atomic_load(&gPatchVersion[slot]);

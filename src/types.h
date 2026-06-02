@@ -244,6 +244,17 @@ typedef enum {
 } tMouseButton;
 
 typedef enum {
+    cableColourRed,
+    cableColourBlue,
+    cableColourYellow,
+    cableColourOrange,
+    cableColourGreen,
+    cableColourPurple,
+    cableColourWhite,
+    cableColourMax
+} tCableColour;
+
+typedef enum {
     patchTypeNoCat,
     patchTypeAcoustic,
     patchTypeSequencer,
@@ -693,7 +704,7 @@ typedef struct {
     uint8_t  voiceCount;
     uint16_t barPosition;
     uint8_t  unknown3;
-    uint8_t  visible[7]; // TODO - add the enumeration for colours and use a max value to set this
+    uint8_t  visible[cableColourMax];
     uint8_t  monoPoly;
     uint8_t  activeVariation;
     uint8_t  category;

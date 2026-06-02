@@ -27,9 +27,9 @@ extern "C" {
 
 int msgqueue_sem_trywait(tMessageQueue * queue) {
     errno = 0;
-    
+
     pthread_mutex_lock(&queue->semMutex);
-    
+
     // Check if the semaphore has a positive count
     if (queue->semCount <= 0) {
         // No resources available. Unlock and mimic POSIX sem_trywait behaviour
@@ -37,32 +37,32 @@ int msgqueue_sem_trywait(tMessageQueue * queue) {
         errno = EAGAIN;
         return -1;
     }
-    
     // Resource acquired successfully
     queue->semCount--;
-    
+
     pthread_mutex_unlock(&queue->semMutex);
     return 0;
 }
-    
+
 void msgqueue_sem_wait(tMessageQueue * queue) {
     pthread_mutex_lock(&queue->semMutex);
+
     while (queue->semCount <= 0) {
         pthread_cond_wait(&queue->semCond, &queue->semMutex);
     }
     queue->semCount--;
     pthread_mutex_unlock(&queue->semMutex);
 }
-    
+
 void msgqueue_sem_send(tMessageQueue * queue) {
     pthread_mutex_lock(&queue->semMutex);
     queue->semCount++;
     pthread_cond_signal(&queue->semCond);
     pthread_mutex_unlock(&queue->semMutex);
 }
-    
+
 void msg_init(tMessageQueue * msgQueue, char * semName) {
-    pthread_mutexattr_t attr               = {0};
+    pthread_mutexattr_t attr = {0};
 
     pthread_mutexattr_init(&attr);
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
@@ -72,10 +72,10 @@ void msg_init(tMessageQueue * msgQueue, char * semName) {
     msgQueue->semCount = 0;
     pthread_mutexattr_destroy(&attr);
 
-    msgQueue->head      = NULL;
-    msgQueue->tail      = NULL;
+    msgQueue->head     = NULL;
+    msgQueue->tail     = NULL;
 }
-    
+
 int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageContent) {
     int        retVal      = EXIT_FAILURE;
     tMessage * oldMsgQueue = NULL;
@@ -97,7 +97,7 @@ int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageCon
 
         case eRcvPoll:
 
-            if (msgqueue_sem_trywait(msgQueue) == -1 ) {
+            if (msgqueue_sem_trywait(msgQueue) == -1) {
                 if (errno == EAGAIN) {       // Semaphore is not available, no messages
                     return retVal;
                 }

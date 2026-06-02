@@ -43,11 +43,11 @@ void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     gPatchDescr[slot].unknown3                                                                          = read_bit_stream(buff, subOffset, 3);
     gPatchDescr[slot].visible[0]                                                                        = read_bit_stream(buff, subOffset, 1);
     gPatchDescr[slot].visible[1]                                                                        = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].visible[2]                                                                      = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].visible[3]                                                                      = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].visible[4]                                                                       = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].visible[5]                                                                      = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].visible[6]                                                                       = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].visible[2]                                                                        = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].visible[3]                                                                        = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].visible[4]                                                                        = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].visible[5]                                                                        = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].visible[6]                                                                        = read_bit_stream(buff, subOffset, 1);
     gPatchDescr[slot].monoPoly                                                                          = read_bit_stream(buff, subOffset, 2);
     gPatchDescr[slot].activeVariation                                                                   = read_bit_stream(buff, subOffset, 8);
     gPatchDescr[slot].category                                                                          = read_bit_stream(buff, subOffset, 8);

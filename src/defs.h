@@ -53,7 +53,6 @@
 #define MAX_NUM_CONNECTORS                   (13)
 #define MAX_NUM_KNOBS                        (120)                        // G2 always has exactly 120 knob slots
 #define MAX_NUM_CONTROLLERS                  (128)
-#define NUM_CABLE_COLOURS                    (7)
 
 #define INTERRUPT_MESSAGE_SIZE               (16)
 #define EXTENDED_MESSAGE_SIZE                (8192)
