@@ -2474,6 +2474,7 @@ const tVolumeLocation    volumeLocationList[] = {
     {moduleTypeMix4to1C, volumeTypeMono,     {{-15,  6}, {3, 25}}, anchorTopRight},
     {moduleTypeCompress, volumeTypeCompress, {{-18,  6}, {4, 38}}, anchorTopRight},
     {moduleType2toOut,   volumeTypeStereo,   {{-25,  6}, {3, 10}}, anchorTopRight},
+    {moduleType4toOut,   volumeTypeStereo /* Quad */,   {{-25,  6}, {3, 10}}, anchorTopRight},
     {moduleTypeFxtoIn,   volumeTypeStereo,   {{-25,  6}, {3, 10}}, anchorTopRight},
     {moduleTypeMix4to1S, volumeTypeStereo,   {{-10, 13}, {3, 15}}, anchorTopRight}, };
 

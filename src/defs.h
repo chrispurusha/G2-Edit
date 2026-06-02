@@ -40,7 +40,6 @@
 
 #define WINDOW_TITLE                         "G2 Editor"
 
-#define UPLOAD_PATCH_VERSION                 (0x53)
 #define NUM_VARIATIONS_USB                   (10)                     // 10 variations per patch, but only fist 8 presented on the GUI
 #define NUM_VARIATIONS_FILE                  (NUM_VARIATIONS_USB - 1) // One less variation for file access = 9
 #define NUM_GUI_VARIATIONS                   (8)

@@ -384,7 +384,7 @@ static int parse_patch_version(uint8_t * buff, int length) {
     }
     atomic_store(&gPatchVersion[slot], version);
 
-    LOG_DEBUG("Patch version slot %u = 0x%02x\n", slot, version);
+    LOG_DEBUG("Parsed patch version slot %u = 0x%02x or %u\n", slot, version, version);
     return EXIT_SUCCESS;
 }
 
@@ -1040,7 +1040,7 @@ static int send_get_patch(uint32_t slot) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
     int     response                = SUB_RESPONSE_ERROR;
-
+    
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
     buff[pos++] = atomic_load(&gPatchVersion[slot]);
@@ -1197,7 +1197,7 @@ static int push_slot_to_device(uint32_t slot) {
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = UPLOAD_PATCH_VERSION;
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
     buff[pos++] = SUB_COMMAND_SET_PATCH;
     buff[pos++] = 0x00;
     buff[pos++] = 0x00;
@@ -1342,7 +1342,6 @@ static int send_init_sequence_pull(void) {
 
     LOG_DEBUG("Pull init sequence complete\n");
     atomic_store(&gotPatchChangeIndication, false);
-    atomic_store(&gCommsState, eCommsOnLine);
     call_full_patch_change_notify();
     call_wake_glfw();
 
@@ -1368,7 +1367,6 @@ static int send_init_sequence_push(void) {
 
     LOG_DEBUG("Push init sequence complete\n");
     atomic_store(&gotPatchChangeIndication, false);
-    atomic_store(&gCommsState, eCommsOnLine);
     call_full_patch_change_notify();
     call_wake_glfw();
 
@@ -1689,7 +1687,9 @@ static void state_handler(void) {
                 result = send_init_sequence_push();
             }
 
-            if (result != EXIT_SUCCESS) {
+            if (result == EXIT_SUCCESS) {
+                atomic_store(&gCommsState, eCommsOnLine);
+            } else {
                 LOG_DEBUG("Init sequence failed — will retry\n");
                 pthread_mutex_lock(&usbStaticMutex);
                 close_device();
