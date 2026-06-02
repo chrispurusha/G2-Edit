@@ -46,17 +46,14 @@ extern "C" {
 void open_patch_type_context_menu(tCoord coord);
 
 void get_global_gui_scaled_mouse_coord(tCoord * coord) {
-    int fbWidth  = 0;
-    int fbHeight = 0;
+    int winWidth  = 0;
+    int winHeight = 0;
 
     glfwGetCursorPos(gWindow, &(coord->x), &(coord->y));
+    glfwGetWindowSize(gWindow, &winWidth, &winHeight);
 
-    glfwGetFramebufferSize(gWindow, &fbWidth, &fbHeight);
-
-    coord->x /= fbWidth;
-    coord->y /= fbHeight;
-    coord->x *= TARGET_FRAME_BUFF_WIDTH;
-    coord->y *= TARGET_FRAME_BUFF_HEIGHT;
+    coord->x = (coord->x / (double)winWidth)  * (get_render_width()  / (double)GLOBAL_GUI_SCALE);
+    coord->y = (coord->y / (double)winHeight) * (get_render_height() / (double)GLOBAL_GUI_SCALE);
 }
 
 void adjust_scroll_for_drag(void) {
