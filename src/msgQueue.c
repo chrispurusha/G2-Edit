@@ -25,33 +25,57 @@ extern "C" {
 #include "types.h"
 #include "msgQueue.h"
 
+int msgqueue_sem_trywait(tMessageQueue * queue) {
+    errno = 0;
+    
+    pthread_mutex_lock(&queue->semMutex);
+    
+    // Check if the semaphore has a positive count
+    if (queue->semCount <= 0) {
+        // No resources available. Unlock and mimic POSIX sem_trywait behaviour
+        pthread_mutex_unlock(&queue->semMutex);
+        errno = EAGAIN;
+        return -1;
+    }
+    
+    // Resource acquired successfully
+    queue->semCount--;
+    
+    pthread_mutex_unlock(&queue->semMutex);
+    return 0;
+}
+    
+void msgqueue_sem_wait(tMessageQueue * queue) {
+    pthread_mutex_lock(&queue->semMutex);
+    while (queue->semCount <= 0) {
+        pthread_cond_wait(&queue->semCond, &queue->semMutex);
+    }
+    queue->semCount--;
+    pthread_mutex_unlock(&queue->semMutex);
+}
+    
+void msgqueue_sem_send(tMessageQueue * queue) {
+    pthread_mutex_lock(&queue->semMutex);
+    queue->semCount++;
+    pthread_cond_signal(&queue->semCond);
+    pthread_mutex_unlock(&queue->semMutex);
+}
+    
 void msg_init(tMessageQueue * msgQueue, char * semName) {
     pthread_mutexattr_t attr               = {0};
-    char                semNameWithPid[64] = {0};
 
     pthread_mutexattr_init(&attr);
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
     pthread_mutex_init(&msgQueue->mutex, &attr);
+    pthread_mutex_init(&msgQueue->semMutex, &attr);
+    pthread_cond_init(&msgQueue->semCond, NULL);
+    msgQueue->semCount = 0;
     pthread_mutexattr_destroy(&attr);
 
     msgQueue->head      = NULL;
     msgQueue->tail      = NULL;
-
-    snprintf(semNameWithPid, sizeof(semNameWithPid), "/%s_%d", semName, getpid());
-
-    // IMPORTANT: Unlink any stale semaphore from previous runs FIRST
-    sem_unlink(semNameWithPid);
-
-    // Now create a fresh semaphore
-    msgQueue->semaphore = sem_open(semNameWithPid, O_CREAT | O_EXCL, 0644, 0);
-
-    if (msgQueue->semaphore == SEM_FAILED) {
-        LOG_ERROR("Semaphore '%s' creation failed\n", semNameWithPid);
-        LOG_ERROR("Error: %s\n", strerror(errno));
-        return;
-    }
 }
-
+    
 int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageContent) {
     int        retVal      = EXIT_FAILURE;
     tMessage * oldMsgQueue = NULL;
@@ -68,16 +92,15 @@ int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageCon
 
     switch (rcv) {
         case eRcvWait:
-            sem_wait(msgQueue->semaphore);     // Block until message is available
+            msgqueue_sem_wait(msgQueue);
             break;
 
         case eRcvPoll:
 
-            if (sem_trywait(msgQueue->semaphore) == -1) {
+            if (msgqueue_sem_trywait(msgQueue) == -1 ) {
                 if (errno == EAGAIN) {       // Semaphore is not available, no messages
                     return retVal;
                 }
-                // Handle other errors (e.g., ENOMEM)
                 perror("sem_trywait failed");
                 return retVal;
             }
@@ -138,8 +161,7 @@ void msg_send(tMessageQueue * msgQueue, tMessageContent * messageContent) {
     }
     pthread_mutex_unlock(&msgQueue->mutex);
 
-    // Signal that a new message is available
-    sem_post(msgQueue->semaphore);
+    msgqueue_sem_send(msgQueue);
 }
 
 #ifdef __cplusplus
