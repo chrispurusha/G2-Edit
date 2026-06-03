@@ -1095,7 +1095,7 @@ static int send_get_global_page(void) {
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = 0; //atomic_load(&gPerfVersion);
+    buff[pos++] = atomic_load(&gPerfVersion);
     buff[pos++] = SUB_COMMAND_GET_GLOBAL_PAGE;
     retVal      = send_message(buff, pos);
 
