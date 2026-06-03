@@ -2131,14 +2131,14 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
             LOG_DEBUG("ZOOM OUT\n");
             zoomFactor  = get_zoom_factor();
             zoomFactor -= ZOOM_DELTA;
-            set_zoom_factor(zoomFactor, area.coord);
+            set_zoom_factor(zoomFactor, coord);
         }
 
         if (key == GLFW_KEY_EQUAL) {
             LOG_DEBUG("ZOOM IN\n");
             zoomFactor  = get_zoom_factor();
             zoomFactor += ZOOM_DELTA;
-            set_zoom_factor(zoomFactor, area.coord);
+            set_zoom_factor(zoomFactor, coord);
         }
     }
     atomic_store(&gReDraw, true);
