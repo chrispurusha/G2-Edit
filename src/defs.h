@@ -77,6 +77,7 @@
 #define SUB_COMMAND_ASSIGN_GLOBAL_KNOB       (0x1c)
 #define SUB_COMMAND_DEASSIGN_GLOBAL_KNOB     (0x1d)
 #define SUB_RESPONSE_GLOBAL_PAGE             (0x1e)
+#define SUB_RESPONSE_KEYBOARD_SPLIT          (0x1f)
 #define SUB_RESPONSE_PATCH_DESCRIPTION       (0x21) // Think this is also used for set patch description also response to 0x3c 'get patch slot'
 #define SUB_COMMAND_ASSIGN_MIDICC            (0x22)
 #define SUB_COMMAND_DEASSIGN_MIDICC          (0x23)

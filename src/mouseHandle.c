@@ -52,7 +52,7 @@ void get_global_gui_scaled_mouse_coord(tCoord * coord) {
     glfwGetCursorPos(gWindow, &(coord->x), &(coord->y));
     glfwGetWindowSize(gWindow, &winWidth, &winHeight);
 
-    coord->x = (coord->x / (double)winWidth)  * (get_render_width()  / gGlobalGuiScale);
+    coord->x = (coord->x / (double)winWidth) * (get_render_width() / gGlobalGuiScale);
     coord->y = (coord->y / (double)winHeight) * (get_render_height() / gGlobalGuiScale);
 }
 
@@ -247,15 +247,6 @@ void init_params_on_module_all_variations(tModule * module, uint32_t location) {
     }
 }
 
-    // TODO - for various reasons, we need to remove this and deal with state on at render time
-void set_exclusive_button_highlight(tButtonId first, tButtonId last, tButtonId active) {
-    for (tButtonId i = first; i <= last; i++) {
-        gMainButtonArray[i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
-    }
-
-    gMainButtonArray[active].backgroundColour = (tRgb)RGB_GREEN_ON;
-}
-
 void init_patch(uint32_t slot) {  // Todo - think where this should really go
     memset(&gPatchDescr[slot], 0, sizeof(gPatchDescr[0]));
     gPatchDescr[slot].voiceCount      = 1;
@@ -368,16 +359,15 @@ void handle_button(tButtonId buttonId) {
 
             atomic_store(&gSlot, slot);
 
-            set_exclusive_button_highlight(slotAButtonId, slotDButtonId, buttonId);
-
             tMessageContent messageContent = {0};
             messageContent.cmd           = eMsgCmdSelectSlot;
             messageContent.slot          = slot;
             messageContent.slotData.slot = slot;
             msg_send(&gCommandQueue, &messageContent);
 
+            set_exclusive_button_highlight(slotAButtonId, slotDButtonId, buttonId);
             set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId,
-                                           (tButtonId)((uint32_t)variation1ButtonId + variation));
+                                           (tButtonId)((uint32_t)variation1ButtonId + gPatchDescr[slot].activeVariation));
             break;
         }
         case initPatchId:
@@ -2006,9 +1996,9 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
 }
 
 void scroll_event(GLFWwindow * window, double x, double y) {
-    tCoord          coord          = {0};
+    tCoord coord      = {0};
     double zoomFactor = 0.0;
-    
+
     if (gCommandKeyPressed == true) {
         get_global_gui_scaled_mouse_coord(&coord);
         zoomFactor  = get_zoom_factor();
@@ -2120,13 +2110,13 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
     } else if (key == GLFW_KEY_LEFT_SUPER && action == GLFW_RELEASE) {
         gCommandKeyPressed = false;
     } else if (action == GLFW_PRESS && gCommandKeyPressed == true) {
-        tRectangle area = {0};
-        tCoord coord = {0};
-        
-        area = module_area();
+        tRectangle area  = {0};
+        tCoord     coord = {0};
+
+        area    = module_area();
         coord.x = area.coord.x + area.size.w / 2.0;
         coord.y = area.coord.y + area.size.h / 2.0;
-        
+
         // React on command key with - + keys for zooming
         if (key == GLFW_KEY_MINUS) {
             LOG_DEBUG("ZOOM OUT\n");

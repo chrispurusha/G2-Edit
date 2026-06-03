@@ -324,17 +324,17 @@ void setup_render_context(void) {
 }
 
 void init_graphics(void) {
-    int           fbWidth      = 0;
-    int           fbHeight     = 0;
-    int           windowWidth  = 0;
-    int           windowHeight = 0;
-    GLFWmonitor * monitor      = NULL;
-    float         xScale       = 1;
-    float         yScale       = 1;
-    char title[128] = {0};
-    
+    int           fbWidth           = 0;
+    int           fbHeight          = 0;
+    int           windowWidth       = 0;
+    int           windowHeight      = 0;
+    GLFWmonitor * monitor           = NULL;
+    float         xScale            = 1;
+    float         yScale            = 1;
+    char          title[128]        = {0};
+
     snprintf(title, sizeof(title), "%s - Build %s %s", WINDOW_TITLE, __DATE__, __TIME__);
-    
+
     glfwSetErrorCallback(error_callback);
 
     if (!glfwInit()) {
@@ -345,10 +345,10 @@ void init_graphics(void) {
 
     monitor      = glfwGetPrimaryMonitor();
 
-    int x, y, width, height;
-    double widthScaleFactor = 1;
-    double heightScaleFactor = 1;
-    double scaleFactor = 1;
+    int           x, y, width, height;
+    double        widthScaleFactor  = 1;
+    double        heightScaleFactor = 1;
+    double        scaleFactor       = 1;
     glfwGetMonitorWorkarea(monitor, &x, &y, &width, &height);
     glfwGetMonitorContentScale(monitor, &xScale, &yScale);
     windowWidth  = TARGET_FRAME_BUFF_WIDTH / xScale;
@@ -356,19 +356,17 @@ void init_graphics(void) {
 
     if ((windowWidth > width) || (windowHeight > height)) {
         heightScaleFactor = (double)windowHeight / (double)height;
-        widthScaleFactor = (double)windowWidth / (double)width;
-        
+        widthScaleFactor  = (double)windowWidth / (double)width;
+
         if (heightScaleFactor >= widthScaleFactor) {
             scaleFactor = heightScaleFactor;
         } else {
             scaleFactor = widthScaleFactor;
         }
-        
-        windowWidth  = (int)((double)windowWidth  / scaleFactor);
-        windowHeight = (int)((double)windowHeight / scaleFactor);
-        gGlobalGuiScale = gGlobalGuiScale / scaleFactor;
+        windowWidth       = (int)((double)windowWidth / scaleFactor);
+        windowHeight      = (int)((double)windowHeight / scaleFactor);
+        gGlobalGuiScale   = gGlobalGuiScale / scaleFactor;
     }
-    
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
     glfwWindowHint(GLFW_COCOA_GRAPHICS_SWITCHING, GLFW_TRUE);
     gWindow      = glfwCreateWindow(windowWidth, windowHeight, title, NULL, NULL);
@@ -379,7 +377,7 @@ void init_graphics(void) {
     }
     glfwSetWindowSizeLimits(gWindow, windowWidth / gGlobalGuiScale, windowHeight / gGlobalGuiScale, GLFW_DONT_CARE, GLFW_DONT_CARE);
     glfwSetWindowAspectRatio(gWindow, windowWidth, windowHeight);
-    
+
     glfwMakeContextCurrent(gWindow);
 
     glfwGetFramebufferSize(gWindow, &fbWidth, &fbHeight);

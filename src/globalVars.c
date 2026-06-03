@@ -23,7 +23,7 @@ extern "C" {
 
 #include "globalVars.h"
 
-    double gGlobalGuiScale = 2;
+double                 gGlobalGuiScale    = 2;
 _Atomic bool           gQuitAll           = false;
 GLFWwindow *           gWindow            = NULL;
 _Atomic uint32_t       gLocation          = locationVa;
@@ -36,7 +36,7 @@ tButton                gMainButtonArray[] = { // Must align with tButtonId enuma
     {{425,  8}, NULL_RECTANGLE, anchorTopLeft, "FX",         RGB_BACKGROUND_GREY, false},
     {{ 20,  8}, NULL_RECTANGLE, anchorTopLeft, "Read File",  RGB_BACKGROUND_GREY, false},
     {{ 80,  8}, NULL_RECTANGLE, anchorTopLeft, "Write File", RGB_BACKGROUND_GREY, false},
-    {{400, 60}, NULL_RECTANGLE, anchorTopLeft, "1",          RGB_BACKGROUND_GREY,        false},
+    {{400, 60}, NULL_RECTANGLE, anchorTopLeft, "1",          RGB_BACKGROUND_GREY, false},
     {{412, 60}, NULL_RECTANGLE, anchorTopLeft, "2",          RGB_BACKGROUND_GREY, false},
     {{424, 60}, NULL_RECTANGLE, anchorTopLeft, "3",          RGB_BACKGROUND_GREY, false},
     {{436, 60}, NULL_RECTANGLE, anchorTopLeft, "4",          RGB_BACKGROUND_GREY, false},
@@ -45,7 +45,7 @@ tButton                gMainButtonArray[] = { // Must align with tButtonId enuma
     {{472, 60}, NULL_RECTANGLE, anchorTopLeft, "7",          RGB_BACKGROUND_GREY, false},
     {{484, 60}, NULL_RECTANGLE, anchorTopLeft, "8",          RGB_BACKGROUND_GREY, false},
     {{500, 60}, NULL_RECTANGLE, anchorTopLeft, "Init",       RGB_BACKGROUND_GREY, false},
-    {{600,  8}, NULL_RECTANGLE, anchorTopLeft, "A",          RGB_BACKGROUND_GREY,        false},
+    {{600,  8}, NULL_RECTANGLE, anchorTopLeft, "A",          RGB_GREEN_ON, false},
     {{615,  8}, NULL_RECTANGLE, anchorTopLeft, "B",          RGB_BACKGROUND_GREY, false},
     {{630,  8}, NULL_RECTANGLE, anchorTopLeft, "C",          RGB_BACKGROUND_GREY, false},
     {{645,  8}, NULL_RECTANGLE, anchorTopLeft, "D",          RGB_BACKGROUND_GREY, false},
@@ -124,6 +124,14 @@ void patch_name_get(uint32_t slot, char * name, size_t size) {
     name[size - 1] = '\0';
 
     pthread_mutex_unlock(&gPatchNameMutex);
+}
+
+void set_exclusive_button_highlight(tButtonId first, tButtonId last, tButtonId active) {
+    for (tButtonId i = first; i <= last; i++) {
+        gMainButtonArray[i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+    }
+
+    gMainButtonArray[active].backgroundColour = (tRgb)RGB_GREEN_ON;
 }
 
 #ifdef __cplusplus

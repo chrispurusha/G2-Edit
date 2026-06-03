@@ -581,6 +581,9 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             atomic_store(&gSlot, newSlot);
             set_exclusive_button_highlight(slotAButtonId, slotDButtonId,
                                            (tButtonId)(slotAButtonId + newSlot));
+            set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId,
+                                           (tButtonId)((uint32_t)variation1ButtonId + gPatchDescr[newSlot].activeVariation));
+            *unsolicited                      = true;
             return EXIT_SUCCESS;
         }
 
@@ -622,16 +625,27 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         case SUB_COMMAND_SELECT_VARIATION:
             LOG_DEBUG("Got variation select\n");
             uint8_t variation = 0;
-            
-            variation = read_bit_stream(buff, bitPos, 8);
+
+            variation                         = read_bit_stream(buff, bitPos, 8);
             gPatchDescr[slot].activeVariation = variation;
-            
+
             set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId, (tButtonId)(variation1ButtonId + variation));
-            *unsolicited = true;
+            *unsolicited                      = true;
             return EXIT_SUCCESS;
+
+        case SUB_SEL_PARAM_PAGE:
+            LOG_DEBUG("Got select param page\n");
+            *unsolicited                      = true;
+            return EXIT_SUCCESS;
+
+        case SUB_RESPONSE_KEYBOARD_SPLIT:
+            LOG_DEBUG("Got keyboard split\n");
+            *unsolicited                      = true;
+            return EXIT_SUCCESS;
+
         default:
-            LOG_DEBUG("Got unknown sub-command 0x%02x\n", subCommand);
-            return EXIT_FAILURE;
+            LOG_DEBUG("Got unknown sub-command 0x%02x - must implement!!!\n", subCommand);
+            exit(1);
     }
 }
 
@@ -695,7 +709,6 @@ static int rcv_extended(int dataLength, int * response, bool * unsolicited) {
         LOG_ERROR("Expected message too large (%u > %u)\n", dataLength, EXTENDED_MESSAGE_SIZE);
         return EXIT_FAILURE;
     }
-    
     pthread_mutex_lock(&usbStaticMutex);
     devHandle_local = devHandle;
     pthread_mutex_unlock(&usbStaticMutex);
@@ -730,7 +743,7 @@ static int rcv_extended(int dataLength, int * response, bool * unsolicited) {
         }
         usleep(1000);
     }
-    
+
     if (readLength != dataLength) {
         LOG_DEBUG("Length mismatch read=%d expected=%d\n",
                   readLength, dataLength);

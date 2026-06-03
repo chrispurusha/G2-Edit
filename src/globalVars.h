@@ -38,7 +38,7 @@
 extern const char *        patchTypeStrMap[patchTypeUserMax];
 extern const char *        monoPolyStrMap[monoPolyMax];
 
-extern double gGlobalGuiScale;
+extern double              gGlobalGuiScale;
 extern _Atomic bool        gQuitAll;
 extern GLFWwindow *        gWindow;
 extern _Atomic uint32_t    gLocation;
@@ -91,5 +91,6 @@ uint32_t array_size_main_button_array(void);
 
 void patch_name_set(uint32_t slot, const char * name);
 void patch_name_get(uint32_t slot, char * name, size_t size);
+void set_exclusive_button_highlight(tButtonId first, tButtonId last, tButtonId active);
 
 #endif // __GLOBAL_VARS_H__

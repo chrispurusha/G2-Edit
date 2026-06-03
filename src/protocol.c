@@ -36,22 +36,22 @@ extern "C" {
 #include "globalVars.h"
 
 void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
-    gPatchDescr[slot].unknown1                                                                          = read_bit_stream(buff, subOffset, 32);
-    gPatchDescr[slot].unknown2                                                                          = read_bit_stream(buff, subOffset, 29);
-    gPatchDescr[slot].voiceCount                                                                        = read_bit_stream(buff, subOffset, 5);
-    gPatchDescr[slot].barPosition                                                                       = read_bit_stream(buff, subOffset, 14);
-    gPatchDescr[slot].unknown3                                                                          = read_bit_stream(buff, subOffset, 3);
-    gPatchDescr[slot].visible[0]                                                                        = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].visible[1]                                                                        = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].visible[2]                                                                        = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].visible[3]                                                                        = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].visible[4]                                                                        = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].visible[5]                                                                        = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].visible[6]                                                                        = read_bit_stream(buff, subOffset, 1);
-    gPatchDescr[slot].monoPoly                                                                          = read_bit_stream(buff, subOffset, 2);
-    gPatchDescr[slot].activeVariation                                                                   = read_bit_stream(buff, subOffset, 8);
-    gPatchDescr[slot].category                                                                          = read_bit_stream(buff, subOffset, 8);
-    gPatchDescr[slot].unknown4                                                                          = read_bit_stream(buff, subOffset, 12);
+    gPatchDescr[slot].unknown1        = read_bit_stream(buff, subOffset, 32);
+    gPatchDescr[slot].unknown2        = read_bit_stream(buff, subOffset, 29);
+    gPatchDescr[slot].voiceCount      = read_bit_stream(buff, subOffset, 5);
+    gPatchDescr[slot].barPosition     = read_bit_stream(buff, subOffset, 14);
+    gPatchDescr[slot].unknown3        = read_bit_stream(buff, subOffset, 3);
+    gPatchDescr[slot].visible[0]      = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].visible[1]      = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].visible[2]      = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].visible[3]      = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].visible[4]      = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].visible[5]      = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].visible[6]      = read_bit_stream(buff, subOffset, 1);
+    gPatchDescr[slot].monoPoly        = read_bit_stream(buff, subOffset, 2);
+    gPatchDescr[slot].activeVariation = read_bit_stream(buff, subOffset, 8);
+    gPatchDescr[slot].category        = read_bit_stream(buff, subOffset, 8);
+    gPatchDescr[slot].unknown4        = read_bit_stream(buff, subOffset, 12);
 
     LOG_DEBUG("  Voice Count %u\n", gPatchDescr[slot].voiceCount);
     LOG_DEBUG("  Bar Position %u\n", gPatchDescr[slot].barPosition);
@@ -67,13 +67,7 @@ void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     LOG_DEBUG("  Category %u\n", gPatchDescr[slot].category);
 
     if (slot == atomic_load(&gSlot)) {
-        // TODO - Might want to reconsider how we do this, since there's multiple cases of this setting of button colour, perhaps should be dealt with in graphics rendering
-        // Other places call: set_exclusive_button_highlight
-        for (uint32_t i = 0; i < NUM_GUI_VARIATIONS; i++) {
-            gMainButtonArray[(uint32_t)variation1ButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
-        }
-        
-        gMainButtonArray[(int)gPatchDescr[slot].activeVariation + (int)variation1ButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
+        set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId, (tButtonId)(variation1ButtonId + gPatchDescr[slot].activeVariation));
     }
 }
 
