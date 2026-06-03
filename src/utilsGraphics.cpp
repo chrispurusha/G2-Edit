@@ -1017,14 +1017,14 @@ double get_scroll_bar_percent(double scrollBar, double renderSize) {
     return ((scrollBar - low) / (high - low)) * 100.0;
 }
 
-//double set_scroll_bar_percent(double percent, double renderSize) {
-//    double half_length = SCROLLBAR_LENGTH / 2.0;
-//    double low         = half_length + SCROLLBAR_MARGIN;
-//    double high        = renderSize - (half_length + SCROLLBAR_MARGIN);
-//
-// Convert percentage back to actual position on the scrollbar
-//    return low + (percent / 100.0) * (high - low);
-//}
+double set_scroll_bar_percent(double percent, double renderSize) {
+    double half_length = SCROLLBAR_LENGTH / 2.0;
+    double low         = half_length + SCROLLBAR_MARGIN;
+    double high        = renderSize - (half_length + SCROLLBAR_MARGIN);
+
+    // Convert percentage back to actual position on the scrollbar
+    return low + (percent / 100.0) * (high - low);
+}
 
 // Converts angle (-135° to 135°) to normalized value [0,127]
 uint32_t angle_to_value(double angle, uint32_t range) {
@@ -1122,6 +1122,13 @@ void set_zoom_factor(double newZoom, tCoord mouseCoord) {
     // Convert back to percent
     gXScrollPercent = (maxScrollX > 0.0) ? (newScrollX / maxScrollX) * 100.0 : 0.0;
     gYScrollPercent = (maxScrollY > 0.0) ? (newScrollY / maxScrollY) * 100.0 : 0.0;
+    
+    // Sync scrollbar thumb positions to match new percent
+    double renderWidth  = get_render_width()  / gGlobalGuiScale;
+    double renderHeight = get_render_height() / gGlobalGuiScale;
+
+    gScrollState.xBar = set_scroll_bar_percent(gXScrollPercent, renderWidth);
+    gScrollState.yBar = set_scroll_bar_percent(gYScrollPercent, renderHeight);
 }
 
 double get_zoom_factor(void) {
