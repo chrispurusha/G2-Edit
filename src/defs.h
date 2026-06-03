@@ -55,8 +55,8 @@
 #define MAX_NUM_CONTROLLERS                  (128)
 
 #define INTERRUPT_MESSAGE_SIZE               (16)
-#define EXTENDED_MESSAGE_SIZE                (8192)
-#define SEND_MESSAGE_SIZE                    (8192)
+#define EXTENDED_MESSAGE_SIZE                (65536)
+#define SEND_MESSAGE_SIZE                    (65536)
 
 #define RESPONSE_TYPE_EXTENDED               (0x1)
 #define RESPONSE_TYPE_EMBEDDED               (0x2)

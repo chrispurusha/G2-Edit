@@ -619,6 +619,16 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("Got select param\n");
             return EXIT_SUCCESS;
 
+        case SUB_COMMAND_SELECT_VARIATION:
+            LOG_DEBUG("Got variation select\n");
+            uint8_t variation = 0;
+            
+            variation = read_bit_stream(buff, bitPos, 8);
+            gPatchDescr[slot].activeVariation = variation;
+            
+            set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId, (tButtonId)(variation1ButtonId + variation));
+            *unsolicited = true;
+            return EXIT_SUCCESS;
         default:
             LOG_DEBUG("Got unknown sub-command 0x%02x\n", subCommand);
             return EXIT_FAILURE;
@@ -681,12 +691,17 @@ static int rcv_extended(int dataLength, int * response, bool * unsolicited) {
     int                    retVal                      = EXIT_FAILURE;
     libusb_device_handle * devHandle_local             = NULL;
 
+    if (dataLength > EXTENDED_MESSAGE_SIZE) {
+        LOG_ERROR("Expected message too large (%u > %u)\n", dataLength, EXTENDED_MESSAGE_SIZE);
+        return EXIT_FAILURE;
+    }
+    
     pthread_mutex_lock(&usbStaticMutex);
     devHandle_local = devHandle;
     pthread_mutex_unlock(&usbStaticMutex);
 
     if (devHandle_local == NULL) {
-        LOG_ERROR("rcv_extended: device handle is NULL\n");
+        LOG_ERROR("Device handle is NULL\n");
         return EXIT_FAILURE;
     }
 
@@ -707,24 +722,24 @@ static int rcv_extended(int dataLength, int * response, bool * unsolicited) {
                 }
             }
         } else if (is_disconnect_error(retVal)) {
-            LOG_DEBUG("rcv_extended: disconnect error %s\n", libusb_error_name(retVal));
+            LOG_DEBUG("Disconnect error %s\n", libusb_error_name(retVal));
             atomic_store(&gotBadConnectionIndication, true);
             return EXIT_FAILURE;
         } else {
-            LOG_DEBUG("rcv_extended: transfer error %s\n", libusb_error_name(retVal));
+            LOG_DEBUG("Transfer error %s\n", libusb_error_name(retVal));
         }
         usleep(1000);
     }
-
+    
     if (readLength != dataLength) {
-        LOG_DEBUG("rcv_extended: length mismatch read=%d expected=%d\n",
+        LOG_DEBUG("Length mismatch read=%d expected=%d\n",
                   readLength, dataLength);
         return EXIT_FAILURE;
     }
     uint32_t bitPos = SIGNED_BYTE_TO_BIT(dataLength - 2);
 
     if (calc_crc16(buff, dataLength - 2) != read_bit_stream(buff, &bitPos, 16)) {
-        LOG_DEBUG("rcv_extended: bad CRC\n");
+        LOG_DEBUG("Bad CRC\n");
         return EXIT_FAILURE;
     }
     return parse_incoming(buff, dataLength, response, unsolicited);

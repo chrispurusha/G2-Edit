@@ -66,12 +66,15 @@ void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     LOG_DEBUG("  Active Variation %u\n", gPatchDescr[slot].activeVariation);
     LOG_DEBUG("  Category %u\n", gPatchDescr[slot].category);
 
-    // TODO - Might want to reconsider how we do this, since there's multiple cases of this setting of button colour
-    for (uint32_t i = 0; i < NUM_GUI_VARIATIONS; i++) {
-        gMainButtonArray[(uint32_t)variation1ButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+    if (slot == atomic_load(&gSlot)) {
+        // TODO - Might want to reconsider how we do this, since there's multiple cases of this setting of button colour, perhaps should be dealt with in graphics rendering
+        // Other places call: set_exclusive_button_highlight
+        for (uint32_t i = 0; i < NUM_GUI_VARIATIONS; i++) {
+            gMainButtonArray[(uint32_t)variation1ButtonId + i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+        }
+        
+        gMainButtonArray[(int)gPatchDescr[slot].activeVariation + (int)variation1ButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
     }
-
-    gMainButtonArray[gPatchDescr[slot].activeVariation + (uint32_t)variation1ButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
 }
 
 void write_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
