@@ -1025,7 +1025,7 @@ static int send_select_slot(uint32_t slot) {
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = 0x00;
+    buff[pos++] = 0; //atomic_load(&gPerfVersion);
     buff[pos++] = SUB_COMMAND_SELECT_SLOT;
     buff[pos++] = (uint8_t)slot;
     retVal      = send_message(buff, pos);
@@ -1095,17 +1095,17 @@ static int send_get_global_page(void) {
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = 0x00;
+    buff[pos++] = 0; //atomic_load(&gPerfVersion);
     buff[pos++] = SUB_COMMAND_GET_GLOBAL_PAGE;
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, &response);
-        LOG_DEBUG("GET GLOBAL PAGE RESPONSE = 0x%02x\n", response);
+        LOG_DEBUG("GET GLOBAL PAGE RESPONSE = 0x%02x (0x1e is good in this scenario)\n", response);
 
-        //if (response != SUB_RESPONSE_GLOBAL_PAGE) {
-        //    retVal = EXIT_FAILURE;
-        //}
+        if (response != SUB_RESPONSE_GLOBAL_PAGE) {
+            retVal = EXIT_FAILURE;
+        }
     }
     return retVal;
 }
@@ -1449,9 +1449,9 @@ static int send_init_sequence_pull(void) {
     send_get_patch_version(4); // Performance slot
     send_get_synth_settings();
     send_get_midi_cc();
-    //send_get_global_page();
+    send_select_slot(0);
+    send_get_global_page();
     send_get_performance_settings();
-    //send_select_slot(0);
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         send_get_patch_version(slot);
@@ -1716,7 +1716,7 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdSelectSlot:
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-            buff[pos++] = 0;
+            buff[pos++] = 0; // atomic_load(&gPerfVersion);
             buff[pos++] = SUB_COMMAND_SELECT_SLOT;
             buff[pos++] = messageContent->slotData.slot;
             retVal      = send_message(buff, pos);
