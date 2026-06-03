@@ -331,7 +331,10 @@ void init_graphics(void) {
     GLFWmonitor * monitor      = NULL;
     float         xScale       = 1;
     float         yScale       = 1;
-
+    char title[128] = {0};
+    
+    snprintf(title, sizeof(title), "%s - Build %s %s", WINDOW_TITLE, __DATE__, __TIME__);
+    
     glfwSetErrorCallback(error_callback);
 
     if (!glfwInit()) {
@@ -368,7 +371,7 @@ void init_graphics(void) {
     
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
     glfwWindowHint(GLFW_COCOA_GRAPHICS_SWITCHING, GLFW_TRUE);
-    gWindow      = glfwCreateWindow(windowWidth, windowHeight, WINDOW_TITLE, NULL, NULL);
+    gWindow      = glfwCreateWindow(windowWidth, windowHeight, title, NULL, NULL);
 
     if (!gWindow) {
         glfwTerminate();
