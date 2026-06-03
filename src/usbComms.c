@@ -218,6 +218,67 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     return EXIT_SUCCESS;
 }
 
+static int parse_performance_settings(uint8_t * buff, int length) {
+    uint32_t bitPos = 0;
+    uint8_t  ch     = 0;
+    int i;
+
+    if (buff == NULL) {
+        return EXIT_FAILURE;
+    }
+
+    read_bit_stream(buff, &bitPos, 8);
+    read_bit_stream(buff, &bitPos, 8);
+    
+    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
+
+
+    for (i=0; i<MAX_SLOTS; i++) {
+        LOG_DEBUG("PERFORMANCE NAME '");
+        
+        for (int i = 0; i < 20 ; i++) {
+            ch = read_bit_stream(buff, &bitPos, 8);
+            
+            if ((ch >= 0x20) && (ch <= 0x7f)) {
+                LOG_DEBUG_DIRECT("%c", ch);
+            } else {
+                LOG_DEBUG_DIRECT("<0x%02x>", ch);
+            }
+            if (ch == '\0') {
+                break;
+            }
+        }
+        LOG_DEBUG_DIRECT("'\n");
+        
+        LOG_DEBUG("Active = %d\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("Key = %d\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("Hold = %d\n", read_bit_stream(buff, &bitPos, 8));
+        read_bit_stream(buff, &bitPos, 8);
+        read_bit_stream(buff, &bitPos, 8);
+        LOG_DEBUG("Range Lower = %d\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("Range Upper = %d\n", read_bit_stream(buff, &bitPos, 8));
+        read_bit_stream(buff, &bitPos, 8);
+        read_bit_stream(buff, &bitPos, 8);
+        read_bit_stream(buff, &bitPos, 8);
+    }
+
+    return EXIT_SUCCESS;
+}
+    
 static int parse_midi_cc(uint8_t * buff, int length) {
     uint32_t bitPos      = 0;
     uint8_t  subResponse = 0;
@@ -379,10 +440,16 @@ static int parse_patch_version(uint8_t * buff, int length) {
     uint8_t  slot    = read_bit_stream(buff, &bitPos, 8);
     uint8_t  version = read_bit_stream(buff, &bitPos, 8);
 
-    if (slot >= MAX_SLOTS) {
+    // TODO: I think there's more data in here after version!
+    
+    if (slot < MAX_SLOTS) {
+        atomic_store(&gPatchVersion[slot], version);
+    } else if (slot == MAX_SLOTS) {
+        atomic_store(&gPerfVersion, version);
+    } else {
         return EXIT_FAILURE;
     }
-    atomic_store(&gPatchVersion[slot], version);
+
 
     LOG_DEBUG("Parsed patch version slot %u = 0x%02x or %u\n", slot, version, version);
     return EXIT_SUCCESS;
@@ -416,7 +483,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                                   int length, bool * unsolicited) {
     tModule  module   = {0};
     uint32_t slot     = commandResponse & 0x03;
-    uint32_t location = atomic_load(&gLocation);
+    //uint32_t location = atomic_load(&gLocation);
 
     *unsolicited = false;
 
@@ -512,8 +579,9 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_MIDI_CC:
             LOG_DEBUG("Got MIDI CC response slot %u\n", slot);
-            return parse_midi_cc(&buff[BIT_TO_BYTE(*bitPos)],
+            parse_midi_cc(&buff[BIT_TO_BYTE(*bitPos)],
                                  length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
+            return EXIT_SUCCESS;
 
         case SUB_RESPONSE_GLOBAL_PAGE:
         {
@@ -562,8 +630,11 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("Got assigned voices command — unexpected\n");
             return EXIT_SUCCESS;
 
-        case SUB_RESPONSE_PERFORMANCE_NAME:
-            LOG_DEBUG("Got performance name\n");
+        case SUB_RESPONSE_PERFORMANCE_SETTINGS:
+            LOG_DEBUG("Got performance settings\n");
+            parse_performance_settings(&buff[BIT_TO_BYTE(*bitPos)],
+                                        length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
+            *unsolicited = true; // TODO: Note - could be unsolicited or not!!!! Work out how we're doing to deal with that
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_MASTER_CLOCK:
@@ -1030,21 +1101,46 @@ static int send_get_global_page(void) {
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, &response);
-        LOG_DEBUG("GET UNKNOWN 2 RESPONSE = 0x%02x\n", response);
+        LOG_DEBUG("GET GLOBAL PAGE RESPONSE = 0x%02x\n", response);
 
-        if (response != SUB_RESPONSE_GLOBAL_PAGE) {
-            retVal = EXIT_FAILURE;
-        }
+        //if (response != SUB_RESPONSE_GLOBAL_PAGE) {
+        //    retVal = EXIT_FAILURE;
+        //}
     }
     return retVal;
 }
 
+static int send_get_performance_settings(void) {
+    int     retVal                  = EXIT_FAILURE;
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     response                = SUB_RESPONSE_ERROR;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
+    buff[pos++] = atomic_load(&gPerfVersion);
+    buff[pos++] = SUB_COMMAND_PERFORMANCE_SETTINGS;
+    LOG_DEBUG("Send get performance settings\n");
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, &response);
+        LOG_DEBUG("GET PERFORMANCE SETTINGS RESPONSE = 0x%02x\n", response);
+
+        //if (response != SUB_RESPONSE_GLOBAL_PAGE) {
+        //    retVal = EXIT_FAILURE;
+        //}
+    }
+    return retVal;
+}
+    
 static int send_get_patch_version(uint32_t slot) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
     int     response                = SUB_RESPONSE_ERROR;
 
+    LOG_DEBUG("Send get patch version\n");
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
     buff[pos++] = 0x41;
@@ -1347,13 +1443,15 @@ static int send_init_sequence_pull(void) {
     // Clear any stale data before pulling fresh state
     database_clear_cables();
     database_clear_modules();
-
+    
     send_init();
     send_stop();
+    send_get_patch_version(4); // Performance slot
     send_get_synth_settings();
     send_get_midi_cc();
-    send_get_global_page();
-    send_select_slot(0);
+    //send_get_global_page();
+    send_get_performance_settings();
+    //send_select_slot(0);
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         send_get_patch_version(slot);
@@ -1367,7 +1465,7 @@ static int send_init_sequence_pull(void) {
     }
 
     send_start();
-
+    
     LOG_DEBUG("Pull init sequence complete\n");
     atomic_store(&gotPatchChangeIndication, false);
     call_full_patch_change_notify();

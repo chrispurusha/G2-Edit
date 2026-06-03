@@ -77,6 +77,7 @@ uint32_t               gControllerCount[MAX_SLOTS]                  = {0};
 uint32_t               gPatchNotesSize[MAX_SLOTS]                   = {0};
 uint8_t                gPatchNotes[MAX_SLOTS][PATCH_NOTES_SIZE + 1] = {0};
 _Atomic uint8_t        gPatchVersion[MAX_SLOTS]                     = {0};
+_Atomic uint8_t        gPerfVersion                     = 0;
 _Atomic tCommsState    gCommsState                                  = eCommsNeverConnected;
 _Atomic uint32_t       gChangedSlot                                 = 0;
 tNameEdit              gPatchNameEdit                               = {0};

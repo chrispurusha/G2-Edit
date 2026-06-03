@@ -86,7 +86,7 @@
 #define SUB_COMMAND_SET_PATCH_NAME           (0x27)
 #define SUB_RESPONSE_GET_PATCH_NAME          (0x27) // Note - same value as command to set patch name
 #define SUB_COMMAND_GET_PATCH_NAME           (0x28)
-#define SUB_RESPONSE_PERFORMANCE_NAME        (0x29)
+#define SUB_RESPONSE_PERFORMANCE_SETTINGS    (0x29)
 #define SUB_COMMAND_SET_MODULE_UPRATE        (0x2a)
 #define SUB_COMMAND_SET_MODE                 (0x2b)
 #define SUB_SEL_PARAM_PAGE                   (0x2d)
