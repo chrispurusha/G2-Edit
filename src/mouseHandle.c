@@ -2005,12 +2005,14 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
 }
 
 void scroll_event(GLFWwindow * window, double x, double y) {
+    tCoord          coord          = {0};
     double zoomFactor = 0.0;
-
+    
     if (gCommandKeyPressed == true) {
+        get_global_gui_scaled_mouse_coord(&coord);
         zoomFactor  = get_zoom_factor();
         zoomFactor += y * ZOOM_DELTA;
-        set_zoom_factor(zoomFactor);
+        set_zoom_factor(zoomFactor, coord);
     } else {
         if (x != 0) {
             gScrollState.xBar -= x / 2;
@@ -2117,19 +2119,26 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
     } else if (key == GLFW_KEY_LEFT_SUPER && action == GLFW_RELEASE) {
         gCommandKeyPressed = false;
     } else if (action == GLFW_PRESS && gCommandKeyPressed == true) {
+        tRectangle area = {0};
+        tCoord coord = {0};
+        
+        area = module_area();
+        coord.x = area.coord.x + area.size.w / 2.0;
+        coord.y = area.coord.y + area.size.h / 2.0;
+        
         // React on command key with - + keys for zooming
         if (key == GLFW_KEY_MINUS) {
             LOG_DEBUG("ZOOM OUT\n");
             zoomFactor  = get_zoom_factor();
             zoomFactor -= ZOOM_DELTA;
-            set_zoom_factor(zoomFactor);
+            set_zoom_factor(zoomFactor, area.coord);
         }
 
         if (key == GLFW_KEY_EQUAL) {
             LOG_DEBUG("ZOOM IN\n");
             zoomFactor  = get_zoom_factor();
             zoomFactor += ZOOM_DELTA;
-            set_zoom_factor(zoomFactor);
+            set_zoom_factor(zoomFactor, area.coord);
         }
     }
     atomic_store(&gReDraw, true);

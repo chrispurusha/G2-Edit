@@ -54,7 +54,7 @@ bool within_lower_half_of_rectangle(tCoord coord, tRectangle rectangle);
 double clamp_scroll_bar(double value, double max_value);
 void set_x_scroll_percent(double percent);
 void set_y_scroll_percent(double percent);
-void set_zoom_factor(double zoomFactor);
+void set_zoom_factor(double zoomFactor, tCoord mouseCoord);
 //void set_x_end_max(double xEndMax);
 //void set_y_end_max(double yEndMax);
 //double get_x_end_max(void);

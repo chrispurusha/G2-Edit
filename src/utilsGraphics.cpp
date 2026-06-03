@@ -1078,13 +1078,50 @@ void set_y_scroll_percent(double percent) {
     gYScrollPercent = percent;
 }
 
-void set_zoom_factor(double zoomFactor) {
-    if (zoomFactor < 0.25) {
-        zoomFactor = 0.25;
-    } else if (zoomFactor > 2.0) {
-        zoomFactor = 2.0;
-    }
-    gZoomFactor = zoomFactor;
+void set_zoom_factor(double newZoom, tCoord mouseCoord) {
+    if (newZoom < 0.25) newZoom = 0.25;
+    if (newZoom > 2.0)  newZoom = 2.0;
+
+    tRectangle area        = module_area();
+    double     totalWidth  = (double)(MAX_COLUMNS + 1) * MODULE_X_SPAN;
+    double     totalHeight = (double)((MAX_ROWS + 1) + (MAX_ROWS_MODULE - 1)) * MODULE_Y_SPAN;
+
+    // Mouse position relative to module area origin
+    double mouseRelX = mouseCoord.x - area.coord.x;
+    double mouseRelY = mouseCoord.y - area.coord.y;
+
+    // Clamp to module area bounds
+    if (mouseRelX < 0.0) mouseRelX = 0.0;
+    if (mouseRelY < 0.0) mouseRelY = 0.0;
+    if (mouseRelX > area.size.w) mouseRelX = area.size.w;
+    if (mouseRelY > area.size.h) mouseRelY = area.size.h;
+
+    // Content point under cursor in unscaled coords
+    double oldScrollX = calc_scroll_x();
+    double oldScrollY = calc_scroll_y();
+    double cx         = (oldScrollX + mouseRelX) / gZoomFactor;
+    double cy         = (oldScrollY + mouseRelY) / gZoomFactor;
+
+    // Apply new zoom
+    gZoomFactor       = newZoom;
+
+    // Scroll to keep cx/cy under the cursor
+    double newScrollX = cx * gZoomFactor - mouseRelX;
+    double newScrollY = cy * gZoomFactor - mouseRelY;
+
+    // Max scroll at new zoom
+    double maxScrollX = gZoomFactor * totalWidth  - area.size.w;
+    double maxScrollY = gZoomFactor * totalHeight - area.size.h;
+
+    // Clamp
+    if (newScrollX < 0.0) newScrollX = 0.0;
+    if (newScrollY < 0.0) newScrollY = 0.0;
+    if (maxScrollX > 0.0 && newScrollX > maxScrollX) newScrollX = maxScrollX;
+    if (maxScrollY > 0.0 && newScrollY > maxScrollY) newScrollY = maxScrollY;
+
+    // Convert back to percent
+    gXScrollPercent = (maxScrollX > 0.0) ? (newScrollX / maxScrollX) * 100.0 : 0.0;
+    gYScrollPercent = (maxScrollY > 0.0) ? (newScrollY / maxScrollY) * 100.0 : 0.0;
 }
 
 double get_zoom_factor(void) {
