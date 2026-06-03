@@ -247,6 +247,7 @@ void init_params_on_module_all_variations(tModule * module, uint32_t location) {
     }
 }
 
+    // TODO - for various reasons, we need to remove this and deal with state on at render time
 void set_exclusive_button_highlight(tButtonId first, tButtonId last, tButtonId active) {
     for (tButtonId i = first; i <= last; i++) {
         gMainButtonArray[i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
