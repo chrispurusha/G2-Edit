@@ -647,7 +647,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("Got performance settings\n");
             parse_performance_settings(&buff[BIT_TO_BYTE(*bitPos)],
                                        length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
-            *unsolicited = true; // TODO: Note - could be unsolicited or not!!!! Work out how we're doing to deal with that
+            //*unsolicited = true; // TODO: Note - could be unsolicited or not!!!! Work out how we're doing to deal with that
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_MASTER_CLOCK:
