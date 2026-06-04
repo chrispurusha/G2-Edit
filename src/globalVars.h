@@ -66,7 +66,7 @@ extern uint32_t            gControllerCount[MAX_SLOTS]; // TODO - Don't forget t
 extern uint32_t            gPatchNotesSize[MAX_SLOTS];
 extern uint8_t             gPatchNotes[MAX_SLOTS][PATCH_NOTES_SIZE + 1];
 extern _Atomic uint8_t     gPatchVersion[MAX_SLOTS];
-extern _Atomic uint8_t        gPerfVersion;
+extern _Atomic uint8_t     gPerfVersion;
 //extern char                gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1];
 extern _Atomic tCommsState gCommsState;
 extern _Atomic uint32_t    gChangedSlot;

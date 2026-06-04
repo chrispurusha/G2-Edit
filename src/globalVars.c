@@ -45,7 +45,7 @@ tButton                gMainButtonArray[] = { // Must align with tButtonId enuma
     {{472, 60}, NULL_RECTANGLE, anchorTopLeft, "7",          RGB_BACKGROUND_GREY, false},
     {{484, 60}, NULL_RECTANGLE, anchorTopLeft, "8",          RGB_BACKGROUND_GREY, false},
     {{500, 60}, NULL_RECTANGLE, anchorTopLeft, "Init",       RGB_BACKGROUND_GREY, false},
-    {{600,  8}, NULL_RECTANGLE, anchorTopLeft, "A",          RGB_GREEN_ON, false},
+    {{600,  8}, NULL_RECTANGLE, anchorTopLeft, "A",          RGB_GREEN_ON,        false},
     {{615,  8}, NULL_RECTANGLE, anchorTopLeft, "B",          RGB_BACKGROUND_GREY, false},
     {{630,  8}, NULL_RECTANGLE, anchorTopLeft, "C",          RGB_BACKGROUND_GREY, false},
     {{645,  8}, NULL_RECTANGLE, anchorTopLeft, "D",          RGB_BACKGROUND_GREY, false},
@@ -77,7 +77,7 @@ uint32_t               gControllerCount[MAX_SLOTS]                  = {0};
 uint32_t               gPatchNotesSize[MAX_SLOTS]                   = {0};
 uint8_t                gPatchNotes[MAX_SLOTS][PATCH_NOTES_SIZE + 1] = {0};
 _Atomic uint8_t        gPatchVersion[MAX_SLOTS]                     = {0};
-_Atomic uint8_t        gPerfVersion                     = 0;
+_Atomic uint8_t        gPerfVersion                                 = 0;
 _Atomic tCommsState    gCommsState                                  = eCommsNeverConnected;
 _Atomic uint32_t       gChangedSlot                                 = 0;
 tNameEdit              gPatchNameEdit                               = {0};

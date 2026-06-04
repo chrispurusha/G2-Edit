@@ -219,58 +219,72 @@ static int parse_synth_settings(uint8_t * buff, int length) {
 }
 
 static int parse_performance_settings(uint8_t * buff, int length) {
-    uint32_t bitPos = 0;
-    uint8_t  ch     = 0;
-    int i;
+    uint32_t bitPos       = 0;
+    uint32_t selectedSlot = 0;
+    char     name[17]     = {0};
+    uint8_t  ch           = 0;
+    int      nameLen      = 0;
+    int      i;
 
     if (buff == NULL) {
         return EXIT_FAILURE;
     }
 
-    read_bit_stream(buff, &bitPos, 8);
-    read_bit_stream(buff, &bitPos, 8);
-    
-    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown = %d\n", read_bit_stream(buff, &bitPos, 8));
+    // Performance name (ClaviaString — null terminated, max 16 bytes)
+    nameLen       = 0;
 
+    do {
+        ch = read_bit_stream(buff, &bitPos, 8);
 
-    for (i=0; i<MAX_SLOTS; i++) {
-        LOG_DEBUG("PERFORMANCE NAME '");
-        
-        for (int i = 0; i < 20 ; i++) {
-            ch = read_bit_stream(buff, &bitPos, 8);
-            
-            if ((ch >= 0x20) && (ch <= 0x7f)) {
-                LOG_DEBUG_DIRECT("%c", ch);
-            } else {
-                LOG_DEBUG_DIRECT("<0x%02x>", ch);
-            }
-            if (ch == '\0') {
-                break;
-            }
+        if (ch != 0x00 && nameLen < 16) {
+            name[nameLen++] = ch;
         }
-        LOG_DEBUG_DIRECT("'\n");
-        
-        LOG_DEBUG("Active = %d\n", read_bit_stream(buff, &bitPos, 8));
-        LOG_DEBUG("Key = %d\n", read_bit_stream(buff, &bitPos, 8));
-        LOG_DEBUG("Hold = %d\n", read_bit_stream(buff, &bitPos, 8));
-        read_bit_stream(buff, &bitPos, 8);
-        read_bit_stream(buff, &bitPos, 8);
-        LOG_DEBUG("Range Lower = %d\n", read_bit_stream(buff, &bitPos, 8));
-        LOG_DEBUG("Range Upper = %d\n", read_bit_stream(buff, &bitPos, 8));
+    } while (ch != 0x00 && nameLen < 16);
+
+    name[nameLen] = '\0';
+    LOG_DEBUG("Performance Name     = '%s'\n", name);
+
+    // WriteSettings
+    LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8)); // Regular val of 17?
+    LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8)); // Regular val of 82 for standard mode and 87 for performance mode?
+    LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8));
+
+    LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 4));
+    selectedSlot  = read_bit_stream(buff, &bitPos, 2);
+    LOG_DEBUG("SelectedSlot         = %u\n", selectedSlot);
+    LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 2));
+    LOG_DEBUG("RangeEnable          = %u\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("MasterClock          = %u\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("KeyboardSplit        = %u\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("MasterClockRun       = %u\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8));
+
+    // 4 slots — TG2FileSlot.Write
+    for (i = 0; i < MAX_SLOTS; i++) {
+        // Patch name per slot (ReadName — null terminated, max 16 bytes)
+        nameLen       = 0;
+        memset(name, 0, sizeof(name));
+
+        do {
+            ch = read_bit_stream(buff, &bitPos, 8);
+
+            if (ch != 0x00 && nameLen < 16) {
+                name[nameLen++] = ch;
+            }
+        } while (ch != 0x00 && nameLen < 16);
+
+        name[nameLen] = '\0';
+        LOG_DEBUG("Slot %d:\n", i);
+        LOG_DEBUG("  PatchName         = '%s'\n", name);
+        LOG_DEBUG("  Active            = %u\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("  Key               = %u\n", read_bit_stream(buff, &bitPos, 8)); // Seems to follow selected slot?
+        LOG_DEBUG("  Hold              = %u\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("  BankIndex         = %u\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("  PatchIndex        = %u\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("  RangeLower        = %u\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("  RangeUpper        = %u\n", read_bit_stream(buff, &bitPos, 8));
         read_bit_stream(buff, &bitPos, 8);
         read_bit_stream(buff, &bitPos, 8);
         read_bit_stream(buff, &bitPos, 8);
@@ -278,7 +292,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
 
     return EXIT_SUCCESS;
 }
-    
+
 static int parse_midi_cc(uint8_t * buff, int length) {
     uint32_t bitPos      = 0;
     uint8_t  subResponse = 0;
@@ -441,7 +455,7 @@ static int parse_patch_version(uint8_t * buff, int length) {
     uint8_t  version = read_bit_stream(buff, &bitPos, 8);
 
     // TODO: I think there's more data in here after version!
-    
+
     if (slot < MAX_SLOTS) {
         atomic_store(&gPatchVersion[slot], version);
     } else if (slot == MAX_SLOTS) {
@@ -449,8 +463,6 @@ static int parse_patch_version(uint8_t * buff, int length) {
     } else {
         return EXIT_FAILURE;
     }
-
-
     LOG_DEBUG("Parsed patch version slot %u = 0x%02x or %u\n", slot, version, version);
     return EXIT_SUCCESS;
 }
@@ -481,8 +493,9 @@ static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                                   uint8_t commandResponse, uint8_t subCommand,
                                   int length, bool * unsolicited) {
-    tModule  module   = {0};
-    uint32_t slot     = commandResponse & 0x03;
+    tModule  module = {0};
+    uint32_t slot   = commandResponse & 0x03;
+
     //uint32_t location = atomic_load(&gLocation);
 
     *unsolicited = false;
@@ -580,7 +593,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         case SUB_RESPONSE_MIDI_CC:
             LOG_DEBUG("Got MIDI CC response slot %u\n", slot);
             parse_midi_cc(&buff[BIT_TO_BYTE(*bitPos)],
-                                 length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
+                          length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_GLOBAL_PAGE:
@@ -633,7 +646,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         case SUB_RESPONSE_PERFORMANCE_SETTINGS:
             LOG_DEBUG("Got performance settings\n");
             parse_performance_settings(&buff[BIT_TO_BYTE(*bitPos)],
-                                        length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
+                                       length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
             *unsolicited = true; // TODO: Note - could be unsolicited or not!!!! Work out how we're doing to deal with that
             return EXIT_SUCCESS;
 
@@ -654,7 +667,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                                            (tButtonId)(slotAButtonId + newSlot));
             set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId,
                                            (tButtonId)((uint32_t)variation1ButtonId + gPatchDescr[newSlot].activeVariation));
-            *unsolicited                      = true;
+            *unsolicited = true;
             return EXIT_SUCCESS;
         }
 
@@ -686,7 +699,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         }
 
         case SUB_RESPONSE_OK:
-            //printf("GOT OK %f\n", get_time_ms());
+            //LOG_DEBUG("GOT OK %f\n", get_time_ms());
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_SELECT_PARAM:
@@ -1133,7 +1146,7 @@ static int send_get_performance_settings(void) {
     }
     return retVal;
 }
-    
+
 static int send_get_patch_version(uint32_t slot) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
@@ -1443,7 +1456,7 @@ static int send_init_sequence_pull(void) {
     // Clear any stale data before pulling fresh state
     database_clear_cables();
     database_clear_modules();
-    
+
     send_init();
     send_stop();
     send_get_patch_version(4); // Performance slot
@@ -1465,7 +1478,7 @@ static int send_init_sequence_pull(void) {
     }
 
     send_start();
-    
+
     LOG_DEBUG("Pull init sequence complete\n");
     atomic_store(&gotPatchChangeIndication, false);
     call_full_patch_change_notify();
