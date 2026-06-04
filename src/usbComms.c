@@ -251,7 +251,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8));
 
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 4));
-    selectedSlot  = read_bit_stream(buff, &bitPos, 2);
+    selectedSlot  = read_bit_stream(buff, &bitPos, 2);  // For focus rather than keyboard?
     LOG_DEBUG("SelectedSlot         = %u\n", selectedSlot);
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 2));
     LOG_DEBUG("RangeEnable          = %u\n", read_bit_stream(buff, &bitPos, 8));
@@ -279,7 +279,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
         LOG_DEBUG("Slot %d:\n", i);
         LOG_DEBUG("  PatchName         = '%s'\n", name);
         LOG_DEBUG("  Active            = %u\n", read_bit_stream(buff, &bitPos, 8));
-        LOG_DEBUG("  Key               = %u\n", read_bit_stream(buff, &bitPos, 8)); // Seems to follow selected slot?
+        LOG_DEBUG("  Key               = %u\n", read_bit_stream(buff, &bitPos, 8)); // Seems to follow selected slot for keyboard selection?
         LOG_DEBUG("  Hold              = %u\n", read_bit_stream(buff, &bitPos, 8));
         LOG_DEBUG("  BankIndex         = %u\n", read_bit_stream(buff, &bitPos, 8));
         LOG_DEBUG("  PatchIndex        = %u\n", read_bit_stream(buff, &bitPos, 8));
@@ -1038,8 +1038,8 @@ static int send_select_slot(uint32_t slot) {
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = 0; //atomic_load(&gPerfVersion);
-    buff[pos++] = SUB_COMMAND_SELECT_SLOT;
+    buff[pos++] = atomic_load(&gPerfVersion);
+    buff[pos++] = SUB_COMMAND_SELECT_SLOT;   // Note that this is focus, not keyboard selection
     buff[pos++] = (uint8_t)slot;
     retVal      = send_message(buff, pos);
 
@@ -1729,7 +1729,7 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdSelectSlot:
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-            buff[pos++] = 0; // atomic_load(&gPerfVersion);
+            buff[pos++] = atomic_load(&gPerfVersion);
             buff[pos++] = SUB_COMMAND_SELECT_SLOT;
             buff[pos++] = messageContent->slotData.slot;
             retVal      = send_message(buff, pos);
