@@ -63,6 +63,7 @@
 #define RESPONSE_TYPE_INIT                   (0x80)
 #define RESPONSE_TYPE_COMMAND                (0x01)
 
+#define SUB_RESPONSE_NULL                    (0x00)
 #define SUB_COMMAND_GET_SYNTH_SETTINGS       (0x02)
 #define SUB_RESPONSE_SYNTH_SETTINGS          (0x03)
 #define SUB_COMMAND_SET_ASSIGNED_VOICES      (0x04)
