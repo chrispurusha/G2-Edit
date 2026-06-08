@@ -300,6 +300,28 @@ void render_top_bar(void) {
     gTransparentCablesRect = draw_button(mainArea,
                                          {{740, 20}, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
                                          "Dim", transp ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
+
+    if (atomic_load(&gMasterClockRunning)) {
+        buttonBackgroundColour = (tRgb)RGB_GREEN_ON;
+    } else {
+        buttonBackgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+    }
+    snprintf(buff, sizeof(buff), "%u BPM", atomic_load(&gMasterClock));
+    gHideAllCablesRect     = draw_button(mainArea,
+                                         {{500, 8}, {get_text_width("888 BPM", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
+                                         buff, buttonBackgroundColour);
+
+    if (atomic_load(&gPerfMode)) {
+        buttonBackgroundColour = (tRgb)RGB_GREEN_ON;
+        //printf("PERF\n");
+    } else {
+        buttonBackgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+        //printf("NORMAL\n");
+    }
+    snprintf(buff, sizeof(buff), "%u BPM", atomic_load(&gMasterClock));
+    gHideAllCablesRect     = draw_button(mainArea,
+                                         {{460, 8}, {get_text_width("Perf", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
+                                         "Perf", buttonBackgroundColour);
 }
 
 void wake_glfw(void) {

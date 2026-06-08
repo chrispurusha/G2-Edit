@@ -188,6 +188,8 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     LOG_DEBUG_DIRECT("'\n");
 
     LOG_DEBUG("Perf Mode 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    //atomic_store(&gPerfMode, read_bit_stream(buff, &bitPos, 8));
+    //LOG_DEBUG("Perf Mode 0x%x\n", atomic_load(&gPerfMode));
     LOG_DEBUG("Perf Bank 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("Perf Location 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("Memory Protect (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 1));
@@ -214,6 +216,12 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     LOG_DEBUG("Filler 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("Pedal Polarity (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("Control Pedal Gain 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+
+    {
+        static int cnt = 0;
+
+        LOG_DEBUG("Count = %d\n", cnt++);
+    }
 
     return EXIT_SUCCESS;
 }
@@ -243,10 +251,15 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     name[nameLen] = '\0';
     LOG_DEBUG("Performance Name     = '%s'\n", name);
 
+    if (strncmp("-----", name, strlen("-----")) == 0) { // This assumes that no-one will ever set a performance name as -----, but only way I can see to tell if performance mode or not
+        atomic_store(&gPerfMode, 0);
+    } else {
+        atomic_store(&gPerfMode, 1);
+    }
     // WriteSettings
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8)); // Regular val of 17?
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8)); // Regular val of 82 for standard mode and 87 for performance mode?
+    LOG_DEBUG("Keyboard Range Enab  = %u\n", read_bit_stream(buff, &bitPos, 8)); // Regular val of 82 for standard mode and 87 for performance mode? Seen 0x74 for standard an 0x80 for perf too. Seems to be keyboard range enabled!
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8));
 
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 4));
@@ -254,9 +267,11 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     LOG_DEBUG("SelectedSlot         = %u\n", selectedSlot);
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 2));
     LOG_DEBUG("RangeEnable          = %u\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("MasterClock          = %u\n", read_bit_stream(buff, &bitPos, 8));
+    atomic_store(&gMasterClock, read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("MasterClock          = %u\n", atomic_load(&gMasterClock));
     LOG_DEBUG("KeyboardSplit        = %u\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("MasterClockRun       = %u\n", read_bit_stream(buff, &bitPos, 8));
+    atomic_store(&gMasterClockRunning, read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("MasterClockRun       = %u\n", atomic_load(&gMasterClockRunning));
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8));
 
@@ -325,7 +340,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
         int16_t  count     = 0;
         uint32_t subOffset = 0;
 
-        if (type != SUB_SEL_PARAM_PAGE) {
+        if (type != SUB_RESPONSE_SEL_PARAM_PAGE) {
             count = (int16_t)read_bit_stream(buff, &bitOffset, 16);
 
             if (count < 0) {
@@ -364,7 +379,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
                 parse_module_names(slot, buff, &subOffset);
                 break;
 
-            case SUB_SEL_PARAM_PAGE:
+            case SUB_RESPONSE_SEL_PARAM_PAGE:
                 read_bit_stream(buff, &bitOffset, 8);
                 break;
 
@@ -627,7 +642,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             return EXIT_SUCCESS;
         }
 
-        case SUB_COMMAND_SET_ASSIGNED_VOICES:
+        case SUB_RESPONSE_SET_ASSIGNED_VOICES:
             LOG_DEBUG("Got assigned voices command — unexpected\n");
             return EXIT_SUCCESS;
 
@@ -639,11 +654,28 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_MASTER_CLOCK:
         {
+            uint8_t clock   = 0;
+            uint8_t running = 0;
+            uint8_t type    = 0;
+
             LOG_DEBUG("Got master clock\n");
+
+            read_bit_stream(buff, bitPos, 8); // 0xff - not sure what this is, or if it ever changes
+            type = read_bit_stream(buff, bitPos, 8);
+
+            if (type == 1) {
+                clock = read_bit_stream(buff, bitPos, 8);
+                atomic_store(&gMasterClock, clock);
+                LOG_DEBUG_DIRECT("Master clock = %u\n", clock);
+            } else if (type == 0) {
+                running = read_bit_stream(buff, bitPos, 8);
+                atomic_store(&gMasterClockRunning, running);
+                LOG_DEBUG_DIRECT("Clock running = %u\n", running);
+            }
             return EXIT_SUCCESS;
         }
 
-        case SUB_COMMAND_SELECT_SLOT:
+        case SUB_RESPONSE_SELECT_SLOT:
         {
             uint32_t newSlot = read_bit_stream(buff, bitPos, 8);
             LOG_DEBUG("Got slot select %u\n", newSlot);
@@ -691,7 +723,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("Got select param\n");
             return EXIT_SUCCESS;
 
-        case SUB_COMMAND_SELECT_VARIATION:
+        case SUB_RESPONSE_SELECT_VARIATION:
             LOG_DEBUG("Got variation select\n");
             uint8_t variation = 0;
 
@@ -701,13 +733,40 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId, (tButtonId)(variation1ButtonId + variation));
             return EXIT_SUCCESS;
 
-        case SUB_SEL_PARAM_PAGE:
+        case SUB_RESPONSE_SEL_PARAM_PAGE:
             LOG_DEBUG("Got select param page\n");
             return EXIT_SUCCESS;
 
-        case SUB_RESPONSE_KEYBOARD_SPLIT:
-            LOG_DEBUG("Got keyboard split\n");
+        case SUB_RESPONSE_PERF_PATCH_VERSIONS:
+        {
+            uint8_t         newVersion  = 0;
+            uint8_t         readSlot    = 0;
+            uint8_t         subResponse = 0;
+            int             i           = 0;
+
+            LOG_DEBUG("Got performance patch versions\n");
+
+            newVersion = read_bit_stream(buff, bitPos, 8);
+            LOG_DEBUG("Old perf = %u new = %u\n", atomic_load(&gPerfVersion), newVersion);
+            atomic_store(&gPerfVersion, newVersion);
+
+            for (i = 0; i < MAX_SLOTS; i++) {
+                subResponse = read_bit_stream(buff, bitPos, 8);
+                readSlot    = read_bit_stream(buff, bitPos, 8);
+                newVersion  = read_bit_stream(buff, bitPos, 8);
+
+                if (subResponse == SUB_RESPONSE_PATCH_VERSION) {
+                    LOG_DEBUG("Store old patch %u ver = %u new = %u\n", readSlot, atomic_load(&gPatchVersion[readSlot]), newVersion);
+                    atomic_store(&gPatchVersion[readSlot], newVersion);
+                }
+            }
+
+            // TODO - need to trigger a send_get_synth_settings possibly via a new message. Possibly re-fetch everything, since slot contents will be different
+            tMessageContent msg         = {0};
+            msg.cmd    = eMsgCmdGetFullReset;
+            msg_send(&gCommandQueue, &msg);
             return EXIT_SUCCESS;
+        }
 
         default:
             LOG_DEBUG("Got unknown sub-command 0x%02x - must implement!!!\n", subCommand);
@@ -902,6 +961,7 @@ static int int_rec(tPoll poll, int expectedResponse) {
             doLoop = false;                        // Idle poll — always exit after one
         } else {
             LOG_DEBUG("response = 0x%02x expected = 0%02x\n", response, expectedResponse);
+
             if (response == expectedResponse) {
                 doLoop = false;                   // Got what we wanted — retVal already correct
             } else if (  (response == SUB_RESPONSE_OK)
@@ -1638,8 +1698,8 @@ static int send_write_data(tMessageContent * messageContent) {
             push_slot_to_device(messageContent->slot);
             send_start();
 
-            atomic_store(&gotPatchChangeIndication, false);  // TODO - consider if this is the right thing to do here
-            call_full_patch_change_notify(); // TODO - not sure we need to do this here
+            atomic_store(&gotPatchChangeIndication, false); // TODO - consider if this is the right thing to do here
+            call_full_patch_change_notify();                // TODO - not sure we need to do this here
             call_wake_glfw();
             retVal = EXIT_SUCCESS;
             break;
@@ -1648,6 +1708,29 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdWritePatchDescr:
         {
             retVal = send_set_patch_descr(messageContent->slot);
+            break;
+        }
+
+        case eMsgCmdGetFullReset:
+        {
+            int i = 0;
+            send_stop();
+
+//            send_get_synth_settings(); // Note - don't seem to need to do this since start message triggers it
+            send_get_midi_cc();
+            send_select_slot(0);
+            send_get_performance_settings();
+
+            for (i = 0; i < MAX_SLOTS; i++) {
+                send_get_patch_data(i);
+            }
+
+            send_start(); // Note, when going into/out of performance mode, this seems to trigger an auto G2->editor send of synth settings
+
+            call_full_patch_change_notify();
+            call_wake_glfw();
+
+            retVal = EXIT_SUCCESS;
             break;
         }
 
