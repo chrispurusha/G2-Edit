@@ -853,7 +853,7 @@ void render_cables(void) {
 
 void render_morph_groups(void) {
     tModule    module      = {0};
-    tRectangle rectangle   = {{830, 8}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
+    tRectangle rectangle   = {{840, 4}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
     char       buff[16]    = {0};
     char       label[16]   = {0};
     tRgb       dialColour  = RGB_BACKGROUND_GREY;
@@ -881,25 +881,25 @@ void render_morph_groups(void) {
             for (i = 0; i < NUM_MORPHS; i++) {
                 snprintf(buff, sizeof(buff), "%u", module.param[variation][i].value);
 
-                if (module.param[variation][i + NUM_MORPHS].value != 0) {
-                    snprintf(label, sizeof(label), "%s", module.paramName[i + NUM_MORPHS][0]);
-                } else {
-                    snprintf(label, sizeof(label), "Knob");
-                }
+                snprintf(label, sizeof(label), "%s", module.paramName[i + NUM_MORPHS][0]);
 
                 if (i == gMorphGroupFocus) {
                     dialColour = RGB_ORANGE_2;
                 } else {
                     dialColour = RGB_GREY_3;
                 }
-                module.param[variation][i].rectangle              = render_dial_with_text(mainArea, {{rectangle.coord.x, rectangle.coord.y+7},{rectangle.size.w,rectangle.size.h}}, NULL, buff, module.param[variation][i].value, 128, module.param[variation][i].morphRange[gMorphGroupFocus], dialColour);
+                module.param[variation][i].rectangle              = render_dial_with_text(mainArea, {{rectangle.coord.x, rectangle.coord.y+6},{rectangle.size.w,rectangle.size.h}}, NULL, buff, module.param[variation][i].value, 128, module.param[variation][i].morphRange[gMorphGroupFocus], dialColour);
 
                 textHeight                                        = rectangle.size.h / 4.0;
 
-                module.param[variation][i + NUM_MORPHS].rectangle = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, RGB_BACKGROUND_GREY);
+                draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, RGB_BACKGROUND_GREY);
                 
-                snprintf(label, sizeof(label), "%s", morphStrMap[i]);
-                render_text(mainArea, {{rectangle.coord.x, rectangle.coord.y+58}, {BLANK_SIZE, textHeight}}, label);
+                if (module.param[variation][i + NUM_MORPHS].value != 0) {
+                    snprintf(label, sizeof(label), "%s", morphStrMap[i]);
+                } else {
+                    snprintf(label, sizeof(label), "Knob");
+                }
+                module.param[variation][i + NUM_MORPHS].rectangle = draw_button(mainArea, {{rectangle.coord.x-5, rectangle.coord.y+57}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, RGB_BACKGROUND_GREY);
 
                 rectangle.coord.x                                += (STANDARD_TEXT_HEIGHT * 4) + 5;
             }

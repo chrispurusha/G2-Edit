@@ -578,6 +578,14 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_RESOURCES_USED:
             LOG_DEBUG("Got resources in use slot %u\n", commandResponse);
+            uint32_t tmpBitPos = *bitPos;
+
+            for (int i = 0; i < length; i++) {
+                LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, bitPos, 8));
+            }
+
+            LOG_DEBUG_DIRECT("\n");
+            *bitPos = tmpBitPos;
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_PARAM_CHANGE:
