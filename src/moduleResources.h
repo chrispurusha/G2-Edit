@@ -118,6 +118,7 @@ const char *             invertStrMap[]                  = {"m", "1-m", NULL};
 const char *             monoKeyStrMap[]                 = {"Last", "Lo", "Hi", NULL};
 const char *             edgeStepStrMap[]                = {"100%", "75%", "50%", "25%", "0%", NULL};
 const char *             vocoderStrMap[]                 = {"Off", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", NULL};
+const char *             sw8to1SelStrMap[]               = {"Lo", "64'", "32'", "16'", "8'", "4'", "2'", "1'", NULL};
 const tRgb               offOnColourMap[]                = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
 
 const tRgb               gCableColourMap[cableColourMax] = {
@@ -438,7 +439,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscString,  paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   0, NULL,                   NULL          }, // 13 OscString Bypass
     // 14 Unknown
     // 15 Sw8-1 *** Needs more resources
-    {moduleTypeSw8to1,     paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  "Sel",            8,   0, NULL,                   NULL          }, // 15 Sel
+    {moduleTypeSw8to1,     paramType1StandardToggle, paramType2Toggle, {{ 10,  -17}, { 7,  7}}, anchorBottomLeft,  "Sel",            8,   0, sw8to1SelStrMap,                   NULL          }, // 15 Sel
     // 16 Unknown
     // 17 ValSw1-2
     {moduleTypeValSw1to2,  paramType1UpDown,         paramType2UpDown, {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, u128StrMap,             NULL          }, // 17 Val

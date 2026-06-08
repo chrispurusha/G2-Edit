@@ -80,6 +80,11 @@ tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char
             pitchTypeParamIndex = 4;
             break;
         }
+        case moduleTypeOscC:
+        {
+            pitchTypeParamIndex = 3;
+            break;
+        }
         default:
         {
             LOG_ERROR("paramType1OscFreq missing module->type implementation %d\n", module->type);
@@ -761,7 +766,7 @@ tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangl
     tRgb   buttonBackgroundColour = RGB_BACKGROUND_GREY;
 
     if (paramValue >= array_size_str_map(strMap)) {
-        LOG_ERROR("Bad strMap for module type %s ParamRef %u ParamIndex %u, map pointer = 0x%lx, Value %u >= Map array size %u\n", gModuleProperties[module->type].name, paramRef, paramIndex, (unsigned long)strMap, (int)paramValue, array_size_str_map(strMap));
+        LOG_ERROR("Bad strMap for module type %d %s ParamRef %u ParamIndex %u, map pointer = 0x%lx, Value %u >= Map array size %u\n", module->type, gModuleProperties[module->type].name, paramRef, paramIndex, (unsigned long)strMap, (int)paramValue, array_size_str_map(strMap));
 
         //Debug help for value
         char       debug[64]      = {0};
