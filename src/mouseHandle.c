@@ -1747,28 +1747,12 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                if (within_rectangle(coord, gVoiceCountIncRectangle)) {
+                if (within_rectangle(coord, gVoiceCountRectangle)) {
                     tMessageContent messageContent = {0};
                     uint32_t        voiceCount     = gPatchDescr[slot].voiceCount;
 
                     if (voiceCount < 31) {
                         voiceCount++;
-                    }
-                    gPatchDescr[slot].voiceCount = voiceCount;
-                    messageContent.cmd           = eMsgCmdWritePatchDescr;
-                    messageContent.slot          = slot;
-                    msg_send(&gCommandQueue, &messageContent);
-                    found                        = true;
-                }
-            }
-
-            if (found == false) {
-                if (within_rectangle(coord, gVoiceCountDecRectangle)) {
-                    tMessageContent messageContent = {0};
-                    uint32_t        voiceCount     = gPatchDescr[slot].voiceCount;
-
-                    if (voiceCount > 0) {
-                        voiceCount--;
                     }
                     gPatchDescr[slot].voiceCount = voiceCount;
                     messageContent.cmd           = eMsgCmdWritePatchDescr;
@@ -1837,6 +1821,22 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             if (found == false) {
                 if (handle_module_area_click(coord, button)) {
                     found = true;
+                }
+            }
+
+            if (found == false) {
+                if (within_rectangle(coord, gVoiceCountRectangle)) {
+                    tMessageContent messageContent = {0};
+                    uint32_t        voiceCount     = gPatchDescr[slot].voiceCount;
+
+                    if (voiceCount > 0) {
+                        voiceCount--;
+                    }
+                    gPatchDescr[slot].voiceCount = voiceCount;
+                    messageContent.cmd           = eMsgCmdWritePatchDescr;
+                    messageContent.slot          = slot;
+                    msg_send(&gCommandQueue, &messageContent);
+                    found                        = true;
                 }
             }
             stop_dragging();

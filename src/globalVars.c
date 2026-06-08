@@ -96,8 +96,8 @@ tRectangle             gTransparentCablesRect                       = {0};
 tRectangle             gPatchNameRectangle                          = {0};
 tRectangle             gPatchTypeRectangle                          = {0};  // TODO - potentially roll these non-standard buttons into the main button mechanism with special types
 tRectangle             gVoiceCountRectangle                         = {0};
-tRectangle             gVoiceCountIncRectangle                      = {0};
-tRectangle             gVoiceCountDecRectangle                      = {0};
+//tRectangle             gVoiceCountIncRectangle                      = {0};
+//tRectangle             gVoiceCountDecRectangle                      = {0};
 tRectangle             gMonoPolyRectangle                           = {0};
 tRectangle             gPatchVolumeRectangle                        = {{320, 56}, {20, 20}};
 

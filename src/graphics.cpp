@@ -178,6 +178,8 @@ void render_top_bar(void) {
     tRgb        buttonBackgroundColour             = (tRgb)RGB_BACKGROUND_GREY;
     uint32_t    slot                               = atomic_load(&gSlot);
     uint32_t    variation                          = gPatchDescr[slot].activeVariation;
+    int         voiceCount                         = 0;
+    tModule     module                             = {0};
 
     set_rgb_colour(RGB_GREY_5);
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {(get_render_width() / gGlobalGuiScale) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
@@ -202,29 +204,33 @@ void render_top_bar(void) {
     } else {
         gPatchNameRectangle = draw_button(mainArea, {{20, 60}, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, patchNameCopy, (tRgb)RGB_BACKGROUND_GREY);
     }
-    gPatchTypeRectangle     = draw_button(mainArea, {{170, 60}, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
-    gMonoPolyRectangle      = draw_button(mainArea, {{270, 60}, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], (tRgb)RGB_BACKGROUND_GREY);
+    gPatchTypeRectangle  = draw_button(mainArea, {{170, 60}, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
+    gMonoPolyRectangle   = draw_button(mainArea, {{270, 60}, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], (tRgb)RGB_BACKGROUND_GREY);
 
-    snprintf(buff, sizeof(buff), "%u", gPatchDescr[slot].voiceCount + 1);
-    gVoiceCountRectangle    = draw_button(mainArea, {{248, 60}, {get_text_width("XX", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
-    gVoiceCountIncRectangle = draw_button(mainArea, {{240, 55}, {get_text_width("+", STANDARD_BUTTON_TEXT_HEIGHT) * 0.5, STANDARD_BUTTON_TEXT_HEIGHT * 0.5}}, "+", (tRgb)RGB_BACKGROUND_GREY);
-    gVoiceCountDecRectangle = draw_button(mainArea, {{240, 66}, {get_text_width("+", STANDARD_BUTTON_TEXT_HEIGHT) * 0.5, STANDARD_BUTTON_TEXT_HEIGHT * 0.5}}, "-", (tRgb)RGB_BACKGROUND_GREY);
-    {
-        tModule module = {0};
-        module.key.slot     = slot;
-        module.key.location = locationMorph;
-        module.key.index    = PATCH_VOLUME;
-
-        if (read_module(module.key, &module) == true) {
-            snprintf(buff, sizeof(buff), "%u", module.param[variation][VOLUME_LEVEL].value);
-            render_text(mainArea, {{gPatchVolumeRectangle.coord.x, gPatchVolumeRectangle.coord.y - 12}, {NULL, STANDARD_TEXT_HEIGHT}}, buff);
-            module.param[variation][VOLUME_LEVEL].rectangle = render_dial(mainArea, gPatchVolumeRectangle, module.param[variation][VOLUME_LEVEL].value, 127, 0, RGB_GREY_7);
-            write_module(module.key, &module);
-        }
+    if (gPatchDescr[slot].monoPoly == monoPolyPoly) {
+        voiceCount = gPatchDescr[slot].voiceCount + 1;
+    } else {
+        voiceCount = 1;
     }
 
-    snprintf(buff, sizeof(buff), "%u", gAssignedVoices[slot]);
-    render_text(mainArea, {{300, 40}, {NULL, STANDARD_TEXT_HEIGHT}}, buff);
+    if ((gAssignedVoices[slot] == 0) || (gAssignedVoices[slot] == voiceCount)) {
+        buttonBackgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+    } else {
+        buttonBackgroundColour = (tRgb)RGB_RED_5;
+    }
+    snprintf(buff, sizeof(buff), "%u", voiceCount);
+    gVoiceCountRectangle = draw_button(mainArea, {{248, 60}, {get_text_width("XX", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, buff, buttonBackgroundColour);
+
+    module.key.slot      = slot;
+    module.key.location  = locationMorph;
+    module.key.index     = PATCH_VOLUME;
+
+    if (read_module(module.key, &module) == true) {
+        snprintf(buff, sizeof(buff), "%u", module.param[variation][VOLUME_LEVEL].value);
+        render_text(mainArea, {{gPatchVolumeRectangle.coord.x, gPatchVolumeRectangle.coord.y - 12}, {NULL, STANDARD_TEXT_HEIGHT}}, buff);
+        module.param[variation][VOLUME_LEVEL].rectangle = render_dial(mainArea, gPatchVolumeRectangle, module.param[variation][VOLUME_LEVEL].value, 127, 0, RGB_GREY_7);
+        write_module(module.key, &module);
+    }
 
     for (int i = 0; i < array_size_main_button_array(); i++) {
         rectangle                     = {gMainButtonArray[i].coord, {get_text_width(gMainButtonArray[i].text, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}};
@@ -307,21 +313,18 @@ void render_top_bar(void) {
         buttonBackgroundColour = (tRgb)RGB_BACKGROUND_GREY;
     }
     snprintf(buff, sizeof(buff), "%u BPM", atomic_load(&gMasterClock));
-    gHideAllCablesRect     = draw_button(mainArea,
-                                         {{500, 8}, {get_text_width("888 BPM", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
-                                         buff, buttonBackgroundColour);
+    draw_button(mainArea,
+                {{500, 8}, {get_text_width("XXX BPM", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
+                buff, buttonBackgroundColour);
 
     if (atomic_load(&gPerfMode)) {
-        buttonBackgroundColour = (tRgb)RGB_GREEN_ON;
-        //printf("PERF\n");
+        snprintf(buff, sizeof(buff), "Perf Mode");
     } else {
-        buttonBackgroundColour = (tRgb)RGB_BACKGROUND_GREY;
-        //printf("NORMAL\n");
+        snprintf(buff, sizeof(buff), "Patch Mode");
     }
-    snprintf(buff, sizeof(buff), "%u BPM", atomic_load(&gMasterClock));
-    gHideAllCablesRect     = draw_button(mainArea,
-                                         {{460, 8}, {get_text_width("Perf", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
-                                         "Perf", buttonBackgroundColour);
+    draw_button(mainArea,
+                {{20, 42}, {get_text_width("Patch Mode", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
+                buff, (tRgb)RGB_BACKGROUND_GREY);
 }
 
 void wake_glfw(void) {
