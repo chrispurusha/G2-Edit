@@ -1758,7 +1758,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     messageContent.cmd           = eMsgCmdWritePatchDescr;
                     messageContent.slot          = slot;
                     msg_send(&gCommandQueue, &messageContent);
-                    found                        = true;
+                    found                        = true;  // TODO - might have to add new message specifically so we can pass a voice count value, so can set to 2 and back to target, otherwise won't get the allocated voices indication back. ...or will have to do it at init time?
                 }
             }
 

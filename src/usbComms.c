@@ -636,7 +636,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("Got assigned voices response\n");
 
             for (i = 0; i < MAX_SLOTS; i++) {
-                gAssignedVoices[i] = read_bit_stream(buff, bitPos, 8);
+                gAssignedVoices[i] = read_bit_stream(buff, bitPos, 8);   // TODO - might have to set target assigned voices to lower number, before attempting increase?
             }
 
             return EXIT_SUCCESS;
