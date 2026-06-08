@@ -142,6 +142,20 @@ uint8_t reverse_bits_in_byte(uint8_t byte) {
     return byte;
 }
 
+uint32_t byteSwap32(uint32_t x)
+{
+    return ((x & 0x000000FFU) << 24) |
+           ((x & 0x0000FF00U) <<  8) |
+           ((x & 0x00FF0000U) >>  8) |
+           ((x & 0xFF000000U) >> 24);
+}
+    
+uint16_t byteSwap16(uint16_t x)
+{
+    return ((x & 0x00FFU) << 8) |
+           ((x & 0xFF00U) >> 8);
+}
+    
 #ifdef __cplusplus
 }
 #endif

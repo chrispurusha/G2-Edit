@@ -36,5 +36,7 @@ void write_bit_stream(uint8_t * buff, uint32_t * bitPos, uint32_t numBits, uint3
 double get_time_ms(void);
 double get_time_delta(void);
 uint8_t reverse_bits_in_byte(uint8_t byte);
+uint32_t byteSwap32(uint32_t x);
+uint16_t byteSwap16(uint16_t x);
 
 #endif // __UTILS_H__
