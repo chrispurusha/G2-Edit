@@ -761,9 +761,9 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                 }
             }
 
-            // TODO - need to trigger a send_get_synth_settings possibly via a new message. Possibly re-fetch everything, since slot contents will be different
+            // Need to work out if we've switched to/from performance mode, since can't tell from this message
             tMessageContent msg         = {0};
-            msg.cmd    = eMsgCmdGetFullReset;
+            msg.cmd    = eMsgCmdGetPerformanceAndPatchSettings;
             msg_send(&gCommandQueue, &msg);
             return EXIT_SUCCESS;
         }
@@ -1711,7 +1711,7 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
         }
 
-        case eMsgCmdGetFullReset:
+        case eMsgCmdGetPerformanceAndPatchSettings:
         {
             int i = 0;
             send_stop();
