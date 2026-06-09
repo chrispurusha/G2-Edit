@@ -162,5 +162,6 @@ typedef struct {
 void msg_init(tMessageQueue * msgQueue, char * semName);
 int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageContent);
 void msg_send(tMessageQueue * msgQueue, tMessageContent * messageContent);
+int msg_count(tMessageQueue * msgQueue);
 
 #endif // __MSG_QUEUE_H__

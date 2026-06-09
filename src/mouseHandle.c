@@ -1545,6 +1545,64 @@ bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {
     return found;
 }
 
+static void action_copy_variation(int index) {
+    uint32_t src      = (uint32_t)(gContextMenu.items[index].param >> 4) & 0xF;
+    uint32_t tgt      = (uint32_t)(gContextMenu.items[index].param) & 0xF;
+    uint32_t slot     = atomic_load(&gSlot);
+    uint32_t location = atomic_load(&gLocation);
+    tModule  module   = {0};
+
+    LOG_DEBUG("Copy variation %u to %u\n", src, tgt);
+    reset_walk_module();
+
+    while (walk_next_module(&module)) {
+        if (module.key.slot == slot && module.key.location == location) {
+            uint32_t numParams = module_param_count(module.type);
+
+            for (uint32_t p = 0; p < numParams; p++) {
+                // Copy param value and morph ranges
+                module.param[tgt][p]       = module.param[src][p];
+
+                tMessageContent msg = {0};
+                msg.cmd                 = eMsgCmdSetValue;
+                msg.slot                = slot;
+                msg.paramData.moduleKey = module.key;
+                msg.paramData.param     = p;
+                msg.paramData.variation = tgt;
+                msg.paramData.value     = module.param[tgt][p].value;
+                msg_send(&gCommandQueue, &msg);
+            }
+            write_module(module.key, &module);
+        }
+    }
+    finish_walk_module();
+
+    gContextMenu.active = false;
+    atomic_store(&gReDraw, true);
+}
+    
+void open_variation_copy_menu(tCoord coord, uint32_t sourceVariation) {
+    static tMenuItem menuItems[NUM_VARIATIONS_USB + 1]; // +1 for terminator
+    int              count = 0;
+
+    for (uint32_t t = 0; t < NUM_VARIATIONS_USB; t++) {
+        if (t == sourceVariation) continue;
+        static char labels[NUM_VARIATIONS_USB][16];
+        snprintf(labels[t], sizeof(labels[t]), "Copy to var %u", t + 1);
+        menuItems[count].label   = labels[t];
+        menuItems[count].colour  = (tRgb)RGB_GREY_3;
+        menuItems[count].action  = action_copy_variation;
+        menuItems[count].param   = (int)((sourceVariation << 4) | t);
+        menuItems[count].subMenu = NULL;
+        count++;
+    }
+    menuItems[count] = (tMenuItem){NULL, RGB_BLACK, NULL, 0, NULL};
+
+    gContextMenu.coord  = coord;
+    gContextMenu.items  = menuItems;
+    gContextMenu.active = true;
+}
+    
 tMouseButton convert_to_mouse_button(int button, int action) {
     tMouseButton mouseButton = mouseButtonNone;
 
@@ -1837,6 +1895,15 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     messageContent.slot          = slot;
                     msg_send(&gCommandQueue, &messageContent);
                     found                        = true;
+                }
+            }
+            
+            for (i = (int)variation1ButtonId; i <= (int)variation8ButtonId; i++) {
+                if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
+                    uint32_t sourceVariation = (uint32_t)i - (uint32_t)variation1ButtonId;
+                    open_variation_copy_menu(coord, sourceVariation);
+                    found = true;
+                    break;
                 }
             }
             stop_dragging();
