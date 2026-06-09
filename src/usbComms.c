@@ -47,7 +47,7 @@ extern "C" {
 #define PRODUCT_ID             (2)
 
 // USB transfer timeouts (milliseconds)
-#define USB_SEND_TIMEOUT_MS    (100)
+#define USB_SEND_TIMEOUT_MS    (500)
 #define USB_RECV_TIMEOUT_MS    (100)   // Extra headroom for G2 patch computation
 #define USB_INIT_TIMEOUT_MS    (1000)  // Extra headroom during init sequence
 
@@ -1043,11 +1043,14 @@ static int int_rec(tPoll poll, int expectedResponse) {
 static int send_message(uint8_t * buff, int pos) {
     int                    msgLength    = pos - COMMAND_OFFSET;
     int                    actualLength = 0;
+    int                    result       = 0;
+    double                 timeDelta    = 0.0f;
+    uint16_t               crc          = 0;
 
     if (msgLength <= 0) {
         return EXIT_FAILURE;
     }
-    uint16_t               crc          = calc_crc16(&buff[COMMAND_OFFSET], msgLength);
+    crc        = calc_crc16(&buff[COMMAND_OFFSET], msgLength);
     write_uint16(&buff[msgLength + 2], crc);
     msgLength += 4;
     write_uint16(&buff[0], msgLength);
@@ -1060,18 +1063,20 @@ static int send_message(uint8_t * buff, int pos) {
         atomic_store(&gotBadConnectionIndication, true);
         return EXIT_FAILURE;
     }
-    int                    result       = libusb_bulk_transfer(handle, 3, buff, msgLength,
-                                                               &actualLength, USB_SEND_TIMEOUT_MS);
+    timeDelta  = get_time_delta();
+    result     = libusb_bulk_transfer(handle, 3, buff, msgLength,
+                                      &actualLength, USB_SEND_TIMEOUT_MS);
+    timeDelta  = get_time_delta();
 
     if (result == 0) {
         return EXIT_SUCCESS;
     }
 
     if (is_disconnect_error(result)) {
-        LOG_DEBUG("send_message: disconnect error %s\n", libusb_error_name(result));
+        LOG_DEBUG("disconnect error %s\n", libusb_error_name(result));
         atomic_store(&gotBadConnectionIndication, true);
     } else {
-        LOG_ERROR("send_message: transfer error %s\n", libusb_error_name(result));
+        LOG_ERROR("transfer error %s, Time taken %f with timeout of %u\n", libusb_error_name(result), timeDelta, USB_SEND_TIMEOUT_MS);
     }
     return EXIT_FAILURE;
 }
