@@ -47,7 +47,7 @@ extern "C" {
 #define PRODUCT_ID             (2)
 
 // USB transfer timeouts (milliseconds)
-#define USB_SEND_TIMEOUT_MS    (500)
+#define USB_SEND_TIMEOUT_MS    (400)
 #define USB_RECV_TIMEOUT_MS    (100)   // Extra headroom for G2 patch computation
 #define USB_INIT_TIMEOUT_MS    (1000)  // Extra headroom during init sequence
 
@@ -1046,6 +1046,7 @@ static int send_message(uint8_t * buff, int pos) {
     int                    result       = 0;
     double                 timeDelta    = 0.0f;
     uint16_t               crc          = 0;
+    int                    try          = 1;
 
     if (msgLength <= 0) {
         return EXIT_FAILURE;
@@ -1063,21 +1064,32 @@ static int send_message(uint8_t * buff, int pos) {
         atomic_store(&gotBadConnectionIndication, true);
         return EXIT_FAILURE;
     }
-    timeDelta  = get_time_delta();
-    result     = libusb_bulk_transfer(handle, 3, buff, msgLength,
-                                      &actualLength, USB_SEND_TIMEOUT_MS);
-    timeDelta  = get_time_delta();
 
-    if (result == 0) {
-        return EXIT_SUCCESS;
+    for (try = 1; try <= 5; try++) {
+        actualLength = 0;
+        get_time_delta();
+        result       = libusb_bulk_transfer(handle, 3, buff, msgLength,
+                                            &actualLength, USB_SEND_TIMEOUT_MS);
+        timeDelta    = get_time_delta();
+
+        if ((result == 0) && (actualLength == msgLength)) {
+            return EXIT_SUCCESS;
+        }
+
+        if (actualLength != msgLength) {
+            LOG_ERROR("Mismatch: actual length %d, msg length %d\n", actualLength, msgLength);
+        }
+
+        if (is_disconnect_error(result)) {
+            LOG_DEBUG("disconnect error %s\n", libusb_error_name(result));
+            atomic_store(&gotBadConnectionIndication, true);
+            return EXIT_FAILURE;
+        } else {
+            LOG_ERROR("transfer error %s, Time taken %f with timeout of %u\n", libusb_error_name(result), timeDelta, USB_SEND_TIMEOUT_MS);
+        }
+        usleep(10000);
     }
 
-    if (is_disconnect_error(result)) {
-        LOG_DEBUG("disconnect error %s\n", libusb_error_name(result));
-        atomic_store(&gotBadConnectionIndication, true);
-    } else {
-        LOG_ERROR("transfer error %s, Time taken %f with timeout of %u\n", libusb_error_name(result), timeDelta, USB_SEND_TIMEOUT_MS);
-    }
     return EXIT_FAILURE;
 }
 
