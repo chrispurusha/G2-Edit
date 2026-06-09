@@ -166,18 +166,17 @@ void msg_send(tMessageQueue * msgQueue, tMessageContent * messageContent) {
 
 int msg_count(tMessageQueue * msgQueue) {
     int count = 0;
-    
+
     if (msgQueue == NULL) {
         LOG_DEBUG("msgQueue==NULL\n");
         return count;
     }
-    
     pthread_mutex_lock(&msgQueue->mutex);
-    
+
     count = msgQueue->semCount;
-    
+
     pthread_mutex_unlock(&msgQueue->mutex);
-    
+
     return count;
 }
 

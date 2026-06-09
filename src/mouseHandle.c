@@ -1546,32 +1546,35 @@ bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {
 }
 
 static void action_copy_variation(int index) {
-    uint32_t src      = (uint32_t)(gContextMenu.items[index].param >> 4) & 0xF;
-    uint32_t tgt      = (uint32_t)(gContextMenu.items[index].param) & 0xF;
-    uint32_t slot     = atomic_load(&gSlot);
-    uint32_t location = atomic_load(&gLocation);
-    tModule  module   = {0};
+    uint32_t        sourceVariation = (uint32_t)(gContextMenu.items[index].param >> 4) & 0xF;
+    uint32_t        targetVariation = (uint32_t)(gContextMenu.items[index].param) & 0xF;
+    uint32_t        slot            = atomic_load(&gSlot);
+    uint32_t        location        = atomic_load(&gLocation);
+    uint32_t        numParams       = 0;
+    uint32_t        paramIndex      = 0;
+    tModule         module          = {0};
+    tMessageContent msg             = {0};
 
-    LOG_DEBUG("Copy variation %u to %u\n", src, tgt);
+    LOG_DEBUG("Copy variation %u to %u\n", sourceVariation, targetVariation);
     reset_walk_module();
 
     while (walk_next_module(&module)) {
         if (module.key.slot == slot && module.key.location == location) {
-            uint32_t numParams = module_param_count(module.type);
+            numParams = module_param_count(module.type);
 
-            for (uint32_t p = 0; p < numParams; p++) {
+            for (paramIndex = 0; paramIndex < numParams; paramIndex++) {
                 // Copy param value and morph ranges
-                module.param[tgt][p]       = module.param[src][p];
+                module.param[targetVariation][paramIndex] = module.param[sourceVariation][paramIndex];
 
-                tMessageContent msg = {0};
-                msg.cmd                 = eMsgCmdSetValue;
-                msg.slot                = slot;
-                msg.paramData.moduleKey = module.key;
-                msg.paramData.param     = p;
-                msg.paramData.variation = tgt;
-                msg.paramData.value     = module.param[tgt][p].value;
+                msg.cmd                                   = eMsgCmdSetValue;
+                msg.slot                                  = slot;
+                msg.paramData.moduleKey                   = module.key;
+                msg.paramData.param                       = paramIndex;
+                msg.paramData.variation                   = targetVariation;
+                msg.paramData.value                       = module.param[targetVariation][paramIndex].value;
                 msg_send(&gCommandQueue, &msg);
             }
+
             write_module(module.key, &module);
         }
     }
@@ -1580,29 +1583,36 @@ static void action_copy_variation(int index) {
     gContextMenu.active = false;
     atomic_store(&gReDraw, true);
 }
-    
+
 void open_variation_copy_menu(tCoord coord, uint32_t sourceVariation) {
     static tMenuItem menuItems[NUM_VARIATIONS_USB + 1]; // +1 for terminator
-    int              count = 0;
+    int              count                          = 0;
+    uint32_t         targetVariation                = 0;
+    static char      labels[NUM_VARIATIONS_USB][32] = {0};
 
-    for (uint32_t t = 0; t < NUM_VARIATIONS_USB; t++) {
-        if (t == sourceVariation) continue;
-        static char labels[NUM_VARIATIONS_USB][16];
-        snprintf(labels[t], sizeof(labels[t]), "Copy to var %u", t + 1);
-        menuItems[count].label   = labels[t];
-        menuItems[count].colour  = (tRgb)RGB_GREY_3;
-        menuItems[count].action  = action_copy_variation;
-        menuItems[count].param   = (int)((sourceVariation << 4) | t);
-        menuItems[count].subMenu = NULL;
-        count++;
+    memset(&labels, 0, sizeof(labels));
+
+    for (targetVariation = 0; targetVariation < NUM_VARIATIONS_USB; targetVariation++) {
+        if (targetVariation != sourceVariation) {
+            snprintf(labels[targetVariation], sizeof(labels[targetVariation]), "Copy to variation %u", targetVariation + 1);
+            menuItems[count].label   = labels[targetVariation];
+            menuItems[count].colour  = (tRgb)RGB_GREY_3;
+            menuItems[count].action  = action_copy_variation;
+            menuItems[count].param   = (int)((sourceVariation << 4) | targetVariation);
+            menuItems[count].subMenu = NULL;
+            count++;
+        }
     }
-    menuItems[count] = (tMenuItem){NULL, RGB_BLACK, NULL, 0, NULL};
+
+    menuItems[count]    = (tMenuItem){
+        NULL, RGB_BLACK, NULL, 0, NULL
+    };
 
     gContextMenu.coord  = coord;
     gContextMenu.items  = menuItems;
     gContextMenu.active = true;
 }
-    
+
 tMouseButton convert_to_mouse_button(int button, int action) {
     tMouseButton mouseButton = mouseButtonNone;
 
@@ -1897,7 +1907,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     found                        = true;
                 }
             }
-            
+
             for (i = (int)variation1ButtonId; i <= (int)variation8ButtonId; i++) {
                 if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
                     uint32_t sourceVariation = (uint32_t)i - (uint32_t)variation1ButtonId;
@@ -1906,6 +1916,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     break;
                 }
             }
+
             stop_dragging();
         }
         break;
