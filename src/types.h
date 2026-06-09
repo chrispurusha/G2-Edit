@@ -412,9 +412,10 @@ typedef enum {
 } tParamType3;
 
 typedef enum {
-    locationFx    = 0,
-    locationVa    = 1,
-    locationMorph = 2
+    locationFx,
+    locationVa,
+    locationMorph,
+    locationMax
 } tLocation;
 
 typedef struct __attribute__((packed)) {  // TODO: Pack more of the structures in this file
@@ -757,6 +758,11 @@ typedef struct {
     tModuleKey moduleKey;
     char       buffer[MODULE_NAME_SIZE + 1];
 } tModuleNameEdit;
+
+typedef struct {
+    float cycles[locationMax];
+    float mem[locationMax];
+} tResourceAlloc;
 
 #endif // __TYPES_H__
 

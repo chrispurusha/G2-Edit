@@ -325,6 +325,23 @@ void render_top_bar(void) {
     draw_button(mainArea,
                 {{20, 42}, {get_text_width("Patch Mode", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
                 buff, (tRgb)RGB_BACKGROUND_GREY);
+
+    snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].cycles[locationVa]);
+    draw_button(mainArea,
+                {{600, 26}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
+                buff, buttonBackgroundColour);
+    snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].cycles[locationFx]);
+    draw_button(mainArea,
+                {{600, 42}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
+                buff, buttonBackgroundColour);
+    snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].mem[locationVa]);
+    draw_button(mainArea,
+                {{644, 26}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
+                buff, buttonBackgroundColour);
+    snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].mem[locationFx]);
+    draw_button(mainArea,
+                {{644, 42}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
+                buff, buttonBackgroundColour);
 }
 
 void wake_glfw(void) {

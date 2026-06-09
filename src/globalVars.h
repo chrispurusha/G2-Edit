@@ -81,6 +81,8 @@ extern tRectangle          gCableColourSelectRect[cableColourMax];
 extern uint32_t            gCableColour;
 extern _Atomic bool        gCablesTransparent; // true = draw all cables semi-transparent
 //extern _Atomic bool        gCablesHideAll;     // true = hide all cables completely
+extern tResourceAlloc      gResourceAlloc[MAX_SLOTS];
+
 extern tRectangle          gHideAllCablesRect;
 extern tRectangle          gTransparentCablesRect;
 extern tRectangle          gPatchNameRectangle;

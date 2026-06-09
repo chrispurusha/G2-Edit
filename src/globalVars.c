@@ -91,6 +91,8 @@ tRectangle             gCableColourSelectRect[cableColourMax]       = {0};
 uint32_t               gCableColour                                 = 0;
 _Atomic bool           gCablesTransparent                           = false;
 //_Atomic bool           gCablesHideAll                               = false;
+tResourceAlloc         gResourceAlloc[MAX_SLOTS]                    = {0};
+
 tRectangle             gHideAllCablesRect                           = {0};
 tRectangle             gTransparentCablesRect                       = {0};
 tRectangle             gPatchNameRectangle                          = {0};
