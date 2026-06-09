@@ -587,54 +587,112 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
             //LOG_DEBUG_DIRECT("\n");
             //*bitPos = tmpBitPos;
+            //return EXIT_SUCCESS;
             if (slot == 0) {
-                uint16_t cyclesRed1 = 0;
+                uint16_t cyclesRed1  = 0;
                 uint16_t cyclesBlue1 = 0;
-                uint8_t internalMem = 0;
-                //data[5..6]   Unknown
-                uint16_t resource4    = 0;
-                uint16_t resource5    = 0;
-                uint16_t cyclesRed2 = 0;
-                uint16_t resource8    = 0;
+                uint8_t  internalMem = 0;
+
+                uint16_t resource4   = 0;
+                uint16_t resource5   = 0;
+                uint16_t cyclesRed2  = 0;
+                uint16_t resource8   = 0;
                 uint16_t cyclesBlue2 = 0;
-                uint32_t ram = 0;
-                //data[9..10]  Resource5    = data[10] + data[9] * 256
-                //data[11..12] CyclesRed2   = data[12] + data[11] * 128 (red DSP, chip 2)
-                //data[13..14] Unknown
-                //data[15..16] Resource8    (commented out in Delphi)
-                //data[17..18] CyclesBlue2  = data[18] + data[17] * 128 (blue DSP, chip 2)
-                //data[19..20] Unknown
-                //data[21..24] RAM          = 32-bit big-endian (data[21..24])
-                //data[25..26] Unknown
-                
-                cyclesRed1 = byteSwap16(read_bit_stream(buff, bitPos, 16));
+                uint32_t ram         = 0;
+                uint16_t unknown     = 0;
+                uint8_t  location    = 0;
+
+                location     = read_bit_stream(buff, bitPos, 8);
+                LOG_DEBUG("Location %u\n", location);
+                cyclesRed1   = (read_bit_stream(buff, bitPos, 8)) * 128;
+                cyclesRed1  += (read_bit_stream(buff, bitPos, 8));
                 LOG_DEBUG("cycles red 1 %u 0x%x\n", cyclesRed1, cyclesRed1);
-                cyclesBlue1 = byteSwap16(read_bit_stream(buff, bitPos, 16));
+                cyclesBlue1  = (read_bit_stream(buff, bitPos, 8)) * 128;
+                cyclesBlue1 += (read_bit_stream(buff, bitPos, 8));
                 LOG_DEBUG("cycles blue 2 %u 0x%x\n", cyclesBlue1, cyclesBlue1);
-                internalMem = read_bit_stream(buff, bitPos, 8);
+                internalMem  = read_bit_stream(buff, bitPos, 8);
                 LOG_DEBUG("internal mem %u\n", internalMem);
-                read_bit_stream(buff, bitPos, 16); // Unknown
-                resource4 = byteSwap16(read_bit_stream(buff, bitPos, 16));
+                unknown      = (read_bit_stream(buff, bitPos, 16));
+                LOG_DEBUG("unknown %u 0x%x\n", unknown, unknown);
+                resource4    = (read_bit_stream(buff, bitPos, 8)) * 128;
+                resource4   += (read_bit_stream(buff, bitPos, 8));
                 LOG_DEBUG("resource 4 %u 0x%x\n", resource4, resource4);
-                resource5 = byteSwap16(read_bit_stream(buff, bitPos, 16));
+                resource5    = read_bit_stream(buff, bitPos, 8) * 256;
+                resource5   += read_bit_stream(buff, bitPos, 8);
                 LOG_DEBUG("resource 5 %u 0x%x\n", resource5, resource5);
-                cyclesRed2 = byteSwap16(read_bit_stream(buff, bitPos, 16));
+                cyclesRed2   = read_bit_stream(buff, bitPos, 8) * 128;
+                cyclesRed2  += read_bit_stream(buff, bitPos, 8);
                 LOG_DEBUG("Cycles Red2%u 0x%x\n", cyclesRed2, cyclesRed2);
-                read_bit_stream(buff, bitPos, 16); // Unknown
-                resource8 = byteSwap16(read_bit_stream(buff, bitPos, 16));
+                unknown      = (read_bit_stream(buff, bitPos, 16));
+                LOG_DEBUG("unknown %u 0x%x\n", unknown, unknown);
+                resource8    = read_bit_stream(buff, bitPos, 8) * 128;
+                resource8   += read_bit_stream(buff, bitPos, 8);
                 LOG_DEBUG("resource8 %u 0x%x\n", resource8, resource8);
-                cyclesBlue2 = byteSwap16(read_bit_stream(buff, bitPos, 16));
+                cyclesBlue2  = read_bit_stream(buff, bitPos, 8) * 128;
+                cyclesBlue2 += read_bit_stream(buff, bitPos, 8);
                 LOG_DEBUG("Cycles Blue2%u 0x%x\n", cyclesBlue2, cyclesBlue2);
-                read_bit_stream(buff, bitPos, 16); // Unknown
-                ram = read_bit_stream(buff, bitPos, 32);
+                unknown      = (read_bit_stream(buff, bitPos, 8)) * 128;
+                unknown     += (read_bit_stream(buff, bitPos, 8));
+                LOG_DEBUG("unknown %u 0x%x\n", unknown, unknown);
+                ram          = read_bit_stream(buff, bitPos, 32);
                 LOG_DEBUG("RAM %u 0x%x\n", ram, ram);
-                read_bit_stream(buff, bitPos, 16); // Unknown
-                
-                float cyclesLoad = fmaxf(100.0f * (float)cyclesRed1  / 1372.0f
-                                        + 100.0f * (float)cyclesBlue1  / 5000.0f, 0.0f);
-                float memLoad = fmaxf(fmaxf(100.0f * (float)internalMem / 128.0f,
-                                              100.0f * (float)ram        / 260000.0f),
-                                              100.0f * (float)resource4  / 4315.0f);
+                unknown      = (read_bit_stream(buff, bitPos, 16));
+                LOG_DEBUG("unknown %u 0x%x\n", unknown, unknown);
+
+
+                float cyclesLoad = fmaxf(100.0f * (float)cyclesRed1 / 1372.0f
+                                         + 100.0f * (float)cyclesBlue1 / 5000.0f, 0.0f);
+                float memLoad    = fmaxf(fmaxf(100.0f * (float)internalMem / 128.0f,
+                                               100.0f * (float)ram / 260000.0f),
+                                         100.0f * (float)resource4 / 4315.0f);
+                LOG_DEBUG("Memory set = %f %f %f\n", 100.0f * (float)internalMem / 128.0f, 100.0f * (float)ram / 260000.0f, 100.0f * (float)resource4 / 4315.0f);
+                LOG_DEBUG("Cycles load = %f\n", cyclesLoad);
+                LOG_DEBUG("Mem load = %f\n\n", memLoad);
+
+                unknown      = (read_bit_stream(buff, bitPos, 8));
+                LOG_DEBUG("Sub Cmd %u 0x%x\n", unknown, unknown);
+                location     = read_bit_stream(buff, bitPos, 8);
+                LOG_DEBUG("Location %u\n", location);
+                cyclesRed1   = (read_bit_stream(buff, bitPos, 8)) * 128;
+                cyclesRed1  += (read_bit_stream(buff, bitPos, 8));
+                LOG_DEBUG("cycles red 1 %u 0x%x\n", cyclesRed1, cyclesRed1);
+                cyclesBlue1  = (read_bit_stream(buff, bitPos, 8)) * 128;
+                cyclesBlue1 += (read_bit_stream(buff, bitPos, 8));
+                LOG_DEBUG("cycles blue 2 %u 0x%x\n", cyclesBlue1, cyclesBlue1);
+                internalMem  = read_bit_stream(buff, bitPos, 8);
+                LOG_DEBUG("internal mem %u\n", internalMem);
+                unknown      = (read_bit_stream(buff, bitPos, 16));
+                LOG_DEBUG("unknown %u 0x%x\n", unknown, unknown);
+                resource4    = (read_bit_stream(buff, bitPos, 8)) * 128;
+                resource4   += (read_bit_stream(buff, bitPos, 8));
+                LOG_DEBUG("resource 4 %u 0x%x\n", resource4, resource4);
+                resource5    = read_bit_stream(buff, bitPos, 8) * 256;
+                resource5   += read_bit_stream(buff, bitPos, 8);
+                LOG_DEBUG("resource 5 %u 0x%x\n", resource5, resource5);
+                cyclesRed2   = read_bit_stream(buff, bitPos, 8) * 128;
+                cyclesRed2  += read_bit_stream(buff, bitPos, 8);
+                LOG_DEBUG("Cycles Red2%u 0x%x\n", cyclesRed2, cyclesRed2);
+                unknown      = (read_bit_stream(buff, bitPos, 16));
+                LOG_DEBUG("unknown %u 0x%x\n", unknown, unknown);
+                resource8    = read_bit_stream(buff, bitPos, 8) * 128;
+                resource8   += read_bit_stream(buff, bitPos, 8);
+                LOG_DEBUG("resource8 %u 0x%x\n", resource8, resource8);
+                cyclesBlue2  = read_bit_stream(buff, bitPos, 8) * 128;
+                cyclesBlue2 += read_bit_stream(buff, bitPos, 8);
+                LOG_DEBUG("Cycles Blue2%u 0x%x\n", cyclesBlue2, cyclesBlue2);
+                unknown      = (read_bit_stream(buff, bitPos, 8)) * 128;
+                unknown     += (read_bit_stream(buff, bitPos, 8));
+                LOG_DEBUG("unknown %u 0x%x\n", unknown, unknown);
+                ram          = read_bit_stream(buff, bitPos, 32);
+                LOG_DEBUG("RAM %u 0x%x\n", ram, ram);
+                unknown      = (read_bit_stream(buff, bitPos, 16));
+                LOG_DEBUG("unknown %u 0x%x\n", unknown, unknown);
+
+                cyclesLoad   = fmaxf(100.0f * (float)cyclesRed1 / 1372.0f
+                                     + 100.0f * (float)cyclesBlue1 / 5000.0f, 0.0f);
+                memLoad      = fmaxf(fmaxf(100.0f * (float)internalMem / 128.0f,
+                                           100.0f * (float)ram / 260000.0f),
+                                     100.0f * (float)resource4 / 4315.0f);
                 LOG_DEBUG("Cycles load = %f\n", cyclesLoad);
                 LOG_DEBUG("Mem load = %f\n", memLoad);
             }
