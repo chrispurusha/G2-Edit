@@ -328,6 +328,13 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                 if (variation == 0) { // Limit to just 1st variation for now
                     LOG_DEBUG("   Param number %02d param value %02d\n", k, paramValue);
                 }
+                
+                if (variation == 9) {
+                    if ( module.param[8][k].value != paramValue) {
+                        // TODO - could check what's in var 9 against initialisation values held in the module resources structure, since suspect that 9 should have G2's idea of init values
+                        LOG_DEBUG("   Difference on init value in 8 = %02d 9 = %02d\n", module.param[8][k].value, paramValue);
+                    }
+                }
                 module.param[j][k].value = paramValue;
             }
         }
