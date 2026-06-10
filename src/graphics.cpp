@@ -169,17 +169,17 @@ void render_scrollbars(GLFWwindow * window) {
 }
 
 void render_top_bar(void) {
-    tRectangle  rectangle                          = {0};
+    tRectangle  rectangle                           = {0};
     char        patchNameCopy[CLAVIA_NAME_SIZE + 1] = {0};
-    char        buff[32]                           = {0};
-    tCommsState commsState                         = atomic_load(&gCommsState);
-    char *      commsStateText                     = "Unknown";
-    tRgb        commsStateColour                   = RGB_RED_7;
-    tRgb        buttonBackgroundColour             = (tRgb)RGB_BACKGROUND_GREY;
-    uint32_t    slot                               = atomic_load(&gSlot);
-    uint32_t    variation                          = gPatchDescr[slot].activeVariation;
-    int         voiceCount                         = 0;
-    tModule     module                             = {0};
+    char        buff[32]                            = {0};
+    tCommsState commsState                          = atomic_load(&gCommsState);
+    char *      commsStateText                      = "Unknown";
+    tRgb        commsStateColour                    = RGB_RED_7;
+    tRgb        buttonBackgroundColour              = (tRgb)RGB_BACKGROUND_GREY;
+    uint32_t    slot                                = atomic_load(&gSlot);
+    uint32_t    variation                           = gPatchDescr[slot].activeVariation;
+    int         voiceCount                          = 0;
+    tModule     module                              = {0};
 
     set_rgb_colour(RGB_GREY_5);
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {(get_render_width() / gGlobalGuiScale) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
@@ -453,10 +453,10 @@ void init_graphics(void) {
 }
 
 void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
-    const char * base                           = filepath;
-    const char * p                              = filepath;
+    const char * base                            = filepath;
+    const char * p                               = filepath;
     char         patchName[CLAVIA_NAME_SIZE + 1] = {0};
-    int          i                              = 0;
+    int          i                               = 0;
 
     // Find last path separator
     while (*p != '\0') {
@@ -673,7 +673,7 @@ static void on_file_saved(const char * path) {
 }
 
 static void check_action_flags(void) {
-    uint32_t slot                             = atomic_load(&gSlot);
+    uint32_t slot                              = atomic_load(&gSlot);
     char     patchName[CLAVIA_NAME_SIZE + 1]   = {0};
     char     defaultName[CLAVIA_NAME_SIZE + 6] = {0}; // name + ".pch2\0"
 

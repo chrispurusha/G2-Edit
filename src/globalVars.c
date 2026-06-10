@@ -104,7 +104,7 @@ tRectangle             gMonoPolyRectangle                           = {0};
 tRectangle             gPatchVolumeRectangle                        = {{320, 56}, {20, 20}};
 
 /* Stored here, but don't access directly, use functions to access instead */
-static char            gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1]   = {0};
+static char            gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1]  = {0};
 static pthread_mutex_t gPatchNameMutex                              = PTHREAD_MUTEX_INITIALIZER;
 
 uint32_t array_size_main_button_array(void) {

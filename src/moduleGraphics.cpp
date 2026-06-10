@@ -205,12 +205,12 @@ tRectangle render_dial_with_text(tArea area, tRectangle rectangle, char * label,
 // This might be too generic and won't be able to use, or we add extra params!
 // TODO: possibly move all the type cases into functions in a new source file, references by function pointer?
 void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramRef, uint32_t paramIndex) {
-    char     buff[16]                   = {0};
+    char     buff[16]                    = {0};
     char     label[CLAVIA_NAME_SIZE + 1] = {0};
-    uint32_t slot                       = atomic_load(&gSlot);
-    uint32_t variation                  = gPatchDescr[slot].activeVariation;
-    uint32_t paramValue                 = module->param[variation][paramIndex].value;
-    uint32_t morphRange                 = module->param[variation][paramIndex].morphRange[gMorphGroupFocus];
+    uint32_t slot                        = atomic_load(&gSlot);
+    uint32_t variation                   = gPatchDescr[slot].activeVariation;
+    uint32_t paramValue                  = module->param[variation][paramIndex].value;
+    uint32_t morphRange                  = module->param[variation][paramIndex].morphRange[gMorphGroupFocus];
 
     if (paramValue >= paramLocationList[paramRef].range) {
         LOG_ERROR("Module index %u name %s ParamRef %u ParamIndex %u Value %u > Range %u\n", module->key.index, module->name, paramRef, paramIndex, paramValue, paramLocationList[paramRef].range);

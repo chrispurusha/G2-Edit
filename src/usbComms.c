@@ -1021,7 +1021,14 @@ static int int_rec(tPoll poll, int expectedResponse) {
                 retVal     = rcv_extended(dataLength, &response);
             }
         } else if (type == RESPONSE_TYPE_EMBEDDED) {
-            retVal = parse_incoming(buff + 1, dataLength, &response);
+            uint32_t crcBitPos = SIGNED_BYTE_TO_BIT(dataLength - 1);
+
+            if (calc_crc16(&buff[1], dataLength - 2) != (uint16_t)read_bit_stream(buff, &crcBitPos, 16)) {
+                LOG_DEBUG("Bad embedded CRC\n");
+                retVal = EXIT_FAILURE;
+            } else {
+                retVal = parse_incoming(buff + 1, dataLength, &response);
+            }
         }
 
         if (poll == ePollYes) {
@@ -1422,11 +1429,11 @@ static int send_get_patch_data(uint32_t slot) {
 // ---------------------------------------------------------------------------
 
 static int push_slot_to_device(uint32_t slot) {
-    uint8_t  buff[SEND_MESSAGE_SIZE]        = {0};
-    int      pos                            = COMMAND_OFFSET;
-    uint32_t bitPos                         = 0;
-    uint32_t i                              = 0;
-    int      retVal                         = EXIT_FAILURE;
+    uint8_t  buff[SEND_MESSAGE_SIZE]         = {0};
+    int      pos                             = COMMAND_OFFSET;
+    uint32_t bitPos                          = 0;
+    uint32_t i                               = 0;
+    int      retVal                          = EXIT_FAILURE;
     char     patchName[CLAVIA_NAME_SIZE + 1] = {0};
 
     LOG_DEBUG("Pushing slot %u to device\n", slot);
