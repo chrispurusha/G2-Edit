@@ -210,9 +210,9 @@
 #define OCTAVE_SHIFT                   (0x00)
 #define SUSTAIN_PEDAL                  (0x01)
 
-#define PATCH_NAME_SIZE                (16)         // Don't forget to add null terminator where necessary
-#define MODULE_NAME_SIZE               (16)
-#define PARAM_NAME_SIZE                (16)
+#define CLAVIA_NAME_SIZE                (16)         // Don't forget to add null terminator where necessary
+//#define MODULE_NAME_SIZE               (16)
+//#define PARAM_NAME_SIZE                (16)
 #define PROTOCOL_PARAM_NAME_SIZE       (7)
 #define PATCH_NOTES_SIZE               (1024)       // OG editor gets to about 1084 before crashing
 

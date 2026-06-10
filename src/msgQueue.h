@@ -95,7 +95,7 @@ typedef struct {
     uint32_t   unknown1;
     uint32_t   modeCount;
     uint32_t   mode[MAX_NUM_MODES];
-    char       name[MODULE_NAME_SIZE + 1];
+    char       name[CLAVIA_NAME_SIZE + 1];
 } tModuleData;
 
 typedef struct {
@@ -116,11 +116,11 @@ typedef struct {
 
 typedef struct {
     tModuleKey moduleKey;
-    char       name[MODULE_NAME_SIZE + 1];
+    char       name[CLAVIA_NAME_SIZE + 1];
 } tModuleLabelData;
 
 typedef struct {
-    char name[PATCH_NAME_SIZE + 1];
+    char name[CLAVIA_NAME_SIZE + 1];
 } tPatchName;
 
 typedef struct {

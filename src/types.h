@@ -524,7 +524,7 @@ typedef struct _struct_module {
     uint32_t                modeCount;           // Don't yet know what this is for. Might need modes array adding
     uint32_t                actualParamCount;
     tMode                   mode[MAX_NUM_MODES]; // Might not need to be an array, since only seeing one mode so far
-    char                    name[MODULE_NAME_SIZE + 1];
+    char                    name[CLAVIA_NAME_SIZE + 1];
     tParam                  param[NUM_VARIATIONS_USB][MAX_NUM_PARAMETERS];
     uint32_t                paramNumLabels[MAX_NUM_PARAMETERS];
     bool                    paramNameSet[MAX_NUM_PARAMETERS][MAX_NUM_LABELS];
@@ -749,14 +749,14 @@ typedef enum {
 
 typedef struct {
     bool     active;
-    char     buffer[PATCH_NAME_SIZE + 1];
+    char     buffer[CLAVIA_NAME_SIZE + 1];
     uint32_t slot;
 } tNameEdit;  // Todo - rename to patch name edit
 
 typedef struct {
     bool       active;
     tModuleKey moduleKey;
-    char       buffer[MODULE_NAME_SIZE + 1];
+    char       buffer[CLAVIA_NAME_SIZE + 1];
 } tModuleNameEdit;
 
 typedef struct {

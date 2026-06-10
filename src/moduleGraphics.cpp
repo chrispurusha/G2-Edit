@@ -206,7 +206,7 @@ tRectangle render_dial_with_text(tArea area, tRectangle rectangle, char * label,
 // TODO: possibly move all the type cases into functions in a new source file, references by function pointer?
 void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramRef, uint32_t paramIndex) {
     char     buff[16]                   = {0};
-    char     label[PARAM_NAME_SIZE + 1] = {0};
+    char     label[CLAVIA_NAME_SIZE + 1] = {0};
     uint32_t slot                       = atomic_load(&gSlot);
     uint32_t variation                  = gPatchDescr[slot].activeVariation;
     uint32_t paramValue                 = module->param[variation][paramIndex].value;
@@ -688,7 +688,7 @@ void render_module(tModule * module) {
     double     yPos                       = module->row * MODULE_Y_SPAN;
     double     xWidth                     = MODULE_WIDTH;
     double     yHeight                    = (moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP;
-    char       buff[MODULE_NAME_SIZE + 1] = {0};
+    char       buff[CLAVIA_NAME_SIZE + 1] = {0};
     tRgb       rgb                        = {0};
 
     tRectangle moduleRectangle            = {{xPos, yPos}, {xWidth, yHeight}};
@@ -708,7 +708,7 @@ void render_module(tModule * module) {
        && gModuleNameEdit.moduleKey.slot == module->key.slot
        && gModuleNameEdit.moduleKey.location == module->key.location
        && gModuleNameEdit.moduleKey.index == module->key.index) {
-        char editBuf[MODULE_NAME_SIZE + 2] = {0};
+        char editBuf[CLAVIA_NAME_SIZE + 2] = {0};
         snprintf(editBuf, sizeof(editBuf), "%s|", gModuleNameEdit.buffer);
 
         // Highlight the drag area to show edit mode

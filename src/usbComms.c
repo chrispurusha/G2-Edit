@@ -178,8 +178,12 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     }
     LOG_DEBUG("Clavia string '");
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < CLAVIA_NAME_SIZE; i++) {
         ch = read_bit_stream(buff, &bitPos, 8);
+
+        if (ch == '\0') {
+            break;
+        }
 
         if ((ch >= 0x20) && (ch <= 0x7f)) {
             LOG_DEBUG_DIRECT("%c", ch);
@@ -759,13 +763,13 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_GET_PATCH_NAME:
         {
-            char patchName[PATCH_NAME_SIZE + 1] = {0};
+            char patchName[CLAVIA_NAME_SIZE + 1] = {0};
 
             LOG_DEBUG("Got patch name (length %d)\n", length);
 
             memset(patchName, 0, sizeof(patchName));
 
-            for (int i = 0; i < (length - 6) && i < PATCH_NAME_SIZE; i++) {
+            for (int i = 0; i < (length - 6) && i < CLAVIA_NAME_SIZE; i++) {
                 uint8_t ch = read_bit_stream(buff, bitPos, 8);
                 patchName[i] = ch;
                 LOG_DEBUG_DIRECT("%c", patchName[i]);
@@ -1328,11 +1332,11 @@ static int send_set_module_label(uint32_t slot, tModuleKey moduleKey, const char
     buff[pos++] = moduleKey.index;
 
     // WriteClaviaString: chars up to 16, then null terminator if < 16
-    while (i < MODULE_NAME_SIZE && name[i] != '\0') {
+    while (i < CLAVIA_NAME_SIZE && name[i] != '\0') {
         buff[pos++] = (uint8_t)name[i++];
     }
 
-    if (i < MODULE_NAME_SIZE) {
+    if (i < CLAVIA_NAME_SIZE) {
         buff[pos++] = 0x00;
     }
     retVal      = send_message(buff, pos);
@@ -1423,7 +1427,7 @@ static int push_slot_to_device(uint32_t slot) {
     uint32_t bitPos                         = 0;
     uint32_t i                              = 0;
     int      retVal                         = EXIT_FAILURE;
-    char     patchName[PATCH_NAME_SIZE + 1] = {0};
+    char     patchName[CLAVIA_NAME_SIZE + 1] = {0};
 
     LOG_DEBUG("Pushing slot %u to device\n", slot);
 
@@ -1437,7 +1441,7 @@ static int push_slot_to_device(uint32_t slot) {
 
     patch_name_get(slot, patchName, sizeof(patchName));
 
-    while ((i < PATCH_NAME_SIZE) && (patchName[i] != '\0')) {
+    while ((i < CLAVIA_NAME_SIZE) && (patchName[i] != '\0')) {
         buff[pos++] = patchName[i++];
     }
     buff[pos++] = 0x00;
@@ -1487,7 +1491,7 @@ static int send_set_patch_name(uint32_t slot, const char * name) {
     buff[pos++] = SUB_COMMAND_SET_PATCH_NAME;  // 0x27 — used for set AND response
 
     // Null-terminated string, max 16 chars
-    while (i < PATCH_NAME_SIZE && name[i] != '\0') {
+    while (i < CLAVIA_NAME_SIZE && name[i] != '\0') {
         buff[pos++] = (uint8_t)name[i++];
     }
     buff[pos++] = 0x00;

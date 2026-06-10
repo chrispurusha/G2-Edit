@@ -894,7 +894,7 @@ void parse_module_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     tModule    module = {0};
     tModuleKey key    = {0};
     uint32_t   i      = 0;
-    char       name[MODULE_NAME_SIZE + 1];
+    char       name[CLAVIA_NAME_SIZE + 1];
 
 
     LOG_DEBUG("Module names\n");
@@ -914,7 +914,7 @@ void parse_module_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
 
         memset(&name, 0, sizeof(name));
 
-        for (int k = 0; k < MODULE_NAME_SIZE; k++) {
+        for (int k = 0; k < CLAVIA_NAME_SIZE; k++) {
             name[k] = read_bit_stream(buff, subOffset, 8);
 
             if (name[k] == '\0') {
@@ -963,7 +963,7 @@ void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint3
                     moduleCount++;
                     write_bit_stream(buff, bitPos, 8, module.key.index);
 
-                    for (k = 0; k < MODULE_NAME_SIZE; k++) {
+                    for (k = 0; k < CLAVIA_NAME_SIZE; k++) {
                         write_bit_stream(buff, bitPos, 8, module.name[k]);
 
                         if (module.name[k] == '\0') {

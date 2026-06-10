@@ -614,8 +614,8 @@ static void action_rename_module(int index) {
     if (read_module(gContextMenu.moduleKey, &module)) {
         gModuleNameEdit.active                   = true;
         gModuleNameEdit.moduleKey                = gContextMenu.moduleKey;
-        strncpy(gModuleNameEdit.buffer, module.name, MODULE_NAME_SIZE);
-        gModuleNameEdit.buffer[MODULE_NAME_SIZE] = '\0';
+        strncpy(gModuleNameEdit.buffer, module.name, CLAVIA_NAME_SIZE);
+        gModuleNameEdit.buffer[CLAVIA_NAME_SIZE] = '\0';
     }
     gContextMenu.active = false;
     atomic_store(&gReDraw, true);
@@ -2125,7 +2125,7 @@ void char_event(GLFWwindow * window, unsigned int value) {
         size_t len = strlen(gPatchNameEdit.buffer);
 
         // Accept printable ASCII only, up to PATCH_NAME_SIZE
-        if ((value >= 0x20) && (value <= 0x7e) && (len < PATCH_NAME_SIZE)) {
+        if ((value >= 0x20) && (value <= 0x7e) && (len < CLAVIA_NAME_SIZE)) {
             gPatchNameEdit.buffer[len]     = (char)value;
             gPatchNameEdit.buffer[len + 1] = '\0';
         }
@@ -2134,7 +2134,7 @@ void char_event(GLFWwindow * window, unsigned int value) {
     if (gModuleNameEdit.active) {
         size_t len = strlen(gModuleNameEdit.buffer);
 
-        if ((value >= 0x20) && (value <= 0x7e) && (len < MODULE_NAME_SIZE)) {
+        if ((value >= 0x20) && (value <= 0x7e) && (len < CLAVIA_NAME_SIZE)) {
             gModuleNameEdit.buffer[len]     = (char)value;
             gModuleNameEdit.buffer[len + 1] = '\0';
         }
@@ -2196,7 +2196,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                     msg.cmd                              = eMsgCmdSetModuleLabel;
                     msg.slot                             = gModuleNameEdit.moduleKey.slot;
                     msg.moduleLabelData.moduleKey        = gModuleNameEdit.moduleKey;
-                    strncpy(msg.moduleLabelData.name, gModuleNameEdit.buffer, MODULE_NAME_SIZE);
+                    strncpy(msg.moduleLabelData.name, gModuleNameEdit.buffer, CLAVIA_NAME_SIZE);
                     msg_send(&gCommandQueue, &msg);
                 }
             } else if (key == GLFW_KEY_ESCAPE) {

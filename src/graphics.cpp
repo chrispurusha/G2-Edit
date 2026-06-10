@@ -170,7 +170,7 @@ void render_scrollbars(GLFWwindow * window) {
 
 void render_top_bar(void) {
     tRectangle  rectangle                          = {0};
-    char        patchNameCopy[PATCH_NAME_SIZE + 1] = {0};
+    char        patchNameCopy[CLAVIA_NAME_SIZE + 1] = {0};
     char        buff[32]                           = {0};
     tCommsState commsState                         = atomic_load(&gCommsState);
     char *      commsStateText                     = "Unknown";
@@ -190,14 +190,14 @@ void render_top_bar(void) {
     patch_name_get(slot, patchNameCopy, sizeof(patchNameCopy));
 
     if (patchNameCopy[0] == '\0') {
-        strncpy(patchNameCopy, "---", PATCH_NAME_SIZE);
+        strncpy(patchNameCopy, "---", CLAVIA_NAME_SIZE);
     }
     //set_rgb_colour(RGB_BLACK);
     //render_text(mainArea, {{80, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Patch Name");
 
     if (gPatchNameEdit.active && gPatchNameEdit.slot == slot) {
         // Show edit buffer with cursor
-        char displayBuf[PATCH_NAME_SIZE + 2] = {0};
+        char displayBuf[CLAVIA_NAME_SIZE + 2] = {0};
         snprintf(displayBuf, sizeof(displayBuf), "%s|", gPatchNameEdit.buffer);
 
         gPatchNameRectangle = draw_button(mainArea, {{20, 60}, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, displayBuf, (tRgb)RGB_WHITE);
@@ -455,7 +455,7 @@ void init_graphics(void) {
 void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
     const char * base                           = filepath;
     const char * p                              = filepath;
-    char         patchName[PATCH_NAME_SIZE + 1] = {0};
+    char         patchName[CLAVIA_NAME_SIZE + 1] = {0};
     int          i                              = 0;
 
     // Find last path separator
@@ -468,7 +468,7 @@ void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
     // Copy up to PATCH_NAME_SIZE chars, stop at '.' (extension)
     memset(patchName, 0, sizeof(patchName));
 
-    while (i < PATCH_NAME_SIZE && base[i] != '\0' && base[i] != '.') {
+    while (i < CLAVIA_NAME_SIZE && base[i] != '\0' && base[i] != '.') {
         patchName[i] = base[i];
         i++;
     }
@@ -674,8 +674,8 @@ static void on_file_saved(const char * path) {
 
 static void check_action_flags(void) {
     uint32_t slot                             = atomic_load(&gSlot);
-    char     patchName[PATCH_NAME_SIZE + 1]   = {0};
-    char     defaultName[PATCH_NAME_SIZE + 6] = {0}; // name + ".pch2\0"
+    char     patchName[CLAVIA_NAME_SIZE + 1]   = {0};
+    char     defaultName[CLAVIA_NAME_SIZE + 6] = {0}; // name + ".pch2\0"
 
     if (gShowOpenFileReadDialogue) {
         gShowOpenFileReadDialogue = false;
