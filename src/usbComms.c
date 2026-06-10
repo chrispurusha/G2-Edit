@@ -178,23 +178,25 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     }
     LOG_DEBUG("Clavia string '");
 
-    for (int i = 0; i < 11; i++) {
+    for (int i = 0; i < 10; i++) {
         ch = read_bit_stream(buff, &bitPos, 8);
 
         if ((ch >= 0x20) && (ch <= 0x7f)) {
             LOG_DEBUG_DIRECT("%c", ch);
+        } else {
+            LOG_DEBUG_DIRECT("<%02x>", ch);
         }
     }
 
     LOG_DEBUG_DIRECT("'\n");
 
-    LOG_DEBUG("Perf Mode 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    //atomic_store(&gPerfMode, read_bit_stream(buff, &bitPos, 8));
-    //LOG_DEBUG("Perf Mode 0x%x\n", atomic_load(&gPerfMode));
+    atomic_store(&gPerfMode, read_bit_stream(buff, &bitPos, 1));
+    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 7));
     LOG_DEBUG("Perf Bank 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("Perf Location 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("Memory Protect (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 1));
-    read_bit_stream(buff, &bitPos, 7);
+    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 7));
     LOG_DEBUG("MIDI chan Slot A 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("MIDI chan Slot B 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("MIDI chan Slot C 0x%x\n", read_bit_stream(buff, &bitPos, 8));
@@ -202,11 +204,11 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     LOG_DEBUG("Global chan 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("Sysex ID 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("Local on (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 1));
-    read_bit_stream(buff, &bitPos, 7);
-    read_bit_stream(buff, &bitPos, 6);
+    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 7));
+    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 6));
     LOG_DEBUG("Prog Change Rcv 0x%x\n", read_bit_stream(buff, &bitPos, 1));
     LOG_DEBUG("Prog Change Snd 0x%x\n", read_bit_stream(buff, &bitPos, 1));
-    read_bit_stream(buff, &bitPos, 6);
+    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 6));
     LOG_DEBUG("Controllers Rcv 0x%x\n", read_bit_stream(buff, &bitPos, 1));
     LOG_DEBUG("Controllers Snd 0x%x\n", read_bit_stream(buff, &bitPos, 1));
     LOG_DEBUG("Send Clock (bit 1) ignore ext clock (bit 2) 0x%x\n", read_bit_stream(buff, &bitPos, 8));
@@ -217,6 +219,9 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     LOG_DEBUG("Filler 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("Pedal Polarity (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("Control Pedal Gain 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 6));
+    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 6));
+    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 6));
 
     {
         static int cnt = 0;
@@ -252,11 +257,6 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     name[nameLen] = '\0';
     LOG_DEBUG("Performance Name     = '%s'\n", name);
 
-    if (strncmp("-----", name, strlen("-----")) == 0) { // This assumes that no-one will ever set a performance name as -----, but only way I can see to tell if performance mode or not
-        atomic_store(&gPerfMode, 0);
-    } else {
-        atomic_store(&gPerfMode, 1);
-    }
     // WriteSettings
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8)); // Regular val of 17?
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8));
