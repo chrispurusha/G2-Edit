@@ -2139,8 +2139,8 @@ const tConnectorLocation connectorLocationList[] = {
     // 137 Unknown
     // 138 Unknown
     // 139 T&H
-    {moduleTypeTandH,       connectorDirIn,  connectorTypeLogic,   {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocLeft },          // 139 Ctrl
     {moduleTypeTandH,       connectorDirIn,  connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 139 In
+    {moduleTypeTandH,       connectorDirIn,  connectorTypeLogic,   {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocLeft },          // 139 Ctrl
     {moduleTypeTandH,       connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 139 Out
 
     // 140 Mix4-1S
@@ -2186,8 +2186,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSeqVal,      connectorDirIn,  connectorTypeControl, {{ 13, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},          // 145 Val
     {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{ 13, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},          // 145 Trig1
     {moduleTypeSeqVal,      connectorDirOut, connectorTypeLogic,   {{ -3, -60}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Link",         labelLocLeft },          // 145 Link
-    {moduleTypeSeqVal,      connectorDirOut, connectorTypeLogic,   {{ -3, -35}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 145 Out1
-    {moduleTypeSeqVal,      connectorDirOut, connectorTypeLogic,   {{ -3,  -5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 145 Out2
+    {moduleTypeSeqVal,      connectorDirOut, connectorTypeControl, {{ -3, -35}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 145 Val
+    {moduleTypeSeqVal,      connectorDirOut, connectorTypeLogic,   {{ -3,  -5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 145 Trig
 
     // 146 SeqLev
     {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{  3, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight},          // 145 Clk
@@ -2197,8 +2197,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSeqLev,      connectorDirIn,  connectorTypeControl, {{ 13, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},          // 145 Val
     {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{ 13, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},          // 145 Trig1
     {moduleTypeSeqLev,      connectorDirOut, connectorTypeLogic,   {{ -3, -60}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Link",         labelLocLeft },          // 145 Link
-    {moduleTypeSeqLev,      connectorDirOut, connectorTypeLogic,   {{ -3, -35}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 145 Out1
-    {moduleTypeSeqLev,      connectorDirOut, connectorTypeLogic,   {{ -3,  -5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 145 Out2
+    {moduleTypeSeqLev,      connectorDirOut, connectorTypeControl, {{ -3, -35}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 145 Val
+    {moduleTypeSeqLev,      connectorDirOut, connectorTypeLogic,   {{ -3,  -5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 145 Trig
 
     // 147 CtrRcv
     {moduleTypeCtrlRcv,     connectorDirOut, connectorTypeLogic,   {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rcv",          labelLocUp   },          // 147 Rcv
@@ -2406,9 +2406,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSw1to2M,     connectorDirOut, connectorTypeControl, {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocLeft }, // 186 Out2
     {moduleTypeSw1to2M,     connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocRight}, // 186 Ctrl
     // 187 Sw2-1M
-    {moduleTypeSw2to1M,     connectorDirIn,  connectorTypeAudio,   {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   }, // 187 InOff
-    {moduleTypeSw2to1M,     connectorDirIn,  connectorTypeAudio,   {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocLeft }, // 187 InOn
-    {moduleTypeSw2to1M,     connectorDirOut, connectorTypeAudio,   {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft }, // 187 Out
+    {moduleTypeSw2to1M,     connectorDirIn,  connectorTypeControl, {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   }, // 187 InOff
+    {moduleTypeSw2to1M,     connectorDirIn,  connectorTypeControl, {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocLeft }, // 187 InOn
+    {moduleTypeSw2to1M,     connectorDirOut, connectorTypeControl, {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft }, // 187 Out
     {moduleTypeSw2to1M,     connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocRight}, // 187 Ctrl
     // 188 ConstSwM
     {moduleTypeConstSwM,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft }, // 188 Out
@@ -2456,8 +2456,8 @@ const tConnectorLocation connectorLocationList[] = {
     // 198 PitchTrack
     {moduleTypePitchTrack,  connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Input",        labelLocRight},          // 198 Input
     {moduleTypePitchTrack,  connectorDirOut, connectorTypeLogic,   {{-30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Period",       labelLocUp   },          // 198 Period
-    {moduleTypePitchTrack,  connectorDirOut, connectorTypeLogic,   {{-19,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Gate",         labelLocUp   },          // 198 Gate
-    {moduleTypePitchTrack,  connectorDirOut, connectorTypeControl, {{ -8,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Pitch",        labelLocUp   },          // 198 Pitch
+    {moduleTypePitchTrack,  connectorDirOut, connectorTypeControl, {{-19,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Gate",         labelLocUp   },          // 198 Gate
+    {moduleTypePitchTrack,  connectorDirOut, connectorTypeLogic,   {{ -8,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Pitch",        labelLocUp   },          // 198 Pitch
     // 199 MonoKey
     {moduleTypeMonoKey,     connectorDirOut, connectorTypeControl, {{-30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Pitch",        labelLocUp   },          // 199 Pitch
     {moduleTypeMonoKey,     connectorDirOut, connectorTypeLogic,   {{-19,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Gate",         labelLocUp   },          // 198 Gate
@@ -2504,29 +2504,31 @@ const tConnectorLocation connectorLocationList[] = {
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
 const tModeLocation      modeLocationList[] = {
-    {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Toggle, {{ 20,   5}, { 7, 7}}, anchorTopLeft,     "Wave",  8, 0, oscShpBStrMap      },  // 8 OscShpB
-    {moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap},  // 9 Wave
-    {moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14, 7}}, anchorBottomLeft,  "Type",  4, 0, reverbTypeStrMap   },  // 12 Reverb
-    {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 64,  -3}, { 7, 7}}, anchorBottomLeft,  "Wave",  6, 0, lfoWaveStrMap      },  // 24 LfoC
-    {moduleTypeDriver,     paramType1StandardToggle, paramType2Toggle, {{ 35,  -3}, { 7, 7}}, anchorBottomLeft,  "Type",  4, 0, driverTypeStrMap   },  // 35 Type
-    {moduleTypePulse,      paramType1StandardToggle, paramType2Toggle, {{-13,  -3}, { 7, 7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap    },  // 38 Mode
-    {moduleTypeDelay,      paramType1StandardToggle, paramType2Toggle, {{-13,  -3}, { 7, 7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap    },  // 42 Mode
-    {moduleTypeGate,       paramType1StandardToggle, paramType2Toggle, {{ 40,  -3}, { 7, 7}}, anchorBottomLeft,  "G1",    6, 0, gateTypeStrMap     },  // 64 Gate 1 Type
-    {moduleTypeGate,       paramType1StandardToggle, paramType2Toggle, {{ 70,  -3}, { 7, 7}}, anchorBottomLeft,  "G2",    6, 0, gateTypeStrMap     },  // 64 Gate 2 Type
-    {moduleTypeClkDiv,     paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 7, 7}}, anchorBottomLeft,  "Mode",  2, 0, divModeStrMap      },  // 69 DivMode
-    {moduleTypeFltLP,      paramType1StandardToggle, paramType2Toggle, {{ 67,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 6, 2, fltLPSlopeStrMap   },  // 87 FltLP
-    {moduleTypeFlipFlop,   paramType1StandardToggle, paramType2Toggle, {{ 45,  -3}, { 7, 7}}, anchorBottomLeft,  "Type",  2, 0, flipFlopStrMap     },  // 91 Selector
-    {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap},  // 96 Wave
-    {moduleTypeFltHP,      paramType1StandardToggle, paramType2Toggle, {{ 67,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 6, 2, fltLPSlopeStrMap   },  // 134 FltLP
-    {moduleTypeDlySingleA, paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   },  // 172 Delay Range
-    {moduleTypeDlySingleB, paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   },  // 173 Delay Range
-    {moduleTypeDelayDual,  paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   },  // 174 Delay Range
-    {moduleTypeDelayQuad,  paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   },  // 175 Delay Range
-    {moduleTypeDelayA,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   },  // 176 Delay Range
-    {moduleTypeDelayB,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   },  // 177 Delay Range
-    {moduleTypeDlyStereo,  paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   },  // 178 Delay Range
-    {moduleTypeDlyEight,   paramType1StandardToggle, paramType2Toggle, {{ 10, -10}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   },  // 178 Delay Range
-    {moduleTypeOscPM,      paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap},  // 183 Wave
+    {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Toggle, {{ 20,   5}, { 7, 7}}, anchorTopLeft,     "Wave",  8, 0, oscShpBStrMap      }, // 8 OscShpB
+    {moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap}, // 9 Wave
+    {moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14, 7}}, anchorBottomLeft,  "Type",  4, 0, reverbTypeStrMap   }, // 12 Reverb
+    {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 64,  -3}, { 7, 7}}, anchorBottomLeft,  "Wave",  6, 0, lfoWaveStrMap      }, // 24 LfoC
+    {moduleTypeDriver,     paramType1StandardToggle, paramType2Toggle, {{ 35,  -3}, { 7, 7}}, anchorBottomLeft,  "Type",  4, 0, driverTypeStrMap   }, // 35 Type
+    {moduleTypePulse,      paramType1StandardToggle, paramType2Toggle, {{-13,  -3}, { 7, 7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap    }, // 38 Mode
+    {moduleTypeDelay,      paramType1StandardToggle, paramType2Toggle, {{-13,  -3}, { 7, 7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap    }, // 42 Mode
+    {moduleTypeGate,       paramType1StandardToggle, paramType2Toggle, {{ 40,  -3}, { 7, 7}}, anchorBottomLeft,  "G1",    6, 0, gateTypeStrMap     }, // 64 Gate 1 Type
+    {moduleTypeGate,       paramType1StandardToggle, paramType2Toggle, {{ 70,  -3}, { 7, 7}}, anchorBottomLeft,  "G2",    6, 0, gateTypeStrMap     }, // 64 Gate 2 Type
+    {moduleTypeClkDiv,     paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 7, 7}}, anchorBottomLeft,  "Mode",  2, 0, divModeStrMap      }, // 69 DivMode
+    {moduleTypeFltLP,      paramType1StandardToggle, paramType2Toggle, {{ 67,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 6, 2, fltLPSlopeStrMap   }, // 87 FltLP
+    {moduleTypeFlipFlop,   paramType1StandardToggle, paramType2Toggle, {{ 45,  -3}, { 7, 7}}, anchorBottomLeft,  "Type",  2, 0, flipFlopStrMap     }, // 91 Selector
+    {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap}, // 96 Wave
+    {moduleTypeFltHP,      paramType1StandardToggle, paramType2Toggle, {{ 67,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 6, 2, fltLPSlopeStrMap   }, // 134 FltLP
+    {moduleTypeDlySingleA, paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   }, // 172 Delay Range
+    {moduleTypeDlySingleB, paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   }, // 173 Delay Range
+    {moduleTypeDelayDual,  paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   }, // 174 Delay Range
+    {moduleTypeDelayQuad,  paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   }, // 175 Delay Range
+    {moduleTypeDelayA,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   }, // 176 Delay Range
+    {moduleTypeDelayB,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   }, // 177 Delay Range
+    {moduleTypeDlyStereo,  paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   }, // 178 Delay Range
+    {moduleTypeDlyEight,   paramType1StandardToggle, paramType2Toggle, {{ 10, -10}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap   }, // 178 Delay Range
+    {moduleTypeOscPM,      paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap}, // 183 Wave
+    {moduleTypeRndClkB,    paramType1StandardToggle, paramType2Toggle, {{  3,   5}, { 7, 7}}, anchorTopLeft,     "Char",  2, 0, NULL               }, // 206 Character
+    {moduleTypeRndPattern, paramType1StandardToggle, paramType2Toggle, {{  3,   5}, { 7, 7}}, anchorTopLeft,     "Wave",  2, 0, NULL               }, // 208 Wave
 };
 
 //{moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14, 7}}, anchorBottomLeft,  "Type",      4, 0, reverbTypeStrMap,    NULL          },
@@ -2540,7 +2542,6 @@ const tModeLocation      modeLocationList[] = {
 // {moduleTypeFltLP, paramType1StandardToggle, paramType2Toggle, {{ 67, -3}, {7,  7}}, anchorBottomLeft,  "Slope",       6,  2, fltLPSlopeStrMap,   NULL          },
 // {moduleTypeFlipFlop,   paramType1StandardToggle, paramType2Toggle, {{ 45, -3}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, flipFlopStrMap,   NULL          }, // 91 Selector
 //    {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{-20,   5}, {7,  7}}, anchorTopRight,    NULL,        5,  0, shapeTypeStrMap,    NULL          },     // 96 Waveform
-
 
 
 const tVolumeLocation    volumeLocationList[] = {
