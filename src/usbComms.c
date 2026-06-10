@@ -191,10 +191,11 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     LOG_DEBUG_DIRECT("'\n");
 
     atomic_store(&gPerfMode, read_bit_stream(buff, &bitPos, 1));
+    LOG_DEBUG("Perf Mode 0x%x\n", atomic_load(&gPerfMode));
     LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 7));
+    LOG_DEBUG("Spacer 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("Perf Bank 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("Perf Location 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("Memory Protect (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 1));
     LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 7));
     LOG_DEBUG("MIDI chan Slot A 0x%x\n", read_bit_stream(buff, &bitPos, 8));
