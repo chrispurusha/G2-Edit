@@ -381,11 +381,11 @@ const tParamLocation     paramLocationList[] = {
     //  2 Unknown
     //  3 4-Out
     {moduleType4toOut,     paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Out to",         3,   0, outTo4OutStrMap,        NULL          }, // 3 4-Out
-    {moduleType4toOut,     paramType1Bypass,         paramType2Toggle, {{ 45,  -3}, { 5,  5}}, anchorBottomLeft,  "Bypass",         2,   0, NULL,                   NULL          },
+    {moduleType4toOut,     paramType1Bypass,         paramType2Toggle, {{ 45,  -3}, { 5,  5}}, anchorBottomLeft,  "Bypass",         2,   1, NULL,                   NULL          },
     {moduleType4toOut,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Pad",            2,   0, padStrMap,              NULL          },
     // 4 2-Out
     {moduleType2toOut,     paramType1StandardToggle, paramType2Toggle, {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Out to",         6,   0, outToStrMap,            NULL          }, // 4 2-Out
-    {moduleType2toOut,     paramType1Bypass,         paramType2Toggle, {{ 45,  -3}, { 5,  5}}, anchorBottomLeft,  "Bypass",         2,   0, NULL,                   NULL          },
+    {moduleType2toOut,     paramType1Bypass,         paramType2Toggle, {{ 45,  -3}, { 5,  5}}, anchorBottomLeft,  "Bypass",         2,   1, NULL,                   NULL          },
     {moduleType2toOut,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Pad",            2,   0, padStrMap,              NULL          },
     //  5 Invert -- No params
     //  6 Unknown

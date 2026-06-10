@@ -196,7 +196,7 @@ void send_module_move_msg(tModule * module) {
 }
 
 void init_params_on_module(tModule * module, uint32_t location, uint32_t variation) {
-    uint32_t        locationListIndex = 0;
+    uint32_t        paramListIndex = 0;
     uint32_t        paramIndex        = 0;
     uint32_t        numParams         = module_param_count(module->type);
     tMessageContent messageContent    = {0};
@@ -207,9 +207,9 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
         return;
     }
 
-    for (locationListIndex = 0; locationListIndex < array_size_param_location_list(); locationListIndex++) {
-        if (paramLocationList[locationListIndex].moduleType == module->type) {
-            module->param[variation][paramIndex].value = paramLocationList[locationListIndex].defaultValue;
+    for (paramListIndex = 0; paramListIndex < array_size_param_location_list(); paramListIndex++) {
+        if (paramLocationList[paramListIndex].moduleType == module->type) {
+            module->param[variation][paramIndex].value = paramLocationList[paramListIndex].defaultValue;
             anyParamSet                                = true;
 
             messageContent.cmd                         = eMsgCmdSetValue;
