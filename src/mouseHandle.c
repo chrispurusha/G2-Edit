@@ -197,11 +197,11 @@ void send_module_move_msg(tModule * module) {
 
 void init_params_on_module(tModule * module, uint32_t location, uint32_t variation) {
     uint32_t        paramListIndex = 0;
-    uint32_t        paramIndex        = 0;
-    uint32_t        numParams         = module_param_count(module->type);
-    tMessageContent messageContent    = {0};
-    bool            anyParamSet       = false;
-    uint32_t        slot              = atomic_load(&gSlot);
+    uint32_t        paramIndex     = 0;
+    uint32_t        numParams      = module_param_count(module->type);
+    tMessageContent messageContent = {0};
+    bool            anyParamSet    = false;
+    uint32_t        slot           = atomic_load(&gSlot);
 
     if (location != atomic_load(&gLocation)) {
         return;
@@ -241,7 +241,7 @@ void init_params_on_module_all_variations(tModule * module, uint32_t location) {
         return;
     }
 
-    for (uint32_t variation = 0; variation < NUM_VARIATIONS_USB; variation++) {
+    for (uint32_t variation = 0; variation < NUM_VARIATIONS; variation++) {
         init_params_on_module(module, location, variation);
     }
 }
@@ -315,12 +315,13 @@ void handle_button(tButtonId buttonId) {
         case variation6ButtonId:
         case variation7ButtonId:
         case variation8ButtonId:
+        case variationInitButtonId:
         {
             uint32_t        variation      = (uint32_t)buttonId - (uint32_t)variation1ButtonId;
 
             gPatchDescr[slot].activeVariation      = variation;
 
-            set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId, buttonId);
+            set_exclusive_button_highlight(variation1ButtonId, variationInitButtonId, buttonId);
 
             tMessageContent messageContent = {0};
             messageContent.cmd                     = eMsgCmdSelectVariation;
@@ -330,25 +331,25 @@ void handle_button(tButtonId buttonId) {
 
             break;
         }
-        case initParamsButtonId:
-        {
-            tModule module      = {0};
-            bool    validModule = false;
+        //case initParamsButtonId:   // TODO - might add a set to defaults button
+        //{
+        //    tModule module      = {0};
+        //    bool    validModule = false;
+//
+        //    reset_walk_module();
+//
+        //    do {
+        //        validModule = walk_next_module(&module);
 
-            reset_walk_module();
+        //       if (validModule) {
+        //           init_params_on_module(&module, location, variation); // TODO: take init value from the 9th (init) variation, or at least check our init values are the same
+        //       }
+        //   } while (validModule);
+//
+        //    finish_walk_module();
 
-            do {
-                validModule = walk_next_module(&module);
-
-                if (validModule) {
-                    init_params_on_module(&module, location, variation); // TODO: take init value from the 9th (init) variation, or at least check our init values are the same
-                }
-            } while (validModule);
-
-            finish_walk_module();
-
-            break;
-        }
+        //    break;
+        //}
         case slotAButtonId:
         case slotBButtonId:
         case slotCButtonId:
@@ -365,7 +366,7 @@ void handle_button(tButtonId buttonId) {
             msg_send(&gCommandQueue, &messageContent);
 
             set_exclusive_button_highlight(slotAButtonId, slotDButtonId, buttonId);
-            set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId,
+            set_exclusive_button_highlight(variation1ButtonId, variationInitButtonId,
                                            (tButtonId)((uint32_t)variation1ButtonId + gPatchDescr[slot].activeVariation));
             break;
         }
@@ -1602,14 +1603,14 @@ static void action_copy_variation(int index) {
 }
 
 void open_variation_copy_menu(tCoord coord, uint32_t sourceVariation) {
-    static tMenuItem menuItems[NUM_VARIATIONS_USB + 1]; // +1 for terminator
-    int              count                          = 0;
-    uint32_t         targetVariation                = 0;
-    static char      labels[NUM_VARIATIONS_USB][32] = {0};
+    static tMenuItem menuItems[NUM_VARIATIONS + 1]; // +1 for terminator
+    int              count                      = 0;
+    uint32_t         targetVariation            = 0;
+    static char      labels[NUM_VARIATIONS][32] = {0};
 
     memset(&labels, 0, sizeof(labels));
 
-    for (targetVariation = 0; targetVariation < (NUM_GUI_VARIATIONS + 1); targetVariation++) {
+    for (targetVariation = 0; targetVariation < NUM_VARIATIONS; targetVariation++) {
         if (targetVariation != sourceVariation) {
             if (targetVariation == VARIATION_INIT) {
                 snprintf(labels[targetVariation], sizeof(labels[targetVariation]), "Copy to Init");
@@ -1929,7 +1930,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             }
 
-            for (i = (int)variation1ButtonId; i <= (int)variation8ButtonId; i++) {
+            for (i = (int)variation1ButtonId; i <= (int)variationInitButtonId; i++) {
                 if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
                     uint32_t sourceVariation = (uint32_t)i - (uint32_t)variation1ButtonId;
                     open_variation_copy_menu(coord, sourceVariation);

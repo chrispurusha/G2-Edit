@@ -67,7 +67,7 @@ void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     LOG_DEBUG("  Category %u\n", gPatchDescr[slot].category);
 
     if (slot == atomic_load(&gSlot)) {
-        set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId, (tButtonId)(variation1ButtonId + gPatchDescr[slot].activeVariation));
+        set_exclusive_button_highlight(variation1ButtonId, variationInitButtonId, (tButtonId)(variation1ButtonId + gPatchDescr[slot].activeVariation));
     }
 }
 
@@ -328,9 +328,9 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                 if (variation == 0) { // Limit to just 1st variation for now
                     LOG_DEBUG("   Param number %02d param value %02d\n", k, paramValue);
                 }
-                
+
                 if (variation == 9) {
-                    if ( module.param[8][k].value != paramValue) {
+                    if (module.param[8][k].value != paramValue) {
                         // TODO - could check what's in var 9 against initialisation values held in the module resources structure, since suspect that 9 should have G2's idea of init values
                         LOG_DEBUG("   Difference on init value in 8 = %02d 9 = %02d\n", module.param[8][k].value, paramValue);
                     }

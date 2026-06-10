@@ -617,10 +617,10 @@ void write_database_to_file(const char * filepath) {
     write_current_note_2(slot, buff, &bitPos);
     write_cable_list(slot, locationVa, buff, &bitPos);
     write_cable_list(slot, locationFx, buff, &bitPos);
-    write_param_list(slot, locationMorph, buff, &bitPos, NUM_VARIATIONS_FILE);
-    write_param_list(slot, locationVa, buff, &bitPos, NUM_VARIATIONS_FILE);
-    write_param_list(slot, locationFx, buff, &bitPos, NUM_VARIATIONS_FILE);
-    write_morph_params(slot, buff, &bitPos, NUM_VARIATIONS_FILE);
+    write_param_list(slot, locationMorph, buff, &bitPos, NUM_VARIATIONS);
+    write_param_list(slot, locationVa, buff, &bitPos, NUM_VARIATIONS);
+    write_param_list(slot, locationFx, buff, &bitPos, NUM_VARIATIONS);
+    write_morph_params(slot, buff, &bitPos, NUM_VARIATIONS);
     write_knobs(slot, buff, &bitPos);
     write_controllers(slot, buff, &bitPos);
     write_param_names(slot, locationMorph, buff, &bitPos);

@@ -40,11 +40,10 @@
 
 #define WINDOW_TITLE                         "G2 Editor"
 
-#define NUM_VARIATIONS_USB                   (10)                     // 10 variations per patch, but only fist 8 presented on the GUI
-#define NUM_VARIATIONS_FILE                  (NUM_VARIATIONS_USB - 1) // One less variation for file access = 9
-#define NUM_GUI_VARIATIONS                   (8)
+#define NUM_VARIATIONS_USB                   (10) // 10 variations per patch, but only fist 8 presented on the GUI
+#define NUM_VARIATIONS                       (9)  // One less variation for file access or without the USB extra = 9
 #define VARIATION_INIT                       (8)
-#define NUM_MORPHS                           (8)                      // Not sure if we can go higher with this, so remember to check
+#define NUM_MORPHS                           (8)  // Not sure if we can go higher with this, so remember to check
 #define MAX_PARAMS_PER_MODULE                (38)
 #define MAX_CONNECTORS_PER_MODULE            (10)
 #define MAX_SLOTS                            (4)

@@ -745,7 +745,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             atomic_store(&gSlot, newSlot);
             set_exclusive_button_highlight(slotAButtonId, slotDButtonId,
                                            (tButtonId)(slotAButtonId + newSlot));
-            set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId,
+            set_exclusive_button_highlight(variation1ButtonId, variationInitButtonId,
                                            (tButtonId)((uint32_t)variation1ButtonId + gPatchDescr[newSlot].activeVariation));
             return EXIT_SUCCESS;
         }
@@ -792,7 +792,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             variation                         = read_bit_stream(buff, bitPos, 8);
             gPatchDescr[slot].activeVariation = variation;
 
-            set_exclusive_button_highlight(variation1ButtonId, variation8ButtonId, (tButtonId)(variation1ButtonId + variation));
+            set_exclusive_button_highlight(variation1ButtonId, variationInitButtonId, (tButtonId)(variation1ButtonId + variation));
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_SEL_PARAM_PAGE:

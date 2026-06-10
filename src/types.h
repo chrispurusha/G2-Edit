@@ -488,7 +488,7 @@ typedef enum {
     variation6ButtonId,
     variation7ButtonId,
     variation8ButtonId,
-    initParamsButtonId,
+    variationInitButtonId,
     slotAButtonId,
     slotBButtonId,
     slotCButtonId,
