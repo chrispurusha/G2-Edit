@@ -212,16 +212,14 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
             module->param[variation][paramIndex].value = paramLocationList[locationListIndex].defaultValue;
             anyParamSet                                = true;
 
-            for (int i = 0; i < NUM_VARIATIONS_USB; i++) {
-                messageContent.cmd                 = eMsgCmdSetValue;
-                messageContent.slot                = slot;
-                messageContent.paramData.moduleKey = module->key;
-                messageContent.paramData.param     = paramIndex;
-                messageContent.paramData.variation = i;
-                messageContent.paramData.value     = module->param[variation][paramIndex].value;
+            messageContent.cmd                         = eMsgCmdSetValue;
+            messageContent.slot                        = slot;
+            messageContent.paramData.moduleKey         = module->key;
+            messageContent.paramData.param             = paramIndex;
+            messageContent.paramData.variation         = variation;
+            messageContent.paramData.value             = module->param[variation][paramIndex].value;
 
-                msg_send(&gCommandQueue, &messageContent);
-            }
+            msg_send(&gCommandQueue, &messageContent);
 
             paramIndex++;
 
@@ -238,6 +236,7 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
 }
 
 void init_params_on_module_all_variations(tModule * module, uint32_t location) {
+    // Happens on module creation
     if (location != atomic_load(&gLocation)) {
         return;
     }
@@ -1610,9 +1609,13 @@ void open_variation_copy_menu(tCoord coord, uint32_t sourceVariation) {
 
     memset(&labels, 0, sizeof(labels));
 
-    for (targetVariation = 0; targetVariation < NUM_VARIATIONS_USB; targetVariation++) {
+    for (targetVariation = 0; targetVariation < (NUM_GUI_VARIATIONS + 1); targetVariation++) {
         if (targetVariation != sourceVariation) {
-            snprintf(labels[targetVariation], sizeof(labels[targetVariation]), "Copy to variation %u", targetVariation + 1);
+            if (targetVariation == VARIATION_INIT) {
+                snprintf(labels[targetVariation], sizeof(labels[targetVariation]), "Copy to Init");
+            } else {
+                snprintf(labels[targetVariation], sizeof(labels[targetVariation]), "Copy to variation %u", targetVariation + 1);
+            }
             menuItems[count].label   = labels[targetVariation];
             menuItems[count].colour  = (tRgb)RGB_GREY_3;
             menuItems[count].action  = action_copy_variation;
