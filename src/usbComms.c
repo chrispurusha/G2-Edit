@@ -1294,6 +1294,25 @@ static int send_get_patch_name(uint32_t slot) {
     return retVal;
 }
 
+static int send_get_resources_used(uint32_t slot, tLocation location) {
+    int     retVal                  = EXIT_FAILURE;
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
+    buff[pos++] = SUB_COMMAND_QUERY_RESOURCES;
+    buff[pos++] = location;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_RESOURCES_USED);
+        LOG_DEBUG("GET PATCH NAME RESPONSE\n");
+    }
+    return retVal;
+}
+
 static int send_set_module_label(uint32_t slot, tModuleKey moduleKey, const char * name) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
@@ -1383,6 +1402,10 @@ static int send_get_patch_data(uint32_t slot) {
     send_get_patch_version(slot);
     send_get_patch(slot);
     send_get_patch_name(slot);
+    // Also get current note 0x68, patch text 0x6e
+    send_get_resources_used(slot, locationVa);
+    send_get_resources_used(slot, locationFx);
+    // Also get knob snapshot 0x70 and selected param 0x2e
 
     return EXIT_SUCCESS;
 }
@@ -1445,6 +1468,8 @@ static int push_slot_to_device(uint32_t slot) {
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_VERSION);
+
+        LOG_DEBUG("SET PATCH NAME RESPONSE\n");
     }
     return retVal;
 }
