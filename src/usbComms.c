@@ -1854,6 +1854,7 @@ static int send_write_data(tMessageContent * messageContent, bool * ack) {
         case eMsgCmdGetPerformanceAndPatchSettings:
         {
             int i = 0;
+            
             send_stop();
 
             // Note - don't seem to need to do end_get_synth_settings() this since start message triggers it
