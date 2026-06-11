@@ -99,7 +99,6 @@ void render_context_menu(void) {
     if (!gContextMenu.active) {
         return;
     }
-
     get_global_gui_scaled_mouse_coord(&mouseCoord);
 
     if (gContextMenu.items != NULL) {
