@@ -90,18 +90,15 @@ void error_callback(int error, const char * description) {
 }
 
 void render_context_menu(void) {
-    if (!gContextMenu.active) {
-        return;
-    }
     double     size        = 0.0;
     double     largestSize = 0.0;
     tCoord     mouseCoord  = {0};
     tRectangle menuItem    = {0};
     double     itemHeight  = STANDARD_TEXT_HEIGHT;
 
-    int        width, height;
-    glfwGetWindowSize(gWindow, &width, &height);
-    glfwGetCursorPos(gWindow, &mouseCoord.x, &mouseCoord.y);
+    if (!gContextMenu.active) {
+        return;
+    }
 
     get_global_gui_scaled_mouse_coord(&mouseCoord);
 
@@ -757,7 +754,7 @@ void do_graphics_loop(void) {
             cursor_pos(gWindow, x, y);  // Artificially do cursor_pos call for drag scrolling when cursor not moving
             glfwWaitEventsTimeout(0.016);
         } else {
-            glfwWaitEvents(); // Might have to wait on timeout and not use the empty event post, since indication that it  can't be called from other thread
+            glfwWaitEvents();
         }
     }
 }
@@ -768,7 +765,7 @@ void clean_up_graphics(void) {
     FT_Done_FreeType(gLibrary);
     free_textures();
 
-    glfwMakeContextCurrent(NULL);
+    // glfwMakeContextCurrent(NULL); // TODO: Probably not needed, leaving whilst more tests are done
     glfwDestroyWindow(gWindow);
     gWindow = NULL;
     glfwTerminate();

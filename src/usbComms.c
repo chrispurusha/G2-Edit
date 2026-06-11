@@ -148,8 +148,7 @@ static bool open_and_claim_device(void) {
     if (result != LIBUSB_SUCCESS) {
         LOG_ERROR("Failed to claim interface: %s\n", libusb_error_name(result));
         // Close cleanly — don't leak the opened handle
-        libusb_close(devHandle);
-        devHandle = NULL;
+        close_device();
         return false;
     }
     result    = libusb_reset_device(devHandle);
