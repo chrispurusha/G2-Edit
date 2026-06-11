@@ -848,7 +848,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                 }
             }
 
-            // Need to work out if we've switched to/from performance mode, since can't tell from this message
+            // Need to work out if we've switched to/from performance mode, since can't tell from this message.
             tMessageContent msg         = {0};
             msg.cmd    = eMsgCmdGetPerformanceAndPatchSettings;
             msg_send(&gCommandQueue, &msg);
@@ -1856,7 +1856,7 @@ static int send_write_data(tMessageContent * messageContent, bool * ack) {
             int i = 0;
             send_stop();
 
-//            send_get_synth_settings(); // Note - don't seem to need to do this since start message triggers it
+            // Note - don't seem to need to do end_get_synth_settings() this since start message triggers it
             send_get_midi_cc();
             send_select_slot(0);
             send_get_performance_settings();
@@ -1867,6 +1867,13 @@ static int send_write_data(tMessageContent * messageContent, bool * ack) {
 
             send_start(); // Note, when going into/out of performance mode, this seems to trigger an auto G2->editor send of synth settings
 
+            atomic_store(&gSlot, 0);
+            gPatchDescr[0].activeVariation = 0;
+            set_exclusive_button_highlight(slotAButtonId, slotDButtonId,
+                                           (tButtonId)(slotAButtonId ));
+            set_exclusive_button_highlight(variation1ButtonId, variationInitButtonId,
+                                           (tButtonId)((uint32_t)variation1ButtonId));
+            
             call_full_patch_change_notify();
             call_wake_glfw();
 
