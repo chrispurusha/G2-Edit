@@ -512,8 +512,10 @@ static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                                   uint8_t commandResponse, uint8_t subCommand,
                                   int length) {
-    tModule  module = {0};
-    uint32_t slot   = commandResponse & 0x03;
+    tModule  module        = {0};
+    uint32_t slot          = commandResponse & 0x03;
+    int      i             = 0;
+    int      volumesToRead = 0;
 
     switch (subCommand) {
         case SUB_RESPONSE_VOLUME_INDICATOR:
@@ -525,30 +527,38 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                     module.key.index    = k;
 
                     if (read_module(module.key, &module) == true) {
-                        if (gModuleProperties[module.type].volumeType == volumeTypeNone) {
-                            continue;
+                        switch (gModuleProperties[module.type].volumeType) {
+                            case volumeTypeMono:
+                            case volumeTypeCompress:
+                            {
+                                volumesToRead = 1;
+                                break;
+                            }
+                            case volumeTypeStereo:
+                            {
+                                volumesToRead = 2;
+                                break;
+                            }
+                            case volumeTypeQuad:
+                            {
+                                volumesToRead = 4;
+                                break;
+                            }
+                            case volumeTypeNone:
+                            {
+                                volumesToRead = 0;
+                                break;
+                            }
                         }
-                        read_bit_stream(buff, bitPos, 8);  // unknown — per entry
-                        module.volume.value[0] = read_bit_stream(buff, bitPos, 8);
 
-                        if (gModuleProperties[module.type].volumeType == volumeTypeStereo) {
-                            read_bit_stream(buff, bitPos, 8);
-                            module.volume.value[1] = read_bit_stream(buff, bitPos, 8);
-                            module.volume.value[2] = 0;
-                            module.volume.value[3] = 0;
-                        } else if (gModuleProperties[module.type].volumeType == volumeTypeQuad) {
-                            read_bit_stream(buff, bitPos, 8);
-                            module.volume.value[1] = read_bit_stream(buff, bitPos, 8);
-                            read_bit_stream(buff, bitPos, 8);
-                            module.volume.value[2] = read_bit_stream(buff, bitPos, 8);
-                            read_bit_stream(buff, bitPos, 8);
-                            module.volume.value[3] = read_bit_stream(buff, bitPos, 8);
-                        } else {
-                            module.volume.value[1] = 0;
-                            module.volume.value[2] = 0;
-                            module.volume.value[3] = 0;
+                        for (i = 0; i < volumesToRead; i++) {
+                            read_bit_stream(buff, bitPos, 8);  // Not sure what this is. Mostly value of 0, but 0x48 for some items.
+                            module.volume.value[i] = read_bit_stream(buff, bitPos, 8);
                         }
-                        write_module(module.key, &module);
+
+                        if (volumesToRead > 0) {
+                            write_module(module.key, &module);
+                        }
                     }
                 }
             }
