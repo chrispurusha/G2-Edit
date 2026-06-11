@@ -529,13 +529,24 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                             continue;
                         }
                         read_bit_stream(buff, bitPos, 8);  // unknown — per entry
-                        module.volume.value1 = read_bit_stream(buff, bitPos, 8);
+                        module.volume.value[0] = read_bit_stream(buff, bitPos, 8);
 
                         if (gModuleProperties[module.type].volumeType == volumeTypeStereo) {
-                            read_bit_stream(buff, bitPos, 8);  // second unknown
-                            module.volume.value2 = read_bit_stream(buff, bitPos, 8);
+                            read_bit_stream(buff, bitPos, 8);
+                            module.volume.value[1] = read_bit_stream(buff, bitPos, 8);
+                            module.volume.value[2] = 0;
+                            module.volume.value[3] = 0;
+                        } else if (gModuleProperties[module.type].volumeType == volumeTypeQuad) {
+                            read_bit_stream(buff, bitPos, 8);
+                            module.volume.value[1] = read_bit_stream(buff, bitPos, 8);
+                            read_bit_stream(buff, bitPos, 8);
+                            module.volume.value[2] = read_bit_stream(buff, bitPos, 8);
+                            read_bit_stream(buff, bitPos, 8);
+                            module.volume.value[3] = read_bit_stream(buff, bitPos, 8);
                         } else {
-                            module.volume.value2 = 0;
+                            module.volume.value[1] = 0;
+                            module.volume.value[2] = 0;
+                            module.volume.value[3] = 0;
                         }
                         write_module(module.key, &module);
                     }

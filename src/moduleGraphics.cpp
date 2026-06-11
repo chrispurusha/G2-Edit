@@ -72,6 +72,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
 
         case volumeTypeMono:
         case volumeTypeStereo:
+        case volumeTypeQuad:
         {
             value &= 0x1f;
             //LOG_DEBUG("Top 3 bits = %u val = %u\n", top3Bits, value); // Val of 10 or 11 = Yellow, 12 = red?, top bits 3 = clip?
@@ -453,21 +454,34 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
             //set_rgb_colour(RGB_BLACK);
             //render_text(moduleArea, {{coord.x + x_param_size_from_percent(5), coord.y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
 
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value1);
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[0]);
         }
         break;
         case volumeTypeStereo:
         {
-            double space = 2.0;                                                                              // TODO: Possibly make a percentage of width
+            double space = 2.0;                                                                                // TODO: Possibly make a percentage of width
 
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value1); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[0]); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
             rectangle.coord.x += (rectangle.size.w + space);
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value2);
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[1]);
+        }
+        break;
+        case volumeTypeQuad:
+        {
+            double space = 2.0;                                                                                // TODO: Possibly make a percentage of width
+
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[0]); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
+            rectangle.coord.x += (rectangle.size.w + space);
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[1]);
+            rectangle.coord.x += (rectangle.size.w + space);
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[2]);
+            rectangle.coord.x += (rectangle.size.w + space);
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[3]);
         }
         break;
         case volumeTypeCompress:
         {
-            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value1);
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[0]);
         }
         break;
         default:

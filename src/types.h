@@ -397,6 +397,7 @@ typedef enum {
 typedef enum {
     volumeTypeNone,
     volumeTypeStereo,
+    volumeTypeQuad,
     volumeTypeMono,
     volumeTypeCompress,
 } tVolumeType;
@@ -437,8 +438,10 @@ typedef struct {
 typedef struct {
     uint32_t   volumeRef;
     tRectangle rectangle;
-    uint32_t   value1;
-    uint32_t   value2;
+    uint32_t   value[4];
+    //uint32_t   value2;
+    //uint32_t   value3;
+    //uint32_t   value4;
 } tVolume;
 
 typedef struct {
