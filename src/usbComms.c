@@ -48,7 +48,8 @@ extern "C" {
 
 // USB transfer timeouts (milliseconds)
 #define USB_SEND_TIMEOUT_MS    (400)
-#define USB_RECV_TIMEOUT_MS    (100)   // Extra headroom for G2 patch computation
+#define USB_EXT_RECV_TIMEOUT_MS    (200)
+#define USB_INT_RECV_TIMEOUT_MS    (100)
 #define USB_INIT_TIMEOUT_MS    (1000)  // Extra headroom during init sequence
 
 // Atomic flags for cross-thread signalling
@@ -821,9 +822,36 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_SEL_PARAM_PAGE:
-            LOG_DEBUG("Got select param page\n");
-            return EXIT_SUCCESS;
+        {
+            uint32_t tmpSubOffset = *bitPos;
 
+            LOG_DEBUG("Got select param page\n");
+            
+            for (int i = 0; i < 32; i++) {
+                LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, bitPos, 8));
+            }
+
+            LOG_DEBUG_DIRECT("\n");
+            *bitPos = tmpSubOffset;
+
+            return EXIT_SUCCESS;
+        }
+            
+        case SUB_RESPONSE_STORE_PATCH:
+        {
+            uint32_t tmpSubOffset = *bitPos;
+
+            LOG_DEBUG("Got store patch\n");
+            
+            for (int i = 0; i < 32; i++) {
+                LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, bitPos, 8));
+            }
+
+            LOG_DEBUG_DIRECT("\n");
+            *bitPos = tmpSubOffset;
+
+            return EXIT_SUCCESS;
+        }
         case SUB_RESPONSE_PERF_PATCH_VERSIONS:
         {
             uint8_t         newVersion  = 0;
@@ -915,6 +943,7 @@ static int rcv_extended(int dataLength, int * response) {
     uint8_t                buff[EXTENDED_MESSAGE_SIZE] = {0};
     int                    readLength                  = 0;
     int                    retVal                      = EXIT_FAILURE;
+    int try = 1;
     libusb_device_handle * devHandle_local             = NULL;
 
     if (dataLength > EXTENDED_MESSAGE_SIZE) {
@@ -930,12 +959,12 @@ static int rcv_extended(int dataLength, int * response) {
         return EXIT_FAILURE;
     }
 
-    for (int tries = 0; tries < 5; tries++) {
+    for (try = 1; try <= 5; try++) {
         memset(buff, 0, sizeof(buff));
         readLength = 0;
         retVal     = libusb_bulk_transfer(devHandle_local, 0x82, buff,
                                           sizeof(buff), &readLength,
-                                          USB_RECV_TIMEOUT_MS);
+                                          USB_EXT_RECV_TIMEOUT_MS);
 
         if (retVal == LIBUSB_SUCCESS) {
             if (readLength > 0) {
@@ -975,9 +1004,10 @@ static int int_rec(tPoll poll, int expectedResponse) {
     int                    readLength                   = 0;
     int                    retVal                       = EXIT_FAILURE;
     libusb_device_handle * devHandle_local              = NULL;
-    int                    timeout                      = USB_RECV_TIMEOUT_MS;
+    int                    timeout                      = USB_INT_RECV_TIMEOUT_MS;
     bool                   doLoop                       = true;
     int                    response                     = SUB_RESPONSE_ERROR;
+    int try = 1;
 
     while (doLoop == true) {
         if (atomic_load(&gCommsState) != eCommsOnLine) {
@@ -992,7 +1022,7 @@ static int int_rec(tPoll poll, int expectedResponse) {
             return EXIT_FAILURE;
         }
 
-        for (int tries = 0; tries < 5; tries++) {
+        for (try = 1; try <= 5; try++) {
             memset(buff, 0, sizeof(buff));
             readLength = 0;
             retVal     = libusb_bulk_transfer(devHandle_local, 0x81, buff,

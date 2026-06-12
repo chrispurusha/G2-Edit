@@ -78,6 +78,7 @@
 #define SUB_COMMAND_CLEAR_BANK               (0x0e)
 #define SUB_COMMAND_PERFORMANCE_SETTINGS     (0x10)
 #define SUB_COMMAND_SET_KEY_SPLIT            (0x11)
+#define SUB_RESPONSE_STORE_PATCH             (0x13)
 #define SUB_COMMAND_ASSIGN_GLOBAL_KNOB       (0x1c)
 #define SUB_COMMAND_DEASSIGN_GLOBAL_KNOB     (0x1d)
 #define SUB_RESPONSE_GLOBAL_PAGE             (0x1e)
