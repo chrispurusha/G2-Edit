@@ -38,6 +38,7 @@ tRectangle render_radial_line(tArea area, tCoord coord, double radius, double an
 tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active);
 tRectangle draw_button(tArea area, tRectangle rectangle, char * text, tRgb backgroundColour);
 tRectangle draw_updown(tArea area, tRectangle rectangle, char * text);
+tRectangle draw_slider(tArea area, tRectangle rectangle, uint32_t value, uint32_t range, uint32_t morphRange, tRgb colour);
 tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord end, double thickness, int segments);
 tRectangle render_text(tArea area, tRectangle rectangle, char * text);
 bool preload_glyph_textures(const char * fontPath, double fontSize);

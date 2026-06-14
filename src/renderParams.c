@@ -710,6 +710,10 @@ tRectangle render_paramType1Resonance(tModule * module, tRectangle rectangle, ch
     return render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
+tRectangle render_paramType1Slider(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    return draw_slider(moduleArea, rectangle, (uint32_t)paramValue, range, morphRange, colour);
+}
+
 tRectangle render_paramType1StrMap(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     const char ** strMap = paramLocationList[paramRef].strMap;
 

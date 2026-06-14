@@ -1108,22 +1108,22 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqEvent,   paramType1StandardToggle, paramType2Toggle, {{ 88, -16}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T up
     {moduleTypeSeqEvent,   paramType1StandardToggle, paramType2Toggle, {{ 88,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
     // 145 SeqVal
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{ 20, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{ 29, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{ 38, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{ 47, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{ 56, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{ 65, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{ 74, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{ 83, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{ 20, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{ 29, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{ 38, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{ 47, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{ 56, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{ 65, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{ 74, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{ 83, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
+    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 20, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
+    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 29, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-2
+    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 38, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-3
+    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 47, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-4
+    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 56, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-5
+    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 65, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-6
+    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 74, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-7
+    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 83, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-8
+    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 20, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-1
+    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 29, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-2
+    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 38, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-3
+    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 47, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-4
+    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 56, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-5
+    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 65, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-6
+    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 74, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-7
+    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 83, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-8
     {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 20, -15}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-1
     {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 29, -15}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-2
     {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 38, -15}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-3
@@ -1147,22 +1147,22 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Toggle, {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            1,   0, emptyStrMap,                           NULL          }, // 144 Clear
     {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Toggle, {{ 45, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 144 Randomize
     // 146 SeqLev
-    {moduleTypeSeqLev,     paramType1UpDown,         paramType2UpDown, {{ 20, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqLev,     paramType1UpDown,         paramType2UpDown, {{ 29, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqLev,     paramType1UpDown,         paramType2UpDown, {{ 38, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqLev,     paramType1UpDown,         paramType2UpDown, {{ 47, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqLev,     paramType1UpDown,         paramType2UpDown, {{ 56, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqLev,     paramType1UpDown,         paramType2UpDown, {{ 65, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqLev,     paramType1UpDown,         paramType2UpDown, {{ 74, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqLev,     paramType1UpDown,         paramType2UpDown, {{ 83, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqLev,     paramType1UpDown,         paramType2UpDown, {{ 20, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqLev,     paramType1UpDown,         paramType2UpDown, {{ 29, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqLev,     paramType1UpDown,         paramType2UpDown, {{ 38, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqLev,     paramType1UpDown,         paramType2UpDown, {{ 47, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqLev,     paramType1UpDown,         paramType2UpDown, {{ 56, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqLev,     paramType1UpDown,         paramType2UpDown, {{ 65, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqLev,     paramType1UpDown,         paramType2UpDown, {{ 74, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqLev,     paramType1UpDown,         paramType2UpDown, {{ 83, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
+    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 20, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
+    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 29, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-2
+    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 38, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-3
+    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 47, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-4
+    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 56, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-5
+    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 65, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-6
+    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 74, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-7
+    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 83, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-8
+    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 20, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-1
+    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 29, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-2
+    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 38, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-3
+    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 47, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-4
+    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 56, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-5
+    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 65, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-6
+    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 74, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-7
+    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 83, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-8
     {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 20, -15}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-1
     {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 29, -15}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-2
     {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 38, -15}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-3
@@ -1225,22 +1225,22 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeKeyQuant,   paramType1Enable,         paramType2Toggle, {{ 58,  -7}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note D#
     // 153 Unknown
     // 154 SeqCtr
-    {moduleTypeSeqCtr,     paramType1UpDown,         paramType2UpDown, {{ 20, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step1
-    {moduleTypeSeqCtr,     paramType1UpDown,         paramType2UpDown, {{ 29, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step2
-    {moduleTypeSeqCtr,     paramType1UpDown,         paramType2UpDown, {{ 38, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step3
-    {moduleTypeSeqCtr,     paramType1UpDown,         paramType2UpDown, {{ 47, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step4
-    {moduleTypeSeqCtr,     paramType1UpDown,         paramType2UpDown, {{ 56, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step5
-    {moduleTypeSeqCtr,     paramType1UpDown,         paramType2UpDown, {{ 65, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step6
-    {moduleTypeSeqCtr,     paramType1UpDown,         paramType2UpDown, {{ 74, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step7
-    {moduleTypeSeqCtr,     paramType1UpDown,         paramType2UpDown, {{ 83, -38}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step8
-    {moduleTypeSeqCtr,     paramType1UpDown,         paramType2UpDown, {{ 20, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step9
-    {moduleTypeSeqCtr,     paramType1UpDown,         paramType2UpDown, {{ 29, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step10
-    {moduleTypeSeqCtr,     paramType1UpDown,         paramType2UpDown, {{ 38, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step11
-    {moduleTypeSeqCtr,     paramType1UpDown,         paramType2UpDown, {{ 47, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step12
-    {moduleTypeSeqCtr,     paramType1UpDown,         paramType2UpDown, {{ 56, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step13
-    {moduleTypeSeqCtr,     paramType1UpDown,         paramType2UpDown, {{ 65, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step14
-    {moduleTypeSeqCtr,     paramType1UpDown,         paramType2UpDown, {{ 74, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step15
-    {moduleTypeSeqCtr,     paramType1UpDown,         paramType2UpDown, {{ 83, -24}, {10, 10}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step16
+    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 20, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step1
+    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 29, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step2
+    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 38, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step3
+    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 47, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step4
+    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 56, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step5
+    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 65, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step6
+    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 74, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step7
+    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 83, -42}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step8
+    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 20, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step9
+    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 29, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step10
+    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 38, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step11
+    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 47, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step12
+    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 56, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step13
+    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 65, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step14
+    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 74, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step15
+    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 83, -25}, { 7, 16}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step16
     {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 20, -15}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt1
     {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 29, -15}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt2
     {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 38, -15}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt3

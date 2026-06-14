@@ -789,6 +789,77 @@ tRectangle draw_updown(tArea area, tRectangle rectangle, char * text) {
     return retRectangle;
 }
 
+tRectangle draw_slider(tArea area, tRectangle rectangle, uint32_t value, uint32_t range, uint32_t morphRange, tRgb colour) {
+    tRectangle retRectangle    = {0};
+    double     borderLineWidth = 1.0;
+    double     trackH          = 0.0;
+    double     fillHeight      = 0.0;
+    double     fillY           = 0.0;
+    tRectangle line            = {0};
+
+    if (area == moduleArea) {
+        rectangle = scale_scroll_adjust_rectangle(rectangle);
+    }
+    retRectangle = rectangle;
+    rectangle    = global_scale_rectangle(rectangle);
+
+    trackH       = rectangle.size.h;
+    fillHeight   = (range > 1) ? ((double)value / (double)(range - 1)) * trackH : 0.0;
+    fillY        = rectangle.coord.y + trackH - fillHeight;
+
+    set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
+    internal_render_rectangle(rectangle);
+
+    if (morphRange == 0) {
+        set_rgb_colour(colour);
+    } else {
+        set_rgb_colour((tRgb)RGB_ORANGE_2);
+    }
+
+    if (fillHeight > 0.0) {
+        internal_render_rectangle((tRectangle){{rectangle.coord.x, fillY}, {rectangle.size.w, fillHeight}});
+    }
+
+    if (morphRange != 0) {
+        int32_t signedMorphRange = (morphRange < 127) ? (int32_t)morphRange : (int32_t)morphRange - 256;
+        int32_t morphPos         = (int32_t)value + signedMorphRange;
+
+        if (morphPos < 0) {
+            morphPos = 0;
+        } else if (morphPos > (int32_t)(range - 1)) {
+            morphPos = (int32_t)(range - 1);
+        }
+        double  morphHeight      = ((double)morphPos / (double)(range - 1)) * trackH;
+        double  morphY           = rectangle.coord.y + trackH - morphHeight;
+        double  loY              = (fillY < morphY) ? fillY : morphY;
+        double  hiY              = (fillY > morphY) ? fillY : morphY;
+
+        set_rgb_colour((tRgb)RGB_ORANGE_1);
+        internal_render_rectangle((tRectangle){{rectangle.coord.x, loY}, {rectangle.size.w, hiY - loY}});
+    }
+    set_rgb_colour((tRgb)RGB_BLACK);
+    internal_render_rectangle((tRectangle){{rectangle.coord.x, fillY}, {rectangle.size.w, borderLineWidth}});
+
+    line = (tRectangle){{
+                            rectangle.coord.x, rectangle.coord.y + trackH - borderLineWidth
+                        }, {rectangle.size.w, borderLineWidth}};
+    internal_render_rectangle(line); // Bottom
+    line = (tRectangle){{
+                            rectangle.coord.x, rectangle.coord.y
+                        }, {borderLineWidth, trackH}};
+    internal_render_rectangle(line); // Left
+    line = (tRectangle){{
+                            rectangle.coord.x, rectangle.coord.y
+                        }, {rectangle.size.w, borderLineWidth}};
+    internal_render_rectangle(line); // Top
+    line = (tRectangle){{
+                            rectangle.coord.x + rectangle.size.w - borderLineWidth, rectangle.coord.y
+                        }, {borderLineWidth, trackH}};
+    internal_render_rectangle(line); // Right
+
+    return retRectangle;
+}
+
 tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
     tRectangle retRectangle = {0};
 

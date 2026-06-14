@@ -2139,6 +2139,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     tMessageContent messageContent = {0};
     bool            noAction       = false; // unused — kept to avoid restructuring the else-chain below
     tParamType2     paramType2     = paramType2Dial;
+    tParamType1     paramType1     = paramType1CommonDial;
     uint32_t        slot           = atomic_load(&gSlot);
     uint32_t        variation      = gPatchDescr[slot].activeVariation;
     double          x              = 0;
@@ -2181,12 +2182,29 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
 
                 if (paramType2 == paramType2Dial) {
                     if (module.key.location == locationMorph) {
-                        range = 128;
+                        range      = 128;
+                        paramType1 = paramType1CommonDial;
                     } else {
-                        range = paramLocationList[module.param[variation][gParamDragging.param].paramRef].range;
+                        range      = paramLocationList[module.param[variation][gParamDragging.param].paramRef].range;
+                        paramType1 = paramLocationList[module.param[variation][gParamDragging.param].paramRef].type1;
                     }
-                    angle = calculate_mouse_angle((tCoord){x, y}, module.param[variation][gParamDragging.param].rectangle);                                                            // possible add half size
-                    value = angle_to_value(angle, range);
+
+                    if (paramType1 == paramType1Slider) {
+                        tRectangle rect     = module.param[variation][gParamDragging.param].rectangle;
+                        double     fraction = (rect.coord.y + rect.size.h - y) / rect.size.h;
+
+                        if (fraction < 0.0) {
+                            fraction = 0.0;
+                        }
+
+                        if (fraction > 1.0) {
+                            fraction = 1.0;
+                        }
+                        value = (uint32_t)round(fraction * (double)(range - 1));
+                    } else {
+                        angle = calculate_mouse_angle((tCoord){x, y}, module.param[variation][gParamDragging.param].rectangle);                                                            // possible add half size
+                        value = angle_to_value(angle, range);
+                    }
 
                     if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) != GLFW_PRESS) {
                         if (module.param[variation][gParamDragging.param].value != value) {
