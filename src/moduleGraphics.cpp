@@ -423,12 +423,12 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 int        page          = knobIdx / 24;
                 int        bank          = (knobIdx % 24) / 8;
                 int        pos           = knobIdx % 8;
-                double     labelWidth    = get_text_width("Knob X,X,X", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8);
+                double     labelWidth    = get_text_width("X X X", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8);
                 tRectangle labelRect     = {{rectangle.coord.x + (rectangle.size.w - labelWidth) / 2.0,
                     rectangle.coord.y + rectangle.size.h + 2.0},
                     {labelWidth,                                               (double)STANDARD_TEXT_HEIGHT * 0.8}};
 
-                snprintf(knobLabel, sizeof(knobLabel), "Knob %c,%d,%d", 'A' + page, bank + 1, pos + 1);
+                snprintf(knobLabel, sizeof(knobLabel), "%c %d %d", 'A' + page, bank + 1, pos + 1);
                 draw_button(moduleArea, labelRect, knobLabel, RGB_GREY_9);
             }
         }
