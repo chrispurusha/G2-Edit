@@ -222,7 +222,7 @@ void render_top_bar(void) {
     module.key.index     = PATCH_VOLUME;
 
     if (read_module(module.key, &module) == true) {
-        snprintf(buff, sizeof(buff), "%u", module.param[variation][VOLUME_LEVEL].value);
+        snprintf(buff, sizeof(buff), "%s", patchVolumeStrMap[module.param[variation][VOLUME_LEVEL].value]);
         render_text(mainArea, {{gPatchVolumeRectangle.coord.x, gPatchVolumeRectangle.coord.y - 12}, {NULL, STANDARD_TEXT_HEIGHT}}, buff);
         module.param[variation][VOLUME_LEVEL].rectangle = render_dial(mainArea, gPatchVolumeRectangle, module.param[variation][VOLUME_LEVEL].value, 127, 0, RGB_GREY_7);
         write_module(module.key, &module);
