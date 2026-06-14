@@ -304,12 +304,7 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
         }
         case 4: // ClkSync. 32 values
         {
-            const char * clkSyncStrMap[]  = {
-                "64/1", "48/1",  "32/1",  "24/1", "16/1",  "12/1",  "8/1",  "6/1",  "4/1",  "3/1", "2/1",   "1/1D",
-                "1/1",  "1/2D",  "1/1T",  "1/2",  "1/4D",  "1/2T",  "1/4",  "1/8D", "1/4T", "1/8", "1/16D", "1/8T",
-                "1/16", "1/32D", "1/16T", "1/32", "1/64D", "1/32T", "1/64", "1/64T"
-            };
-            int          posClkSyncStrMap = (int)(paramValue / 4.0);
+            int posClkSyncStrMap = (int)(paramValue / 4.0);
 
             if (posClkSyncStrMap > 31) {
                 posClkSyncStrMap = 31;
@@ -733,10 +728,9 @@ tRectangle render_paramType1Pan(tModule * module, tRectangle rectangle, char * l
 
 tRectangle render_paramType1NoteDial(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     // C-1 to G9
-    int    noteoctave;
-    int    noteval;
-    char * noteNameStrMap[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"}; // TODO: should be in the module resources file
-    char * noteName;
+    int          noteoctave;
+    int          noteval;
+    const char * noteName;
 
     noteoctave = ((int)paramValue) / 12 - 1;
     noteval    = ((int)paramValue) % 12;

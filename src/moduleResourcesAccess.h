@@ -23,6 +23,9 @@
 #include "sysIncludes.h"
 #include "types.h"
 
+extern const char *             clkSyncStrMap[];
+extern const char *             noteNameStrMap[];
+extern const char *             morphStrMap[];
 extern const tRgb               gCableColourMap[];
 extern const tRgb               gModuleColourMap[];
 extern const tRgb               connectorColourMap[];

@@ -891,18 +891,17 @@ void render_cables(void) {
 }
 
 void render_morph_groups(void) {
-    tModule      module        = {0};
-    tRectangle   rectangle     = {{840, 4}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
-    char         buff[16]      = {0};
-    char         label[16]     = {0};
-    tRgb         dialColour    = RGB_BACKGROUND_GREY;
-    uint32_t     i             = 0;
-    uint32_t     j             = 0;
-    double       textHeight    = 0.0;
-    bool         validModule   = false;
-    uint32_t     slot          = atomic_load(&gSlot);
-    uint32_t     variation     = gPatchDescr[slot].activeVariation;
-    const char * morphStrMap[] = {"Wheel", "Vel", "Keyb", "Aft.Tch", "Sust.Pd", "Ctrl.Pd", "P.Stick", "G.Wh", NULL};
+    tModule    module      = {0};
+    tRectangle rectangle   = {{840, 4}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
+    char       buff[16]    = {0};
+    char       label[16]   = {0};
+    tRgb       dialColour  = RGB_BACKGROUND_GREY;
+    uint32_t   i           = 0;
+    uint32_t   j           = 0;
+    double     textHeight  = 0.0;
+    bool       validModule = false;
+    uint32_t   slot        = atomic_load(&gSlot);
+    uint32_t   variation   = gPatchDescr[slot].activeVariation;
 
     reset_walk_module();
 
