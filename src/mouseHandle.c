@@ -1475,14 +1475,8 @@ bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
                     if (paramType2 == paramType2UpDown) {
                         range                              = paramLocationList[param->paramRef].range;
 
-                        if (within_lower_half_of_rectangle(coord, param->rectangle)) {  // TODO - check this.
-                            if (param->value > 1) {
-                                param->value--;
-                            }
-                        } else {
-                            if (param->value < (range - 1)) {
-                                param->value++;
-                            }
+                        if (param->value < (range - 1)) {
+                            param->value++;
                         }
                         write_module(module.key, &module);
 
@@ -2073,7 +2067,22 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
                         for (uint32_t p = 0; p < paramCount && !found; p++) {
                             if (within_rectangle(coord, module.param[variation][p].rectangle)) {
-                                open_param_context_menu(coord, module.key, p);
+                                if (paramLocationList[module.param[variation][p].paramRef].type2 == paramType2UpDown) {
+                                    if (module.param[variation][p].value > 0) {
+                                        module.param[variation][p].value--;
+                                    }
+                                    write_module(module.key, &module);
+                                    tMessageContent messageContent = {0};
+                                    messageContent.cmd                 = eMsgCmdSetValue;
+                                    messageContent.slot                = slot;
+                                    messageContent.paramData.moduleKey = module.key;
+                                    messageContent.paramData.param     = p;
+                                    messageContent.paramData.variation = variation;
+                                    messageContent.paramData.value     = module.param[variation][p].value;
+                                    msg_send(&gCommandQueue, &messageContent);
+                                } else {
+                                    open_param_context_menu(coord, module.key, p);
+                                }
                                 found = true;
                             }
                         }

@@ -778,6 +778,7 @@ tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangl
     return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[(int)paramValue], buttonBackgroundColour);
 }
 
+#if 0
 tRectangle render_paramType1UpDown(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, char ** strMap) {
     double y          = rectangle.coord.y;
     double textHeight = rectangle.size.h / 2.0;
@@ -802,8 +803,10 @@ tRectangle render_paramType1UpDown(tModule * module, tRectangle rectangle, char 
     } else {
         set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
     }
-    return draw_updown(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[(int)paramValue]);
+    
+    return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[(int)paramValue], buttonBackgroundColour);
 }
+#endif
 
 tRectangle render_paramType1Bypass(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
     return draw_power_button(moduleArea, rectangle, paramValue != 0);

@@ -380,7 +380,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 }
                 case paramType1UpDown:
                 {
-                    render_param_function = &render_paramType1UpDown;
+                    render_param_function = &render_paramType1StandardToggle;// &render_paramType1UpDown;
                     break;
                 }
                 case paramType1Bypass:
