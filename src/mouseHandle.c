@@ -1145,7 +1145,7 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
     double           renderHeight;
 
     for (int pg = 0; pg < NUM_PARAM_PAGES; pg++) {
-        snprintf(pageLabels[pg], sizeof(pageLabels[pg]), "Page %d", pg + 1);
+        snprintf(pageLabels[pg], sizeof(pageLabels[pg]), "Page %c", 'A' + pg);
 
         for (int bk = 0; bk < NUM_BANKS_PER_PAGE; bk++) {
             snprintf(bankLabels[pg][bk], sizeof(bankLabels[pg][bk]), "Bank %d", bk + 1);
