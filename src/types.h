@@ -595,6 +595,7 @@ typedef struct {
     tModuleKey    moduleKey;
     tConnectorDir connectorDir;
     uint32_t      connectorIndex;
+    uint32_t      paramIndex;
 } tContextMenu;
 
 typedef struct {

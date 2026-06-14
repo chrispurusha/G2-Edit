@@ -352,9 +352,9 @@ void notify_full_patch_change(void) {
     gMainButtonArray[vaButtonId].backgroundColour = (tRgb)RGB_GREEN_ON;
     gMainButtonArray[fxButtonId].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
     // Set scrollbars back to top/left
-    gScrollState.xBar = (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN;
+    gScrollState.xBar                             = (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN;
     set_x_scroll_bar(gScrollState.xBar);
-    gScrollState.yBar =  (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN;
+    gScrollState.yBar                             = (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN;
     set_y_scroll_bar(gScrollState.yBar);
 }
 

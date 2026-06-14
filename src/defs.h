@@ -53,6 +53,9 @@
 #define MAX_NUM_CONNECTORS                   (13)
 #define MAX_NUM_KNOBS                        (120)                        // G2 always has exactly 120 knob slots
 #define MAX_NUM_CONTROLLERS                  (128)
+#define NUM_PARAM_PAGES                      (5)
+#define NUM_BANKS_PER_PAGE                   (3)
+#define NUM_KNOBS_PER_BANK                   (8)
 
 #define INTERRUPT_MESSAGE_SIZE               (16)
 #define EXTENDED_MESSAGE_SIZE                (65536)

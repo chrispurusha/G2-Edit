@@ -43,14 +43,14 @@ extern "C" {
 #include <stdatomic.h>
 #include <pthread.h>
 
-#define VENDOR_ID              (0xffc)
-#define PRODUCT_ID             (2)
+#define VENDOR_ID                  (0xffc)
+#define PRODUCT_ID                 (2)
 
 // USB transfer timeouts (milliseconds)
-#define USB_SEND_TIMEOUT_MS    (400)
+#define USB_SEND_TIMEOUT_MS        (400)
 #define USB_EXT_RECV_TIMEOUT_MS    (200)
 #define USB_INT_RECV_TIMEOUT_MS    (100)
-#define USB_INIT_TIMEOUT_MS    (1000)  // Extra headroom during init sequence
+#define USB_INIT_TIMEOUT_MS        (1000) // Extra headroom during init sequence
 
 // Atomic flags for cross-thread signalling
 static _Atomic bool           gotBadConnectionIndication = false;
@@ -668,6 +668,11 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             return EXIT_SUCCESS;
         }
 
+        case SUB_RESPONSE_KNOBS:
+            LOG_DEBUG("Got knob snapshot slot %u\n", slot);
+            parse_knobs(slot, buff, bitPos);
+            return EXIT_SUCCESS;
+
         case SUB_RESPONSE_PARAM_CHANGE:
             parse_param_change(slot, &buff[BIT_TO_BYTE(*bitPos)],
                                length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
@@ -826,7 +831,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             uint32_t tmpSubOffset = *bitPos;
 
             LOG_DEBUG("Got select param page\n");
-            
+
             for (int i = 0; i < 32; i++) {
                 LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, bitPos, 8));
             }
@@ -836,13 +841,13 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
             return EXIT_SUCCESS;
         }
-            
+
         case SUB_RESPONSE_STORE_PATCH:
         {
             uint32_t tmpSubOffset = *bitPos;
 
             LOG_DEBUG("Got store patch\n");
-            
+
             for (int i = 0; i < 32; i++) {
                 LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, bitPos, 8));
             }
@@ -943,7 +948,7 @@ static int rcv_extended(int dataLength, int * response) {
     uint8_t                buff[EXTENDED_MESSAGE_SIZE] = {0};
     int                    readLength                  = 0;
     int                    retVal                      = EXIT_FAILURE;
-    int try = 1;
+    int                    try                         = 1;
     libusb_device_handle * devHandle_local             = NULL;
 
     if (dataLength > EXTENDED_MESSAGE_SIZE) {
@@ -1007,7 +1012,7 @@ static int int_rec(tPoll poll, int expectedResponse) {
     int                    timeout                      = USB_INT_RECV_TIMEOUT_MS;
     bool                   doLoop                       = true;
     int                    response                     = SUB_RESPONSE_ERROR;
-    int try = 1;
+    int                    try                          = 1;
 
     while (doLoop == true) {
         if (atomic_load(&gCommsState) != eCommsOnLine) {
@@ -1457,6 +1462,24 @@ static void clear_slot_data(uint32_t slot) {
     gNote2Size[slot]       = 0;
 }
 
+static int send_get_knob_snapshot(uint32_t slot) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
+    buff[pos++] = SUB_COMMAND_KNOB_SNAPSHOT;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_KNOBS);
+        LOG_DEBUG("KNOB SNAPSHOT RESPONSE\n");
+    }
+    return retVal;
+}
+
 // Fetch patch data for a single slot. Synth must be stopped before calling.
 static int send_get_patch_data(uint32_t slot) {
     clear_slot_data(slot);
@@ -1467,7 +1490,8 @@ static int send_get_patch_data(uint32_t slot) {
     // Also get current note 0x68, patch text 0x6e
     send_get_resources_used(slot, locationVa);
     send_get_resources_used(slot, locationFx);
-    // Also get knob snapshot 0x70 and selected param 0x2e
+    send_get_knob_snapshot(slot);
+	// Also get selected param 0x2e
 
     return EXIT_SUCCESS;
 }
@@ -1558,6 +1582,49 @@ static int send_set_patch_name(uint32_t slot, const char * name) {
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
         LOG_DEBUG("SET PATCH NAME RESPONSE\n");
+    }
+    return retVal;
+}
+
+static int send_assign_knob(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex, uint32_t knobIndex) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
+    buff[pos++] = SUB_COMMAND_ASSIGN_KNOB;
+    buff[pos++] = (uint8_t)moduleIndex;
+    buff[pos++] = (uint8_t)paramIndex;
+    buff[pos++] = (uint8_t)(location << 6);
+    buff[pos++] = 0x00;
+    buff[pos++] = (uint8_t)knobIndex;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        LOG_DEBUG("ASSIGN KNOB RESPONSE\n");
+    }
+    return retVal;
+}
+
+static int send_deassign_knob(uint32_t slot, uint32_t knobIndex) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
+    buff[pos++] = SUB_COMMAND_DEASSIGN_KNOB;
+    buff[pos++] = 0x00;
+    buff[pos++] = (uint8_t)knobIndex;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        LOG_DEBUG("DEASSIGN KNOB RESPONSE\n");
     }
     return retVal;
 }
@@ -1881,13 +1948,31 @@ static int send_write_data(tMessageContent * messageContent, bool * ack) {
             break;
         }
 
+        case eMsgCmdAssignKnob:
+        {
+            uint32_t kSlot  = messageContent->slot;
+            uint32_t kLoc   = messageContent->knobAssignData.moduleKey.location;
+            uint32_t kMod   = messageContent->knobAssignData.moduleKey.index;
+            uint32_t kParam = messageContent->knobAssignData.paramIndex;
+            uint32_t kKnob  = messageContent->knobAssignData.knobIndex;
+
+            retVal = send_assign_knob(kSlot, kLoc, kMod, kParam, kKnob);
+            break;
+        }
+
+        case eMsgCmdDeassignKnob:
+        {
+            retVal = send_deassign_knob(messageContent->slot, messageContent->knobDeassignData.knobIndex);
+            break;
+        }
+
         case eMsgCmdGetPerformanceAndPatchSettings:
         {
             int i = 0;
-            
+
             send_stop();
 
-            // Note - don't seem to need to do end_get_synth_settings() this since start message triggers it
+            // Note - don't seem to need to do send_get_synth_settings() this since start message triggers it
             send_get_midi_cc();
             send_select_slot(0);
             send_get_performance_settings();
@@ -1901,14 +1986,14 @@ static int send_write_data(tMessageContent * messageContent, bool * ack) {
             atomic_store(&gSlot, 0);
             gPatchDescr[0].activeVariation = 0;
             set_exclusive_button_highlight(slotAButtonId, slotDButtonId,
-                                           (tButtonId)(slotAButtonId ));
+                                           (tButtonId)(slotAButtonId));
             set_exclusive_button_highlight(variation1ButtonId, variationInitButtonId,
                                            (tButtonId)((uint32_t)variation1ButtonId));
-            
+
             call_full_patch_change_notify();
             call_wake_glfw();
 
-            retVal = EXIT_SUCCESS;
+            retVal                         = EXIT_SUCCESS;
             break;
         }
 

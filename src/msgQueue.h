@@ -51,7 +51,9 @@ typedef enum {
     eMsgCmdSetPatchName,
     eMsgCmdSetModuleColour,
     eMsgCmdWritePatchDescr,
-    eMsgCmdGetPerformanceAndPatchSettings
+    eMsgCmdGetPerformanceAndPatchSettings,
+    eMsgCmdAssignKnob,
+    eMsgCmdDeassignKnob
 } eMsgCmd;
 
 typedef struct {
@@ -129,6 +131,16 @@ typedef struct {
 } tModuleColourData;
 
 typedef struct {
+    tModuleKey moduleKey;
+    uint32_t   paramIndex;
+    uint32_t   knobIndex;
+} tKnobAssignData;
+
+typedef struct {
+    uint32_t knobIndex;
+} tKnobDeassignData;
+
+typedef struct {
     uint32_t cmd;
     uint32_t slot;
     union {
@@ -142,6 +154,8 @@ typedef struct {
         tModuleLabelData  moduleLabelData;
         tPatchName        patchName;
         tModuleColourData moduleColourData;
+        tKnobAssignData   knobAssignData;
+        tKnobDeassignData knobDeassignData;
     };
 } tMessageContent;
 

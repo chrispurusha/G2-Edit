@@ -39,6 +39,7 @@ extern "C" {
 #include "moduleGraphics.h"
 #include "globalVars.h"
 #include "renderParams.h"
+#include "mouseHandle.h"
 
 void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) { // TODO: move to utilsgraphics!?
     switch (volumeType) {
@@ -391,6 +392,29 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         default:
         {
             LOG_ERROR("Reached wrong switch in switch paramType2");
+        }
+    }
+    {
+        int32_t knobIdx = find_knob_for_param(module->key.slot, module->key.location,
+                                              module->key.index, paramIndex);
+
+        if (knobIdx >= 0) {
+            tCoord mouseCoord = {0};
+
+            get_global_gui_scaled_mouse_coord(&mouseCoord);
+
+            if (within_rectangle(mouseCoord, module->param[variation][paramIndex].rectangle)) {
+                char       knobLabel[12];
+                int        page      = knobIdx / 24 + 1;
+                int        bank      = (knobIdx % 24) / 8 + 1;
+                int        pos       = knobIdx % 8 + 1;
+                tRectangle labelRect = {{rectangle.coord.x,
+                    rectangle.coord.y + rectangle.size.h + 2.0},
+                    {get_text_width("PgX BaX PoX", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8), (double)STANDARD_TEXT_HEIGHT * 0.8}};
+
+                snprintf(knobLabel, sizeof(knobLabel), "Pg%d Ba%d Po%d", page, bank, pos);
+                draw_button(moduleArea, labelRect, knobLabel, RGB_GREY_9);
+            }
         }
     }
 }
