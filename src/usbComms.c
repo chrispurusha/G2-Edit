@@ -888,6 +888,48 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             return EXIT_SUCCESS;
         }
 
+        case SUB_RESPONSE_CURRENT_NOTE_2:
+        {
+            uint32_t count     = read_bit_stream(buff, bitPos, 16);
+            uint32_t safeCount = (count < sizeof(gNote2[slot])) ? count : (uint32_t)sizeof(gNote2[slot]);
+
+            LOG_DEBUG("Got current note slot %u count %u\n", slot, count);
+
+            if (slot < MAX_SLOTS) {
+                for (uint32_t i = 0; i < safeCount; i++) {
+                    gNote2[slot][i] = read_bit_stream(buff, bitPos, 8);
+                }
+
+                gNote2Size[slot] = safeCount;
+            }
+            return EXIT_SUCCESS;
+        }
+
+        case SUB_RESPONSE_PATCH_NOTES:
+        {
+            uint32_t count     = read_bit_stream(buff, bitPos, 16);
+            uint32_t notesSize = count;
+
+            LOG_DEBUG("Got patch notes slot %u count %u\n", slot, count);
+
+            if (notesSize > sizeof(gPatchNotes[0]) - 1) {
+                LOG_ERROR("Patch notes size %u exceeds limit\n", notesSize);
+                notesSize = (uint32_t)(sizeof(gPatchNotes[0]) - 1);
+            }
+
+            if (slot < MAX_SLOTS) {
+                gPatchNotesSize[slot] = 0;
+                memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
+
+                for (uint32_t i = 0; i < notesSize; i++) {
+                    gPatchNotes[slot][i] = read_bit_stream(buff, bitPos, 8);
+                }
+
+                gPatchNotesSize[slot] = notesSize;
+            }
+            return EXIT_SUCCESS;
+        }
+
         default:
             LOG_DEBUG("Got unknown sub-command 0x%02x - must implement!!!\n", subCommand);
             exit(1);
@@ -1462,6 +1504,60 @@ static void clear_slot_data(uint32_t slot) {
     gNote2Size[slot]       = 0;
 }
 
+static int send_get_current_note(uint32_t slot) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
+    buff[pos++] = SUB_COMMAND_CURRENT_NOTE;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_CURRENT_NOTE_2);
+        LOG_DEBUG("CURRENT NOTE RESPONSE\n");
+    }
+    return retVal;
+}
+
+static int send_get_patch_notes(uint32_t slot) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
+    buff[pos++] = SUB_COMMAND_QUERY_PATCH_TEXT;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_NOTES);
+        LOG_DEBUG("PATCH NOTES RESPONSE\n");
+    }
+    return retVal;
+}
+
+static int send_get_selected_param(uint32_t slot) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
+    buff[pos++] = SUB_COMMAND_GET_SELECTED_PARAM;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_SELECT_PARAM);
+        LOG_DEBUG("SELECTED PARAM RESPONSE\n");
+    }
+    return retVal;
+}
+
 static int send_get_knob_snapshot(uint32_t slot) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
@@ -1487,10 +1583,12 @@ static int send_get_patch_data(uint32_t slot) {
     send_get_patch_version(slot);
     send_get_patch(slot);
     send_get_patch_name(slot);
-    // Also get current note 0x68, patch text 0x6e
+    send_get_current_note(slot);
+    send_get_patch_notes(slot);
     send_get_resources_used(slot, locationVa);
     send_get_resources_used(slot, locationFx);
     send_get_knob_snapshot(slot);
+    send_get_selected_param(slot);
     // Also get selected param 0x2e
 
     return EXIT_SUCCESS;
