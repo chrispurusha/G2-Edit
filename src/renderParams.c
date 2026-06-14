@@ -710,6 +710,41 @@ tRectangle render_paramType1Resonance(tModule * module, tRectangle rectangle, ch
     return render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
+tRectangle render_paramType1StrMap(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    const char ** strMap = paramLocationList[paramRef].strMap;
+
+    if (strMap && (uint32_t)paramValue < array_size_str_map((char **)strMap)) {
+        snprintf(buff, buffSize, "%s", strMap[(int)paramValue]);
+    } else {
+        snprintf(buff, buffSize, "%d", (int)paramValue);
+    }
+    return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
+tRectangle render_paramType1FreqShift(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    uint32_t     slot      = atomic_load(&gSlot);
+    uint32_t     variation = gPatchDescr[slot].activeVariation;
+    const char * s         = NULL;
+
+    switch (module->param[variation][2].value) {
+        case 0:  s = freq_shift_hiStrMap[(int)paramValue];
+            break;
+
+        case 1:  s = freq_shift_loStrMap[(int)paramValue];
+            break;
+
+        case 2:  s = freq_shift_subStrMap[(int)paramValue];
+            break;
+    }
+
+    if (s) {
+        snprintf(buff, buffSize, "%s", s);
+    } else {
+        snprintf(buff, buffSize, "%d", (int)paramValue);
+    }
+    return render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, range, morphRange, colour);
+}
+
 tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, char ** strMap) {
     double y                      = rectangle.coord.y;
     double textHeight             = rectangle.size.h / 2.0;

@@ -339,6 +339,16 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                     render_param_function = &render_paramType1Resonance;
                     break;
                 }
+                case paramType1StrMap:
+                {
+                    render_param_function = &render_paramType1StrMap;
+                    break;
+                }
+                case paramType1FreqShift:
+                {
+                    render_param_function = &render_paramType1FreqShift;
+                    break;
+                }
                 default:
                 {
                     LOG_ERROR("Unrecognised type1 %d\n", paramLocationList[paramRef].type1);

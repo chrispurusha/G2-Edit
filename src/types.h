@@ -381,6 +381,8 @@ typedef enum {
     paramType1LRDial,
     paramType1OscWave,
     paramType1Enable,
+    paramType1StrMap,
+    paramType1FreqShift,
     paramType1StandardToggle,
     paramType1UpDown,
     paramType1UpDownSeqValOdd,

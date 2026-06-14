@@ -42,6 +42,9 @@ extern const char *             patchVolumeStrMap[];
 extern const char *             dbLvlStrMap[];
 extern const char *             ADRTimeStrMap[];
 extern const char *             pulseLoTimeStrMap[];
+extern const char *             freq_shift_hiStrMap[];
+extern const char *             freq_shift_loStrMap[];
+extern const char *             freq_shift_subStrMap[];
 
 uint32_t array_size_param_location_list(void);
 uint32_t array_size_connector_location_list(void);
