@@ -36,6 +36,12 @@ extern const tConnectorLocation connectorLocationList[];
 extern const tVolumeLocation    volumeLocationList[];
 extern const tLedLocation       ledLocationList[];
 extern const char *             patchVolumeStrMap[];
+//extern const double             dbLvlMap[];
+//extern const double             ADRTimeMap[];
+//const double                    pulseLoTime[];
+extern const char *             dbLvlStrMap[];
+extern const char *             ADRTimeStrMap[];
+extern const char *             pulseLoTimeStrMap[];
 
 uint32_t array_size_param_location_list(void);
 uint32_t array_size_connector_location_list(void);

@@ -27,113 +27,183 @@
 #include "types.h"
 
 // Terminate the string maps with a NULL, so that we can work out array size
-const char *             fltClassicDbStrMap[]            = {"12db", "18db", "24db", NULL};
-const char *             fltMultiDbStrMap[]              = {"6db", "12db", NULL};
-const char *             emptyStrMap[]                   = {" ", NULL};
-const char *             driverTypeStrMap[]              = {"Reed", "Bow", "-Lip-", "-Mallet-", NULL};
-const char *             octaveStrMap[]                  = {"C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", NULL};
-const char *             bip128StrMap[]                  = {"-64", "-63", "-62", "-61", "-60", "-59", "-58", "-57", "-56", "-55", "-54", "-53", "-52", "-51", "-50", "-49", "-48", "-47", "-46", "-45", "-44", "-43", "-42", "-41", "-40", "-39", "-38", "-37", "-36", "-35", "-34", "-33", "-32", "-31", "-30", "-29", "-28", "-27", "-26", "-25", "-24", "-23", "-22", "-21", "-20", "-19", "-18", "-17", "-16", "-15", "-14", "-13", "-12", "-11", "-10", "-9", "-8", "-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", NULL};
-const char *             u128StrMap[]                    = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64", "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75", "76", "77", "78", "79", "80", "81", "82", "83", "84", "85", "86", "87", "88", "89", "90", "91", "92", "93", "94", "95", "96", "97", "98", "99", "100", "101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111", "112", "113", "114", "115", "116", "117", "118", "119", "120", "121", "122", "123", "124", "125", "126", "127"};
-const char *             captureStrMap[]                 = {"Closest", "Evenly", NULL};
-const char *             fltNordDbStrMap[]               = {"12dB", "24dB", NULL};
-const char *             offTo100KbStrMap[]              = {"Off", "25%", "50%", "75%", "100%", NULL};
-const char *             offOnStrMap[]                   = {"Off", "On", NULL};
-const char *             expStrMap[]                     = {"Exp", "Lin", "dB", NULL};
-const char *             logStrMap[]                     = {"Log", "Lin", NULL};
-const char *             padStrMap[]                     = {"0dB", "+6dB", NULL};
-const char *             db12PadStrMap[]                 = {"+6dB", "0dB", "-6dB", "-12dB", NULL};
-const char *             db12BPadStrMap[]                = {"0dB", "-6dB", "-12dB", NULL};
-const char *             gcStrMap[]                      = {"GC", "GC", NULL};
-const char *             kbStrMap[]                      = {"KB", "KB", NULL};
-const char *             sideChainStrMap[]               = {"Side Chain", "Side Chain", NULL};
-const char *             pitchTypeStrMap[]               = {"Semi", "Freq", "Factor", "Partial", NULL};
-const char *             fmTypeStrMap[]                  = {"FM Lin", "FM Trk", NULL};
-const char *             envShapeStrMap[]                = {"LogExp", "LinExp", "ExpExp", "LinLin", NULL};
-const char *             normalResetStrMap[]             = {"Normal", "Reset", NULL};
-const char *             posStrMap[]                     = {"Pos", "PosInv", "Neg", "NegInv", "Bip", "BipInv", NULL};
-const char *             outToStrMap[]                   = {"Main 1/2", "Main 3/4", "FX 1/2", "FX 3/4", "Bus 1/2", "Bus 3/4", NULL};
-const char *             outTo4OutStrMap[]               = {"Main", "Fx", "Bus", NULL};
-const char *             inFxStrMap[]                    = {"1/2", "3/4", NULL};
-const char *             shapeTypeStrMap[]               = {"sin", "tri", "saw", "squ", "sup", NULL};
-const char *             shapeOscATypeStrMap[]           = {"sin", "tri", "saw", "squ", "p25", "p10", NULL};
-const char *             reverbTypeStrMap[]              = {"Small", "Medium", "Large", "Hall", NULL};
-const char *             polyMonoStrMap[]                = {"Poly", "Mono", NULL};
-const char *             rangeStrMap[]                   = {"Rate Lo", "Rate Hi", "BPM", "Rate Sub", "Clk", NULL};
-const char *             lfoWaveStrMap[]                 = {"Sin", "Tri", "Saw", "Squ", "RndSt", "Rnd", NULL};
-const char *             lfoShpAWaveStrMap[]             = {"Sine", "CosBell", "TriBell", "Saw>Tri", "Tri>Squ", "Pulse", NULL};
-const char *             rangeLfoCStrMap[]               = {"Rate Lo", "Rate Hi", "BPM", "Rate Sub", NULL};
-const char *             saturateCurveStrMap[]           = {"1", "2", "3", "4", NULL};
-const char *             shpExpCurveStrMap[]             = {"x2", "x3", "x4", "x5", NULL};
-const char *             pulseRangeStrMap[]              = {"Sub", "Lo", "Hi", NULL};
-const char *             pulseModeStrMap[]               = {"Plus", "Minus", NULL};
-const char *             logicDelayModeStrMap[]          = {"Pos", "Neg", "Cycle", NULL};
-const char *             oscPmWaveStrMap[]               = {"Sin", "Tri", NULL};
-const char *             rndClkBCharStrMap[]             = {"Rnd1", "Rnd2", NULL};
-const char *             bipUniStrMap[]                  = {"Bip", "Uni", NULL};
-const char *             vowelStrMap[]                   = {"A", "E", "I", "O", "U", "Y", "AA", "AE", "OE", NULL};
-const char *             nordFilterTypeStrMap[]          = {"LP", "BP", "HP", "BR", NULL};
-const char *             staticFilterTypeStrMap[]        = {"LP", "BP", "HP", NULL};
-const char *             multiEnvSustainStrMap[]         = {"None", "L1", "L2", "L3", "L4", NULL};
-const char *             drSynthPresetStrMap[]           = {"Kick 1", "Kick 2", "Kick 3", "Kick 4", "Kick 5", "Snare 1", "Snare 2", "Snare 3", "Snare 4", "Snare 5", "Tom1 1", "Tom1 2", "Tom1 3", "Tom2 1", "Tom2 2", "Tom2 3", "Tom3 1", "Tom3 2", "Tom3 3", "Cymb 1", "Cymb 2", "Cymb 3", "Cymb 4", "Cymb 5", "Perc 1", "Perc 2", "Perc 3", "Perc 4", "Perc 5", "Perc 6", NULL}; // *** Don't have the list
-const char *             asymSymStrMap[]                 = {"Asym", "Sym", NULL};
-const char *             odTypeStrMap[]                  = {"Soft", "Hard", "Heavy", "Fat", NULL};
-const char *             delayStrMap[]                   = {"12.5ms", "25ms", "50ms", "100ms", NULL};
-const char *             gateTypeStrMap[]                = {"AND", "NAND", "OR", "NOR", "XOR", "NXOR", NULL};
-const char *             invStrMap[]                     = {"+", "Inv", NULL};
-const char *             clkSrcStrMap[]                  = {"Internal", "Master", NULL};
-const char *             int16StrMap[]                   = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", NULL};
-const char *             divModeStrMap[]                 = {"Gated", "Toggled", NULL};
-const char *             out8StrMap[]                    = {"Out1", "Out2", "Out3", "Out4", "Out5", "Out6", "Out7", "Out8", NULL};
-const char *             in8StrMap[]                     = {"In1", "In2", "In3", "In4", "In5", "In6", "In7", "In8", NULL};
-const char *             rectStrMap[]                    = {"Half wave pos.", "Half wave neg.", "Full wave pos.", "Full wave neg.", NULL};
-const char *             shpStaticStrMap[]               = {"Inv x3", "Inv x2", "x2", "x3", NULL};
-const char *             trigGateStrMap[]                = {"Trig", "Gate", NULL};
-const char *             decayReleaseStrMap[]            = {"Decay", "Release", NULL};
-const char *             fltLPSlopeStrMap[]              = {"6db", "12db", "18db", "24db", "30db", "36db", NULL};
-const char *             flipFlopStrMap[]                = {"D-type", "RS-type", NULL};
-const char *             freqShiftRangeStrMap[]          = {"Hi", "Lo", "Sub", NULL};
-const char *             fltPhaseTypeStrMap[]            = {"Notch", "Peak", "Deep", NULL};
-const char *             eq2BandLoStrMap[]               = {"80Hz", "110Hz", "160Hz", NULL};
-const char *             eq2BandHiStrMap[]               = {"6kHz", "8kHz", "12kHz", NULL};
-const char *             presetStrMap[]                  = {"Set", NULL};
-const char *             bitsStrMap[]                    = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "Off", NULL};
-const char *             sustainStrMap[]                 = {"L1", "L2", NULL};
-const char *             midiChanStrMap[]                = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "SlotA", "SlotB", "SlotC", "SlotD", NULL};
-const char *             midiChanRcvStrMap[]             = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "Keyb", NULL};
-const char *             thruStrMap[]                    = {"Notes only", "Notes+Ctrls", NULL};
-const char *             levConvStrMap[]                 = {"Bip", "Pos", "Neg", NULL};
-const char *             oscShpAStrMap[]                 = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "SymPulse", NULL};
-const char *             oscShpBStrMap[]                 = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "DblSaw", "Pulse", "SymPulse", NULL};
-const char *             dxFeedbackStrMap[]              = {"0", "1", "2", "3", "4", "5", "6", "7", NULL};
-const char *             dxAlgStrMap[]                   = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", NULL};
-const char *             pShiftDelayStrMod[]             = {"12.5ms", "25ms", "50ms", "100ms", NULL};
-const char *             twoToInSourceStrMap[]           = {"In1/2", "In3/4", "Bus1/2", "Bus3/4", NULL};
-const char *             fourToInSourceStrMap[]          = {"In", "Bus", NULL};
-const char *             delayRangeStrMap[]              = {"5ms", "25ms", "100ms", "500ms", "1.0s", "2.0s", "2.7s", NULL};
-const char *             delayABRangeStrMap[]            = {"500ms", "1.0s", "2.0s", "2.7s", NULL};
-const char *             dlyStereoRangeStrMap[]          = {"500ms", "1.0s", "1.35s", NULL};
-const char *             timeClkStrMap[]                 = {"Time", "Clk", NULL};
-const char *             ratioFixedStrMap[]              = {"Ratio", "Fixed", NULL};
-const char *             detuneStrMap[]                  = {"-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "+1", "+2", "+3", "+4", "+5", "+6", "+7", NULL};
-const char *             operator07StrMap[]              = {"0", "1", "2", "3", "4", "5", "6", "7", NULL};
-const char *             operatorDepthStrMap[]           = {"-Lin", "-Exp", "+Exp", "+Lin", NULL};
-const char *             phaserTypeStrMap[]              = {"Type I", "Type II", NULL};
-const char *             invertStrMap[]                  = {"m", "1-m", NULL};
-const char *             monoKeyStrMap[]                 = {"Last", "Lo", "Hi", NULL};
-const char *             edgeStepStrMap[]                = {"100%", "75%", "50%", "25%", "0%", NULL};
-const char *             vocoderStrMap[]                 = {"Off", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", NULL};
-const char *             sw8to1SelStrMap[]               = {"Lo", "64'", "32'", "16'", "8'", "4'", "2'", "1'", NULL};
-const char *             seqXFadeStrMap[]                = {"Off", "25%", "50%", "100%", NULL};
-const char *             clkSyncStrMap[]                 = {"64/1", "48/1",  "32/1",  "24/1", "16/1",  "12/1",  "8/1",  "6/1",   "4/1",  "3/1", "2/1",   "1/1D",
-                                                            "1/1",                              "1/2D",  "1/1T",  "1/2",  "1/4D",  "1/2T",  "1/4",  "1/8D",  "1/4T", "1/8", "1/16D", "1/8T",
-                                                            "1/16",                             "1/32D", "1/16T", "1/32", "1/64D", "1/32T", "1/64", "1/64T", NULL};
-const char *             noteNameStrMap[]                = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", NULL};
-const char *             morphStrMap[]                   = {"Wheel", "Vel", "Keyb", "Aft.Tch", "Sust.Pd", "Ctrl.Pd", "P.Stick", "G.Wh", NULL};
-const char *             patchVolumeStrMap[]             = {"-78dB", "-77dB", "-76dB", "-74dB", "-73dB", "-72dB", "-71dB", "-70dB", "-68dB", "-67dB", "-66dB", "-65dB", "-64dB", "-63dB", "-62dB", "-61dB", "-60dB", "-59dB", "-58dB", "-57dB", "-56dB", "-55dB", "-54dB", "-53dB", "-52dB", "-51dB", "-50dB", "-49dB", "-48dB", "-48dB", "-47dB", "-46dB", "-45dB", "-44dB", "-43dB", "-43dB", "-42dB", "-41dB", "-40dB", "-39dB", "-39dB", "-38dB", "-37dB", "-36dB", "-36dB", "-35dB", "-34dB", "-34dB", "-33dB", "-32dB", "-32dB", "-31dB", "-30dB", "-30dB", "-29dB", "-28dB", "-28dB", "-27dB", "-27dB", "-26dB", "-26dB", "-25dB", "-24dB", "-24dB", "-23dB", "-23dB", "-22dB", "-22dB", "-21dB", "-21dB", "-20dB", "-20dB", "-19dB", "-19dB", "-18dB", "-18dB", "-17dB", "-17dB", "-16dB", "-16dB", "-15dB", "-15dB", "-15dB", "-14dB", "-14dB", "-13dB", "-13dB", "-12dB", "-12dB", "-12dB", "-11dB", "-11dB", "-11dB", "-10dB", "-9.8dB", "-9.4dB", "-9.1dB", "-8.7dB", "-8.4dB", "-8.0dB", "-7.7dB", "-7.4dB", "-7.0dB", "-6.7dB", "-6.4dB", "-6.1dB", "-5.7dB", "-5.4dB", "-5.1dB", "-4.8dB", "-4.5dB", "-4.2dB", "-3.9dB", "-3.6dB", "-3.4dB", "-3.1dB", "-2.8dB", "-2.5dB", "-2.3dB", "-2.0dB", "-1.7dB", "-1.5dB", "-1.2dB", "-1.0dB", "-0.7dB", "-0.5dB", "-0.2dB", "-0.0dB"};
+const char *             fltClassicDbStrMap[]                    = {"12db", "18db", "24db", NULL};
+const char *             fltMultiDbStrMap[]                      = {"6db", "12db", NULL};
+const char *             emptyStrMap[]                           = {" ", NULL};
+const char *             driverTypeStrMap[]                      = {"Reed", "Bow", "-Lip-", "-Mallet-", NULL};
+const char *             octaveStrMap[]                          = {"C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", NULL};
+const char *             bip128StrMap[]                          = {"-64", "-63", "-62", "-61", "-60", "-59", "-58", "-57", "-56", "-55", "-54", "-53", "-52", "-51", "-50", "-49", "-48", "-47", "-46", "-45", "-44", "-43", "-42", "-41", "-40", "-39", "-38", "-37", "-36", "-35", "-34", "-33", "-32", "-31", "-30", "-29", "-28", "-27", "-26", "-25", "-24", "-23", "-22", "-21", "-20", "-19", "-18", "-17", "-16", "-15", "-14", "-13", "-12", "-11", "-10", "-9", "-8", "-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", NULL};
+const char *             u128StrMap[]                            = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64", "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75", "76", "77", "78", "79", "80", "81", "82", "83", "84", "85", "86", "87", "88", "89", "90", "91", "92", "93", "94", "95", "96", "97", "98", "99", "100", "101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111", "112", "113", "114", "115", "116", "117", "118", "119", "120", "121", "122", "123", "124", "125", "126", "127"};
+const char *             captureStrMap[]                         = {"Closest", "Evenly", NULL};
+const char *             fltNordDbStrMap[]                       = {"12dB", "24dB", NULL};
+const char *             offTo100KbStrMap[]                      = {"Off", "25%", "50%", "75%", "100%", NULL};
+const char *             offOnStrMap[]                           = {"Off", "On", NULL};
+const char *             expStrMap[]                             = {"Exp", "Lin", "dB", NULL};
+const char *             logStrMap[]                             = {"Log", "Lin", NULL};
+const char *             padStrMap[]                             = {"0dB", "+6dB", NULL};
+const char *             db12PadStrMap[]                         = {"+6dB", "0dB", "-6dB", "-12dB", NULL};
+const char *             db12BPadStrMap[]                        = {"0dB", "-6dB", "-12dB", NULL};
+const char *             gcStrMap[]                              = {"GC", "GC", NULL};
+const char *             kbStrMap[]                              = {"KB", "KB", NULL};
+const char *             sideChainStrMap[]                       = {"Side Chain", "Side Chain", NULL};
+const char *             pitchTypeStrMap[]                       = {"Semi", "Freq", "Factor", "Partial", NULL};
+const char *             fmTypeStrMap[]                          = {"FM Lin", "FM Trk", NULL};
+const char *             envShapeStrMap[]                        = {"LogExp", "LinExp", "ExpExp", "LinLin", NULL};
+const char *             normalResetStrMap[]                     = {"Normal", "Reset", NULL};
+const char *             posStrMap[]                             = {"Pos", "PosInv", "Neg", "NegInv", "Bip", "BipInv", NULL};
+const char *             outToStrMap[]                           = {"Main 1/2", "Main 3/4", "FX 1/2", "FX 3/4", "Bus 1/2", "Bus 3/4", NULL};
+const char *             outTo4OutStrMap[]                       = {"Main", "Fx", "Bus", NULL};
+const char *             inFxStrMap[]                            = {"1/2", "3/4", NULL};
+const char *             shapeTypeStrMap[]                       = {"sin", "tri", "saw", "squ", "sup", NULL};
+const char *             shapeOscATypeStrMap[]                   = {"sin", "tri", "saw", "squ", "p25", "p10", NULL};
+const char *             reverbTypeStrMap[]                      = {"Small", "Medium", "Large", "Hall", NULL};
+const char *             polyMonoStrMap[]                        = {"Poly", "Mono", NULL};
+const char *             rangeStrMap[]                           = {"Rate Lo", "Rate Hi", "BPM", "Rate Sub", "Clk", NULL};
+const char *             lfoWaveStrMap[]                         = {"Sin", "Tri", "Saw", "Squ", "RndSt", "Rnd", NULL};
+const char *             lfoShpAWaveStrMap[]                     = {"Sine", "CosBell", "TriBell", "Saw>Tri", "Tri>Squ", "Pulse", NULL};
+const char *             rangeLfoCStrMap[]                       = {"Rate Lo", "Rate Hi", "BPM", "Rate Sub", NULL};
+const char *             saturateCurveStrMap[]                   = {"1", "2", "3", "4", NULL};
+const char *             shpExpCurveStrMap[]                     = {"x2", "x3", "x4", "x5", NULL};
+const char *             pulseRangeStrMap[]                      = {"Sub", "Lo", "Hi", NULL};
+const char *             pulseModeStrMap[]                       = {"Plus", "Minus", NULL};
+const char *             logicDelayModeStrMap[]                  = {"Pos", "Neg", "Cycle", NULL};
+const char *             oscPmWaveStrMap[]                       = {"Sin", "Tri", NULL};
+const char *             rndClkBCharStrMap[]                     = {"Rnd1", "Rnd2", NULL};
+const char *             bipUniStrMap[]                          = {"Bip", "Uni", NULL};
+const char *             vowelStrMap[]                           = {"A", "E", "I", "O", "U", "Y", "AA", "AE", "OE", NULL};
+const char *             nordFilterTypeStrMap[]                  = {"LP", "BP", "HP", "BR", NULL};
+const char *             staticFilterTypeStrMap[]                = {"LP", "BP", "HP", NULL};
+const char *             multiEnvSustainStrMap[]                 = {"None", "L1", "L2", "L3", "L4", NULL};
+const char *             drSynthPresetStrMap[]                   = {"Kick 1", "Kick 2", "Kick 3", "Kick 4", "Kick 5", "Snare 1", "Snare 2", "Snare 3", "Snare 4", "Snare 5", "Tom1 1", "Tom1 2", "Tom1 3", "Tom2 1", "Tom2 2", "Tom2 3", "Tom3 1", "Tom3 2", "Tom3 3", "Cymb 1", "Cymb 2", "Cymb 3", "Cymb 4", "Cymb 5", "Perc 1", "Perc 2", "Perc 3", "Perc 4", "Perc 5", "Perc 6", NULL}; // *** Don't have the list
+const char *             asymSymStrMap[]                         = {"Asym", "Sym", NULL};
+const char *             odTypeStrMap[]                          = {"Soft", "Hard", "Heavy", "Fat", NULL};
+const char *             delayStrMap[]                           = {"12.5ms", "25ms", "50ms", "100ms", NULL};
+const char *             gateTypeStrMap[]                        = {"AND", "NAND", "OR", "NOR", "XOR", "NXOR", NULL};
+const char *             invStrMap[]                             = {"+", "Inv", NULL};
+const char *             clkSrcStrMap[]                          = {"Internal", "Master", NULL};
+const char *             int16StrMap[]                           = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", NULL};
+const char *             divModeStrMap[]                         = {"Gated", "Toggled", NULL};
+const char *             out8StrMap[]                            = {"Out1", "Out2", "Out3", "Out4", "Out5", "Out6", "Out7", "Out8", NULL};
+const char *             in8StrMap[]                             = {"In1", "In2", "In3", "In4", "In5", "In6", "In7", "In8", NULL};
+const char *             rectStrMap[]                            = {"Half wave pos.", "Half wave neg.", "Full wave pos.", "Full wave neg.", NULL};
+const char *             shpStaticStrMap[]                       = {"Inv x3", "Inv x2", "x2", "x3", NULL};
+const char *             trigGateStrMap[]                        = {"Trig", "Gate", NULL};
+const char *             decayReleaseStrMap[]                    = {"Decay", "Release", NULL};
+const char *             fltLPSlopeStrMap[]                      = {"6db", "12db", "18db", "24db", "30db", "36db", NULL};
+const char *             flipFlopStrMap[]                        = {"D-type", "RS-type", NULL};
+const char *             freqShiftRangeStrMap[]                  = {"Hi", "Lo", "Sub", NULL};
+const char *             fltPhaseTypeStrMap[]                    = {"Notch", "Peak", "Deep", NULL};
+const char *             eq2BandLoStrMap[]                       = {"80Hz", "110Hz", "160Hz", NULL};
+const char *             eq2BandHiStrMap[]                       = {"6kHz", "8kHz", "12kHz", NULL};
+const char *             presetStrMap[]                          = {"Set", NULL};
+const char *             bitsStrMap[]                            = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "Off", NULL};
+const char *             sustainStrMap[]                         = {"L1", "L2", NULL};
+const char *             midiChanStrMap[]                        = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "SlotA", "SlotB", "SlotC", "SlotD", NULL};
+const char *             midiChanRcvStrMap[]                     = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "This", "Keyb", NULL};
+const char *             thruStrMap[]                            = {"Notes only", "Notes+Ctrls", NULL};
+const char *             levConvStrMap[]                         = {"Bip", "Pos", "Neg", NULL};
+const char *             oscShpAStrMap[]                         = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "SymPulse", NULL};
+const char *             oscShpBStrMap[]                         = {"Sine1", "Sine2", "Sine3", "Sine4", "TriSaw", "DblSaw", "Pulse", "SymPulse", NULL};
+const char *             dxFeedbackStrMap[]                      = {"0", "1", "2", "3", "4", "5", "6", "7", NULL};
+const char *             dxAlgStrMap[]                           = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", NULL};
+const char *             pShiftDelayStrMod[]                     = {"12.5ms", "25ms", "50ms", "100ms", NULL};
+const char *             twoToInSourceStrMap[]                   = {"In1/2", "In3/4", "Bus1/2", "Bus3/4", NULL};
+const char *             fourToInSourceStrMap[]                  = {"In", "Bus", NULL};
+const char *             delayRangeStrMap[]                      = {"5ms", "25ms", "100ms", "500ms", "1.0s", "2.0s", "2.7s", NULL};
+const char *             delayABRangeStrMap[]                    = {"500ms", "1.0s", "2.0s", "2.7s", NULL};
+const char *             dlyStereoRangeStrMap[]                  = {"500ms", "1.0s", "1.35s", NULL};
+const char *             timeClkStrMap[]                         = {"Time", "Clk", NULL};
+const char *             ratioFixedStrMap[]                      = {"Ratio", "Fixed", NULL};
+const char *             detuneStrMap[]                          = {"-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "+1", "+2", "+3", "+4", "+5", "+6", "+7", NULL};
+const char *             operator07StrMap[]                      = {"0", "1", "2", "3", "4", "5", "6", "7", NULL};
+const char *             operatorDepthStrMap[]                   = {"-Lin", "-Exp", "+Exp", "+Lin", NULL};
+const char *             phaserTypeStrMap[]                      = {"Type I", "Type II", NULL};
+const char *             invertStrMap[]                          = {"m", "1-m", NULL};
+const char *             monoKeyStrMap[]                         = {"Last", "Lo", "Hi", NULL};
+const char *             edgeStepStrMap[]                        = {"100%", "75%", "50%", "25%", "0%", NULL};
+const char *             vocoderStrMap[]                         = {"Off", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", NULL};
+const char *             sw8to1SelStrMap[]                       = {"Lo", "64'", "32'", "16'", "8'", "4'", "2'", "1'", NULL};
+const char *             seqXFadeStrMap[]                        = {"Off", "25%", "50%", "100%", NULL};
+const char *             clkSyncStrMap[]                         = {"64/1", "48/1",  "32/1",  "24/1", "16/1",  "12/1",  "8/1",  "6/1",   "4/1",  "3/1", "2/1",   "1/1D",
+                                                                    "1/1",                                      "1/2D",  "1/1T",  "1/2",  "1/4D",  "1/2T",  "1/4",  "1/8D",  "1/4T", "1/8", "1/16D", "1/8T",
+                                                                    "1/16",                                     "1/32D", "1/16T", "1/32", "1/64D", "1/32T", "1/64", "1/64T", NULL};
+const char *             noteNameStrMap[]                        = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", NULL};
+const char *             morphStrMap[]                           = {"Wheel", "Vel", "Keyb", "Aft.Tch", "Sust.Pd", "Ctrl.Pd", "P.Stick", "G.Wh", NULL};
+const char *             env_timesStrMap[]                       = {"0.0005ms", "0.0006ms", "0.0007ms", "0.0009ms", "0.0011ms", "0.0013ms", "0.0015ms", "0.0018ms", "0.0021ms", "0.0025ms", "0.0030ms", "0.0035ms", "0.0040ms", "0.0047ms", "0.0055ms", "0.0063ms", "0.0073ms", "0.0084ms", "0.0097ms", "0.0111ms", "0.0127ms", "0.0145ms", "0.0165ms", "0.0187ms", "0.0212ms", "0.0240ms", "0.0271ms", "0.0306ms", "0.0344ms", "0.0387ms", "0.0434ms", "0.0486ms", "0.0543ms", "0.0606ms", "0.0676ms", "0.0752ms", "0.0836ms", "0.0928ms", "0.1030ms", "0.1140ms", "0.1260ms", "0.1390ms", "0.1530ms", "0.1690ms", "0.1860ms", "0.2040ms", "0.2240ms", "0.2460ms", "0.2690ms", "0.2950ms", "0.3220ms", "0.3520ms", "0.3840ms", "0.4190ms", "0.4560ms", "0.4960ms", "0.5400ms", "0.5860ms", "0.6360ms", "0.6900ms", "0.7480ms", "0.8100ms", "0.8760ms", "0.9470ms", "1.0200ms", "1.1000ms", "1.1900ms", "1.2800ms", "1.3800ms", "1.4900ms", "1.6000ms", "1.7200ms", "1.8500ms", "1.9900ms", "2.1300ms", "2.2800ms", "2.4600ms", "2.6200ms", "2.8100ms", "3.0000ms", "3.2100ms", "3.4300ms", "3.6600ms", "3.9100ms", "4.1700ms", "4.4500ms", "4.7400ms", "5.0500ms", "5.3700ms", "5.7200ms", "6.0800ms", "6.4700ms", "6.8700ms", "7.3000ms", "7.7500ms", "8.2200ms", "8.7200ms", "9.2500ms", "9.8000ms", "10.400ms", "11.000ms", "11.600ms", "12.300ms", "13.000ms", "13.800ms", "14.600ms", "15.400ms", "16.200ms", "17.100ms", "18.100ms", "19.100ms", "20.100ms", "21.200ms", "22.400ms", "23.500ms", "24.800ms", "26.100ms", "27.500ms", "28.900ms", "30.400ms", "32.000ms", "33.600ms", "35.300ms", "37.100ms", "38.900ms", "40.900ms", "42.900ms", "45.000ms", NULL};
+const char *             unknown_timesStrMap[]                   = {"0.2m", "0.3m", "0.4m", "0.5m", "0.6m", "0.8m", "0.9m", "1.0m", "1.2m", "1.4m", "1.6m", "1.7m", "2.0m", "2.2m", "2.4m", "2.6m", "2.9m", "3.1m", "3.4m", "3.7m", "4.0m", "4.3m", "4.6m", "4.9m", "5.3m", "5.6m", "6.0m", "6.3m", "6.7m", "7.1m", "7.5m", "7.9m", "8.4m", "8.8m", "9.3m", "9.7m", "10.2m", "10.7m", "11.2m", "11.7m", "12.2m", "12.7m", "13.3m", "13.8m", "14.4m", "14.9m", "15.5m", "16.1m", "16.7m", "17.4m", "18.0m", "18.6m", "19.3m", "19.9m", "20.6m", "21.3m", "22.0m", "22.7m", "23.4m", "24.1m", "24.9m", "25.6m", "26.4m", "27.2m", "28.0m", "28.8m", "29.6m", "30.4m", "31.2m", "32.1m", "32.9m", "33.8m", "34.6m", "35.5m", "36.4m", "37.3m", "38.3m", "39.2m", "40.1m", "41.1m", "42.0m", "43.0m", "44.0m", "45.0m", "46.0m", "47.0m", "48.1m", "49.1m", "50.2m", "51.2m", "52.3m", "53.4m", "54.5m", "55.6m", "56.7m", "57.9m", "59.0m", "60.2m", "61.3m", "62.5m", "63.7m", "64.9m", "66.1m", "67.3m", "68.6m", "69.8m", "71.1m", "72.3m", "73.6m", "74.9m", "76.2m", "77.5m", "78.8m", "80.2m", "81.5m", "82.9m", "84.2m", "85.6m", "87.0m", "88.4m", "89.8m", "91.2m", "92.7m", "94.1m", "95.6m", "97.0m", "98.5m", "100m", NULL};
+const char *             compr_attack_timesStrMap[]              = {"Fast", "0.53m", "0.56m", "0.59m", "0.63m", "0.67m", "0.71m", "0.75m", "0.79m", "0.84m", "0.89m", "0.94m", "1.00m", "1.06m", "1.12m", "1.19m", "1.26m", "1.33m", "1.41m", "1.50m", "1.59m", "1.68m", "1.78m", "1.89m", "2.00m", "2.12m", "2.24m", "2.38m", "2.52m", "2.67m", "2.83m", "3.00m", "3.17m", "3.36m", "3.56m", "3.78m", "4.00m", "4.24m", "4.49m", "4.76m", "5.04m", "5.34m", "5.66m", "5.99m", "6.35m", "6.73m", "7.13m", "7.55m", "8.00m", "8.48m", "8.98m", "9.51m", "10.1m", "10.7m", "11.3m", "12.0m", "12.7m", "13.5m", "14.3m", "15.1m", "16.0m", "17.0m", "18.0m", "19.0m", "20.2m", "21.4m", "22.6m", "24.0m", "25.4m", "26.9m", "28.5m", "30.2m", "32.0m", "33.9m", "35.9m", "38.1m", "40.3m", "42.7m", "45.3m", "47.9m", "50.8m", "53.8m", "57.0m", "60.4m", "64.0m", "67.8m", "71.8m", "76.1m", "80.6m", "85.4m", "90.5m", "95.9m", " 102m", " 108m", " 114m", " 121m", " 128m", " 136m", " 144m", " 152m", " 161m", " 171m", " 181m", " 192m", " 203m", " 215m", " 228m", " 242m", " 256m", " 271m", " 287m", " 304m", " 323m", " 342m", " 362m", " 384m", " 406m", " 431m", " 456m", " 483m", " 512m", " 542m", " 575m", " 609m", " 645m", " 683m", " 724m", " 767m", NULL};
+const char *             compr_release_timesStrMap[]             = {" 125m", " 129m", " 134m", " 139m", " 144m", " 149m", " 154m", " 159m", " 165m", " 171m", " 177m", " 183m", " 189m", " 196m", " 203m", " 210m", " 218m", " 225m", " 233m", " 241m", " 250m", " 259m", " 268m", " 277m", " 287m", " 297m", " 308m", " 319m", " 330m", " 342m", " 354m", " 366m", " 379m", " 392m", " 406m", " 420m", " 435m", " 451m", " 467m", " 483m", " 500m", " 518m", " 536m", " 555m", " 574m", " 595m", " 616m", " 637m", " 660m", " 683m", " 707m", " 732m", " 758m", " 785m", " 812m", " 841m", " 871m", " 901m", " 933m", " 966m", "1.00s", "1.04s", "1.07s", "1.11s", "1.15s", "1.19s", "1.23s", "1.27s", "1.32s", "1.37s", "1.41s", "1.46s", "1.52s", "1.57s", "1.62s", "1.68s", "1.74s", "1.80s", "1.87s", "1.93s", "2.00s", "2.07s", "2.14s", "2.22s", "2.30s", "2.38s", "2.46s", "2.55s", "2.64s", "2.73s", "2.83s", "2.93s", "3.03s", "3.14s", "3.25s", "3.36s", "3.48s", "3.61s", "3.73s", "3.86s", "4.00s", "4.14s", "4.29s", "4.44s", "4.59s", "4.76s", "4.92s", "5.10s", "5.28s", "5.46s", "5.66s", "5.86s", "6.06s", "6.28s", "6.50s", "6.73s", "6.96s", "7.21s", "7.46s", "7.73s", "8.00s", "8.28s", "8.57s", "8.88s", "9.19s", "9.51s", "9.85s", "10.2s", NULL};
+const char *             filter_resonanceStrMap[]                = {"0.50", "0.51", "0.51", "0.52", "0.53", "0.54", "0.55", "0.55", "0.56", "0.57", "0.58", "0.59", "0.60", "0.61", "0.62", "0.63", "0.64", "0.64", "0.66", "0.67", "0.68", "0.69", "0.70", "0.71", "0.73", "0.74", "0.75", "0.76", "0.78", "0.79", "0.81", "0.82", "0.84", "0.84", "0.87", "0.88", "0.90", "0.92", "0.94", "0.95", "0.97", "0.99", "1.01", "1.03", "1.06", "1.08", "1.10", "1.12", "1.15", "1.17", "1.20", "1.23", "1.25", "1.28", "1.31", "1.34", "1.37", "1.41", "1.44", "1.48", "1.51", "1.55", "1.59", "1.63", "1.67", "1.72", "1.76", "1.81", "1.86", "1.91", "1.97", "2.03", "2.08", "2.15", "2.21", "2.28", "2.35", "2.42", "2.50", "2.58", "2.67", "2.76", "2.85", "2.95", "3.05", "3.16", "3.28", "3.40", "3.53", "3.67", "3.81", "3.96", "4.13", "4.30", "4.49", "4.68", "4.89", "5.12", "5.36", "5.61", "5.89", "6.19", "6.51", "6.85", "7.23", "7.64", "8.08", "8.56", "9.08", "9.66", "10", "11", "12", "13", "14", "15", "16", "17", "19", "20", "22", "25", "27", "30", "34", "38", "44", "50", NULL};
+const char *             phaser_freqStrMap[]                     = {"0.05Hz", "0.05Hz", "0.05Hz", "0.05Hz", "0.06Hz", "0.06Hz", "0.07Hz", "0.08Hz", "0.09Hz", "0.10Hz", "0.12Hz", "0.13Hz", "0.15Hz", "0.17Hz", "0.19Hz", "0.21Hz", "0.23Hz", "0.25Hz", "0.28Hz", "0.30Hz", "0.33Hz", "0.36Hz", "0.39Hz", "0.42Hz", "0.46Hz", "0.49Hz", "0.53Hz", "0.57Hz", "0.61Hz", "0.65Hz", "0.69Hz", "0.73Hz", "0.78Hz", "0.82Hz", "0.87Hz", "0.92Hz", "0.97Hz", "1.02Hz", "1.08Hz", "1.13Hz", "1.19Hz", "1.25Hz", "1.31Hz", "1.37Hz", "1.43Hz", "1.49Hz", "1.56Hz", "1.63Hz", "1.69Hz", "1.76Hz", "1.83Hz", "1.91Hz", "1.98Hz", "2.05Hz", "2.13Hz", "2.21Hz", "2.29Hz", "2.37Hz", "2.45Hz", "2.53Hz", "2.62Hz", "2.71Hz", "2.80Hz", "2.88Hz", "2.98Hz", "3.07Hz", "3.16Hz", "3.26Hz", "3.35Hz", "3.45Hz", "3.55Hz", "3.65Hz", "3.75Hz", "3.86Hz", "3.96Hz", "4.07Hz", "4.18Hz", "4.29Hz", "4.40Hz", "4.51Hz", "4.62Hz", "4.74Hz", "4.86Hz", "4.97Hz", "5.09Hz", "5.21Hz", "5.34Hz", "5.46Hz", "5.58Hz", "5.71Hz", "5.84Hz", "5.97Hz", "6.10Hz", "6.23Hz", "6.37Hz", "6.50Hz", "6.64Hz", "6.77Hz", "6.92Hz", "7.06Hz", "7.20Hz", "7.34Hz", "7.49Hz", "7.63Hz", "7.78Hz", "7.93Hz", "8.08Hz", "8.23Hz", "8.39Hz", "8.54Hz", "8.70Hz", "8.86Hz", "9.02Hz", "9.18Hz", "9.34Hz", "9.50Hz", "9.67Hz", "9.84Hz", "10.0Hz", "10.2Hz", "10.3Hz", "10.5Hz", "10.7Hz", "10.9Hz", "11.0Hz", "11.2Hz", "11.4Hz", "11.6Hz", NULL};
+const char *             flanger_rateStrMap[]                    = {"0.01Hz", "0.02Hz", "0.05Hz", "0.07Hz", "0.09Hz", "0.11Hz", "0.14Hz", "0.16Hz", "0.18Hz", "0.21Hz", "0.23Hz", "0.25Hz", "0.27Hz", "0.30Hz", "0.32Hz", "0.34Hz", "0.37Hz", "0.39Hz", "0.41Hz", "0.43Hz", "0.46Hz", "0.48Hz", "0.50Hz", "0.53Hz", "0.55Hz", "0.57Hz", "0.60Hz", "0.62Hz", "0.64Hz", "0.66Hz", "0.69Hz", "0.71Hz", "0.73Hz", "0.76Hz", "0.78Hz", "0.80Hz", "0.82Hz", "0.85Hz", "0.87Hz", "0.89Hz", "0.92Hz", "0.94Hz", "0.96Hz", "0.98Hz", "1.01Hz", "1.03Hz", "1.05Hz", "1.08Hz", "1.10Hz", "1.12Hz", "1.14Hz", "1.17Hz", "1.19Hz", "1.21Hz", "1.24Hz", "1.26Hz", "1.28Hz", "1.30Hz", "1.33Hz", "1.35Hz", "1.37Hz", "1.40Hz", "1.42Hz", "1.44Hz", "1.46Hz", "1.49Hz", "1.51Hz", "1.53Hz", "1.56Hz", "1.58Hz", "1.60Hz", "1.63Hz", "1.65Hz", "1.67Hz", "1.69Hz", "1.72Hz", "1.74Hz", "1.76Hz", "1.79Hz", "1.81Hz", "1.83Hz", "1.85Hz", "1.88Hz", "1.90Hz", "1.92Hz", "1.95Hz", "1.97Hz", "1.99Hz", "2.01Hz", "2.04Hz", "2.06Hz", "2.08Hz", "2.11Hz", "2.13Hz", "2.15Hz", "2.17Hz", "2.20Hz", "2.22Hz", "2.24Hz", "2.27Hz", "2.29Hz", "2.31Hz", "2.33Hz", "2.36Hz", "2.38Hz", "2.40Hz", "2.43Hz", "2.45Hz", "2.47Hz", "2.49Hz", "2.52Hz", "2.54Hz", "2.56Hz", "2.59Hz", "2.61Hz", "2.63Hz", "2.66Hz", "2.68Hz", "2.70Hz", "2.72Hz", "2.75Hz", "2.77Hz", "2.79Hz", "2.82Hz", "2.84Hz", "2.86Hz", "2.88Hz", "2.91Hz", NULL};
+const char *             freq_shift_subStrMap[]                  = {"0.000Hz", "0.000Hz", "0.000Hz", "0.000Hz", "0.000Hz", "0.001Hz", "0.001Hz", "0.001Hz", "0.002Hz", "0.003Hz", "0.004Hz", "0.006Hz", "0.007Hz", "0.009Hz", "0.012Hz", "0.014Hz", "0.018Hz", "0.021Hz", "0.025Hz", "0.029Hz", "0.034Hz", "0.040Hz", "0.046Hz", "0.052Hz", "0.059Hz", "0.067Hz", "0.075Hz", "0.084Hz", "0.094Hz", "0.10Hz", "0.12Hz", "0.13Hz", "0.14Hz", "0.15Hz", "0.17Hz", "0.18Hz", "0.20Hz", "0.22Hz", "0.24Hz", "0.25Hz", "0.27Hz", "0.30Hz", "0.32Hz", "0.34Hz", "0.37Hz", "0.39Hz", "0.42Hz", "0.45Hz", "0.47Hz", "0.50Hz", "0.54Hz", "0.57Hz", "0.60Hz", "0.64Hz", "0.67Hz", "0.71Hz", "0.75Hz", "0.79Hz", "0.84Hz", "0.88Hz", "0.93Hz", "0.97Hz", "1.02Hz", "1.07Hz", "1.12Hz", "1.18Hz", "1.23Hz", "1.29Hz", "1.35Hz", "1.41Hz", "1.47Hz", "1.53Hz", "1.60Hz", "1.67Hz", "1.74Hz", "1.81Hz", "1.88Hz", "1.96Hz", "2.03Hz", "2.11Hz", "2.19Hz", "2.28Hz", "2.36Hz", "2.45Hz", "2.54Hz", "2.63Hz", "2.73Hz", "2.82Hz", "2.92Hz", "3.02Hz", "3.12Hz", "3.23Hz", "3.34Hz", "3.45Hz", "3.56Hz", "3.67Hz", "3.79Hz", "3.91Hz", "4.03Hz", "4.16Hz", "4.29Hz", "4.42Hz", "4.55Hz", "4.68Hz", "4.82Hz", "4.96Hz", "5.11Hz", "5.25Hz", "5.40Hz", "5.55Hz", "5.71Hz", "5.86Hz", "6.02Hz", "6.18Hz", "6.35Hz", "6.52Hz", "6.69Hz", "6.87Hz", "7.04Hz", "7.22Hz", "7.41Hz", "7.59Hz", "7.78Hz", "7.98Hz", "8.17Hz", "8.37Hz", "8.57Hz", "8.78Hz", NULL};
+const char *             freq_shift_loStrMap[]                   = {"0.000Hz", "0.000Hz", "0.000Hz", "0.001Hz", "0.003Hz", "0.006Hz", "0.010Hz", "0.016Hz", "0.024Hz", "0.035Hz", "0.048Hz", "0.063Hz", "0.082Hz", "0.10Hz", "0.13Hz", "0.16Hz", "0.20Hz", "0.23Hz", "0.28Hz", "0.33Hz", "0.38Hz", "0.44Hz", "0.51Hz", "0.58Hz", "0.66Hz", "0.74Hz", "0.84Hz", "0.94Hz", "1.05Hz", "1.16Hz", "1.29Hz", "1.42Hz", "1.56Hz", "1.71Hz", "1.87Hz", "2.04Hz", "2.22Hz", "2.41Hz", "2.61Hz", "2.83Hz", "3.05Hz", "3.28Hz", "3.53Hz", "3.79Hz", "4.06Hz", "4.34Hz", "4.64Hz", "4.95Hz", "5.27Hz", "5.61Hz", "5.96Hz", "6.32Hz", "6.70Hz", "7.09Hz", "7.50Hz", "7.93Hz", "8.37Hz", "8.82Hz", "9.30Hz", "9.79Hz", "10.3Hz", "10.8Hz", "11.4Hz", "11.9Hz", "12.5Hz", "13.1Hz", "13.7Hz", "14.3Hz", "15.0Hz", "15.7Hz", "16.3Hz", "17.1Hz", "17.8Hz", "18.5Hz", "19.3Hz", "20.1Hz", "20.9Hz", "21.8Hz", "22.6Hz", "23.5Hz", "24.4Hz", "25.3Hz", "26.3Hz", "27.2Hz", "28.2Hz", "29.3Hz", "30.3Hz", "31.4Hz", "32.5Hz", "33.6Hz", "34.7Hz", "35.9Hz", "37.1Hz", "38.3Hz", "39.6Hz", "40.9Hz", "42.2Hz", "43.5Hz", "44.8Hz", "46.2Hz", "47.6Hz", "49.1Hz", "50.6Hz", "52.1Hz", "53.6Hz", "55.2Hz", "56.7Hz", "58.4Hz", "60.0Hz", "61.7Hz", "63.4Hz", "65.2Hz", "66.9Hz", "68.8Hz", "70.6Hz", "72.5Hz", "74.4Hz", "76.3Hz", "78.3Hz", "80.3Hz", "82.3Hz", "84.4Hz", "86.5Hz", "88.7Hz", "90.8Hz", "93.1Hz", "95.3Hz", "97.6Hz", NULL};
+const char *             freq_shift_hiStrMap[]                   = {"0.000Hz", "0.001Hz", "0.006Hz", "0.021Hz", "0.049Hz", "0.096Hz", "0.17Hz", "0.26Hz", "0.39Hz", "0.56Hz", "0.77Hz", "1.02Hz", "1.32Hz", "1.68Hz", "2.10Hz", "2.58Hz", "3.14Hz", "3.76Hz", "4.46Hz", "5.25Hz", "6.12Hz", "7.09Hz", "8.15Hz", "9.31Hz", "10.6Hz", "12.0Hz", "13.5Hz", "15.1Hz", "16.8Hz", "18.7Hz", "20.7Hz", "22.8Hz", "25.1Hz", "27.5Hz", "30.1Hz", "32.8Hz", "35.7Hz", "38.8Hz", "42.0Hz", "45.4Hz", "49.0Hz", "52.8Hz", "56.7Hz", "60.9Hz", "65.2Hz", "69.8Hz", "74.5Hz", "79.5Hz", "84.7Hz", "90.1Hz", "95.7Hz", "102Hz", "108Hz", "114Hz", "121Hz", "127Hz", "134Hz", "142Hz", "149Hz", "157Hz", "165Hz", "174Hz", "182Hz", "191Hz", "201Hz", "210Hz", "220Hz", "230Hz", "241Hz", "251Hz", "263Hz", "274Hz", "286Hz", "298Hz", "310Hz", "323Hz", "336Hz", "349Hz", "363Hz", "377Hz", "392Hz", "407Hz", "422Hz", "438Hz", "454Hz", "470Hz", "487Hz", "504Hz", "522Hz", "540Hz", "558Hz", "577Hz", "596Hz", "616Hz", "636Hz", "656Hz", "677Hz", "699Hz", "720Hz", "743Hz", "765Hz", "789Hz", "812Hz", "836Hz", "861Hz", "886Hz", "912Hz", "938Hz", "964Hz", "991Hz", "1019Hz", "1047Hz", "1075Hz", "1105Hz", "1134Hz", "1164Hz", "1195Hz", "1226Hz", "1258Hz", "1290Hz", "1323Hz", "1356Hz", "1390Hz", "1424Hz", "1459Hz", "1495Hz", "1531Hz", "1568Hz", NULL};
+const char *             pulse_delay_rangeStrMap[]               = {"10.4ms", "11.1ms", "11.9ms", "12.8ms", "13.7ms", "14.7ms", "15.8ms", "16.9ms", "18.1ms", "19.4ms", "20.8ms", "22.3ms", "23.9ms", "25.6ms", "27.5ms", "29.4ms", "31.6ms", "33.8ms", "36.3ms", "38.9ms", "41.7ms", "44.8ms", "48.0ms", "51.5ms", "55.2ms", "59.3ms", "63.6ms", "68.2ms", "73.2ms", "78.5ms", "84.2ms", "90.4ms", "97.0ms", "104ms", "112ms", "120ms", "129ms", "138ms", "148ms", "159ms", "171ms", "183ms", "197ms", "211ms", "227ms", "244ms", "262ms", "281ms", "302ms", "324ms", "348ms", "374ms", "402ms", "432ms", "464ms", "498ms", "535ms", "575ms", "618ms", "664ms", "713ms", "767ms", "824ms", "886ms", "952ms", "1030ms", "1100ms", "1190ms", "1280ms", "1370ms", "1470ms", "1580ms", "1700ms", "1830ms", "1970ms", "2120ms", "2280ms", "2450ms", "2630ms", "2830ms", "3050ms", "3280ms", "3530ms", "3790ms", "4080ms", "4390ms", "4720ms", "5080ms", "5470ms", "5890ms", "6340ms", "6820ms", "7340ms", "7900ms", "8500ms", "9160ms", "9860ms", "10700ms", "11500ms", "12400ms", "13300ms", "14300ms", "15400ms", "16600ms", "17900ms", "19300ms", "20700ms", "22300ms", "24100ms", "25900ms", "27900ms", "30100ms", "32400ms", "34900ms", "37600ms", "40600ms", "43700ms", "47100ms", "50800ms", "54800ms", "59000ms", "63600ms", "68600ms", "74000ms", "79800ms", "86000ms", "92800ms", "100000ms", NULL};
+const char *             env_follow_attackStrMap[]               = {"0.00ms", "0.53ms", "0.56ms", "0.60ms", "0.64ms", "0.67ms", "0.72ms", "0.76ms", "0.81ms", "0.86ms", "0.91ms", "0.97ms", "1.03ms", "1.09ms", "1.16ms", "1.23ms", "1.30ms", "1.38ms", "1.47ms", "1.56ms", "1.66ms", "1.76ms", "1.87ms", "1.98ms", "2.10ms", "2.23ms", "2.37ms", "2.52ms", "2.67ms", "2.84ms", "3.01ms", "3.20ms", "3.39ms", "3.60ms", "3.83ms", "4.06ms", "4.31ms", "4.58ms", "4.86ms", "5.16ms", "5.48ms", "5.82ms", "6.18ms", "6.56ms", "6.96ms", "7.39ms", "7.85ms", "8.33ms", "8.84ms", "9.39ms", "9.97ms", "10.6ms", "11.2ms", "11.9ms", "12.7ms", "13.4ms", "14.3ms", "15.2ms", "16.1ms", "17.1ms", "18.1ms", "19.3ms", "20.4ms", "21.7ms", "23.0ms", "24.5ms", "26.0ms", "27.6ms", "29.3ms", "31.1ms", "33.0ms", "35.0ms", "37.2ms", "39.5ms", "41.9ms", "44.5ms", "47.3ms", "50.2ms", "53.3ms", "56.5ms", "60.0ms", "63.7ms", "67.7ms", "71.8ms", "76.3ms", "81.0ms", "86.0ms", "91.3ms", "96.9ms", "103ms", "109ms", "116ms", "123ms", "131ms", "139ms", "147ms", "156ms", "166ms", "176ms", "187ms", "199ms", "211ms", "224ms", "238ms", "253ms", "268ms", "285ms", "302ms", "321ms", "341ms", "362ms", "384ms", "408ms", "433ms", "459ms", "488ms", "518ms", "550ms", "584ms", "620ms", "659ms", "699ms", "742ms", "787ms", "837ms", "888ms", "942ms", "1000ms", NULL};
+const char *             env_follow_releaseStrMap[]              = {"10.0ms", "10.5ms", "10.9ms", "11.4ms", "12.0ms", "12.5ms", "13.1ms", "13.7ms", "14.3ms", "15.0ms", "15.7ms", "16.4ms", "17.1ms", "17.9ms", "18.8ms", "19.6ms", "20.5ms", "21.5ms", "22.4ms", "23.5ms", "24.6ms", "25.7ms", "26.9ms", "28.1ms", "29.4ms", "30.7ms", "32.1ms", "33.6ms", "35.2ms", "36.8ms", "38.5ms", "40.2ms", "42.1ms", "44.0ms", "46.0ms", "48.2ms", "50.4ms", "52.7ms", "55.1ms", "57.6ms", "60.3ms", "63.1ms", "66.0ms", "69.0ms", "72.2ms", "75.5ms", "78.9ms", "82.6ms", "86.3ms", "90.3ms", "94.5ms", "98.8ms", "103ms", "108ms", "113ms", "118ms", "124ms", "129ms", "135ms", "142ms", "148ms", "155ms", "162ms", "169ms", "177ms", "185ms", "194ms", "203ms", "212ms", "222ms", "232ms", "243ms", "254ms", "265ms", "278ms", "291ms", "304ms", "318ms", "332ms", "347ms", "363ms", "380ms", "398ms", "416ms", "435ms", "455ms", "476ms", "498ms", "521ms", "545ms", "570ms", "596ms", "624ms", "652ms", "682ms", "713ms", "747ms", "780ms", "816ms", "854ms", "894ms", "934ms", "977ms", "1020ms", "1070ms", "1120ms", "1170ms", "1220ms", "1280ms", "1340ms", "1400ms", "1460ms", "1530ms", "1600ms", "1680ms", "1760ms", "1840ms", "1920ms", "2010ms", "2100ms", "2200ms", "2300ms", "2410ms", "2520ms", "2630ms", "2760ms", "2870ms", "3000ms", NULL};
+const char *             noise_gate_attackStrMap[]               = {"0.2ms", "0.3ms", "0.4ms", "0.5ms", "0.6ms", "0.8ms", "0.9ms", "1.0ms", "1.2ms", "1.4ms", "1.6ms", "1.7ms", "2.0ms", "2.2ms", "2.4ms", "2.6ms", "2.9ms", "3.1ms", "3.4ms", "3.7ms", "4.0ms", "4.3ms", "4.6ms", "4.9ms", "5.3ms", "5.6ms", "6.0ms", "6.3ms", "6.7ms", "7.1ms", "7.5ms", "7.9ms", "8.4ms", "8.8ms", "9.3ms", "9.7ms", "10.2ms", "10.7ms", "11.2ms", "11.7ms", "12.2ms", "12.7ms", "13.3ms", "13.8ms", "14.4ms", "14.9ms", "15.5ms", "16.1ms", "16.7ms", "17.4ms", "18.0ms", "18.6ms", "19.3ms", "19.9ms", "20.6ms", "21.3ms", "22.0ms", "22.7ms", "23.4ms", "24.1ms", "24.9ms", "25.6ms", "26.4ms", "27.2ms", "28.0ms", "28.8ms", "29.6ms", "30.4ms", "31.2ms", "32.1ms", "32.9ms", "33.8ms", "34.6ms", "35.5ms", "36.4ms", "37.3ms", "38.3ms", "39.2ms", "40.1ms", "41.1ms", "42.0ms", "43.0ms", "44.0ms", "45.0ms", "46.0ms", "47.0ms", "48.1ms", "49.1ms", "50.2ms", "51.2ms", "52.3ms", "53.4ms", "54.5ms", "55.6ms", "56.7ms", "57.9ms", "59.0ms", "60.2ms", "61.3ms", "62.5ms", "63.7ms", "64.9ms", "66.1ms", "67.3ms", "68.6ms", "69.8ms", "71.1ms", "72.3ms", "73.6ms", "74.9ms", "76.2ms", "77.5ms", "78.8ms", "80.2ms", "81.5ms", "82.9ms", "84.2ms", "85.6ms", "87.0ms", "88.4ms", "89.8ms", "91.2ms", "92.7ms", "94.1ms", "95.6ms", "97.0ms", "98.5ms", "100ms", NULL};
+const char *             noise_gate_releaseStrMap[]              = {"0.5ms", "0.59ms", "0.67ms", "0.76ms", "0.87ms", "0.98ms", "1.11ms", "1.25ms", "1.40ms", "1.57ms", "1.75ms", "1.95ms", "2.17ms", "2.41ms", "2.66ms", "2.94ms", "3.25ms", "3.57ms", "3.92ms", "4.30ms", "4.71ms", "5.15ms", "5.62ms", "6.12ms", "6.66ms", "7.24ms", "7.85ms", "8.51ms", "9.21ms", "9.96ms", "10.7ms", "11.6ms", "12.5ms", "13.4ms", "14.4ms", "15.5ms", "16.6ms", "17.8ms", "19.1ms", "20.4ms", "21.8ms", "23.3ms", "24.9ms", "26.5ms", "28.2ms", "30.0ms", "32.0ms", "34.0ms", "36.1ms", "38.3ms", "40.6ms", "43.0ms", "45.5ms", "48.2ms", "51.0ms", "53.9ms", "56.9ms", "60.1ms", "63.4ms", "66.8ms", "70.4ms", "74.2ms", "78.1ms", "82.2ms", "86.4ms", "90.9ms", "95.5ms", "100ms", "105ms", "110ms", "116ms", "121ms", "127ms", "133ms", "139ms", "146ms", "153ms", "160ms", "167ms", "174ms", "182ms", "190ms", "198ms", "207ms", "216ms", "225ms", "234ms", "244ms", "254ms", "265ms", "275ms", "286ms", "298ms", "310ms", "322ms", "335ms", "348ms", "361ms", "375ms", "389ms", "404ms", "419ms", "434ms", "450ms", "467ms", "484ms", "501ms", "519ms", "537ms", "556ms", "578ms", "596ms", "616ms", "638ms", "659ms", "682ms", "705ms", "728ms", "752ms", "777ms", "802ms", "828ms", "855ms", "883ms", "911ms", "940ms", "970ms", "1000ms", NULL};
+const char *             noisegate_pitchtrack_threshholdStrMap[] = {"-100.0dB", "-42.1dB", "-36.1dB", "-32.5dB", "-30.0dB", "-28.1dB", "-26.5dB", "-25.2dB", "-24.0dB", "-23.0dB", "-22.1dB", "-21.2dB", "-20.5dB", "-19.8dB", "-19.2dB", "-18.6dB", "-18.0dB", "-17.5dB", "-17.0dB", "-16.5dB", "-16.1dB", "-15.6dB", "-15.2dB", "-14.8dB", "-14.5dB", "-14.1dB", "-13.8dB", "-13.4dB", "-13.1dB", "-12.8dB", "-12.5dB", "-12.2dB", "-12.0dB", "-11.7dB", "-11.4dB", "-11.2dB", "-11.0dB", "-10.7dB", "-10.5dB", "-10.3dB", "-10.0dB", "-9.8dB", "-9.6dB", "-9.4dB", "-9.2dB", "-9.0dB", "-8.8dB", "-8.6dB", "-8.5dB", "-8.3dB", "-8.1dB", "-7.9dB", "-7.8dB", "-7.6dB", "-7.4dB", "-7.3dB", "-7.1dB", "-7.0dB", "-6.8dB", "-6.7dB", "-6.5dB", "-6.4dB", "-6.2dB", "-6.1dB", "-6.0dB", "-5.8dB", "-5.7dB", "-5.6dB", "-5.4dB", "-5.3dB", "-5.2dB", "-5.1dB", "-4.9dB", "-4.8dB", "-4.7dB", "-4.6dB", "-4.5dB", "-4.3dB", "-4.2dB", "-4.1dB", "-4.0dB", "-3.9dB", "-3.8dB", "-3.7dB", "-3.6dB", "-3.5dB", "-3.4dB", "-3.3dB", "-3.2dB", "-3.1dB", "-3.0dB", "-2.9dB", "-2.8dB", "-2.7dB", "-2.6dB", "-2.5dB", "-2.4dB", "-2.3dB", "-2.3dB", "-2.2dB", "-2.1dB", "-2.0dB", "-1.9dB", "-1.8dB", "-1.7dB", "-1.7dB", "-1.6dB", "-1.5dB", "-1.4dB", "-1.3dB", "-1.2dB", "-1.2dB", "-1.1dB", "-1.0dB", "-0.9dB", "-0.9dB", "-0.8dB", "-0.7dB", "-0.6dB", "-0.6dB", "-0.5dB", "-0.4dB", "-0.3dB", "-0.3dB", "-0.2dB", "-0.1dB", "-0.1dB", "-0.0dB", NULL};
+const char *             patchVolumeStrMap[]                     = {"-78dB", "-77dB", "-76dB", "-74dB", "-73dB", "-72dB", "-71dB", "-70dB", "-68dB", "-67dB", "-66dB", "-65dB", "-64dB", "-63dB", "-62dB", "-61dB", "-60dB", "-59dB", "-58dB", "-57dB", "-56dB", "-55dB", "-54dB", "-53dB", "-52dB", "-51dB", "-50dB", "-49dB", "-48dB", "-48dB", "-47dB", "-46dB", "-45dB", "-44dB", "-43dB", "-43dB", "-42dB", "-41dB", "-40dB", "-39dB", "-39dB", "-38dB", "-37dB", "-36dB", "-36dB", "-35dB", "-34dB", "-34dB", "-33dB", "-32dB", "-32dB", "-31dB", "-30dB", "-30dB", "-29dB", "-28dB", "-28dB", "-27dB", "-27dB", "-26dB", "-26dB", "-25dB", "-24dB", "-24dB", "-23dB", "-23dB", "-22dB", "-22dB", "-21dB", "-21dB", "-20dB", "-20dB", "-19dB", "-19dB", "-18dB", "-18dB", "-17dB", "-17dB", "-16dB", "-16dB", "-15dB", "-15dB", "-15dB", "-14dB", "-14dB", "-13dB", "-13dB", "-12dB", "-12dB", "-12dB", "-11dB", "-11dB", "-11dB", "-10dB", "-9.8dB", "-9.4dB", "-9.1dB", "-8.7dB", "-8.4dB", "-8.0dB", "-7.7dB", "-7.4dB", "-7.0dB", "-6.7dB", "-6.4dB", "-6.1dB", "-5.7dB", "-5.4dB", "-5.1dB", "-4.8dB", "-4.5dB", "-4.2dB", "-3.9dB", "-3.6dB", "-3.4dB", "-3.1dB", "-2.8dB", "-2.5dB", "-2.3dB", "-2.0dB", "-1.7dB", "-1.5dB", "-1.2dB", "-1.0dB", "-0.7dB", "-0.5dB", "-0.2dB", "-0.0dB", NULL};
+const char *             glide_timeStrMap[]                      = {"0.2ms", "0.2ms", "0.3ms", "0.4ms", "0.5ms", "0.6ms", "0.7ms", "0.9ms", "1.0ms", "1.2ms", "1.4ms", "1.7ms", "2.0ms", "2.3ms", "2.7ms", "3.1ms", "3.6ms", "4.2ms", "4.8ms", "5.5ms", "6.3ms", "7.2ms", "8.2ms", "9.3ms", "11ms", "12ms", "14ms", "15ms", "17ms", "19ms", "22ms", "24ms", "27ms", "30ms", "34ms", "38ms", "42ms", "46ms", "51ms", "57ms", "63ms", "69ms", "77ms", "84ms", "93ms", "102ms", "112ms", "123ms", "135ms", "147ms", "161ms", "178ms", "192ms", "209ms", "228ms", "248ms", "270ms", "293ms", "318ms", "345ms", "374ms", "405ms", "438ms", "473ms", "511ms", "552ms", "595ms", "642ms", "691ms", "744ms", "800ms", "860ms", "924ms", "992ms", "1100ms", "1100ms", "1200ms", "1300ms", "1400ms", "1500ms", "1600ms", "1700ms", "1800ms", "2000ms", "2100ms", "2200ms", "2400ms", "2500ms", "2700ms", "2900ms", "3000ms", "3200ms", "3400ms", "3600ms", "3900ms", "4100ms", "4400ms", "4600ms", "4900ms", "5200ms", "5500ms", "5800ms", "6100ms", "6500ms", "6900ms", "7300ms", "7700ms", "8000ms", "8600ms", "9000ms", "9500ms", "10100ms", "10600ms", "11100ms", "11700ms", "12400ms", "13000ms", "13700ms", "14400ms", "15200ms", "15800ms", "16800ms", "17500ms", "18300ms", "19200ms", "20200ms", "21200ms", "22400ms", NULL};
+const char *             patch_settings_glideStrMap[]            = {"19ms", "20ms", "21ms", "23ms", "24ms", "26ms", "27ms", "29ms", "31ms", "33ms", "35ms", "37ms", "40ms", "42ms", "45ms", "48ms", "51ms", "55ms", "58ms", "62ms", "66ms", "71ms", "75ms", "80ms", "86ms", "91ms", "97ms", "104ms", "110ms", "118ms", "125ms", "133ms", "142ms", "151ms", "160ms", "170ms", "181ms", "192ms", "203ms", "215ms", "227ms", "240ms", "253ms", "267ms", "281ms", "296ms", "311ms", "326ms", "342ms", "358ms", "374ms", "390ms", "406ms", "423ms", "440ms", "456ms", "473ms", "490ms", "506ms", "523ms", "540ms", "556ms", "573ms", "589ms", "605ms", "621ms", "637ms", "653ms", "669ms", "685ms", "701ms", "717ms", "733ms", "749ms", "765ms", "781ms", "798ms", "815ms", "832ms", "849ms", "867ms", "885ms", "903ms", "922ms", "942ms", "962ms", "983ms", "1000ms", "1030ms", "1050ms", "1070ms", "1100ms", "1130ms", "1150ms", "1180ms", "1210ms", "1240ms", "1280ms", "1310ms", "1350ms", "1390ms", "1430ms", "1470ms", "1520ms", "1570ms", "1620ms", "1680ms", "1740ms", "1800ms", "1870ms", "1950ms", "2030ms", "2120ms", "2220ms", "2330ms", "2450ms", "2580ms", "2720ms", "2890ms", "3070ms", "3280ms", "3520ms", "3800ms", "4120ms", "4510ms", "4980ms", "5550ms", "6270ms", NULL};
+const char *             dbLvlStrMap[]                           = {"-100.0dB", "-99.9dB", "-99.0dB", "-72.1dB", "-69.2dB", "-66.9dB", "-64.8dB", "-62.9dB",
+                                                                    "-61.1dB",                                        "-59dB",   "-57.9dB", "-56.4dB", "-55.0dB", "-53.6dB", "-52.3dB", "-51.0dB",
+                                                                    "-49.8dB",                                        "-48.6dB", "-47.5dB", "-46.4dB", "-45.3dB", "-44.3dB", "-43.3dB", "-42.3dB",
+                                                                    "-41.3dB",                                        "-40.4dB", "-39.5dB", "-38.7dB", "-37.8dB", "-37.0dB", "-36.2dB", "-35.5dB",
+                                                                    "-34.7dB",                                        "-34.0dB", "-33.3dB", "-32.6dB", "-31.9dB", "-31.2dB", "-30.6dB", "-30.0dB",
+                                                                    "-29.3dB",                                        "-28.7dB", "-28.2dB", "-27.6dB", "-27.0dB", "-26.5dB", "-25.9dB", "-25.4dB",
+                                                                    "-24.8dB",                                        "-24.3dB", "-23.8dB", "-23.3dB", "-22.8dB", "-22.4dB", "-21.9dB", "-21.4dB",
+                                                                    "-21.0dB",                                        "-20.5dB", "-20.1dB", "-19.7dB", "-19.2dB", "-18.8dB", "-18.4dB", "-18.0dB",
+                                                                    "-17.6dB",                                        "-17.2dB", "-16.8dB", "-16.4dB", "-16.1dB", "-15.7dB", "-15.3dB", "-15.0dB",
+                                                                    "-14.6dB",                                        "-14.3dB", "-13.9dB", "-13.6dB", "-13.2dB", "-12.9dB", "-12.6dB", "-12.2dB",
+                                                                    "-11.9dB",                                        "-11.6dB", "-11.3dB", "-11.0dB", "-10.7dB", "-10.4dB", "-10.1dB", "-9.8dB",
+                                                                    "-9.5dB",                                         "-9.2dB",  "-8.9dB",  "-8.6dB",  "-8.3dB",  "-8.0dB",  "-7.8dB",  "-7.5dB",
+                                                                    "-7.2dB",                                         "-7.0dB",  "-6.7dB",  "-6.4dB",  "-6.2dB",  "-5.9dB",  "-5.7dB",  "-5.4dB",
+                                                                    "-5.2dB",                                         "-4.9dB",  "-4.7dB",  "-4.4dB",  "-4.2dB",  "-4.0dB",  "-3.7dB",  "-3.5dB",
+                                                                    "-3.3dB",                                         "-3.0dB",  "-2.8dB",  "-2.6dB",  "-2.3dB",  "-2.1dB",  "-1.9dB",  "-1.7dB",
+                                                                    "-1.5dB",                                         "-1.3dB",  "-1.0dB",  "-0.8dB",  "-0.6dB",  "-0.4dB",  "-0.2dB",  "0.0dB",
+                                                                    NULL};
+const char *             ADRTimeStrMap[]                         = {"0.5ms", "0.6ms",  "0.7ms",  "0.9ms",  "1.1ms",  "1.3ms",  "1.5ms",  "1.8ms",
+                                                                    "2.1ms",                                     "2.5ms",  "3.0ms",  "3.5ms",  "4.0ms",  "4.7ms",  "5.5ms",  "6.3ms",
+                                                                    "7.3ms",                                     "8.4ms",  "9.7ms",  "11.1ms", "12.7ms", "14.5ms", "16.5ms", "18.7ms",
+                                                                    "21.2ms",                                    "24.0ms", "27.1ms", "30.6ms", "34.4ms", "38.7ms", "43.4ms", "48.6ms",
+                                                                    "54.3ms",                                    "60.6ms", "67.6ms", "75.2ms", "83.6ms", "92.8ms", "103ms",  "114ms",
+                                                                    "126ms",                                     "139ms",  "153ms",  "169ms",  "186ms",  "204ms",  "224ms",  "246ms",
+                                                                    "269ms",                                     "295ms",  "322ms",  "352ms",  "384ms",  "419ms",  "456ms",  "496ms",
+                                                                    "540ms",                                     "586ms",  "636ms",  "690ms",  "748ms",  "810ms",  "876ms",  "947ms",
+                                                                    "1.02s",                                     "1.10s",  "1.19s",  "1.28s",  "1.38s",  "1.49s",  "1.60s",  "1.72s",
+                                                                    "1.85s",                                     "1.99s",  "2.13s",  "2.28s",  "2.45s",  "2.62s",  "2.81s",  "3.00s",
+                                                                    "3.21s",                                     "3.43s",  "3.66s",  "3.91s",  "4.17s",  "4.45s",  "4.74s",  "5.05s",
+                                                                    "5.37s",                                     "5.72s",  "6.08s",  "6.47s",  "6.87s",  "7.30s",  "7.75s",  "8.22s",
+                                                                    "8.72s",                                     "9.25s",  "9.80s",  "10.4s",  "11.0s",  "11.6s",  "12.3s",  "13.0s",
+                                                                    "13.8s",                                     "14.6s",  "15.4s",  "16.2s",  "17.1s",  "18.1s",  "19.1s",  "20.1s",
+                                                                    "21.2s",                                     "22.4s",  "23.5s",  "24.8s",  "26.1s",  "27.5s",  "28.9s",  "30.4s",
+                                                                    "32.0s",                                     "33.6s",  "35.3s",  "37.1s",  "38.9s",  "40.9s",  "42.9s",  "45.0s",
+                                                                    NULL};
 
-const tRgb               offOnColourMap[]                = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
+const char *             pulseLoTimeStrMap[]                     = {"1.04ms", "1.11ms", "1.19ms", "1.28ms", "1.37ms", "1.47ms", "1.57ms", "1.69ms",
+                                                                    "1.81ms",                                 "1.94ms", "2.08ms", "2.23ms", "2.39ms", "2.56ms", "2.75ms", "2.94ms",
+                                                                    "3.16ms",                                 "3.38ms", "3.63ms", "3.89ms", "4.17ms", "4.48ms", "4.80ms", "5.15ms",
+                                                                    "5.52ms",                                 "5.93ms", "6.36ms", "6.82ms", "7.32ms", "7.85ms", "8.42ms", "9.04ms",
+                                                                    "9.70ms",                                 "10.4ms", "11.2ms", "12.0ms", "12.9ms", "13.8ms", "14.8ms", "15.9ms",
+                                                                    "17.1ms",                                 "18.3ms", "19.7ms", "21.1ms", "22.7ms", "24.4ms", "26.2ms", "28.1ms",
+                                                                    "30.2ms",                                 "32.4ms", "34.8ms", "37.4ms", "40.2ms", "43.2ms", "46.4ms", "49.8ms",
+                                                                    "53.5ms",                                 "57.5ms", "61.8ms", "66.4ms", "71.3ms", "76.7ms", "82.4ms", "88.6ms",
+                                                                    "95.2ms",                                 "102ms",  "110ms",  "118ms",  "127ms",  "137ms",  "147ms",  "158ms",
+                                                                    "170ms",                                  "183ms",  "196ms",  "211ms",  "227ms",  "244ms",  "263ms",  "283ms",
+                                                                    "304ms",                                  "327ms",  "352ms",  "379ms",  "408ms",  "439ms",  "472ms",  "508ms",
+                                                                    "547ms",                                  "588ms",  "633ms",  "681ms",  "734ms",  "790ms",  "850ms",  "915ms",
+                                                                    "985ms",                                  "1.07s",  "1.15s",  "1.24s",  "1.33s",  "1.43s",  "1.54s",  "1.66s",
+                                                                    "1.79s",                                  "1.93s",  "2.07s",  "2.23s",  "2.41s",  "2.59s",  "2.79s",  "3.01s",
+                                                                    "3.24s",                                  "3.49s",  "3.76s",  "4.06s",  "4.37s",  "4.71s",  "5.08s",  "5.48s",
+                                                                    "5.90s",                                  "6.36s",  "6.86s",  "7.40s",  "7.98s",  "8.60s",  "9.28s",  "10.0s",
+                                                                    NULL};
 
-const tRgb               gCableColourMap[cableColourMax] = {
+const tRgb               offOnColourMap[]                        = {RGB_BACKGROUND_GREY, RGB_GREEN_ON};
+
+const tRgb               gCableColourMap[cableColourMax]         = {
     {0.7, 0.1, 0.1},                                    // red a.k.a Audio
     {0.3, 0.3, 0.7},                                    // blue a.k.a Control
     {0.7, 0.7, 0.1},                                    // yellow a.k.a Logic BG
@@ -143,31 +213,31 @@ const tRgb               gCableColourMap[cableColourMax] = {
     {0.9, 0.9, 0.9},                                    // white - apparently not user selectable
 };
 
-const tRgb               gModuleColourMap[]              = {MODULE_STANDARD_GREY,
-                                                            MODULE_RED_4,
-                                                            MODULE_GREEN_4,
-                                                            MODULE_BLUE_4,
-                                                            MODULE_YELLOW_4,
-                                                            MODULE_BLUE_1,
-                                                            MODULE_RED_1,
-                                                            MODULE_CYAN_2,
-                                                            MODULE_GREEN_2,
-                                                            MODULE_YELLOW_1,
-                                                            MODULE_GREEN_1,
-                                                            MODULE_YELLOW_2,
-                                                            MODULE_BLUE_3,
-                                                            MODULE_RED_2,
-                                                            MODULE_RED_3,
-                                                            MODULE_YELLOW_3,
-                                                            MODULE_GREEN_3,
-                                                            MODULE_CYAN_1,
-                                                            MODULE_CYAN_3,
-                                                            MODULE_CYAN_4,
-                                                            MODULE_BLUE_2,
-                                                            MODULE_PURPLE_1,
-                                                            MODULE_PURPLE_2,
-                                                            MODULE_PURPLE_3,
-                                                            MODULE_PURPLE_4};
+const tRgb               gModuleColourMap[]                      = {MODULE_STANDARD_GREY,
+                                                                    MODULE_RED_4,
+                                                                    MODULE_GREEN_4,
+                                                                    MODULE_BLUE_4,
+                                                                    MODULE_YELLOW_4,
+                                                                    MODULE_BLUE_1,
+                                                                    MODULE_RED_1,
+                                                                    MODULE_CYAN_2,
+                                                                    MODULE_GREEN_2,
+                                                                    MODULE_YELLOW_1,
+                                                                    MODULE_GREEN_1,
+                                                                    MODULE_YELLOW_2,
+                                                                    MODULE_BLUE_3,
+                                                                    MODULE_RED_2,
+                                                                    MODULE_RED_3,
+                                                                    MODULE_YELLOW_3,
+                                                                    MODULE_GREEN_3,
+                                                                    MODULE_CYAN_1,
+                                                                    MODULE_CYAN_3,
+                                                                    MODULE_CYAN_4,
+                                                                    MODULE_BLUE_2,
+                                                                    MODULE_PURPLE_1,
+                                                                    MODULE_PURPLE_2,
+                                                                    MODULE_PURPLE_3,
+                                                                    MODULE_PURPLE_4};
 
 const tRgb               connectorColourMap[] = {
     {0.7, 0.2, 0.2},

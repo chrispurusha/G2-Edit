@@ -358,27 +358,10 @@ tRectangle render_paramType1dB(tModule * module, tRectangle rectangle, char * la
 
 tRectangle render_paramType1MixLevel(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     //double       level      = 0.0;
-    const double dbLvlMap[]    = {
-        -100.0, -99.9, -99.0, -72.1, -69.2, -66.9, -64.8, -62.9,
-        -61.1,    -59, -57.9, -56.4, -55.0, -53.6, -52.3, -51.0,
-        -49.8,  -48.6, -47.5, -46.4, -45.3, -44.3, -43.3, -42.3,
-        -41.3,  -40.4, -39.5, -38.7, -37.8, -37.0, -36.2, -35.5,
-        -34.7,  -34.0, -33.3, -32.6, -31.9, -31.2, -30.6, -30.0,
-        -29.3,  -28.7, -28.2, -27.6, -27.0, -26.5, -25.9, -25.4,
-        -24.8,  -24.3, -23.8, -23.3, -22.8, -22.4, -21.9, -21.4,
-        -21.0,  -20.5, -20.1, -19.7, -19.2, -18.8, -18.4, -18.0,
-        -17.6,  -17.2, -16.8, -16.4, -16.1, -15.7, -15.3, -15.0,
-        -14.6,  -14.3, -13.9, -13.6, -13.2, -12.9, -12.6, -12.2,
-        -11.9,  -11.6, -11.3, -11.0, -10.7, -10.4, -10.1,  -9.8,
-        -9.5,    -9.2,  -8.9,  -8.6,  -8.3,  -8.0,  -7.8,  -7.5,
-        -7.2,    -7.0,  -6.7,  -6.4,  -6.2,  -5.9,  -5.7,  -5.4,
-        -5.2,    -4.9,  -4.7,  -4.4,  -4.2,  -4.0,  -3.7,  -3.5,
-        -3.3,    -3.0,  -2.8,  -2.6,  -2.3,  -2.1,  -1.9,  -1.7,
-        -1.5,    -1.3,  -1.0,  -0.8,  -0.6,  -0.4,  -0.2, 0.0
-    };
-    int          expLinDBparam = 0;
-    uint32_t     slot          = atomic_load(&gSlot);
-    uint32_t     variation     = gPatchDescr[slot].activeVariation;
+
+    int      expLinDBparam = 0;
+    uint32_t slot          = atomic_load(&gSlot);
+    uint32_t variation     = gPatchDescr[slot].activeVariation;
 
     switch (module->type) {
         case moduleTypeMix8to1B:
@@ -394,11 +377,7 @@ tRectangle render_paramType1MixLevel(tModule * module, tRectangle rectangle, cha
     //level = paramValue;
 
     if (module->param[variation][expLinDBparam].value == 2) { // display dB
-        if (paramValue == 0.0) {
-            snprintf(buff, buffSize, "-oodB");
-        } else {
-            snprintf(buff, buffSize, "%.1f", dbLvlMap[(int)paramValue]);
-        }
+        snprintf(buff, buffSize, "%s", dbLvlStrMap[(int)paramValue]);
     }
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
@@ -559,56 +538,31 @@ tRectangle render_paramType1TimeClk(tModule * module, tRectangle rectangle, char
 }
 
 tRectangle render_paramType1ADRTime(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
-    double       time         = 0.0;
-    const double ADRTimeMap[] = {
-        0.0005, 0.0006, 0.0007, 0.0009, 0.0011, 0.0013, 0.0015, 0.0018, 0.0021, 0.0025, 0.0030, 0.0035, 0.0040, 0.0047, 0.0055, 0.0063,
-        0.0073, 0.0084, 0.0097, 0.0111, 0.0127, 0.0145, 0.0165, 0.0187, 0.0212, 0.0240, 0.0271, 0.0306, 0.0344, 0.0387, 0.0434, 0.0486,
-        0.0543, 0.0606, 0.0676, 0.0752, 0.0836, 0.0928,  0.103,  0.114,  0.126,  0.139,  0.153,  0.169,  0.186,  0.204,  0.224,  0.246,
-        0.269,   0.295,  0.322,  0.352,  0.384,  0.419,  0.456,  0.496,  0.540,  0.586,  0.636,  0.690,  0.748,  0.810,  0.876,  0.947,
-        1.02,     1.10,   1.19,   1.28,   1.38,   1.49,   1.60,   1.72,   1.85,   1.99,   2.13,   2.28,   2.45,   2.62,   2.81,   3.00,
-        3.21,     3.43,   3.66,   2.91,   4.17,   4.45,   4.74,   5.05,   5.37,   5.72,   6.08,   6.47,   6.87,   7.30,   7.75,   8.22,
-        8.72,     9.25,   9.80,   10.4,   11.0,   11.6,   12.3,   13.0,   13.8,   14.6,   15.4,   16.2,   17.1,   18.1,   19.1,   20.1,
-        21.2,     22.4,   23.5,   24.8,   26.1,   27.5,   28.9,   30.4,   32.0,   33.6,   35.3,   37.1,   38.9,   40.9,   42.9, 45.0
-    };
+    double time = 0.0;
+
 
     // use table
-    time = ADRTimeMap[(int)paramValue];
+    //time = ADRTimeMap[(int)paramValue];
 
-    if (time < 0.1) {
-        snprintf(buff, buffSize, "%.1fms", time * 1000);
-    } else if (time < 1.0) {
-        snprintf(buff, buffSize, "%.0fms", time * 1000);
-    } else if (time < 10.0) {
-        snprintf(buff, buffSize, "%.2fs", time);
-    } else {
-        snprintf(buff, buffSize, "%.1fs", time);
-    }
+    //if (time < 0.1) {
+    //    snprintf(buff, buffSize, "%.1fms", time * 1000);
+    //} else if (time < 1.0) {
+    //    snprintf(buff, buffSize, "%.0fms", time * 1000);
+    //} else if (time < 10.0) {
+    //    snprintf(buff, buffSize, "%.2fs", time);
+    //} else {
+    //    snprintf(buff, buffSize, "%.1fs", time);
+    //}
+    snprintf(buff, buffSize, "%s", ADRTimeStrMap[(int)paramValue]);
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
 tRectangle render_paramType1PulseTime(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
-    double       time_to_display;
-    const double pulseLoTime[] = {
-        .00104, .00111, .00119, .00128, .00137, .00147, .00157, .00169,
-        .00181, .00194, .00208, .00223, .00239, .00256, .00275, .00294,
-        .00316, .00338, .00363, .00389, .00417, .00448, .00480, .00515,
-        .00552, .00593, .00636, .00682, .00732, .00785, .00842, .00904,
-        .00970, .01040, .01120, .01200, .01290, .01380, .01480, .01590,
-        .0171,   .0183,  .0197,  .0211,  .0227,  .0244,  .0262,  .0281,
-        .0302,   .0324,  .0348,  .0374,  .0402,  .0432,  .0464,  .0498,
-        .0535,   .0575,  .0618,  .0664,  .0713,  .0767,  .0824,  .0886,
-        .0952,   .1020,  .1100,  .1180,  .1270,  .1370,  .1470,  .1580,
-        .170,     .183,   .196,   .211,   .227,   .244,   .263,   .283,
-        .304,     .327,   .352,   .379,   .408,   .439,   .472,   .508,
-        .547,     .588,   .633,   .681,   .734,   .790,   .850,   .915,
-        .985,     1.07,   1.15,   1.24,   1.33,   1.43,   1.54,   1.66,
-        1.79,     1.93,   2.07,   2.23,   2.41,   2.59,   2.79,   3.01,
-        3.24,     3.49,   3.76,   4.06,   4.37,   4.71,   5.08,   5.48,
-        5.90,     6.36,   6.86,   7.40,   7.98,   8.60,   9.28, 10.0
-    };
-    uint32_t     slot          = atomic_load(&gSlot);
-    uint32_t     variation     = gPatchDescr[slot].activeVariation;
+    double   time_to_display;
+    uint32_t slot      = atomic_load(&gSlot);
+    uint32_t variation = gPatchDescr[slot].activeVariation;
 
+#if 0
     time_to_display = pulseLoTime[(int)paramValue]; // in s
 
     switch (module->param[variation][2].value) {
@@ -643,6 +597,8 @@ tRectangle render_paramType1PulseTime(tModule * module, tRectangle rectangle, ch
     } else {
         snprintf(buff, buffSize, "%.1fs", time_to_display);
     }
+#endif
+    snprintf(buff, buffSize, "%s", pulseLoTimeStrMap[(int)paramValue]);
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
