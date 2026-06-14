@@ -404,15 +404,16 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             get_global_gui_scaled_mouse_coord(&mouseCoord);
 
             if (within_rectangle(mouseCoord, module->param[variation][paramIndex].rectangle)) {
-                char       knobLabel[12];
+                char       knobLabel[32];
                 int        page      = knobIdx / 24 + 1;
                 int        bank      = (knobIdx % 24) / 8 + 1;
                 int        pos       = knobIdx % 8 + 1;
-                tRectangle labelRect = {{rectangle.coord.x,
+                double     labelWidth    = get_text_width("Knob X,X,X", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8);
+                tRectangle labelRect = {{rectangle.coord.x + (rectangle.size.w - labelWidth) / 2.0,
                     rectangle.coord.y + rectangle.size.h + 2.0},
-                    {get_text_width("PgX BaX PoX", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8), (double)STANDARD_TEXT_HEIGHT * 0.8}};
+                    {labelWidth,                                               (double)STANDARD_TEXT_HEIGHT * 0.8}};
 
-                snprintf(knobLabel, sizeof(knobLabel), "Pg%d Ba%d Po%d", page, bank, pos);
+                snprintf(knobLabel, sizeof(knobLabel), "Knob %d,%d,%d", page, bank, pos);
                 draw_button(moduleArea, labelRect, knobLabel, RGB_GREY_9);
             }
         }

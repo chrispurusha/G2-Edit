@@ -2264,8 +2264,8 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     }
     // Limit re-draw/render if nothing's happened
     // if (noAction == false) {   // Used to have this check, TODO - see if there's a way to not redraw on every move
-    	atomic_store(&gReDraw, true);
-	// }
+    atomic_store(&gReDraw, true);
+    // }
 }
 
 void scroll_event(GLFWwindow * window, double x, double y) {

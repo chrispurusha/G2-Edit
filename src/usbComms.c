@@ -1491,7 +1491,7 @@ static int send_get_patch_data(uint32_t slot) {
     send_get_resources_used(slot, locationVa);
     send_get_resources_used(slot, locationFx);
     send_get_knob_snapshot(slot);
-	// Also get selected param 0x2e
+    // Also get selected param 0x2e
 
     return EXIT_SUCCESS;
 }
