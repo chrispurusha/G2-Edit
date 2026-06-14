@@ -2052,14 +2052,12 @@ static int send_init_sequence_push(void) {
 // send_write_data — runtime command dispatch
 // ---------------------------------------------------------------------------
 
-static int send_write_data(tMessageContent * messageContent, bool * ack) {
+static int send_write_data(tMessageContent * messageContent) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_FAILURE;
     uint8_t patchVersion[MAX_SLOTS] = {0};
     int     i                       = 0;
-
-    *ack = true;
 
     for (i = 0; i < MAX_SLOTS; i++) {
         patchVersion[i] = atomic_load(&gPatchVersion[i]);
@@ -2069,7 +2067,6 @@ static int send_write_data(tMessageContent * messageContent, bool * ack) {
     switch (messageContent->cmd) {
         case eMsgCmdSetValue:
             retVal      = send_set_param_value(messageContent->slot, messageContent->paramData.moduleKey, messageContent->paramData.param, messageContent->paramData.value, messageContent->paramData.variation);
-            *ack        = false;
             break;
 
         case eMsgCmdSetMode:
@@ -2216,7 +2213,6 @@ static int send_write_data(tMessageContent * messageContent, bool * ack) {
             buff[pos++] = messageContent->paramMorphData.negative;
             buff[pos++] = messageContent->paramMorphData.variation;
             retVal      = send_message(buff, pos);
-            *ack        = false;
             break;
 
         case eMsgCmdSelectVariation:
@@ -2399,7 +2395,6 @@ static int send_write_data(tMessageContent * messageContent, bool * ack) {
 
 static void state_handler(void) {
     tMessageContent messageContent = {0};
-    bool            ack            = false;
 
     //TODO - Don't like early returns. Use retVal
 
@@ -2471,15 +2466,8 @@ static void state_handler(void) {
 
     // Command from UI thread
     if (msg_receive(&gCommandQueue, eRcvPoll, &messageContent) == EXIT_SUCCESS) {
-        send_write_data(&messageContent, &ack);
+        send_write_data(&messageContent);
 
-        if (!ack) {
-            if (msg_count(&gCommandQueue) > 3) { // Monitor this count based mechanism to see if it seems to work OK
-                usleep(25000);                   // Stop rapid flood of unacknowledged writes to G2 since no way of getting acknowledgement on those messages
-            } else {
-                usleep(1000);
-            }
-        }
         return;
     }
     // Nothing to do — poll for unsolicited messages (LED, volume, param change)

@@ -1733,7 +1733,6 @@ static void action_copy_variation(int index) {
     uint32_t        sourceVariation = (uint32_t)(gContextMenu.items[index].param >> 4) & 0xF;
     uint32_t        targetVariation = (uint32_t)(gContextMenu.items[index].param) & 0xF;
     uint32_t        slot            = atomic_load(&gSlot);
-    uint32_t        location        = atomic_load(&gLocation);
     uint32_t        numParams       = 0;
     uint32_t        paramIndex      = 0;
     uint32_t        morphIndex      = 0;
@@ -1741,39 +1740,19 @@ static void action_copy_variation(int index) {
     tMessageContent msg             = {0};
 
     LOG_DEBUG("Copy variation %u to %u\n", sourceVariation, targetVariation);
+
+    // Update local state for both VA and FX locations
     reset_walk_module();
 
     while (walk_next_module(&module)) {
-        if (module.key.slot == slot && module.key.location == location) {
+        if (module.key.slot == slot) {
             numParams = module_param_count(module.type);
 
             for (paramIndex = 0; paramIndex < numParams; paramIndex++) {
-                if (module.param[targetVariation][paramIndex].value != module.param[sourceVariation][paramIndex].value) {
-                    module.param[targetVariation][paramIndex].value = module.param[sourceVariation][paramIndex].value;
+                module.param[targetVariation][paramIndex].value = module.param[sourceVariation][paramIndex].value;
 
-                    msg.cmd                                         = eMsgCmdSetValue;
-                    msg.slot                                        = slot;
-                    msg.paramData.moduleKey                         = module.key;
-                    msg.paramData.param                             = paramIndex;
-                    msg.paramData.variation                         = targetVariation;
-                    msg.paramData.value                             = module.param[targetVariation][paramIndex].value;
-                    msg_send(&gCommandQueue, &msg);
-                }
-
-                // Deal with morph ranges - loop for each
                 for (morphIndex = 0; morphIndex < NUM_MORPHS; morphIndex++) {
-                    if (module.param[targetVariation][paramIndex].morphRange[morphIndex] != module.param[sourceVariation][paramIndex].morphRange[morphIndex]) {
-                        module.param[targetVariation][paramIndex].morphRange[morphIndex] = module.param[sourceVariation][paramIndex].morphRange[morphIndex];
-                        msg.cmd                                                          = eMsgCmdSetParamMorph;
-                        msg.slot                                                         = slot;
-                        msg.paramMorphData.moduleKey                                     = module.key;
-                        msg.paramMorphData.param                                         = paramIndex;
-                        msg.paramMorphData.paramMorph                                    = morphIndex;
-                        msg.paramMorphData.variation                                     = targetVariation;
-                        msg.paramMorphData.value                                         = module.param[targetVariation][paramIndex].morphRange[morphIndex];
-                        msg.paramMorphData.negative                                      = 0;
-                        msg_send(&gCommandQueue, &msg);
-                    }
+                    module.param[targetVariation][paramIndex].morphRange[morphIndex] = module.param[sourceVariation][paramIndex].morphRange[morphIndex];
                 }
             }
 
@@ -1782,7 +1761,13 @@ static void action_copy_variation(int index) {
     }
     finish_walk_module();
 
-    gContextMenu.active = false;
+    msg.cmd                             = eMsgCmdCopyVariation;
+    msg.slot                            = slot;
+    msg.copyVariationData.fromVariation = sourceVariation;
+    msg.copyVariationData.toVariation   = targetVariation;
+    msg_send(&gCommandQueue, &msg);
+
+    gContextMenu.active                 = false;
     atomic_store(&gReDraw, true);
 }
 
