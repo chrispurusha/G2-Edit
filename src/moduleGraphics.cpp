@@ -405,11 +405,11 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 
             if (within_rectangle(mouseCoord, module->param[variation][paramIndex].rectangle)) {
                 char       knobLabel[32];
-                int        page      = knobIdx / 24 + 1;
-                int        bank      = (knobIdx % 24) / 8 + 1;
-                int        pos       = knobIdx % 8 + 1;
-                double     labelWidth    = get_text_width("Knob X,X,X", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8);
-                tRectangle labelRect = {{rectangle.coord.x + (rectangle.size.w - labelWidth) / 2.0,
+                int        page       = knobIdx / 24 + 1;
+                int        bank       = (knobIdx % 24) / 8 + 1;
+                int        pos        = knobIdx % 8 + 1;
+                double     labelWidth = get_text_width("Knob X,X,X", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8);
+                tRectangle labelRect  = {{rectangle.coord.x + (rectangle.size.w - labelWidth) / 2.0,
                     rectangle.coord.y + rectangle.size.h + 2.0},
                     {labelWidth,                                               (double)STANDARD_TEXT_HEIGHT * 0.8}};
 

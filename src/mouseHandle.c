@@ -1135,7 +1135,7 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
     static tMenuItem bankMenuItems[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE + 1];
     static char      bankLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][12];
     static tMenuItem slotMenuItems[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK + 1];
-    static char      slotLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK][16];
+    static char      slotLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK][48];
     static tMenuItem menuItems[3];
 
     uint32_t         slot     = atomic_load(&gSlot);
@@ -1154,8 +1154,30 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
                 uint32_t knobIdx = (uint32_t)((pg * NUM_BANKS_PER_PAGE + bk) * NUM_KNOBS_PER_BANK + k);
                 bool     inUse   = gKnobArray[slot].knob[knobIdx].assigned;
 
-                snprintf(slotLabels[pg][bk][k], sizeof(slotLabels[pg][bk][k]),
-                         "%d  %s", k + 1, inUse ? "(in use)" : "(free)");
+                if (inUse) {
+                    tModule      mod     = {0};
+                    tModuleKey   modKey  = {
+                        slot,
+                        gKnobArray[slot].knob[knobIdx].location,
+                        gKnobArray[slot].knob[knobIdx].moduleIndex
+                    };
+                    uint32_t     pi      = gKnobArray[slot].knob[knobIdx].paramIndex;
+                    const char * modName = "";
+                    const char * parName = "";
+
+                    if (read_module(modKey, &mod)) {
+                        modName = (mod.name[0] != '\0') ? mod.name : gModuleProperties[mod.type].name;
+
+                        if ((pi < MAX_NUM_PARAMETERS) && mod.paramNameSet[pi][0]) {
+                            parName = mod.paramName[pi][0];
+                        }
+                    }
+                    snprintf(slotLabels[pg][bk][k], sizeof(slotLabels[pg][bk][k]),
+                             "%d Used - %s %s", k + 1, modName, parName);
+                } else {
+                    snprintf(slotLabels[pg][bk][k], sizeof(slotLabels[pg][bk][k]),
+                             "%d ---", k + 1);
+                }
                 slotMenuItems[pg][bk][k] = (tMenuItem){
                     slotLabels[pg][bk][k], RGB_GREY_3, action_assign_knob, knobIdx, NULL
                 };
