@@ -51,7 +51,6 @@ typedef enum {
     eMsgCmdSetPatchName,
     eMsgCmdSetModuleColour,
     eMsgCmdWritePatchDescr,
-    eMsgCmdGetPerformanceAndPatchSettings,
     eMsgCmdAssignKnob,
     eMsgCmdDeassignKnob,
     eMsgCmdAssignGlobalKnob,

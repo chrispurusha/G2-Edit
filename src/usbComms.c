@@ -53,21 +53,22 @@ extern "C" {
 #define USB_INIT_TIMEOUT_MS        (1000) // Extra headroom during init sequence
 
 // Atomic flags for cross-thread signalling
-static _Atomic bool           gotBadConnectionIndication = false;
-static _Atomic bool           gotPatchChangeIndication   = false;
+static _Atomic bool           gotBadConnectionIndication      = false;
+static _Atomic bool           gotPatchChangeIndication        = false;
+static _Atomic bool           gotPerfSettingsChangeIndication = false;
 
 // Protected by usbStaticMutex
-static pthread_t              usbThread                  = NULL;
-static libusb_context *       libUsbCtx                  = NULL;
-static libusb_device_handle * devHandle                  = NULL;
+static pthread_t              usbThread                       = NULL;
+static libusb_context *       libUsbCtx                       = NULL;
+static libusb_device_handle * devHandle                       = NULL;
 
 // Callback pointers protected by callbackMutex
 static void                   (*wake_glfw_func_ptr)(void) = NULL;
 static void                   (*full_patch_change_notify_func_ptr)(void) = NULL;
 
 // Mutexes
-static pthread_mutex_t        usbStaticMutex             = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t        callbackMutex              = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t        usbStaticMutex                  = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t        callbackMutex                   = PTHREAD_MUTEX_INITIALIZER;
 
 // ---------------------------------------------------------------------------
 // Callback registration
@@ -872,10 +873,10 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         }
         case SUB_RESPONSE_PERF_PATCH_VERSIONS:
         {
-            uint8_t         newVersion  = 0;
-            uint8_t         readSlot    = 0;
-            uint8_t         subResponse = 0;
-            int             i           = 0;
+            uint8_t newVersion  = 0;
+            uint8_t readSlot    = 0;
+            uint8_t subResponse = 0;
+            int     i           = 0;
 
             LOG_DEBUG("Got performance patch versions\n");
 
@@ -894,10 +895,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                 }
             }
 
-            // Need to work out if we've switched to/from performance mode, since can't tell from this message.
-            tMessageContent msg         = {0};
-            msg.cmd    = eMsgCmdGetPerformanceAndPatchSettings;
-            msg_send(&gCommandQueue, &msg);
+            // Use a flag rather than queuing so rapid switches coalesce into one resync.
+            atomic_store(&gotPerfSettingsChangeIndication, true);
             return EXIT_SUCCESS;
         }
 
@@ -1980,6 +1979,24 @@ static int send_set_patch_descr(uint32_t slot) { // Note - currently using value
 // Init sequences — linear, no state machine
 // ---------------------------------------------------------------------------
 
+// Core resync: stop, fetch all perf+patch data, restart.
+// Called both on explicit request and on G2-initiated perf mode changes.
+static void reload_all_patch_data(void) {
+    send_stop();
+    send_get_midi_cc();
+    send_select_slot(0);
+    send_get_performance_settings();
+
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        send_get_patch_data(slot);
+    }
+
+    send_get_assigned_voices();
+    send_get_global_knobs();
+    send_get_master_clock();
+    send_start();
+}
+
 // First connection: G2 is authoritative — pull all patch data from hardware.
 static int send_init_sequence_pull(void) {
     LOG_DEBUG("Init sequence: pulling from G2\n");
@@ -2347,41 +2364,6 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
         }
 
-        case eMsgCmdGetPerformanceAndPatchSettings:
-        {
-            int i = 0;
-
-            send_stop();
-
-            // Note - don't seem to need to do send_get_synth_settings() this since start message triggers it
-            send_get_midi_cc();
-            send_select_slot(0);
-            send_get_performance_settings();
-
-            for (i = 0; i < MAX_SLOTS; i++) {
-                send_get_patch_data(i);
-            }
-
-            send_get_assigned_voices();
-            send_get_global_knobs();
-            send_get_master_clock();
-
-            send_start(); // Note, when going into/out of performance mode, this seems to trigger an auto G2->editor send of synth settings
-
-            atomic_store(&gSlot, 0);
-            gPatchDescr[0].activeVariation = 0;
-            set_exclusive_button_highlight(slotAButtonId, slotDButtonId,
-                                           (tButtonId)(slotAButtonId));
-            set_exclusive_button_highlight(variation1ButtonId, variationInitButtonId,
-                                           (tButtonId)((uint32_t)variation1ButtonId));
-
-            call_full_patch_change_notify();
-            call_wake_glfw();
-
-            retVal                         = EXIT_SUCCESS;
-            break;
-        }
-
         default:
             LOG_DEBUG("Unknown command %d\n", messageContent->cmd);
             break;
@@ -2445,6 +2427,27 @@ static void state_handler(void) {
         } else {
             usleep(500000);  // 500ms between open attempts — don't hammer the bus
         }
+        return;
+    }
+
+    // Performance/patch settings changed (e.g. perf mode switch on the G2 panel).
+    // Flag coalesces rapid switches — only one full resync runs per batch.
+    if (atomic_load(&gotPerfSettingsChangeIndication)) {
+        atomic_store(&gotPerfSettingsChangeIndication, false);
+
+        LOG_DEBUG("Perf settings change — reloading all slots\n");
+
+        reload_all_patch_data();
+
+        atomic_store(&gSlot, 0);
+        gPatchDescr[0].activeVariation = 0;
+        set_exclusive_button_highlight(slotAButtonId, slotDButtonId,
+                                       (tButtonId)(slotAButtonId));
+        set_exclusive_button_highlight(variation1ButtonId, variationInitButtonId,
+                                       (tButtonId)((uint32_t)variation1ButtonId));
+
+        call_full_patch_change_notify();
+        call_wake_glfw();
         return;
     }
 
