@@ -51,6 +51,10 @@ const char *             fmTypeStrMap[]                          = {"FM Lin", "F
 const char *             envShapeStrMap[]                        = {"LogExp", "LinExp", "ExpExp", "LinLin", NULL};
 const char *             normalResetStrMap[]                     = {"Normal", "Reset", NULL};
 const char *             posStrMap[]                             = {"Pos", "PosInv", "Neg", "NegInv", "Bip", "BipInv", NULL};
+const char *             posNegInvStrMap[]                       = {"Pos", "PosInv", "Neg", "NegInv", NULL};
+const char *             posNegInvBipStrMap[]                    = {"Pos", "PosInv", "Neg", "NegInv", "Bip", NULL};
+const char *             bipPosNegStrMap[]                       = {"BiPol", "Pos", "Neg", NULL};
+const char *             resonAlgStrMap[]                        = {"String1", "String2", "Tube1", "Tube2", "Tube3", NULL};
 const char *             outToStrMap[]                           = {"Main 1/2", "Main 3/4", "FX 1/2", "FX 3/4", "Bus 1/2", "Bus 3/4", NULL};
 const char *             outTo4OutStrMap[]                       = {"Main", "Fx", "Bus", NULL};
 const char *             inFxStrMap[]                            = {"1/2", "3/4", NULL};
@@ -73,7 +77,7 @@ const char *             bipUniStrMap[]                          = {"Bip", "Uni"
 const char *             vowelStrMap[]                           = {"A", "E", "I", "O", "U", "Y", "AA", "AE", "OE", NULL};
 const char *             nordFilterTypeStrMap[]                  = {"LP", "BP", "HP", "BR", NULL};
 const char *             staticFilterTypeStrMap[]                = {"LP", "BP", "HP", NULL};
-const char *             multiEnvSustainStrMap[]                 = {"None", "L1", "L2", "L3", "L4", NULL};
+const char *             multiEnvSustainStrMap[]                 = {"L1", "L2", "L3", "Trg", NULL};
 const char *             drSynthPresetStrMap[]                   = {"Kick 1", "Kick 2", "Kick 3", "Kick 4", "Kick 5", "Snare 1", "Snare 2", "Snare 3", "Snare 4", "Snare 5", "Tom1 1", "Tom1 2", "Tom1 3", "Tom2 1", "Tom2 2", "Tom2 3", "Tom3 1", "Tom3 2", "Tom3 3", "Cymb 1", "Cymb 2", "Cymb 3", "Cymb 4", "Cymb 5", "Perc 1", "Perc 2", "Perc 3", "Perc 4", "Perc 5", "Perc 6", NULL}; // *** Don't have the list
 const char *             asymSymStrMap[]                         = {"Asym", "Sym", NULL};
 const char *             odTypeStrMap[]                          = {"Soft", "Hard", "Heavy", "Fat", NULL};
@@ -652,7 +656,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeMix8to1B,   paramType1StandardToggle, paramType2Toggle, {{  3, -10}, { 7,  7}}, anchorBottomLeft,  "Pad",            3,   0, db12BPadStrMap,         NULL          }, // 40 Pad
     // 41 EnvH
     {moduleTypeEnvH,       paramType1ADRTime,        paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 41 Hold
-    {moduleTypeEnvH,       paramType1StandardToggle, paramType2Toggle, {{-32,  -3}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,              NULL          }, // 41 Pos
+    {moduleTypeEnvH,       paramType1StandardToggle, paramType2Toggle, {{-32,  -3}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, posNegInvStrMap,        NULL          }, // 41 Pos
     // 42 Delay (Logic Delay)
     {moduleTypeDelay,      paramType1PulseTime,      paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                   NULL          }, // 42 Time
     {moduleTypeDelay,      paramType1CommonDial,     paramType2Dial,   {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 42 TimeMod
@@ -679,7 +683,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeEnvAHD,     paramType1ADRTime,        paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Hold",         128,   0, NULL,                   NULL          }, // 46 Hold
     {moduleTypeEnvAHD,     paramType1StandardToggle, paramType2Toggle, {{  5, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,      NULL          }, // 46 Reset
     {moduleTypeEnvAHD,     paramType1ADRTime,        paramType2Dial,   {{ 44,  -3}, { 7, 14}}, anchorBottomLeft,  "Release",      128,   0, NULL,                   NULL          }, // 46 Release
-    {moduleTypeEnvAHD,     paramType1StandardToggle, paramType2Toggle, {{-26, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,              NULL          },
+    {moduleTypeEnvAHD,     paramType1StandardToggle, paramType2Toggle, {{-26, -10}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, posNegInvStrMap,        NULL          }, // 46 OutType
     {moduleTypeEnvAHD,     paramType1StandardToggle, paramType2Toggle, {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, kbStrMap,               offOnColourMap},
     // 47 Pan
     {moduleTypePan,        paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 47 PanMod
@@ -732,8 +736,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeEnvMulti,   paramType1ADRTime,        paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "T3",           128,   0, NULL,                   NULL          }, // 52 Time3
     {moduleTypeEnvMulti,   paramType1ADRTime,        paramType2Dial,   {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "T4",           128,   0, NULL,                   NULL          }, // 52 Time4
     {moduleTypeEnvMulti,   paramType1StandardToggle, paramType2Toggle, {{  3, -22}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,      NULL          }, // 52 Reset
-    {moduleTypeEnvMulti,   paramType1StandardToggle, paramType2Toggle, {{ 30, -22}, { 7,  7}}, anchorBottomLeft,  "Sust",           5,   1, multiEnvSustainStrMap,  NULL          }, // 52 SustainPlacement
-    {moduleTypeEnvMulti,   paramType1StandardToggle, paramType2Toggle, {{-17, -29}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,              NULL          }, // 52 OutType
+    {moduleTypeEnvMulti,   paramType1StandardToggle, paramType2Toggle, {{ 30, -22}, { 7,  7}}, anchorBottomLeft,  "Sust",           4,   2, multiEnvSustainStrMap,  NULL          }, // 52 SustainPlacement
+    {moduleTypeEnvMulti,   paramType1StandardToggle, paramType2Toggle, {{-17, -29}, { 7,  7}}, anchorBottomRight, NULL,             5,   0, posNegInvBipStrMap,     NULL          }, // 52 OutType
     {moduleTypeEnvMulti,   paramType1StandardToggle, paramType2Toggle, {{ 10,  17}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, kbStrMap,               offOnColourMap}, // 52 Kbt
     {moduleTypeEnvMulti,   paramType1StandardToggle, paramType2Toggle, {{-26, -17}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, envShapeStrMap,         NULL          }, // 52 Shape
     // 53 SandH -- No parameters
@@ -745,7 +749,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeFltStatic,  paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, gcStrMap,               offOnColourMap}, // 54 GC
     // 55 EnvD
     {moduleTypeEnvD,       paramType1ADRTime,        paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,   0, NULL,                   NULL          }, // 55 Decay
-    {moduleTypeEnvD,       paramType1StandardToggle, paramType2Toggle, {{ 55,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, posStrMap,              NULL          }, // 55 OutType
+    {moduleTypeEnvD,       paramType1StandardToggle, paramType2Toggle, {{ 55,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, posNegInvStrMap,        NULL          }, // 55 OutType
     // 56 Resonator (Not in Clavia editor)
     {moduleTypeResonator,  paramType1OscFreq,        paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                   NULL          }, // 56 Tune
     {moduleTypeResonator,  paramType1Fine,           paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                   NULL          }, // 56 Cent
@@ -756,7 +760,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeResonator,  paramType1CommonDial,     paramType2Dial,   {{ 62, -17}, { 7, 14}}, anchorBottomLeft,  "Damp",         128,   0, NULL,                   NULL          }, // 56 Damp
     {moduleTypeResonator,  paramType1Bypass,         paramType2Toggle, {{ -3,  -3}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                   NULL          }, // 56 Bypass
     {moduleTypeResonator,  paramType1CommonDial,     paramType2Dial,   {{ 75, -17}, { 7, 14}}, anchorBottomLeft,  "Pos",          128,   0, NULL,                   NULL          }, // 56 Pos
-    {moduleTypeResonator,  paramType1StandardToggle, paramType2Toggle, {{ 30,  20}, { 7,  7}}, anchorTopLeft,     "Alg",            4,   0, pitchTypeStrMap,        NULL          }, // 56 Algorithm *** Check values
+    {moduleTypeResonator,  paramType1StandardToggle, paramType2Toggle, {{ 30,  20}, { 7,  7}}, anchorTopLeft,     "Alg",            5,   0, resonAlgStrMap,         NULL          }, // 56 Algorithm
     // 57 Automate *** We lack an UI element for the CTRL selector
     {moduleTypeAutomate,   paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Ctrl",         128,   7, NULL,                   NULL          }, // 57 Ctrl CC
     {moduleTypeAutomate,   paramType1CommonDial,     paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Val",          128,  64, NULL,                   NULL          }, // 57 Val
@@ -856,7 +860,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeEnvADR,     paramType1StandardToggle, paramType2Toggle, {{ 28, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,      NULL          }, // 84 Reset
     {moduleTypeEnvADR,     paramType1ADRTime,        paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                   NULL          }, // 84 Release/Decay time
     {moduleTypeEnvADR,     paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,         NULL          }, // 84 Trig/Gate
-    {moduleTypeEnvADR,     paramType1StandardToggle, paramType2Toggle, {{ 70, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, posStrMap,              NULL          },
+    {moduleTypeEnvADR,     paramType1StandardToggle, paramType2Toggle, {{ 70, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, posNegInvStrMap,        NULL          }, // 84 OutType
     {moduleTypeEnvADR,     paramType1StandardToggle, paramType2Toggle, {{  3, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, kbStrMap,               offOnColourMap},
     {moduleTypeEnvADR,     paramType1StandardToggle, paramType2Toggle, {{ 52, -12}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, decayReleaseStrMap,     NULL          }, // 84 Decay/Release toggle
     // 85 WindSw
@@ -1374,8 +1378,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                   NULL          }, // 164 Saw M
     {moduleTypeOscDual,    paramType1StandardToggle, paramType2Toggle, {{ -3, -10}, { 7,  7}}, anchorBottomRight, "Soft",           2,   0, offOnStrMap,            NULL          }, // 164 Tune M
     // 165 DXRouter
-    {moduleTypeDXRouter,   paramType1StandardToggle, paramType2Toggle, {{ 10, -10}, { 7,  7}}, anchorBottomLeft,  "Feedback",       8,   0, dxFeedbackStrMap,       NULL          }, // 165 Feedback
     {moduleTypeDXRouter,   paramType1StandardToggle, paramType2Toggle, {{ 10, -20}, { 7,  7}}, anchorBottomLeft,  "Algorithm",     32,   0, dxAlgStrMap,            NULL          }, // 165 Algorithm
+    {moduleTypeDXRouter,   paramType1StandardToggle, paramType2Toggle, {{ 10, -10}, { 7,  7}}, anchorBottomLeft,  "Feedback",       8,   0, dxFeedbackStrMap,       NULL          }, // 165 Feedback
     // 166 Unknown
     // 167 PShift
     {moduleTypePShift,     paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Semi",         128,  64, NULL,                   NULL          }, // 167 Semi
@@ -1426,8 +1430,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeDelayA,     paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "FB",           128,   0, NULL,                   NULL          }, // 176 FB
     {moduleTypeDelayA,     paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Filter",       128,  64, NULL,                   NULL          }, // 176 Filter
     {moduleTypeDelayA,     paramType1CommonDial,     paramType2Dial,   {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Dry/Wet",      128,  64, NULL,                   NULL          }, // 176 Filter
-    {moduleTypeDelayA,     paramType1StandardToggle, paramType2Toggle, {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, timeClkStrMap,          NULL          }, // 176 Time/Clk
     {moduleTypeDelayA,     paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                   NULL          }, // 176 On/Off
+    {moduleTypeDelayA,     paramType1StandardToggle, paramType2Toggle, {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, timeClkStrMap,          NULL          }, // 176 Time/Clk
     // 177 DelayB
     {moduleTypeDelayB,     paramType1TimeClk,        paramType2Dial,   {{ 40, -10}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                   NULL          }, // 176 Time
     {moduleTypeDelayB,     paramType1CommonDial,     paramType2Dial,   {{ 50, -17}, { 7, 14}}, anchorBottomLeft,  "FB",           128,   0, NULL,                   NULL          }, // 176 FB
@@ -1537,7 +1541,7 @@ const tParamLocation     paramLocationList[] = {
     // 195 ModAmt
     {moduleTypeModAmt,     paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Depth",        128,   0, NULL,                   NULL          }, // 195 Depth
     {moduleTypeModAmt,     paramType1StandardToggle, paramType2Toggle, {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, offOnStrMap,            offOnColourMap}, // 195 Enable
-    {moduleTypeModAmt,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,              NULL          }, // 195 Exp
+    {moduleTypeModAmt,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, expStrMap,              NULL          }, // 195 Exp/Lin
     {moduleTypeModAmt,     paramType1StandardToggle, paramType2Toggle, {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, invertStrMap,           NULL          }, // 195 m/1-m
     // 196 OscPerc
     {moduleTypeOscPerc,    paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                   NULL          }, // 196 Coarse
@@ -1557,11 +1561,11 @@ const tParamLocation     paramLocationList[] = {
     // 200 RandomA
     {moduleTypeRandomA,    paramType1Freq,           paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 200 Rate
     {moduleTypeRandomA,    paramType1StandardToggle, paramType2Toggle, {{ 30,   0}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,         NULL          }, // 200 Poly/Mono mode
-    {moduleTypeRandomA,    paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, posStrMap,              NULL          }, // 200 OutType
+    {moduleTypeRandomA,    paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, bipPosNegStrMap,        NULL          }, // 200 OutType
     {moduleTypeRandomA,    paramType1StandardToggle, paramType2Toggle, {{ 30,  -9}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,            NULL          }, // 200 Range
     {moduleTypeRandomA,    paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                   NULL          }, // 26 Bypass
     {moduleTypeRandomA,    paramType1StandardToggle, paramType2Toggle, {{ 65,  -2}, { 7,  7}}, anchorBottomLeft,  "Edge",           5,   0, edgeStepStrMap,         NULL          }, // 200 edge
-    {moduleTypeRandomA,    paramType1StandardToggle, paramType2Toggle, {{ 65, -10}, { 7,  7}}, anchorBottomLeft,  "Step",           5,   0, edgeStepStrMap,         NULL          }, // 200 step
+    {moduleTypeRandomA,    paramType1StandardToggle, paramType2Toggle, {{ 65, -10}, { 7,  7}}, anchorBottomLeft,  "Step",           4,   0, edgeStepStrMap,         NULL          }, // 200 step
     // 201 Red2Blue
     // 202 RandomB
     {moduleTypeRandomB,    paramType1Freq,           paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                   NULL          }, // 202 Rate
@@ -1570,7 +1574,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeRandomB,    paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Rate",         128,  64, NULL,                   NULL          }, // 202 Rate M
     {moduleTypeRandomB,    paramType1CommonDial,     paramType2Dial,   {{ 65, -10}, { 7, 14}}, anchorBottomLeft,  "Step",         128,  64, NULL,                   NULL          }, // 202 Rate M
     {moduleTypeRandomB,    paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                   NULL          }, // 202 Bypass
-    {moduleTypeRandomB,    paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, posStrMap,              NULL          }, // 202 OutType
+    {moduleTypeRandomB,    paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, bipPosNegStrMap,        NULL          }, // 202 OutType
     {moduleTypeRandomB,    paramType1StandardToggle, paramType2Toggle, {{ 20, -14}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,            NULL          }, // 202 Range
     {moduleTypeRandomB,    paramType1StandardToggle, paramType2Toggle, {{ 65,  -2}, { 7,  7}}, anchorBottomLeft,  "Edge",           5,   0, edgeStepStrMap,         NULL          }, // 202 edge
     // 203 Blue2Red
