@@ -959,7 +959,7 @@ static int rcv_extended(int dataLength, int * response) {
         return EXIT_FAILURE;
     }
 
-    for (try = 1; try <= 5; try++) {
+    for (try = 1; try <= 3; try++) {
         memset(buff, 0, sizeof(buff));
         readLength = 0;
         retVal     = libusb_bulk_transfer(devHandle_local, 0x82, buff,
@@ -1022,7 +1022,7 @@ static int int_rec(tPoll poll, int expectedResponse) {
             return EXIT_FAILURE;
         }
 
-        for (try = 1; try <= 5; try++) {
+        for (try = 1; try <= 3; try++) {
             memset(buff, 0, sizeof(buff));
             readLength = 0;
             retVal     = libusb_bulk_transfer(devHandle_local, 0x81, buff,
@@ -1127,7 +1127,7 @@ static int send_message(uint8_t * buff, int pos) {
         return EXIT_FAILURE;
     }
 
-    for (try = 1; try <= 5; try++) {
+    for (try = 1; try <= 3; try++) {
         actualLength = 0;
         get_time_delta();
         result       = libusb_bulk_transfer(handle, 3, buff, msgLength,
