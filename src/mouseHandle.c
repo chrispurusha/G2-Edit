@@ -1166,10 +1166,18 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
                     const char * parName = "";
 
                     if (read_module(modKey, &mod)) {
+                        uint32_t variation = gPatchDescr[slot].activeVariation;
+
                         modName = (mod.name[0] != '\0') ? mod.name : gModuleProperties[mod.type].name;
 
                         if ((pi < MAX_NUM_PARAMETERS) && mod.paramNameSet[pi][0]) {
                             parName = mod.paramName[pi][0];
+                        } else if (pi < MAX_NUM_PARAMETERS) {
+                            const char * label = paramLocationList[mod.param[variation][pi].paramRef].label;
+
+                            if (label != NULL && label[0] != '\0') {
+                                parName = label;
+                            }
                         }
                     }
                     snprintf(slotLabels[pg][bk][k], sizeof(slotLabels[pg][bk][k]),

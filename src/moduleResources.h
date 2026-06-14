@@ -1141,7 +1141,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 74,  -3}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-15
     {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 83,  -3}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-16
     {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Toggle, {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 144 Cycle
-    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{-15,  15}, {8, 8}}, anchorTopRight,    "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
+    {moduleTypeSeqVal,     paramType1UpDown,         paramType2UpDown, {{-15,  15}, { 8,  8}}, anchorTopRight,    "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
     {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Toggle, {{  3,  20}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
     {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Toggle, {{  3,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
     {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Toggle, {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            1,   0, emptyStrMap,                           NULL          }, // 144 Clear
