@@ -474,8 +474,6 @@ static int parse_patch_version(uint8_t * buff, int length) {
     uint8_t  slot    = read_bit_stream(buff, &bitPos, 8);
     uint8_t  version = read_bit_stream(buff, &bitPos, 8);
 
-    // TODO: I think there's more data in here after version!
-
     if (slot < MAX_SLOTS) {
         atomic_store(&gPatchVersion[slot], version);
     } else if (slot == MAX_SLOTS) {
@@ -813,8 +811,23 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_SELECT_PARAM:
-            LOG_DEBUG("Got select param\n");
+        {
+            uint32_t unknown     = read_bit_stream(buff, bitPos, 8);
+            uint32_t location    = read_bit_stream(buff, bitPos, 8);
+            uint32_t moduleIndex = read_bit_stream(buff, bitPos, 8);
+            uint32_t paramIndex  = read_bit_stream(buff, bitPos, 8);
+
+            (void)unknown;
+
+            if (slot < MAX_SLOTS) {
+                gSelectedParam[slot].location    = location;
+                gSelectedParam[slot].moduleIndex = moduleIndex;
+                gSelectedParam[slot].paramIndex  = paramIndex;
+            }
+            LOG_DEBUG("Got select param: slot=%u location=%u module=%u param=%u\n",
+                      slot, location, moduleIndex, paramIndex);
             return EXIT_SUCCESS;
+        }
 
         case SUB_RESPONSE_SELECT_VARIATION:
             LOG_DEBUG("Got variation select\n");
@@ -1796,6 +1809,152 @@ static int send_deassign_knob(uint32_t slot, uint32_t knobIndex) {
     return retVal;
 }
 
+static int send_assign_global_knob(uint32_t slotIndex, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex, uint32_t knobIndex) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
+    buff[pos++] = atomic_load(&gPerfVersion);
+    buff[pos++] = SUB_COMMAND_ASSIGN_GLOBAL_KNOB;
+    buff[pos++] = (uint8_t)((slotIndex << 4) | (location << 2));
+    buff[pos++] = (uint8_t)moduleIndex;
+    buff[pos++] = (uint8_t)paramIndex;
+    buff[pos++] = 0x00;
+    buff[pos++] = (uint8_t)knobIndex;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        LOG_DEBUG("ASSIGN GLOBAL KNOB RESPONSE\n");
+    }
+    return retVal;
+}
+
+static int send_deassign_global_knob(uint32_t knobIndex) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
+    buff[pos++] = atomic_load(&gPerfVersion);
+    buff[pos++] = SUB_COMMAND_DEASSIGN_GLOBAL_KNOB;
+    buff[pos++] = 0x00;
+    buff[pos++] = (uint8_t)knobIndex;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        LOG_DEBUG("DEASSIGN GLOBAL KNOB RESPONSE\n");
+    }
+    return retVal;
+}
+
+static int send_assign_midi_cc(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex, uint32_t midiCC) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
+    buff[pos++] = SUB_COMMAND_ASSIGN_MIDICC;
+    buff[pos++] = (uint8_t)location;
+    buff[pos++] = (uint8_t)moduleIndex;
+    buff[pos++] = (uint8_t)paramIndex;
+    buff[pos++] = (uint8_t)midiCC;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        LOG_DEBUG("ASSIGN MIDI CC RESPONSE\n");
+    }
+    return retVal;
+}
+
+static int send_deassign_midi_cc(uint32_t slot, uint32_t midiCC) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
+    buff[pos++] = SUB_COMMAND_DEASSIGN_MIDICC;
+    buff[pos++] = (uint8_t)midiCC;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        LOG_DEBUG("DEASSIGN MIDI CC RESPONSE\n");
+    }
+    return retVal;
+}
+
+static int send_copy_variation(uint32_t slot, uint32_t fromVariation, uint32_t toVariation) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
+    buff[pos++] = atomic_load(&gPatchVersion[slot]);
+    buff[pos++] = SUB_COMMAND_COPY_VARIATION;
+    buff[pos++] = (uint8_t)fromVariation;
+    buff[pos++] = (uint8_t)toVariation;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        LOG_DEBUG("COPY VARIATION RESPONSE\n");
+    }
+    return retVal;
+}
+
+static int send_set_master_clock_bpm(uint32_t bpm) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
+    buff[pos++] = atomic_load(&gPerfVersion);
+    buff[pos++] = SUB_COMMAND_SET_MASTER_CLOCK;
+    buff[pos++] = 0xFF;
+    buff[pos++] = 0x01;
+    buff[pos++] = (uint8_t)bpm;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        LOG_DEBUG("SET MASTER CLOCK BPM RESPONSE\n");
+    }
+    return retVal;
+}
+
+static int send_set_master_clock_run(uint32_t running) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
+    buff[pos++] = atomic_load(&gPerfVersion);
+    buff[pos++] = SUB_COMMAND_SET_MASTER_CLOCK;
+    buff[pos++] = 0xFF;
+    buff[pos++] = 0x00;
+    buff[pos++] = running ? 0x01 : 0x00;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        LOG_DEBUG("SET MASTER CLOCK RUN RESPONSE\n");
+    }
+    return retVal;
+}
+
 static int send_set_patch_descr(uint32_t slot) { // Note - currently using values straight from patchDescr in sub-function
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     int      pos                     = COMMAND_OFFSET;
@@ -2134,6 +2293,61 @@ static int send_write_data(tMessageContent * messageContent, bool * ack) {
         case eMsgCmdDeassignKnob:
         {
             retVal = send_deassign_knob(messageContent->slot, messageContent->knobDeassignData.knobIndex);
+            break;
+        }
+
+        case eMsgCmdAssignGlobalKnob:
+        {
+            uint32_t gkSlot  = messageContent->globalKnobAssignData.slotIndex;
+            uint32_t gkLoc   = messageContent->globalKnobAssignData.location;
+            uint32_t gkMod   = messageContent->globalKnobAssignData.moduleIndex;
+            uint32_t gkParam = messageContent->globalKnobAssignData.paramIndex;
+            uint32_t gkKnob  = messageContent->globalKnobAssignData.knobIndex;
+
+            retVal = send_assign_global_knob(gkSlot, gkLoc, gkMod, gkParam, gkKnob);
+            break;
+        }
+
+        case eMsgCmdDeassignGlobalKnob:
+        {
+            retVal = send_deassign_global_knob(messageContent->globalKnobDeassignData.knobIndex);
+            break;
+        }
+
+        case eMsgCmdAssignMidiCC:
+        {
+            uint32_t mLoc   = messageContent->midiCCAssignData.moduleKey.location;
+            uint32_t mMod   = messageContent->midiCCAssignData.moduleKey.index;
+            uint32_t mParam = messageContent->midiCCAssignData.paramIndex;
+            uint32_t mCC    = messageContent->midiCCAssignData.midiCC;
+
+            retVal = send_assign_midi_cc(messageContent->slot, mLoc, mMod, mParam, mCC);
+            break;
+        }
+
+        case eMsgCmdDeassignMidiCC:
+        {
+            retVal = send_deassign_midi_cc(messageContent->slot, messageContent->midiCCDeassignData.midiCC);
+            break;
+        }
+
+        case eMsgCmdCopyVariation:
+        {
+            retVal = send_copy_variation(messageContent->slot,
+                                         messageContent->copyVariationData.fromVariation,
+                                         messageContent->copyVariationData.toVariation);
+            break;
+        }
+
+        case eMsgCmdSetMasterClockBPM:
+        {
+            retVal = send_set_master_clock_bpm(messageContent->masterClockBPMData.bpm);
+            break;
+        }
+
+        case eMsgCmdSetMasterClockRun:
+        {
+            retVal = send_set_master_clock_run(messageContent->masterClockRunData.running);
             break;
         }
 

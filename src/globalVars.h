@@ -58,6 +58,7 @@ extern _Atomic uint32_t    gSlot;
 extern tPatchDescr         gPatchDescr[MAX_SLOTS];
 extern tKnobArray          gKnobArray[MAX_SLOTS]; // TODO - Don't forget to nullify on new load
 extern tGlobalKnob         gGlobalKnobArray[MAX_NUM_KNOBS];
+extern tSelectedParam      gSelectedParam[MAX_SLOTS];
 extern uint32_t            gMorphCount[MAX_SLOTS];
 extern uint32_t            gNote2Size[MAX_SLOTS];
 extern uint8_t             gNote2[MAX_SLOTS][1024];

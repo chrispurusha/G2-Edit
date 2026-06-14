@@ -738,6 +738,12 @@ typedef struct {
 } tGlobalKnob;
 
 typedef struct {
+    uint32_t location;
+    uint32_t moduleIndex;
+    uint32_t paramIndex;
+} tSelectedParam;
+
+typedef struct {
     uint8_t  midiCC;
     uint32_t location;
     uint32_t moduleIndex;

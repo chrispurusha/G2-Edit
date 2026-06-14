@@ -53,7 +53,14 @@ typedef enum {
     eMsgCmdWritePatchDescr,
     eMsgCmdGetPerformanceAndPatchSettings,
     eMsgCmdAssignKnob,
-    eMsgCmdDeassignKnob
+    eMsgCmdDeassignKnob,
+    eMsgCmdAssignGlobalKnob,
+    eMsgCmdDeassignGlobalKnob,
+    eMsgCmdAssignMidiCC,
+    eMsgCmdDeassignMidiCC,
+    eMsgCmdCopyVariation,
+    eMsgCmdSetMasterClockBPM,
+    eMsgCmdSetMasterClockRun
 } eMsgCmd;
 
 typedef struct {
@@ -141,21 +148,63 @@ typedef struct {
 } tKnobDeassignData;
 
 typedef struct {
+    uint32_t slotIndex;
+    uint32_t location;
+    uint32_t moduleIndex;
+    uint32_t paramIndex;
+    uint32_t knobIndex;
+} tGlobalKnobAssignData;
+
+typedef struct {
+    uint32_t knobIndex;
+} tGlobalKnobDeassignData;
+
+typedef struct {
+    tModuleKey moduleKey;
+    uint32_t   paramIndex;
+    uint32_t   midiCC;
+} tMidiCCAssignData;
+
+typedef struct {
+    uint32_t midiCC;
+} tMidiCCDeassignData;
+
+typedef struct {
+    uint32_t fromVariation;
+    uint32_t toVariation;
+} tCopyVariationData;
+
+typedef struct {
+    uint32_t bpm;
+} tMasterClockBPMData;
+
+typedef struct {
+    uint32_t running;
+} tMasterClockRunData;
+
+typedef struct {
     uint32_t cmd;
     uint32_t slot;
     union {
-        tParamData        paramData;
-        tParamMorphData   paramMorphData;
-        tModeData         modeData;
-        tModuleData       moduleData;
-        tCableData        cableData;
-        tVariationData    variationData;
-        tSlotData         slotData;
-        tModuleLabelData  moduleLabelData;
-        tPatchName        patchName;
-        tModuleColourData moduleColourData;
-        tKnobAssignData   knobAssignData;
-        tKnobDeassignData knobDeassignData;
+        tParamData              paramData;
+        tParamMorphData         paramMorphData;
+        tModeData               modeData;
+        tModuleData             moduleData;
+        tCableData              cableData;
+        tVariationData          variationData;
+        tSlotData               slotData;
+        tModuleLabelData        moduleLabelData;
+        tPatchName              patchName;
+        tModuleColourData       moduleColourData;
+        tKnobAssignData         knobAssignData;
+        tKnobDeassignData       knobDeassignData;
+        tGlobalKnobAssignData   globalKnobAssignData;
+        tGlobalKnobDeassignData globalKnobDeassignData;
+        tMidiCCAssignData       midiCCAssignData;
+        tMidiCCDeassignData     midiCCDeassignData;
+        tCopyVariationData      copyVariationData;
+        tMasterClockBPMData     masterClockBPMData;
+        tMasterClockRunData     masterClockRunData;
     };
 } tMessageContent;
 

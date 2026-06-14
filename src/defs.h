@@ -116,6 +116,7 @@
 #define SUB_COMMAND_MIDI_DUMP                (0x3d)
 #define SUB_COMMAND_SET_PARAM_MODE           (0x3e)
 #define SUB_RESPONSE_MASTER_CLOCK            (0x3f)
+#define SUB_COMMAND_SET_MASTER_CLOCK         (0x3f) // Note - same value as SUB_RESPONSE_MASTER_CLOCK
 #define SUB_RESPONSE_PARAM_CHANGE            (0x40) // Seems to be used for response and set command
 #define SUB_COMMAND_SET_PARAM                (0x40)
 #define SUB_COMMAND_SET_PERF_MODE            (0x41) // Followed by 3e 01 00 to enable perf,  35 04 to disable?
