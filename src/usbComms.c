@@ -888,6 +888,16 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             return EXIT_SUCCESS;
         }
 
+        case SUB_RESPONSE_EXT_MASTER_CLOCK:
+        {
+            uint8_t  unknown = read_bit_stream(buff, bitPos, 8);
+            uint16_t midiClk = (uint16_t)read_bit_stream(buff, bitPos, 8) << 8;
+
+            midiClk |= (uint16_t)read_bit_stream(buff, bitPos, 8);
+            LOG_DEBUG("Got ext master clock unknown=0x%02x clock=%u\n", unknown, midiClk);
+            return EXIT_SUCCESS;
+        }
+
         case SUB_RESPONSE_GLOBAL_KNOBS:
             LOG_DEBUG("Got global knobs\n");
             read_bit_stream(buff, bitPos, 16); // section byte count — consumed, not used
@@ -1137,7 +1147,7 @@ static int int_rec(tPoll poll, int expectedResponse) {
         if (poll == ePollYes) {
             doLoop = false;                        // Idle poll — always exit after one
         } else {
-            LOG_DEBUG("response = 0x%02x expected = 0%02x\n", response, expectedResponse);
+            LOG_DEBUG("response = 0x%02x expected = 0x%02x\n", response, expectedResponse);
 
             if (response == expectedResponse) {
                 doLoop = false;                   // Got what we wanted — retVal already correct
@@ -1312,6 +1322,42 @@ static int send_get_midi_cc(void) {
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_MIDI_CC);
         LOG_DEBUG("GET MIDI CC RESPONSE\n");
+    }
+    return retVal;
+}
+
+static int send_get_assigned_voices(void) {
+    int     retVal                  = EXIT_FAILURE;
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
+    buff[pos++] = 0x41;
+    buff[pos++] = SUB_COMMAND_SET_ASSIGNED_VOICES;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_ASSIGNED_VOICES);
+        LOG_DEBUG("GET ASSIGNED VOICES RESPONSE\n");
+    }
+    return retVal;
+}
+
+static int send_get_master_clock(void) {
+    int     retVal                  = EXIT_FAILURE;
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
+    buff[pos++] = 0x41;
+    buff[pos++] = SUB_COMMAND_QUERY_MASTER_CLOCK;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_MASTER_CLOCK);
+        LOG_DEBUG("GET MASTER CLOCK RESPONSE\n");
     }
     return retVal;
 }
@@ -1613,7 +1659,6 @@ static int send_get_patch_data(uint32_t slot) {
     send_get_resources_used(slot, locationFx);
     send_get_knob_snapshot(slot);
     send_get_selected_param(slot);
-    // Also get selected param 0x2e
 
     return EXIT_SUCCESS;
 }
@@ -1804,6 +1849,10 @@ static int send_init_sequence_pull(void) {
             return EXIT_FAILURE;
         }
     }
+
+    send_get_assigned_voices();
+    send_get_global_knobs();
+    send_get_master_clock();
 
     send_start();
 
@@ -2103,7 +2152,9 @@ static int send_write_data(tMessageContent * messageContent, bool * ack) {
                 send_get_patch_data(i);
             }
 
+            send_get_assigned_voices();
             send_get_global_knobs();
+            send_get_master_clock();
 
             send_start(); // Note, when going into/out of performance mode, this seems to trigger an auto G2->editor send of synth settings
 
