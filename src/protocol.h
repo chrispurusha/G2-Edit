@@ -33,6 +33,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset, uint32_t chunkBitEnd);
 void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32_t numVariations);
 void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset);
+void parse_global_knobs(uint8_t * buff, uint32_t * bitPos);
 void write_knobs(uint32_t slot, uint8_t * buff, uint32_t * bitPos);
 void parse_controllers(uint32_t slot, uint8_t * buff, uint32_t * subOffset);
 void write_controllers(uint32_t slot, uint8_t * buff, uint32_t * bitPos);

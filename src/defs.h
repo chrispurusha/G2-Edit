@@ -136,8 +136,8 @@
 #define SUB_RESPONSE_MODULE_NAMES            (0x5a)
 #define SUB_RESPONSE_PARAM_NAMES             (0x5b)
 #define SUB_RESPONSE_EXT_MASTER_CLOCK        (0x5d)
-#define SUB_RESPONSE_GLOBAL_KNOBS            (0x5e) // Not yet sure if this is a response or a query command, or both
-#define SUB_COMMAND_GLOBAL_KNOBS             (0x5f)
+#define SUB_COMMAND_QUERY_GLOBAL_KNOBS       (0x5e) // Q_GLOBAL_KNOBS in Delphi — query sent to G2
+#define SUB_RESPONSE_GLOBAL_KNOBS            (0x5f) // C_KNOBS_GLOBAL in Delphi — response from G2
 #define SUB_RESPONSE_CONTROLLERS             (0x60)
 #define SUB_RESPONSE_KNOBS                   (0x62)
 #define SUB_RESPONSE_MORPH_PARAMS            (0x65)

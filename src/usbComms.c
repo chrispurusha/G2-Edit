@@ -888,6 +888,12 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             return EXIT_SUCCESS;
         }
 
+        case SUB_RESPONSE_GLOBAL_KNOBS:
+            LOG_DEBUG("Got global knobs\n");
+            read_bit_stream(buff, bitPos, 16); // section byte count — consumed, not used
+            parse_global_knobs(buff, bitPos);
+            return EXIT_SUCCESS;
+
         case SUB_RESPONSE_CURRENT_NOTE_2:
         {
             uint32_t count     = read_bit_stream(buff, bitPos, 16);
@@ -1504,6 +1510,24 @@ static void clear_slot_data(uint32_t slot) {
     gNote2Size[slot]       = 0;
 }
 
+static int send_get_global_knobs(void) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
+
+    buff[pos++] = 0x01;
+    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
+    buff[pos++] = atomic_load(&gPerfVersion);
+    buff[pos++] = SUB_COMMAND_QUERY_GLOBAL_KNOBS;
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_GLOBAL_KNOBS);
+        LOG_DEBUG("GLOBAL KNOBS RESPONSE\n");
+    }
+    return retVal;
+}
+
 static int send_get_current_note(uint32_t slot) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
@@ -2078,6 +2102,8 @@ static int send_write_data(tMessageContent * messageContent, bool * ack) {
             for (i = 0; i < MAX_SLOTS; i++) {
                 send_get_patch_data(i);
             }
+
+            send_get_global_knobs();
 
             send_start(); // Note, when going into/out of performance mode, this seems to trigger an auto G2->editor send of synth settings
 

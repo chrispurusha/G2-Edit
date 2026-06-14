@@ -68,6 +68,7 @@ uint32_t               gMorphGroupFocus                             = 0;
 _Atomic uint32_t       gSlot                                        = 0;
 tPatchDescr            gPatchDescr[MAX_SLOTS]                       = {0};
 tKnobArray             gKnobArray[MAX_SLOTS]                        = {0};
+tGlobalKnob            gGlobalKnobArray[MAX_NUM_KNOBS]              = {0};
 uint32_t               gMorphCount[MAX_SLOTS]                       = {0};
 uint32_t               gNote2Size[MAX_SLOTS]                        = {0};
 uint8_t                gNote2[MAX_SLOTS][1024]                      = {0};

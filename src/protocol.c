@@ -593,6 +593,38 @@ void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
+void parse_global_knobs(uint8_t * buff, uint32_t * bitPos) {
+    uint32_t knobCount = read_bit_stream(buff, bitPos, 16);
+
+    LOG_DEBUG("  Global knob count %u\n", knobCount);
+
+    if (knobCount > MAX_NUM_KNOBS) {
+        LOG_ERROR("parse_global_knobs: count %u exceeds %u\n", knobCount, MAX_NUM_KNOBS);
+        knobCount = MAX_NUM_KNOBS;
+    }
+    memset(gGlobalKnobArray, 0, sizeof(gGlobalKnobArray));
+
+    for (uint32_t i = 0; i < knobCount; i++) {
+        gGlobalKnobArray[i].assigned = read_bit_stream(buff, bitPos, 1);
+
+        if (gGlobalKnobArray[i].assigned) {
+            gGlobalKnobArray[i].location    = read_bit_stream(buff, bitPos, 2);
+            gGlobalKnobArray[i].moduleIndex = read_bit_stream(buff, bitPos, 8);
+            gGlobalKnobArray[i].isLed       = read_bit_stream(buff, bitPos, 2);
+            gGlobalKnobArray[i].paramIndex  = read_bit_stream(buff, bitPos, 7);
+            gGlobalKnobArray[i].slotIndex   = read_bit_stream(buff, bitPos, 2);
+
+            LOG_DEBUG("  Global knob %u: slot %u location %u module %u isLed %u param %u\n",
+                      i,
+                      gGlobalKnobArray[i].slotIndex,
+                      gGlobalKnobArray[i].location,
+                      gGlobalKnobArray[i].moduleIndex,
+                      gGlobalKnobArray[i].isLed,
+                      gGlobalKnobArray[i].paramIndex);
+        }
+    }
+}
+
 void write_knobs(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     int      i          = 0;
     uint32_t sizeBitPos = 0;

@@ -729,6 +729,15 @@ typedef struct {
 } tKnobArray;
 
 typedef struct {
+    bool     assigned;
+    uint32_t location;
+    uint32_t moduleIndex;
+    uint32_t isLed;
+    uint32_t paramIndex;
+    uint32_t slotIndex;
+} tGlobalKnob;
+
+typedef struct {
     uint8_t  midiCC;
     uint32_t location;
     uint32_t moduleIndex;
