@@ -1133,9 +1133,9 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
     static tMenuItem pageMenuItems[NUM_PARAM_PAGES + 1];
     static char      pageLabels[NUM_PARAM_PAGES][10];
     static tMenuItem bankMenuItems[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE + 1];
-    static char      bankLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][12];
+    static char      bankLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][24];
     static tMenuItem slotMenuItems[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK + 1];
-    static char      slotLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK][48];
+    static char      slotLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK][64];
     static tMenuItem menuItems[3];
 
     uint32_t         slot     = atomic_load(&gSlot);
@@ -1148,7 +1148,7 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
         snprintf(pageLabels[pg], sizeof(pageLabels[pg]), "Page %c", 'A' + pg);
 
         for (int bk = 0; bk < NUM_BANKS_PER_PAGE; bk++) {
-            snprintf(bankLabels[pg][bk], sizeof(bankLabels[pg][bk]), "Bank %d", bk + 1);
+            snprintf(bankLabels[pg][bk], sizeof(bankLabels[pg][bk]), "%c - Bank %d", 'A' + pg, bk + 1);
 
             for (int k = 0; k < NUM_KNOBS_PER_BANK; k++) {
                 uint32_t knobIdx = (uint32_t)((pg * NUM_BANKS_PER_PAGE + bk) * NUM_KNOBS_PER_BANK + k);
@@ -1181,10 +1181,10 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
                         }
                     }
                     snprintf(slotLabels[pg][bk][k], sizeof(slotLabels[pg][bk][k]),
-                             "%d Used - %s %s", k + 1, modName, parName);
+                             "%c %d - %d Used - %s %s", 'A' + pg, bk + 1, k + 1, modName, parName);
                 } else {
                     snprintf(slotLabels[pg][bk][k], sizeof(slotLabels[pg][bk][k]),
-                             "%d ---", k + 1);
+                             "%c %d - %d ---", 'A' + pg, bk + 1, k + 1);
                 }
                 slotMenuItems[pg][bk][k] = (tMenuItem){
                     slotLabels[pg][bk][k], RGB_GREY_3, action_assign_knob, knobIdx, NULL
