@@ -66,6 +66,9 @@ const char *             saturateCurveStrMap[]           = {"1", "2", "3", "4", 
 const char *             shpExpCurveStrMap[]             = {"x2", "x3", "x4", "x5", NULL};
 const char *             pulseRangeStrMap[]              = {"Sub", "Lo", "Hi", NULL};
 const char *             pulseModeStrMap[]               = {"Plus", "Minus", NULL};
+const char *             logicDelayModeStrMap[]          = {"Pos", "Neg", "Cycle", NULL};
+const char *             oscPmWaveStrMap[]               = {"Sin", "Tri", NULL};
+const char *             rndClkBCharStrMap[]             = {"Rnd1", "Rnd2", NULL};
 const char *             bipUniStrMap[]                  = {"Bip", "Uni", NULL};
 const char *             vowelStrMap[]                   = {"A", "E", "I", "O", "U", "Y", "AA", "AE", "OE", NULL};
 const char *             nordFilterTypeStrMap[]          = {"LP", "BP", "HP", "BR", NULL};
@@ -2516,7 +2519,7 @@ const tModeLocation      modeLocationList[] = {
     {moduleTypeLfoC,       paramType1StandardToggle, paramType2Toggle, {{ 64,  -3}, { 7, 7}}, anchorBottomLeft,  "Wave",  6, 0, lfoWaveStrMap       }, // 24 LfoC
     {moduleTypeDriver,     paramType1StandardToggle, paramType2Toggle, {{ 35,  -3}, { 7, 7}}, anchorBottomLeft,  "Type",  4, 0, driverTypeStrMap    }, // 35 Type
     {moduleTypePulse,      paramType1StandardToggle, paramType2Toggle, {{-13,  -3}, { 7, 7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap     }, // 38 Mode
-    {moduleTypeDelay,      paramType1StandardToggle, paramType2Toggle, {{-13,  -3}, { 7, 7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap     }, // 42 Mode
+    {moduleTypeDelay,      paramType1StandardToggle, paramType2Toggle, {{-13,  -3}, { 7, 7}}, anchorBottomRight, "Mode",  3, 0, logicDelayModeStrMap}, // 42 Mode
     {moduleTypeGate,       paramType1StandardToggle, paramType2Toggle, {{ 40,  -3}, { 7, 7}}, anchorBottomLeft,  "G1",    6, 0, gateTypeStrMap      }, // 64 Gate 1 Type
     {moduleTypeGate,       paramType1StandardToggle, paramType2Toggle, {{ 70,  -3}, { 7, 7}}, anchorBottomLeft,  "G2",    6, 0, gateTypeStrMap      }, // 64 Gate 2 Type
     {moduleTypeClkDiv,     paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 7, 7}}, anchorBottomLeft,  "Mode",  2, 0, divModeStrMap       }, // 69 DivMode
@@ -2532,8 +2535,8 @@ const tModeLocation      modeLocationList[] = {
     {moduleTypeDelayB,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 4, 0, delayABRangeStrMap  }, // 177 Delay Range
     {moduleTypeDlyStereo,  paramType1StandardToggle, paramType2Toggle, {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 3, 0, dlyStereoRangeStrMap}, // 182 Delay Range
     {moduleTypeDlyEight,   paramType1StandardToggle, paramType2Toggle, {{ 10, -10}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap    }, // 181 Delay Range
-    {moduleTypeOscPM,      paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap }, // 183 Wave
-    {moduleTypeRndClkB,    paramType1StandardToggle, paramType2Toggle, {{  3,   5}, { 7, 7}}, anchorTopLeft,     "Char",  2, 0, NULL                }, // 206 Character
+    {moduleTypeOscPM,      paramType1StandardToggle, paramType2Toggle, {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  2, 0, oscPmWaveStrMap     }, // 183 Wave
+    {moduleTypeRndClkB,    paramType1StandardToggle, paramType2Toggle, {{  3,   5}, { 7, 7}}, anchorTopLeft,     "Char",  2, 0, rndClkBCharStrMap   }, // 206 Character
     {moduleTypeRndPattern, paramType1StandardToggle, paramType2Toggle, {{  3,   5}, { 7, 7}}, anchorTopLeft,     "Wave",  2, 0, NULL                }, // 208 Wave
 };
 
