@@ -689,6 +689,23 @@ void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord
     targetCoord->y = val;
 }
 
+static void clamp_menu_to_screen(tMenuItem * items, uint32_t columns) {
+    int      count        = 0;
+    double   renderHeight = get_render_height() / gGlobalGuiScale;
+    double   cellH        = STANDARD_TEXT_HEIGHT + (5 * 2);
+    uint32_t cols         = (columns > 1) ? columns : 1;
+
+    while (items[count].label != NULL) {
+        count++;
+    }
+    int      rows         = (count + (int)cols - 1) / (int)cols;
+    double   menuHeight   = rows * cellH;
+
+    if (gContextMenu.coord.y + menuHeight > (renderHeight - SCROLLBAR_WIDTH)) {
+        gContextMenu.coord.y = (renderHeight - SCROLLBAR_WIDTH) - menuHeight;
+    }
+}
+
 void menu_action_create(int index) {
     uint32_t slot     = atomic_load(&gSlot);
     uint32_t location = atomic_load(&gLocation);
@@ -705,7 +722,7 @@ void menu_action_create(int index) {
         if (uniqueIndex >= 0) {
             module.key.index                                                           = (uint32_t)uniqueIndex;
             module.type                                                                = (tModuleType)gContextMenu.items[index].param;
-            convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.coord);
+            convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.originCoord);
 
             strncpy(module.name, gModuleProperties[module.type].name, sizeof(module.name));
             module.name[sizeof(module.name) - 1]                                       = '\0';
@@ -741,6 +758,7 @@ void menu_action_create(int index) {
         gContextMenu.items = gContextMenu.items[index].subMenu;
 
         if (gContextMenu.items != NULL) {
+            clamp_menu_to_screen(gContextMenu.items, 1);
             gContextMenu.active = true;
         }
     }
@@ -769,6 +787,7 @@ void action_set_module_colour(int index) {
         gContextMenu.cellWidth = STANDARD_TEXT_HEIGHT * 2;
 
         if (gContextMenu.items != NULL) {
+            clamp_menu_to_screen(gContextMenu.items, 6);
             gContextMenu.active = true;
         }
     }
@@ -1020,21 +1039,17 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
     };
 
     // Store menu position
-    gContextMenu.coord  = coord;
-    gContextMenu.items  = menuItems;
-    gContextMenu.active = true;
-
-    double           menuHeight        = (((sizeof(oscMenuItems) / sizeof(oscMenuItems[0])) - 1) * (STANDARD_TEXT_HEIGHT + (5 * 2))); // Reference biggest array
-    double           renderHeight      = get_render_height() / gGlobalGuiScale;
-
-    // Shift upwards if too far towards end of screen
-    if (gContextMenu.coord.y + menuHeight > (renderHeight - SCROLLBAR_WIDTH)) {
-        gContextMenu.coord.y = (renderHeight - SCROLLBAR_WIDTH) - menuHeight;
-    }
+    gContextMenu.coord       = coord;
+    gContextMenu.originCoord = coord;
+    gContextMenu.items       = menuItems;
+    gContextMenu.columns     = 0;
+    gContextMenu.cellWidth   = 0.0;
+    gContextMenu.active      = true;
+    clamp_menu_to_screen(menuItems, 1);
 }
 
 void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t connectorIndex) {
-    static tMenuItem menuItems[]  = {
+    static tMenuItem menuItems[] = {
         {"Delete cable", RGB_GREY_3, menu_action_delete_cable, 0, NULL},
         {NULL,           RGB_BLACK,  NULL,                     0, NULL}        // End of menu
     };
@@ -1042,17 +1057,12 @@ void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t co
     // Store menu position
     gContextMenu.coord          = coord;
     gContextMenu.items          = menuItems;
+    gContextMenu.columns        = 0;
+    gContextMenu.cellWidth      = 0.0;
     gContextMenu.moduleKey      = moduleKey;
     gContextMenu.connectorIndex = connectorIndex;
     gContextMenu.active         = true;
-
-    double           menuHeight   = (((sizeof(menuItems) / sizeof(menuItems[0])) - 1) * (STANDARD_TEXT_HEIGHT + (5 * 2)));
-    double           renderHeight = get_render_height() / gGlobalGuiScale;
-
-    // Shift upwards if too far towards end of screen
-    if (gContextMenu.coord.y + menuHeight > (renderHeight - SCROLLBAR_WIDTH)) {
-        gContextMenu.coord.y = (renderHeight - SCROLLBAR_WIDTH) - menuHeight;
-    }
+    clamp_menu_to_screen(menuItems, 1);
 }
 
 int32_t find_knob_for_param(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex) {
@@ -1174,6 +1184,8 @@ static void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
 
     gContextMenu.coord                 = coord;
     gContextMenu.items                 = menuItems;
+    gContextMenu.columns               = 0;
+    gContextMenu.cellWidth             = 0.0;
     gContextMenu.moduleKey             = moduleKey;
     gContextMenu.paramIndex            = paramIndex;
     gContextMenu.active                = true;
@@ -1220,6 +1232,8 @@ static void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t m
 
     gContextMenu.coord                 = coord;
     gContextMenu.items                 = menuItems;
+    gContextMenu.columns               = 0;
+    gContextMenu.cellWidth             = 0.0;
     gContextMenu.moduleKey             = moduleKey;
     gContextMenu.paramIndex            = modeIndex;
     gContextMenu.active                = true;
@@ -1324,6 +1338,8 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
 
     gContextMenu.coord             = coord;
     gContextMenu.items             = menuItems;
+    gContextMenu.columns           = 0;
+    gContextMenu.cellWidth         = 0.0;
     gContextMenu.moduleKey         = moduleKey;
     gContextMenu.paramIndex        = paramIndex;
     gContextMenu.active            = true;
@@ -1367,7 +1383,7 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
         {NULL, RGB_BLACK,            NULL,                      0, NULL}
     };
 
-    static tMenuItem menuItems[]     = {
+    static tMenuItem menuItems[] = {
         {"Rename",        RGB_GREY_3, action_rename_module,      0, NULL},
         {"Set colour",    RGB_GREY_3, action_set_module_colour,  0, colourMenuItems,},
         {"Delete module", RGB_GREY_3, menu_action_delete_module, 0, NULL},
@@ -1381,16 +1397,7 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     gContextMenu.cellWidth = 0.0;
     gContextMenu.moduleKey = moduleKey;
     gContextMenu.active    = true;
-
-    // Pre-clamp so the colour submenu (6 cols x 5 rows) fits on screen
-    int              colourItemCount = (int)((sizeof(colourMenuItems) / sizeof(colourMenuItems[0])) - 1);
-    int              colourRows      = (colourItemCount + 6 - 1) / 6;
-    double           menuHeight      = colourRows * (STANDARD_TEXT_HEIGHT + (5 * 2));
-    double           renderHeight    = get_render_height() / gGlobalGuiScale;
-
-    if (gContextMenu.coord.y + menuHeight > (renderHeight - SCROLLBAR_WIDTH)) {
-        gContextMenu.coord.y = (renderHeight - SCROLLBAR_WIDTH) - menuHeight;
-    }
+    clamp_menu_to_screen(menuItems, 1);
 }
 
 static void action_set_patch_type(int index) {
@@ -1427,9 +1434,11 @@ void open_patch_type_context_menu(tCoord coord) {
         {NULL,        RGB_BLACK,  NULL,                                   0, NULL}
     };
 
-    gContextMenu.coord  = coord;
-    gContextMenu.items  = menuItems;
-    gContextMenu.active = true;
+    gContextMenu.coord     = coord;
+    gContextMenu.items     = menuItems;
+    gContextMenu.columns   = 0;
+    gContextMenu.cellWidth = 0.0;
+    gContextMenu.active    = true;
 }
 
 static void action_set_mono_poly(int index) {
@@ -1453,9 +1462,11 @@ static void open_mono_poly_context_menu(tCoord coord) {
         {NULL,     RGB_BLACK,  NULL,                              0, NULL}
     };
 
-    gContextMenu.coord  = coord;
-    gContextMenu.items  = menuItems;
-    gContextMenu.active = true;
+    gContextMenu.coord     = coord;
+    gContextMenu.items     = menuItems;
+    gContextMenu.columns   = 0;
+    gContextMenu.cellWidth = 0.0;
+    gContextMenu.active    = true;
 }
 
 static void action_set_voice_count(int index) {
@@ -1964,13 +1975,15 @@ void open_variation_copy_menu(tCoord coord, uint32_t sourceVariation) {
         }
     }
 
-    menuItems[count]    = (tMenuItem){
+    menuItems[count]       = (tMenuItem){
         NULL, RGB_BLACK, NULL, 0, NULL
     };
 
-    gContextMenu.coord  = coord;
-    gContextMenu.items  = menuItems;
-    gContextMenu.active = true;
+    gContextMenu.coord     = coord;
+    gContextMenu.items     = menuItems;
+    gContextMenu.columns   = 0;
+    gContextMenu.cellWidth = 0.0;
+    gContextMenu.active    = true;
 }
 
 tMouseButton convert_to_mouse_button(int button, int action) {

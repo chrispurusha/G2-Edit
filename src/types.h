@@ -589,11 +589,12 @@ typedef struct _struct_menuItem {
 } tMenuItem;
 
 typedef struct {
-    bool          active;      // Is the menu currently visible?
-    tCoord        coord;       // Position of the menu
-    tMenuItem *   items;       // Pointer to an array of menu items
-    uint32_t      columns;     // 0 or 1 = single column; >1 = multi-column grid
-    double        cellWidth;   // Override cell width when non-zero
+    bool          active;       // Is the menu currently visible?
+    tCoord        coord;        // Position of the menu (may be clamped)
+    tCoord        originCoord;  // Original click position, unmodified by clamping
+    tMenuItem *   items;        // Pointer to an array of menu items
+    uint32_t      columns;      // 0 or 1 = single column; >1 = multi-column grid
+    double        cellWidth;    // Override cell width when non-zero
     tModuleKey    moduleKey;
     tConnectorDir connectorDir;
     uint32_t      connectorIndex;
