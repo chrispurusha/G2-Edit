@@ -485,9 +485,10 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
         case volumeTypeMono:
         {
             // Debug
-            //snprintf(buff, sizeof(buff), "Vol %u", module->volume.value1);
+            //char buff[32] = {0};
+            //snprintf(buff, sizeof(buff), "Vol Vol=%u PeakHold/Yellow range=%u Clip=%u", module->volume.value[0] & 0xf, (module->volume.value[0] >> 4) & 0x3, (module->volume.value[0] >> 5) & 0x1);
             //set_rgb_colour(RGB_BLACK);
-            //render_text(moduleArea, {{coord.x + x_param_size_from_percent(5), coord.y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+            //render_text(moduleArea, {{rectangle.coord.x + 3, rectangle.coord.y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
 
             render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[0]);
         }
