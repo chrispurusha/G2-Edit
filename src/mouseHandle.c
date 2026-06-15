@@ -2294,13 +2294,15 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
 
 
     get_global_gui_scaled_mouse_coord(&coord);
-    x = coord.x;
-    y = coord.y;
+    x                      = coord.x;
+    y                      = coord.y;
 
     // Scale x and y to match intended rendering window
     //glfwGetWindowSize(window, &width, &height);
     //x = (x * (double)get_render_width()) / (double)width;
     //y = (y * (double)get_render_height()) / (double)height;
+
+    gHoverConnector.active = false;
 
     if (gScrollState.yBarDragging == true) {
         set_y_scroll_bar(y);
@@ -2432,6 +2434,36 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     } else if (gContextMenu.active == true) {
         // Dummy
     } else {
+        tModule  hoverModule = {0};
+        bool     hoverValid  = false;
+        uint32_t hoverSlot   = atomic_load(&gSlot);
+        uint32_t hoverLoc    = atomic_load(&gLocation);
+
+        reset_walk_module();
+
+        do {
+            hoverValid = walk_next_module(&hoverModule);
+
+            if (hoverValid && hoverModule.key.slot == hoverSlot && hoverModule.key.location == hoverLoc) {
+                for (int i = 0; i < (int)module_connector_count(hoverModule.type); i++) {
+                    if (within_rectangle(coord, hoverModule.connector[i].rectangle)) {
+                        gHoverConnector.active      = true;
+                        gHoverConnector.slot        = hoverSlot;
+                        gHoverConnector.location    = hoverLoc;
+                        gHoverConnector.moduleIndex = hoverModule.key.index;
+                        gHoverConnector.ioCount     = (uint32_t)find_io_count_from_index(&hoverModule, hoverModule.connector[i].dir, i);
+                        gHoverConnector.dir         = hoverModule.connector[i].dir;
+                        break;
+                    }
+                }
+            }
+
+            if (gHoverConnector.active) {
+                break;
+            }
+        } while (hoverValid);
+
+        finish_walk_module();
         noAction = true;
     }
     // Limit re-draw/render if nothing's happened

@@ -737,7 +737,7 @@ void do_graphics_loop(void) {
                 tModule module = {0};
                 read_module(gCableDrag.fromModuleKey, &module);
                 set_rgb_colour(RGB_WHITE);
-                render_cable_from_to(module.connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector);
+                render_cable_from_to(module.connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector, 4.0);
             }
             render_top_bar();
             render_morph_groups();

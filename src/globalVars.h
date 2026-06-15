@@ -50,6 +50,7 @@ extern bool                gShowOpenFileWriteDialogue;
 extern tScrollState        gScrollState;
 extern tContextMenu        gContextMenu;
 extern tCableDragging      gCableDrag;
+extern tHoverConnector     gHoverConnector;
 extern tParamDragging      gParamDragging;
 extern tModuleDragging     gModuleDrag;
 extern tMessageQueue       gCommandQueue;

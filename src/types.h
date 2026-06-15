@@ -580,6 +580,15 @@ typedef struct {
     tConnector toConnector;
 } tCableDragging;
 
+typedef struct {
+    bool          active;
+    uint32_t      slot;
+    uint32_t      location;
+    uint32_t      moduleIndex;
+    uint32_t      ioCount;
+    tConnectorDir dir;
+} tHoverConnector;
+
 typedef struct _struct_menuItem {
     char *                    label;
     tRgb                      colour;

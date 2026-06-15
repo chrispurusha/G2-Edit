@@ -815,7 +815,7 @@ void render_modules(void) {
     //render_rectangle(mainArea, {{0.0, area.coord.y + area.size.h}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
 }
 
-void render_cable_from_to(tConnector from, tConnector to) {
+void render_cable_from_to(tConnector from, tConnector to, double thickness) {
     tCoord control   = {0};
 
     from.coord.x += scale_from_percent(CONNECTOR_SIZE / 2.0);
@@ -835,10 +835,33 @@ void render_cable_from_to(tConnector from, tConnector to) {
     }
     control.y     = fmax(from.coord.y, to.coord.y) + 40.0;
 
-    render_bezier_curve(moduleArea, from.coord, control, to.coord, 4.0, 15);
+    render_bezier_curve(moduleArea, from.coord, control, to.coord, thickness, 15);
 }
 
-void render_cable(tCable * cable, bool transparent) {
+static bool cable_touches_hover_connector(tCable * cable) {
+    if (!gHoverConnector.active) {
+        return false;
+    }
+
+    if (cable->key.slot != gHoverConnector.slot || cable->key.location != gHoverConnector.location) {
+        return false;
+    }
+
+    if (  cable->key.moduleFromIndex == gHoverConnector.moduleIndex
+       && cable->key.connectorFromIoCount == gHoverConnector.ioCount
+       && cable->key.linkType == (uint32_t)gHoverConnector.dir) {
+        return true;
+    }
+
+    if (  cable->key.moduleToIndex == gHoverConnector.moduleIndex
+       && cable->key.connectorToIoCount == gHoverConnector.ioCount
+       && gHoverConnector.dir == connectorDirIn) {
+        return true;
+    }
+    return false;
+}
+
+void render_cable(tCable * cable, double alpha) {
     tModule moduleFrom         = {0};
     tModule moduleTo           = {0};
     tRgb    colour             = gCableColourMap[cable->colour];
@@ -851,10 +874,10 @@ void render_cable(tCable * cable, bool transparent) {
         return;
     }
 
-    if (transparent) {
+    if (alpha < 1.0) {
         glEnable(GL_BLEND);  // TODO - move blend enables to graphics routines
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        set_rgba_colour({colour.red, colour.green, colour.blue, 0.5});
+        set_rgba_colour({colour.red, colour.green, colour.blue, alpha});
     } else {
         set_rgb_colour(colour);
     }
@@ -863,10 +886,10 @@ void render_cable(tCable * cable, bool transparent) {
     int     toConnectorIndex   = find_index_from_io_count(&moduleTo, connectorDirIn, cable->key.connectorToIoCount);
 
     if (fromConnectorIndex != -1 && toConnectorIndex != -1) {
-        render_cable_from_to(moduleFrom.connector[fromConnectorIndex], moduleTo.connector[toConnectorIndex]);
+        render_cable_from_to(moduleFrom.connector[fromConnectorIndex], moduleTo.connector[toConnectorIndex], 4.0);
     }
 
-    if (transparent) {
+    if (alpha < 1.0) {
         glDisable(GL_BLEND);  // TODO - move blend disable to graphics routines
     }
 }
@@ -879,6 +902,8 @@ void render_cables(void) {
     //uint32_t hiddenMask     = atomic_load(&gHiddenCableMask);
     //bool     hideAll        = atomic_load(&gCablesHideAll);
     bool     allTransparent = atomic_load(&gCablesTransparent);
+    bool     hoverActive    = gHoverConnector.active;
+    double   normalAlpha    = allTransparent ? 0.5 : 1.0;
 
     reset_walk_cable();
 
@@ -887,17 +912,36 @@ void render_cables(void) {
 
         if (validCable && cable.key.slot == slot && cable.key.location == location) {
             bool colourVisible = gPatchDescr[slot].visible[cable.colour];
-            //bool isHovered    = false /*gHoverConnector.active &&
-            //                           * cable_touches_connector(&cable, gHoverConnector)*/; // TODO
+            bool isHovered     = cable_touches_hover_connector(&cable);
 
-            if (/*hideAll || */ !colourVisible) {
+            if (!colourVisible || (hoverActive && isHovered)) {
                 continue;
             }
-            render_cable(&cable, allTransparent);
+            render_cable(&cable, hoverActive ? 0.2 : normalAlpha);
         }
     } while (validCable);
 
     finish_walk_cable();
+
+    if (hoverActive) {
+        reset_walk_cable();
+
+        do {
+            validCable = walk_next_cable(&cable);
+
+            if (validCable && cable.key.slot == slot && cable.key.location == location) {
+                bool colourVisible = gPatchDescr[slot].visible[cable.colour];
+                bool isHovered     = cable_touches_hover_connector(&cable);
+
+                if (!colourVisible || !isHovered) {
+                    continue;
+                }
+                render_cable(&cable, 1.0);
+            }
+        } while (validCable);
+
+        finish_walk_cable();
+    }
 }
 
 void render_morph_groups(void) {

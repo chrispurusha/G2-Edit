@@ -61,6 +61,7 @@ bool                   gShowOpenFileWriteDialogue                   = false;
 tScrollState           gScrollState                                 = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE};
 tContextMenu           gContextMenu                                 = {0};
 tCableDragging         gCableDrag                                   = {0};
+tHoverConnector        gHoverConnector                              = {0};
 tParamDragging         gParamDragging                               = {0};
 tModuleDragging        gModuleDrag                                  = {0};
 tMessageQueue          gCommandQueue                                = {0};
