@@ -582,8 +582,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
                     if (read_module(module.key, &module) == true) {
                         if (gModuleProperties[module.type].ledType == ledTypeYes) {
-                            module.led.value = read_bit_stream(buff, bitPos, 1);
-                            read_bit_stream(buff, bitPos, 1);  // spare bit
+                            module.led.value = read_bit_stream(buff, bitPos, 2);
 
                             if (module.key.location == location) {
                                 write_module(module.key, &module);

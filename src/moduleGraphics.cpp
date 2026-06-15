@@ -532,9 +532,16 @@ void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, 
     switch (ledLocationList[ledRef].ledType) {
         case ledTypeYes:
         {
-            if (module->led.value != 0) {
+            bool green = (module->led.value >> 1) & 1;
+            bool red   = module->led.value & 1;
+
+            if (green && red) {
+                set_rgb_colour(RGB_YELLOW_7);
+            } else if (green) {
                 set_rgb_colour(RGB_GREEN_7);
-            } else{
+            } else if (red) {
+                set_rgb_colour(RGB_RED_7);
+            } else {
                 set_rgb_colour(RGB_BLACK);
             }
             render_rectangle(moduleArea, rectangle);
