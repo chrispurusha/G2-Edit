@@ -515,6 +515,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
     switch (subCommand) {
         case SUB_RESPONSE_VOLUME_INDICATOR:
         {
+            read_bit_stream(buff, bitPos, 8);  // start_idx (always 0 in practice)
+
             for (int32_t location = 1; location >= 0; location--) {
                 for (int k = 0; k <= 255; k++) {
                     module.key.slot     = slot;
@@ -548,8 +550,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                         }
 
                         for (i = 0; i < volumesToRead; i++) {
-                            read_bit_stream(buff, bitPos, 9);  // Not sure what this is. Mostly value of 0, but 0x48 for some items.
-                            module.volume.value[i] = read_bit_stream(buff, bitPos, 7);
+                            module.volume.value[i] = read_bit_stream(buff, bitPos, 8);  // lo byte: level/state
+                            read_bit_stream(buff, bitPos, 8);                           // hi byte: unused (always 0 for normal levels)
                         }
 
                         if (volumesToRead > 0) {

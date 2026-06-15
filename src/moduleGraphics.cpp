@@ -75,32 +75,27 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
         case volumeTypeStereo:
         case volumeTypeQuad:
         {
-            value &= 0x1f;
-            //LOG_DEBUG("Top 3 bits = %u val = %u\n", top3Bits, value); // Val of 10 or 11 = Yellow, 12 = red?, top bits 3 = clip?
+            uint32_t level             = value & 0x0f;
+            bool     clip              = ((value >> 6) & 0x01) != 0;
 
-            double fullHeight        = rectangle.size.h;
-            //double scaledValue = (rectangle.size.h * value) / 12.0; // 128 usually, but one example of 300!? Maybe the leading nibble denotes a type? val of 1 changes scale!?
-
-            int    valueThresholds[] = {7, 11, 12};                 // Exclusive upper bounds for green/yellow/red
-            tRgb   colours[]         = {RGB_GREEN_7, RGB_YELLOW_7, RGB_RED_7};
+            double   fullHeight        = rectangle.size.h;
+            double   stepHeight        = fullHeight / 12.0;
+            int      valueThresholds[] = {7, 11, 12}; // exclusive upper bounds: green/yellow/red
+            tRgb     colours[]         = {RGB_GREEN_7, RGB_YELLOW_7, RGB_RED_7};
 
             set_rgb_colour(RGB_BLACK);
             render_rectangle(moduleArea, rectangle);
 
-            double previousHeight    = 0;
+            double   previousHeight    = 0;
 
             for (int i = 0; i < 3; i++) {
                 int    segmentTopVal     = valueThresholds[i];
                 int    segmentBottomVal  = (i == 0) ? 0 : valueThresholds[i - 1];
                 int    segmentRange      = segmentTopVal - segmentBottomVal;
-
-                //double segmentHeight = (segmentRange * fullHeight) / 12.0;
-
-                // Determine how much of this segment to draw
                 double segmentDrawHeight = 0;
 
-                if (value >= segmentBottomVal) {
-                    int drawSteps = (value < segmentTopVal) ? value - segmentBottomVal : segmentRange;
+                if ((int)level >= segmentBottomVal) {
+                    int drawSteps = ((int)level < segmentTopVal) ? (int)level - segmentBottomVal : segmentRange;
                     segmentDrawHeight = (drawSteps * fullHeight) / 12.0;
 
                     set_rgb_colour(colours[i]);
@@ -112,6 +107,14 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
                              segmentDrawHeight}});
                     previousHeight   += segmentDrawHeight;
                 }
+            }
+
+            // Clip: bright red stripe at the very top of the meter (red zone) when clipping.
+            if (clip) {
+                set_rgb_colour(RGB_RED_7);
+                render_rectangle(moduleArea,
+                                 {{rectangle.coord.x, rectangle.coord.y},
+                                     {rectangle.size.w, stepHeight}});
             }
         }
 
@@ -484,12 +487,6 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
     switch (volumeLocationList[volumeRef].volumeType) {
         case volumeTypeMono:
         {
-            // Debug
-            //char buff[32] = {0};
-            //snprintf(buff, sizeof(buff), "Vol Vol=%u PeakHold/Yellow range=%u Clip=%u", module->volume.value[0] & 0xf, (module->volume.value[0] >> 4) & 0x3, (module->volume.value[0] >> 5) & 0x1);
-            //set_rgb_colour(RGB_BLACK);
-            //render_text(moduleArea, {{rectangle.coord.x + 3, rectangle.coord.y}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-
             render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[0]);
         }
         break;
