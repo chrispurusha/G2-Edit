@@ -385,15 +385,12 @@ typedef enum {
     paramType1StrMap,
     paramType1FreqShift,
     paramType1StandardToggle,
-    paramType1UpDown,
-    paramType1UpDownSeqValOdd,
-    paramType1UpDownSeqValEven
 } tParamType1;
 
 typedef enum {
     paramType2Dial,
     paramType2Toggle,
-    paramType2UpDown,
+    paramType2Menu,
     paramType2Other // Could add button, slider etc.
 } tParamType2;
 

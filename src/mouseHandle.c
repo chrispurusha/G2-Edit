@@ -1475,7 +1475,7 @@ bool handle_module_press(tCoord coord, tMouseButton mouseButton) {
                         }
                         retVal                   = true;
                     }
-                    // Toggle and UpDown: retVal stays false, handled on release
+                    // Toggle: retVal stays false, handled on release
                 }
             }
 
@@ -1559,7 +1559,7 @@ bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
                 paramCount = module_param_count(module.type);
             }
 
-            // Params — toggles and updowns fire on release
+            // Params — toggles fire on release
             for (int i = 0; (i < paramCount) && (retVal == false); i++) {
                 tParam * param = &module.param[variation][i];
 
@@ -1574,12 +1574,16 @@ bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
                         paramType2 = (paramLocationList[param->paramRef].type2);
                     }
 
-                    if (paramType2 == paramType2UpDown) {
-                        range                              = paramLocationList[param->paramRef].range;
-
-                        if (param->value < (range - 1)) {
-                            param->value++;
+                    if (paramType2 == paramType2Menu) {
+                        open_toggle_menu(coord, module.key, (uint32_t)i, param->paramRef);
+                        retVal = true;
+                    } else if (paramType2 == paramType2Toggle) {
+                        if (module.key.location == locationMorph) {   // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
+                            range = 2;
+                        } else {
+                            range = paramLocationList[param->paramRef].range;
                         }
+                        param->value                       = (param->value + 1) % range;
                         write_module(module.key, &module);
 
                         tMessageContent messageContent = {0};
@@ -1591,29 +1595,6 @@ bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
                         messageContent.paramData.value     = param->value;
                         msg_send(&gCommandQueue, &messageContent);
                         retVal                             = true;
-                    } else if (paramType2 == paramType2Toggle) {
-                        if (module.key.location == locationMorph) {   // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
-                            range = 2;
-                        } else {
-                            range = paramLocationList[param->paramRef].range;
-                        }
-
-                        if (range > 2) {
-                            open_toggle_menu(coord, module.key, (uint32_t)i, param->paramRef);
-                        } else {
-                            param->value                       = (param->value + 1) % range;
-                            write_module(module.key, &module);
-
-                            tMessageContent messageContent = {0};
-                            messageContent.cmd                 = eMsgCmdSetValue;
-                            messageContent.slot                = slot;
-                            messageContent.paramData.moduleKey = module.key;
-                            messageContent.paramData.param     = i;
-                            messageContent.paramData.variation = variation;
-                            messageContent.paramData.value     = param->value;
-                            msg_send(&gCommandQueue, &messageContent);
-                        }
-                        retVal = true;
                     }
                     // Dials: already handled in cursor_pos via gParamDragging
                 }
@@ -1625,24 +1606,21 @@ bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
                     tMode * mode = &module.mode[i];
 
                     if (within_rectangle(coord, module.mode[i].rectangle) && mouseButton == mouseButtonLeftUp) {
-                        if ((modeLocationList[mode->modeRef].type2) != paramType2Dial) {
-                            uint32_t modeRange = modeLocationList[mode->modeRef].range;
-
-                            if (modeRange > 2) {
-                                open_mode_toggle_menu(coord, module.key, (uint32_t)i, mode->modeRef);
-                            } else {
-                                mode->value                       = (mode->value + 1) % modeRange;
-                                write_module(module.key, &module);
-
-                                tMessageContent messageContent = {0};
-                                messageContent.cmd                = eMsgCmdSetMode;
-                                messageContent.slot               = slot;
-                                messageContent.modeData.moduleKey = module.key;
-                                messageContent.modeData.mode      = i;
-                                messageContent.modeData.value     = mode->value;
-                                msg_send(&gCommandQueue, &messageContent);
-                            }
+                        if (modeLocationList[mode->modeRef].type2 == paramType2Menu) {
+                            open_mode_toggle_menu(coord, module.key, (uint32_t)i, mode->modeRef);
                             retVal = true;
+                        } else if (modeLocationList[mode->modeRef].type2 == paramType2Toggle) {
+                            mode->value                       = (mode->value + 1) % modeLocationList[mode->modeRef].range;
+                            write_module(module.key, &module);
+
+                            tMessageContent messageContent = {0};
+                            messageContent.cmd                = eMsgCmdSetMode;
+                            messageContent.slot               = slot;
+                            messageContent.modeData.moduleKey = module.key;
+                            messageContent.modeData.mode      = i;
+                            messageContent.modeData.value     = mode->value;
+                            msg_send(&gCommandQueue, &messageContent);
+                            retVal                            = true;
                         }
                     }
                 }
@@ -2180,22 +2158,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
                         for (uint32_t p = 0; p < paramCount && !found; p++) {
                             if (within_rectangle(coord, module.param[variation][p].rectangle)) {
-                                if (paramLocationList[module.param[variation][p].paramRef].type2 == paramType2UpDown) {
-                                    if (module.param[variation][p].value > 0) {
-                                        module.param[variation][p].value--;
-                                    }
-                                    write_module(module.key, &module);
-                                    tMessageContent messageContent = {0};
-                                    messageContent.cmd                 = eMsgCmdSetValue;
-                                    messageContent.slot                = slot;
-                                    messageContent.paramData.moduleKey = module.key;
-                                    messageContent.paramData.param     = p;
-                                    messageContent.paramData.variation = variation;
-                                    messageContent.paramData.value     = module.param[variation][p].value;
-                                    msg_send(&gCommandQueue, &messageContent);
-                                } else {
-                                    open_param_context_menu(coord, module.key, p);
-                                }
+                                open_param_context_menu(coord, module.key, p);
                                 found = true;
                             }
                         }

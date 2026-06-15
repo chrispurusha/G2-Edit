@@ -367,7 +367,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             break;
         }
         case paramType2Toggle:
-        case paramType2UpDown:
+        case paramType2Menu:
         {
             tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, char ** strMap);
             render_param_function = NULL;
@@ -376,11 +376,6 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 case paramType1StandardToggle:
                 {
                     render_param_function = &render_paramType1StandardToggle;
-                    break;
-                }
-                case paramType1UpDown:
-                {
-                    render_param_function = &render_paramType1StandardToggle;// &render_paramType1UpDown;
                     break;
                 }
                 case paramType1Bypass:
