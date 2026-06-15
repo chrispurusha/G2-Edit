@@ -1425,6 +1425,68 @@ void open_patch_type_context_menu(tCoord coord) {
     gContextMenu.active = true;
 }
 
+static void action_set_mono_poly(int index) {
+    uint32_t        slot           = atomic_load(&gSlot);
+    tMessageContent messageContent = {0};
+
+    gPatchDescr[slot].monoPoly = (uint8_t)gContextMenu.items[index].param;
+
+    messageContent.cmd         = eMsgCmdWritePatchDescr;
+    messageContent.slot        = slot;
+    msg_send(&gCommandQueue, &messageContent);
+
+    gContextMenu.active        = false;
+}
+
+static void open_mono_poly_context_menu(tCoord coord) {
+    static tMenuItem menuItems[] = {
+        {"Poly",   RGB_GREY_3, action_set_mono_poly, monoPolyPoly,   NULL},
+        {"Mono",   RGB_GREY_3, action_set_mono_poly, monoPolyMono,   NULL},
+        {"Legato", RGB_GREY_3, action_set_mono_poly, monoPolyLegato, NULL},
+        {NULL,     RGB_BLACK,  NULL,                              0, NULL}
+    };
+
+    gContextMenu.coord  = coord;
+    gContextMenu.items  = menuItems;
+    gContextMenu.active = true;
+}
+
+static void action_set_voice_count(int index) {
+    uint32_t        slot           = atomic_load(&gSlot);
+    tMessageContent messageContent = {0};
+
+    gPatchDescr[slot].voiceCount = (uint8_t)gContextMenu.items[index].param;
+
+    messageContent.cmd           = eMsgCmdWritePatchDescr;
+    messageContent.slot          = slot;
+    msg_send(&gCommandQueue, &messageContent);
+
+    gContextMenu.active          = false;
+}
+
+static void open_voice_count_context_menu(tCoord coord) {
+    static tMenuItem menuItems[33];
+    static char      labels[32][4];
+    static bool      initialised = false;
+
+    if (!initialised) {
+        for (int i = 0; i < 32; i++) {
+            snprintf(labels[i], sizeof(labels[i]), "%d", i + 1);
+            menuItems[i] = (tMenuItem){
+                labels[i], RGB_GREY_3, action_set_voice_count, (uint32_t)i, NULL
+            };
+        }
+
+        menuItems[32] = (tMenuItem){
+            NULL, RGB_BLACK, NULL, 0, NULL
+        };
+        initialised   = true;
+    }
+    gContextMenu.coord  = coord;
+    gContextMenu.items  = menuItems;
+    gContextMenu.active = true;
+}
+
 bool handle_module_press(tCoord coord, tMouseButton mouseButton) {
     bool        retVal     = false;
     uint32_t    paramCount = 0;
@@ -2075,34 +2137,15 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (within_rectangle(coord, gMonoPolyRectangle)) {
-                    tMessageContent messageContent = {0};
-                    uint32_t        monoPoly       = gPatchDescr[slot].monoPoly;
-                    monoPoly++;
-
-                    if (monoPoly >= monoPolyMax) {
-                        monoPoly = 0;
-                    }
-                    gPatchDescr[slot].monoPoly = monoPoly;
-                    messageContent.cmd         = eMsgCmdWritePatchDescr;
-                    messageContent.slot        = slot;
-                    msg_send(&gCommandQueue, &messageContent);
-                    found                      = true;
+                    open_mono_poly_context_menu(coord);
+                    found = true;
                 }
             }
 
             if (found == false) {
                 if (within_rectangle(coord, gVoiceCountRectangle)) {
-                    tMessageContent messageContent = {0};
-                    uint32_t        voiceCount     = gPatchDescr[slot].voiceCount;
-
-                    if (voiceCount < 31) {
-                        voiceCount++;
-                    }
-                    gPatchDescr[slot].voiceCount = voiceCount;
-                    messageContent.cmd           = eMsgCmdWritePatchDescr;
-                    messageContent.slot          = slot;
-                    msg_send(&gCommandQueue, &messageContent);
-                    found                        = true;  // TODO - might have to add new message specifically so we can pass a voice count value, so can set to 2 and back to target, otherwise won't get the allocated voices indication back. ...or will have to do it at init time?
+                    open_voice_count_context_menu(coord);
+                    found = true;
                 }
             }
 
@@ -2177,22 +2220,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             if (found == false) {
                 if (handle_module_area_click(coord, button)) {
                     found = true;
-                }
-            }
-
-            if (found == false) {
-                if (within_rectangle(coord, gVoiceCountRectangle)) {
-                    tMessageContent messageContent = {0};
-                    uint32_t        voiceCount     = gPatchDescr[slot].voiceCount;
-
-                    if (voiceCount > 0) {
-                        voiceCount--;
-                    }
-                    gPatchDescr[slot].voiceCount = voiceCount;
-                    messageContent.cmd           = eMsgCmdWritePatchDescr;
-                    messageContent.slot          = slot;
-                    msg_send(&gCommandQueue, &messageContent);
-                    found                        = true;
                 }
             }
 
