@@ -764,7 +764,9 @@ void action_set_module_colour(int index) {
 
         msg_send(&gCommandQueue, &messageContent);
     } else {
-        gContextMenu.items = gContextMenu.items[index].subMenu;
+        gContextMenu.items     = gContextMenu.items[index].subMenu;
+        gContextMenu.columns   = 6;
+        gContextMenu.cellWidth = STANDARD_TEXT_HEIGHT * 2;
 
         if (gContextMenu.items != NULL) {
             gContextMenu.active = true;
@@ -1336,35 +1338,36 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
 
 void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     static tMenuItem colourMenuItems[] = {
-        {"         ", MODULE_STANDARD_GREY, action_set_module_colour,  0, NULL}, // TODO - maybe an extra property to denote column?
-        {"",          MODULE_RED_1,         action_set_module_colour,  6, NULL},
-        {"",          MODULE_GREEN_1,       action_set_module_colour, 10, NULL},
-        {"",          MODULE_BLUE_1,        action_set_module_colour,  5, NULL},
-        {"",          MODULE_YELLOW_1,      action_set_module_colour,  9, NULL},
-        {"",          MODULE_PURPLE_1,      action_set_module_colour, 21, NULL},
-        {"",          MODULE_CYAN_1,        action_set_module_colour, 17, NULL},
-        {"",          MODULE_RED_2,         action_set_module_colour, 13, NULL},
-        {"",          MODULE_GREEN_2,       action_set_module_colour,  8, NULL},
-        {"",          MODULE_BLUE_2,        action_set_module_colour, 20, NULL},
-        {"",          MODULE_YELLOW_2,      action_set_module_colour, 11, NULL},
-        {"",          MODULE_PURPLE_2,      action_set_module_colour, 22, NULL},
-        {"",          MODULE_CYAN_2,        action_set_module_colour,  7, NULL},
-        {"",          MODULE_RED_3,         action_set_module_colour, 14, NULL},
-        {"",          MODULE_GREEN_3,       action_set_module_colour, 16, NULL},
-        {"",          MODULE_BLUE_3,        action_set_module_colour, 12, NULL},
-        {"",          MODULE_YELLOW_3,      action_set_module_colour, 15, NULL},
-        {"",          MODULE_PURPLE_3,      action_set_module_colour, 23, NULL},
-        {"",          MODULE_CYAN_3,        action_set_module_colour, 18, NULL},
-        {"",          MODULE_RED_4,         action_set_module_colour,  1, NULL},
-        {"",          MODULE_GREEN_4,       action_set_module_colour,  2, NULL},
-        {"",          MODULE_BLUE_4,        action_set_module_colour,  3, NULL},
-        {"",          MODULE_YELLOW_4,      action_set_module_colour,  4, NULL},
-        {"",          MODULE_PURPLE_4,      action_set_module_colour, 24, NULL},
-        {"",          MODULE_CYAN_4,        action_set_module_colour, 19, NULL},
-        {NULL,        RGB_BLACK,            NULL,                      0, NULL} // End of menu
+        // 6 columns (R,G,B,Y,Pu,Cy) x 4 rows of shades, then Grey
+        {"",   MODULE_RED_1,         action_set_module_colour,  6, NULL},
+        {"",   MODULE_GREEN_1,       action_set_module_colour, 10, NULL},
+        {"",   MODULE_BLUE_1,        action_set_module_colour,  5, NULL},
+        {"",   MODULE_YELLOW_1,      action_set_module_colour,  9, NULL},
+        {"",   MODULE_PURPLE_1,      action_set_module_colour, 21, NULL},
+        {"",   MODULE_CYAN_1,        action_set_module_colour, 17, NULL},
+        {"",   MODULE_RED_2,         action_set_module_colour, 13, NULL},
+        {"",   MODULE_GREEN_2,       action_set_module_colour,  8, NULL},
+        {"",   MODULE_BLUE_2,        action_set_module_colour, 20, NULL},
+        {"",   MODULE_YELLOW_2,      action_set_module_colour, 11, NULL},
+        {"",   MODULE_PURPLE_2,      action_set_module_colour, 22, NULL},
+        {"",   MODULE_CYAN_2,        action_set_module_colour,  7, NULL},
+        {"",   MODULE_RED_3,         action_set_module_colour, 14, NULL},
+        {"",   MODULE_GREEN_3,       action_set_module_colour, 16, NULL},
+        {"",   MODULE_BLUE_3,        action_set_module_colour, 12, NULL},
+        {"",   MODULE_YELLOW_3,      action_set_module_colour, 15, NULL},
+        {"",   MODULE_PURPLE_3,      action_set_module_colour, 23, NULL},
+        {"",   MODULE_CYAN_3,        action_set_module_colour, 18, NULL},
+        {"",   MODULE_RED_4,         action_set_module_colour,  1, NULL},
+        {"",   MODULE_GREEN_4,       action_set_module_colour,  2, NULL},
+        {"",   MODULE_BLUE_4,        action_set_module_colour,  3, NULL},
+        {"",   MODULE_YELLOW_4,      action_set_module_colour,  4, NULL},
+        {"",   MODULE_PURPLE_4,      action_set_module_colour, 24, NULL},
+        {"",   MODULE_CYAN_4,        action_set_module_colour, 19, NULL},
+        {"",   MODULE_STANDARD_GREY, action_set_module_colour,  0, NULL},
+        {NULL, RGB_BLACK,            NULL,                      0, NULL}
     };
 
-    static tMenuItem menuItems[]  = {
+    static tMenuItem menuItems[]     = {
         {"Rename",        RGB_GREY_3, action_rename_module,      0, NULL},
         {"Set colour",    RGB_GREY_3, action_set_module_colour,  0, colourMenuItems,},
         {"Delete module", RGB_GREY_3, menu_action_delete_module, 0, NULL},
@@ -1374,13 +1377,17 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     // Store menu position
     gContextMenu.coord     = coord;
     gContextMenu.items     = menuItems;
+    gContextMenu.columns   = 0;
+    gContextMenu.cellWidth = 0.0;
     gContextMenu.moduleKey = moduleKey;
     gContextMenu.active    = true;
 
-    double           menuHeight   = (((sizeof(colourMenuItems) / sizeof(colourMenuItems[0])) - 1) * (STANDARD_TEXT_HEIGHT + (5 * 2)));
-    double           renderHeight = get_render_height() / gGlobalGuiScale;
+    // Pre-clamp so the colour submenu (6 cols x 5 rows) fits on screen
+    int              colourItemCount = (int)((sizeof(colourMenuItems) / sizeof(colourMenuItems[0])) - 1);
+    int              colourRows      = (colourItemCount + 6 - 1) / 6;
+    double           menuHeight      = colourRows * (STANDARD_TEXT_HEIGHT + (5 * 2));
+    double           renderHeight    = get_render_height() / gGlobalGuiScale;
 
-    // Shift upwards if too far towards end of screen
     if (gContextMenu.coord.y + menuHeight > (renderHeight - SCROLLBAR_WIDTH)) {
         gContextMenu.coord.y = (renderHeight - SCROLLBAR_WIDTH) - menuHeight;
     }
@@ -1467,24 +1474,34 @@ static void action_set_voice_count(int index) {
 static void open_voice_count_context_menu(tCoord coord) {
     static tMenuItem menuItems[33];
     static char      labels[32][4];
-    static bool      initialised = false;
+    static bool      labelsInitialised = false;
+    uint32_t         slot              = atomic_load(&gSlot);
+    uint32_t         assignedVoices    = gAssignedVoices[slot];
 
-    if (!initialised) {
+    if (!labelsInitialised) {
         for (int i = 0; i < 32; i++) {
             snprintf(labels[i], sizeof(labels[i]), "%d", i + 1);
-            menuItems[i] = (tMenuItem){
-                labels[i], RGB_GREY_3, action_set_voice_count, (uint32_t)i, NULL
-            };
+            menuItems[i].label   = labels[i];
+            menuItems[i].action  = action_set_voice_count;
+            menuItems[i].param   = (uint32_t)i;
+            menuItems[i].subMenu = NULL;
         }
 
-        menuItems[32] = (tMenuItem){
+        menuItems[32]     = (tMenuItem){
             NULL, RGB_BLACK, NULL, 0, NULL
         };
-        initialised   = true;
+        labelsInitialised = true;
     }
-    gContextMenu.coord  = coord;
-    gContextMenu.items  = menuItems;
-    gContextMenu.active = true;
+
+    for (int i = 0; i < 32; i++) {
+        bool invalid = (assignedVoices > 0) && ((uint32_t)(i + 1) > assignedVoices);
+        menuItems[i].colour = invalid ? (tRgb)RGB_RED_5 : (tRgb)RGB_GREY_3;
+    }
+
+    gContextMenu.coord   = coord;
+    gContextMenu.items   = menuItems;
+    gContextMenu.columns = 4;
+    gContextMenu.active  = true;
 }
 
 bool handle_module_press(tCoord coord, tMouseButton mouseButton) {
@@ -1717,9 +1734,10 @@ bool handle_context_menu_click(tCoord coord) {
     if ((gContextMenu.active == false) || (gContextMenu.items == NULL)) {
         return false;
     }
-    double size        = 0.0;
-    double largestSize = 0.0;
-    double itemHeight  = STANDARD_TEXT_HEIGHT;
+    double   size        = 0.0;
+    double   largestSize = 0.0;
+    double   itemHeight  = STANDARD_TEXT_HEIGHT;
+    uint32_t columns     = (gContextMenu.columns > 1) ? gContextMenu.columns : 1;
 
     for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
         size = get_text_width(gContextMenu.items[i].label, itemHeight);
@@ -1729,30 +1747,34 @@ bool handle_context_menu_click(tCoord coord) {
         }
     }
 
-    int    yOffset     = 0;
+    double   computed    = (largestSize + (5 * 2) > itemHeight) ? largestSize + (5 * 2) : itemHeight;
+    double   cellW       = (gContextMenu.cellWidth > 0.0) ? gContextMenu.cellWidth : computed;
+    double   cellH       = itemHeight + (5 * 2);
 
     for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
+        int        col      = (int)(i % columns);
+        int        row      = (int)(i / columns);
         tRectangle itemRect = {
-            {gContextMenu.coord.x, gContextMenu.coord.y + yOffset},
-            {
-                largestSize + (5 * 2), itemHeight + (5 * 2)
-            }
+            {gContextMenu.coord.x + col * cellW, gContextMenu.coord.y + row * cellH},
+            {cellW,                              cellH                             }
         };
 
         if (within_rectangle(coord, itemRect)) {
-            if (gContextMenu.items[i].subMenu != NULL) {
-                gContextMenu.items  = gContextMenu.items[i].subMenu;
-                gContextMenu.active = true;
+            if (gContextMenu.items[i].action != NULL) {
+                if (gContextMenu.items[i].subMenu == NULL) {
+                    gContextMenu.active = false;
+                }
+                gContextMenu.items[i].action(i);
+            } else if (gContextMenu.items[i].subMenu != NULL) {
+                gContextMenu.items     = gContextMenu.items[i].subMenu;
+                gContextMenu.columns   = 0;
+                gContextMenu.cellWidth = 0.0;
+                gContextMenu.active    = true;
             } else {
                 gContextMenu.active = false;
-
-                if (gContextMenu.items[i].action != NULL) {
-                    gContextMenu.items[i].action(i);
-                }
             }
             return true;
         }
-        yOffset += itemHeight + (5 * 2);
     }
 
     memset(&gContextMenu, 0, sizeof(gContextMenu)); // Clear everything (including active flag) to zero

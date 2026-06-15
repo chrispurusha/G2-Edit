@@ -95,6 +95,7 @@ void render_context_menu(void) {
     tCoord     mouseCoord  = {0};
     tRectangle menuItem    = {0};
     double     itemHeight  = STANDARD_TEXT_HEIGHT;
+    uint32_t   columns     = (gContextMenu.columns > 1) ? gContextMenu.columns : 1;
 
     if (!gContextMenu.active) {
         return;
@@ -110,23 +111,38 @@ void render_context_menu(void) {
             }
         }
 
-        int yOffset = 0;
+        double computed = (largestSize + (5 * 2) > itemHeight) ? largestSize + (5 * 2) : itemHeight;
+        double cellW    = (gContextMenu.cellWidth > 0.0) ? gContextMenu.cellWidth : computed;
+        double cellH    = itemHeight + (5 * 2);
 
         for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
-            menuItem = {{gContextMenu.coord.x, gContextMenu.coord.y + yOffset}, {largestSize + (5 * 2), itemHeight + (5 * 2)}};
+            int    col = (int)(i % columns);
+            int    row = (int)(i / columns);
+            double x   = gContextMenu.coord.x + col * cellW;
+            double y   = gContextMenu.coord.y + row * cellH;
+            menuItem = {{x, y}, {cellW, cellH}};
 
             set_rgb_colour(gContextMenu.items[i].colour);
             render_rectangle(mainArea, menuItem);
 
-            set_rgb_colour(RGB_GREY_9);    // White text
-            render_text(mainArea, {{gContextMenu.coord.x + 5, gContextMenu.coord.y + 5 + yOffset}, {BLANK_SIZE, itemHeight}}, gContextMenu.items[i].label);
-            yOffset += itemHeight + (5 * 2);
+            set_rgb_colour(RGB_GREY_9);
+            render_text(mainArea, {{x + 5, y + 5}, {BLANK_SIZE, itemHeight}}, gContextMenu.items[i].label);
+
+            if (columns > 1) {
+                set_rgb_colour(RGB_BLACK);
+                render_line(mainArea, {x, y}, {x + cellW, y}, 1);
+                render_line(mainArea, {x + cellW, y}, {x + cellW, y + cellH}, 1);
+                render_line(mainArea, {x, y + cellH}, {x + cellW, y + cellH}, 1);
+                render_line(mainArea, {x, y}, {x, y + cellH}, 1);
+            }
         }
 
-        yOffset = 0;
-
         for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
-            menuItem = {{gContextMenu.coord.x, gContextMenu.coord.y + yOffset}, {largestSize + (5 * 2), itemHeight + (5 * 2)}};
+            int    col = (int)(i % columns);
+            int    row = (int)(i / columns);
+            double x   = gContextMenu.coord.x + col * cellW;
+            double y   = gContextMenu.coord.y + row * cellH;
+            menuItem = {{x, y}, {cellW, cellH}};
 
             if (within_rectangle(mouseCoord, menuItem)) {
                 set_rgb_colour(RGB_BLACK);
@@ -140,7 +156,6 @@ void render_context_menu(void) {
                 render_line(mainArea, {menuItem.coord.x + 1, menuItem.coord.y + 1}, {menuItem.coord.x + 1, (menuItem.coord.y + menuItem.size.h) - 1}, 1);
                 render_line(mainArea, {menuItem.coord.x + 1, (menuItem.coord.y + menuItem.size.h) - 1}, {(menuItem.coord.x + menuItem.size.w) - 1, (menuItem.coord.y + menuItem.size.h) - 1}, 1);
             }
-            yOffset += itemHeight + (5 * 2);
         }
     }
 }
