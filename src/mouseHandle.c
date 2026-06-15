@@ -1129,6 +1129,100 @@ static void action_deassign_knob(int index) {
     atomic_store(&gReDraw, true);
 }
 
+static void action_set_toggle_value(int index) {
+    uint32_t        slot      = atomic_load(&gSlot);
+    uint32_t        variation = gPatchDescr[slot].activeVariation;
+    tModule         module    = {0};
+    tMessageContent msg       = {0};
+
+    if (read_module(gContextMenu.moduleKey, &module)) {
+        uint32_t paramIdx = gContextMenu.paramIndex;
+        module.param[variation][paramIdx].value = (uint32_t)gContextMenu.items[index].param;
+        write_module(gContextMenu.moduleKey, &module);
+
+        msg.cmd                                 = eMsgCmdSetValue;
+        msg.slot                                = slot;
+        msg.paramData.moduleKey                 = gContextMenu.moduleKey;
+        msg.paramData.param                     = paramIdx;
+        msg.paramData.variation                 = variation;
+        msg.paramData.value                     = module.param[variation][paramIdx].value;
+        msg_send(&gCommandQueue, &msg);
+    }
+    gContextMenu.active = false;
+    atomic_store(&gReDraw, true);
+}
+
+static void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, uint32_t paramRef) {
+    static tMenuItem menuItems[33];
+    static char      labels[32][32];
+
+    const char **    strMap = paramLocationList[paramRef].strMap;
+    uint32_t         range  = paramLocationList[paramRef].range;
+
+    for (uint32_t v = 0; v < range && v < 32; v++) {
+        snprintf(labels[v], sizeof(labels[v]), "%s", (strMap && strMap[v]) ? strMap[v] : "");
+        menuItems[v] = (tMenuItem){
+            labels[v], RGB_GREY_3, action_set_toggle_value, v, NULL
+        };
+    }
+
+    menuItems[range < 32 ? range : 32] = (tMenuItem){
+        NULL, RGB_BLACK, NULL, 0, NULL
+    };
+
+    gContextMenu.coord                 = coord;
+    gContextMenu.items                 = menuItems;
+    gContextMenu.moduleKey             = moduleKey;
+    gContextMenu.paramIndex            = paramIndex;
+    gContextMenu.active                = true;
+}
+
+static void action_set_mode_value(int index) {
+    uint32_t        slot   = atomic_load(&gSlot);
+    tModule         module = {0};
+    tMessageContent msg    = {0};
+
+    if (read_module(gContextMenu.moduleKey, &module)) {
+        uint32_t modeIdx = gContextMenu.paramIndex;
+        module.mode[modeIdx].value = (uint32_t)gContextMenu.items[index].param;
+        write_module(gContextMenu.moduleKey, &module);
+
+        msg.cmd                    = eMsgCmdSetMode;
+        msg.slot                   = slot;
+        msg.modeData.moduleKey     = gContextMenu.moduleKey;
+        msg.modeData.mode          = modeIdx;
+        msg.modeData.value         = module.mode[modeIdx].value;
+        msg_send(&gCommandQueue, &msg);
+    }
+    gContextMenu.active = false;
+    atomic_store(&gReDraw, true);
+}
+
+static void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeIndex, uint32_t modeRef) {
+    static tMenuItem menuItems[33];
+    static char      labels[32][32];
+
+    const char **    strMap = modeLocationList[modeRef].strMap;
+    uint32_t         range  = modeLocationList[modeRef].range;
+
+    for (uint32_t v = 0; v < range && v < 32; v++) {
+        snprintf(labels[v], sizeof(labels[v]), "%s", (strMap && strMap[v]) ? strMap[v] : "");
+        menuItems[v] = (tMenuItem){
+            labels[v], RGB_GREY_3, action_set_mode_value, v, NULL
+        };
+    }
+
+    menuItems[range < 32 ? range : 32] = (tMenuItem){
+        NULL, RGB_BLACK, NULL, 0, NULL
+    };
+
+    gContextMenu.coord                 = coord;
+    gContextMenu.items                 = menuItems;
+    gContextMenu.moduleKey             = moduleKey;
+    gContextMenu.paramIndex            = modeIndex;
+    gContextMenu.active                = true;
+}
+
 void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex) {
     static tMenuItem pageMenuItems[NUM_PARAM_PAGES + 1];
     static char      pageLabels[NUM_PARAM_PAGES][10];
@@ -1503,18 +1597,23 @@ bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
                         } else {
                             range = paramLocationList[param->paramRef].range;
                         }
-                        param->value                       = (param->value + 1) % range;
-                        write_module(module.key, &module);
 
-                        tMessageContent messageContent = {0};
-                        messageContent.cmd                 = eMsgCmdSetValue;
-                        messageContent.slot                = slot;
-                        messageContent.paramData.moduleKey = module.key;
-                        messageContent.paramData.param     = i;
-                        messageContent.paramData.variation = variation;
-                        messageContent.paramData.value     = param->value;
-                        msg_send(&gCommandQueue, &messageContent);
-                        retVal                             = true;
+                        if (range > 2) {
+                            open_toggle_menu(coord, module.key, (uint32_t)i, param->paramRef);
+                        } else {
+                            param->value                       = (param->value + 1) % range;
+                            write_module(module.key, &module);
+
+                            tMessageContent messageContent = {0};
+                            messageContent.cmd                 = eMsgCmdSetValue;
+                            messageContent.slot                = slot;
+                            messageContent.paramData.moduleKey = module.key;
+                            messageContent.paramData.param     = i;
+                            messageContent.paramData.variation = variation;
+                            messageContent.paramData.value     = param->value;
+                            msg_send(&gCommandQueue, &messageContent);
+                        }
+                        retVal = true;
                     }
                     // Dials: already handled in cursor_pos via gParamDragging
                 }
@@ -1527,17 +1626,23 @@ bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
 
                     if (within_rectangle(coord, module.mode[i].rectangle) && mouseButton == mouseButtonLeftUp) {
                         if ((modeLocationList[mode->modeRef].type2) != paramType2Dial) {
-                            mode->value                       = (mode->value + 1) % modeLocationList[mode->modeRef].range;
-                            write_module(module.key, &module);
+                            uint32_t modeRange = modeLocationList[mode->modeRef].range;
 
-                            tMessageContent messageContent = {0};
-                            messageContent.cmd                = eMsgCmdSetMode;
-                            messageContent.slot               = slot;
-                            messageContent.modeData.moduleKey = module.key;
-                            messageContent.modeData.mode      = i;
-                            messageContent.modeData.value     = mode->value;
-                            msg_send(&gCommandQueue, &messageContent);
-                            retVal                            = true;
+                            if (modeRange > 2) {
+                                open_mode_toggle_menu(coord, module.key, (uint32_t)i, mode->modeRef);
+                            } else {
+                                mode->value                       = (mode->value + 1) % modeRange;
+                                write_module(module.key, &module);
+
+                                tMessageContent messageContent = {0};
+                                messageContent.cmd                = eMsgCmdSetMode;
+                                messageContent.slot               = slot;
+                                messageContent.modeData.moduleKey = module.key;
+                                messageContent.modeData.mode      = i;
+                                messageContent.modeData.value     = mode->value;
+                                msg_send(&gCommandQueue, &messageContent);
+                            }
+                            retVal = true;
                         }
                     }
                 }
