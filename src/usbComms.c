@@ -525,6 +525,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                         switch (gModuleProperties[module.type].volumeType) {
                             case volumeTypeMono:
                             case volumeTypeCompress:
+                            case volumeTypeSequencer:
                             {
                                 volumesToRead = 1;
                                 break;

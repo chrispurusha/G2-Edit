@@ -400,6 +400,7 @@ typedef enum {
     volumeTypeQuad,
     volumeTypeMono,
     volumeTypeCompress,
+    volumeTypeSequencer, // Step-position indicator: 2 bytes in wire stream, not a volume level
 } tVolumeType;
 
 typedef enum {
