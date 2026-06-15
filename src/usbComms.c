@@ -604,20 +604,23 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         {
             LOG_DEBUG("Got resources in use slot %u\n", commandResponse);
 
-            uint16_t cyclesRed1  = 0;
-            uint16_t cyclesBlue1 = 0;
-            uint8_t  internalMem = 0;
-            uint16_t resource4   = 0;
-            uint16_t resource5   = 0;
-            uint16_t cyclesRed2  = 0;
-            uint16_t resource8   = 0;
-            uint16_t cyclesBlue2 = 0;
-            uint32_t ram         = 0;
-            uint16_t unknown     = 0;
-            uint8_t  location    = 0;
-            uint8_t  sub         = 0;
-            float    cyclesLoad  = 0.0f;
-            float    memLoad     = 0.0f;
+            uint16_t cyclesRed  = 0;
+            uint16_t cyclesBlue = 0;
+            uint8_t  zpMem      = 0;
+            uint16_t xmemV1     = 0;
+            uint16_t ymemV1     = 0;
+            uint16_t pmemV1     = 0;
+            uint16_t xmemV2     = 0;
+            uint16_t ymemV2     = 0;
+            uint16_t pmemV2     = 0;
+            uint16_t ramRaw     = 0;
+            uint32_t qmemRaw    = 0;
+            uint16_t rmemRaw    = 0;
+            uint16_t unknown    = 0;
+            uint8_t  location   = 0;
+            uint8_t  sub        = 0;
+            float    cyclesLoad = 0.0f;
+            float    memLoad    = 0.0f;
 
             *bitPos -= 8; // Multiple messages in here, so need to move back a byte to process each sub response
 
@@ -628,35 +631,32 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                     break;
                 }
                 location                              = read_bit_stream(buff, bitPos, 8);
-                cyclesRed1                            = (read_bit_stream(buff, bitPos, 8)) * 128;
-                cyclesRed1                           += (read_bit_stream(buff, bitPos, 8));
-                cyclesBlue1                           = (read_bit_stream(buff, bitPos, 8)) * 128;
-                cyclesBlue1                          += (read_bit_stream(buff, bitPos, 8));
-                internalMem                           = read_bit_stream(buff, bitPos, 8);
-                unknown                               = (read_bit_stream(buff, bitPos, 16));
-                resource4                             = (read_bit_stream(buff, bitPos, 8)) * 128;
-                resource4                            += (read_bit_stream(buff, bitPos, 8));
-                resource5                             = read_bit_stream(buff, bitPos, 8) * 256;
-                resource5                            += read_bit_stream(buff, bitPos, 8);
-                cyclesRed2                            = read_bit_stream(buff, bitPos, 8) * 128;
-                cyclesRed2                           += read_bit_stream(buff, bitPos, 8);
-                unknown                               = (read_bit_stream(buff, bitPos, 16));
-                resource8                             = read_bit_stream(buff, bitPos, 8) * 128;
-                resource8                            += read_bit_stream(buff, bitPos, 8);
-                cyclesBlue2                           = read_bit_stream(buff, bitPos, 8) * 128;
-                cyclesBlue2                          += read_bit_stream(buff, bitPos, 8);
-                unknown                               = (read_bit_stream(buff, bitPos, 8)) * 128;
-                unknown                              += (read_bit_stream(buff, bitPos, 8));
-                ram                                   = read_bit_stream(buff, bitPos, 32);
-                unknown                               = (read_bit_stream(buff, bitPos, 16));
+                cyclesRed                             = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+                cyclesBlue                            = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+                zpMem                                 = read_bit_stream(buff, bitPos, 8);
+                unknown                               = read_bit_stream(buff, bitPos, 16);              // unknown5, discard
+                xmemV1                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+                ymemV1                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+                pmemV1                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+                xmemV2                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+                ymemV2                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+                pmemV2                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+                ramRaw                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+                qmemRaw                               = read_bit_stream(buff, bitPos, 32);
+                rmemRaw                               = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
 
-                cyclesLoad                            = fmaxf(100.0f * (float)cyclesRed1 / 1372.0f
-                                                              + 100.0f * (float)cyclesBlue1 / 5000.0f, 0.0f);
-                memLoad                               = fmaxf(fmaxf(100.0f * (float)internalMem / 128.0f,
-                                                                    100.0f * (float)ram / 260000.0f),
-                                                              100.0f * (float)resource4 / 4315.0f);
-                //LOG_DEBUG("Cycles load = %f\n", cyclesLoad);
-                //LOG_DEBUG("Mem load = %f\n\n", memLoad);
+                cyclesLoad                            = ((float)cyclesRed + (float)cyclesBlue * 0.25f) * 100.0f / 1371.0f;
+
+                float xmem  = (float)(xmemV1 + xmemV2) * 100.0f / 4336.0f;
+                float ymem  = (float)(ymemV1 + ymemV2) * 100.0f / 2992.0f;
+                float pmem  = (float)(pmemV1 + pmemV2) * 100.0f / 6498.0f;
+                float zpmem = (float)zpMem * 100.0f / 128.0f;
+                float ram   = (float)ramRaw * 100.0f * 7.6293945e-06f;
+                float qmem  = (float)qmemRaw * 100.0f / 260096.0f;
+                float rmem  = (float)rmemRaw * 100.0f * 0.00390625f;
+
+                memLoad                               = fmaxf(fmaxf(fmaxf(fmaxf(fmaxf(fmaxf(xmem, ymem), pmem), zpmem), ram), qmem), rmem);
+
                 cyclesLoad                            = roundf(cyclesLoad * 10.0f) / 10.0f;
                 memLoad                               = roundf(memLoad * 10.0f) / 10.0f;
                 gResourceAlloc[slot].mem[location]    = memLoad;

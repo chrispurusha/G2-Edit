@@ -84,7 +84,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
             double   stepHeight        = fullHeight / 12.0;
             int      valueThresholds[] = {7, 11, 12}; // exclusive upper bounds: green/yellow/red
             tRgb     colours[]         = {RGB_GREEN_7, RGB_YELLOW_7, RGB_RED_7};
-            
+
             set_rgb_colour(RGB_BLACK);
             render_rectangle(moduleArea, rectangle);
 
