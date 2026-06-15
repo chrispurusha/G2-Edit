@@ -293,7 +293,7 @@ const tModuleProperties  gModuleProperties[]  = {
     {"Sw1-4",        3, volumeTypeNone,      ledTypeNo },
     {"Flanger",      3, volumeTypeNone,      ledTypeNo },
     {"Sw1-2",        2, volumeTypeNone,      ledTypeNo },
-    {"FlipFlop",     2, volumeTypeSequencer, ledTypeNo },
+    {"FlipFlop",     2, volumeTypeNone,      ledTypeNo },
     {"FltClassic",   4, volumeTypeNone,      ledTypeNo },
     {"Unknown",      0, volumeTypeNone,      ledTypeNo },
     {"StChorus",     3, volumeTypeNone,      ledTypeNo },
