@@ -976,7 +976,7 @@ const tParamLocation     paramLocationList[] = {
     // 121 SeqNote
     {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
     {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Menu,   {{  0, -60}, {14, 14}}, anchorBottomRight, NULL,             8,   5, octaveStrMap,                          NULL          }, // 121 Octave
-    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Menu,   {{  0, -50}, {14, 14}}, anchorBottomRight, "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Octave
+    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Menu,   {{-15,  15}, { 8,  8}}, anchorTopRight,    "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Octave
     {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, -40}, {10,  7}}, anchorBottomRight, "Clr",            1,   0, emptyStrMap,                           NULL          }, // 121 Clear
     {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, -30}, {10,  7}}, anchorBottomRight, "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 121 Randomize
     {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 121 Dummy for now
@@ -1104,7 +1104,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 76,  -3}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-15
     {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 80,  -3}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-16
     {moduleTypeSeqEvent,   paramType1StandardToggle, paramType2Toggle, {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
-    {moduleTypeSeqEvent,   paramType1StandardToggle, paramType2Menu,   {{-10, -30}, {14, 14}}, anchorBottomRight, "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Length
+    {moduleTypeSeqEvent,   paramType1StandardToggle, paramType2Menu,   {{-15,  15}, { 8,  8}}, anchorTopRight,    "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Length
     {moduleTypeSeqEvent,   paramType1StandardToggle, paramType2Menu,   {{ 88, -16}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T up
     {moduleTypeSeqEvent,   paramType1StandardToggle, paramType2Menu,   {{ 88,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
     // 145 SeqVal
@@ -1180,7 +1180,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 74,  -3}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-15
     {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 83,  -3}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-16
     {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Toggle, {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 144 Cycle
-    {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Menu,   {{-15, -55}, {14, 14}}, anchorBottomRight, "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
+    {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Menu,   {{-15,  15}, { 8,  8}}, anchorTopRight,    "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
     {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Menu,   {{  3,  20}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
     {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Menu,   {{  3,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
     {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Toggle, {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            1,   0, emptyStrMap,                           NULL          }, // 144 Clear

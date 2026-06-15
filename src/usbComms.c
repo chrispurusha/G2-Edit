@@ -238,29 +238,32 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     return EXIT_SUCCESS;
 }
 
+static void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, size_t maxLen) {
+    size_t  nameLen = 0;
+    uint8_t ch;
+
+    do {
+        ch = (uint8_t)read_bit_stream(buff, bitPos, 8);
+
+        if (ch != '\0' && nameLen < maxLen - 1) {
+            name[nameLen++] = (char)ch;
+        }
+    } while (ch != '\0' && nameLen < maxLen - 1);
+
+    name[nameLen] = '\0';
+}
+
 static int parse_performance_settings(uint8_t * buff, int length) {
     uint32_t bitPos       = 0;
     uint32_t selectedSlot = 0;
     char     name[17]     = {0};
-    uint8_t  ch           = 0;
-    int      nameLen      = 0;
-    int      i;
+    int      i            = 0;
 
     if (buff == NULL) {
         return EXIT_FAILURE;
     }
     // Performance name (ClaviaString — null terminated, max 16 bytes)
-    nameLen       = 0;
-
-    do {
-        ch = read_bit_stream(buff, &bitPos, 8);
-
-        if (ch != 0x00 && nameLen < 16) {
-            name[nameLen++] = ch;
-        }
-    } while (ch != 0x00 && nameLen < 16);
-
-    name[nameLen] = '\0';
+    read_clavia_string(buff, &bitPos, name, sizeof(name));
     LOG_DEBUG("Performance Name     = '%s'\n", name);
 
     // WriteSettings
@@ -270,7 +273,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8));
 
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 4));
-    selectedSlot  = read_bit_stream(buff, &bitPos, 2);  // For focus rather than keyboard?
+    selectedSlot = read_bit_stream(buff, &bitPos, 2);   // For focus rather than keyboard?
     LOG_DEBUG("SelectedSlot         = %u\n", selectedSlot);
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 2));
     LOG_DEBUG("RangeEnable          = %u\n", read_bit_stream(buff, &bitPos, 8));
@@ -285,18 +288,8 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     // 4 slots — TG2FileSlot.Write
     for (i = 0; i < MAX_SLOTS; i++) {
         // Patch name per slot (ReadName — null terminated, max 16 bytes)
-        nameLen       = 0;
         memset(name, 0, sizeof(name));
-
-        do {
-            ch = read_bit_stream(buff, &bitPos, 8);
-
-            if (ch != 0x00 && nameLen < 16) {
-                name[nameLen++] = ch;
-            }
-        } while (ch != 0x00 && nameLen < 16);
-
-        name[nameLen] = '\0';
+        read_clavia_string(buff, &bitPos, name, sizeof(name));
         LOG_DEBUG("Slot %d:\n", i);
         LOG_DEBUG("  PatchName         = '%s'\n", name);
         LOG_DEBUG("  Active            = %u\n", read_bit_stream(buff, &bitPos, 8));
@@ -334,6 +327,39 @@ static int parse_midi_cc(uint8_t * buff, int length) {
         }
     }
     return EXIT_SUCCESS;
+}
+
+static void store_note2(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32_t count) {
+    if (slot >= MAX_SLOTS) {
+        return;
+    }
+    uint32_t safeCount = (count < sizeof(gNote2[slot])) ? count : (uint32_t)sizeof(gNote2[slot]);
+
+    for (uint32_t i = 0; i < safeCount; i++) {
+        gNote2[slot][i] = read_bit_stream(buff, bitPos, 8);
+    }
+
+    gNote2Size[slot] = safeCount;
+}
+
+static void store_patch_notes(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32_t count) {
+    if (slot >= MAX_SLOTS) {
+        return;
+    }
+    uint32_t notesSize = count;
+
+    if (notesSize > sizeof(gPatchNotes[0]) - 1) {
+        LOG_ERROR("Patch notes size %u exceeds limit\n", notesSize);
+        notesSize = (uint32_t)(sizeof(gPatchNotes[0]) - 1);
+    }
+    gPatchNotesSize[slot] = 0;
+    memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
+
+    for (uint32_t i = 0; i < notesSize; i++) {
+        gPatchNotes[slot][i] = read_bit_stream(buff, bitPos, 8);
+    }
+
+    gPatchNotesSize[slot] = notesSize;
 }
 
 int parse_patch(uint32_t slot, uint8_t * buff, int length) {
@@ -418,45 +444,14 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
                 break;
 
             case SUB_RESPONSE_CURRENT_NOTE_2:
-            {
                 LOG_DEBUG("Current note 2\n");
-
-                if (slot < MAX_SLOTS) {
-                    uint32_t safeCount = ((uint32_t)count < sizeof(gNote2[slot]))
-                                       ? (uint32_t)count : sizeof(gNote2[slot]);
-
-                    for (uint32_t i = 0; i < safeCount; i++) {
-                        gNote2[slot][i] = read_bit_stream(buff, &subOffset, 8);
-                    }
-
-                    gNote2Size[slot] = safeCount;
-                }
+                store_note2(slot, buff, &subOffset, (uint32_t)count);
                 break;
-            }
 
             case SUB_RESPONSE_PATCH_NOTES:
-            {
                 LOG_DEBUG("Patch notes\n");
-
-                if (slot < MAX_SLOTS) {
-                    uint32_t notesSize = count;
-                    int32_t  i         = 0;
-
-                    if (notesSize > sizeof(gPatchNotes[0]) - 1) {
-                        LOG_ERROR("Patch notes size is greater than %lu\n", sizeof(gPatchNotes[0]) - 1);
-                        notesSize = sizeof(gPatchNotes[0]) - 1;
-                    }
-                    gPatchNotesSize[slot] = 0;
-                    memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
-
-                    for (i = 0; i < notesSize; i++) {
-                        gPatchNotes[slot][i] = read_bit_stream(buff, &subOffset, 8);
-                    }
-
-                    gPatchNotesSize[slot] = notesSize;
-                }
+                store_patch_notes(slot, buff, &subOffset, (uint32_t)count);
                 break;
-            }
 
             default:
                 LOG_DEBUG("Unprocessed type 0x%02x\n", type);
@@ -918,43 +913,19 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_CURRENT_NOTE_2:
         {
-            uint32_t count     = read_bit_stream(buff, bitPos, 16);
-            uint32_t safeCount = (count < sizeof(gNote2[slot])) ? count : (uint32_t)sizeof(gNote2[slot]);
+            uint32_t count = read_bit_stream(buff, bitPos, 16);
 
             LOG_DEBUG("Got current note slot %u count %u\n", slot, count);
-
-            if (slot < MAX_SLOTS) {
-                for (uint32_t i = 0; i < safeCount; i++) {
-                    gNote2[slot][i] = read_bit_stream(buff, bitPos, 8);
-                }
-
-                gNote2Size[slot] = safeCount;
-            }
+            store_note2(slot, buff, bitPos, count);
             return EXIT_SUCCESS;
         }
 
         case SUB_RESPONSE_PATCH_NOTES:
         {
-            uint32_t count     = read_bit_stream(buff, bitPos, 16);
-            uint32_t notesSize = count;
+            uint32_t count = read_bit_stream(buff, bitPos, 16);
 
             LOG_DEBUG("Got patch notes slot %u count %u\n", slot, count);
-
-            if (notesSize > sizeof(gPatchNotes[0]) - 1) {
-                LOG_ERROR("Patch notes size %u exceeds limit\n", notesSize);
-                notesSize = (uint32_t)(sizeof(gPatchNotes[0]) - 1);
-            }
-
-            if (slot < MAX_SLOTS) {
-                gPatchNotesSize[slot] = 0;
-                memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
-
-                for (uint32_t i = 0; i < notesSize; i++) {
-                    gPatchNotes[slot][i] = read_bit_stream(buff, bitPos, 8);
-                }
-
-                gPatchNotesSize[slot] = notesSize;
-            }
+            store_patch_notes(slot, buff, bitPos, count);
             return EXIT_SUCCESS;
         }
 
@@ -1245,15 +1216,26 @@ static int send_init(void) {
     return retVal;
 }
 
+static void usb_cmd_sys(uint8_t * buff, int * pos, uint8_t version, uint8_t subCommand) {
+    buff[(*pos)++] = 0x01;
+    buff[(*pos)++] = COMMAND_REQ | COMMAND_SYS;
+    buff[(*pos)++] = version;
+    buff[(*pos)++] = subCommand;
+}
+
+static void usb_cmd_slot(uint8_t * buff, int * pos, uint32_t slot, uint8_t commandFlags, uint8_t subCommand) {
+    buff[(*pos)++] = 0x01;
+    buff[(*pos)++] = commandFlags | COMMAND_SLOT | (uint8_t)slot;
+    buff[(*pos)++] = (uint8_t)atomic_load(&gPatchVersion[slot]);
+    buff[(*pos)++] = subCommand;
+}
+
 static int send_stop(void) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = 0x41;
-    buff[pos++] = SUB_COMMAND_START_STOP;
+    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_START_STOP);
     buff[pos++] = 0x01;
     retVal      = send_message(buff, pos);
 
@@ -1269,10 +1251,7 @@ static int send_start(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = 0x41;
-    buff[pos++] = SUB_COMMAND_START_STOP;
+    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_START_STOP);
     buff[pos++] = 0x00;
     retVal      = send_message(buff, pos);
 
@@ -1288,10 +1267,7 @@ static int send_select_slot(uint32_t slot) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = atomic_load(&gPerfVersion);
-    buff[pos++] = SUB_COMMAND_SELECT_SLOT;   // Note that this is focus, not keyboard selection
+    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_SELECT_SLOT);   // Note that this is focus, not keyboard selection
     buff[pos++] = (uint8_t)slot;
     retVal      = send_message(buff, pos);
 
@@ -1307,11 +1283,8 @@ static int send_get_synth_settings(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = 0x41;
-    buff[pos++] = SUB_COMMAND_GET_SYNTH_SETTINGS;
-    retVal      = send_message(buff, pos);
+    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_GET_SYNTH_SETTINGS);
+    retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_SYNTH_SETTINGS);
@@ -1325,11 +1298,8 @@ static int send_get_midi_cc(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = 0x41;
-    buff[pos++] = SUB_COMMAND_GET_MIDI_CC;
-    retVal      = send_message(buff, pos);
+    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_GET_MIDI_CC);
+    retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_MIDI_CC);
@@ -1343,11 +1313,8 @@ static int send_get_assigned_voices(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = 0x41;
-    buff[pos++] = SUB_COMMAND_SET_ASSIGNED_VOICES;
-    retVal      = send_message(buff, pos);
+    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_SET_ASSIGNED_VOICES);
+    retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_ASSIGNED_VOICES);
@@ -1361,11 +1328,8 @@ static int send_get_master_clock(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = 0x41;
-    buff[pos++] = SUB_COMMAND_QUERY_MASTER_CLOCK;
-    retVal      = send_message(buff, pos);
+    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_QUERY_MASTER_CLOCK);
+    retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_MASTER_CLOCK);
@@ -1379,11 +1343,8 @@ static int send_get_global_page(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = atomic_load(&gPerfVersion);
-    buff[pos++] = SUB_COMMAND_GET_GLOBAL_PAGE;
-    retVal      = send_message(buff, pos);
+    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_GET_GLOBAL_PAGE);
+    retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_GLOBAL_PAGE);
@@ -1397,12 +1358,9 @@ static int send_get_performance_settings(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = atomic_load(&gPerfVersion);
-    buff[pos++] = SUB_COMMAND_PERFORMANCE_SETTINGS;
     LOG_DEBUG("Send get performance settings\n");
-    retVal      = send_message(buff, pos);
+    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_PERFORMANCE_SETTINGS);
+    retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_PERFORMANCE_SETTINGS);
@@ -1417,10 +1375,7 @@ static int send_get_patch_version(uint32_t slot) {
     int     pos                     = COMMAND_OFFSET;
 
     LOG_DEBUG("Send get patch version\n");
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = 0x41;
-    buff[pos++] = SUB_COMMAND_GET_PATCH_VERSION;
+    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_GET_PATCH_VERSION);
     buff[pos++] = (uint8_t)slot;
     retVal      = send_message(buff, pos);
 
@@ -1436,11 +1391,8 @@ static int send_get_patch(uint32_t slot) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_GET_PATCH_SLOT;
-    retVal      = send_message(buff, pos);
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_GET_PATCH_SLOT);
+    retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_DESCRIPTION);
@@ -1454,11 +1406,8 @@ static int send_get_patch_name(uint32_t slot) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_GET_PATCH_NAME;
-    retVal      = send_message(buff, pos);
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_GET_PATCH_NAME);
+    retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_GET_PATCH_NAME);
@@ -1472,10 +1421,7 @@ static int send_get_resources_used(uint32_t slot, tLocation location) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_QUERY_RESOURCES;
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_QUERY_RESOURCES);
     buff[pos++] = location;
     retVal      = send_message(buff, pos);
 
@@ -1486,27 +1432,24 @@ static int send_get_resources_used(uint32_t slot, tLocation location) {
     return retVal;
 }
 
+static void write_clavia_string(uint8_t * buff, int * pos, const char * name) {
+    int i = 0;
+
+    while (i < CLAVIA_NAME_SIZE && name[i] != '\0') {
+        buff[(*pos)++] = (uint8_t)name[i++];
+    }
+    buff[(*pos)++] = 0x00;
+}
+
 static int send_set_module_label(uint32_t slot, tModuleKey moduleKey, const char * name) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     i                       = 0;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_SET_MODULE_LABEL;
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_MODULE_LABEL);
     buff[pos++] = moduleKey.location;
     buff[pos++] = moduleKey.index;
-
-    // WriteClaviaString: chars up to 16, then null terminator if < 16
-    while (i < CLAVIA_NAME_SIZE && name[i] != '\0') {
-        buff[pos++] = (uint8_t)name[i++];
-    }
-
-    if (i < CLAVIA_NAME_SIZE) {
-        buff[pos++] = 0x00;
-    }
+    write_clavia_string(buff, &pos, name);
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
@@ -1521,10 +1464,7 @@ static int send_set_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t pa
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_SET_PARAM;
+    usb_cmd_slot(buff, &pos, slot, COMMAND_WRITE_NO_RESP, SUB_COMMAND_SET_PARAM);
     buff[pos++] = moduleKey.location;
     buff[pos++] = moduleKey.index;
     buff[pos++] = param;
@@ -1540,10 +1480,7 @@ static int send_set_module_colour(uint32_t slot, uint32_t location,
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_SET_MODULE_COLOUR;
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_MODULE_COLOUR);
     buff[pos++] = (uint8_t)location;
     buff[pos++] = (uint8_t)moduleIndex;
     buff[pos++] = (uint8_t)colour;
@@ -1573,11 +1510,8 @@ static int send_get_global_knobs(void) {
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_FAILURE;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = atomic_load(&gPerfVersion);
-    buff[pos++] = SUB_COMMAND_QUERY_GLOBAL_KNOBS;
-    retVal      = send_message(buff, pos);
+    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_QUERY_GLOBAL_KNOBS);
+    retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_GLOBAL_KNOBS);
@@ -1591,11 +1525,8 @@ static int send_get_current_note(uint32_t slot) {
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_FAILURE;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_CURRENT_NOTE;
-    retVal      = send_message(buff, pos);
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_CURRENT_NOTE);
+    retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_CURRENT_NOTE_2);
@@ -1609,11 +1540,8 @@ static int send_get_patch_notes(uint32_t slot) {
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_FAILURE;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_QUERY_PATCH_TEXT;
-    retVal      = send_message(buff, pos);
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_QUERY_PATCH_TEXT);
+    retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_NOTES);
@@ -1627,11 +1555,8 @@ static int send_get_selected_param(uint32_t slot) {
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_FAILURE;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_GET_SELECTED_PARAM;
-    retVal      = send_message(buff, pos);
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_GET_SELECTED_PARAM);
+    retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_SELECT_PARAM);
@@ -1645,11 +1570,8 @@ static int send_get_knob_snapshot(uint32_t slot) {
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_FAILURE;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_KNOB_SNAPSHOT;
-    retVal      = send_message(buff, pos);
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_KNOB_SNAPSHOT);
+    retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_KNOBS);
@@ -1685,26 +1607,18 @@ static int push_slot_to_device(uint32_t slot) {
     uint8_t  buff[SEND_MESSAGE_SIZE]         = {0};
     int      pos                             = COMMAND_OFFSET;
     uint32_t bitPos                          = 0;
-    uint32_t i                               = 0;
     int      retVal                          = EXIT_FAILURE;
     char     patchName[CLAVIA_NAME_SIZE + 1] = {0};
 
     LOG_DEBUG("Pushing slot %u to device\n", slot);
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_SET_PATCH;
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_PATCH);
     buff[pos++] = 0x00;
     buff[pos++] = 0x00;
     buff[pos++] = 0x00;
 
     patch_name_get(slot, patchName, sizeof(patchName));
-
-    while ((i < CLAVIA_NAME_SIZE) && (patchName[i] != '\0')) {
-        buff[pos++] = patchName[i++];
-    }
-    buff[pos++] = 0x00;
+    write_clavia_string(buff, &pos, patchName);
 
     bitPos      = BYTE_TO_BIT(pos);
 
@@ -1742,21 +1656,12 @@ static int push_slot_to_device(uint32_t slot) {
 static int send_set_patch_name(uint32_t slot, const char * name) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     i                       = 0;
     int     retVal                  = EXIT_FAILURE;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_SET_PATCH_NAME;  // 0x27 — used for set AND response
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_PATCH_NAME);  // 0x27 — used for set AND response
+    write_clavia_string(buff, &pos, name);
 
-    // Null-terminated string, max 16 chars
-    while (i < CLAVIA_NAME_SIZE && name[i] != '\0') {
-        buff[pos++] = (uint8_t)name[i++];
-    }
-    buff[pos++] = 0x00;
-
-    retVal      = send_message(buff, pos);
+    retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
@@ -1770,10 +1675,7 @@ static int send_assign_knob(uint32_t slot, uint32_t location, uint32_t moduleInd
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_FAILURE;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_ASSIGN_KNOB;
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_ASSIGN_KNOB);
     buff[pos++] = (uint8_t)moduleIndex;
     buff[pos++] = (uint8_t)paramIndex;
     buff[pos++] = (uint8_t)(location << 6);
@@ -1793,10 +1695,7 @@ static int send_deassign_knob(uint32_t slot, uint32_t knobIndex) {
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_FAILURE;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_DEASSIGN_KNOB;
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_DEASSIGN_KNOB);
     buff[pos++] = 0x00;
     buff[pos++] = (uint8_t)knobIndex;
     retVal      = send_message(buff, pos);
@@ -1813,10 +1712,7 @@ static int send_assign_global_knob(uint32_t slotIndex, uint32_t location, uint32
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_FAILURE;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = atomic_load(&gPerfVersion);
-    buff[pos++] = SUB_COMMAND_ASSIGN_GLOBAL_KNOB;
+    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_ASSIGN_GLOBAL_KNOB);
     buff[pos++] = (uint8_t)((slotIndex << 4) | (location << 2));
     buff[pos++] = (uint8_t)moduleIndex;
     buff[pos++] = (uint8_t)paramIndex;
@@ -1836,10 +1732,7 @@ static int send_deassign_global_knob(uint32_t knobIndex) {
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_FAILURE;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = atomic_load(&gPerfVersion);
-    buff[pos++] = SUB_COMMAND_DEASSIGN_GLOBAL_KNOB;
+    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_DEASSIGN_GLOBAL_KNOB);
     buff[pos++] = 0x00;
     buff[pos++] = (uint8_t)knobIndex;
     retVal      = send_message(buff, pos);
@@ -1856,10 +1749,7 @@ static int send_assign_midi_cc(uint32_t slot, uint32_t location, uint32_t module
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_FAILURE;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_ASSIGN_MIDICC;
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_ASSIGN_MIDICC);
     buff[pos++] = (uint8_t)location;
     buff[pos++] = (uint8_t)moduleIndex;
     buff[pos++] = (uint8_t)paramIndex;
@@ -1878,10 +1768,7 @@ static int send_deassign_midi_cc(uint32_t slot, uint32_t midiCC) {
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_FAILURE;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_DEASSIGN_MIDICC;
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_DEASSIGN_MIDICC);
     buff[pos++] = (uint8_t)midiCC;
     retVal      = send_message(buff, pos);
 
@@ -1897,10 +1784,7 @@ static int send_copy_variation(uint32_t slot, uint32_t fromVariation, uint32_t t
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_FAILURE;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
-    buff[pos++] = SUB_COMMAND_COPY_VARIATION;
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_COPY_VARIATION);
     buff[pos++] = (uint8_t)fromVariation;
     buff[pos++] = (uint8_t)toVariation;
     retVal      = send_message(buff, pos);
@@ -1917,10 +1801,7 @@ static int send_set_master_clock_bpm(uint32_t bpm) {
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_FAILURE;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = atomic_load(&gPerfVersion);
-    buff[pos++] = SUB_COMMAND_SET_MASTER_CLOCK;
+    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_SET_MASTER_CLOCK);
     buff[pos++] = 0xFF;
     buff[pos++] = 0x01;
     buff[pos++] = (uint8_t)bpm;
@@ -1938,10 +1819,7 @@ static int send_set_master_clock_run(uint32_t running) {
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_FAILURE;
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-    buff[pos++] = atomic_load(&gPerfVersion);
-    buff[pos++] = SUB_COMMAND_SET_MASTER_CLOCK;
+    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_SET_MASTER_CLOCK);
     buff[pos++] = 0xFF;
     buff[pos++] = 0x00;
     buff[pos++] = running ? 0x01 : 0x00;

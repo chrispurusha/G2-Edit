@@ -555,6 +555,17 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
 
+static void parse_knob_common_fields(uint8_t * buff, uint32_t * bitPos, tKnob * knob) {
+    knob->assigned = read_bit_stream(buff, bitPos, 1);
+
+    if (knob->assigned) {
+        knob->location    = read_bit_stream(buff, bitPos, 2);
+        knob->moduleIndex = read_bit_stream(buff, bitPos, 8);
+        knob->isLed       = read_bit_stream(buff, bitPos, 2);
+        knob->paramIndex  = read_bit_stream(buff, bitPos, 7);
+    }
+}
+
 void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     uint32_t knobCount = 0;
     int      i         = 0;
@@ -575,20 +586,13 @@ void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     memset(&gKnobArray[slot], 0, sizeof(tKnobArray));
 
     for (i = 0; i < (int)knobCount; i++) {
-        gKnobArray[slot].knob[i].assigned = read_bit_stream(buff, subOffset, 1);
+        tKnob * knob = &gKnobArray[slot].knob[i];
 
-        if (gKnobArray[slot].knob[i].assigned) {
-            gKnobArray[slot].knob[i].location    = read_bit_stream(buff, subOffset, 2);
-            gKnobArray[slot].knob[i].moduleIndex = read_bit_stream(buff, subOffset, 8);
-            gKnobArray[slot].knob[i].isLed       = read_bit_stream(buff, subOffset, 2);
-            gKnobArray[slot].knob[i].paramIndex  = read_bit_stream(buff, subOffset, 7);
+        parse_knob_common_fields(buff, subOffset, knob);
 
+        if (knob->assigned) {
             LOG_DEBUG("  Knob %d: location %u module %u isLed %u param %u\n",
-                      i,
-                      gKnobArray[slot].knob[i].location,
-                      gKnobArray[slot].knob[i].moduleIndex,
-                      gKnobArray[slot].knob[i].isLed,
-                      gKnobArray[slot].knob[i].paramIndex);
+                      i, knob->location, knob->moduleIndex, knob->isLed, knob->paramIndex);
         }
     }
 }
@@ -605,22 +609,20 @@ void parse_global_knobs(uint8_t * buff, uint32_t * bitPos) {
     memset(gGlobalKnobArray, 0, sizeof(gGlobalKnobArray));
 
     for (uint32_t i = 0; i < knobCount; i++) {
-        gGlobalKnobArray[i].assigned = read_bit_stream(buff, bitPos, 1);
+        tKnob         knob  = {0};
+        tGlobalKnob * gKnob = &gGlobalKnobArray[i];
 
-        if (gGlobalKnobArray[i].assigned) {
-            gGlobalKnobArray[i].location    = read_bit_stream(buff, bitPos, 2);
-            gGlobalKnobArray[i].moduleIndex = read_bit_stream(buff, bitPos, 8);
-            gGlobalKnobArray[i].isLed       = read_bit_stream(buff, bitPos, 2);
-            gGlobalKnobArray[i].paramIndex  = read_bit_stream(buff, bitPos, 7);
-            gGlobalKnobArray[i].slotIndex   = read_bit_stream(buff, bitPos, 2);
+        parse_knob_common_fields(buff, bitPos, &knob);
+        gKnob->assigned    = knob.assigned;
+        gKnob->location    = knob.location;
+        gKnob->moduleIndex = knob.moduleIndex;
+        gKnob->isLed       = knob.isLed;
+        gKnob->paramIndex  = knob.paramIndex;
 
+        if (gKnob->assigned) {
+            gKnob->slotIndex = read_bit_stream(buff, bitPos, 2);
             LOG_DEBUG("  Global knob %u: slot %u location %u module %u isLed %u param %u\n",
-                      i,
-                      gGlobalKnobArray[i].slotIndex,
-                      gGlobalKnobArray[i].location,
-                      gGlobalKnobArray[i].moduleIndex,
-                      gGlobalKnobArray[i].isLed,
-                      gGlobalKnobArray[i].paramIndex);
+                      i, gKnob->slotIndex, gKnob->location, gKnob->moduleIndex, gKnob->isLed, gKnob->paramIndex);
         }
     }
 }

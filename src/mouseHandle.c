@@ -195,13 +195,35 @@ void send_module_move_msg(tModule * module) {
     msg_send(&gCommandQueue, &messageContent);
 }
 
+static void send_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, uint32_t variation, uint32_t value) {
+    tMessageContent msg = {0};
+
+    msg.cmd                 = eMsgCmdSetValue;
+    msg.slot                = slot;
+    msg.paramData.moduleKey = moduleKey;
+    msg.paramData.param     = paramIdx;
+    msg.paramData.variation = variation;
+    msg.paramData.value     = value;
+    msg_send(&gCommandQueue, &msg);
+}
+
+static void send_mode_value(uint32_t slot, tModuleKey moduleKey, uint32_t modeIdx, uint32_t value) {
+    tMessageContent msg = {0};
+
+    msg.cmd                = eMsgCmdSetMode;
+    msg.slot               = slot;
+    msg.modeData.moduleKey = moduleKey;
+    msg.modeData.mode      = modeIdx;
+    msg.modeData.value     = value;
+    msg_send(&gCommandQueue, &msg);
+}
+
 void init_params_on_module(tModule * module, uint32_t location, uint32_t variation) {
-    uint32_t        paramListIndex = 0;
-    uint32_t        paramIndex     = 0;
-    uint32_t        numParams      = module_param_count(module->type);
-    tMessageContent messageContent = {0};
-    bool            anyParamSet    = false;
-    uint32_t        slot           = atomic_load(&gSlot);
+    uint32_t paramListIndex = 0;
+    uint32_t paramIndex     = 0;
+    uint32_t numParams      = module_param_count(module->type);
+    bool     anyParamSet    = false;
+    uint32_t slot           = atomic_load(&gSlot);
 
     if (location != atomic_load(&gLocation)) {
         return;
@@ -212,14 +234,7 @@ void init_params_on_module(tModule * module, uint32_t location, uint32_t variati
             module->param[variation][paramIndex].value = paramLocationList[paramListIndex].defaultValue;
             anyParamSet                                = true;
 
-            messageContent.cmd                         = eMsgCmdSetValue;
-            messageContent.slot                        = slot;
-            messageContent.paramData.moduleKey         = module->key;
-            messageContent.paramData.param             = paramIndex;
-            messageContent.paramData.variation         = variation;
-            messageContent.paramData.value             = module->param[variation][paramIndex].value;
-
-            msg_send(&gCommandQueue, &messageContent);
+            send_param_value(slot, module->key, paramIndex, variation, module->param[variation][paramIndex].value);
 
             paramIndex++;
 
@@ -706,6 +721,15 @@ static void clamp_menu_to_screen(tMenuItem * items, uint32_t columns) {
     }
 }
 
+static void open_context_menu(tCoord coord, tMenuItem * items, uint32_t columns, double cellWidth) {
+    gContextMenu.coord     = coord;
+    gContextMenu.items     = items;
+    gContextMenu.columns   = columns;
+    gContextMenu.cellWidth = cellWidth;
+    gContextMenu.active    = true;
+    clamp_menu_to_screen(items, (columns > 1) ? columns : 1);
+}
+
 void menu_action_create(int index) {
     uint32_t slot     = atomic_load(&gSlot);
     uint32_t location = atomic_load(&gLocation);
@@ -755,11 +779,10 @@ void menu_action_create(int index) {
             shift_modules_down(module.key);
         }
     } else {
-        gContextMenu.items = gContextMenu.items[index].subMenu;
+        tMenuItem * subMenu = gContextMenu.items[index].subMenu;
 
-        if (gContextMenu.items != NULL) {
-            clamp_menu_to_screen(gContextMenu.items, 1);
-            gContextMenu.active = true;
+        if (subMenu != NULL) {
+            open_context_menu(gContextMenu.coord, subMenu, 0, 0.0);
         }
     }
 }
@@ -782,13 +805,10 @@ void action_set_module_colour(int index) {
 
         msg_send(&gCommandQueue, &messageContent);
     } else {
-        gContextMenu.items     = gContextMenu.items[index].subMenu;
-        gContextMenu.columns   = 6;
-        gContextMenu.cellWidth = STANDARD_TEXT_HEIGHT * 2;
+        tMenuItem * subMenu = gContextMenu.items[index].subMenu;
 
-        if (gContextMenu.items != NULL) {
-            clamp_menu_to_screen(gContextMenu.items, 6);
-            gContextMenu.active = true;
+        if (subMenu != NULL) {
+            open_context_menu(gContextMenu.coord, subMenu, 6, STANDARD_TEXT_HEIGHT * 2);
         }
     }
 }
@@ -1039,13 +1059,8 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
     };
 
     // Store menu position
-    gContextMenu.coord       = coord;
     gContextMenu.originCoord = coord;
-    gContextMenu.items       = menuItems;
-    gContextMenu.columns     = 0;
-    gContextMenu.cellWidth   = 0.0;
-    gContextMenu.active      = true;
-    clamp_menu_to_screen(menuItems, 1);
+    open_context_menu(coord, menuItems, 0, 0.0);
 }
 
 void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t connectorIndex) {
@@ -1055,14 +1070,9 @@ void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t co
     };
 
     // Store menu position
-    gContextMenu.coord          = coord;
-    gContextMenu.items          = menuItems;
-    gContextMenu.columns        = 0;
-    gContextMenu.cellWidth      = 0.0;
     gContextMenu.moduleKey      = moduleKey;
     gContextMenu.connectorIndex = connectorIndex;
-    gContextMenu.active         = true;
-    clamp_menu_to_screen(menuItems, 1);
+    open_context_menu(coord, menuItems, 0, 0.0);
 }
 
 int32_t find_knob_for_param(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex) {
@@ -1142,23 +1152,15 @@ static void action_deassign_knob(int index) {
 }
 
 static void action_set_toggle_value(int index) {
-    uint32_t        slot      = atomic_load(&gSlot);
-    uint32_t        variation = gPatchDescr[slot].activeVariation;
-    tModule         module    = {0};
-    tMessageContent msg       = {0};
+    uint32_t slot      = atomic_load(&gSlot);
+    uint32_t variation = gPatchDescr[slot].activeVariation;
+    tModule  module    = {0};
 
     if (read_module(gContextMenu.moduleKey, &module)) {
         uint32_t paramIdx = gContextMenu.paramIndex;
         module.param[variation][paramIdx].value = (uint32_t)gContextMenu.items[index].param;
         write_module(gContextMenu.moduleKey, &module);
-
-        msg.cmd                                 = eMsgCmdSetValue;
-        msg.slot                                = slot;
-        msg.paramData.moduleKey                 = gContextMenu.moduleKey;
-        msg.paramData.param                     = paramIdx;
-        msg.paramData.variation                 = variation;
-        msg.paramData.value                     = module.param[variation][paramIdx].value;
-        msg_send(&gCommandQueue, &msg);
+        send_param_value(slot, gContextMenu.moduleKey, paramIdx, variation, module.param[variation][paramIdx].value);
     }
     gContextMenu.active = false;
     atomic_store(&gReDraw, true);
@@ -1182,31 +1184,20 @@ static void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
         NULL, RGB_BLACK, NULL, 0, NULL
     };
 
-    gContextMenu.coord                 = coord;
-    gContextMenu.items                 = menuItems;
-    gContextMenu.columns               = 0;
-    gContextMenu.cellWidth             = 0.0;
     gContextMenu.moduleKey             = moduleKey;
     gContextMenu.paramIndex            = paramIndex;
-    gContextMenu.active                = true;
+    open_context_menu(coord, menuItems, 0, 0.0);
 }
 
 static void action_set_mode_value(int index) {
-    uint32_t        slot   = atomic_load(&gSlot);
-    tModule         module = {0};
-    tMessageContent msg    = {0};
+    uint32_t slot   = atomic_load(&gSlot);
+    tModule  module = {0};
 
     if (read_module(gContextMenu.moduleKey, &module)) {
         uint32_t modeIdx = gContextMenu.paramIndex;
         module.mode[modeIdx].value = (uint32_t)gContextMenu.items[index].param;
         write_module(gContextMenu.moduleKey, &module);
-
-        msg.cmd                    = eMsgCmdSetMode;
-        msg.slot                   = slot;
-        msg.modeData.moduleKey     = gContextMenu.moduleKey;
-        msg.modeData.mode          = modeIdx;
-        msg.modeData.value         = module.mode[modeIdx].value;
-        msg_send(&gCommandQueue, &msg);
+        send_mode_value(slot, gContextMenu.moduleKey, modeIdx, module.mode[modeIdx].value);
     }
     gContextMenu.active = false;
     atomic_store(&gReDraw, true);
@@ -1230,13 +1221,9 @@ static void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t m
         NULL, RGB_BLACK, NULL, 0, NULL
     };
 
-    gContextMenu.coord                 = coord;
-    gContextMenu.items                 = menuItems;
-    gContextMenu.columns               = 0;
-    gContextMenu.cellWidth             = 0.0;
     gContextMenu.moduleKey             = moduleKey;
     gContextMenu.paramIndex            = modeIndex;
-    gContextMenu.active                = true;
+    open_context_menu(coord, menuItems, 0, 0.0);
 }
 
 void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex) {
@@ -1251,8 +1238,6 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
     uint32_t         slot     = atomic_load(&gSlot);
     int32_t          assigned = find_knob_for_param(slot, moduleKey.location, moduleKey.index, paramIndex);
     int              count    = 0;
-    double           menuHeight;
-    double           renderHeight;
 
     for (int pg = 0; pg < NUM_PARAM_PAGES; pg++) {
         snprintf(pageLabels[pg], sizeof(pageLabels[pg]), "Page %c", 'A' + pg);
@@ -1336,20 +1321,9 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
         NULL, RGB_BLACK, NULL, 0, NULL
     };
 
-    gContextMenu.coord             = coord;
-    gContextMenu.items             = menuItems;
-    gContextMenu.columns           = 0;
-    gContextMenu.cellWidth         = 0.0;
     gContextMenu.moduleKey         = moduleKey;
     gContextMenu.paramIndex        = paramIndex;
-    gContextMenu.active            = true;
-
-    menuHeight                     = (double)(count + 1) * (STANDARD_TEXT_HEIGHT + (5 * 2));
-    renderHeight                   = get_render_height() / gGlobalGuiScale;
-
-    if (gContextMenu.coord.y + menuHeight > (renderHeight - SCROLLBAR_WIDTH)) {
-        gContextMenu.coord.y = (renderHeight - SCROLLBAR_WIDTH) - menuHeight;
-    }
+    open_context_menu(coord, menuItems, 0, 0.0);
 }
 
 void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
@@ -1391,25 +1365,23 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     };
 
     // Store menu position
-    gContextMenu.coord     = coord;
-    gContextMenu.items     = menuItems;
-    gContextMenu.columns   = 0;
-    gContextMenu.cellWidth = 0.0;
     gContextMenu.moduleKey = moduleKey;
-    gContextMenu.active    = true;
-    clamp_menu_to_screen(menuItems, 1);
+    open_context_menu(coord, menuItems, 0, 0.0);
+}
+
+static void send_patch_descr_update(uint32_t slot) {
+    tMessageContent messageContent = {0};
+
+    messageContent.cmd  = eMsgCmdWritePatchDescr;
+    messageContent.slot = slot;
+    msg_send(&gCommandQueue, &messageContent);
 }
 
 static void action_set_patch_type(int index) {
-    uint32_t        slot           = atomic_load(&gSlot);
-    tMessageContent messageContent = {0};
+    uint32_t slot = atomic_load(&gSlot);
 
     gPatchDescr[slot].category = gContextMenu.items[index].param;
-
-    messageContent.cmd         = eMsgCmdWritePatchDescr; // or whatever sets category
-    messageContent.slot        = slot;
-    msg_send(&gCommandQueue, &messageContent);
-
+    send_patch_descr_update(slot);
     gContextMenu.active        = false;
 }
 
@@ -1434,23 +1406,14 @@ void open_patch_type_context_menu(tCoord coord) {
         {NULL,        RGB_BLACK,  NULL,                                   0, NULL}
     };
 
-    gContextMenu.coord     = coord;
-    gContextMenu.items     = menuItems;
-    gContextMenu.columns   = 0;
-    gContextMenu.cellWidth = 0.0;
-    gContextMenu.active    = true;
+    open_context_menu(coord, menuItems, 0, 0.0);
 }
 
 static void action_set_mono_poly(int index) {
-    uint32_t        slot           = atomic_load(&gSlot);
-    tMessageContent messageContent = {0};
+    uint32_t slot = atomic_load(&gSlot);
 
     gPatchDescr[slot].monoPoly = (uint8_t)gContextMenu.items[index].param;
-
-    messageContent.cmd         = eMsgCmdWritePatchDescr;
-    messageContent.slot        = slot;
-    msg_send(&gCommandQueue, &messageContent);
-
+    send_patch_descr_update(slot);
     gContextMenu.active        = false;
 }
 
@@ -1462,23 +1425,14 @@ static void open_mono_poly_context_menu(tCoord coord) {
         {NULL,     RGB_BLACK,  NULL,                              0, NULL}
     };
 
-    gContextMenu.coord     = coord;
-    gContextMenu.items     = menuItems;
-    gContextMenu.columns   = 0;
-    gContextMenu.cellWidth = 0.0;
-    gContextMenu.active    = true;
+    open_context_menu(coord, menuItems, 0, 0.0);
 }
 
 static void action_set_voice_count(int index) {
-    uint32_t        slot           = atomic_load(&gSlot);
-    tMessageContent messageContent = {0};
+    uint32_t slot = atomic_load(&gSlot);
 
     gPatchDescr[slot].voiceCount = (uint8_t)gContextMenu.items[index].param;
-
-    messageContent.cmd           = eMsgCmdWritePatchDescr;
-    messageContent.slot          = slot;
-    msg_send(&gCommandQueue, &messageContent);
-
+    send_patch_descr_update(slot);
     gContextMenu.active          = false;
 }
 
@@ -1509,10 +1463,7 @@ static void open_voice_count_context_menu(tCoord coord) {
         menuItems[i].colour = invalid ? (tRgb)RGB_RED_5 : (tRgb)RGB_GREY_3;
     }
 
-    gContextMenu.coord   = coord;
-    gContextMenu.items   = menuItems;
-    gContextMenu.columns = 4;
-    gContextMenu.active  = true;
+    open_context_menu(coord, menuItems, 4, 0.0);
 }
 
 bool handle_module_press(tCoord coord, tMouseButton mouseButton) {
@@ -1673,18 +1624,10 @@ bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
                         } else {
                             range = paramLocationList[param->paramRef].range;
                         }
-                        param->value                       = (param->value + 1) % range;
+                        param->value = (param->value + 1) % range;
                         write_module(module.key, &module);
-
-                        tMessageContent messageContent = {0};
-                        messageContent.cmd                 = eMsgCmdSetValue;
-                        messageContent.slot                = slot;
-                        messageContent.paramData.moduleKey = module.key;
-                        messageContent.paramData.param     = i;
-                        messageContent.paramData.variation = variation;
-                        messageContent.paramData.value     = param->value;
-                        msg_send(&gCommandQueue, &messageContent);
-                        retVal                             = true;
+                        send_param_value(slot, module.key, (uint32_t)i, variation, param->value);
+                        retVal       = true;
                     }
                     // Dials: already handled in cursor_pos via gParamDragging
                 }
@@ -1700,17 +1643,10 @@ bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
                             open_mode_toggle_menu(coord, module.key, (uint32_t)i, mode->modeRef);
                             retVal = true;
                         } else if (modeLocationList[mode->modeRef].type2 == paramType2Toggle) {
-                            mode->value                       = (mode->value + 1) % modeLocationList[mode->modeRef].range;
+                            mode->value = (mode->value + 1) % modeLocationList[mode->modeRef].range;
                             write_module(module.key, &module);
-
-                            tMessageContent messageContent = {0};
-                            messageContent.cmd                = eMsgCmdSetMode;
-                            messageContent.slot               = slot;
-                            messageContent.modeData.moduleKey = module.key;
-                            messageContent.modeData.mode      = i;
-                            messageContent.modeData.value     = mode->value;
-                            msg_send(&gCommandQueue, &messageContent);
-                            retVal                            = true;
+                            send_mode_value(slot, module.key, (uint32_t)i, mode->value);
+                            retVal      = true;
                         }
                     }
                 }
@@ -1777,10 +1713,7 @@ bool handle_context_menu_click(tCoord coord) {
                 }
                 gContextMenu.items[i].action(i);
             } else if (gContextMenu.items[i].subMenu != NULL) {
-                gContextMenu.items     = gContextMenu.items[i].subMenu;
-                gContextMenu.columns   = 0;
-                gContextMenu.cellWidth = 0.0;
-                gContextMenu.active    = true;
+                open_context_menu(gContextMenu.coord, gContextMenu.items[i].subMenu, 0, 0.0);
             } else {
                 gContextMenu.active = false;
             }
@@ -1975,15 +1908,11 @@ void open_variation_copy_menu(tCoord coord, uint32_t sourceVariation) {
         }
     }
 
-    menuItems[count]       = (tMenuItem){
+    menuItems[count] = (tMenuItem){
         NULL, RGB_BLACK, NULL, 0, NULL
     };
 
-    gContextMenu.coord     = coord;
-    gContextMenu.items     = menuItems;
-    gContextMenu.columns   = 0;
-    gContextMenu.cellWidth = 0.0;
-    gContextMenu.active    = true;
+    open_context_menu(coord, menuItems, 0, 0.0);
 }
 
 tMouseButton convert_to_mouse_button(int button, int action) {
@@ -2361,13 +2290,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
 
                             write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
 
-                            messageContent.cmd                                  = eMsgCmdSetValue;
-                            messageContent.slot                                 = slot;
-                            messageContent.paramData.moduleKey                  = gParamDragging.moduleKey;
-                            messageContent.paramData.param                      = gParamDragging.param;
-                            messageContent.paramData.variation                  = variation;
-                            messageContent.paramData.value                      = value;
-                            msg_send(&gCommandQueue, &messageContent);
+                            send_param_value(slot, gParamDragging.moduleKey, gParamDragging.param, variation, value);
                         }
                     } else {
                         if (module.param[variation][gParamDragging.param].morphRange[gMorphGroupFocus] != value) {
@@ -2404,12 +2327,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
 
                         write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
 
-                        messageContent.cmd                     = eMsgCmdSetMode;
-                        messageContent.slot                    = slot;
-                        messageContent.modeData.moduleKey      = gParamDragging.moduleKey;
-                        messageContent.modeData.mode           = gParamDragging.mode;
-                        messageContent.modeData.value          = value;
-                        msg_send(&gCommandQueue, &messageContent);
+                        send_mode_value(slot, gParamDragging.moduleKey, gParamDragging.mode, value);
                     }
                 }
                 break;
