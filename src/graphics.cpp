@@ -332,6 +332,7 @@ void render_top_bar(void) {
         tRgb notesColour = (strlen((char *)gPatchNotes[slot]) > 0) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
         gPatchNotesButtonRect = draw_button(mainArea, {{355, 60}, {get_text_width("Notes", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, "Notes", notesColour);
     }
+    gSettingsButtonRect  = draw_button(mainArea, {{270, 8}, {get_text_width("Settings", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, "Settings", (tRgb)RGB_BACKGROUND_GREY);
 
     if (gPatchDescr[slot].monoPoly == monoPolyPoly) {
         voiceCount = gPatchDescr[slot].voiceCount + 1;
@@ -832,6 +833,197 @@ static void check_action_flags(void) {
     }
 }
 
+// Helper: render a −/value/+ triplet, return updated x position.
+// decRect and incRect are updated in the caller's rects struct.
+static double render_spin(double x, double y, double btnH,
+                          const char * valStr, const char * widestVal,
+                          tRectangle * decRect, tRectangle * incRect) {
+    *decRect = draw_button(mainArea, {{x, y}, {get_text_width((char *)"-", btnH) + 4.0, btnH}},
+                           "-", (tRgb)RGB_BACKGROUND_GREY);
+    x       += decRect->size.w + 3.0;
+    set_rgb_colour(RGB_BLACK);
+    render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, (char *)valStr);
+    x       += get_text_width((char *)widestVal, btnH) + 3.0;
+    *incRect = draw_button(mainArea, {{x, y}, {get_text_width((char *)"+", btnH) + 4.0, btnH}},
+                           "+", (tRgb)RGB_BACKGROUND_GREY);
+    x       += incRect->size.w;
+    return x;
+}
+
+// Helper: MIDI channel value → display string (1-16 or "Off")
+static void midi_chan_str(uint8_t val, char * buf, size_t bufLen) {
+    if (val >= 0x10) {
+        snprintf(buf, bufLen, "Off");
+    } else {
+        snprintf(buf, bufLen, "%u", (unsigned)val + 1u);
+    }
+}
+
+static void render_patch_settings_panel(void) {
+    if (!gPatchSettingsEdit.active) {
+        return;
+    }
+    double renderW = get_render_width() / gGlobalGuiScale;
+    double renderH = get_render_height() / gGlobalGuiScale;
+    double boxW    = 600.0;
+    double boxH    = 375.0;
+    double boxX    = (renderW - boxW) / 2.0;
+    double boxY    = (renderH - boxH) / 2.0;
+    double margin  = 10.0;
+    double titleH  = 24.0;
+    double rowH    = 26.0;
+    double secH    = 18.0;
+    double btnH    = STANDARD_BUTTON_TEXT_HEIGHT;
+    double y       = boxY + titleH + margin;
+    char   buf[16] = {0};
+
+    set_rgb_colour(RGB_GREY_2);
+    render_rectangle(mainArea, {{0.0, 0.0}, {renderW, renderH}});
+
+    set_rgb_colour(RGB_GREY_5);
+    render_rectangle_with_border(mainArea, {{boxX, boxY}, {boxW, boxH}});
+
+    set_rgb_colour(RGB_GREY_3);
+    render_rectangle(mainArea, {{boxX, boxY}, {boxW, titleH}});
+    set_rgb_colour(RGB_BLACK);
+    render_text(mainArea, {{boxX + margin, boxY + 6.0}, {BLANK_SIZE, btnH}}, "Synth Settings");
+
+    gSettingsPanelRects.close = draw_button(mainArea,
+                                            {{boxX + boxW - 44.0, boxY + 4.0}, {get_text_width((char *)"Close", btnH) + 4.0, btnH}},
+                                            "Close", (tRgb)RGB_BACKGROUND_GREY);
+
+    // ── MIDI Channels ──────────────────────────────────────────────
+    set_rgb_colour(RGB_GREY_7);
+    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "MIDI Channels");
+    y                        += secH;
+
+    static const char * slotLabel[4] = {"A", "B", "C", "D"};
+    double              colW         = (boxW - margin * 2.0) / 4.0;
+
+    for (int i = 0; i < 4; i++) {
+        double x = boxX + margin + i * colW;
+        snprintf(buf, sizeof(buf), "%c:", slotLabel[i][0]);
+        set_rgb_colour(RGB_BLACK);
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, buf);
+        x += get_text_width((char *)"A:", btnH) + 4.0;
+        midi_chan_str(gSynthSettings.midiChanSlot[i], buf, sizeof(buf));
+        x  = render_spin(x, y, btnH, buf, "Off", &gSettingsPanelRects.midiChanDec[i], &gSettingsPanelRects.midiChanInc[i]);
+    }
+
+    y                        += rowH;
+
+    // Global channel + SysEx ID
+    {
+        double x = boxX + margin;
+        set_rgb_colour(RGB_BLACK);
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Global:");
+        x += get_text_width((char *)"Global:", btnH) + 4.0;
+        midi_chan_str(gSynthSettings.globalChan, buf, sizeof(buf));
+        x  = render_spin(x, y, btnH, buf, "Off", &gSettingsPanelRects.globalChanDec, &gSettingsPanelRects.globalChanInc);
+
+        x += 20.0;
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "SysEx ID:");
+        x += get_text_width((char *)"SysEx ID:", btnH) + 4.0;
+        midi_chan_str(gSynthSettings.sysexId, buf, sizeof(buf));
+        render_spin(x, y, btnH, buf, "Off", &gSettingsPanelRects.sysexIdDec, &gSettingsPanelRects.sysexIdInc);
+    }
+    y                        += rowH;
+
+    // ── Switches ───────────────────────────────────────────────────
+    set_rgb_colour(RGB_GREY_7);
+    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Options");
+    y                        += secH;
+
+    // Macro to draw a toggle button and advance x
+    // drawn inline for 2 rows of 4 items each
+    struct {
+        const char * label;
+        uint8_t *    val;
+        tRectangle * rect;
+    }   toggles[]  = {
+        {"Local On",     &gSynthSettings.localOn,        &gSettingsPanelRects.localOn       },
+        {"Mem Protect",  &gSynthSettings.memoryProtect,  &gSettingsPanelRects.memoryProtect },
+        {"Prog Chg Rcv", &gSynthSettings.progChangeRcv,  &gSettingsPanelRects.progChangeRcv },
+        {"Prog Chg Snd", &gSynthSettings.progChangeSnd,  &gSettingsPanelRects.progChangeSnd },
+        {"Ctrl Rcv",     &gSynthSettings.controllersRcv, &gSettingsPanelRects.controllersRcv},
+        {"Ctrl Snd",     &gSynthSettings.controllersSnd, &gSettingsPanelRects.controllersSnd},
+        {"Send Clock",   &gSynthSettings.sendClock,      &gSettingsPanelRects.sendClock     },
+        {"Ext Clk Off",  &gSynthSettings.ignoreExtClock, &gSettingsPanelRects.ignoreExtClock}, };
+    int numToggles = (int)(sizeof(toggles) / sizeof(toggles[0]));
+    int perRow     = 4;
+
+    for (int i = 0; i < numToggles; i++) {
+        double itemW = (boxW - margin * 2.0) / perRow;
+        double x     = boxX + margin + (i % perRow) * itemW;
+
+        if (i > 0 && (i % perRow) == 0) {
+            y += rowH;
+        }
+        tRgb   c     = (*toggles[i].val) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
+        *toggles[i].rect = draw_button(mainArea,
+                                       {{x, y}, {get_text_width((char *)toggles[i].label, btnH) + 6.0, btnH}},
+                                       (char *)toggles[i].label, c);
+    }
+
+    y += rowH;
+
+    // ── Tuning ─────────────────────────────────────────────────────
+    set_rgb_colour(RGB_GREY_7);
+    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Tuning");
+    y += secH;
+
+    {
+        double x      = boxX + margin;
+        set_rgb_colour(RGB_BLACK);
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Cent:");
+        x                                    += get_text_width((char *)"Cent:", btnH) + 4.0;
+        snprintf(buf, sizeof(buf), "%+d", (int)gSynthSettings.tuneCent - 50);
+        x                                     = render_spin(x, y, btnH, buf, "+50", &gSettingsPanelRects.tuneCentDec, &gSettingsPanelRects.tuneCentInc);
+
+        x                                    += 14.0;
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Semi:");
+        x                                    += get_text_width((char *)"Semi:", btnH) + 4.0;
+        snprintf(buf, sizeof(buf), "%+d", (int)gSynthSettings.tuneSemi - 12);
+        x                                     = render_spin(x, y, btnH, buf, "+12", &gSettingsPanelRects.tuneSemiDec, &gSettingsPanelRects.tuneSemiInc);
+
+        x                                    += 14.0;
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Oct:");
+        x                                    += get_text_width((char *)"Oct:", btnH) + 4.0;
+        snprintf(buf, sizeof(buf), "%+d", (int)gSynthSettings.globalOctaveShift - 2);
+        x                                     = render_spin(x, y, btnH, buf, "+2", &gSettingsPanelRects.octaveShiftDec, &gSettingsPanelRects.octaveShiftInc);
+
+        x                                    += 14.0;
+        tRgb   shiftC = gSynthSettings.globalShiftActive ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
+        gSettingsPanelRects.globalShiftActive = draw_button(mainArea,
+                                                            {{x, y}, {get_text_width((char *)"Shift", btnH) + 6.0, btnH}},
+                                                            "Shift", shiftC);
+    }
+    y += rowH;
+
+    // ── Pedal ──────────────────────────────────────────────────────
+    set_rgb_colour(RGB_GREY_7);
+    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Pedal");
+    y += secH;
+
+    {
+        double x    = boxX + margin;
+        set_rgb_colour(RGB_BLACK);
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Polarity:");
+        x                                += get_text_width((char *)"Polarity:", btnH) + 4.0;
+        tRgb   polC = gSynthSettings.pedalPolarity ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
+        gSettingsPanelRects.pedalPolarity = draw_button(mainArea,
+                                                        {{x, y}, {get_text_width((char *)"Reverse", btnH) + 6.0, btnH}},
+                                                        gSynthSettings.pedalPolarity ? (char *)"Reverse" : (char *)"Normal",
+                                                        polC);
+        x                                += gSettingsPanelRects.pedalPolarity.size.w + 16.0;
+
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Gain:");
+        x                                += get_text_width((char *)"Gain:", btnH) + 4.0;
+        snprintf(buf, sizeof(buf), "%u", gSynthSettings.pedalGain);
+        render_spin(x, y, btnH, buf, "127", &gSettingsPanelRects.pedalGainDec, &gSettingsPanelRects.pedalGainInc);
+    }
+}
+
 static void render_patch_notes_edit(void) {
     if (!gPatchNotesEdit.active) {
         return;
@@ -1047,6 +1239,7 @@ void do_graphics_loop(void) {
             render_morph_groups();
             render_scrollbars(gWindow);
             render_context_menu();
+            render_patch_settings_panel();
             render_patch_notes_edit();
             //Debug only
             //{

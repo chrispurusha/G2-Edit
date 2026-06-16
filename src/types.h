@@ -810,5 +810,61 @@ typedef struct {
     char     buffer[PATCH_NOTES_SIZE + 1];
 } tPatchNotesEdit;
 
+typedef struct {
+    bool     active;
+    uint32_t slot;
+} tPatchSettingsEdit;
+
+typedef struct {
+    uint8_t midiChanSlot[4];  // 0x00-0x0F = ch 1-16, 0x10 = off
+    uint8_t globalChan;       // same encoding
+    uint8_t sysexId;          // same encoding
+    uint8_t localOn;
+    uint8_t progChangeRcv;
+    uint8_t progChangeSnd;
+    uint8_t controllersRcv;
+    uint8_t controllersSnd;
+    uint8_t sendClock;
+    uint8_t ignoreExtClock;
+    uint8_t tuneCent;         // raw 0-100, centre = 50
+    uint8_t globalShiftActive;
+    uint8_t globalOctaveShift;
+    uint8_t tuneSemi;
+    uint8_t pedalPolarity;
+    uint8_t pedalGain;
+    uint8_t memoryProtect;
+    uint8_t perfMode;
+    uint8_t perfBank;
+    uint8_t perfLocation;
+} tSynthSettings;
+
+typedef struct {
+    tRectangle close;
+    tRectangle midiChanDec[4];
+    tRectangle midiChanInc[4];
+    tRectangle globalChanDec;
+    tRectangle globalChanInc;
+    tRectangle sysexIdDec;
+    tRectangle sysexIdInc;
+    tRectangle localOn;
+    tRectangle memoryProtect;
+    tRectangle progChangeRcv;
+    tRectangle progChangeSnd;
+    tRectangle controllersRcv;
+    tRectangle controllersSnd;
+    tRectangle sendClock;
+    tRectangle ignoreExtClock;
+    tRectangle tuneCentDec;
+    tRectangle tuneCentInc;
+    tRectangle tuneSemiDec;
+    tRectangle tuneSemiInc;
+    tRectangle octaveShiftDec;
+    tRectangle octaveShiftInc;
+    tRectangle globalShiftActive;
+    tRectangle pedalPolarity;
+    tRectangle pedalGainDec;
+    tRectangle pedalGainInc;
+} tSettingsPanelRects;
+
 #endif // __TYPES_H__
 

@@ -1443,6 +1443,29 @@ static void send_patch_descr_update(uint32_t slot) {
     msg_send(&gCommandQueue, &messageContent);
 }
 
+static void send_master_clock_bpm(uint32_t bpm) {
+    tMessageContent messageContent = {0};
+
+    messageContent.cmd                    = eMsgCmdSetMasterClockBPM;
+    messageContent.masterClockBPMData.bpm = bpm;
+    msg_send(&gCommandQueue, &messageContent);
+}
+
+static void send_master_clock_run(uint32_t running) {
+    tMessageContent messageContent = {0};
+
+    messageContent.cmd                        = eMsgCmdSetMasterClockRun;
+    messageContent.masterClockRunData.running = running;
+    msg_send(&gCommandQueue, &messageContent);
+}
+
+static void send_synth_settings_msg(void) {
+    tMessageContent msg = {0};
+
+    msg.cmd = eMsgCmdWriteSynthSettings;
+    msg_send(&gCommandQueue, &msg);
+}
+
 static void action_set_patch_type(int index) {
     uint32_t slot = atomic_load(&gSlot);
 
@@ -2044,6 +2067,120 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         atomic_store(&gReDraw, true);
         return;
     }
+
+    if (gPatchSettingsEdit.active) {
+        if (mouseButton == mouseButtonLeftUp) {
+            bool changed = false;
+
+            if (within_rectangle(coord, gSettingsPanelRects.close)) {
+                gPatchSettingsEdit.active = false;
+            } else {
+                for (int s = 0; s < 4; s++) {
+                    if (within_rectangle(coord, gSettingsPanelRects.midiChanDec[s])) {
+                        gSynthSettings.midiChanSlot[s] = (gSynthSettings.midiChanSlot[s] == 0) ? 0x10 : gSynthSettings.midiChanSlot[s] - 1;
+                        changed                        = true;
+                    } else if (within_rectangle(coord, gSettingsPanelRects.midiChanInc[s])) {
+                        gSynthSettings.midiChanSlot[s] = (gSynthSettings.midiChanSlot[s] >= 0x10) ? 0 : gSynthSettings.midiChanSlot[s] + 1;
+                        changed                        = true;
+                    }
+                }
+
+                if (within_rectangle(coord, gSettingsPanelRects.globalChanDec)) {
+                    gSynthSettings.globalChan = (gSynthSettings.globalChan == 0) ? 0x10 : gSynthSettings.globalChan - 1;
+                    changed                   = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.globalChanInc)) {
+                    gSynthSettings.globalChan = (gSynthSettings.globalChan >= 0x10) ? 0 : gSynthSettings.globalChan + 1;
+                    changed                   = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.sysexIdDec)) {
+                    if (gSynthSettings.sysexId > 0) {
+                        gSynthSettings.sysexId--;
+                    }
+                    changed = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.sysexIdInc)) {
+                    if (gSynthSettings.sysexId < 127) {
+                        gSynthSettings.sysexId++;
+                    }
+                    changed = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.localOn)) {
+                    gSynthSettings.localOn = gSynthSettings.localOn ? 0 : 1;
+                    changed                = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.memoryProtect)) {
+                    gSynthSettings.memoryProtect = gSynthSettings.memoryProtect ? 0 : 1;
+                    changed                      = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.progChangeRcv)) {
+                    gSynthSettings.progChangeRcv = gSynthSettings.progChangeRcv ? 0 : 1;
+                    changed                      = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.progChangeSnd)) {
+                    gSynthSettings.progChangeSnd = gSynthSettings.progChangeSnd ? 0 : 1;
+                    changed                      = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.controllersRcv)) {
+                    gSynthSettings.controllersRcv = gSynthSettings.controllersRcv ? 0 : 1;
+                    changed                       = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.controllersSnd)) {
+                    gSynthSettings.controllersSnd = gSynthSettings.controllersSnd ? 0 : 1;
+                    changed                       = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.sendClock)) {
+                    gSynthSettings.sendClock = gSynthSettings.sendClock ? 0 : 1;
+                    changed                  = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.ignoreExtClock)) {
+                    gSynthSettings.ignoreExtClock = gSynthSettings.ignoreExtClock ? 0 : 1;
+                    changed                       = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.tuneCentDec)) {
+                    if (gSynthSettings.tuneCent > 0) {
+                        gSynthSettings.tuneCent--;
+                    }
+                    changed = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.tuneCentInc)) {
+                    if (gSynthSettings.tuneCent < 100) {
+                        gSynthSettings.tuneCent++;
+                    }
+                    changed = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.tuneSemiDec)) {
+                    if (gSynthSettings.tuneSemi > 0) {
+                        gSynthSettings.tuneSemi--;
+                    }
+                    changed = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.tuneSemiInc)) {
+                    if (gSynthSettings.tuneSemi < 24) {
+                        gSynthSettings.tuneSemi++;
+                    }
+                    changed = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.octaveShiftDec)) {
+                    if (gSynthSettings.globalOctaveShift > 0) {
+                        gSynthSettings.globalOctaveShift--;
+                    }
+                    changed = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.octaveShiftInc)) {
+                    if (gSynthSettings.globalOctaveShift < 4) {
+                        gSynthSettings.globalOctaveShift++;
+                    }
+                    changed = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.globalShiftActive)) {
+                    gSynthSettings.globalShiftActive = gSynthSettings.globalShiftActive ? 0 : 1;
+                    changed                          = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.pedalPolarity)) {
+                    gSynthSettings.pedalPolarity = gSynthSettings.pedalPolarity ? 0 : 1;
+                    changed                      = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.pedalGainDec)) {
+                    if (gSynthSettings.pedalGain > 0) {
+                        gSynthSettings.pedalGain--;
+                    }
+                    changed = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.pedalGainInc)) {
+                    if (gSynthSettings.pedalGain < 127) {
+                        gSynthSettings.pedalGain++;
+                    }
+                    changed = true;
+                }
+
+                if (changed) {
+                    send_synth_settings_msg();
+                }
+            }
+        }
+        atomic_store(&gReDraw, true);
+        return;
+    }
     stop_patch_name_editing();
     stop_module_name_editing();
     stop_param_name_editing();
@@ -2188,6 +2325,14 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     gPatchNotesEdit.cursorPos = gPatchNotesSize[slot];
                     memset(gPatchNotesEdit.buffer, 0, sizeof(gPatchNotesEdit.buffer));
                     memcpy(gPatchNotesEdit.buffer, gPatchNotes[slot], gPatchNotesSize[slot]);
+                    found                     = true;
+                }
+            }
+
+            if (found == false) {
+                if (within_rectangle(coord, gSettingsButtonRect)) {
+                    gPatchSettingsEdit.active = true;
+                    gPatchSettingsEdit.slot   = slot;
                     found                     = true;
                 }
             }

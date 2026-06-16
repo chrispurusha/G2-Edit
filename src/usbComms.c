@@ -171,69 +171,83 @@ static bool open_and_claim_device(void) {
 // ---------------------------------------------------------------------------
 
 static int parse_synth_settings(uint8_t * buff, int length) {
-    uint32_t bitPos = 0;
-    uint8_t  ch     = 0;
+    uint32_t bitPos   = 0;
+    uint8_t  ch       = 0;
 
     if (buff == NULL) {
         return EXIT_FAILURE;
     }
-    LOG_DEBUG("Clavia string '");
 
     for (int i = 0; i < CLAVIA_NAME_SIZE; i++) {
         ch = read_bit_stream(buff, &bitPos, 8);
-
         if (ch == '\0') {
             break;
         }
-
-        if ((ch >= 0x20) && (ch <= 0x7f)) {
-            LOG_DEBUG_DIRECT("%c", ch);
-        } else {
-            LOG_DEBUG_DIRECT("<%02x>", ch);
-        }
+        LOG_DEBUG_DIRECT("%c", (ch >= 0x20 && ch <= 0x7f) ? ch : '?');
     }
 
-    LOG_DEBUG_DIRECT("'\n");
+    LOG_DEBUG_DIRECT("\n");
 
-    atomic_store(&gPerfMode, read_bit_stream(buff, &bitPos, 1));
-    LOG_DEBUG("Perf Mode 0x%x\n", atomic_load(&gPerfMode));
-    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 7));
-    LOG_DEBUG("Spacer 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Perf Bank 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Perf Location 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Memory Protect (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 1));
-    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 7));
-    LOG_DEBUG("MIDI chan Slot A 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("MIDI chan Slot B 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("MIDI chan Slot C 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("MIDI chan Slot D 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Global chan 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Sysex ID 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Local on (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 1));
-    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 7));
-    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 6));
-    LOG_DEBUG("Prog Change Rcv 0x%x\n", read_bit_stream(buff, &bitPos, 1));
-    LOG_DEBUG("Prog Change Snd 0x%x\n", read_bit_stream(buff, &bitPos, 1));
-    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 6));
-    LOG_DEBUG("Controllers Rcv 0x%x\n", read_bit_stream(buff, &bitPos, 1));
-    LOG_DEBUG("Controllers Snd 0x%x\n", read_bit_stream(buff, &bitPos, 1));
-    LOG_DEBUG("Send Clock (bit 1) ignore ext clock (bit 2) 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Tune cent 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Global Shift Active (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Global Octave Shift 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Tune semi 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Filler 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Pedal Polarity (bit 0) 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Control Pedal Gain 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 6));
-    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 6));
-    LOG_DEBUG("Unknown 0x%x\n", read_bit_stream(buff, &bitPos, 6));
-
-    {
-        static int cnt = 0;
-
-        LOG_DEBUG("Count = %d\n", cnt++);
+    gSynthSettings.perfMode          = read_bit_stream(buff, &bitPos, 1);
+    atomic_store(&gPerfMode, gSynthSettings.perfMode);
+    read_bit_stream(buff, &bitPos, 7);  // patchSortMode - unused
+    read_bit_stream(buff, &bitPos, 8);  // perfSortMode - unused
+    gSynthSettings.perfBank          = read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.perfLocation      = read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.memoryProtect     = read_bit_stream(buff, &bitPos, 1);
+	read_bit_stream(buff, &bitPos, 7);
+	
+    for (int i = 0; i < 4; i++) {
+        gSynthSettings.midiChanSlot[i] = read_bit_stream(buff, &bitPos, 8);
     }
+    gSynthSettings.globalChan        = read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.sysexId           = read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.localOn           = read_bit_stream(buff, &bitPos, 1);
+	read_bit_stream(buff, &bitPos, 7);
+	read_bit_stream(buff, &bitPos, 6);
+    gSynthSettings.progChangeRcv     = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.progChangeSnd     = read_bit_stream(buff, &bitPos, 1);
+	read_bit_stream(buff, &bitPos, 6);
+
+    gSynthSettings.controllersRcv    = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.controllersSnd    = read_bit_stream(buff, &bitPos, 1);
+
+    gSynthSettings.sendClock         = read_bit_stream(buff, &bitPos, 8);
+
+
+    // Signed byte ±50 cents; store offset-encoded (0-100, centre=50)
+    gSynthSettings.tuneCent          = (uint8_t)((int8_t)read_bit_stream(buff, &bitPos, 8) + 50);
+
+    gSynthSettings.globalShiftActive = read_bit_stream(buff, &bitPos, 8);
+
+    // Signed byte ±2; store offset-encoded (0-4, centre=2)
+    gSynthSettings.globalOctaveShift = (uint8_t)((int8_t)read_bit_stream(buff, &bitPos, 8) + 2);
+
+    // Signed byte ±12 semitones; store offset-encoded (0-24, centre=12)
+    gSynthSettings.tuneSemi          = (uint8_t)((int8_t)read_bit_stream(buff, &bitPos, 8) + 12);
+
+    read_bit_stream(buff, &bitPos, 8);  // vibratoRate - unused
+    gSynthSettings.pedalPolarity     = read_bit_stream(buff, &bitPos, 8);
+    read_bit_stream(buff, &bitPos, 8);  // constant (always 1 in write) - unused
+    gSynthSettings.pedalGain         = read_bit_stream(buff, &bitPos, 8);
+
+
+
+    LOG_DEBUG("MIDI chan A=%u B=%u C=%u D=%u Global=%u SysexID=%u\n",
+              gSynthSettings.midiChanSlot[0], gSynthSettings.midiChanSlot[1],
+              gSynthSettings.midiChanSlot[2], gSynthSettings.midiChanSlot[3],
+              gSynthSettings.globalChan, gSynthSettings.sysexId);
+    LOG_DEBUG("LocalOn=%u MemProt=%u ProgRcv=%u ProgSnd=%u CtrlRcv=%u CtrlSnd=%u\n",
+              gSynthSettings.localOn, gSynthSettings.memoryProtect,
+              gSynthSettings.progChangeRcv, gSynthSettings.progChangeSnd,
+              gSynthSettings.controllersRcv, gSynthSettings.controllersSnd);
+    LOG_DEBUG("SendClock=%u IgnoreExt=%u TuneCent=%u TuneSemi=%u OctShift=%u ShiftActive=%u\n",
+              gSynthSettings.sendClock, gSynthSettings.ignoreExtClock,
+              gSynthSettings.tuneCent, gSynthSettings.tuneSemi,
+              gSynthSettings.globalOctaveShift, gSynthSettings.globalShiftActive);
+    LOG_DEBUG("PedalPol=%u PedalGain=%u PerfMode=%u PerfBank=%u PerfLoc=%u\n",
+              gSynthSettings.pedalPolarity, gSynthSettings.pedalGain,
+              gSynthSettings.perfMode, gSynthSettings.perfBank, gSynthSettings.perfLocation);
 
     return EXIT_SUCCESS;
 }
@@ -1872,6 +1886,78 @@ static int send_set_master_clock_run(uint32_t running) {
     return retVal;
 }
 
+// Write all synth (global) settings back to the G2.
+static int send_synth_settings(void) {
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    int      pos                     = COMMAND_OFFSET;
+    int      retVal                  = EXIT_FAILURE;
+    uint32_t bitPos                  = 0;
+    uint8_t  payload[64]             = {0};
+
+    write_bit_stream(payload, &bitPos, 8, SUB_COMMAND_SET_SYNTH_SETTINGS);  // type byte
+
+    for (int i = 0; i < CLAVIA_NAME_SIZE; i++) {
+        write_bit_stream(payload, &bitPos, 8, 0);   // name (zeros)
+    }
+
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.perfMode);
+    write_bit_stream(payload, &bitPos, 7, 0);        // patchSortMode - unused
+    write_bit_stream(payload, &bitPos, 7, 0);        // perfSortMode - unused
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.perfBank);
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.perfLocation);
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.memoryProtect);
+
+    for (int i = 0; i < 4; i++) {
+        write_bit_stream(payload, &bitPos, 8, gSynthSettings.midiChanSlot[i]);
+    }
+
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.globalChan);
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.sysexId);
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.localOn);
+
+    {
+        uint8_t progMode = (uint8_t)((gSynthSettings.progChangeRcv << 1) | gSynthSettings.progChangeSnd);
+        uint8_t ctrlMode = (uint8_t)((gSynthSettings.controllersRcv << 1) | gSynthSettings.controllersSnd);
+        write_bit_stream(payload, &bitPos, 8, progMode);
+        write_bit_stream(payload, &bitPos, 8, ctrlMode);
+    }
+
+    write_bit_stream(payload, &bitPos, 8, 0);        // sendArp - unused
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.sendClock);
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.ignoreExtClock);
+
+    // Convert offset-encoded values back to signed bytes for the stream
+    write_bit_stream(payload, &bitPos, 8, (uint8_t)((int)gSynthSettings.tuneCent - 50));
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.globalShiftActive);
+    write_bit_stream(payload, &bitPos, 8, (uint8_t)((int)gSynthSettings.globalOctaveShift - 2));
+    write_bit_stream(payload, &bitPos, 8, (uint8_t)((int)gSynthSettings.tuneSemi - 12));
+
+    write_bit_stream(payload, &bitPos, 8, 0);        // vibratoRate - unused
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.pedalPolarity);
+    write_bit_stream(payload, &bitPos, 8, 1);        // constant (always 1)
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.pedalGain);
+
+    for (int i = 0; i < 16; i++) {
+        write_bit_stream(payload, &bitPos, 8, 0);   // trailing padding
+    }
+
+    uint32_t payloadBytes = BIT_TO_BYTE_ROUND_UP(bitPos);
+
+    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_SET_SYNTH_SETTINGS);  // S_SYNTH_SETTINGS = 0x03
+
+    for (uint32_t i = 0; i < payloadBytes && pos < SEND_MESSAGE_SIZE; i++) {
+        buff[pos++] = payload[i];
+    }
+
+    retVal = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        LOG_DEBUG("SET SYNTH SETTINGS RESPONSE\n");
+    }
+    return retVal;
+}
+
 static int send_set_patch_descr(uint32_t slot) { // Note - currently using values straight from patchDescr in sub-function
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     int      pos                     = COMMAND_OFFSET;
@@ -2285,6 +2371,10 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdSetParamLabel:
             retVal = send_set_param_label(messageContent->slot, messageContent->paramLabelData.moduleKey, messageContent->paramLabelData.paramIndex, messageContent->paramLabelData.name);
+            break;
+
+        case eMsgCmdWriteSynthSettings:
+            retVal = send_synth_settings();
             break;
 
         default:
