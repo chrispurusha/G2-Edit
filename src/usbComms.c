@@ -566,32 +566,32 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_LED_DATA:
         {
-            for (int i = 4; i < (length - 2); i++) {
+            uint8_t  start_idx = read_bit_stream(buff, bitPos, 8);
+            uint32_t led_count = 0;
+
+            // G2 packs 2-bit LED values LSB-first (bits 0-1 = first LED, bits 2-3 = second,
+            // etc.), but read_bit_stream reads MSB-first.  Reversing each data byte reconciles
+            // the two orderings.  Only the packed data bytes are reversed — start_idx (buff[4])
+            // is already consumed above and must not be touched.
+            for (int i = 5; i < (length - 2); i++) {
                 buff[i] = reverse_bits_in_byte(buff[i]);
             }
 
-            uint32_t ledType = read_bit_stream(buff, bitPos, 8);
-
-            if (ledType != 0x39) {
-                LOG_DEBUG("Unhandled LED type 0x%02x\n", ledType);
-                return EXIT_SUCCESS;
-            }
-
-            // Iterate both locations in VA-first order to match wire order.
-            // Consume bits for all modules regardless of displayed location.
+            // VA (location 1) first, then FX (location 0), each sorted by ascending module
+            // index — this matches the order in which the G2 assigns LED sequence numbers.
             for (int32_t location = 1; location >= 0; location--) {
                 for (int k = 0; k <= 255; k++) {
                     module.key.slot     = slot;
                     module.key.location = location;
                     module.key.index    = k;
 
-                    if (read_module(module.key, &module) == true) {
+                    if (read_module(module.key, &module)) {
                         if (gModuleProperties[module.type].ledType == ledTypeYes) {
-                            module.led.value = read_bit_stream(buff, bitPos, 2);
-
-                            if (module.key.location == location) {
+                            if (led_count >= start_idx && led_count < (uint32_t)(start_idx + 40)) {
+                                module.led.value = read_bit_stream(buff, bitPos, 2);
                                 write_module(module.key, &module);
                             }
+                            led_count++;
                         }
                     }
                 }

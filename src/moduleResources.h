@@ -1019,16 +1019,16 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 121 Dummy
     // 122 Unknown
     // 123 Mix4-1C
-    {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 11,  -10}, { 7, 14}}, anchorBottomLeft,     NULL,           128,   0, NULL,                                  NULL          }, // 123 L1
-    {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 31,  -10}, { 7, 14}}, anchorBottomLeft,     NULL,           128,   0, NULL,                                  NULL          }, // 123 L2
-    {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 51,  -10}, { 7, 14}}, anchorBottomLeft,     NULL,           128,   0, NULL,                                  NULL          }, // 123 L3
-    {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 71,  -10}, { 7, 14}}, anchorBottomLeft,     NULL,           128,   0, NULL,                                  NULL          }, // 123 L4
-    {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 5,  -1}, {18,  7}}, anchorBottomLeft,     NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable1
-    {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 25,  -1}, {18,  7}}, anchorBottomLeft,     NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable2
-    {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 45,  -1}, {18,  7}}, anchorBottomLeft,     NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable3
-    {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 65,  -1}, {18,  7}}, anchorBottomLeft,     NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable4
-    {moduleTypeMix4to1C,   paramType1StandardToggle, paramType2Menu,   {{  -12,  6}, { 7,  7}}, anchorTopRight,     "Pad",            2,   0, padStrMap,                             NULL          }, // 123 Pad
-    {moduleTypeMix4to1C,   paramType1StandardToggle, paramType2Menu,   {{  3,  6}, { 7,  7}}, anchorTopLeft,     "Curve",             3,   0, expStrMap,                             NULL          }, // 123 Exp
+    {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 11, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },   // 123 L1
+    {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 31, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },   // 123 L2
+    {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 51, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },   // 123 L3
+    {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 71, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },   // 123 L4
+    {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{  5,  -1}, {18,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},   // 123 Enable1
+    {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 25,  -1}, {18,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},   // 123 Enable2
+    {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 45,  -1}, {18,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},   // 123 Enable3
+    {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 65,  -1}, {18,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},   // 123 Enable4
+    {moduleTypeMix4to1C,   paramType1StandardToggle, paramType2Menu,   {{-12,   6}, { 7,  7}}, anchorTopRight,    "Pad",            2,   0, padStrMap,                             NULL          },   // 123 Pad
+    {moduleTypeMix4to1C,   paramType1StandardToggle, paramType2Menu,   {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Curve",          3,   0, expStrMap,                             NULL          },   // 123 Exp
     // 124 Mux8-1 -- No params
     // 125 WahWah
     {moduleTypeWahWah,     paramType1Freq,           paramType2Dial,   {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 125 Sweep M
@@ -2602,7 +2602,7 @@ const tModeLocation      modeLocationList[] = {
 
 
 const tVolumeLocation    volumeLocationList[] = {
-    {moduleTypeMix4to1C,  volumeTypeMono,     {{-4,  6}, {3, 15}}, anchorTopRight},
+    {moduleTypeMix4to1C,  volumeTypeMono,     {{ -4,  6}, {3, 15}}, anchorTopRight},
     {moduleTypeCompress,  volumeTypeCompress, {{-18,  6}, {4, 38}}, anchorTopRight},
     {moduleType2toOut,    volumeTypeStereo,   {{-25,  6}, {3, 10}}, anchorTopRight},
     {moduleType4toOut,    volumeTypeQuad,     {{-40,  6}, {3, 10}}, anchorTopRight},
