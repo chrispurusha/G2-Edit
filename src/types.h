@@ -806,6 +806,7 @@ typedef struct {
 typedef struct {
     bool     active;
     uint32_t slot;
+    uint32_t cursorPos;
     char     buffer[PATCH_NOTES_SIZE + 1];
 } tPatchNotesEdit;
 

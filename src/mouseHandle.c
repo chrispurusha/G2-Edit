@@ -41,6 +41,7 @@ extern "C" {
 #include "moduleResourcesAccess.h"
 #include "utilsGraphics.h"
 #include "mouseHandle.h"
+#include "graphics.h"
 #include "globalVars.h"
 
 void open_patch_type_context_menu(tCoord coord);
@@ -2021,8 +2022,14 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     get_global_gui_scaled_mouse_coord(&coord);
 
     if (gPatchNotesEdit.active) {
-        // Any click outside the dialog dismisses it (discarding edits)
-        gPatchNotesEdit.active = false;
+        if (mouseButton == mouseButtonLeftDown) {
+            int newPos = note_editor_cursor_from_click(coord.x, coord.y);
+            if (newPos >= 0) {
+                gPatchNotesEdit.cursorPos = (uint32_t)newPos;
+            } else {
+                gPatchNotesEdit.active = false;
+            }
+        }
         atomic_store(&gReDraw, true);
         return;
     }
@@ -2165,11 +2172,12 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (within_rectangle(coord, gPatchNotesButtonRect)) {
-                    gPatchNotesEdit.active = true;
-                    gPatchNotesEdit.slot   = slot;
+                    gPatchNotesEdit.active    = true;
+                    gPatchNotesEdit.slot      = slot;
+                    gPatchNotesEdit.cursorPos = gPatchNotesSize[slot];
                     memset(gPatchNotesEdit.buffer, 0, sizeof(gPatchNotesEdit.buffer));
                     memcpy(gPatchNotesEdit.buffer, gPatchNotes[slot], gPatchNotesSize[slot]);
-                    found                  = true;
+                    found                     = true;
                 }
             }
 
@@ -2526,11 +2534,15 @@ void char_event(GLFWwindow * window, unsigned int value) {
     }
 
     if (gPatchNotesEdit.active) {
-        size_t len = strlen(gPatchNotesEdit.buffer);
+        size_t   len       = strlen(gPatchNotesEdit.buffer);
+        uint32_t cursorPos = gPatchNotesEdit.cursorPos;
 
         if ((value >= 0x20) && (value <= 0x7e) && (len < PATCH_NOTES_SIZE)) {
-            gPatchNotesEdit.buffer[len]     = (char)value;
-            gPatchNotesEdit.buffer[len + 1] = '\0';
+            memmove(&gPatchNotesEdit.buffer[cursorPos + 1],
+                    &gPatchNotesEdit.buffer[cursorPos],
+                    len - cursorPos + 1);
+            gPatchNotesEdit.buffer[cursorPos] = (char)value;
+            gPatchNotesEdit.cursorPos++;
         }
     }
 
@@ -2562,36 +2574,54 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 
     if (gPatchNotesEdit.active) {
         if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-            size_t len = strlen(gPatchNotesEdit.buffer);
+            size_t   len       = strlen(gPatchNotesEdit.buffer);
+            uint32_t cursorPos = gPatchNotesEdit.cursorPos;
 
             if (key == GLFW_KEY_BACKSPACE) {
-                if (len > 0) {
-                    gPatchNotesEdit.buffer[len - 1] = '\0';
+                if (cursorPos > 0) {
+                    memmove(&gPatchNotesEdit.buffer[cursorPos - 1],
+                            &gPatchNotesEdit.buffer[cursorPos],
+                            len - cursorPos + 1);
+                    gPatchNotesEdit.cursorPos--;
+                }
+            } else if (key == GLFW_KEY_DELETE) {
+                if (cursorPos < len) {
+                    memmove(&gPatchNotesEdit.buffer[cursorPos],
+                            &gPatchNotesEdit.buffer[cursorPos + 1],
+                            len - cursorPos);
                 }
             } else if (  (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER)
                       && (mods & (GLFW_MOD_CONTROL | GLFW_MOD_SUPER))) {
-                // Ctrl/Cmd + Enter → commit and push patch to device
-                uint32_t        newSize = (uint32_t)len;
-
-                if (newSize > PATCH_NOTES_SIZE) {
-                    newSize = PATCH_NOTES_SIZE;
-                }
+                uint32_t newSize = (uint32_t)len;
+                if (newSize > PATCH_NOTES_SIZE) newSize = PATCH_NOTES_SIZE;
                 memcpy(gPatchNotes[gPatchNotesEdit.slot], gPatchNotesEdit.buffer, newSize);
                 gPatchNotes[gPatchNotesEdit.slot][newSize] = '\0';
                 gPatchNotesSize[gPatchNotesEdit.slot]      = newSize;
-
                 gPatchNotesEdit.active                     = false;
-
-                tMessageContent msg     = {0};
+                tMessageContent msg                        = {0};
                 msg.cmd                                    = eMsgCmdWritePatch;
                 msg.slot                                   = gPatchNotesEdit.slot;
                 msg_send(&gCommandQueue, &msg);
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
-                // Plain Enter → insert carriage return (G2 uses 0x0d as line separator)
                 if (len < PATCH_NOTES_SIZE) {
-                    gPatchNotesEdit.buffer[len]     = '\r';
-                    gPatchNotesEdit.buffer[len + 1] = '\0';
+                    memmove(&gPatchNotesEdit.buffer[cursorPos + 1],
+                            &gPatchNotesEdit.buffer[cursorPos],
+                            len - cursorPos + 1);
+                    gPatchNotesEdit.buffer[cursorPos] = '\r';
+                    gPatchNotesEdit.cursorPos++;
                 }
+            } else if (key == GLFW_KEY_LEFT) {
+                if (cursorPos > 0) gPatchNotesEdit.cursorPos--;
+            } else if (key == GLFW_KEY_RIGHT) {
+                if (cursorPos < len) gPatchNotesEdit.cursorPos++;
+            } else if (key == GLFW_KEY_UP) {
+                gPatchNotesEdit.cursorPos = (uint32_t)note_editor_cursor_move_line((int)cursorPos, -1);
+            } else if (key == GLFW_KEY_DOWN) {
+                gPatchNotesEdit.cursorPos = (uint32_t)note_editor_cursor_move_line((int)cursorPos, 1);
+            } else if (key == GLFW_KEY_HOME) {
+                gPatchNotesEdit.cursorPos = (uint32_t)note_editor_cursor_line_home((int)cursorPos);
+            } else if (key == GLFW_KEY_END) {
+                gPatchNotesEdit.cursorPos = (uint32_t)note_editor_cursor_line_end((int)cursorPos);
             } else if (key == GLFW_KEY_ESCAPE) {
                 gPatchNotesEdit.active = false;
             }
