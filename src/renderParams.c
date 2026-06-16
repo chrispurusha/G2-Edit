@@ -783,7 +783,8 @@ tRectangle render_paramType1Bypass(tModule * module, tRectangle rectangle, char 
 }
 
 tRectangle render_paramType1Enable(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
-    tRgb buttonBackgroundColour = RGB_BACKGROUND_GREY;
+    tRgb       buttonBackgroundColour = RGB_BACKGROUND_GREY;
+    tRectangle buttonRect             = {{rectangle.coord.x, rectangle.coord.y}, {rectangle.size.w, STANDARD_BUTTON_TEXT_HEIGHT}};
 
     if (  gParamNameEdit.active
        && gParamNameEdit.moduleKey.slot == module->key.slot
@@ -792,13 +793,13 @@ tRectangle render_paramType1Enable(tModule * module, tRectangle rectangle, char 
        && gParamNameEdit.paramIndex == paramIndex) {
         char editBuf[PROTOCOL_PARAM_NAME_SIZE + 2] = {0};
         snprintf(editBuf, sizeof(editBuf), "%s|", gParamNameEdit.buffer);
-        return draw_button(moduleArea, rectangle, editBuf, (tRgb)RGB_WHITE);
+        return draw_button(moduleArea, buttonRect, editBuf, (tRgb)RGB_WHITE);
     }
 
     if (paramLocationList[paramRef].colourMap != NULL) {
         buttonBackgroundColour = paramLocationList[paramRef].colourMap[(int)paramValue];
     }
-    return draw_button(moduleArea, rectangle, label, buttonBackgroundColour);
+    return draw_button(moduleArea, buttonRect, label, buttonBackgroundColour);
 }
 
 #ifdef __cplusplus
