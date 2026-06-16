@@ -1226,6 +1226,24 @@ static void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t m
     open_context_menu(coord, menuItems, 0, 0.0);
 }
 
+static void action_rename_param_label(int index) {
+    tModule  module = {0};
+    uint32_t pi     = gContextMenu.paramIndex;
+
+    if (read_module(gContextMenu.moduleKey, &module)) {
+        gParamNameEdit.active     = true;
+        gParamNameEdit.moduleKey  = gContextMenu.moduleKey;
+        gParamNameEdit.paramIndex = pi;
+        memset(gParamNameEdit.buffer, 0, sizeof(gParamNameEdit.buffer));
+
+        if (module.paramNameSet[pi][0]) {
+            strncpy(gParamNameEdit.buffer, module.paramName[pi][0], PROTOCOL_PARAM_NAME_SIZE);
+        }
+    }
+    gContextMenu.active = false;
+    atomic_store(&gReDraw, true);
+}
+
 void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex) {
     static tMenuItem pageMenuItems[NUM_PARAM_PAGES + 1];
     static char      pageLabels[NUM_PARAM_PAGES][10];
@@ -1233,7 +1251,7 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
     static char      bankLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][24];
     static tMenuItem slotMenuItems[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK + 1];
     static char      slotLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK][64];
-    static tMenuItem menuItems[3];
+    static tMenuItem menuItems[4];
 
     uint32_t         slot     = atomic_load(&gSlot);
     int32_t          assigned = find_knob_for_param(slot, moduleKey.location, moduleKey.index, paramIndex);
@@ -1317,12 +1335,25 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
             "Deassign knob", RGB_GREY_3, action_deassign_knob, 0, NULL
         };
     }
-    menuItems[count]               = (tMenuItem){
+    {
+        tModule  mod       = {0};
+        uint32_t variation = gPatchDescr[slot].activeVariation;
+
+        if (read_module(moduleKey, &mod) && (paramIndex < MAX_NUM_PARAMETERS)) {
+            if (paramLocationList[mod.param[variation][paramIndex].paramRef].type1 == paramType1Enable) {
+                menuItems[count++] = (tMenuItem){
+                    "Rename", RGB_GREY_3, action_rename_param_label, 0, NULL
+                };
+            }
+        }
+    }
+
+    menuItems[count]        = (tMenuItem){
         NULL, RGB_BLACK, NULL, 0, NULL
     };
 
-    gContextMenu.moduleKey         = moduleKey;
-    gContextMenu.paramIndex        = paramIndex;
+    gContextMenu.moduleKey  = moduleKey;
+    gContextMenu.paramIndex = paramIndex;
     open_context_menu(coord, menuItems, 0, 0.0);
 }
 

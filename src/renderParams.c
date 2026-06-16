@@ -785,6 +785,16 @@ tRectangle render_paramType1Bypass(tModule * module, tRectangle rectangle, char 
 tRectangle render_paramType1Enable(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
     tRgb buttonBackgroundColour = RGB_BACKGROUND_GREY;
 
+    if (  gParamNameEdit.active
+       && gParamNameEdit.moduleKey.slot == module->key.slot
+       && gParamNameEdit.moduleKey.location == module->key.location
+       && gParamNameEdit.moduleKey.index == module->key.index
+       && gParamNameEdit.paramIndex == paramIndex) {
+        char editBuf[PROTOCOL_PARAM_NAME_SIZE + 2] = {0};
+        snprintf(editBuf, sizeof(editBuf), "%s|", gParamNameEdit.buffer);
+        return draw_button(moduleArea, rectangle, editBuf, (tRgb)RGB_WHITE);
+    }
+
     if (paramLocationList[paramRef].colourMap != NULL) {
         buttonBackgroundColour = paramLocationList[paramRef].colourMap[(int)paramValue];
     }
