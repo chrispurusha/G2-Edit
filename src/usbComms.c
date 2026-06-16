@@ -171,8 +171,8 @@ static bool open_and_claim_device(void) {
 // ---------------------------------------------------------------------------
 
 static int parse_synth_settings(uint8_t * buff, int length) {
-    uint32_t bitPos   = 0;
-    uint8_t  ch       = 0;
+    uint32_t bitPos = 0;
+    uint8_t  ch     = 0;
 
     if (buff == NULL) {
         return EXIT_FAILURE;
@@ -180,6 +180,7 @@ static int parse_synth_settings(uint8_t * buff, int length) {
 
     for (int i = 0; i < CLAVIA_NAME_SIZE; i++) {
         ch = read_bit_stream(buff, &bitPos, 8);
+
         if (ch == '\0') {
             break;
         }
@@ -195,26 +196,27 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     gSynthSettings.perfBank          = read_bit_stream(buff, &bitPos, 8);
     gSynthSettings.perfLocation      = read_bit_stream(buff, &bitPos, 8);
     gSynthSettings.memoryProtect     = read_bit_stream(buff, &bitPos, 1);
-	read_bit_stream(buff, &bitPos, 7);
-	
+    read_bit_stream(buff, &bitPos, 7);
+
     for (int i = 0; i < 4; i++) {
         gSynthSettings.midiChanSlot[i] = read_bit_stream(buff, &bitPos, 8);
     }
+
     gSynthSettings.globalChan        = read_bit_stream(buff, &bitPos, 8);
     gSynthSettings.sysexId           = read_bit_stream(buff, &bitPos, 8);
     gSynthSettings.localOn           = read_bit_stream(buff, &bitPos, 1);
-	read_bit_stream(buff, &bitPos, 7);
-	read_bit_stream(buff, &bitPos, 6);
+    read_bit_stream(buff, &bitPos, 7);
+    read_bit_stream(buff, &bitPos, 6);
     gSynthSettings.progChangeRcv     = read_bit_stream(buff, &bitPos, 1);
     gSynthSettings.progChangeSnd     = read_bit_stream(buff, &bitPos, 1);
-	read_bit_stream(buff, &bitPos, 6);
+    read_bit_stream(buff, &bitPos, 6);
 
     gSynthSettings.controllersRcv    = read_bit_stream(buff, &bitPos, 1);
     gSynthSettings.controllersSnd    = read_bit_stream(buff, &bitPos, 1);
 
-    gSynthSettings.sendClock         = read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.sendClock         = read_bit_stream(buff, &bitPos, 8); // Is (bit 1) ignore ext clock (bit 2)
 
-
+    // TODO - leave these values without additions and render appropriately instead
     // Signed byte ±50 cents; store offset-encoded (0-100, centre=50)
     gSynthSettings.tuneCent          = (uint8_t)((int8_t)read_bit_stream(buff, &bitPos, 8) + 50);
 
@@ -226,11 +228,10 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     // Signed byte ±12 semitones; store offset-encoded (0-24, centre=12)
     gSynthSettings.tuneSemi          = (uint8_t)((int8_t)read_bit_stream(buff, &bitPos, 8) + 12);
 
-    read_bit_stream(buff, &bitPos, 8);  // vibratoRate - unused
-    gSynthSettings.pedalPolarity     = read_bit_stream(buff, &bitPos, 8);
-    read_bit_stream(buff, &bitPos, 8);  // constant (always 1 in write) - unused
+    read_bit_stream(buff, &bitPos, 8);                                    // vibratoRate - unused
+    gSynthSettings.pedalPolarity     = read_bit_stream(buff, &bitPos, 8); // Bit 0
+    read_bit_stream(buff, &bitPos, 8);                                    // constant (always 1 in write) - unused
     gSynthSettings.pedalGain         = read_bit_stream(buff, &bitPos, 8);
-
 
 
     LOG_DEBUG("MIDI chan A=%u B=%u C=%u D=%u Global=%u SysexID=%u\n",
