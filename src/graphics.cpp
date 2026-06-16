@@ -48,11 +48,11 @@ extern "C" {
 #include "moduleResourcesAccess.h"
 #include "globalVars.h"
 
-static FT_Library   gLibrary   = {0};
-static FT_Face      gFace      = {0};
-static _Atomic bool gNeedFocus = false;
+static FT_Library      gLibrary        = {0};
+static FT_Face         gFace           = {0};
+static _Atomic bool    gNeedFocus      = false;
 
-#define MAX_NOTE_VISUAL_LINES 1000
+#define MAX_NOTE_VISUAL_LINES    1000
 
 typedef struct {
     int  bufStart;
@@ -70,24 +70,36 @@ static double          gNoteTextW      = 0.0;
 static double          gNoteTextHParam = 0.0;
 
 static int find_wrap_point(const char * text, int textLen, double textW, double textH) {
-    if (textLen <= 0) return 0;
+    if (textLen <= 0) {
+        return 0;
+    }
     char tmp[PATCH_NOTES_SIZE + 1];
     strncpy(tmp, text, textLen);
     tmp[textLen] = '\0';
-    if (get_text_width(tmp, textH) <= textW) return textLen;
 
-    int lo = 1, hi = textLen;
+    if (get_text_width(tmp, textH) <= textW) {
+        return textLen;
+    }
+    int  lo = 1, hi = textLen;
+
     while (lo < hi) {
         int mid = (lo + hi + 1) / 2;
         strncpy(tmp, text, mid);
         tmp[mid] = '\0';
-        if (get_text_width(tmp, textH) <= textW) lo = mid;
-        else hi = mid - 1;
-    }
-    int charBreak = lo;
 
-    int wordBreak = charBreak;
-    while (wordBreak > 0 && text[wordBreak - 1] != ' ') wordBreak--;
+        if (get_text_width(tmp, textH) <= textW) {
+            lo = mid;
+        } else{
+            hi = mid - 1;
+        }
+    }
+    int  charBreak = lo;
+
+    int  wordBreak = charBreak;
+
+    while (wordBreak > 0 && text[wordBreak - 1] != ' ') {
+        wordBreak--;
+    }
     return (wordBreak > 0) ? wordBreak : charBreak;
 }
 
@@ -98,41 +110,56 @@ static void build_note_visual_lines(const char * buf, double textW, double textH
 
     while (gNoteLineCount < MAX_NOTE_VISUAL_LINES) {
         int logicalEnd = pos;
-        while (logicalEnd < len && buf[logicalEnd] != '\r') logicalEnd++;
 
-        int segStart = pos;
+        while (logicalEnd < len && buf[logicalEnd] != '\r') {
+            logicalEnd++;
+        }
+        int segStart   = pos;
+
         while (gNoteLineCount < MAX_NOTE_VISUAL_LINES) {
-            int remaining = logicalEnd - segStart;
+            int  remaining = logicalEnd - segStart;
+
             if (remaining <= 0) {
                 if (segStart == pos) {
-                    gNoteLines[gNoteLineCount++] = { segStart, segStart, true };
+                    gNoteLines[gNoteLineCount++] = {segStart, segStart, true};
                 }
                 break;
             }
-            int wrapAt    = find_wrap_point(buf + segStart, remaining, textW, textH);
-            bool softWrap = (wrapAt < remaining);
-            gNoteLines[gNoteLineCount++] = { segStart, segStart + wrapAt, !softWrap };
-            segStart += wrapAt;
-            if (!softWrap) break;
+            int  wrapAt    = find_wrap_point(buf + segStart, remaining, textW, textH);
+            bool softWrap  = (wrapAt < remaining);
+            gNoteLines[gNoteLineCount++] = {segStart, segStart + wrapAt, !softWrap};
+            segStart                    += wrapAt;
+
+            if (!softWrap) {
+                break;
+            }
         }
 
-        if (logicalEnd >= len) break;
+        if (logicalEnd >= len) {
+            break;
+        }
         pos = logicalEnd + 1;
 
         if (pos >= len && gNoteLineCount < MAX_NOTE_VISUAL_LINES) {
-            gNoteLines[gNoteLineCount++] = { len, len, true };
+            gNoteLines[gNoteLineCount++] = {len, len, true};
             break;
         }
     }
 
-    if (gNoteLineCount == 0) gNoteLines[gNoteLineCount++] = { 0, 0, true };
+    if (gNoteLineCount == 0) {
+        gNoteLines[gNoteLineCount++] = {0, 0, true};
+    }
 }
 
 static int find_note_cursor_line(int cursorPos) {
     int result = 0;
+
     for (int i = 0; i < gNoteLineCount; i++) {
-        if (gNoteLines[i].bufStart <= cursorPos) result = i;
+        if (gNoteLines[i].bufStart <= cursorPos) {
+            result = i;
+        }
     }
+
     return result;
 }
 
@@ -302,7 +329,7 @@ void render_top_bar(void) {
     gPatchTypeRectangle  = draw_button(mainArea, {{170, 60}, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
     gMonoPolyRectangle   = draw_button(mainArea, {{270, 60}, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], (tRgb)RGB_BACKGROUND_GREY);
     {
-        tRgb notesColour = (gPatchNotesSize[slot] > 0) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
+        tRgb notesColour = (strlen((char *)gPatchNotes[slot]) > 0) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
         gPatchNotesButtonRect = draw_button(mainArea, {{355, 60}, {get_text_width("Notes", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, "Notes", notesColour);
     }
 
@@ -858,10 +885,17 @@ static void render_patch_notes_edit(void) {
     int visLines   = (int)(maxTextH / lineH);
 
     // Keep scroll so the cursor line is always visible
-    if (cursorLine < gNoteScrollLine) gNoteScrollLine = cursorLine;
-    if (cursorLine >= gNoteScrollLine + visLines) gNoteScrollLine = cursorLine - visLines + 1;
-    if (gNoteScrollLine < 0) gNoteScrollLine = 0;
+    if (cursorLine < gNoteScrollLine) {
+        gNoteScrollLine = cursorLine;
+    }
 
+    if (cursorLine >= gNoteScrollLine + visLines) {
+        gNoteScrollLine = cursorLine - visLines + 1;
+    }
+
+    if (gNoteScrollLine < 0) {
+        gNoteScrollLine = 0;
+    }
     // Text content area background
     set_rgb_colour(RGB_WHITE);
     render_rectangle(mainArea, {{boxX + 1, boxY + titleH}, {boxW - 2, boxH - titleH - hintH - 1}});
@@ -871,25 +905,30 @@ static void render_patch_notes_edit(void) {
         double       y   = textY0;
 
         for (int i = gNoteScrollLine; i < gNoteLineCount && i < gNoteScrollLine + visLines; i++) {
-            int start = gNoteLines[i].bufStart;
-            int end   = gNoteLines[i].bufEnd;
-            int len   = end - start;
+            int  start                             = gNoteLines[i].bufStart;
+            int  end                               = gNoteLines[i].bufEnd;
+            int  len                               = end - start;
 
             char displayLine[PATCH_NOTES_SIZE + 4] = {0};
 
             if (i == cursorLine) {
                 int col = cursorPos - start;
-                if (col < 0) col = 0;
-                if (col > len) col = len;
+
+                if (col < 0) {
+                    col = 0;
+                }
+
+                if (col > len) {
+                    col = len;
+                }
                 strncpy(displayLine, buf + start, col);
-                displayLine[col] = '|';
+                displayLine[col]     = '|';
                 strncpy(displayLine + col + 1, buf + start + col, len - col);
                 displayLine[len + 1] = '\0';
             } else {
                 strncpy(displayLine, buf + start, len);
                 displayLine[len] = '\0';
             }
-
             set_rgb_colour(RGB_BLACK);
             render_text(mainArea, {{textX, y}, {textW, STANDARD_TEXT_HEIGHT}}, displayLine);
             y += lineH;
@@ -905,58 +944,80 @@ static void render_patch_notes_edit(void) {
 }
 
 int note_editor_cursor_move_line(int cursorPos, int delta) {
-    if (gNoteLineCount == 0) return cursorPos;
+    if (gNoteLineCount == 0) {
+        return cursorPos;
+    }
     int curLine = find_note_cursor_line(cursorPos);
     int col     = cursorPos - gNoteLines[curLine].bufStart;
     int newLine = curLine + delta;
-    if (newLine < 0) newLine = 0;
-    if (newLine >= gNoteLineCount) newLine = gNoteLineCount - 1;
-    int newLen = gNoteLines[newLine].bufEnd - gNoteLines[newLine].bufStart;
+
+    if (newLine < 0) {
+        newLine = 0;
+    }
+
+    if (newLine >= gNoteLineCount) {
+        newLine = gNoteLineCount - 1;
+    }
+    int newLen  = gNoteLines[newLine].bufEnd - gNoteLines[newLine].bufStart;
     return gNoteLines[newLine].bufStart + (col < newLen ? col : newLen);
 }
 
 int note_editor_cursor_line_home(int cursorPos) {
-    if (gNoteLineCount == 0) return 0;
+    if (gNoteLineCount == 0) {
+        return 0;
+    }
     return gNoteLines[find_note_cursor_line(cursorPos)].bufStart;
 }
 
 int note_editor_cursor_line_end(int cursorPos) {
-    if (gNoteLineCount == 0) return 0;
+    if (gNoteLineCount == 0) {
+        return 0;
+    }
     return gNoteLines[find_note_cursor_line(cursorPos)].bufEnd;
 }
 
 int note_editor_cursor_from_click(double logicalX, double logicalY) {
-    if (gNoteLineCount == 0) return -1;
+    if (gNoteLineCount == 0) {
+        return -1;
+    }
+    double       relY    = logicalY - gNoteTextY0;
 
-    double relY = logicalY - gNoteTextY0;
-    if (relY < 0) return -1;
+    if (relY < 0) {
+        return -1;
+    }
+    int          lineIdx = gNoteScrollLine + (int)(relY / gNoteLineH);
 
-    int lineIdx = gNoteScrollLine + (int)(relY / gNoteLineH);
-    if (lineIdx >= gNoteLineCount) lineIdx = gNoteLineCount - 1;
-    if (lineIdx < 0) return -1;
+    if (lineIdx >= gNoteLineCount) {
+        lineIdx = gNoteLineCount - 1;
+    }
 
-    int          start  = gNoteLines[lineIdx].bufStart;
-    int          end    = gNoteLines[lineIdx].bufEnd;
-    const char * buf    = gPatchNotesEdit.buffer;
-    double       relX   = logicalX - gNoteTextX;
+    if (lineIdx < 0) {
+        return -1;
+    }
+    int          start   = gNoteLines[lineIdx].bufStart;
+    int          end     = gNoteLines[lineIdx].bufEnd;
+    const char * buf     = gPatchNotesEdit.buffer;
+    double       relX    = logicalX - gNoteTextX;
     char         tmp[PATCH_NOTES_SIZE + 1];
 
     for (int col = 0; col <= end - start; col++) {
         strncpy(tmp, buf + start, col);
         tmp[col] = '\0';
+
         if (get_text_width(tmp, gNoteTextHParam) > relX) {
             if (col > 0) {
                 strncpy(tmp, buf + start, col - 1);
                 tmp[col - 1] = '\0';
                 double wPrev = get_text_width(tmp, gNoteTextHParam);
                 strncpy(tmp, buf + start, col);
-                tmp[col] = '\0';
-                double wCur = get_text_width(tmp, gNoteTextHParam);
+                tmp[col]     = '\0';
+                double wCur  = get_text_width(tmp, gNoteTextHParam);
                 return start + ((relX - wPrev < wCur - relX) ? col - 1 : col);
             }
             return start;
         }
     }
+
     return start + (end - start);
 }
 

@@ -2009,25 +2009,36 @@ tMouseButton convert_to_mouse_button(int button, int action) {
 }
 
 void mouse_button(GLFWwindow * window, int button, int action, int mods) {
-    tCoord       coord       = {0};
-    tMouseButton mouseButton = mouseButtonNone;
-    bool         found       = false;
-    tModule      module      = {0};
-    int32_t      i           = 0;
-    uint32_t     slot        = atomic_load(&gSlot);
-    uint32_t     location    = atomic_load(&gLocation);
+    static bool  noteEditDismissed = false;
+    tCoord       coord             = {0};
+    tMouseButton mouseButton       = mouseButtonNone;
+    bool         found             = false;
+    tModule      module            = {0};
+    int32_t      i                 = 0;
+    uint32_t     slot              = atomic_load(&gSlot);
+    uint32_t     location          = atomic_load(&gLocation);
 
     mouseButton = convert_to_mouse_button(button, action);
 
     get_global_gui_scaled_mouse_coord(&coord);
 
+    if (noteEditDismissed) {
+        if (mouseButton == mouseButtonLeftUp) {
+            noteEditDismissed = false;
+        }
+        atomic_store(&gReDraw, true);
+        return;
+    }
+
     if (gPatchNotesEdit.active) {
         if (mouseButton == mouseButtonLeftDown) {
             int newPos = note_editor_cursor_from_click(coord.x, coord.y);
+
             if (newPos >= 0) {
                 gPatchNotesEdit.cursorPos = (uint32_t)newPos;
             } else {
                 gPatchNotesEdit.active = false;
+                noteEditDismissed      = true;
             }
         }
         atomic_store(&gReDraw, true);
@@ -2592,13 +2603,16 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 }
             } else if (  (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER)
                       && (mods & (GLFW_MOD_CONTROL | GLFW_MOD_SUPER))) {
-                uint32_t newSize = (uint32_t)len;
-                if (newSize > PATCH_NOTES_SIZE) newSize = PATCH_NOTES_SIZE;
+                uint32_t        newSize = (uint32_t)len;
+
+                if (newSize > PATCH_NOTES_SIZE) {
+                    newSize = PATCH_NOTES_SIZE;
+                }
                 memcpy(gPatchNotes[gPatchNotesEdit.slot], gPatchNotesEdit.buffer, newSize);
                 gPatchNotes[gPatchNotesEdit.slot][newSize] = '\0';
                 gPatchNotesSize[gPatchNotesEdit.slot]      = newSize;
                 gPatchNotesEdit.active                     = false;
-                tMessageContent msg                        = {0};
+                tMessageContent msg     = {0};
                 msg.cmd                                    = eMsgCmdWritePatch;
                 msg.slot                                   = gPatchNotesEdit.slot;
                 msg_send(&gCommandQueue, &msg);
@@ -2611,9 +2625,13 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                     gPatchNotesEdit.cursorPos++;
                 }
             } else if (key == GLFW_KEY_LEFT) {
-                if (cursorPos > 0) gPatchNotesEdit.cursorPos--;
+                if (cursorPos > 0) {
+                    gPatchNotesEdit.cursorPos--;
+                }
             } else if (key == GLFW_KEY_RIGHT) {
-                if (cursorPos < len) gPatchNotesEdit.cursorPos++;
+                if (cursorPos < len) {
+                    gPatchNotesEdit.cursorPos++;
+                }
             } else if (key == GLFW_KEY_UP) {
                 gPatchNotesEdit.cursorPos = (uint32_t)note_editor_cursor_move_line((int)cursorPos, -1);
             } else if (key == GLFW_KEY_DOWN) {
