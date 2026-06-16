@@ -202,8 +202,8 @@ void parse_cable_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     key.slot     = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
     LOG_DEBUG("Location       0x%x\n", key.location);
-    LOG_DEBUG("Unknown        0x%x\n", read_bit_stream(buff, subOffset, 12));  // TODO, store
-    uint32_t  cableCount = read_bit_stream(buff, subOffset, 10);
+    read_bit_stream(buff, subOffset, 6);                         // byte-align before GetUWord
+    uint32_t  cableCount = read_bit_stream(buff, subOffset, 16); // high byte then low byte
     LOG_DEBUG("Cable Count    %d\n", cableCount);
 
     for (uint32_t i = 0; i < cableCount; i++) {
@@ -230,10 +230,10 @@ void write_cable_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     sizeBitPos       = *bitPos;
     write_bit_stream(buff, bitPos, 16, 0);  // Populated later
     write_bit_stream(buff, bitPos, 2, location);
-    write_bit_stream(buff, bitPos, 12, 0);  // Unknown - TODO, store
+    write_bit_stream(buff, bitPos, 6, 0);   // byte-align before PutUWord
 
     cableCountBitPos = *bitPos;
-    write_bit_stream(buff, bitPos, 10, 0);  // Populated later
+    write_bit_stream(buff, bitPos, 16, 0);  // Populated later
 
     cableCount       = 0;
     reset_walk_cable();
@@ -260,7 +260,7 @@ void write_cable_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 
-    write_bit_stream(buff, &cableCountBitPos, 10, cableCount);
+    write_bit_stream(buff, &cableCountBitPos, 16, cableCount);
 }
 
 void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
@@ -406,7 +406,7 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
 
-void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset, uint32_t chunkBitEnd) {
+void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     tModule    module          = {0};
     tModuleKey key             = {0};
     uint32_t   numVariations   = 0;
@@ -420,20 +420,20 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset, uin
 
     numVariations     = read_bit_stream(buff, subOffset, 8);
     gMorphCount[slot] = read_bit_stream(buff, subOffset, 4);
-    read_bit_stream(buff, subOffset, 20);  // Reserved
+
+    for (j = 0; j < (int)gMorphCount[slot]; j++) {
+        read_bit_stream(buff, subOffset, 2);  // keyboard morph assign (discard)
+    }
 
     LOG_DEBUG("Variations %u Morph Count %u\n", numVariations, gMorphCount[slot]);
 
-    for (j = 0; j < numVariations; j++) {    // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
-        variation       = read_bit_stream(buff, subOffset, 4);
-        read_bit_stream(buff, subOffset, 4); // Lots of unknown stuff
-        read_bit_stream(buff, subOffset, 8);
-        read_bit_stream(buff, subOffset, 8);
-        read_bit_stream(buff, subOffset, 8);
-        read_bit_stream(buff, subOffset, 8);
-        read_bit_stream(buff, subOffset, 8);
-        read_bit_stream(buff, subOffset, 8);
-        read_bit_stream(buff, subOffset, 4);
+    for (j = 0; j < numVariations; j++) {
+        variation       = read_bit_stream(buff, subOffset, 8);
+
+        for (k = 0; k < (int)gMorphCount[slot]; k++) {
+            read_bit_stream(buff, subOffset, 7);  // morph value per morph (discard)
+        }
+
         morphParamCount = read_bit_stream(buff, subOffset, 8);
         LOG_DEBUG("Variation %u Morph param count %u\n", variation, morphParamCount);
 
@@ -454,28 +454,14 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset, uin
             if (read_module(key, &module) == false) {
                 write_module(key, &module);
             }
-            //module.param[j][paramIndex].morphRange[morph] = range;
-            //module.param[variation][paramIndex].morphRange[morph] = range;  // Todo - Check this is correct and it's not the commented out line above which is needed
-
-            //if (morph < NUM_MORPHS) {
-            //    module.param[j][paramIndex].morphRange[morph] = range;
-            //} else {
-            //    LOG_ERROR("morph index %u out of range\n", morph);
-            //}
 
             if (morph < NUM_MORPHS) {
-                module.param[variation][paramIndex].morphRange[morph] = range;
+                module.param[variation][paramIndex].morphRange[morph] = (uint8_t)range;
             } else {
                 LOG_ERROR("morph index %u out of range\n", morph);
             }
             write_module(key, &module);
         }
-
-        uint32_t bitsLeft = chunkBitEnd - *subOffset;
-
-        LOG_DEBUG("subOffset before pad: %u, chunk end: %u\n", *subOffset, chunkBitEnd);
-
-        read_bit_stream(buff, subOffset, (bitsLeft < 4) ? bitsLeft : 4);
     }
 }
 
@@ -497,18 +483,17 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32
 
     write_bit_stream(buff, bitPos, 8, numVariations); // Variation count (9)
     write_bit_stream(buff, bitPos, 4, gMorphCount[slot]);
-    write_bit_stream(buff, bitPos, 20, 0);            // Reserved data
+
+    for (m = 0; m < gMorphCount[slot]; m++) {
+        write_bit_stream(buff, bitPos, 2, 0);  // keyboard morph assign (zero)
+    }
 
     for (i = 0; i < numVariations; i++) {
-        write_bit_stream(buff, bitPos, 4, i);  // Variation number
-        write_bit_stream(buff, bitPos, 4, 0);  // Unknown
-        write_bit_stream(buff, bitPos, 8, 0);  // Unknown
-        write_bit_stream(buff, bitPos, 8, 0);  // Unknown
-        write_bit_stream(buff, bitPos, 8, 0);  // Unknown
-        write_bit_stream(buff, bitPos, 8, 0);  // Unknown
-        write_bit_stream(buff, bitPos, 8, 0);  // Unknown
-        write_bit_stream(buff, bitPos, 8, 0);  // Unknown
-        write_bit_stream(buff, bitPos, 4, 0);  // Unknown
+        write_bit_stream(buff, bitPos, 8, i);  // Variation number
+
+        for (m = 0; m < gMorphCount[slot]; m++) {
+            write_bit_stream(buff, bitPos, 7, 0);  // morph value (zero)
+        }
 
         morphParamCountBitPos = *bitPos;
         write_bit_stream(buff, bitPos, 8, 0);  // Populated later
@@ -542,12 +527,6 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32
         finish_walk_module();
 
         write_bit_stream(buff, &morphParamCountBitPos, 8, morphParamCount);
-        LOG_DEBUG("WRITE %d %d\n", i, numVariations);
-
-        if ((i + 1) < numVariations) {
-            LOG_DEBUG("ACTUALLY DO WRITE\n");
-            write_bit_stream(buff, bitPos, 4, 0);  // Trailing unknown bits, don't do on last run-through
-        }
     }
 
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
@@ -949,11 +928,7 @@ void parse_module_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         memset(&name, 0, sizeof(name));
 
         for (int k = 0; k < CLAVIA_NAME_SIZE; k++) {
-            name[k] = read_bit_stream(buff, subOffset, 8);
-
-            if (name[k] == '\0') {
-                break;
-            }
+            name[k] = (char)read_bit_stream(buff, subOffset, 8);
         }
 
         //LOG_DEBUG("%s\n", name);
@@ -999,10 +974,6 @@ void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint3
 
                     for (k = 0; k < CLAVIA_NAME_SIZE; k++) {
                         write_bit_stream(buff, bitPos, 8, module.name[k]);
-
-                        if (module.name[k] == '\0') {
-                            break;
-                        }
                     }
                 }
             }

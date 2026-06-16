@@ -159,7 +159,7 @@ tRectangle render_dial(tArea area, tRectangle rectangle, uint32_t value, uint32_
     if (morphRange != 0) {
         signedValue = (int32_t)value;
 
-        if (morphRange < 127) {
+        if (morphRange < 128) {
             signedMorphRange = (int32_t)morphRange;
         } else {
             signedMorphRange = (int32_t)morphRange - 256;

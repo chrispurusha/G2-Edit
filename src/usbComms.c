@@ -48,7 +48,7 @@ extern "C" {
 
 // USB transfer timeouts (milliseconds)
 #define USB_SEND_TIMEOUT_MS        (400)
-#define USB_EXT_RECV_TIMEOUT_MS    (200)
+#define USB_EXT_RECV_TIMEOUT_MS    (2000)
 #define USB_INT_RECV_TIMEOUT_MS    (100)
 #define USB_INIT_TIMEOUT_MS        (1000) // Extra headroom during init sequence
 
@@ -432,7 +432,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
             }
 
             case SUB_RESPONSE_MORPH_PARAMS:
-                parse_morph_params(slot, buff, &subOffset, subOffset + BYTE_TO_BIT(count));
+                parse_morph_params(slot, buff, &subOffset);
                 break;
 
             case SUB_RESPONSE_KNOBS:
@@ -570,7 +570,12 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                 buff[i] = reverse_bits_in_byte(buff[i]);
             }
 
-            read_bit_stream(buff, bitPos, 8);  // unknown byte
+            uint32_t ledType = read_bit_stream(buff, bitPos, 8);
+
+            if (ledType != 0x39) {
+                LOG_DEBUG("Unhandled LED type 0x%02x\n", ledType);
+                return EXIT_SUCCESS;
+            }
 
             // Iterate both locations in VA-first order to match wire order.
             // Consume bits for all modules regardless of displayed location.
@@ -1036,6 +1041,13 @@ static int rcv_extended(int dataLength, int * response) {
     if (readLength != dataLength) {
         LOG_DEBUG("Length mismatch read=%d expected=%d\n",
                   readLength, dataLength);
+
+        if (readLength == 0) {
+            // All retries returned no data — libusb endpoint 0x82 is stuck.
+            // Trigger reconnect so recovery is automatic without restarting.
+            LOG_DEBUG("Extended receive got no data after retries — triggering reconnect\n");
+            atomic_store(&gotBadConnectionIndication, true);
+        }
         return EXIT_FAILURE;
     }
     uint32_t bitPos = SIGNED_BYTE_TO_BIT(dataLength - 2);

@@ -340,19 +340,19 @@ void render_top_bar(void) {
     snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].cycles[locationVa]);
     draw_button(mainArea,
                 {{600, 26}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
-                buff, buttonBackgroundColour);
+                buff, (tRgb)RGB_BACKGROUND_GREY);
     snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].cycles[locationFx]);
     draw_button(mainArea,
                 {{600, 42}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
-                buff, buttonBackgroundColour);
+                buff, (tRgb)RGB_BACKGROUND_GREY);
     snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].mem[locationVa]);
     draw_button(mainArea,
                 {{644, 26}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
-                buff, buttonBackgroundColour);
+                buff, (tRgb)RGB_BACKGROUND_GREY);
     snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].mem[locationFx]);
     draw_button(mainArea,
                 {{644, 42}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}},
-                buff, buttonBackgroundColour);
+                buff, (tRgb)RGB_BACKGROUND_GREY);
 }
 
 void wake_glfw(void) {
@@ -639,7 +639,7 @@ void write_database_to_file(const char * filepath) {
     write_morph_params(slot, buff, &bitPos, NUM_VARIATIONS);
     write_knobs(slot, buff, &bitPos);
     write_controllers(slot, buff, &bitPos);
-    write_param_names(slot, locationMorph, buff, &bitPos);
+    //write_param_names(slot, locationMorph, buff, &bitPos);
     write_param_names(slot, locationVa, buff, &bitPos);
     write_param_names(slot, locationFx, buff, &bitPos);
     write_module_names(slot, locationVa, buff, &bitPos);
