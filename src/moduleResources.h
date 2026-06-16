@@ -430,7 +430,7 @@ const tParamLocation     paramLocationList[] = {
     //  7 OscB
     {moduleTypeOscB,       paramType1OscFreq,        paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 7 Tune
     {moduleTypeOscB,       paramType1Fine,           paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 7 Cent
-    {moduleTypeOscB,       paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 7 Kbt
+    {moduleTypeOscB,       paramType1StandardToggle, paramType2Toggle, {{ 10,   8}, { 7,  7}}, anchorTopLeft,  NULL,            2,   1, kbStrMap,                           offOnColourMap}, // 7 Kbt
     {moduleTypeOscB,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 7 Pitch M
     {moduleTypeOscB,       paramType1StandardToggle, paramType2Menu,   {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 7 Pitch Type
     {moduleTypeOscB,       paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          }, // FM M
@@ -442,7 +442,7 @@ const tParamLocation     paramLocationList[] = {
     // 8 OscShpB
     {moduleTypeOscShpB,    paramType1OscFreq,        paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 8 Tune
     {moduleTypeOscShpB,    paramType1Fine,           paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 8 Cent
-    {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, { 7,  7}}, anchorBottomLeft,  NULL,            2,   1, kbStrMap,                              offOnColourMap}, // 8 Kbt
+    {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Toggle, {{ 10,   8}, { 7,  7}}, anchorTopLeft,  NULL,            2,   1, kbStrMap,                              offOnColourMap}, // 8 Kbt
     {moduleTypeOscShpB,    paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 8 Pitch M
     {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Menu,   {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 8 Pitch Type
     {moduleTypeOscShpB,    paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          }, // FM M
@@ -453,7 +453,7 @@ const tParamLocation     paramLocationList[] = {
     //  9 OscC
     {moduleTypeOscC,       paramType1OscFreq,        paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 9 Coarse
     {moduleTypeOscC,       paramType1Fine,           paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 9 Fine
-    {moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, { 7,  7}}, anchorBottomLeft,  NULL,            2,   1, kbStrMap,                              offOnColourMap}, // 9 Kbt
+    {moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{ 10,   8}, { 7,  7}}, anchorTopLeft,  NULL,            2,   1, kbStrMap,                              offOnColourMap}, // 9 Kbt
     {moduleTypeOscC,       paramType1StandardToggle, paramType2Menu,   {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 9 Tune Mode
     {moduleTypeOscC,       paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          }, // FM
     {moduleTypeOscC,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 9 Bypass
@@ -858,7 +858,7 @@ const tParamLocation     paramLocationList[] = {
     // 97 OscA
     {moduleTypeOscA,       paramType1Freq,           paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 97 Tune
     {moduleTypeOscA,       paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 97 Fine
-    {moduleTypeOscA,       paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 97 Kbt
+    {moduleTypeOscA,       paramType1StandardToggle, paramType2Toggle, {{ 10,   8}, { 7,  7}}, anchorTopLeft,  NULL,            2,   1, kbStrMap,                           offOnColourMap}, // 97 Kbt
     {moduleTypeOscA,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 97 Pitch M
     {moduleTypeOscA,       paramType1StandardToggle, paramType2Menu,   {{-20,   5}, { 7,  7}}, anchorTopRight,    NULL,             6,   2, shapeOscATypeStrMap,                   NULL          }, // 97 Waveform
     {moduleTypeOscA,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 97 Bypass
