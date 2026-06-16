@@ -935,6 +935,10 @@ void parse_module_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
 
         for (int k = 0; k < CLAVIA_NAME_SIZE; k++) {
             name[k] = (char)read_bit_stream(buff, subOffset, 8);
+            
+            if (name[k] == '\0') {
+                break;
+            }
         }
 
         //LOG_DEBUG("%s\n", name);
@@ -980,6 +984,10 @@ void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint3
 
                     for (k = 0; k < CLAVIA_NAME_SIZE; k++) {
                         write_bit_stream(buff, bitPos, 8, module.name[k]);
+                        
+                        if (module.name[k] == '\0') {
+                            break;
+                        }
                     }
                 }
             }
