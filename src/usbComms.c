@@ -1920,9 +1920,8 @@ static int send_synth_settings(void) {
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.globalChan);
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.sysexId);
     write_bit_stream(payload, &bitPos, 1, gSynthSettings.localOn);
-    write_bit_stream(payload, &bitPos, 8, 0);        // unknown
     write_bit_stream(payload, &bitPos, 7, 0);        // unknown
-    write_bit_stream(payload, &bitPos, 8, 0);        // unknown
+    write_bit_stream(payload, &bitPos, 6, 0);        // unknown
     write_bit_stream(payload, &bitPos, 1, gSynthSettings.progChangeRcv);
     write_bit_stream(payload, &bitPos, 1, gSynthSettings.progChangeSnd);
     write_bit_stream(payload, &bitPos, 6, 0);        // unknown
