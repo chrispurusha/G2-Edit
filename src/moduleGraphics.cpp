@@ -991,7 +991,17 @@ void render_morph_groups(void) {
 
                 textHeight                                        = rectangle.size.h / 4.0;
 
-                draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, RGB_BACKGROUND_GREY);
+                if (  gParamNameEdit.active
+                   && gParamNameEdit.moduleKey.slot == module.key.slot
+                   && gParamNameEdit.moduleKey.location == module.key.location
+                   && gParamNameEdit.moduleKey.index == module.key.index
+                   && gParamNameEdit.paramIndex == (i + NUM_MORPHS)) {
+                    char editBuf[PROTOCOL_PARAM_NAME_SIZE + 2] = {0};
+                    snprintf(editBuf, sizeof(editBuf), "%s|", gParamNameEdit.buffer);
+                    gMorphLabelRect[i] = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, editBuf, RGB_WHITE);
+                } else {
+                    gMorphLabelRect[i] = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, RGB_BACKGROUND_GREY);
+                }
 
                 if (module.param[variation][i + NUM_MORPHS].value != 0) {
                     snprintf(label, sizeof(label), "%s", morphStrMap[i]);

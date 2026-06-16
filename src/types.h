@@ -792,6 +792,13 @@ typedef struct {
 } tModuleNameEdit;
 
 typedef struct {
+    bool       active;
+    tModuleKey moduleKey;
+    uint32_t   paramIndex;
+    char       buffer[PROTOCOL_PARAM_NAME_SIZE + 1];
+} tParamNameEdit;
+
+typedef struct {
     float cycles[locationMax];
     float mem[locationMax];
 } tResourceAlloc;

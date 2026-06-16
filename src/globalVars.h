@@ -78,6 +78,8 @@ extern _Atomic tCommsState gCommsState;
 extern _Atomic uint32_t    gChangedSlot;
 extern tNameEdit           gPatchNameEdit;
 extern tModuleNameEdit     gModuleNameEdit;
+extern tParamNameEdit      gParamNameEdit;
+extern tRectangle          gMorphLabelRect[NUM_MORPHS];
 //extern _Atomic uint32_t    gHiddenCableMask;
 extern tRectangle          gCableColourToggleRect[cableColourMax];
 extern tRectangle          gCableColourSelectRect[cableColourMax];

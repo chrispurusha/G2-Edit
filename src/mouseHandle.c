@@ -1369,6 +1369,40 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     open_context_menu(coord, menuItems, 0, 0.0);
 }
 
+static void action_rename_morph_label(int index) {
+    tModule  module     = {0};
+    uint32_t morphIndex = (uint32_t)gContextMenu.items[index].param;
+    uint32_t slot       = atomic_load(&gSlot);
+
+    gContextMenu.moduleKey = (tModuleKey){
+        slot, locationMorph, 1
+    };
+
+    if (read_module(gContextMenu.moduleKey, &module)) {
+        uint32_t pi = morphIndex + NUM_MORPHS;
+
+        gParamNameEdit.active     = true;
+        gParamNameEdit.moduleKey  = gContextMenu.moduleKey;
+        gParamNameEdit.paramIndex = pi;
+        memset(gParamNameEdit.buffer, 0, sizeof(gParamNameEdit.buffer));
+        strncpy(gParamNameEdit.buffer, module.paramName[pi][0], PROTOCOL_PARAM_NAME_SIZE);
+    }
+    gContextMenu.active    = false;
+    atomic_store(&gReDraw, true);
+}
+
+static void open_morph_label_context_menu(tCoord coord, uint32_t morphIndex) {
+    static tMenuItem menuItems[2];
+
+    menuItems[0] = (tMenuItem){
+        "Rename", RGB_GREY_3, action_rename_morph_label, morphIndex, NULL
+    };
+    menuItems[1] = (tMenuItem){
+        NULL, RGB_BLACK, NULL, 0, NULL
+    };
+    open_context_menu(coord, menuItems, 0, 0.0);
+}
+
 static void send_patch_descr_update(uint32_t slot) {
     tMessageContent messageContent = {0};
 
@@ -1760,6 +1794,10 @@ void stop_module_name_editing(void) {
     memset(&gModuleNameEdit, 0, sizeof(gModuleNameEdit));
 }
 
+void stop_param_name_editing(void) {
+    memset(&gParamNameEdit, 0, sizeof(gParamNameEdit));
+}
+
 static bool input_connector_has_cable(uint32_t slot, uint32_t location,
                                       uint32_t moduleIndex, uint32_t ioCount) {
     tCable cable = {0};
@@ -1949,6 +1987,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
     stop_patch_name_editing();
     stop_module_name_editing();
+    stop_param_name_editing();
 
     switch (mouseButton) {
         case mouseButtonLeftDown:
@@ -2180,6 +2219,15 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             }
             finish_walk_module();
+
+            if (found == false) {
+                for (int mi = 0; mi < NUM_MORPHS && !found; mi++) {
+                    if (within_rectangle(coord, gMorphLabelRect[mi])) {
+                        open_morph_label_context_menu(coord, (uint32_t)mi);
+                        found = true;
+                    }
+                }
+            }
 
             if (found == false) {
                 if (handle_module_area_click(coord, button)) {
@@ -2434,6 +2482,15 @@ void char_event(GLFWwindow * window, unsigned int value) {
             gModuleNameEdit.buffer[len + 1] = '\0';
         }
     }
+
+    if (gParamNameEdit.active) {
+        size_t len = strlen(gParamNameEdit.buffer);
+
+        if ((value >= 0x20) && (value <= 0x7e) && (len < PROTOCOL_PARAM_NAME_SIZE)) {
+            gParamNameEdit.buffer[len]     = (char)value;
+            gParamNameEdit.buffer[len + 1] = '\0';
+        }
+    }
     LOG_DEBUG("char=%d\n", value);
     atomic_store(&gReDraw, true);
 }
@@ -2496,6 +2553,40 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 }
             } else if (key == GLFW_KEY_ESCAPE) {
                 gModuleNameEdit.active = false;  // discard
+            }
+        }
+    } else if (gParamNameEdit.active) {
+        if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+            if (key == GLFW_KEY_BACKSPACE) {
+                size_t len = strlen(gParamNameEdit.buffer);
+
+                if (len > 0) {
+                    gParamNameEdit.buffer[len - 1] = '\0';
+                }
+            } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
+                tModule module = {0};
+
+                gParamNameEdit.active = false;
+
+                if (read_module(gParamNameEdit.moduleKey, &module) == true) {
+                    tMessageContent msg = {0};
+                    uint32_t        pi  = gParamNameEdit.paramIndex;
+
+                    module.paramNameSet[pi][0]                        = true;
+                    strncpy(module.paramName[pi][0], gParamNameEdit.buffer, PROTOCOL_PARAM_NAME_SIZE);
+                    module.paramName[pi][0][PROTOCOL_PARAM_NAME_SIZE] = '\0';
+                    module.paramNumLabels[pi]                         = 1;
+                    write_module(gParamNameEdit.moduleKey, &module);
+
+                    msg.cmd                                           = eMsgCmdSetParamLabel;
+                    msg.slot                                          = gParamNameEdit.moduleKey.slot;
+                    msg.paramLabelData.moduleKey                      = gParamNameEdit.moduleKey;
+                    msg.paramLabelData.paramIndex                     = pi;
+                    strncpy(msg.paramLabelData.name, gParamNameEdit.buffer, PROTOCOL_PARAM_NAME_SIZE);
+                    msg_send(&gCommandQueue, &msg);
+                }
+            } else if (key == GLFW_KEY_ESCAPE) {
+                gParamNameEdit.active = false;  // discard
             }
         }
     } else if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {

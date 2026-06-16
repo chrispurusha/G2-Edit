@@ -750,7 +750,7 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             LOG_DEBUG("Param name: ");
 
             if (paramLength > 0) {
-                numLabels                         = (paramLength - 1) / PROTOCOL_PARAM_NAME_SIZE;
+                numLabels = (paramLength - 1) / PROTOCOL_PARAM_NAME_SIZE;
 
                 if (numLabels > MAX_NUM_LABELS) {
                     LOG_ERROR("numLabels %u exceeds maximum %u for param %u\n", numLabels, MAX_NUM_LABELS, paramIndex);
@@ -758,8 +758,14 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                 }
 
                 if (paramIndex >= MAX_NUM_PARAMETERS) {
-                    LOG_ERROR("paramIndex %u exceeds maximum %u\n", paramIndex, MAX_NUM_PARAMETERS);
-                    exit(1);
+                    LOG_WARNING("paramIndex %u exceeds maximum %u, skipping\n", paramIndex, MAX_NUM_PARAMETERS);
+
+                    for (k = 0; k < (int)(paramLength - 1); k++) {
+                        read_bit_stream(buff, subOffset, 8);
+                    }
+
+                    j += paramLength - 1;
+                    continue;
                 }
 
                 if (sizeof(module.paramName[0]) < (numLabels * PROTOCOL_PARAM_NAME_SIZE)) {

@@ -788,7 +788,7 @@ tRectangle render_paramType1Enable(tModule * module, tRectangle rectangle, char 
     if (paramLocationList[paramRef].colourMap != NULL) {
         buttonBackgroundColour = paramLocationList[paramRef].colourMap[(int)paramValue];
     }
-    return draw_button(moduleArea, rectangle, NULL, buttonBackgroundColour);  // TODO: Add label!
+    return draw_button(moduleArea, rectangle, label, buttonBackgroundColour);
 }
 
 #ifdef __cplusplus

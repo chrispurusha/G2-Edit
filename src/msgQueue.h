@@ -59,7 +59,8 @@ typedef enum {
     eMsgCmdDeassignMidiCC,
     eMsgCmdCopyVariation,
     eMsgCmdSetMasterClockBPM,
-    eMsgCmdSetMasterClockRun
+    eMsgCmdSetMasterClockRun,
+    eMsgCmdSetParamLabel
 } eMsgCmd;
 
 typedef struct {
@@ -126,6 +127,12 @@ typedef struct {
     tModuleKey moduleKey;
     char       name[CLAVIA_NAME_SIZE + 1];
 } tModuleLabelData;
+
+typedef struct {
+    tModuleKey moduleKey;
+    uint32_t   paramIndex;
+    char       name[PROTOCOL_PARAM_NAME_SIZE + 1];
+} tParamLabelData;
 
 typedef struct {
     char name[CLAVIA_NAME_SIZE + 1];
@@ -204,6 +211,7 @@ typedef struct {
         tCopyVariationData      copyVariationData;
         tMasterClockBPMData     masterClockBPMData;
         tMasterClockRunData     masterClockRunData;
+        tParamLabelData         paramLabelData;
     };
 } tMessageContent;
 

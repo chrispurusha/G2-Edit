@@ -1473,6 +1473,32 @@ static int send_set_module_label(uint32_t slot, tModuleKey moduleKey, const char
     return retVal;
 }
 
+static int send_set_param_label(uint32_t slot, tModuleKey moduleKey, uint32_t paramIndex, const char * name) {
+    int     retVal                  = EXIT_FAILURE;
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_PARAM_LABEL);
+    buff[pos++] = moduleKey.location;
+    buff[pos++] = moduleKey.index;
+    buff[pos++] = 3 + PROTOCOL_PARAM_NAME_SIZE;  // size: isString + paramLength + paramIndex + name bytes
+    buff[pos++] = 1;                             // isString
+    buff[pos++] = 1 + PROTOCOL_PARAM_NAME_SIZE;  // paramLength
+    buff[pos++] = (uint8_t)paramIndex;
+
+    for (int i = 0; i < PROTOCOL_PARAM_NAME_SIZE; i++) {
+        buff[pos++] = (uint8_t)name[i];  // fixed-length, zero-padded
+    }
+
+    retVal      = send_message(buff, pos);
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        LOG_DEBUG("SET PARAM LABEL RESPONSE\n");
+    }
+    return retVal;
+}
+
 static int send_set_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t param, uint32_t value, uint32_t variation) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
@@ -2255,6 +2281,10 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal = send_set_master_clock_run(messageContent->masterClockRunData.running);
             break;
         }
+
+        case eMsgCmdSetParamLabel:
+            retVal = send_set_param_label(messageContent->slot, messageContent->paramLabelData.moduleKey, messageContent->paramLabelData.paramIndex, messageContent->paramLabelData.name);
+            break;
 
         default:
             LOG_DEBUG("Unknown command %d\n", messageContent->cmd);
