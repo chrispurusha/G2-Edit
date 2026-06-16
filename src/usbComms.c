@@ -2059,7 +2059,8 @@ static int send_write_data(tMessageContent * messageContent) {
                 buff[pos++] = messageContent->moduleData.mode[i];
             }
 
-            strcpy((char *)&buff[pos], messageContent->moduleData.name);
+            snprintf((char *)&buff[pos], SEND_MESSAGE_SIZE - pos, "%s", messageContent->moduleData.name);
+            
             pos        += strlen(messageContent->moduleData.name) + 1;
             retVal      = send_message(buff, pos);
 
