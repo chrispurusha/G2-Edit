@@ -778,7 +778,7 @@ static void render_patch_notes_edit(void) {
         char * lineStart                     = lineBuf;
 
         while (*lineStart != '\0' || !addedCursor) {
-            char * nl                                = strchr(lineStart, '\n');
+            char * nl                                = strchr(lineStart, '\r');
             bool   lastLine                          = (nl == NULL);
 
             if (nl != NULL) {

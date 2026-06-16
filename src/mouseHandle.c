@@ -2587,9 +2587,9 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 msg.slot                                   = gPatchNotesEdit.slot;
                 msg_send(&gCommandQueue, &msg);
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
-                // Plain Enter → insert newline
+                // Plain Enter → insert carriage return (G2 uses 0x0d as line separator)
                 if (len < PATCH_NOTES_SIZE) {
-                    gPatchNotesEdit.buffer[len]     = '\n';
+                    gPatchNotesEdit.buffer[len]     = '\r';
                     gPatchNotesEdit.buffer[len + 1] = '\0';
                 }
             } else if (key == GLFW_KEY_ESCAPE) {
