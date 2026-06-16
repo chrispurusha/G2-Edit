@@ -89,6 +89,7 @@ _Atomic uint32_t       gChangedSlot                                 = 0;
 tNameEdit              gPatchNameEdit                               = {0};
 tModuleNameEdit        gModuleNameEdit                              = {0};
 tParamNameEdit         gParamNameEdit                               = {0};
+tPatchNotesEdit        gPatchNotesEdit                              = {0};
 tRectangle             gMorphLabelRect[NUM_MORPHS]                  = {0};
 //_Atomic uint32_t       gHiddenCableMask                             = 0; // TODO - Send to G2 when changes
 tRectangle             gCableColourToggleRect[cableColourMax]       = {0};
@@ -100,6 +101,7 @@ tResourceAlloc         gResourceAlloc[MAX_SLOTS]                    = {0};
 
 tRectangle             gHideAllCablesRect                           = {0};
 tRectangle             gTransparentCablesRect                       = {0};
+tRectangle             gPatchNotesButtonRect                        = {0};
 tRectangle             gPatchNameRectangle                          = {0};
 tRectangle             gPatchTypeRectangle                          = {0};  // TODO - potentially roll these non-standard buttons into the main button mechanism with special types
 tRectangle             gVoiceCountRectangle                         = {0};

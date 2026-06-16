@@ -803,5 +803,11 @@ typedef struct {
     float mem[locationMax];
 } tResourceAlloc;
 
+typedef struct {
+    bool     active;
+    uint32_t slot;
+    char     buffer[PATCH_NOTES_SIZE + 1];
+} tPatchNotesEdit;
+
 #endif // __TYPES_H__
 

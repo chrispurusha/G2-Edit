@@ -217,6 +217,10 @@ void render_top_bar(void) {
     }
     gPatchTypeRectangle  = draw_button(mainArea, {{170, 60}, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
     gMonoPolyRectangle   = draw_button(mainArea, {{270, 60}, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], (tRgb)RGB_BACKGROUND_GREY);
+    {
+        tRgb notesColour = (gPatchNotesSize[slot] > 0) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
+        gPatchNotesButtonRect = draw_button(mainArea, {{355, 60}, {get_text_width("Notes", STANDARD_BUTTON_TEXT_HEIGHT), STANDARD_BUTTON_TEXT_HEIGHT}}, "Notes", notesColour);
+    }
 
     if (gPatchDescr[slot].monoPoly == monoPolyPoly) {
         voiceCount = gPatchDescr[slot].voiceCount + 1;
@@ -717,6 +721,102 @@ static void check_action_flags(void) {
     }
 }
 
+static void render_patch_notes_edit(void) {
+    if (!gPatchNotesEdit.active) {
+        return;
+    }
+    double renderW      = get_render_width() / gGlobalGuiScale;
+    double renderH      = get_render_height() / gGlobalGuiScale;
+    double boxW         = 700.0;
+    double boxH         = 500.0;
+    double boxX         = (renderW - boxW) / 2.0;
+    double boxY         = (renderH - boxH) / 2.0;
+    double margin       = 10.0;
+    double titleH       = 24.0;
+    double lineH        = STANDARD_TEXT_HEIGHT + 3.0;
+    double hintH        = STANDARD_TEXT_HEIGHT + 4.0;
+    double textY0       = boxY + titleH + margin;
+    double textX        = boxX + margin;
+    double textW        = boxW - margin * 2.0;
+    double maxTextH     = boxH - titleH - hintH - margin * 3.0;
+    char   countBuf[32] = {0};
+
+    // Background overlay to de-emphasise content beneath the dialog
+    set_rgb_colour(RGB_GREY_2);
+    render_rectangle(mainArea, {{0.0, 0.0}, {renderW, renderH}});
+
+    // Dialog box
+    set_rgb_colour(RGB_GREY_5);
+    render_rectangle_with_border(mainArea, {{boxX, boxY}, {boxW, boxH}});
+
+    // Title bar
+    set_rgb_colour(RGB_GREY_3);
+    render_rectangle(mainArea, {{boxX, boxY}, {boxW, titleH}});
+    set_rgb_colour(RGB_BLACK);
+    render_text(mainArea, {{boxX + margin, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Patch Notes");
+
+    // Character count on the right of the title bar
+    snprintf(countBuf, sizeof(countBuf), "%zu / %d", strlen(gPatchNotesEdit.buffer), PATCH_NOTES_SIZE);
+    set_rgb_colour(RGB_GREY_9);
+    render_text(mainArea, {{boxX + boxW - 80.0, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, countBuf);
+
+    // Text content area — render the buffer line by line, appending a cursor to the last line
+    set_rgb_colour(RGB_WHITE);
+    render_rectangle(mainArea, {{boxX + 1, boxY + titleH}, {boxW - 2, boxH - titleH - hintH - 1}});
+
+    {
+        // Split buffer into lines at '\n', render each in the text area
+        char   lineBuf[PATCH_NOTES_SIZE + 2] = {0};
+        char * src                           = gPatchNotesEdit.buffer;
+        int    lineCount                     = 0;
+        double y                             = textY0;
+        bool   addedCursor                   = false;
+
+        strncpy(lineBuf, src, PATCH_NOTES_SIZE);
+        lineBuf[PATCH_NOTES_SIZE] = '\0';
+
+        char * lineStart                     = lineBuf;
+
+        while (*lineStart != '\0' || !addedCursor) {
+            char * nl                                = strchr(lineStart, '\n');
+            bool   lastLine                          = (nl == NULL);
+
+            if (nl != NULL) {
+                *nl = '\0';
+            }
+            char   displayLine[PATCH_NOTES_SIZE + 2] = {0};
+
+            if (lastLine) {
+                // Append cursor to the final line
+                snprintf(displayLine, sizeof(displayLine), "%s|", lineStart);
+                addedCursor = true;
+            } else {
+                strncpy(displayLine, lineStart, PATCH_NOTES_SIZE);
+                displayLine[PATCH_NOTES_SIZE] = '\0';
+            }
+
+            if ((y + lineH) <= (textY0 + maxTextH)) {
+                set_rgb_colour(RGB_BLACK);
+                render_text(mainArea, {{textX, y}, {textW, STANDARD_TEXT_HEIGHT}}, displayLine);
+            }
+            y        += lineH;
+            lineCount++;
+
+            if (lastLine) {
+                break;
+            }
+            lineStart = nl + 1;
+        }
+    }
+
+    // Hint bar at the bottom of the dialog
+    set_rgb_colour(RGB_GREY_3);
+    render_rectangle(mainArea, {{boxX, boxY + boxH - hintH}, {boxW, hintH}});
+    set_rgb_colour(RGB_BLACK);
+    render_text(mainArea, {{boxX + margin, boxY + boxH - hintH + 3.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}},
+                "Enter=newline   Ctrl+Enter=save   Esc=cancel");
+}
+
 void do_graphics_loop(void) {
     bool reDraw = false;
 
@@ -743,6 +843,7 @@ void do_graphics_loop(void) {
             render_morph_groups();
             render_scrollbars(gWindow);
             render_context_menu();
+            render_patch_notes_edit();
             //Debug only
             //{
             //    double x        = 0.0;

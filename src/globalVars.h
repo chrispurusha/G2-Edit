@@ -79,6 +79,7 @@ extern _Atomic uint32_t    gChangedSlot;
 extern tNameEdit           gPatchNameEdit;
 extern tModuleNameEdit     gModuleNameEdit;
 extern tParamNameEdit      gParamNameEdit;
+extern tPatchNotesEdit     gPatchNotesEdit;
 extern tRectangle          gMorphLabelRect[NUM_MORPHS];
 //extern _Atomic uint32_t    gHiddenCableMask;
 extern tRectangle          gCableColourToggleRect[cableColourMax];
@@ -90,6 +91,7 @@ extern tResourceAlloc      gResourceAlloc[MAX_SLOTS];
 
 extern tRectangle          gHideAllCablesRect;
 extern tRectangle          gTransparentCablesRect;
+extern tRectangle          gPatchNotesButtonRect;
 extern tRectangle          gPatchNameRectangle;
 extern tRectangle          gPatchTypeRectangle;
 extern tRectangle          gVoiceCountRectangle;

@@ -1829,6 +1829,10 @@ void stop_param_name_editing(void) {
     memset(&gParamNameEdit, 0, sizeof(gParamNameEdit));
 }
 
+void stop_patch_notes_editing(void) {
+    memset(&gPatchNotesEdit, 0, sizeof(gPatchNotesEdit));
+}
+
 static bool input_connector_has_cable(uint32_t slot, uint32_t location,
                                       uint32_t moduleIndex, uint32_t ioCount) {
     tCable cable = {0};
@@ -2016,6 +2020,12 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
     get_global_gui_scaled_mouse_coord(&coord);
 
+    if (gPatchNotesEdit.active) {
+        // Any click outside the dialog dismisses it (discarding edits)
+        gPatchNotesEdit.active = false;
+        atomic_store(&gReDraw, true);
+        return;
+    }
     stop_patch_name_editing();
     stop_module_name_editing();
     stop_param_name_editing();
@@ -2150,6 +2160,16 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     atomic_store(&gCablesTransparent, !current);
                     atomic_store(&gReDraw, true);
                     found = true;
+                }
+            }
+
+            if (found == false) {
+                if (within_rectangle(coord, gPatchNotesButtonRect)) {
+                    gPatchNotesEdit.active = true;
+                    gPatchNotesEdit.slot   = slot;
+                    memset(gPatchNotesEdit.buffer, 0, sizeof(gPatchNotesEdit.buffer));
+                    memcpy(gPatchNotesEdit.buffer, gPatchNotes[slot], gPatchNotesSize[slot]);
+                    found                  = true;
                 }
             }
 
@@ -2505,6 +2525,15 @@ void char_event(GLFWwindow * window, unsigned int value) {
         }
     }
 
+    if (gPatchNotesEdit.active) {
+        size_t len = strlen(gPatchNotesEdit.buffer);
+
+        if ((value >= 0x20) && (value <= 0x7e) && (len < PATCH_NOTES_SIZE)) {
+            gPatchNotesEdit.buffer[len]     = (char)value;
+            gPatchNotesEdit.buffer[len + 1] = '\0';
+        }
+    }
+
     if (gModuleNameEdit.active) {
         size_t len = strlen(gModuleNameEdit.buffer);
 
@@ -2531,7 +2560,45 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 
     LOG_DEBUG("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
 
-    if (gPatchNameEdit.active) {
+    if (gPatchNotesEdit.active) {
+        if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+            size_t len = strlen(gPatchNotesEdit.buffer);
+
+            if (key == GLFW_KEY_BACKSPACE) {
+                if (len > 0) {
+                    gPatchNotesEdit.buffer[len - 1] = '\0';
+                }
+            } else if (  (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER)
+                      && (mods & (GLFW_MOD_CONTROL | GLFW_MOD_SUPER))) {
+                // Ctrl/Cmd + Enter → commit and push patch to device
+                uint32_t        newSize = (uint32_t)len;
+
+                if (newSize > PATCH_NOTES_SIZE) {
+                    newSize = PATCH_NOTES_SIZE;
+                }
+                memcpy(gPatchNotes[gPatchNotesEdit.slot], gPatchNotesEdit.buffer, newSize);
+                gPatchNotes[gPatchNotesEdit.slot][newSize] = '\0';
+                gPatchNotesSize[gPatchNotesEdit.slot]      = newSize;
+
+                gPatchNotesEdit.active                     = false;
+
+                tMessageContent msg     = {0};
+                msg.cmd                                    = eMsgCmdWritePatch;
+                msg.slot                                   = gPatchNotesEdit.slot;
+                msg_send(&gCommandQueue, &msg);
+            } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
+                // Plain Enter → insert newline
+                if (len < PATCH_NOTES_SIZE) {
+                    gPatchNotesEdit.buffer[len]     = '\n';
+                    gPatchNotesEdit.buffer[len + 1] = '\0';
+                }
+            } else if (key == GLFW_KEY_ESCAPE) {
+                gPatchNotesEdit.active = false;
+            }
+        }
+        atomic_store(&gReDraw, true);
+        return;
+    } else if (gPatchNameEdit.active) {
         if (action == GLFW_PRESS || action == GLFW_REPEAT) {
             if (key == GLFW_KEY_BACKSPACE) {
                 size_t len = strlen(gPatchNameEdit.buffer);
