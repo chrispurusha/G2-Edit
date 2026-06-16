@@ -816,6 +816,7 @@ typedef struct {
 } tPatchSettingsEdit;
 
 typedef struct {
+    char   name[CLAVIA_NAME_SIZE+1];
     uint8_t midiChanSlot[4];  // 0x00-0x0F = ch 1-16, 0x10 = off
     uint8_t globalChan;       // same encoding
     uint8_t sysexId;          // same encoding

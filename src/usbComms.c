@@ -172,22 +172,20 @@ static bool open_and_claim_device(void) {
 
 static int parse_synth_settings(uint8_t * buff, int length) {
     uint32_t bitPos = 0;
-    uint8_t  ch     = 0;
 
     if (buff == NULL) {
         return EXIT_FAILURE;
     }
 
     for (int i = 0; i < CLAVIA_NAME_SIZE; i++) {
-        ch = read_bit_stream(buff, &bitPos, 8);
+        gSynthSettings.name[i] = read_bit_stream(buff, &bitPos, 8);
 
-        if (ch == '\0') {
+        if (gSynthSettings.name[i] == '\0') {
             break;
         }
-        LOG_DEBUG_DIRECT("%c", (ch >= 0x20 && ch <= 0x7f) ? ch : '?');
     }
-
-    LOG_DEBUG_DIRECT("\n");
+    
+    gSynthSettings.name[CLAVIA_NAME_SIZE] = '\0';
 
     gSynthSettings.perfMode          = read_bit_stream(buff, &bitPos, 1);
     atomic_store(&gPerfMode, gSynthSettings.perfMode);
@@ -1894,19 +1892,26 @@ static int send_synth_settings(void) {
     int      retVal                  = EXIT_FAILURE;
     uint32_t bitPos                  = 0;
     uint8_t  payload[64]             = {0};
+    uint8_t ch = 0;
 
-    write_bit_stream(payload, &bitPos, 8, SUB_COMMAND_SET_SYNTH_SETTINGS);  // type byte
+    //write_bit_stream(payload, &bitPos, 8, SUB_COMMAND_SET_SYNTH_SETTINGS); // type byte
 
     for (int i = 0; i < CLAVIA_NAME_SIZE; i++) {
-        write_bit_stream(payload, &bitPos, 8, 0);   // name (zeros)
+        write_bit_stream(payload, &bitPos, 8, gSynthSettings.name[i]);   // Todo: name should come from storage
+        if (gSynthSettings.name[i] == '\0') {
+            break;
+        }
     }
+    
+    //write_bit_stream(payload, &bitPos, 8, 0);                              // name: null terminator (no name to write)
 
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.perfMode);
-    write_bit_stream(payload, &bitPos, 7, 0);        // patchSortMode - unused
-    write_bit_stream(payload, &bitPos, 7, 0);        // perfSortMode - unused
+    write_bit_stream(payload, &bitPos, 1, gSynthSettings.perfMode);
+    write_bit_stream(payload, &bitPos, 7, 0);        // unknown
+    write_bit_stream(payload, &bitPos, 8, 0);        // spacer
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.perfBank);
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.perfLocation);
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.memoryProtect);
+    write_bit_stream(payload, &bitPos, 1, gSynthSettings.memoryProtect);
+    write_bit_stream(payload, &bitPos, 7, 0);        // unknown
 
     for (int i = 0; i < 4; i++) {
         write_bit_stream(payload, &bitPos, 8, gSynthSettings.midiChanSlot[i]);
@@ -1914,33 +1919,27 @@ static int send_synth_settings(void) {
 
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.globalChan);
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.sysexId);
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.localOn);
+    write_bit_stream(payload, &bitPos, 1, gSynthSettings.localOn);
+    write_bit_stream(payload, &bitPos, 8, 0);        // unknown
+    write_bit_stream(payload, &bitPos, 7, 0);        // unknown
+    write_bit_stream(payload, &bitPos, 8, 0);        // unknown
+    write_bit_stream(payload, &bitPos, 1, gSynthSettings.progChangeRcv);
+    write_bit_stream(payload, &bitPos, 1, gSynthSettings.progChangeSnd);
+    write_bit_stream(payload, &bitPos, 6, 0);        // unknown
+    write_bit_stream(payload, &bitPos, 1, gSynthSettings.controllersRcv);
+    write_bit_stream(payload, &bitPos, 1, gSynthSettings.controllersSnd);
 
-    {
-        uint8_t progMode = (uint8_t)((gSynthSettings.progChangeRcv << 1) | gSynthSettings.progChangeSnd);
-        uint8_t ctrlMode = (uint8_t)((gSynthSettings.controllersRcv << 1) | gSynthSettings.controllersSnd);
-        write_bit_stream(payload, &bitPos, 8, progMode);
-        write_bit_stream(payload, &bitPos, 8, ctrlMode);
-    }
-
-    write_bit_stream(payload, &bitPos, 8, 0);        // sendArp - unused
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.sendClock);
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.ignoreExtClock);
-
-    // Convert offset-encoded values back to signed bytes for the stream
     write_bit_stream(payload, &bitPos, 8, (uint8_t)((int)gSynthSettings.tuneCent - 50));
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.globalShiftActive);
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.globalShiftActive & 0x01);
     write_bit_stream(payload, &bitPos, 8, (uint8_t)((int)gSynthSettings.globalOctaveShift - 2));
     write_bit_stream(payload, &bitPos, 8, (uint8_t)((int)gSynthSettings.tuneSemi - 12));
-
-    write_bit_stream(payload, &bitPos, 8, 0);        // vibratoRate - unused
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.pedalPolarity);
-    write_bit_stream(payload, &bitPos, 8, 1);        // constant (always 1)
+    write_bit_stream(payload, &bitPos, 8, 0);        // filler
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.pedalPolarity & 0x01);
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.pedalGain);
-
-    for (int i = 0; i < 16; i++) {
-        write_bit_stream(payload, &bitPos, 8, 0);   // trailing padding
-    }
+    write_bit_stream(payload, &bitPos, 6, 0);        // unknown
+    write_bit_stream(payload, &bitPos, 6, 0);        // unknown
+    write_bit_stream(payload, &bitPos, 6, 0);        // unknown
 
     uint32_t payloadBytes = BIT_TO_BYTE_ROUND_UP(bitPos);
 
