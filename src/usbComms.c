@@ -52,7 +52,7 @@ extern "C" {
 #define USB_EXT_RECV_TIMEOUT_MS     (2000)
 #define USB_INT_RECV_TIMEOUT_MS     (100)
 #define USB_INIT_TIMEOUT_MS         (1000) // Extra headroom during init sequence
-#define USB_KEEPALIVE_INTERVAL_S    (2)   // macOS suspends USB after ~3s idle; keep well inside that
+#define USB_KEEPALIVE_INTERVAL_S    (2)    // macOS suspends USB after ~3s idle; keep well inside that
 
 // Atomic flags for cross-thread signalling
 static _Atomic bool           gotBadConnectionIndication      = false;
@@ -348,12 +348,12 @@ static int parse_midi_cc(uint8_t * buff, int length) {
         return EXIT_FAILURE;
     }
 
-    while (true) {
+    while ((BIT_TO_BYTE_ROUND_UP(bitPos) + 3) <= length) {
         LOG_DEBUG("MIDI Chan 0x%x\n", read_bit_stream(buff, &bitPos, 8));
         LOG_DEBUG("CC Numb/value 0x%x\n", read_bit_stream(buff, &bitPos, 8));
         subResponse = read_bit_stream(buff, &bitPos, 8);
 
-        if ((subResponse != SUB_RESPONSE_MIDI_CC) || (BIT_TO_BYTE_ROUND_UP(bitPos) > length)) {
+        if (subResponse != SUB_RESPONSE_MIDI_CC) {
             LOG_DEBUG("MIDI CC stream end on 0x%02x bitPos(byte)=%u length=%d\n",
                       subResponse, BIT_TO_BYTE_ROUND_UP(bitPos), length);
             break;
@@ -659,6 +659,10 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             float    cyclesLoad = 0.0f;
             float    memLoad    = 0.0f;
 
+            if (*bitPos < 8) {
+                LOG_ERROR("Resources used: bitPos underflow (%u)\n", *bitPos);
+                return EXIT_FAILURE;
+            }
             *bitPos -= 8; // Multiple messages in here, so need to move back a byte to process each sub response
 
             while ((BIT_TO_BYTE(*bitPos)) < (length - CRC_BYTES)) {
@@ -730,10 +734,11 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_GLOBAL_PAGE:
         {
-            uint8_t globalPage = 0;
-            
+            static uint32_t count      = 0;
+            uint8_t         globalPage = 0;
+
             globalPage = read_bit_stream(buff, bitPos, 8);
-            LOG_DEBUG("Got global page Page=%u Pos=%u\n", globalPage / 3, globalPage %3);
+            LOG_DEBUG("%u Got global page Page=%u Pos=%u\n", count++, globalPage / 3, globalPage % 3);
             return EXIT_SUCCESS;
         }
 
@@ -873,9 +878,9 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         case SUB_RESPONSE_SEL_PARAM_PAGE:
         {
             uint8_t paramPage = 0;
-            
+
             paramPage = read_bit_stream(buff, bitPos, 8);
-            LOG_DEBUG("Got param page Page=%u Pos=%u\n", paramPage / 3, paramPage %3);
+            LOG_DEBUG("Got param page Page=%u Pos=%u\n", paramPage / 3, paramPage % 3);
 
             return EXIT_SUCCESS;
         }
@@ -1331,7 +1336,6 @@ static int send_get_synth_settings(void) {
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_SYNTH_SETTINGS);
-        LOG_DEBUG("GET STNTH SETTINGS RESPONSE\n");
     }
     return retVal;
 }
@@ -1346,7 +1350,6 @@ static int send_get_midi_cc(void) {
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_MIDI_CC);
-        LOG_DEBUG("GET MIDI CC RESPONSE\n");
     }
     return retVal;
 }
@@ -1361,7 +1364,6 @@ static int send_get_assigned_voices(void) {
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_ASSIGNED_VOICES);
-        LOG_DEBUG("GET ASSIGNED VOICES RESPONSE\n");
     }
     return retVal;
 }
@@ -1376,7 +1378,6 @@ static int send_get_master_clock(void) {
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_MASTER_CLOCK);
-        LOG_DEBUG("GET MASTER CLOCK RESPONSE\n");
     }
     return retVal;
 }
@@ -1390,9 +1391,7 @@ static int send_get_global_page(void) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        static uint32_t count = 0;
         retVal = int_rec(ePollNo, SUB_RESPONSE_GLOBAL_PAGE);
-        LOG_DEBUG("GET GLOBAL PAGE RESPONSE %u\n", count++);
     }
     return retVal;
 }
@@ -1408,7 +1407,6 @@ static int send_get_performance_settings(void) {
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_PERFORMANCE_SETTINGS);
-        LOG_DEBUG("GET PERFORMANCE SETTINGS RESPONSE\n");
     }
     return retVal;
 }
@@ -1425,7 +1423,6 @@ static int send_get_patch_version(uint32_t slot) {
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_VERSION);
-        LOG_DEBUG("GET PATCH VERSION RESPONSE\n");
     }
     return retVal;
 }
@@ -1440,7 +1437,6 @@ static int send_get_patch(uint32_t slot) {
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_DESCRIPTION);
-        LOG_DEBUG("GET PATCH RESPONSE\n");
     }
     return retVal;
 }
@@ -1455,7 +1451,6 @@ static int send_get_patch_name(uint32_t slot) {
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_GET_PATCH_NAME);
-        LOG_DEBUG("GET PATCH NAME RESPONSE\n");
     }
     return retVal;
 }
@@ -1471,7 +1466,6 @@ static int send_get_resources_used(uint32_t slot, tLocation location) {
 
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_RESOURCES_USED);
-        LOG_DEBUG("GET PATCH NAME RESPONSE\n");
     }
     return retVal;
 }
@@ -2156,6 +2150,10 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdWriteModule:
+        {
+            int avail   = 0;
+            int written = 0;
+            
             LOG_DEBUG("Writing module\n");
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
@@ -2169,22 +2167,24 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.colour;
             buff[pos++] = messageContent->moduleData.upRate;
             buff[pos++] = messageContent->moduleData.isLed;
-
+            
             for (int i = 0; i < messageContent->moduleData.modeCount; i++) {
                 buff[pos++] = messageContent->moduleData.mode[i];
             }
-
-            snprintf((char *)&buff[pos], SEND_MESSAGE_SIZE - pos, "%s", messageContent->moduleData.name);
-
-            pos        += strlen(messageContent->moduleData.name) + 1;
+            
+            avail   = SEND_MESSAGE_SIZE - pos;
+            written = snprintf((char *)&buff[pos], avail, "%s", messageContent->moduleData.name);
+                
+            pos += ((written >= 0) && (written < avail)) ? written + 1 : avail;
+            
             retVal      = send_message(buff, pos);
-
+            
             if (retVal == EXIT_SUCCESS) {
                 retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
                 LOG_DEBUG("WRITE MODULE RESPONSE\n");
             }
             break;
-
+        }
         case eMsgCmdMoveModule:
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
