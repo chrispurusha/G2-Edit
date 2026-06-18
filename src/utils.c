@@ -119,24 +119,21 @@ uint32_t read_bit_stream(uint8_t * buff, uint32_t * bitPos, uint32_t numBits) {
 }
 
 void write_bit_stream(uint8_t * buff, uint32_t * bitPos, uint32_t numBits, uint32_t val) {
+    uint32_t i         = 0;
+    uint8_t  bit       = 0;
+    uint32_t byteIndex = 0;
+    uint32_t bitIndex  = 0;
+
     if ((buff == NULL) || (bitPos == NULL) || (numBits == 0) || (numBits > 32)) {
         return;
     }
 
-    for (uint32_t i = 0; i < numBits; i++) {
-        // Extract bit from 'val', MSB first
-        uint8_t  bit       = (val >> ((numBits - 1) - i)) & 0x01;
-
-        // Compute current byte and bit positions
-        uint32_t byteIndex = (*bitPos) >> 3;
-        uint32_t bitIndex  = (7 - (*bitPos & 0x07));  // mirror of your read_bit_stream()
-
-        // Clear the bit position in the buffer
+    for (i = 0; i < numBits; i++) {
+        bit              = (val >> ((numBits - 1) - i)) & 0x01;
+        byteIndex        = (*bitPos) >> 3;
+        bitIndex         = (7 - (*bitPos & 0x07));
         buff[byteIndex] &= ~(1u << bitIndex);
-
-        // Set the bit if needed
         buff[byteIndex] |= (bit << bitIndex);
-
         (*bitPos)++;
     }
 }
@@ -151,17 +148,17 @@ double get_time_ms(void) {
 double get_time_delta(void) {  // TODO - make thread safe, caller maintaining last time
     struct timespec        currentTime = {0};
     static struct timespec lastTime    = {0};
+    double                 elapsedMS   = 0.0;
 
-    //clock_gettime(CLOCK_MONOTONIC, &gLastTime);
     clock_gettime(CLOCK_MONOTONIC, &currentTime);
 
     if ((lastTime.tv_sec == 0) && (lastTime.tv_nsec == 0)) {
         lastTime = currentTime;
-        return 0.0;
+    } else {
+        elapsedMS = (currentTime.tv_sec - lastTime.tv_sec) * 1000.0 +
+                    (currentTime.tv_nsec - lastTime.tv_nsec) / 1.0e6;
+        lastTime  = currentTime;
     }
-    double                 elapsedMS   = (currentTime.tv_sec - lastTime.tv_sec) * 1000.0 + // Convert seconds to milliseconds
-                                         (currentTime.tv_nsec - lastTime.tv_nsec) / 1.0e6; // Convert nanoseconds to milliseconds
-    lastTime = currentTime;
     return elapsedMS;
 }
 
