@@ -274,7 +274,7 @@ static int parse_synth_settings(uint8_t * buff, int length) {
 static void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, int nameSize) {
     int i = 0;
 
-    if (nameSize != CLAVIA_NAME_SIZE+1) {
+    if (nameSize != CLAVIA_NAME_SIZE + 1) {
         LOG_ERROR("Called with invalid size of %d\n", nameSize);
         exit(1);
     }
@@ -290,10 +290,10 @@ static void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, i
 }
 
 static int parse_performance_settings(uint8_t * buff, int length) {
-    uint32_t bitPos       = 0;
-    uint32_t selectedSlot = 0;
-    char     name[CLAVIA_NAME_SIZE+1]     = {0};
-    int      i            = 0;
+    uint32_t bitPos                     = 0;
+    uint32_t selectedSlot               = 0;
+    char     name[CLAVIA_NAME_SIZE + 1] = {0};
+    int      i                          = 0;
 
     if (buff == NULL) {
         return EXIT_FAILURE;
@@ -1473,12 +1473,11 @@ static int send_get_resources_used(uint32_t slot, tLocation location) {
     return retVal;
 }
 
-static void write_clavia_string(uint8_t * buff, int * pos, const char * name) {
+static void write_clavia_string(uint8_t * buff, uint32_t * bitPos, const char * name) {
     int i = 0;
 
     for (i = 0; i < CLAVIA_NAME_SIZE; i++) {
-        buff[*pos] = name[i];
-        (*pos)++;
+        write_bit_stream(buff, bitPos, 8, (uint8_t)name[i]);
 
         if (name[i] == '\0') {
             break;
@@ -1494,7 +1493,11 @@ static int send_set_module_label(uint32_t slot, tModuleKey moduleKey, const char
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_MODULE_LABEL);
     buff[pos++] = moduleKey.location;
     buff[pos++] = moduleKey.index;
-    write_clavia_string(buff, &pos, name);
+    {
+        uint32_t bitPos = BYTE_TO_BIT(pos);
+        write_clavia_string(buff, &bitPos, name);
+        pos = BIT_TO_BYTE(bitPos);
+    }
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
@@ -1695,9 +1698,8 @@ static int push_slot_to_device(uint32_t slot) {
     buff[pos++] = 0x00;
 
     patch_name_get(slot, patchName, sizeof(patchName));
-    write_clavia_string(buff, &pos, patchName);
-
     bitPos      = BYTE_TO_BIT(pos);
+    write_clavia_string(buff, &bitPos, patchName);
 
     write_patch_descr(slot, buff, &bitPos);
     write_module_list(slot, locationVa, buff, &bitPos);
@@ -1736,8 +1738,11 @@ static int send_set_patch_name(uint32_t slot, const char * name) {
     int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_PATCH_NAME);  // 0x27 — used for set AND response
-    write_clavia_string(buff, &pos, name);
-
+    {
+        uint32_t bitPos = BYTE_TO_BIT(pos);
+        write_clavia_string(buff, &bitPos, name);
+        pos = BIT_TO_BYTE(bitPos);
+    }
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
