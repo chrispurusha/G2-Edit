@@ -271,25 +271,28 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     return EXIT_SUCCESS;
 }
 
-static void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, size_t maxLen) {
-    size_t  nameLen = 0;
-    uint8_t ch;
+static void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, int nameSize) {
+    int i = 0;
 
-    do {
-        ch = (uint8_t)read_bit_stream(buff, bitPos, 8);
+    if (nameSize != CLAVIA_NAME_SIZE+1) {
+        LOG_ERROR("Called with invalid size of %d\n", nameSize);
+        exit(1);
+    }
+    memset(name, 0, nameSize);
 
-        if (ch != '\0' && nameLen < maxLen - 1) {
-            name[nameLen++] = (char)ch;
+    for (i = 0; i < nameSize; i++) {
+        name[i] = (uint8_t)read_bit_stream(buff, bitPos, 8);
+
+        if (name[i] == '\0') {
+            break;
         }
-    } while (ch != '\0' && nameLen < maxLen - 1);
-
-    name[nameLen] = '\0';
+    }
 }
 
 static int parse_performance_settings(uint8_t * buff, int length) {
     uint32_t bitPos       = 0;
     uint32_t selectedSlot = 0;
-    char     name[17]     = {0};
+    char     name[CLAVIA_NAME_SIZE+1]     = {0};
     int      i            = 0;
 
     if (buff == NULL) {
