@@ -2460,8 +2460,9 @@ static void state_handler(void) {
 
         LOG_DEBUG("Perf settings change — reloading all slots\n");
 
-        reload_all_patch_data();
-
+        if (reload_all_patch_data() != EXIT_SUCCESS) {
+            LOG_ERROR("reload_all_patch_data failed\n");
+        }
         atomic_store(&gSlot, 0);
         gPatchDescr[0].activeVariation = 0;
         set_exclusive_button_highlight(slotAButtonId, slotDButtonId,
