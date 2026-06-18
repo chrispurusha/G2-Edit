@@ -247,6 +247,7 @@
 #define RGB_YELLOW_7                   {0.7, 0.7, 0.0}
 #define RGB_RED_7                      {0.7, 0.0, 0.0}
 #define RGB_RED_5                      {0.7, 0.2, 0.2}
+#define RGB_ORANGE_0                   {0.8, 0.7, 0.5}
 #define RGB_ORANGE_1                   {0.8, 0.3, 0.1}
 #define RGB_ORANGE_2                   {0.8, 0.5, 0.2}
 #define RGBA_BLACK_ON_TRANSPARENT      {0.0, 0.0, 0.0, 1.0}

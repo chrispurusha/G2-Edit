@@ -1474,24 +1474,35 @@ static int send_set_param_label(uint32_t slot, tModuleKey moduleKey, uint32_t pa
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
+    int     i                       = 0;
+
+    LOG_DEBUG("SET PARAM LABEL slot=%u loc=%u idx=%u param=%u name='%s'\n",
+              slot, moduleKey.location, moduleKey.index, paramIndex, name);
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_PARAM_LABEL);
     buff[pos++] = moduleKey.location;
     buff[pos++] = moduleKey.index;
-    buff[pos++] = 3 + PROTOCOL_PARAM_NAME_SIZE;  // size: isString + paramLength + paramIndex + name bytes
+    buff[pos++] = 3 + PROTOCOL_PARAM_NAME_SIZE;  // moduleLength: isString + paramLength + paramIndex + name bytes
     buff[pos++] = 1;                             // isString
-    buff[pos++] = 1 + PROTOCOL_PARAM_NAME_SIZE;  // paramLength
+    buff[pos++] = 1 + PROTOCOL_PARAM_NAME_SIZE;  // paramLength = 8
     buff[pos++] = (uint8_t)paramIndex;
 
-    for (int i = 0; i < PROTOCOL_PARAM_NAME_SIZE; i++) {
-        buff[pos++] = (uint8_t)name[i];  // fixed-length, zero-padded
+    for (i = 0; i < PROTOCOL_PARAM_NAME_SIZE; i++) {
+        buff[pos++] = (uint8_t)name[i];
     }
 
     retVal      = send_message(buff, pos);
 
-    if (retVal == EXIT_SUCCESS) {
+    if (retVal != EXIT_SUCCESS) {
+        LOG_DEBUG("SET PARAM LABEL send_message FAILED\n");
+    } else {
         retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
-        LOG_DEBUG("SET PARAM LABEL RESPONSE\n");
+
+        if (retVal == EXIT_SUCCESS) {
+            LOG_DEBUG("SET PARAM LABEL RESPONSE OK\n");
+        } else {
+            LOG_DEBUG("SET PARAM LABEL RESPONSE FAILED\n");
+        }
     }
     return retVal;
 }

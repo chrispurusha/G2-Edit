@@ -1411,7 +1411,7 @@ static void action_rename_morph_label(int index) {
     };
 
     if (read_module(gContextMenu.moduleKey, &module)) {
-        uint32_t pi = morphIndex + NUM_MORPHS;
+        uint32_t pi = morphIndex /* + NUM_MORPHS*/;  // This may or may not be correct
 
         gParamNameEdit.active     = true;
         gParamNameEdit.moduleKey  = gContextMenu.moduleKey;
@@ -1427,7 +1427,7 @@ static void open_morph_label_context_menu(tCoord coord, uint32_t morphIndex) {
     static tMenuItem menuItems[2];
 
     menuItems[0] = (tMenuItem){
-        "Rename", RGB_GREY_3, action_rename_morph_label, morphIndex, NULL
+        "Rename", RGB_GREY_3, action_rename_morph_label, morphIndex + NUM_MORPHS, NULL
     };
     menuItems[1] = (tMenuItem){
         NULL, RGB_BLACK, NULL, 0, NULL
