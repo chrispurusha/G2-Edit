@@ -213,8 +213,8 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     gSynthSettings.controllersSnd    = read_bit_stream(buff, &bitPos, 1);
 
     read_bit_stream(buff, &bitPos, 1);
-    gSynthSettings.sendClock         = read_bit_stream(buff, &bitPos, 1); // Is (bit 1) ignore ext clock (bit 2)
-    gSynthSettings.receiveClock         = read_bit_stream(buff, &bitPos, 1); // Is (bit 1) ignore ext clock (bit 2)
+    gSynthSettings.sendClock         = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.receiveClock         = !read_bit_stream(buff, &bitPos, 1); // Note that this one is inverted. Is more of an ignore-external-clock
     read_bit_stream(buff, &bitPos, 5);
 
     // TODO - leave these values without additions and render appropriately instead
@@ -229,7 +229,7 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     // Signed byte ±12 semitones; store offset-encoded (0-24, centre=12)
     gSynthSettings.tuneSemi          = (uint8_t)((int8_t)read_bit_stream(buff, &bitPos, 8) + 12);
 
-    gSynthSettings.vibratoRate = read_bit_stream(buff, &bitPos, 8);                                    // vibratoRate - unused, but doesn't seem to work
+    read_bit_stream(buff, &bitPos, 8);                                    // vibratoRate - unused, it's a parameter instead
     gSynthSettings.pedalPolarity     = read_bit_stream(buff, &bitPos, 1); // Bit 0. Next bit is always 1. 1 = closed, 0 = open
     read_bit_stream(buff, &bitPos, 7);
     //read_bit_stream(buff, &bitPos, 8);                                    // constant (always 1 in write) - unused
@@ -245,13 +245,13 @@ static int parse_synth_settings(uint8_t * buff, int length) {
               gSynthSettings.localOn, gSynthSettings.memoryProtect,
               gSynthSettings.progChangeRcv, gSynthSettings.progChangeSnd,
               gSynthSettings.controllersRcv, gSynthSettings.controllersSnd);
-    LOG_DEBUG("SendClock=%u ReceiveClock=%u IgnoreExt=%u TuneCent=%u TuneSemi=%u OctShift=%u ShiftActive=%u\n",
-              gSynthSettings.sendClock, gSynthSettings.receiveClock, gSynthSettings.ignoreExtClock,
+    LOG_DEBUG("SendClock=%u ReceiveClock=%u TuneCent=%u TuneSemi=%u OctShift=%u ShiftActive=%u\n",
+              gSynthSettings.sendClock, gSynthSettings.receiveClock,
               gSynthSettings.tuneCent, gSynthSettings.tuneSemi,
               gSynthSettings.globalOctaveShift, gSynthSettings.globalShiftActive);
-    LOG_DEBUG("PedalPol=%u PedalGain=%u PerfMode=%u PerfBank=%u PerfLoc=%u VibratoRate=%u\n",
+    LOG_DEBUG("PedalPol=%u PedalGain=%u PerfMode=%u PerfBank=%u PerfLoc=%u\n",
               gSynthSettings.pedalPolarity, gSynthSettings.pedalGain,
-              gSynthSettings.perfMode, gSynthSettings.perfBank, gSynthSettings.perfLocation, gSynthSettings.vibratoRate);
+              gSynthSettings.perfMode, gSynthSettings.perfBank, gSynthSettings.perfLocation);
     
     {
         static uint8_t prevBuff[64] = {0};

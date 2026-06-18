@@ -948,7 +948,7 @@ static void render_patch_settings_panel(void) {
         {"Ctrl Rcv",     &gSynthSettings.controllersRcv, &gSettingsPanelRects.controllersRcv},
         {"Ctrl Snd",     &gSynthSettings.controllersSnd, &gSettingsPanelRects.controllersSnd},
         {"Send Clock",   &gSynthSettings.sendClock,      &gSettingsPanelRects.sendClock     },
-        {"Ext Clk Off",  &gSynthSettings.ignoreExtClock, &gSettingsPanelRects.ignoreExtClock}, };
+        {"Receive Clock",  &gSynthSettings.receiveClock, &gSettingsPanelRects.receiveClock}, };
     int numToggles = (int)(sizeof(toggles) / sizeof(toggles[0]));
     int perRow     = 4;
 
@@ -986,17 +986,6 @@ static void render_patch_settings_panel(void) {
         snprintf(buf, sizeof(buf), "%+d", (int)gSynthSettings.tuneSemi - 12);
         x                                     = render_spin(x, y, btnH, buf, "+12", &gSettingsPanelRects.tuneSemiDec, &gSettingsPanelRects.tuneSemiInc);
 
-        x                                    += 14.0;
-        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Oct:");
-        x                                    += get_text_width((char *)"Oct:", btnH) + 4.0;
-        snprintf(buf, sizeof(buf), "%+d", (int)gSynthSettings.globalOctaveShift - 2);
-        x                                     = render_spin(x, y, btnH, buf, "+2", &gSettingsPanelRects.octaveShiftDec, &gSettingsPanelRects.octaveShiftInc);
-
-        x                                    += 14.0;
-        tRgb   shiftC = gSynthSettings.globalShiftActive ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
-        gSettingsPanelRects.globalShiftActive = draw_button(mainArea,
-                                                            {{x, y}, {get_text_width((char *)"Shift", btnH) + 6.0, btnH}},
-                                                            "Shift", shiftC);
     }
     y += rowH;
 
@@ -1012,8 +1001,8 @@ static void render_patch_settings_panel(void) {
         x                                += get_text_width((char *)"Polarity:", btnH) + 4.0;
         tRgb   polC = gSynthSettings.pedalPolarity ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
         gSettingsPanelRects.pedalPolarity = draw_button(mainArea,
-                                                        {{x, y}, {get_text_width((char *)"Reverse", btnH) + 6.0, btnH}},
-                                                        gSynthSettings.pedalPolarity ? (char *)"Reverse" : (char *)"Normal",
+                                                        {{x, y}, {get_text_width((char *)"Closed", btnH) + 6.0, btnH}},
+                                                        gSynthSettings.pedalPolarity ? (char *)"Closed" : (char *)"Open",
                                                         polC);
         x                                += gSettingsPanelRects.pedalPolarity.size.w + 16.0;
 

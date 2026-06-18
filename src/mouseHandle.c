@@ -2122,8 +2122,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 } else if (within_rectangle(coord, gSettingsPanelRects.sendClock)) {
                     gSynthSettings.sendClock = gSynthSettings.sendClock ? 0 : 1;
                     changed                  = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.ignoreExtClock)) {
-                    gSynthSettings.ignoreExtClock = gSynthSettings.ignoreExtClock ? 0 : 1;
+                } else if (within_rectangle(coord, gSettingsPanelRects.receiveClock)) {
+                    gSynthSettings.receiveClock = gSynthSettings.receiveClock ? 1 : 0;
                     changed                       = true;
                 } else if (within_rectangle(coord, gSettingsPanelRects.tuneCentDec)) {
                     if (gSynthSettings.tuneCent > 0) {
@@ -2145,19 +2145,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                         gSynthSettings.tuneSemi++;
                     }
                     changed = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.octaveShiftDec)) {
-                    if (gSynthSettings.globalOctaveShift > 0) {
-                        gSynthSettings.globalOctaveShift--;
-                    }
-                    changed = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.octaveShiftInc)) {
-                    if (gSynthSettings.globalOctaveShift < 4) {
-                        gSynthSettings.globalOctaveShift++;
-                    }
-                    changed = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.globalShiftActive)) {
-                    gSynthSettings.globalShiftActive = gSynthSettings.globalShiftActive ? 0 : 1;
-                    changed                          = true;
                 } else if (within_rectangle(coord, gSettingsPanelRects.pedalPolarity)) {
                     gSynthSettings.pedalPolarity = gSynthSettings.pedalPolarity ? 0 : 1;
                     changed                      = true;

@@ -825,9 +825,8 @@ typedef struct {
     uint8_t progChangeSnd;
     uint8_t controllersRcv;
     uint8_t controllersSnd;
-    uint8_t receiveClock;
-    uint8_t sendClock;
-    uint8_t ignoreExtClock;
+    uint8_t receiveClock;  // 1=off, 0=om
+    uint8_t sendClock;  // 0=on, 1=off
     uint8_t tuneCent;         // raw 0-100, centre = 50
     uint8_t globalShiftActive;
     uint8_t globalOctaveShift;
@@ -838,7 +837,7 @@ typedef struct {
     uint8_t perfMode;
     uint8_t perfBank;
     uint8_t perfLocation;
-    uint8_t vibratoRate;
+    //uint8_t vibratoRate; // Comes from a parameter, not synth settings
 } tSynthSettings;
 
 typedef struct {
@@ -856,14 +855,11 @@ typedef struct {
     tRectangle controllersRcv;
     tRectangle controllersSnd;
     tRectangle sendClock;
-    tRectangle ignoreExtClock;
+    tRectangle receiveClock;
     tRectangle tuneCentDec;
     tRectangle tuneCentInc;
     tRectangle tuneSemiDec;
     tRectangle tuneSemiInc;
-    tRectangle octaveShiftDec;
-    tRectangle octaveShiftInc;
-    tRectangle globalShiftActive;
     tRectangle pedalPolarity;
     tRectangle pedalGainDec;
     tRectangle pedalGainInc;
