@@ -1028,6 +1028,36 @@ static void render_patch_settings_panel(void) {
         snprintf(buf, sizeof(buf), "%u", gSynthSettings.pedalGain);
         render_spin(x, y, btnH, buf, "127", &gSettingsPanelRects.pedalGainDec, &gSettingsPanelRects.pedalGainInc);
     }
+    y += rowH;
+
+    // ── Sort Mode ──────────────────────────────────────────────────
+    static const char * patchSortLabels[3] = {"Prog#", "Alpha", "Category"};
+    static const char * perfSortLabels[3]  = {"Prog#", NULL, "Category"};
+
+    set_rgb_colour(RGB_GREY_7);
+    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Sort Mode");
+    y += secH;
+
+    {
+        double       x          = boxX + margin;
+        const char * patchLabel = patchSortLabels[gSynthSettings.patchSortMode < 3 ? gSynthSettings.patchSortMode : 0];
+        const char * perfLabel  = perfSortLabels[gSynthSettings.perfSortMode < 3 ? gSynthSettings.perfSortMode : 0];
+
+        if (!perfLabel) {
+            perfLabel = "Prog#";
+        }
+        set_rgb_colour(RGB_BLACK);
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Patch:");
+        x += get_text_width((char *)"Patch:", btnH) + 4.0;
+        x  = render_spin(x, y, btnH, (char *)patchLabel, "Category",
+                         &gSettingsPanelRects.patchSortModeDec, &gSettingsPanelRects.patchSortModeInc);
+
+        x += 20.0;
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Perf:");
+        x += get_text_width((char *)"Perf:", btnH) + 4.0;
+        render_spin(x, y, btnH, (char *)perfLabel, "Category",
+                    &gSettingsPanelRects.perfSortModeDec, &gSettingsPanelRects.perfSortModeInc);
+    }
 }
 
 static void render_patch_notes_edit(void) {

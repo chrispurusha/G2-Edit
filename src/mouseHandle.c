@@ -2193,6 +2193,27 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                         gSynthSettings.pedalGain++;
                     }
                     changed = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.patchSortModeDec)) {
+                    if (gSynthSettings.patchSortMode > 0) {
+                        gSynthSettings.patchSortMode--;
+                    }
+                    changed = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.patchSortModeInc)) {
+                    if (gSynthSettings.patchSortMode < 2) {
+                        gSynthSettings.patchSortMode++;
+                    }
+                    changed = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.perfSortModeDec)) {
+                    // Perf sort: valid values are 0 and 2 (no 1)
+                    if (gSynthSettings.perfSortMode > 0) {
+                        gSynthSettings.perfSortMode = 0;
+                    }
+                    changed = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.perfSortModeInc)) {
+                    if (gSynthSettings.perfSortMode < 2) {
+                        gSynthSettings.perfSortMode = 2;
+                    }
+                    changed = true;
                 }
 
                 if (changed) {

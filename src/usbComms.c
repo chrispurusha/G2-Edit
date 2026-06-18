@@ -190,9 +190,9 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     gSynthSettings.perfMode               = read_bit_stream(buff, &bitPos, 1);
     atomic_store(&gPerfMode, gSynthSettings.perfMode);
     read_bit_stream(buff, &bitPos, 5);  // Unused
-    gSynthSettings.patchSortMode = read_bit_stream(buff, &bitPos, 2);
+    gSynthSettings.patchSortMode          = read_bit_stream(buff, &bitPos, 2);
     read_bit_stream(buff, &bitPos, 6);  // perfSortMode - unused
-    gSynthSettings.perfSortMode = read_bit_stream(buff, &bitPos, 2);
+    gSynthSettings.perfSortMode           = read_bit_stream(buff, &bitPos, 2);
     gSynthSettings.perfBank               = read_bit_stream(buff, &bitPos, 8);
     gSynthSettings.perfLocation           = read_bit_stream(buff, &bitPos, 8);
     gSynthSettings.memoryProtect          = read_bit_stream(buff, &bitPos, 1);
@@ -251,18 +251,16 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     LOG_DEBUG("Patch Sort Mode=%u Perf Sort Mode=%u\n",
               gSynthSettings.patchSortMode, gSynthSettings.perfSortMode);
 
-    {
+    { // Debug to highlight what we're changing on the G2 itself
         static uint8_t prevBuff[64] = {0};
         printf("synth settings change!\n");
 
-        for (int i = 0; i < 43; i++) {
+        for (int i = 0; i < 40; i++) {
             if (buff[i] != prevBuff[i]) {
                 prevBuff[i] = buff[i];
                 LOG_DEBUG("%d 0x%02x %u\n", i, buff[i], buff[i]);
             }
         }
-
-        printf("\n");
     }
 
     return EXIT_SUCCESS;
@@ -1929,7 +1927,7 @@ static int send_synth_settings(void) {
     write_bit_stream(payload, &bitPos, 2, gSynthSettings.patchSortMode);
     write_bit_stream(payload, &bitPos, 6, 0);
     write_bit_stream(payload, &bitPos, 2, gSynthSettings.perfSortMode);
-    
+
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.perfBank);
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.perfLocation);
     write_bit_stream(payload, &bitPos, 1, gSynthSettings.memoryProtect);

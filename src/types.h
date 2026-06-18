@@ -869,6 +869,10 @@ typedef struct {
     tRectangle pedalPolarity;
     tRectangle pedalGainDec;
     tRectangle pedalGainInc;
+    tRectangle patchSortModeDec;
+    tRectangle patchSortModeInc;
+    tRectangle perfSortModeDec;
+    tRectangle perfSortModeInc;
 } tSettingsPanelRects;
 
 #endif // __TYPES_H__
