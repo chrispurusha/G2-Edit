@@ -221,10 +221,11 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     // Signed byte ±50 cents; store offset-encoded (0-100, centre=50)
     gSynthSettings.tuneCent          = (uint8_t)((int8_t)read_bit_stream(buff, &bitPos, 8) + 50);
 
-    gSynthSettings.globalShiftActive = read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.globalShiftActive = read_bit_stream(buff, &bitPos, 1);
+    read_bit_stream(buff, &bitPos, 7);
 
     // Signed byte ±2; store offset-encoded (0-4, centre=2)
-    gSynthSettings.globalOctaveShift = (uint8_t)((int8_t)read_bit_stream(buff, &bitPos, 8) + 2);
+    gSynthSettings.globalOctaveShift = (uint8_t)((int8_t)read_bit_stream(buff, &bitPos, 8));
 
     // Signed byte ±12 semitones; store offset-encoded (0-24, centre=12)
     gSynthSettings.tuneSemi          = (uint8_t)((int8_t)read_bit_stream(buff, &bitPos, 8) + 12);
@@ -1945,11 +1946,15 @@ static int send_synth_settings(void) {
     write_bit_stream(payload, &bitPos, 6, 0);        // unknown
     write_bit_stream(payload, &bitPos, 1, gSynthSettings.controllersRcv);
     write_bit_stream(payload, &bitPos, 1, gSynthSettings.controllersSnd);
-
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.sendClock);
+    
+    write_bit_stream(payload, &bitPos, 1, 0);
+    write_bit_stream(payload, &bitPos, 1, gSynthSettings.sendClock);
+    write_bit_stream(payload, &bitPos, 1, !gSynthSettings.receiveClock);
+    write_bit_stream(payload, &bitPos, 5, 0);
     write_bit_stream(payload, &bitPos, 8, (uint8_t)((int)gSynthSettings.tuneCent - 50));
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.globalShiftActive);
-    write_bit_stream(payload, &bitPos, 8, (uint8_t)((int)gSynthSettings.globalOctaveShift - 2));
+    write_bit_stream(payload, &bitPos, 1, (uint8_t)((int)gSynthSettings.globalShiftActive));    // Supposed to be global shift active, but that's a parameter
+    write_bit_stream(payload, &bitPos, 7, 0);
+    write_bit_stream(payload, &bitPos, 8, (uint8_t)gSynthSettings.globalOctaveShift);  // Supposed to be global octave shift, but that's a parameter
     write_bit_stream(payload, &bitPos, 8, (uint8_t)((int)gSynthSettings.tuneSemi - 12));
     
     write_bit_stream(payload, &bitPos, 8, 0);        // filler - possibly should be vibrato rate, but doesn't seem to work
