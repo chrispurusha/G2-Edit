@@ -27,6 +27,7 @@ extern "C" {
 #include "graphics.h"
 #include "dataBase.h"
 #include "usbComms.h"
+#include "misc.h"
 #include "globalVars.h"
 #include "main.h"
 
@@ -69,6 +70,8 @@ int main(int argc, char ** argv) {
     init_database();
 
     init_graphics();
+
+    register_sleep_wake_notifications();
 
     start_usb_thread();
 

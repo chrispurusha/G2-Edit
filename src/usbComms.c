@@ -2556,6 +2556,11 @@ static void * usb_thread_loop(void * arg) {
     return NULL;
 }
 
+void usb_signal_reconnect(void) {
+    LOG_DEBUG("System wake detected — forcing USB reconnect\n");
+    atomic_store(&gotBadConnectionIndication, true);
+}
+
 void start_usb_thread(void) {
     if (pthread_create(&usbThread, NULL, usb_thread_loop, NULL) != EXIT_SUCCESS) {
         LOG_ERROR("Failed to create USB thread\n");

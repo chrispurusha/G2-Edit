@@ -17,23 +17,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __USB_COMMS_H__
-#define __USB_COMMS_H__
+#import "misc.h"
+#import <Cocoa/Cocoa.h>
+#include "usbComms.h"
 
-#include "sysIncludes.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void start_usb_thread(void);
-void register_glfw_wake_cb(void ( *func_ptr )(void));
-void register_full_patch_change_notify_cb(void ( *func_ptr )(void));
-int parse_patch(uint32_t slot, uint8_t * buff, int length);  // TODO: also accessed from file, so need to decide how to access from USB and file
-void usb_signal_reconnect(void);                             // Call on system wake to force USB re-init
-
-#ifdef __cplusplus
+void register_sleep_wake_notifications(void) {
+    [[[NSWorkspace sharedWorkspace] notificationCenter]
+     addObserverForName:NSWorkspaceDidWakeNotification
+     object:nil
+     queue:nil
+     usingBlock:^(NSNotification * note) {
+         usb_signal_reconnect();
+     }];
 }
-#endif
-
-#endif // __USB_COMMS_H__
