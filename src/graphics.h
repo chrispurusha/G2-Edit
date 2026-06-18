@@ -22,13 +22,22 @@
 
 #include "sysIncludes.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void init_graphics(void);
 void do_graphics_loop(void);
 void clean_up_graphics(void);
+void wake_glfw(void);
 
 int note_editor_cursor_move_line(int cursorPos, int delta);
 int note_editor_cursor_line_home(int cursorPos);
 int note_editor_cursor_line_end(int cursorPos);
 int note_editor_cursor_from_click(double logicalX, double logicalY);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __GRAPHICS_H__

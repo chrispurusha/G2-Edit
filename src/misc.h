@@ -25,6 +25,7 @@ extern "C" {
 #endif
 
 void register_sleep_wake_notifications(void);
+void setup_main_menu(void);
 
 #ifdef __cplusplus
 }

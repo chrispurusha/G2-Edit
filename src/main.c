@@ -72,6 +72,7 @@ int main(int argc, char ** argv) {
     init_graphics();
 
     register_sleep_wake_notifications();
+    setup_main_menu();
 
     start_usb_thread();
 

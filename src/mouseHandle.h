@@ -22,6 +22,11 @@
 
 #include "sysIncludes.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void init_patch(uint32_t slot);
 void get_global_gui_scaled_mouse_coord(tCoord * coord);
 void set_exclusive_button_highlight(tButtonId first, tButtonId last, tButtonId active);
 int32_t find_knob_for_param(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex);
@@ -35,5 +40,9 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 void cursor_pos(GLFWwindow * window, double x, double y);
 void mouse_button(GLFWwindow * window, int button, int action, int mods);
 void scroll_event(GLFWwindow * window, double x, double y);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __MOUSE_HANDLE_H__

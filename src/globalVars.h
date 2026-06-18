@@ -109,10 +109,18 @@ extern tRectangle          gTempoDialRectangle;
 extern tRectangle          gClockRunStopRectangle;
 extern bool                gTempoDragging;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 uint32_t array_size_main_button_array(void);
 
 void patch_name_set(uint32_t slot, const char * name);
 void patch_name_get(uint32_t slot, char * name, size_t size);
 void set_exclusive_button_highlight(tButtonId first, tButtonId last, tButtonId active);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __GLOBAL_VARS_H__
