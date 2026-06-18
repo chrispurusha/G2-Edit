@@ -258,7 +258,7 @@ static int parse_synth_settings(uint8_t * buff, int length) {
 
     { // Debug to highlight what we're changing on the G2 itself
         static uint8_t prevBuff[64] = {0};
-        printf("synth settings change!\n");
+        LOG_DEBUG("synth settings change!\n");
 
         for (int i = 0; i < 40; i++) {
             if (buff[i] != prevBuff[i]) {
