@@ -41,8 +41,8 @@ tRectangle draw_slider(tArea area, tRectangle rectangle, uint32_t value, uint32_
 tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord end, double thickness, int segments);
 tRectangle render_text(tArea area, tRectangle rectangle, char * text);
 bool preload_glyph_textures(const char * fontPath, double fontSize);
-double get_text_width(char * text, double targetHeight);
-double largest_text_width(int numItems, char ** text, double targetHeight);
+double get_text_width(char * text, double targetHeight, tCache useCache);
+double largest_text_width(int numItems, char ** text, double targetHeight, tCache useCache);
 void free_textures(void);
 double value_to_angle(uint32_t value, uint32_t range);
 double get_scroll_bar_percent(double scrollBar, double renderSize);

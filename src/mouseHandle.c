@@ -1776,7 +1776,7 @@ bool handle_context_menu_click(tCoord coord) {
     uint32_t columns     = (gContextMenu.columns > 1) ? gContextMenu.columns : 1;
 
     for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
-        size = get_text_width(gContextMenu.items[i].label, itemHeight);
+        size = get_text_width(gContextMenu.items[i].label, itemHeight, eNoCache);
 
         if (size > largestSize) {
             largestSize = size;

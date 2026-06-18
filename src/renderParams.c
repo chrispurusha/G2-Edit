@@ -775,7 +775,7 @@ tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangl
     if (paramLocationList[paramRef].colourMap != NULL) {
         buttonBackgroundColour = paramLocationList[paramRef].colourMap[(int)paramValue];
     }
-    return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight), textHeight}}, strMap[(int)paramValue], buttonBackgroundColour);
+    return draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(paramLocationList[paramRef].range, strMap, textHeight, eCache), textHeight}}, strMap[(int)paramValue], buttonBackgroundColour);
 }
 
 tRectangle render_paramType1Bypass(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {

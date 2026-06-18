@@ -423,7 +423,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
                 int        page          = knobIdx / 24;
                 int        bank          = (knobIdx % 24) / 8;
                 int        pos           = knobIdx % 8;
-                double     labelWidth    = get_text_width("X X X", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8);
+                double     labelWidth    = get_text_width("X X X", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8, eCache);
                 tRectangle labelRect     = {{rectangle.coord.x + (rectangle.size.w - labelWidth) / 2.0,
                     rectangle.coord.y + rectangle.size.h + 2.0},
                     {labelWidth,                                               (double)STANDARD_TEXT_HEIGHT * 0.8}};
@@ -473,7 +473,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             //    set_rgb_colour(RGB_BACKGROUND_GREY);
             //}
 
-            module->mode[modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight), textHeight}}, strMap[modeValue], RGB_BACKGROUND_GREY);
+            module->mode[modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight, eCache), textHeight}}, strMap[modeValue], RGB_BACKGROUND_GREY);
             break;
         }
         default:
@@ -578,7 +578,7 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
                 textRectangle.coord.y += STANDARD_TEXT_HEIGHT;
                 break;
             case labelLocLeft:
-                textRectangle.coord.x -= (get_text_width((char *)connectorLocationList[connectorListIndex].label, textRectangle.size.h) + 2);
+                textRectangle.coord.x -= (get_text_width((char *)connectorLocationList[connectorListIndex].label, textRectangle.size.h, eCache) + 2);
                 textRectangle.coord.y += 2;
                 break;
             case labelLocRight:
@@ -770,7 +770,7 @@ void render_module(tModule * module) {
         // Highlight the drag area to show edit mode
         set_rgb_colour(RGB_WHITE);
         render_rectangle(moduleArea, {{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3},
-                             {get_text_width(LONGEST_MODULE_NAME, STANDARD_BUTTON_TEXT_HEIGHT) + 5, STANDARD_BUTTON_TEXT_HEIGHT + 2}});
+                             {get_text_width(LONGEST_MODULE_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache) + 5, STANDARD_BUTTON_TEXT_HEIGHT + 2}});
 
         set_rgba_colour(RGBA_BLACK_ON_TRANSPARENT);
         render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0},

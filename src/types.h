@@ -875,5 +875,10 @@ typedef struct {
     tRectangle perfSortModeInc;
 } tSettingsPanelRects;
 
+typedef enum {
+    eNoCache,
+    eCache,
+} tCache;
+
 #endif // __TYPES_H__
 

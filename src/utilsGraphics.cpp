@@ -949,21 +949,41 @@ double get_char_width(char ch, double targetHeight) {
     return width * scaleVal;
 }
 
-double get_text_width(char * text, double targetHeight) {
+double get_text_width(char * text, double targetHeight, tCache useCache) {
     if (text == NULL) {
         return 0.0;
     }
-    double       width = 0.0;
-    const char * ch    = text;
+    static const int kCacheSize = 64;
+    static struct {
+        char * text;
+        double height;
+        double width;
+    }                cache[64]  = {};
+    static int       cacheCount = 0;
+
+    if (useCache == eCache) {
+        for (int i = 0; i < cacheCount; i++) {
+            if ((cache[i].text == text) && (cache[i].height == targetHeight)) {
+                return cache[i].width;
+            }
+        }
+    }
+    double           width      = 0.0;
+    const char *     ch         = text;
 
     while (*ch) {
         width += get_char_width(*ch, targetHeight);
         ch++;
     }
+
+    if ((useCache == eCache) && (cacheCount < kCacheSize)) {
+        cache[cacheCount] = {text, targetHeight, width};
+        cacheCount++;
+    }
     return width;
 }
 
-double largest_text_width(int numItems, char ** text, double targetHeight) {
+double largest_text_width(int numItems, char ** text, double targetHeight, tCache useCache) {
     if (text == NULL) {
         return 0.0;
     }
@@ -972,7 +992,7 @@ double largest_text_width(int numItems, char ** text, double targetHeight) {
     double maxSize = 0;
 
     for (i = 0; i < numItems; i++) {
-        size = get_text_width(text[i], targetHeight);
+        size = get_text_width(text[i], targetHeight, useCache);
 
         if (size > maxSize) {
             maxSize = size;
