@@ -1334,7 +1334,7 @@ static int send_get_assigned_voices(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_SET_ASSIGNED_VOICES);
+    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_GET_ASSIGNED_VOICES);
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
