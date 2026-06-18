@@ -26,22 +26,20 @@ extern "C" {
 #include "msgQueue.h"
 
 int msgqueue_sem_trywait(tMessageQueue * queue) {
-    errno = 0;
+    int retVal = 0;
 
+    errno = 0;
     pthread_mutex_lock(&queue->semMutex);
 
-    // Check if the semaphore has a positive count
     if (queue->semCount <= 0) {
-        // No resources available. Unlock and mimic POSIX sem_trywait behaviour
-        pthread_mutex_unlock(&queue->semMutex);
-        errno = EAGAIN;
-        return -1;
+        errno  = EAGAIN;
+        retVal = -1;
+    } else {
+        queue->semCount--;
     }
-    // Resource acquired successfully
-    queue->semCount--;
-
     pthread_mutex_unlock(&queue->semMutex);
-    return 0;
+
+    return retVal;
 }
 
 void msgqueue_sem_wait(tMessageQueue * queue) {
@@ -79,6 +77,7 @@ void msg_init(tMessageQueue * msgQueue, char * semName) {
 int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageContent) {
     int        retVal      = EXIT_FAILURE;
     tMessage * oldMsgQueue = NULL;
+    bool       proceed     = true;
 
     if (msgQueue == NULL) {
         LOG_DEBUG("msgQueue==NULL\n");
@@ -98,34 +97,33 @@ int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageCon
         case eRcvPoll:
 
             if (msgqueue_sem_trywait(msgQueue) == -1) {
-                if (errno == EAGAIN) {       // Semaphore is not available, no messages
-                    return retVal;
+                if (errno != EAGAIN) {
+                    perror("sem_trywait failed");
                 }
-                perror("sem_trywait failed");
-                return retVal;
+                proceed = false;
             }
             break;
     }
-    pthread_mutex_lock(&msgQueue->mutex);
 
-    if (msgQueue->head != NULL) {
-        // Copy the content from the head message to the provided messageContent
-        memcpy(messageContent, &(msgQueue->head->messageContent), sizeof(*messageContent));
+    if (proceed) {
+        pthread_mutex_lock(&msgQueue->mutex);
 
-        oldMsgQueue    = msgQueue->head;
-        msgQueue->head = msgQueue->head->nextMessage;
+        if (msgQueue->head != NULL) {
+            memcpy(messageContent, &(msgQueue->head->messageContent), sizeof(*messageContent));
+            oldMsgQueue    = msgQueue->head;
+            msgQueue->head = msgQueue->head->nextMessage;
 
-        // If the queue becomes empty, reset the tail pointer as well
-        if (msgQueue->head == NULL) {
-            msgQueue->tail = NULL;
+            if (msgQueue->head == NULL) {
+                msgQueue->tail = NULL;
+            }
+            retVal         = EXIT_SUCCESS;
         }
-        retVal         = EXIT_SUCCESS; // Return success when message is processed
-    }
-    pthread_mutex_unlock(&msgQueue->mutex);
+        pthread_mutex_unlock(&msgQueue->mutex);
 
-    if (oldMsgQueue != NULL) {
-        memset(oldMsgQueue, 0, sizeof(*oldMsgQueue));     // Clear the memory
-        free(oldMsgQueue);                                // Free the message
+        if (oldMsgQueue != NULL) {
+            memset(oldMsgQueue, 0, sizeof(*oldMsgQueue));
+            free(oldMsgQueue);
+        }
     }
     return retVal;
 }
@@ -137,31 +135,27 @@ void msg_send(tMessageQueue * msgQueue, tMessageContent * messageContent) {
         LOG_DEBUG("msgQueue==NULL\n");
         return;
     }
-    // Allocate memory for the new message
     message = malloc(sizeof(tMessage));
 
-    if (message == NULL) {
-        LOG_DEBUG("Memory allocation failed for message\n");
-        return;         // Memory allocation failure
-    }
-    memset(message, 0, sizeof(tMessage));
+    if (message != NULL) {
+        memset(message, 0, sizeof(tMessage));
+        memcpy(&(message->messageContent), messageContent, sizeof(message->messageContent));
 
-    // Copy the message content to the new message
-    memcpy(&(message->messageContent), messageContent, sizeof(message->messageContent));
+        pthread_mutex_lock(&msgQueue->mutex);
 
-    pthread_mutex_lock(&msgQueue->mutex);
+        if (msgQueue->tail == NULL) {
+            msgQueue->head = message;
+            msgQueue->tail = message;
+        } else {
+            msgQueue->tail->nextMessage = message;
+            msgQueue->tail              = message;
+        }
+        pthread_mutex_unlock(&msgQueue->mutex);
 
-    // If the queue is empty, set both head and tail to the new message
-    if (msgQueue->tail == NULL) {
-        msgQueue->head = message;
-        msgQueue->tail = message;
+        msgqueue_sem_send(msgQueue);
     } else {
-        msgQueue->tail->nextMessage = message;
-        msgQueue->tail              = message; // Move the tail pointer to the new last message
+        LOG_DEBUG("Memory allocation failed for message\n");
     }
-    pthread_mutex_unlock(&msgQueue->mutex);
-
-    msgqueue_sem_send(msgQueue);
 }
 
 int msg_count(tMessageQueue * msgQueue) {
