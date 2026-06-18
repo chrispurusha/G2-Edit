@@ -96,6 +96,8 @@ extern tResourceAlloc      gResourceAlloc[MAX_SLOTS];
 extern tRectangle          gHideAllCablesRect;
 extern tRectangle          gTransparentCablesRect;
 extern tRectangle          gPatchNotesButtonRect;
+extern tRectangle          gPatchNotesCloseRect;
+extern tRectangle          gPatchNotesDiscardRect;
 extern tRectangle          gPatchNameRectangle;
 extern tRectangle          gPatchTypeRectangle;
 extern tRectangle          gVoiceCountRectangle;

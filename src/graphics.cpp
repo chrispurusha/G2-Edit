@@ -838,7 +838,7 @@ static void check_action_flags(void) {
 static double render_spin(double x, double y, double btnH,
                           const char * valStr, const char * widestVal,
                           tRectangle * decRect, tRectangle * incRect) {
-    *decRect = draw_button(mainArea, {{x, y}, {get_text_width((char *)"-", btnH) + 4.0, btnH}},
+    *decRect = draw_button(mainArea, {{x, y}, {get_text_width((char *)"+", btnH) + 4.0, btnH}},
                            "-", (tRgb)RGB_BACKGROUND_GREY);
     x       += decRect->size.w + 3.0;
     set_rgb_colour(RGB_BLACK);
@@ -1059,22 +1059,29 @@ static void render_patch_notes_edit(void) {
     render_rectangle_with_border(mainArea, {{boxX, boxY}, {boxW, boxH}});
 
     // Title bar
+    double btnH         = STANDARD_BUTTON_TEXT_HEIGHT;
     set_rgb_colour(RGB_GREY_3);
     render_rectangle(mainArea, {{boxX, boxY}, {boxW, titleH}});
     set_rgb_colour(RGB_BLACK);
     render_text(mainArea, {{boxX + margin, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Patch Notes");
 
-    // Character count on the right of the title bar
+    // Character count
     snprintf(countBuf, sizeof(countBuf), "%zu / %d", strlen(gPatchNotesEdit.buffer), PATCH_NOTES_SIZE);
     set_rgb_colour(RGB_GREY_9);
-    render_text(mainArea, {{boxX + boxW - 80.0, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, countBuf);
+    render_text(mainArea, {{boxX + boxW / 2.0 - 30.0, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, countBuf);
+
+    // Close button in title bar
+    gPatchNotesCloseRect = draw_button(mainArea,
+                                       {{boxX + boxW - (get_text_width((char *)"Close", btnH) + 4.0) - 4.0, boxY + (titleH - btnH) / 2.0},
+                                           {get_text_width((char *)"Close", btnH) + 4.0, btnH}},
+                                       (char *)"Close", RGB_BACKGROUND_GREY);
 
     // Cache geometry for click-to-cursor and keyboard navigation
-    gNoteTextX      = textX;
-    gNoteTextY0     = textY0;
-    gNoteLineH      = lineH;
-    gNoteTextW      = textW;
-    gNoteTextHParam = STANDARD_TEXT_HEIGHT;
+    gNoteTextX           = textX;
+    gNoteTextY0          = textY0;
+    gNoteLineH           = lineH;
+    gNoteTextW           = textW;
+    gNoteTextHParam      = STANDARD_TEXT_HEIGHT;
 
     build_note_visual_lines(gPatchNotesEdit.buffer, textW, STANDARD_TEXT_HEIGHT);
 
@@ -1133,12 +1140,19 @@ static void render_patch_notes_edit(void) {
         }
     }
 
-    // Hint bar
+    // Bottom bar: Discard Edits button + hint text
     set_rgb_colour(RGB_GREY_3);
     render_rectangle(mainArea, {{boxX, boxY + boxH - hintH}, {boxW, hintH}});
+
+    double btnY = boxY + boxH - hintH + (hintH - btnH) / 2.0;
+    double btnX = boxX + margin;
+    gPatchNotesDiscardRect = draw_button(mainArea,
+                                         {{btnX, btnY}, {get_text_width((char *)"Discard Edits", btnH) + 4.0, btnH}},
+                                         (char *)"Discard Edits", RGB_BACKGROUND_GREY);
+    btnX                  += gPatchNotesDiscardRect.size.w + 12.0;
     set_rgb_colour(RGB_BLACK);
-    render_text(mainArea, {{boxX + margin, boxY + boxH - hintH + 3.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}},
-                "Arrows/Click=move   Enter=newline   Ctrl+Enter=save   Esc=cancel");
+    render_text(mainArea, {{btnX, boxY + boxH - hintH + 3.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}},
+                "Arrows/Click=move   Enter=newline   Esc=close without saving");
 }
 
 int note_editor_cursor_move_line(int cursorPos, int delta) {

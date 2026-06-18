@@ -2055,13 +2055,35 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
     if (gPatchNotesEdit.active) {
         if (mouseButton == mouseButtonLeftDown) {
-            int newPos = note_editor_cursor_from_click(coord.x, coord.y);
+            if (within_rectangle(coord, gPatchNotesCloseRect)) {
+                size_t          len     = strlen(gPatchNotesEdit.buffer);
+                uint32_t        newSize = (uint32_t)len;
 
-            if (newPos >= 0) {
-                gPatchNotesEdit.cursorPos = (uint32_t)newPos;
+                if (newSize > PATCH_NOTES_SIZE) {
+                    newSize = PATCH_NOTES_SIZE;
+                }
+                memcpy(gPatchNotes[gPatchNotesEdit.slot], gPatchNotesEdit.buffer, newSize);
+                gPatchNotes[gPatchNotesEdit.slot][newSize] = '\0';
+                gPatchNotesSize[gPatchNotesEdit.slot]      = newSize;
+                gPatchNotesEdit.active                     = false;
+                tMessageContent msg     = {0};
+                msg.cmd                                    = eMsgCmdWritePatch;
+                msg.slot                                   = gPatchNotesEdit.slot;
+                msg_send(&gCommandQueue, &msg);
+            } else if (within_rectangle(coord, gPatchNotesDiscardRect)) {
+                size_t origLen = strlen(gPatchNotesEdit.original);
+                memset(gPatchNotesEdit.buffer, 0, sizeof(gPatchNotesEdit.buffer));
+                memcpy(gPatchNotesEdit.buffer, gPatchNotesEdit.original, origLen);
+                gPatchNotesEdit.cursorPos = (uint32_t)origLen;
             } else {
-                gPatchNotesEdit.active = false;
-                noteEditDismissed      = true;
+                int newPos = note_editor_cursor_from_click(coord.x, coord.y);
+
+                if (newPos >= 0) {
+                    gPatchNotesEdit.cursorPos = (uint32_t)newPos;
+                } else {
+                    gPatchNotesEdit.active = false;
+                    noteEditDismissed      = true;
+                }
             }
         }
         atomic_store(&gReDraw, true);
@@ -2325,6 +2347,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     gPatchNotesEdit.cursorPos = gPatchNotesSize[slot];
                     memset(gPatchNotesEdit.buffer, 0, sizeof(gPatchNotesEdit.buffer));
                     memcpy(gPatchNotesEdit.buffer, gPatchNotes[slot], gPatchNotesSize[slot]);
+                    memset(gPatchNotesEdit.original, 0, sizeof(gPatchNotesEdit.original));
+                    memcpy(gPatchNotesEdit.original, gPatchNotes[slot], gPatchNotesSize[slot]);
                     found                     = true;
                 }
             }
