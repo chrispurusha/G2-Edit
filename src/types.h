@@ -825,6 +825,7 @@ typedef struct {
     uint8_t progChangeSnd;
     uint8_t controllersRcv;
     uint8_t controllersSnd;
+    uint8_t receiveClock;
     uint8_t sendClock;
     uint8_t ignoreExtClock;
     uint8_t tuneCent;         // raw 0-100, centre = 50
@@ -837,6 +838,7 @@ typedef struct {
     uint8_t perfMode;
     uint8_t perfBank;
     uint8_t perfLocation;
+    uint8_t vibratoRate;
 } tSynthSettings;
 
 typedef struct {

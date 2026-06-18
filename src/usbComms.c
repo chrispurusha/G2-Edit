@@ -212,7 +212,10 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     gSynthSettings.controllersRcv    = read_bit_stream(buff, &bitPos, 1);
     gSynthSettings.controllersSnd    = read_bit_stream(buff, &bitPos, 1);
 
-    gSynthSettings.sendClock         = read_bit_stream(buff, &bitPos, 8); // Is (bit 1) ignore ext clock (bit 2)
+    read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.sendClock         = read_bit_stream(buff, &bitPos, 1); // Is (bit 1) ignore ext clock (bit 2)
+    gSynthSettings.receiveClock         = read_bit_stream(buff, &bitPos, 1); // Is (bit 1) ignore ext clock (bit 2)
+    read_bit_stream(buff, &bitPos, 5);
 
     // TODO - leave these values without additions and render appropriately instead
     // Signed byte ±50 cents; store offset-encoded (0-100, centre=50)
@@ -226,12 +229,14 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     // Signed byte ±12 semitones; store offset-encoded (0-24, centre=12)
     gSynthSettings.tuneSemi          = (uint8_t)((int8_t)read_bit_stream(buff, &bitPos, 8) + 12);
 
-    read_bit_stream(buff, &bitPos, 8);                                    // vibratoRate - unused
-    gSynthSettings.pedalPolarity     = read_bit_stream(buff, &bitPos, 8); // Bit 0
-    read_bit_stream(buff, &bitPos, 8);                                    // constant (always 1 in write) - unused
+    gSynthSettings.vibratoRate = read_bit_stream(buff, &bitPos, 8);                                    // vibratoRate - unused, but doesn't seem to work
+    gSynthSettings.pedalPolarity     = read_bit_stream(buff, &bitPos, 1); // Bit 0. Next bit is always 1. 1 = closed, 0 = open
+    read_bit_stream(buff, &bitPos, 7);
+    //read_bit_stream(buff, &bitPos, 8);                                    // constant (always 1 in write) - unused
     gSynthSettings.pedalGain         = read_bit_stream(buff, &bitPos, 8);
 
-
+    LOG_DEBUG("Name=%s\n",
+              gSynthSettings.name);
     LOG_DEBUG("MIDI chan A=%u B=%u C=%u D=%u Global=%u SysexID=%u\n",
               gSynthSettings.midiChanSlot[0], gSynthSettings.midiChanSlot[1],
               gSynthSettings.midiChanSlot[2], gSynthSettings.midiChanSlot[3],
@@ -240,13 +245,25 @@ static int parse_synth_settings(uint8_t * buff, int length) {
               gSynthSettings.localOn, gSynthSettings.memoryProtect,
               gSynthSettings.progChangeRcv, gSynthSettings.progChangeSnd,
               gSynthSettings.controllersRcv, gSynthSettings.controllersSnd);
-    LOG_DEBUG("SendClock=%u IgnoreExt=%u TuneCent=%u TuneSemi=%u OctShift=%u ShiftActive=%u\n",
-              gSynthSettings.sendClock, gSynthSettings.ignoreExtClock,
+    LOG_DEBUG("SendClock=%u ReceiveClock=%u IgnoreExt=%u TuneCent=%u TuneSemi=%u OctShift=%u ShiftActive=%u\n",
+              gSynthSettings.sendClock, gSynthSettings.receiveClock, gSynthSettings.ignoreExtClock,
               gSynthSettings.tuneCent, gSynthSettings.tuneSemi,
               gSynthSettings.globalOctaveShift, gSynthSettings.globalShiftActive);
-    LOG_DEBUG("PedalPol=%u PedalGain=%u PerfMode=%u PerfBank=%u PerfLoc=%u\n",
+    LOG_DEBUG("PedalPol=%u PedalGain=%u PerfMode=%u PerfBank=%u PerfLoc=%u VibratoRate=%u\n",
               gSynthSettings.pedalPolarity, gSynthSettings.pedalGain,
-              gSynthSettings.perfMode, gSynthSettings.perfBank, gSynthSettings.perfLocation);
+              gSynthSettings.perfMode, gSynthSettings.perfBank, gSynthSettings.perfLocation, gSynthSettings.vibratoRate);
+    
+    {
+        static uint8_t prevBuff[64] = {0};
+        printf("synth settings change!\n");
+        for (int i=4; i<26; i++) {
+            if (buff[i] != prevBuff[i]) {
+                prevBuff[i] = buff[i];
+                printf("%d 0x%02x %u\n", i, buff[i], buff[i]);
+            }
+        }
+        printf("\n");
+    }
 
     return EXIT_SUCCESS;
 }
@@ -1893,7 +1910,7 @@ static int send_synth_settings(void) {
     uint32_t bitPos                  = 0;
     uint8_t  payload[64]             = {0};
     uint8_t ch = 0;
-    int i = 0;
+    uint32_t i = 0;
 
     //write_bit_stream(payload, &bitPos, 8, SUB_COMMAND_SET_SYNTH_SETTINGS); // type byte
 
@@ -1931,11 +1948,14 @@ static int send_synth_settings(void) {
 
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.sendClock);
     write_bit_stream(payload, &bitPos, 8, (uint8_t)((int)gSynthSettings.tuneCent - 50));
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.globalShiftActive & 0x01);
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.globalShiftActive);
     write_bit_stream(payload, &bitPos, 8, (uint8_t)((int)gSynthSettings.globalOctaveShift - 2));
     write_bit_stream(payload, &bitPos, 8, (uint8_t)((int)gSynthSettings.tuneSemi - 12));
-    write_bit_stream(payload, &bitPos, 8, 0);        // filler
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.pedalPolarity & 0x01);
+    
+    write_bit_stream(payload, &bitPos, 8, 0);        // filler - possibly should be vibrato rate, but doesn't seem to work
+    write_bit_stream(payload, &bitPos, 1, gSynthSettings.pedalPolarity);
+    write_bit_stream(payload, &bitPos, 1, 1);
+    write_bit_stream(payload, &bitPos, 6, 0);
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.pedalGain);
     
     for (i = 0; i< 16; i++) {
