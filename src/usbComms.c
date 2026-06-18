@@ -2080,6 +2080,7 @@ static int send_init_sequence_push(void) {
 
     send_init();
     send_stop();
+    send_synth_settings();
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         if (push_slot_to_device(slot) != EXIT_SUCCESS) {
@@ -2087,6 +2088,13 @@ static int send_init_sequence_push(void) {
             return EXIT_FAILURE;
         }
     }
+
+    // TODO - Maybe if/when we can write some of these items, we send data from the editor
+    send_get_midi_cc();
+    send_get_performance_settings();
+    send_get_assigned_voices();
+    send_get_global_knobs();
+    send_get_master_clock();
 
     send_start();
 
