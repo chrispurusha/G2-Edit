@@ -904,30 +904,32 @@ void render_morph_groups(void) {
                 } else {
                     dialColour = RGB_GREY_3;
                 }
-                module.param[variation][i].rectangle              = render_dial_with_text(mainArea, {{rectangle.coord.x, rectangle.coord.y + 6}, {rectangle.size.w, rectangle.size.h}}, NULL, buff, module.param[variation][i].value, 128, module.param[variation][i].morphRange[gMorphGroupFocus], dialColour);
+                module.param[variation][i].rectangle = render_dial_with_text(mainArea, {{rectangle.coord.x, rectangle.coord.y + 16}, {rectangle.size.w, rectangle.size.h}}, NULL, buff, module.param[variation][i].value, 128, module.param[variation][i].morphRange[gMorphGroupFocus], dialColour);
 
-                textHeight                                        = rectangle.size.h / 4.0;
-
-                if (  gParamNameEdit.active
-                   && gParamNameEdit.moduleKey.slot == module.key.slot
-                   && gParamNameEdit.moduleKey.location == module.key.location
-                   && gParamNameEdit.moduleKey.index == module.key.index
-                   && gParamNameEdit.paramIndex == (i + NUM_MORPHS)) {
-                    char editBuf[PROTOCOL_PARAM_NAME_SIZE + 2] = {0};
-                    snprintf(editBuf, sizeof(editBuf), "%s|", gParamNameEdit.buffer);
-                    gMorphLabelRect[i] = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, editBuf, RGB_WHITE);
-                } else {
-                    gMorphLabelRect[i] = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, RGB_BACKGROUND_GREY);
-                }
+                textHeight                           = rectangle.size.h / 4.0;
 
                 if (module.param[variation][i + NUM_MORPHS].value != 0) {
                     snprintf(label, sizeof(label), "%s", morphStrMap[i]);
+                    gMorphLabelRect[i]                                = NULL_RECTANGLE;
+                    module.param[variation][i + NUM_MORPHS].rectangle = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y + 57}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, RGB_BACKGROUND_GREY);
                 } else {
-                    snprintf(label, sizeof(label), "Knob");
+                    if (  gParamNameEdit.active
+                       && gParamNameEdit.moduleKey.slot == module.key.slot
+                       && gParamNameEdit.moduleKey.location == module.key.location
+                       && gParamNameEdit.moduleKey.index == module.key.index
+                       && gParamNameEdit.paramIndex == (i + NUM_MORPHS)) {
+                        char editBuf[PROTOCOL_PARAM_NAME_SIZE + 2] = {0};
+                        snprintf(editBuf, sizeof(editBuf), "%s|", gParamNameEdit.buffer);
+                        gMorphLabelRect[i] = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y + 57}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, editBuf, RGB_WHITE);
+                    } else {
+                        if (label[0] == '\0') {
+                            snprintf(label, sizeof(label), "Knob");
+                        }
+                        gMorphLabelRect[i] = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y + 57}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, RGB_BACKGROUND_GREY);
+                    }
+                    module.param[variation][i + NUM_MORPHS].rectangle = gMorphLabelRect[i];
                 }
-                module.param[variation][i + NUM_MORPHS].rectangle = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y + 57}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, RGB_BACKGROUND_GREY);
-
-                rectangle.coord.x                                += (STANDARD_TEXT_HEIGHT * 4) + 5;
+                rectangle.coord.x += (STANDARD_TEXT_HEIGHT * 4) + 5;
             }
 
             write_module(module.key, &module);
