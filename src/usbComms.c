@@ -1543,13 +1543,19 @@ static int send_set_module_colour(uint32_t slot, uint32_t location,
                                   uint32_t moduleIndex, uint32_t colour) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
+    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_MODULE_COLOUR);
     buff[pos++] = (uint8_t)location;
     buff[pos++] = (uint8_t)moduleIndex;
     buff[pos++] = (uint8_t)colour;
+    retVal      = send_message(buff, pos);
 
-    return send_message(buff, pos);
+    if (retVal == EXIT_SUCCESS) {
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        LOG_DEBUG("SET MODULE COLOUR RESPONSE\n");
+    }
+    return retVal;
 }
 
 // ---------------------------------------------------------------------------
@@ -2153,7 +2159,7 @@ static int send_write_data(tMessageContent * messageContent) {
         {
             int avail   = 0;
             int written = 0;
-            
+
             LOG_DEBUG("Writing module\n");
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
@@ -2167,18 +2173,18 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.colour;
             buff[pos++] = messageContent->moduleData.upRate;
             buff[pos++] = messageContent->moduleData.isLed;
-            
+
             for (int i = 0; i < messageContent->moduleData.modeCount; i++) {
                 buff[pos++] = messageContent->moduleData.mode[i];
             }
-            
-            avail   = SEND_MESSAGE_SIZE - pos;
-            written = snprintf((char *)&buff[pos], avail, "%s", messageContent->moduleData.name);
-                
-            pos += ((written >= 0) && (written < avail)) ? written + 1 : avail;
-            
+
+            avail       = SEND_MESSAGE_SIZE - pos;
+            written     = snprintf((char *)&buff[pos], avail, "%s", messageContent->moduleData.name);
+
+            pos        += ((written >= 0) && (written < avail)) ? written + 1 : avail;
+
             retVal      = send_message(buff, pos);
-            
+
             if (retVal == EXIT_SUCCESS) {
                 retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
                 LOG_DEBUG("WRITE MODULE RESPONSE\n");
