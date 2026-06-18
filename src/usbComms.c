@@ -1622,19 +1622,21 @@ static int send_get_knob_snapshot(uint32_t slot) {
 
 // Fetch patch data for a single slot. Synth must be stopped before calling.
 static int send_get_patch_data(uint32_t slot) {
+    int retVal = EXIT_SUCCESS;
+
     clear_slot_data(slot);
 
-    send_get_patch_version(slot);
-    send_get_patch(slot);
-    send_get_patch_name(slot);
-    send_get_current_note(slot);
-    send_get_patch_notes(slot);
-    send_get_resources_used(slot, locationVa);
-    send_get_resources_used(slot, locationFx);
-    send_get_knob_snapshot(slot);
-    send_get_selected_param(slot);
+    retVal |= send_get_patch_version(slot);
+    retVal |= send_get_patch(slot);
+    retVal |= send_get_patch_name(slot);
+    retVal |= send_get_current_note(slot);
+    retVal |= send_get_patch_notes(slot);
+    retVal |= send_get_resources_used(slot, locationVa);
+    retVal |= send_get_resources_used(slot, locationFx);
+    retVal |= send_get_knob_snapshot(slot);
+    retVal |= send_get_selected_param(slot);
 
-    return EXIT_SUCCESS;
+    return retVal;
 }
 
 // ---------------------------------------------------------------------------
@@ -1975,20 +1977,25 @@ static int send_set_patch_descr(uint32_t slot) { // Note - currently using value
 
 // Core resync: stop, fetch all perf+patch data, restart.
 // Called both on explicit request and on G2-initiated perf mode changes.
-static void reload_all_patch_data(void) {
-    send_stop();
-    send_get_midi_cc();
-    send_select_slot(0);
-    send_get_performance_settings();
+static int reload_all_patch_data(void) {
+    int      retVal = EXIT_SUCCESS;
+    uint32_t slot   = 0;
 
-    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-        send_get_patch_data(slot);
+    retVal |= send_stop();
+    retVal |= send_get_midi_cc();
+    retVal |= send_select_slot(0);
+    retVal |= send_get_performance_settings();
+
+    for (slot = 0; slot < MAX_SLOTS; slot++) {
+        retVal |= send_get_patch_data(slot);
     }
 
-    send_get_assigned_voices();
-    send_get_global_knobs();
-    send_get_master_clock();
-    send_start();
+    retVal |= send_get_assigned_voices();
+    retVal |= send_get_global_knobs();
+    retVal |= send_get_master_clock();
+    retVal |= send_start();
+
+    return retVal;
 }
 
 // First connection: G2 is authoritative — pull all patch data from hardware.
@@ -2284,13 +2291,12 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdWritePatch:
         {
             send_stop();
-            push_slot_to_device(messageContent->slot);
+            retVal = push_slot_to_device(messageContent->slot);
             send_start();
 
             atomic_store(&gotPatchChangeIndication, false); // TODO - consider if this is the right thing to do here
             call_full_patch_change_notify();                // TODO - not sure we need to do this here
             call_wake_glfw();
-            retVal = EXIT_SUCCESS;
             break;
         }
 
