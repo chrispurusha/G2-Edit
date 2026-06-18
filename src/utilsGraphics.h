@@ -69,5 +69,7 @@ double calc_scroll_x(void);
 double calc_scroll_y(void);
 tRectangle rectangle_scale_from_percent(tRectangle rectangle);
 double scale_from_percent(double val);
+tRectangle render_dial(tArea area, tRectangle rectangle, uint32_t value, uint32_t range, uint32_t morphRange, tRgb colour);
+tRectangle render_dial_with_text(tArea area, tRectangle rectangle, char * label, char * buff, uint32_t value, uint32_t range, uint32_t morphRange, tRgb colour);
 
 #endif // __UTILS_GRAPHICS_H__

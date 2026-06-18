@@ -1217,6 +1217,76 @@ tRectangle rectangle_scale_from_percent(tRectangle rectangle) {
 #define X_POS_FROM_PERCENT(x)    ((MODULE_WIDTH * (double)x) / 100.0)
 #define Y_POS_FROM_PERCENT(x)    ((MODULE_HEIGHT * (double)x) / 100.0)
 
+tRectangle render_dial(tArea area, tRectangle rectangle, uint32_t value, uint32_t range, uint32_t morphRange, tRgb colour) {
+    double  angle            = 0.0;
+    double  morphAngle       = 0.0;
+    double  radius           = 0.0;
+    double  x                = 0;
+    double  y                = 0;
+    int32_t signedMorphRange = 0;
+    int32_t signedValue      = 0;
+    int32_t morphPos         = 0;
+
+    radius = (rectangle.size.w / 2.0);
+    x      = rectangle.coord.x + radius;
+    y      = rectangle.coord.y + radius;
+    angle  = value_to_angle(value, range);
+
+    if (morphRange == 0) {
+        set_rgb_colour(colour);
+    } else {
+        set_rgb_colour(RGB_ORANGE_2);
+    }
+    render_circle_part_angle(area, {x, y}, radius, 0.0, 360.0, 25);
+
+    if (morphRange != 0) {
+        signedValue = (int32_t)value;
+
+        if (morphRange < 128) {
+            signedMorphRange = (int32_t)morphRange;
+        } else {
+            signedMorphRange = (int32_t)morphRange - 256;
+        }
+        morphPos    = signedValue + signedMorphRange;
+
+        if (morphPos < 0) {
+            morphPos = 0;
+        } else if (morphPos > (int32_t)(range - 1)) {
+            morphPos = range - 1;
+        }
+        morphAngle  = value_to_angle((uint32_t)morphPos, range);
+        set_rgb_colour(RGB_ORANGE_1);
+
+        if (morphAngle > angle) {
+            render_circle_part_angle(area, {x, y}, radius, angle, morphAngle, 25);
+        } else {
+            render_circle_part_angle(area, {x, y}, radius, morphAngle, angle, 25);
+        }
+    }
+    set_rgb_colour(RGB_BLACK);
+    render_radial_line(area, {x, y}, radius, angle, 2.0);
+    set_rgb_colour(RGB_BLACK);
+    return render_circle_line(area, {x, y}, radius, 25, 1.0);
+}
+
+tRectangle render_dial_with_text(tArea area, tRectangle rectangle, char * label, char * buff, uint32_t value, uint32_t range, uint32_t morphRange, tRgb colour) {
+    double textHeight  = rectangle.size.h / 4.0;
+    double dialOffsetY = 0.0;
+
+    set_rgb_colour(RGB_BLACK);
+
+    if (label != NULL) {
+        render_text(area, {{rectangle.coord.x, rectangle.coord.y + dialOffsetY}, {BLANK_SIZE, textHeight}}, label);
+        dialOffsetY += textHeight;
+    }
+
+    if (buff != NULL) {
+        render_text(area, {{rectangle.coord.x, rectangle.coord.y + dialOffsetY}, {BLANK_SIZE, textHeight}}, buff);
+        dialOffsetY += textHeight;
+    }
+    return render_dial(area, {{rectangle.coord.x, rectangle.coord.y + dialOffsetY}, {rectangle.size.w, rectangle.size.w}}, value, range, morphRange, colour);
+}
+
 #ifdef __cplusplus
 }
 #endif
