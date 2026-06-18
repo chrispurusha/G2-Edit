@@ -26,8 +26,10 @@ extern "C" {
 
 static pthread_mutex_t dbMutex             = {0};
 static tModule *       firstModule         = NULL;
+static tModule *       lastModule          = NULL;
 static tModule *       walkModule          = NULL;
 static tCable *        firstCable          = NULL;
+static tCable *        lastCable           = NULL;
 static tCable *        walkCable           = NULL;
 static int32_t         moduleWalkNestCount = 0;
 static int32_t         cableWalkNestCount  = 0;
@@ -117,8 +119,7 @@ bool read_module(tModuleKey key, tModule * module) {
 }
 
 void write_module(tModuleKey key, tModule * module) {
-    tModule * dbModule      = NULL;
-    tModule * iterateModule = NULL;
+    tModule * dbModule = NULL;
 
     module->key = key;  // Ensure key is set
 
@@ -137,14 +138,11 @@ void write_module(tModuleKey key, tModule * module) {
 
         if (firstModule == NULL) {
             firstModule = dbModule;
+            lastModule  = dbModule;
         } else {
-            iterateModule       = firstModule;
-
-            while (iterateModule->next != NULL) {
-                iterateModule = iterateModule->next;
-            }
-            iterateModule->next = dbModule;
-            dbModule->prev      = iterateModule;
+            lastModule->next = dbModule;
+            dbModule->prev   = lastModule;
+            lastModule       = dbModule;
         }
     }
 
@@ -181,6 +179,8 @@ void delete_module(tModuleKey key) {
 
         if (dbModule->next != NULL) {
             dbModule->next->prev = dbModule->prev;
+        } else {
+            lastModule = dbModule->prev;
         }
         memset(dbModule, 0, sizeof(*dbModule));  // Protection against using stale data
         free(dbModule);
@@ -290,8 +290,7 @@ bool read_cable(tCableKey key, tCable * cable) {
 }
 
 void write_cable(tCableKey key, tCable * cable) {
-    tCable * dbCable      = NULL;
-    tCable * iterateCable = NULL;
+    tCable * dbCable = NULL;
 
     cable->key = key;
 
@@ -310,14 +309,11 @@ void write_cable(tCableKey key, tCable * cable) {
 
         if (firstCable == NULL) {
             firstCable = dbCable;
+            lastCable  = dbCable;
         } else {
-            iterateCable       = firstCable;
-
-            while (iterateCable->next != NULL) {
-                iterateCable = iterateCable->next;
-            }
-            iterateCable->next = dbCable;
-            dbCable->prev      = iterateCable;
+            lastCable->next = dbCable;
+            dbCable->prev   = lastCable;
+            lastCable       = dbCable;
         }
     }
 
@@ -352,6 +348,8 @@ void delete_cable(tCableKey key) {
 
         if (dbCable->next != NULL) {
             dbCable->next->prev = dbCable->prev;
+        } else {
+            lastCable = dbCable->prev;
         }
         memset(dbCable, 0, sizeof(*dbCable));  // Protection against using stale data
         free(dbCable);
@@ -449,6 +447,7 @@ void database_clear_modules(void) {
         module     = nextModule;
     }
     firstModule = NULL;
+    lastModule  = NULL;
 
     database_mutex_unlock();
 }
@@ -467,6 +466,7 @@ void database_clear_cables(void) {
         cable     = nextCable;
     }
     firstCable = NULL;
+    lastCable  = NULL;
 
     database_mutex_unlock();
 }
