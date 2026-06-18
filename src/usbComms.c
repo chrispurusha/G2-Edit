@@ -171,6 +171,36 @@ static bool open_and_claim_device(void) {
     return true;
 }
 
+static void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, int nameSize) {
+    int i = 0;
+
+    if (nameSize != CLAVIA_NAME_SIZE + 1) {
+        LOG_ERROR("Called with invalid size of %d\n", nameSize);
+        exit(1);
+    }
+    memset(name, 0, nameSize);
+
+    for (i = 0; i < nameSize; i++) {
+        name[i] = (uint8_t)read_bit_stream(buff, bitPos, 8);
+
+        if (name[i] == '\0') {
+            break;
+        }
+    }
+}
+
+static void write_clavia_string(uint8_t * buff, uint32_t * bitPos, const char * name) {
+    int i = 0;
+
+    for (i = 0; i < CLAVIA_NAME_SIZE; i++) {
+        write_bit_stream(buff, bitPos, 8, (uint8_t)name[i]);
+
+        if (name[i] == '\0') {
+            break;
+        }
+    }
+}
+    
 // ---------------------------------------------------------------------------
 // Parsers
 // ---------------------------------------------------------------------------
@@ -181,60 +211,51 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     if (buff == NULL) {
         return EXIT_FAILURE;
     }
+    read_clavia_string(buff, &bitPos, gSynthSettings.name, sizeof(gSynthSettings.name));
 
-    for (int i = 0; i < CLAVIA_NAME_SIZE; i++) {
-        gSynthSettings.name[i] = read_bit_stream(buff, &bitPos, 8);
-
-        if (gSynthSettings.name[i] == '\0') {
-            break;
-        }
-    }
-
-    gSynthSettings.name[CLAVIA_NAME_SIZE] = '\0';
-
-    gSynthSettings.perfMode               = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.perfMode          = read_bit_stream(buff, &bitPos, 1);
     atomic_store(&gPerfMode, gSynthSettings.perfMode);
     read_bit_stream(buff, &bitPos, 5);  // Unused
-    gSynthSettings.patchSortMode          = read_bit_stream(buff, &bitPos, 2);
+    gSynthSettings.patchSortMode     = read_bit_stream(buff, &bitPos, 2);
     read_bit_stream(buff, &bitPos, 6);  // perfSortMode - unused
-    gSynthSettings.perfSortMode           = read_bit_stream(buff, &bitPos, 2);
-    gSynthSettings.perfBank               = read_bit_stream(buff, &bitPos, 8);
-    gSynthSettings.perfLocation           = read_bit_stream(buff, &bitPos, 8);
-    gSynthSettings.memoryProtect          = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.perfSortMode      = read_bit_stream(buff, &bitPos, 2);
+    gSynthSettings.perfBank          = read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.perfLocation      = read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.memoryProtect     = read_bit_stream(buff, &bitPos, 1);
     read_bit_stream(buff, &bitPos, 7);
 
     for (int i = 0; i < 4; i++) {
         gSynthSettings.midiChanSlot[i] = read_bit_stream(buff, &bitPos, 8);
     }
 
-    gSynthSettings.globalChan             = read_bit_stream(buff, &bitPos, 8);
-    gSynthSettings.sysexId                = read_bit_stream(buff, &bitPos, 8);
-    gSynthSettings.localOn                = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.globalChan        = read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.sysexId           = read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.localOn           = read_bit_stream(buff, &bitPos, 1);
     read_bit_stream(buff, &bitPos, 7);
     read_bit_stream(buff, &bitPos, 6);
-    gSynthSettings.progChangeRcv          = read_bit_stream(buff, &bitPos, 1);
-    gSynthSettings.progChangeSnd          = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.progChangeRcv     = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.progChangeSnd     = read_bit_stream(buff, &bitPos, 1);
     read_bit_stream(buff, &bitPos, 6);
 
-    gSynthSettings.controllersRcv         = read_bit_stream(buff, &bitPos, 1);
-    gSynthSettings.controllersSnd         = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.controllersRcv    = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.controllersSnd    = read_bit_stream(buff, &bitPos, 1);
 
     read_bit_stream(buff, &bitPos, 1);
-    gSynthSettings.sendClock              = read_bit_stream(buff, &bitPos, 1);
-    gSynthSettings.receiveClock           = !read_bit_stream(buff, &bitPos, 1); // Note that this one is inverted. Is more of an ignore-external-clock
+    gSynthSettings.sendClock         = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.receiveClock      = !read_bit_stream(buff, &bitPos, 1);      // Note that this one is inverted. Is more of an ignore-external-clock
     read_bit_stream(buff, &bitPos, 5);
 
-    gSynthSettings.tuneCent               = (int8_t)read_bit_stream(buff, &bitPos, 8);
-    gSynthSettings.globalShiftActive      = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.tuneCent          = (int8_t)read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.globalShiftActive = read_bit_stream(buff, &bitPos, 1);
     read_bit_stream(buff, &bitPos, 7);
-    gSynthSettings.globalOctaveShift      = (int8_t)read_bit_stream(buff, &bitPos, 8);
-    gSynthSettings.tuneSemi               = (int8_t)read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.globalOctaveShift = (int8_t)read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.tuneSemi          = (int8_t)read_bit_stream(buff, &bitPos, 8);
 
     read_bit_stream(buff, &bitPos, 8);                                         // vibratoRate - unused, it's a parameter instead
-    gSynthSettings.pedalPolarity          = read_bit_stream(buff, &bitPos, 1); // Bit 0. Next bit is always 1. 1 = closed, 0 = open
+    gSynthSettings.pedalPolarity     = read_bit_stream(buff, &bitPos, 1);      // Bit 0. Next bit is always 1. 1 = closed, 0 = open
     read_bit_stream(buff, &bitPos, 7);
     //read_bit_stream(buff, &bitPos, 8);                                    // constant (always 1 in write) - unused
-    gSynthSettings.pedalGain              = read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.pedalGain         = read_bit_stream(buff, &bitPos, 8);
 
     LOG_DEBUG("Name=%s\n",
               gSynthSettings.name);
@@ -269,24 +290,6 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     }
 
     return EXIT_SUCCESS;
-}
-
-static void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, int nameSize) {
-    int i = 0;
-
-    if (nameSize != CLAVIA_NAME_SIZE + 1) {
-        LOG_ERROR("Called with invalid size of %d\n", nameSize);
-        exit(1);
-    }
-    memset(name, 0, nameSize);
-
-    for (i = 0; i < nameSize; i++) {
-        name[i] = (uint8_t)read_bit_stream(buff, bitPos, 8);
-
-        if (name[i] == '\0') {
-            break;
-        }
-    }
 }
 
 static int parse_performance_settings(uint8_t * buff, int length) {
@@ -1473,18 +1476,6 @@ static int send_get_resources_used(uint32_t slot, tLocation location) {
     return retVal;
 }
 
-static void write_clavia_string(uint8_t * buff, uint32_t * bitPos, const char * name) {
-    int i = 0;
-
-    for (i = 0; i < CLAVIA_NAME_SIZE; i++) {
-        write_bit_stream(buff, bitPos, 8, (uint8_t)name[i]);
-
-        if (name[i] == '\0') {
-            break;
-        }
-    }
-}
-
 static int send_set_module_label(uint32_t slot, tModuleKey moduleKey, const char * name) {
     int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
@@ -1921,20 +1912,9 @@ static int send_synth_settings(void) {
     int      retVal                  = EXIT_FAILURE;
     uint32_t bitPos                  = 0;
     uint8_t  payload[64]             = {0};
-    uint8_t  ch                      = 0;
     uint32_t i                       = 0;
 
-    //write_bit_stream(payload, &bitPos, 8, SUB_COMMAND_SET_SYNTH_SETTINGS); // type byte
-
-    for (i = 0; i < CLAVIA_NAME_SIZE; i++) {
-        write_bit_stream(payload, &bitPos, 8, gSynthSettings.name[i]);   // Todo: name should come from storage
-
-        if (gSynthSettings.name[i] == '\0') {
-            break;
-        }
-    }
-
-    //write_bit_stream(payload, &bitPos, 8, 0);                              // name: null terminator (no name to write)
+    write_clavia_string(payload, &bitPos, gSynthSettings.name);
 
     write_bit_stream(payload, &bitPos, 1, gSynthSettings.perfMode);
     write_bit_stream(payload, &bitPos, 5, 0);
