@@ -171,35 +171,6 @@ static bool open_and_claim_device(void) {
     return true;
 }
 
-static void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, int nameSize) {
-    int i = 0;
-
-    if (nameSize != CLAVIA_NAME_SIZE + 1) {
-        LOG_ERROR("Called with invalid size of %d\n", nameSize);
-        exit(1);
-    }
-    memset(name, 0, nameSize);
-
-    for (i = 0; i < nameSize; i++) {
-        name[i] = (uint8_t)read_bit_stream(buff, bitPos, 8);
-
-        if (name[i] == '\0') {
-            break;
-        }
-    }
-}
-
-static void write_clavia_string(uint8_t * buff, uint32_t * bitPos, const char * name) {
-    int i = 0;
-
-    for (i = 0; i < CLAVIA_NAME_SIZE; i++) {
-        write_bit_stream(buff, bitPos, 8, (uint8_t)name[i]);
-
-        if (name[i] == '\0') {
-            break;
-        }
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Parsers
