@@ -1473,10 +1473,14 @@ static int send_get_resources_used(uint32_t slot, tLocation location) {
 static void write_clavia_string(uint8_t * buff, int * pos, const char * name) {
     int i = 0;
 
-    while (i < CLAVIA_NAME_SIZE && name[i] != '\0') {
-        buff[(*pos)++] = (uint8_t)name[i++];
+    for (i = 0; i < CLAVIA_NAME_SIZE; i++) {
+        buff[*pos] = name[i];
+        (*pos)++;
+
+        if (name[i] == '\0') {
+            break;
+        }
     }
-    buff[(*pos)++] = 0x00;
 }
 
 static int send_set_module_label(uint32_t slot, tModuleKey moduleKey, const char * name) {
