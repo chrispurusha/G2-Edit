@@ -730,15 +730,10 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_GLOBAL_PAGE:
         {
-            LOG_DEBUG("Got global page\n");
-            uint32_t tmpBitPos = *bitPos;
-
-            for (int i = 0; i < length; i++) {
-                LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, bitPos, 8));
-            }
-
-            LOG_DEBUG_DIRECT("\n");
-            *bitPos = tmpBitPos;
+            uint8_t globalPage = 0;
+            
+            globalPage = read_bit_stream(buff, bitPos, 8);
+            LOG_DEBUG("Got global page Page=%u Pos=%u\n", globalPage / 3, globalPage %3);
             return EXIT_SUCCESS;
         }
 
@@ -877,16 +872,10 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_SEL_PARAM_PAGE:
         {
-            uint32_t tmpSubOffset = *bitPos;
-
-            LOG_DEBUG("Got select param page\n");
-
-            for (int i = 0; i < 32; i++) {
-                LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, bitPos, 8));
-            }
-
-            LOG_DEBUG_DIRECT("\n");
-            *bitPos = tmpSubOffset;
+            uint8_t paramPage = 0;
+            
+            paramPage = read_bit_stream(buff, bitPos, 8);
+            LOG_DEBUG("Got param page Page=%u Pos=%u\n", paramPage / 3, paramPage %3);
 
             return EXIT_SUCCESS;
         }
