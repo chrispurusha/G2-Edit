@@ -52,7 +52,7 @@ extern "C" {
 #define USB_EXT_RECV_TIMEOUT_MS     (2000)
 #define USB_INT_RECV_TIMEOUT_MS     (100)
 #define USB_INIT_TIMEOUT_MS         (1000) // Extra headroom during init sequence
-#define USB_KEEPALIVE_INTERVAL_S    (30)   // Send a keepalive if idle for this long
+#define USB_KEEPALIVE_INTERVAL_S    (2)   // macOS suspends USB after ~3s idle; keep well inside that
 
 // Atomic flags for cross-thread signalling
 static _Atomic bool           gotBadConnectionIndication      = false;
@@ -72,8 +72,8 @@ static void                   (*full_patch_change_notify_func_ptr)(void) = NULL;
 static pthread_mutex_t        usbStaticMutex                  = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t        callbackMutex                   = PTHREAD_MUTEX_INITIALIZER;
 
-// Keepalive: timestamp of the last successful outbound USB transfer
-static time_t                 gLastSendTime                   = 0;
+// Keepalive: timestamp of the last successful inbound or outbound USB transfer
+static time_t                 gLastActivityTime               = 0;
 
 // ---------------------------------------------------------------------------
 // Callback registration
@@ -1124,6 +1124,7 @@ static int int_rec(tPoll poll, int expectedResponse) {
 
             if (retVal == LIBUSB_SUCCESS) {
                 if (readLength > 0) {
+                    gLastActivityTime = time(NULL);
                     break;
                 }
             } else if (retVal == LIBUSB_ERROR_TIMEOUT) {
@@ -1233,7 +1234,7 @@ static int send_message(uint8_t * buff, int pos) {
         timeDelta    = get_time_delta();
 
         if ((result == 0) && (actualLength == msgLength)) {
-            gLastSendTime = time(NULL);
+            gLastActivityTime = time(NULL);
             return EXIT_SUCCESS;
         }
 
@@ -1400,8 +1401,9 @@ static int send_get_global_page(void) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
+        static uint32_t count = 0;
         retVal = int_rec(ePollNo, SUB_RESPONSE_GLOBAL_PAGE);
-        LOG_DEBUG("GET GLOBAL PAGE RESPONSE\n");
+        LOG_DEBUG("GET GLOBAL PAGE RESPONSE %u\n", count++);
     }
     return retVal;
 }
@@ -2525,10 +2527,15 @@ static void state_handler(void) {
         return;
     }
 
-    // Keepalive: if no outbound traffic for a while, send a lightweight request
-    if (time(NULL) - gLastSendTime >= USB_KEEPALIVE_INTERVAL_S) {
+    // Keepalive: if no outbound traffic for a while, send a lightweight request.
+    // If the G2 doesn't respond, treat it as a bad connection and force a reconnect.
+    if (time(NULL) - gLastActivityTime >= USB_KEEPALIVE_INTERVAL_S) {
         LOG_DEBUG("USB keepalive\n");
-        send_get_global_page();
+
+        if (send_get_global_page() != EXIT_SUCCESS) {
+            LOG_DEBUG("Keepalive failed — forcing reconnect\n");
+            atomic_store(&gotBadConnectionIndication, true);
+        }
         return;
     }
     // Nothing to do — poll for unsolicited messages (LED, volume, param change)
