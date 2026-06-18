@@ -29,6 +29,7 @@ extern "C" {
 #endif
 
 #include <math.h>
+#include <time.h>
 #include "defs.h"
 #include "types.h"
 #include <libusb.h>
@@ -43,14 +44,15 @@ extern "C" {
 #include <stdatomic.h>
 #include <pthread.h>
 
-#define VENDOR_ID                  (0xffc)
-#define PRODUCT_ID                 (2)
+#define VENDOR_ID                   (0xffc)
+#define PRODUCT_ID                  (2)
 
 // USB transfer timeouts (milliseconds)
-#define USB_SEND_TIMEOUT_MS        (400)
-#define USB_EXT_RECV_TIMEOUT_MS    (2000)
-#define USB_INT_RECV_TIMEOUT_MS    (100)
-#define USB_INIT_TIMEOUT_MS        (1000) // Extra headroom during init sequence
+#define USB_SEND_TIMEOUT_MS         (400)
+#define USB_EXT_RECV_TIMEOUT_MS     (2000)
+#define USB_INT_RECV_TIMEOUT_MS     (100)
+#define USB_INIT_TIMEOUT_MS         (1000) // Extra headroom during init sequence
+#define USB_KEEPALIVE_INTERVAL_S    (30)   // Send a keepalive if idle for this long
 
 // Atomic flags for cross-thread signalling
 static _Atomic bool           gotBadConnectionIndication      = false;
@@ -69,6 +71,9 @@ static void                   (*full_patch_change_notify_func_ptr)(void) = NULL;
 // Mutexes
 static pthread_mutex_t        usbStaticMutex                  = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t        callbackMutex                   = PTHREAD_MUTEX_INITIALIZER;
+
+// Keepalive: timestamp of the last successful outbound USB transfer
+static time_t                 gLastSendTime                   = 0;
 
 // ---------------------------------------------------------------------------
 // Callback registration
@@ -1174,7 +1179,12 @@ static int int_rec(tPoll poll, int expectedResponse) {
         } else {
             LOG_DEBUG("response = 0x%02x expected = 0x%02x\n", response, expectedResponse);
 
-            if (response == expectedResponse) {
+            // SUB_RESPONSE_EXT_MASTER_CLOCK (0x5d) is an alternative form of the master clock
+            // response; the G2 sends either depending on whether external clock is active.
+            bool altMasterClock = (expectedResponse == SUB_RESPONSE_MASTER_CLOCK)
+                                  && (response == SUB_RESPONSE_EXT_MASTER_CLOCK);
+
+            if (response == expectedResponse || altMasterClock) {
                 doLoop = false;                   // Got what we wanted — retVal already correct
             } else if (  (response == SUB_RESPONSE_OK)
                       || (response == SUB_RESPONSE_ERROR)) {
@@ -1223,6 +1233,7 @@ static int send_message(uint8_t * buff, int pos) {
         timeDelta    = get_time_delta();
 
         if ((result == 0) && (actualLength == msgLength)) {
+            gLastSendTime = time(NULL);
             return EXIT_SUCCESS;
         }
 
@@ -2511,6 +2522,13 @@ static void state_handler(void) {
     if (msg_receive(&gCommandQueue, eRcvPoll, &messageContent) == EXIT_SUCCESS) {
         send_write_data(&messageContent);
 
+        return;
+    }
+
+    // Keepalive: if no outbound traffic for a while, send a lightweight request
+    if (time(NULL) - gLastSendTime >= USB_KEEPALIVE_INTERVAL_S) {
+        LOG_DEBUG("USB keepalive\n");
+        send_get_global_page();
         return;
     }
     // Nothing to do — poll for unsolicited messages (LED, volume, param change)
