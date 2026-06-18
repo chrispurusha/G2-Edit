@@ -1718,7 +1718,7 @@ static int push_slot_to_device(uint32_t slot) {
     if (retVal == EXIT_SUCCESS) {
         retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_VERSION);
 
-        LOG_DEBUG("SET PATCH NAME RESPONSE\n");
+        LOG_DEBUG("PUSH SLOT RESPONSE\n");
     }
     return retVal;
 }
