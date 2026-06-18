@@ -200,7 +200,7 @@ static void write_clavia_string(uint8_t * buff, uint32_t * bitPos, const char * 
         }
     }
 }
-    
+
 // ---------------------------------------------------------------------------
 // Parsers
 // ---------------------------------------------------------------------------
@@ -830,18 +830,16 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         case SUB_RESPONSE_GET_PATCH_NAME:
         {
             char patchName[CLAVIA_NAME_SIZE + 1] = {0};
+            int  nameBytes                       = length - 6;
 
             LOG_DEBUG("Got patch name (length %d)\n", length);
 
-            memset(patchName, 0, sizeof(patchName));
-
-            for (int i = 0; i < (length - 6) && i < CLAVIA_NAME_SIZE; i++) {
-                uint8_t ch = read_bit_stream(buff, bitPos, 8);
-                patchName[i] = ch;
-                LOG_DEBUG_DIRECT("%c", patchName[i]);
+            if ((nameBytes < 0) || (nameBytes > CLAVIA_NAME_SIZE)) {
+                LOG_ERROR("Patch name length out of range: %d\n", nameBytes);
+                return EXIT_FAILURE;
             }
-
-            LOG_DEBUG_DIRECT("\n");
+            read_clavia_string(buff, bitPos, patchName, sizeof(patchName));
+            LOG_DEBUG("Patch name: %s\n", patchName);
 
             patch_name_set(slot, patchName);
 
