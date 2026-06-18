@@ -303,6 +303,14 @@ void render_top_bar(void) {
     int         voiceCount                          = 0;
     tModule     module                              = {0};
     bool        clockRunning                        = atomic_load(&gMasterClockRunning);
+    uint64_t    txTime                              = atomic_load(&gUsbTxTime);
+    uint64_t    rxTime                              = atomic_load(&gUsbRxTime);
+    uint64_t    nowMs                               = (uint64_t)get_time_ms();
+    bool        txActive                            = (txTime != 0) && ((nowMs - txTime) < 100);
+    bool        rxActive                            = (rxTime != 0) && ((nowMs - rxTime) < 100);
+    tRectangle  commsStateRect                      = {0};
+    double      indicatorX                          = 0.0;
+    double      indicatorW                          = 0.0;
 
     set_rgb_colour(RGB_GREY_5);
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {(get_render_width() / gGlobalGuiScale) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
@@ -396,8 +404,13 @@ void render_top_bar(void) {
     }
     set_rgb_colour(commsStateColour);
     rectangle        = {{220, 8}, {get_text_width("Offline", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}};
-    draw_button(mainArea, rectangle, commsStateText, commsStateColour);
+    commsStateRect   = draw_button(mainArea, rectangle, commsStateText, commsStateColour);
+    draw_button(mainArea, {{220, 25}, {get_text_width("Tx", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6, eCache), (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6}}, "Tx", txActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
+    draw_button(mainArea, {{233, 25}, {get_text_width("Tx", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6, eCache), (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6}}, "Rx", rxActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
 
+    if (txActive || rxActive) {
+        wake_glfw();
+    }
     // Cable colour visibility toggles — 6 small squares
     //uint32_t hiddenMask = atomic_load(&gHiddenCableMask);
 

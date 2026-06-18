@@ -1027,6 +1027,7 @@ static int rcv_extended(int dataLength, int * response) {
 
                 if (  (responseType == RESPONSE_TYPE_INIT)
                    || (responseType == RESPONSE_TYPE_COMMAND)) {
+                    atomic_store(&gUsbRxTime, (uint64_t)get_time_ms());
                     break;
                 }
             }
@@ -1094,6 +1095,7 @@ static int int_rec(tPoll poll, int expectedResponse) {
             if (retVal == LIBUSB_SUCCESS) {
                 if (readLength > 0) {
                     gLastActivityTime = time(NULL);
+                    atomic_store(&gUsbRxTime, (uint64_t)get_time_ms());
                     break;
                 }
             } else if (retVal == LIBUSB_ERROR_TIMEOUT) {
@@ -1204,6 +1206,7 @@ static int send_message(uint8_t * buff, int pos) {
 
         if ((result == 0) && (actualLength == msgLength)) {
             gLastActivityTime = time(NULL);
+            atomic_store(&gUsbTxTime, (uint64_t)get_time_ms());
             return EXIT_SUCCESS;
         }
 

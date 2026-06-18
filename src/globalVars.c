@@ -118,6 +118,8 @@ tRectangle             gPatchVolumeRectangle                        = {{320, 56}
 tRectangle             gTempoDialRectangle                          = {0};
 tRectangle             gClockRunStopRectangle                       = {0};
 bool                   gTempoDragging                               = false;
+_Atomic uint64_t       gUsbTxTime                                   = 0;
+_Atomic uint64_t       gUsbRxTime                                   = 0;
 
 /* Stored here, but don't access directly, use functions to access instead */
 static char            gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1]  = {0};

@@ -108,6 +108,8 @@ extern tRectangle          gPatchVolumeRectangle;
 extern tRectangle          gTempoDialRectangle;
 extern tRectangle          gClockRunStopRectangle;
 extern bool                gTempoDragging;
+extern _Atomic uint64_t    gUsbTxTime;
+extern _Atomic uint64_t    gUsbRxTime;
 
 #ifdef __cplusplus
 extern "C" {
