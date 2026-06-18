@@ -1893,10 +1893,11 @@ static int send_synth_settings(void) {
     uint32_t bitPos                  = 0;
     uint8_t  payload[64]             = {0};
     uint8_t ch = 0;
+    int i = 0;
 
     //write_bit_stream(payload, &bitPos, 8, SUB_COMMAND_SET_SYNTH_SETTINGS); // type byte
 
-    for (int i = 0; i < CLAVIA_NAME_SIZE; i++) {
+    for (i = 0; i < CLAVIA_NAME_SIZE; i++) {
         write_bit_stream(payload, &bitPos, 8, gSynthSettings.name[i]);   // Todo: name should come from storage
         if (gSynthSettings.name[i] == '\0') {
             break;
@@ -1913,7 +1914,7 @@ static int send_synth_settings(void) {
     write_bit_stream(payload, &bitPos, 1, gSynthSettings.memoryProtect);
     write_bit_stream(payload, &bitPos, 7, 0);        // unknown
 
-    for (int i = 0; i < 4; i++) {
+    for (i = 0; i < 4; i++) {
         write_bit_stream(payload, &bitPos, 8, gSynthSettings.midiChanSlot[i]);
     }
 
@@ -1936,9 +1937,11 @@ static int send_synth_settings(void) {
     write_bit_stream(payload, &bitPos, 8, 0);        // filler
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.pedalPolarity & 0x01);
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.pedalGain);
-    write_bit_stream(payload, &bitPos, 6, 0);        // unknown
-    write_bit_stream(payload, &bitPos, 6, 0);        // unknown
-    write_bit_stream(payload, &bitPos, 6, 0);        // unknown
+    
+    for (i = 0; i< 16; i++) {
+        write_bit_stream(payload, &bitPos, 8, 0);
+    }
+
 
     uint32_t payloadBytes = BIT_TO_BYTE_ROUND_UP(bitPos);
 
