@@ -1476,15 +1476,14 @@ static int send_set_param_label(uint32_t slot, tModuleKey moduleKey, uint32_t pa
     int     pos                     = COMMAND_OFFSET;
     int     i                       = 0;
 
-    LOG_DEBUG("SET PARAM LABEL slot=%u loc=%u idx=%u param=%u name='%s'\n",
+    LOG_DEBUG("SET PARAM LABEL slot=%u loction=%u index=%u param=%u name='%s'\n",
               slot, moduleKey.location, moduleKey.index, paramIndex, name);
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_PARAM_LABEL);
     buff[pos++] = moduleKey.location;
     buff[pos++] = moduleKey.index;
-    buff[pos++] = 3 + PROTOCOL_PARAM_NAME_SIZE;  // moduleLength: isString + paramLength + paramIndex + name bytes
     buff[pos++] = 1;                             // isString
-    buff[pos++] = 1 + PROTOCOL_PARAM_NAME_SIZE;  // paramLength = 8
+    buff[pos++] = PROTOCOL_PARAM_NAME_SIZE + 1;  // paramLength
     buff[pos++] = (uint8_t)paramIndex;
 
     for (i = 0; i < PROTOCOL_PARAM_NAME_SIZE; i++) {
