@@ -184,57 +184,50 @@ static int parse_synth_settings(uint8_t * buff, int length) {
             break;
         }
     }
-    
+
     gSynthSettings.name[CLAVIA_NAME_SIZE] = '\0';
 
-    gSynthSettings.perfMode          = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.perfMode               = read_bit_stream(buff, &bitPos, 1);
     atomic_store(&gPerfMode, gSynthSettings.perfMode);
     read_bit_stream(buff, &bitPos, 7);  // patchSortMode - unused
     read_bit_stream(buff, &bitPos, 8);  // perfSortMode - unused
-    gSynthSettings.perfBank          = read_bit_stream(buff, &bitPos, 8);
-    gSynthSettings.perfLocation      = read_bit_stream(buff, &bitPos, 8);
-    gSynthSettings.memoryProtect     = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.perfBank               = read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.perfLocation           = read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.memoryProtect          = read_bit_stream(buff, &bitPos, 1);
     read_bit_stream(buff, &bitPos, 7);
 
     for (int i = 0; i < 4; i++) {
         gSynthSettings.midiChanSlot[i] = read_bit_stream(buff, &bitPos, 8);
     }
 
-    gSynthSettings.globalChan        = read_bit_stream(buff, &bitPos, 8);
-    gSynthSettings.sysexId           = read_bit_stream(buff, &bitPos, 8);
-    gSynthSettings.localOn           = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.globalChan             = read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.sysexId                = read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.localOn                = read_bit_stream(buff, &bitPos, 1);
     read_bit_stream(buff, &bitPos, 7);
     read_bit_stream(buff, &bitPos, 6);
-    gSynthSettings.progChangeRcv     = read_bit_stream(buff, &bitPos, 1);
-    gSynthSettings.progChangeSnd     = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.progChangeRcv          = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.progChangeSnd          = read_bit_stream(buff, &bitPos, 1);
     read_bit_stream(buff, &bitPos, 6);
 
-    gSynthSettings.controllersRcv    = read_bit_stream(buff, &bitPos, 1);
-    gSynthSettings.controllersSnd    = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.controllersRcv         = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.controllersSnd         = read_bit_stream(buff, &bitPos, 1);
 
     read_bit_stream(buff, &bitPos, 1);
-    gSynthSettings.sendClock         = read_bit_stream(buff, &bitPos, 1);
-    gSynthSettings.receiveClock         = !read_bit_stream(buff, &bitPos, 1); // Note that this one is inverted. Is more of an ignore-external-clock
+    gSynthSettings.sendClock              = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.receiveClock           = !read_bit_stream(buff, &bitPos, 1); // Note that this one is inverted. Is more of an ignore-external-clock
     read_bit_stream(buff, &bitPos, 5);
 
-    // TODO - leave these values without additions and render appropriately instead
-    // Signed byte ±50 cents; store offset-encoded (0-100, centre=50)
-    gSynthSettings.tuneCent          = (uint8_t)((int8_t)read_bit_stream(buff, &bitPos, 8) + 50);
-
-    gSynthSettings.globalShiftActive = read_bit_stream(buff, &bitPos, 1);
+    gSynthSettings.tuneCent               = (int8_t)read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.globalShiftActive      = read_bit_stream(buff, &bitPos, 1);
     read_bit_stream(buff, &bitPos, 7);
+    gSynthSettings.globalOctaveShift      = (int8_t)read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.tuneSemi               = (int8_t)read_bit_stream(buff, &bitPos, 8);
 
-    // Signed byte ±2; store offset-encoded (0-4, centre=2)
-    gSynthSettings.globalOctaveShift = (uint8_t)((int8_t)read_bit_stream(buff, &bitPos, 8));
-
-    // Signed byte ±12 semitones; store offset-encoded (0-24, centre=12)
-    gSynthSettings.tuneSemi          = (uint8_t)((int8_t)read_bit_stream(buff, &bitPos, 8) + 12);
-
-    read_bit_stream(buff, &bitPos, 8);                                    // vibratoRate - unused, it's a parameter instead
-    gSynthSettings.pedalPolarity     = read_bit_stream(buff, &bitPos, 1); // Bit 0. Next bit is always 1. 1 = closed, 0 = open
+    read_bit_stream(buff, &bitPos, 8);                                         // vibratoRate - unused, it's a parameter instead
+    gSynthSettings.pedalPolarity          = read_bit_stream(buff, &bitPos, 1); // Bit 0. Next bit is always 1. 1 = closed, 0 = open
     read_bit_stream(buff, &bitPos, 7);
     //read_bit_stream(buff, &bitPos, 8);                                    // constant (always 1 in write) - unused
-    gSynthSettings.pedalGain         = read_bit_stream(buff, &bitPos, 8);
+    gSynthSettings.pedalGain              = read_bit_stream(buff, &bitPos, 8);
 
     LOG_DEBUG("Name=%s\n",
               gSynthSettings.name);
@@ -246,23 +239,25 @@ static int parse_synth_settings(uint8_t * buff, int length) {
               gSynthSettings.localOn, gSynthSettings.memoryProtect,
               gSynthSettings.progChangeRcv, gSynthSettings.progChangeSnd,
               gSynthSettings.controllersRcv, gSynthSettings.controllersSnd);
-    LOG_DEBUG("SendClock=%u ReceiveClock=%u TuneCent=%u TuneSemi=%u OctShift=%u ShiftActive=%u\n",
+    LOG_DEBUG("SendClock=%u ReceiveClock=%u TuneCent=%d TuneSemi=%d OctShift=%d ShiftActive=%u\n",
               gSynthSettings.sendClock, gSynthSettings.receiveClock,
               gSynthSettings.tuneCent, gSynthSettings.tuneSemi,
               gSynthSettings.globalOctaveShift, gSynthSettings.globalShiftActive);
     LOG_DEBUG("PedalPol=%u PedalGain=%u PerfMode=%u PerfBank=%u PerfLoc=%u\n",
               gSynthSettings.pedalPolarity, gSynthSettings.pedalGain,
               gSynthSettings.perfMode, gSynthSettings.perfBank, gSynthSettings.perfLocation);
-    
+
     {
         static uint8_t prevBuff[64] = {0};
         printf("synth settings change!\n");
-        for (int i=4; i<26; i++) {
+
+        for (int i = 4; i < 26; i++) {
             if (buff[i] != prevBuff[i]) {
                 prevBuff[i] = buff[i];
                 printf("%d 0x%02x %u\n", i, buff[i], buff[i]);
             }
         }
+
         printf("\n");
     }
 
@@ -1910,18 +1905,19 @@ static int send_synth_settings(void) {
     int      retVal                  = EXIT_FAILURE;
     uint32_t bitPos                  = 0;
     uint8_t  payload[64]             = {0};
-    uint8_t ch = 0;
-    uint32_t i = 0;
+    uint8_t  ch                      = 0;
+    uint32_t i                       = 0;
 
     //write_bit_stream(payload, &bitPos, 8, SUB_COMMAND_SET_SYNTH_SETTINGS); // type byte
 
     for (i = 0; i < CLAVIA_NAME_SIZE; i++) {
         write_bit_stream(payload, &bitPos, 8, gSynthSettings.name[i]);   // Todo: name should come from storage
+
         if (gSynthSettings.name[i] == '\0') {
             break;
         }
     }
-    
+
     //write_bit_stream(payload, &bitPos, 8, 0);                              // name: null terminator (no name to write)
 
     write_bit_stream(payload, &bitPos, 1, gSynthSettings.perfMode);
@@ -1946,27 +1942,26 @@ static int send_synth_settings(void) {
     write_bit_stream(payload, &bitPos, 6, 0);        // unknown
     write_bit_stream(payload, &bitPos, 1, gSynthSettings.controllersRcv);
     write_bit_stream(payload, &bitPos, 1, gSynthSettings.controllersSnd);
-    
+
     write_bit_stream(payload, &bitPos, 1, 0);
     write_bit_stream(payload, &bitPos, 1, gSynthSettings.sendClock);
     write_bit_stream(payload, &bitPos, 1, !gSynthSettings.receiveClock);
     write_bit_stream(payload, &bitPos, 5, 0);
-    write_bit_stream(payload, &bitPos, 8, (uint8_t)((int)gSynthSettings.tuneCent - 50));
-    write_bit_stream(payload, &bitPos, 1, (uint8_t)((int)gSynthSettings.globalShiftActive));    // Supposed to be global shift active, but that's a parameter
+    write_bit_stream(payload, &bitPos, 8, (uint8_t)gSynthSettings.tuneCent);
+    write_bit_stream(payload, &bitPos, 1, gSynthSettings.globalShiftActive);
     write_bit_stream(payload, &bitPos, 7, 0);
-    write_bit_stream(payload, &bitPos, 8, (uint8_t)gSynthSettings.globalOctaveShift);  // Supposed to be global octave shift, but that's a parameter
-    write_bit_stream(payload, &bitPos, 8, (uint8_t)((int)gSynthSettings.tuneSemi - 12));
-    
+    write_bit_stream(payload, &bitPos, 8, (uint8_t)gSynthSettings.globalOctaveShift);
+    write_bit_stream(payload, &bitPos, 8, (uint8_t)gSynthSettings.tuneSemi);
+
     write_bit_stream(payload, &bitPos, 8, 0);        // filler - possibly should be vibrato rate, but doesn't seem to work
     write_bit_stream(payload, &bitPos, 1, gSynthSettings.pedalPolarity);
     write_bit_stream(payload, &bitPos, 1, 1);
     write_bit_stream(payload, &bitPos, 6, 0);
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.pedalGain);
-    
-    for (i = 0; i< 16; i++) {
+
+    for (i = 0; i < 16; i++) {
         write_bit_stream(payload, &bitPos, 8, 0);
     }
-
 
     uint32_t payloadBytes = BIT_TO_BYTE_ROUND_UP(bitPos);
 

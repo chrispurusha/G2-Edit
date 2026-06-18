@@ -816,7 +816,7 @@ typedef struct {
 } tPatchSettingsEdit;
 
 typedef struct {
-    char   name[CLAVIA_NAME_SIZE+1];
+    char    name[CLAVIA_NAME_SIZE + 1];
     uint8_t midiChanSlot[4];  // 0x00-0x0F = ch 1-16, 0x10 = off
     uint8_t globalChan;       // same encoding
     uint8_t sysexId;          // same encoding
@@ -825,12 +825,12 @@ typedef struct {
     uint8_t progChangeSnd;
     uint8_t controllersRcv;
     uint8_t controllersSnd;
-    uint8_t receiveClock;  // 1=off, 0=om
-    uint8_t sendClock;  // 0=on, 1=off
-    uint8_t tuneCent;         // raw 0-100, centre = 50
+    uint8_t receiveClock;      // 1=off, 0=om
+    uint8_t sendClock;         // 0=on, 1=off
+    int8_t  tuneCent;          // signed, -50..+50 cents
     uint8_t globalShiftActive;
-    uint8_t globalOctaveShift;
-    uint8_t tuneSemi;
+    int8_t  globalOctaveShift; // signed, -2..+2
+    int8_t  tuneSemi;          // signed, -12..+12 semitones
     uint8_t pedalPolarity;
     uint8_t pedalGain;
     uint8_t memoryProtect;
@@ -860,6 +860,9 @@ typedef struct {
     tRectangle tuneCentInc;
     tRectangle tuneSemiDec;
     tRectangle tuneSemiInc;
+    tRectangle globalShiftActive;
+    tRectangle globalOctaveShiftDec;
+    tRectangle globalOctaveShiftInc;
     tRectangle pedalPolarity;
     tRectangle pedalGainDec;
     tRectangle pedalGainInc;

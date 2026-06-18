@@ -941,14 +941,14 @@ static void render_patch_settings_panel(void) {
         uint8_t *    val;
         tRectangle * rect;
     }   toggles[]  = {
-        {"Local On",     &gSynthSettings.localOn,        &gSettingsPanelRects.localOn       },
-        {"Mem Protect",  &gSynthSettings.memoryProtect,  &gSettingsPanelRects.memoryProtect },
-        {"Prog Chg Rcv", &gSynthSettings.progChangeRcv,  &gSettingsPanelRects.progChangeRcv },
-        {"Prog Chg Snd", &gSynthSettings.progChangeSnd,  &gSettingsPanelRects.progChangeSnd },
-        {"Ctrl Rcv",     &gSynthSettings.controllersRcv, &gSettingsPanelRects.controllersRcv},
-        {"Ctrl Snd",     &gSynthSettings.controllersSnd, &gSettingsPanelRects.controllersSnd},
-        {"Send Clock",   &gSynthSettings.sendClock,      &gSettingsPanelRects.sendClock     },
-        {"Receive Clock",  &gSynthSettings.receiveClock, &gSettingsPanelRects.receiveClock}, };
+        {"Local On",      &gSynthSettings.localOn,        &gSettingsPanelRects.localOn       },
+        {"Mem Protect",   &gSynthSettings.memoryProtect,  &gSettingsPanelRects.memoryProtect },
+        {"Prog Chg Rcv",  &gSynthSettings.progChangeRcv,  &gSettingsPanelRects.progChangeRcv },
+        {"Prog Chg Snd",  &gSynthSettings.progChangeSnd,  &gSettingsPanelRects.progChangeSnd },
+        {"Ctrl Rcv",      &gSynthSettings.controllersRcv, &gSettingsPanelRects.controllersRcv},
+        {"Ctrl Snd",      &gSynthSettings.controllersSnd, &gSettingsPanelRects.controllersSnd},
+        {"Send Clock",    &gSynthSettings.sendClock,      &gSettingsPanelRects.sendClock     },
+        {"Receive Clock", &gSynthSettings.receiveClock,   &gSettingsPanelRects.receiveClock  }, };
     int numToggles = (int)(sizeof(toggles) / sizeof(toggles[0]));
     int perRow     = 4;
 
@@ -973,19 +973,36 @@ static void render_patch_settings_panel(void) {
     y += secH;
 
     {
+        double x = boxX + margin;
+        set_rgb_colour(RGB_BLACK);
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Semi:");
+        x += get_text_width((char *)"Semi:", btnH) + 4.0;
+        snprintf(buf, sizeof(buf), "%+d", (int)gSynthSettings.tuneSemi);
+        x  = render_spin(x, y, btnH, buf, "+12", &gSettingsPanelRects.tuneSemiDec, &gSettingsPanelRects.tuneSemiInc);
+
+        x += 14.0;
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Cent:");
+        x += get_text_width((char *)"Cent:", btnH) + 4.0;
+        snprintf(buf, sizeof(buf), "%+d", (int)gSynthSettings.tuneCent);
+        render_spin(x, y, btnH, buf, "+50", &gSettingsPanelRects.tuneCentDec, &gSettingsPanelRects.tuneCentInc);
+    }
+    y += rowH;
+
+    {
         double x      = boxX + margin;
         set_rgb_colour(RGB_BLACK);
-        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Cent:");
-        x                                    += get_text_width((char *)"Cent:", btnH) + 4.0;
-        snprintf(buf, sizeof(buf), "%+d", (int)gSynthSettings.tuneCent - 50);
-        x                                     = render_spin(x, y, btnH, buf, "+50", &gSettingsPanelRects.tuneCentDec, &gSettingsPanelRects.tuneCentInc);
-
-        x                                    += 14.0;
-        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Semi:");
-        x                                    += get_text_width((char *)"Semi:", btnH) + 4.0;
-        snprintf(buf, sizeof(buf), "%+d", (int)gSynthSettings.tuneSemi - 12);
-        x                                     = render_spin(x, y, btnH, buf, "+12", &gSettingsPanelRects.tuneSemiDec, &gSettingsPanelRects.tuneSemiInc);
-
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Glob Shift:");
+        x                                    += get_text_width((char *)"Glob Shift:", btnH) + 4.0;
+        tRgb   shiftC = (gSynthSettings.globalShiftActive & 0x01) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
+        gSettingsPanelRects.globalShiftActive = draw_button(mainArea,
+                                                            {{x, y}, {get_text_width((char *)"Active", btnH) + 6.0, btnH}},
+                                                            (gSynthSettings.globalShiftActive & 0x01) ? (char *)"Active" : (char *)"Off",
+                                                            shiftC);
+        x                                    += gSettingsPanelRects.globalShiftActive.size.w + 14.0;
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Oct:");
+        x                                    += get_text_width((char *)"Oct:", btnH) + 4.0;
+        snprintf(buf, sizeof(buf), "%+d", (int)gSynthSettings.globalOctaveShift);
+        render_spin(x, y, btnH, buf, "+2", &gSettingsPanelRects.globalOctaveShiftDec, &gSettingsPanelRects.globalOctaveShiftInc);
     }
     y += rowH;
 

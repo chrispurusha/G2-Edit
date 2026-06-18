@@ -2123,26 +2123,39 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     gSynthSettings.sendClock = gSynthSettings.sendClock ? 0 : 1;
                     changed                  = true;
                 } else if (within_rectangle(coord, gSettingsPanelRects.receiveClock)) {
-                    gSynthSettings.receiveClock = gSynthSettings.receiveClock ? 1 : 0;
-                    changed                       = true;
+                    gSynthSettings.receiveClock = gSynthSettings.receiveClock ? 0 : 1;
+                    changed                     = true;
                 } else if (within_rectangle(coord, gSettingsPanelRects.tuneCentDec)) {
-                    if (gSynthSettings.tuneCent > 0) {
+                    if (gSynthSettings.tuneCent > -50) {
                         gSynthSettings.tuneCent--;
                     }
                     changed = true;
                 } else if (within_rectangle(coord, gSettingsPanelRects.tuneCentInc)) {
-                    if (gSynthSettings.tuneCent < 100) {
+                    if (gSynthSettings.tuneCent < 50) {
                         gSynthSettings.tuneCent++;
                     }
                     changed = true;
                 } else if (within_rectangle(coord, gSettingsPanelRects.tuneSemiDec)) {
-                    if (gSynthSettings.tuneSemi > 0) {
+                    if (gSynthSettings.tuneSemi > -12) {
                         gSynthSettings.tuneSemi--;
                     }
                     changed = true;
                 } else if (within_rectangle(coord, gSettingsPanelRects.tuneSemiInc)) {
-                    if (gSynthSettings.tuneSemi < 24) {
+                    if (gSynthSettings.tuneSemi < 12) {
                         gSynthSettings.tuneSemi++;
+                    }
+                    changed = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.globalShiftActive)) {
+                    gSynthSettings.globalShiftActive = gSynthSettings.globalShiftActive ? 0 : 1;
+                    changed                          = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.globalOctaveShiftDec)) {
+                    if (gSynthSettings.globalOctaveShift > -2) {
+                        gSynthSettings.globalOctaveShift--;
+                    }
+                    changed = true;
+                } else if (within_rectangle(coord, gSettingsPanelRects.globalOctaveShiftInc)) {
+                    if (gSynthSettings.globalOctaveShift < 2) {
+                        gSynthSettings.globalOctaveShift++;
                     }
                     changed = true;
                 } else if (within_rectangle(coord, gSettingsPanelRects.pedalPolarity)) {
