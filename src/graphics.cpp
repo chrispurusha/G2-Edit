@@ -302,6 +302,7 @@ void render_top_bar(void) {
     uint32_t    variation                           = gPatchDescr[slot].activeVariation;
     int         voiceCount                          = 0;
     tModule     module                              = {0};
+    bool        clockRunning                        = atomic_load(&gMasterClockRunning);
 
     set_rgb_colour(RGB_GREY_5);
     render_rectangle_with_border(mainArea, {{0.0, 0.0}, {(get_render_width() / gGlobalGuiScale) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
@@ -434,13 +435,9 @@ void render_top_bar(void) {
                                          {{740, 20}, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                          "Dim", transp ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
-    if (atomic_load(&gMasterClockRunning)) {
-        buttonBackgroundColour = (tRgb)RGB_GREEN_ON;
-    } else {
-        buttonBackgroundColour = (tRgb)RGB_BACKGROUND_GREY;
-    }
     snprintf(buff, sizeof(buff), "%u BPM", atomic_load(&gMasterClock));
-    gTempoDialRectangle    = render_dial_with_text(mainArea, {{520, 8}, {20, 48}}, NULL, buff, atomic_load(&gMasterClock), 241, 0, buttonBackgroundColour);
+    gTempoDialRectangle    = render_dial_with_text(mainArea, {{535, 10}, {20, 48}}, NULL, buff, atomic_load(&gMasterClock), 241, 0, (tRgb)RGB_BACKGROUND_GREY);
+    gClockRunStopRectangle = draw_button(mainArea, {{475, 8}, {get_text_width("Stopped", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)(clockRunning ? "Running" : "Stopped"), clockRunning ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
     if (atomic_load(&gPerfMode)) {
         snprintf(buff, sizeof(buff), "Perf Mode");

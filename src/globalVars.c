@@ -116,6 +116,7 @@ tRectangle             gVoiceCountRectangle                         = {0};
 tRectangle             gMonoPolyRectangle                           = {0};
 tRectangle             gPatchVolumeRectangle                        = {{320, 56}, {20, 20}};
 tRectangle             gTempoDialRectangle                          = {0};
+tRectangle             gClockRunStopRectangle                       = {0};
 bool                   gTempoDragging                               = false;
 
 /* Stored here, but don't access directly, use functions to access instead */

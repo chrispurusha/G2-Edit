@@ -2036,6 +2036,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     tCoord       coord             = {0};
     tMouseButton mouseButton       = mouseButtonNone;
     bool         found             = false;
+    bool         running           = false;
     tModule      module            = {0};
     int32_t      i                 = 0;
     uint32_t     slot              = atomic_load(&gSlot);
@@ -2264,6 +2265,16 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 if (within_rectangle(coord, gTempoDialRectangle)) {
                     gTempoDragging = true;
                     found          = true;
+                }
+            }
+
+            if (found == false) {
+                if (within_rectangle(coord, gClockRunStopRectangle)) {
+                    running = !atomic_load(&gMasterClockRunning);
+                    atomic_store(&gMasterClockRunning, (uint8_t)running);
+                    send_master_clock_run((uint32_t)running);
+                    atomic_store(&gReDraw, true);
+                    found   = true;
                 }
             }
 
