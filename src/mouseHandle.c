@@ -1838,7 +1838,7 @@ void stop_dragging(void) {
     memset(&gModuleDrag, 0, sizeof(gModuleDrag));
     memset(&gParamDragging, 0, sizeof(gParamDragging));
     memset(&gCableDrag, 0, sizeof(gCableDrag));
-    //gPatchVolumeDragging      = false;
+    gTempoDragging            = false;
 }
 
 void stop_patch_name_editing(void) {
@@ -2261,6 +2261,13 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
+                if (within_rectangle(coord, gTempoDialRectangle)) {
+                    gTempoDragging = true;
+                    found          = true;
+                }
+            }
+
+            if (found == false) {
                 if (handle_module_press(coord, mouseButton) == true) {
                     found = true;
                 }
@@ -2553,6 +2560,14 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         //messageContent.cmd           = eMsgCmdWritePatchDescr;
         // messageContent.slot          = slot;
         // msg_send(&gCommandQueue, &messageContent);
+    } else if (gTempoDragging == true) {
+        angle = calculate_mouse_angle((tCoord){x, y}, gTempoDialRectangle);
+        value = angle_to_value(angle, 241);
+
+        if (atomic_load(&gMasterClock) != value) {
+            atomic_store(&gMasterClock, (uint8_t)value);
+            send_master_clock_bpm(value);
+        }
     } else if (gParamDragging.active == true) {
         read_module(gParamDragging.moduleKey, &module);
 

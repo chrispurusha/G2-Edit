@@ -115,6 +115,8 @@ tRectangle             gVoiceCountRectangle                         = {0};
 //tRectangle             gVoiceCountDecRectangle                      = {0};
 tRectangle             gMonoPolyRectangle                           = {0};
 tRectangle             gPatchVolumeRectangle                        = {{320, 56}, {20, 20}};
+tRectangle             gTempoDialRectangle                          = {0};
+bool                   gTempoDragging                               = false;
 
 /* Stored here, but don't access directly, use functions to access instead */
 static char            gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1]  = {0};

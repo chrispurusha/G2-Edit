@@ -105,6 +105,8 @@ extern tRectangle          gVoiceCountRectangle;
 //extern tRectangle          gVoiceCountDecRectangle;
 extern tRectangle          gMonoPolyRectangle;
 extern tRectangle          gPatchVolumeRectangle;
+extern tRectangle          gTempoDialRectangle;
+extern bool                gTempoDragging;
 
 uint32_t array_size_main_button_array(void);
 

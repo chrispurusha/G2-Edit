@@ -440,9 +440,7 @@ void render_top_bar(void) {
         buttonBackgroundColour = (tRgb)RGB_BACKGROUND_GREY;
     }
     snprintf(buff, sizeof(buff), "%u BPM", atomic_load(&gMasterClock));
-    draw_button(mainArea,
-                {{500, 8}, {get_text_width("XXX BPM", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
-                buff, buttonBackgroundColour);
+    gTempoDialRectangle    = render_dial_with_text(mainArea, {{500, 0}, {20, 48}}, NULL, buff, atomic_load(&gMasterClock), 241, 0, buttonBackgroundColour);
 
     if (atomic_load(&gPerfMode)) {
         snprintf(buff, sizeof(buff), "Perf Mode");
