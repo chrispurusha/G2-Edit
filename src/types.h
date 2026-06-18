@@ -840,6 +840,7 @@ typedef struct {
     uint8_t perfLocation;
     //uint8_t vibratoRate; // Comes from a parameter, not synth settings
     uint8_t patchSortMode;
+    uint8_t perfSortMode;
 } tSynthSettings;
 
 typedef struct {

@@ -191,7 +191,8 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     atomic_store(&gPerfMode, gSynthSettings.perfMode);
     read_bit_stream(buff, &bitPos, 5);  // Unused
     gSynthSettings.patchSortMode = read_bit_stream(buff, &bitPos, 2);
-    read_bit_stream(buff, &bitPos, 8);  // perfSortMode - unused
+    read_bit_stream(buff, &bitPos, 6);  // perfSortMode - unused
+    gSynthSettings.perfSortMode = read_bit_stream(buff, &bitPos, 2);
     gSynthSettings.perfBank               = read_bit_stream(buff, &bitPos, 8);
     gSynthSettings.perfLocation           = read_bit_stream(buff, &bitPos, 8);
     gSynthSettings.memoryProtect          = read_bit_stream(buff, &bitPos, 1);
@@ -247,8 +248,8 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     LOG_DEBUG("PedalPol=%u PedalGain=%u PerfMode=%u PerfBank=%u PerfLoc=%u\n",
               gSynthSettings.pedalPolarity, gSynthSettings.pedalGain,
               gSynthSettings.perfMode, gSynthSettings.perfBank, gSynthSettings.perfLocation);
-    LOG_DEBUG("Patch Sort Mode=%u\n",
-              gSynthSettings.patchSortMode);
+    LOG_DEBUG("Patch Sort Mode=%u Perf Sort Mode=%u\n",
+              gSynthSettings.patchSortMode, gSynthSettings.perfSortMode);
 
     {
         static uint8_t prevBuff[64] = {0};
@@ -1924,10 +1925,11 @@ static int send_synth_settings(void) {
     //write_bit_stream(payload, &bitPos, 8, 0);                              // name: null terminator (no name to write)
 
     write_bit_stream(payload, &bitPos, 1, gSynthSettings.perfMode);
-    write_bit_stream(payload, &bitPos, 5, 0);        // unknown
+    write_bit_stream(payload, &bitPos, 5, 0);
     write_bit_stream(payload, &bitPos, 2, gSynthSettings.patchSortMode);
+    write_bit_stream(payload, &bitPos, 6, 0);
+    write_bit_stream(payload, &bitPos, 2, gSynthSettings.perfSortMode);
     
-    write_bit_stream(payload, &bitPos, 8, 0);        // spacer
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.perfBank);
     write_bit_stream(payload, &bitPos, 8, gSynthSettings.perfLocation);
     write_bit_stream(payload, &bitPos, 1, gSynthSettings.memoryProtect);
