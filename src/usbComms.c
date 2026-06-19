@@ -2052,6 +2052,9 @@ static int send_init_sequence_pull(void) {
 
     send_init();
     send_stop();
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        send_get_patch_version(slot);
+    }
     send_get_patch_version(4); // Performance slot
     send_get_synth_settings();
     send_get_midi_cc();
@@ -2060,11 +2063,8 @@ static int send_init_sequence_pull(void) {
     send_get_performance_settings();
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-        send_get_patch_version(slot);
-    }
-
-    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         if (send_get_patch_data(slot) != EXIT_SUCCESS) {
+            LOG_DEBUG("Setting to eCommsReconnecting state, due to send_get_patch_data(slot) failing\n");
             atomic_store(&gCommsState, eCommsReconnecting);
             return EXIT_FAILURE;
         }
@@ -2095,6 +2095,7 @@ static int send_init_sequence_push(void) {
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         if (push_slot_to_device(slot) != EXIT_SUCCESS) {
+            LOG_DEBUG("Setting to eCommsReconnecting state, due to push_slot_to_device(slot) failing\n");
             atomic_store(&gCommsState, eCommsReconnecting);
             return EXIT_FAILURE;
         }
@@ -2478,6 +2479,7 @@ static void state_handler(void) {
                 result = send_init_sequence_pull();
             } else {
                 // Reconnection after disconnect — editor is authoritative, push all slots
+                LOG_DEBUG("Push due to comms state = %u\n", atomic_load(&gCommsState));
                 result = send_init_sequence_push();
             }
 
