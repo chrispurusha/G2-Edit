@@ -332,17 +332,17 @@ void render_top_bar(void) {
         char displayBuf[CLAVIA_NAME_SIZE + 2] = {0};
         snprintf(displayBuf, sizeof(displayBuf), "%s|", gPatchNameEdit.buffer);
 
-        gTopbarControls[topbarPatchNameId].rectangle = draw_button(mainArea, {{20, 60}, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, displayBuf, (tRgb)RGB_WHITE);
+        gTopbarControls[topbarPatchNameId].rectangle = draw_button(mainArea, {topbar_control_def(topbarPatchNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, displayBuf, (tRgb)RGB_WHITE);
     } else {
-        gTopbarControls[topbarPatchNameId].rectangle = draw_button(mainArea, {{20, 60}, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, patchNameCopy, (tRgb)RGB_BACKGROUND_GREY);
+        gTopbarControls[topbarPatchNameId].rectangle = draw_button(mainArea, {topbar_control_def(topbarPatchNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, patchNameCopy, (tRgb)RGB_BACKGROUND_GREY);
     }
-    gTopbarControls[topbarPatchTypeId].rectangle  = draw_button(mainArea, {{170, 60}, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
-    gTopbarControls[topbarMonoPolyId].rectangle   = draw_button(mainArea, {{270, 60}, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarPatchTypeId].rectangle  = draw_button(mainArea, {topbar_control_def(topbarPatchTypeId)->coord, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarMonoPolyId].rectangle   = draw_button(mainArea, {topbar_control_def(topbarMonoPolyId)->coord, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], (tRgb)RGB_BACKGROUND_GREY);
     {
         tRgb notesColour = (strlen((char *)gPatchNotes[slot]) > 0) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
-        gTopbarControls[topbarPatchNotesId].rectangle = draw_button(mainArea, {{340, 8}, {get_text_width("Notes", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "Notes", notesColour);
+        gTopbarControls[topbarPatchNotesId].rectangle = draw_button(mainArea, {topbar_control_def(topbarPatchNotesId)->coord, {get_text_width("Notes", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "Notes", notesColour);
     }
-    gTopbarControls[topbarSettingsId].rectangle   = draw_button(mainArea, {{270, 8}, {get_text_width("Settings", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "Settings", (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarSettingsId].rectangle   = draw_button(mainArea, {topbar_control_def(topbarSettingsId)->coord, {get_text_width("Settings", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "Settings", (tRgb)RGB_BACKGROUND_GREY);
 
     if (gPatchDescr[slot].monoPoly == monoPolyPoly) {
         voiceCount = gPatchDescr[slot].voiceCount + 1;
@@ -356,7 +356,7 @@ void render_top_bar(void) {
         buttonBackgroundColour = (tRgb)RGB_RED_5;
     }
     snprintf(buff, sizeof(buff), "%u", voiceCount);
-    gTopbarControls[topbarVoiceCountId].rectangle = draw_button(mainArea, {{248, 60}, {get_text_width("XX", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, buff, buttonBackgroundColour);
+    gTopbarControls[topbarVoiceCountId].rectangle = draw_button(mainArea, {topbar_control_def(topbarVoiceCountId)->coord, {get_text_width("XX", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, buff, buttonBackgroundColour);
 
     module.key.slot                               = slot;
     module.key.location                           = locationMorph;
@@ -418,27 +418,29 @@ void render_top_bar(void) {
     //uint32_t hiddenMask = atomic_load(&gHiddenCableMask);
 
     for (int i = 0; i < cableColourMax; i++) {
-        bool             visible  = gPatchDescr[slot].visible[i];
-        tRgb             colour   = gCableColourMap[i];
-        double           x        = 700.0 + (i * (get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache) + 5));
-        tTopbarControlId toggleId = (tTopbarControlId)((int)topbarCableColourToggle0Id + i);
+        bool                      visible  = gPatchDescr[slot].visible[i];
+        tRgb                      colour   = gCableColourMap[i];
+        double                    x        = 700.0 + (i * (get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache) + 5));
+        tTopbarControlId          toggleId = (tTopbarControlId)((int)topbarCableColourToggle0Id + i);
+        const tTopbarControlDef * def      = topbar_control_def(toggleId);
 
         if (visible) {
-            gTopbarControls[toggleId].rectangle = draw_button(mainArea, {{x, 40.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "X", colour);
+            gTopbarControls[toggleId].rectangle = draw_button(mainArea, {{x, def->coord.y}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "X", colour);
         } else {
-            gTopbarControls[toggleId].rectangle = draw_button(mainArea, {{x, 40.0}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, " ", colour);
+            gTopbarControls[toggleId].rectangle = draw_button(mainArea, {{x, def->coord.y}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, " ", colour);
         }
     }
 
     for (int i = 0; i < cableColourMax; i++) {
-        tRgb             colour   = gCableColourMap[i];
-        double           x        = 700.0 + (i * (get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache) + 5));
-        tTopbarControlId selectId = (tTopbarControlId)((int)topbarCableColourSelect0Id + i);
+        tRgb                      colour   = gCableColourMap[i];
+        double                    x        = 700.0 + (i * (get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache) + 5));
+        tTopbarControlId          selectId = (tTopbarControlId)((int)topbarCableColourSelect0Id + i);
+        const tTopbarControlDef * def      = topbar_control_def(selectId);
 
         if (i == (int)gCableColour) {
-            gTopbarControls[selectId].rectangle = draw_button(mainArea, {{x, 60}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "X", colour);
+            gTopbarControls[selectId].rectangle = draw_button(mainArea, {{x, def->coord.y}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "X", colour);
         } else {
-            gTopbarControls[selectId].rectangle = draw_button(mainArea, {{x, 60}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, " ", colour);
+            gTopbarControls[selectId].rectangle = draw_button(mainArea, {{x, def->coord.y}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, " ", colour);
         }
     }
 
@@ -446,16 +448,16 @@ void render_top_bar(void) {
     bool transp = atomic_load(&gCablesTransparent);
 
     gTopbarControls[topbarHideAllCablesId].rectangle     = draw_button(mainArea,
-                                                                       {{700, 20}, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
+                                                                       {topbar_control_def(topbarHideAllCablesId)->coord, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                        "Hide", (tRgb)RGB_BACKGROUND_GREY);
 
     gTopbarControls[topbarTransparentCablesId].rectangle = draw_button(mainArea,
-                                                                       {{740, 20}, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
+                                                                       {topbar_control_def(topbarTransparentCablesId)->coord, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                        "Dim", transp ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
     snprintf(buff, sizeof(buff), "%u BPM", atomic_load(&gMasterClock));
-    gTopbarControls[topbarTempoDialId].rectangle         = render_dial_with_text(mainArea, {{535, 10}, {20, 48}}, NULL, buff, atomic_load(&gMasterClock), 241, 0, (tRgb)RGB_BACKGROUND_GREY);
-    gTopbarControls[topbarClockRunStopId].rectangle      = draw_button(mainArea, {{475, 8}, {get_text_width("Stopped", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)(clockRunning ? "Running" : "Stopped"), clockRunning ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarTempoDialId].rectangle         = render_dial_with_text(mainArea, {topbar_control_def(topbarTempoDialId)->coord, {20, 48}}, NULL, buff, atomic_load(&gMasterClock), 241, 0, (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarClockRunStopId].rectangle      = draw_button(mainArea, {topbar_control_def(topbarClockRunStopId)->coord, {get_text_width("Stopped", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)(clockRunning ? "Running" : "Stopped"), clockRunning ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
     if (atomic_load(&gPerfMode)) {
         snprintf(buff, sizeof(buff), "Perf Mode");
