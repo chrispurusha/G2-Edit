@@ -1654,7 +1654,7 @@ static int send_get_knob_snapshot(uint32_t slot) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_KNOBS);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK); // Really expected SUB_RESPONSE_KNOBS here
         LOG_DEBUG("KNOB SNAPSHOT RESPONSE\n");
     }
     return retVal;
@@ -1673,7 +1673,10 @@ static int send_get_patch_data(uint32_t slot) {
     retVal |= send_get_patch_notes(slot);
     retVal |= send_get_resources_used(slot, locationVa);
     retVal |= send_get_resources_used(slot, locationFx);
-    retVal |= send_get_knob_snapshot(slot);
+
+    if (send_get_knob_snapshot(slot) != EXIT_SUCCESS) {
+        LOG_DEBUG("send_get_knob_snapshot slot %u failed — skipping\n", slot);
+    }
     retVal |= send_get_selected_param(slot);
 
     return retVal;
