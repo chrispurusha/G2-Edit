@@ -36,7 +36,7 @@ void usb_log_open(void) {
     } else {
         snprintf(path, sizeof(path), "/tmp/G2_usb.log");
     }
-    logFile = fopen(path, "a");
+    logFile = fopen(path, "w");
 
     if (logFile == NULL) {
         fprintf(stderr, "usb_log_open: failed to open %s\n", path);
