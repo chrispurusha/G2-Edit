@@ -20,7 +20,8 @@
 #ifndef __DEFS_H__
 #define __DEFS_H__
 
-#define ENABLE_DEBUG    // Comment out of not required
+#define ENABLE_DEBUG      // Comment out if not required
+#define ENABLE_USB_LOG    // Uncomment to enable USB message logging to ~/G2_usb.log
 
 #define LOG_ERROR(fmt, ...)           fprintf(stderr, "E %s() " fmt, __func__, ## __VA_ARGS__)
 #define LOG_WARNING(fmt, ...)         fprintf(stderr, "W %s() " fmt, __func__, ## __VA_ARGS__)

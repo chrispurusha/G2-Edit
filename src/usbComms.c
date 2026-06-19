@@ -31,6 +31,7 @@ extern "C" {
 #include <math.h>
 #include <time.h>
 #include "defs.h"
+#include "usbLog.h"
 #include "types.h"
 #include <libusb.h>
 #include "utils.h"
@@ -596,7 +597,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                     module.key.index    = k;
 
                     if (read_module(module.key, &module)) {
-                        if (gModuleProperties[module.type].ledType == ledTypeYes) {
+                        if (module_led_count(module.type) > 0) {
                             if (led_count >= start_idx && led_count < (uint32_t)(start_idx + 40)) {
                                 module.led.value = read_bit_stream(buff, bitPos, 2);
                                 write_module(module.key, &module);
@@ -1028,6 +1029,7 @@ static int rcv_extended(int dataLength, int * response) {
                 if (  (responseType == RESPONSE_TYPE_INIT)
                    || (responseType == RESPONSE_TYPE_COMMAND)) {
                     atomic_store(&gUsbRxTime, (uint64_t)get_time_ms());
+                    usb_log_message("EX", buff, (size_t)readLength);
                     break;
                 }
             }
@@ -1096,6 +1098,7 @@ static int int_rec(tPoll poll, int expectedResponse) {
                 if (readLength > 0) {
                     gLastActivityTime = time(NULL);
                     atomic_store(&gUsbRxTime, (uint64_t)get_time_ms());
+                    usb_log_message("RX", buff, (size_t)readLength);
                     break;
                 }
             } else if (retVal == LIBUSB_ERROR_TIMEOUT) {
@@ -1207,6 +1210,7 @@ static int send_message(uint8_t * buff, int pos) {
         if ((result == 0) && (actualLength == msgLength)) {
             gLastActivityTime = time(NULL);
             atomic_store(&gUsbTxTime, (uint64_t)get_time_ms());
+            usb_log_message("TX", buff, (size_t)msgLength);
             return EXIT_SUCCESS;
         }
 
@@ -2570,6 +2574,7 @@ static int usb_comms_init_signals(void) {
 static void * usb_thread_loop(void * arg) {
     usb_comms_init_signals();
     msg_init(&gCommandQueue, "command");
+    usb_log_open();
 
     if (libusb_init(&libUsbCtx) != LIBUSB_SUCCESS) {
         LOG_ERROR("libusb_init failed\n");
@@ -2585,6 +2590,7 @@ static void * usb_thread_loop(void * arg) {
     pthread_mutex_unlock(&usbStaticMutex);
 
     libusb_exit(libUsbCtx);
+    usb_log_close();
     return NULL;
 }
 
