@@ -44,7 +44,7 @@ extern GLFWwindow *        gWindow;
 extern _Atomic uint32_t    gLocation;
 extern _Atomic bool        gReDraw;
 extern bool                gCommandKeyPressed;
-extern tButton             gMainButtonArray[];
+extern tTopbarControl      gTopbarControls[topbarControlMax];
 extern bool                gShowOpenFileReadDialogue;
 extern bool                gShowOpenFileWriteDialogue;
 extern tScrollState        gScrollState;
@@ -83,30 +83,15 @@ extern tPatchNotesEdit     gPatchNotesEdit;
 extern tSynthSettings      gSynthSettings;
 extern tPatchSettingsEdit  gPatchSettingsEdit;
 extern tSettingsPanelRects gSettingsPanelRects;
-extern tRectangle          gSettingsButtonRect;
 extern tRectangle          gMorphLabelRect[NUM_MORPHS];
 //extern _Atomic uint32_t    gHiddenCableMask;
-extern tRectangle          gCableColourToggleRect[cableColourMax];
-extern tRectangle          gCableColourSelectRect[cableColourMax];
 extern uint32_t            gCableColour;
 extern _Atomic bool        gCablesTransparent; // true = draw all cables semi-transparent
 //extern _Atomic bool        gCablesHideAll;     // true = hide all cables completely
 extern tResourceAlloc      gResourceAlloc[MAX_SLOTS];
 
-extern tRectangle          gHideAllCablesRect;
-extern tRectangle          gTransparentCablesRect;
-extern tRectangle          gPatchNotesButtonRect;
 extern tRectangle          gPatchNotesCloseRect;
 extern tRectangle          gPatchNotesDiscardRect;
-extern tRectangle          gPatchNameRectangle;
-extern tRectangle          gPatchTypeRectangle;
-extern tRectangle          gVoiceCountRectangle;
-//extern tRectangle          gVoiceCountIncRectangle;
-//extern tRectangle          gVoiceCountDecRectangle;
-extern tRectangle          gMonoPolyRectangle;
-extern tRectangle          gPatchVolumeRectangle;
-extern tRectangle          gTempoDialRectangle;
-extern tRectangle          gClockRunStopRectangle;
 extern bool                gTempoDragging;
 extern _Atomic uint64_t    gUsbTxTime;
 extern _Atomic uint64_t    gUsbRxTime;
@@ -115,11 +100,9 @@ extern _Atomic uint64_t    gUsbRxTime;
 extern "C" {
 #endif
 
-uint32_t array_size_main_button_array(void);
-
 void patch_name_set(uint32_t slot, const char * name);
 void patch_name_get(uint32_t slot, char * name, size_t size);
-void set_exclusive_button_highlight(tButtonId first, tButtonId last, tButtonId active);
+void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active);
 
 #ifdef __cplusplus
 }

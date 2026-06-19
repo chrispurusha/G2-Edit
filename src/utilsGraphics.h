@@ -36,13 +36,13 @@ tRectangle render_circle_part(tArea area, tCoord coord, double radius, int segme
 tRectangle render_circle_part_angle(tArea area, tCoord coord, double radius, double startAngle, double endAngle, int numSteps);
 tRectangle render_radial_line(tArea area, tCoord coord, double radius, double angleDegrees, double thickness);
 tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active);
-tRectangle draw_button(tArea area, tRectangle rectangle, char * text, tRgb backgroundColour);
+tRectangle draw_button(tArea area, tRectangle rectangle, const char * text, tRgb backgroundColour);
 tRectangle draw_slider(tArea area, tRectangle rectangle, uint32_t value, uint32_t range, uint32_t morphRange, tRgb colour);
 tRectangle render_bezier_curve(tArea area, tCoord start, tCoord control, tCoord end, double thickness, int segments);
-tRectangle render_text(tArea area, tRectangle rectangle, char * text);
+tRectangle render_text(tArea area, tRectangle rectangle, const char * text);
 bool preload_glyph_textures(const char * fontPath, double fontSize);
-double get_text_width(char * text, double targetHeight, tCache useCache);
-double largest_text_width(int numItems, char ** text, double targetHeight, tCache useCache);
+double get_text_width(const char * text, double targetHeight, tCache useCache);
+double largest_text_width(int numItems, const char ** text, double targetHeight, tCache useCache);
 void free_textures(void);
 double value_to_angle(uint32_t value, uint32_t range);
 double get_scroll_bar_percent(double scrollBar, double renderSize);
@@ -70,6 +70,6 @@ double calc_scroll_y(void);
 tRectangle rectangle_scale_from_percent(tRectangle rectangle);
 double scale_from_percent(double val);
 tRectangle render_dial(tArea area, tRectangle rectangle, uint32_t value, uint32_t range, uint32_t morphRange, tRgb colour);
-tRectangle render_dial_with_text(tArea area, tRectangle rectangle, char * label, char * buff, uint32_t value, uint32_t range, uint32_t morphRange, tRgb colour);
+tRectangle render_dial_with_text(tArea area, tRectangle rectangle, const char * label, const char * buff, uint32_t value, uint32_t range, uint32_t morphRange, tRgb colour);
 
 #endif // __UTILS_GRAPHICS_H__

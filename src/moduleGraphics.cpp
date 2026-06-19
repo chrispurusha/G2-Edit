@@ -291,7 +291,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         case paramType2Toggle:
         case paramType2Menu:
         {
-            tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, char ** strMap);
+            tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap);
             render_param_function = NULL;
 
             switch (paramLocationList[paramRef].type1) {
@@ -317,7 +317,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             }
 
             if (render_param_function != NULL) {
-                module->param[variation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, (char **)paramLocationList[paramRef].strMap);
+                module->param[variation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
             }
             break;
         }
@@ -370,9 +370,9 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
         }
         case paramType1StandardToggle:
         {
-            char ** strMap     = (char **)modeLocationList[modeRef].strMap;
-            double  y          = rectangle.coord.y;
-            double  textHeight = rectangle.size.h / 2.0;
+            const char ** strMap     = modeLocationList[modeRef].strMap;
+            double        y          = rectangle.coord.y;
+            double        textHeight = rectangle.size.h / 2.0;
 
             //LOG_DEBUG("Mode for module %s\n", gModuleProperties[module->type].name);
             if (strMap == NULL) {

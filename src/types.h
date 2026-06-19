@@ -21,6 +21,7 @@
 #define __TYPES_H__
 
 #include "sysIncludes.h"
+#include "defs.h"
 
 typedef enum {
     moduleTypeUnknown0,
@@ -480,25 +481,58 @@ typedef enum {
 } tConnectorDir;
 
 typedef enum {
-    vaButtonId,
-    fxButtonId,
-    openReadFileButtonId,
-    openWriteFileButtonId,
-    variation1ButtonId,
-    variation2ButtonId,
-    variation3ButtonId,
-    variation4ButtonId,
-    variation5ButtonId,
-    variation6ButtonId,
-    variation7ButtonId,
-    variation8ButtonId,
-    variationInitButtonId,
-    slotAButtonId,
-    slotBButtonId,
-    slotCButtonId,
-    slotDButtonId,
-    initPatchId
-} tButtonId;
+    topbarControlTypeButton,
+    topbarControlTypeSpecial,
+} tTopbarControlType;
+
+typedef enum {
+    // Standard buttons (IDs 0..topbarVariationInitId) — rendered generically from resource table
+    topbarVaId = 0,
+    topbarFxId,
+    topbarOpenReadFileId,
+    topbarOpenWriteFileId,
+    topbarNewPatchId,
+    topbarSlotAId,
+    topbarSlotBId,
+    topbarSlotCId,
+    topbarSlotDId,
+    topbarVariation1Id,
+    topbarVariation2Id,
+    topbarVariation3Id,
+    topbarVariation4Id,
+    topbarVariation5Id,
+    topbarVariation6Id,
+    topbarVariation7Id,
+    topbarVariation8Id,
+    topbarVariationInitId,
+    // Special controls — dynamic text or custom rendering
+    topbarPatchNameId,
+    topbarPatchTypeId,
+    topbarMonoPolyId,
+    topbarVoiceCountId,
+    topbarPatchNotesId,
+    topbarSettingsId,
+    topbarClockRunStopId,
+    topbarTempoDialId,
+    topbarPatchVolumeId,
+    topbarHideAllCablesId,
+    topbarTransparentCablesId,
+    topbarCableColourToggle0Id,
+    topbarCableColourToggle1Id,
+    topbarCableColourToggle2Id,
+    topbarCableColourToggle3Id,
+    topbarCableColourToggle4Id,
+    topbarCableColourToggle5Id,
+    topbarCableColourToggle6Id,
+    topbarCableColourSelect0Id,
+    topbarCableColourSelect1Id,
+    topbarCableColourSelect2Id,
+    topbarCableColourSelect3Id,
+    topbarCableColourSelect4Id,
+    topbarCableColourSelect5Id,
+    topbarCableColourSelect6Id,
+    topbarControlMax
+} tTopbarControlId;
 
 typedef struct {
     tRectangle     rectangle;
@@ -708,13 +742,19 @@ typedef struct {
 } tLedLocation;
 
 typedef struct {
-    const tCoord  coord;
-    tRectangle    rectangle;
-    const tAnchor anchor;
-    char *        text;
-    tRgb          backgroundColour;
-    bool          isPressed;
-} tButton;
+    tRectangle rectangle;
+    tRgb       colour;
+    bool       isPressed;
+} tTopbarControl;
+
+typedef struct {
+    tTopbarControlId   id;
+    tCoord             coord;
+    tAnchor            anchor;
+    const char *       text;
+    tRgb               defaultColour;
+    tTopbarControlType type;
+} tTopbarControlDef;
 
 typedef struct {
     uint32_t unknown1;

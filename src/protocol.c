@@ -67,7 +67,7 @@ void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     LOG_DEBUG("  Category %u\n", gPatchDescr[slot].category);
 
     if (slot == atomic_load(&gSlot)) {
-        set_exclusive_button_highlight(variation1ButtonId, variationInitButtonId, (tButtonId)(variation1ButtonId + gPatchDescr[slot].activeVariation));
+        set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId, (tTopbarControlId)(topbarVariation1Id + gPatchDescr[slot].activeVariation));
     }
 }
 

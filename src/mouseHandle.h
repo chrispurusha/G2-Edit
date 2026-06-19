@@ -28,7 +28,7 @@ extern "C" {
 
 void init_patch(uint32_t slot);
 void get_global_gui_scaled_mouse_coord(tCoord * coord);
-void set_exclusive_button_highlight(tButtonId first, tButtonId last, tButtonId active);
+void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active);
 int32_t find_knob_for_param(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex);
 void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex);
 bool handle_context_menu_click(tCoord coord);

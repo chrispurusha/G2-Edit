@@ -249,9 +249,9 @@ static void internal_render_circle_line_part_angle(tCoord coord, double radius, 
     glEnd();
 }
 
-static void internal_render_text(tRectangle rectangle, char * text) {
-    double scaleFactor = 0.0;
-    char * ch          = NULL;
+static void internal_render_text(tRectangle rectangle, const char * text) {
+    double       scaleFactor = 0.0;
+    const char * ch          = NULL;
 
     if (text == NULL) {
         //LOG_ERROR("render_text text=NULL\n");
@@ -670,7 +670,7 @@ tRectangle draw_power_button(tArea area, tRectangle rectangle, bool active) {
     return retRectangle;
 }
 
-tRectangle draw_button(tArea area, tRectangle rectangle, char * text, tRgb backgroundColour) {
+tRectangle draw_button(tArea area, tRectangle rectangle, const char * text, tRgb backgroundColour) {
     tRectangle retRectangle    = {0};
     double     borderLineWidth = 1.0;
     double     margin          = 2.0;
@@ -792,7 +792,7 @@ tRectangle draw_slider(tArea area, tRectangle rectangle, uint32_t value, uint32_
     return retRectangle;
 }
 
-tRectangle render_text(tArea area, tRectangle rectangle, char * text) {
+tRectangle render_text(tArea area, tRectangle rectangle, const char * text) {
     tRectangle retRectangle = {0};
 
     if (area == moduleArea) {
@@ -949,15 +949,15 @@ double get_char_width(char ch, double targetHeight) {
     return width * scaleVal;
 }
 
-double get_text_width(char * text, double targetHeight, tCache useCache) {
+double get_text_width(const char * text, double targetHeight, tCache useCache) {
     if (text == NULL) {
         return 0.0;
     }
     static const int kCacheSize = 64;
     static struct {
-        char * text;
-        double height;
-        double width;
+        const char * text;
+        double       height;
+        double       width;
     }                cache[64]  = {};
     static int       cacheCount = 0;
 
@@ -983,7 +983,7 @@ double get_text_width(char * text, double targetHeight, tCache useCache) {
     return width;
 }
 
-double largest_text_width(int numItems, char ** text, double targetHeight, tCache useCache) {
+double largest_text_width(int numItems, const char ** text, double targetHeight, tCache useCache) {
     if (text == NULL) {
         return 0.0;
     }
@@ -1269,7 +1269,7 @@ tRectangle render_dial(tArea area, tRectangle rectangle, uint32_t value, uint32_
     return render_circle_line(area, {x, y}, radius, 25, 1.0);
 }
 
-tRectangle render_dial_with_text(tArea area, tRectangle rectangle, char * label, char * buff, uint32_t value, uint32_t range, uint32_t morphRange, tRgb colour) {
+tRectangle render_dial_with_text(tArea area, tRectangle rectangle, const char * label, const char * buff, uint32_t value, uint32_t range, uint32_t morphRange, tRgb colour) {
     double textHeight  = rectangle.size.h / 4.0;
     double dialOffsetY = 0.0;
 

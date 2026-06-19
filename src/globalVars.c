@@ -23,34 +23,15 @@ extern "C" {
 
 #include "globalVars.h"
 
-double                 gGlobalGuiScale    = 2;
-_Atomic bool           gQuitAll           = false;
-GLFWwindow *           gWindow            = NULL;
-_Atomic uint32_t       gLocation          = locationVa;
-_Atomic bool           gReDraw            = true;
+double                 gGlobalGuiScale                              = 2;
+_Atomic bool           gQuitAll                                     = false;
+GLFWwindow *           gWindow                                      = NULL;
+_Atomic uint32_t       gLocation                                    = locationVa;
+_Atomic bool           gReDraw                                      = true;
 
-bool                   gCommandKeyPressed = false;
+bool                   gCommandKeyPressed                           = false;
 
-tButton                gMainButtonArray[] = { // Must align with tButtonId enumaration (in types.h)
-    {{400,  8}, NULL_RECTANGLE, anchorTopLeft, "VA",         RGB_GREEN_ON,        false},
-    {{425,  8}, NULL_RECTANGLE, anchorTopLeft, "FX",         RGB_BACKGROUND_GREY, false},
-    {{ 20,  8}, NULL_RECTANGLE, anchorTopLeft, "Read File",  RGB_BACKGROUND_GREY, false},
-    {{ 80,  8}, NULL_RECTANGLE, anchorTopLeft, "Write File", RGB_BACKGROUND_GREY, false},
-    {{400, 60}, NULL_RECTANGLE, anchorTopLeft, "1",          RGB_BACKGROUND_GREY, false},
-    {{412, 60}, NULL_RECTANGLE, anchorTopLeft, "2",          RGB_BACKGROUND_GREY, false},
-    {{424, 60}, NULL_RECTANGLE, anchorTopLeft, "3",          RGB_BACKGROUND_GREY, false},
-    {{436, 60}, NULL_RECTANGLE, anchorTopLeft, "4",          RGB_BACKGROUND_GREY, false},
-    {{448, 60}, NULL_RECTANGLE, anchorTopLeft, "5",          RGB_BACKGROUND_GREY, false},
-    {{460, 60}, NULL_RECTANGLE, anchorTopLeft, "6",          RGB_BACKGROUND_GREY, false},
-    {{472, 60}, NULL_RECTANGLE, anchorTopLeft, "7",          RGB_BACKGROUND_GREY, false},
-    {{484, 60}, NULL_RECTANGLE, anchorTopLeft, "8",          RGB_BACKGROUND_GREY, false},
-    {{500, 60}, NULL_RECTANGLE, anchorTopLeft, "Init",       RGB_BACKGROUND_GREY, false},
-    {{600,  8}, NULL_RECTANGLE, anchorTopLeft, "A",          RGB_GREEN_ON,        false},
-    {{615,  8}, NULL_RECTANGLE, anchorTopLeft, "B",          RGB_BACKGROUND_GREY, false},
-    {{630,  8}, NULL_RECTANGLE, anchorTopLeft, "C",          RGB_BACKGROUND_GREY, false},
-    {{645,  8}, NULL_RECTANGLE, anchorTopLeft, "D",          RGB_BACKGROUND_GREY, false},
-    {{140,  8}, NULL_RECTANGLE, anchorTopLeft, "New Patch",  RGB_BACKGROUND_GREY, false},
-};
+tTopbarControl         gTopbarControls[topbarControlMax]            = {0};
 
 const char *           patchTypeStrMap[patchTypeUserMax]            = {"No Cat", "Acoustic", "Sequencer", "Bass", "Classic", "Drum", "Fantasy", "Fx", "Lead", "Organ", "Pad", "Piano", "Synth", "Audio In", "User 1", "User 2"};
 const char *           monoPolyStrMap[monoPolyMax]                  = {"Poly", "Mono", "Legato"};
@@ -93,30 +74,15 @@ tPatchNotesEdit        gPatchNotesEdit                              = {0};
 tSynthSettings         gSynthSettings                               = {0};
 tPatchSettingsEdit     gPatchSettingsEdit                           = {0};
 tSettingsPanelRects    gSettingsPanelRects                          = {0};
-tRectangle             gSettingsButtonRect                          = {0};
 tRectangle             gMorphLabelRect[NUM_MORPHS]                  = {0};
 //_Atomic uint32_t       gHiddenCableMask                             = 0; // TODO - Send to G2 when changes
-tRectangle             gCableColourToggleRect[cableColourMax]       = {0};
-tRectangle             gCableColourSelectRect[cableColourMax]       = {0};
 uint32_t               gCableColour                                 = 0;
 _Atomic bool           gCablesTransparent                           = false;
 //_Atomic bool           gCablesHideAll                               = false;
 tResourceAlloc         gResourceAlloc[MAX_SLOTS]                    = {0};
 
-tRectangle             gHideAllCablesRect                           = {0};
-tRectangle             gTransparentCablesRect                       = {0};
-tRectangle             gPatchNotesButtonRect                        = {0};
 tRectangle             gPatchNotesCloseRect                         = {0};
 tRectangle             gPatchNotesDiscardRect                       = {0};
-tRectangle             gPatchNameRectangle                          = {0};
-tRectangle             gPatchTypeRectangle                          = {0};  // TODO - potentially roll these non-standard buttons into the main button mechanism with special types
-tRectangle             gVoiceCountRectangle                         = {0};
-//tRectangle             gVoiceCountIncRectangle                      = {0};
-//tRectangle             gVoiceCountDecRectangle                      = {0};
-tRectangle             gMonoPolyRectangle                           = {0};
-tRectangle             gPatchVolumeRectangle                        = {{320, 56}, {20, 20}};
-tRectangle             gTempoDialRectangle                          = {0};
-tRectangle             gClockRunStopRectangle                       = {0};
 bool                   gTempoDragging                               = false;
 _Atomic uint64_t       gUsbTxTime                                   = 0;
 _Atomic uint64_t       gUsbRxTime                                   = 0;
@@ -124,10 +90,6 @@ _Atomic uint64_t       gUsbRxTime                                   = 0;
 /* Stored here, but don't access directly, use functions to access instead */
 static char            gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1]  = {0};
 static pthread_mutex_t gPatchNameMutex                              = PTHREAD_MUTEX_INITIALIZER;
-
-uint32_t array_size_main_button_array(void) {
-    return ARRAY_SIZE(gMainButtonArray);
-}
 
 void patch_name_set(uint32_t slot, const char * name) {
     pthread_mutex_lock(&gPatchNameMutex);
@@ -150,12 +112,14 @@ void patch_name_get(uint32_t slot, char * name, size_t size) {
     pthread_mutex_unlock(&gPatchNameMutex);
 }
 
-void set_exclusive_button_highlight(tButtonId first, tButtonId last, tButtonId active) {
-    for (tButtonId i = first; i <= last; i++) {
-        gMainButtonArray[i].backgroundColour = (tRgb)RGB_BACKGROUND_GREY;
+void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active) {
+    tTopbarControlId i = first;
+
+    for (i = first; i <= last; i++) {
+        gTopbarControls[i].colour = (tRgb)RGB_BACKGROUND_GREY;
     }
 
-    gMainButtonArray[active].backgroundColour = (tRgb)RGB_GREEN_ON;
+    gTopbarControls[active].colour = (tRgb)RGB_GREEN_ON;
 }
 
 #ifdef __cplusplus

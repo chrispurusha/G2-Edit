@@ -717,7 +717,7 @@ tRectangle render_paramType1Slider(tModule * module, tRectangle rectangle, char 
 tRectangle render_paramType1StrMap(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     const char ** strMap = paramLocationList[paramRef].strMap;
 
-    if (strMap && (uint32_t)paramValue < array_size_str_map((char **)strMap)) {
+    if (strMap && (uint32_t)paramValue < array_size_str_map(strMap)) {
         snprintf(buff, buffSize, "%s", strMap[(int)paramValue]);
     } else {
         snprintf(buff, buffSize, "%d", (int)paramValue);
@@ -749,7 +749,7 @@ tRectangle render_paramType1FreqShift(tModule * module, tRectangle rectangle, ch
     return render_dial_with_text(moduleArea, rectangle, label, buff, paramValue, range, morphRange, colour);
 }
 
-tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, char ** strMap) {
+tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap) {
     double y                      = rectangle.coord.y;
     double textHeight             = rectangle.size.h / 2.0;
     tRgb   buttonBackgroundColour = RGB_BACKGROUND_GREY;

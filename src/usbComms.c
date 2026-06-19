@@ -785,10 +785,10 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("Got slot select %u\n", newSlot);
 
             atomic_store(&gSlot, newSlot);
-            set_exclusive_button_highlight(slotAButtonId, slotDButtonId,
-                                           (tButtonId)(slotAButtonId + newSlot));
-            set_exclusive_button_highlight(variation1ButtonId, variationInitButtonId,
-                                           (tButtonId)((uint32_t)variation1ButtonId + gPatchDescr[newSlot].activeVariation));
+            set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
+                                           (tTopbarControlId)(topbarSlotAId + newSlot));
+            set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
+                                           (tTopbarControlId)((uint32_t)topbarVariation1Id + gPatchDescr[newSlot].activeVariation));
             return EXIT_SUCCESS;
         }
 
@@ -847,7 +847,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             variation                         = read_bit_stream(buff, bitPos, 8);
             gPatchDescr[slot].activeVariation = variation;
 
-            set_exclusive_button_highlight(variation1ButtonId, variationInitButtonId, (tButtonId)(variation1ButtonId + variation));
+            set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId, (tTopbarControlId)(topbarVariation1Id + variation));
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_SEL_PARAM_PAGE:
@@ -2501,10 +2501,10 @@ static void state_handler(void) {
         }
         atomic_store(&gSlot, 0);
         gPatchDescr[0].activeVariation = 0;
-        set_exclusive_button_highlight(slotAButtonId, slotDButtonId,
-                                       (tButtonId)(slotAButtonId));
-        set_exclusive_button_highlight(variation1ButtonId, variationInitButtonId,
-                                       (tButtonId)((uint32_t)variation1ButtonId));
+        set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
+                                       (tTopbarControlId)(topbarSlotAId));
+        set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
+                                       (tTopbarControlId)((uint32_t)topbarVariation1Id));
 
         call_full_patch_change_notify();
         call_wake_glfw();

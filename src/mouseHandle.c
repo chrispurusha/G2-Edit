@@ -39,6 +39,7 @@ extern "C" {
 #include "msgQueue.h"
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
+#include "topbarResourcesAccess.h"
 #include "utilsGraphics.h"
 #include "mouseHandle.h"
 #include "graphics.h"
@@ -291,53 +292,53 @@ void init_patch(uint32_t slot) {  // Todo - think where this should really go
     patch_name_set(slot, "Init");
 }
 
-void handle_button(tButtonId buttonId) {
+void handle_button(tTopbarControlId controlId) {
     uint32_t slot      = atomic_load(&gSlot);
     uint32_t location  = atomic_load(&gLocation);
     uint32_t variation = gPatchDescr[slot].activeVariation;
 
-    switch (buttonId) {
-        case vaButtonId:
+    switch (controlId) {
+        case topbarVaId:
         {
             atomic_store(&gLocation, locationVa);
-            set_exclusive_button_highlight(vaButtonId, fxButtonId, buttonId);
+            set_exclusive_button_highlight(topbarVaId, topbarFxId, controlId);
             set_x_scroll_bar(0); // or different scroll positions for va and fx!?
             set_y_scroll_bar(0);
             break;
         }
-        case fxButtonId:
+        case topbarFxId:
         {
             atomic_store(&gLocation, locationFx);
-            set_exclusive_button_highlight(vaButtonId, fxButtonId, buttonId);
+            set_exclusive_button_highlight(topbarVaId, topbarFxId, controlId);
             set_x_scroll_bar(0);
             set_y_scroll_bar(0);
             break;
         }
-        case openReadFileButtonId:
+        case topbarOpenReadFileId:
         {
             gShowOpenFileReadDialogue = true;
             break;
         }
-        case openWriteFileButtonId:
+        case topbarOpenWriteFileId:
         {
             gShowOpenFileWriteDialogue = true;
             break;
         }
-        case variation1ButtonId:
-        case variation2ButtonId:
-        case variation3ButtonId:
-        case variation4ButtonId:
-        case variation5ButtonId:
-        case variation6ButtonId:
-        case variation7ButtonId:
-        case variation8ButtonId:
-        case variationInitButtonId:
+        case topbarVariation1Id:
+        case topbarVariation2Id:
+        case topbarVariation3Id:
+        case topbarVariation4Id:
+        case topbarVariation5Id:
+        case topbarVariation6Id:
+        case topbarVariation7Id:
+        case topbarVariation8Id:
+        case topbarVariationInitId:
         {
-            uint32_t        variation      = (uint32_t)buttonId - (uint32_t)variation1ButtonId;
+            uint32_t        variation      = (uint32_t)controlId - (uint32_t)topbarVariation1Id;
 
             gPatchDescr[slot].activeVariation      = variation;
 
-            set_exclusive_button_highlight(variation1ButtonId, variationInitButtonId, buttonId);
+            set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId, controlId);
 
             tMessageContent messageContent = {0};
             messageContent.cmd                     = eMsgCmdSelectVariation;
@@ -347,31 +348,12 @@ void handle_button(tButtonId buttonId) {
 
             break;
         }
-        //case initParamsButtonId:   // TODO - might add a set to defaults button
-        //{
-        //    tModule module      = {0};
-        //    bool    validModule = false;
-//
-        //    reset_walk_module();
-//
-        //    do {
-        //        validModule = walk_next_module(&module);
-
-        //       if (validModule) {
-        //           init_params_on_module(&module, location, variation); // TODO: take init value from the 9th (init) variation, or at least check our init values are the same
-        //       }
-        //   } while (validModule);
-//
-        //    finish_walk_module();
-
-        //    break;
-        //}
-        case slotAButtonId:
-        case slotBButtonId:
-        case slotCButtonId:
-        case slotDButtonId:
+        case topbarSlotAId:
+        case topbarSlotBId:
+        case topbarSlotCId:
+        case topbarSlotDId:
         {
-            uint32_t        slot           = (uint32_t)buttonId - (uint32_t)slotAButtonId;
+            uint32_t        slot           = (uint32_t)controlId - (uint32_t)topbarSlotAId;
 
             atomic_store(&gSlot, slot);
 
@@ -381,23 +363,26 @@ void handle_button(tButtonId buttonId) {
             messageContent.slotData.slot = slot;
             msg_send(&gCommandQueue, &messageContent);
 
-            set_exclusive_button_highlight(slotAButtonId, slotDButtonId, buttonId);
-            set_exclusive_button_highlight(variation1ButtonId, variationInitButtonId,
-                                           (tButtonId)((uint32_t)variation1ButtonId + gPatchDescr[slot].activeVariation));
+            set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId, controlId);
+            set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
+                                           (tTopbarControlId)((uint32_t)topbarVariation1Id + gPatchDescr[slot].activeVariation));
             break;
         }
-        case initPatchId:
+        case topbarNewPatchId:
         {
             init_patch(slot);
 
-            //gMainButtonArray[buttonId].backgroundColour   = (tRgb)RGB_GREEN_ON;
             tMessageContent messageContent = {0};
             messageContent.cmd  = eMsgCmdWritePatch;
             messageContent.slot = slot;
             msg_send(&gCommandQueue, &messageContent);
             break;
         }
+        default:
+            break;
     }
+    (void)location;
+    (void)variation;
 }
 
 void shift_modules_down(tModuleKey key) {   // TODO: Deal with modules already on last row!
@@ -2234,10 +2219,10 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         {
             // Button down should only ever deal with start of drag, or graphical indication of button down
 
-            for (i = 0; i < array_size_main_button_array(); i++) {
-                if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
-                    found                         = true;
-                    gMainButtonArray[i].isPressed = true; // Used only to change button colour
+            for (i = 0; i < TOPBAR_STANDARD_BUTTON_COUNT; i++) {
+                if (within_rectangle(coord, gTopbarControls[i].rectangle)) {
+                    found                        = true;
+                    gTopbarControls[i].isPressed = true;
                     break;
                 }
             }
@@ -2249,7 +2234,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                if (within_rectangle(coord, gPatchVolumeRectangle)) {
+                if (within_rectangle(coord, gTopbarControls[topbarPatchVolumeId].rectangle)) {
                     module.key.location      = locationMorph;
                     module.key.slot          = slot;
                     module.key.index         = PATCH_VOLUME;
@@ -2262,14 +2247,14 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                if (within_rectangle(coord, gTempoDialRectangle)) {
+                if (within_rectangle(coord, gTopbarControls[topbarTempoDialId].rectangle)) {
                     gTempoDragging = true;
                     found          = true;
                 }
             }
 
             if (found == false) {
-                if (within_rectangle(coord, gClockRunStopRectangle)) {
+                if (within_rectangle(coord, gTopbarControls[topbarClockRunStopId].rectangle)) {
                     running = !atomic_load(&gMasterClockRunning);
                     atomic_store(&gMasterClockRunning, (uint8_t)running);
                     send_master_clock_run((uint32_t)running);
@@ -2288,8 +2273,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
         case mouseButtonLeftUp:
         {
-            for (i = 0; i < array_size_main_button_array(); i++) {
-                gMainButtonArray[i].isPressed = false;
+            for (i = 0; i < TOPBAR_STANDARD_BUTTON_COUNT; i++) {
+                gTopbarControls[i].isPressed = false;
             }
 
             if (found == false) {
@@ -2303,9 +2288,9 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                for (i = 0; i < array_size_main_button_array(); i++) {
-                    if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
-                        handle_button((tButtonId)i);
+                for (i = 0; i < TOPBAR_STANDARD_BUTTON_COUNT; i++) {
+                    if (within_rectangle(coord, gTopbarControls[i].rectangle)) {
+                        handle_button((tTopbarControlId)i);
                         found = true;
                         break;
                     }
@@ -2314,7 +2299,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 for (i = 0; i < cableColourMax; i++) {
-                    if (within_rectangle(coord, gCableColourToggleRect[i])) {
+                    if (within_rectangle(coord, gTopbarControls[(int)topbarCableColourToggle0Id + i].rectangle)) {
                         for (int colour = 0; colour < cableColourMax; colour++) {
                             gPatchDescr[slot].visible[i] = !gPatchDescr[slot].visible[i];
                         }
@@ -2332,7 +2317,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 for (i = 0; i < cableColourMax; i++) {
-                    if (within_rectangle(coord, gCableColourSelectRect[i])) {
+                    if (within_rectangle(coord, gTopbarControls[(int)topbarCableColourSelect0Id + i].rectangle)) {
                         gCableColour = i;
                         atomic_store(&gReDraw, true);
                         found        = true;
@@ -2342,7 +2327,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                if (within_rectangle(coord, gHideAllCablesRect)) {
+                if (within_rectangle(coord, gTopbarControls[topbarHideAllCablesId].rectangle)) {
                     int             colour         = 0;
                     int             visibleCount   = 0;
 
@@ -2371,7 +2356,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                if (within_rectangle(coord, gTransparentCablesRect)) {
+                if (within_rectangle(coord, gTopbarControls[topbarTransparentCablesId].rectangle)) {
                     bool current = atomic_load(&gCablesTransparent);
                     atomic_store(&gCablesTransparent, !current);
                     atomic_store(&gReDraw, true);
@@ -2380,7 +2365,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                if (within_rectangle(coord, gPatchNotesButtonRect)) {
+                if (within_rectangle(coord, gTopbarControls[topbarPatchNotesId].rectangle)) {
                     gPatchNotesEdit.active    = true;
                     gPatchNotesEdit.slot      = slot;
                     gPatchNotesEdit.cursorPos = gPatchNotesSize[slot];
@@ -2393,7 +2378,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                if (within_rectangle(coord, gSettingsButtonRect)) {
+                if (within_rectangle(coord, gTopbarControls[topbarSettingsId].rectangle)) {
                     gPatchSettingsEdit.active = true;
                     gPatchSettingsEdit.slot   = slot;
                     found                     = true;
@@ -2401,7 +2386,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                if (within_rectangle(coord, gPatchNameRectangle)) {
+                if (within_rectangle(coord, gTopbarControls[topbarPatchNameId].rectangle)) {
                     gPatchNameEdit.active = true;
                     gPatchNameEdit.slot   = slot;
                     patch_name_get(slot, gPatchNameEdit.buffer, sizeof(gPatchNameEdit.buffer));
@@ -2410,21 +2395,21 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                if (within_rectangle(coord, gPatchTypeRectangle)) {
-                    open_patch_type_context_menu(gPatchTypeRectangle.coord);
+                if (within_rectangle(coord, gTopbarControls[topbarPatchTypeId].rectangle)) {
+                    open_patch_type_context_menu(gTopbarControls[topbarPatchTypeId].rectangle.coord);
                     found = true;
                 }
             }
 
             if (found == false) {
-                if (within_rectangle(coord, gMonoPolyRectangle)) {
+                if (within_rectangle(coord, gTopbarControls[topbarMonoPolyId].rectangle)) {
                     open_mono_poly_context_menu(coord);
                     found = true;
                 }
             }
 
             if (found == false) {
-                if (within_rectangle(coord, gVoiceCountRectangle)) {
+                if (within_rectangle(coord, gTopbarControls[topbarVoiceCountId].rectangle)) {
                     open_voice_count_context_menu(coord);
                     found = true;
                 }
@@ -2513,9 +2498,9 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             }
 
-            for (i = (int)variation1ButtonId; i <= (int)variationInitButtonId; i++) {
-                if (within_rectangle(coord, gMainButtonArray[i].rectangle)) {
-                    uint32_t sourceVariation = (uint32_t)i - (uint32_t)variation1ButtonId;
+            for (i = (int)topbarVariation1Id; i <= (int)topbarVariationInitId; i++) {
+                if (within_rectangle(coord, gTopbarControls[i].rectangle)) {
+                    uint32_t sourceVariation = (uint32_t)i - (uint32_t)topbarVariation1Id;
                     open_variation_copy_menu(coord, sourceVariation);
                     found = true;
                     break;
@@ -2572,7 +2557,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         // messageContent.slot          = slot;
         // msg_send(&gCommandQueue, &messageContent);
     } else if (gTempoDragging == true) {
-        angle = calculate_mouse_angle((tCoord){x, y}, gTempoDialRectangle);
+        angle = calculate_mouse_angle((tCoord){x, y}, gTopbarControls[topbarTempoDialId].rectangle);
         value = angle_to_value(angle, 241);
 
         if (atomic_load(&gMasterClock) != value) {

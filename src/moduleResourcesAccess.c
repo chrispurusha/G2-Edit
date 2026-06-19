@@ -44,7 +44,7 @@ uint32_t array_size_led_location_list(void) {
     return ARRAY_SIZE(ledLocationList);
 }
 
-uint32_t array_size_str_map(char ** strMap) {
+uint32_t array_size_str_map(const char ** strMap) {
     uint32_t i = 0;
 
     if (strMap != NULL) {
