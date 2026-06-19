@@ -1471,23 +1471,46 @@ static int send_set_module_label(uint32_t slot, tModuleKey moduleKey, const char
 }
 
 static int send_set_param_label(uint32_t slot, tModuleKey moduleKey, uint32_t paramIndex, const char * name) {
-    int     retVal                  = EXIT_FAILURE;
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
-    int     i                       = 0;
+    int      retVal                           = EXIT_FAILURE;
+    uint8_t  buff[SEND_MESSAGE_SIZE]          = {0};
+    int      pos                              = COMMAND_OFFSET;
+    int      i                                = 0;
+    uint32_t pi                               = 0;
+    uint32_t labelCount                       = 0;
+    uint32_t labelIndices[MAX_NUM_PARAMETERS] = {0};
+    tModule  module                           = {0};
 
-    LOG_DEBUG("SET PARAM LABEL slot=%u loction=%u index=%u param=%u name='%s'\n",
+    LOG_DEBUG("SET PARAM LABEL slot=%u location=%u index=%u param=%u name='%s'\n",
               slot, moduleKey.location, moduleKey.index, paramIndex, name);
 
+    if (!read_module(moduleKey, &module)) {
+        LOG_DEBUG("SET PARAM LABEL read_module FAILED\n");
+        return EXIT_FAILURE;
+    }
+
+    for (pi = 0; pi < MAX_NUM_PARAMETERS; pi++) {
+        if (module.paramNameSet[pi][0]) {
+            labelIndices[labelCount++] = pi;
+        }
+    }
+
+    if (labelCount == 0) {
+        return EXIT_SUCCESS;
+    }
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_PARAM_LABEL);
     buff[pos++] = moduleKey.location;
     buff[pos++] = moduleKey.index;
-    buff[pos++] = 1;                             // isString
-    buff[pos++] = PROTOCOL_PARAM_NAME_SIZE + 1;  // paramLength
-    buff[pos++] = (uint8_t)paramIndex;
+    buff[pos++] = (uint8_t)(labelCount * (3 + PROTOCOL_PARAM_NAME_SIZE));
 
-    for (i = 0; i < PROTOCOL_PARAM_NAME_SIZE; i++) {
-        buff[pos++] = (uint8_t)name[i];
+    for (uint32_t j = 0; j < labelCount; j++) {
+        pi          = labelIndices[j];
+        buff[pos++] = 1;                            // isString
+        buff[pos++] = PROTOCOL_PARAM_NAME_SIZE + 1; // paramLength
+        buff[pos++] = (uint8_t)pi;                  // paramIndex
+
+        for (i = 0; i < PROTOCOL_PARAM_NAME_SIZE; i++) {
+            buff[pos++] = (uint8_t)module.paramName[pi][0][i];
+        }
     }
 
     retVal      = send_message(buff, pos);
