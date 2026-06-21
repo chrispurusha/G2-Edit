@@ -20,7 +20,7 @@
 #ifndef __DEFS_H__
 #define __DEFS_H__
 
-#define ENABLE_DEBUG      // Comment out if not required
+#define ENABLE_DEBUG    // Comment out if not required
 //#define ENABLE_USB_LOG    // Uncomment to enable USB message logging to ~/G2_usb.log
 
 #ifdef ENABLE_USB_LOG

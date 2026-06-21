@@ -163,9 +163,7 @@ static bool open_and_claim_device(void) {
 
     if (result != LIBUSB_SUCCESS) {
         LOG_ERROR("Failed to reset device: %s\n", libusb_error_name(result));
-        // Close cleanly — don't leak the opened handle
-        libusb_close(devHandle);
-        devHandle = NULL;
+        close_device();
         return false;
     }
     LOG_DEBUG("Device opened and interface claimed\n");
@@ -221,14 +219,34 @@ static int usb_bulk_transfer_sync(libusb_device_handle * handle, uint8_t endpoin
         if ((unsigned int)elapsed_ms >= timeout_ms) {
             break;
         }
-        libusb_handle_events_timeout_completed(libUsbCtx, &tv, &completed);
+        r = libusb_handle_events_timeout_completed(libUsbCtx, &tv, &completed);
+
+        if (r != LIBUSB_SUCCESS) {
+            break;
+        }
     }
 
     if (!completed) {
         libusb_cancel_transfer(xfer);
+        clock_gettime(CLOCK_MONOTONIC, &start);
 
         while (!completed) {
-            libusb_handle_events_timeout_completed(libUsbCtx, &tv, &completed);
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            long drain_ms = (now.tv_sec - start.tv_sec) * 1000L
+                            + (now.tv_nsec - start.tv_nsec) / 1000000L;
+
+            if (drain_ms >= 500L) {
+                LOG_ERROR("Cancel drain timed out — leaking transfer\n");
+                *actual_length = 0;
+                return LIBUSB_ERROR_IO;
+            }
+            r = libusb_handle_events_timeout_completed(libUsbCtx, &tv, &completed);
+
+            if (r != LIBUSB_SUCCESS) {
+                LOG_ERROR("Event loop error during cancel drain: %s\n", libusb_error_name(r));
+                *actual_length = 0;
+                return LIBUSB_ERROR_IO;
+            }
         }
     }
     *actual_length = xfer->actual_length;
@@ -1317,6 +1335,25 @@ static int send_message(uint8_t * buff, int pos) {
     return EXIT_FAILURE;
 }
 
+// For non-idempotent commands (add/delete module/cable): retry TX failures only.
+// Never resends after a successful TX because the G2 already actioned the command.
+static int send_and_receive_once(uint8_t * buff, int pos, int expectedResponse, unsigned int timeout_ms) {
+    int retVal  = EXIT_FAILURE;
+    int attempt = 0;
+
+    for (attempt = 1; attempt <= 3; attempt++) {
+        retVal = send_message(buff, pos);
+
+        if (retVal == EXIT_SUCCESS) {
+            retVal = int_rec(ePollNo, expectedResponse, timeout_ms);
+            break;
+        }
+        LOG_ERROR("send failed, attempt %d\n", attempt);
+    }
+
+    return retVal;
+}
+
 static int send_and_receive(uint8_t * buff, int pos, int expectedResponse, unsigned int timeout_ms) {
     int retVal  = EXIT_FAILURE;
     int attempt = 0;
@@ -2028,7 +2065,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex;
             buff[pos++] = messageContent->cableData.moduleToIndex;
             buff[pos++] = messageContent->cableData.connectorToIoIndex;
-            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            retVal      = send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
             break;
 
         case eMsgCmdWriteModule:
@@ -2058,7 +2095,7 @@ static int send_write_data(tMessageContent * messageContent) {
             written     = snprintf((char *)&buff[pos], avail, "%s", messageContent->moduleData.name);
 
             pos        += ((written >= 0) && (written < avail)) ? written + 1 : avail;
-            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            retVal      = send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
             break;
         }
         case eMsgCmdMoveModule:
@@ -2080,7 +2117,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = SUB_COMMAND_DELETE_MODULE;
             buff[pos++] = messageContent->moduleData.moduleKey.location;
             buff[pos++] = messageContent->moduleData.moduleKey.index;
-            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            retVal      = send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
             break;
 
         case eMsgCmdSetModuleUpRate:
@@ -2104,7 +2141,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex;
             buff[pos++] = messageContent->cableData.moduleToIndex;
             buff[pos++] = messageContent->cableData.connectorToIoIndex;
-            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            retVal      = send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
             break;
 
         case eMsgCmdSetParamMorph:
