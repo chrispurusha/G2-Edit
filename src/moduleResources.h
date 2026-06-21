@@ -2701,10 +2701,10 @@ const tLedLocation       ledLocationList[] = {
     {moduleType8Counter,   ledTypeYes, {{-14,  3}, {3, 3}}, anchorTopRight},  // XPos:219
     {moduleType8Counter,   ledTypeYes, {{ -6,  3}, {3, 3}}, anchorTopRight},  // XPos:242
 
-    {moduleTypeSeqEvent,   ledTypeYes, {{ -2,  7}, {3, 3}}, anchorTopRight},
+    /*{moduleTypeSeqEvent,   ledTypeYes, {{ -2,  7}, {3, 3}}, anchorTopRight},   // Park LEDs must work differently to normal LEDs, with these in, the tracking breaks
     {moduleTypeSeqNote,    ledTypeYes, {{ -2,  7}, {3, 3}}, anchorTopRight},
     {moduleTypeSeqVal,     ledTypeYes, {{ -2,  7}, {3, 3}}, anchorTopRight},
     {moduleTypeSeqLev,     ledTypeYes, {{ -2,  7}, {3, 3}}, anchorTopRight},
-    {moduleTypeSeqCtr,     ledTypeYes, {{ -2,  7}, {3, 3}}, anchorTopRight}, };
+    {moduleTypeSeqCtr,     ledTypeYes, {{ -2,  7}, {3, 3}}, anchorTopRight},*/ };
 
 #endif // __MODULE_RESOURCES_H__
