@@ -1139,6 +1139,9 @@ static int rcv_extended(int dataLength, int * response, unsigned int timeout_ms)
                     atomic_store(&gUsbRxTime, (uint64_t)get_time_ms());
                     usb_log_message("EX", buff, (size_t)readLength);
                     break;
+                } else {
+                    LOG_DEBUG("Unexpected extended responseType 0x%02x — discarding\n", responseType);
+                    break;
                 }
             }
             // readLength == 0: ZLP — device not ready yet, retry
@@ -1987,7 +1990,8 @@ static int send_init_sequence_pull(void) {
     return EXIT_SUCCESS;
 }
 
-// Reconnection: editor is authoritative — push all slots to the hardware.
+// Push all editor state to the G2. Not called on reconnection; reserved for
+// a future "push to device" menu action.
 static int send_init_sequence_push(void) {
     LOG_DEBUG("Init sequence: pushing editor data to G2\n");
     atomic_store(&gCommsState, eCommsInitialising);
@@ -2313,8 +2317,8 @@ static void state_handler(void) {
         close_device();
         pthread_mutex_unlock(&usbStaticMutex);
 
-        // Do NOT clear the database — editor data is preserved so it can be
-        // pushed back to the hardware on reconnection.
+        // Do NOT clear the database here — send_init_sequence_pull clears it
+        // once a connection is re-established and fresh state is pulled.
 
         call_full_patch_change_notify();
         call_wake_glfw();
@@ -2331,15 +2335,9 @@ static void state_handler(void) {
         if (opened) {
             int result = EXIT_FAILURE;
 
-            if (atomic_load(&gCommsState) == eCommsNeverConnected) {
-                // First ever connection — G2 is authoritative, pull everything
-                LOG_ERROR("Never connected, therefore pull settings\n");
-                result = send_init_sequence_pull();
-            } else {
-                // Reconnection after disconnect — editor is authoritative, push all slots
-                LOG_DEBUG("Push due to comms state = %u\n", atomic_load(&gCommsState));
-                result = send_init_sequence_push();
-            }
+            // Always pull from the G2 — it is authoritative on both first
+            // connection and reconnection after disconnect.
+            result = send_init_sequence_pull();
 
             if (result == EXIT_SUCCESS) {
                 atomic_store(&gCommsState, eCommsOnLine);
