@@ -43,5 +43,6 @@ void parse_module_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset);
 void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos);
 void write_patch_notes(uint32_t slot, uint8_t * buff, uint32_t * bitPos);
 void write_current_note_2(uint32_t slot, uint8_t * buff, uint32_t * bitPos);
+void update_module_up_rates(void);
 
 #endif // __PROTOCOL_H__

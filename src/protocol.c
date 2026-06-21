@@ -33,6 +33,7 @@ extern "C" {
 #include "utils.h"
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
+#include "msgQueue.h"
 #include "globalVars.h"
 
 void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
@@ -1016,6 +1017,77 @@ void write_current_note_2(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     write_bit_stream(buff, bitPos, 8, 0x20);
     write_bit_stream(buff, bitPos, 8, 0x00);
     write_bit_stream(buff, bitPos, 8, 0x00);
+}
+
+void update_module_up_rates(void) {
+    tModule  module      = {0};
+    uint32_t slot        = atomic_load(&gSlot);
+    uint32_t location    = atomic_load(&gLocation);
+    bool     changesMade = false;
+
+    reset_walk_module();
+
+    while (walk_next_module(&module)) {
+        if (module.key.slot == slot && module.key.location == location) {
+            module.newUpRate = 0;
+            write_module(module.key, &module);
+        }
+    }
+    finish_walk_module();
+
+    do {
+        tCable  cable      = {0};
+        tModule fromModule = {0};
+        tModule toModule   = {0};
+
+        changesMade = false;
+
+        reset_walk_cable();
+
+        while (walk_next_cable(&cable)) {
+            tConnectorDir fromConnector = connectorDirOut;
+            int           fromConnIndex = -1;
+            int           toConnIndex   = -1;
+            tModuleKey    fromModuleKey = {cable.key.slot, cable.key.location, cable.key.moduleFromIndex};
+            tModuleKey    toModuleKey   = {cable.key.slot, cable.key.location, cable.key.moduleToIndex};
+
+            if ((fromModuleKey.slot == slot) && (toModuleKey.slot == slot) && (fromModuleKey.location == location) && (toModuleKey.location == location)) {
+                if (read_module(fromModuleKey, &fromModule) && read_module(toModuleKey, &toModule)) {
+                    fromConnector = (cable.key.linkType == cableLinkTypeFromInput) ? connectorDirIn : connectorDirOut;
+                    fromConnIndex = find_index_from_io_count(&fromModule, fromConnector, cable.key.connectorFromIoCount);
+                    toConnIndex   = find_index_from_io_count(&toModule, connectorDirIn, cable.key.connectorToIoCount);
+
+                    if ((fromConnIndex != -1) && (toConnIndex != -1) && (toModule.newUpRate == 0)) {
+                        if (fromModule.newUpRate == 1 || ((fromModule.connector[fromConnIndex].type == connectorTypeAudio) && (toModule.connector[toConnIndex].type != connectorTypeAudio))) {
+                            toModule.newUpRate = 1;
+                            write_module(toModuleKey, &toModule);
+                            changesMade        = true;
+                        }
+                    }
+                }
+            }
+        }
+        finish_walk_cable();
+    } while (changesMade);
+
+    reset_walk_module();
+
+    while (walk_next_module(&module)) {
+        if ((module.key.slot == slot) && (module.key.location == location)) {
+            if (module.newUpRate != module.upRate) {
+                tMessageContent messageContent = {0};
+
+                module.upRate                       = module.newUpRate;
+                write_module(module.key, &module);
+                messageContent.cmd                  = eMsgCmdSetModuleUpRate;
+                messageContent.slot                 = slot;
+                messageContent.moduleData.moduleKey = module.key;
+                messageContent.moduleData.upRate    = module.upRate;
+                msg_send(&gCommandQueue, &messageContent);
+            }
+        }
+    }
+    finish_walk_module();
 }
 
 #ifdef __cplusplus

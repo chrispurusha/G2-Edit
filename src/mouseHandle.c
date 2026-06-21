@@ -44,6 +44,7 @@ extern "C" {
 #include "mouseHandle.h"
 #include "graphics.h"
 #include "globalVars.h"
+#include "protocol.h"
 #include "menus.h"
 
 void get_global_gui_scaled_mouse_coord(tCoord * coord) {
@@ -93,95 +94,6 @@ void adjust_scroll_for_drag(void) {
         gScrollState.yBar -= yAdjustAmount;
         set_y_scroll_bar(gScrollState.yBar);
     }
-}
-
-void update_module_up_rates(void) {
-    tModule  module      = {0};
-    uint32_t slot        = atomic_load(&gSlot); // TODO: Might need to pass this in as a parameter
-    uint32_t location    = atomic_load(&gLocation);
-
-    // Step 1 - initialise the old and new fields
-    reset_walk_module();
-
-    while (walk_next_module(&module)) {
-        if (module.key.slot == slot && module.key.location == location) {
-            module.newUpRate = 0;
-
-            write_module(module.key, &module);
-        }
-    }
-    finish_walk_module();
-
-    // Step - run through cables and see if to module needs up-rating
-
-    bool     changesMade = false;
-
-    do {
-        changesMade = false;
-        tCable  cable      = {0};
-        tModule fromModule = {0};
-        tModule toModule   = {0};
-
-        reset_walk_cable();
-
-        while (walk_next_cable(&cable)) {
-            tConnectorDir fromConnector = connectorDirOut;
-            int           fromConnIndex = -1;
-            int           toConnIndex   = -1;
-            tModuleKey    fromModuleKey = {cable.key.slot, cable.key.location, cable.key.moduleFromIndex};
-            tModuleKey    toModuleKey   = {cable.key.slot, cable.key.location, cable.key.moduleToIndex};
-
-            if ((fromModuleKey.slot == slot) && (toModuleKey.slot == slot) && (fromModuleKey.location == location) && (toModuleKey.location == location)) {
-                if (read_module(fromModuleKey, &fromModule) && read_module(toModuleKey, &toModule)) {
-                    if (cable.key.linkType == cableLinkTypeFromInput) {
-                        fromConnector = connectorDirIn;
-                    } else {
-                        fromConnector = connectorDirOut;
-                    }
-                    fromConnIndex = find_index_from_io_count(&fromModule, fromConnector, cable.key.connectorFromIoCount);
-                    toConnIndex   = find_index_from_io_count(&toModule, connectorDirIn, cable.key.connectorToIoCount);
-
-                    if ((fromConnIndex != -1) && (toConnIndex != -1)) {
-                        if (toModule.newUpRate == 0) {
-                            if (fromModule.newUpRate == 1) {
-                                //LOG_DEBUG("From module is uprated from = %u %u\n", fromModule.key.location, fromModule.key.index);
-                                toModule.newUpRate = 1;
-                                write_module(toModuleKey, &toModule);
-                                changesMade        = true;
-                            } else if ((fromModule.connector[fromConnIndex].type == connectorTypeAudio) && (toModule.connector[toConnIndex].type != connectorTypeAudio)) {
-                                //LOG_DEBUG("From module from is audio and to is control\n");
-                                toModule.newUpRate = 1;
-                                write_module(toModuleKey, &toModule);
-                                changesMade        = true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        finish_walk_cable();
-    } while (changesMade);
-
-    // Step 3 - write any changes to database and device
-    reset_walk_module();
-
-    while (walk_next_module(&module)) {
-        if ((module.key.slot == slot) && (module.key.location == location)) {
-            if (module.newUpRate != module.upRate) {
-                module.upRate                       = module.newUpRate;
-
-                write_module(module.key, &module);
-
-                tMessageContent messageContent = {0};
-                messageContent.cmd                  = eMsgCmdSetModuleUpRate;
-                messageContent.slot                 = slot;
-                messageContent.moduleData.moduleKey = module.key;
-                messageContent.moduleData.upRate    = module.upRate;
-                msg_send(&gCommandQueue, &messageContent);
-            }
-        }
-    }
-    finish_walk_module();
 }
 
 void send_module_move_msg(tModule * module) {
@@ -485,142 +397,6 @@ bool swap_cable_to_from_if_needed(tCableKey * cableKey, tModule * fromModule, tM
     return false;
 }
 
-void menu_action_delete_cable(int index) {
-    tModule  module     = {0};
-    tCable   walk       = {0};
-    int      outIndex   = -1;
-    int      inIndex    = -1;
-    bool     deleteWalk = false;
-    uint32_t slot       = atomic_load(&gSlot);
-    uint32_t location   = atomic_load(&gLocation);
-
-    if ((gContextMenu.moduleKey.slot == slot) && (gContextMenu.moduleKey.location == location)) { // TODO - probably don't need to do this check?
-        read_module(gContextMenu.moduleKey, &module);
-
-        reset_walk_cable();
-
-        while (walk_next_cable(&walk)) {
-            deleteWalk = false;
-
-            if (walk.key.slot == slot && walk.key.location == gContextMenu.moduleKey.location) {
-                switch (module.connector[gContextMenu.connectorIndex].dir) {
-                    case connectorDirOut:
-                        outIndex = find_io_count_from_index(&module, connectorDirOut, gContextMenu.connectorIndex);
-                        break;
-                    case connectorDirIn:
-                        inIndex  = find_io_count_from_index(&module, connectorDirIn, gContextMenu.connectorIndex);
-                        break;
-                }
-
-                if (walk.key.moduleFromIndex == gContextMenu.moduleKey.index) {
-                    if (walk.key.linkType == cableLinkTypeFromInput) {
-                        if (walk.key.connectorFromIoCount == inIndex) {
-                            deleteWalk = true;
-                        }
-                    } else if (walk.key.linkType == cableLinkTypeFromOutput) {
-                        if (walk.key.connectorFromIoCount == outIndex) {
-                            deleteWalk = true;
-                        }
-                    }
-                }
-
-                if (walk.key.moduleToIndex == gContextMenu.moduleKey.index) {
-                    if (walk.key.connectorToIoCount == inIndex) {
-                        deleteWalk = true;
-                    }
-                }
-
-                if (deleteWalk == true) {
-                    tMessageContent messageContent = {0};
-
-                    messageContent.cmd                            = eMsgCmdDeleteCable;
-                    messageContent.slot                           = slot;
-                    messageContent.cableData.location             = location;
-                    messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
-                    messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
-                    messageContent.cableData.moduleToIndex        = walk.key.moduleToIndex;
-                    messageContent.cableData.connectorToIoIndex   = walk.key.connectorToIoCount;
-                    messageContent.cableData.linkType             = walk.key.linkType;
-
-                    msg_send(&gCommandQueue, &messageContent);
-
-                    delete_cable(walk.key);
-                }
-            }
-        }
-        finish_walk_cable();
-        update_module_up_rates();
-    }
-}
-
-void menu_action_delete_module(int index) {
-    tModule         module         = {0};
-    tCable          walk           = {0};
-    bool            deleteWalk     = false;
-    uint32_t        slot           = atomic_load(&gSlot);
-    uint32_t        location       = atomic_load(&gLocation);
-    tMessageContent messageContent = {0};
-
-    if (gContextMenu.moduleKey.slot == slot && gContextMenu.moduleKey.location == location) { // TODO - probably don't need to do this check?
-        read_module(gContextMenu.moduleKey, &module);
-
-        reset_walk_cable();
-
-        while (walk_next_cable(&walk)) {
-            deleteWalk = false;
-
-            if (walk.key.slot == slot && walk.key.location == gContextMenu.moduleKey.location) {
-                if (walk.key.moduleFromIndex == gContextMenu.moduleKey.index) {
-                    deleteWalk = true;
-                } else if (walk.key.moduleToIndex == gContextMenu.moduleKey.index) {
-                    deleteWalk = true;
-                }
-
-                if (deleteWalk == true) {
-                    memset(&messageContent, 0, sizeof(messageContent));
-                    messageContent.cmd                            = eMsgCmdDeleteCable;
-                    messageContent.slot                           = slot;
-                    messageContent.cableData.location             = location;
-                    messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
-                    messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
-                    messageContent.cableData.moduleToIndex        = walk.key.moduleToIndex;
-                    messageContent.cableData.connectorToIoIndex   = walk.key.connectorToIoCount;
-                    messageContent.cableData.linkType             = walk.key.linkType;
-
-                    msg_send(&gCommandQueue, &messageContent);
-
-                    delete_cable(walk.key);
-                }
-            }
-        }
-        finish_walk_cable();
-
-        memset(&messageContent, 0, sizeof(messageContent));
-        messageContent.cmd                  = eMsgCmdDeleteModule;
-        messageContent.slot                 = slot;
-        messageContent.moduleData.moduleKey = module.key;
-
-        msg_send(&gCommandQueue, &messageContent);
-
-        delete_module(gContextMenu.moduleKey);
-
-        update_module_up_rates();
-    }
-}
-
-static void action_rename_module(int index) {
-    tModule module = {0};
-
-    if (read_module(gContextMenu.moduleKey, &module)) {
-        gModuleNameEdit.active                   = true;
-        gModuleNameEdit.moduleKey                = gContextMenu.moduleKey;
-        strncpy(gModuleNameEdit.buffer, module.name, CLAVIA_NAME_SIZE);
-        gModuleNameEdit.buffer[CLAVIA_NAME_SIZE] = '\0';
-    }
-    gContextMenu.active = false;
-    atomic_store(&gReDraw, true);
-}
-
 int32_t find_unique_module_id(uint32_t location) {
     tModuleKey key    = {0};
     tModule    module = {0};
@@ -742,32 +518,6 @@ void menu_action_create(int index) {
 
         if (subMenu != NULL) {
             open_context_menu(gContextMenu.coord, subMenu, 0, 0.0);
-        }
-    }
-}
-
-void action_set_module_colour(int index) {
-    if (gContextMenu.items[index].subMenu == NULL) {
-        tModule         module         = {0};
-        tMessageContent messageContent = {0};
-
-        read_module(gContextMenu.moduleKey, &module);
-
-        module.colour                             = gContextMenu.items[index].param;
-
-        write_module(module.key, &module);
-
-        messageContent.cmd                        = eMsgCmdSetModuleColour;
-        messageContent.slot                       = module.key.slot; // TODO - possible better method for other functions, since slot is part of module key - might not even need this in the type
-        messageContent.moduleColourData.moduleKey = module.key;
-        messageContent.moduleColourData.colour    = module.colour;
-
-        msg_send(&gCommandQueue, &messageContent);
-    } else {
-        tMenuItem * subMenu = gContextMenu.items[index].subMenu;
-
-        if (subMenu != NULL) {
-            open_context_menu(gContextMenu.coord, subMenu, 6, STANDARD_TEXT_HEIGHT * 2);
         }
     }
 }
@@ -1019,18 +769,6 @@ void open_module_area_context_menu(tCoord coord) {  // TODO: Move these static s
 
     // Store menu position
     gContextMenu.originCoord = coord;
-    open_context_menu(coord, menuItems, 0, 0.0);
-}
-
-void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t connectorIndex) {
-    static tMenuItem menuItems[] = {
-        {"Delete cable", RGB_GREY_3, menu_action_delete_cable, 0, NULL},
-        {NULL,           RGB_BLACK,  NULL,                     0, NULL}        // End of menu
-    };
-
-    // Store menu position
-    gContextMenu.moduleKey      = moduleKey;
-    gContextMenu.connectorIndex = connectorIndex;
     open_context_menu(coord, menuItems, 0, 0.0);
 }
 
@@ -1313,83 +1051,6 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
 
     gContextMenu.moduleKey  = moduleKey;
     gContextMenu.paramIndex = paramIndex;
-    open_context_menu(coord, menuItems, 0, 0.0);
-}
-
-void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
-    static tMenuItem colourMenuItems[] = {
-        // 6 columns (R,G,B,Y,Pu,Cy) x 4 rows of shades, then Grey
-        {"",   MODULE_RED_1,         action_set_module_colour,  6, NULL},
-        {"",   MODULE_GREEN_1,       action_set_module_colour, 10, NULL},
-        {"",   MODULE_BLUE_1,        action_set_module_colour,  5, NULL},
-        {"",   MODULE_YELLOW_1,      action_set_module_colour,  9, NULL},
-        {"",   MODULE_PURPLE_1,      action_set_module_colour, 21, NULL},
-        {"",   MODULE_CYAN_1,        action_set_module_colour, 17, NULL},
-        {"",   MODULE_RED_2,         action_set_module_colour, 13, NULL},
-        {"",   MODULE_GREEN_2,       action_set_module_colour,  8, NULL},
-        {"",   MODULE_BLUE_2,        action_set_module_colour, 20, NULL},
-        {"",   MODULE_YELLOW_2,      action_set_module_colour, 11, NULL},
-        {"",   MODULE_PURPLE_2,      action_set_module_colour, 22, NULL},
-        {"",   MODULE_CYAN_2,        action_set_module_colour,  7, NULL},
-        {"",   MODULE_RED_3,         action_set_module_colour, 14, NULL},
-        {"",   MODULE_GREEN_3,       action_set_module_colour, 16, NULL},
-        {"",   MODULE_BLUE_3,        action_set_module_colour, 12, NULL},
-        {"",   MODULE_YELLOW_3,      action_set_module_colour, 15, NULL},
-        {"",   MODULE_PURPLE_3,      action_set_module_colour, 23, NULL},
-        {"",   MODULE_CYAN_3,        action_set_module_colour, 18, NULL},
-        {"",   MODULE_RED_4,         action_set_module_colour,  1, NULL},
-        {"",   MODULE_GREEN_4,       action_set_module_colour,  2, NULL},
-        {"",   MODULE_BLUE_4,        action_set_module_colour,  3, NULL},
-        {"",   MODULE_YELLOW_4,      action_set_module_colour,  4, NULL},
-        {"",   MODULE_PURPLE_4,      action_set_module_colour, 24, NULL},
-        {"",   MODULE_CYAN_4,        action_set_module_colour, 19, NULL},
-        {"",   MODULE_STANDARD_GREY, action_set_module_colour,  0, NULL},
-        {NULL, RGB_BLACK,            NULL,                      0, NULL}
-    };
-
-    static tMenuItem menuItems[] = {
-        {"Rename",        RGB_GREY_3, action_rename_module,      0, NULL},
-        {"Set colour",    RGB_GREY_3, action_set_module_colour,  0, colourMenuItems,},
-        {"Delete module", RGB_GREY_3, menu_action_delete_module, 0, NULL},
-        {NULL,            RGB_BLACK,  NULL,                      0, NULL}      // End of menu
-    };
-
-    // Store menu position
-    gContextMenu.moduleKey = moduleKey;
-    open_context_menu(coord, menuItems, 0, 0.0);
-}
-
-static void action_rename_morph_label(int index) {
-    tModule  module     = {0};
-    uint32_t morphIndex = (uint32_t)gContextMenu.items[index].param;
-    uint32_t slot       = atomic_load(&gSlot);
-
-    gContextMenu.moduleKey = (tModuleKey){
-        slot, locationMorph, 1
-    };
-
-    if (read_module(gContextMenu.moduleKey, &module)) {
-        uint32_t pi = morphIndex /* + NUM_MORPHS*/;  // This may or may not be correct
-
-        gParamNameEdit.active     = true;
-        gParamNameEdit.moduleKey  = gContextMenu.moduleKey;
-        gParamNameEdit.paramIndex = pi;
-        memset(gParamNameEdit.buffer, 0, sizeof(gParamNameEdit.buffer));
-        strncpy(gParamNameEdit.buffer, module.paramName[pi][0], PROTOCOL_PARAM_NAME_SIZE);
-    }
-    gContextMenu.active    = false;
-    atomic_store(&gReDraw, true);
-}
-
-static void open_morph_label_context_menu(tCoord coord, uint32_t morphIndex) {
-    static tMenuItem menuItems[2];
-
-    menuItems[0] = (tMenuItem){
-        "Rename", RGB_GREY_3, action_rename_morph_label, morphIndex + NUM_MORPHS, NULL
-    };
-    menuItems[1] = (tMenuItem){
-        NULL, RGB_BLACK, NULL, 0, NULL
-    };
     open_context_menu(coord, menuItems, 0, 0.0);
 }
 

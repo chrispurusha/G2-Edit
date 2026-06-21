@@ -29,6 +29,7 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "globalVars.h"
+#include "protocol.h"
 #include "menus.h"
 
 // ── Synth settings action targets ──────────────────────────────────────────
@@ -125,6 +126,192 @@ static void action_copy_variation(int index) {
     msg_send(&gCommandQueue, &msg);
 
     gContextMenu.active                 = false;
+    atomic_store(&gReDraw, true);
+}
+
+// ── Module / cable / morph actions ─────────────────────────────────────────
+
+static void menu_action_delete_cable(int index) {
+    tModule  module     = {0};
+    tCable   walk       = {0};
+    int      outIndex   = -1;
+    int      inIndex    = -1;
+    bool     deleteWalk = false;
+    uint32_t slot       = atomic_load(&gSlot);
+    uint32_t location   = atomic_load(&gLocation);
+
+    if ((gContextMenu.moduleKey.slot == slot) && (gContextMenu.moduleKey.location == location)) {
+        read_module(gContextMenu.moduleKey, &module);
+
+        reset_walk_cable();
+
+        while (walk_next_cable(&walk)) {
+            deleteWalk = false;
+
+            if (walk.key.slot == slot && walk.key.location == gContextMenu.moduleKey.location) {
+                switch (module.connector[gContextMenu.connectorIndex].dir) {
+                    case connectorDirOut:
+                        outIndex = find_io_count_from_index(&module, connectorDirOut, gContextMenu.connectorIndex);
+                        break;
+                    case connectorDirIn:
+                        inIndex  = find_io_count_from_index(&module, connectorDirIn, gContextMenu.connectorIndex);
+                        break;
+                }
+
+                if (walk.key.moduleFromIndex == gContextMenu.moduleKey.index) {
+                    if (walk.key.linkType == cableLinkTypeFromInput) {
+                        if (walk.key.connectorFromIoCount == inIndex) {
+                            deleteWalk = true;
+                        }
+                    } else if (walk.key.linkType == cableLinkTypeFromOutput) {
+                        if (walk.key.connectorFromIoCount == outIndex) {
+                            deleteWalk = true;
+                        }
+                    }
+                }
+
+                if (walk.key.moduleToIndex == gContextMenu.moduleKey.index) {
+                    if (walk.key.connectorToIoCount == inIndex) {
+                        deleteWalk = true;
+                    }
+                }
+
+                if (deleteWalk == true) {
+                    tMessageContent messageContent = {0};
+
+                    messageContent.cmd                            = eMsgCmdDeleteCable;
+                    messageContent.slot                           = slot;
+                    messageContent.cableData.location             = location;
+                    messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
+                    messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
+                    messageContent.cableData.moduleToIndex        = walk.key.moduleToIndex;
+                    messageContent.cableData.connectorToIoIndex   = walk.key.connectorToIoCount;
+                    messageContent.cableData.linkType             = walk.key.linkType;
+
+                    msg_send(&gCommandQueue, &messageContent);
+
+                    delete_cable(walk.key);
+                }
+            }
+        }
+        finish_walk_cable();
+        update_module_up_rates();
+    }
+}
+
+static void menu_action_delete_module(int index) {
+    tModule         module         = {0};
+    tCable          walk           = {0};
+    bool            deleteWalk     = false;
+    uint32_t        slot           = atomic_load(&gSlot);
+    uint32_t        location       = atomic_load(&gLocation);
+    tMessageContent messageContent = {0};
+
+    if (gContextMenu.moduleKey.slot == slot && gContextMenu.moduleKey.location == location) {
+        read_module(gContextMenu.moduleKey, &module);
+
+        reset_walk_cable();
+
+        while (walk_next_cable(&walk)) {
+            deleteWalk = false;
+
+            if (walk.key.slot == slot && walk.key.location == gContextMenu.moduleKey.location) {
+                if (walk.key.moduleFromIndex == gContextMenu.moduleKey.index) {
+                    deleteWalk = true;
+                } else if (walk.key.moduleToIndex == gContextMenu.moduleKey.index) {
+                    deleteWalk = true;
+                }
+
+                if (deleteWalk == true) {
+                    memset(&messageContent, 0, sizeof(messageContent));
+                    messageContent.cmd                            = eMsgCmdDeleteCable;
+                    messageContent.slot                           = slot;
+                    messageContent.cableData.location             = location;
+                    messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
+                    messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
+                    messageContent.cableData.moduleToIndex        = walk.key.moduleToIndex;
+                    messageContent.cableData.connectorToIoIndex   = walk.key.connectorToIoCount;
+                    messageContent.cableData.linkType             = walk.key.linkType;
+
+                    msg_send(&gCommandQueue, &messageContent);
+
+                    delete_cable(walk.key);
+                }
+            }
+        }
+        finish_walk_cable();
+
+        memset(&messageContent, 0, sizeof(messageContent));
+        messageContent.cmd                  = eMsgCmdDeleteModule;
+        messageContent.slot                 = slot;
+        messageContent.moduleData.moduleKey = module.key;
+
+        msg_send(&gCommandQueue, &messageContent);
+
+        delete_module(gContextMenu.moduleKey);
+
+        update_module_up_rates();
+    }
+}
+
+static void action_rename_module(int index) {
+    tModule module = {0};
+
+    if (read_module(gContextMenu.moduleKey, &module)) {
+        gModuleNameEdit.active                   = true;
+        gModuleNameEdit.moduleKey                = gContextMenu.moduleKey;
+        strncpy(gModuleNameEdit.buffer, module.name, CLAVIA_NAME_SIZE);
+        gModuleNameEdit.buffer[CLAVIA_NAME_SIZE] = '\0';
+    }
+    gContextMenu.active = false;
+    atomic_store(&gReDraw, true);
+}
+
+static void action_set_module_colour(int index) {
+    if (gContextMenu.items[index].subMenu == NULL) {
+        tModule         module         = {0};
+        tMessageContent messageContent = {0};
+
+        read_module(gContextMenu.moduleKey, &module);
+
+        module.colour                             = gContextMenu.items[index].param;
+
+        write_module(module.key, &module);
+
+        messageContent.cmd                        = eMsgCmdSetModuleColour;
+        messageContent.slot                       = module.key.slot;
+        messageContent.moduleColourData.moduleKey = module.key;
+        messageContent.moduleColourData.colour    = module.colour;
+
+        msg_send(&gCommandQueue, &messageContent);
+    } else {
+        tMenuItem * subMenu = gContextMenu.items[index].subMenu;
+
+        if (subMenu != NULL) {
+            open_context_menu(gContextMenu.coord, subMenu, 6, STANDARD_TEXT_HEIGHT * 2);
+        }
+    }
+}
+
+static void action_rename_morph_label(int index) {
+    tModule  module     = {0};
+    uint32_t morphIndex = (uint32_t)gContextMenu.items[index].param;
+    uint32_t slot       = atomic_load(&gSlot);
+
+    gContextMenu.moduleKey = (tModuleKey){
+        slot, locationMorph, 1
+    };
+
+    if (read_module(gContextMenu.moduleKey, &module)) {
+        uint32_t pi = morphIndex /* + NUM_MORPHS*/;
+
+        gParamNameEdit.active     = true;
+        gParamNameEdit.moduleKey  = gContextMenu.moduleKey;
+        gParamNameEdit.paramIndex = pi;
+        memset(gParamNameEdit.buffer, 0, sizeof(gParamNameEdit.buffer));
+        strncpy(gParamNameEdit.buffer, module.paramName[pi][0], PROTOCOL_PARAM_NAME_SIZE);
+    }
+    gContextMenu.active    = false;
     atomic_store(&gReDraw, true);
 }
 
@@ -343,6 +530,72 @@ void open_active_off_dropdown(tCoord coord, uint8_t * target) {
 void open_pedal_polarity_dropdown(tCoord coord, uint8_t * target) {
     gSettingU8Target = target;
     open_context_menu(coord, gPedalPolarityItems, 0, 0.0);
+}
+
+// ── Module / cable / morph menus ────────────────────────────────────────────
+
+void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t connectorIndex) {
+    static tMenuItem menuItems[] = {
+        {"Delete cable", RGB_GREY_3, menu_action_delete_cable, 0, NULL},
+        {NULL,           RGB_BLACK,  NULL,                     0, NULL}
+    };
+
+    gContextMenu.moduleKey      = moduleKey;
+    gContextMenu.connectorIndex = connectorIndex;
+    open_context_menu(coord, menuItems, 0, 0.0);
+}
+
+void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
+    static tMenuItem colourMenuItems[] = {
+        {"",   MODULE_RED_1,         action_set_module_colour,  6, NULL},
+        {"",   MODULE_GREEN_1,       action_set_module_colour, 10, NULL},
+        {"",   MODULE_BLUE_1,        action_set_module_colour,  5, NULL},
+        {"",   MODULE_YELLOW_1,      action_set_module_colour,  9, NULL},
+        {"",   MODULE_PURPLE_1,      action_set_module_colour, 21, NULL},
+        {"",   MODULE_CYAN_1,        action_set_module_colour, 17, NULL},
+        {"",   MODULE_RED_2,         action_set_module_colour, 13, NULL},
+        {"",   MODULE_GREEN_2,       action_set_module_colour,  8, NULL},
+        {"",   MODULE_BLUE_2,        action_set_module_colour, 20, NULL},
+        {"",   MODULE_YELLOW_2,      action_set_module_colour, 11, NULL},
+        {"",   MODULE_PURPLE_2,      action_set_module_colour, 22, NULL},
+        {"",   MODULE_CYAN_2,        action_set_module_colour,  7, NULL},
+        {"",   MODULE_RED_3,         action_set_module_colour, 14, NULL},
+        {"",   MODULE_GREEN_3,       action_set_module_colour, 16, NULL},
+        {"",   MODULE_BLUE_3,        action_set_module_colour, 12, NULL},
+        {"",   MODULE_YELLOW_3,      action_set_module_colour, 15, NULL},
+        {"",   MODULE_PURPLE_3,      action_set_module_colour, 23, NULL},
+        {"",   MODULE_CYAN_3,        action_set_module_colour, 18, NULL},
+        {"",   MODULE_RED_4,         action_set_module_colour,  1, NULL},
+        {"",   MODULE_GREEN_4,       action_set_module_colour,  2, NULL},
+        {"",   MODULE_BLUE_4,        action_set_module_colour,  3, NULL},
+        {"",   MODULE_YELLOW_4,      action_set_module_colour,  4, NULL},
+        {"",   MODULE_PURPLE_4,      action_set_module_colour, 24, NULL},
+        {"",   MODULE_CYAN_4,        action_set_module_colour, 19, NULL},
+        {"",   MODULE_STANDARD_GREY, action_set_module_colour,  0, NULL},
+        {NULL, RGB_BLACK,            NULL,                      0, NULL}
+    };
+
+    static tMenuItem menuItems[] = {
+        {"Rename",        RGB_GREY_3, action_rename_module,      0, NULL           },
+        {"Set colour",    RGB_GREY_3, action_set_module_colour,  0, colourMenuItems},
+        {"Delete module", RGB_GREY_3, menu_action_delete_module, 0, NULL           },
+        {NULL,            RGB_BLACK,  NULL,                      0, NULL           }
+    };
+
+    gContextMenu.moduleKey = moduleKey;
+    open_context_menu(coord, menuItems, 0, 0.0);
+}
+
+void open_morph_label_context_menu(tCoord coord, uint32_t morphIndex) {
+    static tMenuItem menuItems[2];
+
+    menuItems[0] = (tMenuItem){
+        "Rename", RGB_GREY_3, action_rename_morph_label, morphIndex + NUM_MORPHS, NULL
+    };
+    menuItems[1] = (tMenuItem){
+        NULL, RGB_BLACK, NULL, 0, NULL
+    };
+    open_context_menu(coord, menuItems, 0, 0.0);
 }
 
 // ── Patch settings menus ────────────────────────────────────────────────────

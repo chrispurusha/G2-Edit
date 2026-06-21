@@ -31,6 +31,11 @@ void open_context_menu(tCoord coord, tMenuItem * items, uint32_t columns, double
 bool handle_context_menu_click(tCoord coord);
 tCoord below_rect(tRectangle r);
 
+// Module / cable / morph menus
+void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t connectorIndex);
+void open_module_context_menu(tCoord coord, tModuleKey moduleKey);
+void open_morph_label_context_menu(tCoord coord, uint32_t morphIndex);
+
 // Patch settings menus
 void open_patch_type_context_menu(tCoord coord);
 void open_mono_poly_context_menu(tCoord coord);
