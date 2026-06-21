@@ -1005,11 +1005,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_EXT_MASTER_CLOCK:
         {
-            uint8_t  unknown = read_bit_stream(buff, bitPos, 8);
-            uint16_t midiClk = (uint16_t)read_bit_stream(buff, bitPos, 8) << 8;
-
-            midiClk |= (uint16_t)read_bit_stream(buff, bitPos, 8);
-            LOG_DEBUG("Got ext master clock unknown=0x%02x clock=%u\n", unknown, midiClk);
+            // Don't think we need to process this since we're already setting data via unsolited and a bigger block of incoming data
             return EXIT_SUCCESS;
         }
 
@@ -1262,12 +1258,7 @@ static int int_rec(tPoll poll, int expectedResponse, unsigned int timeout_ms) {
         } else {
             LOG_DEBUG("response = 0x%02x expected = 0x%02x\n", response, expectedResponse);
 
-            // SUB_RESPONSE_EXT_MASTER_CLOCK (0x5d) is an alternative form of the master clock
-            // response; the G2 sends either depending on whether external clock is active.
-            bool altMasterClock = (expectedResponse == SUB_RESPONSE_MASTER_CLOCK)
-                                  && (response == SUB_RESPONSE_EXT_MASTER_CLOCK);
-
-            if (response == expectedResponse || altMasterClock) {
+            if (response == expectedResponse) {
                 doLoop = false;                   // Got what we wanted — retVal already correct
             } else if (  (response == SUB_RESPONSE_OK)
                       || (response == SUB_RESPONSE_ERROR)) {
@@ -1458,7 +1449,7 @@ static int send_get_master_clock(void) {
     int     pos                     = COMMAND_OFFSET;
 
     usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_QUERY_MASTER_CLOCK);
-    return send_and_receive(buff, pos, SUB_RESPONSE_MASTER_CLOCK, USB_RECV_DATA_MS);
+    return send_and_receive(buff, pos, SUB_RESPONSE_EXT_MASTER_CLOCK, USB_RECV_DATA_MS);
 }
 
 static int send_get_global_page(void) {
