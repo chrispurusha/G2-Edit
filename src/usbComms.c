@@ -1110,7 +1110,7 @@ static int rcv_extended(int dataLength, int * response, unsigned int timeout_ms)
         if (timeDelta > largestDelta) {
             largestDelta = timeDelta;
         }
-        LOG_DEBUG("RX Ext Delta %dms largest %dms\n", (int)timeDelta, (int)largestDelta);
+        //LOG_DEBUG("RX Ext Delta %dms largest %dms\n", (int)timeDelta, (int)largestDelta);
 
         if (retVal == LIBUSB_SUCCESS) {
             if (readLength > 0) {
