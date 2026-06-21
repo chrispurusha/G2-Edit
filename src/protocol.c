@@ -1019,6 +1019,41 @@ void write_current_note_2(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     write_bit_stream(buff, bitPos, 8, 0x00);
 }
 
+void send_module_move_msg(tModule * module) {
+    tMessageContent messageContent = {0};
+    uint32_t        slot           = atomic_load(&gSlot);
+
+    messageContent.cmd                  = eMsgCmdMoveModule;
+    messageContent.slot                 = slot;
+    messageContent.moduleData.moduleKey = module->key;
+    messageContent.moduleData.row       = module->row;
+    messageContent.moduleData.column    = module->column;
+    msg_send(&gCommandQueue, &messageContent);
+}
+
+void send_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, uint32_t variation, uint32_t value) {
+    tMessageContent msg = {0};
+
+    msg.cmd                 = eMsgCmdSetValue;
+    msg.slot                = slot;
+    msg.paramData.moduleKey = moduleKey;
+    msg.paramData.param     = paramIdx;
+    msg.paramData.variation = variation;
+    msg.paramData.value     = value;
+    msg_send(&gCommandQueue, &msg);
+}
+
+void send_mode_value(uint32_t slot, tModuleKey moduleKey, uint32_t modeIdx, uint32_t value) {
+    tMessageContent msg = {0};
+
+    msg.cmd                = eMsgCmdSetMode;
+    msg.slot               = slot;
+    msg.modeData.moduleKey = moduleKey;
+    msg.modeData.mode      = modeIdx;
+    msg.modeData.value     = value;
+    msg_send(&gCommandQueue, &msg);
+}
+
 void update_module_up_rates(void) {
     tModule  module      = {0};
     uint32_t slot        = atomic_load(&gSlot);

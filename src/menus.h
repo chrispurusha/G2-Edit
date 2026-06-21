@@ -31,6 +31,11 @@ void open_context_menu(tCoord coord, tMenuItem * items, uint32_t columns, double
 bool handle_context_menu_click(tCoord coord);
 tCoord below_rect(tRectangle r);
 
+// Module creation utilities
+void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row, tCoord coord);
+void shift_modules_down(tModuleKey key);
+void open_module_area_context_menu(tCoord coord);
+
 // Module / cable / morph menus
 void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t connectorIndex);
 void open_module_context_menu(tCoord coord, tModuleKey moduleKey);
