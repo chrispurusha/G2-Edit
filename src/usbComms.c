@@ -1317,19 +1317,34 @@ static int send_message(uint8_t * buff, int pos) {
     return EXIT_FAILURE;
 }
 
+static int send_and_receive(uint8_t * buff, int pos, int expectedResponse, unsigned int timeout_ms) {
+    int retVal  = EXIT_FAILURE;
+    int attempt = 0;
+
+    for (attempt = 1; attempt <= 3; attempt++) {
+        retVal = send_message(buff, pos);
+
+        if (retVal == EXIT_SUCCESS) {
+            retVal = int_rec(ePollNo, expectedResponse, timeout_ms);
+
+            if (retVal == EXIT_SUCCESS) {
+                break;
+            }
+            LOG_ERROR("receive failed, attempt %d\n", attempt);
+        } else {
+            LOG_ERROR("send failed, attempt %d\n", attempt);
+        }
+    }
+
+    return retVal;
+}
+
 static int send_init(void) {
-    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
     buff[pos++] = 0x80;
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("INIT RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static void usb_cmd_sys(uint8_t * buff, int * pos, uint8_t version, uint8_t subCommand) {
@@ -1347,199 +1362,117 @@ static void usb_cmd_slot(uint8_t * buff, int * pos, uint32_t slot, uint8_t comma
 }
 
 static int send_stop(void) {
-    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
     usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_START_STOP);
     buff[pos++] = 0x01;
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("STOP RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_start(void) {
-    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
     usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_START_STOP);
     buff[pos++] = 0x00;
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("START RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_select_slot(uint32_t slot) {
-    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
     usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_SELECT_SLOT);   // Note that this is focus, not keyboard selection
     buff[pos++] = (uint8_t)slot;
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("SELECT SLOT RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_get_synth_settings(void) {
-    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
     usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_GET_SYNTH_SETTINGS);
-    retVal = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_SYNTH_SETTINGS, USB_RECV_DATA_MS);
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_SYNTH_SETTINGS, USB_RECV_DATA_MS);
 }
 
 static int send_get_midi_cc(void) {
-    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
     usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_GET_MIDI_CC);
-    retVal = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_MIDI_CC, USB_RECV_DATA_MS);
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_MIDI_CC, USB_RECV_DATA_MS);
 }
 
 static int send_get_assigned_voices(void) {
-    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
     usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_GET_ASSIGNED_VOICES);
-    retVal = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_ASSIGNED_VOICES, USB_RECV_DATA_MS);
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_ASSIGNED_VOICES, USB_RECV_DATA_MS);
 }
 
 static int send_get_master_clock(void) {
-    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
     usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_QUERY_MASTER_CLOCK);
-    retVal = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_MASTER_CLOCK, USB_RECV_DATA_MS);
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_MASTER_CLOCK, USB_RECV_DATA_MS);
 }
 
 static int send_get_global_page(void) {
-    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
     usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_GET_GLOBAL_PAGE);
-    retVal = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_GLOBAL_PAGE, USB_RECV_DATA_MS);
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_GLOBAL_PAGE, USB_RECV_DATA_MS);
 }
 
 static int send_get_performance_settings(void) {
-    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
     LOG_DEBUG("Send get performance settings\n");
     usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_PERFORMANCE_SETTINGS);
-    retVal = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_PERFORMANCE_SETTINGS, USB_RECV_DATA_MS);
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_PERFORMANCE_SETTINGS, USB_RECV_DATA_MS);
 }
 
 static int send_get_patch_version(uint32_t slot) {
-    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
     LOG_DEBUG("Send get patch version\n");
     usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_GET_PATCH_VERSION);
     buff[pos++] = (uint8_t)slot;
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_VERSION, USB_RECV_DATA_MS);
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_PATCH_VERSION, USB_RECV_DATA_MS);
 }
 
 static int send_get_patch(uint32_t slot) {
-    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_GET_PATCH_SLOT);
-    retVal = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_DESCRIPTION, USB_RECV_DATA_MS);
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_PATCH_DESCRIPTION, USB_RECV_DATA_MS);
 }
 
 static int send_get_patch_name(uint32_t slot) {
-    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_GET_PATCH_NAME);
-    retVal = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_GET_PATCH_NAME, USB_RECV_DATA_MS);
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_GET_PATCH_NAME, USB_RECV_DATA_MS);
 }
 
 static int send_get_resources_used(uint32_t slot, tLocation location) {
-    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_QUERY_RESOURCES);
     buff[pos++] = location;
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_RESOURCES_USED, USB_RECV_DATA_MS);
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_RESOURCES_USED, USB_RECV_DATA_MS);
 }
 
 static int send_set_module_label(uint32_t slot, tModuleKey moduleKey, const char * name) {
-    int     retVal                  = EXIT_FAILURE;
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
@@ -1551,17 +1484,10 @@ static int send_set_module_label(uint32_t slot, tModuleKey moduleKey, const char
         write_clavia_string(buff, &bitPos, name);
         pos = BIT_TO_BYTE(bitPos);
     }
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("SET MODULE LABEL RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_set_param_label(uint32_t slot, tModuleKey moduleKey, uint32_t paramIndex, const char * name) {
-    int      retVal                           = EXIT_FAILURE;
     uint8_t  buff[SEND_MESSAGE_SIZE]          = {0};
     int      pos                              = COMMAND_OFFSET;
     int      i                                = 0;
@@ -1603,20 +1529,7 @@ static int send_set_param_label(uint32_t slot, tModuleKey moduleKey, uint32_t pa
         }
     }
 
-    retVal      = send_message(buff, pos);
-
-    if (retVal != EXIT_SUCCESS) {
-        LOG_DEBUG("SET PARAM LABEL send_message FAILED\n");
-    } else {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-
-        if (retVal == EXIT_SUCCESS) {
-            LOG_DEBUG("SET PARAM LABEL RESPONSE OK\n");
-        } else {
-            LOG_DEBUG("SET PARAM LABEL RESPONSE FAILED\n");
-        }
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_set_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t param, uint32_t value, uint32_t variation) {
@@ -1639,19 +1552,12 @@ static int send_set_module_colour(uint32_t slot, uint32_t location,
                                   uint32_t moduleIndex, uint32_t colour) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_MODULE_COLOUR);
     buff[pos++] = (uint8_t)location;
     buff[pos++] = (uint8_t)moduleIndex;
     buff[pos++] = (uint8_t)colour;
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("SET MODULE COLOUR RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 // ---------------------------------------------------------------------------
@@ -1674,76 +1580,41 @@ static void clear_slot_data(uint32_t slot) {
 static int send_get_global_knobs(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_QUERY_GLOBAL_KNOBS);
-    retVal = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_GLOBAL_KNOBS, USB_RECV_DATA_MS);
-        LOG_DEBUG("GLOBAL KNOBS RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_GLOBAL_KNOBS, USB_RECV_DATA_MS);
 }
 
 static int send_get_current_note(uint32_t slot) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_CURRENT_NOTE);
-    retVal = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_CURRENT_NOTE_2, USB_RECV_DATA_MS);
-        LOG_DEBUG("CURRENT NOTE RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_CURRENT_NOTE_2, USB_RECV_DATA_MS);
 }
 
 static int send_get_patch_notes(uint32_t slot) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_QUERY_PATCH_TEXT);
-    retVal = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_NOTES, USB_RECV_DATA_MS);
-        LOG_DEBUG("PATCH NOTES RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_PATCH_NOTES, USB_RECV_DATA_MS);
 }
 
 static int send_get_selected_param(uint32_t slot) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_GET_SELECTED_PARAM);
-    retVal = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_SELECT_PARAM, USB_RECV_DATA_MS);
-        LOG_DEBUG("SELECTED PARAM RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_SELECT_PARAM, USB_RECV_DATA_MS);
 }
 
 static int send_get_knob_snapshot(uint32_t slot) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_KNOB_SNAPSHOT);
-    retVal = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS); // Really expected SUB_RESPONSE_KNOBS here
-        LOG_DEBUG("KNOB SNAPSHOT RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS); // Really expected SUB_RESPONSE_KNOBS here
 }
 
 // Fetch patch data for a single slot. Synth must be stopped before calling.
@@ -1778,7 +1649,6 @@ static int push_slot_to_device(uint32_t slot) {
     uint8_t  buff[SEND_MESSAGE_SIZE]         = {0};
     int      pos                             = COMMAND_OFFSET;
     uint32_t bitPos                          = 0;
-    int      retVal                          = EXIT_FAILURE;
     char     patchName[CLAVIA_NAME_SIZE + 1] = {0};
 
     LOG_DEBUG("Pushing slot %u to device\n", slot);
@@ -1811,22 +1681,13 @@ static int push_slot_to_device(uint32_t slot) {
     write_module_names(slot, locationFx, buff, &bitPos);
     write_patch_notes(slot, buff, &bitPos);
 
-    pos    = BIT_TO_BYTE(bitPos);
-
-    retVal = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_VERSION, USB_RECV_DATA_MS);
-
-        LOG_DEBUG("PUSH SLOT RESPONSE\n");
-    }
-    return retVal;
+    pos = BIT_TO_BYTE(bitPos);
+    return send_and_receive(buff, pos, SUB_RESPONSE_PATCH_VERSION, USB_RECV_DATA_MS);
 }
 
 static int send_set_patch_name(uint32_t slot, const char * name) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_PATCH_NAME);  // 0x27 — used for set AND response
     {
@@ -1834,19 +1695,12 @@ static int send_set_patch_name(uint32_t slot, const char * name) {
         write_clavia_string(buff, &bitPos, name);
         pos = BIT_TO_BYTE(bitPos);
     }
-    retVal = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("SET PATCH NAME RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_assign_knob(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex, uint32_t knobIndex) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_ASSIGN_KNOB);
     buff[pos++] = (uint8_t)moduleIndex;
@@ -1854,36 +1708,22 @@ static int send_assign_knob(uint32_t slot, uint32_t location, uint32_t moduleInd
     buff[pos++] = (uint8_t)(location << 6);
     buff[pos++] = 0x00;
     buff[pos++] = (uint8_t)knobIndex;
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("ASSIGN KNOB RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_deassign_knob(uint32_t slot, uint32_t knobIndex) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_DEASSIGN_KNOB);
     buff[pos++] = 0x00;
     buff[pos++] = (uint8_t)knobIndex;
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("DEASSIGN KNOB RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_assign_global_knob(uint32_t slotIndex, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex, uint32_t knobIndex) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_ASSIGN_GLOBAL_KNOB);
     buff[pos++] = (uint8_t)((slotIndex << 4) | (location << 2));
@@ -1891,125 +1731,76 @@ static int send_assign_global_knob(uint32_t slotIndex, uint32_t location, uint32
     buff[pos++] = (uint8_t)paramIndex;
     buff[pos++] = 0x00;
     buff[pos++] = (uint8_t)knobIndex;
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("ASSIGN GLOBAL KNOB RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_deassign_global_knob(uint32_t knobIndex) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_DEASSIGN_GLOBAL_KNOB);
     buff[pos++] = 0x00;
     buff[pos++] = (uint8_t)knobIndex;
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("DEASSIGN GLOBAL KNOB RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_assign_midi_cc(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex, uint32_t midiCC) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_ASSIGN_MIDICC);
     buff[pos++] = (uint8_t)location;
     buff[pos++] = (uint8_t)moduleIndex;
     buff[pos++] = (uint8_t)paramIndex;
     buff[pos++] = (uint8_t)midiCC;
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("ASSIGN MIDI CC RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_deassign_midi_cc(uint32_t slot, uint32_t midiCC) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_DEASSIGN_MIDICC);
     buff[pos++] = (uint8_t)midiCC;
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("DEASSIGN MIDI CC RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_copy_variation(uint32_t slot, uint32_t fromVariation, uint32_t toVariation) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_COPY_VARIATION);
     buff[pos++] = (uint8_t)fromVariation;
     buff[pos++] = (uint8_t)toVariation;
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("COPY VARIATION RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_set_master_clock_bpm(uint32_t bpm) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_SET_MASTER_CLOCK);
     buff[pos++] = 0xFF;
     buff[pos++] = 0x01;
     buff[pos++] = (uint8_t)bpm;
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("SET MASTER CLOCK BPM RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_set_master_clock_run(uint32_t running) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
 
     usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_SET_MASTER_CLOCK);
     buff[pos++] = 0xFF;
     buff[pos++] = 0x00;
     buff[pos++] = running ? 0x01 : 0x00;
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("SET MASTER CLOCK RUN RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 // Write all synth (global) settings back to the G2.
 static int send_synth_settings(void) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     int      pos                     = COMMAND_OFFSET;
-    int      retVal                  = EXIT_FAILURE;
     uint32_t bitPos                  = 0;
     uint8_t  payload[64]             = {0};
     uint32_t i                       = 0;
@@ -2070,20 +1861,13 @@ static int send_synth_settings(void) {
         buff[pos++] = payload[i];
     }
 
-    retVal = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-        LOG_DEBUG("SET SYNTH SETTINGS RESPONSE\n");
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_set_patch_descr(uint32_t slot) { // Note - currently using values straight from patchDescr in sub-function
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     int      pos                     = COMMAND_OFFSET;
     uint32_t bitPos                  = 0;
-    int      retVal                  = EXIT_FAILURE;
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
@@ -2091,13 +1875,7 @@ static int send_set_patch_descr(uint32_t slot) { // Note - currently using value
     bitPos      = BYTE_TO_BIT(pos);
     write_patch_descr(slot, buff, &bitPos);
     pos         = BIT_TO_BYTE(bitPos);
-
-    retVal      = send_message(buff, pos);
-
-    if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-    }
-    return retVal;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 // ---------------------------------------------------------------------------
@@ -2237,12 +2015,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->modeData.mode;
             buff[pos++] = messageContent->modeData.value;
             LOG_DEBUG("SET MODE %u %u\n", messageContent->modeData.mode, messageContent->modeData.value);
-            retVal      = send_message(buff, pos);
-
-            if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-                LOG_DEBUG("SET MODE RESPONSE\n");
-            }
+            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
             break;
 
         case eMsgCmdWriteCable:
@@ -2255,12 +2028,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex;
             buff[pos++] = messageContent->cableData.moduleToIndex;
             buff[pos++] = messageContent->cableData.connectorToIoIndex;
-            retVal      = send_message(buff, pos);
-
-            if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-                LOG_DEBUG("WRITE CABLE RESPONSE\n");
-            }
+            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
             break;
 
         case eMsgCmdWriteModule:
@@ -2290,13 +2058,7 @@ static int send_write_data(tMessageContent * messageContent) {
             written     = snprintf((char *)&buff[pos], avail, "%s", messageContent->moduleData.name);
 
             pos        += ((written >= 0) && (written < avail)) ? written + 1 : avail;
-
-            retVal      = send_message(buff, pos);
-
-            if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-                LOG_DEBUG("WRITE MODULE RESPONSE\n");
-            }
+            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
             break;
         }
         case eMsgCmdMoveModule:
@@ -2308,12 +2070,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.moduleKey.index;
             buff[pos++] = messageContent->moduleData.column;
             buff[pos++] = messageContent->moduleData.row;
-            retVal      = send_message(buff, pos);
-
-            if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-                LOG_DEBUG("MOVE MODULE RESPONSE\n");
-            }
+            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
             break;
 
         case eMsgCmdDeleteModule:
@@ -2323,12 +2080,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = SUB_COMMAND_DELETE_MODULE;
             buff[pos++] = messageContent->moduleData.moduleKey.location;
             buff[pos++] = messageContent->moduleData.moduleKey.index;
-            retVal      = send_message(buff, pos);
-
-            if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-                LOG_DEBUG("DELETE MODULE RESPONSE\n");
-            }
+            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
             break;
 
         case eMsgCmdSetModuleUpRate:
@@ -2339,12 +2091,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.moduleKey.location;
             buff[pos++] = messageContent->moduleData.moduleKey.index;
             buff[pos++] = messageContent->moduleData.upRate;
-            retVal      = send_message(buff, pos);
-
-            if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-                LOG_DEBUG("SET MODULE UPRATE RESPONSE\n");
-            }
+            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
             break;
 
         case eMsgCmdDeleteCable:
@@ -2357,12 +2104,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex;
             buff[pos++] = messageContent->cableData.moduleToIndex;
             buff[pos++] = messageContent->cableData.connectorToIoIndex;
-            retVal      = send_message(buff, pos);
-
-            if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-                LOG_DEBUG("DELETE CABLE RESPONSE\n");
-            }
+            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
             break;
 
         case eMsgCmdSetParamMorph:
@@ -2386,12 +2128,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = patchVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_SELECT_VARIATION;
             buff[pos++] = messageContent->variationData.variation;
-            retVal      = send_message(buff, pos);
-
-            if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-                LOG_DEBUG("SELECT VARIATION RESPONSE\n");
-            }
+            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
             break;
 
         case eMsgCmdSelectSlot:
@@ -2400,12 +2137,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = atomic_load(&gPerfVersion);
             buff[pos++] = SUB_COMMAND_SELECT_SLOT;
             buff[pos++] = messageContent->slotData.slot;
-            retVal      = send_message(buff, pos);
-
-            if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-                LOG_DEBUG("SELECT SLOT RESPONSE\n");
-            }
+            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
             break;
 
         case eMsgCmdSetModuleLabel:
