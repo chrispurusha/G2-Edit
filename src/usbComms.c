@@ -50,8 +50,9 @@ extern "C" {
 
 // USB transfer timeouts (milliseconds)
 #define USB_SEND_TIMEOUT_MS         (50)
-#define USB_EXT_RECV_TIMEOUT_MS     (3000)
-#define USB_INT_RECV_TIMEOUT_MS     (50)
+#define USB_RECV_POLL_MS            (50)   // ePollYes idle poll — timeout is expected and normal
+#define USB_RECV_ACK_MS             (500)  // simple command acknowledgment (SUB_RESPONSE_OK)
+#define USB_RECV_DATA_MS            (3000) // data response — may be large or slow to prepare
 #define USB_KEEPALIVE_INTERVAL_S    (2)    // macOS suspends USB after ~3s idle; keep well inside that
 
 // Atomic flags for cross-thread signalling
@@ -1073,7 +1074,7 @@ static int parse_incoming(uint8_t * buff, int length, int * response) {
 // USB receive functions
 // ---------------------------------------------------------------------------
 
-static int rcv_extended(int dataLength, int * response) {
+static int rcv_extended(int dataLength, int * response, unsigned int timeout_ms) {
     uint8_t                buff[EXTENDED_MESSAGE_SIZE] = {0};
     int                    readLength                  = 0;
     int                    retVal                      = EXIT_FAILURE;
@@ -1095,19 +1096,21 @@ static int rcv_extended(int dataLength, int * response) {
         return EXIT_FAILURE;
     }
 
+    // The G2 sometimes sends a zero-length packet on 0x82 before the real data.
+    // Retry up to 3 times on a 0-byte success to absorb ZLPs.
     for (try = 1; try <= 3; try++) {
         memset(buff, 0, sizeof(buff));
         readLength = 0;
         get_time_delta();
         retVal     = usb_bulk_transfer_sync(devHandle_local, 0x82, buff,
                                             sizeof(buff), &readLength,
-                                            USB_EXT_RECV_TIMEOUT_MS);
+                                            timeout_ms);
         timeDelta  = get_time_delta();
 
         if (timeDelta > largestDelta) {
             largestDelta = timeDelta;
         }
-        LOG_DEBUG("RX ext Delta %dms largest %dms\n", (int)(timeDelta * 1000), (int)(largestDelta * 1000));
+        LOG_DEBUG("RX Ext Delta %dms largest %dms\n", (int)timeDelta, (int)largestDelta);
 
         if (retVal == LIBUSB_SUCCESS) {
             if (readLength > 0) {
@@ -1120,24 +1123,22 @@ static int rcv_extended(int dataLength, int * response) {
                     break;
                 }
             }
+            // readLength == 0: ZLP — device not ready yet, retry
         } else if (is_disconnect_error(retVal)) {
             LOG_DEBUG("Disconnect error %s\n", libusb_error_name(retVal));
             atomic_store(&gotBadConnectionIndication, true);
             return EXIT_FAILURE;
         } else {
             LOG_DEBUG("Transfer error %s\n", libusb_error_name(retVal));
+            break;
         }
-        usleep(1000);
     }
 
     if (readLength != dataLength) {
-        LOG_DEBUG("Length mismatch read=%d expected=%d\n",
-                  readLength, dataLength);
+        LOG_DEBUG("Length mismatch read=%d expected=%d\n", readLength, dataLength);
 
         if (readLength == 0) {
-            // All retries returned no data — libusb endpoint 0x82 is stuck.
-            // Trigger reconnect so recovery is automatic without restarting.
-            LOG_DEBUG("Extended receive got no data after retries — triggering reconnect\n");
+            LOG_DEBUG("Extended receive got no data — triggering reconnect\n");
             atomic_store(&gotBadConnectionIndication, true);
         }
         return EXIT_FAILURE;
@@ -1151,7 +1152,7 @@ static int rcv_extended(int dataLength, int * response) {
     return parse_incoming(buff, dataLength, response);
 }
 
-static int int_rec(tPoll poll, int expectedResponse) {
+static int int_rec(tPoll poll, int expectedResponse, unsigned int timeout_ms) {
     uint8_t                buff[INTERRUPT_MESSAGE_SIZE] = {0};
     int                    readLength                   = 0;
     int                    retVal                       = EXIT_FAILURE;
@@ -1175,7 +1176,7 @@ static int int_rec(tPoll poll, int expectedResponse) {
         get_time_delta();
         retVal          = usb_bulk_transfer_sync(devHandle_local, 0x81, buff,
                                                  sizeof(buff), &readLength,
-                                                 USB_INT_RECV_TIMEOUT_MS);
+                                                 timeout_ms);
         timeDelta       = get_time_delta();
 
         if (timeDelta > largestDelta) {
@@ -1221,7 +1222,7 @@ static int int_rec(tPoll poll, int expectedResponse) {
 
             if (!foundNoneZero) {
                 dataLength = read_bit_stream(buff, &bitPos, 16);
-                retVal     = rcv_extended(dataLength, &response);
+                retVal     = rcv_extended(dataLength, &response, timeout_ms);
             }
         } else if (type == RESPONSE_TYPE_EMBEDDED) {
             uint32_t crcBitPos = SIGNED_BYTE_TO_BIT(dataLength - 1);
@@ -1264,7 +1265,7 @@ static int send_message(uint8_t * buff, int pos) {
     int                    msgLength    = pos - COMMAND_OFFSET;
     int                    actualLength = 0;
     int                    result       = 0;
-	uint16_t               crc          = 0;
+    uint16_t               crc          = 0;
     double                 timeDelta    = 0.0f;
     static double          largestDelta = 0.0f;
 
@@ -1325,7 +1326,7 @@ static int send_init(void) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("INIT RESPONSE\n");
     }
     return retVal;
@@ -1355,7 +1356,7 @@ static int send_stop(void) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("STOP RESPONSE\n");
     }
     return retVal;
@@ -1371,7 +1372,7 @@ static int send_start(void) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("START RESPONSE\n");
     }
     return retVal;
@@ -1387,7 +1388,7 @@ static int send_select_slot(uint32_t slot) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("SELECT SLOT RESPONSE\n");
     }
     return retVal;
@@ -1402,7 +1403,7 @@ static int send_get_synth_settings(void) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_SYNTH_SETTINGS);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_SYNTH_SETTINGS, USB_RECV_DATA_MS);
     }
     return retVal;
 }
@@ -1416,7 +1417,7 @@ static int send_get_midi_cc(void) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_MIDI_CC);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_MIDI_CC, USB_RECV_DATA_MS);
     }
     return retVal;
 }
@@ -1430,7 +1431,7 @@ static int send_get_assigned_voices(void) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_ASSIGNED_VOICES);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_ASSIGNED_VOICES, USB_RECV_DATA_MS);
     }
     return retVal;
 }
@@ -1444,7 +1445,7 @@ static int send_get_master_clock(void) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_MASTER_CLOCK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_MASTER_CLOCK, USB_RECV_DATA_MS);
     }
     return retVal;
 }
@@ -1458,7 +1459,7 @@ static int send_get_global_page(void) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_GLOBAL_PAGE);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_GLOBAL_PAGE, USB_RECV_DATA_MS);
     }
     return retVal;
 }
@@ -1473,7 +1474,7 @@ static int send_get_performance_settings(void) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_PERFORMANCE_SETTINGS);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_PERFORMANCE_SETTINGS, USB_RECV_DATA_MS);
     }
     return retVal;
 }
@@ -1489,7 +1490,7 @@ static int send_get_patch_version(uint32_t slot) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_VERSION);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_VERSION, USB_RECV_DATA_MS);
     }
     return retVal;
 }
@@ -1503,7 +1504,7 @@ static int send_get_patch(uint32_t slot) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_DESCRIPTION);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_DESCRIPTION, USB_RECV_DATA_MS);
     }
     return retVal;
 }
@@ -1517,7 +1518,7 @@ static int send_get_patch_name(uint32_t slot) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_GET_PATCH_NAME);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_GET_PATCH_NAME, USB_RECV_DATA_MS);
     }
     return retVal;
 }
@@ -1532,7 +1533,7 @@ static int send_get_resources_used(uint32_t slot, tLocation location) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_RESOURCES_USED);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_RESOURCES_USED, USB_RECV_DATA_MS);
     }
     return retVal;
 }
@@ -1553,7 +1554,7 @@ static int send_set_module_label(uint32_t slot, tModuleKey moduleKey, const char
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("SET MODULE LABEL RESPONSE\n");
     }
     return retVal;
@@ -1607,7 +1608,7 @@ static int send_set_param_label(uint32_t slot, tModuleKey moduleKey, uint32_t pa
     if (retVal != EXIT_SUCCESS) {
         LOG_DEBUG("SET PARAM LABEL send_message FAILED\n");
     } else {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 
         if (retVal == EXIT_SUCCESS) {
             LOG_DEBUG("SET PARAM LABEL RESPONSE OK\n");
@@ -1647,7 +1648,7 @@ static int send_set_module_colour(uint32_t slot, uint32_t location,
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("SET MODULE COLOUR RESPONSE\n");
     }
     return retVal;
@@ -1679,7 +1680,7 @@ static int send_get_global_knobs(void) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_GLOBAL_KNOBS);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_GLOBAL_KNOBS, USB_RECV_DATA_MS);
         LOG_DEBUG("GLOBAL KNOBS RESPONSE\n");
     }
     return retVal;
@@ -1694,7 +1695,7 @@ static int send_get_current_note(uint32_t slot) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_CURRENT_NOTE_2);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_CURRENT_NOTE_2, USB_RECV_DATA_MS);
         LOG_DEBUG("CURRENT NOTE RESPONSE\n");
     }
     return retVal;
@@ -1709,7 +1710,7 @@ static int send_get_patch_notes(uint32_t slot) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_NOTES);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_NOTES, USB_RECV_DATA_MS);
         LOG_DEBUG("PATCH NOTES RESPONSE\n");
     }
     return retVal;
@@ -1724,7 +1725,7 @@ static int send_get_selected_param(uint32_t slot) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_SELECT_PARAM);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_SELECT_PARAM, USB_RECV_DATA_MS);
         LOG_DEBUG("SELECTED PARAM RESPONSE\n");
     }
     return retVal;
@@ -1739,7 +1740,7 @@ static int send_get_knob_snapshot(uint32_t slot) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK); // Really expected SUB_RESPONSE_KNOBS here
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS); // Really expected SUB_RESPONSE_KNOBS here
         LOG_DEBUG("KNOB SNAPSHOT RESPONSE\n");
     }
     return retVal;
@@ -1815,7 +1816,7 @@ static int push_slot_to_device(uint32_t slot) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_VERSION);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_PATCH_VERSION, USB_RECV_DATA_MS);
 
         LOG_DEBUG("PUSH SLOT RESPONSE\n");
     }
@@ -1836,7 +1837,7 @@ static int send_set_patch_name(uint32_t slot, const char * name) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("SET PATCH NAME RESPONSE\n");
     }
     return retVal;
@@ -1856,7 +1857,7 @@ static int send_assign_knob(uint32_t slot, uint32_t location, uint32_t moduleInd
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("ASSIGN KNOB RESPONSE\n");
     }
     return retVal;
@@ -1873,7 +1874,7 @@ static int send_deassign_knob(uint32_t slot, uint32_t knobIndex) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("DEASSIGN KNOB RESPONSE\n");
     }
     return retVal;
@@ -1893,7 +1894,7 @@ static int send_assign_global_knob(uint32_t slotIndex, uint32_t location, uint32
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("ASSIGN GLOBAL KNOB RESPONSE\n");
     }
     return retVal;
@@ -1910,7 +1911,7 @@ static int send_deassign_global_knob(uint32_t knobIndex) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("DEASSIGN GLOBAL KNOB RESPONSE\n");
     }
     return retVal;
@@ -1929,7 +1930,7 @@ static int send_assign_midi_cc(uint32_t slot, uint32_t location, uint32_t module
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("ASSIGN MIDI CC RESPONSE\n");
     }
     return retVal;
@@ -1945,7 +1946,7 @@ static int send_deassign_midi_cc(uint32_t slot, uint32_t midiCC) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("DEASSIGN MIDI CC RESPONSE\n");
     }
     return retVal;
@@ -1962,7 +1963,7 @@ static int send_copy_variation(uint32_t slot, uint32_t fromVariation, uint32_t t
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("COPY VARIATION RESPONSE\n");
     }
     return retVal;
@@ -1980,7 +1981,7 @@ static int send_set_master_clock_bpm(uint32_t bpm) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("SET MASTER CLOCK BPM RESPONSE\n");
     }
     return retVal;
@@ -1998,7 +1999,7 @@ static int send_set_master_clock_run(uint32_t running) {
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("SET MASTER CLOCK RUN RESPONSE\n");
     }
     return retVal;
@@ -2072,7 +2073,7 @@ static int send_synth_settings(void) {
     retVal = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
         LOG_DEBUG("SET SYNTH SETTINGS RESPONSE\n");
     }
     return retVal;
@@ -2094,7 +2095,7 @@ static int send_set_patch_descr(uint32_t slot) { // Note - currently using value
     retVal      = send_message(buff, pos);
 
     if (retVal == EXIT_SUCCESS) {
-        retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+        retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
     }
     return retVal;
 }
@@ -2239,7 +2240,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
                 LOG_DEBUG("SET MODE RESPONSE\n");
             }
             break;
@@ -2257,7 +2258,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
                 LOG_DEBUG("WRITE CABLE RESPONSE\n");
             }
             break;
@@ -2293,7 +2294,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
                 LOG_DEBUG("WRITE MODULE RESPONSE\n");
             }
             break;
@@ -2310,7 +2311,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
                 LOG_DEBUG("MOVE MODULE RESPONSE\n");
             }
             break;
@@ -2325,7 +2326,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
                 LOG_DEBUG("DELETE MODULE RESPONSE\n");
             }
             break;
@@ -2341,7 +2342,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
                 LOG_DEBUG("SET MODULE UPRATE RESPONSE\n");
             }
             break;
@@ -2359,7 +2360,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
                 LOG_DEBUG("DELETE CABLE RESPONSE\n");
             }
             break;
@@ -2388,7 +2389,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
                 LOG_DEBUG("SELECT VARIATION RESPONSE\n");
             }
             break;
@@ -2402,7 +2403,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal      = send_message(buff, pos);
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = int_rec(ePollNo, SUB_RESPONSE_OK);
+                retVal = int_rec(ePollNo, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
                 LOG_DEBUG("SELECT SLOT RESPONSE\n");
             }
             break;
@@ -2643,7 +2644,7 @@ static void state_handler(void) {
         return;
     }
     // Nothing to do — poll for unsolicited messages (LED, volume, param change)
-    int_rec(ePollYes, SUB_RESPONSE_NULL);
+    int_rec(ePollYes, SUB_RESPONSE_NULL, USB_RECV_POLL_MS);
 }
 
 // ---------------------------------------------------------------------------
