@@ -28,10 +28,12 @@
 void usb_log_open(void);
 void usb_log_close(void);
 void usb_log_message(const char * direction, const uint8_t * data, size_t length);
+void usb_log_text(const char * fmt, ...);
 #else
 #define usb_log_open()
 #define usb_log_close()
 #define usb_log_message(direction, data, length)    ((void)0)
+#define usb_log_text(fmt, ...)                      ((void)0)
 #endif
 
 #endif // __USB_LOG_H__

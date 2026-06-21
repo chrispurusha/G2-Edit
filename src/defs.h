@@ -23,12 +23,29 @@
 #define ENABLE_DEBUG      // Comment out if not required
 #define ENABLE_USB_LOG    // Uncomment to enable USB message logging to ~/G2_usb.log
 
-#define LOG_ERROR(fmt, ...)           fprintf(stderr, "E %s() " fmt, __func__, ## __VA_ARGS__)
-#define LOG_WARNING(fmt, ...)         fprintf(stderr, "W %s() " fmt, __func__, ## __VA_ARGS__)
-#define LOG_INFO(fmt, ...)            fprintf(stdout, "I %s() " fmt, __func__, ## __VA_ARGS__)
+#ifdef ENABLE_USB_LOG
+void usb_log_text(const char * fmt, ...);
+#define _USB_LOG(fmt, ...)    usb_log_text(fmt, ## __VA_ARGS__)
+#else
+#define _USB_LOG(fmt, ...)    ((void)0)
+#endif
+
+#define LOG_ERROR(fmt, ...)                                      \
+   do {fprintf(stderr, "E %s() " fmt, __func__, ## __VA_ARGS__); \
+       _USB_LOG("E %s() " fmt, __func__, ## __VA_ARGS__);} while (0)
+#define LOG_WARNING(fmt, ...)                                    \
+   do {fprintf(stderr, "W %s() " fmt, __func__, ## __VA_ARGS__); \
+       _USB_LOG("W %s() " fmt, __func__, ## __VA_ARGS__);} while (0)
+#define LOG_INFO(fmt, ...)                                       \
+   do {fprintf(stdout, "I %s() " fmt, __func__, ## __VA_ARGS__); \
+       _USB_LOG("I %s() " fmt, __func__, ## __VA_ARGS__);} while (0)
 #ifdef ENABLE_DEBUG
-#define LOG_DEBUG(fmt, ...)           fprintf(stdout, "D %s() " fmt, __func__, ## __VA_ARGS__)
-#define LOG_DEBUG_DIRECT(fmt, ...)    fprintf(stdout, fmt, ## __VA_ARGS__)
+#define LOG_DEBUG(fmt, ...)                                      \
+   do {fprintf(stdout, "D %s() " fmt, __func__, ## __VA_ARGS__); \
+       _USB_LOG("D %s() " fmt, __func__, ## __VA_ARGS__);} while (0)
+#define LOG_DEBUG_DIRECT(fmt, ...)           \
+   do {fprintf(stdout, fmt, ## __VA_ARGS__); \
+       _USB_LOG(fmt, ## __VA_ARGS__);} while (0)
 #else
 #define LOG_DEBUG(fmt, ...)           ((void)0)
 #define LOG_DEBUG_DIRECT(fmt, ...)    ((void)0)

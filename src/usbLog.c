@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <time.h>
 #include "defs.h"
 #include "usbLog.h"
@@ -53,6 +54,28 @@ void usb_log_close(void) {
         fclose(logFile);
         logFile = NULL;
     }
+}
+
+void usb_log_text(const char * fmt, ...) {
+    struct timespec ts;
+    struct tm       tmInfo;
+    va_list         args;
+
+    if (logFile == NULL) {
+        return;
+    }
+    clock_gettime(CLOCK_REALTIME, &ts);
+    localtime_r(&ts.tv_sec, &tmInfo);
+
+    fprintf(logFile, "[%02d:%02d:%02d.%03d] ",
+            tmInfo.tm_hour, tmInfo.tm_min, tmInfo.tm_sec,
+            (int)(ts.tv_nsec / 1000000));
+
+    va_start(args, fmt);
+    vfprintf(logFile, fmt, args);
+    va_end(args);
+
+    fflush(logFile);
 }
 
 void usb_log_message(const char * direction, const uint8_t * data, size_t length) {

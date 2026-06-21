@@ -49,7 +49,7 @@ extern "C" {
 #define PRODUCT_ID                  (2)
 
 // USB transfer timeouts (milliseconds)
-#define USB_SEND_TIMEOUT_MS         (400)
+#define USB_SEND_TIMEOUT_MS         (2000)
 #define USB_EXT_RECV_TIMEOUT_MS     (2000)
 #define USB_INT_RECV_TIMEOUT_MS     (100)
 #define USB_INIT_TIMEOUT_MS         (1000) // Extra headroom during init sequence
@@ -1096,7 +1096,7 @@ static int int_rec(tPoll poll, int expectedResponse) {
 
             if (retVal == LIBUSB_SUCCESS) {
                 if (readLength > 0) {
-                    gLastActivityTime = time(NULL);
+                    //gLastActivityTime = time(NULL);
                     atomic_store(&gUsbRxTime, (uint64_t)get_time_ms());
                     usb_log_message("RX", buff, (size_t)readLength);
                     break;
@@ -1182,6 +1182,7 @@ static int send_message(uint8_t * buff, int pos) {
     double                 timeDelta    = 0.0f;
     uint16_t               crc          = 0;
     int                    try          = 1;
+    static double largestDelta = 0;
 
     if (msgLength <= 0) {
         return EXIT_FAILURE;
@@ -1200,32 +1201,34 @@ static int send_message(uint8_t * buff, int pos) {
         return EXIT_FAILURE;
     }
 
-    for (try = 1; try <= 3; try++) {
-        actualLength = 0;
-        get_time_delta();
-        result       = libusb_bulk_transfer(handle, 3, buff, msgLength,
-                                            &actualLength, USB_SEND_TIMEOUT_MS);
-        timeDelta    = get_time_delta();
+    actualLength = 0;
+    get_time_delta();
+    result       = libusb_bulk_transfer(handle, 3, buff, msgLength,
+                                        &actualLength, USB_SEND_TIMEOUT_MS);
+    timeDelta    = get_time_delta();
+    if (timeDelta>largestDelta) {
+        largestDelta = timeDelta;
+    }
+    LOG_DEBUG("TX Delta %dms largest %dms\n", (int)(timeDelta * 1000), (int)(largestDelta * 1000));
 
-        if ((result == 0) && (actualLength == msgLength)) {
-            gLastActivityTime = time(NULL);
-            atomic_store(&gUsbTxTime, (uint64_t)get_time_ms());
-            usb_log_message("TX", buff, (size_t)msgLength);
-            return EXIT_SUCCESS;
-        }
+    if ((result == 0) && (actualLength == msgLength)) {
+        
+        gLastActivityTime = time(NULL);
+        atomic_store(&gUsbTxTime, (uint64_t)get_time_ms());
+        usb_log_message("TX", buff, (size_t)msgLength);
+        return EXIT_SUCCESS;
+    }
 
-        if (actualLength != msgLength) {
-            LOG_ERROR("Mismatch: actual length %d, msg length %d\n", actualLength, msgLength);
-        }
+    if (actualLength != msgLength) {
+        LOG_ERROR("Mismatch: actual length %d, msg length %d\n", actualLength, msgLength);
+    }
 
-        if (is_disconnect_error(result)) {
-            LOG_DEBUG("disconnect error %s\n", libusb_error_name(result));
-            atomic_store(&gotBadConnectionIndication, true);
-            return EXIT_FAILURE;
-        } else {
-            LOG_ERROR("transfer error %s, Time taken %f with timeout of %u\n", libusb_error_name(result), timeDelta, USB_SEND_TIMEOUT_MS);
-        }
-        usleep(10000);
+    if (is_disconnect_error(result)) {
+        LOG_DEBUG("disconnect error %s\n", libusb_error_name(result));
+        atomic_store(&gotBadConnectionIndication, true);
+        return EXIT_FAILURE;
+    } else {
+        LOG_ERROR("transfer error %s, Time taken %f with timeout of %u\n", libusb_error_name(result), timeDelta, USB_SEND_TIMEOUT_MS);
     }
 
     return EXIT_FAILURE;
@@ -2476,6 +2479,7 @@ static void state_handler(void) {
 
             if (atomic_load(&gCommsState) == eCommsNeverConnected) {
                 // First ever connection — G2 is authoritative, pull everything
+                LOG_ERROR("Never connected, therefore pull settings\n");
                 result = send_init_sequence_pull();
             } else {
                 // Reconnection after disconnect — editor is authoritative, push all slots
@@ -2548,7 +2552,7 @@ static void state_handler(void) {
     if (time(NULL) - gLastActivityTime >= USB_KEEPALIVE_INTERVAL_S) {
         LOG_DEBUG("USB keepalive\n");
 
-        if (send_get_global_page() != EXIT_SUCCESS) {
+        if (send_get_patch_version(0) != EXIT_SUCCESS) {
             LOG_DEBUG("Keepalive failed — forcing reconnect\n");
             atomic_store(&gotBadConnectionIndication, true);
         }
