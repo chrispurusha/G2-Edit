@@ -41,7 +41,6 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "globalVars.h"
-#include "mouseHandle.h"
 #include <stdatomic.h>
 #include <pthread.h>
 

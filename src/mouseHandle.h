@@ -28,7 +28,6 @@ extern "C" {
 
 void init_patch(uint32_t slot);
 void get_global_gui_scaled_mouse_coord(tCoord * coord);
-void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active);
 bool handle_scrollbar_click(tCoord coord);
 void set_x_scroll_bar(double x);
 void set_y_scroll_bar(double y);
