@@ -49,10 +49,9 @@ extern "C" {
 #define PRODUCT_ID                  (2)
 
 // USB transfer timeouts (milliseconds)
-#define USB_SEND_TIMEOUT_MS         (2000)
-#define USB_EXT_RECV_TIMEOUT_MS     (2000)
-#define USB_INT_RECV_TIMEOUT_MS     (100)
-#define USB_INIT_TIMEOUT_MS         (1000) // Extra headroom during init sequence
+#define USB_SEND_TIMEOUT_MS         (50)
+#define USB_EXT_RECV_TIMEOUT_MS     (3000)
+#define USB_INT_RECV_TIMEOUT_MS     (50)
 #define USB_KEEPALIVE_INTERVAL_S    (2)    // macOS suspends USB after ~3s idle; keep well inside that
 
 // Atomic flags for cross-thread signalling
@@ -172,6 +171,85 @@ static bool open_and_claim_device(void) {
     return true;
 }
 
+// ---------------------------------------------------------------------------
+// Async-backed synchronous transfer — replaces libusb_bulk_transfer.
+// Drives the libusb event loop in 50ms slices so the wall-clock timeout is
+// reliable even when the macOS IOKit backend ignores per-transfer timeouts.
+// ---------------------------------------------------------------------------
+
+static void LIBUSB_CALL usb_transfer_cb(struct libusb_transfer * xfer) {
+    int * completed = (int *)xfer->user_data;
+
+    *completed = 1;
+}
+
+static int usb_bulk_transfer_sync(libusb_device_handle * handle, uint8_t endpoint,
+                                  uint8_t * buffer, int length, int * actual_length,
+                                  unsigned int timeout_ms) {
+    struct libusb_transfer * xfer      = NULL;
+    int                      completed = 0;
+    int                      r         = LIBUSB_SUCCESS;
+    struct timeval           tv        = {0, 50 * 1000};
+    struct timespec          start     = {0};
+    struct timespec          now       = {0};
+    int                      status    = LIBUSB_TRANSFER_ERROR;
+
+    *actual_length = 0;
+
+    xfer           = libusb_alloc_transfer(0);
+
+    if (xfer == NULL) {
+        return LIBUSB_ERROR_NO_MEM;
+    }
+    libusb_fill_bulk_transfer(xfer, handle, endpoint, buffer, length,
+                              usb_transfer_cb, &completed, 0);
+
+    r              = libusb_submit_transfer(xfer);
+
+    if (r != LIBUSB_SUCCESS) {
+        libusb_free_transfer(xfer);
+        return r;
+    }
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
+    while (!completed) {
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        long elapsed_ms = (now.tv_sec - start.tv_sec) * 1000L
+                          + (now.tv_nsec - start.tv_nsec) / 1000000L;
+
+        if ((unsigned int)elapsed_ms >= timeout_ms) {
+            break;
+        }
+        libusb_handle_events_timeout_completed(libUsbCtx, &tv, &completed);
+    }
+
+    if (!completed) {
+        libusb_cancel_transfer(xfer);
+
+        while (!completed) {
+            libusb_handle_events_timeout_completed(libUsbCtx, &tv, &completed);
+        }
+    }
+    *actual_length = xfer->actual_length;
+    status         = xfer->status;
+    libusb_free_transfer(xfer);
+
+    switch (status) {
+        case LIBUSB_TRANSFER_COMPLETED: return LIBUSB_SUCCESS;
+
+        case LIBUSB_TRANSFER_CANCELLED: return LIBUSB_ERROR_TIMEOUT;
+
+        case LIBUSB_TRANSFER_TIMED_OUT: return LIBUSB_ERROR_TIMEOUT;
+
+        case LIBUSB_TRANSFER_STALL:     return LIBUSB_ERROR_PIPE;
+
+        case LIBUSB_TRANSFER_NO_DEVICE: return LIBUSB_ERROR_NO_DEVICE;
+
+        case LIBUSB_TRANSFER_OVERFLOW:  return LIBUSB_ERROR_OVERFLOW;
+
+        default:                         return LIBUSB_ERROR_IO;
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Parsers
@@ -1001,6 +1079,8 @@ static int rcv_extended(int dataLength, int * response) {
     int                    retVal                      = EXIT_FAILURE;
     int                    try                         = 1;
     libusb_device_handle * devHandle_local             = NULL;
+    double                 timeDelta                   = 0.0f;
+    static double          largestDelta                = 0.0f;
 
     if (dataLength > EXTENDED_MESSAGE_SIZE) {
         LOG_ERROR("Expected message too large (%u > %u)\n", dataLength, EXTENDED_MESSAGE_SIZE);
@@ -1018,9 +1098,16 @@ static int rcv_extended(int dataLength, int * response) {
     for (try = 1; try <= 3; try++) {
         memset(buff, 0, sizeof(buff));
         readLength = 0;
-        retVal     = libusb_bulk_transfer(devHandle_local, 0x82, buff,
-                                          sizeof(buff), &readLength,
-                                          USB_EXT_RECV_TIMEOUT_MS);
+        get_time_delta();
+        retVal     = usb_bulk_transfer_sync(devHandle_local, 0x82, buff,
+                                            sizeof(buff), &readLength,
+                                            USB_EXT_RECV_TIMEOUT_MS);
+        timeDelta  = get_time_delta();
+
+        if (timeDelta > largestDelta) {
+            largestDelta = timeDelta;
+        }
+        LOG_DEBUG("RX ext Delta %dms largest %dms\n", (int)(timeDelta * 1000), (int)(largestDelta * 1000));
 
         if (retVal == LIBUSB_SUCCESS) {
             if (readLength > 0) {
@@ -1069,15 +1156,12 @@ static int int_rec(tPoll poll, int expectedResponse) {
     int                    readLength                   = 0;
     int                    retVal                       = EXIT_FAILURE;
     libusb_device_handle * devHandle_local              = NULL;
-    int                    timeout                      = USB_INT_RECV_TIMEOUT_MS;
     bool                   doLoop                       = true;
     int                    response                     = SUB_RESPONSE_ERROR;
-    int                    try                          = 1;
+    double                 timeDelta                    = 0.0f;
+    static double          largestDelta                 = 0.0f;
 
     while (doLoop == true) {
-        if (atomic_load(&gCommsState) != eCommsOnLine) {
-            timeout = USB_INIT_TIMEOUT_MS;
-        }
         pthread_mutex_lock(&usbStaticMutex);
         devHandle_local = devHandle;
         pthread_mutex_unlock(&usbStaticMutex);
@@ -1086,35 +1170,36 @@ static int int_rec(tPoll poll, int expectedResponse) {
             LOG_ERROR("int_rec: device handle is NULL\n");
             return EXIT_FAILURE;
         }
+        memset(buff, 0, sizeof(buff));
+        readLength      = 0;
+        get_time_delta();
+        retVal          = usb_bulk_transfer_sync(devHandle_local, 0x81, buff,
+                                                 sizeof(buff), &readLength,
+                                                 USB_INT_RECV_TIMEOUT_MS);
+        timeDelta       = get_time_delta();
 
-        for (try = 1; try <= 3; try++) {
-            memset(buff, 0, sizeof(buff));
-            readLength = 0;
-            retVal     = libusb_bulk_transfer(devHandle_local, 0x81, buff,
-                                              sizeof(buff), &readLength,
-                                              timeout);
+        if (timeDelta > largestDelta) {
+            largestDelta = timeDelta;
+        }
+        //LOG_DEBUG("RX Int Delta %dms largest %dms\n", (int)timeDelta, (int)largestDelta);
 
-            if (retVal == LIBUSB_SUCCESS) {
-                if (readLength > 0) {
-                    //gLastActivityTime = time(NULL);
-                    atomic_store(&gUsbRxTime, (uint64_t)get_time_ms());
-                    usb_log_message("RX", buff, (size_t)readLength);
-                    break;
-                }
-            } else if (retVal == LIBUSB_ERROR_TIMEOUT) {
-                if (poll == ePollYes) {
-                    return EXIT_SUCCESS;
-                } else {
-                    return EXIT_FAILURE;
-                }
-            } else if (is_disconnect_error(retVal)) {
-                LOG_DEBUG("int_rec: disconnect error %s\n", libusb_error_name(retVal));
-                atomic_store(&gotBadConnectionIndication, true);
-                return EXIT_FAILURE;
-            } else {
-                LOG_DEBUG("int_rec: transfer error %s\n", libusb_error_name(retVal));
+        if (retVal == LIBUSB_SUCCESS) {
+            if (readLength > 0) {
+                atomic_store(&gUsbRxTime, (uint64_t)get_time_ms());
+                usb_log_message("RX", buff, (size_t)readLength);
             }
-            usleep(1000);
+        } else if (retVal == LIBUSB_ERROR_TIMEOUT) {
+            if (poll == ePollYes) {
+                return EXIT_SUCCESS;
+            } else {
+                return EXIT_FAILURE;
+            }
+        } else if (is_disconnect_error(retVal)) {
+            LOG_DEBUG("int_rec: disconnect error %s\n", libusb_error_name(retVal));
+            atomic_store(&gotBadConnectionIndication, true);
+            return EXIT_FAILURE;
+        } else {
+            LOG_DEBUG("int_rec: transfer error %s\n", libusb_error_name(retVal));
         }
 
         if (readLength <= 0) {
@@ -1179,17 +1264,16 @@ static int send_message(uint8_t * buff, int pos) {
     int                    msgLength    = pos - COMMAND_OFFSET;
     int                    actualLength = 0;
     int                    result       = 0;
+	uint16_t               crc          = 0;
     double                 timeDelta    = 0.0f;
-    uint16_t               crc          = 0;
-    int                    try          = 1;
-    static double largestDelta = 0;
+    static double          largestDelta = 0.0f;
 
     if (msgLength <= 0) {
         return EXIT_FAILURE;
     }
-    crc        = calc_crc16(&buff[COMMAND_OFFSET], msgLength);
+    crc          = calc_crc16(&buff[COMMAND_OFFSET], msgLength);
     write_uint16(&buff[msgLength + 2], crc);
-    msgLength += 4;
+    msgLength   += 4;
     write_uint16(&buff[0], msgLength);
 
     pthread_mutex_lock(&usbStaticMutex);
@@ -1200,19 +1284,18 @@ static int send_message(uint8_t * buff, int pos) {
         atomic_store(&gotBadConnectionIndication, true);
         return EXIT_FAILURE;
     }
-
     actualLength = 0;
     get_time_delta();
-    result       = libusb_bulk_transfer(handle, 3, buff, msgLength,
-                                        &actualLength, USB_SEND_TIMEOUT_MS);
+    result       = usb_bulk_transfer_sync(handle, 3, buff, msgLength,
+                                          &actualLength, USB_SEND_TIMEOUT_MS);
     timeDelta    = get_time_delta();
-    if (timeDelta>largestDelta) {
+
+    if (timeDelta > largestDelta) {
         largestDelta = timeDelta;
     }
-    LOG_DEBUG("TX Delta %dms largest %dms\n", (int)(timeDelta * 1000), (int)(largestDelta * 1000));
+    //LOG_DEBUG("TX Delta %dms largest %dms\n", (int)timeDelta, (int)largestDelta);
 
     if ((result == 0) && (actualLength == msgLength)) {
-        
         gLastActivityTime = time(NULL);
         atomic_store(&gUsbTxTime, (uint64_t)get_time_ms());
         usb_log_message("TX", buff, (size_t)msgLength);
@@ -1230,7 +1313,6 @@ static int send_message(uint8_t * buff, int pos) {
     } else {
         LOG_ERROR("transfer error %s, Time taken %f with timeout of %u\n", libusb_error_name(result), timeDelta, USB_SEND_TIMEOUT_MS);
     }
-
     return EXIT_FAILURE;
 }
 
@@ -2055,9 +2137,11 @@ static int send_init_sequence_pull(void) {
 
     send_init();
     send_stop();
+
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         send_get_patch_version(slot);
     }
+
     send_get_patch_version(4); // Performance slot
     send_get_synth_settings();
     send_get_midi_cc();
