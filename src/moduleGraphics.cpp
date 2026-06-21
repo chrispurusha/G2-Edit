@@ -69,8 +69,8 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
                 render_rectangle(moduleArea, smallRectangle);
                 smallRectangle.coord.y += smallRectangle.size.h + space;
             }
+            break;
         }
-        break;
 
         case volumeTypeMono:
         case volumeTypeStereo:
@@ -119,9 +119,36 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
                                  {{rectangle.coord.x, rectangle.coord.y},
                                      {rectangle.size.w, stepHeight}});
             }
+            break;
         }
 
-        break;
+        case volumeTypeSequencer:
+        {
+            tRectangle smallRectangle = rectangle;
+            double     space          = 2.0; // TODO: Possibly make a percentage of width
+            uint32_t   leds           = 16;
+
+            smallRectangle.coord.y += space;
+            smallRectangle.coord.x += space;
+            smallRectangle.size.w   = (smallRectangle.size.w - (space * (double)(leds + 1))) / (double)leds;
+            smallRectangle.size.h  -= space * 2;
+
+            set_rgb_colour(RGB_BLACK);
+            render_rectangle(moduleArea, rectangle);
+
+            value                  &= 0x0ff;                         // There's a value of 3 in the high nibble, which is unknown use. Might be an indication of this being individual bit per LED?
+
+            for (int i = 0; i < leds; i++) {
+                if (i == value) {
+                    set_rgb_colour(RGB_GREEN_7);
+                } else {
+                    set_rgb_colour(RGB_GREEN_3);
+                }
+                render_rectangle(moduleArea, smallRectangle);
+                smallRectangle.coord.x += smallRectangle.size.w + space;
+            }
+            break;
+        }
         default:
             break;
     }
@@ -417,6 +444,11 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
             render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[0]); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
             rectangle.coord.x += (rectangle.size.w + space);
             render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[1]);
+        }
+        break;
+        case volumeTypeSequencer:
+        {
+            render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[0]); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
         }
         break;
         case volumeTypeQuad:

@@ -1011,12 +1011,6 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 121 Dummy
     {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 121 Dummy
     {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 121 Dummy
-    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 121 Dummy
-    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 121 Dummy
-    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 121 Dummy
-    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 121 Dummy
-    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 121 Dummy
-    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 121 Dummy
     // 122 Unknown
     // 123 Mix4-1C
     {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 11, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },   // 123 L1
@@ -1198,13 +1192,6 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Menu,   {{  3,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
     {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Toggle, {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            1,   0, emptyStrMap,                           NULL          }, // 144 Clear
     {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Toggle, {{ 45, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 144 Randomize
-    {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
 
     // 147 CtrRcv
     {moduleTypeCtrlRcv,    paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Ctrl",         128,  64, NULL,                                  NULL          }, // 147 Ctrl
@@ -2621,6 +2608,11 @@ const tVolumeLocation    volumeLocationList[] = {
     {moduleTypeFltComb,   volumeTypeMono,     {{-11, 20}, {3, 22}}, anchorTopRight}, // XPos:227 YPos:40 H:4
     {moduleType2toIn,     volumeTypeStereo,   {{-25,  6}, {3, 10}}, anchorTopRight}, // XPos:205+231 YPos:10 H:2
     {moduleType4toIn,     volumeTypeQuad,     {{-40,  6}, {3, 10}}, anchorTopRight}, // XPos:153..231 YPos:10 H:2
+    {moduleTypeSeqEvent,     volumeTypeSequencer,     {{20,  6}, {60, 5}}, anchorTopLeft}, // XPos:153..231 YPos:10 H:2
+    {moduleTypeSeqNote,     volumeTypeSequencer,     {{20,  6}, {60, 5}}, anchorTopLeft}, // XPos:153..231 YPos:10 H:2
+    {moduleTypeSeqVal,     volumeTypeSequencer,     {{20,  6}, {60, 5}}, anchorTopLeft}, // XPos:153..231 YPos:10 H:2
+    {moduleTypeSeqLev,     volumeTypeSequencer,     {{20,  6}, {60, 5}}, anchorTopLeft}, // XPos:153..231 YPos:10 H:2
+    {moduleTypeSeqCtr,     volumeTypeSequencer,     {{20,  6}, {60, 5}}, anchorTopLeft}, // XPos:153..231 YPos:10 H:2
 };
 
 const tLedLocation       ledLocationList[] = {
@@ -2655,11 +2647,6 @@ const tLedLocation       ledLocationList[] = {
     {moduleTypeRandomA,    ledTypeYes, {{-11,  4}, {3, 3}}, anchorTopRight},  // XPos:226 YPos:4  H:2
     {moduleTypeRandomB,    ledTypeYes, {{ -6, 14}, {3, 3}}, anchorTopRight},  // XPos:242 YPos:21 H:3
     {moduleTypeOperator,   ledTypeYes, {{  8, 13}, {3, 3}}, anchorTopLeft },  // XPos:17  YPos:77 H:12
-    {moduleTypeSeqNote,    ledTypeYes, {{ -6,  2}, {3, 3}}, anchorTopRight},  // XPos:242 YPos:7  H:9
-    {moduleTypeSeqEvent,   ledTypeYes, {{ -6,  3}, {3, 3}}, anchorTopRight},  // XPos:242 YPos:7  H:5
-    {moduleTypeSeqVal,     ledTypeYes, {{ -6,  2}, {3, 3}}, anchorTopRight},  // XPos:242 YPos:7  H:8
-    {moduleTypeSeqLev,     ledTypeYes, {{ -6,  2}, {3, 3}}, anchorTopRight},  // XPos:242 YPos:7  H:8
-    {moduleTypeSeqCtr,     ledTypeYes, {{ -6,  2}, {3, 3}}, anchorTopRight},  // XPos:242 YPos:7  H:8
     // Mux1to8 (ID 21) — 8 LEDs across the upper-right strip
     {moduleTypeMux1to8,    ledTypeYes, {{-51,  3}, {3, 3}}, anchorTopRight},  // XPos:102
     {moduleTypeMux1to8,    ledTypeYes, {{-45,  3}, {3, 3}}, anchorTopRight},  // XPos:122
