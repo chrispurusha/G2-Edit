@@ -2398,7 +2398,6 @@ static void state_handler(void) {
 
         return;
     }
-
 #if 0
     // Keepalive: if no outbound traffic for a while, send a lightweight request.
     // If the G2 doesn't respond, treat it as a bad connection and force a reconnect.
@@ -2412,7 +2411,7 @@ static void state_handler(void) {
         return;
     }
 #endif
-    
+
     // Nothing to do — poll for unsolicited messages (LED, volume, param change)
     int_rec(ePollYes, SUB_RESPONSE_NULL, USB_RECV_POLL_MS);
 }

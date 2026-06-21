@@ -39,7 +39,7 @@ const char *           monoPolyStrMap[monoPolyMax]                  = {"Poly", "
 bool                   gShowOpenFileReadDialogue                    = false;
 bool                   gShowOpenFileWriteDialogue                   = false;
 
-tScrollState           gScrollState                                 = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, NULL_RECTANGLE};
+tScrollState           gScrollState                                 = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, 0.0, NULL_RECTANGLE, NULL_RECTANGLE, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, 0.0, NULL_RECTANGLE, NULL_RECTANGLE};
 tContextMenu           gContextMenu                                 = {0};
 tCableDragging         gCableDrag                                   = {0};
 tHoverConnector        gHoverConnector                              = {0};

@@ -1803,14 +1803,14 @@ bool handle_context_menu_click(tCoord coord) {
 bool handle_scrollbar_click(tCoord coord) {
     //printf("Mouse %f %f bar x %f %f %f %f\n", coord.x, coord.y, gScrollState.xRectangle.coord.x,  gScrollState.xRectangle.coord.y,  gScrollState.xRectangle.size.w,  gScrollState.xRectangle.size.h);
 
-    if (within_rectangle(coord, gScrollState.xRectangle)) {
-        set_x_scroll_bar(coord.x);
+    if (within_rectangle(coord, gScrollState.xThumb)) {
+        gScrollState.xGrabOffset  = coord.x - gScrollState.xBar;
         gScrollState.xBarDragging = true;
         return true;
     }
 
-    if (within_rectangle(coord, gScrollState.yRectangle)) {
-        set_y_scroll_bar(coord.y);
+    if (within_rectangle(coord, gScrollState.yThumb)) {
+        gScrollState.yGrabOffset  = coord.y - gScrollState.yBar;
         gScrollState.yBarDragging = true;
         return true;
     }
@@ -2545,9 +2545,9 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     gHoverConnector.active = false;
 
     if (gScrollState.yBarDragging == true) {
-        set_y_scroll_bar(y);
+        set_y_scroll_bar(y - gScrollState.yGrabOffset);
     } else if (gScrollState.xBarDragging == true) {
-        set_x_scroll_bar(x);
+        set_x_scroll_bar(x - gScrollState.xGrabOffset);
         //} else if (gVoiceDialDragging == true) {  // Use this for patch level...?
         //
         //angle                        = calculate_mouse_angle((tCoord){x, y}, gVoiceDialRect);

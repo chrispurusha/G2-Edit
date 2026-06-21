@@ -589,10 +589,14 @@ typedef struct _struct_module {
 typedef struct {
     double     xBar;
     bool       xBarDragging;
+    double     xGrabOffset;
     tRectangle xRectangle;
+    tRectangle xThumb;
     double     yBar;
     bool       yBarDragging;
+    double     yGrabOffset;
     tRectangle yRectangle;
+    tRectangle yThumb;
 } tScrollState;
 
 typedef struct {
