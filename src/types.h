@@ -887,12 +887,9 @@ typedef struct {
 
 typedef struct {
     tRectangle close;
-    tRectangle midiChanDec[4];
-    tRectangle midiChanInc[4];
-    tRectangle globalChanDec;
-    tRectangle globalChanInc;
-    tRectangle sysexIdDec;
-    tRectangle sysexIdInc;
+    tRectangle midiChan[4];
+    tRectangle globalChan;
+    tRectangle sysexId;
     tRectangle localOn;
     tRectangle memoryProtect;
     tRectangle progChangeRcv;
@@ -901,20 +898,14 @@ typedef struct {
     tRectangle controllersSnd;
     tRectangle sendClock;
     tRectangle receiveClock;
-    tRectangle tuneCentDec;
-    tRectangle tuneCentInc;
-    tRectangle tuneSemiDec;
-    tRectangle tuneSemiInc;
+    tRectangle tuneCent;
+    tRectangle tuneSemi;
     tRectangle globalShiftActive;
-    tRectangle globalOctaveShiftDec;
-    tRectangle globalOctaveShiftInc;
+    tRectangle globalOctaveShift;
     tRectangle pedalPolarity;
-    tRectangle pedalGainDec;
-    tRectangle pedalGainInc;
-    tRectangle patchSortModeDec;
-    tRectangle patchSortModeInc;
-    tRectangle perfSortModeDec;
-    tRectangle perfSortModeInc;
+    tRectangle pedalGain;
+    tRectangle patchSortMode;
+    tRectangle perfSortMode;
 } tSettingsPanelRects;
 
 typedef enum {

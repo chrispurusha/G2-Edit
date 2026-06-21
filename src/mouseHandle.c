@@ -692,6 +692,7 @@ void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord
 
 static void clamp_menu_to_screen(tMenuItem * items, uint32_t columns) {
     int      count        = 0;
+    double   renderWidth  = get_render_width() / gGlobalGuiScale;
     double   renderHeight = get_render_height() / gGlobalGuiScale;
     double   cellH        = STANDARD_TEXT_HEIGHT + (5 * 2);
     uint32_t cols         = (columns > 1) ? columns : 1;
@@ -704,6 +705,22 @@ static void clamp_menu_to_screen(tMenuItem * items, uint32_t columns) {
 
     if (gContextMenu.coord.y + menuHeight > (renderHeight - SCROLLBAR_WIDTH)) {
         gContextMenu.coord.y = (renderHeight - SCROLLBAR_WIDTH) - menuHeight;
+    }
+
+    if (gContextMenu.coord.y < 0.0) {
+        gContextMenu.coord.y = 0.0;
+    }
+
+    if (gContextMenu.cellWidth > 0.0) {
+        double menuWidth = gContextMenu.cellWidth * (double)cols;
+
+        if (gContextMenu.coord.x + menuWidth > renderWidth - SCROLLBAR_WIDTH) {
+            gContextMenu.coord.x = renderWidth - SCROLLBAR_WIDTH - menuWidth;
+        }
+
+        if (gContextMenu.coord.x < 0.0) {
+            gContextMenu.coord.x = 0.0;
+        }
     }
 }
 
@@ -1451,6 +1468,217 @@ static void send_synth_settings_msg(void) {
     msg_send(&gCommandQueue, &msg);
 }
 
+// ── Settings panel dropdown helpers ────────────────────────────────────
+
+static uint8_t * gSettingU8Target = NULL;
+static int8_t *  gSettingI8Target = NULL;
+
+static void action_setting_u8(int index) {
+    *gSettingU8Target = (uint8_t)gContextMenu.items[index].param;
+    send_synth_settings_msg();
+}
+
+static void action_setting_i8(int index) {
+    *gSettingI8Target = (int8_t)(int32_t)gContextMenu.items[index].param;
+    send_synth_settings_msg();
+}
+
+static void open_midi_chan_dropdown(tCoord coord, uint8_t * target) {
+    static tMenuItem items[] = {
+        {"Off", RGB_GREY_3, action_setting_u8, 0x10, NULL},
+        {"1",   RGB_GREY_3, action_setting_u8,    0, NULL},
+        {"2",   RGB_GREY_3, action_setting_u8,    1, NULL},
+        {"3",   RGB_GREY_3, action_setting_u8,    2, NULL},
+        {"4",   RGB_GREY_3, action_setting_u8,    3, NULL},
+        {"5",   RGB_GREY_3, action_setting_u8,    4, NULL},
+        {"6",   RGB_GREY_3, action_setting_u8,    5, NULL},
+        {"7",   RGB_GREY_3, action_setting_u8,    6, NULL},
+        {"8",   RGB_GREY_3, action_setting_u8,    7, NULL},
+        {"9",   RGB_GREY_3, action_setting_u8,    8, NULL},
+        {"10",  RGB_GREY_3, action_setting_u8,    9, NULL},
+        {"11",  RGB_GREY_3, action_setting_u8,   10, NULL},
+        {"12",  RGB_GREY_3, action_setting_u8,   11, NULL},
+        {"13",  RGB_GREY_3, action_setting_u8,   12, NULL},
+        {"14",  RGB_GREY_3, action_setting_u8,   13, NULL},
+        {"15",  RGB_GREY_3, action_setting_u8,   14, NULL},
+        {"16",  RGB_GREY_3, action_setting_u8,   15, NULL},
+        {NULL,  {0,                         0,   0}, NULL, 0, NULL},
+    };
+
+    gSettingU8Target = target;
+    open_context_menu(coord, items, 0, 0.0);
+}
+
+static void open_sysex_id_dropdown(tCoord coord, uint8_t * target) {
+    static tMenuItem items[] = {
+        {"1",   RGB_GREY_3, action_setting_u8,  0, NULL},
+        {"2",   RGB_GREY_3, action_setting_u8,  1, NULL},
+        {"3",   RGB_GREY_3, action_setting_u8,  2, NULL},
+        {"4",   RGB_GREY_3, action_setting_u8,  3, NULL},
+        {"5",   RGB_GREY_3, action_setting_u8,  4, NULL},
+        {"6",   RGB_GREY_3, action_setting_u8,  5, NULL},
+        {"7",   RGB_GREY_3, action_setting_u8,  6, NULL},
+        {"8",   RGB_GREY_3, action_setting_u8,  7, NULL},
+        {"9",   RGB_GREY_3, action_setting_u8,  8, NULL},
+        {"10",  RGB_GREY_3, action_setting_u8,  9, NULL},
+        {"11",  RGB_GREY_3, action_setting_u8, 10, NULL},
+        {"12",  RGB_GREY_3, action_setting_u8, 11, NULL},
+        {"13",  RGB_GREY_3, action_setting_u8, 12, NULL},
+        {"14",  RGB_GREY_3, action_setting_u8, 13, NULL},
+        {"15",  RGB_GREY_3, action_setting_u8, 14, NULL},
+        {"16",  RGB_GREY_3, action_setting_u8, 15, NULL},
+        {"All", RGB_GREY_3, action_setting_u8, 16, NULL},
+        {NULL,  {0,                         0, 0}, NULL, 0, NULL},
+    };
+
+    gSettingU8Target = target;
+    open_context_menu(coord, items, 0, 0.0);
+}
+
+static void open_tune_semi_dropdown(tCoord coord, int8_t * target) {
+    static tMenuItem items[26];
+    static char      labels[25][5];
+    static bool      initialized = false;
+    int              i           = 0;
+
+    if (!initialized) {
+        for (i = 0; i < 25; i++) {
+            int val = i - 12;
+            snprintf(labels[i], sizeof(labels[i]), "%+d", val);
+            items[i].label   = labels[i];
+            items[i].colour  = (tRgb)RGB_GREY_3;
+            items[i].action  = action_setting_i8;
+            items[i].param   = (uint32_t)(int32_t)val;
+            items[i].subMenu = NULL;
+        }
+
+        initialized = true;
+    }
+    gSettingI8Target = target;
+    open_context_menu(coord, items, 5, 0.0);
+}
+
+static void open_tune_cent_dropdown(tCoord coord, int8_t * target) {
+    static tMenuItem items[102];
+    static char      labels[101][5];
+    static bool      initialized = false;
+    int              i           = 0;
+
+    if (!initialized) {
+        for (i = 0; i < 101; i++) {
+            int val = i - 50;
+            snprintf(labels[i], sizeof(labels[i]), "%+d", val);
+            items[i].label   = labels[i];
+            items[i].colour  = (tRgb)RGB_GREY_3;
+            items[i].action  = action_setting_i8;
+            items[i].param   = (uint32_t)(int32_t)val;
+            items[i].subMenu = NULL;
+        }
+
+        initialized = true;
+    }
+    gSettingI8Target = target;
+    open_context_menu(coord, items, 10, 0.0);
+}
+
+static void open_octave_shift_dropdown(tCoord coord, int8_t * target) {
+    static tMenuItem items[] = {
+        {"-2", RGB_GREY_3, action_setting_i8, (uint32_t)(int32_t)-2, NULL},
+        {"-1", RGB_GREY_3, action_setting_i8, (uint32_t)(int32_t)-1, NULL},
+        {"0",  RGB_GREY_3, action_setting_i8,                     0, NULL},
+        {"+1", RGB_GREY_3, action_setting_i8,                     1, NULL},
+        {"+2", RGB_GREY_3, action_setting_i8,                     2, NULL},
+        {NULL, {0,                         0,                    0}, NULL, 0, NULL},
+    };
+
+    gSettingI8Target = target;
+    open_context_menu(coord, items, 0, 0.0);
+}
+
+static void open_pedal_gain_dropdown(tCoord coord, uint8_t * target) {
+    static tMenuItem items[34];
+    static char      labels[33][5];
+    static bool      initialized = false;
+    int              i           = 0;
+
+    if (!initialized) {
+        for (i = 0; i < 33; i++) {
+            snprintf(labels[i], sizeof(labels[i]), "%.2f", 1.0 + i / 64.0);
+            items[i].label   = labels[i];
+            items[i].colour  = (tRgb)RGB_GREY_3;
+            items[i].action  = action_setting_u8;
+            items[i].param   = (uint32_t)i;
+            items[i].subMenu = NULL;
+        }
+
+        initialized = true;
+    }
+    gSettingU8Target = target;
+    open_context_menu(coord, items, 4, 0.0);
+}
+
+static void open_patch_sort_dropdown(tCoord coord, uint8_t * target) {
+    static tMenuItem items[] = {
+        {"Prog#",    RGB_GREY_3, action_setting_u8, 0, NULL},
+        {"Alpha",    RGB_GREY_3, action_setting_u8, 1, NULL},
+        {"Category", RGB_GREY_3, action_setting_u8, 2, NULL},
+        {NULL,       {0,                         0,0}, NULL, 0, NULL},
+    };
+
+    gSettingU8Target = target;
+    open_context_menu(coord, items, 0, 0.0);
+}
+
+static void open_perf_sort_dropdown(tCoord coord, uint8_t * target) {
+    static tMenuItem items[] = {
+        {"Prog#",    RGB_GREY_3, action_setting_u8, 0, NULL},
+        {"Category", RGB_GREY_3, action_setting_u8, 2, NULL},
+        {NULL,       {0,                         0,0}, NULL, 0, NULL},
+    };
+
+    gSettingU8Target = target;
+    open_context_menu(coord, items, 0, 0.0);
+}
+
+static void open_on_off_dropdown(tCoord coord, uint8_t * target) {
+    static tMenuItem items[] = {
+        {"Off", RGB_GREY_3, action_setting_u8, 0, NULL},
+        {"On",  RGB_GREY_3, action_setting_u8, 1, NULL},
+        {NULL,  {0,                         0,0}, NULL, 0, NULL},
+    };
+
+    gSettingU8Target = target;
+    open_context_menu(coord, items, 0, 0.0);
+}
+
+static void open_active_off_dropdown(tCoord coord, uint8_t * target) {
+    static tMenuItem items[] = {
+        {"Off",    RGB_GREY_3, action_setting_u8, 0, NULL},
+        {"Active", RGB_GREY_3, action_setting_u8, 1, NULL},
+        {NULL,     {0,                         0,0}, NULL, 0, NULL},
+    };
+
+    gSettingU8Target = target;
+    open_context_menu(coord, items, 0, 0.0);
+}
+
+static void open_pedal_polarity_dropdown(tCoord coord, uint8_t * target) {
+    static tMenuItem items[] = {
+        {"Open",   RGB_GREY_3, action_setting_u8, 0, NULL},
+        {"Closed", RGB_GREY_3, action_setting_u8, 1, NULL},
+        {NULL,     {0,                         0,0}, NULL, 0, NULL},
+    };
+
+    gSettingU8Target = target;
+    open_context_menu(coord, items, 0, 0.0);
+}
+
+static tCoord below_rect(tRectangle r) {
+    tCoord c = {r.coord.x, r.coord.y + r.size.h};
+
+    return c;
+}
+
 static void action_set_patch_type(int index) {
     uint32_t slot = atomic_load(&gSlot);
 
@@ -2078,132 +2306,61 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
     if (gPatchSettingsEdit.active) {
         if (mouseButton == mouseButtonLeftUp) {
-            bool changed = false;
+            if (gContextMenu.active) {
+                if (!handle_context_menu_click(coord)) {
+                    gContextMenu.active = false;
+                }
+                atomic_store(&gReDraw, true);
+                return;
+            }
 
             if (within_rectangle(coord, gSettingsPanelRects.close)) {
                 gPatchSettingsEdit.active = false;
             } else {
-                for (int s = 0; s < 4; s++) {
-                    if (within_rectangle(coord, gSettingsPanelRects.midiChanDec[s])) {
-                        gSynthSettings.midiChanSlot[s] = (gSynthSettings.midiChanSlot[s] == 0) ? 0x10 : gSynthSettings.midiChanSlot[s] - 1;
-                        changed                        = true;
-                    } else if (within_rectangle(coord, gSettingsPanelRects.midiChanInc[s])) {
-                        gSynthSettings.midiChanSlot[s] = (gSynthSettings.midiChanSlot[s] >= 0x10) ? 0 : gSynthSettings.midiChanSlot[s] + 1;
-                        changed                        = true;
+                int s = 0;
+
+                for (s = 0; s < 4; s++) {
+                    if (within_rectangle(coord, gSettingsPanelRects.midiChan[s])) {
+                        open_midi_chan_dropdown(below_rect(gSettingsPanelRects.midiChan[s]), &gSynthSettings.midiChanSlot[s]);
                     }
                 }
 
-                if (within_rectangle(coord, gSettingsPanelRects.globalChanDec)) {
-                    gSynthSettings.globalChan = (gSynthSettings.globalChan == 0) ? 0x10 : gSynthSettings.globalChan - 1;
-                    changed                   = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.globalChanInc)) {
-                    gSynthSettings.globalChan = (gSynthSettings.globalChan >= 0x10) ? 0 : gSynthSettings.globalChan + 1;
-                    changed                   = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.sysexIdDec)) {
-                    if (gSynthSettings.sysexId > 0) {
-                        gSynthSettings.sysexId--;
-                    }
-                    changed = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.sysexIdInc)) {
-                    if (gSynthSettings.sysexId < 127) {
-                        gSynthSettings.sysexId++;
-                    }
-                    changed = true;
+                if (within_rectangle(coord, gSettingsPanelRects.globalChan)) {
+                    open_midi_chan_dropdown(below_rect(gSettingsPanelRects.globalChan), &gSynthSettings.globalChan);
+                } else if (within_rectangle(coord, gSettingsPanelRects.sysexId)) {
+                    open_sysex_id_dropdown(below_rect(gSettingsPanelRects.sysexId), &gSynthSettings.sysexId);
                 } else if (within_rectangle(coord, gSettingsPanelRects.localOn)) {
-                    gSynthSettings.localOn = gSynthSettings.localOn ? 0 : 1;
-                    changed                = true;
+                    open_on_off_dropdown(below_rect(gSettingsPanelRects.localOn), &gSynthSettings.localOn);
                 } else if (within_rectangle(coord, gSettingsPanelRects.memoryProtect)) {
-                    gSynthSettings.memoryProtect = gSynthSettings.memoryProtect ? 0 : 1;
-                    changed                      = true;
+                    open_on_off_dropdown(below_rect(gSettingsPanelRects.memoryProtect), &gSynthSettings.memoryProtect);
                 } else if (within_rectangle(coord, gSettingsPanelRects.progChangeRcv)) {
-                    gSynthSettings.progChangeRcv = gSynthSettings.progChangeRcv ? 0 : 1;
-                    changed                      = true;
+                    open_on_off_dropdown(below_rect(gSettingsPanelRects.progChangeRcv), &gSynthSettings.progChangeRcv);
                 } else if (within_rectangle(coord, gSettingsPanelRects.progChangeSnd)) {
-                    gSynthSettings.progChangeSnd = gSynthSettings.progChangeSnd ? 0 : 1;
-                    changed                      = true;
+                    open_on_off_dropdown(below_rect(gSettingsPanelRects.progChangeSnd), &gSynthSettings.progChangeSnd);
                 } else if (within_rectangle(coord, gSettingsPanelRects.controllersRcv)) {
-                    gSynthSettings.controllersRcv = gSynthSettings.controllersRcv ? 0 : 1;
-                    changed                       = true;
+                    open_on_off_dropdown(below_rect(gSettingsPanelRects.controllersRcv), &gSynthSettings.controllersRcv);
                 } else if (within_rectangle(coord, gSettingsPanelRects.controllersSnd)) {
-                    gSynthSettings.controllersSnd = gSynthSettings.controllersSnd ? 0 : 1;
-                    changed                       = true;
+                    open_on_off_dropdown(below_rect(gSettingsPanelRects.controllersSnd), &gSynthSettings.controllersSnd);
                 } else if (within_rectangle(coord, gSettingsPanelRects.sendClock)) {
-                    gSynthSettings.sendClock = gSynthSettings.sendClock ? 0 : 1;
-                    changed                  = true;
+                    open_on_off_dropdown(below_rect(gSettingsPanelRects.sendClock), &gSynthSettings.sendClock);
                 } else if (within_rectangle(coord, gSettingsPanelRects.receiveClock)) {
-                    gSynthSettings.receiveClock = gSynthSettings.receiveClock ? 0 : 1;
-                    changed                     = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.tuneCentDec)) {
-                    if (gSynthSettings.tuneCent > -50) {
-                        gSynthSettings.tuneCent--;
-                    }
-                    changed = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.tuneCentInc)) {
-                    if (gSynthSettings.tuneCent < 50) {
-                        gSynthSettings.tuneCent++;
-                    }
-                    changed = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.tuneSemiDec)) {
-                    if (gSynthSettings.tuneSemi > -12) {
-                        gSynthSettings.tuneSemi--;
-                    }
-                    changed = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.tuneSemiInc)) {
-                    if (gSynthSettings.tuneSemi < 12) {
-                        gSynthSettings.tuneSemi++;
-                    }
-                    changed = true;
+                    open_on_off_dropdown(below_rect(gSettingsPanelRects.receiveClock), &gSynthSettings.receiveClock);
+                } else if (within_rectangle(coord, gSettingsPanelRects.tuneSemi)) {
+                    open_tune_semi_dropdown(below_rect(gSettingsPanelRects.tuneSemi), &gSynthSettings.tuneSemi);
+                } else if (within_rectangle(coord, gSettingsPanelRects.tuneCent)) {
+                    open_tune_cent_dropdown(below_rect(gSettingsPanelRects.tuneCent), &gSynthSettings.tuneCent);
                 } else if (within_rectangle(coord, gSettingsPanelRects.globalShiftActive)) {
-                    gSynthSettings.globalShiftActive = gSynthSettings.globalShiftActive ? 0 : 1;
-                    changed                          = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.globalOctaveShiftDec)) {
-                    if (gSynthSettings.globalOctaveShift > -2) {
-                        gSynthSettings.globalOctaveShift--;
-                    }
-                    changed = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.globalOctaveShiftInc)) {
-                    if (gSynthSettings.globalOctaveShift < 2) {
-                        gSynthSettings.globalOctaveShift++;
-                    }
-                    changed = true;
+                    open_active_off_dropdown(below_rect(gSettingsPanelRects.globalShiftActive), &gSynthSettings.globalShiftActive);
+                } else if (within_rectangle(coord, gSettingsPanelRects.globalOctaveShift)) {
+                    open_octave_shift_dropdown(below_rect(gSettingsPanelRects.globalOctaveShift), &gSynthSettings.globalOctaveShift);
                 } else if (within_rectangle(coord, gSettingsPanelRects.pedalPolarity)) {
-                    gSynthSettings.pedalPolarity = gSynthSettings.pedalPolarity ? 0 : 1;
-                    changed                      = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.pedalGainDec)) {
-                    if (gSynthSettings.pedalGain > 0) {
-                        gSynthSettings.pedalGain--;
-                    }
-                    changed = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.pedalGainInc)) {
-                    if (gSynthSettings.pedalGain < 127) {
-                        gSynthSettings.pedalGain++;
-                    }
-                    changed = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.patchSortModeDec)) {
-                    if (gSynthSettings.patchSortMode > 0) {
-                        gSynthSettings.patchSortMode--;
-                    }
-                    changed = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.patchSortModeInc)) {
-                    if (gSynthSettings.patchSortMode < 2) {
-                        gSynthSettings.patchSortMode++;
-                    }
-                    changed = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.perfSortModeDec)) {
-                    // Perf sort: valid values are 0 and 2 (no 1)
-                    if (gSynthSettings.perfSortMode > 0) {
-                        gSynthSettings.perfSortMode = 0;
-                    }
-                    changed = true;
-                } else if (within_rectangle(coord, gSettingsPanelRects.perfSortModeInc)) {
-                    if (gSynthSettings.perfSortMode < 2) {
-                        gSynthSettings.perfSortMode = 2;
-                    }
-                    changed = true;
-                }
-
-                if (changed) {
-                    send_synth_settings_msg();
+                    open_pedal_polarity_dropdown(below_rect(gSettingsPanelRects.pedalPolarity), &gSynthSettings.pedalPolarity);
+                } else if (within_rectangle(coord, gSettingsPanelRects.pedalGain)) {
+                    open_pedal_gain_dropdown(below_rect(gSettingsPanelRects.pedalGain), &gSynthSettings.pedalGain);
+                } else if (within_rectangle(coord, gSettingsPanelRects.patchSortMode)) {
+                    open_patch_sort_dropdown(below_rect(gSettingsPanelRects.patchSortMode), &gSynthSettings.patchSortMode);
+                } else if (within_rectangle(coord, gSettingsPanelRects.perfSortMode)) {
+                    open_perf_sort_dropdown(below_rect(gSettingsPanelRects.perfSortMode), &gSynthSettings.perfSortMode);
                 }
             }
         }

@@ -849,21 +849,13 @@ static void check_action_flags(void) {
     }
 }
 
-// Helper: render a −/value/+ triplet, return updated x position.
-// decRect and incRect are updated in the caller's rects struct.
-static double render_spin(double x, double y, double btnH,
-                          const char * valStr, const char * widestVal,
-                          tRectangle * decRect, tRectangle * incRect) {
-    *decRect = draw_button(mainArea, {{x, y}, {get_text_width((char *)"+", btnH, eCache) + 4.0, btnH}},
-                           "-", (tRgb)RGB_BACKGROUND_GREY);
-    x       += decRect->size.w + 3.0;
-    set_rgb_colour(RGB_BLACK);
-    render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, (char *)valStr);
-    x       += get_text_width((char *)widestVal, btnH, eNoCache) + 3.0;
-    *incRect = draw_button(mainArea, {{x, y}, {get_text_width((char *)"+", btnH, eCache) + 4.0, btnH}},
-                           "+", (tRgb)RGB_BACKGROUND_GREY);
-    x       += incRect->size.w;
-    return x;
+// Helper: draw a fixed-width dropdown trigger button, return updated x.
+static double render_dropdown(double x, double y, double btnH,
+                              const char * valStr, const char * widestVal,
+                              tRectangle * rect) {
+    *rect = draw_button(mainArea, {{x, y}, {get_text_width((char *)widestVal, btnH, eCache) + 8.0, btnH}},
+                        (char *)valStr, (tRgb)RGB_BACKGROUND_GREY);
+    return x + rect->size.w;
 }
 
 // Helper: MIDI channel value → display string (1-16 or "Off")
@@ -882,7 +874,7 @@ static void render_patch_settings_panel(void) {
     double renderW = get_render_width() / gGlobalGuiScale;
     double renderH = get_render_height() / gGlobalGuiScale;
     double boxW    = 600.0;
-    double boxH    = 375.0;
+    double boxH    = 427.0;
     double boxX    = (renderW - boxW) / 2.0;
     double boxY    = (renderH - boxH) / 2.0;
     double margin  = 10.0;
@@ -923,7 +915,7 @@ static void render_patch_settings_panel(void) {
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, buf);
         x += get_text_width((char *)"A:", btnH, eCache) + 4.0;
         midi_chan_str(gSynthSettings.midiChanSlot[i], buf, sizeof(buf));
-        x  = render_spin(x, y, btnH, buf, "Off", &gSettingsPanelRects.midiChanDec[i], &gSettingsPanelRects.midiChanInc[i]);
+        render_dropdown(x, y, btnH, buf, "Off", &gSettingsPanelRects.midiChan[i]);
     }
 
     y                        += rowH;
@@ -935,38 +927,41 @@ static void render_patch_settings_panel(void) {
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Global:");
         x += get_text_width((char *)"Global:", btnH, eCache) + 4.0;
         midi_chan_str(gSynthSettings.globalChan, buf, sizeof(buf));
-        x  = render_spin(x, y, btnH, buf, "Off", &gSettingsPanelRects.globalChanDec, &gSettingsPanelRects.globalChanInc);
+        x  = render_dropdown(x, y, btnH, buf, "Off", &gSettingsPanelRects.globalChan);
 
         x += 20.0;
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "SysEx ID:");
         x += get_text_width((char *)"SysEx ID:", btnH, eCache) + 4.0;
-        midi_chan_str(gSynthSettings.sysexId, buf, sizeof(buf));
-        render_spin(x, y, btnH, buf, "Off", &gSettingsPanelRects.sysexIdDec, &gSettingsPanelRects.sysexIdInc);
+
+        if (gSynthSettings.sysexId < 16) {
+            snprintf(buf, sizeof(buf), "%u", gSynthSettings.sysexId + 1);
+        } else {
+            snprintf(buf, sizeof(buf), "All");
+        }
+        render_dropdown(x, y, btnH, buf, "All", &gSettingsPanelRects.sysexId);
     }
-    y                        += rowH;
+    y += rowH;
 
     // ── Switches ───────────────────────────────────────────────────
     set_rgb_colour(RGB_GREY_7);
     render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Options");
-    y                        += secH;
+    y += secH;
 
-    // Macro to draw a toggle button and advance x
-    // drawn inline for 2 rows of 4 items each
     struct {
         const char * label;
         uint8_t *    val;
         tRectangle * rect;
     }   toggles[]  = {
-        {"Local On",      &gSynthSettings.localOn,        &gSettingsPanelRects.localOn       },
-        {"Mem Protect",   &gSynthSettings.memoryProtect,  &gSettingsPanelRects.memoryProtect },
-        {"Prog Chg Rcv",  &gSynthSettings.progChangeRcv,  &gSettingsPanelRects.progChangeRcv },
-        {"Prog Chg Snd",  &gSynthSettings.progChangeSnd,  &gSettingsPanelRects.progChangeSnd },
-        {"Ctrl Rcv",      &gSynthSettings.controllersRcv, &gSettingsPanelRects.controllersRcv},
-        {"Ctrl Snd",      &gSynthSettings.controllersSnd, &gSettingsPanelRects.controllersSnd},
-        {"Send Clock",    &gSynthSettings.sendClock,      &gSettingsPanelRects.sendClock     },
-        {"Receive Clock", &gSynthSettings.receiveClock,   &gSettingsPanelRects.receiveClock  }, };
+        {"Local On:",      &gSynthSettings.localOn,        &gSettingsPanelRects.localOn       },
+        {"Mem Protect:",   &gSynthSettings.memoryProtect,  &gSettingsPanelRects.memoryProtect },
+        {"Prog Chg Rcv:",  &gSynthSettings.progChangeRcv,  &gSettingsPanelRects.progChangeRcv },
+        {"Prog Chg Snd:",  &gSynthSettings.progChangeSnd,  &gSettingsPanelRects.progChangeSnd },
+        {"Ctrl Rcv:",      &gSynthSettings.controllersRcv, &gSettingsPanelRects.controllersRcv},
+        {"Ctrl Snd:",      &gSynthSettings.controllersSnd, &gSettingsPanelRects.controllersSnd},
+        {"Send Clock:",    &gSynthSettings.sendClock,      &gSettingsPanelRects.sendClock     },
+        {"Receive Clock:", &gSynthSettings.receiveClock,   &gSettingsPanelRects.receiveClock  }, };
     int numToggles = (int)(sizeof(toggles) / sizeof(toggles[0]));
-    int perRow     = 4;
+    int perRow     = 2;
 
     for (int i = 0; i < numToggles; i++) {
         double itemW = (boxW - margin * 2.0) / perRow;
@@ -975,10 +970,10 @@ static void render_patch_settings_panel(void) {
         if (i > 0 && (i % perRow) == 0) {
             y += rowH;
         }
-        tRgb   c     = (*toggles[i].val) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
-        *toggles[i].rect = draw_button(mainArea,
-                                       {{x, y}, {get_text_width((char *)toggles[i].label, btnH, eCache) + 6.0, btnH}},
-                                       (char *)toggles[i].label, c);
+        set_rgb_colour(RGB_BLACK);
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, (char *)toggles[i].label);
+        x += get_text_width((char *)toggles[i].label, btnH, eCache) + 4.0;
+        render_dropdown(x, y, btnH, (*toggles[i].val) ? "On" : "Off", "On", toggles[i].rect);
     }
 
     y += rowH;
@@ -994,31 +989,29 @@ static void render_patch_settings_panel(void) {
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Semi:");
         x += get_text_width((char *)"Semi:", btnH, eCache) + 4.0;
         snprintf(buf, sizeof(buf), "%+d", (int)gSynthSettings.tuneSemi);
-        x  = render_spin(x, y, btnH, buf, "+12", &gSettingsPanelRects.tuneSemiDec, &gSettingsPanelRects.tuneSemiInc);
+        x  = render_dropdown(x, y, btnH, buf, "+12", &gSettingsPanelRects.tuneSemi);
 
         x += 14.0;
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Cent:");
         x += get_text_width((char *)"Cent:", btnH, eCache) + 4.0;
         snprintf(buf, sizeof(buf), "%+d", (int)gSynthSettings.tuneCent);
-        render_spin(x, y, btnH, buf, "+50", &gSettingsPanelRects.tuneCentDec, &gSettingsPanelRects.tuneCentInc);
+        render_dropdown(x, y, btnH, buf, "+50", &gSettingsPanelRects.tuneCent);
     }
     y += rowH;
 
     {
-        double x      = boxX + margin;
+        double x = boxX + margin;
         set_rgb_colour(RGB_BLACK);
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Glob Shift:");
-        x                                    += get_text_width((char *)"Glob Shift:", btnH, eCache) + 4.0;
-        tRgb   shiftC = (gSynthSettings.globalShiftActive & 0x01) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
-        gSettingsPanelRects.globalShiftActive = draw_button(mainArea,
-                                                            {{x, y}, {get_text_width((char *)"Active", btnH, eCache) + 6.0, btnH}},
-                                                            (gSynthSettings.globalShiftActive & 0x01) ? (char *)"Active" : (char *)"Off",
-                                                            shiftC);
-        x                                    += gSettingsPanelRects.globalShiftActive.size.w + 14.0;
+        x += get_text_width((char *)"Glob Shift:", btnH, eCache) + 4.0;
+        render_dropdown(x, y, btnH,
+                        (gSynthSettings.globalShiftActive & 0x01) ? "Active" : "Off",
+                        "Active", &gSettingsPanelRects.globalShiftActive);
+        x += gSettingsPanelRects.globalShiftActive.size.w + 14.0;
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Oct:");
-        x                                    += get_text_width((char *)"Oct:", btnH, eCache) + 4.0;
+        x += get_text_width((char *)"Oct:", btnH, eCache) + 4.0;
         snprintf(buf, sizeof(buf), "%+d", (int)gSynthSettings.globalOctaveShift);
-        render_spin(x, y, btnH, buf, "+2", &gSettingsPanelRects.globalOctaveShiftDec, &gSettingsPanelRects.globalOctaveShiftInc);
+        render_dropdown(x, y, btnH, buf, "+2", &gSettingsPanelRects.globalOctaveShift);
     }
     y += rowH;
 
@@ -1028,21 +1021,19 @@ static void render_patch_settings_panel(void) {
     y += secH;
 
     {
-        double x    = boxX + margin;
+        double x = boxX + margin;
         set_rgb_colour(RGB_BLACK);
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Polarity:");
-        x                                += get_text_width((char *)"Polarity:", btnH, eCache) + 4.0;
-        tRgb   polC = gSynthSettings.pedalPolarity ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
-        gSettingsPanelRects.pedalPolarity = draw_button(mainArea,
-                                                        {{x, y}, {get_text_width((char *)"Closed", btnH, eCache) + 6.0, btnH}},
-                                                        gSynthSettings.pedalPolarity ? (char *)"Closed" : (char *)"Open",
-                                                        polC);
-        x                                += gSettingsPanelRects.pedalPolarity.size.w + 16.0;
+        x += get_text_width((char *)"Polarity:", btnH, eCache) + 4.0;
+        render_dropdown(x, y, btnH,
+                        gSynthSettings.pedalPolarity ? "Closed" : "Open",
+                        "Closed", &gSettingsPanelRects.pedalPolarity);
+        x += gSettingsPanelRects.pedalPolarity.size.w + 16.0;
 
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Gain:");
-        x                                += get_text_width((char *)"Gain:", btnH, eCache) + 4.0;
-        snprintf(buf, sizeof(buf), "%u", gSynthSettings.pedalGain);
-        render_spin(x, y, btnH, buf, "127", &gSettingsPanelRects.pedalGainDec, &gSettingsPanelRects.pedalGainInc);
+        x += get_text_width((char *)"Gain:", btnH, eCache) + 4.0;
+        snprintf(buf, sizeof(buf), "%.2f", 1.0 + gSynthSettings.pedalGain / 64.0);
+        render_dropdown(x, y, btnH, buf, "1.50", &gSettingsPanelRects.pedalGain);
     }
     y += rowH;
 
@@ -1065,14 +1056,12 @@ static void render_patch_settings_panel(void) {
         set_rgb_colour(RGB_BLACK);
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Patch:");
         x += get_text_width((char *)"Patch:", btnH, eCache) + 4.0;
-        x  = render_spin(x, y, btnH, (char *)patchLabel, "Category",
-                         &gSettingsPanelRects.patchSortModeDec, &gSettingsPanelRects.patchSortModeInc);
+        x  = render_dropdown(x, y, btnH, (char *)patchLabel, "Category", &gSettingsPanelRects.patchSortMode);
 
         x += 20.0;
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Perf:");
         x += get_text_width((char *)"Perf:", btnH, eCache) + 4.0;
-        render_spin(x, y, btnH, (char *)perfLabel, "Category",
-                    &gSettingsPanelRects.perfSortModeDec, &gSettingsPanelRects.perfSortModeInc);
+        render_dropdown(x, y, btnH, (char *)perfLabel, "Category", &gSettingsPanelRects.perfSortMode);
     }
 }
 
@@ -1304,8 +1293,8 @@ void do_graphics_loop(void) {
             render_top_bar();
             render_morph_groups();
             render_scrollbars(gWindow);
-            render_context_menu();
             render_patch_settings_panel();
+            render_context_menu();
             render_patch_notes_edit();
             //Debug only
             //{

@@ -76,6 +76,7 @@ extern _Atomic uint8_t     gPerfMode;
 //extern char                gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1];
 extern _Atomic tCommsState gCommsState;
 extern _Atomic uint32_t    gChangedSlot;
+extern _Atomic uint8_t     gGlobalPage;
 extern tNameEdit           gPatchNameEdit;
 extern tModuleNameEdit     gModuleNameEdit;
 extern tParamNameEdit      gParamNameEdit;

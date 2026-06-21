@@ -813,6 +813,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             uint8_t         globalPage = 0;
 
             globalPage = read_bit_stream(buff, bitPos, 8);
+            atomic_store(&gGlobalPage, globalPage);
             LOG_DEBUG("%u Got global page Page=%u Pos=%u\n", count++, globalPage / 3, globalPage % 3);
             return EXIT_SUCCESS;
         }
