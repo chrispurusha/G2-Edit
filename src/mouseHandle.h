@@ -31,7 +31,6 @@ void get_global_gui_scaled_mouse_coord(tCoord * coord);
 void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active);
 int32_t find_knob_for_param(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex);
 void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex);
-bool handle_context_menu_click(tCoord coord);
 bool handle_scrollbar_click(tCoord coord);
 void set_x_scroll_bar(double x);
 void set_y_scroll_bar(double y);
