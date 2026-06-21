@@ -69,6 +69,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
                 render_rectangle(moduleArea, smallRectangle);
                 smallRectangle.coord.y += smallRectangle.size.h + space;
             }
+
             break;
         }
 
@@ -147,6 +148,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
                 render_rectangle(moduleArea, smallRectangle);
                 smallRectangle.coord.x += smallRectangle.size.w + space;
             }
+
             break;
         }
         default:
