@@ -533,6 +533,290 @@ static void menu_action_create(int index) {
     }
 }
 
+// ── Parameter / knob actions ────────────────────────────────────────────────
+
+int32_t find_knob_for_param(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex) {
+    for (int i = 0; i < MAX_NUM_KNOBS; i++) {
+        if (  gKnobArray[slot].knob[i].assigned
+           && gKnobArray[slot].knob[i].location == location
+           && gKnobArray[slot].knob[i].moduleIndex == moduleIndex
+           && gKnobArray[slot].knob[i].paramIndex == paramIndex) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+static void action_assign_knob(int index) {
+    uint32_t        slot        = atomic_load(&gSlot);
+    uint32_t        targetKnob  = (uint32_t)gContextMenu.items[index].param;
+    uint32_t        location    = gContextMenu.moduleKey.location;
+    uint32_t        moduleIndex = gContextMenu.moduleKey.index;
+    uint32_t        paramIndex  = gContextMenu.paramIndex;
+    int32_t         existingKnob;
+    tMessageContent msg         = {0};
+
+    if (gKnobArray[slot].knob[targetKnob].assigned) {
+        gKnobArray[slot].knob[targetKnob].assigned = false;
+        msg.cmd                                    = eMsgCmdDeassignKnob;
+        msg.slot                                   = slot;
+        msg.knobDeassignData.knobIndex             = targetKnob;
+        msg_send(&gCommandQueue, &msg);
+        memset(&msg, 0, sizeof(msg));
+    }
+    existingKnob                                  = find_knob_for_param(slot, location, moduleIndex, paramIndex);
+
+    if (existingKnob >= 0 && (uint32_t)existingKnob != targetKnob) {
+        gKnobArray[slot].knob[existingKnob].assigned = false;
+        msg.cmd                                      = eMsgCmdDeassignKnob;
+        msg.slot                                     = slot;
+        msg.knobDeassignData.knobIndex               = (uint32_t)existingKnob;
+        msg_send(&gCommandQueue, &msg);
+        memset(&msg, 0, sizeof(msg));
+    }
+    gKnobArray[slot].knob[targetKnob].assigned    = true;
+    gKnobArray[slot].knob[targetKnob].location    = location;
+    gKnobArray[slot].knob[targetKnob].moduleIndex = moduleIndex;
+    gKnobArray[slot].knob[targetKnob].isLed       = 0;
+    gKnobArray[slot].knob[targetKnob].paramIndex  = paramIndex;
+
+    msg.cmd                                       = eMsgCmdAssignKnob;
+    msg.slot                                      = slot;
+    msg.knobAssignData.moduleKey                  = gContextMenu.moduleKey;
+    msg.knobAssignData.paramIndex                 = paramIndex;
+    msg.knobAssignData.knobIndex                  = targetKnob;
+    msg_send(&gCommandQueue, &msg);
+
+    gContextMenu.active                           = false;
+    atomic_store(&gReDraw, true);
+}
+
+static void action_deassign_knob(int index) {
+    uint32_t        slot        = atomic_load(&gSlot);
+    uint32_t        location    = gContextMenu.moduleKey.location;
+    uint32_t        moduleIndex = gContextMenu.moduleKey.index;
+    uint32_t        paramIndex  = gContextMenu.paramIndex;
+    int32_t         knobIndex   = find_knob_for_param(slot, location, moduleIndex, paramIndex);
+    tMessageContent msg         = {0};
+
+    if (knobIndex >= 0) {
+        gKnobArray[slot].knob[knobIndex].assigned = false;
+        msg.cmd                                   = eMsgCmdDeassignKnob;
+        msg.slot                                  = slot;
+        msg.knobDeassignData.knobIndex            = (uint32_t)knobIndex;
+        msg_send(&gCommandQueue, &msg);
+    }
+    gContextMenu.active = false;
+    atomic_store(&gReDraw, true);
+}
+
+static void action_set_toggle_value(int index) {
+    uint32_t slot      = atomic_load(&gSlot);
+    uint32_t variation = gPatchDescr[slot].activeVariation;
+    tModule  module    = {0};
+
+    if (read_module(gContextMenu.moduleKey, &module)) {
+        uint32_t paramIdx = gContextMenu.paramIndex;
+        module.param[variation][paramIdx].value = (uint32_t)gContextMenu.items[index].param;
+        write_module(gContextMenu.moduleKey, &module);
+        send_param_value(slot, gContextMenu.moduleKey, paramIdx, variation, module.param[variation][paramIdx].value);
+    }
+    gContextMenu.active = false;
+    atomic_store(&gReDraw, true);
+}
+
+void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, uint32_t paramRef) {
+    static tMenuItem menuItems[33];
+    static char      labels[32][32];
+
+    const char **    strMap = paramLocationList[paramRef].strMap;
+    uint32_t         range  = paramLocationList[paramRef].range;
+
+    for (uint32_t v = 0; v < range && v < 32; v++) {
+        snprintf(labels[v], sizeof(labels[v]), "%s", (strMap && strMap[v]) ? strMap[v] : "");
+        menuItems[v] = (tMenuItem){
+            labels[v], RGB_GREY_3, action_set_toggle_value, v, NULL
+        };
+    }
+
+    menuItems[range < 32 ? range : 32] = (tMenuItem){
+        NULL, RGB_BLACK, NULL, 0, NULL
+    };
+
+    gContextMenu.moduleKey             = moduleKey;
+    gContextMenu.paramIndex            = paramIndex;
+    open_context_menu(coord, menuItems, 0, 0.0);
+}
+
+static void action_set_mode_value(int index) {
+    uint32_t slot   = atomic_load(&gSlot);
+    tModule  module = {0};
+
+    if (read_module(gContextMenu.moduleKey, &module)) {
+        uint32_t modeIdx = gContextMenu.paramIndex;
+        module.mode[modeIdx].value = (uint32_t)gContextMenu.items[index].param;
+        write_module(gContextMenu.moduleKey, &module);
+        send_mode_value(slot, gContextMenu.moduleKey, modeIdx, module.mode[modeIdx].value);
+    }
+    gContextMenu.active = false;
+    atomic_store(&gReDraw, true);
+}
+
+void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeIndex, uint32_t modeRef) {
+    static tMenuItem menuItems[33];
+    static char      labels[32][32];
+
+    const char **    strMap = modeLocationList[modeRef].strMap;
+    uint32_t         range  = modeLocationList[modeRef].range;
+
+    for (uint32_t v = 0; v < range && v < 32; v++) {
+        snprintf(labels[v], sizeof(labels[v]), "%s", (strMap && strMap[v]) ? strMap[v] : "");
+        menuItems[v] = (tMenuItem){
+            labels[v], RGB_GREY_3, action_set_mode_value, v, NULL
+        };
+    }
+
+    menuItems[range < 32 ? range : 32] = (tMenuItem){
+        NULL, RGB_BLACK, NULL, 0, NULL
+    };
+
+    gContextMenu.moduleKey             = moduleKey;
+    gContextMenu.paramIndex            = modeIndex;
+    open_context_menu(coord, menuItems, 0, 0.0);
+}
+
+static void action_rename_param_label(int index) {
+    tModule  module = {0};
+    uint32_t pi     = gContextMenu.paramIndex;
+
+    if (read_module(gContextMenu.moduleKey, &module)) {
+        gParamNameEdit.active     = true;
+        gParamNameEdit.moduleKey  = gContextMenu.moduleKey;
+        gParamNameEdit.paramIndex = pi;
+        memset(gParamNameEdit.buffer, 0, sizeof(gParamNameEdit.buffer));
+
+        if (module.paramNameSet[pi][0]) {
+            strncpy(gParamNameEdit.buffer, module.paramName[pi][0], PROTOCOL_PARAM_NAME_SIZE);
+        }
+    }
+    gContextMenu.active = false;
+    atomic_store(&gReDraw, true);
+}
+
+void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex) {
+    static tMenuItem pageMenuItems[NUM_PARAM_PAGES + 1];
+    static char      pageLabels[NUM_PARAM_PAGES][10];
+    static tMenuItem bankMenuItems[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE + 1];
+    static char      bankLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][24];
+    static tMenuItem slotMenuItems[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK + 1];
+    static char      slotLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK][64];
+    static tMenuItem menuItems[4];
+
+    uint32_t         slot     = atomic_load(&gSlot);
+    int32_t          assigned = find_knob_for_param(slot, moduleKey.location, moduleKey.index, paramIndex);
+    int              count    = 0;
+
+    for (int pg = 0; pg < NUM_PARAM_PAGES; pg++) {
+        snprintf(pageLabels[pg], sizeof(pageLabels[pg]), "Page %c", 'A' + pg);
+
+        for (int bk = 0; bk < NUM_BANKS_PER_PAGE; bk++) {
+            snprintf(bankLabels[pg][bk], sizeof(bankLabels[pg][bk]), "%c - Bank %d", 'A' + pg, bk + 1);
+
+            for (int k = 0; k < NUM_KNOBS_PER_BANK; k++) {
+                uint32_t knobIdx = (uint32_t)((pg * NUM_BANKS_PER_PAGE + bk) * NUM_KNOBS_PER_BANK + k);
+                bool     inUse   = gKnobArray[slot].knob[knobIdx].assigned;
+
+                if (inUse) {
+                    tModule      mod     = {0};
+                    tModuleKey   modKey  = {
+                        slot,
+                        gKnobArray[slot].knob[knobIdx].location,
+                        gKnobArray[slot].knob[knobIdx].moduleIndex
+                    };
+                    uint32_t     pi      = gKnobArray[slot].knob[knobIdx].paramIndex;
+                    const char * modName = "";
+                    const char * parName = "";
+
+                    if (read_module(modKey, &mod)) {
+                        uint32_t variation = gPatchDescr[slot].activeVariation;
+
+                        modName = (mod.name[0] != '\0') ? mod.name : gModuleProperties[mod.type].name;
+
+                        if ((pi < MAX_NUM_PARAMETERS) && mod.paramNameSet[pi][0]) {
+                            parName = mod.paramName[pi][0];
+                        } else if (pi < MAX_NUM_PARAMETERS) {
+                            const char * label = paramLocationList[mod.param[variation][pi].paramRef].label;
+
+                            if (label != NULL && label[0] != '\0') {
+                                parName = label;
+                            }
+                        }
+                    }
+                    snprintf(slotLabels[pg][bk][k], sizeof(slotLabels[pg][bk][k]),
+                             "%c %d - %d Used - %s %s", 'A' + pg, bk + 1, k + 1, modName, parName);
+                } else {
+                    snprintf(slotLabels[pg][bk][k], sizeof(slotLabels[pg][bk][k]),
+                             "%c %d - %d ---", 'A' + pg, bk + 1, k + 1);
+                }
+                slotMenuItems[pg][bk][k] = (tMenuItem){
+                    slotLabels[pg][bk][k], RGB_GREY_3, action_assign_knob, knobIdx, NULL
+                };
+            }
+
+            slotMenuItems[pg][bk][NUM_KNOBS_PER_BANK] = (tMenuItem){
+                NULL, RGB_BLACK, NULL, 0, NULL
+            };
+
+            bankMenuItems[pg][bk]                     = (tMenuItem){
+                bankLabels[pg][bk], RGB_GREY_3, NULL, 0, slotMenuItems[pg][bk]
+            };
+        }
+
+        bankMenuItems[pg][NUM_BANKS_PER_PAGE] = (tMenuItem){
+            NULL, RGB_BLACK, NULL, 0, NULL
+        };
+
+        pageMenuItems[pg]                     = (tMenuItem){
+            pageLabels[pg], RGB_GREY_3, NULL, 0, bankMenuItems[pg]
+        };
+    }
+
+    pageMenuItems[NUM_PARAM_PAGES] = (tMenuItem){
+        NULL, RGB_BLACK, NULL, 0, NULL
+    };
+
+    menuItems[count++]             = (tMenuItem){
+        "Assign knob...", RGB_GREY_3, NULL, 0, pageMenuItems
+    };
+
+    if (assigned >= 0) {
+        menuItems[count++] = (tMenuItem){
+            "Deassign knob", RGB_GREY_3, action_deassign_knob, 0, NULL
+        };
+    }
+    {
+        tModule  mod       = {0};
+        uint32_t variation = gPatchDescr[slot].activeVariation;
+
+        if (read_module(moduleKey, &mod) && (paramIndex < MAX_NUM_PARAMETERS)) {
+            if (paramLocationList[mod.param[variation][paramIndex].paramRef].type1 == paramType1Enable) {
+                menuItems[count++] = (tMenuItem){
+                    "Rename", RGB_GREY_3, action_rename_param_label, 0, NULL
+                };
+            }
+        }
+    }
+
+    menuItems[count]        = (tMenuItem){
+        NULL, RGB_BLACK, NULL, 0, NULL
+    };
+
+    gContextMenu.moduleKey  = moduleKey;
+    gContextMenu.paramIndex = paramIndex;
+    open_context_menu(coord, menuItems, 0, 0.0);
+}
+
 // ── Static menu item arrays (menuResources.h uses the actions above) ───────
 
 #include "menuResources.h"

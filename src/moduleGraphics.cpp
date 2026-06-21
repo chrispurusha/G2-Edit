@@ -40,6 +40,7 @@ extern "C" {
 #include "globalVars.h"
 #include "renderParams.h"
 #include "mouseHandle.h"
+#include "menus.h"
 
 void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) { // TODO: move to utilsgraphics!?
     switch (volumeType) {

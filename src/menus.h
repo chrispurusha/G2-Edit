@@ -36,6 +36,12 @@ void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row,
 void shift_modules_down(tModuleKey key);
 void open_module_area_context_menu(tCoord coord);
 
+// Parameter / knob menus
+int32_t find_knob_for_param(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex);
+void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex);
+void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, uint32_t paramRef);
+void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeIndex, uint32_t modeRef);
+
 // Module / cable / morph menus
 void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t connectorIndex);
 void open_module_context_menu(tCoord coord, tModuleKey moduleKey);
