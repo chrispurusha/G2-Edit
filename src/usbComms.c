@@ -589,13 +589,13 @@ static int parse_patch_version(uint8_t * buff, int length) {
 }
 
 static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
-	tModule module = {0};
+    tModule    module    = {0};
     //static tModule module;  // TODO - Temporary measure, since we were over-running the stack! ultimately, malloc the params on a module
-    uint32_t       bitPos    = 0;
-    tModuleKey     key       = {0};
-    uint32_t       param     = 0;
-    uint32_t       variation = 0;
-    uint32_t       value     = 0;
+    uint32_t   bitPos    = 0;
+    tModuleKey key       = {0};
+    uint32_t   param     = 0;
+    uint32_t   variation = 0;
+    uint32_t   value     = 0;
 
     //memset(&module, 0, sizeof(module)); // TODO - Temporary measure, since we were over-running the stack! ultimately, malloc the params on a module
     key.slot                             = slot;
@@ -616,11 +616,11 @@ static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                                   uint8_t commandResponse, uint8_t subCommand,
                                   int length) {
-	tModule module = {0};
+    tModule  module        = {0};
     //static tModule module; // TODO - Temporary measure, since we were over-running the stack! ultimately, malloc the params on a module
-    uint32_t       slot          = commandResponse & 0x03;
-    int            i             = 0;
-    int            volumesToRead = 0;
+    uint32_t slot          = commandResponse & 0x03;
+    int      i             = 0;
+    int      volumesToRead = 0;
 
     //memset(&module, 0, sizeof(module)); // TODO - Temporary measure, since we were over-running the stack! ultimately, malloc the params on a module
 

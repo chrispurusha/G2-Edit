@@ -547,43 +547,42 @@ typedef struct {
     uint32_t index;
 } tModuleKey;
 
-typedef struct _struct_module {
-    tModuleKey              key;
-    tModuleType             type;              // Review this. Is it used!?
-    uint32_t                row;
-    uint32_t                column;
-    tRectangle              dragArea;         // For mouse-click recognition for dragging and menu
-    tRectangle              rectangle;        // Full size of module rectangle, in case we need it
-    uint32_t                colour;
-    uint32_t                upRate;
-    uint32_t                newUpRate;           // Only used for mass uprate re-assessing
-    uint32_t                isLed;
-    uint32_t                unknown1;            // Guess we should store this, to write back if necessary. Might not be needed
-    uint32_t                modeCount;           // Don't yet know what this is for. Might need modes array adding
-    uint32_t                actualParamCount;
-    tMode                   mode[MAX_NUM_MODES]; // Might not need to be an array, since only seeing one mode so far
-    char                    name[CLAVIA_NAME_SIZE + 1];
-    tParam                  param[NUM_VARIATIONS_USB][MAX_NUM_PARAMETERS];
-    uint32_t                paramNumLabels[MAX_NUM_PARAMETERS];
-    bool                    paramNameSet[MAX_NUM_PARAMETERS][MAX_NUM_LABELS];
-    char                    paramName[MAX_NUM_PARAMETERS][MAX_NUM_LABELS][PROTOCOL_PARAM_NAME_SIZE + 1];
-    tConnector              connector[MAX_NUM_CONNECTORS];
-    bool                    gotParamIndexCache;
-    uint32_t                paramIndexCache;
-    bool                    gotModeIndexCache;
-    uint32_t                modeIndexCache;
-    bool                    gotConnectorIndexCache;
-    uint32_t                connectorIndexCache;
-    bool                    gotVolumeIndexCache;
-    uint32_t                volumeIndexCache;
-    bool                    gotLedIndexCache;
-    uint32_t                ledIndexCache;
+typedef struct {
+    bool        active;
+    tModuleKey  key;
+    tModuleType type;                          // Review this. Is it used!?
+    uint32_t    row;
+    uint32_t    column;
+    tRectangle  dragArea;                     // For mouse-click recognition for dragging and menu
+    tRectangle  rectangle;                    // Full size of module rectangle, in case we need it
+    uint32_t    colour;
+    uint32_t    upRate;
+    uint32_t    newUpRate;                       // Only used for mass uprate re-assessing
+    uint32_t    isLed;
+    uint32_t    unknown1;                        // Guess we should store this, to write back if necessary. Might not be needed
+    uint32_t    modeCount;                       // Don't yet know what this is for. Might need modes array adding
+    uint32_t    actualParamCount;
+    tMode       mode[MAX_NUM_MODES];             // Might not need to be an array, since only seeing one mode so far
+    char        name[CLAVIA_NAME_SIZE + 1];
+    tParam      param[NUM_VARIATIONS_USB][MAX_NUM_PARAMETERS];
+    uint32_t    paramNumLabels[MAX_NUM_PARAMETERS];
+    bool        paramNameSet[MAX_NUM_PARAMETERS][MAX_NUM_LABELS];
+    char        paramName[MAX_NUM_PARAMETERS][MAX_NUM_LABELS][PROTOCOL_PARAM_NAME_SIZE + 1];
+    tConnector  connector[MAX_NUM_CONNECTORS];
+    bool        gotParamIndexCache;
+    uint32_t    paramIndexCache;
+    bool        gotModeIndexCache;
+    uint32_t    modeIndexCache;
+    bool        gotConnectorIndexCache;
+    uint32_t    connectorIndexCache;
+    bool        gotVolumeIndexCache;
+    uint32_t    volumeIndexCache;
+    bool        gotLedIndexCache;
+    uint32_t    ledIndexCache;
     //uint32_t                volume[2];
-    tVolume                 volume;
-    tLed                    led;
+    tVolume     volume;
+    tLed        led;
     //uint32_t                led;
-    struct _struct_module * prev;
-    struct _struct_module * next;
 } tModule;
 
 typedef struct {
