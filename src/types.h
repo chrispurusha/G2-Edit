@@ -516,6 +516,7 @@ typedef enum {
     topbarClockRunStopId,
     topbarTempoDialId,
     topbarPatchVolumeId,
+    topbarPerfModeId,
     topbarHideAllCablesId,
     topbarTransparentCablesId,
     topbarCableColourToggle0Id,

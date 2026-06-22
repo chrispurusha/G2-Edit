@@ -464,9 +464,9 @@ void render_top_bar(void) {
     } else {
         snprintf(buff, sizeof(buff), "Patch Mode");
     }
-    draw_button(mainArea,
-                {{20, 42}, {get_text_width("Patch Mode", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
-                buff, (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarPerfModeId].rectangle          = draw_button(mainArea,
+                                                                       {{20, 42}, {get_text_width("Patch Mode", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
+                                                                       buff, (tRgb)RGB_BACKGROUND_GREY);
 
     snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].cycles[locationVa]);
     draw_button(mainArea,
