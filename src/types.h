@@ -422,7 +422,7 @@ typedef enum {
     locationMax
 } tLocation;
 
-typedef struct __attribute__((packed)) {  // TODO: Pack more of the structures in this file
+typedef struct {
     uint32_t   paramRef;
     tRectangle rectangle;
     uint8_t    value;
