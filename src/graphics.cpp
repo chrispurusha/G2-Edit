@@ -365,7 +365,7 @@ void render_top_bar(void) {
     if (read_module(module.key, &module) == true) {
         snprintf(buff, sizeof(buff), "%s", patchVolumeStrMap[module.param[variation][VOLUME_LEVEL].value]);
         render_text(mainArea, {{gTopbarControls[topbarPatchVolumeId].rectangle.coord.x, gTopbarControls[topbarPatchVolumeId].rectangle.coord.y - 12}, {NULL, STANDARD_TEXT_HEIGHT}}, buff);
-        module.param[variation][VOLUME_LEVEL].rectangle = render_dial(mainArea, gTopbarControls[topbarPatchVolumeId].rectangle, module.param[variation][VOLUME_LEVEL].value, 127, 0, RGB_GREY_7);
+        gParamRectangle[module.key.slot][module.key.location][module.key.index][VOLUME_LEVEL] = render_dial(mainArea, gTopbarControls[topbarPatchVolumeId].rectangle, module.param[variation][VOLUME_LEVEL].value, 127, 0, RGB_GREY_7);
         write_module(module.key, &module);
     }
 

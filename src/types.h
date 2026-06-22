@@ -423,14 +423,12 @@ typedef enum {
 } tLocation;
 
 typedef struct {
-    uint32_t   paramRef;
-    tRectangle rectangle;
-    uint8_t    value;
-    uint8_t    morphRange[NUM_MORPHS]; // 8 seems to be number of morphs. Not sure we can go higher, but
-    uint8_t    midiCC;                 // MIDI CC number assigned to this param (0 if unassigned)
-    bool       hasMidiCC;              // true if a CC is assigned to this param
-}
-tParam;
+    uint32_t paramRef;
+    uint8_t  value;
+    uint8_t  morphRange[NUM_MORPHS];   // 8 seems to be number of morphs. Not sure we can go higher, but
+    uint8_t  midiCC;                   // MIDI CC number assigned to this param (0 if unassigned)
+    bool     hasMidiCC;                // true if a CC is assigned to this param
+} tParam;
 
 typedef struct {
     uint32_t   modeRef;

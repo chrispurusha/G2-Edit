@@ -314,7 +314,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             }
 
             if (render_param_function != NULL) {
-                module->param[variation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramRef);
+                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramRef);
             }
             break;
         }
@@ -347,7 +347,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             }
 
             if (render_param_function != NULL) {
-                module->param[variation][paramIndex].rectangle = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
+                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
             }
             break;
         }
@@ -365,7 +365,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 
             get_global_gui_scaled_mouse_coord(&mouseCoord);
 
-            if (within_rectangle(mouseCoord, module->param[variation][paramIndex].rectangle)) {
+            if (within_rectangle(mouseCoord, gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex])) {
                 char       knobLabel[32] = {0};
                 int        page          = knobIdx / 24;
                 int        bank          = (knobIdx % 24) / 8;
@@ -411,7 +411,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
                 //Debug help for value
                 char debug[64] = {0};
                 snprintf(debug, sizeof(debug), "modeRef %u", modeRef);
-                module->param[variation][modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {30, textHeight}}, debug, RGB_BACKGROUND_GREY);
+                gParamRectangle[module->key.slot][module->key.location][module->key.index][modeIndex] = draw_button(moduleArea, {{rectangle.coord.x, y}, {30, textHeight}}, debug, RGB_BACKGROUND_GREY);
                 return;
             }
             //if (paramLocationList[paramRef].colourMap != NULL) {
@@ -936,13 +936,13 @@ void render_morph_groups(void) {
             // Make sure all rectangles (for mouse click) are nullified
             for (i = 0; i < NUM_VARIATIONS_USB; i++) {
                 for (j = 0; j < (NUM_MORPHS * 2); j++) {
-                    module.param[i][j].rectangle = NULL_RECTANGLE;
+                    gParamRectangle[module.key.slot][module.key.location][module.key.index][j] = NULL_RECTANGLE;
                 }
             }
 
             for (i = 0; i < NUM_MORPHS; i++) {
-                isKnob                                            = !(module.param[variation][i + NUM_MORPHS].value != 0);
-                dialValue                                         = module.param[variation][i].value;
+                isKnob                                                                                  = !(module.param[variation][i + NUM_MORPHS].value != 0);
+                dialValue                                                                               = module.param[variation][i].value;
 
                 snprintf(dialValueStr, sizeof(dialValueStr), "%u", dialValue);
 
@@ -955,7 +955,7 @@ void render_morph_groups(void) {
                 } else {
                     snprintf(label, sizeof(label), "%s", morphStrMap[i]);
                 }
-                textHeight                                        = rectangle.size.h / 4.0;
+                textHeight                                                                              = rectangle.size.h / 4.0;
 
                 set_rgb_colour(RGB_BLACK);
                 render_text(mainArea, {{rectangle.coord.x - 3, rectangle.coord.y}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, (char *)morphStrMap[i]);
@@ -965,7 +965,7 @@ void render_morph_groups(void) {
                 } else {
                     dialColour = RGB_GREY_3;
                 }
-                module.param[variation][i].rectangle              = render_dial_with_text(mainArea, {{rectangle.coord.x, rectangle.coord.y + 16}, {rectangle.size.w, rectangle.size.h}}, NULL, dialValueStr, module.param[variation][i].value, 128, module.param[variation][i].morphRange[gMorphGroupFocus], dialColour);
+                gParamRectangle[module.key.slot][module.key.location][module.key.index][i]              = render_dial_with_text(mainArea, {{rectangle.coord.x, rectangle.coord.y + 16}, {rectangle.size.w, rectangle.size.h}}, NULL, dialValueStr, module.param[variation][i].value, 128, module.param[variation][i].morphRange[gMorphGroupFocus], dialColour);
 
                 if (  gParamNameEdit.active
                    && gParamNameEdit.moduleKey.slot == module.key.slot
@@ -978,9 +978,9 @@ void render_morph_groups(void) {
                 } else {
                     gMorphLabelRect[i] = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y + 57}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, RGB_BACKGROUND_GREY);
                 }
-                module.param[variation][i + NUM_MORPHS].rectangle = gMorphLabelRect[i];  // Without +NUM_MORPHS, is the dial
+                gParamRectangle[module.key.slot][module.key.location][module.key.index][i + NUM_MORPHS] = gMorphLabelRect[i];
 
-                rectangle.coord.x                                += (STANDARD_TEXT_HEIGHT * 4) + 5;
+                rectangle.coord.x                                                                      += (STANDARD_TEXT_HEIGHT * 4) + 5;
             }
 
             write_module(module.key, &module);

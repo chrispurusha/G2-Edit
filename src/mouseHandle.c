@@ -308,7 +308,7 @@ bool handle_module_press(tCoord coord, tMouseButton mouseButton) {
             for (int i = 0; (i < paramCount) && (retVal == false); i++) {
                 tParam * param = &module.param[variation][i];
 
-                if (within_rectangle(coord, param->rectangle) && mouseButton == mouseButtonLeftDown) {
+                if (within_rectangle(coord, gParamRectangle[module.key.slot][module.key.location][module.key.index][i]) && mouseButton == mouseButtonLeftDown) {
                     if (module.key.location == locationMorph) {      // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
                         if (i < NUM_MORPHS) {
                             paramType2 = paramType2Dial;
@@ -418,7 +418,7 @@ bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
             for (int i = 0; (i < paramCount) && (retVal == false); i++) {
                 tParam * param = &module.param[variation][i];
 
-                if (within_rectangle(coord, param->rectangle) && mouseButton == mouseButtonLeftUp) {
+                if (within_rectangle(coord, gParamRectangle[module.key.slot][module.key.location][module.key.index][i]) && mouseButton == mouseButtonLeftUp) {
                     if (module.key.location == locationMorph) {  // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
                         if (i < NUM_MORPHS) {
                             paramType2 = paramType2Dial;
@@ -1016,7 +1016,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                         uint32_t variation  = gPatchDescr[slot].activeVariation;
 
                         for (uint32_t p = 0; p < paramCount && !found; p++) {
-                            if (within_rectangle(coord, module.param[variation][p].rectangle)) {
+                            if (within_rectangle(coord, gParamRectangle[module.key.slot][module.key.location][module.key.index][p])) {
                                 open_param_context_menu(coord, module.key, p);
                                 found = true;
                             }
@@ -1137,7 +1137,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                     }
 
                     if (paramType1 == paramType1Slider) {
-                        tRectangle rect     = module.param[variation][gParamDragging.param].rectangle;
+                        tRectangle rect     = gParamRectangle[module.key.slot][module.key.location][module.key.index][gParamDragging.param];
                         double     fraction = (rect.coord.y + rect.size.h - y) / rect.size.h;
 
                         if (fraction < 0.0) {
@@ -1149,7 +1149,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                         }
                         value = (uint32_t)round(fraction * (double)(range - 1));
                     } else {
-                        angle = calculate_mouse_angle((tCoord){x, y}, module.param[variation][gParamDragging.param].rectangle);                                                            // possible add half size
+                        angle = calculate_mouse_angle((tCoord){x, y}, gParamRectangle[module.key.slot][module.key.location][module.key.index][gParamDragging.param]);                                                            // possible add half size
                         value = angle_to_value(angle, range);
                     }
 
