@@ -533,6 +533,10 @@ void stop_patch_notes_editing(void) {
     memset(&gPatchNotesEdit, 0, sizeof(gPatchNotesEdit));
 }
 
+void stop_synth_name_editing(void) {
+    memset(&gSynthNameEdit, 0, sizeof(gSynthNameEdit));
+}
+
 static bool input_connector_has_cable(uint32_t slot, uint32_t location,
                                       uint32_t moduleIndex, uint32_t ioCount) {
     tCable cable = {0};
@@ -706,8 +710,11 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (within_rectangle(coord, gSettingsPanelRects.close)) {
                 gPatchSettingsEdit.active = false;
+                stop_synth_name_editing();
             } else {
                 int s = 0;
+
+                stop_synth_name_editing();
 
                 for (s = 0; s < 4; s++) {
                     if (within_rectangle(coord, gSettingsPanelRects.midiChan[s])) {
@@ -715,7 +722,11 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     }
                 }
 
-                if (within_rectangle(coord, gSettingsPanelRects.globalChan)) {
+                if (within_rectangle(coord, gSettingsPanelRects.synthName)) {
+                    gSynthNameEdit.active                   = true;
+                    strncpy(gSynthNameEdit.buffer, gSynthSettings.name, CLAVIA_NAME_SIZE);
+                    gSynthNameEdit.buffer[CLAVIA_NAME_SIZE] = '\0';
+                } else if (within_rectangle(coord, gSettingsPanelRects.globalChan)) {
                     open_midi_chan_dropdown(below_rect(gSettingsPanelRects.globalChan), &gSynthSettings.globalChan);
                 } else if (within_rectangle(coord, gSettingsPanelRects.sysexId)) {
                     open_sysex_id_dropdown(below_rect(gSettingsPanelRects.sysexId), &gSynthSettings.sysexId);
@@ -1322,6 +1333,15 @@ void char_event(GLFWwindow * window, unsigned int value) {
             gParamNameEdit.buffer[len + 1] = '\0';
         }
     }
+
+    if (gSynthNameEdit.active) {
+        size_t len = strlen(gSynthNameEdit.buffer);
+
+        if ((value >= 0x20) && (value <= 0x7e) && (len < CLAVIA_NAME_SIZE)) {
+            gSynthNameEdit.buffer[len]     = (char)value;
+            gSynthNameEdit.buffer[len + 1] = '\0';
+        }
+    }
     LOG_DEBUG("char=%d\n", value);
     atomic_store(&gReDraw, true);
 }
@@ -1481,6 +1501,23 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 }
             } else if (key == GLFW_KEY_ESCAPE) {
                 gParamNameEdit.active = false;  // discard
+            }
+        }
+    } else if (gSynthNameEdit.active) {
+        if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+            if (key == GLFW_KEY_BACKSPACE) {
+                size_t len = strlen(gSynthNameEdit.buffer);
+
+                if (len > 0) {
+                    gSynthNameEdit.buffer[len - 1] = '\0';
+                }
+            } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
+                gSynthNameEdit.active                 = false;
+                strncpy(gSynthSettings.name, gSynthNameEdit.buffer, CLAVIA_NAME_SIZE);
+                gSynthSettings.name[CLAVIA_NAME_SIZE] = '\0';
+                send_synth_settings_msg();
+            } else if (key == GLFW_KEY_ESCAPE) {
+                gSynthNameEdit.active = false;
             }
         }
     } else if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {

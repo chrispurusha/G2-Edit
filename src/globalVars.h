@@ -80,6 +80,7 @@ extern _Atomic uint8_t     gGlobalPage;
 extern tNameEdit           gPatchNameEdit;
 extern tModuleNameEdit     gModuleNameEdit;
 extern tParamNameEdit      gParamNameEdit;
+extern tNameEdit           gSynthNameEdit;
 extern tPatchNotesEdit     gPatchNotesEdit;
 extern tSynthSettings      gSynthSettings;
 extern tPatchSettingsEdit  gPatchSettingsEdit;

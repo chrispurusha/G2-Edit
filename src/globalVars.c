@@ -71,6 +71,7 @@ _Atomic uint8_t        gGlobalPage                                  = 0;
 tNameEdit              gPatchNameEdit                               = {0};
 tModuleNameEdit        gModuleNameEdit                              = {0};
 tParamNameEdit         gParamNameEdit                               = {0};
+tNameEdit              gSynthNameEdit                               = {0};
 tPatchNotesEdit        gPatchNotesEdit                              = {0};
 tSynthSettings         gSynthSettings                               = {0};
 tPatchSettingsEdit     gPatchSettingsEdit                           = {0};

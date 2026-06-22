@@ -874,7 +874,7 @@ static void render_patch_settings_panel(void) {
     double renderW = get_render_width() / gGlobalGuiScale;
     double renderH = get_render_height() / gGlobalGuiScale;
     double boxW    = 600.0;
-    double boxH    = 427.0;
+    double boxH    = 453.0;
     double boxX    = (renderW - boxW) / 2.0;
     double boxY    = (renderH - boxH) / 2.0;
     double margin  = 10.0;
@@ -899,6 +899,24 @@ static void render_patch_settings_panel(void) {
     gSettingsPanelRects.close = draw_button(mainArea,
                                             {{boxX + boxW - 44.0, boxY + 4.0}, {get_text_width((char *)"Close", btnH, eCache) + 4.0, btnH}},
                                             "Close", (tRgb)RGB_BACKGROUND_GREY);
+
+    // ── Synth Name ─────────────────────────────────────────────────
+    {
+        char   displayBuf[CLAVIA_NAME_SIZE + 2] = {0};
+        double x                                = boxX + margin;
+        set_rgb_colour(RGB_BLACK);
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Name:");
+        x += get_text_width((char *)"Name:", btnH, eCache) + 4.0;
+
+        if (gSynthNameEdit.active) {
+            snprintf(displayBuf, sizeof(displayBuf), "%s|", gSynthNameEdit.buffer);
+            gSettingsPanelRects.synthName = draw_button(mainArea, {{x, y}, {get_text_width(LONGEST_PATCH_NAME, btnH, eCache), btnH}}, displayBuf, (tRgb)RGB_WHITE);
+        } else {
+            snprintf(displayBuf, sizeof(displayBuf), "%s", gSynthSettings.name);
+            gSettingsPanelRects.synthName = draw_button(mainArea, {{x, y}, {get_text_width(LONGEST_PATCH_NAME, btnH, eCache), btnH}}, displayBuf, (tRgb)RGB_BACKGROUND_GREY);
+        }
+    }
+    y                        += rowH;
 
     // ── MIDI Channels ──────────────────────────────────────────────
     set_rgb_colour(RGB_GREY_7);

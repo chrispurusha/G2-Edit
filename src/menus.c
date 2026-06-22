@@ -39,7 +39,7 @@ extern "C" {
 static uint8_t * gSettingU8Target = NULL;
 static int8_t *  gSettingI8Target = NULL;
 
-static void send_synth_settings_msg(void) {
+void send_synth_settings_msg(void) {
     tMessageContent msg = {0};
 
     msg.cmd = eMsgCmdWriteSynthSettings;

@@ -311,6 +311,7 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             if (paramCount != module_param_count(module.type)) {
                 LOG_ERROR("Incorrect number of parameters on module %u %s count from G2 = %u, our structures = %u\n", module.type, gModuleProperties[module.type].name, paramCount, module_param_count(module.type));
             }
+
             if (paramCount > module_param_count(module.type)) {
                 exit(1);
             }

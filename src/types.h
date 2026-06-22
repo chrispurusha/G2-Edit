@@ -906,6 +906,7 @@ typedef struct {
     tRectangle pedalGain;
     tRectangle patchSortMode;
     tRectangle perfSortMode;
+    tRectangle synthName;
 } tSettingsPanelRects;
 
 typedef enum {

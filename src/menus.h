@@ -54,6 +54,7 @@ void open_voice_count_context_menu(tCoord coord);
 void open_variation_copy_menu(tCoord coord, uint32_t sourceVariation);
 
 // Synth settings dropdowns
+void send_synth_settings_msg(void);
 void open_midi_chan_dropdown(tCoord coord, uint8_t * target);
 void open_sysex_id_dropdown(tCoord coord, uint8_t * target);
 void open_tune_semi_dropdown(tCoord coord, int8_t * target);
