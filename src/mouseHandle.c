@@ -917,9 +917,12 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (within_rectangle(coord, gTopbarControls[topbarPerfModeId].rectangle)) {
+                    tMessageContent reloadMsg = {0};
                     gSynthSettings.perfMode = gSynthSettings.perfMode ? 0 : 1;
                     atomic_store(&gPerfMode, gSynthSettings.perfMode);
                     send_synth_settings_msg();
+                    reloadMsg.cmd           = eMsgCmdReloadAllPatchData;
+                    msg_send(&gCommandQueue, &reloadMsg);
                     found                   = true;
                 }
             }

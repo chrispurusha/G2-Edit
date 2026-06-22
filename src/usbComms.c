@@ -2276,11 +2276,23 @@ static int send_write_data(tMessageContent * messageContent) {
         }
 
         case eMsgCmdSetParamLabel:
-            retVal = send_set_param_label(messageContent->slot, messageContent->paramLabelData.moduleKey, messageContent->paramLabelData.paramIndex, messageContent->paramLabelData.name);
+            retVal                         = send_set_param_label(messageContent->slot, messageContent->paramLabelData.moduleKey, messageContent->paramLabelData.paramIndex, messageContent->paramLabelData.name);
             break;
 
         case eMsgCmdWriteSynthSettings:
-            retVal = send_synth_settings();
+            retVal                         = send_synth_settings();
+            break;
+
+        case eMsgCmdReloadAllPatchData:
+            retVal                         = reload_all_patch_data();
+            atomic_store(&gSlot, 0);
+            gPatchDescr[0].activeVariation = 0;
+            set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
+                                           (tTopbarControlId)(topbarSlotAId));
+            set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
+                                           (tTopbarControlId)((uint32_t)topbarVariation1Id));
+            call_full_patch_change_notify();
+            call_wake_glfw();
             break;
 
         default:

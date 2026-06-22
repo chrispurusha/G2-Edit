@@ -61,7 +61,8 @@ typedef enum {
     eMsgCmdSetMasterClockBPM,
     eMsgCmdSetMasterClockRun,
     eMsgCmdSetParamLabel,
-    eMsgCmdWriteSynthSettings
+    eMsgCmdWriteSynthSettings,
+    eMsgCmdReloadAllPatchData
 } eMsgCmd;
 
 typedef struct {
