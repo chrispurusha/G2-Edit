@@ -864,12 +864,14 @@ void render_cables(void) {
     bool     validCable     = false;
     uint32_t slot           = atomic_load(&gSlot);
     uint32_t location       = atomic_load(&gLocation);
-    //uint32_t hiddenMask     = atomic_load(&gHiddenCableMask);
-    //bool     hideAll        = atomic_load(&gCablesHideAll);
+    bool     hideAll        = atomic_load(&gCablesHideAll);
     bool     allTransparent = atomic_load(&gCablesTransparent);
     bool     hoverActive    = gHoverConnector.active;
     double   normalAlpha    = allTransparent ? 0.5 : 1.0;
 
+    if (hideAll) {
+        return;
+    }
     reset_walk_cable();
 
     do {

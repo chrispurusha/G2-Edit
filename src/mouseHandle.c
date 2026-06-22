@@ -886,30 +886,10 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (within_rectangle(coord, gTopbarControls[topbarHideAllCablesId].rectangle)) {
-                    int             colour         = 0;
-                    int             visibleCount   = 0;
-
-                    for (int colour = 0; colour < cableColourMax; colour++) {
-                        if (gPatchDescr[slot].visible[colour]) {
-                            visibleCount++;
-                        }
-                    }
-
-                    if (visibleCount == 0) {
-                        for (colour = 0; colour < cableColourMax; colour++) {
-                            gPatchDescr[slot].visible[colour] = 1;
-                        }
-                    } else {
-                        for (colour = 0; colour < cableColourMax; colour++) {
-                            gPatchDescr[slot].visible[colour] = 0;
-                        }
-                    }
+                    bool current = atomic_load(&gCablesHideAll);
+                    atomic_store(&gCablesHideAll, !current);
                     atomic_store(&gReDraw, true);
-                    tMessageContent messageContent = {0};
-                    messageContent.cmd  = eMsgCmdWritePatchDescr;
-                    messageContent.slot = slot;
-                    msg_send(&gCommandQueue, &messageContent);
-                    found               = true;
+                    found = true;
                 }
             }
 

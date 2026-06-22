@@ -80,7 +80,7 @@ tRectangle             gMorphLabelRect[NUM_MORPHS]                  = {0};
 //_Atomic uint32_t       gHiddenCableMask                             = 0; // TODO - Send to G2 when changes
 uint32_t               gCableColour                                 = 0;
 _Atomic bool           gCablesTransparent                           = false;
-//_Atomic bool           gCablesHideAll                               = false;
+_Atomic bool           gCablesHideAll                               = false;
 tResourceAlloc         gResourceAlloc[MAX_SLOTS]                    = {0};
 
 tRectangle             gPatchNotesCloseRect                         = {0};

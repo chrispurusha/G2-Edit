@@ -444,12 +444,12 @@ void render_top_bar(void) {
         }
     }
 
-    //bool hideAll = atomic_load(&gCablesHideAll);
-    bool transp = atomic_load(&gCablesTransparent);
+    bool hideAll = atomic_load(&gCablesHideAll);
+    bool transp  = atomic_load(&gCablesTransparent);
 
     gTopbarControls[topbarHideAllCablesId].rectangle     = draw_button(mainArea,
                                                                        {topbar_control_def(topbarHideAllCablesId)->coord, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
-                                                                       "Hide", (tRgb)RGB_BACKGROUND_GREY);
+                                                                       "Hide", hideAll ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
     gTopbarControls[topbarTransparentCablesId].rectangle = draw_button(mainArea,
                                                                        {topbar_control_def(topbarTransparentCablesId)->coord, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
