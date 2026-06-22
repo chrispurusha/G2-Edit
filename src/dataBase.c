@@ -24,7 +24,6 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 
-//extern tModule         gModule[MAX_SLOTS][locationMax][MAX_NUM_MODULES];
 tModule                gModule[MAX_SLOTS][locationMax][MAX_NUM_MODULES] = {0};
 
 static pthread_mutex_t dbMutex                                          = {0};
