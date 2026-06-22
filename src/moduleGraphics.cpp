@@ -499,6 +499,12 @@ void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, 
             render_rectangle(moduleArea, rectangle);
             break;
         }
+        case ledTypePark:
+        {
+            set_rgb_colour(RGB_GREEN_3);
+            render_rectangle(moduleArea, rectangle);
+            break;
+        }
         default:
         {
         }

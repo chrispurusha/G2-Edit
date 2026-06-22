@@ -407,6 +407,7 @@ typedef enum {
 typedef enum {
     ledTypeNo,
     ledTypeYes,
+    ledTypePark,  // display-only LED: rendered but never counted in LED stream
 } tLedType;
 
 typedef enum {

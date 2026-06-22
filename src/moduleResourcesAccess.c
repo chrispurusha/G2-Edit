@@ -139,7 +139,7 @@ uint32_t module_led_count(tModuleType moduleType) {
         uint32_t count = 0;
 
         for (int i = 0; i < array_size_led_location_list(); i++) {
-            if (ledLocationList[i].moduleType == moduleType) {
+            if (ledLocationList[i].moduleType == moduleType && ledLocationList[i].ledType != ledTypePark) {
                 count++;
             }
         }
