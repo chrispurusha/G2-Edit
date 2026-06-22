@@ -589,26 +589,24 @@ static int parse_patch_version(uint8_t * buff, int length) {
 }
 
 static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
-    tModule    module    = {0};
-    //static tModule module;  // TODO - Temporary measure, since we were over-running the stack! ultimately, malloc the params on a module
     uint32_t   bitPos    = 0;
     tModuleKey key       = {0};
     uint32_t   param     = 0;
     uint32_t   variation = 0;
     uint32_t   value     = 0;
 
-    //memset(&module, 0, sizeof(module)); // TODO - Temporary measure, since we were over-running the stack! ultimately, malloc the params on a module
-    key.slot                             = slot;
-    key.location                         = read_bit_stream(buff, &bitPos, 8);
-    key.index                            = read_bit_stream(buff, &bitPos, 8);
-    param                                = read_bit_stream(buff, &bitPos, 8);
-    value                                = read_bit_stream(buff, &bitPos, 8);
-    variation                            = read_bit_stream(buff, &bitPos, 8);
+    key.slot     = slot;
+    key.location = read_bit_stream(buff, &bitPos, 8);
+    key.index    = read_bit_stream(buff, &bitPos, 8);
+    param        = read_bit_stream(buff, &bitPos, 8);
+    value        = read_bit_stream(buff, &bitPos, 8);
+    variation    = read_bit_stream(buff, &bitPos, 8);
 
-    read_module(key, &module);
-    module.param[variation][param].value = value;
-    write_module(key, &module);
+    tModule *  module    = get_module(key);
 
+    if (module != NULL) {
+        module->param[variation][param].value = value;
+    }
     LOG_DEBUG("Param change - module %u:%u param=%u value=%u\n",
               key.location, key.index, param, value);
 }
@@ -616,27 +614,23 @@ static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                                   uint8_t commandResponse, uint8_t subCommand,
                                   int length) {
-    tModule  module        = {0};
-    //static tModule module; // TODO - Temporary measure, since we were over-running the stack! ultimately, malloc the params on a module
-    uint32_t slot          = commandResponse & 0x03;
-    int      i             = 0;
-    int      volumesToRead = 0;
-
-    //memset(&module, 0, sizeof(module)); // TODO - Temporary measure, since we were over-running the stack! ultimately, malloc the params on a module
+    uint32_t slot = commandResponse & 0x03;
+    int      i    = 0;
 
     switch (subCommand) {
         case SUB_RESPONSE_VOLUME_INDICATOR:
         {
+            int volumesToRead = 0;
+
             read_bit_stream(buff, bitPos, 8);  // start_idx (always 0 in practice)
 
             for (int32_t location = 1; location >= 0; location--) {
-                for (int k = 0; k <= 255; k++) {
-                    module.key.slot     = slot;
-                    module.key.location = location;
-                    module.key.index    = k;
+                for (int k = 0; k < MAX_NUM_MODULES; k++) {
+                    tModuleKey key    = {slot, (uint32_t)location, (uint32_t)k};
+                    tModule *  module = get_module(key);
 
-                    if (read_module(module.key, &module) == true) {
-                        switch (gModuleProperties[module.type].volumeType) {
+                    if (module != NULL) {
+                        switch (gModuleProperties[module->type].volumeType) {
                             case volumeTypeMono:
                             case volumeTypeCompress:
                             case volumeTypeSequencer:
@@ -662,12 +656,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                         }
 
                         for (i = 0; i < volumesToRead; i++) {
-                            module.volume.value[i] = read_bit_stream(buff, bitPos, 8);  // lo byte: level/state
-                            read_bit_stream(buff, bitPos, 8);                           // hi byte: unused (always 0 for normal levels)
-                        }
-
-                        if (volumesToRead > 0) {
-                            write_module(module.key, &module);
+                            module->volume.value[i] = read_bit_stream(buff, bitPos, 8);
+                            read_bit_stream(buff, bitPos, 8);  // hi byte: unused
                         }
                     }
                 }
@@ -692,16 +682,14 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             // VA (location 1) first, then FX (location 0), each sorted by ascending module
             // index — this matches the order in which the G2 assigns LED sequence numbers.
             for (int32_t location = 1; location >= 0; location--) {
-                for (int k = 0; k <= 255; k++) {
-                    module.key.slot     = slot;
-                    module.key.location = location;
-                    module.key.index    = k;
+                for (int k = 0; k < MAX_NUM_MODULES; k++) {
+                    tModuleKey key    = {slot, (uint32_t)location, (uint32_t)k};
+                    tModule *  module = get_module(key);
 
-                    if (read_module(module.key, &module)) {
-                        if (module_led_count(module.type) > 0) {
+                    if (module != NULL) {
+                        if (module_led_count(module->type) > 0) {
                             if (led_count >= start_idx && led_count < (uint32_t)(start_idx + 40)) {
-                                module.led.value = read_bit_stream(buff, bitPos, 2);
-                                write_module(module.key, &module);
+                                module->led.value = read_bit_stream(buff, bitPos, 2);
                             }
                             led_count++;
                         }
@@ -1524,24 +1512,25 @@ static int send_set_module_label(uint32_t slot, tModuleKey moduleKey, const char
 }
 
 static int send_set_param_label(uint32_t slot, tModuleKey moduleKey, uint32_t paramIndex, const char * name) {
-    uint8_t  buff[SEND_MESSAGE_SIZE]          = {0};
-    int      pos                              = COMMAND_OFFSET;
-    int      i                                = 0;
-    uint32_t pi                               = 0;
-    uint32_t labelCount                       = 0;
-    uint32_t labelIndices[MAX_NUM_PARAMETERS] = {0};
-    tModule  module                           = {0};
+    uint8_t   buff[SEND_MESSAGE_SIZE]          = {0};
+    int       pos                              = COMMAND_OFFSET;
+    int       i                                = 0;
+    uint32_t  pi                               = 0;
+    uint32_t  labelCount                       = 0;
+    uint32_t  labelIndices[MAX_NUM_PARAMETERS] = {0};
 
     LOG_DEBUG("SET PARAM LABEL slot=%u location=%u index=%u param=%u name='%s'\n",
               slot, moduleKey.location, moduleKey.index, paramIndex, name);
 
-    if (!read_module(moduleKey, &module)) {
-        LOG_DEBUG("SET PARAM LABEL read_module FAILED\n");
+    tModule * module                           = get_module(moduleKey);
+
+    if (module == NULL) {
+        LOG_DEBUG("SET PARAM LABEL get_module FAILED\n");
         return EXIT_FAILURE;
     }
 
     for (pi = 0; pi < MAX_NUM_PARAMETERS; pi++) {
-        if (module.paramNameSet[pi][0]) {
+        if (module->paramNameSet[pi][0]) {
             labelIndices[labelCount++] = pi;
         }
     }
@@ -1556,12 +1545,12 @@ static int send_set_param_label(uint32_t slot, tModuleKey moduleKey, uint32_t pa
 
     for (uint32_t j = 0; j < labelCount; j++) {
         pi          = labelIndices[j];
-        buff[pos++] = 1;                            // isString
-        buff[pos++] = PROTOCOL_PARAM_NAME_SIZE + 1; // paramLength
-        buff[pos++] = (uint8_t)pi;                  // paramIndex
+        buff[pos++] = 1;                             // isString
+        buff[pos++] = PROTOCOL_PARAM_NAME_SIZE + 1;  // paramLength
+        buff[pos++] = (uint8_t)pi;                   // paramIndex
 
         for (i = 0; i < PROTOCOL_PARAM_NAME_SIZE; i++) {
-            buff[pos++] = (uint8_t)module.paramName[pi][0][i];
+            buff[pos++] = (uint8_t)module->paramName[pi][0][i];
         }
     }
 

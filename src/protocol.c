@@ -100,52 +100,51 @@ void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     uint32_t   j           = 0;
     uint32_t   type        = 0;
     tModuleKey key         = {0};
-    tModule    module      = {0};
+    tModule *  module      = NULL;
 
     LOG_DEBUG("Module list\n");
 
     key.slot     = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
-    LOG_DEBUG("Location       0x%x\n", key.location);     // Discerns between FX and main, could put in the module itself
+    LOG_DEBUG("Location       0x%x\n", key.location);
     uint32_t   moduleCount = read_bit_stream(buff, subOffset, 8);
     LOG_DEBUG("Module Count   %d\n", moduleCount);
 
     for (i = 0; i < moduleCount; i++) {
-        type             = read_bit_stream(buff, subOffset, 8);
-        key.index        = read_bit_stream(buff, subOffset, 8);
+        type              = read_bit_stream(buff, subOffset, 8);
+        key.index         = read_bit_stream(buff, subOffset, 8);
 
-        if (read_module(key, &module) == true) {
-            LOG_DEBUG("Module already created\n");
+        if ((key.location >= (uint32_t)locationMax) || (key.index >= MAX_NUM_MODULES)) {
+            LOG_ERROR("Module key out of bounds location=%u index=%u\n", key.location, key.index);
+            break;
         }
-        module.type      = type;
-        module.column    = read_bit_stream(buff, subOffset, 7);        // 7
-        module.row       = read_bit_stream(buff, subOffset, 7);        // 7
-        module.colour    = read_bit_stream(buff, subOffset, 8);        // 8
-        module.upRate    = read_bit_stream(buff, subOffset, 1);        // 1
-        module.isLed     = read_bit_stream(buff, subOffset, 1);        // 1
-        module.unknown1  = read_bit_stream(buff, subOffset, 6);        // 6
-        module.modeCount = read_bit_stream(buff, subOffset, 4);        // 4
+        module            = get_module_slot(key.slot, key.location, key.index);
+        module->active    = true;
+        module->key       = key;
+        module->type      = type;
+        module->column    = read_bit_stream(buff, subOffset, 7);
+        module->row       = read_bit_stream(buff, subOffset, 7);
+        module->colour    = read_bit_stream(buff, subOffset, 8);
+        module->upRate    = read_bit_stream(buff, subOffset, 1);
+        module->isLed     = read_bit_stream(buff, subOffset, 1);
+        module->unknown1  = read_bit_stream(buff, subOffset, 6);
+        module->modeCount = read_bit_stream(buff, subOffset, 4);
 
-        LOG_DEBUG("Module type %u\n", module.type);
-        LOG_DEBUG("Module column %u\n", module.column);
-        LOG_DEBUG("Module row %u\n", module.row);
+        LOG_DEBUG("Module type %u\n", module->type);
+        LOG_DEBUG("Module column %u\n", module->column);
+        LOG_DEBUG("Module row %u\n", module->row);
 
-        for (j = 0; j < module.modeCount; j++) {
-            module.mode[j].value = read_bit_stream(buff, subOffset, 6);
-            LOG_DEBUG("Mode index %u = %u\n", j, module.mode[j].value);
-            LOG_DEBUG("MODE %u %u\n", j, module.mode[j].value);
+        for (j = 0; j < module->modeCount; j++) {
+            module->mode[j].value = read_bit_stream(buff, subOffset, 6);
+            LOG_DEBUG("Mode index %u = %u\n", j, module->mode[j].value);
         }
 
         LOG_DEBUG("Number connectors for module %u\n", module_connector_count(type));
-        write_module(key, &module);
     }
 }
 
 void write_module_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos) {
-    tModule  module            = {0};
     uint32_t moduleCount       = 0;
-    bool     validModule       = false;
-    //int32_t   location = 0;
     uint32_t sizeBitPos        = 0;
     uint32_t moduleCountBitPos = 0;
     uint32_t j                 = 0;
@@ -158,35 +157,29 @@ void write_module_list(uint32_t slot, tLocation location, uint8_t * buff, uint32
     write_bit_stream(buff, bitPos, 2, location);
 
     moduleCountBitPos = *bitPos;
-    write_bit_stream(buff, bitPos, 8, 0);  // Populated later
+    write_bit_stream(buff, bitPos, 8, 0);   // Populated later
 
-    moduleCount       = 0;
-    reset_walk_module();
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, location, i);
 
-    do {
-        validModule = walk_next_module(&module);
-
-        if (validModule == true) {
-            if ((module.key.slot == slot) && (module.key.location == location)) {
-                moduleCount++;
-                write_bit_stream(buff, bitPos, 8, module.type);
-                write_bit_stream(buff, bitPos, 8, module.key.index);
-                write_bit_stream(buff, bitPos, 7, module.column);
-                write_bit_stream(buff, bitPos, 7, module.row);
-                write_bit_stream(buff, bitPos, 8, module.colour);
-                write_bit_stream(buff, bitPos, 1, module.upRate);
-                write_bit_stream(buff, bitPos, 1, module.isLed);
-                write_bit_stream(buff, bitPos, 6, module.unknown1);
-                write_bit_stream(buff, bitPos, 4, module.modeCount);
-
-                for (j = 0; j < module.modeCount; j++) {
-                    write_bit_stream(buff, bitPos, 6, module.mode[j].value);
-                }
-            }
+        if (!module->active) {
+            continue;
         }
-    } while (validModule);
+        moduleCount++;
+        write_bit_stream(buff, bitPos, 8, module->type);
+        write_bit_stream(buff, bitPos, 8, module->key.index);
+        write_bit_stream(buff, bitPos, 7, module->column);
+        write_bit_stream(buff, bitPos, 7, module->row);
+        write_bit_stream(buff, bitPos, 8, module->colour);
+        write_bit_stream(buff, bitPos, 1, module->upRate);
+        write_bit_stream(buff, bitPos, 1, module->isLed);
+        write_bit_stream(buff, bitPos, 6, module->unknown1);
+        write_bit_stream(buff, bitPos, 4, module->modeCount);
 
-    finish_walk_module();
+        for (j = 0; j < module->modeCount; j++) {
+            write_bit_stream(buff, bitPos, 6, module->mode[j].value);
+        }
+    }
 
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 
@@ -270,7 +263,6 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     uint32_t   moduleCount   = 0;
     uint32_t   paramValue    = 0;
     tModuleKey key           = {0};
-    tModule    module        = {0};
     int        i             = 0;
     int        j             = 0;
     int        k             = 0;
@@ -291,10 +283,9 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     }
 
     for (i = 0; i < moduleCount; i++) {
-        key.index               = read_bit_stream(buff, subOffset, 8);
-        //LOG_DEBUG(" Module Index        %u\n", key.index);
+        key.index                = read_bit_stream(buff, subOffset, 8);
 
-        paramCount              = read_bit_stream(buff, subOffset, 7);
+        paramCount               = read_bit_stream(buff, subOffset, 7);
         LOG_DEBUG("  variation list param count = %u\n", paramCount);
 
         if (paramCount >= MAX_NUM_PARAMETERS) {
@@ -302,25 +293,29 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             exit(1);
         }
 
-        if (read_module(key, &module) == false) {
-            module.key = key;
+        if ((key.location >= (uint32_t)locationMax) || (key.index >= MAX_NUM_MODULES)) {
+            LOG_ERROR("parse_param_list: key out of bounds location=%u index=%u\n", key.location, key.index);
+            break;
         }
-        module.actualParamCount = paramCount;
+        tModule * module = get_module_slot(key.slot, key.location, key.index);
+        module->key              = key;
+        module->active           = true;
+        module->actualParamCount = paramCount;
 
-        if ((module.type != moduleTypeUnknown0) && (module_param_count(module.type) > 0)) {
-            if (paramCount != module_param_count(module.type)) {
-                LOG_ERROR("Incorrect number of parameters on module %u %s count from G2 = %u, our structures = %u\n", module.type, gModuleProperties[module.type].name, paramCount, module_param_count(module.type));
+        if ((module->type != moduleTypeUnknown0) && (module_param_count(module->type) > 0)) {
+            if (paramCount != module_param_count(module->type)) {
+                LOG_ERROR("Incorrect number of parameters on module %u %s count from G2 = %u, our structures = %u\n", module->type, gModuleProperties[module->type].name, paramCount, module_param_count(module->type));
             }
 
-            if (paramCount > module_param_count(module.type)) {
+            if (paramCount > module_param_count(module->type)) {
                 exit(1);
             }
         }
 
-        for (j = 0; j < numVariations; j++) {                                                          // 0 to 9, but last 2 not available on old editor. Possibly/probably init values?
+        for (j = 0; j < numVariations; j++) {
             uint32_t variation = read_bit_stream(buff, subOffset, 8);
 
-            if (variation == 0) { // Limit to just 1st variation for now
+            if (variation == 0) {
                 LOG_DEBUG("  Variation %u\n", variation);
             }
 
@@ -329,30 +324,25 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             }
 
             for (k = 0; k < paramCount; k++) {
-                paramValue               = read_bit_stream(buff, subOffset, 7);
+                paramValue                = read_bit_stream(buff, subOffset, 7);
 
-                if (variation == 0) { // Limit to just 1st variation for now
+                if (variation == 0) {
                     LOG_DEBUG("   Param number %02d param value %02d\n", k, paramValue);
                 }
 
                 if (variation == 9) {
-                    if (module.param[8][k].value != paramValue) {
-                        // TODO - could check what's in var 9 against initialisation values held in the module resources structure, since suspect that 9 should have G2's idea of init values
-                        LOG_DEBUG("   Difference on init value in 8 = %02d 9 = %02d\n", module.param[8][k].value, paramValue);
+                    if (module->param[8][k].value != paramValue) {
+                        LOG_DEBUG("   Difference on init value in 8 = %02d 9 = %02d\n", module->param[8][k].value, paramValue);
                     }
                 }
-                module.param[j][k].value = paramValue;
+                module->param[j][k].value = paramValue;
             }
         }
-
-        write_module(key, &module);         // Careful with type 2, morphs!
     }
 }
 
 void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos, uint32_t numVariations) {
-    tModule  module            = {0};
     uint32_t moduleCount       = 0;
-    bool     validModule       = false;
     uint32_t sizeBitPos        = 0;
     uint32_t moduleCountBitPos = 0;
     uint32_t variationsBitPos  = 0;
@@ -369,41 +359,35 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     write_bit_stream(buff, bitPos, 2, location);
 
     moduleCountBitPos = *bitPos;
-    write_bit_stream(buff, bitPos, 8, 0);  // Populated later
+    write_bit_stream(buff, bitPos, 8, 0);   // Populated later
 
     variationsBitPos  = *bitPos;
-    write_bit_stream(buff, bitPos, 8, 0);  // Write 9 for files, not 10!
+    write_bit_stream(buff, bitPos, 8, 0);   // Write 9 for files, not 10!
 
-    reset_walk_module();
+    for (i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, location, i);
 
-    do {
-        validModule = walk_next_module(&module);
+        if (!module->active) {
+            continue;
+        }
+        paramCount = module->actualParamCount;
 
-        if (validModule == true) {
-            if ((module.key.slot == slot) && (module.key.location == location)) {
-                variations = numVariations; // At least one valid module, so we have variations
+        if (paramCount > 0) {
+            variations = numVariations;
+            moduleCount++;
 
-                paramCount = module.actualParamCount;
+            write_bit_stream(buff, bitPos, 8, module->key.index);
+            write_bit_stream(buff, bitPos, 7, paramCount);
 
-                if (paramCount > 0) {
-                    moduleCount++;
+            for (uint32_t v = 0; v < numVariations; v++) {
+                write_bit_stream(buff, bitPos, 8, v);
 
-                    write_bit_stream(buff, bitPos, 8, module.key.index);
-                    write_bit_stream(buff, bitPos, 7, paramCount);
-
-                    for (i = 0; i < numVariations; i++) {
-                        write_bit_stream(buff, bitPos, 8, i);
-
-                        for (j = 0; j < paramCount; j++) {
-                            write_bit_stream(buff, bitPos, 7, module.param[i][j].value);
-                        }
-                    }
+                for (j = 0; j < paramCount; j++) {
+                    write_bit_stream(buff, bitPos, 7, module->param[v][j].value);
                 }
             }
         }
-    } while (validModule);
-
-    finish_walk_module();
+    }
 
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 
@@ -413,7 +397,6 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
 }
 
 void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
-    tModule    module          = {0};
     tModuleKey key             = {0};
     uint32_t   numVariations   = 0;
     uint32_t   variation       = 0;
@@ -457,23 +440,20 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             LOG_DEBUG("  Morph %u\n", morph);
             LOG_DEBUG("  Range %u\n", range);
 
-            if (read_module(key, &module) == false) {
-                write_module(key, &module);
-            }
+            if ((key.location < (uint32_t)locationMax) && (key.index < MAX_NUM_MODULES)) {
+                tModule * module = get_module_slot(key.slot, key.location, key.index);
 
-            if (morph < NUM_MORPHS) {
-                module.param[variation][paramIndex].morphRange[morph] = (uint8_t)range;
-            } else {
-                LOG_ERROR("morph index %u out of range\n", morph);
+                if (morph < NUM_MORPHS) {
+                    module->param[variation][paramIndex].morphRange[morph] = (uint8_t)range;
+                } else {
+                    LOG_ERROR("morph index %u out of range\n", morph);
+                }
             }
-            write_module(key, &module);
         }
     }
 }
 
 void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32_t numVariations) {
-    tModule  module                = {0};
-    bool     validModule           = false;
     uint32_t sizeBitPos            = 0;
     uint32_t morphParamCountBitPos = 0;
     uint32_t morphParamCount       = 0;
@@ -505,32 +485,30 @@ void write_morph_params(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32
         write_bit_stream(buff, bitPos, 8, 0);  // Populated later
 
         morphParamCount       = 0;
-        reset_walk_module();
 
-        do {
-            validModule = walk_next_module(&module);
+        for (uint32_t l = 0; l < (uint32_t)locationMax; l++) {
+            for (uint32_t idx = 0; idx < MAX_NUM_MODULES; idx++) {
+                tModule * module = get_module_slot(slot, l, idx);
 
-            if (validModule == true) {
-                if (module.key.slot == slot) {
-                    paramCount = module.actualParamCount;
+                if (!module->active) {
+                    continue;
+                }
+                paramCount = module->actualParamCount;
 
-                    for (j = 0; j < paramCount; j++) {
-                        for (m = 0; m < gMorphCount[slot]; m++) {
-                            if (module.param[i][j].morphRange[m] != 0) {
-                                morphParamCount++;
-                                write_bit_stream(buff, bitPos, 2, module.key.location);
-                                write_bit_stream(buff, bitPos, 8, module.key.index);
-                                write_bit_stream(buff, bitPos, 7, j); // Parameter index
-                                write_bit_stream(buff, bitPos, 4, m); // Morph index
-                                write_bit_stream(buff, bitPos, 8, module.param[i][j].morphRange[m]);
-                            }
+                for (j = 0; j < paramCount; j++) {
+                    for (m = 0; m < gMorphCount[slot]; m++) {
+                        if (module->param[i][j].morphRange[m] != 0) {
+                            morphParamCount++;
+                            write_bit_stream(buff, bitPos, 2, module->key.location);
+                            write_bit_stream(buff, bitPos, 8, module->key.index);
+                            write_bit_stream(buff, bitPos, 7, j);
+                            write_bit_stream(buff, bitPos, 4, m);
+                            write_bit_stream(buff, bitPos, 8, module->param[i][j].morphRange[m]);
                         }
                     }
                 }
             }
-        } while (validModule);
-
-        finish_walk_module();
+        }
 
         write_bit_stream(buff, &morphParamCountBitPos, 8, morphParamCount);
     }
@@ -644,7 +622,6 @@ void write_knobs(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
 
 void parse_controllers(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     tModuleKey key             = {0};
-    tModule    module          = {0};
     uint32_t   controllerCount = 0;
     uint32_t   paramIndex      = 0;
     int        i               = 0;
@@ -673,11 +650,12 @@ void parse_controllers(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                   i, gControllerArray[slot].controller[i].midiCC, key.location, key.index, paramIndex);
 
         // Shadow onto the module param for convenient per-param lookup
-        if (read_module(key, &module) == true) {
+        tModule * module = get_module(key);
+
+        if (module != NULL) {
             if (paramIndex < MAX_NUM_PARAMETERS) {
-                module.param[0][paramIndex].midiCC    = gControllerArray[slot].controller[i].midiCC;
-                module.param[0][paramIndex].hasMidiCC = true;
-                write_module(key, &module);
+                module->param[0][paramIndex].midiCC    = gControllerArray[slot].controller[i].midiCC;
+                module->param[0][paramIndex].hasMidiCC = true;
             } else {
                 LOG_ERROR("Controller paramIndex %u out of range for module %u\n", paramIndex, key.index);
             }
@@ -717,7 +695,6 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     uint32_t   nameCount    = 0;
     uint32_t   paramLength  = 0;
     uint32_t   moduleLength = 0;
-    tModule    module       = {0};
     tModuleKey key          = {0};
     int        i            = 0;
     int        j            = 0;
@@ -739,9 +716,12 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         key.index    = read_bit_stream(buff, subOffset, 8);
         LOG_DEBUG("Module index      %d\n", key.index);
 
-        if (read_module(key, &module) == false) {
-            write_module(key, &module);
+        if ((key.location >= (uint32_t)locationMax) || (key.index >= MAX_NUM_MODULES)) {
+            LOG_ERROR("parse_param_names: key out of bounds location=%u index=%u\n", key.location, key.index);
+            break;
         }
+        tModule * module = get_module_slot(key.slot, key.location, key.index);
+
         moduleLength = read_bit_stream(buff, subOffset, 8);
         LOG_DEBUG("Module length     %d\n\n", moduleLength);
 
@@ -774,16 +754,16 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                     continue;
                 }
 
-                if (sizeof(module.paramName[0]) < (numLabels * PROTOCOL_PARAM_NAME_SIZE)) {
+                if (sizeof(module->paramName[0]) < (numLabels * PROTOCOL_PARAM_NAME_SIZE)) {
                     LOG_ERROR("paramName array too small for %u labels\n", numLabels);
                     exit(1);
                 }
-                memset(&module.paramName[paramIndex], 0, sizeof(module.paramName[0]));
+                memset(&module->paramName[paramIndex], 0, sizeof(module->paramName[0]));
 
-                module.paramNumLabels[paramIndex] = numLabels;
+                module->paramNumLabels[paramIndex] = numLabels;
 
                 for (labelIndex = 0; labelIndex < numLabels; labelIndex++) {
-                    module.paramNameSet[paramIndex][labelIndex] = true;
+                    module->paramNameSet[paramIndex][labelIndex] = true;
 
                     for (k = 0; k < PROTOCOL_PARAM_NAME_SIZE; k++) {
                         uint8_t ch = read_bit_stream(buff, subOffset, 8);
@@ -793,23 +773,19 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                         } else {
                             LOG_DEBUG_DIRECT(" ");
                         }
-                        module.paramName[paramIndex][labelIndex][k] = ch;
+                        module->paramName[paramIndex][labelIndex][k] = ch;
                     }
                 }
 
-                j                                += paramLength - 1;
+                j                                 += paramLength - 1;
             }
             LOG_DEBUG_DIRECT(";\n");
         }
-
-        write_module(key, &module);
     }
 }
 
 void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos) {
-    tModule  module             = {0};
     uint32_t nameCount          = 0;
-    bool     validModule        = false;
     uint32_t sizeBitPos         = 0;
     uint32_t nameCountBitPos    = 0;
     uint32_t moduleLengthBitPos = 0;
@@ -834,80 +810,74 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
 
     LOG_DEBUG("Write param names for location %d\n", location);
 
-    nameCount       = 0;
-    reset_walk_module();
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, location, i);
 
-    do {
-        validModule = walk_next_module(&module);
+        if (!module->active) {
+            continue;
+        }
+        paramCount = module->actualParamCount;
 
-        if (validModule == true) {
-            if ((module.key.slot == slot) && (module.key.location == location)) {
-                paramCount = module.actualParamCount;
+        if (paramCount > 0) {
+            moduleHasNames = false;
 
-                if (paramCount > 0) {
-                    moduleHasNames = false;
-
-                    for (j = 0; j < paramCount; j++) {
-                        for (labelIndex = 0; labelIndex < MAX_NUM_LABELS; labelIndex++) {
-                            if (module.paramNameSet[j][labelIndex] == true) {
-                                moduleHasNames = true;
-                                break;
-                            }
-                        }
-
-                        if (moduleHasNames) {
-                            break;
-                        }
-                    }
-
-                    if (moduleHasNames) {
-                        nameCount++;
-                        write_bit_stream(buff, bitPos, 8, module.key.index);
-
-                        moduleLengthBitPos = *bitPos;
-                        write_bit_stream(buff, bitPos, 8, 0);  // Populated later
-
-                        moduleLength       = 0;
-
-                        for (j = 0; j < paramCount; j++) {
-                            numLabels = module.paramNumLabels[j];
-
-                            if (numLabels > 0) {
-                                paramLength   = 1 + (numLabels * PROTOCOL_PARAM_NAME_SIZE);
-
-                                write_bit_stream(buff, bitPos, 8, 1);  // isString
-                                write_bit_stream(buff, bitPos, 8, paramLength);
-                                write_bit_stream(buff, bitPos, 8, j);  // paramIndex
-
-                                moduleLength += 3;
-
-                                for (labelIndex = 0; labelIndex < numLabels; labelIndex++) {
-                                    LOG_DEBUG("Write param Name: ");
-
-                                    for (k = 0; k < PROTOCOL_PARAM_NAME_SIZE; k++) {
-                                        if ((module.paramName[j][labelIndex][k] >= 0x20) && (module.paramName[j][labelIndex][k] <= 0x7f)) {
-                                            LOG_DEBUG_DIRECT("%c", module.paramName[j][labelIndex][k]);
-                                        } else {
-                                            LOG_DEBUG_DIRECT(" ");
-                                        }
-                                        write_bit_stream(buff, bitPos, 8, module.paramName[j][labelIndex][k]);
-                                    }
-
-                                    LOG_DEBUG_DIRECT(";\n");
-                                }
-
-                                moduleLength += paramLength - 1;
-                            }
-                        }
-
-                        write_bit_stream(buff, &moduleLengthBitPos, 8, moduleLength);
+            for (j = 0; j < paramCount; j++) {
+                for (labelIndex = 0; labelIndex < MAX_NUM_LABELS; labelIndex++) {
+                    if (module->paramNameSet[j][labelIndex] == true) {
+                        moduleHasNames = true;
+                        break;
                     }
                 }
+
+                if (moduleHasNames) {
+                    break;
+                }
+            }
+
+            if (moduleHasNames) {
+                nameCount++;
+                write_bit_stream(buff, bitPos, 8, module->key.index);
+
+                moduleLengthBitPos = *bitPos;
+                write_bit_stream(buff, bitPos, 8, 0);  // Populated later
+
+                moduleLength       = 0;
+
+                for (j = 0; j < paramCount; j++) {
+                    numLabels = module->paramNumLabels[j];
+
+                    if (numLabels > 0) {
+                        paramLength   = 1 + (numLabels * PROTOCOL_PARAM_NAME_SIZE);
+
+                        write_bit_stream(buff, bitPos, 8, 1);  // isString
+                        write_bit_stream(buff, bitPos, 8, paramLength);
+                        write_bit_stream(buff, bitPos, 8, j);  // paramIndex
+
+                        moduleLength += 3;
+
+                        for (labelIndex = 0; labelIndex < numLabels; labelIndex++) {
+                            LOG_DEBUG("Write param Name: ");
+
+                            for (k = 0; k < PROTOCOL_PARAM_NAME_SIZE; k++) {
+                                if ((module->paramName[j][labelIndex][k] >= 0x20) && (module->paramName[j][labelIndex][k] <= 0x7f)) {
+                                    LOG_DEBUG_DIRECT("%c", module->paramName[j][labelIndex][k]);
+                                } else {
+                                    LOG_DEBUG_DIRECT(" ");
+                                }
+                                write_bit_stream(buff, bitPos, 8, module->paramName[j][labelIndex][k]);
+                            }
+
+                            LOG_DEBUG_DIRECT(";\n");
+                        }
+
+                        moduleLength += paramLength - 1;
+                    }
+                }
+
+                write_bit_stream(buff, &moduleLengthBitPos, 8, moduleLength);
             }
         }
-    } while (validModule);
-
-    finish_walk_module();
+    }
 
     *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 
@@ -916,11 +886,9 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
 }
 
 void parse_module_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
-    tModule    module = {0};
-    tModuleKey key    = {0};
-    uint32_t   i      = 0;
+    tModuleKey key   = {0};
+    uint32_t   i     = 0;
     char       name[CLAVIA_NAME_SIZE + 1];
-
 
     LOG_DEBUG("Module names\n");
 
@@ -928,34 +896,26 @@ void parse_module_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     key.location = read_bit_stream(buff, subOffset, 2);
     read_bit_stream(buff, subOffset, 6);
     LOG_DEBUG("Location 0x%x\n", key.location);
-    uint32_t   items  = read_bit_stream(buff, subOffset, 8);
+    uint32_t   items = read_bit_stream(buff, subOffset, 8);
     LOG_DEBUG("Items %u\n", items);
 
     for (i = 0; i < items; i++) {
         key.index = read_bit_stream(buff, subOffset, 8);
-        //LOG_DEBUG(" Module Name Index %u\n", key.index);
-
-        //LOG_DEBUG(" Module loc %u index %u\n", module.key.location, module.key.index);
-
         read_clavia_string(buff, subOffset, name, sizeof(name));
 
-        //LOG_DEBUG("%s\n", name);
+        tModule * module = get_module(key);
 
-        if (read_module(key, &module) == true) {
-            strncpy(module.name, name, sizeof(module.name));
-            module.name[sizeof(module.name) - 1] = '\0';
-            write_module(key, &module);
+        if (module != NULL) {
+            strncpy(module->name, name, sizeof(module->name));
+            module->name[sizeof(module->name) - 1] = '\0';
         }
     }
 }
 
 void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos) {
-    tModule  module          = {0};
     uint32_t moduleCount     = 0;
-    bool     validModule     = false;
     uint32_t sizeBitPos      = 0;
     uint32_t itemCountBitPos = 0;
-    uint32_t k               = 0;
 
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_MODULE_NAMES);
 
@@ -968,25 +928,19 @@ void write_module_names(uint32_t slot, tLocation location, uint8_t * buff, uint3
     itemCountBitPos = *bitPos;
     write_bit_stream(buff, bitPos, 8, 0);  // Populated later
 
-    moduleCount     = 0;
-    reset_walk_module();
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, location, i);
 
-    do {
-        validModule = walk_next_module(&module);
-
-        if (validModule == true) {
-            if ((module.key.slot == slot) && (module.key.location == location)) {
-                if (module.name[0] != '\0') {
-                    moduleCount++;
-                    write_bit_stream(buff, bitPos, 8, module.key.index);
-
-                    write_clavia_string(buff, bitPos, module.name);
-                }
-            }
+        if (!module->active) {
+            continue;
         }
-    } while (validModule);
 
-    finish_walk_module();
+        if (module->name[0] != '\0') {
+            moduleCount++;
+            write_bit_stream(buff, bitPos, 8, module->key.index);
+            write_clavia_string(buff, bitPos, module->name);
+        }
+    }
 
     *bitPos         = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 
@@ -1060,48 +1014,43 @@ void send_mode_value(uint32_t slot, tModuleKey moduleKey, uint32_t modeIdx, uint
 }
 
 void update_module_up_rates(void) {
-    tModule  module      = {0};
     uint32_t slot        = atomic_load(&gSlot);
     uint32_t location    = atomic_load(&gLocation);
     bool     changesMade = false;
 
-    reset_walk_module();
+    // Reset newUpRate for all modules in this slot/location
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, location, i);
 
-    while (walk_next_module(&module)) {
-        if (module.key.slot == slot && module.key.location == location) {
-            module.newUpRate = 0;
-            write_module(module.key, &module);
+        if (module->active) {
+            module->newUpRate = 0;
         }
     }
-    finish_walk_module();
 
     do {
-        tCable  cable      = {0};
-        tModule fromModule = {0};
-        tModule toModule   = {0};
+        tCable cable = {0};
 
         changesMade = false;
 
         reset_walk_cable();
 
         while (walk_next_cable(&cable)) {
-            tConnectorDir fromConnector = connectorDirOut;
-            int           fromConnIndex = -1;
-            int           toConnIndex   = -1;
-            tModuleKey    fromModuleKey = {cable.key.slot, cable.key.location, cable.key.moduleFromIndex};
-            tModuleKey    toModuleKey   = {cable.key.slot, cable.key.location, cable.key.moduleToIndex};
+            tModuleKey fromModuleKey = {cable.key.slot, cable.key.location, cable.key.moduleFromIndex};
+            tModuleKey toModuleKey   = {cable.key.slot, cable.key.location, cable.key.moduleToIndex};
 
             if ((fromModuleKey.slot == slot) && (toModuleKey.slot == slot) && (fromModuleKey.location == location) && (toModuleKey.location == location)) {
-                if (read_module(fromModuleKey, &fromModule) && read_module(toModuleKey, &toModule)) {
-                    fromConnector = (cable.key.linkType == cableLinkTypeFromInput) ? connectorDirIn : connectorDirOut;
-                    fromConnIndex = find_index_from_io_count(&fromModule, fromConnector, cable.key.connectorFromIoCount);
-                    toConnIndex   = find_index_from_io_count(&toModule, connectorDirIn, cable.key.connectorToIoCount);
+                tModule * fromModule = get_module(fromModuleKey);
+                tModule * toModule   = get_module(toModuleKey);
 
-                    if ((fromConnIndex != -1) && (toConnIndex != -1) && (toModule.newUpRate == 0)) {
-                        if (fromModule.newUpRate == 1 || ((fromModule.connector[fromConnIndex].type == connectorTypeAudio) && (toModule.connector[toConnIndex].type != connectorTypeAudio))) {
-                            toModule.newUpRate = 1;
-                            write_module(toModuleKey, &toModule);
-                            changesMade        = true;
+                if ((fromModule != NULL) && (toModule != NULL)) {
+                    tConnectorDir fromConnector = (cable.key.linkType == cableLinkTypeFromInput) ? connectorDirIn : connectorDirOut;
+                    int           fromConnIndex = find_index_from_io_count(fromModule, fromConnector, cable.key.connectorFromIoCount);
+                    int           toConnIndex   = find_index_from_io_count(toModule, connectorDirIn, cable.key.connectorToIoCount);
+
+                    if ((fromConnIndex != -1) && (toConnIndex != -1) && (toModule->newUpRate == 0)) {
+                        if (fromModule->newUpRate == 1 || ((fromModule->connector[fromConnIndex].type == connectorTypeAudio) && (toModule->connector[toConnIndex].type != connectorTypeAudio))) {
+                            toModule->newUpRate = 1;
+                            changesMade         = true;
                         }
                     }
                 }
@@ -1110,24 +1059,20 @@ void update_module_up_rates(void) {
         finish_walk_cable();
     } while (changesMade);
 
-    reset_walk_module();
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, location, i);
 
-    while (walk_next_module(&module)) {
-        if ((module.key.slot == slot) && (module.key.location == location)) {
-            if (module.newUpRate != module.upRate) {
-                tMessageContent messageContent = {0};
+        if (module->active && (module->newUpRate != module->upRate)) {
+            tMessageContent messageContent = {0};
 
-                module.upRate                       = module.newUpRate;
-                write_module(module.key, &module);
-                messageContent.cmd                  = eMsgCmdSetModuleUpRate;
-                messageContent.slot                 = slot;
-                messageContent.moduleData.moduleKey = module.key;
-                messageContent.moduleData.upRate    = module.upRate;
-                msg_send(&gCommandQueue, &messageContent);
-            }
+            module->upRate                      = module->newUpRate;
+            messageContent.cmd                  = eMsgCmdSetModuleUpRate;
+            messageContent.slot                 = slot;
+            messageContent.moduleData.moduleKey = module->key;
+            messageContent.moduleData.upRate    = module->upRate;
+            msg_send(&gCommandQueue, &messageContent);
         }
     }
-    finish_walk_module();
 }
 
 #ifdef __cplusplus

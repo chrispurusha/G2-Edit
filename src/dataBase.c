@@ -24,15 +24,13 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 
+//extern tModule         gModule[MAX_SLOTS][locationMax][MAX_NUM_MODULES];
+tModule                gModule[MAX_SLOTS][locationMax][MAX_NUM_MODULES] = {0};
+
 static pthread_mutex_t dbMutex                                          = {0};
-static tModule         modules[MAX_SLOTS][locationMax][MAX_NUM_MODULES] = {0};
-static uint32_t        walkSlot                                         = 0;
-static uint32_t        walkLocation                                     = 0;
-static uint32_t        walkIndex                                        = 0;
 static tCable *        firstCable                                       = NULL;
 static tCable *        lastCable                                        = NULL;
 static tCable *        walkCable                                        = NULL;
-static int32_t         moduleWalkNestCount                              = 0;
 static int32_t         cableWalkNestCount                               = 0;
 
 static void database_mutex_init(void) {
@@ -52,142 +50,73 @@ static void database_mutex_unlock(void) {
     pthread_mutex_unlock(&dbMutex);
 }
 
-void dump_modules(void) {
-    uint32_t count = 0;
-
-    database_mutex_lock();
-    LOG_DEBUG("\n\nDump modules\n");
-
-    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-        for (uint32_t location = 0; location < (uint32_t)locationMax; location++) {
-            for (uint32_t index = 0; index < MAX_NUM_MODULES; index++) {
-                if (modules[slot][location][index].active) {
-                    tModule * module = &modules[slot][location][index];
-                    LOG_DEBUG("Slot %u\n", module->key.slot);
-                    LOG_DEBUG("Location %u\n", module->key.location);
-                    LOG_DEBUG("Index %u\n", module->key.index);
-                    LOG_DEBUG(" Type %u\n", module->type);
-                    LOG_DEBUG(" Name %s\n", module->name);
-                    LOG_DEBUG(" Row %d\n", module->row);
-                    LOG_DEBUG(" Column %d\n", module->column);
-                    count++;
-                }
-            }
-        }
+tModule * get_module_slot(uint32_t slot, uint32_t location, uint32_t index) {
+    if ((slot < MAX_SLOTS) && (location < (uint32_t)locationMax) && (index < MAX_NUM_MODULES)) {
+        return &gModule[slot][location][index];
     }
-
-    LOG_DEBUG("\nModule Count=%u\n", count);
-    LOG_DEBUG("\n\n");
-    database_mutex_unlock();
+    return NULL;
 }
 
-static tModule * find_module(tModuleKey key) {
-    tModule * module = NULL;
+tModule * get_module(tModuleKey key) {
+    tModule * module = get_module_slot(key.slot, key.location, key.index);
 
-    database_mutex_lock();
-
-    if ((key.slot < MAX_SLOTS) && (key.location < (uint32_t)locationMax) && (key.index < MAX_NUM_MODULES)) {
-        if (modules[key.slot][key.location][key.index].active) {
-            module = &modules[key.slot][key.location][key.index];
-        }
+    if ((module != NULL) && module->active) {
+        return module;
     }
-    database_mutex_unlock();
-
-    return module;
-}
-
-bool read_module(tModuleKey key, tModule * module) {
-    bool      retVal      = false;
-    tModule * foundModule = NULL;
-
-    memset(module, 0, sizeof(*module));
-
-    database_mutex_lock();
-
-    foundModule = find_module(key);
-
-    if (foundModule != NULL) {
-        memcpy(module, foundModule, sizeof(*module));
-        retVal = true;
-    }
-    database_mutex_unlock();
-
-    return retVal;
+    return NULL;
 }
 
 void write_module(tModuleKey key, tModule * module) {
     module->key    = key;
     module->active = true;
 
-    database_mutex_lock();
-
     if ((key.slot < MAX_SLOTS) && (key.location < (uint32_t)locationMax) && (key.index < MAX_NUM_MODULES)) {
-        modules[key.slot][key.location][key.index] = *module;
+        gModule[key.slot][key.location][key.index] = *module;
     } else {
         LOG_ERROR("Module key out of bounds slot=%u location=%u index=%u\n", key.slot, key.location, key.index);
     }
-    database_mutex_unlock();
 }
 
 void delete_module(tModuleKey key) {
-    database_mutex_lock();
-
     if ((key.slot < MAX_SLOTS) && (key.location < (uint32_t)locationMax) && (key.index < MAX_NUM_MODULES)) {
-        memset(&modules[key.slot][key.location][key.index], 0, sizeof(tModule));
+        memset(&gModule[key.slot][key.location][key.index], 0, sizeof(tModule));
     }
-    database_mutex_unlock();
 }
 
-void reset_walk_module(void) {
-    database_mutex_lock();
-    moduleWalkNestCount++;
-
-    if (moduleWalkNestCount > 1) {
-        LOG_ERROR("Attempted to nest module walk - can't do that\n");
-        exit(1);
-    }
-    walkSlot     = 0;
-    walkLocation = 0;
-    walkIndex    = 0;
-}
-
-void finish_walk_module(void) {
-    moduleWalkNestCount--;
-    database_mutex_unlock();
-}
-
-bool walk_next_module(tModule * module) {
-    bool validModule = false;
-
-    memset(module, 0, sizeof(*module));
-    database_mutex_lock();
-
-    while (walkSlot < MAX_SLOTS) {
-        uint32_t s = walkSlot;
-        uint32_t l = walkLocation;
-        uint32_t i = walkIndex;
-
-        walkIndex++;
-
-        if (walkIndex >= MAX_NUM_MODULES) {
-            walkIndex = 0;
-            walkLocation++;
-
-            if (walkLocation >= (uint32_t)locationMax) {
-                walkLocation = 0;
-                walkSlot++;
+void database_delete_modules_by_slot(uint32_t slot) {
+    if (slot < MAX_SLOTS) {
+        for (uint32_t location = 0; location < (uint32_t)locationMax; location++) {
+            for (uint32_t index = 0; index < MAX_NUM_MODULES; index++) {
+                memset(&gModule[slot][location][index], 0, sizeof(tModule));
             }
         }
+    }
+}
 
-        if (modules[s][l][i].active) {
-            *module     = modules[s][l][i];
-            validModule = true;
-            break;
+void database_clear_modules(void) {
+    memset(gModule, 0, sizeof(gModule));
+}
+
+void dump_modules(void) {
+    uint32_t count = 0;
+
+    LOG_DEBUG("\n\nDump modules\n");
+
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        for (uint32_t location = 0; location < (uint32_t)locationMax; location++) {
+            for (uint32_t index = 0; index < MAX_NUM_MODULES; index++) {
+                if (gModule[slot][location][index].active) {
+                    tModule * module = &gModule[slot][location][index];
+                    LOG_DEBUG("Slot %u Location %u Index %u Type %u Name %s Row %u Column %u\n",
+                              module->key.slot, module->key.location, module->key.index,
+                              module->type, module->name, module->row, module->column);
+                    count++;
+                }
+            }
         }
     }
-    database_mutex_unlock();
 
-    return validModule;
+    LOG_DEBUG("\nModule Count=%u\n\n", count);
 }
 
 void dump_cables(void) {
@@ -359,19 +288,6 @@ bool walk_next_cable(tCable * cable) {
     return validCable;
 }
 
-void database_delete_modules_by_slot(uint32_t slot) {
-    database_mutex_lock();
-
-    if (slot < MAX_SLOTS) {
-        for (uint32_t location = 0; location < (uint32_t)locationMax; location++) {
-            for (uint32_t index = 0; index < MAX_NUM_MODULES; index++) {
-                memset(&modules[slot][location][index], 0, sizeof(tModule));
-            }
-        }
-    }
-    database_mutex_unlock();
-}
-
 void database_delete_cables_by_slot(uint32_t slot) {
     tCable * cable     = NULL;
     tCable * nextCable = NULL;
@@ -388,12 +304,6 @@ void database_delete_cables_by_slot(uint32_t slot) {
         }
         cable     = nextCable;
     }
-    database_mutex_unlock();
-}
-
-void database_clear_modules(void) {
-    database_mutex_lock();
-    memset(modules, 0, sizeof(modules));
     database_mutex_unlock();
 }
 

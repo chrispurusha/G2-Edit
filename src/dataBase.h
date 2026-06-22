@@ -24,15 +24,13 @@
 #include "defs.h"
 #include "types.h"
 
-bool read_module(tModuleKey key, tModule * module);
+tModule * get_module(tModuleKey key);
+tModule * get_module_slot(uint32_t slot, uint32_t location, uint32_t index);
 void write_module(tModuleKey key, tModule * module);
 void delete_module(tModuleKey key);
 void dump_modules(void);
-void reset_walk_module(void);
-void finish_walk_module(void);
-bool walk_next_module(tModule * module);
-uint32_t module_height(uint32_t type);
-char * module_type_name(uint32_t type);
+void database_clear_modules(void);
+void database_delete_modules_by_slot(uint32_t slot);
 bool read_cable(tCableKey key, tCable * cable);
 void write_cable(tCableKey key, tCable * cable);
 void delete_cable(tCableKey key);
@@ -40,11 +38,9 @@ void dump_cables(void);
 void reset_walk_cable(void);
 void finish_walk_cable(void);
 bool walk_next_cable(tCable * cable);
-void database_clear_modules(void);
 void database_clear_cables(void);
 int find_io_count_from_index(tModule * module, tConnectorDir dir, int index);
 int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCount);
-void database_delete_modules_by_slot(uint32_t slot);
 void database_delete_cables_by_slot(uint32_t slot);
 void init_database(void);
 

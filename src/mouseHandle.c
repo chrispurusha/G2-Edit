@@ -280,195 +280,191 @@ static void send_master_clock_run(uint32_t running) {
     msg_send(&gCommandQueue, &messageContent);
 }
 
-bool handle_module_press(tCoord coord, tMouseButton mouseButton) {
+static bool handle_module_press_for_module(tModule * module, tCoord coord, tMouseButton mouseButton, uint32_t variation) {
     bool        retVal     = false;
     uint32_t    paramCount = 0;
     tParamType2 paramType2 = paramType2Dial;
-    uint32_t    slot       = atomic_load(&gSlot);
-    uint32_t    location   = atomic_load(&gLocation);
-    uint32_t    variation  = gPatchDescr[slot].activeVariation;
-    tModule     module     = {0};
 
-    // Since morph parameters are in top banner area, no longer need to check if (!within_rectangle(coord, module_area()))
-    reset_walk_module();
+    if (module->key.location == locationMorph) {
+        if (module->key.index == 1) {
+            paramCount = NUM_MORPHS * 2;
+        } else {
+            paramCount = 1;
+        }
+    } else {
+        paramCount = module_param_count(module->type);
+    }
 
-    while (walk_next_module(&module) && (retVal == false)) {
-        if (module.key.slot == slot && (module.key.location == location || module.key.location == locationMorph)) {
-            if (module.key.location == locationMorph) {
-                if (module.key.index == 1) {  // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
-                    paramCount = NUM_MORPHS * 2;
-                } else {
-                    paramCount = 1;  // TODO: correct value for index, probably through a function which returns correct count
-                }
+    for (int i = 0; (i < (int)paramCount) && (retVal == false); i++) {
+        tParam * param = &module->param[variation][i];
+
+        if (within_rectangle(coord, gParamRectangle[module->key.slot][module->key.location][module->key.index][i]) && mouseButton == mouseButtonLeftDown) {
+            if (module->key.location == locationMorph) {
+                paramType2 = (i < NUM_MORPHS) ? paramType2Dial : paramType2Toggle;
             } else {
-                paramCount = module_param_count(module.type);
+                paramType2 = (paramLocationList[param->paramRef].type2);
             }
 
-            // Deal with click on param
-            for (int i = 0; (i < paramCount) && (retVal == false); i++) {
-                tParam * param = &module.param[variation][i];
+            if (paramType2 == paramType2Dial) {
+                gParamDragging.moduleKey = module->key;
+                gParamDragging.type3     = paramType3Param;
+                gParamDragging.param     = i;
+                gParamDragging.active    = true;
 
-                if (within_rectangle(coord, gParamRectangle[module.key.slot][module.key.location][module.key.index][i]) && mouseButton == mouseButtonLeftDown) {
-                    if (module.key.location == locationMorph) {      // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
-                        if (i < NUM_MORPHS) {
-                            paramType2 = paramType2Dial;
-                        } else {
-                            paramType2 = paramType2Toggle;
-                        }
-                    } else {
-                        paramType2 = (paramLocationList[param->paramRef].type2);
-                    }
-
-                    if (paramType2 == paramType2Dial) {
-                        gParamDragging.moduleKey = module.key;
-                        gParamDragging.type3     = paramType3Param;
-                        gParamDragging.param     = i;
-                        gParamDragging.active    = true;
-
-                        if (module.key.location == locationMorph) {
-                            gMorphGroupFocus = i;
-                        }
-                        retVal                   = true;
-                    }
-                    // Toggle: retVal stays false, handled on release
+                if (module->key.location == locationMorph) {
+                    gMorphGroupFocus = i;
                 }
+                retVal                   = true;
             }
+        }
+    }
 
-            // Modes — dials only on press
-            if (retVal == false) {
-                for (int i = 0; (i < module.modeCount) && (retVal == false); i++) {
-                    tMode * mode = &module.mode[i];
+    if (retVal == false) {
+        for (int i = 0; (i < (int)module->modeCount) && (retVal == false); i++) {
+            tMode * mode = &module->mode[i];
 
-                    if (within_rectangle(coord, module.mode[i].rectangle) && mouseButton == mouseButtonLeftDown) {
-                        if ((modeLocationList[mode->modeRef].type2) == paramType2Dial) {
-                            memset(&gParamDragging, 0, sizeof(gParamDragging));
-                            gParamDragging.moduleKey = module.key;
-                            gParamDragging.type3     = paramType3Mode;
-                            gParamDragging.mode      = i;
-                            gParamDragging.active    = true;
-                            retVal                   = true;
-                        }
-                        // Mode toggle: handled on release
-                    }
-                }
-            }
-
-            // Connectors — start cable drag on press
-            if (retVal == false) {
-                for (int i = 0; (i < module_connector_count(module.type)) && (retVal == false); i++) {
-                    if (within_rectangle(coord, module.connector[i].rectangle)) {
-                        gCableDrag.fromModuleKey = module.key;
-
-                        if (mouseButton == mouseButtonLeftDown) {
-                            gCableDrag.fromConnectorIndex = i;
-                            convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, coord);
-                            gCableDrag.active             = true;
-                            retVal                        = true;
-                        }
-                    }
-                }
-            }
-
-            // Module drag area — start drag on press
-            if (retVal == false) {
-                if (within_rectangle(coord, module.dragArea) && mouseButton == mouseButtonLeftDown) {
-                    delete_module(module.key);
-                    write_module(module.key, &module);
-                    gModuleDrag.moduleKey = module.key;
-                    gModuleDrag.active    = true;
-                    retVal                = true;
+            if (within_rectangle(coord, module->mode[i].rectangle) && mouseButton == mouseButtonLeftDown) {
+                if ((modeLocationList[mode->modeRef].type2) == paramType2Dial) {
+                    memset(&gParamDragging, 0, sizeof(gParamDragging));
+                    gParamDragging.moduleKey = module->key;
+                    gParamDragging.type3     = paramType3Mode;
+                    gParamDragging.mode      = i;
+                    gParamDragging.active    = true;
+                    retVal                   = true;
                 }
             }
         }
     }
-    finish_walk_module();
+
+    if (retVal == false) {
+        for (int i = 0; (i < (int)module_connector_count(module->type)) && (retVal == false); i++) {
+            if (within_rectangle(coord, module->connector[i].rectangle)) {
+                gCableDrag.fromModuleKey = module->key;
+
+                if (mouseButton == mouseButtonLeftDown) {
+                    gCableDrag.fromConnectorIndex = i;
+                    convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, coord);
+                    gCableDrag.active             = true;
+                    retVal                        = true;
+                }
+            }
+        }
+    }
+
+    if (retVal == false) {
+        if (within_rectangle(coord, module->dragArea) && mouseButton == mouseButtonLeftDown) {
+            gModuleDrag.moduleKey = module->key;
+            gModuleDrag.active    = true;
+            retVal                = true;
+        }
+    }
     return retVal;
 }
 
-bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
+bool handle_module_press(tCoord coord, tMouseButton mouseButton) {
+    uint32_t slot      = atomic_load(&gSlot);
+    uint32_t location  = atomic_load(&gLocation);
+    uint32_t variation = gPatchDescr[slot].activeVariation;
+
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, location, i);
+
+        if (module->active && handle_module_press_for_module(module, coord, mouseButton, variation)) {
+            return true;
+        }
+    }
+
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
+
+        if (module->active && handle_module_press_for_module(module, coord, mouseButton, variation)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool handle_module_release_for_module(tModule * module, tCoord coord, tMouseButton mouseButton, uint32_t slot, uint32_t variation) {
     bool        retVal     = false;
     uint32_t    paramCount = 0;
     tParamType2 paramType2 = paramType2Dial;
     uint32_t    range      = 0;
 
-    uint32_t    slot       = atomic_load(&gSlot);
-    uint32_t    location   = atomic_load(&gLocation);
-    uint32_t    variation  = gPatchDescr[slot].activeVariation;
+    if (module->key.location == locationMorph) {
+        paramCount = (module->key.index == 1) ? (NUM_MORPHS * 2) : 1;
+    } else {
+        paramCount = module_param_count(module->type);
+    }
+
+    for (int i = 0; (i < (int)paramCount) && (retVal == false); i++) {
+        tParam * param = &module->param[variation][i];
+
+        if (within_rectangle(coord, gParamRectangle[module->key.slot][module->key.location][module->key.index][i]) && mouseButton == mouseButtonLeftUp) {
+            if (module->key.location == locationMorph) {
+                paramType2 = (i < NUM_MORPHS) ? paramType2Dial : paramType2Toggle;
+            } else {
+                paramType2 = (paramLocationList[param->paramRef].type2);
+            }
+
+            if (paramType2 == paramType2Menu) {
+                open_toggle_menu(coord, module->key, (uint32_t)i, param->paramRef);
+                retVal = true;
+            } else if (paramType2 == paramType2Toggle) {
+                range        = (module->key.location == locationMorph) ? 2 : paramLocationList[param->paramRef].range;
+                param->value = (param->value + 1) % range;
+                send_param_value(slot, module->key, (uint32_t)i, variation, param->value);
+                retVal       = true;
+            }
+        }
+    }
+
+    if (retVal == false) {
+        for (int i = 0; (i < (int)module->modeCount) && (retVal == false); i++) {
+            tMode * mode = &module->mode[i];
+
+            if (within_rectangle(coord, module->mode[i].rectangle) && mouseButton == mouseButtonLeftUp) {
+                if (modeLocationList[mode->modeRef].type2 == paramType2Menu) {
+                    open_mode_toggle_menu(coord, module->key, (uint32_t)i, mode->modeRef);
+                    retVal = true;
+                } else if (modeLocationList[mode->modeRef].type2 == paramType2Toggle) {
+                    mode->value = (mode->value + 1) % modeLocationList[mode->modeRef].range;
+                    send_mode_value(slot, module->key, (uint32_t)i, mode->value);
+                    retVal      = true;
+                }
+            }
+        }
+    }
+    return retVal;
+}
+
+bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
+    uint32_t slot      = atomic_load(&gSlot);
+    uint32_t location  = atomic_load(&gLocation);
+    uint32_t variation = gPatchDescr[slot].activeVariation;
 
     // Only fire if we weren't dragging — dial drags are handled in cursor_pos
     if (gParamDragging.active || gModuleDrag.active || gCableDrag.active) {
         return false;
     }
-    reset_walk_module();
-    tModule     module     = {0};
 
-    while (walk_next_module(&module) && (retVal == false)) {
-        if (module.key.slot == slot && (module.key.location == location || module.key.location == locationMorph)) {
-            if (module.key.location == locationMorph) {
-                if (module.key.index == 1) {  // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
-                    paramCount = NUM_MORPHS * 2;
-                } else {
-                    paramCount = 1;  // TODO: correct value for index, probably through a function which returns correct count
-                }
-            } else {
-                paramCount = module_param_count(module.type);
-            }
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, location, i);
 
-            // Params — toggles fire on release
-            for (int i = 0; (i < paramCount) && (retVal == false); i++) {
-                tParam * param = &module.param[variation][i];
-
-                if (within_rectangle(coord, gParamRectangle[module.key.slot][module.key.location][module.key.index][i]) && mouseButton == mouseButtonLeftUp) {
-                    if (module.key.location == locationMorph) {  // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
-                        if (i < NUM_MORPHS) {
-                            paramType2 = paramType2Dial;
-                        } else {
-                            paramType2 = paramType2Toggle;
-                        }
-                    } else {
-                        paramType2 = (paramLocationList[param->paramRef].type2);
-                    }
-
-                    if (paramType2 == paramType2Menu) {
-                        open_toggle_menu(coord, module.key, (uint32_t)i, param->paramRef);
-                        retVal = true;
-                    } else if (paramType2 == paramType2Toggle) {
-                        if (module.key.location == locationMorph) {   // TODO: See if we can roll count into standard mechanism and pre-create the morph modules - maybe create new types at end of list?
-                            range = 2;
-                        } else {
-                            range = paramLocationList[param->paramRef].range;
-                        }
-                        param->value = (param->value + 1) % range;
-                        write_module(module.key, &module);
-                        send_param_value(slot, module.key, (uint32_t)i, variation, param->value);
-                        retVal       = true;
-                    }
-                    // Dials: already handled in cursor_pos via gParamDragging
-                }
-            }
-
-            // Modes — toggle fires on release
-            if (retVal == false) {
-                for (int i = 0; (i < module.modeCount) && (retVal == false); i++) {
-                    tMode * mode = &module.mode[i];
-
-                    if (within_rectangle(coord, module.mode[i].rectangle) && mouseButton == mouseButtonLeftUp) {
-                        if (modeLocationList[mode->modeRef].type2 == paramType2Menu) {
-                            open_mode_toggle_menu(coord, module.key, (uint32_t)i, mode->modeRef);
-                            retVal = true;
-                        } else if (modeLocationList[mode->modeRef].type2 == paramType2Toggle) {
-                            mode->value = (mode->value + 1) % modeLocationList[mode->modeRef].range;
-                            write_module(module.key, &module);
-                            send_mode_value(slot, module.key, (uint32_t)i, mode->value);
-                            retVal      = true;
-                        }
-                    }
-                }
-            }
+        if (module->active && handle_module_release_for_module(module, coord, mouseButton, slot, variation)) {
+            return true;
         }
     }
-    finish_walk_module();
-    return retVal;
+
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
+
+        if (module->active && handle_module_release_for_module(module, coord, mouseButton, slot, variation)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool handle_module_area_click(tCoord coord, int button) {
@@ -562,58 +558,63 @@ static bool input_connector_has_cable(uint32_t slot, uint32_t location,
 bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {
     bool      found      = false;
     int32_t   i          = 0;
-    tModule   fromModule = {0};
-    tModule   toModule   = {0};
     tCableKey cableKey   = {0};
     tCable    cable      = {0};
 
-    reset_walk_module();
+    tModule * fromModule = get_module(gCableDrag.fromModuleKey);
 
-    while (found == false && walk_next_module(&toModule)) {
-        if (toModule.key.slot == slot && toModule.key.location == location) {
-            for (i = 0; i < module_connector_count(toModule.type); i++) {
-                if (within_rectangle(coord, toModule.connector[i].rectangle) == true) {
-                    found                                         = true;
-                    read_module(gCableDrag.fromModuleKey, &fromModule);
-                    set_up_cable_key(&cableKey, &fromModule, &toModule, i);
+    if (fromModule == NULL) {
+        return false;
+    }
 
-                    swap_cable_to_from_if_needed(&cableKey, &fromModule, &toModule, i);
+    for (uint32_t idx = 0; idx < MAX_NUM_MODULES && !found; idx++) {
+        tModule * toModule = get_module_slot(slot, location, idx);
 
-                    // Prevent self-connections and invalid connections
-                    if (  (cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i)
-                       || (  fromModule.connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
-                          && toModule.connector[i].dir == connectorDirOut)) {
-                        break;
-                    }
+        if (!toModule->active) {
+            continue;
+        }
 
-                    // Note that this call will walk the cables, which we can't nest
-                    if (input_connector_has_cable(slot, location,
-                                                  cableKey.moduleToIndex,
-                                                  cableKey.connectorToIoCount)) {
-                        break;
-                    }
-                    cable.colour                                  = gCableColour;
-                    write_cable(cableKey, &cable);
+        for (i = 0; i < (int32_t)module_connector_count(toModule->type); i++) {
+            if (within_rectangle(coord, toModule->connector[i].rectangle) == true) {
+                found                                         = true;
+                set_up_cable_key(&cableKey, fromModule, toModule, i);
 
-                    tMessageContent messageContent = {0};
+                swap_cable_to_from_if_needed(&cableKey, fromModule, toModule, i);
 
-                    messageContent.cmd                            = eMsgCmdWriteCable;
-                    messageContent.slot                           = slot;
-                    messageContent.cableData.location             = location;
-                    messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
-                    messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
-                    messageContent.cableData.moduleToIndex        = cableKey.moduleToIndex;
-                    messageContent.cableData.connectorToIoIndex   = cableKey.connectorToIoCount;
-                    messageContent.cableData.linkType             = cableKey.linkType;
-                    messageContent.cableData.colour               = cable.colour;
-                    msg_send(&gCommandQueue, &messageContent);
-
+                // Prevent self-connections and invalid connections
+                if (  (cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i)
+                   || (  fromModule->connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
+                      && toModule->connector[i].dir == connectorDirOut)) {
                     break;
                 }
+
+                // Note that this call will walk the cables, which we can't nest
+                if (input_connector_has_cable(slot, location,
+                                              cableKey.moduleToIndex,
+                                              cableKey.connectorToIoCount)) {
+                    break;
+                }
+                cable.colour                                  = gCableColour;
+                write_cable(cableKey, &cable);
+
+                tMessageContent messageContent = {0};
+
+                messageContent.cmd                            = eMsgCmdWriteCable;
+                messageContent.slot                           = slot;
+                messageContent.cableData.location             = location;
+                messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
+                messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
+                messageContent.cableData.moduleToIndex        = cableKey.moduleToIndex;
+                messageContent.cableData.connectorToIoIndex   = cableKey.connectorToIoCount;
+                messageContent.cableData.linkType             = cableKey.linkType;
+                messageContent.cableData.colour               = cable.colour;
+                msg_send(&gCommandQueue, &messageContent);
+
+                break;
             }
         }
     }
-    finish_walk_module();
+
     update_module_up_rates();
 
     return found;
@@ -644,7 +645,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     tMouseButton mouseButton       = mouseButtonNone;
     bool         found             = false;
     bool         running           = false;
-    tModule      module            = {0};
     int32_t      i                 = 0;
     uint32_t     slot              = atomic_load(&gSlot);
     uint32_t     location          = atomic_load(&gLocation);
@@ -793,10 +793,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (within_rectangle(coord, gTopbarControls[topbarPatchVolumeId].rectangle)) {
-                    module.key.location      = locationMorph;
-                    module.key.slot          = slot;
-                    module.key.index         = PATCH_VOLUME;
-                    gParamDragging.moduleKey = module.key;
+                    tModuleKey volKey = {slot, (uint32_t)locationMorph, PATCH_VOLUME};
+                    gParamDragging.moduleKey = volKey;
                     gParamDragging.type3     = paramType3Param;
                     gParamDragging.param     = VOLUME_LEVEL;
                     gParamDragging.active    = true;
@@ -999,39 +997,40 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
         case mouseButtonRightUp:
         {
-            reset_walk_module();
+            for (uint32_t idx = 0; idx < MAX_NUM_MODULES && !found; idx++) {
+                tModule * module = get_module_slot(slot, location, idx);
 
-            while (found == false && walk_next_module(&module)) {
-                if (module.key.slot == slot && module.key.location == location) {
-                    for (i = 0; i < module_connector_count(module.type); i++) {
-                        if (within_rectangle(coord, module.connector[i].rectangle)) {
-                            open_connector_context_menu(coord, module.key, i);
-                            found = true;
-                            break;
-                        }
+                if (!module->active) {
+                    continue;
+                }
+
+                for (i = 0; i < (int)module_connector_count(module->type); i++) {
+                    if (within_rectangle(coord, module->connector[i].rectangle)) {
+                        open_connector_context_menu(coord, module->key, i);
+                        found = true;
+                        break;
                     }
+                }
 
-                    if (found == false) {
-                        uint32_t paramCount = module_param_count(module.type);
-                        uint32_t variation  = gPatchDescr[slot].activeVariation;
+                if (found == false) {
+                    uint32_t paramCount = module_param_count(module->type);
+                    uint32_t variation  = gPatchDescr[slot].activeVariation;
 
-                        for (uint32_t p = 0; p < paramCount && !found; p++) {
-                            if (within_rectangle(coord, gParamRectangle[module.key.slot][module.key.location][module.key.index][p])) {
-                                open_param_context_menu(coord, module.key, p);
-                                found = true;
-                            }
-                        }
-                    }
-
-                    if (found == false) {
-                        if (within_rectangle(coord, module.rectangle)) {
-                            open_module_context_menu(coord, module.key);
+                    for (uint32_t p = 0; p < paramCount && !found; p++) {
+                        if (within_rectangle(coord, gParamRectangle[module->key.slot][module->key.location][module->key.index][p])) {
+                            open_param_context_menu(coord, module->key, p);
                             found = true;
                         }
                     }
                 }
+
+                if (found == false) {
+                    if (within_rectangle(coord, module->rectangle)) {
+                        open_module_context_menu(coord, module->key);
+                        found = true;
+                    }
+                }
             }
-            finish_walk_module();
 
             if (found == false) {
                 for (int mi = 0; mi < NUM_MORPHS && !found; mi++) {
@@ -1072,7 +1071,6 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     double          angle          = 0.0;
     uint32_t        range          = 0;
     uint32_t        value          = 0;
-    tModule         module         = {0};
     tMessageContent messageContent = {0};
     bool            noAction       = false; // unused — kept to avoid restructuring the else-chain below
     tParamType2     paramType2     = paramType2Dial;
@@ -1115,105 +1113,99 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
             send_master_clock_bpm(value);
         }
     } else if (gParamDragging.active == true) {
-        read_module(gParamDragging.moduleKey, &module);
+        tModule * module = get_module(gParamDragging.moduleKey);
 
-        // TODO: Think about if we need to check key's slot
-        switch (gParamDragging.type3) {
-            case paramType3Param:
+        if (module != NULL) {
+            switch (gParamDragging.type3) {
+                case paramType3Param:
 
-                if (module.key.location == locationMorph) {
-                    paramType2 = paramType2Dial;
-                } else {
-                    paramType2 = paramLocationList[module.param[variation][gParamDragging.param].paramRef].type2;
-                }
-
-                if (paramType2 == paramType2Dial) {
-                    if (module.key.location == locationMorph) {
-                        range      = 128;
-                        paramType1 = paramType1CommonDial;
+                    if (module->key.location == locationMorph) {
+                        paramType2 = paramType2Dial;
                     } else {
-                        range      = paramLocationList[module.param[variation][gParamDragging.param].paramRef].range;
-                        paramType1 = paramLocationList[module.param[variation][gParamDragging.param].paramRef].type1;
+                        paramType2 = paramLocationList[module->param[variation][gParamDragging.param].paramRef].type2;
                     }
 
-                    if (paramType1 == paramType1Slider) {
-                        tRectangle rect     = gParamRectangle[module.key.slot][module.key.location][module.key.index][gParamDragging.param];
-                        double     fraction = (rect.coord.y + rect.size.h - y) / rect.size.h;
-
-                        if (fraction < 0.0) {
-                            fraction = 0.0;
+                    if (paramType2 == paramType2Dial) {
+                        if (module->key.location == locationMorph) {
+                            range      = 128;
+                            paramType1 = paramType1CommonDial;
+                        } else {
+                            range      = paramLocationList[module->param[variation][gParamDragging.param].paramRef].range;
+                            paramType1 = paramLocationList[module->param[variation][gParamDragging.param].paramRef].type1;
                         }
 
-                        if (fraction > 1.0) {
-                            fraction = 1.0;
-                        }
-                        value = (uint32_t)round(fraction * (double)(range - 1));
-                    } else {
-                        angle = calculate_mouse_angle((tCoord){x, y}, gParamRectangle[module.key.slot][module.key.location][module.key.index][gParamDragging.param]);                                                            // possible add half size
-                        value = angle_to_value(angle, range);
-                    }
+                        if (paramType1 == paramType1Slider) {
+                            tRectangle rect     = gParamRectangle[module->key.slot][module->key.location][module->key.index][gParamDragging.param];
+                            double     fraction = (rect.coord.y + rect.size.h - y) / rect.size.h;
 
-                    if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) != GLFW_PRESS) {
-                        if (module.param[variation][gParamDragging.param].value != value) {
-                            module.param[variation][gParamDragging.param].value = value;
-
-                            write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
-
-                            send_param_value(slot, gParamDragging.moduleKey, gParamDragging.param, variation, value);
-                        }
-                    } else {
-                        if (module.param[variation][gParamDragging.param].morphRange[gMorphGroupFocus] != value) {
-                            if (value >= module.param[variation][gParamDragging.param].value) {
-                                module.param[variation][gParamDragging.param].morphRange[gMorphGroupFocus] = value - module.param[variation][gParamDragging.param].value;
-                            } else {
-                                module.param[variation][gParamDragging.param].morphRange[gMorphGroupFocus] = 256 - (module.param[variation][gParamDragging.param].value - value);
+                            if (fraction < 0.0) {
+                                fraction = 0.0;
                             }
-                            write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
-                            LOG_DEBUG("Write to module %u variation %u\n", module.key.index, variation);
 
-                            messageContent.cmd                       = eMsgCmdSetParamMorph;
-                            messageContent.slot                      = slot;
-                            messageContent.paramMorphData.moduleKey  = module.key;
-                            messageContent.paramMorphData.param      = gParamDragging.param;
-                            messageContent.paramMorphData.paramMorph = gMorphGroupFocus;
-                            messageContent.paramMorphData.value      = module.param[variation][gParamDragging.param].morphRange[gMorphGroupFocus];
-                            messageContent.paramMorphData.negative   = 0;
-                            messageContent.paramMorphData.variation  = variation;
-                            msg_send(&gCommandQueue, &messageContent);
+                            if (fraction > 1.0) {
+                                fraction = 1.0;
+                            }
+                            value = (uint32_t)round(fraction * (double)(range - 1));
+                        } else {
+                            angle = calculate_mouse_angle((tCoord){x, y}, gParamRectangle[module->key.slot][module->key.location][module->key.index][gParamDragging.param]);
+                            value = angle_to_value(angle, range);
+                        }
+
+                        if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) != GLFW_PRESS) {
+                            if (module->param[variation][gParamDragging.param].value != value) {
+                                module->param[variation][gParamDragging.param].value = value;
+                                send_param_value(slot, gParamDragging.moduleKey, gParamDragging.param, variation, value);
+                            }
+                        } else {
+                            if (module->param[variation][gParamDragging.param].morphRange[gMorphGroupFocus] != value) {
+                                if (value >= module->param[variation][gParamDragging.param].value) {
+                                    module->param[variation][gParamDragging.param].morphRange[gMorphGroupFocus] = value - module->param[variation][gParamDragging.param].value;
+                                } else {
+                                    module->param[variation][gParamDragging.param].morphRange[gMorphGroupFocus] = 256 - (module->param[variation][gParamDragging.param].value - value);
+                                }
+                                LOG_DEBUG("Write to module %u variation %u\n", module->key.index, variation);
+
+                                messageContent.cmd                       = eMsgCmdSetParamMorph;
+                                messageContent.slot                      = slot;
+                                messageContent.paramMorphData.moduleKey  = module->key;
+                                messageContent.paramMorphData.param      = gParamDragging.param;
+                                messageContent.paramMorphData.paramMorph = gMorphGroupFocus;
+                                messageContent.paramMorphData.value      = module->param[variation][gParamDragging.param].morphRange[gMorphGroupFocus];
+                                messageContent.paramMorphData.negative   = 0;
+                                messageContent.paramMorphData.variation  = variation;
+                                msg_send(&gCommandQueue, &messageContent);
+                            }
                         }
                     }
-                }
-                break;
-            case paramType3Mode:
+                    break;
+                case paramType3Mode:
 
-                // Not currently being used for anything, but could ultimately be. In some cases, could be better as a drop down menu
-                if (modeLocationList[module.mode[gParamDragging.mode].modeRef].type2 == paramType2Dial) {
-                    angle = calculate_mouse_angle((tCoord){x, y}, module.mode[gParamDragging.mode].rectangle);                                                            // possible add half size
-                    value = angle_to_value(angle, modeLocationList[module.mode[gParamDragging.mode].modeRef].range);
+                    if (modeLocationList[module->mode[gParamDragging.mode].modeRef].type2 == paramType2Dial) {
+                        angle = calculate_mouse_angle((tCoord){x, y}, module->mode[gParamDragging.mode].rectangle);
+                        value = angle_to_value(angle, modeLocationList[module->mode[gParamDragging.mode].modeRef].range);
 
-                    if (module.mode[gParamDragging.mode].value != value) {
-                        module.mode[gParamDragging.mode].value = value;
-
-                        write_module(gParamDragging.moduleKey, &module);         // Write new value into parameter
-
-                        send_mode_value(slot, gParamDragging.moduleKey, gParamDragging.mode, value);
+                        if (module->mode[gParamDragging.mode].value != value) {
+                            module->mode[gParamDragging.mode].value = value;
+                            send_mode_value(slot, gParamDragging.moduleKey, gParamDragging.mode, value);
+                        }
                     }
-                }
-                break;
+                    break;
+            }
         }
     } else if (gModuleDrag.active == true) {
-        read_module(gModuleDrag.moduleKey, &module);
+        tModule * module = get_module(gModuleDrag.moduleKey);
 
-        convert_mouse_coord_to_module_column_row(&module.column, &module.row, (tCoord){x, y});
+        if (module != NULL) {
+            convert_mouse_coord_to_module_column_row(&module->column, &module->row, (tCoord){x, y});
 
-        if (module.row > 127) {
-            module.row = 127;
+            if (module->row > 127) {
+                module->row = 127;
+            }
+
+            if (module->column > 127) {
+                module->column = 127;
+            }
         }
-
-        if (module.column > 127) {
-            module.column = 127;
-        }
-        write_module(gModuleDrag.moduleKey, &module);
         adjust_scroll_for_drag();
     } else if (gCableDrag.active == true) {
         convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, (tCoord){x - scale_from_percent(CONNECTOR_SIZE / 2.0), y - scale_from_percent(CONNECTOR_SIZE / 2.0)});  // SOMETHING NOT RIGHT HERE
@@ -1221,36 +1213,33 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     } else if (gContextMenu.active == true) {
         // Dummy
     } else {
-        tModule  hoverModule = {0};
-        bool     hoverValid  = false;
-        uint32_t hoverSlot   = atomic_load(&gSlot);
-        uint32_t hoverLoc    = atomic_load(&gLocation);
+        uint32_t hoverSlot = atomic_load(&gSlot);
+        uint32_t hoverLoc  = atomic_load(&gLocation);
 
-        reset_walk_module();
+        for (uint32_t idx = 0; idx < MAX_NUM_MODULES; idx++) {
+            tModule * hoverModule = get_module_slot(hoverSlot, hoverLoc, idx);
 
-        do {
-            hoverValid = walk_next_module(&hoverModule);
+            if (!hoverModule->active) {
+                continue;
+            }
 
-            if (hoverValid && hoverModule.key.slot == hoverSlot && hoverModule.key.location == hoverLoc) {
-                for (int i = 0; i < (int)module_connector_count(hoverModule.type); i++) {
-                    if (within_rectangle(coord, hoverModule.connector[i].rectangle)) {
-                        gHoverConnector.active      = true;
-                        gHoverConnector.slot        = hoverSlot;
-                        gHoverConnector.location    = hoverLoc;
-                        gHoverConnector.moduleIndex = hoverModule.key.index;
-                        gHoverConnector.ioCount     = (uint32_t)find_io_count_from_index(&hoverModule, hoverModule.connector[i].dir, i);
-                        gHoverConnector.dir         = hoverModule.connector[i].dir;
-                        break;
-                    }
+            for (int i = 0; i < (int)module_connector_count(hoverModule->type); i++) {
+                if (within_rectangle(coord, hoverModule->connector[i].rectangle)) {
+                    gHoverConnector.active      = true;
+                    gHoverConnector.slot        = hoverSlot;
+                    gHoverConnector.location    = hoverLoc;
+                    gHoverConnector.moduleIndex = hoverModule->key.index;
+                    gHoverConnector.ioCount     = (uint32_t)find_io_count_from_index(hoverModule, hoverModule->connector[i].dir, i);
+                    gHoverConnector.dir         = hoverModule->connector[i].dir;
+                    break;
                 }
             }
 
             if (gHoverConnector.active) {
                 break;
             }
-        } while (hoverValid);
+        }
 
-        finish_walk_module();
         noAction = true;
     }
     // Limit re-draw/render if nothing's happened
@@ -1439,21 +1428,19 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                     gModuleNameEdit.buffer[len - 1] = '\0';
                 }
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
-                tModule module = {0};
-
                 gModuleNameEdit.active = false;
-                module.key             = gModuleNameEdit.moduleKey;
 
-                if (read_module(module.key, &module) == true) {
+                tModule * module = get_module(gModuleNameEdit.moduleKey);
+
+                if (module != NULL) {
                     tMessageContent msg = {0};
 
-                    strncpy(module.name, gModuleNameEdit.buffer, sizeof(module.name));
-                    module.name[sizeof(module.name) - 1] = '\0';
-                    write_module(module.key, &module);
+                    strncpy(module->name, gModuleNameEdit.buffer, sizeof(module->name));
+                    module->name[sizeof(module->name) - 1] = '\0';
 
-                    msg.cmd                              = eMsgCmdSetModuleLabel;
-                    msg.slot                             = gModuleNameEdit.moduleKey.slot;
-                    msg.moduleLabelData.moduleKey        = gModuleNameEdit.moduleKey;
+                    msg.cmd                                = eMsgCmdSetModuleLabel;
+                    msg.slot                               = gModuleNameEdit.moduleKey.slot;
+                    msg.moduleLabelData.moduleKey          = gModuleNameEdit.moduleKey;
                     strncpy(msg.moduleLabelData.name, gModuleNameEdit.buffer, CLAVIA_NAME_SIZE);
                     msg_send(&gCommandQueue, &msg);
                 }
@@ -1470,24 +1457,23 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                     gParamNameEdit.buffer[len - 1] = '\0';
                 }
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
-                tModule module = {0};
-
                 gParamNameEdit.active = false;
 
-                if (read_module(gParamNameEdit.moduleKey, &module) == true) {
+                tModule * module = get_module(gParamNameEdit.moduleKey);
+
+                if (module != NULL) {
                     tMessageContent msg = {0};
                     uint32_t        pi  = gParamNameEdit.paramIndex;
 
-                    module.paramNameSet[pi][0]                        = true;
-                    strncpy(module.paramName[pi][0], gParamNameEdit.buffer, PROTOCOL_PARAM_NAME_SIZE);
-                    module.paramName[pi][0][PROTOCOL_PARAM_NAME_SIZE] = '\0';
-                    module.paramNumLabels[pi]                         = 1;
-                    write_module(gParamNameEdit.moduleKey, &module);
+                    module->paramNameSet[pi][0]                        = true;
+                    strncpy(module->paramName[pi][0], gParamNameEdit.buffer, PROTOCOL_PARAM_NAME_SIZE);
+                    module->paramName[pi][0][PROTOCOL_PARAM_NAME_SIZE] = '\0';
+                    module->paramNumLabels[pi]                         = 1;
 
-                    msg.cmd                                           = eMsgCmdSetParamLabel;
-                    msg.slot                                          = gParamNameEdit.moduleKey.slot;
-                    msg.paramLabelData.moduleKey                      = gParamNameEdit.moduleKey;
-                    msg.paramLabelData.paramIndex                     = pi;
+                    msg.cmd                                            = eMsgCmdSetParamLabel;
+                    msg.slot                                           = gParamNameEdit.moduleKey.slot;
+                    msg.paramLabelData.moduleKey                       = gParamNameEdit.moduleKey;
+                    msg.paramLabelData.paramIndex                      = pi;
                     strncpy(msg.paramLabelData.name, gParamNameEdit.buffer, PROTOCOL_PARAM_NAME_SIZE);
                     msg_send(&gCommandQueue, &msg);
                 }

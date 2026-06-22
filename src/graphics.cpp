@@ -302,7 +302,6 @@ void render_top_bar(void) {
     uint32_t    slot                                = atomic_load(&gSlot);
     uint32_t    variation                           = gPatchDescr[slot].activeVariation;
     int         voiceCount                          = 0;
-    tModule     module                              = {0};
     bool        clockRunning                        = atomic_load(&gMasterClockRunning);
     uint64_t    txTime                              = atomic_load(&gUsbTxTime);
     uint64_t    rxTime                              = atomic_load(&gUsbRxTime);
@@ -358,15 +357,15 @@ void render_top_bar(void) {
     snprintf(buff, sizeof(buff), "%u", voiceCount);
     gTopbarControls[topbarVoiceCountId].rectangle = draw_button(mainArea, {topbar_control_def(topbarVoiceCountId)->coord, {get_text_width("XX", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, buff, buttonBackgroundColour);
 
-    module.key.slot                               = slot;
-    module.key.location                           = locationMorph;
-    module.key.index                              = PATCH_VOLUME;
+    {
+        tModuleKey volKey = {slot, (uint32_t)locationMorph, PATCH_VOLUME};
+        tModule *  module = get_module(volKey);
 
-    if (read_module(module.key, &module) == true) {
-        snprintf(buff, sizeof(buff), "%s", patchVolumeStrMap[module.param[variation][VOLUME_LEVEL].value]);
-        render_text(mainArea, {{gTopbarControls[topbarPatchVolumeId].rectangle.coord.x, gTopbarControls[topbarPatchVolumeId].rectangle.coord.y - 12}, {NULL, STANDARD_TEXT_HEIGHT}}, buff);
-        gParamRectangle[module.key.slot][module.key.location][module.key.index][VOLUME_LEVEL] = render_dial(mainArea, gTopbarControls[topbarPatchVolumeId].rectangle, module.param[variation][VOLUME_LEVEL].value, 127, 0, RGB_GREY_7);
-        write_module(module.key, &module);
+        if (module != NULL) {
+            snprintf(buff, sizeof(buff), "%s", patchVolumeStrMap[module->param[variation][VOLUME_LEVEL].value]);
+            render_text(mainArea, {{gTopbarControls[topbarPatchVolumeId].rectangle.coord.x, gTopbarControls[topbarPatchVolumeId].rectangle.coord.y - 12}, {NULL, STANDARD_TEXT_HEIGHT}}, buff);
+            gParamRectangle[module->key.slot][module->key.location][module->key.index][VOLUME_LEVEL] = render_dial(mainArea, gTopbarControls[topbarPatchVolumeId].rectangle, module->param[variation][VOLUME_LEVEL].value, 127, 0, RGB_GREY_7);
+        }
     }
 
     for (int i = 0; i < TOPBAR_STANDARD_BUTTON_COUNT; i++) {
@@ -1303,10 +1302,12 @@ void do_graphics_loop(void) {
             render_cables();
 
             if (gCableDrag.active == true) {
-                tModule module = {0};
-                read_module(gCableDrag.fromModuleKey, &module);
-                set_rgb_colour(RGB_WHITE);
-                render_cable_from_to(module.connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector, 4.0);
+                tModule * module = get_module(gCableDrag.fromModuleKey);
+
+                if (module != NULL) {
+                    set_rgb_colour(RGB_WHITE);
+                    render_cable_from_to(module->connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector, 4.0);
+                }
             }
             render_top_bar();
             render_morph_groups();

@@ -97,29 +97,28 @@ static void action_copy_variation(int index) {
     uint32_t        numParams       = 0;
     uint32_t        paramIndex      = 0;
     uint32_t        morphIndex      = 0;
-    tModule         module          = {0};
     tMessageContent msg             = {0};
 
     LOG_DEBUG("Copy variation %u to %u\n", sourceVariation, targetVariation);
 
-    reset_walk_module();
+    for (uint32_t loc = 0; loc < (uint32_t)locationMax; loc++) {
+        for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+            tModule * module = get_module_slot(slot, loc, i);
 
-    while (walk_next_module(&module)) {
-        if (module.key.slot == slot) {
-            numParams = module_param_count(module.type);
+            if (!module->active) {
+                continue;
+            }
+            numParams = module_param_count(module->type);
 
             for (paramIndex = 0; paramIndex < numParams; paramIndex++) {
-                module.param[targetVariation][paramIndex].value = module.param[sourceVariation][paramIndex].value;
+                module->param[targetVariation][paramIndex].value = module->param[sourceVariation][paramIndex].value;
 
                 for (morphIndex = 0; morphIndex < NUM_MORPHS; morphIndex++) {
-                    module.param[targetVariation][paramIndex].morphRange[morphIndex] = module.param[sourceVariation][paramIndex].morphRange[morphIndex];
+                    module->param[targetVariation][paramIndex].morphRange[morphIndex] = module->param[sourceVariation][paramIndex].morphRange[morphIndex];
                 }
             }
-
-            write_module(module.key, &module);
         }
     }
-    finish_walk_module();
 
     msg.cmd                             = eMsgCmdCopyVariation;
     msg.slot                            = slot;
@@ -134,7 +133,6 @@ static void action_copy_variation(int index) {
 // ── Module / cable / morph actions ─────────────────────────────────────────
 
 static void menu_action_delete_cable(int index) {
-    tModule  module     = {0};
     tCable   walk       = {0};
     int      outIndex   = -1;
     int      inIndex    = -1;
@@ -143,20 +141,23 @@ static void menu_action_delete_cable(int index) {
     uint32_t location   = atomic_load(&gLocation);
 
     if ((gContextMenu.moduleKey.slot == slot) && (gContextMenu.moduleKey.location == location)) {
-        read_module(gContextMenu.moduleKey, &module);
+        tModule * module = get_module(gContextMenu.moduleKey);
 
+        if (module == NULL) {
+            return;
+        }
         reset_walk_cable();
 
         while (walk_next_cable(&walk)) {
             deleteWalk = false;
 
             if (walk.key.slot == slot && walk.key.location == gContextMenu.moduleKey.location) {
-                switch (module.connector[gContextMenu.connectorIndex].dir) {
+                switch (module->connector[gContextMenu.connectorIndex].dir) {
                     case connectorDirOut:
-                        outIndex = find_io_count_from_index(&module, connectorDirOut, gContextMenu.connectorIndex);
+                        outIndex = find_io_count_from_index(module, connectorDirOut, gContextMenu.connectorIndex);
                         break;
                     case connectorDirIn:
-                        inIndex  = find_io_count_from_index(&module, connectorDirIn, gContextMenu.connectorIndex);
+                        inIndex  = find_io_count_from_index(module, connectorDirIn, gContextMenu.connectorIndex);
                         break;
                 }
 
@@ -202,7 +203,6 @@ static void menu_action_delete_cable(int index) {
 }
 
 static void menu_action_delete_module(int index) {
-    tModule         module         = {0};
     tCable          walk           = {0};
     bool            deleteWalk     = false;
     uint32_t        slot           = atomic_load(&gSlot);
@@ -210,8 +210,6 @@ static void menu_action_delete_module(int index) {
     tMessageContent messageContent = {0};
 
     if (gContextMenu.moduleKey.slot == slot && gContextMenu.moduleKey.location == location) {
-        read_module(gContextMenu.moduleKey, &module);
-
         reset_walk_cable();
 
         while (walk_next_cable(&walk)) {
@@ -246,7 +244,7 @@ static void menu_action_delete_module(int index) {
         memset(&messageContent, 0, sizeof(messageContent));
         messageContent.cmd                  = eMsgCmdDeleteModule;
         messageContent.slot                 = slot;
-        messageContent.moduleData.moduleKey = module.key;
+        messageContent.moduleData.moduleKey = gContextMenu.moduleKey;
 
         msg_send(&gCommandQueue, &messageContent);
 
@@ -257,12 +255,12 @@ static void menu_action_delete_module(int index) {
 }
 
 static void action_rename_module(int index) {
-    tModule module = {0};
+    tModule * module = get_module(gContextMenu.moduleKey);
 
-    if (read_module(gContextMenu.moduleKey, &module)) {
+    if (module != NULL) {
         gModuleNameEdit.active                   = true;
         gModuleNameEdit.moduleKey                = gContextMenu.moduleKey;
-        strncpy(gModuleNameEdit.buffer, module.name, CLAVIA_NAME_SIZE);
+        strncpy(gModuleNameEdit.buffer, module->name, CLAVIA_NAME_SIZE);
         gModuleNameEdit.buffer[CLAVIA_NAME_SIZE] = '\0';
     }
     gContextMenu.active = false;
@@ -271,19 +269,18 @@ static void action_rename_module(int index) {
 
 static void action_set_module_colour(int index) {
     if (gContextMenu.items[index].subMenu == NULL) {
-        tModule         module         = {0};
         tMessageContent messageContent = {0};
+        tModule *       module         = get_module(gContextMenu.moduleKey);
 
-        read_module(gContextMenu.moduleKey, &module);
-
-        module.colour                             = gContextMenu.items[index].param;
-
-        write_module(module.key, &module);
+        if (module == NULL) {
+            return;
+        }
+        module->colour                            = gContextMenu.items[index].param;
 
         messageContent.cmd                        = eMsgCmdSetModuleColour;
-        messageContent.slot                       = module.key.slot;
-        messageContent.moduleColourData.moduleKey = module.key;
-        messageContent.moduleColourData.colour    = module.colour;
+        messageContent.slot                       = module->key.slot;
+        messageContent.moduleColourData.moduleKey = module->key;
+        messageContent.moduleColourData.colour    = module->colour;
 
         msg_send(&gCommandQueue, &messageContent);
     } else {
@@ -296,22 +293,23 @@ static void action_set_module_colour(int index) {
 }
 
 static void action_rename_morph_label(int index) {
-    tModule  module     = {0};
-    uint32_t morphIndex = (uint32_t)gContextMenu.items[index].param;
-    uint32_t slot       = atomic_load(&gSlot);
+    uint32_t  morphIndex = (uint32_t)gContextMenu.items[index].param;
+    uint32_t  slot       = atomic_load(&gSlot);
 
     gContextMenu.moduleKey = (tModuleKey){
         slot, locationMorph, 1
     };
 
-    if (read_module(gContextMenu.moduleKey, &module)) {
-        uint32_t pi = morphIndex /* + NUM_MORPHS*/;
+    tModule * module     = get_module(gContextMenu.moduleKey);
+
+    if (module != NULL) {
+        uint32_t pi = morphIndex;
 
         gParamNameEdit.active     = true;
         gParamNameEdit.moduleKey  = gContextMenu.moduleKey;
         gParamNameEdit.paramIndex = pi;
         memset(gParamNameEdit.buffer, 0, sizeof(gParamNameEdit.buffer));
-        strncpy(gParamNameEdit.buffer, module.paramName[pi][0], PROTOCOL_PARAM_NAME_SIZE);
+        strncpy(gParamNameEdit.buffer, module->paramName[pi][0], PROTOCOL_PARAM_NAME_SIZE);
     }
     gContextMenu.active    = false;
     atomic_store(&gReDraw, true);
@@ -323,7 +321,6 @@ static void init_params_on_module(tModule * module, uint32_t location, uint32_t 
     uint32_t paramListIndex = 0;
     uint32_t paramIndex     = 0;
     uint32_t numParams      = module_param_count(module->type);
-    bool     anyParamSet    = false;
     uint32_t slot           = atomic_load(&gSlot);
 
     if (location != atomic_load(&gLocation)) {
@@ -333,7 +330,6 @@ static void init_params_on_module(tModule * module, uint32_t location, uint32_t 
     for (paramListIndex = 0; paramListIndex < array_size_param_location_list(); paramListIndex++) {
         if (paramLocationList[paramListIndex].moduleType == module->type) {
             module->param[variation][paramIndex].value = paramLocationList[paramListIndex].defaultValue;
-            anyParamSet                                = true;
             send_param_value(slot, module->key, paramIndex, variation, module->param[variation][paramIndex].value);
             paramIndex++;
 
@@ -341,10 +337,6 @@ static void init_params_on_module(tModule * module, uint32_t location, uint32_t 
                 break;
             }
         }
-    }
-
-    if (anyParamSet) {
-        write_module(module->key, module);
     }
 }
 
@@ -359,18 +351,12 @@ static void init_params_on_module_all_variations(tModule * module, uint32_t loca
 }
 
 static int32_t find_unique_module_id(uint32_t location) {
-    tModuleKey key    = {0};
-    tModule    module = {0};
-    int32_t    i      = 0;
-    uint32_t   slot   = atomic_load(&gSlot);
+    uint32_t slot = atomic_load(&gSlot);
 
-    key.slot     = slot;
-    key.location = location;
+    for (uint32_t i = 1; i < MAX_NUM_MODULES; i++) {
+        tModule * candidate = get_module_slot(slot, location, i);
 
-    for (i = 1; i <= 255; i++) {
-        key.index = i;
-
-        if (read_module(key, &module) == false) {
+        if ((candidate == NULL) || !candidate->active) {
             return (int32_t)i;
         }
     }
@@ -408,71 +394,67 @@ void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row,
 }
 
 void shift_modules_down(tModuleKey key) {
-    tModule  module            = {0};
-    tModule  walk              = {0};
-    bool     doDrop            = false;
-    uint32_t rowAndBelowToDrop = 0;
-    uint32_t dropAmount        = 0;
-    bool     moduleRePosition  = false;
+    tModule * module            = get_module(key);
 
-    if (read_module(key, &module) == false) {
+    if (module == NULL) {
         return;
     }
-    reset_walk_module();
+    bool      moduleRePosition  = false;
+    bool      doDrop            = false;
+    uint32_t  rowAndBelowToDrop = 0;
+    uint32_t  dropAmount        = 0;
 
-    while (walk_next_module(&walk)) {
-        if ((walk.column == module.column) && (walk.key.slot == key.slot) && (walk.key.location == key.location)) {
-            if (walk.key.index != key.index) {
-                if ((module.row > walk.row) && (module.row < walk.row + gModuleProperties[walk.type].height)) {
-                    module.row       = walk.row + gModuleProperties[walk.type].height;
-                    write_module(module.key, &module);
-                    send_module_move_msg(&module);
-                    moduleRePosition = true;
-                    break;
-                }
-            }
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * walk = get_module_slot(key.slot, key.location, i);
+
+        if (!walk->active || walk->key.index == key.index) {
+            continue;
+        }
+
+        if ((walk->column == module->column) && (module->row > walk->row) && (module->row < walk->row + gModuleProperties[walk->type].height)) {
+            module->row      = walk->row + gModuleProperties[walk->type].height;
+            send_module_move_msg(module);
+            moduleRePosition = true;
+            break;
         }
     }
-    finish_walk_module();
 
     if (moduleRePosition == false) {
-        send_module_move_msg(&module);
+        send_module_move_msg(module);
     }
-    reset_walk_module();
 
-    while (walk_next_module(&walk)) {
-        if ((walk.column == module.column) && (walk.key.slot == key.slot) && (walk.key.location == key.location)) {
-            if (walk.key.index != key.index) {
-                if ((walk.row >= module.row) && (walk.row < module.row + gModuleProperties[module.type].height)) {
-                    rowAndBelowToDrop = walk.row;
-                    dropAmount        = (module.row + gModuleProperties[module.type].height) - walk.row;
-                    doDrop            = true;
-                    break;
-                }
-            }
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * walk = get_module_slot(key.slot, key.location, i);
+
+        if (!walk->active || walk->key.index == key.index) {
+            continue;
+        }
+
+        if ((walk->column == module->column) && (walk->row >= module->row) && (walk->row < module->row + gModuleProperties[module->type].height)) {
+            rowAndBelowToDrop = walk->row;
+            dropAmount        = (module->row + gModuleProperties[module->type].height) - walk->row;
+            doDrop            = true;
+            break;
         }
     }
-    finish_walk_module();
 
     if (doDrop == true) {
-        reset_walk_module();
+        for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+            tModule * walk = get_module_slot(key.slot, key.location, i);
 
-        while (walk_next_module(&walk)) {
-            if ((walk.column == module.column) && (walk.key.slot == key.slot) && (walk.key.location == key.location)) {
-                if (walk.key.index != key.index) {
-                    if (walk.row >= rowAndBelowToDrop) {
-                        walk.row += dropAmount;
+            if (!walk->active || walk->key.index == key.index) {
+                continue;
+            }
 
-                        if (walk.row > MAX_ROWS) {
-                            walk.row = MAX_ROWS;
-                        }
-                        write_module(walk.key, &walk);
-                        send_module_move_msg(&walk);
-                    }
+            if ((walk->column == module->column) && (walk->row >= rowAndBelowToDrop)) {
+                walk->row += dropAmount;
+
+                if (walk->row > MAX_ROWS) {
+                    walk->row = MAX_ROWS;
                 }
+                send_module_move_msg(walk);
             }
         }
-        finish_walk_module();
     }
 }
 
@@ -520,7 +502,7 @@ static void menu_action_create(int index) {
 
             write_module(module.key, &module);
 
-            init_params_on_module_all_variations(&module, location);
+            init_params_on_module_all_variations(get_module(module.key), location);
 
             shift_modules_down(module.key);
         }
@@ -612,15 +594,14 @@ static void action_deassign_knob(int index) {
 }
 
 static void action_set_toggle_value(int index) {
-    uint32_t slot      = atomic_load(&gSlot);
-    uint32_t variation = gPatchDescr[slot].activeVariation;
-    tModule  module    = {0};
+    uint32_t  slot      = atomic_load(&gSlot);
+    uint32_t  variation = gPatchDescr[slot].activeVariation;
+    tModule * module    = get_module(gContextMenu.moduleKey);
 
-    if (read_module(gContextMenu.moduleKey, &module)) {
+    if (module != NULL) {
         uint32_t paramIdx = gContextMenu.paramIndex;
-        module.param[variation][paramIdx].value = (uint32_t)gContextMenu.items[index].param;
-        write_module(gContextMenu.moduleKey, &module);
-        send_param_value(slot, gContextMenu.moduleKey, paramIdx, variation, module.param[variation][paramIdx].value);
+        module->param[variation][paramIdx].value = (uint32_t)gContextMenu.items[index].param;
+        send_param_value(slot, gContextMenu.moduleKey, paramIdx, variation, module->param[variation][paramIdx].value);
     }
     gContextMenu.active = false;
     atomic_store(&gReDraw, true);
@@ -650,14 +631,13 @@ void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, u
 }
 
 static void action_set_mode_value(int index) {
-    uint32_t slot   = atomic_load(&gSlot);
-    tModule  module = {0};
+    uint32_t  slot   = atomic_load(&gSlot);
+    tModule * module = get_module(gContextMenu.moduleKey);
 
-    if (read_module(gContextMenu.moduleKey, &module)) {
+    if (module != NULL) {
         uint32_t modeIdx = gContextMenu.paramIndex;
-        module.mode[modeIdx].value = (uint32_t)gContextMenu.items[index].param;
-        write_module(gContextMenu.moduleKey, &module);
-        send_mode_value(slot, gContextMenu.moduleKey, modeIdx, module.mode[modeIdx].value);
+        module->mode[modeIdx].value = (uint32_t)gContextMenu.items[index].param;
+        send_mode_value(slot, gContextMenu.moduleKey, modeIdx, module->mode[modeIdx].value);
     }
     gContextMenu.active = false;
     atomic_store(&gReDraw, true);
@@ -687,17 +667,17 @@ void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeInde
 }
 
 static void action_rename_param_label(int index) {
-    tModule  module = {0};
-    uint32_t pi     = gContextMenu.paramIndex;
+    uint32_t  pi     = gContextMenu.paramIndex;
+    tModule * module = get_module(gContextMenu.moduleKey);
 
-    if (read_module(gContextMenu.moduleKey, &module)) {
+    if (module != NULL) {
         gParamNameEdit.active     = true;
         gParamNameEdit.moduleKey  = gContextMenu.moduleKey;
         gParamNameEdit.paramIndex = pi;
         memset(gParamNameEdit.buffer, 0, sizeof(gParamNameEdit.buffer));
 
-        if (module.paramNameSet[pi][0]) {
-            strncpy(gParamNameEdit.buffer, module.paramName[pi][0], PROTOCOL_PARAM_NAME_SIZE);
+        if (module->paramNameSet[pi][0]) {
+            strncpy(gParamNameEdit.buffer, module->paramName[pi][0], PROTOCOL_PARAM_NAME_SIZE);
         }
     }
     gContextMenu.active = false;
@@ -728,25 +708,21 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
                 bool     inUse   = gKnobArray[slot].knob[knobIdx].assigned;
 
                 if (inUse) {
-                    tModule      mod     = {0};
-                    tModuleKey   modKey  = {
-                        slot,
-                        gKnobArray[slot].knob[knobIdx].location,
-                        gKnobArray[slot].knob[knobIdx].moduleIndex
-                    };
+                    tModuleKey   modKey  = {slot, gKnobArray[slot].knob[knobIdx].location, gKnobArray[slot].knob[knobIdx].moduleIndex};
                     uint32_t     pi      = gKnobArray[slot].knob[knobIdx].paramIndex;
                     const char * modName = "";
                     const char * parName = "";
+                    tModule *    mod     = get_module(modKey);
 
-                    if (read_module(modKey, &mod)) {
+                    if (mod != NULL) {
                         uint32_t variation = gPatchDescr[slot].activeVariation;
 
-                        modName = (mod.name[0] != '\0') ? mod.name : gModuleProperties[mod.type].name;
+                        modName = (mod->name[0] != '\0') ? mod->name : gModuleProperties[mod->type].name;
 
-                        if ((pi < MAX_NUM_PARAMETERS) && mod.paramNameSet[pi][0]) {
-                            parName = mod.paramName[pi][0];
+                        if ((pi < MAX_NUM_PARAMETERS) && mod->paramNameSet[pi][0]) {
+                            parName = mod->paramName[pi][0];
                         } else if (pi < MAX_NUM_PARAMETERS) {
-                            const char * label = paramLocationList[mod.param[variation][pi].paramRef].label;
+                            const char * label = paramLocationList[mod->param[variation][pi].paramRef].label;
 
                             if (label != NULL && label[0] != '\0') {
                                 parName = label;
@@ -796,11 +772,11 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
         };
     }
     {
-        tModule  mod       = {0};
-        uint32_t variation = gPatchDescr[slot].activeVariation;
+        uint32_t  variation = gPatchDescr[slot].activeVariation;
+        tModule * mod       = get_module(moduleKey);
 
-        if (read_module(moduleKey, &mod) && (paramIndex < MAX_NUM_PARAMETERS)) {
-            if (paramLocationList[mod.param[variation][paramIndex].paramRef].type1 == paramType1Enable) {
+        if ((mod != NULL) && (paramIndex < MAX_NUM_PARAMETERS)) {
+            if (paramLocationList[mod->param[variation][paramIndex].paramRef].type1 == paramType1Enable) {
                 menuItems[count++] = (tMenuItem){
                     "Rename", RGB_GREY_3, action_rename_param_label, 0, NULL
                 };
