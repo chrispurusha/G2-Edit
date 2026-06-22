@@ -213,9 +213,7 @@ void parse_cable_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
 }
 
 void write_cable_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_t * bitPos) {
-    tCable   cable            = {0};
     uint32_t cableCount       = 0;
-    bool     validCable       = false;
     uint32_t sizeBitPos       = 0;
     uint32_t cableCountBitPos = 0;
 
@@ -230,27 +228,23 @@ void write_cable_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     write_bit_stream(buff, bitPos, 16, 0);  // Populated later
 
     cableCount       = 0;
-    reset_walk_cable();
 
-    do {
-        validCable = walk_next_cable(&cable);
+    for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+        tCable * cable = get_cable_slot(slot, (uint32_t)location, i);
 
-        if (validCable == true) {
-            if ((cable.key.slot == slot) && (cable.key.location == location)) {
-                cableCount++;
-                write_bit_stream(buff, bitPos, 3, cable.colour);
-                write_bit_stream(buff, bitPos, 8, cable.key.moduleFromIndex);
-                write_bit_stream(buff, bitPos, 6, cable.key.connectorFromIoCount);
-                write_bit_stream(buff, bitPos, 1, cable.key.linkType);
-                write_bit_stream(buff, bitPos, 8, cable.key.moduleToIndex);
-                write_bit_stream(buff, bitPos, 6, cable.key.connectorToIoCount);
-            }
+        if (cable == NULL || !cable->active) {
+            continue;
         }
-    } while (validCable);
+        cableCount++;
+        write_bit_stream(buff, bitPos, 3, cable->colour);
+        write_bit_stream(buff, bitPos, 8, cable->key.moduleFromIndex);
+        write_bit_stream(buff, bitPos, 6, cable->key.connectorFromIoCount);
+        write_bit_stream(buff, bitPos, 1, cable->key.linkType);
+        write_bit_stream(buff, bitPos, 8, cable->key.moduleToIndex);
+        write_bit_stream(buff, bitPos, 6, cable->key.connectorToIoCount);
+    }
 
-    finish_walk_cable();
-
-    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+    *bitPos          = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
 
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 
@@ -1028,35 +1022,32 @@ void update_module_up_rates(void) {
     }
 
     do {
-        tCable cable = {0};
-
         changesMade = false;
 
-        reset_walk_cable();
+        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+            tCable *   cable         = get_cable_slot(slot, location, i);
 
-        while (walk_next_cable(&cable)) {
-            tModuleKey fromModuleKey = {cable.key.slot, cable.key.location, cable.key.moduleFromIndex};
-            tModuleKey toModuleKey   = {cable.key.slot, cable.key.location, cable.key.moduleToIndex};
+            if (cable == NULL || !cable->active) {
+                continue;
+            }
+            tModuleKey fromModuleKey = {cable->key.slot, cable->key.location, cable->key.moduleFromIndex};
+            tModuleKey toModuleKey   = {cable->key.slot, cable->key.location, cable->key.moduleToIndex};
+            tModule *  fromModule    = get_module(fromModuleKey);
+            tModule *  toModule      = get_module(toModuleKey);
 
-            if ((fromModuleKey.slot == slot) && (toModuleKey.slot == slot) && (fromModuleKey.location == location) && (toModuleKey.location == location)) {
-                tModule * fromModule = get_module(fromModuleKey);
-                tModule * toModule   = get_module(toModuleKey);
+            if ((fromModule != NULL) && (toModule != NULL)) {
+                tConnectorDir fromConnector = (cable->key.linkType == cableLinkTypeFromInput) ? connectorDirIn : connectorDirOut;
+                int           fromConnIndex = find_index_from_io_count(fromModule, fromConnector, cable->key.connectorFromIoCount);
+                int           toConnIndex   = find_index_from_io_count(toModule, connectorDirIn, cable->key.connectorToIoCount);
 
-                if ((fromModule != NULL) && (toModule != NULL)) {
-                    tConnectorDir fromConnector = (cable.key.linkType == cableLinkTypeFromInput) ? connectorDirIn : connectorDirOut;
-                    int           fromConnIndex = find_index_from_io_count(fromModule, fromConnector, cable.key.connectorFromIoCount);
-                    int           toConnIndex   = find_index_from_io_count(toModule, connectorDirIn, cable.key.connectorToIoCount);
-
-                    if ((fromConnIndex != -1) && (toConnIndex != -1) && (toModule->newUpRate == 0)) {
-                        if (fromModule->newUpRate == 1 || ((fromModule->connector[fromConnIndex].type == connectorTypeAudio) && (toModule->connector[toConnIndex].type != connectorTypeAudio))) {
-                            toModule->newUpRate = 1;
-                            changesMade         = true;
-                        }
+                if ((fromConnIndex != -1) && (toConnIndex != -1) && (toModule->newUpRate == 0)) {
+                    if (fromModule->newUpRate == 1 || ((fromModule->connector[fromConnIndex].type == connectorTypeAudio) && (toModule->connector[toConnIndex].type != connectorTypeAudio))) {
+                        toModule->newUpRate = 1;
+                        changesMade         = true;
                     }
                 }
             }
         }
-        finish_walk_cable();
     } while (changesMade);
 
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {

@@ -535,24 +535,19 @@ void stop_synth_name_editing(void) {
 
 static bool input_connector_has_cable(uint32_t slot, uint32_t location,
                                       uint32_t moduleIndex, uint32_t ioCount) {
-    tCable cable = {0};
-    bool   found = false;
+    for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+        tCable * cable = get_cable_slot(slot, location, i);
 
-    reset_walk_cable();
+        if (cable == NULL || !cable->active) {
+            continue;
+        }
 
-    while (walk_next_cable(&cable) && !found) {
-        if (  cable.key.slot == slot
-           && cable.key.location == location) {
-            // Check the TO end (always an input)
-            if (  cable.key.moduleToIndex == moduleIndex
-               && cable.key.connectorToIoCount == ioCount) {
-                found = true;
-            }
+        if (cable->key.moduleToIndex == moduleIndex && cable->key.connectorToIoCount == ioCount) {
+            return true;
         }
     }
-    finish_walk_cable();
 
-    return found;
+    return false;
 }
 
 bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {

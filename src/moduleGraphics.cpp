@@ -854,8 +854,6 @@ void render_cable(tCable * cable, double alpha) {
 }
 
 void render_cables(void) {
-    tCable   cable          = {0};
-    bool     validCable     = false;
     uint32_t slot           = atomic_load(&gSlot);
     uint32_t location       = atomic_load(&gLocation);
     bool     hideAll        = atomic_load(&gCablesHideAll);
@@ -866,42 +864,37 @@ void render_cables(void) {
     if (hideAll) {
         return;
     }
-    reset_walk_cable();
 
-    do {
-        validCable = walk_next_cable(&cable);
+    for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+        tCable * cable         = get_cable_slot(slot, location, i);
 
-        if (validCable && cable.key.slot == slot && cable.key.location == location) {
-            bool colourVisible = gPatchDescr[slot].visible[cable.colour];
-            bool isHovered     = cable_touches_hover_connector(&cable);
-
-            if (!colourVisible || (hoverActive && isHovered)) {
-                continue;
-            }
-            render_cable(&cable, hoverActive ? 0.2 : normalAlpha);
+        if (cable == NULL || !cable->active) {
+            continue;
         }
-    } while (validCable);
+        bool     colourVisible = gPatchDescr[slot].visible[cable->colour];
+        bool     isHovered     = cable_touches_hover_connector(cable);
 
-    finish_walk_cable();
+        if (!colourVisible || (hoverActive && isHovered)) {
+            continue;
+        }
+        render_cable(cable, hoverActive ? 0.2 : normalAlpha);
+    }
 
     if (hoverActive) {
-        reset_walk_cable();
+        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+            tCable * cable         = get_cable_slot(slot, location, i);
 
-        do {
-            validCable = walk_next_cable(&cable);
-
-            if (validCable && cable.key.slot == slot && cable.key.location == location) {
-                bool colourVisible = gPatchDescr[slot].visible[cable.colour];
-                bool isHovered     = cable_touches_hover_connector(&cable);
-
-                if (!colourVisible || !isHovered) {
-                    continue;
-                }
-                render_cable(&cable, 1.0);
+            if (cable == NULL || !cable->active) {
+                continue;
             }
-        } while (validCable);
+            bool     colourVisible = gPatchDescr[slot].visible[cable->colour];
+            bool     isHovered     = cable_touches_hover_connector(cable);
 
-        finish_walk_cable();
+            if (!colourVisible || !isHovered) {
+                continue;
+            }
+            render_cable(cable, 1.0);
+        }
     }
 }
 

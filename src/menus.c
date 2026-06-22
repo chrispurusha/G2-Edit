@@ -133,12 +133,10 @@ static void action_copy_variation(int index) {
 // ── Module / cable / morph actions ─────────────────────────────────────────
 
 static void menu_action_delete_cable(int index) {
-    tCable   walk       = {0};
-    int      outIndex   = -1;
-    int      inIndex    = -1;
-    bool     deleteWalk = false;
-    uint32_t slot       = atomic_load(&gSlot);
-    uint32_t location   = atomic_load(&gLocation);
+    int      outIndex = -1;
+    int      inIndex  = -1;
+    uint32_t slot     = atomic_load(&gSlot);
+    uint32_t location = atomic_load(&gLocation);
 
     if ((gContextMenu.moduleKey.slot == slot) && (gContextMenu.moduleKey.location == location)) {
         tModule * module = get_module(gContextMenu.moduleKey);
@@ -146,100 +144,93 @@ static void menu_action_delete_cable(int index) {
         if (module == NULL) {
             return;
         }
-        reset_walk_cable();
 
-        while (walk_next_cable(&walk)) {
-            deleteWalk = false;
+        switch (module->connector[gContextMenu.connectorIndex].dir) {
+            case connectorDirOut:
+                outIndex = find_io_count_from_index(module, connectorDirOut, gContextMenu.connectorIndex);
+                break;
+            case connectorDirIn:
+                inIndex  = find_io_count_from_index(module, connectorDirIn, gContextMenu.connectorIndex);
+                break;
+        }
 
-            if (walk.key.slot == slot && walk.key.location == gContextMenu.moduleKey.location) {
-                switch (module->connector[gContextMenu.connectorIndex].dir) {
-                    case connectorDirOut:
-                        outIndex = find_io_count_from_index(module, connectorDirOut, gContextMenu.connectorIndex);
-                        break;
-                    case connectorDirIn:
-                        inIndex  = find_io_count_from_index(module, connectorDirIn, gContextMenu.connectorIndex);
-                        break;
-                }
+        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+            tCable * cable    = get_cable_slot(slot, location, i);
+            bool     doDelete = false;
 
-                if (walk.key.moduleFromIndex == gContextMenu.moduleKey.index) {
-                    if (walk.key.linkType == cableLinkTypeFromInput) {
-                        if (walk.key.connectorFromIoCount == inIndex) {
-                            deleteWalk = true;
-                        }
-                    } else if (walk.key.linkType == cableLinkTypeFromOutput) {
-                        if (walk.key.connectorFromIoCount == outIndex) {
-                            deleteWalk = true;
-                        }
+            if (cable == NULL || !cable->active) {
+                continue;
+            }
+
+            if (cable->key.moduleFromIndex == gContextMenu.moduleKey.index) {
+                if (cable->key.linkType == cableLinkTypeFromInput) {
+                    if ((int)cable->key.connectorFromIoCount == inIndex) {
+                        doDelete = true;
                     }
-                }
-
-                if (walk.key.moduleToIndex == gContextMenu.moduleKey.index) {
-                    if (walk.key.connectorToIoCount == inIndex) {
-                        deleteWalk = true;
+                } else if (cable->key.linkType == cableLinkTypeFromOutput) {
+                    if ((int)cable->key.connectorFromIoCount == outIndex) {
+                        doDelete = true;
                     }
-                }
-
-                if (deleteWalk == true) {
-                    tMessageContent messageContent = {0};
-
-                    messageContent.cmd                            = eMsgCmdDeleteCable;
-                    messageContent.slot                           = slot;
-                    messageContent.cableData.location             = location;
-                    messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
-                    messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
-                    messageContent.cableData.moduleToIndex        = walk.key.moduleToIndex;
-                    messageContent.cableData.connectorToIoIndex   = walk.key.connectorToIoCount;
-                    messageContent.cableData.linkType             = walk.key.linkType;
-
-                    msg_send(&gCommandQueue, &messageContent);
-
-                    delete_cable(walk.key);
                 }
             }
+
+            if (cable->key.moduleToIndex == gContextMenu.moduleKey.index) {
+                if ((int)cable->key.connectorToIoCount == inIndex) {
+                    doDelete = true;
+                }
+            }
+
+            if (doDelete) {
+                tMessageContent messageContent = {0};
+
+                messageContent.cmd                            = eMsgCmdDeleteCable;
+                messageContent.slot                           = slot;
+                messageContent.cableData.location             = location;
+                messageContent.cableData.moduleFromIndex      = cable->key.moduleFromIndex;
+                messageContent.cableData.connectorFromIoIndex = cable->key.connectorFromIoCount;
+                messageContent.cableData.moduleToIndex        = cable->key.moduleToIndex;
+                messageContent.cableData.connectorToIoIndex   = cable->key.connectorToIoCount;
+                messageContent.cableData.linkType             = cable->key.linkType;
+
+                msg_send(&gCommandQueue, &messageContent);
+
+                delete_cable(cable->key);
+            }
         }
-        finish_walk_cable();
+
         update_module_up_rates();
     }
 }
 
 static void menu_action_delete_module(int index) {
-    tCable          walk           = {0};
-    bool            deleteWalk     = false;
     uint32_t        slot           = atomic_load(&gSlot);
     uint32_t        location       = atomic_load(&gLocation);
     tMessageContent messageContent = {0};
 
     if (gContextMenu.moduleKey.slot == slot && gContextMenu.moduleKey.location == location) {
-        reset_walk_cable();
+        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+            tCable * cable = get_cable_slot(slot, location, i);
 
-        while (walk_next_cable(&walk)) {
-            deleteWalk = false;
+            if (cable == NULL || !cable->active) {
+                continue;
+            }
 
-            if (walk.key.slot == slot && walk.key.location == gContextMenu.moduleKey.location) {
-                if (walk.key.moduleFromIndex == gContextMenu.moduleKey.index) {
-                    deleteWalk = true;
-                } else if (walk.key.moduleToIndex == gContextMenu.moduleKey.index) {
-                    deleteWalk = true;
-                }
+            if (cable->key.moduleFromIndex == gContextMenu.moduleKey.index || cable->key.moduleToIndex == gContextMenu.moduleKey.index) {
+                memset(&messageContent, 0, sizeof(messageContent));
+                messageContent.cmd                            = eMsgCmdDeleteCable;
+                messageContent.slot                           = slot;
+                messageContent.cableData.location             = location;
+                messageContent.cableData.moduleFromIndex      = cable->key.moduleFromIndex;
+                messageContent.cableData.connectorFromIoIndex = cable->key.connectorFromIoCount;
+                messageContent.cableData.moduleToIndex        = cable->key.moduleToIndex;
+                messageContent.cableData.connectorToIoIndex   = cable->key.connectorToIoCount;
+                messageContent.cableData.linkType             = cable->key.linkType;
 
-                if (deleteWalk == true) {
-                    memset(&messageContent, 0, sizeof(messageContent));
-                    messageContent.cmd                            = eMsgCmdDeleteCable;
-                    messageContent.slot                           = slot;
-                    messageContent.cableData.location             = location;
-                    messageContent.cableData.moduleFromIndex      = walk.key.moduleFromIndex;
-                    messageContent.cableData.connectorFromIoIndex = walk.key.connectorFromIoCount;
-                    messageContent.cableData.moduleToIndex        = walk.key.moduleToIndex;
-                    messageContent.cableData.connectorToIoIndex   = walk.key.connectorToIoCount;
-                    messageContent.cableData.linkType             = walk.key.linkType;
+                msg_send(&gCommandQueue, &messageContent);
 
-                    msg_send(&gCommandQueue, &messageContent);
-
-                    delete_cable(walk.key);
-                }
+                delete_cable(cable->key);
             }
         }
-        finish_walk_cable();
 
         memset(&messageContent, 0, sizeof(messageContent));
         messageContent.cmd                  = eMsgCmdDeleteModule;

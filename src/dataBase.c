@@ -24,30 +24,9 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 
-tModule                gModule[MAX_SLOTS][locationMax][MAX_NUM_MODULES] = {0};
+tModule gModule[MAX_SLOTS][locationMax][MAX_NUM_MODULES] = {0};
 
-static pthread_mutex_t dbMutex                                          = {0};
-static tCable *        firstCable                                       = NULL;
-static tCable *        lastCable                                        = NULL;
-static tCable *        walkCable                                        = NULL;
-static int32_t         cableWalkNestCount                               = 0;
-
-static void database_mutex_init(void) {
-    pthread_mutexattr_t attr = {0};
-
-    pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-    pthread_mutex_init(&dbMutex, &attr);
-    pthread_mutexattr_destroy(&attr);
-}
-
-static void database_mutex_lock(void) {
-    pthread_mutex_lock(&dbMutex);
-}
-
-static void database_mutex_unlock(void) {
-    pthread_mutex_unlock(&dbMutex);
-}
+tCable  gCable[MAX_SLOTS][locationMax][MAX_NUM_CABLES]   = {0};
 
 tModule * get_module_slot(uint32_t slot, uint32_t location, uint32_t index) {
     if ((slot < MAX_SLOTS) && (location < (uint32_t)locationMax) && (index < MAX_NUM_MODULES)) {
@@ -118,211 +97,88 @@ void dump_modules(void) {
     LOG_DEBUG("\nModule Count=%u\n\n", count);
 }
 
-void dump_cables(void) {
-    tCable * cable = NULL;
-
-    database_mutex_lock();
-
-    cable = firstCable;
-
-    LOG_DEBUG("\n\n\nDump cables\n");
-
-    while (cable != NULL) {
-        LOG_DEBUG("Cable\n");
-        LOG_DEBUG("Slot %u\n", cable->key.slot);
-        LOG_DEBUG("Location %u\n", cable->key.location);
-        LOG_DEBUG(" Colour %u\n", cable->colour);
-        LOG_DEBUG(" Module from %u\n", cable->key.moduleFromIndex);
-        LOG_DEBUG(" Connector from %u\n", cable->key.connectorFromIoCount);
-        LOG_DEBUG(" Link type %u\n", cable->key.linkType);
-        LOG_DEBUG(" Module to %u\n", cable->key.moduleToIndex);
-        LOG_DEBUG(" Connector to %u (depends on link type)\n", cable->key.connectorToIoCount);
-        cable = cable->next;
+tCable * get_cable_slot(uint32_t slot, uint32_t location, uint32_t index) {
+    if ((slot < MAX_SLOTS) && (location < (uint32_t)locationMax) && (index < MAX_NUM_CABLES)) {
+        return &gCable[slot][location][index];
     }
-    LOG_DEBUG("\n\n\n");
-
-    database_mutex_unlock();
+    return NULL;
 }
 
-static tCable * find_cable(tCableKey key) {
-    tCable * cable = NULL;
+tCable * get_cable(tCableKey key) {
+    if ((key.slot < MAX_SLOTS) && (key.location < (uint32_t)locationMax)) {
+        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+            tCable * cable = &gCable[key.slot][key.location][i];
 
-    database_mutex_lock();
-
-    cable = firstCable;
-
-    while (cable != NULL) {
-        if (memcmp(&cable->key, &key, sizeof(tCableKey)) == 0) {
-            break;
+            if (cable->active && (memcmp(&cable->key, &key, sizeof(tCableKey)) == 0)) {
+                return cable;
+            }
         }
-        cable = cable->next;
     }
-    database_mutex_unlock();
-
-    return cable;
-}
-
-bool read_cable(tCableKey key, tCable * cable) {
-    bool     retVal     = false;
-    tCable * foundCable = NULL;
-
-    memset(cable, 0, sizeof(*cable));
-
-    database_mutex_lock();
-
-    foundCable = find_cable(key);
-
-    if (foundCable != NULL) {
-        memcpy(cable, foundCable, sizeof(*cable));
-        retVal = true;
-    }
-    database_mutex_unlock();
-
-    return retVal;
+    return NULL;
 }
 
 void write_cable(tCableKey key, tCable * cable) {
-    tCable * dbCable = NULL;
+    tCable * existing = get_cable(key);
 
-    cable->key = key;
-
-    database_mutex_lock();
-
-    dbCable    = find_cable(key);
-
-    if (dbCable == NULL) {
-        dbCable = (tCable *)malloc(sizeof(tCable));
-
-        if (dbCable == NULL) {
-            LOG_DEBUG("Malloc fail\n");
-            exit(1);
-        }
-        memset(dbCable, 0, sizeof(*dbCable));
-
-        if (firstCable == NULL) {
-            firstCable = dbCable;
-            lastCable  = dbCable;
-        } else {
-            lastCable->next = dbCable;
-            dbCable->prev   = lastCable;
-            lastCable       = dbCable;
-        }
+    if (existing != NULL) {
+        existing->colour = cable->colour;
+        return;
     }
 
-    if (dbCable != NULL) {
-        tCable * prev = dbCable->prev;
-        tCable * next = dbCable->next;
-        memcpy(dbCable, cable, sizeof(*dbCable));
-        dbCable->prev = prev;
-        dbCable->next = next;
-    } else {
-        LOG_DEBUG("Cable generation or update failed\n");
-        exit(1);
+    if ((key.slot < MAX_SLOTS) && (key.location < (uint32_t)locationMax)) {
+        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+            if (!gCable[key.slot][key.location][i].active) {
+                gCable[key.slot][key.location][i]        = *cable;
+                gCable[key.slot][key.location][i].key    = key;
+                gCable[key.slot][key.location][i].active = true;
+                return;
+            }
+        }
+
+        LOG_ERROR("write_cable: no free slot slot=%u location=%u\n", key.slot, key.location);
     }
-    database_mutex_unlock();
 }
 
 void delete_cable(tCableKey key) {
-    tCable * dbCable = NULL;
+    tCable * cable = get_cable(key);
 
-    database_mutex_lock();
+    if (cable != NULL) {
+        memset(cable, 0, sizeof(tCable));
+    }
+}
 
-    dbCable = find_cable(key);
+void dump_cables(void) {
+    LOG_DEBUG("\n\nDump cables\n");
 
-    if (dbCable != NULL) {
-        walkCable = dbCable->prev;  // Trick to point to previous item if we're deleting
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        for (uint32_t loc = 0; loc < (uint32_t)locationMax; loc++) {
+            for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+                tCable * cable = &gCable[slot][loc][i];
 
-        if (dbCable->prev != NULL) {
-            dbCable->prev->next = dbCable->next;
-        } else {
-            firstCable = dbCable->next;
+                if (cable->active) {
+                    LOG_DEBUG("Slot %u Location %u Colour %u From %u/%u LinkType %u To %u/%u\n",
+                              cable->key.slot, cable->key.location, cable->colour,
+                              cable->key.moduleFromIndex, cable->key.connectorFromIoCount,
+                              cable->key.linkType, cable->key.moduleToIndex,
+                              cable->key.connectorToIoCount);
+                }
+            }
         }
-
-        if (dbCable->next != NULL) {
-            dbCable->next->prev = dbCable->prev;
-        } else {
-            lastCable = dbCable->prev;
-        }
-        memset(dbCable, 0, sizeof(*dbCable));  // Protection against using stale data
-        free(dbCable);
-    }
-    database_mutex_unlock();
-}
-
-void reset_walk_cable(void) {
-    database_mutex_lock();
-    cableWalkNestCount++;
-
-    if (cableWalkNestCount > 1) {
-        LOG_ERROR("Attempted to nest cable walk - can't do that\n");
-        exit(1);
-    }
-    walkCable = NULL;
-}
-
-void finish_walk_cable(void) {
-    cableWalkNestCount--;
-    database_mutex_unlock();
-}
-
-bool walk_next_cable(tCable * cable) {
-    bool validCable = false;
-
-    memset(cable, 0, sizeof(*cable));
-
-    database_mutex_lock();
-
-    if (walkCable == NULL) {
-        walkCable = firstCable;
-    } else {
-        walkCable = walkCable->next;
     }
 
-    if (walkCable != NULL) {
-        memcpy(cable, walkCable, sizeof(*cable));
-        validCable = true;
-    }
-    database_mutex_unlock();
-
-    return validCable;
+    LOG_DEBUG("\n\n");
 }
 
 void database_delete_cables_by_slot(uint32_t slot) {
-    tCable * cable     = NULL;
-    tCable * nextCable = NULL;
-
-    database_mutex_lock();
-
-    cable = firstCable;
-
-    while (cable != NULL) {
-        nextCable = cable->next;
-
-        if (cable->key.slot == slot) {
-            delete_cable(cable->key);
+    if (slot < MAX_SLOTS) {
+        for (uint32_t loc = 0; loc < (uint32_t)locationMax; loc++) {
+            memset(gCable[slot][loc], 0, sizeof(gCable[slot][loc]));
         }
-        cable     = nextCable;
     }
-    database_mutex_unlock();
 }
 
 void database_clear_cables(void) {
-    tCable * cable     = NULL;
-    tCable * nextCable = NULL;
-
-    database_mutex_lock();
-
-    cable      = firstCable;
-
-    while (cable != NULL) {
-        nextCable = cable->next;
-        free(cable);
-        cable     = nextCable;
-    }
-    firstCable = NULL;
-    lastCable  = NULL;
-
-    database_mutex_unlock();
+    memset(gCable, 0, sizeof(gCable));
 }
 
 int find_io_count_from_index(tModule * module, tConnectorDir dir, int index) {
@@ -355,7 +211,6 @@ int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCoun
 }
 
 void init_database(void) {
-    database_mutex_init();
 }
 
 #ifdef __cplusplus

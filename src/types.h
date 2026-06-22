@@ -461,11 +461,10 @@ typedef struct {
     uint32_t connectorToIoCount;
 } tCableKey;
 
-typedef struct _struct_cable {
-    tCableKey              key;
-    uint32_t               colour;
-    struct _struct_cable * prev;
-    struct _struct_cable * next;       // This can go, when we attach to modules rather than separate linked list
+typedef struct {
+    tCableKey key;
+    uint32_t  colour;
+    bool      active;
 } tCable;
 
 typedef enum {
