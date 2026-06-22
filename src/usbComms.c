@@ -596,6 +596,7 @@ static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
     uint32_t       variation = 0;
     uint32_t       value     = 0;
 
+    memset(&module,0, sizeof(module)); // TODO - Temporary measure, since we were over-running the stack! ultimately, malloc the params on a module
     key.slot                             = slot;
     key.location                         = read_bit_stream(buff, &bitPos, 8);
     key.index                            = read_bit_stream(buff, &bitPos, 8);
@@ -619,6 +620,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
     int            i             = 0;
     int            volumesToRead = 0;
 
+    memset(&module,0, sizeof(module)); // TODO - Temporary measure, since we were over-running the stack! ultimately, malloc the params on a module
+    
     switch (subCommand) {
         case SUB_RESPONSE_VOLUME_INDICATOR:
         {
