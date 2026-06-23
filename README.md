@@ -2,7 +2,7 @@
 
 Binary beta releases can be found here:
 
-https://github.com/chrispurusha/G2-Edit/releases/tag
+https://github.com/chrispurusha/G2-Edit/tags
 
 Very much a work in-progress. Not yet tidied or rationalised.
 
