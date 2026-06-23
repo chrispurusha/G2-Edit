@@ -11,7 +11,7 @@ Please drop me a line.
 
 Since I'm now incurring costs (I recently started using LLMS) which would be good to at least cover, I now have a Buy-me-a-coffee page:
 
-buymeacoffee.com/chrispurusha
+https://buymeacoffee.com/chrispurusha
 
 Thanks for any donations!
 
