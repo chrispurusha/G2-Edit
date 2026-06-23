@@ -1,5 +1,9 @@
 # G2-Edit
 
+Binary beta release can be found here:
+
+https://github.com/chrispurusha/G2-Edit/releases/tag/V0.0.1-beta.1
+
 Very much a work in-progress. Not yet tidied or rationalised.
 
 If anyone's interested in helping, especially with the GUI side of things,
