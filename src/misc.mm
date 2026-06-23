@@ -32,6 +32,10 @@
 - (void)newPatch:(id)sender;
 - (void)openNotes:(id)sender;
 - (void)openSettings:(id)sender;
+- (void)setDialModeRotary:(id)sender;
+- (void)setDialModeVertical:(id)sender;
+- (void)setDialModeHorizontal:(id)sender;
+- (BOOL)validateMenuItem:(NSMenuItem *)item;
 @end
 
 @implementation G2MenuTarget
@@ -72,6 +76,34 @@
     wake_glfw();
 }
 
+- (void)setDialModeRotary:(id)sender {
+    gDialMode = eDialModeRotary;
+    [[NSUserDefaults standardUserDefaults] setInteger:gDialMode forKey:@"dialMode"];
+}
+
+- (void)setDialModeVertical:(id)sender {
+    gDialMode = eDialModeVertical;
+    [[NSUserDefaults standardUserDefaults] setInteger:gDialMode forKey:@"dialMode"];
+}
+
+- (void)setDialModeHorizontal:(id)sender {
+    gDialMode = eDialModeHorizontal;
+    [[NSUserDefaults standardUserDefaults] setInteger:gDialMode forKey:@"dialMode"];
+}
+
+- (BOOL)validateMenuItem:(NSMenuItem *)item {
+    SEL action = [item action];
+
+    if (action == @selector(setDialModeRotary:)) {
+        [item setState:(gDialMode == eDialModeRotary) ? NSControlStateValueOn : NSControlStateValueOff];
+    } else if (action == @selector(setDialModeVertical:)) {
+        [item setState:(gDialMode == eDialModeVertical) ? NSControlStateValueOn : NSControlStateValueOff];
+    } else if (action == @selector(setDialModeHorizontal:)) {
+        [item setState:(gDialMode == eDialModeHorizontal) ? NSControlStateValueOn : NSControlStateValueOff];
+    }
+    return YES;
+}
+
 @end
 
 static NSMenuItem * make_item(NSString * title, SEL action, NSString * key, G2MenuTarget * target) {
@@ -93,6 +125,11 @@ void setup_main_menu(void) {
         menuBar = [[NSMenu alloc] init];
         [[NSApplication sharedApplication] setMainMenu:menuBar];
     }
+    NSUserDefaults *      defaults  = [NSUserDefaults standardUserDefaults];
+
+    if ([defaults objectForKey:@"dialMode"] != nil) {
+        gDialMode = (tDialMode)[defaults integerForKey:@"dialMode"];
+    }
     // File menu
     NSMenuItem *          fileMI    = [[NSMenuItem alloc] init];
     NSMenu *              fileMenu  = [[NSMenu alloc] initWithTitle:@"File"];
@@ -112,6 +149,16 @@ void setup_main_menu(void) {
     [patchMenu addItem:make_item(@"Settings", @selector(openSettings:), @",", target)];
     [patchMI setSubmenu:patchMenu];
     [menuBar insertItem:patchMI atIndex:2];
+
+    // Controls menu
+    NSMenuItem *          ctrlMI    = [[NSMenuItem alloc] init];
+    NSMenu *              ctrlMenu  = [[NSMenu alloc] initWithTitle:@"Controls"];
+
+    [ctrlMenu addItem:make_item(@"Rotary", @selector(setDialModeRotary:), @"", target)];
+    [ctrlMenu addItem:make_item(@"Vertical", @selector(setDialModeVertical:), @"", target)];
+    [ctrlMenu addItem:make_item(@"Horizontal", @selector(setDialModeHorizontal:), @"", target)];
+    [ctrlMI setSubmenu:ctrlMenu];
+    [menuBar insertItem:ctrlMI atIndex:3];
 }
 
 void register_sleep_wake_notifications(void) {

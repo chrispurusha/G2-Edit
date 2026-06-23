@@ -47,6 +47,11 @@ extern "C" {
 #include "protocol.h"
 #include "menus.h"
 
+// Drag-start state for vertical/horizontal dial modes
+static double   gDragStartX   = 0.0;
+static double   gDragStartY   = 0.0;
+static uint32_t gDragStartVal = 0;
+
 void get_global_gui_scaled_mouse_coord(tCoord * coord) {
     int winWidth  = 0;
     int winHeight = 0;
@@ -314,6 +319,12 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
                 if (module->key.location == locationMorph) {
                     gMorphGroupFocus = i;
                 }
+
+                if (gDialMode != eDialModeRotary) {
+                    glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
+                    gDragStartVal = module->param[variation][i].value;
+                    glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                }
                 retVal                   = true;
             }
         }
@@ -330,6 +341,12 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
                     gParamDragging.type3     = paramType3Mode;
                     gParamDragging.mode      = i;
                     gParamDragging.active    = true;
+
+                    if (gDialMode != eDialModeRotary) {
+                        glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
+                        gDragStartVal = module->mode[i].value;
+                        glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                    }
                     retVal                   = true;
                 }
             }
@@ -505,6 +522,10 @@ bool handle_scrollbar_click(tCoord coord) {
 }
 
 void stop_dragging(void) {
+    if (gDialMode != eDialModeRotary && (gParamDragging.active || gTempoDragging)) {
+        glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        glfwSetCursorPos(gWindow, gDragStartX, gDragStartY);
+    }
     gScrollState.yBarDragging = false;
     gScrollState.xBarDragging = false;
     memset(&gModuleDrag, 0, sizeof(gModuleDrag));
@@ -793,6 +814,14 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     gParamDragging.type3     = paramType3Param;
                     gParamDragging.param     = VOLUME_LEVEL;
                     gParamDragging.active    = true;
+
+                    if (gDialMode != eDialModeRotary) {
+                        tModule * volModule    = get_module(volKey);
+                        uint32_t  volVariation = gPatchDescr[slot].activeVariation;
+                        glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
+                        gDragStartVal = (volModule != NULL) ? volModule->param[volVariation][VOLUME_LEVEL].value : 0;
+                        glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                    }
                     found                    = true;
                 }
             }
@@ -800,6 +829,12 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             if (found == false) {
                 if (within_rectangle(coord, gTopbarControls[topbarTempoDialId].rectangle)) {
                     gTempoDragging = true;
+
+                    if (gDialMode != eDialModeRotary) {
+                        glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
+                        gDragStartVal = atomic_load(&gMasterClock);
+                        glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                    }
                     found          = true;
                 }
             }
@@ -1100,8 +1135,32 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         // messageContent.slot          = slot;
         // msg_send(&gCommandQueue, &messageContent);
     } else if (gTempoDragging == true) {
-        angle = calculate_mouse_angle((tCoord){x, y}, gTopbarControls[topbarTempoDialId].rectangle);
-        value = angle_to_value(angle, 241);
+        if (gDialMode == eDialModeVertical) {
+            int newVal = (int)gDragStartVal + (int)((gDragStartY - yCoord) * 241.0 / 200.0);
+
+            if (newVal < 0) {
+                newVal = 0;
+            }
+
+            if (newVal > 240) {
+                newVal = 240;
+            }
+            value = (uint32_t)newVal;
+        } else if (gDialMode == eDialModeHorizontal) {
+            int newVal = (int)gDragStartVal + (int)((xCoord - gDragStartX) * 241.0 / 200.0);
+
+            if (newVal < 0) {
+                newVal = 0;
+            }
+
+            if (newVal > 240) {
+                newVal = 240;
+            }
+            value = (uint32_t)newVal;
+        } else {
+            angle = calculate_mouse_angle((tCoord){x, y}, gTopbarControls[topbarTempoDialId].rectangle);
+            value = angle_to_value(angle, 241);
+        }
 
         if (atomic_load(&gMasterClock) != value) {
             atomic_store(&gMasterClock, (uint8_t)value);
@@ -1141,6 +1200,28 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                                 fraction = 1.0;
                             }
                             value = (uint32_t)round(fraction * (double)(range - 1));
+                        } else if (gDialMode == eDialModeVertical) {
+                            int newVal = (int)gDragStartVal + (int)((gDragStartY - yCoord) * (double)range / 200.0);
+
+                            if (newVal < 0) {
+                                newVal = 0;
+                            }
+
+                            if (newVal >= (int)range) {
+                                newVal = (int)range - 1;
+                            }
+                            value = (uint32_t)newVal;
+                        } else if (gDialMode == eDialModeHorizontal) {
+                            int newVal = (int)gDragStartVal + (int)((xCoord - gDragStartX) * (double)range / 200.0);
+
+                            if (newVal < 0) {
+                                newVal = 0;
+                            }
+
+                            if (newVal >= (int)range) {
+                                newVal = (int)range - 1;
+                            }
+                            value = (uint32_t)newVal;
                         } else {
                             angle = calculate_mouse_angle((tCoord){x, y}, gParamRectangle[module->key.slot][module->key.location][module->key.index][gParamDragging.param]);
                             value = angle_to_value(angle, range);
@@ -1176,8 +1257,34 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                 case paramType3Mode:
 
                     if (modeLocationList[module->mode[gParamDragging.mode].modeRef].type2 == paramType2Dial) {
-                        angle = calculate_mouse_angle((tCoord){x, y}, module->mode[gParamDragging.mode].rectangle);
-                        value = angle_to_value(angle, modeLocationList[module->mode[gParamDragging.mode].modeRef].range);
+                        uint32_t modeRange = modeLocationList[module->mode[gParamDragging.mode].modeRef].range;
+
+                        if (gDialMode == eDialModeVertical) {
+                            int newVal = (int)gDragStartVal + (int)((gDragStartY - yCoord) * (double)modeRange / 200.0);
+
+                            if (newVal < 0) {
+                                newVal = 0;
+                            }
+
+                            if (newVal >= (int)modeRange) {
+                                newVal = (int)modeRange - 1;
+                            }
+                            value = (uint32_t)newVal;
+                        } else if (gDialMode == eDialModeHorizontal) {
+                            int newVal = (int)gDragStartVal + (int)((xCoord - gDragStartX) * (double)modeRange / 200.0);
+
+                            if (newVal < 0) {
+                                newVal = 0;
+                            }
+
+                            if (newVal >= (int)modeRange) {
+                                newVal = (int)modeRange - 1;
+                            }
+                            value = (uint32_t)newVal;
+                        } else {
+                            angle = calculate_mouse_angle((tCoord){x, y}, module->mode[gParamDragging.mode].rectangle);
+                            value = angle_to_value(angle, modeRange);
+                        }
 
                         if (module->mode[gParamDragging.mode].value != value) {
                             module->mode[gParamDragging.mode].value = value;
