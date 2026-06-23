@@ -5,8 +5,13 @@ Very much a work in-progress. Not yet tidied or rationalised.
 If anyone's interested in helping, especially with the GUI side of things,
 Please drop me a line.
 
+Since I'm now incurring costs (I recently started using LLMS) which would be good to at least cover, I now have a Buy-me-a-coffee page:
 
-This application has a dependency on 2 libraries: glfw and freetype2.
+buymeacoffee.com/chrispurusha
+
+Thanks for any donations!
+
+This application has a dependency on 3 libraries: glfw, freetype2 and libusb.
 
 To add these to the host build system, here is an example of the commands I used:
 
@@ -36,6 +41,6 @@ brew reinstall pkgconf
 
 brew upgrade
 
-Todo: Many mechanisms yet to implement - including copying, file writing, etc. 200+ modules to test. Graphical representation of filter curves / oscillator waves etc.
+Todo: Many mechanisms yet to implement - including copying, etc. 200+ modules to test. Graphical representation of filter curves / oscillator waves etc.
 
 See [THIRD_PARTY.md](./THIRD_PARTY.md) for open-source acknowledgments.
