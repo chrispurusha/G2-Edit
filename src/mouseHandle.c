@@ -1194,17 +1194,17 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                         }
 
                         if (paramType1 == paramType1Slider) {
-                            tRectangle rect     = gParamRectangle[module->key.slot][module->key.location][module->key.index][gParamDragging.param];
-                            double     fraction = (rect.coord.y + rect.size.h - y) / rect.size.h;
+                            int newVal = (int)module->param[variation][gParamDragging.param].value + (int)((gDragPrevY - yCoord) * (double)range / 200.0);
+                            gDragPrevY = yCoord;
 
-                            if (fraction < 0.0) {
-                                fraction = 0.0;
+                            if (newVal < 0) {
+                                newVal = 0;
                             }
 
-                            if (fraction > 1.0) {
-                                fraction = 1.0;
+                            if (newVal >= (int)range) {
+                                newVal = (int)range - 1;
                             }
-                            value = (uint32_t)round(fraction * (double)(range - 1));
+                            value      = (uint32_t)newVal;
                         } else if (gDialMode == eDialModeVertical) {
                             int newVal = (int)module->param[variation][gParamDragging.param].value + (int)((gDragPrevY - yCoord) * (double)range / 200.0);
                             gDragPrevY = yCoord;
