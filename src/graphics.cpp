@@ -454,22 +454,35 @@ void render_top_bar(void) {
                                                                        {{20, 42}, {get_text_width("Patch Mode", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                        buff, (tRgb)RGB_BACKGROUND_GREY);
 
-    snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].cycles[locationVa]);
-    draw_button(mainArea,
-                {{600, 44}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
-                buff, (tRgb)RGB_BACKGROUND_GREY);
-    snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].cycles[locationFx]);
-    draw_button(mainArea,
-                {{600, 60}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
-                buff, (tRgb)RGB_BACKGROUND_GREY);
-    snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].mem[locationVa]);
-    draw_button(mainArea,
-                {{644, 44}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
-                buff, (tRgb)RGB_BACKGROUND_GREY);
-    snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].mem[locationFx]);
-    draw_button(mainArea,
-                {{644, 60}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
-                buff, (tRgb)RGB_BACKGROUND_GREY);
+    {
+        double resLabelH  = STANDARD_TEXT_HEIGHT * 0.7;
+        double col1X      = 600.0;
+        double col2X      = 644.0;
+        double row1Y      = 44.0;
+        double row2Y      = 60.0;
+        double valW       = get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache);
+        double labelX     = 581.0;
+        double headerY    = row1Y - resLabelH - 2.0;
+        double titleW     = get_text_width("Patch Load", resLabelH, eCache);
+        double panelRight = col2X + valW;
+        double titleX     = labelX + (panelRight - labelX - titleW) / 2.0;
+        double rowLabelOY = (STANDARD_TEXT_HEIGHT - resLabelH) / 2.0;
+
+        render_text(mainArea, {{titleX, headerY - resLabelH - 2.0}, {BLANK_SIZE, resLabelH}}, "Patch Load");
+        render_text(mainArea, {{col1X, headerY}, {BLANK_SIZE, resLabelH}}, "Cycles");
+        render_text(mainArea, {{col2X, headerY}, {BLANK_SIZE, resLabelH}}, "Memory");
+        render_text(mainArea, {{labelX, row1Y + rowLabelOY}, {BLANK_SIZE, resLabelH}}, "VA");
+        render_text(mainArea, {{labelX, row2Y + rowLabelOY}, {BLANK_SIZE, resLabelH}}, "FX");
+
+        snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].cycles[locationVa]);
+        draw_button(mainArea, {{col1X, row1Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
+        snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].cycles[locationFx]);
+        draw_button(mainArea, {{col1X, row2Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
+        snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].mem[locationVa]);
+        draw_button(mainArea, {{col2X, row1Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
+        snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].mem[locationFx]);
+        draw_button(mainArea, {{col2X, row2Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
+    }
 }
 
 void wake_glfw(void) {
