@@ -31,7 +31,7 @@
 		};
 		79A07D7F3CD94F70B77FE0B7 /* SynthLib */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = SynthLib;
+			path = SynthLib/src;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -190,7 +190,7 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				"HEADER_SEARCH_PATHS[arch=*]" = (
-					"$(PROJECT_DIR)/SynthLib",
+					"$(PROJECT_DIR)/SynthLib/src",
 					"$(PROJECT_DIR)/ThirdParty/libusb/libusb",
 					"$(PROJECT_DIR)/ThirdParty/glfw/include",
 					"$(PROJECT_DIR)/ThirdParty/freetype/include",
@@ -253,7 +253,7 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				"HEADER_SEARCH_PATHS[arch=*]" = (
-					"$(PROJECT_DIR)/SynthLib",
+					"$(PROJECT_DIR)/SynthLib/src",
 					"$(PROJECT_DIR)/ThirdParty/libusb/libusb",
 					"$(PROJECT_DIR)/ThirdParty/glfw/include",
 					"$(PROJECT_DIR)/ThirdParty/freetype/include",
