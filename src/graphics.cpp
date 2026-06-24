@@ -463,12 +463,8 @@ void render_top_bar(void) {
         double valW       = get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache);
         double labelX     = 581.0;
         double headerY    = row1Y - resLabelH - 2.0;
-        double titleW     = get_text_width("Patch Load", resLabelH, eCache);
-        double panelRight = col2X + valW;
-        double titleX     = labelX + (panelRight - labelX - titleW) / 2.0;
         double rowLabelOY = (STANDARD_TEXT_HEIGHT - resLabelH) / 2.0;
 
-        render_text(mainArea, {{titleX, headerY - resLabelH - 2.0}, {BLANK_SIZE, resLabelH}}, "Patch Load");
         render_text(mainArea, {{col1X, headerY}, {BLANK_SIZE, resLabelH}}, "Cycles");
         render_text(mainArea, {{col2X, headerY}, {BLANK_SIZE, resLabelH}}, "Memory");
         render_text(mainArea, {{labelX, row1Y + rowLabelOY}, {BLANK_SIZE, resLabelH}}, "VA");
