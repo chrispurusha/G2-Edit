@@ -484,8 +484,9 @@ void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, 
     switch (ledLocationList[ledRef].ledType) {
         case ledTypeYes:
         {
-            bool green = (module->led.value >> 1) & 1;
-            bool red   = module->led.value & 1;
+            uint32_t ledVal = atomic_load(&module->led.value);
+            bool     green  = (ledVal >> 1) & 1;
+            bool     red    = ledVal & 1;
 
             if (green && red) {
                 set_rgb_colour(RGB_YELLOW_7);
