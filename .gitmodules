@@ -7,3 +7,6 @@
 [submodule "ThirdParty/freetype"]
 	path = ThirdParty/freetype
 	url = https://gitlab.freedesktop.org/freetype/freetype.git
+[submodule "SynthLib"]
+	path = SynthLib
+	url = https://github.com/chrispurusha/SynthLib.git
