@@ -1,5 +1,9 @@
 # G2-Edit
 
+Binary beta releases can be found here:
+
+https://github.com/chrispurusha/G2-Edit/tags
+
 Very much a work in-progress. Not yet tidied or rationalised.
 
 If anyone's interested in helping, especially with the GUI side of things,
@@ -7,7 +11,7 @@ Please drop me a line.
 
 Since I'm now incurring costs (I recently started using LLMS) which would be good to at least cover, I now have a Buy-me-a-coffee page:
 
-buymeacoffee.com/chrispurusha
+https://buymeacoffee.com/chrispurusha
 
 Thanks for any donations!
 
