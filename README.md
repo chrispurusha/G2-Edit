@@ -14,7 +14,27 @@ Thanks for any donations!
 
 ## Building
 
+### Prerequisites
+
+Install the following via Homebrew (https://brew.sh):
+
+```
+brew install cmake autoconf automake libtool uncrustify
+```
+
+- **cmake** — builds glfw and freetype
+- **autoconf / automake / libtool** — builds libusb
+- **uncrustify** — code formatter (optional, only needed when editing source)
+
+Xcode and its command line tools are also required:
+
+```
+xcode-select --install
+```
+
 ### 1. Clone with submodules
+
+The third-party libraries (glfw, freetype, libusb) are nested submodules inside SynthLib. The `--recurse-submodules` flag is required — without it the build will fail.
 
 ```
 git clone --recurse-submodules https://github.com/chrispurusha/G2-Edit.git
@@ -28,21 +48,37 @@ git submodule update --init --recursive
 
 ### 2. Build the third-party libraries
 
-All dependencies are in SynthLib/ThirdParty:
+All commands run from the root of the cloned repository.
+
+**glfw:**
 
 ```
-cd SynthLib/ThirdParty/glfw
-cmake -S . -B build
-cmake --build build
+cmake -S SynthLib/ThirdParty/glfw -B SynthLib/ThirdParty/glfw/build \
+  -DGLFW_BUILD_DOCS=OFF \
+  -DGLFW_BUILD_EXAMPLES=OFF \
+  -DGLFW_BUILD_TESTS=OFF
+cmake --build SynthLib/ThirdParty/glfw/build
+```
 
-cd ../freetype
-cmake -S . -B build
-cmake --build build
+**freetype:**
 
-cd ../libusb
-./autogen.sh
+```
+cmake -S SynthLib/ThirdParty/freetype -B SynthLib/ThirdParty/freetype/build \
+  -DFT_DISABLE_BROTLI=ON \
+  -DFT_DISABLE_BZIP2=ON \
+  -DFT_DISABLE_PNG=ON \
+  -DFT_DISABLE_ZLIB=ON
+cmake --build SynthLib/ThirdParty/freetype/build
+```
+
+**libusb:**
+
+```
+cd SynthLib/ThirdParty/libusb
+./bootstrap.sh
 ./configure
 make
+cd ../../..
 ```
 
 ### 3. Build with Xcode
@@ -51,13 +87,11 @@ Open `G2 Editor.xcodeproj` and build normally.
 
 ### 4. Code formatting (optional)
 
-After editing source files:
+After editing source files, run from the repository root:
 
 ```
 ./do-uncrustify
 ```
-
-Install uncrustify if needed: `brew install uncrustify`
 
 ## Todo
 
