@@ -52,6 +52,7 @@ void usb_log_text(const char * fmt, ...);
 #endif
 
 #define PATCH_FILE_SIZE                      (10 * 1024 * 1024)
+#define PERF_FILE_SIZE                       (40 * 1024 * 1024)
 #define TARGET_FRAME_BUFF_WIDTH              (2560)
 #define TARGET_FRAME_BUFF_HEIGHT             (1440)
 //#define GLOBAL_GUI_SCALE                     (2)  // Should be related to window size

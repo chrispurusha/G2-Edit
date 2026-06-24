@@ -991,13 +991,26 @@ void write_patch_notes(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
 }
 
 void write_current_note_2(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
-    // Fixed payload for now
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_CURRENT_NOTE_2);
     write_bit_stream(buff, bitPos, 16, 6);
     write_bit_stream(buff, bitPos, 8, 0x80);
     write_bit_stream(buff, bitPos, 8, 0x00);
     write_bit_stream(buff, bitPos, 8, 0x00);
     write_bit_stream(buff, bitPos, 8, 0x20);
+    write_bit_stream(buff, bitPos, 8, 0x00);
+    write_bit_stream(buff, bitPos, 8, 0x00);
+}
+
+void write_current_note_2_perf(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
+    write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_CURRENT_NOTE_2);
+    write_bit_stream(buff, bitPos, 16, 9);
+    write_bit_stream(buff, bitPos, 8, 0x80);
+    write_bit_stream(buff, bitPos, 8, 0x00);
+    write_bit_stream(buff, bitPos, 8, 0x00);
+    write_bit_stream(buff, bitPos, 8, 0x60);
+    write_bit_stream(buff, bitPos, 8, 0x00);
+    write_bit_stream(buff, bitPos, 8, 0x01);
+    write_bit_stream(buff, bitPos, 8, 0x00);
     write_bit_stream(buff, bitPos, 8, 0x00);
     write_bit_stream(buff, bitPos, 8, 0x00);
 }
@@ -1093,6 +1106,75 @@ void update_module_up_rates(void) {
             messageContent.moduleData.upRate    = module->upRate;
             msg_send(&gCommandQueue, &messageContent);
         }
+    }
+}
+
+void write_global_knobs(uint8_t * buff, uint32_t * bitPos) {
+    uint32_t sizeBitPos = 0;
+
+    write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_GLOBAL_KNOBS);
+
+    sizeBitPos = *bitPos;
+    write_bit_stream(buff, bitPos, 16, 0);   // Populated later
+
+    write_bit_stream(buff, bitPos, 16, MAX_NUM_KNOBS);
+
+    for (int i = 0; i < MAX_NUM_KNOBS; i++) {
+        tGlobalKnob * gKnob = &gGlobalKnobArray[i];
+
+        write_bit_stream(buff, bitPos, 1, gKnob->assigned ? 1 : 0);
+
+        if (gKnob->assigned) {
+            write_bit_stream(buff, bitPos, 2, gKnob->location);
+            write_bit_stream(buff, bitPos, 8, gKnob->moduleIndex);
+            write_bit_stream(buff, bitPos, 2, gKnob->isLed);
+            write_bit_stream(buff, bitPos, 7, gKnob->paramIndex);
+            write_bit_stream(buff, bitPos, 2, gKnob->slotIndex);
+        }
+    }
+
+    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+    write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
+}
+
+void write_slot_separator(uint8_t * buff, uint32_t * bitPos) {
+    write_bit_stream(buff, bitPos, 8, 0x6f);
+    write_bit_stream(buff, bitPos, 16, 0);
+}
+
+void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
+    char slotName[CLAVIA_NAME_SIZE + 1] = {0};
+
+    write_bit_stream(buff, bitPos, 8, 0x11); // constant observed in all perf files
+    write_bit_stream(buff, bitPos, 8, 0x00);
+    write_bit_stream(buff, bitPos, 8, 0x50); // TODO: use real gMasterVolume once stored; 0x50 is the G2 default
+    write_bit_stream(buff, bitPos, 8, 0x00);
+    write_bit_stream(buff, bitPos, 8, (uint8_t)(atomic_load(&gSlot) * 4)); // selected slot encoding
+    write_bit_stream(buff, bitPos, 8, 0x00);
+    write_bit_stream(buff, bitPos, 8, atomic_load(&gMasterClock));
+    write_bit_stream(buff, bitPos, 8, 0x00);
+    write_bit_stream(buff, bitPos, 8, atomic_load(&gMasterClockRunning));
+    write_bit_stream(buff, bitPos, 8, 0x00);
+    write_bit_stream(buff, bitPos, 8, 0x00);
+
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        patch_name_get(slot, slotName, sizeof(slotName));
+
+        if (slotName[0] == '\0') {
+            strncpy(slotName, "No name", sizeof(slotName) - 1);
+        }
+        write_clavia_string(buff, bitPos, slotName);
+
+        write_bit_stream(buff, bitPos, 8, 0x01);           // enabled
+        write_bit_stream(buff, bitPos, 8, slot == 0 ? 0x01 : 0x00);
+        write_bit_stream(buff, bitPos, 8, 0x00);
+        write_bit_stream(buff, bitPos, 8, 0x00);
+        write_bit_stream(buff, bitPos, 8, 0x00);
+        write_bit_stream(buff, bitPos, 8, 0x00);
+        write_bit_stream(buff, bitPos, 8, 0x7f);           // slot volume (default 127)
+        write_bit_stream(buff, bitPos, 8, slot == 0 ? 0x02 : 0x10);
+        write_bit_stream(buff, bitPos, 8, 0x00);
+        write_bit_stream(buff, bitPos, 8, 0x00);
     }
 }
 
