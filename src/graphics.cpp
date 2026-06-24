@@ -456,19 +456,19 @@ void render_top_bar(void) {
 
     snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].cycles[locationVa]);
     draw_button(mainArea,
-                {{600, 46}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
+                {{600, 44}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                 buff, (tRgb)RGB_BACKGROUND_GREY);
     snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].cycles[locationFx]);
     draw_button(mainArea,
-                {{600, 62}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
+                {{600, 60}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                 buff, (tRgb)RGB_BACKGROUND_GREY);
     snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].mem[locationVa]);
     draw_button(mainArea,
-                {{644, 46}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
+                {{644, 44}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                 buff, (tRgb)RGB_BACKGROUND_GREY);
     snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].mem[locationFx]);
     draw_button(mainArea,
-                {{644, 62}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
+                {{644, 60}, {get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                 buff, (tRgb)RGB_BACKGROUND_GREY);
 }
 
