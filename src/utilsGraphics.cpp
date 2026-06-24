@@ -41,6 +41,7 @@ extern "C" {
 
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
+#include "geometry.h"
 #include "utilsGraphics.h"
 #include "globalVars.h"
 
@@ -1007,14 +1008,6 @@ void free_textures(void) {
 }
 
 // Converts normalized value [0,127] back to an angle (-135° to 135°)
-double value_to_angle(uint32_t value, uint32_t range) {
-    if (range < 2) {
-        LOG_ERROR("Can't deal with a range of %u\n", range);
-        exit(1);
-    }
-    return ((double)value * (135.0 * 2.0) / (double)(range - 1)) - 135.0;
-}
-
 double clamp_scroll_bar(double value, double max_value) {
     max_value /= gGlobalGuiScale;
 
@@ -1047,50 +1040,6 @@ double set_scroll_bar_percent(double percent, double renderSize) {
 
     // Convert percentage back to actual position on the scrollbar
     return low + (percent / 100.0) * (high - low);
-}
-
-// Converts angle (-135° to 135°) to normalized value [0,127]
-uint32_t angle_to_value(double angle, uint32_t range) {
-    // Clamp angle within [-135, 135] range
-    if (angle > 135.0 && angle < 180.0) {
-        angle = 135.0;
-    } else if (angle >= 180.0 && angle < 360.0 - 135.0) {
-        angle = 360.0 - 135.0;
-    }
-    // Normalize angle to [0, 270]
-    angle = fmod(angle + 135.0, 360.0);
-
-    uint32_t value = (uint32_t)floor((angle * (double)range) / 270.0);
-
-    if (value >= range) { // If we hit 128, we only just hit it, so decrement
-        value = range - 1;
-    }
-    return value;
-}
-
-// Calculates angle (0° at top, increasing clockwise)
-double calculate_mouse_angle(tCoord mouseCoord, tRectangle rectangle) {
-    double centerX = rectangle.coord.x + (rectangle.size.w / 2.0);
-    double centerY = rectangle.coord.y + (rectangle.size.h / 2.0);
-
-    double dx      = mouseCoord.x - centerX;
-    double dy      = mouseCoord.y - centerY;
-
-    double angle   = atan2(dx, -dy) * (180.0 / M_PI); // 0° at top
-
-    return (angle < 0) ? angle + 360.0 : angle;
-}
-
-bool within_rectangle(tCoord coord, tRectangle rectangle) {
-    return coord.x >= rectangle.coord.x
-           && coord.x <= rectangle.coord.x + rectangle.size.w
-           && coord.y >= rectangle.coord.y
-           && coord.y <= rectangle.coord.y + rectangle.size.h;
-}
-
-bool within_lower_half_of_rectangle(tCoord coord, tRectangle rectangle) {
-    return within_rectangle(coord, rectangle)
-           && coord.y >= rectangle.coord.y + rectangle.size.h / 2;
 }
 
 void set_x_scroll_percent(double percent) {

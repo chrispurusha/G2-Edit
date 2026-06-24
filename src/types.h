@@ -22,6 +22,7 @@
 
 #include "sysIncludes.h"
 #include "defs.h"
+#include "geometry.h"
 
 typedef enum {
     moduleTypeUnknown0,
@@ -300,20 +301,6 @@ typedef struct {
     double alpha;
 } tRgba;
 
-typedef struct {
-    double x;
-    double y;
-} tCoord;
-
-typedef struct {
-    double w;
-    double h;
-} tSize;
-
-typedef struct {
-    tCoord coord;
-    tSize  size;
-} tRectangle;
 
 typedef struct {
     int32_t x;
