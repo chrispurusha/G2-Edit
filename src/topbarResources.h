@@ -55,15 +55,15 @@ static const tTopbarControlDef topbarControlList[topbarControlMax] = {
     [topbarClockRunStopId]       = {topbarClockRunStopId,       {475,  8}, anchorTopLeft, NULL, RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
     [topbarTempoDialId]          = {topbarTempoDialId,          {535, 10}, anchorTopLeft, NULL, RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
     [topbarPatchVolumeId]        = {topbarPatchVolumeId,        {320, 56}, anchorTopLeft, NULL, RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
-    [topbarHideAllCablesId]      = {topbarHideAllCablesId,      {700, 20}, anchorTopLeft, "Hide", RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
-    [topbarTransparentCablesId]  = {topbarTransparentCablesId,  {740, 20}, anchorTopLeft, "Dim", RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
+    [topbarHideAllCablesId]      = {topbarHideAllCablesId,      {700, 40}, anchorTopLeft, "Hide", RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
+    [topbarTransparentCablesId]  = {topbarTransparentCablesId,  {740, 40}, anchorTopLeft, "Dim", RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
     // Cable colour toggles — x position computed at render time
-    [topbarCableColourToggle0Id] = {topbarCableColourToggle0Id, {  0, 40}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
-    [topbarCableColourToggle1Id] = {topbarCableColourToggle1Id, {  0, 40}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
-    [topbarCableColourToggle2Id] = {topbarCableColourToggle2Id, {  0, 40}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
-    [topbarCableColourToggle3Id] = {topbarCableColourToggle3Id, {  0, 40}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
-    [topbarCableColourToggle4Id] = {topbarCableColourToggle4Id, {  0, 40}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
-    [topbarCableColourToggle5Id] = {topbarCableColourToggle5Id, {  0, 40}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
-    [topbarCableColourToggle6Id] = {topbarCableColourToggle6Id, {  0, 40}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial }, };
+    [topbarCableColourToggle0Id] = {topbarCableColourToggle0Id, {  0, 60}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
+    [topbarCableColourToggle1Id] = {topbarCableColourToggle1Id, {  0, 60}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
+    [topbarCableColourToggle2Id] = {topbarCableColourToggle2Id, {  0, 60}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
+    [topbarCableColourToggle3Id] = {topbarCableColourToggle3Id, {  0, 60}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
+    [topbarCableColourToggle4Id] = {topbarCableColourToggle4Id, {  0, 60}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
+    [topbarCableColourToggle5Id] = {topbarCableColourToggle5Id, {  0, 60}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
+    [topbarCableColourToggle6Id] = {topbarCableColourToggle6Id, {  0, 60}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial }, };
 
 #endif // __TOPBAR_RESOURCES_H__
