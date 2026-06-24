@@ -718,22 +718,22 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeAutomate,   paramType1CommonDial,     paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Val",          128,  64, NULL,                                  NULL          }, // 57 Val
     {moduleTypeAutomate,   paramType1StandardToggle, paramType2Menu,   {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Ch",            17,   0, NULL,                                  NULL          }, // 57 Channel
     {moduleTypeAutomate,   paramType1StandardToggle, paramType2Menu,   {{ 33,  -3}, { 7,  7}}, anchorBottomLeft,  "Echo",           2,   0, offOnStrMap,                           NULL          }, // 57 Echo
-    // 58 Drumsynth — Row 1 (MasterOsc | NoiseFilter) at y=22%, Row 2 (SlaveOsc | Bend) at y=50%
-    {moduleTypeDrumSynth,  paramType1FreqDrum,       paramType2Dial,   {{  8,  22}, { 7, 14}}, anchorTopLeft,     NULL,           128, 100, NULL,                                  NULL          }, // 58 Master Freq
-    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{  8,  50}, { 7, 14}}, anchorTopLeft,     NULL,           128,   0, NULL,                                  NULL          }, // 58 Slave Ratio
-    {moduleTypeDrumSynth,  paramType1ADRTime,        paramType2Dial,   {{ 24,  22}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          }, // 58 MasterDecay
-    {moduleTypeDrumSynth,  paramType1ADRTime,        paramType2Dial,   {{ 24,  50}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          }, // 58 Slave Decay
-    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 36,  22}, { 7, 14}}, anchorTopLeft,     "Lev",          128, 100, NULL,                                  NULL          }, // 58 Master Level
-    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 36,  50}, { 7, 14}}, anchorTopLeft,     "Lev",          128, 100, NULL,                                  NULL          }, // 58 Slave Level
-    {moduleTypeDrumSynth,  paramType1Freq,           paramType2Dial,   {{ 50,  22}, { 7, 14}}, anchorTopLeft,     "Freq",         128,   0, NULL,                                  NULL          }, // 58 Noise Filter Freq
-    {moduleTypeDrumSynth,  paramType1Resonance,      paramType2Dial,   {{ 62,  22}, { 7, 14}}, anchorTopLeft,     "Res",          128,   0, NULL,                                  NULL          }, // 58 Noise Filter Res
-    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 74,  22}, { 7, 14}}, anchorTopLeft,     "Swp",          128,   0, NULL,                                  NULL          }, // 58 Noise Filter Sweep
-    {moduleTypeDrumSynth,  paramType1ADRTime,        paramType2Dial,   {{ 86,  22}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          }, // 58 Noise Filter Decay
-    {moduleTypeDrumSynth,  paramType1StandardToggle, paramType2Menu,   {{ 92,  26}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, staticFilterTypeStrMap,                NULL          }, // 58 Noise FilterType
-    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 50,  50}, { 7, 14}}, anchorTopLeft,     "Amt",          128,   0, NULL,                                  NULL          }, // 58 Bend Amount
-    {moduleTypeDrumSynth,  paramType1ADRTime,        paramType2Dial,   {{ 62,  50}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          }, // 58 BendDecay
-    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 74,  50}, { 7, 14}}, anchorTopLeft,     "Click",        128,   0, NULL,                                  NULL          }, // 58 Click Amount
-    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 86,  50}, { 7, 14}}, anchorTopLeft,     "Noise",        128,   0, NULL,                                  NULL          }, // 58 Noise Amount
+    // 58 Drumsynth — 4 rows: MasterOsc(y=17) | NoiseFilter(y=33) | SlaveOsc(y=49) | Bend/Click/Noise(y=65)
+    {moduleTypeDrumSynth,  paramType1FreqDrum,       paramType2Dial,   {{ 10,  17}, { 7, 14}}, anchorTopLeft,     NULL,           128, 100, NULL,                                  NULL          }, // 58 Master Freq
+    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 10,  49}, { 7, 14}}, anchorTopLeft,     NULL,           128,   0, NULL,                                  NULL          }, // 58 Slave Ratio
+    {moduleTypeDrumSynth,  paramType1ADRTime,        paramType2Dial,   {{ 28,  17}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          }, // 58 MasterDecay
+    {moduleTypeDrumSynth,  paramType1ADRTime,        paramType2Dial,   {{ 28,  49}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          }, // 58 Slave Decay
+    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 46,  17}, { 7, 14}}, anchorTopLeft,     "Lev",          128, 100, NULL,                                  NULL          }, // 58 Master Level
+    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 46,  49}, { 7, 14}}, anchorTopLeft,     "Lev",          128, 100, NULL,                                  NULL          }, // 58 Slave Level
+    {moduleTypeDrumSynth,  paramType1Freq,           paramType2Dial,   {{ 10,  33}, { 7, 14}}, anchorTopLeft,     "Freq",         128,   0, NULL,                                  NULL          }, // 58 Noise Filter Freq
+    {moduleTypeDrumSynth,  paramType1Resonance,      paramType2Dial,   {{ 28,  33}, { 7, 14}}, anchorTopLeft,     "Res",          128,   0, NULL,                                  NULL          }, // 58 Noise Filter Res
+    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 46,  33}, { 7, 14}}, anchorTopLeft,     "Swp",          128,   0, NULL,                                  NULL          }, // 58 Noise Filter Sweep
+    {moduleTypeDrumSynth,  paramType1ADRTime,        paramType2Dial,   {{ 64,  33}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          }, // 58 Noise Filter Decay
+    {moduleTypeDrumSynth,  paramType1StandardToggle, paramType2Menu,   {{ 90,  37}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, staticFilterTypeStrMap,                NULL          }, // 58 Noise FilterType
+    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 10,  65}, { 7, 14}}, anchorTopLeft,     "Amt",          128,   0, NULL,                                  NULL          }, // 58 Bend Amount
+    {moduleTypeDrumSynth,  paramType1ADRTime,        paramType2Dial,   {{ 28,  65}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          }, // 58 BendDecay
+    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 46,  65}, { 7, 14}}, anchorTopLeft,     "Click",        128,   0, NULL,                                  NULL          }, // 58 Click Amount
+    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 64,  65}, { 7, 14}}, anchorTopLeft,     "Noise",        128,   0, NULL,                                  NULL          }, // 58 Noise Amount
     {moduleTypeDrumSynth,  paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 58 Bypass
     //{moduleTypeDrumSynth,   paramType1StandardToggle, paramType2Menu, {{ 60, -35}, {7,  7}}, anchorBottomLeft,  NULL,        1,  0, drSynthPresetStrMap,   NULL          }, // 58 Preset *** Length must be updated  // TODO: Only 16 parameters on this one, decide which one is wrong
 
@@ -1841,8 +1841,8 @@ const tConnectorLocation connectorLocationList[] = {
     // 57 Automate
     // 58 Drumsynth
     {moduleTypeDrumSynth,   connectorDirIn,  connectorTypeLogic,   {{  3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Trig",         labelLocUp   },        // 55 Trig
-    {moduleTypeDrumSynth,   connectorDirIn,  connectorTypeControl, {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Pitch",        labelLocUp   },        // 55 Pitch M
-    {moduleTypeDrumSynth,   connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",          labelLocUp   },        // 55 Velocity
+    {moduleTypeDrumSynth,   connectorDirIn,  connectorTypeControl, {{  3,  -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Pitch",        labelLocUp   },        // 55 Pitch M
+    {moduleTypeDrumSynth,   connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",          labelLocRight},        // 55 Velocity
     {moduleTypeDrumSynth,   connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },        // 55 Out
     // 59 CompLev
     {moduleTypeCompLev,     connectorDirIn,  connectorTypeControl, {{ 40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "A",            labelLocLeft },        // 55 Pitch M
@@ -2638,7 +2638,7 @@ const tLedLocation       ledLocationList[] = {
     {moduleTypeEnvADDSR,   ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:19 H:5
     {moduleTypePulse,      ledTypeYes,  {{ -6,  4}, {3, 3}}, anchorTopRight}, // XPos:242 YPos:4  H:2
     {moduleTypeDelay,      ledTypeYes,  {{ -6,  4}, {3, 3}}, anchorTopRight}, // XPos:242 YPos:4  H:2
-    {moduleTypeDrumSynth,  ledTypeYes,  {{  3, 10}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:39 H:8
+    {moduleTypeDrumSynth,  ledTypeYes,  {{  9, 10}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:39 H:8
     {moduleTypeWindSw,     ledTypeYes,  {{-20, 15}, {3, 3}}, anchorTopRight}, // XPos:198 YPos:15 H:2
     {moduleTypeNoteDet,    ledTypeYes,  {{-24, 15}, {3, 3}}, anchorTopRight}, // XPos:186 YPos:15 H:2
     {moduleTypeNoiseGate,  ledTypeYes,  {{-15, 21}, {3, 3}}, anchorTopRight}, // XPos:213 YPos:32 H:3
