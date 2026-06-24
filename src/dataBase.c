@@ -71,6 +71,20 @@ void database_delete_modules_by_slot(uint32_t slot) {
     }
 }
 
+bool slot_has_modules(uint32_t slot) {
+    if (slot >= MAX_SLOTS) {
+        return false;
+    }
+    for (uint32_t location = 0; location < (uint32_t)locationMax; location++) {
+        for (uint32_t index = 0; index < MAX_NUM_MODULES; index++) {
+            if (gModule[slot][location][index].active) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void database_clear_modules(void) {
     memset(gModule, 0, sizeof(gModule));
 }

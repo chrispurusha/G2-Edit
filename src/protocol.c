@@ -1165,13 +1165,14 @@ void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
         }
         write_clavia_string(buff, bitPos, slotName);
 
-        write_bit_stream(buff, bitPos, 8, 0x01);           // enabled
-        write_bit_stream(buff, bitPos, 8, slot == 0 ? 0x01 : 0x00);
+        bool has_content = slot_has_modules(slot);
+        write_bit_stream(buff, bitPos, 8, 0x01);                              // slot active
+        write_bit_stream(buff, bitPos, 8, (slot == 0 || has_content) ? 0x01 : 0x00);
         write_bit_stream(buff, bitPos, 8, 0x00);
+        write_bit_stream(buff, bitPos, 8, has_content ? 0x01 : 0x00);
+        write_bit_stream(buff, bitPos, 8, has_content ? 0x01 : 0x00);
         write_bit_stream(buff, bitPos, 8, 0x00);
-        write_bit_stream(buff, bitPos, 8, 0x00);
-        write_bit_stream(buff, bitPos, 8, 0x00);
-        write_bit_stream(buff, bitPos, 8, 0x7f);           // slot volume (default 127)
+        write_bit_stream(buff, bitPos, 8, 0x7f);                              // slot volume (default 127)
         write_bit_stream(buff, bitPos, 8, slot == 0 ? 0x02 : 0x10);
         write_bit_stream(buff, bitPos, 8, 0x00);
         write_bit_stream(buff, bitPos, 8, 0x00);
