@@ -28,7 +28,7 @@ git submodule update --init --recursive
 
 ### 2. Build the third-party libraries
 
-glfw and freetype are in SynthLib/ThirdParty and shared across all editor projects:
+All dependencies are in SynthLib/ThirdParty:
 
 ```
 cd SynthLib/ThirdParty/glfw
@@ -38,12 +38,8 @@ cmake --build build
 cd ../freetype
 cmake -S . -B build
 cmake --build build
-```
 
-libusb is G2-Edit-specific:
-
-```
-cd ThirdParty/libusb
+cd ../libusb
 ./autogen.sh
 ./configure
 make

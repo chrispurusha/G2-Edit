@@ -191,7 +191,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				"HEADER_SEARCH_PATHS[arch=*]" = (
 					"$(PROJECT_DIR)/SynthLib/src",
-					"$(PROJECT_DIR)/ThirdParty/libusb/libusb",
+					"$(PROJECT_DIR)/SynthLib/ThirdParty/libusb/libusb",
 					"$(PROJECT_DIR)/SynthLib/ThirdParty/glfw/include",
 					"$(PROJECT_DIR)/SynthLib/ThirdParty/freetype/include",
 				);
@@ -209,7 +209,7 @@
 				"OTHER_LDFLAGS[arch=*]" = (
 					"$(PROJECT_DIR)/SynthLib/ThirdParty/glfw/build/src/libglfw3.a",
 					"$(PROJECT_DIR)/SynthLib/ThirdParty/freetype/build/libfreetype.a",
-					"$(PROJECT_DIR)/ThirdParty/libusb/libusb/.libs/libusb-1.0.a",
+					"$(PROJECT_DIR)/SynthLib/ThirdParty/libusb/libusb/.libs/libusb-1.0.a",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "Purusha.G2-Editor";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -254,7 +254,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				"HEADER_SEARCH_PATHS[arch=*]" = (
 					"$(PROJECT_DIR)/SynthLib/src",
-					"$(PROJECT_DIR)/ThirdParty/libusb/libusb",
+					"$(PROJECT_DIR)/SynthLib/ThirdParty/libusb/libusb",
 					"$(PROJECT_DIR)/SynthLib/ThirdParty/glfw/include",
 					"$(PROJECT_DIR)/SynthLib/ThirdParty/freetype/include",
 				);
@@ -269,7 +269,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
 				MARKETING_VERSION = 1.0;
 				"OTHER_LDFLAGS[arch=*]" = (
-					"$(PROJECT_DIR)/ThirdParty/libusb/libusb/.libs/libusb-1.0.a",
+					"$(PROJECT_DIR)/SynthLib/ThirdParty/libusb/libusb/.libs/libusb-1.0.a",
 					"$(PROJECT_DIR)/SynthLib/ThirdParty/freetype/build/libfreetype.a",
 					"$(PROJECT_DIR)/SynthLib/ThirdParty/glfw/build/src/libglfw3.a",
 				);

@@ -1,6 +1,6 @@
 # Third-Party Software
 
-This project uses the following third-party open-source libraries. All licenses listed are permissive and compatible with open-source distribution.
+Third-party libraries are maintained in [SynthLib](https://github.com/chrispurusha/SynthLib) and included via git submodule. See SynthLib's THIRD_PARTY.md for the full list. Libraries used by this project:
 
 ---
 
