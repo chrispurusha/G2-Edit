@@ -22,6 +22,8 @@
 
 #include "sysIncludes.h"
 
+void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, int nameSize);
+void write_clavia_string(uint8_t * buff, uint32_t * bitPos, const char * name);
 void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset);
 void write_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * bitPos);
 void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset);
