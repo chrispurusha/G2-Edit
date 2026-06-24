@@ -430,19 +430,6 @@ void render_top_bar(void) {
         }
     }
 
-    for (int i = 0; i < cableColourMax; i++) {
-        tRgb                      colour   = gCableColourMap[i];
-        double                    x        = 700.0 + (i * (get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache) + 5));
-        tTopbarControlId          selectId = (tTopbarControlId)((int)topbarCableColourSelect0Id + i);
-        const tTopbarControlDef * def      = topbar_control_def(selectId);
-
-        if (i == (int)gCableColour) {
-            gTopbarControls[selectId].rectangle = draw_button(mainArea, {{x, def->coord.y}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "X", colour);
-        } else {
-            gTopbarControls[selectId].rectangle = draw_button(mainArea, {{x, def->coord.y}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, " ", colour);
-        }
-    }
-
     bool hideAll = atomic_load(&gCablesHideAll);
     bool transp  = atomic_load(&gCablesTransparent);
 
@@ -1305,7 +1292,8 @@ void do_graphics_loop(void) {
                 tModule * module = get_module(gCableDrag.fromModuleKey);
 
                 if (module != NULL) {
-                    set_rgb_colour(RGB_WHITE);
+                    tCableColour dragColour = cable_colour_for_connector_type(module->connector[gCableDrag.fromConnectorIndex].type);
+                    set_rgb_colour(gCableColourMap[dragColour]);
                     render_cable_from_to(module->connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector, 4.0);
                 }
             }

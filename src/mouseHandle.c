@@ -613,7 +613,7 @@ bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {
                                               cableKey.connectorToIoCount)) {
                     break;
                 }
-                cable.colour                                  = gCableColour;
+                cable.colour                                  = (uint32_t)cable_colour_for_connector_type(fromModule->connector[gCableDrag.fromConnectorIndex].type);
                 write_cable(cableKey, &cable);
 
                 tMessageContent messageContent = {0};
@@ -899,17 +899,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                         messageContent.slot = slot;
                         msg_send(&gCommandQueue, &messageContent);
                         found               = true;
-                        break;
-                    }
-                }
-            }
-
-            if (found == false) {
-                for (i = 0; i < cableColourMax; i++) {
-                    if (within_rectangle(coord, gTopbarControls[(int)topbarCableColourSelect0Id + i].rectangle)) {
-                        gCableColour = i;
-                        atomic_store(&gReDraw, true);
-                        found        = true;
                         break;
                     }
                 }

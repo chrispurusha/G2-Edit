@@ -46,6 +46,7 @@ extern const char *             freq_shift_hiStrMap[];
 extern const char *             freq_shift_loStrMap[];
 extern const char *             freq_shift_subStrMap[];
 
+tCableColour cable_colour_for_connector_type(tConnectorType type);
 uint32_t array_size_param_location_list(void);
 uint32_t array_size_connector_location_list(void);
 uint32_t array_size_mode_location_list(void);

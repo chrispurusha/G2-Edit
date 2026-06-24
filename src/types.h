@@ -523,13 +523,6 @@ typedef enum {
     topbarCableColourToggle4Id,
     topbarCableColourToggle5Id,
     topbarCableColourToggle6Id,
-    topbarCableColourSelect0Id,
-    topbarCableColourSelect1Id,
-    topbarCableColourSelect2Id,
-    topbarCableColourSelect3Id,
-    topbarCableColourSelect4Id,
-    topbarCableColourSelect5Id,
-    topbarCableColourSelect6Id,
     topbarControlMax
 } tTopbarControlId;
 

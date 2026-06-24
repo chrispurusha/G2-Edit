@@ -132,6 +132,79 @@ static void action_copy_variation(int index) {
 
 // ── Module / cable / morph actions ─────────────────────────────────────────
 
+static void menu_action_set_cable_colour(int index) {
+    uint32_t  newColour = gContextMenu.items[index].param;
+    uint32_t  slot      = atomic_load(&gSlot);
+    uint32_t  location  = atomic_load(&gLocation);
+    int       outIndex  = -1;
+    int       inIndex   = -1;
+
+    gContextMenu.active = false;
+
+    if ((gContextMenu.moduleKey.slot != slot) || (gContextMenu.moduleKey.location != location)) {
+        return;
+    }
+    tModule * module    = get_module(gContextMenu.moduleKey);
+
+    if (module == NULL) {
+        return;
+    }
+
+    switch (module->connector[gContextMenu.connectorIndex].dir) {
+        case connectorDirOut:
+            outIndex = find_io_count_from_index(module, connectorDirOut, gContextMenu.connectorIndex);
+            break;
+        case connectorDirIn:
+            inIndex  = find_io_count_from_index(module, connectorDirIn, gContextMenu.connectorIndex);
+            break;
+    }
+
+    for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+        tCable * cable    = get_cable_slot(slot, location, i);
+        bool     doUpdate = false;
+
+        if (cable == NULL || !cable->active) {
+            continue;
+        }
+
+        if (cable->key.moduleFromIndex == gContextMenu.moduleKey.index) {
+            if (cable->key.linkType == cableLinkTypeFromInput) {
+                if ((int)cable->key.connectorFromIoCount == inIndex) {
+                    doUpdate = true;
+                }
+            } else if (cable->key.linkType == cableLinkTypeFromOutput) {
+                if ((int)cable->key.connectorFromIoCount == outIndex) {
+                    doUpdate = true;
+                }
+            }
+        }
+
+        if (cable->key.moduleToIndex == gContextMenu.moduleKey.index) {
+            if ((int)cable->key.connectorToIoCount == inIndex) {
+                doUpdate = true;
+            }
+        }
+
+        if (doUpdate) {
+            cable->colour                                 = newColour;
+
+            tMessageContent messageContent = {0};
+            messageContent.cmd                            = eMsgCmdWriteCable;
+            messageContent.slot                           = slot;
+            messageContent.cableData.location             = location;
+            messageContent.cableData.moduleFromIndex      = cable->key.moduleFromIndex;
+            messageContent.cableData.connectorFromIoIndex = cable->key.connectorFromIoCount;
+            messageContent.cableData.moduleToIndex        = cable->key.moduleToIndex;
+            messageContent.cableData.connectorToIoIndex   = cable->key.connectorToIoCount;
+            messageContent.cableData.linkType             = cable->key.linkType;
+            messageContent.cableData.colour               = newColour;
+            msg_send(&gCommandQueue, &messageContent);
+        }
+    }
+
+    atomic_store(&gReDraw, true);
+}
+
 static void menu_action_delete_cable(int index) {
     int      outIndex = -1;
     int      inIndex  = -1;
@@ -1004,9 +1077,20 @@ void open_pedal_polarity_dropdown(tCoord coord, uint8_t * target) {
 // ── Module / cable / morph menus ────────────────────────────────────────────
 
 void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t connectorIndex) {
-    static tMenuItem menuItems[] = {
-        {"Delete cable", RGB_GREY_3, menu_action_delete_cable, 0, NULL},
-        {NULL,           RGB_BLACK,  NULL,                     0, NULL}
+    static tMenuItem cableColourItems[] = {
+        {"",   {0.7, 0.1, 0.1}, menu_action_set_cable_colour, cableColourRed,    NULL},
+        {"",   {0.3, 0.3, 0.7}, menu_action_set_cable_colour, cableColourBlue,   NULL},
+        {"",   {0.7, 0.7, 0.1}, menu_action_set_cable_colour, cableColourYellow, NULL},
+        {"",   {0.8, 0.3, 0.2}, menu_action_set_cable_colour, cableColourOrange, NULL},
+        {"",   {0.1, 0.7, 0.1}, menu_action_set_cable_colour, cableColourGreen,  NULL},
+        {"",   {0.7, 0.1, 0.7}, menu_action_set_cable_colour, cableColourPurple, NULL},
+        {NULL, RGB_BLACK, NULL, 0, NULL}
+    };
+
+    static tMenuItem menuItems[]        = {
+        {"Delete cable", RGB_GREY_3, menu_action_delete_cable, 0, NULL            },
+        {"Cable colour", RGB_GREY_3, NULL,                     0, cableColourItems},
+        {NULL,           RGB_BLACK,  NULL,                     0, NULL            }
     };
 
     gContextMenu.moduleKey      = moduleKey;

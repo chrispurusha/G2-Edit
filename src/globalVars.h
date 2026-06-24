@@ -87,7 +87,6 @@ extern tPatchSettingsEdit  gPatchSettingsEdit;
 extern tSettingsPanelRects gSettingsPanelRects;
 extern tRectangle          gMorphLabelRect[NUM_MORPHS];
 //extern _Atomic uint32_t    gHiddenCableMask;
-extern uint32_t            gCableColour;
 extern _Atomic bool        gCablesTransparent; // true = draw all cables semi-transparent
 extern _Atomic bool        gCablesHideAll;
 extern tResourceAlloc      gResourceAlloc[MAX_SLOTS];

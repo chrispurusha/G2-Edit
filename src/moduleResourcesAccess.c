@@ -24,6 +24,18 @@ extern "C" {
 #include "moduleResources.h"
 #include "moduleResourcesAccess.h"
 
+tCableColour cable_colour_for_connector_type(tConnectorType type) {
+    switch (type) {
+        case connectorTypeAudio:   return cableColourRed;
+
+        case connectorTypeControl: return cableColourBlue;
+
+        case connectorTypeLogic:   return cableColourYellow;
+
+        default:                   return cableColourRed;
+    }
+}
+
 uint32_t array_size_param_location_list(void) {
     return ARRAY_SIZE(paramLocationList);
 }

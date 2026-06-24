@@ -64,14 +64,6 @@ static const tTopbarControlDef topbarControlList[topbarControlMax] = {
     [topbarCableColourToggle3Id] = {topbarCableColourToggle3Id, {  0, 40}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
     [topbarCableColourToggle4Id] = {topbarCableColourToggle4Id, {  0, 40}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
     [topbarCableColourToggle5Id] = {topbarCableColourToggle5Id, {  0, 40}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
-    [topbarCableColourToggle6Id] = {topbarCableColourToggle6Id, {  0, 40}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
-    // Cable colour selects — x position computed at render time
-    [topbarCableColourSelect0Id] = {topbarCableColourSelect0Id, {  0, 60}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
-    [topbarCableColourSelect1Id] = {topbarCableColourSelect1Id, {  0, 60}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
-    [topbarCableColourSelect2Id] = {topbarCableColourSelect2Id, {  0, 60}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
-    [topbarCableColourSelect3Id] = {topbarCableColourSelect3Id, {  0, 60}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
-    [topbarCableColourSelect4Id] = {topbarCableColourSelect4Id, {  0, 60}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
-    [topbarCableColourSelect5Id] = {topbarCableColourSelect5Id, {  0, 60}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial },
-    [topbarCableColourSelect6Id] = {topbarCableColourSelect6Id, {  0, 60}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial }, };
+    [topbarCableColourToggle6Id] = {topbarCableColourToggle6Id, {  0, 40}, anchorTopLeft, NULL,         {0,                                      0, 0},topbarControlTypeSpecial }, };
 
 #endif // __TOPBAR_RESOURCES_H__
