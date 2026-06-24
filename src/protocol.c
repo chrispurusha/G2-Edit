@@ -1002,17 +1002,30 @@ void write_current_note_2(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
 }
 
 void write_current_note_2_perf(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
+    uint32_t voiceCount = gPatchDescr[slot].voiceCount;
+    uint32_t n          = voiceCount + 1;   // voice list entries = voiceCount + 1
+    uint32_t sizeBitPos = 0;
+
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_CURRENT_NOTE_2);
-    write_bit_stream(buff, bitPos, 16, 9);
-    write_bit_stream(buff, bitPos, 8, 0x80);
-    write_bit_stream(buff, bitPos, 8, 0x00);
-    write_bit_stream(buff, bitPos, 8, 0x00);
-    write_bit_stream(buff, bitPos, 8, 0x60);
-    write_bit_stream(buff, bitPos, 8, 0x00);
-    write_bit_stream(buff, bitPos, 8, 0x01);
-    write_bit_stream(buff, bitPos, 8, 0x00);
-    write_bit_stream(buff, bitPos, 8, 0x00);
-    write_bit_stream(buff, bitPos, 8, 0x00);
+
+    sizeBitPos = *bitPos;
+    write_bit_stream(buff, bitPos, 16, 0);
+
+    write_bit_stream(buff, bitPos, 7, 64);  // last note: MIDI 64, no attack/release
+    write_bit_stream(buff, bitPos, 7, 0);
+    write_bit_stream(buff, bitPos, 7, 0);
+
+    write_bit_stream(buff, bitPos, 5, voiceCount);  // count-1 field = voiceCount
+
+    for (uint32_t i = 0; i < n; i++) {
+        write_bit_stream(buff, bitPos, 7, 64);
+        write_bit_stream(buff, bitPos, 7, 0);
+        write_bit_stream(buff, bitPos, 7, 0);
+    }
+
+    *bitPos    = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+
+    write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
 
 void send_module_move_msg(tModule * module) {
@@ -1133,7 +1146,7 @@ void write_global_knobs(uint8_t * buff, uint32_t * bitPos) {
         }
     }
 
-    *bitPos = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
+    *bitPos    = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(*bitPos));
     write_bit_stream(buff, &sizeBitPos, 16, BIT_TO_BYTE(*bitPos - sizeBitPos) - 2);
 }
 
@@ -1145,9 +1158,9 @@ void write_slot_separator(uint8_t * buff, uint32_t * bitPos) {
 void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
     char slotName[CLAVIA_NAME_SIZE + 1] = {0};
 
-    write_bit_stream(buff, bitPos, 8, 0x11); // constant observed in all perf files
+    write_bit_stream(buff, bitPos, 8, 0x11);                               // constant observed in all perf files
     write_bit_stream(buff, bitPos, 8, 0x00);
-    write_bit_stream(buff, bitPos, 8, 0x50); // TODO: use real gMasterVolume once stored; 0x50 is the G2 default
+    write_bit_stream(buff, bitPos, 8, 0x50);                               // TODO: use real gMasterVolume once stored; 0x50 is the G2 default
     write_bit_stream(buff, bitPos, 8, 0x00);
     write_bit_stream(buff, bitPos, 8, (uint8_t)(atomic_load(&gSlot) * 4)); // selected slot encoding
     write_bit_stream(buff, bitPos, 8, 0x00);

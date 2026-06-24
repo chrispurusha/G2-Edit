@@ -433,9 +433,9 @@ typedef struct {
 } tVolume;
 
 typedef struct {
-    uint32_t          ledRef;
-    tRectangle        rectangle;
-    _Atomic uint32_t  value;
+    uint32_t         ledRef;
+    tRectangle       rectangle;
+    _Atomic uint32_t value;
 } tLed;
 
 typedef struct {

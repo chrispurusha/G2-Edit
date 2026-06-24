@@ -77,16 +77,19 @@ uint32_t count_active_modules(uint32_t slot) {
     if (slot >= MAX_SLOTS) {
         return 0;
     }
+
     // Only count VA and FX — morph-location modules exist on all slots (sent by G2 via USB)
     // but are not written to patch/perf files and don't indicate real patch content.
     for (uint32_t index = 0; index < MAX_NUM_MODULES; index++) {
         if (gModule[slot][locationVa][index].active) {
             count++;
         }
+
         if (gModule[slot][locationFx][index].active) {
             count++;
         }
     }
+
     return count;
 }
 

@@ -807,7 +807,6 @@ void write_perf_to_file(const char * filepath) {
         LOG_ERROR("Error opening file\n");
         return;
     }
-
     buff = (uint8_t *)malloc(PERF_FILE_SIZE);
 
     if (buff == NULL) {
@@ -861,8 +860,8 @@ void write_perf_to_file(const char * filepath) {
 
     write_global_knobs(buff, &bitPos);
 
-    bitPos    = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos));
-    calcCrc   = calc_crc16(buff, BIT_TO_BYTE_ROUND_UP(bitPos));
+    bitPos      = BYTE_TO_BIT(BIT_TO_BYTE_ROUND_UP(bitPos));
+    calcCrc     = calc_crc16(buff, BIT_TO_BYTE_ROUND_UP(bitPos));
     write_bit_stream(buff, &bitPos, 16, calcCrc);
 
     writtenSize = fwrite(buff, 1, BIT_TO_BYTE_ROUND_UP(bitPos), file);
@@ -874,7 +873,6 @@ void write_perf_to_file(const char * filepath) {
     if (BIT_TO_BYTE_ROUND_UP(bitPos) > ((PERF_FILE_SIZE * 3) / 4)) {
         LOG_ERROR("Write file size > 3/4 of %d, might need to increase PERF_FILE_SIZE\n", PERF_FILE_SIZE);
     }
-
     free(buff);
     fclose(file);
 }
@@ -890,7 +888,7 @@ static void on_file_opened(const char * path) {
 }
 
 static void on_file_saved(const char * path) {
-    uint32_t slot    = atomic_load(&gSlot);
+    uint32_t slot     = atomic_load(&gSlot);
     bool     perfMode = atomic_load(&gPerfMode) != 0;
 
     if (path) {
