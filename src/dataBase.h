@@ -25,6 +25,7 @@
 #include "types.h"
 
 tModule * get_module(tModuleKey key);
+uint32_t count_active_modules(uint32_t slot);
 bool slot_has_modules(uint32_t slot);
 tModule * get_module_slot(uint32_t slot, uint32_t location, uint32_t index);
 void write_module(tModuleKey key, tModule * module);

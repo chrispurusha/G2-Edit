@@ -71,18 +71,27 @@ void database_delete_modules_by_slot(uint32_t slot) {
     }
 }
 
-bool slot_has_modules(uint32_t slot) {
+uint32_t count_active_modules(uint32_t slot) {
+    uint32_t count = 0;
+
     if (slot >= MAX_SLOTS) {
-        return false;
+        return 0;
     }
-    for (uint32_t location = 0; location < (uint32_t)locationMax; location++) {
-        for (uint32_t index = 0; index < MAX_NUM_MODULES; index++) {
-            if (gModule[slot][location][index].active) {
-                return true;
-            }
+    // Only count VA and FX — morph-location modules exist on all slots (sent by G2 via USB)
+    // but are not written to patch/perf files and don't indicate real patch content.
+    for (uint32_t index = 0; index < MAX_NUM_MODULES; index++) {
+        if (gModule[slot][locationVa][index].active) {
+            count++;
+        }
+        if (gModule[slot][locationFx][index].active) {
+            count++;
         }
     }
-    return false;
+    return count;
+}
+
+bool slot_has_modules(uint32_t slot) {
+    return count_active_modules(slot) > 0;
 }
 
 void database_clear_modules(void) {

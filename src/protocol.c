@@ -1166,6 +1166,7 @@ void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
         write_clavia_string(buff, bitPos, slotName);
 
         bool has_content = slot_has_modules(slot);
+
         write_bit_stream(buff, bitPos, 8, 0x01);                              // slot active
         write_bit_stream(buff, bitPos, 8, (slot == 0 || has_content) ? 0x01 : 0x00);
         write_bit_stream(buff, bitPos, 8, 0x00);
