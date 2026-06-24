@@ -1,50 +1,70 @@
 # G2-Edit
 
-Binary beta releases can be found here:
+A macOS GUI editor for the Nord G2 modular synthesizer. Work in progress.
 
-https://github.com/chrispurusha/G2-Edit/tags
+Binary beta releases: https://github.com/chrispurusha/G2-Edit/tags
 
-Very much a work in-progress. Not yet tidied or rationalised.
+If anyone is interested in helping, especially with the GUI side of things, please drop me a line.
 
-If anyone's interested in helping, especially with the GUI side of things,
-Please drop me a line.
-
-Since I'm now incurring costs (I recently started using LLMS) which would be good to at least cover, I now have a Buy-me-a-coffee page:
+Since I'm now incurring costs (I recently started using LLMs) which would be good to at least cover, I now have a Buy Me a Coffee page:
 
 https://buymeacoffee.com/chrispurusha
 
 Thanks for any donations!
 
-This application has a dependency on 3 libraries: glfw, freetype2 and libusb.
+## Building
 
-To add these to the host build system, here is an example of the commands I used:
+### 1. Clone with submodules
 
-// Next command only required if Homebrew not installed (or not up-to-date)
+```
+git clone --recurse-submodules https://github.com/chrispurusha/G2-Edit.git
+```
 
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+If you already cloned without `--recurse-submodules`:
 
-brew install glfw
+```
+git submodule update --init --recursive
+```
 
-brew install freetype2
+### 2. Build the third-party libraries
 
-brew install libusb
+glfw and freetype are in SynthLib/ThirdParty and shared across all editor projects:
 
-// For uncrustify, which is a 'C' beautifier
+```
+cd SynthLib/ThirdParty/glfw
+cmake -S . -B build
+cmake --build build
 
-brew install uncrustify
+cd ../freetype
+cmake -S . -B build
+cmake --build build
+```
 
-(Note - seems I no longer have to use ...install --build-from-source <library>)
+libusb is G2-Edit-specific:
 
-If you have those installed already and want to update, here's the sequence I ran to update:
+```
+cd ThirdParty/libusb
+./autogen.sh
+./configure
+make
+```
 
-brew update
+### 3. Build with Xcode
 
-brew doctor
+Open `G2 Editor.xcodeproj` and build normally.
 
-brew reinstall pkgconf
+### 4. Code formatting (optional)
 
-brew upgrade
+After editing source files:
 
-Todo: Many mechanisms yet to implement - including copying, etc. 200+ modules to test. Graphical representation of filter curves / oscillator waves etc.
+```
+./do-uncrustify
+```
+
+Install uncrustify if needed: `brew install uncrustify`
+
+## Todo
+
+Many mechanisms yet to implement — including copying, etc. 200+ modules to test. Graphical representation of filter curves / oscillator waves etc.
 
 See [THIRD_PARTY.md](./THIRD_PARTY.md) for open-source acknowledgments.
