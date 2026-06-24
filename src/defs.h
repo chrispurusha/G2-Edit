@@ -95,6 +95,8 @@ void usb_log_text(const char * fmt, ...);
 #define SUB_COMMAND_GET_ASSIGNED_VOICES      (0x04)
 #define SUB_RESPONSE_SET_ASSIGNED_VOICES     (0x04)
 #define SUB_RESPONSE_ASSIGNED_VOICES         (0x05)
+#define SUB_COMMAND_GET_SLOT_SELECTION       (0x06) // CMSlotSelectionRequest in the reference
+#define SUB_RESPONSE_SLOT_SELECTION          (0x07) // CMSlotSelectionDump in the reference
 #define SUB_COMMAND_SELECT_SLOT              (0x09)
 #define SUB_RESPONSE_SELECT_SLOT             (0x09)
 #define SUB_COMMAND_RETRIEVE                 (0x0a)

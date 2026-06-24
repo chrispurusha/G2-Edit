@@ -825,6 +825,20 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             return EXIT_SUCCESS;
         }
 
+        case SUB_RESPONSE_SLOT_SELECTION:
+        {
+            LOG_DEBUG("Got slot selection dump\n");
+            read_bit_stream(buff, bitPos, 4); // 4 padding bits (always 0)
+
+            for (uint32_t i = 0; i < MAX_SLOTS; i++) {
+                uint8_t status = (uint8_t)read_bit_stream(buff, bitPos, 8);
+                atomic_store(&gSlotEnabled[i], status != 0 ? 1 : 0);
+                LOG_DEBUG("  Slot %u enabled: %u\n", i, status != 0 ? 1 : 0);
+            }
+
+            return EXIT_SUCCESS;
+        }
+
         case SUB_RESPONSE_ASSIGNED_VOICES:
         {
             int i = 0;
@@ -1428,6 +1442,14 @@ static int send_get_midi_cc(void) {
     return send_and_receive(buff, pos, SUB_RESPONSE_MIDI_CC, USB_RECV_DATA_MS);
 }
 
+static int send_get_slot_selection(void) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+
+    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_GET_SLOT_SELECTION);
+    return send_and_receive(buff, pos, SUB_RESPONSE_SLOT_SELECTION, USB_RECV_DATA_MS);
+}
+
 static int send_get_assigned_voices(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
@@ -1961,6 +1983,7 @@ static int send_init_sequence_pull(void) {
         }
     }
 
+    send_get_slot_selection();
     send_get_assigned_voices();
     send_get_global_knobs();
     send_get_master_clock();

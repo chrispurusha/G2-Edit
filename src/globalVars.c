@@ -63,6 +63,7 @@ uint32_t               gControllerCount[MAX_SLOTS]                              
 uint32_t               gPatchNotesSize[MAX_SLOTS]                                                   = {0};
 uint8_t                gPatchNotes[MAX_SLOTS][PATCH_NOTES_SIZE + 1]                                 = {0};
 _Atomic uint8_t        gPatchVersion[MAX_SLOTS]                                                     = {0};
+_Atomic uint8_t        gSlotEnabled[MAX_SLOTS]                                                      = {1, 1, 1, 1};
 _Atomic uint8_t        gPerfVersion                                                                 = 0;
 _Atomic uint8_t        gMasterClock                                                                 = 0;
 _Atomic uint8_t        gPerfMode                                                                    = 0;
