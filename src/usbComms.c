@@ -2612,8 +2612,11 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdWritePerfHeader:
             // send_perf_header_usb() — disabled: gPerfHeaderCache is zero until G2 sends an 0x11
-            // send_perf_name_usb()   — disabled: G2 in patch mode echoes back "error" as perf name
+            // 0x3e mode byte: 1=perf, 0=patch (per defs.h comment and original reference)
             retVal = send_perf_mode_change_usb(1);
+            if (retVal == EXIT_SUCCESS) {
+                //retVal = send_perf_name_usb();
+            }
             break;
 
         case eMsgCmdReloadAllPatchData:
