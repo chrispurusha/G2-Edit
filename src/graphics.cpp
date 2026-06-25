@@ -689,21 +689,21 @@ void read_file_into_memory_and_process(const char * filepath) {
         type    = buff[byteOffset++];
         LOG_DEBUG("Version %u\n", version);
         LOG_DEBUG("Type %u\n", type);
-
+        
+        /* TODO - implement clear down commands as an init/clear slot function? */
+        database_delete_cables_by_slot(slot);
+        database_delete_modules_by_slot(slot);
+        gMorphCount[slot]      = 0;
+        gNote2Size[slot]       = 0;
+        gControllerCount[slot] = 0;
+        gPatchNotesSize[slot]  = 0;
+        memset(&(gPatchDescr[slot]), 0, sizeof(gPatchDescr[0]));
+        memset(&(gKnobArray[slot]), 0, sizeof(gKnobArray[0]));
+        memset(gNote2[slot], 0, sizeof(gNote2[0]));
+        memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
+        memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
+        
         if (type == 0) {
-            /* TODO - implement clear down commands as an init/clear slot function? */
-            database_delete_cables_by_slot(slot);
-            database_delete_modules_by_slot(slot);
-            gMorphCount[slot]      = 0;
-            gNote2Size[slot]       = 0;
-            gControllerCount[slot] = 0;
-            gPatchNotesSize[slot]  = 0;
-            memset(&(gPatchDescr[slot]), 0, sizeof(gPatchDescr[0]));
-            memset(&(gKnobArray[slot]), 0, sizeof(gKnobArray[0]));
-            memset(gNote2[slot], 0, sizeof(gNote2[0]));
-            memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
-            memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
-
             parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // TODO: parse_patch should really be in a commonly accessible source file, for file or USB access
             set_patch_name_from_filename(slot, filepath);
 

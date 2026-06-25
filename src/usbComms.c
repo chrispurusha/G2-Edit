@@ -1954,7 +1954,8 @@ static int push_slot_to_device(uint32_t slot) {
     write_patch_notes(slot, buff, &bitPos);
 
     pos = BIT_TO_BYTE(bitPos);
-    return send_and_receive(buff, pos, SUB_RESPONSE_PATCH_VERSION, USB_RECV_DATA_MS);
+    int expectedResp = atomic_load(&gPerfMode) ? SUB_RESPONSE_OK : SUB_RESPONSE_PATCH_VERSION;
+    return send_and_receive(buff, pos, expectedResp, USB_RECV_DATA_MS);
 }
 
 static int send_set_patch_name(uint32_t slot, const char * name) {
