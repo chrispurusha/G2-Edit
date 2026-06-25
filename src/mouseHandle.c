@@ -1633,6 +1633,10 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 gPerfNameEdit.active        = false;
                 strncpy(gPerfName, gPerfNameEdit.buffer, CLAVIA_NAME_SIZE);
                 gPerfName[CLAVIA_NAME_SIZE] = '\0';
+
+                tMessageContent messageContent = {0};
+                messageContent.cmd = eMsgCmdWritePerfHeader;
+                msg_send(&gCommandQueue, &messageContent);
             } else if (key == GLFW_KEY_ESCAPE) {
                 gPerfNameEdit.active = false;
             }
