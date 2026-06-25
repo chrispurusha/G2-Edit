@@ -2614,11 +2614,12 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal = send_stop();
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = send_perf_mode_change_usb(1);
+                //retVal = send_perf_mode_change_usb(1);
             }
             
+            
             if (retVal == EXIT_SUCCESS) {
-                for (uint32_t s = 0; s < MAX_SLOTS && retVal == EXIT_SUCCESS; s++) {
+                for (uint32_t s = 1; s < MAX_SLOTS && retVal == EXIT_SUCCESS; s++) {
                     retVal = push_slot_to_device(s);
                 }
             }
@@ -2633,6 +2634,14 @@ static int send_write_data(tMessageContent * messageContent) {
 
             if (retVal == EXIT_SUCCESS) {
                 retVal = send_start();
+            }
+
+            if (retVal == EXIT_SUCCESS) {
+                retVal = send_set_master_clock_bpm(atomic_load(&gMasterClock));
+            }
+
+            if (retVal == EXIT_SUCCESS) {
+                retVal = send_set_master_clock_run(atomic_load(&gMasterClockRunning));
             }
 
             if (retVal == EXIT_SUCCESS) {
