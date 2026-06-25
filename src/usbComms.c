@@ -423,40 +423,55 @@ static int parse_performance_settings(uint8_t * buff, int length) {
 // header section, but on USB it carries a 2-byte the original editor's code size word and fixed-width 16-byte
 // names (not null-terminated-variable-length as in the 0x29 settings dump).
 static void parse_perf_header_dump(uint8_t * buff, uint32_t * bitPos) {
-    char name[CLAVIA_NAME_SIZE + 1] = {0};
-    int  i                          = 0;
+    char    name[CLAVIA_NAME_SIZE + 1] = {0};
+    int     i                          = 0;
 
     // the original editor's code size word (2 bytes) — read to advance past it; content size not needed
     read_bit_stream(buff, bitPos, 8);
     read_bit_stream(buff, bitPos, 8);
 
-    // 8 global setting bytes (the original editor's code fields this+8 through this+0x20)
-    LOG_DEBUG("  GlobalMode        = %u\n", read_bit_stream(buff, bitPos, 8)); // clamped [0,15]
-    LOG_DEBUG("  RangeAndFlags     = %u\n", read_bit_stream(buff, bitPos, 8)); // 6 bits + 2 bits
-    LOG_DEBUG("  KeyboardRange     = %u\n", read_bit_stream(buff, bitPos, 8)); // bool
-    LOG_DEBUG("  Unknown0x18       = %u\n", read_bit_stream(buff, bitPos, 8)); // undefined2 (1B)
-    LOG_DEBUG("  Unknown0x20       = %u\n", read_bit_stream(buff, bitPos, 8)); // bool
-    LOG_DEBUG("  PerfMode          = %u\n", read_bit_stream(buff, bitPos, 8)); // clamped [0,1]
-    read_bit_stream(buff, bitPos, 8);                                          // fixed 0x00
-    read_bit_stream(buff, bitPos, 8);                                          // fixed 0x00
+    // 8 global setting bytes — store for echo-back when sending perf header to G2
+    gPerfHeaderCache.globalMode    = (uint8_t)read_bit_stream(buff, bitPos, 8);
+    gPerfHeaderCache.rangeAndFlags = (uint8_t)read_bit_stream(buff, bitPos, 8);
+    gPerfHeaderCache.keyboardRange = (uint8_t)read_bit_stream(buff, bitPos, 8);
+    gPerfHeaderCache.unknown18     = (uint8_t)read_bit_stream(buff, bitPos, 8);
+    gPerfHeaderCache.unknown20     = (uint8_t)read_bit_stream(buff, bitPos, 8);
+    uint8_t perfMode                   = (uint8_t)read_bit_stream(buff, bitPos, 8);
+    atomic_store(&gPerfMode, perfMode);
+    gSynthSettings.perfMode        = perfMode;
+    LOG_DEBUG("  GlobalMode        = %u\n", gPerfHeaderCache.globalMode);
+    LOG_DEBUG("  RangeAndFlags     = %u\n", gPerfHeaderCache.rangeAndFlags);
+    LOG_DEBUG("  KeyboardRange     = %u\n", gPerfHeaderCache.keyboardRange);
+    LOG_DEBUG("  Unknown0x18       = %u\n", gPerfHeaderCache.unknown18);
+    LOG_DEBUG("  Unknown0x20       = %u\n", gPerfHeaderCache.unknown20);
+    LOG_DEBUG("  PerfMode          = %u\n", perfMode);
+    read_bit_stream(buff, bitPos, 8);  // fixed 0x00
+    read_bit_stream(buff, bitPos, 8);  // fixed 0x00
 
     for (i = 0; i < MAX_SLOTS; i++) {
         memset(name, 0, sizeof(name));
         read_clavia_string(buff, bitPos, name, sizeof(name));
         uint8_t enabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
         atomic_store(&gSlotEnabled[i], enabled != 0 ? 1 : 0);
+        gPerfHeaderCache.slot[i].keyboardEnabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
+        gPerfHeaderCache.slot[i].holdEnabled     = (uint8_t)read_bit_stream(buff, bitPos, 8);
+        gPerfHeaderCache.slot[i].rangeLower      = (uint8_t)read_bit_stream(buff, bitPos, 8);
+        gPerfHeaderCache.slot[i].rangeUpper      = (uint8_t)read_bit_stream(buff, bitPos, 8);
+        gPerfHeaderCache.slot[i].byte37          = (uint8_t)read_bit_stream(buff, bitPos, 8);
+        gPerfHeaderCache.slot[i].byte38          = (uint8_t)read_bit_stream(buff, bitPos, 8);
+        gPerfHeaderCache.slot[i].byte34          = (uint8_t)read_bit_stream(buff, bitPos, 8);
+        read_bit_stream(buff, bitPos, 8);  // 0x00
+        read_bit_stream(buff, bitPos, 8);  // 0x00
         LOG_DEBUG("Slot %d:\n", i);
         LOG_DEBUG("  Name              = '%s'\n", name);
         LOG_DEBUG("  SlotEnabled       = %u\n", enabled != 0 ? 1 : 0);
-        LOG_DEBUG("  KeyboardEnabled   = %u\n", read_bit_stream(buff, bitPos, 8));
-        LOG_DEBUG("  HoldEnabled       = %u\n", read_bit_stream(buff, bitPos, 8));
-        LOG_DEBUG("  RangeLower        = %u\n", read_bit_stream(buff, bitPos, 8)); // CRangeABC 0x35
-        LOG_DEBUG("  RangeUpper        = %u\n", read_bit_stream(buff, bitPos, 8)); // CRangeABC 0x36
-        LOG_DEBUG("  Byte0x37          = %u\n", read_bit_stream(buff, bitPos, 8));
-        LOG_DEBUG("  Byte0x38          = %u\n", read_bit_stream(buff, bitPos, 8));
-        LOG_DEBUG("  Byte0x34          = %u\n", read_bit_stream(buff, bitPos, 8)); // clamped [0,0x10]
-        read_bit_stream(buff, bitPos, 8);                                          // 0x00 discarded
-        read_bit_stream(buff, bitPos, 8);                                          // 0x00 discarded
+        LOG_DEBUG("  KeyboardEnabled   = %u\n", gPerfHeaderCache.slot[i].keyboardEnabled);
+        LOG_DEBUG("  HoldEnabled       = %u\n", gPerfHeaderCache.slot[i].holdEnabled);
+        LOG_DEBUG("  RangeLower        = %u\n", gPerfHeaderCache.slot[i].rangeLower);
+        LOG_DEBUG("  RangeUpper        = %u\n", gPerfHeaderCache.slot[i].rangeUpper);
+        LOG_DEBUG("  Byte0x37          = %u\n", gPerfHeaderCache.slot[i].byte37);
+        LOG_DEBUG("  Byte0x38          = %u\n", gPerfHeaderCache.slot[i].byte38);
+        LOG_DEBUG("  Byte0x34          = %u\n", gPerfHeaderCache.slot[i].byte34);
     }
 }
 
@@ -2126,6 +2141,60 @@ static int send_set_patch_descr(uint32_t slot) { // Note - currently using value
     return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
+static int send_perf_header_usb(void) {
+    uint8_t  buff[SEND_MESSAGE_SIZE]    = {0};
+    uint8_t  payload[512]               = {0};
+    int      pos                        = COMMAND_OFFSET;
+    uint32_t bitPos                     = 0;
+    char     name[CLAVIA_NAME_SIZE + 1] = {0};
+    uint32_t i                          = 0;
+
+    // Build payload starting at byte 2, reserving bytes 0-1 for the the original editor's code size word
+    bitPos = BYTE_TO_BIT(2);
+
+    // 8 global bytes
+    write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.globalMode);
+    write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.rangeAndFlags);
+    write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.keyboardRange);
+    write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.unknown18);
+    write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.unknown20);
+    write_bit_stream(payload, &bitPos, 8, atomic_load(&gPerfMode) ? 1 : 0);
+    write_bit_stream(payload, &bitPos, 8, 0);
+    write_bit_stream(payload, &bitPos, 8, 0);
+
+    // Per-slot data
+    for (i = 0; i < MAX_SLOTS; i++) {
+        memset(name, 0, sizeof(name));
+        patch_name_get(i, name, sizeof(name));
+        write_clavia_string(payload, &bitPos, name);
+        write_bit_stream(payload, &bitPos, 8, atomic_load(&gSlotEnabled[i]));
+        write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].keyboardEnabled);
+        write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].holdEnabled);
+        write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].rangeLower);
+        write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].rangeUpper);
+        write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].byte37);
+        write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].byte38);
+        write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].byte34);
+        write_bit_stream(payload, &bitPos, 8, 0);
+        write_bit_stream(payload, &bitPos, 8, 0);
+    }
+
+    // Back-fill the the original editor's code size word (big-endian; counts bytes after the word)
+    uint32_t totalBytes   = BIT_TO_BYTE(bitPos);
+    uint32_t contentBytes = totalBytes - 2;
+
+    payload[0] = (uint8_t)((contentBytes >> 8) & 0xff);
+    payload[1] = (uint8_t)(contentBytes & 0xff);
+
+    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_RESPONSE_PERF_SETTINGS);
+
+    for (i = 0; i < totalBytes && (uint32_t)pos < SEND_MESSAGE_SIZE; i++) {
+        buff[pos++] = payload[i];
+    }
+
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+}
+
 // ---------------------------------------------------------------------------
 // Init sequences — linear, no state machine
 // ---------------------------------------------------------------------------
@@ -2499,6 +2568,10 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdWriteSynthSettings:
             retVal                         = send_synth_settings();
+            break;
+
+        case eMsgCmdWritePerfHeader:
+            retVal                         = send_perf_header_usb();
             break;
 
         case eMsgCmdReloadAllPatchData:

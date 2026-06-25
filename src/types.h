@@ -801,6 +801,23 @@ typedef enum {
 } tPoll;
 
 typedef struct {
+    uint8_t globalMode;
+    uint8_t rangeAndFlags;
+    uint8_t keyboardRange;
+    uint8_t unknown18;
+    uint8_t unknown20;
+    struct {
+        uint8_t keyboardEnabled;
+        uint8_t holdEnabled;
+        uint8_t rangeLower;
+        uint8_t rangeUpper;
+        uint8_t byte37;
+        uint8_t byte38;
+        uint8_t byte34;
+    } slot[MAX_SLOTS];
+} tPerfHeaderCache;
+
+typedef struct {
     bool     active;
     char     buffer[CLAVIA_NAME_SIZE + 1];
     uint32_t slot;

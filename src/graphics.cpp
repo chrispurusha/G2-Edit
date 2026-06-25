@@ -719,9 +719,15 @@ void read_file_into_memory_and_process(const char * filepath) {
             // The performance name is the null-terminated string at the very start of the file.
             strncpy(gPerfName, (char *)buff, CLAVIA_NAME_SIZE);
             gPerfName[CLAVIA_NAME_SIZE] = '\0';
+            atomic_store(&gPerfMode, 1);
+            gSynthSettings.perfMode     = 1;
             parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
 
             if (atomic_load(&gCommsState) == eCommsOnLine) {
+                tMessageContent hdrMsg = {0};
+                hdrMsg.cmd = eMsgCmdWritePerfHeader;
+                msg_send(&gCommandQueue, &hdrMsg);
+
                 for (uint32_t s = 0; s < MAX_SLOTS; s++) {
                     tMessageContent msg = {0};
                     msg.cmd  = eMsgCmdWritePatch;
