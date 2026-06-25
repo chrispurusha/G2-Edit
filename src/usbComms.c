@@ -2613,15 +2613,14 @@ static int send_write_data(tMessageContent * messageContent) {
         {
             retVal = send_stop();
 
+            // Switch to patch mode so slot pushes get 0x36 responses regardless of starting state.
+            // The 0x3e echo arrives during the first push's int_rec and is looped over harmlessly.
             if (retVal == EXIT_SUCCESS) {
-                //retVal = send_perf_mode_change_usb(1);
+                //send_perf_mode_change_usb(0);
             }
-            
-            
-            if (retVal == EXIT_SUCCESS) {
-                for (uint32_t s = 1; s < MAX_SLOTS && retVal == EXIT_SUCCESS; s++) {
-                    retVal = push_slot_to_device(s);
-                }
+
+            for (uint32_t s = 0; s < MAX_SLOTS && retVal == EXIT_SUCCESS; s++) {
+                retVal = push_slot_to_device(s);
             }
 
             if (retVal == EXIT_SUCCESS) {
