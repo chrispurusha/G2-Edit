@@ -670,36 +670,47 @@ void read_file_into_memory_and_process(const char * filepath) {
     calcCrc  = calc_crc16(buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
 
     if (readCrc == calcCrc) {
-        version                = buff[byteOffset++];
-        type                   = buff[byteOffset++];
+        version = buff[byteOffset++];
+        type    = buff[byteOffset++];
         LOG_DEBUG("Version %u\n", version);
         LOG_DEBUG("Type %u\n", type);
 
-        /* TODO - implement clear down commands as an init/clear slot function? */
-        database_delete_cables_by_slot(slot);
-        database_delete_modules_by_slot(slot);
-        gMorphCount[slot]      = 0;
-        gNote2Size[slot]       = 0;
-        gControllerCount[slot] = 0;
-        gPatchNotesSize[slot]  = 0;
-        memset(&(gPatchDescr[slot]), 0, sizeof(gPatchDescr[0]));
-        memset(&(gKnobArray[slot]), 0, sizeof(gKnobArray[0]));
-        memset(gNote2[slot], 0, sizeof(gNote2[0]));
-        memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
-        memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
-
         if (type == 0) {
+            /* TODO - implement clear down commands as an init/clear slot function? */
+            database_delete_cables_by_slot(slot);
+            database_delete_modules_by_slot(slot);
+            gMorphCount[slot]      = 0;
+            gNote2Size[slot]       = 0;
+            gControllerCount[slot] = 0;
+            gPatchNotesSize[slot]  = 0;
+            memset(&(gPatchDescr[slot]), 0, sizeof(gPatchDescr[0]));
+            memset(&(gKnobArray[slot]), 0, sizeof(gKnobArray[0]));
+            memset(gNote2[slot], 0, sizeof(gNote2[0]));
+            memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
+            memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
+
             parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // TODO: parse_patch should really be in a commonly accessible source file, for file or USB access
-        } // 1 = performance
+            set_patch_name_from_filename(slot, filepath);
 
-        set_patch_name_from_filename(slot, filepath);
+            if (atomic_load(&gCommsState) == eCommsOnLine) {
+                tMessageContent msg = {0};
+                msg.cmd  = eMsgCmdWritePatch;
+                msg.slot = slot;
+                msg_send(&gCommandQueue, &msg);
+            }
+        } else if (type == 1) {
+            // Performance file — parse_perf clears all 4 slots and populates them;
+            // slot names come from the file itself so set_patch_name_from_filename is not called
+            parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
 
-        // If online, push to device immediately
-        if (atomic_load(&gCommsState) == eCommsOnLine) {
-            tMessageContent msg = {0};
-            msg.cmd  = eMsgCmdWritePatch;
-            msg.slot = slot;
-            msg_send(&gCommandQueue, &msg);
+            if (atomic_load(&gCommsState) == eCommsOnLine) {
+                for (uint32_t s = 0; s < MAX_SLOTS; s++) {
+                    tMessageContent msg = {0};
+                    msg.cmd  = eMsgCmdWritePatch;
+                    msg.slot = s;
+                    msg_send(&gCommandQueue, &msg);
+                }
+            }
         }
     } else {
         LOG_WARNING("CRC check failed\n");

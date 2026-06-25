@@ -613,6 +613,156 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
     return EXIT_SUCCESS;
 }
 
+int parse_perf(uint8_t * buff, int length) {
+    uint32_t bitOffset   = 0;
+    uint32_t currentSlot = 0;
+
+    if ((buff == NULL) || (length <= 0)) {
+        return EXIT_FAILURE;
+    }
+    // Perf header section (file format — no the original editor's code size word)
+    uint8_t  headerType  = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
+
+    if (headerType != 0x11) {
+        LOG_ERROR("parse_perf: expected perf header 0x11, got 0x%02x\n", headerType);
+        return EXIT_FAILURE;
+    }
+    read_bit_stream(buff, &bitOffset, 8);                                    // unknown (0x00)
+    LOG_DEBUG("MasterVolume        = %u\n", read_bit_stream(buff, &bitOffset, 8));
+    read_bit_stream(buff, &bitOffset, 8);                                    // unknown (0x00)
+    uint8_t  selSlotByte = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
+    uint32_t selSlot     = (uint32_t)(selSlotByte / 4);
+
+    if (selSlot < MAX_SLOTS) {
+        atomic_store(&gSlot, selSlot);
+    }
+    read_bit_stream(buff, &bitOffset, 8);                                    // unknown (0x00)
+    atomic_store(&gMasterClock, (uint8_t)read_bit_stream(buff, &bitOffset, 8));
+    read_bit_stream(buff, &bitOffset, 8);                                    // unknown (0x00)
+    atomic_store(&gMasterClockRunning, (uint8_t)read_bit_stream(buff, &bitOffset, 8));
+    read_bit_stream(buff, &bitOffset, 8);                                    // 0x00
+    read_bit_stream(buff, &bitOffset, 8);                                    // 0x00
+
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        char    name[CLAVIA_NAME_SIZE + 1] = {0};
+        read_clavia_string(buff, &bitOffset, name, sizeof(name));
+        patch_name_set(slot, name);
+        LOG_DEBUG("Slot %u name '%s'\n", slot, name);
+        uint8_t enabled                    = (uint8_t)read_bit_stream(buff, &bitOffset, 8); // IsSlotEnabled
+        atomic_store(&gSlotEnabled[slot], enabled != 0 ? 1 : 0);
+
+        for (int j = 1; j < 10; j++) {
+            read_bit_stream(buff, &bitOffset, 8);                            // remaining suffix bytes
+        }
+    }
+
+    // Clear all slot data before populating from file
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        database_delete_cables_by_slot(slot);
+        database_delete_modules_by_slot(slot);
+        gMorphCount[slot]      = 0;
+        gNote2Size[slot]       = 0;
+        gControllerCount[slot] = 0;
+        gPatchNotesSize[slot]  = 0;
+        memset(&gPatchDescr[slot], 0, sizeof(gPatchDescr[0]));
+        memset(&gKnobArray[slot], 0, sizeof(gKnobArray[0]));
+        memset(gNote2[slot], 0, sizeof(gNote2[0]));
+        memset(&gControllerArray[slot], 0, sizeof(gControllerArray[0]));
+        memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
+    }
+
+    // Per-slot patch sections — same type/count format as parse_patch.
+    // Slot separator: type 0x6f with count=0 (slot advances; not actual patch notes).
+    // Global knobs: type 0x5f, appears after the final slot separator.
+    while (BIT_TO_BYTE(bitOffset) < length) {
+        uint8_t  type      = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
+        int16_t  count     = 0;
+        uint32_t subOffset = 0;
+
+        if (type != SUB_RESPONSE_SEL_PARAM_PAGE) {
+            count = (int16_t)read_bit_stream(buff, &bitOffset, 16);
+
+            if (count < 0) {
+                LOG_ERROR("parse_perf: negative count %d for type 0x%02x, aborting\n", count, type);
+                return EXIT_FAILURE;
+            }
+
+            if (BIT_TO_BYTE(bitOffset) + count > length) {
+                LOG_ERROR("parse_perf: count %d for type 0x%02x exceeds buffer, aborting\n", count, type);
+                return EXIT_FAILURE;
+            }
+        }
+        subOffset = bitOffset;
+
+        if ((type == SUB_RESPONSE_PATCH_NOTES) && (count == 0)) {
+            // Slot separator — advance to next slot's sections
+            currentSlot++;
+            bitOffset += SIGNED_BYTE_TO_BIT(count);
+            continue;
+        }
+
+        switch (type) {
+            case SUB_RESPONSE_MODULE_LIST:
+                parse_module_list(currentSlot, buff, &subOffset);
+                break;
+
+            case SUB_RESPONSE_CABLE_LIST:
+                parse_cable_list(currentSlot, buff, &subOffset);
+                break;
+
+            case SUB_RESPONSE_PARAM_LIST:
+                parse_param_list(currentSlot, buff, &subOffset);
+                break;
+
+            case SUB_RESPONSE_MODULE_NAMES:
+                parse_module_names(currentSlot, buff, &subOffset);
+                break;
+
+            case SUB_RESPONSE_PARAM_NAMES:
+                parse_param_names(currentSlot, buff, &subOffset);
+                break;
+
+            case SUB_RESPONSE_SEL_PARAM_PAGE:
+                read_bit_stream(buff, &bitOffset, 8);
+                break;
+
+            case SUB_RESPONSE_PATCH_DESCRIPTION:
+                parse_patch_descr(currentSlot, buff, &subOffset);
+                break;
+
+            case SUB_RESPONSE_MORPH_PARAMS:
+                parse_morph_params(currentSlot, buff, &subOffset);
+                break;
+
+            case SUB_RESPONSE_KNOBS:
+                parse_knobs(currentSlot, buff, &subOffset);
+                break;
+
+            case SUB_RESPONSE_CONTROLLERS:
+                parse_controllers(currentSlot, buff, &subOffset);
+                break;
+
+            case SUB_RESPONSE_CURRENT_NOTE_2:
+                store_note2(currentSlot, buff, &subOffset, (uint32_t)count);
+                break;
+
+            case SUB_RESPONSE_PATCH_NOTES:
+                store_patch_notes(currentSlot, buff, &subOffset, (uint32_t)count);
+                break;
+
+            case SUB_RESPONSE_GLOBAL_KNOBS:
+                parse_global_knobs(buff, &subOffset);
+                break;
+
+            default:
+                LOG_DEBUG("parse_perf: unprocessed type 0x%02x slot %u\n", type, currentSlot);
+                break;
+        }
+        bitOffset += SIGNED_BYTE_TO_BIT(count);
+    }
+    return EXIT_SUCCESS;
+}
+
 static int parse_patch_version(uint8_t * buff, int length) {
     if ((buff == NULL) || (length < 2)) {
         return EXIT_FAILURE;
