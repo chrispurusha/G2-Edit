@@ -403,13 +403,13 @@ static int parse_performance_settings(uint8_t * buff, int length) {
         atomic_store(&gSlotEnabled[i], active != 0 ? 1 : 0);
         LOG_DEBUG("Slot %d:\n", i);
         LOG_DEBUG("  PatchName         = '%s'\n", name);
-        //LOG_DEBUG("  Active            = %u\n", active);
-        //LOG_DEBUG("  Key               = %u\n", read_bit_stream(buff, &bitPos, 8)); // Seems to follow selected slot for keyboard selection?
-        //LOG_DEBUG("  Hold              = %u\n", read_bit_stream(buff, &bitPos, 8));
-        //LOG_DEBUG("  BankIndex         = %u\n", read_bit_stream(buff, &bitPos, 8));
-        //LOG_DEBUG("  PatchIndex        = %u\n", read_bit_stream(buff, &bitPos, 8));
-        //LOG_DEBUG("  RangeLower        = %u\n", read_bit_stream(buff, &bitPos, 8));
-        //LOG_DEBUG("  RangeUpper        = %u\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("  Active            = %u\n", active);
+        LOG_DEBUG("  Key               = %u\n", read_bit_stream(buff, &bitPos, 8)); // Seems to follow selected slot for keyboard selection?
+        LOG_DEBUG("  Hold              = %u\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("  BankIndex         = %u\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("  PatchIndex        = %u\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("  RangeLower        = %u\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("  RangeUpper        = %u\n", read_bit_stream(buff, &bitPos, 8));
         read_bit_stream(buff, &bitPos, 8);
         read_bit_stream(buff, &bitPos, 8);
         read_bit_stream(buff, &bitPos, 8);
@@ -1646,9 +1646,8 @@ static int send_stop(void) {
         usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_START_STOP);
         buff[pos++] = 0x01;
         retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-    } else   {
-        usleep(1); // Purely for debug
     }
+    
     atomic_store(&stopCount, atomic_load(&stopCount) + 1);
 
     if (atomic_load(&stopCount) > 10) {
@@ -1674,9 +1673,8 @@ static int send_start(void) {
         usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_START_STOP);  // Note: this sub command also starts, with correct param
         buff[pos++] = 0x00;
         retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-    } else   {
-        usleep(1); // Purely for debug
     }
+    
     return retVal;
 }
 
