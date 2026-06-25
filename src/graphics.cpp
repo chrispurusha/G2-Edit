@@ -718,6 +718,14 @@ void read_file_into_memory_and_process(const char * filepath) {
                 msg_send(&gCommandQueue, &msg);
             }
         } else if (type == 1) {
+            {
+                tMessageContent msg = {0};
+                msg.cmd           = eMsgCmdWriteModePerf;  // Really need to be in perf mode before loading a performance
+                msg_send(&gCommandQueue, &msg);
+            }
+            
+            usleep(2000000);  // TODO - currently, when we write new patches as part of a perf, it triggers a read of the patches. We need to be stable in perf mode in that case.
+            
             int i = 0;
             for (i=0; i<MAX_SLOTS; i++) {
                 clear_slot_data(i);

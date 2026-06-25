@@ -2231,7 +2231,7 @@ static int send_perf_mode_change_usb(uint8_t perfMode) {
     usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_SET_PARAM_MODE);
     buff[pos++] = perfMode ? 1 : 0;
     buff[pos++] = 0x00;
-    return send_message(buff, pos);
+    return send_and_receive(buff, pos, SUB_RESPONSE_PERF_PATCH_VERSIONS/*SUB_COMMAND_SET_PARAM_MODE*/, USB_RECV_ACK_MS);
 }
 
 // ---------------------------------------------------------------------------
@@ -2609,18 +2609,28 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal                         = send_synth_settings();
             break;
 
+        case eMsgCmdWriteModePerf:
+            retVal = send_perf_mode_change_usb(1);
+            break;
+            
+        case eMsgCmdWriteModePatch:
+            retVal = send_perf_mode_change_usb(0);
+            break;
+            
         case eMsgCmdWritePerf:
         {
             retVal = send_stop();
 
             // Switch to patch mode so slot pushes get 0x36 responses regardless of starting state.
             // The 0x3e echo arrives during the first push's int_rec and is looped over harmlessly.
+            //if (retVal == EXIT_SUCCESS) {
+                // retVal = send_perf_mode_change_usb(1);  // TODO - can't do this here in the same way, since it triggers a response which causes us to re-read all the patch data, meaning that we end up pushing blank data back. Possible push slots will do that anyhow, which is arguably wrong
+            //}
+            
             if (retVal == EXIT_SUCCESS) {
-                //send_perf_mode_change_usb(0);
-            }
-
-            for (uint32_t s = 0; s < MAX_SLOTS && retVal == EXIT_SUCCESS; s++) {
-                retVal = push_slot_to_device(s);
+                for (uint32_t s = 0; s < MAX_SLOTS && retVal == EXIT_SUCCESS; s++) {
+                    retVal = push_slot_to_device(s);
+                }
             }
 
             if (retVal == EXIT_SUCCESS) {
