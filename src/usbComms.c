@@ -1411,8 +1411,9 @@ static int int_rec(tPoll poll, int expectedResponse, unsigned int timeout_ms) {
     int                    response                     = SUB_RESPONSE_ERROR;
     double                 timeDelta                    = 0.0f;
     static double          largestDelta                 = 0.0f;
+    int try = 0;
 
-    while (doLoop == true) {
+    for (try=1; try<=5 && doLoop==true; try++) {
         pthread_mutex_lock(&usbStaticMutex);
         devHandle_local = devHandle;
         pthread_mutex_unlock(&usbStaticMutex);
@@ -1492,10 +1493,11 @@ static int int_rec(tPoll poll, int expectedResponse, unsigned int timeout_ms) {
 
             if (response == expectedResponse) {
                 doLoop = false;                   // Got what we wanted — retVal already correct
-            } else if (  (response == SUB_RESPONSE_OK)
-                      || (response == SUB_RESPONSE_ERROR)) {
-                doLoop = false;
-                retVal = EXIT_FAILURE;            // Terminal response but not the expected one
+            } else {
+                if (response == SUB_RESPONSE_ERROR) {
+                    doLoop = false;
+                    retVal = EXIT_FAILURE;            // Terminal response but not the expected one
+                }
             }
         }
     }
@@ -2704,11 +2706,10 @@ static int send_write_data(tMessageContent * messageContent) {
         {
             send_stop();
             
-            if (retVal == EXIT_SUCCESS) {
-                for (uint32_t s = 0; s < MAX_SLOTS && retVal == EXIT_SUCCESS; s++) {
-                    retVal = push_slot_to_device(s);
-                }
+            for (uint32_t s = 0; s < MAX_SLOTS; s++) {
+                retVal = push_slot_to_device(s);
             }
+
 
             if (retVal == EXIT_SUCCESS) {
                 retVal = send_perf_name_usb();
