@@ -2204,7 +2204,7 @@ static int send_perf_header_usb(void) {
         buff[pos++] = payload[i];
     }
 
-    return send_message(buff, pos);
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_perf_name_usb(void) {
@@ -2219,7 +2219,7 @@ static int send_perf_name_usb(void) {
     write_clavia_string(buff, &bitPos, gPerfName);
     pos = BIT_TO_BYTE(bitPos);
     
-    return send_message(buff, pos);
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 // SUB_COMMAND_SET_PARAM_MODE (0x3e) is the original editor's code in the reference.
@@ -2231,7 +2231,7 @@ static int send_perf_mode_change_usb(uint8_t perfMode) {
     usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_SET_PARAM_MODE);
     buff[pos++] = perfMode ? 1 : 0;
     buff[pos++] = 0x00;
-    return send_and_receive(buff, pos, SUB_RESPONSE_PERF_PATCH_VERSIONS/*SUB_COMMAND_SET_PARAM_MODE*/, USB_RECV_ACK_MS);
+    return send_and_receive(buff, pos, SUB_RESPONSE_PERF_PATCH_VERSIONS, USB_RECV_ACK_MS);
 }
 
 // ---------------------------------------------------------------------------
@@ -2662,15 +2662,11 @@ static int send_write_data(tMessageContent * messageContent) {
         }
 
         case eMsgCmdWritePerfSettings:
-            if (retVal == EXIT_SUCCESS) {
                 retVal = send_perf_header_usb();
-            }
             break;
             
         case eMsgCmdWritePerfName:
-            if (retVal == EXIT_SUCCESS) {
                 retVal = send_perf_name_usb();
-            }
             break;
 
         case eMsgCmdReloadAllPatchData:
