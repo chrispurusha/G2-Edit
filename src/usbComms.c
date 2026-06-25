@@ -1066,6 +1066,15 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("Got assigned voices command — unexpected\n");
             return EXIT_SUCCESS;
 
+        case SUB_COMMAND_SET_PARAM_MODE:
+        {
+            uint8_t newPerfMode = (uint8_t)read_bit_stream(buff, bitPos, 8);
+
+            LOG_DEBUG("Got perf mode change: %u\n", newPerfMode);
+            atomic_store(&gPerfMode, newPerfMode);
+            return EXIT_SUCCESS;
+        }
+
         case SUB_RESPONSE_PERF_SETTINGS:
             LOG_DEBUG("Got perf header dump\n");
             parse_perf_header_dump(buff, bitPos);
@@ -2162,11 +2171,16 @@ static int send_perf_header_usb(void) {
     write_bit_stream(payload, &bitPos, 8, 0);
     write_bit_stream(payload, &bitPos, 8, 0);
 
-    // Per-slot data
+    // Per-slot data — slot names are fixed CLAVIA_NAME_SIZE bytes (null-padded), per WriteStream
     for (i = 0; i < MAX_SLOTS; i++) {
+        uint32_t j = 0;
         memset(name, 0, sizeof(name));
         patch_name_get(i, name, sizeof(name));
-        write_clavia_string(payload, &bitPos, name);
+
+        for (j = 0; j < CLAVIA_NAME_SIZE; j++) {
+            write_bit_stream(payload, &bitPos, 8, (uint8_t)name[j]);
+        }
+
         write_bit_stream(payload, &bitPos, 8, atomic_load(&gSlotEnabled[i]));
         write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].keyboardEnabled);
         write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].holdEnabled);
@@ -2192,7 +2206,33 @@ static int send_perf_header_usb(void) {
         buff[pos++] = payload[i];
     }
 
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    return send_message(buff, pos);
+}
+
+static int send_perf_name_usb(void) {
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    int      pos                     = COMMAND_OFFSET;
+    uint32_t j                       = 0;
+
+    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_RESPONSE_PERFORMANCE_SETTINGS);
+
+    for (j = 0; j < CLAVIA_NAME_SIZE; j++) {
+        buff[pos++] = (uint8_t)gPerfName[j];
+    }
+
+    return send_message(buff, pos);
+}
+
+// SUB_COMMAND_SET_PARAM_MODE (0x3e) is the original editor's code in the reference.
+// Version byte 0x41 matches all other connection-level sys commands.
+static int send_perf_mode_change_usb(uint8_t perfMode) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+
+    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_SET_PARAM_MODE);
+    buff[pos++] = perfMode ? 1 : 0;
+    buff[pos++] = 0x00;
+    return send_message(buff, pos);
 }
 
 // ---------------------------------------------------------------------------
@@ -2571,7 +2611,9 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdWritePerfHeader:
-            retVal                         = send_perf_header_usb();
+            // send_perf_header_usb() — disabled: gPerfHeaderCache is zero until G2 sends an 0x11
+            // send_perf_name_usb()   — disabled: G2 in patch mode echoes back "error" as perf name
+            retVal = send_perf_mode_change_usb(1);
             break;
 
         case eMsgCmdReloadAllPatchData:

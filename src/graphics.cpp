@@ -716,11 +716,20 @@ void read_file_into_memory_and_process(const char * filepath) {
         } else if (type == 1) {
             // Performance file — parse_perf clears all 4 slots and populates them;
             // slot names come from the file itself so set_patch_name_from_filename is not called.
-            // The performance name is the null-terminated string at the very start of the file.
-            strncpy(gPerfName, (char *)buff, CLAVIA_NAME_SIZE);
-            gPerfName[CLAVIA_NAME_SIZE] = '\0';
+            // Derive performance name from the filename (strip directory and .prf2 extension).
+            {
+                const char * slash    = strrchr(filepath, '/');
+                const char * baseName = slash ? slash + 1 : filepath;
+                strncpy(gPerfName, baseName, CLAVIA_NAME_SIZE);
+                gPerfName[CLAVIA_NAME_SIZE] = '\0';
+                char *       dot      = strrchr(gPerfName, '.');
+
+                if (dot) {
+                    *dot = '\0';
+                }
+            }
             atomic_store(&gPerfMode, 1);
-            gSynthSettings.perfMode     = 1;
+            gSynthSettings.perfMode = 1;
             parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
 
             if (atomic_load(&gCommsState) == eCommsOnLine) {
