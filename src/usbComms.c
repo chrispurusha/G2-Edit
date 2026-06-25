@@ -58,6 +58,7 @@ extern "C" {
 static _Atomic bool           gotBadConnectionIndication      = false;
 static _Atomic bool           gotPatchChangeIndication        = false;
 static _Atomic bool           gotPerfSettingsChangeIndication = false;
+static _Atomic int32_t         stopCount = 0;
 
 // Protected by usbStaticMutex
 static pthread_t              usbThread                       = NULL;
@@ -1627,19 +1628,47 @@ static void usb_cmd_slot(uint8_t * buff, int * pos, uint32_t slot, uint8_t comma
 static int send_stop(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
+    int retVal = EXIT_SUCCESS;
 
-    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_START_STOP);
-    buff[pos++] = 0x01;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    if (atomic_load(&stopCount)==0) {
+        usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_START_STOP);
+        buff[pos++] = 0x01;
+        retVal = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    }
+    else {
+        usleep(1); // Purely for debug
+    }
+    
+    atomic_store(&stopCount, atomic_load(&stopCount)+1);
+    if (atomic_load(&stopCount)>10) {
+        LOG_ERROR("Stop message count went greater than 10\n");
+        exit(1);
+    }
+
+    return retVal;
 }
 
 static int send_start(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
+    int retVal = EXIT_SUCCESS;
 
-    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_START_STOP);
-    buff[pos++] = 0x00;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    atomic_store(&stopCount, atomic_load(&stopCount)-1);
+    if (atomic_load(&stopCount)<0) {
+        LOG_ERROR("Stop message count went negative\n");
+        exit(1);
+    }
+    
+    if (atomic_load(&stopCount)==0) {
+        usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_START_STOP);  // Note: this sub command also starts, with correct param
+        buff[pos++] = 0x00;
+        retVal =  send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    }
+    else {
+        usleep(1); // Purely for debug
+    }
+    
+    return retVal;
 }
 
 static int send_select_slot(uint32_t slot) {
@@ -2394,6 +2423,8 @@ static int send_write_data(tMessageContent * messageContent) {
             int avail   = 0;
             int written = 0;
 
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
+            
             LOG_DEBUG("Writing module\n");
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
@@ -2417,9 +2448,12 @@ static int send_write_data(tMessageContent * messageContent) {
 
             pos        += ((written >= 0) && (written < avail)) ? written + 1 : avail;
             retVal      = send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            
+            send_start();
             break;
         }
         case eMsgCmdMoveModule:
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
             buff[pos++] = patchVersion[messageContent->slot];
@@ -2429,6 +2463,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.column;
             buff[pos++] = messageContent->moduleData.row;
             retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            send_start();
             break;
 
         case eMsgCmdDeleteModule:
@@ -2481,12 +2516,14 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdSelectVariation:
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
             buff[pos++] = patchVersion[messageContent->slot];
             buff[pos++] = SUB_COMMAND_SELECT_VARIATION;
             buff[pos++] = messageContent->variationData.variation;
             retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            send_start();
             break;
 
         case eMsgCmdSelectSlot:
@@ -2524,7 +2561,9 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdWritePatchDescr:
         {
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_set_patch_descr(messageContent->slot);
+            send_start();
             break;
         }
 
@@ -2583,9 +2622,11 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdCopyVariation:
         {
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_copy_variation(messageContent->slot,
                                          messageContent->copyVariationData.fromVariation,
                                          messageContent->copyVariationData.toVariation);
+            send_start();
             break;
         }
 
@@ -2606,15 +2647,21 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdWriteSynthSettings:
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal                         = send_synth_settings();
+            send_start();
             break;
 
         case eMsgCmdWriteModePerf:
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_perf_mode_change_usb(1);
+            send_start();
             break;
             
         case eMsgCmdWriteModePatch:
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_perf_mode_change_usb(0);
+            send_start();
             break;
             
         case eMsgCmdWritePerf:
@@ -2662,11 +2709,15 @@ static int send_write_data(tMessageContent * messageContent) {
         }
 
         case eMsgCmdWritePerfSettings:
-                retVal = send_perf_header_usb();
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
+            retVal = send_perf_header_usb();
+            send_start();
             break;
             
         case eMsgCmdWritePerfName:
-                retVal = send_perf_name_usb();
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
+            retVal = send_perf_name_usb();
+            send_start();
             break;
 
         case eMsgCmdReloadAllPatchData:
