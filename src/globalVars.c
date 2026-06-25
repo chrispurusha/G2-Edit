@@ -69,7 +69,7 @@ _Atomic uint8_t        gMasterClock                                             
 ///_Atomic uint8_t        gPerfMode                                                                    = 0;
 _Atomic uint8_t        gMasterClockRunning                                                          = 0;
 _Atomic tCommsState    gCommsState                                                                  = eCommsNeverConnected;
-_Atomic uint32_t       gChangedSlot                                                                 = 0;
+//_Atomic uint32_t       gChangedSlot                                                                 = 0;
 _Atomic uint8_t        gGlobalPage                                                                  = 0;
 tNameEdit              gPatchNameEdit                                                               = {0};
 tModuleNameEdit        gModuleNameEdit                                                              = {0};

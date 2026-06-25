@@ -56,7 +56,7 @@ extern "C" {
 
 // Atomic flags for cross-thread signalling
 static _Atomic bool           gotBadConnectionIndication      = false;
-static _Atomic bool           gotPatchChangeIndication        = false;
+static _Atomic bool           gotPatchChangeIndication[MAX_SLOTS]        = {0};
 static _Atomic bool           gotPerfSettingsChangeIndication = false;
 static _Atomic int32_t        stopCount                       = 0;
 
@@ -787,9 +787,13 @@ static int parse_patch_version(uint8_t * buff, int length) {
     uint8_t  version = read_bit_stream(buff, &bitPos, 8);
 
     if (slot < MAX_SLOTS) {
-        atomic_store(&gPatchVersion[slot], version);
+        if (version != atomic_load(&gPatchVersion[slot])) {
+            atomic_store(&gPatchVersion[slot], version);
+        }
     } else if (slot == MAX_SLOTS) {
-        atomic_store(&gPerfVersion, version);
+        if (version != atomic_load(&gPerfVersion)) {
+            atomic_store(&gPerfVersion, version);
+        }
     } else {
         return EXIT_FAILURE;
     }
@@ -1027,10 +1031,13 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("Patch version change: slot %u new version 0x%02x\n", changedSlot, newVersion);
 
             if (changedSlot < MAX_SLOTS) {
-                atomic_store(&gPatchVersion[changedSlot], newVersion);
-                atomic_store(&gChangedSlot, (uint32_t)changedSlot);
+                if (newVersion != atomic_load(&gPatchVersion[changedSlot])) {
+                    atomic_store(&gPatchVersion[changedSlot], newVersion);
+                    atomic_store(&gotPatchChangeIndication[changedSlot], true);
+                    //atomic_store(&gChangedSlot, (uint32_t)changedSlot);
+                }
             }
-            atomic_store(&gotPatchChangeIndication, true);
+            
             return EXIT_SUCCESS;
         }
 
@@ -1209,11 +1216,15 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             uint8_t subResponse = 0;
             int     i           = 0;
 
-            LOG_DEBUG("Got performance patch versions\n");
+            LOG_DEBUG("\nGot performance patch versions\n\n");
 
             newVersion = read_bit_stream(buff, bitPos, 8);
             LOG_DEBUG("Old perf = %u new = %u\n", atomic_load(&gPerfVersion), newVersion);
-            atomic_store(&gPerfVersion, newVersion);
+            if (newVersion != atomic_load(&gPerfVersion)) {
+                atomic_store(&gPerfVersion, newVersion);
+                // Use a flag rather than queuing so rapid switches coalesce into one resync.
+                atomic_store(&gotPerfSettingsChangeIndication, true);
+            }
 
             for (i = 0; i < MAX_SLOTS; i++) {
                 subResponse = read_bit_stream(buff, bitPos, 8);
@@ -1222,12 +1233,14 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
                 if (subResponse == SUB_RESPONSE_PATCH_VERSION) {
                     LOG_DEBUG("Store old patch %u ver = %u new = %u\n", readSlot, atomic_load(&gPatchVersion[readSlot]), newVersion);
-                    atomic_store(&gPatchVersion[readSlot], newVersion);
+                    if (newVersion != atomic_load(&gPatchVersion[readSlot])) {
+                        atomic_store(&gPatchVersion[readSlot], newVersion);
+                        atomic_store(&gotPatchChangeIndication[readSlot], true);
+                        //atomic_store(&gChangedSlot, (uint32_t)readSlot); // TODO - we really need a patch change indication for each slot
+                    }
                 }
             }
 
-            // Use a flag rather than queuing so rapid switches coalesce into one resync.
-            atomic_store(&gotPerfSettingsChangeIndication, true);
             return EXIT_SUCCESS;
         }
 
@@ -2269,6 +2282,8 @@ static int reload_all_patch_data(void) {
     int      retVal = EXIT_SUCCESS;
     uint32_t slot   = 0;
 
+    LOG_DEBUG("\nReload all patch data\n\n");
+    
     retVal |= send_stop();
     retVal |= send_get_midi_cc();
     retVal |= send_select_slot(0);
@@ -2325,7 +2340,10 @@ static int send_init_sequence_pull(void) {
     send_start();
 
     LOG_DEBUG("Pull init sequence complete\n");
-    atomic_store(&gotPatchChangeIndication, false);
+    
+    for (int i =0; i<MAX_SLOTS; i++) {
+        atomic_store(&gotPatchChangeIndication[i], false);
+    }
     call_full_patch_change_notify();
     call_wake_glfw();
 
@@ -2360,7 +2378,9 @@ static int send_init_sequence_push(void) {
     send_start();
 
     LOG_DEBUG("Push init sequence complete\n");
-    atomic_store(&gotPatchChangeIndication, false);
+    for (int i =0; i<MAX_SLOTS; i++) {
+        atomic_store(&gotPatchChangeIndication[i], false);
+    }
     call_full_patch_change_notify();
     call_wake_glfw();
 
@@ -2567,7 +2587,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal = push_slot_to_device(messageContent->slot);
             send_start();
 
-            atomic_store(&gotPatchChangeIndication, false); // TODO - consider if this is the right thing to do here
+            atomic_store(&gotPatchChangeIndication[messageContent->slot], false); // TODO - consider if this is the right thing to do here
             call_full_patch_change_notify();                // TODO - not sure we need to do this here
             call_wake_glfw();
             break;
@@ -2721,7 +2741,9 @@ static int send_write_data(tMessageContent * messageContent) {
             }
 
             if (retVal == EXIT_SUCCESS) {
-                atomic_store(&gotPatchChangeIndication, false);
+                for (int i =0; i<MAX_SLOTS; i++) {
+                    atomic_store(&gotPatchChangeIndication[i], false);
+                }
                 call_full_patch_change_notify();
                 call_wake_glfw();
             }
@@ -2742,6 +2764,7 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdReloadAllPatchData:
+            LOG_DEBUG("\nGot msg queue command to read all patch data\n\n");
             retVal                         = reload_all_patch_data();
             atomic_store(&gSlot, 0);
             gPatchDescr[0].activeVariation = 0;
@@ -2766,6 +2789,7 @@ static int send_write_data(tMessageContent * messageContent) {
 
 static void state_handler(void) {
     tMessageContent messageContent = {0};
+    bool foundOneChange = false;
 
     //TODO - Don't like early returns. Use retVal
 
@@ -2820,11 +2844,16 @@ static void state_handler(void) {
     if (atomic_load(&gotPerfSettingsChangeIndication)) {
         atomic_store(&gotPerfSettingsChangeIndication, false);
 
-        LOG_DEBUG("Perf settings change — reloading all slots\n");
+        LOG_DEBUG("\nPerf settings change — reloading all slots via reload_all_patch_date()\n\n");
 
-        if (reload_all_patch_data() != EXIT_SUCCESS) {
-            LOG_ERROR("reload_all_patch_data failed\n");
-        }
+        //if (reload_all_patch_data() != EXIT_SUCCESS) {
+        //    LOG_ERROR("reload_all_patch_data failed\n");
+        //}
+        
+        send_stop();
+        send_get_performance_settings();  // TODO - maybe be some more items we need to get here
+        send_start();
+        
         atomic_store(&gSlot, 0);
         gPatchDescr[0].activeVariation = 0;
         set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
@@ -2837,17 +2866,18 @@ static void state_handler(void) {
         return;
     }
 
-    // Patch changed on the hardware (e.g. user loaded a patch from the G2 panel)
-    if (atomic_load(&gotPatchChangeIndication)) {
-        atomic_store(&gotPatchChangeIndication, false);
-        uint32_t slot = atomic_load(&gChangedSlot);
-
-        LOG_DEBUG("Patch change on slot %u — reloading\n", slot);
-
-        send_stop();
-        send_get_patch_data(slot);
-        send_start();
-
+    for (int i = 0; i< MAX_SLOTS; i++) {
+        if (atomic_load(&gotPatchChangeIndication[i]) == true) {
+            atomic_store(&gotPatchChangeIndication[i], false);
+            LOG_DEBUG("Patch change on slot %u — reloading\n", i);
+            send_stop();
+            send_get_patch_data(i);
+            send_start();
+            foundOneChange = true;
+        }
+    }
+    
+    if (foundOneChange == true) {
         call_full_patch_change_notify();
         call_wake_glfw();
         return;
