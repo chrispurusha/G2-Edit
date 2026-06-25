@@ -2393,6 +2393,7 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdSetMode:
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
             buff[pos++] = patchVersion[messageContent->slot];
@@ -2403,9 +2404,11 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->modeData.value;
             LOG_DEBUG("SET MODE %u %u\n", messageContent->modeData.mode, messageContent->modeData.value);
             retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            send_start();
             break;
 
         case eMsgCmdWriteCable:
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
             buff[pos++] = patchVersion[messageContent->slot];
@@ -2416,6 +2419,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->cableData.moduleToIndex;
             buff[pos++] = messageContent->cableData.connectorToIoIndex;
             retVal      = send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            send_start();
             break;
 
         case eMsgCmdWriteModule:
@@ -2467,6 +2471,7 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdDeleteModule:
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
             buff[pos++] = patchVersion[messageContent->slot];
@@ -2474,9 +2479,11 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.moduleKey.location;
             buff[pos++] = messageContent->moduleData.moduleKey.index;
             retVal      = send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            send_start();
             break;
 
         case eMsgCmdSetModuleUpRate:
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
             buff[pos++] = patchVersion[messageContent->slot];
@@ -2485,9 +2492,11 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->moduleData.moduleKey.index;
             buff[pos++] = messageContent->moduleData.upRate;
             retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            send_start();
             break;
 
         case eMsgCmdDeleteCable:
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
             buff[pos++] = patchVersion[messageContent->slot];
@@ -2498,6 +2507,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->cableData.moduleToIndex;
             buff[pos++] = messageContent->cableData.connectorToIoIndex;
             retVal      = send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            send_start();
             break;
 
         case eMsgCmdSetParamMorph:
@@ -2512,7 +2522,7 @@ static int send_write_data(tMessageContent * messageContent) {
             buff[pos++] = messageContent->paramMorphData.value;
             buff[pos++] = messageContent->paramMorphData.negative;
             buff[pos++] = messageContent->paramMorphData.variation;
-            retVal      = send_message(buff, pos);
+            retVal      = send_message(buff, pos);   // Don't do stop/start around messages with no expected response
             break;
 
         case eMsgCmdSelectVariation:
@@ -2527,24 +2537,32 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdSelectSlot:
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SYS;
             buff[pos++] = atomic_load(&gPerfVersion);
             buff[pos++] = SUB_COMMAND_SELECT_SLOT;
             buff[pos++] = messageContent->slotData.slot;
             retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            send_start();
             break;
 
         case eMsgCmdSetModuleLabel:
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal      = send_set_module_label(messageContent->slot, messageContent->moduleLabelData.moduleKey, messageContent->moduleLabelData.name);
+            send_start();
             break;
 
         case eMsgCmdSetPatchName:
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal      = send_set_patch_name(messageContent->slot, messageContent->patchName.name);
+            send_start();
             break;
 
         case eMsgCmdSetModuleColour:
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal      = send_set_module_colour(messageContent->slot, messageContent->moduleColourData.moduleKey.location, messageContent->moduleColourData.moduleKey.index, messageContent->moduleColourData.colour);
+            send_start();
             break;
 
         case eMsgCmdWritePatch:
@@ -2569,6 +2587,7 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdAssignKnob:
         {
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             uint32_t kSlot  = messageContent->slot;
             uint32_t kLoc   = messageContent->knobAssignData.moduleKey.location;
             uint32_t kMod   = messageContent->knobAssignData.moduleKey.index;
@@ -2576,17 +2595,21 @@ static int send_write_data(tMessageContent * messageContent) {
             uint32_t kKnob  = messageContent->knobAssignData.knobIndex;
 
             retVal = send_assign_knob(kSlot, kLoc, kMod, kParam, kKnob);
+            send_start();
             break;
         }
 
         case eMsgCmdDeassignKnob:
         {
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_deassign_knob(messageContent->slot, messageContent->knobDeassignData.knobIndex);
+            send_start();
             break;
         }
 
         case eMsgCmdAssignGlobalKnob:
         {
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             uint32_t gkSlot  = messageContent->globalKnobAssignData.slotIndex;
             uint32_t gkLoc   = messageContent->globalKnobAssignData.location;
             uint32_t gkMod   = messageContent->globalKnobAssignData.moduleIndex;
@@ -2594,29 +2617,36 @@ static int send_write_data(tMessageContent * messageContent) {
             uint32_t gkKnob  = messageContent->globalKnobAssignData.knobIndex;
 
             retVal = send_assign_global_knob(gkSlot, gkLoc, gkMod, gkParam, gkKnob);
+            send_start();
             break;
         }
 
         case eMsgCmdDeassignGlobalKnob:
         {
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_deassign_global_knob(messageContent->globalKnobDeassignData.knobIndex);
+            send_start();
             break;
         }
 
         case eMsgCmdAssignMidiCC:
         {
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             uint32_t mLoc   = messageContent->midiCCAssignData.moduleKey.location;
             uint32_t mMod   = messageContent->midiCCAssignData.moduleKey.index;
             uint32_t mParam = messageContent->midiCCAssignData.paramIndex;
             uint32_t mCC    = messageContent->midiCCAssignData.midiCC;
 
             retVal = send_assign_midi_cc(messageContent->slot, mLoc, mMod, mParam, mCC);
+            send_start();
             break;
         }
 
         case eMsgCmdDeassignMidiCC:
         {
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_deassign_midi_cc(messageContent->slot, messageContent->midiCCDeassignData.midiCC);
+            send_start();
             break;
         }
 
@@ -2632,18 +2662,24 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdSetMasterClockBPM:
         {
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_set_master_clock_bpm(messageContent->masterClockBPMData.bpm);
+            send_start();
             break;
         }
 
         case eMsgCmdSetMasterClockRun:
         {
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_set_master_clock_run(messageContent->masterClockRunData.running);
+            send_start();
             break;
         }
 
         case eMsgCmdSetParamLabel:
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal                         = send_set_param_label(messageContent->slot, messageContent->paramLabelData.moduleKey, messageContent->paramLabelData.paramIndex, messageContent->paramLabelData.name);
+            send_start();
             break;
 
         case eMsgCmdWriteSynthSettings:
@@ -2666,13 +2702,7 @@ static int send_write_data(tMessageContent * messageContent) {
             
         case eMsgCmdWritePerf:
         {
-            retVal = send_stop();
-
-            // Switch to patch mode so slot pushes get 0x36 responses regardless of starting state.
-            // The 0x3e echo arrives during the first push's int_rec and is looped over harmlessly.
-            //if (retVal == EXIT_SUCCESS) {
-                // retVal = send_perf_mode_change_usb(1);  // TODO - can't do this here in the same way, since it triggers a response which causes us to re-read all the patch data, meaning that we end up pushing blank data back. Possible push slots will do that anyhow, which is arguably wrong
-            //}
+            send_stop();
             
             if (retVal == EXIT_SUCCESS) {
                 for (uint32_t s = 0; s < MAX_SLOTS && retVal == EXIT_SUCCESS; s++) {
@@ -2689,10 +2719,6 @@ static int send_write_data(tMessageContent * messageContent) {
             }
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = send_start();
-            }
-
-            if (retVal == EXIT_SUCCESS) {
                 retVal = send_set_master_clock_bpm(atomic_load(&gMasterClock));
             }
 
@@ -2705,6 +2731,7 @@ static int send_write_data(tMessageContent * messageContent) {
                 call_full_patch_change_notify();
                 call_wake_glfw();
             }
+            send_start();
             break;
         }
 
