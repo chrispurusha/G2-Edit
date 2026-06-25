@@ -2176,7 +2176,7 @@ static int send_perf_header_usb(void) {
         memset(name, 0, sizeof(name));
         patch_name_get(i, name, sizeof(name));
 
-        write_clavia_string(buff, &bitPos, name);
+        write_clavia_string(payload, &bitPos, name);
 
         write_bit_stream(payload, &bitPos, 8, atomic_load(&gSlotEnabled[i]));
         write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].keyboardEnabled);
@@ -2609,14 +2609,12 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdWritePerfHeader:
-            // send_perf_header_usb() — disabled: gPerfHeaderCache is zero until G2 sends an 0x11
-            // 0x3e mode byte: 1=perf, 0=patch (per defs.h comment and original reference)
             retVal = send_perf_mode_change_usb(1);
             if (retVal == EXIT_SUCCESS) {
-                //retVal = send_perf_name_usb();
-                //if (retVal == EXIT_SUCCESS) {
-                    retVal = send_perf_header_usb();
-                //}
+                retVal = send_perf_header_usb();
+            }
+            if (retVal == EXIT_SUCCESS) {
+                retVal = send_perf_name_usb();
             }
             break;
 
