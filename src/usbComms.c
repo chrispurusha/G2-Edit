@@ -397,9 +397,11 @@ static int parse_performance_settings(uint8_t * buff, int length) {
         // Patch name per slot (ReadName — null terminated, max 16 bytes)
         memset(name, 0, sizeof(name));
         read_clavia_string(buff, &bitPos, name, sizeof(name));
+        uint8_t active = (uint8_t)read_bit_stream(buff, &bitPos, 8);
+        atomic_store(&gSlotEnabled[i], active != 0 ? 1 : 0);
         LOG_DEBUG("Slot %d:\n", i);
         LOG_DEBUG("  PatchName         = '%s'\n", name);
-        LOG_DEBUG("  Active            = %u\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("  Active            = %u\n", active);
         LOG_DEBUG("  Key               = %u\n", read_bit_stream(buff, &bitPos, 8)); // Seems to follow selected slot for keyboard selection?
         LOG_DEBUG("  Hold              = %u\n", read_bit_stream(buff, &bitPos, 8));
         LOG_DEBUG("  BankIndex         = %u\n", read_bit_stream(buff, &bitPos, 8));
@@ -412,6 +414,48 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     }
 
     return EXIT_SUCCESS;
+}
+
+// CMPerformanceHeaderDump (USB sub-command 0x11): G2 broadcasts this unsolicited when perf
+// settings change. Uses the original editor's code — the same struct as the .prf2 file
+// header section, but on USB it carries a 2-byte the original editor's code size word and fixed-width 16-byte
+// names (not null-terminated-variable-length as in the 0x29 settings dump).
+static void parse_perf_header_dump(uint8_t * buff, uint32_t * bitPos) {
+    char name[CLAVIA_NAME_SIZE + 1] = {0};
+    int  i                          = 0;
+
+    // the original editor's code size word (2 bytes) — read to advance past it; content size not needed
+    read_bit_stream(buff, bitPos, 8);
+    read_bit_stream(buff, bitPos, 8);
+
+    // 8 global setting bytes (the original editor's code fields this+8 through this+0x20)
+    LOG_DEBUG("  GlobalMode        = %u\n", read_bit_stream(buff, bitPos, 8)); // clamped [0,15]
+    LOG_DEBUG("  RangeAndFlags     = %u\n", read_bit_stream(buff, bitPos, 8)); // 6 bits + 2 bits
+    LOG_DEBUG("  KeyboardRange     = %u\n", read_bit_stream(buff, bitPos, 8)); // bool
+    LOG_DEBUG("  Unknown0x18       = %u\n", read_bit_stream(buff, bitPos, 8)); // undefined2 (1B)
+    LOG_DEBUG("  Unknown0x20       = %u\n", read_bit_stream(buff, bitPos, 8)); // bool
+    LOG_DEBUG("  PerfMode          = %u\n", read_bit_stream(buff, bitPos, 8)); // clamped [0,1]
+    read_bit_stream(buff, bitPos, 8);                                          // fixed 0x00
+    read_bit_stream(buff, bitPos, 8);                                          // fixed 0x00
+
+    for (i = 0; i < MAX_SLOTS; i++) {
+        memset(name, 0, sizeof(name));
+        read_clavia_string(buff, bitPos, name, sizeof(name));
+        uint8_t enabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
+        atomic_store(&gSlotEnabled[i], enabled != 0 ? 1 : 0);
+        LOG_DEBUG("Slot %d:\n", i);
+        LOG_DEBUG("  Name              = '%s'\n", name);
+        LOG_DEBUG("  SlotEnabled       = %u\n", enabled != 0 ? 1 : 0);
+        LOG_DEBUG("  KeyboardEnabled   = %u\n", read_bit_stream(buff, bitPos, 8));
+        LOG_DEBUG("  HoldEnabled       = %u\n", read_bit_stream(buff, bitPos, 8));
+        LOG_DEBUG("  RangeLower        = %u\n", read_bit_stream(buff, bitPos, 8)); // CRangeABC 0x35
+        LOG_DEBUG("  RangeUpper        = %u\n", read_bit_stream(buff, bitPos, 8)); // CRangeABC 0x36
+        LOG_DEBUG("  Byte0x37          = %u\n", read_bit_stream(buff, bitPos, 8));
+        LOG_DEBUG("  Byte0x38          = %u\n", read_bit_stream(buff, bitPos, 8));
+        LOG_DEBUG("  Byte0x34          = %u\n", read_bit_stream(buff, bitPos, 8)); // clamped [0,0x10]
+        read_bit_stream(buff, bitPos, 8);                                          // 0x00 discarded
+        read_bit_stream(buff, bitPos, 8);                                          // 0x00 discarded
+    }
 }
 
 static int parse_midi_cc(uint8_t * buff, int length) {
@@ -853,6 +897,11 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_SET_ASSIGNED_VOICES:
             LOG_DEBUG("Got assigned voices command — unexpected\n");
+            return EXIT_SUCCESS;
+
+        case SUB_RESPONSE_PERF_SETTINGS:
+            LOG_DEBUG("Got perf header dump\n");
+            parse_perf_header_dump(buff, bitPos);
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_PERFORMANCE_SETTINGS:
