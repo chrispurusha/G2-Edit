@@ -84,18 +84,18 @@ void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     gPatchDescr[slot].category        = read_bit_stream(buff, subOffset, 8);
     gPatchDescr[slot].unknown4        = read_bit_stream(buff, subOffset, 12);
 
-    LOG_DEBUG("  Voice Count %u\n", gPatchDescr[slot].voiceCount);
-    LOG_DEBUG("  Bar Position %u\n", gPatchDescr[slot].barPosition);
-    LOG_DEBUG("  Red %u\n", gPatchDescr[slot].visible[0]);
-    LOG_DEBUG("  Blue %u\n", gPatchDescr[slot].visible[1]);
-    LOG_DEBUG("  Yellow %u\n", gPatchDescr[slot].visible[2]);
-    LOG_DEBUG("  Orange %u\n", gPatchDescr[slot].visible[3]);
-    LOG_DEBUG("  Green %u\n", gPatchDescr[slot].visible[4]);
-    LOG_DEBUG("  Purple %u\n", gPatchDescr[slot].visible[5]);
-    LOG_DEBUG("  White %u\n", gPatchDescr[slot].visible[6]);
-    LOG_DEBUG("  Mono Poly %u\n", gPatchDescr[slot].monoPoly);
-    LOG_DEBUG("  Active Variation %u\n", gPatchDescr[slot].activeVariation);
-    LOG_DEBUG("  Category %u\n", gPatchDescr[slot].category);
+    LOG_MODULE_DATA("  Voice Count %u\n", gPatchDescr[slot].voiceCount);
+    LOG_MODULE_DATA("  Bar Position %u\n", gPatchDescr[slot].barPosition);
+    LOG_MODULE_DATA("  Red %u\n", gPatchDescr[slot].visible[0]);
+    LOG_MODULE_DATA("  Blue %u\n", gPatchDescr[slot].visible[1]);
+    LOG_MODULE_DATA("  Yellow %u\n", gPatchDescr[slot].visible[2]);
+    LOG_MODULE_DATA("  Orange %u\n", gPatchDescr[slot].visible[3]);
+    LOG_MODULE_DATA("  Green %u\n", gPatchDescr[slot].visible[4]);
+    LOG_MODULE_DATA("  Purple %u\n", gPatchDescr[slot].visible[5]);
+    LOG_MODULE_DATA("  White %u\n", gPatchDescr[slot].visible[6]);
+    LOG_MODULE_DATA("  Mono Poly %u\n", gPatchDescr[slot].monoPoly);
+    LOG_MODULE_DATA("  Active Variation %u\n", gPatchDescr[slot].activeVariation);
+    LOG_MODULE_DATA("  Category %u\n", gPatchDescr[slot].category);
 
     if (slot == atomic_load(&gSlot)) {
         set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId, (tTopbarControlId)(topbarVariation1Id + gPatchDescr[slot].activeVariation));
@@ -132,13 +132,13 @@ void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     tModuleKey key         = {0};
     tModule *  module      = NULL;
 
-    LOG_DEBUG("Module list\n");
+    LOG_MODULE_DATA("Module list\n");
 
     key.slot     = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
-    LOG_DEBUG("Location       0x%x\n", key.location);
+    LOG_MODULE_DATA("Location       0x%x\n", key.location);
     uint32_t   moduleCount = read_bit_stream(buff, subOffset, 8);
-    LOG_DEBUG("Module Count   %d\n", moduleCount);
+    LOG_MODULE_DATA("Module Count   %d\n", moduleCount);
 
     for (i = 0; i < moduleCount; i++) {
         type              = read_bit_stream(buff, subOffset, 8);
@@ -160,16 +160,16 @@ void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         module->unknown1  = read_bit_stream(buff, subOffset, 6);
         module->modeCount = read_bit_stream(buff, subOffset, 4);
 
-        LOG_DEBUG("Module type %u\n", module->type);
-        LOG_DEBUG("Module column %u\n", module->column);
-        LOG_DEBUG("Module row %u\n", module->row);
+        LOG_MODULE_DATA("Module type %u\n", module->type);
+        LOG_MODULE_DATA("Module column %u\n", module->column);
+        LOG_MODULE_DATA("Module row %u\n", module->row);
 
         for (j = 0; j < module->modeCount; j++) {
             module->mode[j].value = read_bit_stream(buff, subOffset, 6);
-            LOG_DEBUG("Mode index %u = %u\n", j, module->mode[j].value);
+            LOG_MODULE_DATA("Mode index %u = %u\n", j, module->mode[j].value);
         }
 
-        LOG_DEBUG("Number connectors for module %u\n", module_connector_count(type));
+        LOG_MODULE_DATA("Number connectors for module %u\n", module_connector_count(type));
     }
 }
 
@@ -221,14 +221,14 @@ void parse_cable_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     tCableKey key        = {0};
     tCable    cable      = {0};
 
-    LOG_DEBUG("Cable list\n");
+    LOG_MODULE_DATA("Cable list\n");
 
     key.slot     = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
-    LOG_DEBUG("Location       0x%x\n", key.location);
+    LOG_MODULE_DATA("Location       0x%x\n", key.location);
     read_bit_stream(buff, subOffset, 6);                         // byte-align before GetUWord
     uint32_t  cableCount = read_bit_stream(buff, subOffset, 16); // high byte then low byte
-    LOG_DEBUG("Cable Count    %d\n", cableCount);
+    LOG_MODULE_DATA("Cable Count    %d\n", cableCount);
 
     for (uint32_t i = 0; i < cableCount; i++) {
         cable.colour             = read_bit_stream(buff, subOffset, 3);
@@ -291,18 +291,18 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     int        j             = 0;
     int        k             = 0;
 
-    LOG_DEBUG("Param list\n");
+    LOG_MODULE_DATA("Param list\n");
     key.slot      = slot;
     key.location  = read_bit_stream(buff, subOffset, 2);
-    LOG_DEBUG("Location       0x%x\n", key.location);     // 0..1 = param list, 2 = patch settings!?
+    LOG_MODULE_DATA("Location       0x%x\n", key.location);     // 0..1 = param list, 2 = patch settings!?
     // SWITCH ON LOC BEING 0..1 or 2 2 = line 4112 in file.pas
     moduleCount   = read_bit_stream(buff, subOffset, 8);
-    LOG_DEBUG("Module Count      %u\n", moduleCount);
+    LOG_MODULE_DATA("Module Count      %u\n", moduleCount);
     numVariations = read_bit_stream(buff, subOffset, 8);     // Should always be 10 on USB or 9 in a file - TODO: sanity check
-    LOG_DEBUG("Variation Count      %u\n", numVariations);
+    LOG_MODULE_DATA("Variation Count      %u\n", numVariations);
 
     if (numVariations > 10) {
-        LOG_DEBUG("Variation Count > 10\n");
+        LOG_MODULE_DATA("Variation Count > 10\n");
         return;
     }
 
@@ -310,7 +310,7 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         key.index                = read_bit_stream(buff, subOffset, 8);
 
         paramCount               = read_bit_stream(buff, subOffset, 7);
-        LOG_DEBUG("  variation list param count = %u\n", paramCount);
+        LOG_MODULE_DATA("  variation list param count = %u\n", paramCount);
 
         if (paramCount >= MAX_NUM_PARAMETERS) {
             LOG_ERROR("MAX_NUM_PARAMETERS needs increasing to >= %u\n", paramCount + 1);
@@ -340,7 +340,7 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             uint32_t variation = read_bit_stream(buff, subOffset, 8);
 
             if (variation == 0) {
-                LOG_DEBUG("  Variation %u\n", variation);
+                LOG_MODULE_DATA("  Variation %u\n", variation);
             }
 
             if (j != variation) {
@@ -351,12 +351,12 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                 paramValue                = read_bit_stream(buff, subOffset, 7);
 
                 if (variation == 0) {
-                    LOG_DEBUG("   Param number %02d param value %02d\n", k, paramValue);
+                    LOG_MODULE_DATA("   Param number %02d param value %02d\n", k, paramValue);
                 }
 
                 if (variation == 9) {
                     if (module->param[8][k].value != paramValue) {
-                        LOG_DEBUG("   Difference on init value in 8 = %02d 9 = %02d\n", module->param[8][k].value, paramValue);
+                        LOG_MODULE_DATA("   Difference on init value in 8 = %02d 9 = %02d\n", module->param[8][k].value, paramValue);
                     }
                 }
                 module->param[j][k].value = paramValue;
@@ -438,7 +438,7 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         read_bit_stream(buff, subOffset, 2);  // keyboard morph assign (discard)
     }
 
-    LOG_DEBUG("Variations %u Morph Count %u\n", numVariations, gMorphCount[slot]);
+    LOG_MODULE_DATA("Variations %u Morph Count %u\n", numVariations, gMorphCount[slot]);
 
     for (j = 0; j < numVariations; j++) {
         variation       = read_bit_stream(buff, subOffset, 8);
@@ -448,7 +448,7 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         }
 
         morphParamCount = read_bit_stream(buff, subOffset, 8);
-        LOG_DEBUG("Variation %u Morph param count %u\n", variation, morphParamCount);
+        LOG_MODULE_DATA("Variation %u Morph param count %u\n", variation, morphParamCount);
 
         for (k = 0; k < morphParamCount; k++) {
             key.slot     = slot;
@@ -458,11 +458,11 @@ void parse_morph_params(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
             morph        = read_bit_stream(buff, subOffset, 4);
             range        = read_bit_stream(buff, subOffset, 8);
 
-            LOG_DEBUG("  Location %u\n", key.location);
-            LOG_DEBUG("  Module index %u\n", key.index);
-            LOG_DEBUG("  Param index %u\n", paramIndex);
-            LOG_DEBUG("  Morph %u\n", morph);
-            LOG_DEBUG("  Range %u\n", range);
+            LOG_MODULE_DATA("  Location %u\n", key.location);
+            LOG_MODULE_DATA("  Module index %u\n", key.index);
+            LOG_MODULE_DATA("  Param index %u\n", paramIndex);
+            LOG_MODULE_DATA("  Morph %u\n", morph);
+            LOG_MODULE_DATA("  Range %u\n", range);
 
             if ((key.location < (uint32_t)locationMax) && (key.index < MAX_NUM_MODULES)) {
                 tModule * module = get_module_slot(key.slot, key.location, key.index);
@@ -561,7 +561,7 @@ void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         return;
     }
     knobCount = read_bit_stream(buff, subOffset, 16);
-    LOG_DEBUG("  Knob Count %u\n", knobCount);
+    LOG_MODULE_DATA("  Knob Count %u\n", knobCount);
 
     // The G2 always sends exactly KNOB_COUNT (120) entries; guard against
     // malformed data sending more than we have storage for.
@@ -578,7 +578,7 @@ void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         parse_knob_common_fields(buff, subOffset, knob);
 
         if (knob->assigned) {
-            LOG_DEBUG("  Knob %d: location %u module %u isLed %u param %u\n",
+            LOG_MODULE_DATA("  Knob %d: location %u module %u isLed %u param %u\n",
                       i, knob->location, knob->moduleIndex, knob->isLed, knob->paramIndex);
         }
     }
@@ -587,7 +587,7 @@ void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
 void parse_global_knobs(uint8_t * buff, uint32_t * bitPos) {
     uint32_t knobCount = read_bit_stream(buff, bitPos, 16);
 
-    LOG_DEBUG("  Global knob count %u\n", knobCount);
+    LOG_MODULE_DATA("  Global knob count %u\n", knobCount);
 
     if (knobCount > MAX_NUM_KNOBS) {
         LOG_ERROR("parse_global_knobs: count %u exceeds %u\n", knobCount, MAX_NUM_KNOBS);
@@ -608,7 +608,7 @@ void parse_global_knobs(uint8_t * buff, uint32_t * bitPos) {
 
         if (gKnob->assigned) {
             gKnob->slotIndex = read_bit_stream(buff, bitPos, 2);
-            LOG_DEBUG("  Global knob %u: slot %u location %u module %u isLed %u param %u\n",
+            LOG_MODULE_DATA("  Global knob %u: slot %u location %u module %u isLed %u param %u\n",
                       i, gKnob->slotIndex, gKnob->location, gKnob->moduleIndex, gKnob->isLed, gKnob->paramIndex);
         }
     }
@@ -650,10 +650,10 @@ void parse_controllers(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     uint32_t   paramIndex      = 0;
     int        i               = 0;
 
-    LOG_DEBUG("Controllers\n");
+    LOG_MODULE_DATA("Controllers\n");
 
     controllerCount = read_bit_stream(buff, subOffset, 7);
-    LOG_DEBUG("  Controller Count %u\n", controllerCount);
+    LOG_MODULE_DATA("  Controller Count %u\n", controllerCount);
 
     if (controllerCount > MAX_NUM_CONTROLLERS) {
         LOG_ERROR("Controller count %u exceeds MAX_NUM_CONTROLLERS %u\n", controllerCount, MAX_NUM_CONTROLLERS);
@@ -670,7 +670,7 @@ void parse_controllers(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         gControllerArray[slot].controller[i].moduleIndex = key.index;
         gControllerArray[slot].controller[i].paramIndex  = paramIndex;
 
-        LOG_DEBUG("  Controller %d: MidiCC %u Location %u ModuleIndex %u ParamIndex %u\n",
+        LOG_MODULE_DATA("  Controller %d: MidiCC %u Location %u ModuleIndex %u ParamIndex %u\n",
                   i, gControllerArray[slot].controller[i].midiCC, key.location, key.index, paramIndex);
 
         // Shadow onto the module param for convenient per-param lookup
@@ -728,17 +728,17 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     uint32_t   paramIndex   = 0;
     uint32_t   numLabels    = 0;
 
-    LOG_DEBUG("Param names\n");
+    LOG_MODULE_DATA("Param names\n");
 
     key.slot     = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
-    LOG_DEBUG("Location       0x%x\n", key.location);
+    LOG_MODULE_DATA("Location       0x%x\n", key.location);
     nameCount    = read_bit_stream(buff, subOffset, 8);
-    LOG_DEBUG("NameCount      %d\n", nameCount);
+    LOG_MODULE_DATA("NameCount      %d\n", nameCount);
 
     for (i = 0; i < nameCount; i++) {
         key.index    = read_bit_stream(buff, subOffset, 8);
-        LOG_DEBUG("Module index      %d\n", key.index);
+        LOG_MODULE_DATA("Module index      %d\n", key.index);
 
         if ((key.location >= (uint32_t)locationMax) || (key.index >= MAX_NUM_MODULES)) {
             LOG_ERROR("parse_param_names: key out of bounds location=%u index=%u\n", key.location, key.index);
@@ -747,17 +747,17 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         tModule * module = get_module_slot(key.slot, key.location, key.index);
 
         moduleLength = read_bit_stream(buff, subOffset, 8);
-        LOG_DEBUG("Module length     %d\n\n", moduleLength);
+        LOG_MODULE_DATA("Module length     %d\n\n", moduleLength);
 
         for (j = 0; j < moduleLength;) {
             isString    = read_bit_stream(buff, subOffset, 8);
-            LOG_DEBUG("IsString     %d\n", isString);
+            LOG_MODULE_DATA("IsString     %d\n", isString);
             paramLength = read_bit_stream(buff, subOffset, 8);
-            LOG_DEBUG("ParamLen     %d\n", paramLength);
+            LOG_MODULE_DATA("ParamLen     %d\n", paramLength);
             paramIndex  = read_bit_stream(buff, subOffset, 8);
-            LOG_DEBUG("Param Index  %d\n", paramIndex);
+            LOG_MODULE_DATA("Param Index  %d\n", paramIndex);
             j          += 3;
-            LOG_DEBUG("Param name: ");
+            LOG_MODULE_DATA("Param name: ");
 
             if (paramLength > 0) {
                 numLabels = (paramLength - 1) / PROTOCOL_PARAM_NAME_SIZE;
@@ -793,9 +793,9 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
                         uint8_t ch = read_bit_stream(buff, subOffset, 8);
 
                         if ((ch >= 0x20) && (ch <= 0x7f)) {
-                            LOG_DEBUG_DIRECT("%c", ch);
+                            LOG_MODULE_DATA_DIRECT("%c", ch);
                         } else {
-                            LOG_DEBUG_DIRECT(" ");
+                            LOG_MODULE_DATA_DIRECT(" ");
                         }
                         module->paramName[paramIndex][labelIndex][k] = ch;
                     }
@@ -803,7 +803,7 @@ void parse_param_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
 
                 j                                 += paramLength - 1;
             }
-            LOG_DEBUG_DIRECT(";\n");
+            LOG_MODULE_DATA_DIRECT(";\n");
         }
     }
 }
@@ -832,7 +832,7 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
     nameCountBitPos = *bitPos;
     write_bit_stream(buff, bitPos, 8, 0);  // Populated later
 
-    LOG_DEBUG("Write param names for location %d\n", location);
+    LOG_MODULE_DATA("Write param names for location %d\n", location);
 
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
         tModule * module = get_module_slot(slot, location, i);
@@ -880,18 +880,18 @@ void write_param_names(uint32_t slot, tLocation location, uint8_t * buff, uint32
                         moduleLength += 3;
 
                         for (labelIndex = 0; labelIndex < numLabels; labelIndex++) {
-                            LOG_DEBUG("Write param Name: ");
+                            LOG_MODULE_DATA("Write param Name: ");
 
                             for (k = 0; k < PROTOCOL_PARAM_NAME_SIZE; k++) {
                                 if ((module->paramName[j][labelIndex][k] >= 0x20) && (module->paramName[j][labelIndex][k] <= 0x7f)) {
-                                    LOG_DEBUG_DIRECT("%c", module->paramName[j][labelIndex][k]);
+                                    LOG_MODULE_DATA_DIRECT("%c", module->paramName[j][labelIndex][k]);
                                 } else {
-                                    LOG_DEBUG_DIRECT(" ");
+                                    LOG_MODULE_DATA_DIRECT(" ");
                                 }
                                 write_bit_stream(buff, bitPos, 8, module->paramName[j][labelIndex][k]);
                             }
 
-                            LOG_DEBUG_DIRECT(";\n");
+                            LOG_MODULE_DATA_DIRECT(";\n");
                         }
 
                         moduleLength += paramLength - 1;
@@ -914,14 +914,14 @@ void parse_module_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     uint32_t   i     = 0;
     char       name[CLAVIA_NAME_SIZE + 1];
 
-    LOG_DEBUG("Module names\n");
+    LOG_MODULE_DATA("Module names\n");
 
     key.slot     = slot;
     key.location = read_bit_stream(buff, subOffset, 2);
     read_bit_stream(buff, subOffset, 6);
-    LOG_DEBUG("Location 0x%x\n", key.location);
+    LOG_MODULE_DATA("Location 0x%x\n", key.location);
     uint32_t   items = read_bit_stream(buff, subOffset, 8);
-    LOG_DEBUG("Items %u\n", items);
+    LOG_MODULE_DATA("Items %u\n", items);
 
     for (i = 0; i < items; i++) {
         key.index = read_bit_stream(buff, subOffset, 8);

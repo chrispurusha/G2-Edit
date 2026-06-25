@@ -345,17 +345,17 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     LOG_DEBUG("Patch Sort Mode=%u Perf Sort Mode=%u\n",
               gSynthSettings.patchSortMode, gSynthSettings.perfSortMode);
 
-    { // Debug to highlight what we're changing on the G2 itself
-        static uint8_t prevBuff[64] = {0};
-        LOG_DEBUG("synth settings change!\n");
-
-        for (int i = 0; i < 40; i++) {
-            if (buff[i] != prevBuff[i]) {
-                prevBuff[i] = buff[i];
-                LOG_DEBUG("%d 0x%02x %u\n", i, buff[i], buff[i]);
-            }
-        }
-    }
+    //{ // Debug to highlight what we're changing on the G2 itself
+    //    static uint8_t prevBuff[64] = {0};
+    //    LOG_DEBUG("synth settings change!\n");
+//
+    //    for (int i = 0; i < 40; i++) {
+    //        if (buff[i] != prevBuff[i]) {
+    //            prevBuff[i] = buff[i];
+     //           LOG_DEBUG("%d 0x%02x %u\n", i, buff[i], buff[i]);
+     //       }
+     //   }
+    //}
 
     return EXIT_SUCCESS;
 }
@@ -403,13 +403,13 @@ static int parse_performance_settings(uint8_t * buff, int length) {
         atomic_store(&gSlotEnabled[i], active != 0 ? 1 : 0);
         LOG_DEBUG("Slot %d:\n", i);
         LOG_DEBUG("  PatchName         = '%s'\n", name);
-        LOG_DEBUG("  Active            = %u\n", active);
-        LOG_DEBUG("  Key               = %u\n", read_bit_stream(buff, &bitPos, 8)); // Seems to follow selected slot for keyboard selection?
-        LOG_DEBUG("  Hold              = %u\n", read_bit_stream(buff, &bitPos, 8));
-        LOG_DEBUG("  BankIndex         = %u\n", read_bit_stream(buff, &bitPos, 8));
-        LOG_DEBUG("  PatchIndex        = %u\n", read_bit_stream(buff, &bitPos, 8));
-        LOG_DEBUG("  RangeLower        = %u\n", read_bit_stream(buff, &bitPos, 8));
-        LOG_DEBUG("  RangeUpper        = %u\n", read_bit_stream(buff, &bitPos, 8));
+        //LOG_DEBUG("  Active            = %u\n", active);
+        //LOG_DEBUG("  Key               = %u\n", read_bit_stream(buff, &bitPos, 8)); // Seems to follow selected slot for keyboard selection?
+        //LOG_DEBUG("  Hold              = %u\n", read_bit_stream(buff, &bitPos, 8));
+        //LOG_DEBUG("  BankIndex         = %u\n", read_bit_stream(buff, &bitPos, 8));
+        //LOG_DEBUG("  PatchIndex        = %u\n", read_bit_stream(buff, &bitPos, 8));
+        //LOG_DEBUG("  RangeLower        = %u\n", read_bit_stream(buff, &bitPos, 8));
+        //LOG_DEBUG("  RangeUpper        = %u\n", read_bit_stream(buff, &bitPos, 8));
         read_bit_stream(buff, &bitPos, 8);
         read_bit_stream(buff, &bitPos, 8);
         read_bit_stream(buff, &bitPos, 8);
@@ -555,7 +555,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
         }
         subOffset = bitOffset;
 
-        LOG_DEBUG("Type = 0x%x, Count = %d\n", type, count);
+        LOG_MODULE_DATA("Type = 0x%x, Count = %d\n", type, count);
 
         switch (type) {
             case SUB_RESPONSE_MODULE_LIST:
@@ -585,14 +585,14 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
             case SUB_RESPONSE_PATCH_DESCRIPTION:
             {
                 LOG_DEBUG("Patch Descr\n");
-                uint32_t tmpSubOffset = subOffset;
+                //uint32_t tmpSubOffset = subOffset;
 
-                for (int i = 0; i < 32; i++) {
-                    LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, &subOffset, 8));
-                }
+                //for (int i = 0; i < 32; i++) {
+                //    LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, &subOffset, 8));
+                //}
 
-                LOG_DEBUG_DIRECT("\n");
-                subOffset = tmpSubOffset;
+                //LOG_DEBUG_DIRECT("\n");
+                //subOffset = tmpSubOffset;
                 parse_patch_descr(slot, buff, &subOffset);
                 break;
             }
