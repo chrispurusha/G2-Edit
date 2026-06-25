@@ -2173,13 +2173,10 @@ static int send_perf_header_usb(void) {
 
     // Per-slot data — slot names are fixed CLAVIA_NAME_SIZE bytes (null-padded), per WriteStream
     for (i = 0; i < MAX_SLOTS; i++) {
-        uint32_t j = 0;
         memset(name, 0, sizeof(name));
         patch_name_get(i, name, sizeof(name));
 
-        for (j = 0; j < CLAVIA_NAME_SIZE; j++) {
-            write_bit_stream(payload, &bitPos, 8, (uint8_t)name[j]);
-        }
+        write_clavia_string(buff, &bitPos, name);
 
         write_bit_stream(payload, &bitPos, 8, atomic_load(&gSlotEnabled[i]));
         write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].keyboardEnabled);
@@ -2616,7 +2613,10 @@ static int send_write_data(tMessageContent * messageContent) {
             // 0x3e mode byte: 1=perf, 0=patch (per defs.h comment and original reference)
             retVal = send_perf_mode_change_usb(1);
             if (retVal == EXIT_SUCCESS) {
-                retVal = send_perf_name_usb();
+                //retVal = send_perf_name_usb();
+                //if (retVal == EXIT_SUCCESS) {
+                    retVal = send_perf_header_usb();
+                //}
             }
             break;
 
