@@ -557,6 +557,10 @@ void stop_synth_name_editing(void) {
     memset(&gSynthNameEdit, 0, sizeof(gSynthNameEdit));
 }
 
+void stop_perf_name_editing(void) {
+    memset(&gPerfNameEdit, 0, sizeof(gPerfNameEdit));
+}
+
 static bool input_connector_has_cable(uint32_t slot, uint32_t location,
                                       uint32_t moduleIndex, uint32_t ioCount) {
     for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
@@ -790,6 +794,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     stop_patch_name_editing();
     stop_module_name_editing();
     stop_param_name_editing();
+    stop_perf_name_editing();
 
     switch (mouseButton) {
         case mouseButtonLeftDown:
@@ -944,6 +949,15 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     reloadMsg.cmd           = eMsgCmdReloadAllPatchData;
                     msg_send(&gCommandQueue, &reloadMsg);
                     found                   = true;
+                }
+            }
+
+            if (found == false) {
+                if (atomic_load(&gPerfMode) && within_rectangle(coord, gTopbarControls[topbarPerfNameId].rectangle)) {
+                    gPerfNameEdit.active                   = true;
+                    strncpy(gPerfNameEdit.buffer, gPerfName, CLAVIA_NAME_SIZE);
+                    gPerfNameEdit.buffer[CLAVIA_NAME_SIZE] = '\0';
+                    found                                  = true;
                 }
             }
 
@@ -1423,6 +1437,15 @@ void char_event(GLFWwindow * window, unsigned int value) {
             gSynthNameEdit.buffer[len + 1] = '\0';
         }
     }
+
+    if (gPerfNameEdit.active) {
+        size_t len = strlen(gPerfNameEdit.buffer);
+
+        if ((value >= 0x20) && (value <= 0x7e) && (len < CLAVIA_NAME_SIZE)) {
+            gPerfNameEdit.buffer[len]     = (char)value;
+            gPerfNameEdit.buffer[len + 1] = '\0';
+        }
+    }
     LOG_DEBUG("char=%d\n", value);
     atomic_store(&gReDraw, true);
 }
@@ -1596,6 +1619,22 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 send_synth_settings_msg();
             } else if (key == GLFW_KEY_ESCAPE) {
                 gSynthNameEdit.active = false;
+            }
+        }
+    } else if (gPerfNameEdit.active) {
+        if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+            if (key == GLFW_KEY_BACKSPACE) {
+                size_t len = strlen(gPerfNameEdit.buffer);
+
+                if (len > 0) {
+                    gPerfNameEdit.buffer[len - 1] = '\0';
+                }
+            } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
+                gPerfNameEdit.active        = false;
+                strncpy(gPerfName, gPerfNameEdit.buffer, CLAVIA_NAME_SIZE);
+                gPerfName[CLAVIA_NAME_SIZE] = '\0';
+            } else if (key == GLFW_KEY_ESCAPE) {
+                gPerfNameEdit.active = false;
             }
         }
     } else if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {

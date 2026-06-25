@@ -454,6 +454,21 @@ void render_top_bar(void) {
                                                                        {{20, 42}, {get_text_width("Patch Mode", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                        buff, (tRgb)RGB_BACKGROUND_GREY);
 
+    if (atomic_load(&gPerfMode)) {
+        char perfNameDisplay[CLAVIA_NAME_SIZE + 2] = {0};
+
+        if (gPerfNameEdit.active) {
+            snprintf(perfNameDisplay, sizeof(perfNameDisplay), "%s|", gPerfNameEdit.buffer);
+            gTopbarControls[topbarPerfNameId].rectangle = draw_button(mainArea,
+                                                                      {topbar_control_def(topbarPerfNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
+                                                                      perfNameDisplay, (tRgb)RGB_WHITE);
+        } else {
+            snprintf(perfNameDisplay, sizeof(perfNameDisplay), "%s", gPerfName[0] ? gPerfName : "---");
+            gTopbarControls[topbarPerfNameId].rectangle = draw_button(mainArea,
+                                                                      {topbar_control_def(topbarPerfNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
+                                                                      perfNameDisplay, (tRgb)RGB_BACKGROUND_GREY);
+        }
+    }
     {
         double resLabelH  = STANDARD_TEXT_HEIGHT * 0.7;
         double col1X      = 600.0;
@@ -700,7 +715,10 @@ void read_file_into_memory_and_process(const char * filepath) {
             }
         } else if (type == 1) {
             // Performance file — parse_perf clears all 4 slots and populates them;
-            // slot names come from the file itself so set_patch_name_from_filename is not called
+            // slot names come from the file itself so set_patch_name_from_filename is not called.
+            // The performance name is the null-terminated string at the very start of the file.
+            strncpy(gPerfName, (char *)buff, CLAVIA_NAME_SIZE);
+            gPerfName[CLAVIA_NAME_SIZE] = '\0';
             parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
 
             if (atomic_load(&gCommsState) == eCommsOnLine) {
@@ -931,7 +949,11 @@ static void check_action_flags(void) {
         gShowOpenFileWriteDialogue = false;
 
         if (perfMode) {
-            strncpy(defaultName, "performance.prf2", sizeof(defaultName) - 1);
+            if (gPerfName[0] != '\0') {
+                snprintf(defaultName, sizeof(defaultName), "%s.prf2", gPerfName);
+            } else {
+                strncpy(defaultName, "performance.prf2", sizeof(defaultName) - 1);
+            }
         } else {
             patch_name_get(slot, patchName, sizeof(patchName));
 

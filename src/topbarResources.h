@@ -55,6 +55,7 @@ static const tTopbarControlDef topbarControlList[topbarControlMax] = {
     [topbarClockRunStopId]       = {topbarClockRunStopId,       {475,  8}, anchorTopLeft, NULL, RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
     [topbarTempoDialId]          = {topbarTempoDialId,          {535, 10}, anchorTopLeft, NULL, RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
     [topbarPatchVolumeId]        = {topbarPatchVolumeId,        {320, 56}, anchorTopLeft, NULL, RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
+    [topbarPerfNameId]           = {topbarPerfNameId,           {120, 42}, anchorTopLeft, NULL, RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
     [topbarHideAllCablesId]      = {topbarHideAllCablesId,      {700, 40}, anchorTopLeft, "Hide", RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
     [topbarTransparentCablesId]  = {topbarTransparentCablesId,  {740, 40}, anchorTopLeft, "Dim", RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
     // Cable colour toggles — x position computed at render time

@@ -371,6 +371,8 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     }
     // Performance name (ClaviaString — null terminated, max 16 bytes)
     read_clavia_string(buff, &bitPos, name, sizeof(name));
+    strncpy(gPerfName, name, CLAVIA_NAME_SIZE);
+    gPerfName[CLAVIA_NAME_SIZE] = '\0';
     LOG_DEBUG("Performance Name     = '%s'\n", name);
 
     // WriteSettings
@@ -380,7 +382,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8));
 
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 4));
-    selectedSlot = read_bit_stream(buff, &bitPos, 2);   // For focus rather than keyboard?
+    selectedSlot                = read_bit_stream(buff, &bitPos, 2); // For focus rather than keyboard?
     LOG_DEBUG("SelectedSlot         = %u\n", selectedSlot);
     LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 2));
     LOG_DEBUG("RangeEnable          = %u\n", read_bit_stream(buff, &bitPos, 8));

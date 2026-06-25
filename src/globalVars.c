@@ -75,6 +75,8 @@ tNameEdit              gPatchNameEdit                                           
 tModuleNameEdit        gModuleNameEdit                                                              = {0};
 tParamNameEdit         gParamNameEdit                                                               = {0};
 tNameEdit              gSynthNameEdit                                                               = {0};
+tNameEdit              gPerfNameEdit                                                                = {0};
+char                   gPerfName[CLAVIA_NAME_SIZE + 1]                                              = {0};
 tPatchNotesEdit        gPatchNotesEdit                                                              = {0};
 tSynthSettings         gSynthSettings                                                               = {0};
 tPatchSettingsEdit     gPatchSettingsEdit                                                           = {0};

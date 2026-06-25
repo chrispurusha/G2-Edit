@@ -82,6 +82,8 @@ extern tNameEdit           gPatchNameEdit;
 extern tModuleNameEdit     gModuleNameEdit;
 extern tParamNameEdit      gParamNameEdit;
 extern tNameEdit           gSynthNameEdit;
+extern tNameEdit           gPerfNameEdit;
+extern char                gPerfName[CLAVIA_NAME_SIZE + 1];
 extern tPatchNotesEdit     gPatchNotesEdit;
 extern tSynthSettings      gSynthSettings;
 extern tPatchSettingsEdit  gPatchSettingsEdit;
