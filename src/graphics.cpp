@@ -445,7 +445,7 @@ void render_top_bar(void) {
     gTopbarControls[topbarTempoDialId].rectangle         = render_dial_with_text(mainArea, {topbar_control_def(topbarTempoDialId)->coord, {20, 48}}, NULL, buff, atomic_load(&gMasterClock), 241, 0, (tRgb)RGB_BACKGROUND_GREY);
     gTopbarControls[topbarClockRunStopId].rectangle      = draw_button(mainArea, {topbar_control_def(topbarClockRunStopId)->coord, {get_text_width("Stopped", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)(clockRunning ? "Running" : "Stopped"), clockRunning ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
-    if (atomic_load(&gPerfMode)) {
+    if (gSynthSettings.perfMode == 1) {
         snprintf(buff, sizeof(buff), "Perf Mode");
     } else {
         snprintf(buff, sizeof(buff), "Patch Mode");
@@ -454,7 +454,7 @@ void render_top_bar(void) {
                                                                        {{20, 42}, {get_text_width("Patch Mode", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                        buff, (tRgb)RGB_BACKGROUND_GREY);
 
-    if (atomic_load(&gPerfMode)) {
+    if (gSynthSettings.perfMode == 1) {
         char perfNameDisplay[CLAVIA_NAME_SIZE + 2] = {0};
 
         if (gPerfNameEdit.active) {
@@ -636,7 +636,7 @@ void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
 }
 
 void clear_slot_data(uint32_t slot) {
-    if (slot<MAX_SLOTS) {
+    if (slot < MAX_SLOTS) {
         database_delete_cables_by_slot(slot);
         database_delete_modules_by_slot(slot);
         gMorphCount[slot]      = 0;
@@ -705,7 +705,7 @@ void read_file_into_memory_and_process(const char * filepath) {
         type    = buff[byteOffset++];
         LOG_DEBUG("Version %u\n", version);
         LOG_DEBUG("Type %u\n", type);
-        
+
         if (type == 0) {
             clear_slot_data(slot);
             parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // TODO: parse_patch should really be in a commonly accessible source file, for file or USB access
@@ -720,17 +720,19 @@ void read_file_into_memory_and_process(const char * filepath) {
         } else if (type == 1) {
             {
                 tMessageContent msg = {0};
-                msg.cmd           = eMsgCmdWriteModePerf;  // Really need to be in perf mode before loading a performance
+                msg.cmd = eMsgCmdWriteModePerf;            // Really need to be in perf mode before loading a performance
                 msg_send(&gCommandQueue, &msg);
+                gSynthSettings.perfMode = 1;  // TODO - Ideally, we'd get an indication back or request state until perf mode = 1, so we could remove the big sleep below
             }
-            
+
             usleep(2000000);  // TODO - currently, when we write new patches as part of a perf, it triggers a read of the patches. We need to be stable in perf mode in that case.
-            
+
             int i = 0;
-            for (i=0; i<MAX_SLOTS; i++) {
+
+            for (i = 0; i < MAX_SLOTS; i++) {
                 clear_slot_data(i);
             }
-            
+
             // Performance file — parse_perf clears all 4 slots and populates them;
             // slot names come from the file itself so set_patch_name_from_filename is not called.
             // Derive performance name from the filename (strip directory and .prf2 extension).
@@ -745,7 +747,7 @@ void read_file_into_memory_and_process(const char * filepath) {
                     *dot = '\0';
                 }
             }
-            atomic_store(&gPerfMode, 1);
+
             gSynthSettings.perfMode = 1;
             parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
 
@@ -943,12 +945,11 @@ static void on_file_opened(const char * path) {
 
 static void on_file_saved(const char * path) {
     uint32_t slot     = atomic_load(&gSlot);
-    bool     perfMode = atomic_load(&gPerfMode) != 0;
 
     if (path) {
         LOG_INFO("Saving file: %s", path);
 
-        if (perfMode) {
+        if (gSynthSettings.perfMode == 1) {
             write_perf_to_file(path);
         } else {
             write_database_to_file(path);
@@ -961,7 +962,7 @@ static void on_file_saved(const char * path) {
 
 static void check_action_flags(void) {
     uint32_t slot                              = atomic_load(&gSlot);
-    bool     perfMode                          = atomic_load(&gPerfMode) != 0;
+    //bool     perfMode                          = atomic_load(&gPerfMode) != 0;
     char     patchName[CLAVIA_NAME_SIZE + 1]   = {0};
     char     defaultName[CLAVIA_NAME_SIZE + 6] = {0}; // name (16) + extension (5) + null
 
@@ -973,7 +974,7 @@ static void check_action_flags(void) {
     if (gShowOpenFileWriteDialogue) {
         gShowOpenFileWriteDialogue = false;
 
-        if (perfMode) {
+        if (gSynthSettings.perfMode == 1) {
             if (gPerfName[0] != '\0') {
                 snprintf(defaultName, sizeof(defaultName), "%s.prf2", gPerfName);
             } else {

@@ -943,21 +943,21 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             if (found == false) {
                 if (within_rectangle(coord, gTopbarControls[topbarPerfModeId].rectangle)) {
                     tMessageContent msg = {0};
-                    gSynthSettings.perfMode = gSynthSettings.perfMode ? 0 : 1;
-                    atomic_store(&gPerfMode, gSynthSettings.perfMode);
-                    //send_synth_settings_msg();
-                    if (gSynthSettings.perfMode == 1) {
-                        msg.cmd           = eMsgCmdWriteModePerf;
+                    if (gSynthSettings.perfMode == 0) {
+                        msg.cmd = eMsgCmdWriteModePerf;
+                        gSynthSettings.perfMode = 1;
                     } else {
-                        msg.cmd           = eMsgCmdWriteModePatch;
+                        msg.cmd = eMsgCmdWriteModePatch;
+                        gSynthSettings.perfMode = 0;
                     }
+
                     msg_send(&gCommandQueue, &msg);
                     found                   = true;
                 }
             }
 
             if (found == false) {
-                if (atomic_load(&gPerfMode) && within_rectangle(coord, gTopbarControls[topbarPerfNameId].rectangle)) {
+                if (gSynthSettings.perfMode == 1 && within_rectangle(coord, gTopbarControls[topbarPerfNameId].rectangle)) {
                     gPerfNameEdit.active                   = true;
                     strncpy(gPerfNameEdit.buffer, gPerfName, CLAVIA_NAME_SIZE);
                     gPerfNameEdit.buffer[CLAVIA_NAME_SIZE] = '\0';
@@ -1639,7 +1639,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 gPerfName[CLAVIA_NAME_SIZE] = '\0';
 
                 tMessageContent messageContent = {0};
-                messageContent.cmd = eMsgCmdWritePerfName;
+                messageContent.cmd          = eMsgCmdWritePerfName;
                 msg_send(&gCommandQueue, &messageContent);
             } else if (key == GLFW_KEY_ESCAPE) {
                 gPerfNameEdit.active = false;

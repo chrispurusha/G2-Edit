@@ -66,7 +66,7 @@ _Atomic uint8_t        gPatchVersion[MAX_SLOTS]                                 
 _Atomic uint8_t        gSlotEnabled[MAX_SLOTS]                                                      = {1, 1, 1, 1};
 _Atomic uint8_t        gPerfVersion                                                                 = 0;
 _Atomic uint8_t        gMasterClock                                                                 = 0;
-_Atomic uint8_t        gPerfMode                                                                    = 0;
+///_Atomic uint8_t        gPerfMode                                                                    = 0;
 _Atomic uint8_t        gMasterClockRunning                                                          = 0;
 _Atomic tCommsState    gCommsState                                                                  = eCommsNeverConnected;
 _Atomic uint32_t       gChangedSlot                                                                 = 0;

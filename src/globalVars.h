@@ -73,7 +73,7 @@ extern _Atomic uint8_t     gSlotEnabled[MAX_SLOTS];
 extern _Atomic uint8_t     gPerfVersion;
 extern _Atomic uint8_t     gMasterClock;
 extern _Atomic uint8_t     gMasterClockRunning;
-extern _Atomic uint8_t     gPerfMode;
+//extern _Atomic uint8_t     gPerfMode;
 //extern char                gPatchName[MAX_SLOTS][PATCH_NAME_SIZE + 1];
 extern _Atomic tCommsState gCommsState;
 extern _Atomic uint32_t    gChangedSlot;

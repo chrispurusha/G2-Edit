@@ -58,7 +58,7 @@ extern "C" {
 static _Atomic bool           gotBadConnectionIndication      = false;
 static _Atomic bool           gotPatchChangeIndication        = false;
 static _Atomic bool           gotPerfSettingsChangeIndication = false;
-static _Atomic int32_t         stopCount = 0;
+static _Atomic int32_t        stopCount                       = 0;
 
 // Protected by usbStaticMutex
 static pthread_t              usbThread                       = NULL;
@@ -283,7 +283,6 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     read_clavia_string(buff, &bitPos, gSynthSettings.name, sizeof(gSynthSettings.name));
 
     gSynthSettings.perfMode          = read_bit_stream(buff, &bitPos, 1);
-    atomic_store(&gPerfMode, gSynthSettings.perfMode);
     read_bit_stream(buff, &bitPos, 5);  // Unused
     gSynthSettings.patchSortMode     = read_bit_stream(buff, &bitPos, 2);
     read_bit_stream(buff, &bitPos, 6);  // perfSortMode - unused
@@ -437,15 +436,13 @@ static void parse_perf_header_dump(uint8_t * buff, uint32_t * bitPos) {
     gPerfHeaderCache.keyboardRange = (uint8_t)read_bit_stream(buff, bitPos, 8);
     gPerfHeaderCache.unknown18     = (uint8_t)read_bit_stream(buff, bitPos, 8);
     gPerfHeaderCache.unknown20     = (uint8_t)read_bit_stream(buff, bitPos, 8);
-    uint8_t perfMode                   = (uint8_t)read_bit_stream(buff, bitPos, 8);
-    atomic_store(&gPerfMode, perfMode);
-    gSynthSettings.perfMode        = perfMode;
+    gSynthSettings.perfMode        = read_bit_stream(buff, bitPos, 8);
     LOG_DEBUG("  GlobalMode        = %u\n", gPerfHeaderCache.globalMode);
     LOG_DEBUG("  RangeAndFlags     = %u\n", gPerfHeaderCache.rangeAndFlags);
     LOG_DEBUG("  KeyboardRange     = %u\n", gPerfHeaderCache.keyboardRange);
     LOG_DEBUG("  Unknown0x18       = %u\n", gPerfHeaderCache.unknown18);
     LOG_DEBUG("  Unknown0x20       = %u\n", gPerfHeaderCache.unknown20);
-    LOG_DEBUG("  PerfMode          = %u\n", perfMode);
+    LOG_DEBUG("  PerfMode          = %u\n", gSynthSettings.perfMode);
     read_bit_stream(buff, bitPos, 8);  // fixed 0x00
     read_bit_stream(buff, bitPos, 8);  // fixed 0x00
 
@@ -1069,10 +1066,9 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_COMMAND_SET_PARAM_MODE:
         {
-            uint8_t newPerfMode = (uint8_t)read_bit_stream(buff, bitPos, 8);
+            gSynthSettings.perfMode = read_bit_stream(buff, bitPos, 8);
 
-            LOG_DEBUG("Got perf mode change: %u\n", newPerfMode);
-            atomic_store(&gPerfMode, newPerfMode);
+            LOG_DEBUG("Got perf mode change: %u\n", gSynthSettings.perfMode); // TODO - check this one
             return EXIT_SUCCESS;
         }
 
@@ -1411,9 +1407,9 @@ static int int_rec(tPoll poll, int expectedResponse, unsigned int timeout_ms) {
     int                    response                     = SUB_RESPONSE_ERROR;
     double                 timeDelta                    = 0.0f;
     static double          largestDelta                 = 0.0f;
-    int try = 0;
+    int                    try                          = 0;
 
-    for (try=1; try<=5 && doLoop==true; try++) {
+    for (try = 1; try <= 5 && doLoop == true; try++) {
         pthread_mutex_lock(&usbStaticMutex);
         devHandle_local = devHandle;
         pthread_mutex_unlock(&usbStaticMutex);
@@ -1501,6 +1497,7 @@ static int int_rec(tPoll poll, int expectedResponse, unsigned int timeout_ms) {
             }
         }
     }
+
     return retVal;
 }
 
@@ -1630,46 +1627,43 @@ static void usb_cmd_slot(uint8_t * buff, int * pos, uint32_t slot, uint8_t comma
 static int send_stop(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int retVal = EXIT_SUCCESS;
+    int     retVal                  = EXIT_SUCCESS;
 
-    if (atomic_load(&stopCount)==0) {
+    if (atomic_load(&stopCount) == 0) {
         usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_START_STOP);
         buff[pos++] = 0x01;
-        retVal = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-    }
-    else {
+        retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    } else   {
         usleep(1); // Purely for debug
     }
-    
-    atomic_store(&stopCount, atomic_load(&stopCount)+1);
-    if (atomic_load(&stopCount)>10) {
+    atomic_store(&stopCount, atomic_load(&stopCount) + 1);
+
+    if (atomic_load(&stopCount) > 10) {
         LOG_ERROR("Stop message count went greater than 10\n");
         exit(1);
     }
-
     return retVal;
 }
 
 static int send_start(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
-    int retVal = EXIT_SUCCESS;
+    int     retVal                  = EXIT_SUCCESS;
 
-    atomic_store(&stopCount, atomic_load(&stopCount)-1);
-    if (atomic_load(&stopCount)<0) {
+    atomic_store(&stopCount, atomic_load(&stopCount) - 1);
+
+    if (atomic_load(&stopCount) < 0) {
         LOG_ERROR("Stop message count went negative\n");
         exit(1);
     }
-    
-    if (atomic_load(&stopCount)==0) {
+
+    if (atomic_load(&stopCount) == 0) {
         usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_START_STOP);  // Note: this sub command also starts, with correct param
         buff[pos++] = 0x00;
-        retVal =  send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-    }
-    else {
+        retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    } else   {
         usleep(1); // Purely for debug
     }
-    
     return retVal;
 }
 
@@ -2199,7 +2193,7 @@ static int send_perf_header_usb(void) {
     write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.keyboardRange);
     write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.unknown18);
     write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.unknown20);
-    write_bit_stream(payload, &bitPos, 8, atomic_load(&gPerfMode) ? 1 : 0);
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.perfMode == 1 ? 1 : 0);
     write_bit_stream(payload, &bitPos, 8, 0);
     write_bit_stream(payload, &bitPos, 8, 0);
 
@@ -2242,14 +2236,14 @@ static int send_perf_name_usb(void) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     int      pos                     = COMMAND_OFFSET;
     uint32_t j                       = 0;
-    uint32_t bitPos = 0;
+    uint32_t bitPos                  = 0;
 
     usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_RESPONSE_PERFORMANCE_SETTINGS);
 
     bitPos = BYTE_TO_BIT(pos);
     write_clavia_string(buff, &bitPos, gPerfName);
-    pos = BIT_TO_BYTE(bitPos);
-    
+    pos    = BIT_TO_BYTE(bitPos);
+
     return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
@@ -2430,7 +2424,7 @@ static int send_write_data(tMessageContent * messageContent) {
             int written = 0;
 
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            
+
             LOG_DEBUG("Writing module\n");
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
@@ -2454,7 +2448,7 @@ static int send_write_data(tMessageContent * messageContent) {
 
             pos        += ((written >= 0) && (written < avail)) ? written + 1 : avail;
             retVal      = send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-            
+
             send_start();
             break;
         }
@@ -2680,13 +2674,13 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdSetParamLabel:
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            retVal                         = send_set_param_label(messageContent->slot, messageContent->paramLabelData.moduleKey, messageContent->paramLabelData.paramIndex, messageContent->paramLabelData.name);
+            retVal = send_set_param_label(messageContent->slot, messageContent->paramLabelData.moduleKey, messageContent->paramLabelData.paramIndex, messageContent->paramLabelData.name);
             send_start();
             break;
 
         case eMsgCmdWriteSynthSettings:
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            retVal                         = send_synth_settings();
+            retVal = send_synth_settings();
             send_start();
             break;
 
@@ -2695,21 +2689,20 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal = send_perf_mode_change_usb(1);
             send_start();
             break;
-            
+
         case eMsgCmdWriteModePatch:
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_perf_mode_change_usb(0);
             send_start();
             break;
-            
+
         case eMsgCmdWritePerf:
         {
             send_stop();
-            
+
             for (uint32_t s = 0; s < MAX_SLOTS; s++) {
                 retVal = push_slot_to_device(s);
             }
-
 
             if (retVal == EXIT_SUCCESS) {
                 retVal = send_perf_name_usb();
@@ -2738,13 +2731,13 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdWritePerfSettings:
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            retVal = send_perf_header_usb();
+            retVal                         = send_perf_header_usb();
             send_start();
             break;
-            
+
         case eMsgCmdWritePerfName:
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            retVal = send_perf_name_usb();
+            retVal                         = send_perf_name_usb();
             send_start();
             break;
 
