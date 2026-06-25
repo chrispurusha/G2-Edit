@@ -62,7 +62,9 @@ typedef enum {
     eMsgCmdSetMasterClockRun,
     eMsgCmdSetParamLabel,
     eMsgCmdWriteSynthSettings,
-    eMsgCmdWritePerfHeader,
+    eMsgCmdWritePerf,
+    eMsgCmdWritePerfName,
+    eMsgCmdWritePerfSettings,
     eMsgCmdReloadAllPatchData
 } eMsgCmd;
 

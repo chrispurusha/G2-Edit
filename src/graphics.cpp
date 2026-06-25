@@ -742,16 +742,9 @@ void read_file_into_memory_and_process(const char * filepath) {
             parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
 
             if (atomic_load(&gCommsState) == eCommsOnLine) {
-                tMessageContent hdrMsg = {0};
-                hdrMsg.cmd = eMsgCmdWritePerfHeader;
-                msg_send(&gCommandQueue, &hdrMsg);
-
-                for (uint32_t s = 0; s < MAX_SLOTS; s++) {
-                    tMessageContent msg = {0};
-                    msg.cmd  = eMsgCmdWritePatch;
-                    msg.slot = s;
-                    msg_send(&gCommandQueue, &msg);
-                }
+                tMessageContent msg = {0};
+                msg.cmd = eMsgCmdWritePerf;
+                msg_send(&gCommandQueue, &msg);
             }
         }
     } else {
