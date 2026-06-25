@@ -718,14 +718,13 @@ void read_file_into_memory_and_process(const char * filepath) {
                 msg_send(&gCommandQueue, &msg);
             }
         } else if (type == 1) {
-            {
+            if (gSynthSettings.perfMode == 0) {
                 tMessageContent msg = {0};
                 msg.cmd = eMsgCmdWriteModePerf;            // Really need to be in perf mode before loading a performance
                 msg_send(&gCommandQueue, &msg);
                 gSynthSettings.perfMode = 1;  // TODO - Ideally, we'd get an indication back or request state until perf mode = 1, so we could remove the big sleep below
+                usleep(2000000);  // TODO - currently, when we write new patches as part of a perf, it triggers a read of the patches. We need to be stable in perf mode in that case.
             }
-
-            usleep(2000000);  // TODO - currently, when we write new patches as part of a perf, it triggers a read of the patches. We need to be stable in perf mode in that case.
 
             int i = 0;
 
