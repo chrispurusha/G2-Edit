@@ -635,6 +635,22 @@ void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
     LOG_DEBUG("Patch name from file: '%s'\n", patchName);
 }
 
+void clear_slot_data(uint32_t slot) {
+    if (slot<MAX_SLOTS) {
+        database_delete_cables_by_slot(slot);
+        database_delete_modules_by_slot(slot);
+        gMorphCount[slot]      = 0;
+        gNote2Size[slot]       = 0;
+        gControllerCount[slot] = 0;
+        gPatchNotesSize[slot]  = 0;
+        memset(&(gPatchDescr[slot]), 0, sizeof(gPatchDescr[0]));
+        memset(&(gKnobArray[slot]), 0, sizeof(gKnobArray[0]));
+        memset(gNote2[slot], 0, sizeof(gNote2[0]));
+        memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
+        memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
+    }
+}
+
 void read_file_into_memory_and_process(const char * filepath) {
     int64_t   byteOffset = 0;
     int64_t   fileSize   = 0;
@@ -690,20 +706,8 @@ void read_file_into_memory_and_process(const char * filepath) {
         LOG_DEBUG("Version %u\n", version);
         LOG_DEBUG("Type %u\n", type);
         
-        /* TODO - implement clear down commands as an init/clear slot function? */
-        database_delete_cables_by_slot(slot);
-        database_delete_modules_by_slot(slot);
-        gMorphCount[slot]      = 0;
-        gNote2Size[slot]       = 0;
-        gControllerCount[slot] = 0;
-        gPatchNotesSize[slot]  = 0;
-        memset(&(gPatchDescr[slot]), 0, sizeof(gPatchDescr[0]));
-        memset(&(gKnobArray[slot]), 0, sizeof(gKnobArray[0]));
-        memset(gNote2[slot], 0, sizeof(gNote2[0]));
-        memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
-        memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
-        
         if (type == 0) {
+            clear_slot_data(slot);
             parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // TODO: parse_patch should really be in a commonly accessible source file, for file or USB access
             set_patch_name_from_filename(slot, filepath);
 
@@ -714,6 +718,11 @@ void read_file_into_memory_and_process(const char * filepath) {
                 msg_send(&gCommandQueue, &msg);
             }
         } else if (type == 1) {
+            int i = 0;
+            for (i=0; i<MAX_SLOTS; i++) {
+                clear_slot_data(i);
+            }
+            
             // Performance file — parse_perf clears all 4 slots and populates them;
             // slot names come from the file itself so set_patch_name_from_filename is not called.
             // Derive performance name from the filename (strip directory and .prf2 extension).
