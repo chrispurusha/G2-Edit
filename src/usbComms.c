@@ -2213,13 +2213,14 @@ static int send_perf_name_usb(void) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     int      pos                     = COMMAND_OFFSET;
     uint32_t j                       = 0;
+    uint32_t bitPos = 0;
 
     usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_RESPONSE_PERFORMANCE_SETTINGS);
 
-    for (j = 0; j < CLAVIA_NAME_SIZE; j++) {
-        buff[pos++] = (uint8_t)gPerfName[j];
-    }
-
+    bitPos = BYTE_TO_BIT(pos);
+    write_clavia_string(buff, &bitPos, gPerfName);
+    pos = BIT_TO_BYTE(bitPos);
+    
     return send_message(buff, pos);
 }
 
@@ -2615,7 +2616,7 @@ static int send_write_data(tMessageContent * messageContent) {
             // 0x3e mode byte: 1=perf, 0=patch (per defs.h comment and original reference)
             retVal = send_perf_mode_change_usb(1);
             if (retVal == EXIT_SUCCESS) {
-                //retVal = send_perf_name_usb();
+                retVal = send_perf_name_usb();
             }
             break;
 
