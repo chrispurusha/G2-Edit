@@ -376,23 +376,22 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     LOG_DEBUG("Performance Name     = '%s'\n", name);
 
     // WriteSettings
-    LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8)); // Regular val of 17?
-    LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8));
+    read_bit_stream(buff, &bitPos, 8); // Regular val of 17?
+    read_bit_stream(buff, &bitPos, 8);
     LOG_DEBUG("Keyboard Range Enab  = %u\n", read_bit_stream(buff, &bitPos, 8)); // Regular val of 82 for standard mode and 87 for performance mode? Seen 0x74 for standard an 0x80 for perf too. Seems to be keyboard range enabled!
-    LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8));
-
-    LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 4));
+    read_bit_stream(buff, &bitPos, 8);
+    read_bit_stream(buff, &bitPos, 4);
     selectedSlot                = read_bit_stream(buff, &bitPos, 2); // For focus rather than keyboard?
     LOG_DEBUG("SelectedSlot         = %u\n", selectedSlot);
-    LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 2));
+    read_bit_stream(buff, &bitPos, 2);
     LOG_DEBUG("RangeEnable          = %u\n", read_bit_stream(buff, &bitPos, 8));
     atomic_store(&gMasterClock, read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("MasterClock          = %u\n", atomic_load(&gMasterClock));
     LOG_DEBUG("KeyboardSplit        = %u\n", read_bit_stream(buff, &bitPos, 8));
     atomic_store(&gMasterClockRunning, read_bit_stream(buff, &bitPos, 8));
     LOG_DEBUG("MasterClockRun       = %u\n", atomic_load(&gMasterClockRunning));
-    LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("Unknown              = %u\n", read_bit_stream(buff, &bitPos, 8));
+    read_bit_stream(buff, &bitPos, 8);
+    read_bit_stream(buff, &bitPos, 8);
 
     // 4 slots — TG2FileSlot.Write
     for (i = 0; i < MAX_SLOTS; i++) {
