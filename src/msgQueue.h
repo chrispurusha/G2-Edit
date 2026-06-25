@@ -66,8 +66,8 @@ typedef enum {
     eMsgCmdWriteModePatch,
     eMsgCmdWritePerf,
     eMsgCmdWritePerfName,
-    eMsgCmdWritePerfSettings,
-    eMsgCmdReloadAllPatchData
+    eMsgCmdWritePerfSettings//,
+    //eMsgCmdReloadAllPatchData
 } eMsgCmd;
 
 typedef struct {

@@ -2276,9 +2276,10 @@ static int send_perf_mode_change_usb(uint8_t perfMode) {
 // Init sequences — linear, no state machine
 // ---------------------------------------------------------------------------
 
+#if 0
 // Core resync: stop, fetch all perf+patch data, restart.
 // Called both on explicit request and on G2-initiated perf mode changes.
-static int reload_all_patch_data(void) {
+static int reload_all_patch_data(void) { // Urgent TODO - rationalise this, name it appropriately for what it's doing. This isn't just patch data it's pulling, it's everything!
     int      retVal = EXIT_SUCCESS;
     uint32_t slot   = 0;
 
@@ -2300,7 +2301,8 @@ static int reload_all_patch_data(void) {
 
     return retVal;
 }
-
+#endif
+    
 // First connection: G2 is authoritative — pull all patch data from hardware.
 static int send_init_sequence_pull(void) {
     LOG_DEBUG("Init sequence: pulling from G2\n");
@@ -2763,18 +2765,18 @@ static int send_write_data(tMessageContent * messageContent) {
             send_start();
             break;
 
-        case eMsgCmdReloadAllPatchData:
-            LOG_DEBUG("\nGot msg queue command to read all patch data\n\n");
-            retVal                         = reload_all_patch_data();
-            atomic_store(&gSlot, 0);
-            gPatchDescr[0].activeVariation = 0;
-            set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
-                                           (tTopbarControlId)(topbarSlotAId));
-            set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
-                                           (tTopbarControlId)((uint32_t)topbarVariation1Id));
-            call_full_patch_change_notify();
-            call_wake_glfw();
-            break;
+        //case eMsgCmdReloadAllPatchData:  // TODO - do we really want to reload all patch data, and is it just patch data - this is currently doing a lot more
+        //    LOG_DEBUG("\nGot msg queue command to read all patch data\n\n");
+        //    retVal                         = reload_all_patch_data();
+        //    atomic_store(&gSlot, 0);
+        //    gPatchDescr[0].activeVariation = 0;
+         //   set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
+         //                                  (tTopbarControlId)(topbarSlotAId));
+        //    set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
+         //                                  (tTopbarControlId)((uint32_t)topbarVariation1Id));
+         //   call_full_patch_change_notify();
+         //   call_wake_glfw();
+         //   break;
 
         default:
             LOG_DEBUG("Unknown command %d\n", messageContent->cmd);
