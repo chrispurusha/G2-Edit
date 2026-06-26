@@ -63,7 +63,7 @@ uint32_t            gControllerCount[MAX_SLOTS]                                 
 uint32_t            gPatchNotesSize[MAX_SLOTS]                                                   = {0};
 uint8_t             gPatchNotes[MAX_SLOTS][PATCH_NOTES_SIZE + 1]                                 = {0};
 //_Atomic uint8_t     gPatchVersion[MAX_SLOTS]                                                     = {0};
-tGlobalSettings     gGlobalSettings                                                              = {0};
+tGlobalSettings     gGlobalSettings                                                              = {0}; // Note - should reflect settings in the G2
 _Atomic tCommsState gCommsState                                                                  = eCommsNeverConnected;
 _Atomic uint8_t     gGlobalPage                                                                  = 0;
 tNameEdit           gPatchNameEdit                                                               = {0};
@@ -71,9 +71,9 @@ tModuleNameEdit     gModuleNameEdit                                             
 tParamNameEdit      gParamNameEdit                                                               = {0};
 tNameEdit           gSynthNameEdit                                                               = {0};
 tNameEdit           gPerfNameEdit                                                                = {0};
-tPerfSettings       gPerfSettings                                                                = {0};
+tPerfSettings       gPerfSettings                                                                = {0}; // Note - should reflect settings in the G2
 tPatchNotesEdit     gPatchNotesEdit                                                              = {0};
-tSynthSettings      gSynthSettings                                                               = {0};
+tSynthSettings      gSynthSettings                                                               = {0}; // Note - should reflect settings in the G2
 tPatchSettingsEdit  gPatchSettingsEdit                                                           = {0};
 tSettingsPanelRects gSettingsPanelRects                                                          = {0};
 tRectangle          gMorphLabelRect[NUM_MORPHS]                                                  = {0};

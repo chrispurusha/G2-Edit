@@ -837,7 +837,7 @@ typedef struct {
     uint32_t slot;
 } tPatchSettingsEdit;
 
-typedef struct {
+typedef struct {  // Note - should reflect settings in the G2
     char            name[CLAVIA_NAME_SIZE + 1];
     _Atomic uint8_t midiChanSlot[4];  // 0x00-0x0F = ch 1-16, 0x10 = off
     _Atomic uint8_t globalChan;       // same encoding
@@ -862,7 +862,7 @@ typedef struct {
     _Atomic uint8_t perfSortMode;
 } tSynthSettings;
 
-typedef struct {  // TODO - may need various in here, like names, perf mode etc. Do items really even belong in here? Should maybe go into globalsettings?
+typedef struct {  // Note - should reflect settings in the G2
     _Atomic uint8_t globalMode;
     _Atomic uint8_t rangeAndFlags;
     _Atomic uint8_t keyboardRange;
@@ -874,7 +874,7 @@ typedef struct {  // TODO - may need various in here, like names, perf mode etc.
     } slot[MAX_SLOTS];
 } tPerfSettings;
 
-typedef struct {  // TODO - may need various in here, like names, perf mode etc
+typedef struct {  // Note - should reflect settings in the G2
     _Atomic uint8_t perfMode;
     char            perfName[CLAVIA_NAME_SIZE + 1];
     _Atomic uint8_t perfVersion;
