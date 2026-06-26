@@ -71,7 +71,6 @@ tModuleNameEdit     gModuleNameEdit                                             
 tParamNameEdit      gParamNameEdit                                                               = {0};
 tNameEdit           gSynthNameEdit                                                               = {0};
 tNameEdit           gPerfNameEdit                                                                = {0};
-char                gPerfName[CLAVIA_NAME_SIZE + 1]                                              = {0};  // TODO - should go into performance settings?
 tPerfSettings       gPerfSettings                                                                = {0};
 tPatchNotesEdit     gPatchNotesEdit                                                              = {0};
 tSynthSettings      gSynthSettings                                                               = {0};
@@ -92,7 +91,7 @@ tRectangle          gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX
 pthread_mutex_t     gStringCopyMutex                                                             = PTHREAD_MUTEX_INITIALIZER;
 
 /* Stored here, but don't access directly, use functions to access instead */
-char                gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1]                                  = {0}; // TODO - Might have to do into perf settings
+//char                gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1]                                  = {0}; // TODO - Might have to do into perf settings
 _Atomic uint8_t     gSelectedSlot                                                                = 0;   // TODO - Might have to store in perf settings
 
 void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active) {

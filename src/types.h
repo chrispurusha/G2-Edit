@@ -876,13 +876,15 @@ typedef struct {  // TODO - may need various in here, like names, perf mode etc.
 
 typedef struct {  // TODO - may need various in here, like names, perf mode etc
     _Atomic uint8_t perfMode;
+    char            perfName[CLAVIA_NAME_SIZE + 1];
     _Atomic uint8_t perfVersion;
     _Atomic uint8_t masterClock;
     _Atomic uint8_t masterClockRunning;
     struct {
-        _Atomic uint8_t     patchVersion;
+        char            patchName[CLAVIA_NAME_SIZE + 1];
+        _Atomic uint8_t patchVersion;
         _Atomic uint8_t enabled;     // a.k.a. active
-    }               slot[MAX_SLOTS];
+    } slot[MAX_SLOTS];
 } tGlobalSettings;
 
 typedef struct {

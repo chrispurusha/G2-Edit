@@ -129,7 +129,7 @@ void init_patch(uint32_t slot) {  // Todo - think where this should really go
     memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
     memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
 
-    COPY_STRING(gPatchName[slot], "Init");
+    COPY_STRING(gGlobalSettings.slot[slot].patchName, "Init");
 }
 
 void handle_button(tTopbarControlId controlId) {
@@ -959,7 +959,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             if (found == false) {
                 if (gGlobalSettings.perfMode == 1 && within_rectangle(coord, gTopbarControls[topbarPerfNameId].rectangle)) {
                     gPerfNameEdit.active = true;
-                    COPY_STRING(gPerfNameEdit.buffer, gPerfName);
+                    COPY_STRING(gPerfNameEdit.buffer, gGlobalSettings.perfName);
                     found                = true;
                 }
             }
@@ -976,7 +976,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 if (within_rectangle(coord, gTopbarControls[topbarPatchNameId].rectangle)) {
                     gPatchNameEdit.active = true;
                     gPatchNameEdit.slot   = slot;
-                    COPY_STRING(gPatchNameEdit.buffer, gPatchName[gPatchNameEdit.slot]);
+                    COPY_STRING(gPatchNameEdit.buffer, gGlobalSettings.slot[slot].patchName);
                     found                 = true;
                 }
             }
@@ -1532,11 +1532,11 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
                 // Commit
                 gPatchNameEdit.active = false;
-                COPY_STRING(gPatchName[gPatchNameEdit.slot], gPatchNameEdit.buffer);
+                COPY_STRING(gGlobalSettings.slot[gPatchNameEdit.slot].patchName, gPatchNameEdit.buffer);
                 tMessageContent messageContent = {0};
                 messageContent.cmd    = eMsgCmdSetPatchName;
                 messageContent.slot   = gPatchNameEdit.slot;
-                COPY_STRING(messageContent.patchName.name, gPatchName[gPatchNameEdit.slot]);
+                COPY_STRING(messageContent.patchName.name, gGlobalSettings.slot[gPatchNameEdit.slot].patchName);
                 msg_send(&gCommandQueue, &messageContent);
             } else if (key == GLFW_KEY_ESCAPE) {
                 // Cancel — discard edits
@@ -1627,7 +1627,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 }
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
                 gPerfNameEdit.active = false;
-                COPY_STRING(gPerfName, gPerfNameEdit.buffer);
+                COPY_STRING(gGlobalSettings.perfName, gPerfNameEdit.buffer);
                 tMessageContent messageContent = {0};
                 messageContent.cmd   = eMsgCmdWritePerfName;
                 msg_send(&gCommandQueue, &messageContent);

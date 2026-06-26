@@ -317,7 +317,7 @@ void render_top_bar(void) {
     set_rgb_colour(RGB_BLACK);
     render_text(mainArea, {{400, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Variation");
 
-    COPY_STRING(patchNameCopy, gPatchName[slot]);
+    COPY_STRING(patchNameCopy, gGlobalSettings.slot[slot].patchName);
 
     //patch_name_get(slot, patchNameCopy, sizeof(patchNameCopy));
 
@@ -464,7 +464,7 @@ void render_top_bar(void) {
                                                                       {topbar_control_def(topbarPerfNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                       perfNameDisplay, (tRgb)RGB_WHITE);
         } else {
-            snprintf(perfNameDisplay, sizeof(perfNameDisplay), "%s", gPerfName[0] ? gPerfName : "---");
+            snprintf(perfNameDisplay, sizeof(perfNameDisplay), "%s", gGlobalSettings.perfName[0] ? gGlobalSettings.perfName : "---");
             gTopbarControls[topbarPerfNameId].rectangle = draw_button(mainArea,
                                                                       {topbar_control_def(topbarPerfNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                       perfNameDisplay, (tRgb)RGB_BACKGROUND_GREY);
@@ -631,7 +631,7 @@ void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
         patchName[i] = base[i];
         i++;
     }
-    COPY_STRING(gPatchName[slot], patchName);
+    COPY_STRING(gGlobalSettings.slot[slot].patchName, patchName);
 
     LOG_DEBUG("Patch name from file: '%s'\n", patchName);
 }
@@ -738,8 +738,8 @@ void read_file_into_memory_and_process(const char * filepath) {
             {
                 const char * slash    = strrchr(filepath, '/');
                 const char * baseName = slash ? slash + 1 : filepath;
-                COPY_STRING(gPerfName, baseName);
-                char *       dot      = strrchr(gPerfName, '.');
+                COPY_STRING(gGlobalSettings.perfName, baseName);
+                char *       dot      = strrchr(gGlobalSettings.perfName, '.');
 
                 if (dot) {
                     *dot = '\0';
@@ -973,15 +973,15 @@ static void check_action_flags(void) {
         gShowOpenFileWriteDialogue = false;
 
         if (gGlobalSettings.perfMode == 1) {
-            if (gPerfName[0] != '\0') {
-                snprintf(defaultName, sizeof(defaultName), "%s.prf2", gPerfName);
+            if (gGlobalSettings.perfName[0] != '\0') {
+                snprintf(defaultName, sizeof(defaultName), "%s.prf2", gGlobalSettings.perfName);
             } else {
                 COPY_STRING(defaultName, "performance.prf2");
             }
         } else {
-            COPY_STRING(patchName, gPatchName[slot]);
+            COPY_STRING(patchName, gGlobalSettings.slot[slot].patchName);
 
-            if (patchName[0] != '\0') {
+            if (gGlobalSettings.slot[slot].patchName[0] != '\0') {
                 snprintf(defaultName, sizeof(defaultName), "%s.pch2", patchName);
             } else {
                 snprintf(defaultName, sizeof(defaultName), "patch.pch2");

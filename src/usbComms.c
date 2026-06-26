@@ -368,9 +368,9 @@ static int parse_performance_settings(uint8_t * buff, int length) {
         return EXIT_FAILURE;
     }
     // Performance name (ClaviaString — null terminated, max 16 bytes)
-    memset(gPerfName, 0, sizeof(gPerfName));
-    read_clavia_string(buff, &bitPos, gPerfName, sizeof(gPerfName));
-    LOG_DEBUG("Performance Name     = '%s'\n", gPerfName);
+    memset(gGlobalSettings.perfName, 0, sizeof(gGlobalSettings.perfName));
+    read_clavia_string(buff, &bitPos, gGlobalSettings.perfName, sizeof(gGlobalSettings.perfName));
+    LOG_DEBUG("Performance Name     = '%s'\n", gGlobalSettings.perfName);
 
     // WriteSettings
     read_bit_stream(buff, &bitPos, 8);                                           // Regular val of 17?
@@ -392,7 +392,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
 
     // 4 slots — TG2FileSlot.Write
     for (i = 0; i < MAX_SLOTS; i++) {
-        read_clavia_string(buff, &bitPos, gPatchName[i], sizeof(gPatchName[0]));
+        read_clavia_string(buff, &bitPos, gGlobalSettings.slot[i].patchName, sizeof(gGlobalSettings.slot[i].patchName));
         gGlobalSettings.slot[i].enabled       = read_bit_stream(buff, &bitPos, 8);
         gPerfSettings.slot[i].keyboardEnabled = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         gPerfSettings.slot[i].holdEnabled     = (uint8_t)read_bit_stream(buff, &bitPos, 8);
@@ -401,7 +401,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
         gPerfSettings.slot[i].rangeLower      = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         gPerfSettings.slot[i].rangeUpper      = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         LOG_DEBUG("Slot %d:\n", i);
-        LOG_DEBUG("  PatchName         = '%s'\n", gPatchName[i]);
+        LOG_DEBUG("  PatchName         = '%s'\n", gGlobalSettings.slot[i].patchName);
         LOG_DEBUG("  Active            = %u\n", gGlobalSettings.slot[i].enabled);
         LOG_DEBUG("  Key               = %u\n", gPerfSettings.slot[i].keyboardEnabled); // Which keyboard slot is enabled
         LOG_DEBUG("  Hold              = %u\n", gPerfSettings.slot[i].holdEnabled);
@@ -444,7 +444,7 @@ static void parse_perf_header(uint8_t * buff, uint32_t * bitPos) {
     read_bit_stream(buff, bitPos, 8);                                  // fixed 0x00
 
     for (i = 0; i < MAX_SLOTS; i++) {
-        read_clavia_string(buff, bitPos, gPatchName[i], sizeof(gPatchName[0]));
+        read_clavia_string(buff, bitPos, gGlobalSettings.slot[i].patchName, sizeof(gGlobalSettings.slot[i].patchName));
         uint8_t enabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
         gGlobalSettings.slot[i].enabled       = enabled;
         gPerfSettings.slot[i].keyboardEnabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
@@ -457,7 +457,7 @@ static void parse_perf_header(uint8_t * buff, uint32_t * bitPos) {
         read_bit_stream(buff, bitPos, 8);  // 0x00
         read_bit_stream(buff, bitPos, 8);  // 0x00
         LOG_DEBUG("Slot %d:\n", i);
-        LOG_DEBUG("  Name              = '%s'\n", gPatchName[i]);
+        LOG_DEBUG("  Name              = '%s'\n", gGlobalSettings.slot[i].patchName);
         LOG_DEBUG("  SlotEnabled       = %u\n", enabled);
         LOG_DEBUG("  KeyboardEnabled   = %u\n", gPerfSettings.slot[i].keyboardEnabled);
         LOG_DEBUG("  HoldEnabled       = %u\n", gPerfSettings.slot[i].holdEnabled);
@@ -654,9 +654,9 @@ int parse_perf(uint8_t * buff, int length) {  // TODO - this one isn't used by U
     read_bit_stream(buff, &bitOffset, 8);                                    // 0x00
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-        read_clavia_string(buff, &bitOffset, gPatchName[slot], sizeof(gPatchName[0]));
+        read_clavia_string(buff, &bitOffset, gGlobalSettings.slot[slot].patchName, sizeof(gGlobalSettings.slot[slot].patchName));
 
-        LOG_DEBUG("Slot %u name '%s'\n", slot, gPatchName[slot]);
+        LOG_DEBUG("Slot %u name '%s'\n", slot, gGlobalSettings.slot[slot].patchName);
         uint8_t enabled = (uint8_t)read_bit_stream(buff, &bitOffset, 8);                    // IsSlotEnabled
         gGlobalSettings.slot[slot].enabled = enabled;
 
@@ -1026,8 +1026,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
             if (changedSlot < MAX_SLOTS) {
                 if (newVersion != gGlobalSettings.slot[changedSlot].patchVersion) {
-                    gGlobalSettings.slot[changedSlot].patchVersion            = newVersion;
-                    gotPatchChangeIndication[changedSlot] = true;
+                    gGlobalSettings.slot[changedSlot].patchVersion = newVersion;
+                    gotPatchChangeIndication[changedSlot]          = true;
                     //gChangedSlot= (uint32_t)changedSlot;
                 }
             }
@@ -1135,8 +1135,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                 LOG_ERROR("Patch name length out of range: %d\n", nameBytes);
                 return EXIT_FAILURE;
             }
-            read_clavia_string(buff, bitPos, gPatchName[slot], sizeof(gPatchName[0]));
-            LOG_DEBUG("Patch name: %s\n", gPatchName[slot]);
+            read_clavia_string(buff, bitPos, gGlobalSettings.slot[slot].patchName, sizeof(gGlobalSettings.slot[slot].patchName));
+            LOG_DEBUG("Patch name: %s\n", gGlobalSettings.slot[slot].patchName);
 
             return EXIT_SUCCESS;
         }
@@ -1226,8 +1226,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                     LOG_DEBUG("Store old patch %u ver = %u new = %u\n", readSlot, gGlobalSettings.slot[readSlot].patchVersion, newVersion);
 
                     if (newVersion != gGlobalSettings.slot[readSlot].patchVersion) {
-                        gGlobalSettings.slot[readSlot].patchVersion            = newVersion;
-                        gotPatchChangeIndication[readSlot] = true;
+                        gGlobalSettings.slot[readSlot].patchVersion = newVersion;
+                        gotPatchChangeIndication[readSlot]          = true;
                     }
                 }
             }
@@ -1955,7 +1955,7 @@ static int push_slot_to_device(uint32_t slot) {
     buff[pos++] = 0x00;
 
     bitPos      = BYTE_TO_BIT(pos);
-    write_clavia_string(buff, &bitPos, gPatchName[slot]);
+    write_clavia_string(buff, &bitPos, gGlobalSettings.slot[slot].patchName);
 
     write_patch_descr(slot, buff, &bitPos);
     write_module_list(slot, locationVa, buff, &bitPos);
@@ -2196,7 +2196,7 @@ static int send_perf_header(void) {
 
     // Per-slot data — slot names are fixed CLAVIA_NAME_SIZE bytes (null-padded), per WriteStream
     for (i = 0; i < MAX_SLOTS; i++) {
-        write_clavia_string(payload, &bitPos, gPatchName[i]);
+        write_clavia_string(payload, &bitPos, gGlobalSettings.slot[i].patchName);
 
         write_bit_stream(payload, &bitPos, 8, gGlobalSettings.slot[i].enabled);
         write_bit_stream(payload, &bitPos, 8, gPerfSettings.slot[i].keyboardEnabled);
@@ -2235,7 +2235,7 @@ static int send_perf_name(void) {
     usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_RESPONSE_PERFORMANCE_SETTINGS);
 
     bitPos = BYTE_TO_BIT(pos);
-    write_clavia_string(buff, &bitPos, gPerfName);
+    write_clavia_string(buff, &bitPos, gGlobalSettings.perfName);
     pos    = BIT_TO_BYTE(bitPos);
 
     return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);

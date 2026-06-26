@@ -1180,10 +1180,10 @@ void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
     write_bit_stream(buff, bitPos, 8, 0x00);
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-        if (gPatchName[slot][0] == '\0') {
+        if (gGlobalSettings.slot[slot].patchName[0] == '\0') {
             write_clavia_string(buff, bitPos, "No name");
         } else {
-            write_clavia_string(buff, bitPos, gPatchName[slot]);
+            write_clavia_string(buff, bitPos, gGlobalSettings.slot[slot].patchName);
         }
         bool has_content = slot_has_modules(slot);
 
