@@ -880,6 +880,7 @@ typedef struct {  // TODO - may need various in here, like names, perf mode etc
     _Atomic uint8_t masterClock;
     _Atomic uint8_t masterClockRunning;
     struct {
+        _Atomic uint8_t     patchVersion;
         _Atomic uint8_t enabled;     // a.k.a. active
     }               slot[MAX_SLOTS];
 } tGlobalSettings;

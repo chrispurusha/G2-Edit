@@ -781,8 +781,8 @@ static int parse_patch_version(uint8_t * buff, int length) {
     uint8_t  version = read_bit_stream(buff, &bitPos, 8);
 
     if (slot < MAX_SLOTS) {
-        if (version != gPatchVersion[slot]) {
-            gPatchVersion[slot] = version;
+        if (version != gGlobalSettings.slot[slot].patchVersion) {
+            gGlobalSettings.slot[slot].patchVersion = version;
         }
     } else if (slot == MAX_SLOTS) {
         if (version != gGlobalSettings.perfVersion) {
@@ -1025,8 +1025,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("Patch version change: slot %u new version 0x%02x\n", changedSlot, newVersion);
 
             if (changedSlot < MAX_SLOTS) {
-                if (newVersion != gPatchVersion[changedSlot]) {
-                    gPatchVersion[changedSlot]            = newVersion;
+                if (newVersion != gGlobalSettings.slot[changedSlot].patchVersion) {
+                    gGlobalSettings.slot[changedSlot].patchVersion            = newVersion;
                     gotPatchChangeIndication[changedSlot] = true;
                     //gChangedSlot= (uint32_t)changedSlot;
                 }
@@ -1223,10 +1223,10 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                 newVersion  = read_bit_stream(buff, bitPos, 8);
 
                 if (subResponse == SUB_RESPONSE_PATCH_VERSION) {
-                    LOG_DEBUG("Store old patch %u ver = %u new = %u\n", readSlot, gPatchVersion[readSlot], newVersion);
+                    LOG_DEBUG("Store old patch %u ver = %u new = %u\n", readSlot, gGlobalSettings.slot[readSlot].patchVersion, newVersion);
 
-                    if (newVersion != gPatchVersion[readSlot]) {
-                        gPatchVersion[readSlot]            = newVersion;
+                    if (newVersion != gGlobalSettings.slot[readSlot].patchVersion) {
+                        gGlobalSettings.slot[readSlot].patchVersion            = newVersion;
                         gotPatchChangeIndication[readSlot] = true;
                     }
                 }
@@ -1624,7 +1624,7 @@ static void usb_cmd_sys(uint8_t * buff, int * pos, uint8_t version, uint8_t subC
 static void usb_cmd_slot(uint8_t * buff, int * pos, uint32_t slot, uint8_t commandFlags, uint8_t subCommand) {
     buff[(*pos)++] = 0x01;
     buff[(*pos)++] = commandFlags | COMMAND_SLOT | (uint8_t)slot;
-    buff[(*pos)++] = (uint8_t)gPatchVersion[slot];
+    buff[(*pos)++] = (uint8_t)gGlobalSettings.slot[slot].patchVersion;
     buff[(*pos)++] = subCommand;
 }
 
@@ -2167,7 +2167,7 @@ static int send_set_patch_descr(uint32_t slot) { // Note - currently using value
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = gPatchVersion[slot];
+    buff[pos++] = gGlobalSettings.slot[slot].patchVersion;
     bitPos      = BYTE_TO_BIT(pos);
     write_patch_descr(slot, buff, &bitPos);
     pos         = BIT_TO_BYTE(bitPos);
@@ -2358,7 +2358,7 @@ static int send_write_data(tMessageContent * messageContent) {
     int     i                       = 0;
 
     for (i = 0; i < MAX_SLOTS; i++) {
-        patchVersion[i] = gPatchVersion[i];
+        patchVersion[i] = gGlobalSettings.slot[i].patchVersion;
     }
 
     // TODO - these should move to functions where we can do: SEND_RECV(function());
