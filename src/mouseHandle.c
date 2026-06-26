@@ -1507,7 +1507,10 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         adjust_scroll_for_drag();
     } else if (gContextMenu.active == true) {
         // Dummy
-    } else {
+    } else if (  (coord.x >= 0.0)
+              && (coord.y >= TOP_BAR_HEIGHT)
+              && (coord.x < (get_render_width() / gGlobalGuiScale) - SCROLLBAR_WIDTH)
+              && (coord.y < (get_render_height() / gGlobalGuiScale) - SCROLLBAR_WIDTH)) {
         uint32_t hoverSlot = gSlot;
         uint32_t hoverLoc  = gLocation;
 
