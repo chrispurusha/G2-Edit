@@ -2223,24 +2223,24 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSeqEvent,    connectorDirOut, connectorTypeLogic,   {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },       // 144 Out1
     {moduleTypeSeqEvent,    connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },       // 144 Out2
     // 145 SeqVal
-    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight},       // 145 Clk
-    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3, -30}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocRight},       // 145 Rst
-    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Lp",           labelLocRight},       // 145 Lp
+    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocUp},       // 145 Clk
+    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3, -30}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocUp},       // 145 Rst
+    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Lp",           labelLocUp},       // 145 Lp
     {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{-14,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Park",         labelLocRight},       // 145 Park
     {moduleTypeSeqVal,      connectorDirIn,  connectorTypeControl, {{ 13, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},       // 145 Val
     {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{ 13, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},       // 145 Trig1
-    {moduleTypeSeqVal,      connectorDirOut, connectorTypeLogic,   {{ -3, -60}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Link",         labelLocLeft },       // 145 Link
+    {moduleTypeSeqVal,      connectorDirOut, connectorTypeLogic,   {{ -3, -60}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Link",         labelLocUp },       // 145 Link
     {moduleTypeSeqVal,      connectorDirOut, connectorTypeControl, {{ -3, -35}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },       // 145 Val
     {moduleTypeSeqVal,      connectorDirOut, connectorTypeLogic,   {{ -3,  -5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },       // 145 Trig
 
     // 146 SeqLev
-    {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{  3, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight},       // 145 Clk
-    {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{  3, -30}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocRight},       // 145 Rst
-    {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{  3, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Lp",           labelLocRight},       // 145 Lp
+    {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{  3, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocUp},       // 145 Clk
+    {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{  3, -30}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocUp},       // 145 Rst
+    {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{  3, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Lp",           labelLocUp},       // 145 Lp
     {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{-14,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Park",         labelLocRight},       // 145 Park
     {moduleTypeSeqLev,      connectorDirIn,  connectorTypeControl, {{ 13, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},       // 145 Val
     {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{ 13, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},       // 145 Trig1
-    {moduleTypeSeqLev,      connectorDirOut, connectorTypeLogic,   {{ -3, -60}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Link",         labelLocLeft },       // 145 Link
+    {moduleTypeSeqLev,      connectorDirOut, connectorTypeLogic,   {{ -3, -60}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Link",         labelLocUp },       // 145 Link
     {moduleTypeSeqLev,      connectorDirOut, connectorTypeControl, {{ -3, -35}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },       // 145 Val
     {moduleTypeSeqLev,      connectorDirOut, connectorTypeLogic,   {{ -3,  -5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },       // 145 Trig
 
@@ -2265,7 +2265,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeKeyQuant,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocRight},          // 152 Out
     // 153 Unknown
     // 154 SeqCtr
-    {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeControl, {{  3, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocRight},          // 154 Ctrl
+    {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeControl, {{  3, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocUp},          // 154 Ctrl
     {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeControl, {{  3, -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Val",          labelLocRight},          // 154 Val
     {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Trig",         labelLocRight},          // 154 Trig
     {moduleTypeSeqCtr,      connectorDirOut, connectorTypeControl, {{ -3, -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Val",          labelLocLeft },          // 154 Val
