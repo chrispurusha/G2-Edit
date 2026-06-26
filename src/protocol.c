@@ -108,7 +108,7 @@ void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     LOG_MODULE_DATA("  Active Variation %u\n", gPatchDescr[slot].activeVariation);
     LOG_MODULE_DATA("  Category %u\n", gPatchDescr[slot].category);
 
-    if (slot == atomic_load(&gSlot)) {
+    if (slot == gSlot) {
         set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId, (tTopbarControlId)(topbarVariation1Id + gPatchDescr[slot].activeVariation));
     }
 }
@@ -1040,7 +1040,7 @@ void write_current_note_2_perf(uint32_t slot, uint8_t * buff, uint32_t * bitPos)
 
 void send_module_move_msg(tModule * module) {
     tMessageContent messageContent = {0};
-    uint32_t        slot           = atomic_load(&gSlot);
+    uint32_t        slot           = gSlot;
 
     messageContent.cmd                  = eMsgCmdMoveModule;
     messageContent.slot                 = slot;
@@ -1074,8 +1074,8 @@ void send_mode_value(uint32_t slot, tModuleKey moduleKey, uint32_t modeIdx, uint
 }
 
 void update_module_up_rates(void) {
-    uint32_t slot        = atomic_load(&gSlot);
-    uint32_t location    = atomic_load(&gLocation);
+    uint32_t slot        = gSlot;
+    uint32_t location    = gLocation;
     bool     changesMade = false;
 
     // Reset newUpRate for all modules in this slot/location
@@ -1172,17 +1172,17 @@ void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
     write_bit_stream(buff, bitPos, 8, 0x00);
     write_bit_stream(buff, bitPos, 8, 0x50);                               // TODO: use real gMasterVolume once stored; 0x50 is the G2 default
     write_bit_stream(buff, bitPos, 8, 0x00);
-    write_bit_stream(buff, bitPos, 8, (uint8_t)(atomic_load(&gSlot) * 4)); // selected slot encoding
+    write_bit_stream(buff, bitPos, 8, (uint8_t)(gSlot * 4)); // selected slot encoding
     write_bit_stream(buff, bitPos, 8, 0x00);
-    write_bit_stream(buff, bitPos, 8, atomic_load(&gMasterClock));
+    write_bit_stream(buff, bitPos, 8, gMasterClock);
     write_bit_stream(buff, bitPos, 8, 0x00);
-    write_bit_stream(buff, bitPos, 8, atomic_load(&gMasterClockRunning));
+    write_bit_stream(buff, bitPos, 8, gMasterClockRunning);
     write_bit_stream(buff, bitPos, 8, 0x00);
     write_bit_stream(buff, bitPos, 8, 0x00);
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
 
-        if (gPatchName[slot] == '\0') {
+        if (gPatchName[slot][0] == '\0') {
             write_clavia_string(buff, bitPos, "No name");
         } else {
             write_clavia_string(buff, bitPos, gPatchName[slot]);
@@ -1190,7 +1190,7 @@ void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
 
         bool has_content = slot_has_modules(slot);
 
-        write_bit_stream(buff, bitPos, 8, atomic_load(&gSlotEnabled[slot]));  // IsSlotEnabled — from CMSlotSelectionDump (USB type 7)
+        write_bit_stream(buff, bitPos, 8, gSlotEnabled[slot]);  // IsSlotEnabled — from CMSlotSelectionDump (USB type 7)
         write_bit_stream(buff, bitPos, 8, (slot == 0 || has_content) ? 0x01 : 0x00);
         write_bit_stream(buff, bitPos, 8, 0x00);
         write_bit_stream(buff, bitPos, 8, has_content ? 0x01 : 0x00);

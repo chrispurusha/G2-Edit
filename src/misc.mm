@@ -51,12 +51,12 @@
 }
 
 - (void)newPatch:(id)sender {
-    init_patch(atomic_load(&gSlot));
+    init_patch(gSlot);
     wake_glfw();
 }
 
 - (void)openNotes:(id)sender {
-    uint32_t slot = atomic_load(&gSlot);
+    uint32_t slot = gSlot;
 
     gPatchNotesEdit.active    = true;
     gPatchNotesEdit.slot      = slot;
@@ -69,7 +69,7 @@
 }
 
 - (void)openSettings:(id)sender {
-    uint32_t slot = atomic_load(&gSlot);
+    uint32_t slot = gSlot;
 
     gPatchSettingsEdit.active = true;
     gPatchSettingsEdit.slot   = slot;

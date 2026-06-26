@@ -133,14 +133,14 @@ void init_patch(uint32_t slot) {  // Todo - think where this should really go
 }
 
 void handle_button(tTopbarControlId controlId) {
-    uint32_t slot      = atomic_load(&gSlot);
-    uint32_t location  = atomic_load(&gLocation);
+    uint32_t slot      = gSlot;
+    uint32_t location  = gLocation;
     uint32_t variation = gPatchDescr[slot].activeVariation;
 
     switch (controlId) {
         case topbarVaId:
         {
-            atomic_store(&gLocation, locationVa);
+            gLocation= locationVa;
             set_exclusive_button_highlight(topbarVaId, topbarFxId, controlId);
             set_x_scroll_bar(0); // or different scroll positions for va and fx!?
             set_y_scroll_bar(0);
@@ -148,7 +148,7 @@ void handle_button(tTopbarControlId controlId) {
         }
         case topbarFxId:
         {
-            atomic_store(&gLocation, locationFx);
+            gLocation= locationFx;
             set_exclusive_button_highlight(topbarVaId, topbarFxId, controlId);
             set_x_scroll_bar(0);
             set_y_scroll_bar(0);
@@ -195,7 +195,7 @@ void handle_button(tTopbarControlId controlId) {
         {
             uint32_t        slot           = (uint32_t)controlId - (uint32_t)topbarSlotAId;
 
-            atomic_store(&gSlot, slot);
+            gSlot= slot;
 
             tMessageContent messageContent = {0};
             messageContent.cmd           = eMsgCmdSelectSlot;
@@ -383,8 +383,8 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
 }
 
 bool handle_module_press(tCoord coord, tMouseButton mouseButton) {
-    uint32_t slot      = atomic_load(&gSlot);
-    uint32_t location  = atomic_load(&gLocation);
+    uint32_t slot      = gSlot;
+    uint32_t location  = gLocation;
     uint32_t variation = gPatchDescr[slot].activeVariation;
 
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
@@ -460,8 +460,8 @@ static bool handle_module_release_for_module(tModule * module, tCoord coord, tMo
 }
 
 bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
-    uint32_t slot      = atomic_load(&gSlot);
-    uint32_t location  = atomic_load(&gLocation);
+    uint32_t slot      = gSlot;
+    uint32_t location  = gLocation;
     uint32_t variation = gPatchDescr[slot].activeVariation;
 
     // Only fire if we weren't dragging — dial drags are handled in cursor_pos
@@ -670,8 +670,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     bool         found             = false;
     bool         running           = false;
     int32_t      i                 = 0;
-    uint32_t     slot              = atomic_load(&gSlot);
-    uint32_t     location          = atomic_load(&gLocation);
+    uint32_t     slot              = gSlot;
+    uint32_t     location          = gLocation;
 
     mouseButton = convert_to_mouse_button(button, action);
 
@@ -681,7 +681,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         if (mouseButton == mouseButtonLeftUp) {
             noteEditDismissed = false;
         }
-        atomic_store(&gReDraw, true);
+        gReDraw = true;
         return;
     }
 
@@ -718,7 +718,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             }
         }
-        atomic_store(&gReDraw, true);
+        gReDraw = true;
         return;
     }
 
@@ -728,7 +728,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 if (!handle_context_menu_click(coord)) {
                     gContextMenu.active = false;
                 }
-                atomic_store(&gReDraw, true);
+                gReDraw = true;
                 return;
             }
 
@@ -788,7 +788,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             }
         }
-        atomic_store(&gReDraw, true);
+        gReDraw = true;
         return;
     }
     stop_patch_name_editing();
@@ -849,10 +849,10 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (within_rectangle(coord, gTopbarControls[topbarClockRunStopId].rectangle)) {
-                    running = !atomic_load(&gMasterClockRunning);
-                    atomic_store(&gMasterClockRunning, (uint8_t)running);
+                    running = !gMasterClockRunning;
+                    gMasterClockRunning= (uint8_t)running;
                     send_master_clock_run((uint32_t)running);
-                    atomic_store(&gReDraw, true);
+                    gReDraw = true;
                     found   = true;
                 }
             }
@@ -898,7 +898,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                             gPatchDescr[slot].visible[i] = !gPatchDescr[slot].visible[i];
                         }
 
-                        atomic_store(&gReDraw, true);
+                        gReDraw = true;
                         tMessageContent messageContent = {0};
                         messageContent.cmd  = eMsgCmdWritePatchDescr;
                         messageContent.slot = slot;
@@ -911,18 +911,18 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (within_rectangle(coord, gTopbarControls[topbarHideAllCablesId].rectangle)) {
-                    bool current = atomic_load(&gCablesHideAll);
-                    atomic_store(&gCablesHideAll, !current);
-                    atomic_store(&gReDraw, true);
+                    bool current = gCablesHideAll;
+                    gCablesHideAll= !current;
+                    gReDraw = true;
                     found = true;
                 }
             }
 
             if (found == false) {
                 if (within_rectangle(coord, gTopbarControls[topbarTransparentCablesId].rectangle)) {
-                    bool current = atomic_load(&gCablesTransparent);
-                    atomic_store(&gCablesTransparent, !current);
-                    atomic_store(&gReDraw, true);
+                    bool current = gCablesTransparent;
+                    gCablesTransparent= !current;
+                    gReDraw = true;
                     found = true;
                 }
             }
@@ -1102,7 +1102,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         default:
             break;
     }
-    atomic_store(&gReDraw, true);
+    gReDraw = true;
 }
 
 void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
@@ -1114,7 +1114,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     bool            noAction       = false; // unused — kept to avoid restructuring the else-chain below
     tParamType2     paramType2     = paramType2Dial;
     tParamType1     paramType1     = paramType1CommonDial;
-    uint32_t        slot           = atomic_load(&gSlot);
+    uint32_t        slot           = gSlot;
     uint32_t        variation      = gPatchDescr[slot].activeVariation;
     double          x              = 0;
     double          y              = 0;
@@ -1145,7 +1145,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         // msg_send(&gCommandQueue, &messageContent);
     } else if (gTempoDragging == true) {
         if (gDialMode == eDialModeVertical) {
-            int newVal = (int)atomic_load(&gMasterClock) + (int)((gDragPrevY - yCoord) * 241.0 / 200.0);
+            int newVal = (int)gMasterClock + (int)((gDragPrevY - yCoord) * 241.0 / 200.0);
             gDragPrevY = yCoord;
 
             if (newVal < 0) {
@@ -1157,7 +1157,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
             }
             value      = (uint32_t)newVal;
         } else if (gDialMode == eDialModeHorizontal) {
-            int newVal = (int)atomic_load(&gMasterClock) + (int)((xCoord - gDragPrevX) * 241.0 / 200.0);
+            int newVal = (int)gMasterClock + (int)((xCoord - gDragPrevX) * 241.0 / 200.0);
             gDragPrevX = xCoord;
 
             if (newVal < 0) {
@@ -1173,8 +1173,8 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
             value = angle_to_value(angle, 241);
         }
 
-        if (atomic_load(&gMasterClock) != value) {
-            atomic_store(&gMasterClock, (uint8_t)value);
+        if (gMasterClock != value) {
+            gMasterClock= (uint8_t)value;
             send_master_clock_bpm(value);
         }
     } else if (gParamDragging.active == true) {
@@ -1330,8 +1330,8 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     } else if (gContextMenu.active == true) {
         // Dummy
     } else {
-        uint32_t hoverSlot = atomic_load(&gSlot);
-        uint32_t hoverLoc  = atomic_load(&gLocation);
+        uint32_t hoverSlot = gSlot;
+        uint32_t hoverLoc  = gLocation;
 
         for (uint32_t idx = 0; idx < MAX_NUM_MODULES; idx++) {
             tModule * hoverModule = get_module_slot(hoverSlot, hoverLoc, idx);
@@ -1361,7 +1361,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     }
     // Limit re-draw/render if nothing's happened
     // if (noAction == false) {   // Used to have this check, TODO - see if there's a way to not redraw on every move
-    atomic_store(&gReDraw, true);
+    gReDraw = true;
     // }
 }
 
@@ -1387,7 +1387,7 @@ void scroll_event(GLFWwindow * window, double x, double y) {
     }
 //    LOG_DEBUG("Area: %f %f - size: %i %i - barY %f %f %f \n", moduleArea.size.w,moduleArea.size.h, width,height, gScrollState.yBar, gScrollState.yRectangle.size.h,gScrollState.yRectangle.coord.y);
 
-    atomic_store(&gReDraw, true);
+    gReDraw = true;
 }
 
 void char_event(GLFWwindow * window, unsigned int value) {
@@ -1450,7 +1450,7 @@ void char_event(GLFWwindow * window, unsigned int value) {
         }
     }
     LOG_DEBUG("char=%d\n", value);
-    atomic_store(&gReDraw, true);
+    gReDraw = true;
 }
 
 void key_callback(GLFWwindow * window, int key, int scancode, int action, int mods) {
@@ -1519,7 +1519,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 gPatchNotesEdit.active = false;
             }
         }
-        atomic_store(&gReDraw, true);
+        gReDraw = true;
         return;
     } else if (gPatchNameEdit.active) {
         if (action == GLFW_PRESS || action == GLFW_REPEAT) {
@@ -1664,7 +1664,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
             set_zoom_factor(zoomFactor, coord);
         }
     }
-    atomic_store(&gReDraw, true);
+    gReDraw = true;
 }
 
 #ifdef __cplusplus

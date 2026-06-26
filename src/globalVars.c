@@ -98,6 +98,7 @@ tRectangle             gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][
 
 /* Stored here, but don't access directly, use functions to access instead */
 char            gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1]                                  = {0};   // TODO - Might have to do into perf settings
+_Atomic uint8_t gSelectedSlot = 0; // TODO - Might have to store in perf settings
 
 void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active) {
     tTopbarControlId i = first;

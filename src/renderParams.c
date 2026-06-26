@@ -63,8 +63,8 @@ tRectangle render_paramType1Freq(tModule * module, tRectangle rectangle, char * 
 tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     // Frequency dial for oscillators. Uses PitchType param to control display of Tune
     int      pitchTypeParamIndex = 0;
-    uint32_t slot                = atomic_load(&gSlot);
-    //uint32_t location            = atomic_load(&gLocation);
+    uint32_t slot                = gSlot;
+    //uint32_t location            = gLocation;
     uint32_t variation           = gPatchDescr[slot].activeVariation;
 
     switch (module->type) {
@@ -215,7 +215,7 @@ tRectangle render_paramType1FreqDrum(tModule * module, tRectangle rectangle, cha
 tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double   rate;
     int      rateModeParamIndex;
-    uint32_t slot      = atomic_load(&gSlot);
+    uint32_t slot      = gSlot;
     uint32_t variation = gPatchDescr[slot].activeVariation;
 
     switch (module->type) {
@@ -360,7 +360,7 @@ tRectangle render_paramType1MixLevel(tModule * module, tRectangle rectangle, cha
     //double       level      = 0.0;
 
     int      expLinDBparam = 0;
-    uint32_t slot          = atomic_load(&gSlot);
+    uint32_t slot          = gSlot;
     uint32_t variation     = gPatchDescr[slot].activeVariation;
 
     switch (module->type) {
@@ -559,7 +559,7 @@ tRectangle render_paramType1ADRTime(tModule * module, tRectangle rectangle, char
 
 tRectangle render_paramType1PulseTime(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double   time_to_display;
-    uint32_t slot      = atomic_load(&gSlot);
+    uint32_t slot      = gSlot;
     uint32_t variation = gPatchDescr[slot].activeVariation;
 
 #if 0
@@ -620,7 +620,7 @@ tRectangle render_paramType1BipLevel(tModule * module, tRectangle rectangle, cha
     double   res            = 0.0;
     double   maxVal         = 64.0;
     int      typeParamIndex = 0;
-    uint32_t slot           = atomic_load(&gSlot);
+    uint32_t slot           = gSlot;
     uint32_t variation      = gPatchDescr[slot].activeVariation;
 
     switch (module->type) {
@@ -726,7 +726,7 @@ tRectangle render_paramType1StrMap(tModule * module, tRectangle rectangle, char 
 }
 
 tRectangle render_paramType1FreqShift(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
-    uint32_t     slot      = atomic_load(&gSlot);
+    uint32_t     slot      = gSlot;
     uint32_t     variation = gPatchDescr[slot].activeVariation;
     const char * s         = NULL;
 

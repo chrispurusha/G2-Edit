@@ -161,7 +161,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
 void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramRef, uint32_t paramIndex) {
     char     buff[16]                    = {0};
     char     label[CLAVIA_NAME_SIZE + 1] = {0};
-    uint32_t slot                        = atomic_load(&gSlot);
+    uint32_t slot                        = gSlot;
     uint32_t variation                   = gPatchDescr[slot].activeVariation;
     uint32_t paramValue                  = module->param[variation][paramIndex].value;
     uint32_t morphRange                  = module->param[variation][paramIndex].morphRange[gMorphGroupFocus];
@@ -384,7 +384,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 
 void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef, uint32_t modeIndex) {
     uint32_t modeValue = module->mode[modeIndex].value;
-    uint32_t slot      = atomic_load(&gSlot);
+    uint32_t slot      = gSlot;
     uint32_t variation = gPatchDescr[slot].activeVariation;
 
     module->mode[0].modeRef = modeRef;
@@ -484,7 +484,7 @@ void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, 
     switch (ledLocationList[ledRef].ledType) {
         case ledTypeYes:
         {
-            uint32_t ledVal = atomic_load(&module->led.value);
+            uint32_t ledVal = module->led.value;
             bool     green  = (ledVal >> 1) & 1;
             bool     red    = ledVal & 1;
 
@@ -754,8 +754,8 @@ void render_module(tModule * module) {
 }
 
 void render_modules(void) {
-    uint32_t slot     = atomic_load(&gSlot);
-    uint32_t location = atomic_load(&gLocation);
+    uint32_t slot     = gSlot;
+    uint32_t location = gLocation;
 
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
         tModule * module = get_module_slot(slot, location, i);
@@ -855,10 +855,10 @@ void render_cable(tCable * cable, double alpha) {
 }
 
 void render_cables(void) {
-    uint32_t slot           = atomic_load(&gSlot);
-    uint32_t location       = atomic_load(&gLocation);
-    bool     hideAll        = atomic_load(&gCablesHideAll);
-    bool     allTransparent = atomic_load(&gCablesTransparent);
+    uint32_t slot           = gSlot;
+    uint32_t location       = gLocation;
+    bool     hideAll        = gCablesHideAll;
+    bool     allTransparent = gCablesTransparent;
     bool     hoverActive    = gHoverConnector.active;
     double   normalAlpha    = allTransparent ? 0.5 : 1.0;
 
@@ -909,7 +909,7 @@ void render_morph_groups(void) {
     double     textHeight       = 0.0;
     bool       isKnob           = false;
     uint8_t    dialValue        = 0;
-    uint32_t   slot             = atomic_load(&gSlot);
+    uint32_t   slot             = gSlot;
     uint32_t   variation        = gPatchDescr[slot].activeVariation;
 
     tModule *  module           = get_module({slot, (uint32_t)locationMorph, 1});

@@ -67,7 +67,7 @@ static void send_patch_descr_update(uint32_t slot) {
 }
 
 static void action_set_patch_type(int index) {
-    uint32_t slot = atomic_load(&gSlot);
+    uint32_t slot = gSlot;
 
     gPatchDescr[slot].category = gContextMenu.items[index].param;
     send_patch_descr_update(slot);
@@ -75,7 +75,7 @@ static void action_set_patch_type(int index) {
 }
 
 static void action_set_mono_poly(int index) {
-    uint32_t slot = atomic_load(&gSlot);
+    uint32_t slot = gSlot;
 
     gPatchDescr[slot].monoPoly = (uint8_t)gContextMenu.items[index].param;
     send_patch_descr_update(slot);
@@ -83,7 +83,7 @@ static void action_set_mono_poly(int index) {
 }
 
 static void action_set_voice_count(int index) {
-    uint32_t slot = atomic_load(&gSlot);
+    uint32_t slot = gSlot;
 
     gPatchDescr[slot].voiceCount = (uint8_t)gContextMenu.items[index].param;
     send_patch_descr_update(slot);
@@ -93,7 +93,7 @@ static void action_set_voice_count(int index) {
 static void action_copy_variation(int index) {
     uint32_t        sourceVariation = (uint32_t)(gContextMenu.items[index].param >> 4) & 0xF;
     uint32_t        targetVariation = (uint32_t)(gContextMenu.items[index].param) & 0xF;
-    uint32_t        slot            = atomic_load(&gSlot);
+    uint32_t        slot            = gSlot;
     uint32_t        numParams       = 0;
     uint32_t        paramIndex      = 0;
     uint32_t        morphIndex      = 0;
@@ -127,15 +127,15 @@ static void action_copy_variation(int index) {
     msg_send(&gCommandQueue, &msg);
 
     gContextMenu.active                 = false;
-    atomic_store(&gReDraw, true);
+    gReDraw = true;
 }
 
 // ── Module / cable / morph actions ─────────────────────────────────────────
 
 static void menu_action_set_cable_colour(int index) {
     uint32_t  newColour = gContextMenu.items[index].param;
-    uint32_t  slot      = atomic_load(&gSlot);
-    uint32_t  location  = atomic_load(&gLocation);
+    uint32_t  slot      = gSlot;
+    uint32_t  location  = &gLocation;
     int       outIndex  = -1;
     int       inIndex   = -1;
 
@@ -202,14 +202,14 @@ static void menu_action_set_cable_colour(int index) {
         }
     }
 
-    atomic_store(&gReDraw, true);
+    gReDraw = true;
 }
 
 static void menu_action_delete_cable(int index) {
     int      outIndex = -1;
     int      inIndex  = -1;
-    uint32_t slot     = atomic_load(&gSlot);
-    uint32_t location = atomic_load(&gLocation);
+    uint32_t slot     = gSlot;
+    uint32_t location = gLocation;
 
     if ((gContextMenu.moduleKey.slot == slot) && (gContextMenu.moduleKey.location == location)) {
         tModule * module = get_module(gContextMenu.moduleKey);
@@ -276,8 +276,8 @@ static void menu_action_delete_cable(int index) {
 }
 
 static void menu_action_delete_module(int index) {
-    uint32_t        slot           = atomic_load(&gSlot);
-    uint32_t        location       = atomic_load(&gLocation);
+    uint32_t        slot           = gSlot;
+    uint32_t        location       = gLocation;
     tMessageContent messageContent = {0};
 
     if (gContextMenu.moduleKey.slot == slot && gContextMenu.moduleKey.location == location) {
@@ -327,7 +327,7 @@ static void action_rename_module(int index) {
         COPY_STRING(gModuleNameEdit.buffer, module->name);
     }
     gContextMenu.active = false;
-    atomic_store(&gReDraw, true);
+    gReDraw = true;
 }
 
 static void action_set_module_colour(int index) {
@@ -357,7 +357,7 @@ static void action_set_module_colour(int index) {
 
 static void action_rename_morph_label(int index) {
     uint32_t  morphIndex = (uint32_t)gContextMenu.items[index].param;
-    uint32_t  slot       = atomic_load(&gSlot);
+    uint32_t  slot       = gSlot;
 
     gContextMenu.moduleKey = (tModuleKey){
         slot, locationMorph, 1
@@ -374,7 +374,7 @@ static void action_rename_morph_label(int index) {
         COPY_STRING(gParamNameEdit.buffer, module->paramName[pi][0]);
     }
     gContextMenu.active    = false;
-    atomic_store(&gReDraw, true);
+    gReDraw = true;
 }
 
 // ── Module creation helpers ─────────────────────────────────────────────────
@@ -383,9 +383,9 @@ static void init_params_on_module(tModule * module, uint32_t location, uint32_t 
     uint32_t paramListIndex = 0;
     uint32_t paramIndex     = 0;
     uint32_t numParams      = module_param_count(module->type);
-    uint32_t slot           = atomic_load(&gSlot);
+    uint32_t slot           = gSlot;
 
-    if (location != atomic_load(&gLocation)) {
+    if (location != gLocation) {
         return;
     }
 
@@ -403,7 +403,7 @@ static void init_params_on_module(tModule * module, uint32_t location, uint32_t 
 }
 
 static void init_params_on_module_all_variations(tModule * module, uint32_t location) {
-    if (location != atomic_load(&gLocation)) {
+    if (location != gLocation) {
         return;
     }
 
@@ -413,7 +413,7 @@ static void init_params_on_module_all_variations(tModule * module, uint32_t loca
 }
 
 static int32_t find_unique_module_id(uint32_t location) {
-    uint32_t slot = atomic_load(&gSlot);
+    uint32_t slot = gSlot;
 
     for (uint32_t i = 1; i < MAX_NUM_MODULES; i++) {
         tModule * candidate = get_module_slot(slot, location, i);
@@ -521,8 +521,8 @@ void shift_modules_down(tModuleKey key) {
 }
 
 static void menu_action_create(int index) {
-    uint32_t slot     = atomic_load(&gSlot);
-    uint32_t location = atomic_load(&gLocation);
+    uint32_t slot     = gSlot;
+    uint32_t location = gLocation;
 
     if (gContextMenu.items[index].param != 0) {
         tModule         module         = {0};
@@ -591,7 +591,7 @@ int32_t find_knob_for_param(uint32_t slot, uint32_t location, uint32_t moduleInd
 }
 
 static void action_assign_knob(int index) {
-    uint32_t        slot        = atomic_load(&gSlot);
+    uint32_t        slot        = gSlot;
     uint32_t        targetKnob  = (uint32_t)gContextMenu.items[index].param;
     uint32_t        location    = gContextMenu.moduleKey.location;
     uint32_t        moduleIndex = gContextMenu.moduleKey.index;
@@ -631,11 +631,11 @@ static void action_assign_knob(int index) {
     msg_send(&gCommandQueue, &msg);
 
     gContextMenu.active                           = false;
-    atomic_store(&gReDraw, true);
+    gReDraw = true;
 }
 
 static void action_deassign_knob(int index) {
-    uint32_t        slot        = atomic_load(&gSlot);
+    uint32_t        slot        = gSlot;
     uint32_t        location    = gContextMenu.moduleKey.location;
     uint32_t        moduleIndex = gContextMenu.moduleKey.index;
     uint32_t        paramIndex  = gContextMenu.paramIndex;
@@ -650,11 +650,11 @@ static void action_deassign_knob(int index) {
         msg_send(&gCommandQueue, &msg);
     }
     gContextMenu.active = false;
-    atomic_store(&gReDraw, true);
+    gReDraw = true;
 }
 
 static void action_set_toggle_value(int index) {
-    uint32_t  slot      = atomic_load(&gSlot);
+    uint32_t  slot      = gSlot;
     uint32_t  variation = gPatchDescr[slot].activeVariation;
     tModule * module    = get_module(gContextMenu.moduleKey);
 
@@ -664,7 +664,7 @@ static void action_set_toggle_value(int index) {
         send_param_value(slot, gContextMenu.moduleKey, paramIdx, variation, module->param[variation][paramIdx].value);
     }
     gContextMenu.active = false;
-    atomic_store(&gReDraw, true);
+    gReDraw = true;
 }
 
 void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, uint32_t paramRef) {
@@ -691,7 +691,7 @@ void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, u
 }
 
 static void action_set_mode_value(int index) {
-    uint32_t  slot   = atomic_load(&gSlot);
+    uint32_t  slot   = gSlot;
     tModule * module = get_module(gContextMenu.moduleKey);
 
     if (module != NULL) {
@@ -700,7 +700,7 @@ static void action_set_mode_value(int index) {
         send_mode_value(slot, gContextMenu.moduleKey, modeIdx, module->mode[modeIdx].value);
     }
     gContextMenu.active = false;
-    atomic_store(&gReDraw, true);
+    gReDraw = true;
 }
 
 void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeIndex, uint32_t modeRef) {
@@ -741,7 +741,7 @@ static void action_rename_param_label(int index) {
         }
     }
     gContextMenu.active = false;
-    atomic_store(&gReDraw, true);
+    gReDraw = true;
 }
 
 void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex) {
@@ -753,7 +753,7 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
     static char      slotLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK][64];
     static tMenuItem menuItems[4];
 
-    uint32_t         slot     = atomic_load(&gSlot);
+    uint32_t         slot     = gSlot;
     int32_t          assigned = find_knob_for_param(slot, moduleKey.location, moduleKey.index, paramIndex);
     int              count    = 0;
 
@@ -1401,7 +1401,7 @@ void open_voice_count_context_menu(tCoord coord) {
     static tMenuItem menuItems[33];
     static char      labels[32][4];
     static bool      labelsInitialised = false;
-    uint32_t         slot              = atomic_load(&gSlot);
+    uint32_t         slot              = gSlot;
     uint32_t         assignedVoices    = gAssignedVoices[slot];
 
     if (!labelsInitialised) {

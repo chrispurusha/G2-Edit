@@ -165,11 +165,11 @@ static int find_note_cursor_line(int cursorPos) {
 
 void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
     glViewport(0, 0, width, height);
-    atomic_store(&gReDraw, true);
+    gReDraw = true;
 }
 
 void window_close_callback(GLFWwindow * window) {
-    atomic_store(&gReDraw, false);
+    gReDraw = false;
 
     glfwSetFramebufferSizeCallback(gWindow, NULL);
     glfwSetWindowCloseCallback(gWindow, NULL);
@@ -294,16 +294,16 @@ void render_top_bar(void) {
     tRectangle  rectangle                           = {0};
     char        patchNameCopy[CLAVIA_NAME_SIZE + 1] = {0};
     char        buff[32]                            = {0};
-    tCommsState commsState                          = atomic_load(&gCommsState);
+    tCommsState commsState                          = gCommsState;
     char *      commsStateText                      = "Unknown";
     tRgb        commsStateColour                    = RGB_RED_7;
     tRgb        buttonBackgroundColour              = (tRgb)RGB_BACKGROUND_GREY;
-    uint32_t    slot                                = atomic_load(&gSlot);
+    uint32_t    slot                                = gSlot;
     uint32_t    variation                           = gPatchDescr[slot].activeVariation;
     int         voiceCount                          = 0;
-    bool        clockRunning                        = atomic_load(&gMasterClockRunning);
-    uint64_t    txTime                              = atomic_load(&gUsbTxTime);
-    uint64_t    rxTime                              = atomic_load(&gUsbRxTime);
+    bool        clockRunning                        = gMasterClockRunning;
+    uint64_t    txTime                              = gUsbTxTime;
+    uint64_t    rxTime                              = gUsbRxTime;
     uint64_t    nowMs                               = (uint64_t)get_time_ms();
     bool        txActive                            = (txTime != 0) && ((nowMs - txTime) < 100);
     bool        rxActive                            = (rxTime != 0) && ((nowMs - rxTime) < 100);
@@ -415,7 +415,7 @@ void render_top_bar(void) {
         wake_glfw();
     }
     // Cable colour visibility toggles — 6 small squares
-    //uint32_t hiddenMask = atomic_load(&gHiddenCableMask);
+    //uint32_t hiddenMask = gHiddenCableMask;
 
     for (int i = 0; i < cableColourMax; i++) {
         bool                      visible  = gPatchDescr[slot].visible[i];
@@ -431,8 +431,8 @@ void render_top_bar(void) {
         }
     }
 
-    bool hideAll = atomic_load(&gCablesHideAll);
-    bool transp  = atomic_load(&gCablesTransparent);
+    bool hideAll = gCablesHideAll;
+    bool transp  = gCablesTransparent;
 
     gTopbarControls[topbarHideAllCablesId].rectangle     = draw_button(mainArea,
                                                                        {topbar_control_def(topbarHideAllCablesId)->coord, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
@@ -442,8 +442,8 @@ void render_top_bar(void) {
                                                                        {topbar_control_def(topbarTransparentCablesId)->coord, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                        "Dim", transp ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
-    snprintf(buff, sizeof(buff), "%u BPM", atomic_load(&gMasterClock));
-    gTopbarControls[topbarTempoDialId].rectangle         = render_dial_with_text(mainArea, {topbar_control_def(topbarTempoDialId)->coord, {20, 48}}, NULL, buff, atomic_load(&gMasterClock), 241, 0, (tRgb)RGB_BACKGROUND_GREY);
+    snprintf(buff, sizeof(buff), "%u BPM", gMasterClock);
+    gTopbarControls[topbarTempoDialId].rectangle         = render_dial_with_text(mainArea, {topbar_control_def(topbarTempoDialId)->coord, {20, 48}}, NULL, buff, gMasterClock, 241, 0, (tRgb)RGB_BACKGROUND_GREY);
     gTopbarControls[topbarClockRunStopId].rectangle      = draw_button(mainArea, {topbar_control_def(topbarClockRunStopId)->coord, {get_text_width("Stopped", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)(clockRunning ? "Running" : "Stopped"), clockRunning ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
     if (gSynthSettings.perfMode == 1) {
@@ -498,14 +498,14 @@ void render_top_bar(void) {
 }
 
 void wake_glfw(void) {
-    atomic_store(&gReDraw, true);
+    gReDraw = true;
 
     // Safe GLFW call from any thread
     glfwPostEmptyEvent();
 }
 
 void notify_full_patch_change(void) {
-    atomic_store(&gLocation, locationVa);
+    gLocation = locationVa;
     gTopbarControls[topbarVaId].colour = (tRgb)RGB_GREEN_ON;
     gTopbarControls[topbarFxId].colour = (tRgb)RGB_BACKGROUND_GREY;
     // Set scrollbars back to top/left
@@ -662,7 +662,7 @@ void read_file_into_memory_and_process(const char * filepath) {
     uint8_t   type       = 0;
     uint32_t  readCrc    = 0;
     uint32_t  calcCrc    = 0;
-    uint32_t  slot       = atomic_load(&gSlot);
+    uint32_t  slot       = gSlot;
 
     file     = fopen(filepath, "rb");
 
@@ -712,7 +712,7 @@ void read_file_into_memory_and_process(const char * filepath) {
             parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // TODO: parse_patch should really be in a commonly accessible source file, for file or USB access
             set_patch_name_from_filename(slot, filepath);
 
-            if (atomic_load(&gCommsState) == eCommsOnLine) {
+            if (gCommsState == eCommsOnLine) {
                 tMessageContent msg = {0};
                 msg.cmd  = eMsgCmdWritePatch;
                 msg.slot = slot;
@@ -750,7 +750,7 @@ void read_file_into_memory_and_process(const char * filepath) {
             gSynthSettings.perfMode = 1;
             parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
 
-            if (atomic_load(&gCommsState) == eCommsOnLine) {
+            if (gCommsState == eCommsOnLine) {
                 tMessageContent msg = {0};
                 msg.cmd = eMsgCmdWritePerf;
                 msg_send(&gCommandQueue, &msg);
@@ -772,7 +772,7 @@ void write_database_to_file(const char * filepath) {
     uint8_t * buff           = NULL;
     uint32_t  bitPos         = 0;
     uint32_t  calcCrc        = 0;
-    uint32_t  slot           = atomic_load(&gSlot);
+    uint32_t  slot           = gSlot;
 
     file = fopen(filepath, "wb");
 
@@ -938,12 +938,12 @@ static void on_file_opened(const char * path) {
         read_file_into_memory_and_process(path);
         //set_window_title(path);
     }
-    atomic_store(&gNeedFocus, true);
+    gNeedFocus = true;
     wake_glfw();
 }
 
 static void on_file_saved(const char * path) {
-    uint32_t slot     = atomic_load(&gSlot);
+    uint32_t slot     = gSlot;
 
     if (path) {
         LOG_INFO("Saving file: %s", path);
@@ -955,13 +955,13 @@ static void on_file_saved(const char * path) {
             set_patch_name_from_filename(slot, path);
         }
     }
-    atomic_store(&gNeedFocus, true);
+    gNeedFocus = true;
     wake_glfw();
 }
 
 static void check_action_flags(void) {
-    uint32_t slot                              = atomic_load(&gSlot);
-    //bool     perfMode                          = atomic_load(&gPerfMode) != 0;
+    uint32_t slot                              = gSlot;
+    //bool     perfMode                          = gPerfMode != 0;
     char     patchName[CLAVIA_NAME_SIZE + 1]   = {0};
     char     defaultName[CLAVIA_NAME_SIZE + 6] = {0}; // name (16) + extension (5) + null
 
@@ -992,8 +992,8 @@ static void check_action_flags(void) {
         open_file_write_dialogue_async(on_file_saved, defaultName);
     }
 
-    if (atomic_load(&gNeedFocus)) {
-        atomic_store(&gNeedFocus, false);
+    if (gNeedFocus == true) {
+        gNeedFocus = false;
         glfwFocusWindow(gWindow);
     }
 }
@@ -1441,8 +1441,8 @@ void do_graphics_loop(void) {
     while ((gQuitAll == false) && (!glfwWindowShouldClose(gWindow))) {
         check_action_flags();
 
-        reDraw = atomic_load(&gReDraw);
-        atomic_store(&gReDraw, false);
+        reDraw = gReDraw;
+        gReDraw = false;
 
         if (reDraw == true) {
             glClearColor(0.8, 0.8, 0.8, 1.0);

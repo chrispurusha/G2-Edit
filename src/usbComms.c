@@ -362,7 +362,6 @@ static int parse_synth_settings(uint8_t * buff, int length) {
 
 static int parse_performance_settings(uint8_t * buff, int length) {
     uint32_t bitPos                     = 0;
-    uint32_t selectedSlot               = 0;
     int      i                          = 0;
 
     if (buff == NULL) {
@@ -379,22 +378,22 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     LOG_DEBUG("Keyboard Range Enab  = %u\n", read_bit_stream(buff, &bitPos, 8)); // Regular val of 82 for standard mode and 87 for performance mode? Seen 0x74 for standard an 0x80 for perf too. Seems to be keyboard range enabled!
     read_bit_stream(buff, &bitPos, 8);
     read_bit_stream(buff, &bitPos, 4);
-    selectedSlot                = read_bit_stream(buff, &bitPos, 2); // For focus rather than keyboard?
-    LOG_DEBUG("SelectedSlot         = %u\n", selectedSlot);
+    gSelectedSlot                = read_bit_stream(buff, &bitPos, 2); // For focus rather than keyboard?
+    LOG_DEBUG("SelectedSlot         = %u\n", gSelectedSlot);
     read_bit_stream(buff, &bitPos, 2);
     LOG_DEBUG("RangeEnable          = %u\n", read_bit_stream(buff, &bitPos, 8));
-    atomic_store(&gMasterClock, read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("MasterClock          = %u\n", atomic_load(&gMasterClock));
+    gMasterClock = read_bit_stream(buff, &bitPos, 8);
+    LOG_DEBUG("MasterClock          = %u\n", gMasterClock);
     LOG_DEBUG("KeyboardSplit        = %u\n", read_bit_stream(buff, &bitPos, 8));
-    atomic_store(&gMasterClockRunning, read_bit_stream(buff, &bitPos, 8));
-    LOG_DEBUG("MasterClockRun       = %u\n", atomic_load(&gMasterClockRunning));
+    gMasterClockRunning = read_bit_stream(buff, &bitPos, 8);
+    LOG_DEBUG("MasterClockRun       = %u\n", gMasterClockRunning);
     read_bit_stream(buff, &bitPos, 8);
     read_bit_stream(buff, &bitPos, 8);
 
     // 4 slots — TG2FileSlot.Write
     for (i = 0; i < MAX_SLOTS; i++) {
         read_clavia_string(buff, &bitPos, gPatchName[i], sizeof(gPatchName[0]));
-        atomic_store(&gSlotEnabled[i], read_bit_stream(buff, &bitPos, 8));
+        gSlotEnabled[i]= read_bit_stream(buff, &bitPos, 8);
         gPerfSettings.slot[i].keyboardEnabled = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         gPerfSettings.slot[i].holdEnabled     = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         read_bit_stream(buff, &bitPos, 8); // Bank index
@@ -403,7 +402,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
         gPerfSettings.slot[i].rangeUpper      = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         LOG_DEBUG("Slot %d:\n", i);
         LOG_DEBUG("  PatchName         = '%s'\n", gPatchName[i]);
-        LOG_DEBUG("  Active            = %u\n", atomic_load(&gSlotEnabled[i]));
+        LOG_DEBUG("  Active            = %u\n", gSlotEnabled[i]);
         LOG_DEBUG("  Key               = %u\n", gPerfSettings.slot[i].keyboardEnabled); // Which keyboard slot is enabled
         LOG_DEBUG("  Hold              = %u\n", gPerfSettings.slot[i].holdEnabled);
         LOG_DEBUG("  BankIndex         = %u\n", 0);
@@ -447,7 +446,7 @@ static void parse_perf_header(uint8_t * buff, uint32_t * bitPos) {
     for (i = 0; i < MAX_SLOTS; i++) {
         read_clavia_string(buff, bitPos, gPatchName[i], sizeof(gPatchName[0]));
         uint8_t enabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
-        atomic_store(&gSlotEnabled[i], enabled != 0 ? 1 : 0);
+        gSlotEnabled[i]= enabled;
         gPerfSettings.slot[i].keyboardEnabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
         gPerfSettings.slot[i].holdEnabled     = (uint8_t)read_bit_stream(buff, bitPos, 8);
         gPerfSettings.slot[i].rangeLower      = (uint8_t)read_bit_stream(buff, bitPos, 8);
@@ -643,12 +642,12 @@ int parse_perf(uint8_t * buff, int length) {
     uint32_t selSlot     = (uint32_t)(selSlotByte / 4);
 
     if (selSlot < MAX_SLOTS) {
-        atomic_store(&gSlot, selSlot);
+        gSlot= selSlot;
     }
     read_bit_stream(buff, &bitOffset, 8);                                    // unknown (0x00)
-    atomic_store(&gMasterClock, (uint8_t)read_bit_stream(buff, &bitOffset, 8));
+    gMasterClock= (uint8_t)read_bit_stream(buff, &bitOffset, 8);
     read_bit_stream(buff, &bitOffset, 8);                                    // unknown (0x00)
-    atomic_store(&gMasterClockRunning, (uint8_t)read_bit_stream(buff, &bitOffset, 8));
+    gMasterClockRunning= (uint8_t)read_bit_stream(buff, &bitOffset, 8);
     read_bit_stream(buff, &bitOffset, 8);                                    // 0x00
     read_bit_stream(buff, &bitOffset, 8);                                    // 0x00
 
@@ -658,7 +657,7 @@ int parse_perf(uint8_t * buff, int length) {
 
         LOG_DEBUG("Slot %u name '%s'\n", slot, gPatchName[slot]);
         uint8_t enabled                    = (uint8_t)read_bit_stream(buff, &bitOffset, 8); // IsSlotEnabled
-        atomic_store(&gSlotEnabled[slot], enabled != 0 ? 1 : 0);
+        gSlotEnabled[slot]= enabled;
 
         for (int j = 1; j < 10; j++) {
             read_bit_stream(buff, &bitOffset, 8);                            // remaining suffix bytes
@@ -781,12 +780,12 @@ static int parse_patch_version(uint8_t * buff, int length) {
     uint8_t  version = read_bit_stream(buff, &bitPos, 8);
 
     if (slot < MAX_SLOTS) {
-        if (version != atomic_load(&gPatchVersion[slot])) {
-            atomic_store(&gPatchVersion[slot], version);
+        if (version != gPatchVersion[slot]) {
+            gPatchVersion[slot]= version;
         }
     } else if (slot == MAX_SLOTS) {
-        if (version != atomic_load(&gPerfVersion)) {
-            atomic_store(&gPerfVersion, version);
+        if (version != gPerfVersion) {
+            gPerfVersion= version;
         }
     } else {
         return EXIT_FAILURE;
@@ -896,7 +895,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                     if (module != NULL) {
                         if (module_led_count(module->type) > 0) {
                             if (led_count >= start_idx && led_count < (uint32_t)(start_idx + 40)) {
-                                atomic_store(&module->led.value, read_bit_stream(buff, bitPos, 2));
+                                module->led.value= read_bit_stream(buff, bitPos, 2);
                             }
                             led_count++;
                         }
@@ -1012,7 +1011,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             uint8_t         globalPage = 0;
 
             globalPage = read_bit_stream(buff, bitPos, 8);
-            atomic_store(&gGlobalPage, globalPage);
+            gGlobalPage= globalPage;
             LOG_DEBUG("%u Got global page Page=%u Pos=%u\n", count++, globalPage / 3, globalPage % 3);
             return EXIT_SUCCESS;
         }
@@ -1025,10 +1024,10 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("Patch version change: slot %u new version 0x%02x\n", changedSlot, newVersion);
 
             if (changedSlot < MAX_SLOTS) {
-                if (newVersion != atomic_load(&gPatchVersion[changedSlot])) {
-                    atomic_store(&gPatchVersion[changedSlot], newVersion);
-                    atomic_store(&gotPatchChangeIndication[changedSlot], true);
-                    //atomic_store(&gChangedSlot, (uint32_t)changedSlot);
+                if (newVersion != gPatchVersion[changedSlot]) {
+                    gPatchVersion[changedSlot]= newVersion;
+                    gotPatchChangeIndication[changedSlot]= true;
+                    //gChangedSlot= (uint32_t)changedSlot;
                 }
             }
             
@@ -1042,7 +1041,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
             for (uint32_t i = 0; i < MAX_SLOTS; i++) {
                 uint8_t status = (uint8_t)read_bit_stream(buff, bitPos, 8);
-                atomic_store(&gSlotEnabled[i], status != 0 ? 1 : 0);
+                gSlotEnabled[i]= status;
                 LOG_DEBUG("  Slot %u enabled: %u\n", i, status != 0 ? 1 : 0);
             }
 
@@ -1097,11 +1096,11 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
             if (type == 1) {
                 clock = read_bit_stream(buff, bitPos, 8);
-                atomic_store(&gMasterClock, clock);
+                gMasterClock= clock;
                 LOG_DEBUG_DIRECT("Master clock = %u\n", clock);
             } else if (type == 0) {
                 running = read_bit_stream(buff, bitPos, 8);
-                atomic_store(&gMasterClockRunning, running);
+                gMasterClockRunning= running;
                 LOG_DEBUG_DIRECT("Clock running = %u\n", running);
             }
             return EXIT_SUCCESS;
@@ -1112,7 +1111,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             uint32_t newSlot = read_bit_stream(buff, bitPos, 8);
             LOG_DEBUG("Got slot select %u\n", newSlot);
 
-            atomic_store(&gSlot, newSlot);
+            gSlot= newSlot;
             set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
                                            (tTopbarControlId)(topbarSlotAId + newSlot));
             set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
@@ -1210,11 +1209,11 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("\nGot performance patch versions\n\n");
 
             newVersion = read_bit_stream(buff, bitPos, 8);
-            LOG_DEBUG("Old perf = %u new = %u\n", atomic_load(&gPerfVersion), newVersion);
-            if (newVersion != atomic_load(&gPerfVersion)) {
-                atomic_store(&gPerfVersion, newVersion);
+            LOG_DEBUG("Old perf = %u new = %u\n", gPerfVersion, newVersion);
+            if (newVersion != gPerfVersion) {
+                gPerfVersion= newVersion;
                 // Use a flag rather than queuing so rapid switches coalesce into one resync.
-                atomic_store(&gotPerfSettingsChangeIndication, true);
+                gotPerfSettingsChangeIndication= true;
             }
 
             for (i = 0; i < MAX_SLOTS; i++) {
@@ -1223,11 +1222,10 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                 newVersion  = read_bit_stream(buff, bitPos, 8);
 
                 if (subResponse == SUB_RESPONSE_PATCH_VERSION) {
-                    LOG_DEBUG("Store old patch %u ver = %u new = %u\n", readSlot, atomic_load(&gPatchVersion[readSlot]), newVersion);
-                    if (newVersion != atomic_load(&gPatchVersion[readSlot])) {
-                        atomic_store(&gPatchVersion[readSlot], newVersion);
-                        atomic_store(&gotPatchChangeIndication[readSlot], true);
-                        //atomic_store(&gChangedSlot, (uint32_t)readSlot); // TODO - we really need a patch change indication for each slot
+                    LOG_DEBUG("Store old patch %u ver = %u new = %u\n", readSlot, gPatchVersion[readSlot], newVersion);
+                    if (newVersion != gPatchVersion[readSlot]) {
+                        gPatchVersion[readSlot]= newVersion;
+                        gotPatchChangeIndication[readSlot]= true;
                     }
                 }
             }
@@ -1365,7 +1363,7 @@ static int rcv_extended(int dataLength, int * response, unsigned int timeout_ms)
 
                 if (  (responseType == RESPONSE_TYPE_INIT)
                    || (responseType == RESPONSE_TYPE_COMMAND)) {
-                    atomic_store(&gUsbRxTime, (uint64_t)get_time_ms());
+                    gUsbRxTime= (uint64_t)get_time_ms();
                     usb_log_message("EX", buff, (size_t)readLength);
                     break;
                 } else {
@@ -1376,7 +1374,7 @@ static int rcv_extended(int dataLength, int * response, unsigned int timeout_ms)
             // readLength == 0: ZLP — device not ready yet, retry
         } else if (is_disconnect_error(retVal)) {
             LOG_DEBUG("Disconnect error %s\n", libusb_error_name(retVal));
-            atomic_store(&gotBadConnectionIndication, true);
+            gotBadConnectionIndication= true;
             return EXIT_FAILURE;
         } else {
             LOG_DEBUG("Transfer error %s\n", libusb_error_name(retVal));
@@ -1389,7 +1387,7 @@ static int rcv_extended(int dataLength, int * response, unsigned int timeout_ms)
 
         if (readLength == 0) {
             LOG_DEBUG("Extended receive got no data — triggering reconnect\n");
-            atomic_store(&gotBadConnectionIndication, true);
+            gotBadConnectionIndication= true;
         }
         return EXIT_FAILURE;
     }
@@ -1437,7 +1435,7 @@ static int int_rec(tPoll poll, int expectedResponse, unsigned int timeout_ms) {
 
         if (retVal == LIBUSB_SUCCESS) {
             if (readLength > 0) {
-                atomic_store(&gUsbRxTime, (uint64_t)get_time_ms());
+                gUsbRxTime= (uint64_t)get_time_ms();
                 usb_log_message("RX", buff, (size_t)readLength);
             }
         } else if (retVal == LIBUSB_ERROR_TIMEOUT) {
@@ -1448,7 +1446,7 @@ static int int_rec(tPoll poll, int expectedResponse, unsigned int timeout_ms) {
             }
         } else if (is_disconnect_error(retVal)) {
             LOG_DEBUG("int_rec: disconnect error %s\n", libusb_error_name(retVal));
-            atomic_store(&gotBadConnectionIndication, true);
+            gotBadConnectionIndication = true;
             return EXIT_FAILURE;
         } else {
             LOG_DEBUG("int_rec: transfer error %s\n", libusb_error_name(retVal));
@@ -1530,7 +1528,7 @@ static int send_message(uint8_t * buff, int pos) {
     pthread_mutex_unlock(&usbStaticMutex);
 
     if (handle == NULL) {
-        atomic_store(&gotBadConnectionIndication, true);
+        gotBadConnectionIndication = true;
         return EXIT_FAILURE;
     }
     actualLength = 0;
@@ -1546,7 +1544,7 @@ static int send_message(uint8_t * buff, int pos) {
 
     if ((result == 0) && (actualLength == msgLength)) {
         gLastActivityTime = time(NULL);
-        atomic_store(&gUsbTxTime, (uint64_t)get_time_ms());
+        gUsbTxTime= (uint64_t)get_time_ms();
         usb_log_message("TX", buff, (size_t)msgLength);
         return EXIT_SUCCESS;
     }
@@ -1557,7 +1555,7 @@ static int send_message(uint8_t * buff, int pos) {
 
     if (is_disconnect_error(result)) {
         LOG_DEBUG("disconnect error %s\n", libusb_error_name(result));
-        atomic_store(&gotBadConnectionIndication, true);
+        gotBadConnectionIndication = true;
         return EXIT_FAILURE;
     } else {
         LOG_ERROR("transfer error %s, Time taken %f with timeout of %u\n", libusb_error_name(result), timeDelta, USB_SEND_TIMEOUT_MS);
@@ -1624,7 +1622,7 @@ static void usb_cmd_sys(uint8_t * buff, int * pos, uint8_t version, uint8_t subC
 static void usb_cmd_slot(uint8_t * buff, int * pos, uint32_t slot, uint8_t commandFlags, uint8_t subCommand) {
     buff[(*pos)++] = 0x01;
     buff[(*pos)++] = commandFlags | COMMAND_SLOT | (uint8_t)slot;
-    buff[(*pos)++] = (uint8_t)atomic_load(&gPatchVersion[slot]);
+    buff[(*pos)++] = (uint8_t)gPatchVersion[slot];
     buff[(*pos)++] = subCommand;
 }
 
@@ -1633,15 +1631,15 @@ static int send_stop(void) {
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_SUCCESS;
 
-    if (atomic_load(&stopCount) == 0) {
+    if (stopCount == 0) {
         usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_START_STOP);
         buff[pos++] = 0x01;
         retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
     }
     
-    atomic_store(&stopCount, atomic_load(&stopCount) + 1);
+    stopCount++;
 
-    if (atomic_load(&stopCount) > 10) {
+    if (stopCount > 10) {
         LOG_ERROR("Stop message count went greater than 10\n");
         exit(1);
     }
@@ -1653,14 +1651,14 @@ static int send_start(void) {
     int     pos                     = COMMAND_OFFSET;
     int     retVal                  = EXIT_SUCCESS;
 
-    atomic_store(&stopCount, atomic_load(&stopCount) - 1);
+    stopCount--;
 
-    if (atomic_load(&stopCount) < 0) {
+    if (stopCount < 0) {
         LOG_ERROR("Stop message count went negative\n");
         exit(1);
     }
 
-    if (atomic_load(&stopCount) == 0) {
+    if (stopCount == 0) {
         usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_START_STOP);  // Note: this sub command also starts, with correct param
         buff[pos++] = 0x00;
         retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
@@ -1673,7 +1671,7 @@ static int send_select_slot(uint32_t slot) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_SELECT_SLOT);   // Note that this is focus, not keyboard selection
+    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_COMMAND_SELECT_SLOT);   // Note that this is focus, not keyboard selection
     buff[pos++] = (uint8_t)slot;
     return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
@@ -1722,7 +1720,7 @@ static int send_get_global_page(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_GET_GLOBAL_PAGE);
+    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_COMMAND_GET_GLOBAL_PAGE);
     return send_and_receive(buff, pos, SUB_RESPONSE_GLOBAL_PAGE, USB_RECV_DATA_MS);
 }
 
@@ -1731,7 +1729,7 @@ static int send_get_performance_settings(void) {
     int     pos                     = COMMAND_OFFSET;
 
     LOG_DEBUG("Send get performance settings\n");
-    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_PERFORMANCE_SETTINGS);
+    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_COMMAND_PERFORMANCE_SETTINGS);
     return send_and_receive(buff, pos, SUB_RESPONSE_PERFORMANCE_SETTINGS, USB_RECV_DATA_MS);
 }
 
@@ -1880,7 +1878,7 @@ static int send_get_global_knobs(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_QUERY_GLOBAL_KNOBS);
+    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_COMMAND_QUERY_GLOBAL_KNOBS);
     return send_and_receive(buff, pos, SUB_RESPONSE_GLOBAL_KNOBS, USB_RECV_DATA_MS);
 }
 
@@ -2023,7 +2021,7 @@ static int send_assign_global_knob(uint32_t slotIndex, uint32_t location, uint32
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_ASSIGN_GLOBAL_KNOB);
+    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_COMMAND_ASSIGN_GLOBAL_KNOB);
     buff[pos++] = (uint8_t)((slotIndex << 4) | (location << 2));
     buff[pos++] = (uint8_t)moduleIndex;
     buff[pos++] = (uint8_t)paramIndex;
@@ -2036,7 +2034,7 @@ static int send_deassign_global_knob(uint32_t knobIndex) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_DEASSIGN_GLOBAL_KNOB);
+    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_COMMAND_DEASSIGN_GLOBAL_KNOB);
     buff[pos++] = 0x00;
     buff[pos++] = (uint8_t)knobIndex;
     return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
@@ -2077,7 +2075,7 @@ static int send_set_master_clock_bpm(uint32_t bpm) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_SET_MASTER_CLOCK);
+    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_COMMAND_SET_MASTER_CLOCK);
     buff[pos++] = 0xFF;
     buff[pos++] = 0x01;
     buff[pos++] = (uint8_t)bpm;
@@ -2088,7 +2086,7 @@ static int send_set_master_clock_run(uint32_t running) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_COMMAND_SET_MASTER_CLOCK);
+    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_COMMAND_SET_MASTER_CLOCK);
     buff[pos++] = 0xFF;
     buff[pos++] = 0x00;
     buff[pos++] = running ? 0x01 : 0x00;
@@ -2169,7 +2167,7 @@ static int send_set_patch_descr(uint32_t slot) { // Note - currently using value
 
     buff[pos++] = 0x01;
     buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = atomic_load(&gPatchVersion[slot]);
+    buff[pos++] = gPatchVersion[slot];
     bitPos      = BYTE_TO_BIT(pos);
     write_patch_descr(slot, buff, &bitPos);
     pos         = BIT_TO_BYTE(bitPos);
@@ -2200,7 +2198,7 @@ static int send_perf_header(void) {
     for (i = 0; i < MAX_SLOTS; i++) {
         write_clavia_string(payload, &bitPos, gPatchName[i]);
 
-        write_bit_stream(payload, &bitPos, 8, atomic_load(&gSlotEnabled[i]));
+        write_bit_stream(payload, &bitPos, 8, gSlotEnabled[i]);
         write_bit_stream(payload, &bitPos, 8, gPerfSettings.slot[i].keyboardEnabled);
         write_bit_stream(payload, &bitPos, 8, gPerfSettings.slot[i].holdEnabled);
         write_bit_stream(payload, &bitPos, 8, gPerfSettings.slot[i].rangeLower);
@@ -2219,7 +2217,7 @@ static int send_perf_header(void) {
     payload[0] = (uint8_t)((contentBytes >> 8) & 0xff);
     payload[1] = (uint8_t)(contentBytes & 0xff);
 
-    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_RESPONSE_PERF_HEADER);
+    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_RESPONSE_PERF_HEADER);
 
     for (i = 0; i < totalBytes && (uint32_t)pos < SEND_MESSAGE_SIZE; i++) {
         buff[pos++] = payload[i];
@@ -2234,7 +2232,7 @@ static int send_perf_name(void) {
     uint32_t j                       = 0;
     uint32_t bitPos                  = 0;
 
-    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_RESPONSE_PERFORMANCE_SETTINGS);
+    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_RESPONSE_PERFORMANCE_SETTINGS);
 
     bitPos = BYTE_TO_BIT(pos);
     write_clavia_string(buff, &bitPos, gPerfName);
@@ -2262,7 +2260,7 @@ static int send_perf_mode_change(uint8_t perfMode) {
 // First connection: G2 is authoritative — pull all patch data from hardware.
 static int send_init_sequence_pull(void) {
     LOG_DEBUG("Init sequence: pulling from G2\n");
-    atomic_store(&gCommsState, eCommsInitialising);
+    gCommsState= eCommsInitialising;
 
     // Clear any stale data before pulling fresh state
     database_clear_cables();
@@ -2285,7 +2283,7 @@ static int send_init_sequence_pull(void) {
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         if (send_get_patch_data(slot) != EXIT_SUCCESS) {
             LOG_DEBUG("Setting to eCommsReconnecting state, due to send_get_patch_data(slot) failing\n");
-            atomic_store(&gCommsState, eCommsReconnecting);
+            gCommsState= eCommsReconnecting;
             return EXIT_FAILURE;
         }
     }
@@ -2300,7 +2298,7 @@ static int send_init_sequence_pull(void) {
     LOG_DEBUG("Pull init sequence complete\n");
     
     for (int i =0; i<MAX_SLOTS; i++) {
-        atomic_store(&gotPatchChangeIndication[i], false);
+        gotPatchChangeIndication[i]= false;
     }
     call_full_patch_change_notify();
     call_wake_glfw();
@@ -2312,7 +2310,7 @@ static int send_init_sequence_pull(void) {
 // a future "push to device" menu action.
 static int send_init_sequence_push(void) {
     LOG_DEBUG("Init sequence: pushing editor data to G2\n");
-    atomic_store(&gCommsState, eCommsInitialising);
+    gCommsState= eCommsInitialising;
 
     send_init();
     send_stop();
@@ -2321,7 +2319,7 @@ static int send_init_sequence_push(void) {
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         if (push_slot_to_device(slot) != EXIT_SUCCESS) {
             LOG_DEBUG("Setting to eCommsReconnecting state, due to push_slot_to_device(slot) failing\n");
-            atomic_store(&gCommsState, eCommsReconnecting);
+            gCommsState= eCommsReconnecting;
             return EXIT_FAILURE;
         }
     }
@@ -2337,7 +2335,7 @@ static int send_init_sequence_push(void) {
 
     LOG_DEBUG("Push init sequence complete\n");
     for (int i =0; i<MAX_SLOTS; i++) {
-        atomic_store(&gotPatchChangeIndication[i], false);
+        gotPatchChangeIndication[i]= false;
     }
     call_full_patch_change_notify();
     call_wake_glfw();
@@ -2357,7 +2355,7 @@ static int send_write_data(tMessageContent * messageContent) {
     int     i                       = 0;
 
     for (i = 0; i < MAX_SLOTS; i++) {
-        patchVersion[i] = atomic_load(&gPatchVersion[i]);
+        patchVersion[i] = gPatchVersion[i];
     }
 
     // TODO - these should move to functions where we can do: SEND_RECV(function());
@@ -2514,7 +2512,7 @@ static int send_write_data(tMessageContent * messageContent) {
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-            buff[pos++] = atomic_load(&gPerfVersion);
+            buff[pos++] = gPerfVersion;
             buff[pos++] = SUB_COMMAND_SELECT_SLOT;
             buff[pos++] = messageContent->slotData.slot;
             retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
@@ -2545,7 +2543,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal = push_slot_to_device(messageContent->slot);
             send_start();
 
-            atomic_store(&gotPatchChangeIndication[messageContent->slot], false); // TODO - consider if this is the right thing to do here
+            gotPatchChangeIndication[messageContent->slot]= false; // TODO - consider if this is the right thing to do here
             call_full_patch_change_notify();                // TODO - not sure we need to do this here
             call_wake_glfw();
             break;
@@ -2691,16 +2689,16 @@ static int send_write_data(tMessageContent * messageContent) {
             }
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = send_set_master_clock_bpm(atomic_load(&gMasterClock));
+                retVal = send_set_master_clock_bpm(gMasterClock);
             }
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = send_set_master_clock_run(atomic_load(&gMasterClockRunning));
+                retVal = send_set_master_clock_run(gMasterClockRunning);
             }
 
             if (retVal == EXIT_SUCCESS) {
                 for (int i =0; i<MAX_SLOTS; i++) {
-                    atomic_store(&gotPatchChangeIndication[i], false);
+                    gotPatchChangeIndication[i]= false;
                 }
                 call_full_patch_change_notify();
                 call_wake_glfw();
@@ -2724,7 +2722,7 @@ static int send_write_data(tMessageContent * messageContent) {
         //case eMsgCmdReloadAllPatchData:  // TODO - do we really want to reload all patch data, and is it just patch data - this is currently doing a lot more
         //    LOG_DEBUG("\nGot msg queue command to read all patch data\n\n");
         //    retVal                         = reload_all_patch_data();
-        //    atomic_store(&gSlot, 0);
+        //    gSlot= 0;
         //    gPatchDescr[0].activeVariation = 0;
          //   set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
          //                                  (tTopbarControlId)(topbarSlotAId));
@@ -2751,10 +2749,10 @@ static void state_handler(void) {
 
     //TODO - Don't like early returns. Use retVal
 
-    if (atomic_load(&gotBadConnectionIndication)) {
+    if (gotBadConnectionIndication) {
         LOG_DEBUG("Bad connection — closing device\n");
-        atomic_store(&gotBadConnectionIndication, false);
-        atomic_store(&gCommsState, eCommsReconnecting);
+        gotBadConnectionIndication= false;
+        gCommsState= eCommsReconnecting;
 
         pthread_mutex_lock(&usbStaticMutex);
         close_device();
@@ -2768,7 +2766,7 @@ static void state_handler(void) {
         return;
     }
 
-    if (atomic_load(&gCommsState) != eCommsOnLine) {
+    if (gCommsState != eCommsOnLine) {
         bool opened = false;
 
         pthread_mutex_lock(&usbStaticMutex);
@@ -2783,13 +2781,13 @@ static void state_handler(void) {
             result = send_init_sequence_pull();
 
             if (result == EXIT_SUCCESS) {
-                atomic_store(&gCommsState, eCommsOnLine);
+                gCommsState= eCommsOnLine;
             } else {
                 LOG_DEBUG("Init sequence failed — will retry\n");
                 pthread_mutex_lock(&usbStaticMutex);
                 close_device();
                 pthread_mutex_unlock(&usbStaticMutex);
-                atomic_store(&gCommsState, eCommsReconnecting);
+                gCommsState= eCommsReconnecting;
             }
         } else {
             usleep(500000);  // 500ms between open attempts — don't hammer the bus
@@ -2799,8 +2797,8 @@ static void state_handler(void) {
 
     // Performance/patch settings changed (e.g. perf mode switch on the G2 panel).
     // Flag coalesces rapid switches — only one full resync runs per batch.
-    if (atomic_load(&gotPerfSettingsChangeIndication)) {
-        atomic_store(&gotPerfSettingsChangeIndication, false);
+    if (gotPerfSettingsChangeIndication) {
+        gotPerfSettingsChangeIndication= false;
 
         LOG_DEBUG("\nPerf settings change — reloading all slots via reload_all_patch_date()\n\n");
 
@@ -2812,7 +2810,7 @@ static void state_handler(void) {
         send_get_performance_settings();  // TODO - maybe be some more items we need to get here
         send_start();
         
-        atomic_store(&gSlot, 0);
+        gSlot = 0;
         gPatchDescr[0].activeVariation = 0;
         set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
                                        (tTopbarControlId)(topbarSlotAId));
@@ -2825,8 +2823,8 @@ static void state_handler(void) {
     }
 
     for (int i = 0; i< MAX_SLOTS; i++) {
-        if (atomic_load(&gotPatchChangeIndication[i]) == true) {
-            atomic_store(&gotPatchChangeIndication[i], false);
+        if (gotPatchChangeIndication[i] == true) {
+            gotPatchChangeIndication[i] = false;
             LOG_DEBUG("Patch change on slot %u — reloading\n", i);
             send_stop();
             send_get_patch_data(i);
@@ -2855,7 +2853,7 @@ static void state_handler(void) {
 
         if (send_get_patch_version(0) != EXIT_SUCCESS) {
             LOG_DEBUG("Keepalive failed — forcing reconnect\n");
-            atomic_store(&gotBadConnectionIndication, true);
+            gotBadConnectionIndication = true;
         }
         return;
     }
@@ -2894,7 +2892,7 @@ static void * usb_thread_loop(void * arg) {
     }
     // Only if needed: libusb_set_option(libUsbCtx, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_WARNING);
 
-    while (atomic_load(&gQuitAll) == false) {
+    while (gQuitAll == false) {
         state_handler();
     }
     pthread_mutex_lock(&usbStaticMutex);
@@ -2908,7 +2906,7 @@ static void * usb_thread_loop(void * arg) {
 
 void usb_signal_reconnect(void) {
     LOG_DEBUG("System wake detected — forcing USB reconnect\n");
-    atomic_store(&gotBadConnectionIndication, true);
+    gotBadConnectionIndication = true;
 }
 
 void start_usb_thread(void) {
