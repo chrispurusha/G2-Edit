@@ -27,8 +27,8 @@
 
 static const tTopbarControlDef topbarControlList[topbarControlMax] = {
     // Standard buttons — static text, generic rendering (IDs 0..topbarVariationInitId)
-    [topbarVaId]                 = {topbarVaId,                 {400,  8}, anchorTopLeft, "VA", RGB_GREEN_ON,        topbarControlTypeButton },
-    [topbarFxId]                 = {topbarFxId,                 {425,  8}, anchorTopLeft, "FX", RGB_BACKGROUND_GREY, topbarControlTypeButton },
+    [topbarVaId]                 = {topbarVaId,                 {427,  8}, anchorTopLeft, "VA", RGB_GREEN_ON,        topbarControlTypeButton },
+    [topbarFxId]                 = {topbarFxId,                 {444,  8}, anchorTopLeft, "FX", RGB_BACKGROUND_GREY, topbarControlTypeButton },
     [topbarOpenReadFileId]       = {topbarOpenReadFileId,       { 20,  8}, anchorTopLeft, "Read File", RGB_BACKGROUND_GREY, topbarControlTypeButton },
     [topbarOpenWriteFileId]      = {topbarOpenWriteFileId,      { 80,  8}, anchorTopLeft, "Write File", RGB_BACKGROUND_GREY, topbarControlTypeButton },
     [topbarNewPatchId]           = {topbarNewPatchId,           {140,  8}, anchorTopLeft, "New Patch", RGB_BACKGROUND_GREY, topbarControlTypeButton },
@@ -53,6 +53,7 @@ static const tTopbarControlDef topbarControlList[topbarControlMax] = {
     [topbarPatchNotesId]         = {topbarPatchNotesId,         {355,  8}, anchorTopLeft, "Notes", RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
     [topbarSettingsId]           = {topbarSettingsId,           {270,  8}, anchorTopLeft, "Settings", RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
     [topbarPerfSettingsId]       = {topbarPerfSettingsId,       {325,  8}, anchorTopLeft, "Perf", RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
+    [topbarPatchSettingsId]      = {topbarPatchSettingsId,      {390,  8}, anchorTopLeft, "Patch", RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
     [topbarClockRunStopId]       = {topbarClockRunStopId,       {475,  8}, anchorTopLeft, NULL, RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
     [topbarTempoDialId]          = {topbarTempoDialId,          {535, 10}, anchorTopLeft, NULL, RGB_BACKGROUND_GREY, topbarControlTypeSpecial},
     [topbarPatchVolumeId]        = {topbarPatchVolumeId,        {320, 56}, anchorTopLeft, NULL, RGB_BACKGROUND_GREY, topbarControlTypeSpecial},

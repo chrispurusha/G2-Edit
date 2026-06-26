@@ -45,6 +45,7 @@ extern const char *             pulseLoTimeStrMap[];
 extern const char *             freq_shift_hiStrMap[];
 extern const char *             freq_shift_loStrMap[];
 extern const char *             freq_shift_subStrMap[];
+extern const char *             patch_settings_glideStrMap[];
 
 tCableColour cable_colour_for_connector_type(tConnectorType type);
 uint32_t array_size_param_location_list(void);

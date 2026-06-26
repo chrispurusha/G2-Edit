@@ -336,14 +336,15 @@ void render_top_bar(void) {
     } else {
         gTopbarControls[topbarPatchNameId].rectangle = draw_button(mainArea, {topbar_control_def(topbarPatchNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, patchNameCopy, (tRgb)RGB_BACKGROUND_GREY);
     }
-    gTopbarControls[topbarPatchTypeId].rectangle    = draw_button(mainArea, {topbar_control_def(topbarPatchTypeId)->coord, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
-    gTopbarControls[topbarMonoPolyId].rectangle     = draw_button(mainArea, {topbar_control_def(topbarMonoPolyId)->coord, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarPatchTypeId].rectangle     = draw_button(mainArea, {topbar_control_def(topbarPatchTypeId)->coord, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarMonoPolyId].rectangle      = draw_button(mainArea, {topbar_control_def(topbarMonoPolyId)->coord, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], (tRgb)RGB_BACKGROUND_GREY);
     {
         tRgb notesColour = (strlen((char *)gPatchNotes[slot]) > 0) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
         gTopbarControls[topbarPatchNotesId].rectangle = draw_button(mainArea, {topbar_control_def(topbarPatchNotesId)->coord, {get_text_width("Notes", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "Notes", notesColour);
     }
-    gTopbarControls[topbarSettingsId].rectangle     = draw_button(mainArea, {topbar_control_def(topbarSettingsId)->coord, {get_text_width("Settings", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "Settings", (tRgb)RGB_BACKGROUND_GREY);
-    gTopbarControls[topbarPerfSettingsId].rectangle = draw_button(mainArea, {topbar_control_def(topbarPerfSettingsId)->coord, {get_text_width("Perf", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "Perf", (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarSettingsId].rectangle      = draw_button(mainArea, {topbar_control_def(topbarSettingsId)->coord, {get_text_width("Settings", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "Settings", (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarPerfSettingsId].rectangle  = draw_button(mainArea, {topbar_control_def(topbarPerfSettingsId)->coord, {get_text_width("Perf", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "Perf", (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarPatchSettingsId].rectangle = draw_button(mainArea, {topbar_control_def(topbarPatchSettingsId)->coord, {get_text_width("Patch", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "Patch", (tRgb)RGB_BACKGROUND_GREY);
 
     if (gPatchDescr[slot].monoPoly == monoPolyPoly) {
         voiceCount = gPatchDescr[slot].voiceCount + 1;
@@ -357,7 +358,7 @@ void render_top_bar(void) {
         buttonBackgroundColour = (tRgb)RGB_RED_5;
     }
     snprintf(buff, sizeof(buff), "%u", voiceCount);
-    gTopbarControls[topbarVoiceCountId].rectangle   = draw_button(mainArea, {topbar_control_def(topbarVoiceCountId)->coord, {get_text_width("XX", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, buff, buttonBackgroundColour);
+    gTopbarControls[topbarVoiceCountId].rectangle    = draw_button(mainArea, {topbar_control_def(topbarVoiceCountId)->coord, {get_text_width("XX", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, buff, buttonBackgroundColour);
 
     {
         tModuleKey volKey = {slot, (uint32_t)locationMorph, PATCH_VOLUME};
@@ -1239,6 +1240,172 @@ static void render_patch_settings_panel(void) {
     }
 }
 
+static void render_patch_params_panel(void) {
+    if (!gPatchParamsEdit.active) {
+        return;
+    }
+    uint32_t slot    = gPatchParamsEdit.slot;
+    double   renderW = get_render_width() / gGlobalGuiScale;
+    double   renderH = get_render_height() / gGlobalGuiScale;
+    double   boxW    = 680.0;
+    double   boxH    = 320.0;
+    double   boxX    = (renderW - boxW) / 2.0;
+    double   boxY    = (renderH - boxH) / 2.0;
+    double   margin  = 10.0;
+    double   titleH  = 24.0;
+    double   rowH    = 26.0;
+    double   secH    = 18.0;
+    double   btnH    = STANDARD_BUTTON_TEXT_HEIGHT;
+    double   y       = boxY + titleH + margin;
+    char     buf[16] = {0};
+
+    set_rgb_colour(RGB_GREY_2);
+    render_rectangle(mainArea, {{0.0, 0.0}, {renderW, renderH}});
+
+    set_rgb_colour(RGB_GREY_5);
+    render_rectangle_with_border(mainArea, {{boxX, boxY}, {boxW, boxH}});
+
+    set_rgb_colour(RGB_GREY_3);
+    render_rectangle(mainArea, {{boxX, boxY}, {boxW, titleH}});
+    set_rgb_colour(RGB_BLACK);
+    render_text(mainArea, {{boxX + margin, boxY + 6.0}, {BLANK_SIZE, btnH}}, "Patch Settings");
+
+    gPatchSettingsPanelRects.close = draw_button(mainArea,
+                                                 {{boxX + boxW - 44.0, boxY + 4.0}, {get_text_width((char *)"Close", btnH, eCache) + 4.0, btnH}},
+                                                 "Close", (tRgb)RGB_BACKGROUND_GREY);
+
+    // ── Sustain Pedal + Octave Shift ───────────────────────────────
+    {
+        double x = boxX + margin;
+        set_rgb_colour(RGB_BLACK);
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Sustain Pedal:");
+        x += get_text_width((char *)"Sustain Pedal:", btnH, eCache) + 4.0;
+        render_dropdown(x, y, btnH,
+                        gPatchSettings[slot].sustainPedal ? "On" : "Off",
+                        "On", &gPatchSettingsPanelRects.sustainPedal);
+
+        x  = boxX + boxW / 2.0;
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Octave Shift:");
+        x += get_text_width((char *)"Octave Shift:", btnH, eCache) + 4.0;
+        snprintf(buf, sizeof(buf), "%+d", (int)gPatchSettings[slot].octaveShift);
+        render_dropdown(x, y, btnH, buf, "+2", &gPatchSettingsPanelRects.octaveShift);
+    }
+    y                             += rowH;
+
+    // ── Arpeggiator ────────────────────────────────────────────────
+    set_rgb_colour(RGB_GREY_7);
+    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Arpeggiator");
+    y                             += secH;
+
+    {
+        static const char * arpRateLabels[] = {"1/96", "1/48", "1/32", "1/24", "1/16T", "1/16",
+                                               "1/8T", "1/8",  "1/4T", "1/4",  "1/2T",  "1/2",
+                                               "3/4",  "1/1",  };
+        static const char * arpDirLabels[]  = {"Up", "Down", "Up+Dn", "Random"};
+        static const char * arpOctLabels[]  = {"1 oct", "2 oct", "3 oct", "4 oct"};
+        double              x               = boxX + margin;
+        uint8_t             ri              = gPatchSettings[slot].arpRate < 14 ? gPatchSettings[slot].arpRate : 0;
+        uint8_t             di              = gPatchSettings[slot].arpDirection < 4 ? gPatchSettings[slot].arpDirection : 0;
+        uint8_t             oi              = gPatchSettings[slot].arpOctaveRange < 4 ? gPatchSettings[slot].arpOctaveRange : 0;
+
+        set_rgb_colour(RGB_BLACK);
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Rate:");
+        x += get_text_width((char *)"Rate:", btnH, eCache) + 4.0;
+        x  = render_dropdown(x, y, btnH, arpRateLabels[ri], "1/16T", &gPatchSettingsPanelRects.arpRate);
+
+        x += 16.0;
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Dir:");
+        x += get_text_width((char *)"Dir:", btnH, eCache) + 4.0;
+        x  = render_dropdown(x, y, btnH, arpDirLabels[di], "Random", &gPatchSettingsPanelRects.arpDirection);
+
+        x += 16.0;
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Range:");
+        x += get_text_width((char *)"Range:", btnH, eCache) + 4.0;
+        x  = render_dropdown(x, y, btnH, arpOctLabels[oi], "4 oct", &gPatchSettingsPanelRects.arpOctaveRange);
+
+        x += 16.0;
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Enable:");
+        x += get_text_width((char *)"Enable:", btnH, eCache) + 4.0;
+        render_dropdown(x, y, btnH,
+                        gPatchSettings[slot].arpEnabled ? "On" : "Off",
+                        "On", &gPatchSettingsPanelRects.arpEnabled);
+    }
+    y += rowH;
+
+    // ── Vibrato ────────────────────────────────────────────────────
+    set_rgb_colour(RGB_GREY_7);
+    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Vibrato");
+    y += secH;
+
+    {
+        static const char * srcLabels[] = {"Wheel", "AfTouch", "Off"};
+        double              x           = boxX + margin;
+        uint8_t             si          = gPatchSettings[slot].vibratoSource < 3 ? gPatchSettings[slot].vibratoSource : 2;
+
+        set_rgb_colour(RGB_BLACK);
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Amount:");
+        x                                   += get_text_width((char *)"Amount:", btnH, eCache) + 4.0;
+        snprintf(buf, sizeof(buf), "%u cnt", (unsigned)gPatchSettings[slot].vibratoAmount);
+        x                                    = render_dropdown(x, y, btnH, buf, "127 cnt", &gPatchSettingsPanelRects.vibratoAmount);
+
+        x                                   += 16.0;
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Source:");
+        x                                   += get_text_width((char *)"Source:", btnH, eCache) + 4.0;
+        x                                    = render_dropdown(x, y, btnH, srcLabels[si], "AfTouch", &gPatchSettingsPanelRects.vibratoSource);
+
+        x                                   += 16.0;
+        double              dialH       = rowH * 2.0;
+        gPatchSettingsPanelRects.vibratoRate = render_dial_with_text(mainArea, {{x, y}, {20.0, dialH}}, "Rate", NULL, gPatchSettings[slot].vibratoRate, 127, 0, (tRgb)RGB_BACKGROUND_GREY);
+    }
+    y += rowH;
+
+    // ── Glide ──────────────────────────────────────────────────────
+    set_rgb_colour(RGB_GREY_7);
+    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Glide");
+    y += secH;
+
+    {
+        static const char * modeLabels[] = {"Auto", "Normal", "Off"};
+        double              x            = boxX + margin;
+        uint8_t             mi           = gPatchSettings[slot].glideMode < 3 ? gPatchSettings[slot].glideMode : 2;
+        uint8_t             gi           = gPatchSettings[slot].glideTime < 120 ? gPatchSettings[slot].glideTime : 28;
+
+        set_rgb_colour(RGB_BLACK);
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Time:");
+        x += get_text_width((char *)"Time:", btnH, eCache) + 4.0;
+        x  = render_dropdown(x, y, btnH, patch_settings_glideStrMap[gi], "1000ms", &gPatchSettingsPanelRects.glideTime);
+
+        x += 16.0;
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Mode:");
+        x += get_text_width((char *)"Mode:", btnH, eCache) + 4.0;
+        render_dropdown(x, y, btnH, modeLabels[mi], "Normal", &gPatchSettingsPanelRects.glideMode);
+    }
+    y += rowH;
+
+    // ── Bend ───────────────────────────────────────────────────────
+    set_rgb_colour(RGB_GREY_7);
+    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Bend");
+    y += secH;
+
+    {
+        double x = boxX + margin;
+        set_rgb_colour(RGB_BLACK);
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Range:");
+        x += get_text_width((char *)"Range:", btnH, eCache) + 4.0;
+        snprintf(buf, sizeof(buf), "%u semi", (unsigned)gPatchSettings[slot].bendRange);
+        x  = render_dropdown(x, y, btnH, buf, "24 semi", &gPatchSettingsPanelRects.bendRange);
+
+        x += 16.0;
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Enable:");
+        x += get_text_width((char *)"Enable:", btnH, eCache) + 4.0;
+        render_dropdown(x, y, btnH,
+                        gPatchSettings[slot].bendEnabled ? "On" : "Off",
+                        "On", &gPatchSettingsPanelRects.bendEnabled);
+    }
+
+    (void)y;
+}
+
 static void render_perf_settings_panel(void) {
     if (!gPerfSettingsEdit.active) {
         return;
@@ -1610,6 +1777,7 @@ void do_graphics_loop(void) {
             render_scrollbars(gWindow);
             render_patch_settings_panel();
             render_perf_settings_panel();
+            render_patch_params_panel();
             render_context_menu();
             render_patch_notes_edit();
             //Debug only

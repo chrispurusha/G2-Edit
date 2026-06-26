@@ -503,6 +503,7 @@ typedef enum {
     topbarPerfModeId,
     topbarPerfNameId,
     topbarPerfSettingsId,
+    topbarPatchSettingsId,
     topbarHideAllCablesId,
     topbarTransparentCablesId,
     topbarCableColourToggle0Id,
@@ -837,6 +838,39 @@ typedef struct {
     bool     active;
     uint32_t slot;
 } tPatchSettingsEdit;
+
+typedef struct {
+    _Atomic uint8_t sustainPedal;
+    _Atomic int8_t  octaveShift;      // -2..+2
+    _Atomic uint8_t arpEnabled;
+    _Atomic uint8_t arpRate;          // index into arp rate string map
+    _Atomic uint8_t arpDirection;     // 0=Up 1=Down 2=Up+Dn 3=Random
+    _Atomic uint8_t arpOctaveRange;   // 0=1oct 1=2oct 2=3oct 3=4oct
+    _Atomic uint8_t vibratoAmount;    // 0..127 cents
+    _Atomic uint8_t vibratoSource;    // 0=Wheel 1=AfTouch 2=Off
+    _Atomic uint8_t vibratoRate;      // 0..127
+    _Atomic uint8_t glideTime;        // index into patch_settings_glideStrMap
+    _Atomic uint8_t glideMode;        // 0=Auto 1=Normal 2=Off
+    _Atomic uint8_t bendRange;        // 0..24 semitones
+    _Atomic uint8_t bendEnabled;
+} tPatchSettings;
+
+typedef struct {
+    tRectangle close;
+    tRectangle sustainPedal;
+    tRectangle octaveShift;
+    tRectangle arpEnabled;
+    tRectangle arpRate;
+    tRectangle arpDirection;
+    tRectangle arpOctaveRange;
+    tRectangle vibratoAmount;
+    tRectangle vibratoSource;
+    tRectangle vibratoRate;
+    tRectangle glideTime;
+    tRectangle glideMode;
+    tRectangle bendRange;
+    tRectangle bendEnabled;
+} tPatchSettingsPanelRects;
 
 typedef struct {                     // Note - should reflect settings in the G2
     char            name[CLAVIA_NAME_SIZE + 1];

@@ -2717,6 +2717,10 @@ static int send_write_data(tMessageContent * messageContent) {
             send_start();
             break;
 
+        case eMsgCmdWritePatchSettings:
+            // TODO: implement send_patch_settings() once protocol format is confirmed
+            break;
+
         case eMsgCmdWritePerfName:
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_perf_name();
