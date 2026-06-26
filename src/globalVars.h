@@ -103,9 +103,6 @@ extern _Atomic uint64_t    gUsbRxTime;
 extern tRectangle          gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS];
 extern tDialMode           gDialMode;
 extern pthread_mutex_t     gStringCopyMutex;
-extern _Atomic uint8_t     gSelectedSlot;
-
-//extern char                gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1];
 
 #ifdef __cplusplus
 extern "C" {

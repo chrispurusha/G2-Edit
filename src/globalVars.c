@@ -90,10 +90,6 @@ _Atomic uint64_t    gUsbRxTime                                                  
 tRectangle          gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS] = {0};    // Rectangle references for each module. It's big - around 6mb
 pthread_mutex_t     gStringCopyMutex                                                             = PTHREAD_MUTEX_INITIALIZER;
 
-/* Stored here, but don't access directly, use functions to access instead */
-//char                gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1]                                  = {0}; // TODO - Might have to do into perf settings
-_Atomic uint8_t     gSelectedSlot                                                                = 0;   // TODO - Might have to store in perf settings
-
 void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active) {
     tTopbarControlId i = first;
 

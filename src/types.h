@@ -880,6 +880,7 @@ typedef struct {  // TODO - may need various in here, like names, perf mode etc
     _Atomic uint8_t perfVersion;
     _Atomic uint8_t masterClock;
     _Atomic uint8_t masterClockRunning;
+    _Atomic uint8_t     selectedSlot;
     struct {
         char            patchName[CLAVIA_NAME_SIZE + 1];
         _Atomic uint8_t patchVersion;
