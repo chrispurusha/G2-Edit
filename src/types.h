@@ -856,14 +856,13 @@ typedef struct {
     _Atomic uint8_t pedalPolarity;
     _Atomic uint8_t pedalGain;
     _Atomic uint8_t memoryProtect;
-    _Atomic uint8_t perfMode;
     _Atomic uint8_t perfBank;
     _Atomic uint8_t perfLocation;
     _Atomic uint8_t patchSortMode;
     _Atomic uint8_t perfSortMode;
 } tSynthSettings;
 
-typedef struct {  // TODO - name need various in here, like names, perf mode etc
+typedef struct {  // TODO - may need various in here, like names, perf mode etc. Do items really even belong in here? Should maybe go into globalsettings?
     _Atomic uint8_t globalMode;
     _Atomic uint8_t rangeAndFlags;
     _Atomic uint8_t keyboardRange;
@@ -875,7 +874,8 @@ typedef struct {  // TODO - name need various in here, like names, perf mode etc
     } slot[MAX_SLOTS];
 } tPerfSettings;
 
-typedef struct {  // TODO - name need various in here, like names, perf mode etc
+typedef struct {  // TODO - may need various in here, like names, perf mode etc
+    _Atomic uint8_t perfMode;
     _Atomic uint8_t     masterClock;
     _Atomic uint8_t     masterClockRunning;
     //struct {

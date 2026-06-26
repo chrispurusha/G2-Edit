@@ -944,12 +944,12 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 if (within_rectangle(coord, gTopbarControls[topbarPerfModeId].rectangle)) {
                     tMessageContent msg = {0};
 
-                    if (gSynthSettings.perfMode == 0) {
+                    if (gGlobalSettings.perfMode == 0) {
                         msg.cmd                 = eMsgCmdWriteModePerf;
-                        gSynthSettings.perfMode = 1;
+                        gGlobalSettings.perfMode = 1;
                     } else {
                         msg.cmd                 = eMsgCmdWriteModePatch;
-                        gSynthSettings.perfMode = 0;
+                        gGlobalSettings.perfMode = 0;
                     }
                     msg_send(&gCommandQueue, &msg);
                     found = true;
@@ -957,7 +957,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                if (gSynthSettings.perfMode == 1 && within_rectangle(coord, gTopbarControls[topbarPerfNameId].rectangle)) {
+                if (gGlobalSettings.perfMode == 1 && within_rectangle(coord, gTopbarControls[topbarPerfNameId].rectangle)) {
                     gPerfNameEdit.active = true;
                     COPY_STRING(gPerfNameEdit.buffer, gPerfName);
                     found                = true;

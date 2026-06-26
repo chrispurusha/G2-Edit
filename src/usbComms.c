@@ -282,7 +282,7 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     }
     read_clavia_string(buff, &bitPos, gSynthSettings.name, sizeof(gSynthSettings.name));
 
-    gSynthSettings.perfMode          = read_bit_stream(buff, &bitPos, 1);
+    gGlobalSettings.perfMode          = read_bit_stream(buff, &bitPos, 1);
     read_bit_stream(buff, &bitPos, 5);  // Unused
     gSynthSettings.patchSortMode     = read_bit_stream(buff, &bitPos, 2);
     read_bit_stream(buff, &bitPos, 6);  // perfSortMode - unused
@@ -341,7 +341,7 @@ static int parse_synth_settings(uint8_t * buff, int length) {
               gSynthSettings.globalOctaveShift, gSynthSettings.globalShiftActive);
     LOG_DEBUG("PedalPol=%u PedalGain=%u PerfMode=%u PerfBank=%u PerfLoc=%u\n",
               gSynthSettings.pedalPolarity, gSynthSettings.pedalGain,
-              gSynthSettings.perfMode, gSynthSettings.perfBank, gSynthSettings.perfLocation);
+              gGlobalSettings.perfMode, gSynthSettings.perfBank, gSynthSettings.perfLocation);
     LOG_DEBUG("Patch Sort Mode=%u Perf Sort Mode=%u\n",
               gSynthSettings.patchSortMode, gSynthSettings.perfSortMode);
 
@@ -435,11 +435,11 @@ static void parse_perf_header(uint8_t * buff, uint32_t * bitPos) {
     gPerfSettings.keyboardRange = (uint8_t)read_bit_stream(buff, bitPos, 8);
     read_bit_stream(buff, bitPos, 8);
     read_bit_stream(buff, bitPos, 8);
-    gSynthSettings.perfMode     = read_bit_stream(buff, bitPos, 8);
+    gGlobalSettings.perfMode     = read_bit_stream(buff, bitPos, 8);
     LOG_DEBUG("  GlobalMode        = %u\n", gPerfSettings.globalMode);
     LOG_DEBUG("  RangeAndFlags     = %u\n", gPerfSettings.rangeAndFlags);
     LOG_DEBUG("  KeyboardRange     = %u\n", gPerfSettings.keyboardRange);
-    LOG_DEBUG("  PerfMode          = %u\n", gSynthSettings.perfMode); // TODO - Does this belong in synth or perf?
+    LOG_DEBUG("  PerfMode          = %u\n", gGlobalSettings.perfMode); // TODO - Does this belong in synth or perf?
     read_bit_stream(buff, bitPos, 8);                                 // fixed 0x00
     read_bit_stream(buff, bitPos, 8);                                 // fixed 0x00
 
@@ -1066,9 +1066,9 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_COMMAND_SET_PARAM_MODE:
         {
-            gSynthSettings.perfMode = read_bit_stream(buff, bitPos, 8);
+            gGlobalSettings.perfMode = read_bit_stream(buff, bitPos, 8);
 
-            LOG_DEBUG("Got perf mode change: %u\n", gSynthSettings.perfMode); // TODO - check this one
+            LOG_DEBUG("Got perf mode change: %u\n", gGlobalSettings.perfMode); // TODO - check this one
             return EXIT_SUCCESS;
         }
 
@@ -2103,7 +2103,7 @@ static int send_synth_settings(void) {
 
     write_clavia_string(payload, &bitPos, gSynthSettings.name);
 
-    write_bit_stream(payload, &bitPos, 1, gSynthSettings.perfMode);
+    write_bit_stream(payload, &bitPos, 1, gGlobalSettings.perfMode);
     write_bit_stream(payload, &bitPos, 5, 0);
     write_bit_stream(payload, &bitPos, 2, gSynthSettings.patchSortMode);
     write_bit_stream(payload, &bitPos, 6, 0);
@@ -2190,7 +2190,7 @@ static int send_perf_header(void) {
     write_bit_stream(payload, &bitPos, 8, gPerfSettings.keyboardRange);
     write_bit_stream(payload, &bitPos, 8, 0);
     write_bit_stream(payload, &bitPos, 8, 0);
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.perfMode);
+    write_bit_stream(payload, &bitPos, 8, gGlobalSettings.perfMode);
     write_bit_stream(payload, &bitPos, 8, 0);
     write_bit_stream(payload, &bitPos, 8, 0);
 

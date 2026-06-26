@@ -446,7 +446,7 @@ void render_top_bar(void) {
     gTopbarControls[topbarTempoDialId].rectangle         = render_dial_with_text(mainArea, {topbar_control_def(topbarTempoDialId)->coord, {20, 48}}, NULL, buff, gGlobalSettings.masterClock, 241, 0, (tRgb)RGB_BACKGROUND_GREY);
     gTopbarControls[topbarClockRunStopId].rectangle      = draw_button(mainArea, {topbar_control_def(topbarClockRunStopId)->coord, {get_text_width("Stopped", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)(clockRunning ? "Running" : "Stopped"), clockRunning ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
-    if (gSynthSettings.perfMode == 1) {
+    if (gGlobalSettings.perfMode == 1) {
         snprintf(buff, sizeof(buff), "Perf Mode");
     } else {
         snprintf(buff, sizeof(buff), "Patch Mode");
@@ -455,7 +455,7 @@ void render_top_bar(void) {
                                                                        {{20, 42}, {get_text_width("Patch Mode", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                        buff, (tRgb)RGB_BACKGROUND_GREY);
 
-    if (gSynthSettings.perfMode == 1) {
+    if (gGlobalSettings.perfMode == 1) {
         char perfNameDisplay[CLAVIA_NAME_SIZE + 2] = {0};
 
         if (gPerfNameEdit.active) {
@@ -719,11 +719,11 @@ void read_file_into_memory_and_process(const char * filepath) {
                 msg_send(&gCommandQueue, &msg);
             }
         } else if (type == 1) {
-            if (gSynthSettings.perfMode == 0) {
+            if (gGlobalSettings.perfMode == 0) {
                 tMessageContent msg = {0};
                 msg.cmd                 = eMsgCmdWriteModePerf; // Really need to be in perf mode before loading a performance
                 msg_send(&gCommandQueue, &msg);
-                gSynthSettings.perfMode = 1;                    // TODO - Ideally, we'd get an indication back or request state until perf mode = 1, so we could remove the big sleep below
+                gGlobalSettings.perfMode = 1;                    // TODO - Ideally, we'd get an indication back or request state until perf mode = 1, so we could remove the big sleep below
                 usleep(2000000);                                // TODO - currently, when we write new patches as part of a perf, it triggers a read of the patches. We need to be stable in perf mode in that case.
             }
             int i = 0;
@@ -746,7 +746,7 @@ void read_file_into_memory_and_process(const char * filepath) {
                 }
             }
 
-            gSynthSettings.perfMode = 1;
+            gGlobalSettings.perfMode = 1;
             parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
 
             if (gCommsState == eCommsOnLine) {
@@ -947,7 +947,7 @@ static void on_file_saved(const char * path) {
     if (path) {
         LOG_INFO("Saving file: %s", path);
 
-        if (gSynthSettings.perfMode == 1) {
+        if (gGlobalSettings.perfMode == 1) {
             write_perf_to_file(path);
         } else {
             write_database_to_file(path);
@@ -972,7 +972,7 @@ static void check_action_flags(void) {
     if (gShowOpenFileWriteDialogue) {
         gShowOpenFileWriteDialogue = false;
 
-        if (gSynthSettings.perfMode == 1) {
+        if (gGlobalSettings.perfMode == 1) {
             if (gPerfName[0] != '\0') {
                 snprintf(defaultName, sizeof(defaultName), "%s.prf2", gPerfName);
             } else {
