@@ -94,31 +94,10 @@ bool                   gTempoDragging                                           
 _Atomic uint64_t       gUsbTxTime                                                                   = 0;
 _Atomic uint64_t       gUsbRxTime                                                                   = 0;
 tRectangle             gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS] = {0}; // Rectangle references for each module. It's big - around 6mb
+    pthread_mutex_t gStringCopyMutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* Stored here, but don't access directly, use functions to access instead */
-static char            gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1]                                  = {0};   // TODO - Might have to do into perf settings
-static pthread_mutex_t gPatchNameMutex                                                              = PTHREAD_MUTEX_INITIALIZER;
-
-void patch_name_set(uint32_t slot, const char * name) {
-    pthread_mutex_lock(&gPatchNameMutex);
-
-    strncpy(gPatchName[slot], name, sizeof(gPatchName[0]) - 1);
-    gPatchName[slot][sizeof(gPatchName[0]) - 1] = '\0';
-
-    pthread_mutex_unlock(&gPatchNameMutex);
-}
-
-void patch_name_get(uint32_t slot, char * name, size_t size) {
-    pthread_mutex_lock(&gPatchNameMutex);
-
-    strncpy(name,
-            gPatchName[slot],
-            size - 1);
-
-    name[size - 1] = '\0';
-
-    pthread_mutex_unlock(&gPatchNameMutex);
-}
+char            gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1]                                  = {0};   // TODO - Might have to do into perf settings
 
 void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active) {
     tTopbarControlId i = first;

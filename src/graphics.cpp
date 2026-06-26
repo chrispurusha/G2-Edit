@@ -75,8 +75,7 @@ static int find_wrap_point(const char * text, int textLen, double textW, double 
         return 0;
     }
     char tmp[PATCH_NOTES_SIZE + 1];
-    strncpy(tmp, text, textLen);
-    tmp[textLen] = '\0';
+    COPY_STRING(tmp, text);
 
     if (get_text_width(tmp, textH, eNoCache) <= textW) {
         return textLen;
@@ -85,8 +84,8 @@ static int find_wrap_point(const char * text, int textLen, double textW, double 
 
     while (lo < hi) {
         int mid = (lo + hi + 1) / 2;
-        strncpy(tmp, text, mid);
-        tmp[mid] = '\0';
+        
+        COPY_STRING(tmp, text);
 
         if (get_text_width(tmp, textH, eNoCache) <= textW) {
             lo = mid;
@@ -318,10 +317,12 @@ void render_top_bar(void) {
     set_rgb_colour(RGB_BLACK);
     render_text(mainArea, {{400, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Variation");
 
-    patch_name_get(slot, patchNameCopy, sizeof(patchNameCopy));
+    COPY_STRING(patchNameCopy, gPatchName[slot]);
+    
+    //patch_name_get(slot, patchNameCopy, sizeof(patchNameCopy));
 
     if (patchNameCopy[0] == '\0') {
-        strncpy(patchNameCopy, "---", CLAVIA_NAME_SIZE);
+        COPY_STRING(patchNameCopy, "---");
     }
     //set_rgb_colour(RGB_BLACK);
     //render_text(mainArea, {{80, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Patch Name");
@@ -630,7 +631,7 @@ void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
         patchName[i] = base[i];
         i++;
     }
-    patch_name_set(slot, patchName);
+    COPY_STRING(gPatchName[slot], patchName);
 
     LOG_DEBUG("Patch name from file: '%s'\n", patchName);
 }
@@ -738,8 +739,7 @@ void read_file_into_memory_and_process(const char * filepath) {
             {
                 const char * slash    = strrchr(filepath, '/');
                 const char * baseName = slash ? slash + 1 : filepath;
-                strncpy(gPerfName, baseName, CLAVIA_NAME_SIZE);
-                gPerfName[CLAVIA_NAME_SIZE] = '\0';
+                COPY_STRING(gPerfName, baseName);
                 char *       dot      = strrchr(gPerfName, '.');
 
                 if (dot) {
@@ -977,15 +977,16 @@ static void check_action_flags(void) {
             if (gPerfName[0] != '\0') {
                 snprintf(defaultName, sizeof(defaultName), "%s.prf2", gPerfName);
             } else {
-                strncpy(defaultName, "performance.prf2", sizeof(defaultName) - 1);
+                COPY_STRING(defaultName, "performance.prf2");
             }
         } else {
-            patch_name_get(slot, patchName, sizeof(patchName));
+            COPY_STRING(patchName, gPatchName[slot]);
 
             if (patchName[0] != '\0') {
                 snprintf(defaultName, sizeof(defaultName), "%s.pch2", patchName);
             } else {
-                strncpy(defaultName, "patch.pch2", sizeof(defaultName) - 1);
+                snprintf(defaultName, sizeof(defaultName), "patch.pch2");
+
             }
         }
         open_file_write_dialogue_async(on_file_saved, defaultName);

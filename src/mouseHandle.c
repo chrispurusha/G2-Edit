@@ -128,7 +128,8 @@ void init_patch(uint32_t slot) {  // Todo - think where this should really go
     memset(gNote2[slot], 0, sizeof(gNote2[0]));
     memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
     memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
-    patch_name_set(slot, "Init");
+    
+    COPY_STRING(gPatchName[slot], "Init");
 }
 
 void handle_button(tTopbarControlId controlId) {
@@ -747,8 +748,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
                 if (within_rectangle(coord, gSettingsPanelRects.synthName)) {
                     gSynthNameEdit.active                   = true;
-                    strncpy(gSynthNameEdit.buffer, gSynthSettings.name, CLAVIA_NAME_SIZE);
-                    gSynthNameEdit.buffer[CLAVIA_NAME_SIZE] = '\0';
+                    COPY_STRING(gSynthNameEdit.buffer, gSynthSettings.name);
                 } else if (within_rectangle(coord, gSettingsPanelRects.globalChan)) {
                     open_midi_chan_dropdown(below_rect(gSettingsPanelRects.globalChan), &gSynthSettings.globalChan);
                 } else if (within_rectangle(coord, gSettingsPanelRects.sysexId)) {
@@ -959,8 +959,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             if (found == false) {
                 if (gSynthSettings.perfMode == 1 && within_rectangle(coord, gTopbarControls[topbarPerfNameId].rectangle)) {
                     gPerfNameEdit.active                   = true;
-                    strncpy(gPerfNameEdit.buffer, gPerfName, CLAVIA_NAME_SIZE);
-                    gPerfNameEdit.buffer[CLAVIA_NAME_SIZE] = '\0';
+                    COPY_STRING(gPerfNameEdit.buffer, gPerfName);
                     found                                  = true;
                 }
             }
@@ -977,7 +976,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 if (within_rectangle(coord, gTopbarControls[topbarPatchNameId].rectangle)) {
                     gPatchNameEdit.active = true;
                     gPatchNameEdit.slot   = slot;
-                    patch_name_get(slot, gPatchNameEdit.buffer, sizeof(gPatchNameEdit.buffer));
+                    COPY_STRING(gPatchNameEdit.buffer, gPatchName[gPatchNameEdit.slot]);
                     found                 = true;
                 }
             }
@@ -1533,13 +1532,11 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
                 // Commit
                 gPatchNameEdit.active = false;
-                patch_name_set(gPatchNameEdit.slot, gPatchNameEdit.buffer);
-
+                COPY_STRING(gPatchName[gPatchNameEdit.slot], gPatchNameEdit.buffer);
                 tMessageContent messageContent = {0};
                 messageContent.cmd    = eMsgCmdSetPatchName;
                 messageContent.slot   = gPatchNameEdit.slot;
-                patch_name_get(gPatchNameEdit.slot, messageContent.patchName.name, sizeof(messageContent.patchName.name));
-
+                COPY_STRING(messageContent.patchName.name, gPatchName[gPatchNameEdit.slot]);
                 msg_send(&gCommandQueue, &messageContent);
             } else if (key == GLFW_KEY_ESCAPE) {
                 // Cancel — discard edits
@@ -1561,14 +1558,11 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 
                 if (module != NULL) {
                     tMessageContent msg = {0};
-
-                    strncpy(module->name, gModuleNameEdit.buffer, sizeof(module->name));
-                    module->name[sizeof(module->name) - 1] = '\0';
-
+                    COPY_STRING(module->name, gModuleNameEdit.buffer);
                     msg.cmd                                = eMsgCmdSetModuleLabel;
                     msg.slot                               = gModuleNameEdit.moduleKey.slot;
                     msg.moduleLabelData.moduleKey          = gModuleNameEdit.moduleKey;
-                    strncpy(msg.moduleLabelData.name, gModuleNameEdit.buffer, CLAVIA_NAME_SIZE);
+                    COPY_STRING(msg.moduleLabelData.name, gModuleNameEdit.buffer);
                     msg_send(&gCommandQueue, &msg);
                 }
             } else if (key == GLFW_KEY_ESCAPE) {
@@ -1593,15 +1587,14 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                     uint32_t        pi  = gParamNameEdit.paramIndex;
 
                     module->paramNameSet[pi][0]                        = true;
-                    strncpy(module->paramName[pi][0], gParamNameEdit.buffer, PROTOCOL_PARAM_NAME_SIZE);
-                    module->paramName[pi][0][PROTOCOL_PARAM_NAME_SIZE] = '\0';
+                    COPY_STRING(module->paramName[pi][0], gParamNameEdit.buffer);
                     module->paramNumLabels[pi]                         = 1;
 
                     msg.cmd                                            = eMsgCmdSetParamLabel;
                     msg.slot                                           = gParamNameEdit.moduleKey.slot;
                     msg.paramLabelData.moduleKey                       = gParamNameEdit.moduleKey;
                     msg.paramLabelData.paramIndex                      = pi;
-                    strncpy(msg.paramLabelData.name, gParamNameEdit.buffer, PROTOCOL_PARAM_NAME_SIZE);
+                    COPY_STRING(msg.paramLabelData.name, gParamNameEdit.buffer);
                     msg_send(&gCommandQueue, &msg);
                 }
             } else if (key == GLFW_KEY_ESCAPE) {
@@ -1618,8 +1611,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 }
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
                 gSynthNameEdit.active                 = false;
-                strncpy(gSynthSettings.name, gSynthNameEdit.buffer, CLAVIA_NAME_SIZE);
-                gSynthSettings.name[CLAVIA_NAME_SIZE] = '\0';
+                COPY_STRING(gSynthSettings.name, gSynthNameEdit.buffer);
                 send_synth_settings_msg();
             } else if (key == GLFW_KEY_ESCAPE) {
                 gSynthNameEdit.active = false;
@@ -1635,9 +1627,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 }
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
                 gPerfNameEdit.active        = false;
-                strncpy(gPerfName, gPerfNameEdit.buffer, CLAVIA_NAME_SIZE);
-                gPerfName[CLAVIA_NAME_SIZE] = '\0';
-
+                COPY_STRING(gPerfName, gPerfNameEdit.buffer);
                 tMessageContent messageContent = {0};
                 messageContent.cmd          = eMsgCmdWritePerfName;
                 msg_send(&gCommandQueue, &messageContent);

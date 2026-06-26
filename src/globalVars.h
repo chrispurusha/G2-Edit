@@ -102,13 +102,16 @@ extern _Atomic uint64_t    gUsbTxTime;
 extern _Atomic uint64_t    gUsbRxTime;
 extern tRectangle          gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS];
 extern tDialMode           gDialMode;
+extern pthread_mutex_t gStringCopyMutex;
+
+extern char            gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1];
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void patch_name_set(uint32_t slot, const char * name);
-void patch_name_get(uint32_t slot, char * name, size_t size);
+//void patch_name_set(uint32_t slot, const char * name);
+//void patch_name_get(uint32_t slot, char * name, size_t size);
 void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active);
 
 #ifdef __cplusplus

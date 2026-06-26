@@ -324,8 +324,7 @@ static void action_rename_module(int index) {
     if (module != NULL) {
         gModuleNameEdit.active                   = true;
         gModuleNameEdit.moduleKey                = gContextMenu.moduleKey;
-        strncpy(gModuleNameEdit.buffer, module->name, CLAVIA_NAME_SIZE);
-        gModuleNameEdit.buffer[CLAVIA_NAME_SIZE] = '\0';
+        COPY_STRING(gModuleNameEdit.buffer, module->name);
     }
     gContextMenu.active = false;
     atomic_store(&gReDraw, true);
@@ -372,8 +371,7 @@ static void action_rename_morph_label(int index) {
         gParamNameEdit.active     = true;
         gParamNameEdit.moduleKey  = gContextMenu.moduleKey;
         gParamNameEdit.paramIndex = pi;
-        memset(gParamNameEdit.buffer, 0, sizeof(gParamNameEdit.buffer));
-        strncpy(gParamNameEdit.buffer, module->paramName[pi][0], PROTOCOL_PARAM_NAME_SIZE);
+        COPY_STRING(gParamNameEdit.buffer, module->paramName[pi][0]);
     }
     gContextMenu.active    = false;
     atomic_store(&gReDraw, true);
@@ -540,8 +538,7 @@ static void menu_action_create(int index) {
             module.type                                                                = (tModuleType)gContextMenu.items[index].param;
             convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.originCoord);
 
-            strncpy(module.name, gModuleProperties[module.type].name, sizeof(module.name));
-            module.name[sizeof(module.name) - 1]                                       = '\0';
+            COPY_STRING(module.name, gModuleProperties[module.type].name);
 
             messageContent.cmd                                                         = eMsgCmdWriteModule;
             messageContent.slot                                                        = slot;
@@ -559,8 +556,7 @@ static void menu_action_create(int index) {
                 messageContent.moduleData.mode[i] = module.mode[i].value;
             }
 
-            strncpy(messageContent.moduleData.name, module.name, sizeof(messageContent.moduleData.name));
-            messageContent.moduleData.name[sizeof(messageContent.moduleData.name) - 1] = '\0';
+            COPY_STRING(messageContent.moduleData.name, module.name);
 
             msg_send(&gCommandQueue, &messageContent);
 
@@ -741,7 +737,7 @@ static void action_rename_param_label(int index) {
         memset(gParamNameEdit.buffer, 0, sizeof(gParamNameEdit.buffer));
 
         if (module->paramNameSet[pi][0]) {
-            strncpy(gParamNameEdit.buffer, module->paramName[pi][0], PROTOCOL_PARAM_NAME_SIZE);
+            COPY_STRING(gParamNameEdit.buffer, module->paramName[pi][0]);
         }
     }
     gContextMenu.active = false;

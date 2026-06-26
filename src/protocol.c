@@ -35,6 +35,8 @@ extern "C" {
 #include "moduleResourcesAccess.h"
 #include "msgQueue.h"
 #include "globalVars.h"
+    
+static pthread_mutex_t patchNameMutex                                                              = PTHREAD_MUTEX_INITIALIZER;
 
 void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, int nameSize) {
     int i = 0;
@@ -43,6 +45,9 @@ void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, int name
         LOG_ERROR("Called with invalid size of %d\n", nameSize);
         exit(1);
     }
+    
+    pthread_mutex_lock(&patchNameMutex);
+    
     memset(name, 0, nameSize);
 
     for (i = 0; i < CLAVIA_NAME_SIZE; i++) {
@@ -52,11 +57,15 @@ void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, int name
             break;
         }
     }
+    
+    pthread_mutex_unlock(&patchNameMutex);
 }
 
 void write_clavia_string(uint8_t * buff, uint32_t * bitPos, const char * name) {
     int i = 0;
 
+    pthread_mutex_lock(&patchNameMutex);
+    
     for (i = 0; i < CLAVIA_NAME_SIZE; i++) {
         write_bit_stream(buff, bitPos, 8, (uint8_t)name[i]);
 
@@ -64,8 +73,10 @@ void write_clavia_string(uint8_t * buff, uint32_t * bitPos, const char * name) {
             break;
         }
     }
+    
+    pthread_mutex_unlock(&patchNameMutex);
 }
-
+    
 void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     gPatchDescr[slot].unknown1        = read_bit_stream(buff, subOffset, 32);
     gPatchDescr[slot].unknown2        = read_bit_stream(buff, subOffset, 29);
@@ -930,8 +941,7 @@ void parse_module_names(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         tModule * module = get_module(key);
 
         if (module != NULL) {
-            strncpy(module->name, name, sizeof(module->name));
-            module->name[sizeof(module->name) - 1] = '\0';
+            COPY_STRING(module->name, name);
         }
     }
 }
@@ -1156,7 +1166,7 @@ void write_slot_separator(uint8_t * buff, uint32_t * bitPos) {
 }
 
 void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
-    char slotName[CLAVIA_NAME_SIZE + 1] = {0};
+    //char slotName[CLAVIA_NAME_SIZE + 1] = {0};
 
     write_bit_stream(buff, bitPos, 8, 0x11);                               // constant observed in all perf files
     write_bit_stream(buff, bitPos, 8, 0x00);
@@ -1171,12 +1181,12 @@ void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
     write_bit_stream(buff, bitPos, 8, 0x00);
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-        patch_name_get(slot, slotName, sizeof(slotName));
 
-        if (slotName[0] == '\0') {
-            strncpy(slotName, "No name", sizeof(slotName) - 1);
+        if (gPatchName[slot] == '\0') {
+            write_clavia_string(buff, bitPos, "No name");
+        } else {
+            write_clavia_string(buff, bitPos, gPatchName[slot]);
         }
-        write_clavia_string(buff, bitPos, slotName);
 
         bool has_content = slot_has_modules(slot);
 

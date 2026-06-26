@@ -172,9 +172,9 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
     }
 
     if (strlen(module->paramName[paramIndex][0]) > 0) {  // TODO - Work out how labels array works
-        strncpy(label, module->paramName[paramIndex][0], sizeof(label));
+        COPY_STRING(label, module->paramName[paramIndex][0]);
     } else if (paramLocationList[paramRef].label != NULL) {
-        strncpy(label, paramLocationList[paramRef].label, sizeof(label));
+        COPY_STRING(label, paramLocationList[paramRef].label);
     }
     label[sizeof(label) - 1]                      = '\0';
 

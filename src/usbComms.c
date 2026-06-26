@@ -363,7 +363,6 @@ static int parse_synth_settings(uint8_t * buff, int length) {
 static int parse_performance_settings(uint8_t * buff, int length) {
     uint32_t bitPos                     = 0;
     uint32_t selectedSlot               = 0;
-    //char     name[CLAVIA_NAME_SIZE + 1] = {0};
     int      i                          = 0;
 
     if (buff == NULL) {
@@ -394,9 +393,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
 
     // 4 slots — TG2FileSlot.Write
     for (i = 0; i < MAX_SLOTS; i++) {
-        char name[CLAVIA_NAME_SIZE+1] = {0};
-        read_clavia_string(buff, &bitPos, name, sizeof(name));
-        patch_name_set(i, name);
+        read_clavia_string(buff, &bitPos, gPatchName[i], sizeof(gPatchName[0]));
         atomic_store(&gSlotEnabled[i], read_bit_stream(buff, &bitPos, 8));
         gPerfSettings.slot[i].keyboardEnabled = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         gPerfSettings.slot[i].holdEnabled     = (uint8_t)read_bit_stream(buff, &bitPos, 8);
@@ -405,7 +402,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
         gPerfSettings.slot[i].rangeLower      = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         gPerfSettings.slot[i].rangeUpper      = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         LOG_DEBUG("Slot %d:\n", i);
-        LOG_DEBUG("  PatchName         = '%s'\n", name);
+        LOG_DEBUG("  PatchName         = '%s'\n", gPatchName[i]);
         LOG_DEBUG("  Active            = %u\n", atomic_load(&gSlotEnabled[i]));
         LOG_DEBUG("  Key               = %u\n", gPerfSettings.slot[i].keyboardEnabled); // Which keyboard slot is enabled
         LOG_DEBUG("  Hold              = %u\n", gPerfSettings.slot[i].holdEnabled);
@@ -427,7 +424,6 @@ static int parse_performance_settings(uint8_t * buff, int length) {
 // header section, but on USB it carries a 2-byte the original editor's code size word and fixed-width 16-byte
 // names (not null-terminated-variable-length as in the 0x29 settings dump).
 static void parse_perf_header(uint8_t * buff, uint32_t * bitPos) {
-    char    name[CLAVIA_NAME_SIZE + 1] = {0};
     int     i                          = 0;
 
     // the original editor's code size word (2 bytes) — read to advance past it; content size not needed
@@ -449,8 +445,7 @@ static void parse_perf_header(uint8_t * buff, uint32_t * bitPos) {
     read_bit_stream(buff, bitPos, 8);  // fixed 0x00
 
     for (i = 0; i < MAX_SLOTS; i++) {
-        memset(name, 0, sizeof(name));
-        read_clavia_string(buff, bitPos, name, sizeof(name));
+        read_clavia_string(buff, bitPos, gPatchName[i], sizeof(gPatchName[0]));
         uint8_t enabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
         atomic_store(&gSlotEnabled[i], enabled != 0 ? 1 : 0);
         gPerfSettings.slot[i].keyboardEnabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
@@ -463,7 +458,7 @@ static void parse_perf_header(uint8_t * buff, uint32_t * bitPos) {
         read_bit_stream(buff, bitPos, 8);  // 0x00
         read_bit_stream(buff, bitPos, 8);  // 0x00
         LOG_DEBUG("Slot %d:\n", i);
-        LOG_DEBUG("  Name              = '%s'\n", name);
+        LOG_DEBUG("  Name              = '%s'\n", gPatchName[i]);
         LOG_DEBUG("  SlotEnabled       = %u\n", enabled);
         LOG_DEBUG("  KeyboardEnabled   = %u\n", gPerfSettings.slot[i].keyboardEnabled);
         LOG_DEBUG("  HoldEnabled       = %u\n", gPerfSettings.slot[i].holdEnabled);
@@ -658,10 +653,10 @@ int parse_perf(uint8_t * buff, int length) {
     read_bit_stream(buff, &bitOffset, 8);                                    // 0x00
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-        char    name[CLAVIA_NAME_SIZE + 1] = {0};
-        read_clavia_string(buff, &bitOffset, name, sizeof(name));
-        patch_name_set(slot, name);
-        LOG_DEBUG("Slot %u name '%s'\n", slot, name);
+
+        read_clavia_string(buff, &bitOffset, gPatchName[slot], sizeof(gPatchName[0]));
+
+        LOG_DEBUG("Slot %u name '%s'\n", slot, gPatchName[slot]);
         uint8_t enabled                    = (uint8_t)read_bit_stream(buff, &bitOffset, 8); // IsSlotEnabled
         atomic_store(&gSlotEnabled[slot], enabled != 0 ? 1 : 0);
 
@@ -1133,7 +1128,6 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_GET_PATCH_NAME:
         {
-            char patchName[CLAVIA_NAME_SIZE + 1] = {0};
             int  nameBytes                       = length - 6;
 
             LOG_DEBUG("Got patch name (length %d)\n", length);
@@ -1142,10 +1136,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                 LOG_ERROR("Patch name length out of range: %d\n", nameBytes);
                 return EXIT_FAILURE;
             }
-            read_clavia_string(buff, bitPos, patchName, sizeof(patchName));
-            LOG_DEBUG("Patch name: %s\n", patchName);
-
-            patch_name_set(slot, patchName);
+            read_clavia_string(buff, bitPos, gPatchName[slot], sizeof(gPatchName[0]));
+            LOG_DEBUG("Patch name: %s\n", gPatchName[slot]);
 
             return EXIT_SUCCESS;
         }
@@ -1956,7 +1948,6 @@ static int push_slot_to_device(uint32_t slot) {
     uint8_t  buff[SEND_MESSAGE_SIZE]         = {0};
     int      pos                             = COMMAND_OFFSET;
     uint32_t bitPos                          = 0;
-    char     patchName[CLAVIA_NAME_SIZE + 1] = {0};
 
     LOG_DEBUG("Pushing slot %u to device\n", slot);
 
@@ -1965,9 +1956,8 @@ static int push_slot_to_device(uint32_t slot) {
     buff[pos++] = 0x00;
     buff[pos++] = 0x00;
 
-    patch_name_get(slot, patchName, sizeof(patchName));
     bitPos      = BYTE_TO_BIT(pos);
-    write_clavia_string(buff, &bitPos, patchName);
+    write_clavia_string(buff, &bitPos, gPatchName[slot]);
 
     write_patch_descr(slot, buff, &bitPos);
     write_module_list(slot, locationVa, buff, &bitPos);
@@ -2191,7 +2181,6 @@ static int send_perf_header(void) {
     uint8_t  payload[512]               = {0};
     int      pos                        = COMMAND_OFFSET;
     uint32_t bitPos                     = 0;
-    char     name[CLAVIA_NAME_SIZE + 1] = {0};
     uint32_t i                          = 0;
 
     // Build payload starting at byte 2, reserving bytes 0-1 for the the original editor's code size word
@@ -2209,10 +2198,7 @@ static int send_perf_header(void) {
 
     // Per-slot data — slot names are fixed CLAVIA_NAME_SIZE bytes (null-padded), per WriteStream
     for (i = 0; i < MAX_SLOTS; i++) {
-        memset(name, 0, sizeof(name));
-        patch_name_get(i, name, sizeof(name));
-
-        write_clavia_string(payload, &bitPos, name);
+        write_clavia_string(payload, &bitPos, gPatchName[i]);
 
         write_bit_stream(payload, &bitPos, 8, atomic_load(&gSlotEnabled[i]));
         write_bit_stream(payload, &bitPos, 8, gPerfSettings.slot[i].keyboardEnabled);
