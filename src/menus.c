@@ -36,8 +36,12 @@ extern "C" {
 
 // ── Synth settings action targets ──────────────────────────────────────────
 
-static _Atomic uint8_t * gSettingU8Target = NULL;
-static _Atomic int8_t *  gSettingI8Target = NULL;
+static _Atomic uint8_t * gSettingU8Target     = NULL;
+static _Atomic int8_t *  gSettingI8Target     = NULL;
+
+// ── Perf settings action targets ───────────────────────────────────────────
+
+static _Atomic uint8_t * gPerfSettingU8Target = NULL;
 
 void send_synth_settings_msg(void) {
     tMessageContent msg = {0};
@@ -54,6 +58,18 @@ static void action_setting_u8(int index) {
 static void action_setting_i8(int index) {
     *gSettingI8Target = (int8_t)(int32_t)gContextMenu.items[index].param;
     send_synth_settings_msg();
+}
+
+void send_perf_settings_msg(void) {
+    tMessageContent msg = {0};
+
+    msg.cmd = eMsgCmdWritePerfSettings;
+    msg_send(&gCommandQueue, &msg);
+}
+
+static void action_perf_setting_u8(int index) {
+    *gPerfSettingU8Target = (uint8_t)gContextMenu.items[index].param;
+    send_perf_settings_msg();
 }
 
 // ── Patch descriptor action targets ────────────────────────────────────────
@@ -1068,6 +1084,83 @@ void open_active_off_dropdown(tCoord coord, _Atomic uint8_t * target) {
 void open_pedal_polarity_dropdown(tCoord coord, _Atomic uint8_t * target) {
     gSettingU8Target = target;
     open_context_menu(coord, gPedalPolarityItems, 0, 0.0);
+}
+
+// ── Perf settings dropdowns ─────────────────────────────────────────────────
+
+void open_perf_on_off_dropdown(tCoord coord, _Atomic uint8_t * target) {
+    static tMenuItem items[] = {
+        {"Off", RGB_GREY_3, action_perf_setting_u8, 0, NULL},
+        {"On",  RGB_GREY_3, action_perf_setting_u8, 1, NULL},
+        {NULL,  RGB_BLACK,  NULL,                   0, NULL},
+    };
+
+    gPerfSettingU8Target = target;
+    open_context_menu(coord, items, 0, 0.0);
+}
+
+void open_stop_run_dropdown(tCoord coord, _Atomic uint8_t * target) {
+    static tMenuItem items[] = {
+        {"Stop", RGB_GREY_3, action_perf_setting_u8, 0, NULL},
+        {"Run",  RGB_GREY_3, action_perf_setting_u8, 1, NULL},
+        {NULL,   RGB_BLACK,  NULL,                   0, NULL},
+    };
+
+    gPerfSettingU8Target = target;
+    open_context_menu(coord, items, 0, 0.0);
+}
+
+void open_master_clock_dropdown(tCoord coord, _Atomic uint8_t * target) {
+    static tMenuItem items[213];
+    static char      labels[212][5];
+    static bool      initialized = false;
+    int              i           = 0;
+
+    if (!initialized) {
+        for (i = 0; i < 211; i++) {
+            int bpm = 30 + i;
+            snprintf(labels[i], sizeof(labels[i]), "%d", bpm);
+            items[i].label   = labels[i];
+            items[i].colour  = (tRgb)RGB_GREY_3;
+            items[i].action  = action_perf_setting_u8;
+            items[i].param   = (uint32_t)bpm;
+            items[i].subMenu = NULL;
+        }
+
+        items[211]  = (tMenuItem){
+            NULL, RGB_BLACK, NULL, 0, NULL
+        };
+        initialized = true;
+    }
+    gPerfSettingU8Target = target;
+    open_context_menu(coord, items, 6, 0.0);
+}
+
+void open_midi_note_dropdown(tCoord coord, _Atomic uint8_t * target) {
+    static const char * noteNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    static tMenuItem    items[130];
+    static char         labels[128][6];
+    static bool         initialized = false;
+    int                 i           = 0;
+
+    if (!initialized) {
+        for (i = 0; i < 128; i++) {
+            int octave = (i / 12) - 1;
+            snprintf(labels[i], sizeof(labels[i]), "%s%d", noteNames[i % 12], octave);
+            items[i].label   = labels[i];
+            items[i].colour  = (tRgb)RGB_GREY_3;
+            items[i].action  = action_perf_setting_u8;
+            items[i].param   = (uint32_t)i;
+            items[i].subMenu = NULL;
+        }
+
+        items[128]  = (tMenuItem){
+            NULL, RGB_BLACK, NULL, 0, NULL
+        };
+        initialized = true;
+    }
+    gPerfSettingU8Target = target;
+    open_context_menu(coord, items, 8, 0.0);
 }
 
 // ── Module / cable / morph menus ────────────────────────────────────────────

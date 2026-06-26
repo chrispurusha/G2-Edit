@@ -502,6 +502,7 @@ typedef enum {
     topbarPatchVolumeId,
     topbarPerfModeId,
     topbarPerfNameId,
+    topbarPerfSettingsId,
     topbarHideAllCablesId,
     topbarTransparentCablesId,
     topbarCableColourToggle0Id,
@@ -911,6 +912,22 @@ typedef struct {
     tRectangle perfSortMode;
     tRectangle synthName;
 } tSettingsPanelRects;
+
+typedef struct {
+    bool active;
+} tPerfSettingsEdit;
+
+typedef struct {
+    tRectangle close;
+    tRectangle masterClock;
+    tRectangle masterClockRunning;
+    tRectangle keyboardRange;
+    tRectangle slotEnabled[MAX_SLOTS];
+    tRectangle slotKeyboard[MAX_SLOTS];
+    tRectangle slotHold[MAX_SLOTS];
+    tRectangle rangeLower[MAX_SLOTS];
+    tRectangle rangeUpper[MAX_SLOTS];
+} tPerfSettingsPanelRects;
 
 typedef enum {
     eNoCache,

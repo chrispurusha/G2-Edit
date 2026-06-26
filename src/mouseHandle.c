@@ -48,10 +48,11 @@ extern "C" {
 #include "menus.h"
 
 // Drag-start state for vertical/horizontal dial modes
-static double gDragStartX = 0.0;   // cursor position at press — used for restore on release
-static double gDragStartY = 0.0;
-static double gDragPrevX  = 0.0;   // cursor position at previous cursor_pos call — used for incremental delta
-static double gDragPrevY  = 0.0;
+static double gDragStartX    = 0.0;   // cursor position at press — used for restore on release
+static double gDragStartY    = 0.0;
+static double gDragPrevX     = 0.0;   // cursor position at previous cursor_pos call — used for incremental delta
+static double gDragPrevY     = 0.0;
+static bool   gDragFirstMove = false; // absorbs the first cursor_pos after CURSOR_DISABLED is set (coordinate discontinuity on macOS)
 
 void get_global_gui_scaled_mouse_coord(tCoord * coord) {
     int winWidth  = 0;
@@ -324,9 +325,10 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
 
                 if (gDialMode != eDialModeRotary) {
                     glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
-                    gDragPrevX = gDragStartX;
-                    gDragPrevY = gDragStartY;
+                    gDragPrevX     = gDragStartX;
+                    gDragPrevY     = gDragStartY;
                     glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                    gDragFirstMove = true;
                 }
                 retVal                   = true;
             }
@@ -347,9 +349,10 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
 
                     if (gDialMode != eDialModeRotary) {
                         glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
-                        gDragPrevX = gDragStartX;
-                        gDragPrevY = gDragStartY;
+                        gDragPrevX     = gDragStartX;
+                        gDragPrevY     = gDragStartY;
                         glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                        gDragFirstMove = true;
                     }
                     retVal                   = true;
                 }
@@ -526,7 +529,7 @@ bool handle_scrollbar_click(tCoord coord) {
 }
 
 void stop_dragging(void) {
-    if (gDialMode != eDialModeRotary && (gParamDragging.active || gTempoDragging)) {
+    if (gDialMode != eDialModeRotary && (gParamDragging.active || gTempoDragging || gPerfTempoDragging)) {
         glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         glfwSetCursorPos(gWindow, gDragStartX, gDragStartY);
     }
@@ -536,6 +539,8 @@ void stop_dragging(void) {
     memset(&gParamDragging, 0, sizeof(gParamDragging));
     memset(&gCableDrag, 0, sizeof(gCableDrag));
     gTempoDragging            = false;
+    gPerfTempoDragging        = false;
+    gDragFirstMove            = false;
 }
 
 void stop_patch_name_editing(void) {
@@ -722,6 +727,62 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         return;
     }
 
+    if (gPerfSettingsEdit.active) {
+        if (mouseButton == mouseButtonLeftDown) {
+            if (within_rectangle(coord, gPerfSettingsPanelRects.masterClock)) {
+                gPerfTempoDragging = true;
+
+                if (gDialMode != eDialModeRotary) {
+                    glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
+                    gDragPrevX     = gDragStartX;
+                    gDragPrevY     = gDragStartY;
+                    glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                    gDragFirstMove = true;
+                }
+            }
+        }
+
+        if (mouseButton == mouseButtonLeftUp) {
+            stop_dragging();
+
+            if (gContextMenu.active) {
+                if (!handle_context_menu_click(coord)) {
+                    gContextMenu.active = false;
+                }
+                gReDraw = true;
+                return;
+            }
+
+            if (within_rectangle(coord, gPerfSettingsPanelRects.close)) {
+                gPerfSettingsEdit.active = false;
+            } else {
+                int s = 0;
+
+                if (within_rectangle(coord, gPerfSettingsPanelRects.masterClockRunning)) {
+                    open_stop_run_dropdown(below_rect(gPerfSettingsPanelRects.masterClockRunning), &gGlobalSettings.masterClockRunning);
+                } else if (within_rectangle(coord, gPerfSettingsPanelRects.keyboardRange)) {
+                    open_perf_on_off_dropdown(below_rect(gPerfSettingsPanelRects.keyboardRange), &gPerfSettings.keyboardRange);
+                } else {
+                    for (s = 0; s < MAX_SLOTS; s++) {
+                        if (within_rectangle(coord, gPerfSettingsPanelRects.slotEnabled[s])) {
+                            open_perf_on_off_dropdown(below_rect(gPerfSettingsPanelRects.slotEnabled[s]), &gGlobalSettings.slot[s].enabled);
+                        } else if (within_rectangle(coord, gPerfSettingsPanelRects.slotKeyboard[s])) {
+                            open_perf_on_off_dropdown(below_rect(gPerfSettingsPanelRects.slotKeyboard[s]), &gPerfSettings.slot[s].keyboardEnabled);
+                        } else if (within_rectangle(coord, gPerfSettingsPanelRects.slotHold[s])) {
+                            open_perf_on_off_dropdown(below_rect(gPerfSettingsPanelRects.slotHold[s]), &gPerfSettings.slot[s].holdEnabled);
+                        } else if (within_rectangle(coord, gPerfSettingsPanelRects.rangeLower[s])) {
+                            open_midi_note_dropdown(below_rect(gPerfSettingsPanelRects.rangeLower[s]), &gPerfSettings.slot[s].rangeLower);
+                        } else if (within_rectangle(coord, gPerfSettingsPanelRects.rangeUpper[s])) {
+                            open_midi_note_dropdown(below_rect(gPerfSettingsPanelRects.rangeUpper[s]), &gPerfSettings.slot[s].rangeUpper);
+                        }
+                    }
+                }
+            }
+        }
+        gReDraw = true;
+        return;
+    }
+
     if (gPatchSettingsEdit.active) {
         if (mouseButton == mouseButtonLeftUp) {
             if (gContextMenu.active) {
@@ -825,9 +886,10 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
                     if (gDialMode != eDialModeRotary) {
                         glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
-                        gDragPrevX = gDragStartX;
-                        gDragPrevY = gDragStartY;
+                        gDragPrevX     = gDragStartX;
+                        gDragPrevY     = gDragStartY;
                         glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                        gDragFirstMove = true;
                     }
                     found                    = true;
                 }
@@ -839,9 +901,10 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
                     if (gDialMode != eDialModeRotary) {
                         glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
-                        gDragPrevX = gDragStartX;
-                        gDragPrevY = gDragStartY;
+                        gDragPrevX     = gDragStartX;
+                        gDragPrevY     = gDragStartY;
                         glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                        gDragFirstMove = true;
                     }
                     found          = true;
                 }
@@ -969,6 +1032,13 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     gPatchSettingsEdit.active = true;
                     gPatchSettingsEdit.slot   = slot;
                     found                     = true;
+                }
+            }
+
+            if (found == false) {
+                if (within_rectangle(coord, gTopbarControls[topbarPerfSettingsId].rectangle)) {
+                    gPerfSettingsEdit.active = true;
+                    found                    = true;
                 }
             }
 
@@ -1131,6 +1201,14 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
 
     gHoverConnector.active = false;
 
+    if (gDragFirstMove) {
+        gDragPrevX     = xCoord;
+        gDragPrevY     = yCoord;
+        gDragFirstMove = false;
+        gReDraw        = true;
+        return;
+    }
+
     if (gScrollState.yBarDragging == true) {
         set_y_scroll_bar(y - gScrollState.yGrabOffset);
     } else if (gScrollState.xBarDragging == true) {
@@ -1170,6 +1248,40 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
             value      = (uint32_t)newVal;
         } else {
             angle = calculate_mouse_angle((tCoord){x, y}, gTopbarControls[topbarTempoDialId].rectangle);
+            value = angle_to_value(angle, 241);
+        }
+
+        if (gGlobalSettings.masterClock != value) {
+            gGlobalSettings.masterClock = (uint8_t)value;
+            send_master_clock_bpm(value);
+        }
+    } else if (gPerfTempoDragging == true) {
+        if (gDialMode == eDialModeVertical) {
+            int newVal = (int)gGlobalSettings.masterClock + (int)((gDragPrevY - yCoord) * 241.0 / 200.0);
+            gDragPrevY = yCoord;
+
+            if (newVal < 0) {
+                newVal = 0;
+            }
+
+            if (newVal > 240) {
+                newVal = 240;
+            }
+            value      = (uint32_t)newVal;
+        } else if (gDialMode == eDialModeHorizontal) {
+            int newVal = (int)gGlobalSettings.masterClock + (int)((xCoord - gDragPrevX) * 241.0 / 200.0);
+            gDragPrevX = xCoord;
+
+            if (newVal < 0) {
+                newVal = 0;
+            }
+
+            if (newVal > 240) {
+                newVal = 240;
+            }
+            value      = (uint32_t)newVal;
+        } else {
+            angle = calculate_mouse_angle((tCoord){x, y}, gPerfSettingsPanelRects.masterClock);
             value = angle_to_value(angle, 241);
         }
 

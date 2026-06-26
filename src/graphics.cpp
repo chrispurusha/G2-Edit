@@ -336,13 +336,14 @@ void render_top_bar(void) {
     } else {
         gTopbarControls[topbarPatchNameId].rectangle = draw_button(mainArea, {topbar_control_def(topbarPatchNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, patchNameCopy, (tRgb)RGB_BACKGROUND_GREY);
     }
-    gTopbarControls[topbarPatchTypeId].rectangle  = draw_button(mainArea, {topbar_control_def(topbarPatchTypeId)->coord, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
-    gTopbarControls[topbarMonoPolyId].rectangle   = draw_button(mainArea, {topbar_control_def(topbarMonoPolyId)->coord, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarPatchTypeId].rectangle    = draw_button(mainArea, {topbar_control_def(topbarPatchTypeId)->coord, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)patchTypeStrMap[gPatchDescr[slot].category], (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarMonoPolyId].rectangle     = draw_button(mainArea, {topbar_control_def(topbarMonoPolyId)->coord, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], (tRgb)RGB_BACKGROUND_GREY);
     {
         tRgb notesColour = (strlen((char *)gPatchNotes[slot]) > 0) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
         gTopbarControls[topbarPatchNotesId].rectangle = draw_button(mainArea, {topbar_control_def(topbarPatchNotesId)->coord, {get_text_width("Notes", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "Notes", notesColour);
     }
-    gTopbarControls[topbarSettingsId].rectangle   = draw_button(mainArea, {topbar_control_def(topbarSettingsId)->coord, {get_text_width("Settings", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "Settings", (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarSettingsId].rectangle     = draw_button(mainArea, {topbar_control_def(topbarSettingsId)->coord, {get_text_width("Settings", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "Settings", (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarPerfSettingsId].rectangle = draw_button(mainArea, {topbar_control_def(topbarPerfSettingsId)->coord, {get_text_width("Perf", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "Perf", (tRgb)RGB_BACKGROUND_GREY);
 
     if (gPatchDescr[slot].monoPoly == monoPolyPoly) {
         voiceCount = gPatchDescr[slot].voiceCount + 1;
@@ -356,7 +357,7 @@ void render_top_bar(void) {
         buttonBackgroundColour = (tRgb)RGB_RED_5;
     }
     snprintf(buff, sizeof(buff), "%u", voiceCount);
-    gTopbarControls[topbarVoiceCountId].rectangle = draw_button(mainArea, {topbar_control_def(topbarVoiceCountId)->coord, {get_text_width("XX", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, buff, buttonBackgroundColour);
+    gTopbarControls[topbarVoiceCountId].rectangle   = draw_button(mainArea, {topbar_control_def(topbarVoiceCountId)->coord, {get_text_width("XX", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, buff, buttonBackgroundColour);
 
     {
         tModuleKey volKey = {slot, (uint32_t)locationMorph, PATCH_VOLUME};
@@ -1005,6 +1006,14 @@ static double render_dropdown(double x, double y, double btnH,
     return x + rect->size.w;
 }
 
+// Helper: MIDI note number → note name string (e.g. 0 → "C-1", 60 → "C4")
+static void midi_note_name_str(uint8_t note, char * buf, size_t bufLen) {
+    static const char * names[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    int                 octave  = (int)(note / 12) - 1;
+
+    snprintf(buf, bufLen, "%s%d", names[note % 12], octave);
+}
+
 // Helper: MIDI channel value → display string (1-16 or "Off")
 static void midi_chan_str(uint8_t val, char * buf, size_t bufLen) {
     if (val >= 0x10) {
@@ -1228,6 +1237,144 @@ static void render_patch_settings_panel(void) {
         x += get_text_width((char *)"Perf:", btnH, eCache) + 4.0;
         render_dropdown(x, y, btnH, (char *)perfLabel, "Category", &gSettingsPanelRects.perfSortMode);
     }
+}
+
+static void render_perf_settings_panel(void) {
+    if (!gPerfSettingsEdit.active) {
+        return;
+    }
+    double renderW = get_render_width() / gGlobalGuiScale;
+    double renderH = get_render_height() / gGlobalGuiScale;
+    double boxW    = 700.0;
+    double boxH    = 390.0;
+    double boxX    = (renderW - boxW) / 2.0;
+    double boxY    = (renderH - boxH) / 2.0;
+    double margin  = 10.0;
+    double titleH  = 24.0;
+    double rowH    = 26.0;
+    double secH    = 18.0;
+    double btnH    = STANDARD_BUTTON_TEXT_HEIGHT;
+    double y       = boxY + titleH + margin;
+    char   buf[32] = {0};
+    char   note[8] = {0};
+
+    set_rgb_colour(RGB_GREY_2);
+    render_rectangle(mainArea, {{0.0, 0.0}, {renderW, renderH}});
+
+    set_rgb_colour(RGB_GREY_5);
+    render_rectangle_with_border(mainArea, {{boxX, boxY}, {boxW, boxH}});
+
+    set_rgb_colour(RGB_GREY_3);
+    render_rectangle(mainArea, {{boxX, boxY}, {boxW, titleH}});
+    set_rgb_colour(RGB_BLACK);
+    render_text(mainArea, {{boxX + margin, boxY + 6.0}, {BLANK_SIZE, btnH}}, "Performance Settings");
+
+    gPerfSettingsPanelRects.close = draw_button(mainArea,
+                                                {{boxX + boxW - 44.0, boxY + 4.0}, {get_text_width((char *)"Close", btnH, eCache) + 4.0, btnH}},
+                                                "Close", (tRgb)RGB_BACKGROUND_GREY);
+
+    // ── Perf Name ──────────────────────────────────────────────────
+    {
+        char   nameBuf[CLAVIA_NAME_SIZE + 2] = {0};
+        double x                             = boxX + margin;
+        set_rgb_colour(RGB_BLACK);
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Name:");
+        x += get_text_width((char *)"Name:", btnH, eCache) + 4.0;
+        snprintf(nameBuf, sizeof(nameBuf), "%s", gGlobalSettings.perfName);
+        draw_button(mainArea, {{x, y}, {get_text_width(LONGEST_PATCH_NAME, btnH, eCache), btnH}},
+                    nameBuf, (tRgb)RGB_BACKGROUND_GREY);
+    }
+    y                            += rowH;
+
+    // ── Master Clock ───────────────────────────────────────────────
+    set_rgb_colour(RGB_GREY_7);
+    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Master Clock");
+    y                            += secH;
+
+    {
+        double dialH = 48.0;
+        double x     = boxX + margin;
+        snprintf(buf, sizeof(buf), "%u BPM", (unsigned)gGlobalSettings.masterClock);
+        gPerfSettingsPanelRects.masterClock = render_dial_with_text(mainArea, {{x, y}, {20.0, dialH}}, NULL, buf, gGlobalSettings.masterClock, 241, 0, (tRgb)RGB_BACKGROUND_GREY);
+        x                                  += 20.0 + 12.0;
+        render_dropdown(x, y + (dialH - btnH) / 2.0, btnH,
+                        gGlobalSettings.masterClockRunning ? "Run" : "Stop",
+                        "Stop", &gPerfSettingsPanelRects.masterClockRunning);
+        y                                  += dialH + 4.0;
+    }
+
+    // ── Slots ──────────────────────────────────────────────────────
+    set_rgb_colour(RGB_GREY_7);
+    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Slots");
+    y                            += secH;
+
+    double labelColW = get_text_width((char *)"Slot A:", btnH, eCache) + 8.0;
+    double dropW     = get_text_width((char *)"On", btnH, eCache) + 16.0;
+    double noteDropW = get_text_width((char *)"C#-1", btnH, eCache) + 10.0;
+    double colEn     = boxX + margin + labelColW;
+    double colKbd    = colEn + dropW + 8.0;
+    double colHld    = colKbd + dropW + 8.0;
+    double colLo     = colHld + dropW + 16.0;
+    double colHi     = colLo + noteDropW + 8.0;
+    double colRng    = colHi + noteDropW + 12.0;
+
+    // Column headers
+    set_rgb_colour(RGB_BLACK);
+    render_text(mainArea, {{colEn, y}, {BLANK_SIZE, btnH}}, "Enable");
+    render_text(mainArea, {{colKbd, y}, {BLANK_SIZE, btnH}}, "Keyboard");
+    render_text(mainArea, {{colHld, y}, {BLANK_SIZE, btnH}}, "Hold");
+    render_text(mainArea, {{colLo, y}, {BLANK_SIZE, btnH}}, "Lower");
+    render_text(mainArea, {{colHi, y}, {BLANK_SIZE, btnH}}, "Upper");
+
+    // Keyboard Range global toggle — right side of header
+    {
+        double x = colRng;
+        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Kbd Range:");
+        x += get_text_width((char *)"Kbd Range:", btnH, eCache) + 4.0;
+        render_dropdown(x, y, btnH,
+                        gPerfSettings.keyboardRange ? "On" : "Off",
+                        "On", &gPerfSettingsPanelRects.keyboardRange);
+    }
+    y += rowH;
+
+    // Slot rows A–D
+    static const char * slotLabel[] = {"Slot A:", "Slot B:", "Slot C:", "Slot D:"};
+
+    for (int i = 0; i < MAX_SLOTS; i++) {
+        char loNote[8]    = {0};
+        char hiNote[8]    = {0};
+        char rangeBuf[18] = {0};
+
+        set_rgb_colour(RGB_BLACK);
+        render_text(mainArea, {{boxX + margin, y + 2.0}, {BLANK_SIZE, btnH}}, (char *)slotLabel[i]);
+
+        render_dropdown(colEn, y, btnH,
+                        gGlobalSettings.slot[i].enabled ? "On" : "Off",
+                        "On", &gPerfSettingsPanelRects.slotEnabled[i]);
+
+        render_dropdown(colKbd, y, btnH,
+                        gPerfSettings.slot[i].keyboardEnabled ? "On" : "Off",
+                        "On", &gPerfSettingsPanelRects.slotKeyboard[i]);
+
+        render_dropdown(colHld, y, btnH,
+                        gPerfSettings.slot[i].holdEnabled ? "On" : "Off",
+                        "On", &gPerfSettingsPanelRects.slotHold[i]);
+
+        midi_note_name_str(gPerfSettings.slot[i].rangeLower, note, sizeof(note));
+        render_dropdown(colLo, y, btnH, note, "C#-1", &gPerfSettingsPanelRects.rangeLower[i]);
+
+        midi_note_name_str(gPerfSettings.slot[i].rangeUpper, note, sizeof(note));
+        render_dropdown(colHi, y, btnH, note, "C#-1", &gPerfSettingsPanelRects.rangeUpper[i]);
+
+        midi_note_name_str(gPerfSettings.slot[i].rangeLower, loNote, sizeof(loNote));
+        midi_note_name_str(gPerfSettings.slot[i].rangeUpper, hiNote, sizeof(hiNote));
+        snprintf(rangeBuf, sizeof(rangeBuf), "%s - %s", loNote, hiNote);
+        render_text(mainArea, {{colRng, y + 2.0}, {BLANK_SIZE, btnH}}, rangeBuf);
+
+        y += rowH;
+    }
+
+    (void)buf;
 }
 
 static void render_patch_notes_edit(void) {
@@ -1462,6 +1609,7 @@ void do_graphics_loop(void) {
             render_morph_groups();
             render_scrollbars(gWindow);
             render_patch_settings_panel();
+            render_perf_settings_panel();
             render_context_menu();
             render_patch_notes_edit();
             //Debug only

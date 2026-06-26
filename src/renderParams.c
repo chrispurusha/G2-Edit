@@ -711,6 +711,18 @@ tRectangle render_paramType1Resonance(tModule * module, tRectangle rectangle, ch
 }
 
 tRectangle render_paramType1Slider(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    double     textH    = 8.0;
+    tRgb       black    = {0.0, 0.0, 0.0};
+    tRectangle textRect = {0};
+
+    textRect.coord.x = rectangle.coord.x;
+    textRect.coord.y = rectangle.coord.y - textH;
+    textRect.size.w  = BLANK_SIZE;
+    textRect.size.h  = textH;
+
+    snprintf(buff, buffSize, "%u", (uint32_t)paramValue);
+    set_rgb_colour(black);
+    render_text(moduleArea, textRect, buff);
     return draw_slider(moduleArea, rectangle, (uint32_t)paramValue, range, morphRange, colour);
 }
 
