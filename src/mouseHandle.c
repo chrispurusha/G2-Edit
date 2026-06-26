@@ -322,8 +322,10 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
                 if (module->key.location == locationMorph) {
                     gMorphGroupFocus = i;
                 }
+                bool isSlider = (module->key.location != locationMorph)
+                                && (paramLocationList[param->paramRef].type1 == paramType1Slider);
 
-                if (gDialMode != eDialModeRotary) {
+                if (gDialMode != eDialModeRotary || isSlider) {
                     glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
                     gDragPrevX     = gDragStartX;
                     gDragPrevY     = gDragStartY;
@@ -529,9 +531,12 @@ bool handle_scrollbar_click(tCoord coord) {
 }
 
 void stop_dragging(void) {
-    if (gDialMode != eDialModeRotary && (gParamDragging.active || gTempoDragging || gPerfTempoDragging)) {
+    if (gParamDragging.active || gTempoDragging || gPerfTempoDragging) {
         glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        glfwSetCursorPos(gWindow, gDragStartX, gDragStartY);
+
+        if (gDialMode != eDialModeRotary) {
+            glfwSetCursorPos(gWindow, gDragStartX, gDragStartY);
+        }
     }
     gScrollState.yBarDragging = false;
     gScrollState.xBarDragging = false;
