@@ -55,17 +55,17 @@ void open_variation_copy_menu(tCoord coord, uint32_t sourceVariation);
 
 // Synth settings dropdowns
 void send_synth_settings_msg(void);
-void open_midi_chan_dropdown(tCoord coord, uint8_t * target);
-void open_sysex_id_dropdown(tCoord coord, uint8_t * target);
-void open_tune_semi_dropdown(tCoord coord, int8_t * target);
-void open_tune_cent_dropdown(tCoord coord, int8_t * target);
-void open_octave_shift_dropdown(tCoord coord, int8_t * target);
-void open_pedal_gain_dropdown(tCoord coord, uint8_t * target);
-void open_patch_sort_dropdown(tCoord coord, uint8_t * target);
-void open_perf_sort_dropdown(tCoord coord, uint8_t * target);
-void open_on_off_dropdown(tCoord coord, uint8_t * target);
-void open_active_off_dropdown(tCoord coord, uint8_t * target);
-void open_pedal_polarity_dropdown(tCoord coord, uint8_t * target);
+void open_midi_chan_dropdown(tCoord coord, _Atomic uint8_t * target);
+void open_sysex_id_dropdown(tCoord coord, _Atomic uint8_t * target);
+void open_tune_semi_dropdown(tCoord coord, _Atomic int8_t * target);
+void open_tune_cent_dropdown(tCoord coord, _Atomic int8_t * target);
+void open_octave_shift_dropdown(tCoord coord, _Atomic int8_t * target);
+void open_pedal_gain_dropdown(tCoord coord, _Atomic uint8_t * target);
+void open_patch_sort_dropdown(tCoord coord, _Atomic uint8_t * target);
+void open_perf_sort_dropdown(tCoord coord, _Atomic uint8_t * target);
+void open_on_off_dropdown(tCoord coord, _Atomic uint8_t * target);
+void open_active_off_dropdown(tCoord coord, _Atomic uint8_t * target);
+void open_pedal_polarity_dropdown(tCoord coord, _Atomic uint8_t * target);
 
 #ifdef __cplusplus
 }

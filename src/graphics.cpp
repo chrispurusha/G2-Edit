@@ -981,7 +981,7 @@ static void check_action_flags(void) {
         } else {
             COPY_STRING(patchName, gGlobalSettings.slot[slot].patchName);
 
-            if (gGlobalSettings.slot[slot].patchName[0] != '\0') {
+            if (patchName[0] != '\0') {
                 snprintf(defaultName, sizeof(defaultName), "%s.pch2", patchName);
             } else {
                 snprintf(defaultName, sizeof(defaultName), "patch.pch2");

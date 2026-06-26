@@ -36,8 +36,8 @@ extern "C" {
 
 // ── Synth settings action targets ──────────────────────────────────────────
 
-static uint8_t * gSettingU8Target = NULL;
-static int8_t *  gSettingI8Target = NULL;
+static _Atomic uint8_t * gSettingU8Target = NULL;
+static _Atomic int8_t *  gSettingI8Target = NULL;
 
 void send_synth_settings_msg(void) {
     tMessageContent msg = {0};
@@ -135,7 +135,7 @@ static void action_copy_variation(int index) {
 static void menu_action_set_cable_colour(int index) {
     uint32_t  newColour = gContextMenu.items[index].param;
     uint32_t  slot      = gSlot;
-    uint32_t  location  = &gLocation;
+    uint32_t  location  = gLocation;
     int       outIndex  = -1;
     int       inIndex   = -1;
 
@@ -962,17 +962,17 @@ tCoord below_rect(tRectangle r) {
 
 // ── Synth settings dropdowns ────────────────────────────────────────────────
 
-void open_midi_chan_dropdown(tCoord coord, uint8_t * target) {
+void open_midi_chan_dropdown(tCoord coord, _Atomic uint8_t * target) {
     gSettingU8Target = target;
     open_context_menu(coord, gMidiChanItems, 0, 0.0);
 }
 
-void open_sysex_id_dropdown(tCoord coord, uint8_t * target) {
+void open_sysex_id_dropdown(tCoord coord, _Atomic uint8_t * target) {
     gSettingU8Target = target;
     open_context_menu(coord, gSysexIdItems, 0, 0.0);
 }
 
-void open_tune_semi_dropdown(tCoord coord, int8_t * target) {
+void open_tune_semi_dropdown(tCoord coord, _Atomic int8_t * target) {
     static tMenuItem items[26];
     static char      labels[25][5];
     static bool      initialized = false;
@@ -995,7 +995,7 @@ void open_tune_semi_dropdown(tCoord coord, int8_t * target) {
     open_context_menu(coord, items, 5, 0.0);
 }
 
-void open_tune_cent_dropdown(tCoord coord, int8_t * target) {
+void open_tune_cent_dropdown(tCoord coord, _Atomic int8_t * target) {
     static tMenuItem items[102];
     static char      labels[101][5];
     static bool      initialized = false;
@@ -1018,12 +1018,12 @@ void open_tune_cent_dropdown(tCoord coord, int8_t * target) {
     open_context_menu(coord, items, 10, 0.0);
 }
 
-void open_octave_shift_dropdown(tCoord coord, int8_t * target) {
+void open_octave_shift_dropdown(tCoord coord, _Atomic int8_t * target) {
     gSettingI8Target = target;
     open_context_menu(coord, gOctaveShiftItems, 0, 0.0);
 }
 
-void open_pedal_gain_dropdown(tCoord coord, uint8_t * target) {
+void open_pedal_gain_dropdown(tCoord coord, _Atomic uint8_t * target) {
     static tMenuItem items[34];
     static char      labels[33][5];
     static bool      initialized = false;
@@ -1045,27 +1045,27 @@ void open_pedal_gain_dropdown(tCoord coord, uint8_t * target) {
     open_context_menu(coord, items, 4, 0.0);
 }
 
-void open_patch_sort_dropdown(tCoord coord, uint8_t * target) {
+void open_patch_sort_dropdown(tCoord coord, _Atomic uint8_t * target) {
     gSettingU8Target = target;
     open_context_menu(coord, gPatchSortItems, 0, 0.0);
 }
 
-void open_perf_sort_dropdown(tCoord coord, uint8_t * target) {
+void open_perf_sort_dropdown(tCoord coord, _Atomic uint8_t * target) {
     gSettingU8Target = target;
     open_context_menu(coord, gPerfSortItems, 0, 0.0);
 }
 
-void open_on_off_dropdown(tCoord coord, uint8_t * target) {
+void open_on_off_dropdown(tCoord coord, _Atomic uint8_t * target) {
     gSettingU8Target = target;
     open_context_menu(coord, gOnOffItems, 0, 0.0);
 }
 
-void open_active_off_dropdown(tCoord coord, uint8_t * target) {
+void open_active_off_dropdown(tCoord coord, _Atomic uint8_t * target) {
     gSettingU8Target = target;
     open_context_menu(coord, gActiveOffItems, 0, 0.0);
 }
 
-void open_pedal_polarity_dropdown(tCoord coord, uint8_t * target) {
+void open_pedal_polarity_dropdown(tCoord coord, _Atomic uint8_t * target) {
     gSettingU8Target = target;
     open_context_menu(coord, gPedalPolarityItems, 0, 0.0);
 }
