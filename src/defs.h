@@ -52,10 +52,10 @@ void usb_log_text(const char * fmt, ...);
 #define LOG_DEBUG_DIRECT(fmt, ...)    ((void)0)
 #endif
 #ifdef ENABLE_LOG_MODULE_DATA
-#define LOG_MODULE_DATA(fmt, ...)                                      \
+#define LOG_MODULE_DATA(fmt, ...)                                \
    do {fprintf(stdout, "D %s() " fmt, __func__, ## __VA_ARGS__); \
        _USB_LOG("D %s() " fmt, __func__, ## __VA_ARGS__);} while (0)
-#define LOG_MODULE_DATA_DIRECT(fmt, ...)           \
+#define LOG_MODULE_DATA_DIRECT(fmt, ...)     \
    do {fprintf(stdout, fmt, ## __VA_ARGS__); \
        _USB_LOG(fmt, ## __VA_ARGS__);} while (0)
 #else
@@ -354,12 +354,12 @@ void usb_log_text(const char * fmt, ...);
 #define NULL_RECTANGLE                 {{0.0, 0.0}, {0.0, 0.0}}
 #define ARRAY_SIZE(arr)    (sizeof(arr) / sizeof(arr[0]))
 
-#define COPY_STRING(dst, src)        \
-    do {                                           \
-        pthread_mutex_lock(&(gStringCopyMutex));              \
-        strncpy((dst), (src), sizeof(dst) - 1);    \
-        (dst)[sizeof(dst) - 1] = '\0';             \
-        pthread_mutex_unlock(&(gStringCopyMutex));            \
-    } while (0)
+#define COPY_STRING(dst, src)                     \
+   do {                                           \
+       pthread_mutex_lock(&(gStringCopyMutex));   \
+       strncpy((dst), (src), sizeof(dst) - 1);    \
+       (dst)[sizeof(dst) - 1] = '\0';             \
+       pthread_mutex_unlock(&(gStringCopyMutex)); \
+   } while (0)
 
 #endif // #define __DEFS_H__

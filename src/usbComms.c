@@ -55,26 +55,26 @@ extern "C" {
 #define USB_KEEPALIVE_INTERVAL_S    (2)    // macOS suspends USB after ~3s idle; keep well inside that
 
 // Atomic flags for cross-thread signalling
-static _Atomic bool           gotBadConnectionIndication      = false;
-static _Atomic bool           gotPatchChangeIndication[MAX_SLOTS]        = {0};
-static _Atomic bool           gotPerfSettingsChangeIndication = false;
-static _Atomic int32_t        stopCount                       = 0;
+static _Atomic bool           gotBadConnectionIndication          = false;
+static _Atomic bool           gotPatchChangeIndication[MAX_SLOTS] = {0};
+static _Atomic bool           gotPerfSettingsChangeIndication     = false;
+static _Atomic int32_t        stopCount                           = 0;
 
 // Protected by usbStaticMutex
-static pthread_t              usbThread                       = NULL;
-static libusb_context *       libUsbCtx                       = NULL;
-static libusb_device_handle * devHandle                       = NULL;
+static pthread_t              usbThread                           = NULL;
+static libusb_context *       libUsbCtx                           = NULL;
+static libusb_device_handle * devHandle                           = NULL;
 
 // Callback pointers protected by callbackMutex
 static void                   (*wake_glfw_func_ptr)(void) = NULL;
 static void                   (*full_patch_change_notify_func_ptr)(void) = NULL;
 
 // Mutexes
-static pthread_mutex_t        usbStaticMutex                  = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t        callbackMutex                   = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t        usbStaticMutex                      = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t        callbackMutex                       = PTHREAD_MUTEX_INITIALIZER;
 
 // Keepalive: timestamp of the last successful inbound or outbound USB transfer
-static time_t                 gLastActivityTime               = 0;
+static time_t                 gLastActivityTime                   = 0;
 
 // ---------------------------------------------------------------------------
 // Callback registration
@@ -352,17 +352,17 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     //    for (int i = 0; i < 40; i++) {
     //        if (buff[i] != prevBuff[i]) {
     //            prevBuff[i] = buff[i];
-     //           LOG_DEBUG("%d 0x%02x %u\n", i, buff[i], buff[i]);
-     //       }
-     //   }
+    //           LOG_DEBUG("%d 0x%02x %u\n", i, buff[i], buff[i]);
+    //       }
+    //   }
     //}
 
     return EXIT_SUCCESS;
 }
 
 static int parse_performance_settings(uint8_t * buff, int length) {
-    uint32_t bitPos                     = 0;
-    int      i                          = 0;
+    uint32_t bitPos = 0;
+    int      i      = 0;
 
     if (buff == NULL) {
         return EXIT_FAILURE;
@@ -373,16 +373,16 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     LOG_DEBUG("Performance Name     = '%s'\n", gPerfName);
 
     // WriteSettings
-    read_bit_stream(buff, &bitPos, 8); // Regular val of 17?
+    read_bit_stream(buff, &bitPos, 8);                                           // Regular val of 17?
     read_bit_stream(buff, &bitPos, 8);
     LOG_DEBUG("Keyboard Range Enab  = %u\n", read_bit_stream(buff, &bitPos, 8)); // Regular val of 82 for standard mode and 87 for performance mode? Seen 0x74 for standard an 0x80 for perf too. Seems to be keyboard range enabled!
     read_bit_stream(buff, &bitPos, 8);
     read_bit_stream(buff, &bitPos, 4);
-    gSelectedSlot                = read_bit_stream(buff, &bitPos, 2); // For focus rather than keyboard?
+    gSelectedSlot       = read_bit_stream(buff, &bitPos, 2);          // For focus rather than keyboard?
     LOG_DEBUG("SelectedSlot         = %u\n", gSelectedSlot);
     read_bit_stream(buff, &bitPos, 2);
     LOG_DEBUG("RangeEnable          = %u\n", read_bit_stream(buff, &bitPos, 8));
-    gMasterClock = read_bit_stream(buff, &bitPos, 8);
+    gMasterClock        = read_bit_stream(buff, &bitPos, 8);
     LOG_DEBUG("MasterClock          = %u\n", gMasterClock);
     LOG_DEBUG("KeyboardSplit        = %u\n", read_bit_stream(buff, &bitPos, 8));
     gMasterClockRunning = read_bit_stream(buff, &bitPos, 8);
@@ -393,7 +393,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     // 4 slots — TG2FileSlot.Write
     for (i = 0; i < MAX_SLOTS; i++) {
         read_clavia_string(buff, &bitPos, gPatchName[i], sizeof(gPatchName[0]));
-        gSlotEnabled[i]= read_bit_stream(buff, &bitPos, 8);
+        gSlotEnabled[i]                       = read_bit_stream(buff, &bitPos, 8);
         gPerfSettings.slot[i].keyboardEnabled = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         gPerfSettings.slot[i].holdEnabled     = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         read_bit_stream(buff, &bitPos, 8); // Bank index
@@ -409,7 +409,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
         LOG_DEBUG("  PatchIndex        = %u\n", 0);
         LOG_DEBUG("  RangeLower        = %u\n", gPerfSettings.slot[i].rangeLower);
         LOG_DEBUG("  RangeUpper        = %u\n", gPerfSettings.slot[i].rangeUpper);
-        
+
         read_bit_stream(buff, &bitPos, 8);
         read_bit_stream(buff, &bitPos, 8);
         read_bit_stream(buff, &bitPos, 8);
@@ -423,7 +423,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
 // header section, but on USB it carries a 2-byte the original editor's code size word and fixed-width 16-byte
 // names (not null-terminated-variable-length as in the 0x29 settings dump).
 static void parse_perf_header(uint8_t * buff, uint32_t * bitPos) {
-    int     i                          = 0;
+    int i = 0;
 
     // the original editor's code size word (2 bytes) — read to advance past it; content size not needed
     read_bit_stream(buff, bitPos, 8);
@@ -435,18 +435,18 @@ static void parse_perf_header(uint8_t * buff, uint32_t * bitPos) {
     gPerfSettings.keyboardRange = (uint8_t)read_bit_stream(buff, bitPos, 8);
     read_bit_stream(buff, bitPos, 8);
     read_bit_stream(buff, bitPos, 8);
-    gSynthSettings.perfMode        = read_bit_stream(buff, bitPos, 8);
+    gSynthSettings.perfMode     = read_bit_stream(buff, bitPos, 8);
     LOG_DEBUG("  GlobalMode        = %u\n", gPerfSettings.globalMode);
     LOG_DEBUG("  RangeAndFlags     = %u\n", gPerfSettings.rangeAndFlags);
     LOG_DEBUG("  KeyboardRange     = %u\n", gPerfSettings.keyboardRange);
-    LOG_DEBUG("  PerfMode          = %u\n", gSynthSettings.perfMode);    // TODO - Does this belong in synth or perf?
-    read_bit_stream(buff, bitPos, 8);  // fixed 0x00
-    read_bit_stream(buff, bitPos, 8);  // fixed 0x00
+    LOG_DEBUG("  PerfMode          = %u\n", gSynthSettings.perfMode); // TODO - Does this belong in synth or perf?
+    read_bit_stream(buff, bitPos, 8);                                 // fixed 0x00
+    read_bit_stream(buff, bitPos, 8);                                 // fixed 0x00
 
     for (i = 0; i < MAX_SLOTS; i++) {
         read_clavia_string(buff, bitPos, gPatchName[i], sizeof(gPatchName[0]));
         uint8_t enabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
-        gSlotEnabled[i]= enabled;
+        gSlotEnabled[i]                       = enabled;
         gPerfSettings.slot[i].keyboardEnabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
         gPerfSettings.slot[i].holdEnabled     = (uint8_t)read_bit_stream(buff, bitPos, 8);
         gPerfSettings.slot[i].rangeLower      = (uint8_t)read_bit_stream(buff, bitPos, 8);
@@ -642,22 +642,21 @@ int parse_perf(uint8_t * buff, int length) {
     uint32_t selSlot     = (uint32_t)(selSlotByte / 4);
 
     if (selSlot < MAX_SLOTS) {
-        gSlot= selSlot;
+        gSlot = selSlot;
     }
     read_bit_stream(buff, &bitOffset, 8);                                    // unknown (0x00)
-    gMasterClock= (uint8_t)read_bit_stream(buff, &bitOffset, 8);
+    gMasterClock        = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
     read_bit_stream(buff, &bitOffset, 8);                                    // unknown (0x00)
-    gMasterClockRunning= (uint8_t)read_bit_stream(buff, &bitOffset, 8);
+    gMasterClockRunning = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
     read_bit_stream(buff, &bitOffset, 8);                                    // 0x00
     read_bit_stream(buff, &bitOffset, 8);                                    // 0x00
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-
         read_clavia_string(buff, &bitOffset, gPatchName[slot], sizeof(gPatchName[0]));
 
         LOG_DEBUG("Slot %u name '%s'\n", slot, gPatchName[slot]);
-        uint8_t enabled                    = (uint8_t)read_bit_stream(buff, &bitOffset, 8); // IsSlotEnabled
-        gSlotEnabled[slot]= enabled;
+        uint8_t enabled = (uint8_t)read_bit_stream(buff, &bitOffset, 8);                    // IsSlotEnabled
+        gSlotEnabled[slot] = enabled;
 
         for (int j = 1; j < 10; j++) {
             read_bit_stream(buff, &bitOffset, 8);                            // remaining suffix bytes
@@ -781,11 +780,11 @@ static int parse_patch_version(uint8_t * buff, int length) {
 
     if (slot < MAX_SLOTS) {
         if (version != gPatchVersion[slot]) {
-            gPatchVersion[slot]= version;
+            gPatchVersion[slot] = version;
         }
     } else if (slot == MAX_SLOTS) {
         if (version != gPerfVersion) {
-            gPerfVersion= version;
+            gPerfVersion = version;
         }
     } else {
         return EXIT_FAILURE;
@@ -895,7 +894,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                     if (module != NULL) {
                         if (module_led_count(module->type) > 0) {
                             if (led_count >= start_idx && led_count < (uint32_t)(start_idx + 40)) {
-                                module->led.value= read_bit_stream(buff, bitPos, 2);
+                                module->led.value = read_bit_stream(buff, bitPos, 2);
                             }
                             led_count++;
                         }
@@ -1010,8 +1009,8 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             static uint32_t count      = 0;
             uint8_t         globalPage = 0;
 
-            globalPage = read_bit_stream(buff, bitPos, 8);
-            gGlobalPage= globalPage;
+            globalPage  = read_bit_stream(buff, bitPos, 8);
+            gGlobalPage = globalPage;
             LOG_DEBUG("%u Got global page Page=%u Pos=%u\n", count++, globalPage / 3, globalPage % 3);
             return EXIT_SUCCESS;
         }
@@ -1025,12 +1024,11 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
             if (changedSlot < MAX_SLOTS) {
                 if (newVersion != gPatchVersion[changedSlot]) {
-                    gPatchVersion[changedSlot]= newVersion;
-                    gotPatchChangeIndication[changedSlot]= true;
+                    gPatchVersion[changedSlot]            = newVersion;
+                    gotPatchChangeIndication[changedSlot] = true;
                     //gChangedSlot= (uint32_t)changedSlot;
                 }
             }
-            
             return EXIT_SUCCESS;
         }
 
@@ -1041,7 +1039,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
             for (uint32_t i = 0; i < MAX_SLOTS; i++) {
                 uint8_t status = (uint8_t)read_bit_stream(buff, bitPos, 8);
-                gSlotEnabled[i]= status;
+                gSlotEnabled[i] = status;
                 LOG_DEBUG("  Slot %u enabled: %u\n", i, status != 0 ? 1 : 0);
             }
 
@@ -1095,12 +1093,12 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             type = read_bit_stream(buff, bitPos, 8);
 
             if (type == 1) {
-                clock = read_bit_stream(buff, bitPos, 8);
-                gMasterClock= clock;
+                clock        = read_bit_stream(buff, bitPos, 8);
+                gMasterClock = clock;
                 LOG_DEBUG_DIRECT("Master clock = %u\n", clock);
             } else if (type == 0) {
-                running = read_bit_stream(buff, bitPos, 8);
-                gMasterClockRunning= running;
+                running             = read_bit_stream(buff, bitPos, 8);
+                gMasterClockRunning = running;
                 LOG_DEBUG_DIRECT("Clock running = %u\n", running);
             }
             return EXIT_SUCCESS;
@@ -1111,7 +1109,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             uint32_t newSlot = read_bit_stream(buff, bitPos, 8);
             LOG_DEBUG("Got slot select %u\n", newSlot);
 
-            gSlot= newSlot;
+            gSlot = newSlot;
             set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
                                            (tTopbarControlId)(topbarSlotAId + newSlot));
             set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
@@ -1127,7 +1125,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_GET_PATCH_NAME:
         {
-            int  nameBytes                       = length - 6;
+            int nameBytes = length - 6;
 
             LOG_DEBUG("Got patch name (length %d)\n", length);
 
@@ -1210,10 +1208,11 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
             newVersion = read_bit_stream(buff, bitPos, 8);
             LOG_DEBUG("Old perf = %u new = %u\n", gPerfVersion, newVersion);
+
             if (newVersion != gPerfVersion) {
-                gPerfVersion= newVersion;
+                gPerfVersion                    = newVersion;
                 // Use a flag rather than queuing so rapid switches coalesce into one resync.
-                gotPerfSettingsChangeIndication= true;
+                gotPerfSettingsChangeIndication = true;
             }
 
             for (i = 0; i < MAX_SLOTS; i++) {
@@ -1223,9 +1222,10 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
                 if (subResponse == SUB_RESPONSE_PATCH_VERSION) {
                     LOG_DEBUG("Store old patch %u ver = %u new = %u\n", readSlot, gPatchVersion[readSlot], newVersion);
+
                     if (newVersion != gPatchVersion[readSlot]) {
-                        gPatchVersion[readSlot]= newVersion;
-                        gotPatchChangeIndication[readSlot]= true;
+                        gPatchVersion[readSlot]            = newVersion;
+                        gotPatchChangeIndication[readSlot] = true;
                     }
                 }
             }
@@ -1363,7 +1363,7 @@ static int rcv_extended(int dataLength, int * response, unsigned int timeout_ms)
 
                 if (  (responseType == RESPONSE_TYPE_INIT)
                    || (responseType == RESPONSE_TYPE_COMMAND)) {
-                    gUsbRxTime= (uint64_t)get_time_ms();
+                    gUsbRxTime = (uint64_t)get_time_ms();
                     usb_log_message("EX", buff, (size_t)readLength);
                     break;
                 } else {
@@ -1374,7 +1374,7 @@ static int rcv_extended(int dataLength, int * response, unsigned int timeout_ms)
             // readLength == 0: ZLP — device not ready yet, retry
         } else if (is_disconnect_error(retVal)) {
             LOG_DEBUG("Disconnect error %s\n", libusb_error_name(retVal));
-            gotBadConnectionIndication= true;
+            gotBadConnectionIndication = true;
             return EXIT_FAILURE;
         } else {
             LOG_DEBUG("Transfer error %s\n", libusb_error_name(retVal));
@@ -1387,7 +1387,7 @@ static int rcv_extended(int dataLength, int * response, unsigned int timeout_ms)
 
         if (readLength == 0) {
             LOG_DEBUG("Extended receive got no data — triggering reconnect\n");
-            gotBadConnectionIndication= true;
+            gotBadConnectionIndication = true;
         }
         return EXIT_FAILURE;
     }
@@ -1435,7 +1435,7 @@ static int int_rec(tPoll poll, int expectedResponse, unsigned int timeout_ms) {
 
         if (retVal == LIBUSB_SUCCESS) {
             if (readLength > 0) {
-                gUsbRxTime= (uint64_t)get_time_ms();
+                gUsbRxTime = (uint64_t)get_time_ms();
                 usb_log_message("RX", buff, (size_t)readLength);
             }
         } else if (retVal == LIBUSB_ERROR_TIMEOUT) {
@@ -1544,7 +1544,7 @@ static int send_message(uint8_t * buff, int pos) {
 
     if ((result == 0) && (actualLength == msgLength)) {
         gLastActivityTime = time(NULL);
-        gUsbTxTime= (uint64_t)get_time_ms();
+        gUsbTxTime        = (uint64_t)get_time_ms();
         usb_log_message("TX", buff, (size_t)msgLength);
         return EXIT_SUCCESS;
     }
@@ -1636,7 +1636,6 @@ static int send_stop(void) {
         buff[pos++] = 0x01;
         retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
     }
-    
     stopCount++;
 
     if (stopCount > 10) {
@@ -1663,7 +1662,6 @@ static int send_start(void) {
         buff[pos++] = 0x00;
         retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
     }
-    
     return retVal;
 }
 
@@ -1943,9 +1941,9 @@ static int send_get_patch_data(uint32_t slot) {
 // ---------------------------------------------------------------------------
 
 static int push_slot_to_device(uint32_t slot) {
-    uint8_t  buff[SEND_MESSAGE_SIZE]         = {0};
-    int      pos                             = COMMAND_OFFSET;
-    uint32_t bitPos                          = 0;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    int      pos                     = COMMAND_OFFSET;
+    uint32_t bitPos                  = 0;
 
     LOG_DEBUG("Pushing slot %u to device\n", slot);
 
@@ -2175,11 +2173,11 @@ static int send_set_patch_descr(uint32_t slot) { // Note - currently using value
 }
 
 static int send_perf_header(void) {
-    uint8_t  buff[SEND_MESSAGE_SIZE]    = {0};
-    uint8_t  payload[512]               = {0};
-    int      pos                        = COMMAND_OFFSET;
-    uint32_t bitPos                     = 0;
-    uint32_t i                          = 0;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint8_t  payload[512]            = {0};
+    int      pos                     = COMMAND_OFFSET;
+    uint32_t bitPos                  = 0;
+    uint32_t i                       = 0;
 
     // Build payload starting at byte 2, reserving bytes 0-1 for the the original editor's code size word
     bitPos = BYTE_TO_BIT(2);
@@ -2256,11 +2254,11 @@ static int send_perf_mode_change(uint8_t perfMode) {
 // ---------------------------------------------------------------------------
 // Init sequences — linear, no state machine
 // ---------------------------------------------------------------------------
-    
+
 // First connection: G2 is authoritative — pull all patch data from hardware.
 static int send_init_sequence_pull(void) {
     LOG_DEBUG("Init sequence: pulling from G2\n");
-    gCommsState= eCommsInitialising;
+    gCommsState = eCommsInitialising;
 
     // Clear any stale data before pulling fresh state
     database_clear_cables();
@@ -2283,7 +2281,7 @@ static int send_init_sequence_pull(void) {
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         if (send_get_patch_data(slot) != EXIT_SUCCESS) {
             LOG_DEBUG("Setting to eCommsReconnecting state, due to send_get_patch_data(slot) failing\n");
-            gCommsState= eCommsReconnecting;
+            gCommsState = eCommsReconnecting;
             return EXIT_FAILURE;
         }
     }
@@ -2296,10 +2294,11 @@ static int send_init_sequence_pull(void) {
     send_start();
 
     LOG_DEBUG("Pull init sequence complete\n");
-    
-    for (int i =0; i<MAX_SLOTS; i++) {
-        gotPatchChangeIndication[i]= false;
+
+    for (int i = 0; i < MAX_SLOTS; i++) {
+        gotPatchChangeIndication[i] = false;
     }
+
     call_full_patch_change_notify();
     call_wake_glfw();
 
@@ -2310,7 +2309,7 @@ static int send_init_sequence_pull(void) {
 // a future "push to device" menu action.
 static int send_init_sequence_push(void) {
     LOG_DEBUG("Init sequence: pushing editor data to G2\n");
-    gCommsState= eCommsInitialising;
+    gCommsState = eCommsInitialising;
 
     send_init();
     send_stop();
@@ -2319,7 +2318,7 @@ static int send_init_sequence_push(void) {
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
         if (push_slot_to_device(slot) != EXIT_SUCCESS) {
             LOG_DEBUG("Setting to eCommsReconnecting state, due to push_slot_to_device(slot) failing\n");
-            gCommsState= eCommsReconnecting;
+            gCommsState = eCommsReconnecting;
             return EXIT_FAILURE;
         }
     }
@@ -2334,9 +2333,11 @@ static int send_init_sequence_push(void) {
     send_start();
 
     LOG_DEBUG("Push init sequence complete\n");
-    for (int i =0; i<MAX_SLOTS; i++) {
-        gotPatchChangeIndication[i]= false;
+
+    for (int i = 0; i < MAX_SLOTS; i++) {
+        gotPatchChangeIndication[i] = false;
     }
+
     call_full_patch_change_notify();
     call_wake_glfw();
 
@@ -2540,11 +2541,11 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdWritePatch:
         {
             send_stop();
-            retVal = push_slot_to_device(messageContent->slot);
+            retVal                                         = push_slot_to_device(messageContent->slot);
             send_start();
 
-            gotPatchChangeIndication[messageContent->slot]= false; // TODO - consider if this is the right thing to do here
-            call_full_patch_change_notify();                // TODO - not sure we need to do this here
+            gotPatchChangeIndication[messageContent->slot] = false; // TODO - consider if this is the right thing to do here
+            call_full_patch_change_notify();                        // TODO - not sure we need to do this here
             call_wake_glfw();
             break;
         }
@@ -2697,9 +2698,10 @@ static int send_write_data(tMessageContent * messageContent) {
             }
 
             if (retVal == EXIT_SUCCESS) {
-                for (int i =0; i<MAX_SLOTS; i++) {
-                    gotPatchChangeIndication[i]= false;
+                for (int i = 0; i < MAX_SLOTS; i++) {
+                    gotPatchChangeIndication[i] = false;
                 }
+
                 call_full_patch_change_notify();
                 call_wake_glfw();
             }
@@ -2709,13 +2711,13 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdWritePerfSettings:
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            retVal                         = send_perf_header();
+            retVal = send_perf_header();
             send_start();
             break;
 
         case eMsgCmdWritePerfName:
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            retVal                         = send_perf_name();
+            retVal = send_perf_name();
             send_start();
             break;
 
@@ -2724,13 +2726,13 @@ static int send_write_data(tMessageContent * messageContent) {
         //    retVal                         = reload_all_patch_data();
         //    gSlot= 0;
         //    gPatchDescr[0].activeVariation = 0;
-         //   set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
-         //                                  (tTopbarControlId)(topbarSlotAId));
+        //   set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
+        //                                  (tTopbarControlId)(topbarSlotAId));
         //    set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
-         //                                  (tTopbarControlId)((uint32_t)topbarVariation1Id));
-         //   call_full_patch_change_notify();
-         //   call_wake_glfw();
-         //   break;
+        //                                  (tTopbarControlId)((uint32_t)topbarVariation1Id));
+        //   call_full_patch_change_notify();
+        //   call_wake_glfw();
+        //   break;
 
         default:
             LOG_DEBUG("Unknown command %d\n", messageContent->cmd);
@@ -2745,14 +2747,14 @@ static int send_write_data(tMessageContent * messageContent) {
 
 static void state_handler(void) {
     tMessageContent messageContent = {0};
-    bool foundOneChange = false;
+    bool            foundOneChange = false;
 
     //TODO - Don't like early returns. Use retVal
 
     if (gotBadConnectionIndication) {
         LOG_DEBUG("Bad connection — closing device\n");
-        gotBadConnectionIndication= false;
-        gCommsState= eCommsReconnecting;
+        gotBadConnectionIndication = false;
+        gCommsState                = eCommsReconnecting;
 
         pthread_mutex_lock(&usbStaticMutex);
         close_device();
@@ -2781,13 +2783,13 @@ static void state_handler(void) {
             result = send_init_sequence_pull();
 
             if (result == EXIT_SUCCESS) {
-                gCommsState= eCommsOnLine;
+                gCommsState = eCommsOnLine;
             } else {
                 LOG_DEBUG("Init sequence failed — will retry\n");
                 pthread_mutex_lock(&usbStaticMutex);
                 close_device();
                 pthread_mutex_unlock(&usbStaticMutex);
-                gCommsState= eCommsReconnecting;
+                gCommsState = eCommsReconnecting;
             }
         } else {
             usleep(500000);  // 500ms between open attempts — don't hammer the bus
@@ -2798,20 +2800,20 @@ static void state_handler(void) {
     // Performance/patch settings changed (e.g. perf mode switch on the G2 panel).
     // Flag coalesces rapid switches — only one full resync runs per batch.
     if (gotPerfSettingsChangeIndication) {
-        gotPerfSettingsChangeIndication= false;
+        gotPerfSettingsChangeIndication = false;
 
         LOG_DEBUG("\nPerf settings change — reloading all slots via reload_all_patch_date()\n\n");
 
         //if (reload_all_patch_data() != EXIT_SUCCESS) {
         //    LOG_ERROR("reload_all_patch_data failed\n");
         //}
-        
+
         send_stop();
         send_get_performance_settings();  // TODO - maybe be some more items we need to get here
         send_start();
-        
-        gSlot = 0;
-        gPatchDescr[0].activeVariation = 0;
+
+        gSlot                           = 0;
+        gPatchDescr[0].activeVariation  = 0;
         set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
                                        (tTopbarControlId)(topbarSlotAId));
         set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
@@ -2822,17 +2824,17 @@ static void state_handler(void) {
         return;
     }
 
-    for (int i = 0; i< MAX_SLOTS; i++) {
+    for (int i = 0; i < MAX_SLOTS; i++) {
         if (gotPatchChangeIndication[i] == true) {
             gotPatchChangeIndication[i] = false;
             LOG_DEBUG("Patch change on slot %u — reloading\n", i);
             send_stop();
             send_get_patch_data(i);
             send_start();
-            foundOneChange = true;
+            foundOneChange              = true;
         }
     }
-    
+
     if (foundOneChange == true) {
         call_full_patch_change_notify();
         call_wake_glfw();

@@ -127,7 +127,7 @@ static void action_copy_variation(int index) {
     msg_send(&gCommandQueue, &msg);
 
     gContextMenu.active                 = false;
-    gReDraw = true;
+    gReDraw                             = true;
 }
 
 // ── Module / cable / morph actions ─────────────────────────────────────────
@@ -322,12 +322,12 @@ static void action_rename_module(int index) {
     tModule * module = get_module(gContextMenu.moduleKey);
 
     if (module != NULL) {
-        gModuleNameEdit.active                   = true;
-        gModuleNameEdit.moduleKey                = gContextMenu.moduleKey;
+        gModuleNameEdit.active    = true;
+        gModuleNameEdit.moduleKey = gContextMenu.moduleKey;
         COPY_STRING(gModuleNameEdit.buffer, module->name);
     }
     gContextMenu.active = false;
-    gReDraw = true;
+    gReDraw             = true;
 }
 
 static void action_set_module_colour(int index) {
@@ -374,7 +374,7 @@ static void action_rename_morph_label(int index) {
         COPY_STRING(gParamNameEdit.buffer, module->paramName[pi][0]);
     }
     gContextMenu.active    = false;
-    gReDraw = true;
+    gReDraw                = true;
 }
 
 // ── Module creation helpers ─────────────────────────────────────────────────
@@ -534,23 +534,23 @@ static void menu_action_create(int index) {
         uniqueIndex         = find_unique_module_id(module.key.location);
 
         if (uniqueIndex >= 0) {
-            module.key.index                                                           = (uint32_t)uniqueIndex;
-            module.type                                                                = (tModuleType)gContextMenu.items[index].param;
+            module.key.index                    = (uint32_t)uniqueIndex;
+            module.type                         = (tModuleType)gContextMenu.items[index].param;
             convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.originCoord);
 
             COPY_STRING(module.name, gModuleProperties[module.type].name);
 
-            messageContent.cmd                                                         = eMsgCmdWriteModule;
-            messageContent.slot                                                        = slot;
-            messageContent.moduleData.moduleKey                                        = module.key;
-            messageContent.moduleData.type                                             = module.type;
-            messageContent.moduleData.row                                              = module.row;
-            messageContent.moduleData.column                                           = module.column;
-            messageContent.moduleData.colour                                           = module.colour;
-            messageContent.moduleData.upRate                                           = module.upRate;
-            messageContent.moduleData.isLed                                            = module.isLed;
-            messageContent.moduleData.unknown1                                         = module.unknown1;
-            messageContent.moduleData.modeCount                                        = module_mode_count(module.type);
+            messageContent.cmd                  = eMsgCmdWriteModule;
+            messageContent.slot                 = slot;
+            messageContent.moduleData.moduleKey = module.key;
+            messageContent.moduleData.type      = module.type;
+            messageContent.moduleData.row       = module.row;
+            messageContent.moduleData.column    = module.column;
+            messageContent.moduleData.colour    = module.colour;
+            messageContent.moduleData.upRate    = module.upRate;
+            messageContent.moduleData.isLed     = module.isLed;
+            messageContent.moduleData.unknown1  = module.unknown1;
+            messageContent.moduleData.modeCount = module_mode_count(module.type);
 
             for (int i = 0; i < module_mode_count(module.type); i++) {
                 messageContent.moduleData.mode[i] = module.mode[i].value;
@@ -631,7 +631,7 @@ static void action_assign_knob(int index) {
     msg_send(&gCommandQueue, &msg);
 
     gContextMenu.active                           = false;
-    gReDraw = true;
+    gReDraw                                       = true;
 }
 
 static void action_deassign_knob(int index) {
@@ -650,7 +650,7 @@ static void action_deassign_knob(int index) {
         msg_send(&gCommandQueue, &msg);
     }
     gContextMenu.active = false;
-    gReDraw = true;
+    gReDraw             = true;
 }
 
 static void action_set_toggle_value(int index) {
@@ -664,7 +664,7 @@ static void action_set_toggle_value(int index) {
         send_param_value(slot, gContextMenu.moduleKey, paramIdx, variation, module->param[variation][paramIdx].value);
     }
     gContextMenu.active = false;
-    gReDraw = true;
+    gReDraw             = true;
 }
 
 void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, uint32_t paramRef) {
@@ -700,7 +700,7 @@ static void action_set_mode_value(int index) {
         send_mode_value(slot, gContextMenu.moduleKey, modeIdx, module->mode[modeIdx].value);
     }
     gContextMenu.active = false;
-    gReDraw = true;
+    gReDraw             = true;
 }
 
 void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeIndex, uint32_t modeRef) {
@@ -741,7 +741,7 @@ static void action_rename_param_label(int index) {
         }
     }
     gContextMenu.active = false;
-    gReDraw = true;
+    gReDraw             = true;
 }
 
 void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex) {

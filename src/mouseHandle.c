@@ -128,7 +128,7 @@ void init_patch(uint32_t slot) {  // Todo - think where this should really go
     memset(gNote2[slot], 0, sizeof(gNote2[0]));
     memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
     memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
-    
+
     COPY_STRING(gPatchName[slot], "Init");
 }
 
@@ -140,7 +140,7 @@ void handle_button(tTopbarControlId controlId) {
     switch (controlId) {
         case topbarVaId:
         {
-            gLocation= locationVa;
+            gLocation = locationVa;
             set_exclusive_button_highlight(topbarVaId, topbarFxId, controlId);
             set_x_scroll_bar(0); // or different scroll positions for va and fx!?
             set_y_scroll_bar(0);
@@ -148,7 +148,7 @@ void handle_button(tTopbarControlId controlId) {
         }
         case topbarFxId:
         {
-            gLocation= locationFx;
+            gLocation = locationFx;
             set_exclusive_button_highlight(topbarVaId, topbarFxId, controlId);
             set_x_scroll_bar(0);
             set_y_scroll_bar(0);
@@ -195,7 +195,7 @@ void handle_button(tTopbarControlId controlId) {
         {
             uint32_t        slot           = (uint32_t)controlId - (uint32_t)topbarSlotAId;
 
-            gSlot= slot;
+            gSlot                        = slot;
 
             tMessageContent messageContent = {0};
             messageContent.cmd           = eMsgCmdSelectSlot;
@@ -747,7 +747,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
 
                 if (within_rectangle(coord, gSettingsPanelRects.synthName)) {
-                    gSynthNameEdit.active                   = true;
+                    gSynthNameEdit.active = true;
                     COPY_STRING(gSynthNameEdit.buffer, gSynthSettings.name);
                 } else if (within_rectangle(coord, gSettingsPanelRects.globalChan)) {
                     open_midi_chan_dropdown(below_rect(gSettingsPanelRects.globalChan), &gSynthSettings.globalChan);
@@ -849,11 +849,11 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (within_rectangle(coord, gTopbarControls[topbarClockRunStopId].rectangle)) {
-                    running = !gMasterClockRunning;
-                    gMasterClockRunning= (uint8_t)running;
+                    running             = !gMasterClockRunning;
+                    gMasterClockRunning = (uint8_t)running;
                     send_master_clock_run((uint32_t)running);
-                    gReDraw = true;
-                    found   = true;
+                    gReDraw             = true;
+                    found               = true;
                 }
             }
 
@@ -898,7 +898,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                             gPatchDescr[slot].visible[i] = !gPatchDescr[slot].visible[i];
                         }
 
-                        gReDraw = true;
+                        gReDraw             = true;
                         tMessageContent messageContent = {0};
                         messageContent.cmd  = eMsgCmdWritePatchDescr;
                         messageContent.slot = slot;
@@ -912,18 +912,18 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             if (found == false) {
                 if (within_rectangle(coord, gTopbarControls[topbarHideAllCablesId].rectangle)) {
                     bool current = gCablesHideAll;
-                    gCablesHideAll= !current;
-                    gReDraw = true;
-                    found = true;
+                    gCablesHideAll = !current;
+                    gReDraw        = true;
+                    found          = true;
                 }
             }
 
             if (found == false) {
                 if (within_rectangle(coord, gTopbarControls[topbarTransparentCablesId].rectangle)) {
                     bool current = gCablesTransparent;
-                    gCablesTransparent= !current;
-                    gReDraw = true;
-                    found = true;
+                    gCablesTransparent = !current;
+                    gReDraw            = true;
+                    found              = true;
                 }
             }
 
@@ -943,24 +943,24 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             if (found == false) {
                 if (within_rectangle(coord, gTopbarControls[topbarPerfModeId].rectangle)) {
                     tMessageContent msg = {0};
+
                     if (gSynthSettings.perfMode == 0) {
-                        msg.cmd = eMsgCmdWriteModePerf;
+                        msg.cmd                 = eMsgCmdWriteModePerf;
                         gSynthSettings.perfMode = 1;
                     } else {
-                        msg.cmd = eMsgCmdWriteModePatch;
+                        msg.cmd                 = eMsgCmdWriteModePatch;
                         gSynthSettings.perfMode = 0;
                     }
-
                     msg_send(&gCommandQueue, &msg);
-                    found                   = true;
+                    found = true;
                 }
             }
 
             if (found == false) {
                 if (gSynthSettings.perfMode == 1 && within_rectangle(coord, gTopbarControls[topbarPerfNameId].rectangle)) {
-                    gPerfNameEdit.active                   = true;
+                    gPerfNameEdit.active = true;
                     COPY_STRING(gPerfNameEdit.buffer, gPerfName);
-                    found                                  = true;
+                    found                = true;
                 }
             }
 
@@ -1174,7 +1174,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         }
 
         if (gMasterClock != value) {
-            gMasterClock= (uint8_t)value;
+            gMasterClock = (uint8_t)value;
             send_master_clock_bpm(value);
         }
     } else if (gParamDragging.active == true) {
@@ -1559,9 +1559,9 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 if (module != NULL) {
                     tMessageContent msg = {0};
                     COPY_STRING(module->name, gModuleNameEdit.buffer);
-                    msg.cmd                                = eMsgCmdSetModuleLabel;
-                    msg.slot                               = gModuleNameEdit.moduleKey.slot;
-                    msg.moduleLabelData.moduleKey          = gModuleNameEdit.moduleKey;
+                    msg.cmd                       = eMsgCmdSetModuleLabel;
+                    msg.slot                      = gModuleNameEdit.moduleKey.slot;
+                    msg.moduleLabelData.moduleKey = gModuleNameEdit.moduleKey;
                     COPY_STRING(msg.moduleLabelData.name, gModuleNameEdit.buffer);
                     msg_send(&gCommandQueue, &msg);
                 }
@@ -1586,14 +1586,14 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                     tMessageContent msg = {0};
                     uint32_t        pi  = gParamNameEdit.paramIndex;
 
-                    module->paramNameSet[pi][0]                        = true;
+                    module->paramNameSet[pi][0]   = true;
                     COPY_STRING(module->paramName[pi][0], gParamNameEdit.buffer);
-                    module->paramNumLabels[pi]                         = 1;
+                    module->paramNumLabels[pi]    = 1;
 
-                    msg.cmd                                            = eMsgCmdSetParamLabel;
-                    msg.slot                                           = gParamNameEdit.moduleKey.slot;
-                    msg.paramLabelData.moduleKey                       = gParamNameEdit.moduleKey;
-                    msg.paramLabelData.paramIndex                      = pi;
+                    msg.cmd                       = eMsgCmdSetParamLabel;
+                    msg.slot                      = gParamNameEdit.moduleKey.slot;
+                    msg.paramLabelData.moduleKey  = gParamNameEdit.moduleKey;
+                    msg.paramLabelData.paramIndex = pi;
                     COPY_STRING(msg.paramLabelData.name, gParamNameEdit.buffer);
                     msg_send(&gCommandQueue, &msg);
                 }
@@ -1610,7 +1610,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                     gSynthNameEdit.buffer[len - 1] = '\0';
                 }
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
-                gSynthNameEdit.active                 = false;
+                gSynthNameEdit.active = false;
                 COPY_STRING(gSynthSettings.name, gSynthNameEdit.buffer);
                 send_synth_settings_msg();
             } else if (key == GLFW_KEY_ESCAPE) {
@@ -1626,10 +1626,10 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                     gPerfNameEdit.buffer[len - 1] = '\0';
                 }
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
-                gPerfNameEdit.active        = false;
+                gPerfNameEdit.active = false;
                 COPY_STRING(gPerfName, gPerfNameEdit.buffer);
                 tMessageContent messageContent = {0};
-                messageContent.cmd          = eMsgCmdWritePerfName;
+                messageContent.cmd   = eMsgCmdWritePerfName;
                 msg_send(&gCommandQueue, &messageContent);
             } else if (key == GLFW_KEY_ESCAPE) {
                 gPerfNameEdit.active = false;

@@ -84,7 +84,7 @@ extern tParamNameEdit      gParamNameEdit;
 extern tNameEdit           gSynthNameEdit;
 extern tNameEdit           gPerfNameEdit;
 extern char                gPerfName[CLAVIA_NAME_SIZE + 1];
-extern tPerfSettings         gPerfSettings;
+extern tPerfSettings       gPerfSettings;
 extern tPatchNotesEdit     gPatchNotesEdit;
 extern tSynthSettings      gSynthSettings;
 extern tPatchSettingsEdit  gPatchSettingsEdit;
@@ -102,10 +102,10 @@ extern _Atomic uint64_t    gUsbTxTime;
 extern _Atomic uint64_t    gUsbRxTime;
 extern tRectangle          gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS];
 extern tDialMode           gDialMode;
-extern pthread_mutex_t gStringCopyMutex;
-extern _Atomic uint8_t gSelectedSlot;
+extern pthread_mutex_t     gStringCopyMutex;
+extern _Atomic uint8_t     gSelectedSlot;
 
-extern char            gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1];
+extern char                gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1];
 
 #ifdef __cplusplus
 extern "C" {

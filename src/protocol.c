@@ -35,8 +35,8 @@ extern "C" {
 #include "moduleResourcesAccess.h"
 #include "msgQueue.h"
 #include "globalVars.h"
-    
-static pthread_mutex_t patchNameMutex                                                              = PTHREAD_MUTEX_INITIALIZER;
+
+static pthread_mutex_t patchNameMutex = PTHREAD_MUTEX_INITIALIZER;
 
 void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, int nameSize) {
     int i = 0;
@@ -45,9 +45,8 @@ void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, int name
         LOG_ERROR("Called with invalid size of %d\n", nameSize);
         exit(1);
     }
-    
     pthread_mutex_lock(&patchNameMutex);
-    
+
     memset(name, 0, nameSize);
 
     for (i = 0; i < CLAVIA_NAME_SIZE; i++) {
@@ -57,7 +56,7 @@ void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, int name
             break;
         }
     }
-    
+
     pthread_mutex_unlock(&patchNameMutex);
 }
 
@@ -65,7 +64,7 @@ void write_clavia_string(uint8_t * buff, uint32_t * bitPos, const char * name) {
     int i = 0;
 
     pthread_mutex_lock(&patchNameMutex);
-    
+
     for (i = 0; i < CLAVIA_NAME_SIZE; i++) {
         write_bit_stream(buff, bitPos, 8, (uint8_t)name[i]);
 
@@ -73,10 +72,10 @@ void write_clavia_string(uint8_t * buff, uint32_t * bitPos, const char * name) {
             break;
         }
     }
-    
+
     pthread_mutex_unlock(&patchNameMutex);
 }
-    
+
 void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     gPatchDescr[slot].unknown1        = read_bit_stream(buff, subOffset, 32);
     gPatchDescr[slot].unknown2        = read_bit_stream(buff, subOffset, 29);
@@ -590,7 +589,7 @@ void parse_knobs(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
 
         if (knob->assigned) {
             LOG_MODULE_DATA("  Knob %d: location %u module %u isLed %u param %u\n",
-                      i, knob->location, knob->moduleIndex, knob->isLed, knob->paramIndex);
+                            i, knob->location, knob->moduleIndex, knob->isLed, knob->paramIndex);
         }
     }
 }
@@ -620,7 +619,7 @@ void parse_global_knobs(uint8_t * buff, uint32_t * bitPos) {
         if (gKnob->assigned) {
             gKnob->slotIndex = read_bit_stream(buff, bitPos, 2);
             LOG_MODULE_DATA("  Global knob %u: slot %u location %u module %u isLed %u param %u\n",
-                      i, gKnob->slotIndex, gKnob->location, gKnob->moduleIndex, gKnob->isLed, gKnob->paramIndex);
+                            i, gKnob->slotIndex, gKnob->location, gKnob->moduleIndex, gKnob->isLed, gKnob->paramIndex);
         }
     }
 }
@@ -682,7 +681,7 @@ void parse_controllers(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         gControllerArray[slot].controller[i].paramIndex  = paramIndex;
 
         LOG_MODULE_DATA("  Controller %d: MidiCC %u Location %u ModuleIndex %u ParamIndex %u\n",
-                  i, gControllerArray[slot].controller[i].midiCC, key.location, key.index, paramIndex);
+                        i, gControllerArray[slot].controller[i].midiCC, key.location, key.index, paramIndex);
 
         // Shadow onto the module param for convenient per-param lookup
         tModule * module = get_module(key);
@@ -1168,9 +1167,9 @@ void write_slot_separator(uint8_t * buff, uint32_t * bitPos) {
 void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
     //char slotName[CLAVIA_NAME_SIZE + 1] = {0};
 
-    write_bit_stream(buff, bitPos, 8, 0x11);                               // constant observed in all perf files
+    write_bit_stream(buff, bitPos, 8, 0x11);                 // constant observed in all perf files
     write_bit_stream(buff, bitPos, 8, 0x00);
-    write_bit_stream(buff, bitPos, 8, 0x50);                               // TODO: use real gMasterVolume once stored; 0x50 is the G2 default
+    write_bit_stream(buff, bitPos, 8, 0x50);                 // TODO: use real gMasterVolume once stored; 0x50 is the G2 default
     write_bit_stream(buff, bitPos, 8, 0x00);
     write_bit_stream(buff, bitPos, 8, (uint8_t)(gSlot * 4)); // selected slot encoding
     write_bit_stream(buff, bitPos, 8, 0x00);
@@ -1181,13 +1180,11 @@ void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
     write_bit_stream(buff, bitPos, 8, 0x00);
 
     for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
-
         if (gPatchName[slot][0] == '\0') {
             write_clavia_string(buff, bitPos, "No name");
         } else {
             write_clavia_string(buff, bitPos, gPatchName[slot]);
         }
-
         bool has_content = slot_has_modules(slot);
 
         write_bit_stream(buff, bitPos, 8, gSlotEnabled[slot]);  // IsSlotEnabled — from CMSlotSelectionDump (USB type 7)

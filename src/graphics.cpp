@@ -84,7 +84,7 @@ static int find_wrap_point(const char * text, int textLen, double textW, double 
 
     while (lo < hi) {
         int mid = (lo + hi + 1) / 2;
-        
+
         COPY_STRING(tmp, text);
 
         if (get_text_width(tmp, textH, eNoCache) <= textW) {
@@ -318,7 +318,7 @@ void render_top_bar(void) {
     render_text(mainArea, {{400, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Variation");
 
     COPY_STRING(patchNameCopy, gPatchName[slot]);
-    
+
     //patch_name_get(slot, patchNameCopy, sizeof(patchNameCopy));
 
     if (patchNameCopy[0] == '\0') {
@@ -505,7 +505,7 @@ void wake_glfw(void) {
 }
 
 void notify_full_patch_change(void) {
-    gLocation = locationVa;
+    gLocation                          = locationVa;
     gTopbarControls[topbarVaId].colour = (tRgb)RGB_GREEN_ON;
     gTopbarControls[topbarFxId].colour = (tRgb)RGB_BACKGROUND_GREY;
     // Set scrollbars back to top/left
@@ -721,12 +721,11 @@ void read_file_into_memory_and_process(const char * filepath) {
         } else if (type == 1) {
             if (gSynthSettings.perfMode == 0) {
                 tMessageContent msg = {0};
-                msg.cmd = eMsgCmdWriteModePerf;            // Really need to be in perf mode before loading a performance
+                msg.cmd                 = eMsgCmdWriteModePerf; // Really need to be in perf mode before loading a performance
                 msg_send(&gCommandQueue, &msg);
-                gSynthSettings.perfMode = 1;  // TODO - Ideally, we'd get an indication back or request state until perf mode = 1, so we could remove the big sleep below
-                usleep(2000000);  // TODO - currently, when we write new patches as part of a perf, it triggers a read of the patches. We need to be stable in perf mode in that case.
+                gSynthSettings.perfMode = 1;                    // TODO - Ideally, we'd get an indication back or request state until perf mode = 1, so we could remove the big sleep below
+                usleep(2000000);                                // TODO - currently, when we write new patches as part of a perf, it triggers a read of the patches. We need to be stable in perf mode in that case.
             }
-
             int i = 0;
 
             for (i = 0; i < MAX_SLOTS; i++) {
@@ -943,7 +942,7 @@ static void on_file_opened(const char * path) {
 }
 
 static void on_file_saved(const char * path) {
-    uint32_t slot     = gSlot;
+    uint32_t slot = gSlot;
 
     if (path) {
         LOG_INFO("Saving file: %s", path);
@@ -986,7 +985,6 @@ static void check_action_flags(void) {
                 snprintf(defaultName, sizeof(defaultName), "%s.pch2", patchName);
             } else {
                 snprintf(defaultName, sizeof(defaultName), "patch.pch2");
-
             }
         }
         open_file_write_dialogue_async(on_file_saved, defaultName);
@@ -1441,7 +1439,7 @@ void do_graphics_loop(void) {
     while ((gQuitAll == false) && (!glfwWindowShouldClose(gWindow))) {
         check_action_flags();
 
-        reDraw = gReDraw;
+        reDraw  = gReDraw;
         gReDraw = false;
 
         if (reDraw == true) {
