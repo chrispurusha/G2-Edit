@@ -363,17 +363,16 @@ static int parse_synth_settings(uint8_t * buff, int length) {
 static int parse_performance_settings(uint8_t * buff, int length) {
     uint32_t bitPos                     = 0;
     uint32_t selectedSlot               = 0;
-    char     name[CLAVIA_NAME_SIZE + 1] = {0};
+    //char     name[CLAVIA_NAME_SIZE + 1] = {0};
     int      i                          = 0;
 
     if (buff == NULL) {
         return EXIT_FAILURE;
     }
     // Performance name (ClaviaString — null terminated, max 16 bytes)
-    read_clavia_string(buff, &bitPos, name, sizeof(name));
-    strncpy(gPerfName, name, CLAVIA_NAME_SIZE);
-    gPerfName[CLAVIA_NAME_SIZE] = '\0';
-    LOG_DEBUG("Performance Name     = '%s'\n", name);
+    memset(gPerfName, 0, sizeof(gPerfName));
+    read_clavia_string(buff, &bitPos, gPerfName, sizeof(gPerfName));
+    LOG_DEBUG("Performance Name     = '%s'\n", gPerfName);
 
     // WriteSettings
     read_bit_stream(buff, &bitPos, 8); // Regular val of 17?
@@ -395,20 +394,26 @@ static int parse_performance_settings(uint8_t * buff, int length) {
 
     // 4 slots — TG2FileSlot.Write
     for (i = 0; i < MAX_SLOTS; i++) {
-        // Patch name per slot (ReadName — null terminated, max 16 bytes)
-        memset(name, 0, sizeof(name));
+        char name[CLAVIA_NAME_SIZE+1] = {0};
         read_clavia_string(buff, &bitPos, name, sizeof(name));
-        uint8_t active = (uint8_t)read_bit_stream(buff, &bitPos, 8);
-        atomic_store(&gSlotEnabled[i], active != 0 ? 1 : 0);
+        patch_name_set(i, name);
+        atomic_store(&gSlotEnabled[i], read_bit_stream(buff, &bitPos, 8));
+        gPerfSettings.slot[i].keyboardEnabled = (uint8_t)read_bit_stream(buff, &bitPos, 8);
+        gPerfSettings.slot[i].holdEnabled     = (uint8_t)read_bit_stream(buff, &bitPos, 8);
+        read_bit_stream(buff, &bitPos, 8); // Bank index
+        read_bit_stream(buff, &bitPos, 8); // Patch index
+        gPerfSettings.slot[i].rangeLower      = (uint8_t)read_bit_stream(buff, &bitPos, 8);
+        gPerfSettings.slot[i].rangeUpper      = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         LOG_DEBUG("Slot %d:\n", i);
         LOG_DEBUG("  PatchName         = '%s'\n", name);
-        LOG_DEBUG("  Active            = %u\n", active);
-        LOG_DEBUG("  Key               = %u\n", read_bit_stream(buff, &bitPos, 8)); // Seems to follow selected slot for keyboard selection?
-        LOG_DEBUG("  Hold              = %u\n", read_bit_stream(buff, &bitPos, 8));
-        LOG_DEBUG("  BankIndex         = %u\n", read_bit_stream(buff, &bitPos, 8));
-        LOG_DEBUG("  PatchIndex        = %u\n", read_bit_stream(buff, &bitPos, 8));
-        LOG_DEBUG("  RangeLower        = %u\n", read_bit_stream(buff, &bitPos, 8));
-        LOG_DEBUG("  RangeUpper        = %u\n", read_bit_stream(buff, &bitPos, 8));
+        LOG_DEBUG("  Active            = %u\n", atomic_load(&gSlotEnabled[i]));
+        LOG_DEBUG("  Key               = %u\n", gPerfSettings.slot[i].keyboardEnabled); // Which keyboard slot is enabled
+        LOG_DEBUG("  Hold              = %u\n", gPerfSettings.slot[i].holdEnabled);
+        LOG_DEBUG("  BankIndex         = %u\n", 0);
+        LOG_DEBUG("  PatchIndex        = %u\n", 0);
+        LOG_DEBUG("  RangeLower        = %u\n", gPerfSettings.slot[i].rangeLower);
+        LOG_DEBUG("  RangeUpper        = %u\n", gPerfSettings.slot[i].rangeUpper);
+        
         read_bit_stream(buff, &bitPos, 8);
         read_bit_stream(buff, &bitPos, 8);
         read_bit_stream(buff, &bitPos, 8);
@@ -421,7 +426,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
 // settings change. Uses the original editor's code — the same struct as the .prf2 file
 // header section, but on USB it carries a 2-byte the original editor's code size word and fixed-width 16-byte
 // names (not null-terminated-variable-length as in the 0x29 settings dump).
-static void parse_perf_header_dump(uint8_t * buff, uint32_t * bitPos) {
+static void parse_perf_header(uint8_t * buff, uint32_t * bitPos) {
     char    name[CLAVIA_NAME_SIZE + 1] = {0};
     int     i                          = 0;
 
@@ -430,18 +435,16 @@ static void parse_perf_header_dump(uint8_t * buff, uint32_t * bitPos) {
     read_bit_stream(buff, bitPos, 8);
 
     // 8 global setting bytes — store for echo-back when sending perf header to G2
-    gPerfHeaderCache.globalMode    = (uint8_t)read_bit_stream(buff, bitPos, 8);
-    gPerfHeaderCache.rangeAndFlags = (uint8_t)read_bit_stream(buff, bitPos, 8);
-    gPerfHeaderCache.keyboardRange = (uint8_t)read_bit_stream(buff, bitPos, 8);
-    gPerfHeaderCache.unknown18     = (uint8_t)read_bit_stream(buff, bitPos, 8);
-    gPerfHeaderCache.unknown20     = (uint8_t)read_bit_stream(buff, bitPos, 8);
+    gPerfSettings.globalMode    = (uint8_t)read_bit_stream(buff, bitPos, 8);
+    gPerfSettings.rangeAndFlags = (uint8_t)read_bit_stream(buff, bitPos, 8);
+    gPerfSettings.keyboardRange = (uint8_t)read_bit_stream(buff, bitPos, 8);
+    read_bit_stream(buff, bitPos, 8);
+    read_bit_stream(buff, bitPos, 8);
     gSynthSettings.perfMode        = read_bit_stream(buff, bitPos, 8);
-    LOG_DEBUG("  GlobalMode        = %u\n", gPerfHeaderCache.globalMode);
-    LOG_DEBUG("  RangeAndFlags     = %u\n", gPerfHeaderCache.rangeAndFlags);
-    LOG_DEBUG("  KeyboardRange     = %u\n", gPerfHeaderCache.keyboardRange);
-    LOG_DEBUG("  Unknown0x18       = %u\n", gPerfHeaderCache.unknown18);
-    LOG_DEBUG("  Unknown0x20       = %u\n", gPerfHeaderCache.unknown20);
-    LOG_DEBUG("  PerfMode          = %u\n", gSynthSettings.perfMode);
+    LOG_DEBUG("  GlobalMode        = %u\n", gPerfSettings.globalMode);
+    LOG_DEBUG("  RangeAndFlags     = %u\n", gPerfSettings.rangeAndFlags);
+    LOG_DEBUG("  KeyboardRange     = %u\n", gPerfSettings.keyboardRange);
+    LOG_DEBUG("  PerfMode          = %u\n", gSynthSettings.perfMode);    // TODO - Does this belong in synth or perf?
     read_bit_stream(buff, bitPos, 8);  // fixed 0x00
     read_bit_stream(buff, bitPos, 8);  // fixed 0x00
 
@@ -450,25 +453,22 @@ static void parse_perf_header_dump(uint8_t * buff, uint32_t * bitPos) {
         read_clavia_string(buff, bitPos, name, sizeof(name));
         uint8_t enabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
         atomic_store(&gSlotEnabled[i], enabled != 0 ? 1 : 0);
-        gPerfHeaderCache.slot[i].keyboardEnabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
-        gPerfHeaderCache.slot[i].holdEnabled     = (uint8_t)read_bit_stream(buff, bitPos, 8);
-        gPerfHeaderCache.slot[i].rangeLower      = (uint8_t)read_bit_stream(buff, bitPos, 8);
-        gPerfHeaderCache.slot[i].rangeUpper      = (uint8_t)read_bit_stream(buff, bitPos, 8);
-        gPerfHeaderCache.slot[i].byte37          = (uint8_t)read_bit_stream(buff, bitPos, 8);
-        gPerfHeaderCache.slot[i].byte38          = (uint8_t)read_bit_stream(buff, bitPos, 8);
-        gPerfHeaderCache.slot[i].byte34          = (uint8_t)read_bit_stream(buff, bitPos, 8);
+        gPerfSettings.slot[i].keyboardEnabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
+        gPerfSettings.slot[i].holdEnabled     = (uint8_t)read_bit_stream(buff, bitPos, 8);
+        gPerfSettings.slot[i].rangeLower      = (uint8_t)read_bit_stream(buff, bitPos, 8);
+        gPerfSettings.slot[i].rangeUpper      = (uint8_t)read_bit_stream(buff, bitPos, 8);
+        read_bit_stream(buff, bitPos, 8);
+        read_bit_stream(buff, bitPos, 8);
+        read_bit_stream(buff, bitPos, 8);
         read_bit_stream(buff, bitPos, 8);  // 0x00
         read_bit_stream(buff, bitPos, 8);  // 0x00
         LOG_DEBUG("Slot %d:\n", i);
         LOG_DEBUG("  Name              = '%s'\n", name);
-        LOG_DEBUG("  SlotEnabled       = %u\n", enabled != 0 ? 1 : 0);
-        LOG_DEBUG("  KeyboardEnabled   = %u\n", gPerfHeaderCache.slot[i].keyboardEnabled);
-        LOG_DEBUG("  HoldEnabled       = %u\n", gPerfHeaderCache.slot[i].holdEnabled);
-        LOG_DEBUG("  RangeLower        = %u\n", gPerfHeaderCache.slot[i].rangeLower);
-        LOG_DEBUG("  RangeUpper        = %u\n", gPerfHeaderCache.slot[i].rangeUpper);
-        LOG_DEBUG("  Byte0x37          = %u\n", gPerfHeaderCache.slot[i].byte37);
-        LOG_DEBUG("  Byte0x38          = %u\n", gPerfHeaderCache.slot[i].byte38);
-        LOG_DEBUG("  Byte0x34          = %u\n", gPerfHeaderCache.slot[i].byte34);
+        LOG_DEBUG("  SlotEnabled       = %u\n", enabled);
+        LOG_DEBUG("  KeyboardEnabled   = %u\n", gPerfSettings.slot[i].keyboardEnabled);
+        LOG_DEBUG("  HoldEnabled       = %u\n", gPerfSettings.slot[i].holdEnabled);
+        LOG_DEBUG("  RangeLower        = %u\n", gPerfSettings.slot[i].rangeLower);
+        LOG_DEBUG("  RangeUpper        = %u\n", gPerfSettings.slot[i].rangeUpper);
     }
 }
 
@@ -1078,9 +1078,9 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             return EXIT_SUCCESS;
         }
 
-        case SUB_RESPONSE_PERF_SETTINGS:
+        case SUB_RESPONSE_PERF_HEADER:
             LOG_DEBUG("Got perf header dump\n");
-            parse_perf_header_dump(buff, bitPos);
+            parse_perf_header(buff, bitPos);
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_PERFORMANCE_SETTINGS:
@@ -2186,7 +2186,7 @@ static int send_set_patch_descr(uint32_t slot) { // Note - currently using value
     return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
-static int send_perf_header_usb(void) {
+static int send_perf_header(void) {
     uint8_t  buff[SEND_MESSAGE_SIZE]    = {0};
     uint8_t  payload[512]               = {0};
     int      pos                        = COMMAND_OFFSET;
@@ -2198,12 +2198,12 @@ static int send_perf_header_usb(void) {
     bitPos = BYTE_TO_BIT(2);
 
     // 8 global bytes
-    write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.globalMode);
-    write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.rangeAndFlags);
-    write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.keyboardRange);
-    write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.unknown18);
-    write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.unknown20);
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.perfMode == 1 ? 1 : 0);
+    write_bit_stream(payload, &bitPos, 8, gPerfSettings.globalMode);
+    write_bit_stream(payload, &bitPos, 8, gPerfSettings.rangeAndFlags);
+    write_bit_stream(payload, &bitPos, 8, gPerfSettings.keyboardRange);
+    write_bit_stream(payload, &bitPos, 8, 0);
+    write_bit_stream(payload, &bitPos, 8, 0);
+    write_bit_stream(payload, &bitPos, 8, gSynthSettings.perfMode);
     write_bit_stream(payload, &bitPos, 8, 0);
     write_bit_stream(payload, &bitPos, 8, 0);
 
@@ -2215,13 +2215,13 @@ static int send_perf_header_usb(void) {
         write_clavia_string(payload, &bitPos, name);
 
         write_bit_stream(payload, &bitPos, 8, atomic_load(&gSlotEnabled[i]));
-        write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].keyboardEnabled);
-        write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].holdEnabled);
-        write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].rangeLower);
-        write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].rangeUpper);
-        write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].byte37);
-        write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].byte38);
-        write_bit_stream(payload, &bitPos, 8, gPerfHeaderCache.slot[i].byte34);
+        write_bit_stream(payload, &bitPos, 8, gPerfSettings.slot[i].keyboardEnabled);
+        write_bit_stream(payload, &bitPos, 8, gPerfSettings.slot[i].holdEnabled);
+        write_bit_stream(payload, &bitPos, 8, gPerfSettings.slot[i].rangeLower);
+        write_bit_stream(payload, &bitPos, 8, gPerfSettings.slot[i].rangeUpper);
+        write_bit_stream(payload, &bitPos, 8, 0);
+        write_bit_stream(payload, &bitPos, 8, 0);
+        write_bit_stream(payload, &bitPos, 8, 0);
         write_bit_stream(payload, &bitPos, 8, 0);
         write_bit_stream(payload, &bitPos, 8, 0);
     }
@@ -2233,7 +2233,7 @@ static int send_perf_header_usb(void) {
     payload[0] = (uint8_t)((contentBytes >> 8) & 0xff);
     payload[1] = (uint8_t)(contentBytes & 0xff);
 
-    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_RESPONSE_PERF_SETTINGS);
+    usb_cmd_sys(buff, &pos, (uint8_t)atomic_load(&gPerfVersion), SUB_RESPONSE_PERF_HEADER);
 
     for (i = 0; i < totalBytes && (uint32_t)pos < SEND_MESSAGE_SIZE; i++) {
         buff[pos++] = payload[i];
@@ -2242,7 +2242,7 @@ static int send_perf_header_usb(void) {
     return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
-static int send_perf_name_usb(void) {
+static int send_perf_name(void) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     int      pos                     = COMMAND_OFFSET;
     uint32_t j                       = 0;
@@ -2259,7 +2259,7 @@ static int send_perf_name_usb(void) {
 
 // SUB_COMMAND_SET_PARAM_MODE (0x3e) is the original editor's code in the reference.
 // Version byte 0x41 matches all other connection-level sys commands.
-static int send_perf_mode_change_usb(uint8_t perfMode) {
+static int send_perf_mode_change(uint8_t perfMode) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
@@ -2272,33 +2272,6 @@ static int send_perf_mode_change_usb(uint8_t perfMode) {
 // ---------------------------------------------------------------------------
 // Init sequences — linear, no state machine
 // ---------------------------------------------------------------------------
-
-#if 0
-// Core resync: stop, fetch all perf+patch data, restart.
-// Called both on explicit request and on G2-initiated perf mode changes.
-static int reload_all_patch_data(void) { // Urgent TODO - rationalise this, name it appropriately for what it's doing. This isn't just patch data it's pulling, it's everything!
-    int      retVal = EXIT_SUCCESS;
-    uint32_t slot   = 0;
-
-    LOG_DEBUG("\nReload all patch data\n\n");
-    
-    retVal |= send_stop();
-    retVal |= send_get_midi_cc();
-    retVal |= send_select_slot(0);
-    retVal |= send_get_performance_settings();
-
-    for (slot = 0; slot < MAX_SLOTS; slot++) {
-        retVal |= send_get_patch_data(slot);
-    }
-
-    retVal |= send_get_assigned_voices();
-    retVal |= send_get_global_knobs();
-    retVal |= send_get_master_clock();
-    retVal |= send_start();
-
-    return retVal;
-}
-#endif
     
 // First connection: G2 is authoritative — pull all patch data from hardware.
 static int send_init_sequence_pull(void) {
@@ -2705,13 +2678,13 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdWriteModePerf:
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            retVal = send_perf_mode_change_usb(1);
+            retVal = send_perf_mode_change(1);
             send_start();
             break;
 
         case eMsgCmdWriteModePatch:
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            retVal = send_perf_mode_change_usb(0);
+            retVal = send_perf_mode_change(0);
             send_start();
             break;
 
@@ -2724,11 +2697,11 @@ static int send_write_data(tMessageContent * messageContent) {
             }
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = send_perf_name_usb();
+                retVal = send_perf_name();
             }
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = send_perf_header_usb();
+                retVal = send_perf_header();
             }
 
             if (retVal == EXIT_SUCCESS) {
@@ -2752,13 +2725,13 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdWritePerfSettings:
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            retVal                         = send_perf_header_usb();
+            retVal                         = send_perf_header();
             send_start();
             break;
 
         case eMsgCmdWritePerfName:
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            retVal                         = send_perf_name_usb();
+            retVal                         = send_perf_name();
             send_start();
             break;
 

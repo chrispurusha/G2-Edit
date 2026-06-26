@@ -1189,7 +1189,7 @@ void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
         write_bit_stream(buff, bitPos, 8, 0x7f);                              // slot volume (default 127)
         write_bit_stream(buff, bitPos, 8, slot == 0 ? 0x02 : 0x10);
         write_bit_stream(buff, bitPos, 8, 0x00);
-        write_bit_stream(buff, bitPos, 8, 0x00);
+        write_bit_stream(buff, bitPos, 8, 0x00);  // TODO - this all needs fixing, based on the parsing in usbscomms..c
     }
 }
 

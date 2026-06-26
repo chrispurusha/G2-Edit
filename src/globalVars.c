@@ -63,7 +63,7 @@ uint32_t               gControllerCount[MAX_SLOTS]                              
 uint32_t               gPatchNotesSize[MAX_SLOTS]                                                   = {0};
 uint8_t                gPatchNotes[MAX_SLOTS][PATCH_NOTES_SIZE + 1]                                 = {0};
 _Atomic uint8_t        gPatchVersion[MAX_SLOTS]                                                     = {0};
-_Atomic uint8_t        gSlotEnabled[MAX_SLOTS]                                                      = {1, 1, 1, 1};
+_Atomic uint8_t        gSlotEnabled[MAX_SLOTS]                                                      = {1, 1, 1, 1};  // TODO - should really go into either performance structure, or whatever is appropriate to call that top level structure
 _Atomic uint8_t        gPerfVersion                                                                 = 0;
 _Atomic uint8_t        gMasterClock                                                                 = 0;
 ///_Atomic uint8_t        gPerfMode                                                                    = 0;
@@ -77,7 +77,7 @@ tParamNameEdit         gParamNameEdit                                           
 tNameEdit              gSynthNameEdit                                                               = {0};
 tNameEdit              gPerfNameEdit                                                                = {0};
 char                   gPerfName[CLAVIA_NAME_SIZE + 1]                                              = {0};
-tPerfHeaderCache       gPerfHeaderCache                                                             = {0};
+tPerfSettings       gPerfSettings                                                             = {0};
 tPatchNotesEdit        gPatchNotesEdit                                                              = {0};
 tSynthSettings         gSynthSettings                                                               = {0};
 tPatchSettingsEdit     gPatchSettingsEdit                                                           = {0};
@@ -96,7 +96,7 @@ _Atomic uint64_t       gUsbRxTime                                               
 tRectangle             gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS] = {0}; // Rectangle references for each module. It's big - around 6mb
 
 /* Stored here, but don't access directly, use functions to access instead */
-static char            gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1]                                  = {0};
+static char            gPatchName[MAX_SLOTS][CLAVIA_NAME_SIZE + 1]                                  = {0};   // TODO - Might have to do into perf settings
 static pthread_mutex_t gPatchNameMutex                                                              = PTHREAD_MUTEX_INITIALIZER;
 
 void patch_name_set(uint32_t slot, const char * name) {
