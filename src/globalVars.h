@@ -38,7 +38,7 @@
 extern const char *        patchTypeStrMap[patchTypeUserMax];
 extern const char *        monoPolyStrMap[monoPolyMax];
 
-extern double              gGlobalGuiScale;
+extern _Atomic double      gGlobalGuiScale;
 extern _Atomic bool        gQuitAll;
 extern GLFWwindow *        gWindow;
 extern _Atomic uint32_t    gLocation;

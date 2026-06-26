@@ -378,7 +378,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     LOG_DEBUG("Keyboard Range Enab  = %u\n", read_bit_stream(buff, &bitPos, 8)); // Regular val of 82 for standard mode and 87 for performance mode? Seen 0x74 for standard an 0x80 for perf too. Seems to be keyboard range enabled!
     read_bit_stream(buff, &bitPos, 8);
     read_bit_stream(buff, &bitPos, 4);
-    gGlobalSettings.selectedSlot                      = read_bit_stream(buff, &bitPos, 2); // For focus rather than keyboard?
+    gGlobalSettings.selectedSlot       = read_bit_stream(buff, &bitPos, 2);                // For focus rather than keyboard?
     LOG_DEBUG("SelectedSlot         = %u\n", gGlobalSettings.selectedSlot);
     read_bit_stream(buff, &bitPos, 2);
     LOG_DEBUG("RangeEnable          = %u\n", read_bit_stream(buff, &bitPos, 8));

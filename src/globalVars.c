@@ -25,7 +25,7 @@ extern "C" {
 
 tDialMode           gDialMode                                                                    = eDialModeRotary;
 
-double              gGlobalGuiScale                                                              = 2;
+_Atomic double      gGlobalGuiScale                                                              = 2;
 _Atomic bool        gQuitAll                                                                     = false;
 GLFWwindow *        gWindow                                                                      = NULL;
 _Atomic uint32_t    gLocation                                                                    = locationVa;
