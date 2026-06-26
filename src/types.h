@@ -857,6 +857,7 @@ typedef struct {
 
 typedef struct {
     tRectangle close;
+    tRectangle slot[MAX_SLOTS];
     tRectangle sustainPedal;
     tRectangle octaveShift;
     tRectangle arpEnabled;

@@ -796,32 +796,44 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             if (within_rectangle(coord, gPatchSettingsPanelRects.close)) {
                 gPatchParamsEdit.active = false;
             } else {
-                uint32_t slot = gPatchParamsEdit.slot;
+                bool switched = false;
 
-                if (within_rectangle(coord, gPatchSettingsPanelRects.sustainPedal)) {
-                    open_patch_on_off_dropdown(below_rect(gPatchSettingsPanelRects.sustainPedal), &gPatchSettings[slot].sustainPedal);
-                } else if (within_rectangle(coord, gPatchSettingsPanelRects.octaveShift)) {
-                    open_patch_octave_shift_dropdown(below_rect(gPatchSettingsPanelRects.octaveShift), &gPatchSettings[slot].octaveShift);
-                } else if (within_rectangle(coord, gPatchSettingsPanelRects.arpEnabled)) {
-                    open_patch_on_off_dropdown(below_rect(gPatchSettingsPanelRects.arpEnabled), &gPatchSettings[slot].arpEnabled);
-                } else if (within_rectangle(coord, gPatchSettingsPanelRects.arpRate)) {
-                    open_arp_rate_dropdown(below_rect(gPatchSettingsPanelRects.arpRate), &gPatchSettings[slot].arpRate);
-                } else if (within_rectangle(coord, gPatchSettingsPanelRects.arpDirection)) {
-                    open_arp_direction_dropdown(below_rect(gPatchSettingsPanelRects.arpDirection), &gPatchSettings[slot].arpDirection);
-                } else if (within_rectangle(coord, gPatchSettingsPanelRects.arpOctaveRange)) {
-                    open_arp_octave_dropdown(below_rect(gPatchSettingsPanelRects.arpOctaveRange), &gPatchSettings[slot].arpOctaveRange);
-                } else if (within_rectangle(coord, gPatchSettingsPanelRects.vibratoAmount)) {
-                    open_vibrato_amount_dropdown(below_rect(gPatchSettingsPanelRects.vibratoAmount), &gPatchSettings[slot].vibratoAmount);
-                } else if (within_rectangle(coord, gPatchSettingsPanelRects.vibratoSource)) {
-                    open_vibrato_source_dropdown(below_rect(gPatchSettingsPanelRects.vibratoSource), &gPatchSettings[slot].vibratoSource);
-                } else if (within_rectangle(coord, gPatchSettingsPanelRects.glideTime)) {
-                    open_glide_time_dropdown(below_rect(gPatchSettingsPanelRects.glideTime), &gPatchSettings[slot].glideTime);
-                } else if (within_rectangle(coord, gPatchSettingsPanelRects.glideMode)) {
-                    open_glide_mode_dropdown(below_rect(gPatchSettingsPanelRects.glideMode), &gPatchSettings[slot].glideMode);
-                } else if (within_rectangle(coord, gPatchSettingsPanelRects.bendRange)) {
-                    open_bend_range_dropdown(below_rect(gPatchSettingsPanelRects.bendRange), &gPatchSettings[slot].bendRange);
-                } else if (within_rectangle(coord, gPatchSettingsPanelRects.bendEnabled)) {
-                    open_patch_on_off_dropdown(below_rect(gPatchSettingsPanelRects.bendEnabled), &gPatchSettings[slot].bendEnabled);
+                for (uint32_t s = 0; s < MAX_SLOTS; s++) {
+                    if (within_rectangle(coord, gPatchSettingsPanelRects.slot[s])) {
+                        gPatchParamsEdit.slot = s;
+                        switched              = true;
+                        break;
+                    }
+                }
+
+                if (!switched) {
+                    uint32_t slot = gPatchParamsEdit.slot;
+
+                    if (within_rectangle(coord, gPatchSettingsPanelRects.sustainPedal)) {
+                        open_patch_on_off_dropdown(below_rect(gPatchSettingsPanelRects.sustainPedal), &gPatchSettings[slot].sustainPedal);
+                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.octaveShift)) {
+                        open_patch_octave_shift_dropdown(below_rect(gPatchSettingsPanelRects.octaveShift), &gPatchSettings[slot].octaveShift);
+                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.arpEnabled)) {
+                        open_patch_on_off_dropdown(below_rect(gPatchSettingsPanelRects.arpEnabled), &gPatchSettings[slot].arpEnabled);
+                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.arpRate)) {
+                        open_arp_rate_dropdown(below_rect(gPatchSettingsPanelRects.arpRate), &gPatchSettings[slot].arpRate);
+                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.arpDirection)) {
+                        open_arp_direction_dropdown(below_rect(gPatchSettingsPanelRects.arpDirection), &gPatchSettings[slot].arpDirection);
+                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.arpOctaveRange)) {
+                        open_arp_octave_dropdown(below_rect(gPatchSettingsPanelRects.arpOctaveRange), &gPatchSettings[slot].arpOctaveRange);
+                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.vibratoAmount)) {
+                        open_vibrato_amount_dropdown(below_rect(gPatchSettingsPanelRects.vibratoAmount), &gPatchSettings[slot].vibratoAmount);
+                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.vibratoSource)) {
+                        open_vibrato_source_dropdown(below_rect(gPatchSettingsPanelRects.vibratoSource), &gPatchSettings[slot].vibratoSource);
+                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.glideTime)) {
+                        open_glide_time_dropdown(below_rect(gPatchSettingsPanelRects.glideTime), &gPatchSettings[slot].glideTime);
+                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.glideMode)) {
+                        open_glide_mode_dropdown(below_rect(gPatchSettingsPanelRects.glideMode), &gPatchSettings[slot].glideMode);
+                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.bendRange)) {
+                        open_bend_range_dropdown(below_rect(gPatchSettingsPanelRects.bendRange), &gPatchSettings[slot].bendRange);
+                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.bendEnabled)) {
+                        open_patch_on_off_dropdown(below_rect(gPatchSettingsPanelRects.bendEnabled), &gPatchSettings[slot].bendEnabled);
+                    }
                 }
             }
         }

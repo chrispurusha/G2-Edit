@@ -1274,6 +1274,20 @@ static void render_patch_params_panel(void) {
                                                  {{boxX + boxW - 44.0, boxY + 4.0}, {get_text_width((char *)"Close", btnH, eCache) + 4.0, btnH}},
                                                  "Close", (tRgb)RGB_BACKGROUND_GREY);
 
+    // ── Slot buttons in title bar ──────────────────────────────────
+    {
+        static const char * slotLabels[MAX_SLOTS] = {"A", "B", "C", "D"};
+        double              slotBtnW              = get_text_width((char *)"A", btnH, eCache) + 6.0;
+        double              slotX                 = boxX + boxW - 44.0 - (slotBtnW + 2.0) * MAX_SLOTS - 8.0;
+
+        for (uint32_t s = 0; s < MAX_SLOTS; s++) {
+            tRgb col = (s == slot) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
+            gPatchSettingsPanelRects.slot[s] = draw_button(mainArea,
+                                                           {{slotX + s * (slotBtnW + 2.0), boxY + 4.0}, {slotBtnW, btnH}},
+                                                           slotLabels[s], col);
+        }
+    }
+
     // ── Sustain Pedal + Octave Shift ───────────────────────────────
     {
         double x = boxX + margin;
@@ -1290,12 +1304,12 @@ static void render_patch_params_panel(void) {
         snprintf(buf, sizeof(buf), "%+d", (int)gPatchSettings[slot].octaveShift);
         render_dropdown(x, y, btnH, buf, "+2", &gPatchSettingsPanelRects.octaveShift);
     }
-    y                             += rowH;
+    y += rowH;
 
     // ── Arpeggiator ────────────────────────────────────────────────
     set_rgb_colour(RGB_GREY_7);
     render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Arpeggiator");
-    y                             += secH;
+    y += secH;
 
     {
         static const char * arpRateLabels[] = {"1/96", "1/48", "1/32", "1/24", "1/16T", "1/16",
