@@ -849,11 +849,11 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (within_rectangle(coord, gTopbarControls[topbarClockRunStopId].rectangle)) {
-                    running             = !gGlobalSettings.masterClockRunning;
+                    running                            = !gGlobalSettings.masterClockRunning;
                     gGlobalSettings.masterClockRunning = (uint8_t)running;
                     send_master_clock_run((uint32_t)running);
-                    gReDraw             = true;
-                    found               = true;
+                    gReDraw                            = true;
+                    found                              = true;
                 }
             }
 
@@ -945,10 +945,10 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                     tMessageContent msg = {0};
 
                     if (gGlobalSettings.perfMode == 0) {
-                        msg.cmd                 = eMsgCmdWriteModePerf;
+                        msg.cmd                  = eMsgCmdWriteModePerf;
                         gGlobalSettings.perfMode = 1;
                     } else {
-                        msg.cmd                 = eMsgCmdWriteModePatch;
+                        msg.cmd                  = eMsgCmdWriteModePatch;
                         gGlobalSettings.perfMode = 0;
                     }
                     msg_send(&gCommandQueue, &msg);

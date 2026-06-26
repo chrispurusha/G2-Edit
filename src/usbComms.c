@@ -282,7 +282,7 @@ static int parse_synth_settings(uint8_t * buff, int length) {
     }
     read_clavia_string(buff, &bitPos, gSynthSettings.name, sizeof(gSynthSettings.name));
 
-    gGlobalSettings.perfMode          = read_bit_stream(buff, &bitPos, 1);
+    gGlobalSettings.perfMode         = read_bit_stream(buff, &bitPos, 1);
     read_bit_stream(buff, &bitPos, 5);  // Unused
     gSynthSettings.patchSortMode     = read_bit_stream(buff, &bitPos, 2);
     read_bit_stream(buff, &bitPos, 6);  // perfSortMode - unused
@@ -378,7 +378,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     LOG_DEBUG("Keyboard Range Enab  = %u\n", read_bit_stream(buff, &bitPos, 8)); // Regular val of 82 for standard mode and 87 for performance mode? Seen 0x74 for standard an 0x80 for perf too. Seems to be keyboard range enabled!
     read_bit_stream(buff, &bitPos, 8);
     read_bit_stream(buff, &bitPos, 4);
-    gSelectedSlot       = read_bit_stream(buff, &bitPos, 2);          // For focus rather than keyboard?
+    gSelectedSlot                      = read_bit_stream(buff, &bitPos, 2); // For focus rather than keyboard?
     LOG_DEBUG("SelectedSlot         = %u\n", gSelectedSlot);
     read_bit_stream(buff, &bitPos, 2);
     LOG_DEBUG("RangeEnable          = %u\n", read_bit_stream(buff, &bitPos, 8));
@@ -393,7 +393,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     // 4 slots — TG2FileSlot.Write
     for (i = 0; i < MAX_SLOTS; i++) {
         read_clavia_string(buff, &bitPos, gPatchName[i], sizeof(gPatchName[0]));
-        gSlotEnabled[i]                       = read_bit_stream(buff, &bitPos, 8);
+        gGlobalSettings.slot[i].enabled       = read_bit_stream(buff, &bitPos, 8);
         gPerfSettings.slot[i].keyboardEnabled = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         gPerfSettings.slot[i].holdEnabled     = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         read_bit_stream(buff, &bitPos, 8); // Bank index
@@ -402,7 +402,7 @@ static int parse_performance_settings(uint8_t * buff, int length) {
         gPerfSettings.slot[i].rangeUpper      = (uint8_t)read_bit_stream(buff, &bitPos, 8);
         LOG_DEBUG("Slot %d:\n", i);
         LOG_DEBUG("  PatchName         = '%s'\n", gPatchName[i]);
-        LOG_DEBUG("  Active            = %u\n", gSlotEnabled[i]);
+        LOG_DEBUG("  Active            = %u\n", gGlobalSettings.slot[i].enabled);
         LOG_DEBUG("  Key               = %u\n", gPerfSettings.slot[i].keyboardEnabled); // Which keyboard slot is enabled
         LOG_DEBUG("  Hold              = %u\n", gPerfSettings.slot[i].holdEnabled);
         LOG_DEBUG("  BankIndex         = %u\n", 0);
@@ -435,18 +435,18 @@ static void parse_perf_header(uint8_t * buff, uint32_t * bitPos) {
     gPerfSettings.keyboardRange = (uint8_t)read_bit_stream(buff, bitPos, 8);
     read_bit_stream(buff, bitPos, 8);
     read_bit_stream(buff, bitPos, 8);
-    gGlobalSettings.perfMode     = read_bit_stream(buff, bitPos, 8);
+    gGlobalSettings.perfMode    = read_bit_stream(buff, bitPos, 8);
     LOG_DEBUG("  GlobalMode        = %u\n", gPerfSettings.globalMode);
     LOG_DEBUG("  RangeAndFlags     = %u\n", gPerfSettings.rangeAndFlags);
     LOG_DEBUG("  KeyboardRange     = %u\n", gPerfSettings.keyboardRange);
     LOG_DEBUG("  PerfMode          = %u\n", gGlobalSettings.perfMode); // TODO - Does this belong in synth or perf?
-    read_bit_stream(buff, bitPos, 8);                                 // fixed 0x00
-    read_bit_stream(buff, bitPos, 8);                                 // fixed 0x00
+    read_bit_stream(buff, bitPos, 8);                                  // fixed 0x00
+    read_bit_stream(buff, bitPos, 8);                                  // fixed 0x00
 
     for (i = 0; i < MAX_SLOTS; i++) {
         read_clavia_string(buff, bitPos, gPatchName[i], sizeof(gPatchName[0]));
         uint8_t enabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
-        gSlotEnabled[i]                       = enabled;
+        gGlobalSettings.slot[i].enabled       = enabled;
         gPerfSettings.slot[i].keyboardEnabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
         gPerfSettings.slot[i].holdEnabled     = (uint8_t)read_bit_stream(buff, bitPos, 8);
         gPerfSettings.slot[i].rangeLower      = (uint8_t)read_bit_stream(buff, bitPos, 8);
@@ -464,7 +464,7 @@ static void parse_perf_header(uint8_t * buff, uint32_t * bitPos) {
         LOG_DEBUG("  RangeLower        = %u\n", gPerfSettings.slot[i].rangeLower);
         LOG_DEBUG("  RangeUpper        = %u\n", gPerfSettings.slot[i].rangeUpper);
     }
-    
+
     exit(1); // TEMPORARY!!!!! Not sure we've ever actually seen one of these messages
 }
 
@@ -658,7 +658,7 @@ int parse_perf(uint8_t * buff, int length) {  // TODO - this one isn't used by U
 
         LOG_DEBUG("Slot %u name '%s'\n", slot, gPatchName[slot]);
         uint8_t enabled = (uint8_t)read_bit_stream(buff, &bitOffset, 8);                    // IsSlotEnabled
-        gSlotEnabled[slot] = enabled;
+        gGlobalSettings.slot[slot].enabled = enabled;
 
         for (int j = 1; j < 10; j++) {
             read_bit_stream(buff, &bitOffset, 8);                            // remaining suffix bytes
@@ -785,8 +785,8 @@ static int parse_patch_version(uint8_t * buff, int length) {
             gPatchVersion[slot] = version;
         }
     } else if (slot == MAX_SLOTS) {
-        if (version != gPerfVersion) {
-            gPerfVersion = version;
+        if (version != gGlobalSettings.perfVersion) {
+            gGlobalSettings.perfVersion = version;
         }
     } else {
         return EXIT_FAILURE;
@@ -1041,7 +1041,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
             for (uint32_t i = 0; i < MAX_SLOTS; i++) {
                 uint8_t status = (uint8_t)read_bit_stream(buff, bitPos, 8);
-                gSlotEnabled[i] = status;
+                gGlobalSettings.slot[i].enabled = status;
                 LOG_DEBUG("  Slot %u enabled: %u\n", i, status != 0 ? 1 : 0);
             }
 
@@ -1095,11 +1095,11 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             type = read_bit_stream(buff, bitPos, 8);
 
             if (type == 1) {
-                clock        = read_bit_stream(buff, bitPos, 8);
+                clock                       = read_bit_stream(buff, bitPos, 8);
                 gGlobalSettings.masterClock = clock;
                 LOG_DEBUG_DIRECT("Master clock = %u\n", clock);
             } else if (type == 0) {
-                running             = read_bit_stream(buff, bitPos, 8);
+                running                            = read_bit_stream(buff, bitPos, 8);
                 gGlobalSettings.masterClockRunning = running;
                 LOG_DEBUG_DIRECT("Clock running = %u\n", running);
             }
@@ -1209,10 +1209,10 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("\nGot performance patch versions\n\n");
 
             newVersion = read_bit_stream(buff, bitPos, 8);
-            LOG_DEBUG("Old perf = %u new = %u\n", gPerfVersion, newVersion);
+            LOG_DEBUG("Old perf = %u new = %u\n", gGlobalSettings.perfVersion, newVersion);
 
-            if (newVersion != gPerfVersion) {
-                gPerfVersion                    = newVersion;
+            if (newVersion != gGlobalSettings.perfVersion) {
+                gGlobalSettings.perfVersion     = newVersion;
                 // Use a flag rather than queuing so rapid switches coalesce into one resync.
                 gotPerfSettingsChangeIndication = true;
             }
@@ -1671,7 +1671,7 @@ static int send_select_slot(uint32_t slot) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_COMMAND_SELECT_SLOT);   // Note that this is focus, not keyboard selection
+    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_SELECT_SLOT);   // Note that this is focus, not keyboard selection
     buff[pos++] = (uint8_t)slot;
     return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
@@ -1720,7 +1720,7 @@ static int send_get_global_page(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_COMMAND_GET_GLOBAL_PAGE);
+    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_GET_GLOBAL_PAGE);
     return send_and_receive(buff, pos, SUB_RESPONSE_GLOBAL_PAGE, USB_RECV_DATA_MS);
 }
 
@@ -1729,7 +1729,7 @@ static int send_get_performance_settings(void) {
     int     pos                     = COMMAND_OFFSET;
 
     LOG_DEBUG("Send get performance settings\n");
-    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_COMMAND_PERFORMANCE_SETTINGS);
+    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_PERFORMANCE_SETTINGS);
     return send_and_receive(buff, pos, SUB_RESPONSE_PERFORMANCE_SETTINGS, USB_RECV_DATA_MS);
 }
 
@@ -1878,7 +1878,7 @@ static int send_get_global_knobs(void) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_COMMAND_QUERY_GLOBAL_KNOBS);
+    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_QUERY_GLOBAL_KNOBS);
     return send_and_receive(buff, pos, SUB_RESPONSE_GLOBAL_KNOBS, USB_RECV_DATA_MS);
 }
 
@@ -2021,7 +2021,7 @@ static int send_assign_global_knob(uint32_t slotIndex, uint32_t location, uint32
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_COMMAND_ASSIGN_GLOBAL_KNOB);
+    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_ASSIGN_GLOBAL_KNOB);
     buff[pos++] = (uint8_t)((slotIndex << 4) | (location << 2));
     buff[pos++] = (uint8_t)moduleIndex;
     buff[pos++] = (uint8_t)paramIndex;
@@ -2034,7 +2034,7 @@ static int send_deassign_global_knob(uint32_t knobIndex) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_COMMAND_DEASSIGN_GLOBAL_KNOB);
+    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_DEASSIGN_GLOBAL_KNOB);
     buff[pos++] = 0x00;
     buff[pos++] = (uint8_t)knobIndex;
     return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
@@ -2075,7 +2075,7 @@ static int send_set_master_clock_bpm(uint32_t bpm) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_COMMAND_SET_MASTER_CLOCK);
+    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_SET_MASTER_CLOCK);
     buff[pos++] = 0xFF;
     buff[pos++] = 0x01;
     buff[pos++] = (uint8_t)bpm;
@@ -2086,7 +2086,7 @@ static int send_set_master_clock_run(uint32_t running) {
     uint8_t buff[SEND_MESSAGE_SIZE] = {0};
     int     pos                     = COMMAND_OFFSET;
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_COMMAND_SET_MASTER_CLOCK);
+    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_SET_MASTER_CLOCK);
     buff[pos++] = 0xFF;
     buff[pos++] = 0x00;
     buff[pos++] = running ? 0x01 : 0x00;
@@ -2198,7 +2198,7 @@ static int send_perf_header(void) {
     for (i = 0; i < MAX_SLOTS; i++) {
         write_clavia_string(payload, &bitPos, gPatchName[i]);
 
-        write_bit_stream(payload, &bitPos, 8, gSlotEnabled[i]);
+        write_bit_stream(payload, &bitPos, 8, gGlobalSettings.slot[i].enabled);
         write_bit_stream(payload, &bitPos, 8, gPerfSettings.slot[i].keyboardEnabled);
         write_bit_stream(payload, &bitPos, 8, gPerfSettings.slot[i].holdEnabled);
         write_bit_stream(payload, &bitPos, 8, gPerfSettings.slot[i].rangeLower);
@@ -2217,7 +2217,7 @@ static int send_perf_header(void) {
     payload[0] = (uint8_t)((contentBytes >> 8) & 0xff);
     payload[1] = (uint8_t)(contentBytes & 0xff);
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_RESPONSE_PERF_HEADER);
+    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_RESPONSE_PERF_HEADER);
 
     for (i = 0; i < totalBytes && (uint32_t)pos < SEND_MESSAGE_SIZE; i++) {
         buff[pos++] = payload[i];
@@ -2232,7 +2232,7 @@ static int send_perf_name(void) {
     uint32_t j                       = 0;
     uint32_t bitPos                  = 0;
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gPerfVersion, SUB_RESPONSE_PERFORMANCE_SETTINGS);
+    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_RESPONSE_PERFORMANCE_SETTINGS);
 
     bitPos = BYTE_TO_BIT(pos);
     write_clavia_string(buff, &bitPos, gPerfName);
@@ -2515,7 +2515,7 @@ static int send_write_data(tMessageContent * messageContent) {
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             buff[pos++] = 0x01;
             buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-            buff[pos++] = gPerfVersion;
+            buff[pos++] = gGlobalSettings.perfVersion;
             buff[pos++] = SUB_COMMAND_SELECT_SLOT;
             buff[pos++] = messageContent->slotData.slot;
             retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);

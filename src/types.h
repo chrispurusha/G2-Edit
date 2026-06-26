@@ -838,7 +838,7 @@ typedef struct {
 } tPatchSettingsEdit;
 
 typedef struct {
-    char    name[CLAVIA_NAME_SIZE + 1];
+    char            name[CLAVIA_NAME_SIZE + 1];
     _Atomic uint8_t midiChanSlot[4];  // 0x00-0x0F = ch 1-16, 0x10 = off
     _Atomic uint8_t globalChan;       // same encoding
     _Atomic uint8_t sysexId;          // same encoding
@@ -876,10 +876,12 @@ typedef struct {  // TODO - may need various in here, like names, perf mode etc.
 
 typedef struct {  // TODO - may need various in here, like names, perf mode etc
     _Atomic uint8_t perfMode;
-    _Atomic uint8_t     masterClock;
-    _Atomic uint8_t     masterClockRunning;
-    //struct {
-    //} slot[MAX_SLOTS];
+    _Atomic uint8_t perfVersion;
+    _Atomic uint8_t masterClock;
+    _Atomic uint8_t masterClockRunning;
+    struct {
+        _Atomic uint8_t enabled;     // a.k.a. active
+    }               slot[MAX_SLOTS];
 } tGlobalSettings;
 
 typedef struct {
