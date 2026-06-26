@@ -301,7 +301,7 @@ void render_top_bar(void) {
     uint32_t    slot                                = gSlot;
     uint32_t    variation                           = gPatchDescr[slot].activeVariation;
     int         voiceCount                          = 0;
-    bool        clockRunning                        = gMasterClockRunning;
+    bool        clockRunning                        = gGlobalSettings.masterClockRunning;
     uint64_t    txTime                              = gUsbTxTime;
     uint64_t    rxTime                              = gUsbRxTime;
     uint64_t    nowMs                               = (uint64_t)get_time_ms();
@@ -442,8 +442,8 @@ void render_top_bar(void) {
                                                                        {topbar_control_def(topbarTransparentCablesId)->coord, {get_text_width("Hide", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                        "Dim", transp ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
-    snprintf(buff, sizeof(buff), "%u BPM", gMasterClock);
-    gTopbarControls[topbarTempoDialId].rectangle         = render_dial_with_text(mainArea, {topbar_control_def(topbarTempoDialId)->coord, {20, 48}}, NULL, buff, gMasterClock, 241, 0, (tRgb)RGB_BACKGROUND_GREY);
+    snprintf(buff, sizeof(buff), "%u BPM", gGlobalSettings.masterClock);
+    gTopbarControls[topbarTempoDialId].rectangle         = render_dial_with_text(mainArea, {topbar_control_def(topbarTempoDialId)->coord, {20, 48}}, NULL, buff, gGlobalSettings.masterClock, 241, 0, (tRgb)RGB_BACKGROUND_GREY);
     gTopbarControls[topbarClockRunStopId].rectangle      = draw_button(mainArea, {topbar_control_def(topbarClockRunStopId)->coord, {get_text_width("Stopped", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)(clockRunning ? "Running" : "Stopped"), clockRunning ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
     if (gSynthSettings.perfMode == 1) {
@@ -1114,7 +1114,7 @@ static void render_patch_settings_panel(void) {
 
     struct {
         const char * label;
-        uint8_t *    val;
+        _Atomic uint8_t *    val;
         tRectangle * rect;
     }   toggles[]  = {
         {"Local On:",      &gSynthSettings.localOn,        &gSettingsPanelRects.localOn       },

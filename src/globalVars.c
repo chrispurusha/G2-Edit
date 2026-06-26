@@ -65,9 +65,10 @@ uint8_t             gPatchNotes[MAX_SLOTS][PATCH_NOTES_SIZE + 1]                
 _Atomic uint8_t     gPatchVersion[MAX_SLOTS]                                                     = {0};
 _Atomic uint8_t     gSlotEnabled[MAX_SLOTS]                                                      = {1, 1, 1, 1};     // TODO - should really go into either performance structure, or whatever is appropriate to call that top level structure
 _Atomic uint8_t     gPerfVersion                                                                 = 0;
-_Atomic uint8_t     gMasterClock                                                                 = 0;
+//_Atomic uint8_t     gMasterClock                                                                 = 0; // TODO - go into perf settings?
 ///_Atomic uint8_t        gPerfMode                                                                    = 0;
-_Atomic uint8_t     gMasterClockRunning                                                          = 0;
+//_Atomic uint8_t     gMasterClockRunning                                                          = 0; // TODO - go into perf settings?
+    tGlobalSettings gGlobalSettings = {0};
 _Atomic tCommsState gCommsState                                                                  = eCommsNeverConnected;
 //_Atomic uint32_t       gChangedSlot                                                                 = 0;
 _Atomic uint8_t     gGlobalPage                                                                  = 0;
@@ -76,7 +77,7 @@ tModuleNameEdit     gModuleNameEdit                                             
 tParamNameEdit      gParamNameEdit                                                               = {0};
 tNameEdit           gSynthNameEdit                                                               = {0};
 tNameEdit           gPerfNameEdit                                                                = {0};
-char                gPerfName[CLAVIA_NAME_SIZE + 1]                                              = {0};
+char                gPerfName[CLAVIA_NAME_SIZE + 1]                                              = {0};  // TODO - should go into performance settings?
 tPerfSettings       gPerfSettings                                                                = {0};
 tPatchNotesEdit     gPatchNotesEdit                                                              = {0};
 tSynthSettings      gSynthSettings                                                               = {0};

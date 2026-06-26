@@ -1173,9 +1173,9 @@ void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
     write_bit_stream(buff, bitPos, 8, 0x00);
     write_bit_stream(buff, bitPos, 8, (uint8_t)(gSlot * 4)); // selected slot encoding
     write_bit_stream(buff, bitPos, 8, 0x00);
-    write_bit_stream(buff, bitPos, 8, gMasterClock);
+    write_bit_stream(buff, bitPos, 8, gGlobalSettings.masterClock);
     write_bit_stream(buff, bitPos, 8, 0x00);
-    write_bit_stream(buff, bitPos, 8, gMasterClockRunning);
+    write_bit_stream(buff, bitPos, 8, gGlobalSettings.masterClockRunning);
     write_bit_stream(buff, bitPos, 8, 0x00);
     write_bit_stream(buff, bitPos, 8, 0x00);
 

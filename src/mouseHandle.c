@@ -849,8 +849,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (within_rectangle(coord, gTopbarControls[topbarClockRunStopId].rectangle)) {
-                    running             = !gMasterClockRunning;
-                    gMasterClockRunning = (uint8_t)running;
+                    running             = !gGlobalSettings.masterClockRunning;
+                    gGlobalSettings.masterClockRunning = (uint8_t)running;
                     send_master_clock_run((uint32_t)running);
                     gReDraw             = true;
                     found               = true;
@@ -1145,7 +1145,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         // msg_send(&gCommandQueue, &messageContent);
     } else if (gTempoDragging == true) {
         if (gDialMode == eDialModeVertical) {
-            int newVal = (int)gMasterClock + (int)((gDragPrevY - yCoord) * 241.0 / 200.0);
+            int newVal = (int)gGlobalSettings.masterClock + (int)((gDragPrevY - yCoord) * 241.0 / 200.0);
             gDragPrevY = yCoord;
 
             if (newVal < 0) {
@@ -1157,7 +1157,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
             }
             value      = (uint32_t)newVal;
         } else if (gDialMode == eDialModeHorizontal) {
-            int newVal = (int)gMasterClock + (int)((xCoord - gDragPrevX) * 241.0 / 200.0);
+            int newVal = (int)gGlobalSettings.masterClock + (int)((xCoord - gDragPrevX) * 241.0 / 200.0);
             gDragPrevX = xCoord;
 
             if (newVal < 0) {
@@ -1173,8 +1173,8 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
             value = angle_to_value(angle, 241);
         }
 
-        if (gMasterClock != value) {
-            gMasterClock = (uint8_t)value;
+        if (gGlobalSettings.masterClock != value) {
+            gGlobalSettings.masterClock = (uint8_t)value;
             send_master_clock_bpm(value);
         }
     } else if (gParamDragging.active == true) {

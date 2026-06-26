@@ -382,11 +382,11 @@ static int parse_performance_settings(uint8_t * buff, int length) {
     LOG_DEBUG("SelectedSlot         = %u\n", gSelectedSlot);
     read_bit_stream(buff, &bitPos, 2);
     LOG_DEBUG("RangeEnable          = %u\n", read_bit_stream(buff, &bitPos, 8));
-    gMasterClock        = read_bit_stream(buff, &bitPos, 8);
-    LOG_DEBUG("MasterClock          = %u\n", gMasterClock);
+    gGlobalSettings.masterClock        = read_bit_stream(buff, &bitPos, 8);
+    LOG_DEBUG("MasterClock          = %u\n", gGlobalSettings.masterClock);
     LOG_DEBUG("KeyboardSplit        = %u\n", read_bit_stream(buff, &bitPos, 8));
-    gMasterClockRunning = read_bit_stream(buff, &bitPos, 8);
-    LOG_DEBUG("MasterClockRun       = %u\n", gMasterClockRunning);
+    gGlobalSettings.masterClockRunning = read_bit_stream(buff, &bitPos, 8);
+    LOG_DEBUG("MasterClockRun       = %u\n", gGlobalSettings.masterClockRunning);
     read_bit_stream(buff, &bitPos, 8);
     read_bit_stream(buff, &bitPos, 8);
 
@@ -464,6 +464,8 @@ static void parse_perf_header(uint8_t * buff, uint32_t * bitPos) {
         LOG_DEBUG("  RangeLower        = %u\n", gPerfSettings.slot[i].rangeLower);
         LOG_DEBUG("  RangeUpper        = %u\n", gPerfSettings.slot[i].rangeUpper);
     }
+    
+    exit(1); // TEMPORARY!!!!! Not sure we've ever actually seen one of these messages
 }
 
 static int parse_midi_cc(uint8_t * buff, int length) {
@@ -621,7 +623,7 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
     return EXIT_SUCCESS;
 }
 
-int parse_perf(uint8_t * buff, int length) {
+int parse_perf(uint8_t * buff, int length) {  // TODO - this one isn't used by USB, should probably go into protocol.c
     uint32_t bitOffset   = 0;
     uint32_t currentSlot = 0;
 
@@ -645,9 +647,9 @@ int parse_perf(uint8_t * buff, int length) {
         gSlot = selSlot;
     }
     read_bit_stream(buff, &bitOffset, 8);                                    // unknown (0x00)
-    gMasterClock        = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
+    gGlobalSettings.masterClock        = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
     read_bit_stream(buff, &bitOffset, 8);                                    // unknown (0x00)
-    gMasterClockRunning = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
+    gGlobalSettings.masterClockRunning = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
     read_bit_stream(buff, &bitOffset, 8);                                    // 0x00
     read_bit_stream(buff, &bitOffset, 8);                                    // 0x00
 
@@ -1072,7 +1074,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
         case SUB_RESPONSE_PERF_HEADER:
             LOG_DEBUG("Got perf header dump\n");
-            parse_perf_header(buff, bitPos);
+            parse_perf_header(buff, bitPos);  // TODO - I don't think we've ever seen one of these. Seems to always be SUB_RESPONSE_PERFORMANCE_SETTINGS. Might want to remove
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_PERFORMANCE_SETTINGS:
@@ -1094,11 +1096,11 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
 
             if (type == 1) {
                 clock        = read_bit_stream(buff, bitPos, 8);
-                gMasterClock = clock;
+                gGlobalSettings.masterClock = clock;
                 LOG_DEBUG_DIRECT("Master clock = %u\n", clock);
             } else if (type == 0) {
                 running             = read_bit_stream(buff, bitPos, 8);
-                gMasterClockRunning = running;
+                gGlobalSettings.masterClockRunning = running;
                 LOG_DEBUG_DIRECT("Clock running = %u\n", running);
             }
             return EXIT_SUCCESS;
@@ -2690,11 +2692,11 @@ static int send_write_data(tMessageContent * messageContent) {
             }
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = send_set_master_clock_bpm(gMasterClock);
+                retVal = send_set_master_clock_bpm(gGlobalSettings.masterClock);
             }
 
             if (retVal == EXIT_SUCCESS) {
-                retVal = send_set_master_clock_run(gMasterClockRunning);
+                retVal = send_set_master_clock_run(gGlobalSettings.masterClockRunning);
             }
 
             if (retVal == EXIT_SUCCESS) {

@@ -839,41 +839,48 @@ typedef struct {
 
 typedef struct {
     char    name[CLAVIA_NAME_SIZE + 1];
-    uint8_t midiChanSlot[4];  // 0x00-0x0F = ch 1-16, 0x10 = off
-    uint8_t globalChan;       // same encoding
-    uint8_t sysexId;          // same encoding
-    uint8_t localOn;
-    uint8_t progChangeRcv;
-    uint8_t progChangeSnd;
-    uint8_t controllersRcv;
-    uint8_t controllersSnd;
-    uint8_t receiveClock;      // 1=off, 0=om
-    uint8_t sendClock;         // 0=on, 1=off
-    int8_t  tuneCent;          // signed, -50..+50 cents
-    uint8_t globalShiftActive;
-    int8_t  globalOctaveShift; // signed, -2..+2
-    int8_t  tuneSemi;          // signed, -12..+12 semitones
-    uint8_t pedalPolarity;
-    uint8_t pedalGain;
-    uint8_t memoryProtect;
-    uint8_t perfMode;
-    uint8_t perfBank;
-    uint8_t perfLocation;
-    uint8_t patchSortMode;
-    uint8_t perfSortMode;
+    _Atomic uint8_t midiChanSlot[4];  // 0x00-0x0F = ch 1-16, 0x10 = off
+    _Atomic uint8_t globalChan;       // same encoding
+    _Atomic uint8_t sysexId;          // same encoding
+    _Atomic uint8_t localOn;
+    _Atomic uint8_t progChangeRcv;
+    _Atomic uint8_t progChangeSnd;
+    _Atomic uint8_t controllersRcv;
+    _Atomic uint8_t controllersSnd;
+    _Atomic uint8_t receiveClock;      // 1=off, 0=om
+    _Atomic uint8_t sendClock;         // 0=on, 1=off
+    _Atomic int8_t  tuneCent;          // signed, -50..+50 cents
+    _Atomic uint8_t globalShiftActive;
+    _Atomic int8_t  globalOctaveShift; // signed, -2..+2
+    _Atomic int8_t  tuneSemi;          // signed, -12..+12 semitones
+    _Atomic uint8_t pedalPolarity;
+    _Atomic uint8_t pedalGain;
+    _Atomic uint8_t memoryProtect;
+    _Atomic uint8_t perfMode;
+    _Atomic uint8_t perfBank;
+    _Atomic uint8_t perfLocation;
+    _Atomic uint8_t patchSortMode;
+    _Atomic uint8_t perfSortMode;
 } tSynthSettings;
 
 typedef struct {  // TODO - name need various in here, like names, perf mode etc
-    uint8_t globalMode;
-    uint8_t rangeAndFlags;
-    uint8_t keyboardRange;
+    _Atomic uint8_t globalMode;
+    _Atomic uint8_t rangeAndFlags;
+    _Atomic uint8_t keyboardRange;
     struct {
-        uint8_t keyboardEnabled;
-        uint8_t holdEnabled;
-        uint8_t rangeLower;
-        uint8_t rangeUpper;
+        _Atomic uint8_t keyboardEnabled;
+        _Atomic uint8_t holdEnabled;
+        _Atomic uint8_t rangeLower;
+        _Atomic uint8_t rangeUpper;
     } slot[MAX_SLOTS];
 } tPerfSettings;
+
+typedef struct {  // TODO - name need various in here, like names, perf mode etc
+    _Atomic uint8_t     masterClock;
+    _Atomic uint8_t     masterClockRunning;
+    //struct {
+    //} slot[MAX_SLOTS];
+} tGlobalSettings;
 
 typedef struct {
     tRectangle close;

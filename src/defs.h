@@ -194,7 +194,7 @@ void usb_log_text(const char * fmt, ...);
 #define SUB_RESPONSE_MIDI_CC                 (0x80)
 #define SUB_COMMAND_GET_MIDI_CC              (0x81) // A.k.a. Unknown 1!?
 
-#define SUB_RESPONSE_PERF_HEADER             (0x11)
+#define SUB_RESPONSE_PERF_HEADER             (0x11)    // TODO - Don't think we've ever seen one of these. Might be worth removing
 #define SUB_RESPONSE_CLEAR_BANK              (0x12)
 #define SUB_RESPONSE_LIST_NAMES              (0x13)
 #define SUB_COMMAND_LIST_NAMES               (0x14)
