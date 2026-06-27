@@ -36,17 +36,17 @@ extern "C" {
 
 // ── Synth settings action targets ──────────────────────────────────────────
 
-static _Atomic uint8_t * gSettingU8Target      = NULL;
-static _Atomic int8_t *  gSettingI8Target      = NULL;
+static _Atomic uint8_t * gSettingU8Target     = NULL;
+static _Atomic int8_t *  gSettingI8Target     = NULL;
 
 // ── Perf settings action targets ───────────────────────────────────────────
 
-static _Atomic uint8_t * gPerfSettingU8Target  = NULL;
+static _Atomic uint8_t * gPerfSettingU8Target = NULL;
 
 // ── Patch settings action targets ──────────────────────────────────────────
 
-static _Atomic uint8_t * gPatchSettingU8Target = NULL;
-static _Atomic int8_t *  gPatchSettingI8Target = NULL;
+static uint32_t          gPatchSettingModule  = 0;
+static uint32_t          gPatchSettingParam   = 0;
 
 void send_synth_settings_msg(void) {
     tMessageContent msg = {0};
@@ -77,22 +77,42 @@ static void action_perf_setting_u8(int index) {
     send_perf_settings_msg();
 }
 
-void send_patch_settings_msg(uint32_t slot) {
+static void send_patch_setting_param(uint32_t slot, uint32_t moduleIndex, uint32_t paramIndex, uint32_t value) {
     tMessageContent msg = {0};
 
-    msg.cmd  = eMsgCmdWritePatchSettings;
-    msg.slot = slot;
+    msg.cmd                 = eMsgCmdSetValue;
+    msg.slot                = slot;
+    msg.paramData.moduleKey = (tModuleKey){
+        slot, (uint32_t)locationMorph, moduleIndex
+    };
+    msg.paramData.param     = paramIndex;
+    msg.paramData.value     = value;
+    msg.paramData.variation = 0;
     msg_send(&gCommandQueue, &msg);
 }
 
 static void action_patch_setting_u8(int index) {
-    *gPatchSettingU8Target = (uint8_t)gContextMenu.items[index].param;
-    send_patch_settings_msg(gSlot);
+    uint32_t   value  = (uint32_t)gContextMenu.items[index].param;
+    uint32_t   slot   = (uint32_t)gPatchParamsEdit.slot;
+    tModuleKey key    = {slot, (uint32_t)locationMorph, gPatchSettingModule};
+    tModule *  module = get_module(key);
+
+    if (module != NULL) {
+        module->param[0][gPatchSettingParam].value = (uint8_t)value;
+    }
+    send_patch_setting_param(slot, gPatchSettingModule, gPatchSettingParam, value);
 }
 
 static void action_patch_setting_i8(int index) {
-    *gPatchSettingI8Target = (int8_t)(int32_t)gContextMenu.items[index].param;
-    send_patch_settings_msg(gSlot);
+    uint32_t   value  = (uint32_t)(uint8_t)(int8_t)(int32_t)gContextMenu.items[index].param;
+    uint32_t   slot   = (uint32_t)gPatchParamsEdit.slot;
+    tModuleKey key    = {slot, (uint32_t)locationMorph, gPatchSettingModule};
+    tModule *  module = get_module(key);
+
+    if (module != NULL) {
+        module->param[0][gPatchSettingParam].value = (uint8_t)value;
+    }
+    send_patch_setting_param(slot, gPatchSettingModule, gPatchSettingParam, value);
 }
 
 // ── Patch descriptor action targets ────────────────────────────────────────
@@ -1188,18 +1208,19 @@ void open_midi_note_dropdown(tCoord coord, _Atomic uint8_t * target) {
 
 // ── Patch settings dropdowns ────────────────────────────────────────────────
 
-void open_patch_on_off_dropdown(tCoord coord, _Atomic uint8_t * target) {
+void open_patch_on_off_dropdown(tCoord coord, uint32_t moduleIndex, uint32_t paramIndex) {
     static tMenuItem items[] = {
         {"Off", RGB_GREY_3, action_patch_setting_u8, 0, NULL},
         {"On",  RGB_GREY_3, action_patch_setting_u8, 1, NULL},
         {NULL,  RGB_BLACK,  NULL,                    0, NULL},
     };
 
-    gPatchSettingU8Target = target;
+    gPatchSettingModule = moduleIndex;
+    gPatchSettingParam  = paramIndex;
     open_context_menu(coord, items, 0, 0.0);
 }
 
-void open_arp_rate_dropdown(tCoord coord, _Atomic uint8_t * target) {
+void open_arp_rate_dropdown(tCoord coord) {
     static const char * rateLabels[] = {
         "1/96", "1/48", "1/32", "1/24", "1/16T", "1/16",
         "1/8T", "1/8",  "1/4T", "1/4",  "1/2T",  "1/2",
@@ -1220,11 +1241,12 @@ void open_arp_rate_dropdown(tCoord coord, _Atomic uint8_t * target) {
         };
         initialized = true;
     }
-    gPatchSettingU8Target = target;
+    gPatchSettingModule = PATCH_ARPEGGIATOR;
+    gPatchSettingParam  = ARP_SPEED;
     open_context_menu(coord, items, 0, 0.0);
 }
 
-void open_arp_direction_dropdown(tCoord coord, _Atomic uint8_t * target) {
+void open_arp_direction_dropdown(tCoord coord) {
     static tMenuItem items[] = {
         {"Up",     RGB_GREY_3, action_patch_setting_u8, 0, NULL},
         {"Down",   RGB_GREY_3, action_patch_setting_u8, 1, NULL},
@@ -1233,11 +1255,12 @@ void open_arp_direction_dropdown(tCoord coord, _Atomic uint8_t * target) {
         {NULL,     RGB_BLACK,  NULL,                    0, NULL},
     };
 
-    gPatchSettingU8Target = target;
+    gPatchSettingModule = PATCH_ARPEGGIATOR;
+    gPatchSettingParam  = ARP_DIRECTION;
     open_context_menu(coord, items, 0, 0.0);
 }
 
-void open_arp_octave_dropdown(tCoord coord, _Atomic uint8_t * target) {
+void open_arp_octave_dropdown(tCoord coord) {
     static tMenuItem items[] = {
         {"1 oct", RGB_GREY_3, action_patch_setting_u8, 0, NULL},
         {"2 oct", RGB_GREY_3, action_patch_setting_u8, 1, NULL},
@@ -1246,11 +1269,12 @@ void open_arp_octave_dropdown(tCoord coord, _Atomic uint8_t * target) {
         {NULL,    RGB_BLACK,  NULL,                    0, NULL},
     };
 
-    gPatchSettingU8Target = target;
+    gPatchSettingModule = PATCH_ARPEGGIATOR;
+    gPatchSettingParam  = ARP_OCTAVES;
     open_context_menu(coord, items, 0, 0.0);
 }
 
-void open_vibrato_source_dropdown(tCoord coord, _Atomic uint8_t * target) {
+void open_vibrato_source_dropdown(tCoord coord) {
     static tMenuItem items[] = {
         {"Wheel",   RGB_GREY_3, action_patch_setting_u8, 0, NULL},
         {"AfTouch", RGB_GREY_3, action_patch_setting_u8, 1, NULL},
@@ -1258,11 +1282,12 @@ void open_vibrato_source_dropdown(tCoord coord, _Atomic uint8_t * target) {
         {NULL,      RGB_BLACK,  NULL,                    0, NULL},
     };
 
-    gPatchSettingU8Target = target;
+    gPatchSettingModule = PATCH_VIBRATO;
+    gPatchSettingParam  = VIBRATO_MOD;
     open_context_menu(coord, items, 0, 0.0);
 }
 
-void open_vibrato_amount_dropdown(tCoord coord, _Atomic uint8_t * target) {
+void open_vibrato_amount_dropdown(tCoord coord) {
     static tMenuItem items[129];
     static char      labels[128][8];
     static bool      initialized = false;
@@ -1280,11 +1305,12 @@ void open_vibrato_amount_dropdown(tCoord coord, _Atomic uint8_t * target) {
         };
         initialized = true;
     }
-    gPatchSettingU8Target = target;
+    gPatchSettingModule = PATCH_VIBRATO;
+    gPatchSettingParam  = VIBRATO_DEPTH;
     open_context_menu(coord, items, 8, 0.0);
 }
 
-void open_glide_mode_dropdown(tCoord coord, _Atomic uint8_t * target) {
+void open_glide_mode_dropdown(tCoord coord) {
     static tMenuItem items[] = {
         {"Auto",   RGB_GREY_3, action_patch_setting_u8, 0, NULL},
         {"Normal", RGB_GREY_3, action_patch_setting_u8, 1, NULL},
@@ -1292,11 +1318,12 @@ void open_glide_mode_dropdown(tCoord coord, _Atomic uint8_t * target) {
         {NULL,     RGB_BLACK,  NULL,                    0, NULL},
     };
 
-    gPatchSettingU8Target = target;
+    gPatchSettingModule = PATCH_GLIDE;
+    gPatchSettingParam  = GLIDE_TYPE;
     open_context_menu(coord, items, 0, 0.0);
 }
 
-void open_glide_time_dropdown(tCoord coord, _Atomic uint8_t * target) {
+void open_glide_time_dropdown(tCoord coord) {
     static tMenuItem items[121];
     static bool      initialized = false;
 
@@ -1312,11 +1339,12 @@ void open_glide_time_dropdown(tCoord coord, _Atomic uint8_t * target) {
         };
         initialized = true;
     }
-    gPatchSettingU8Target = target;
+    gPatchSettingModule = PATCH_GLIDE;
+    gPatchSettingParam  = GLIDE_SPEED;
     open_context_menu(coord, items, 6, 0.0);
 }
 
-void open_bend_range_dropdown(tCoord coord, _Atomic uint8_t * target) {
+void open_bend_range_dropdown(tCoord coord) {
     static tMenuItem items[26];
     static char      labels[25][8];
     static bool      initialized = false;
@@ -1334,11 +1362,12 @@ void open_bend_range_dropdown(tCoord coord, _Atomic uint8_t * target) {
         };
         initialized = true;
     }
-    gPatchSettingU8Target = target;
+    gPatchSettingModule = PATCH_BEND;
+    gPatchSettingParam  = BEND_RANGE;
     open_context_menu(coord, items, 0, 0.0);
 }
 
-void open_patch_octave_shift_dropdown(tCoord coord, _Atomic int8_t * target) {
+void open_patch_octave_shift_dropdown(tCoord coord) {
     static tMenuItem items[] = {
         {"-2", RGB_GREY_3, action_patch_setting_i8, (uint32_t)(int32_t)-2, NULL},
         {"-1", RGB_GREY_3, action_patch_setting_i8, (uint32_t)(int32_t)-1, NULL},
@@ -1348,7 +1377,8 @@ void open_patch_octave_shift_dropdown(tCoord coord, _Atomic int8_t * target) {
         {NULL, RGB_BLACK,  NULL,                                        0, NULL},
     };
 
-    gPatchSettingI8Target = target;
+    gPatchSettingModule = PATCH_SUSTAIN;
+    gPatchSettingParam  = OCTAVE_SHIFT;
     open_context_menu(coord, items, 0, 0.0);
 }
 

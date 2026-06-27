@@ -816,6 +816,10 @@ static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
     }
     LOG_DEBUG("Param change - module %u:%u param=%u value=%u\n",
               key.location, key.index, param, value);
+
+    if (key.location == (uint32_t)locationMorph) {
+        call_wake_glfw();
+    }
 }
 
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
@@ -2715,10 +2719,6 @@ static int send_write_data(tMessageContent * messageContent) {
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_perf_header();
             send_start();
-            break;
-
-        case eMsgCmdWritePatchSettings:
-            // TODO: implement send_patch_settings() once protocol format is confirmed
             break;
 
         case eMsgCmdWritePerfName:

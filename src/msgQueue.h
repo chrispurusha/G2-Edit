@@ -66,8 +66,7 @@ typedef enum {
     eMsgCmdWriteModePatch,
     eMsgCmdWritePerf,
     eMsgCmdWritePerfName,
-    eMsgCmdWritePerfSettings,
-    eMsgCmdWritePatchSettings//,
+    eMsgCmdWritePerfSettings//,
     //eMsgCmdReloadAllPatchData
 } eMsgCmd;
 

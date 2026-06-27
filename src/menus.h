@@ -75,17 +75,16 @@ void open_master_clock_dropdown(tCoord coord, _Atomic uint8_t * target);
 void open_midi_note_dropdown(tCoord coord, _Atomic uint8_t * target);
 
 // Patch settings dropdowns
-void send_patch_settings_msg(uint32_t slot);
-void open_patch_on_off_dropdown(tCoord coord, _Atomic uint8_t * target);
-void open_arp_rate_dropdown(tCoord coord, _Atomic uint8_t * target);
-void open_arp_direction_dropdown(tCoord coord, _Atomic uint8_t * target);
-void open_arp_octave_dropdown(tCoord coord, _Atomic uint8_t * target);
-void open_vibrato_source_dropdown(tCoord coord, _Atomic uint8_t * target);
-void open_vibrato_amount_dropdown(tCoord coord, _Atomic uint8_t * target);
-void open_glide_mode_dropdown(tCoord coord, _Atomic uint8_t * target);
-void open_glide_time_dropdown(tCoord coord, _Atomic uint8_t * target);
-void open_bend_range_dropdown(tCoord coord, _Atomic uint8_t * target);
-void open_patch_octave_shift_dropdown(tCoord coord, _Atomic int8_t * target);
+void open_patch_on_off_dropdown(tCoord coord, uint32_t moduleIndex, uint32_t paramIndex);
+void open_arp_rate_dropdown(tCoord coord);
+void open_arp_direction_dropdown(tCoord coord);
+void open_arp_octave_dropdown(tCoord coord);
+void open_vibrato_source_dropdown(tCoord coord);
+void open_vibrato_amount_dropdown(tCoord coord);
+void open_glide_mode_dropdown(tCoord coord);
+void open_glide_time_dropdown(tCoord coord);
+void open_bend_range_dropdown(tCoord coord);
+void open_patch_octave_shift_dropdown(tCoord coord);
 
 #ifdef __cplusplus
 }

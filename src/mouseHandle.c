@@ -798,13 +798,13 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 return;
             }
 
-            if (within_rectangle(coord, gPatchSettingsPanelRects.close)) {
+            if (within_rectangle(coord, gPatchParamClose)) {
                 gPatchParamsEdit.active = false;
             } else {
                 bool switched = false;
 
                 for (uint32_t s = 0; s < MAX_SLOTS; s++) {
-                    if (within_rectangle(coord, gPatchSettingsPanelRects.slot[s])) {
+                    if (within_rectangle(coord, gPatchParamSlots[s])) {
                         gPatchParamsEdit.slot = s;
                         switched              = true;
                         break;
@@ -812,32 +812,52 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
 
                 if (!switched) {
-                    uint32_t slot = gPatchParamsEdit.slot;
+                    static const struct {
+                        tPatchParamRectId id;
+                        void              (*open_fn)(tCoord);
+                    } kPatchParamTable[] = {
+                        {pPSustainPedal,  NULL                            },
+                        {pPOctaveShift,   open_patch_octave_shift_dropdown},
+                        {pPArpEnabled,    NULL                            },
+                        {pPArpRate,       open_arp_rate_dropdown          },
+                        {pPArpDirection,  open_arp_direction_dropdown     },
+                        {pPArpOctaves,    open_arp_octave_dropdown        },
+                        {pPVibratoAmount, open_vibrato_amount_dropdown    },
+                        {pPVibratoSource, open_vibrato_source_dropdown    },
+                        {pPVibratoRate,   NULL                            },
+                        {pPGlideTime,     open_glide_time_dropdown        },
+                        {pPGlideMode,     open_glide_mode_dropdown        },
+                        {pPBendRange,     open_bend_range_dropdown        },
+                        {pPBendEnabled,   NULL                            },
+                    };
+                    static const struct {
+                        tPatchParamRectId id;
+                        uint32_t          moduleIndex;
+                        uint32_t          paramIndex;
+                    } kPatchOnOffTable[] = {
+                        {pPSustainPedal, PATCH_SUSTAIN,     SUSTAIN_PEDAL},
+                        {pPArpEnabled,   PATCH_ARPEGGIATOR, ARP_ON_OFF   },
+                        {pPBendEnabled,  PATCH_BEND,        BEND_ON_OFF  },
+                    };
 
-                    if (within_rectangle(coord, gPatchSettingsPanelRects.sustainPedal)) {
-                        open_patch_on_off_dropdown(below_rect(gPatchSettingsPanelRects.sustainPedal), &gPatchSettings[slot].sustainPedal);
-                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.octaveShift)) {
-                        open_patch_octave_shift_dropdown(below_rect(gPatchSettingsPanelRects.octaveShift), &gPatchSettings[slot].octaveShift);
-                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.arpEnabled)) {
-                        open_patch_on_off_dropdown(below_rect(gPatchSettingsPanelRects.arpEnabled), &gPatchSettings[slot].arpEnabled);
-                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.arpRate)) {
-                        open_arp_rate_dropdown(below_rect(gPatchSettingsPanelRects.arpRate), &gPatchSettings[slot].arpRate);
-                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.arpDirection)) {
-                        open_arp_direction_dropdown(below_rect(gPatchSettingsPanelRects.arpDirection), &gPatchSettings[slot].arpDirection);
-                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.arpOctaveRange)) {
-                        open_arp_octave_dropdown(below_rect(gPatchSettingsPanelRects.arpOctaveRange), &gPatchSettings[slot].arpOctaveRange);
-                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.vibratoAmount)) {
-                        open_vibrato_amount_dropdown(below_rect(gPatchSettingsPanelRects.vibratoAmount), &gPatchSettings[slot].vibratoAmount);
-                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.vibratoSource)) {
-                        open_vibrato_source_dropdown(below_rect(gPatchSettingsPanelRects.vibratoSource), &gPatchSettings[slot].vibratoSource);
-                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.glideTime)) {
-                        open_glide_time_dropdown(below_rect(gPatchSettingsPanelRects.glideTime), &gPatchSettings[slot].glideTime);
-                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.glideMode)) {
-                        open_glide_mode_dropdown(below_rect(gPatchSettingsPanelRects.glideMode), &gPatchSettings[slot].glideMode);
-                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.bendRange)) {
-                        open_bend_range_dropdown(below_rect(gPatchSettingsPanelRects.bendRange), &gPatchSettings[slot].bendRange);
-                    } else if (within_rectangle(coord, gPatchSettingsPanelRects.bendEnabled)) {
-                        open_patch_on_off_dropdown(below_rect(gPatchSettingsPanelRects.bendEnabled), &gPatchSettings[slot].bendEnabled);
+                    for (int i = 0; i < (int)(sizeof(kPatchParamTable) / sizeof(*kPatchParamTable)); i++) {
+                        tPatchParamRectId rid = kPatchParamTable[i].id;
+
+                        if (within_rectangle(coord, gPatchParamRects[rid])) {
+                            if (kPatchParamTable[i].open_fn != NULL) {
+                                kPatchParamTable[i].open_fn(below_rect(gPatchParamRects[rid]));
+                            } else {
+                                for (int j = 0; j < (int)(sizeof(kPatchOnOffTable) / sizeof(*kPatchOnOffTable)); j++) {
+                                    if (kPatchOnOffTable[j].id == rid) {
+                                        open_patch_on_off_dropdown(below_rect(gPatchParamRects[rid]),
+                                                                   kPatchOnOffTable[j].moduleIndex,
+                                                                   kPatchOnOffTable[j].paramIndex);
+                                        break;
+                                    }
+                                }
+                            }
+                            break;
+                        }
                     }
                 }
             }
