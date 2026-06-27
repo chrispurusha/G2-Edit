@@ -1861,6 +1861,129 @@ static int send_set_module_colour(uint32_t slot, uint32_t location,
     return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
+static int send_set_mode(uint32_t slot, tModeData * modeData) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_MODE);
+    buff[pos++] = (uint8_t)modeData->moduleKey.location;
+    buff[pos++] = (uint8_t)modeData->moduleKey.index;
+    buff[pos++] = (uint8_t)modeData->mode;
+    buff[pos++] = (uint8_t)modeData->value;
+    LOG_DEBUG("SET MODE %u %u\n", modeData->mode, modeData->value);
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+}
+
+static int send_write_cable(uint32_t slot, tCableData * cableData) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_WRITE_CABLE);
+    buff[pos++] = 0x10 | ((uint8_t)cableData->location << 3) | (uint8_t)cableData->colour;
+    buff[pos++] = (uint8_t)cableData->moduleFromIndex;
+    buff[pos++] = ((uint8_t)cableData->linkType << 6) | (uint8_t)cableData->connectorFromIoIndex;
+    buff[pos++] = (uint8_t)cableData->moduleToIndex;
+    buff[pos++] = (uint8_t)cableData->connectorToIoIndex;
+    return send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+}
+
+static int send_delete_cable(uint32_t slot, tCableData * cableData) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_DELETE_CABLE);
+    buff[pos++] = 0x2 | (uint8_t)cableData->location;
+    buff[pos++] = (uint8_t)cableData->moduleFromIndex;
+    buff[pos++] = ((uint8_t)cableData->linkType << 6) | (uint8_t)cableData->connectorFromIoIndex;
+    buff[pos++] = (uint8_t)cableData->moduleToIndex;
+    buff[pos++] = (uint8_t)cableData->connectorToIoIndex;
+    return send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+}
+
+static int send_add_module(uint32_t slot, tModuleData * moduleData) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+    int     avail                   = 0;
+    int     written                 = 0;
+
+    LOG_DEBUG("Writing module\n");
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_ADD_MODULE);
+    buff[pos++] = (uint8_t)moduleData->type;
+    buff[pos++] = (uint8_t)moduleData->moduleKey.location;
+    buff[pos++] = (uint8_t)moduleData->moduleKey.index;
+    buff[pos++] = (uint8_t)moduleData->column;
+    buff[pos++] = (uint8_t)moduleData->row;
+    buff[pos++] = (uint8_t)moduleData->colour;
+    buff[pos++] = (uint8_t)moduleData->upRate;
+    buff[pos++] = (uint8_t)moduleData->isLed;
+
+    for (int i = 0; i < (int)moduleData->modeCount; i++) {
+        buff[pos++] = (uint8_t)moduleData->mode[i];
+    }
+
+    avail       = SEND_MESSAGE_SIZE - pos;
+    written     = snprintf((char *)&buff[pos], avail, "%s", moduleData->name);
+    pos        += ((written >= 0) && (written < avail)) ? written + 1 : avail;
+    return send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+}
+
+static int send_move_module(uint32_t slot, tModuleKey moduleKey, uint32_t column, uint32_t row) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_MOVE_MODULE);
+    buff[pos++] = (uint8_t)moduleKey.location;
+    buff[pos++] = (uint8_t)moduleKey.index;
+    buff[pos++] = (uint8_t)column;
+    buff[pos++] = (uint8_t)row;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+}
+
+static int send_delete_module(uint32_t slot, tModuleKey moduleKey) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_DELETE_MODULE);
+    buff[pos++] = (uint8_t)moduleKey.location;
+    buff[pos++] = (uint8_t)moduleKey.index;
+    return send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+}
+
+static int send_set_module_uprate(uint32_t slot, tModuleKey moduleKey, uint32_t upRate) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_MODULE_UPRATE);
+    buff[pos++] = (uint8_t)moduleKey.location;
+    buff[pos++] = (uint8_t)moduleKey.index;
+    buff[pos++] = (uint8_t)upRate;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+}
+
+static int send_set_morph_range(uint32_t slot, tParamMorphData * paramMorphData) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+
+    usb_cmd_slot(buff, &pos, slot, COMMAND_WRITE_NO_RESP, SUB_COMMAND_SET_MORPH_RANGE);
+    buff[pos++] = (uint8_t)paramMorphData->moduleKey.location;
+    buff[pos++] = (uint8_t)paramMorphData->moduleKey.index;
+    buff[pos++] = (uint8_t)paramMorphData->param;
+    buff[pos++] = (uint8_t)paramMorphData->paramMorph;
+    buff[pos++] = (uint8_t)paramMorphData->value;
+    buff[pos++] = (uint8_t)paramMorphData->negative;
+    buff[pos++] = (uint8_t)paramMorphData->variation;
+    return send_message(buff, pos);
+}
+
+static int send_select_variation(uint32_t slot, uint32_t variation) {
+    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
+    int     pos                     = COMMAND_OFFSET;
+
+    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SELECT_VARIATION);
+    buff[pos++] = (uint8_t)variation;
+    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+}
+
 // ---------------------------------------------------------------------------
 // Slot data management
 // ---------------------------------------------------------------------------
@@ -2355,192 +2478,87 @@ static int send_init_sequence_push(void) {
 // ---------------------------------------------------------------------------
 
 static int send_write_data(tMessageContent * messageContent) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_FAILURE;
-    uint8_t patchVersion[MAX_SLOTS] = {0};
-    int     i                       = 0;
+    int retVal = EXIT_FAILURE;
 
-    for (i = 0; i < MAX_SLOTS; i++) {
-        patchVersion[i] = gGlobalSettings.slot[i].patchVersion;
-    }
-
-    // TODO - these should move to functions where we can do: SEND_RECV(function());
     switch (messageContent->cmd) {
         case eMsgCmdSetValue:
-            retVal      = send_set_param_value(messageContent->slot, messageContent->paramData.moduleKey, messageContent->paramData.param, messageContent->paramData.value, messageContent->paramData.variation);
+            retVal = send_set_param_value(messageContent->slot, messageContent->paramData.moduleKey, messageContent->paramData.param, messageContent->paramData.value, messageContent->paramData.variation);
             break;
 
         case eMsgCmdSetMode:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
-            buff[pos++] = patchVersion[messageContent->slot];
-            buff[pos++] = SUB_COMMAND_SET_MODE;
-            buff[pos++] = messageContent->modeData.moduleKey.location;
-            buff[pos++] = messageContent->modeData.moduleKey.index;
-            buff[pos++] = messageContent->modeData.mode;
-            buff[pos++] = messageContent->modeData.value;
-            LOG_DEBUG("SET MODE %u %u\n", messageContent->modeData.mode, messageContent->modeData.value);
-            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            send_stop();
+            retVal = send_set_mode(messageContent->slot, &messageContent->modeData);
             send_start();
             break;
 
         case eMsgCmdWriteCable:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
-            buff[pos++] = patchVersion[messageContent->slot];
-            buff[pos++] = SUB_COMMAND_WRITE_CABLE;
-            buff[pos++] = 0x10 | (messageContent->cableData.location << 3) | messageContent->cableData.colour;
-            buff[pos++] = messageContent->cableData.moduleFromIndex;
-            buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex;
-            buff[pos++] = messageContent->cableData.moduleToIndex;
-            buff[pos++] = messageContent->cableData.connectorToIoIndex;
-            retVal      = send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            send_stop();
+            retVal = send_write_cable(messageContent->slot, &messageContent->cableData);
             send_start();
             break;
 
         case eMsgCmdWriteModule:
-        {
-            int avail   = 0;
-            int written = 0;
-
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-
-            LOG_DEBUG("Writing module\n");
-            buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
-            buff[pos++] = patchVersion[messageContent->slot];
-            buff[pos++] = SUB_COMMAND_ADD_MODULE;
-            buff[pos++] = messageContent->moduleData.type;
-            buff[pos++] = messageContent->moduleData.moduleKey.location;
-            buff[pos++] = messageContent->moduleData.moduleKey.index;
-            buff[pos++] = messageContent->moduleData.column;
-            buff[pos++] = messageContent->moduleData.row;
-            buff[pos++] = messageContent->moduleData.colour;
-            buff[pos++] = messageContent->moduleData.upRate;
-            buff[pos++] = messageContent->moduleData.isLed;
-
-            for (int i = 0; i < messageContent->moduleData.modeCount; i++) {
-                buff[pos++] = messageContent->moduleData.mode[i];
-            }
-
-            avail       = SEND_MESSAGE_SIZE - pos;
-            written     = snprintf((char *)&buff[pos], avail, "%s", messageContent->moduleData.name);
-
-            pos        += ((written >= 0) && (written < avail)) ? written + 1 : avail;
-            retVal      = send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
-
+            send_stop();
+            retVal = send_add_module(messageContent->slot, &messageContent->moduleData);
             send_start();
             break;
-        }
         case eMsgCmdMoveModule:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
-            buff[pos++] = patchVersion[messageContent->slot];
-            buff[pos++] = SUB_COMMAND_MOVE_MODULE;
-            buff[pos++] = messageContent->moduleData.moduleKey.location;
-            buff[pos++] = messageContent->moduleData.moduleKey.index;
-            buff[pos++] = messageContent->moduleData.column;
-            buff[pos++] = messageContent->moduleData.row;
-            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            send_stop();
+            retVal = send_move_module(messageContent->slot, messageContent->moduleData.moduleKey,
+                                      messageContent->moduleData.column, messageContent->moduleData.row);
             send_start();
             break;
 
         case eMsgCmdDeleteModule:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
-            buff[pos++] = patchVersion[messageContent->slot];
-            buff[pos++] = SUB_COMMAND_DELETE_MODULE;
-            buff[pos++] = messageContent->moduleData.moduleKey.location;
-            buff[pos++] = messageContent->moduleData.moduleKey.index;
-            retVal      = send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            send_stop();
+            retVal = send_delete_module(messageContent->slot, messageContent->moduleData.moduleKey);
             send_start();
             break;
 
         case eMsgCmdSetModuleUpRate:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
-            buff[pos++] = patchVersion[messageContent->slot];
-            buff[pos++] = SUB_COMMAND_SET_MODULE_UPRATE;
-            buff[pos++] = messageContent->moduleData.moduleKey.location;
-            buff[pos++] = messageContent->moduleData.moduleKey.index;
-            buff[pos++] = messageContent->moduleData.upRate;
-            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            send_stop();
+            retVal = send_set_module_uprate(messageContent->slot, messageContent->moduleData.moduleKey,
+                                            messageContent->moduleData.upRate);
             send_start();
             break;
 
         case eMsgCmdDeleteCable:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
-            buff[pos++] = patchVersion[messageContent->slot];
-            buff[pos++] = SUB_COMMAND_DELETE_CABLE;
-            buff[pos++] = 0x2 | messageContent->cableData.location;
-            buff[pos++] = messageContent->cableData.moduleFromIndex;
-            buff[pos++] = (messageContent->cableData.linkType << 6) | messageContent->cableData.connectorFromIoIndex;
-            buff[pos++] = messageContent->cableData.moduleToIndex;
-            buff[pos++] = messageContent->cableData.connectorToIoIndex;
-            retVal      = send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            send_stop();
+            retVal = send_delete_cable(messageContent->slot, &messageContent->cableData);
             send_start();
             break;
 
         case eMsgCmdSetParamMorph:
-            buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_WRITE_NO_RESP | COMMAND_SLOT | messageContent->slot;
-            buff[pos++] = patchVersion[messageContent->slot];
-            buff[pos++] = SUB_COMMAND_SET_MORPH_RANGE;
-            buff[pos++] = messageContent->paramMorphData.moduleKey.location;
-            buff[pos++] = messageContent->paramMorphData.moduleKey.index;
-            buff[pos++] = messageContent->paramMorphData.param;
-            buff[pos++] = messageContent->paramMorphData.paramMorph;
-            buff[pos++] = messageContent->paramMorphData.value;
-            buff[pos++] = messageContent->paramMorphData.negative;
-            buff[pos++] = messageContent->paramMorphData.variation;
-            retVal      = send_message(buff, pos);   // Don't do stop/start around messages with no expected response
+            retVal = send_set_morph_range(messageContent->slot, &messageContent->paramMorphData);
             break;
 
         case eMsgCmdSelectVariation:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SLOT | messageContent->slot;
-            buff[pos++] = patchVersion[messageContent->slot];
-            buff[pos++] = SUB_COMMAND_SELECT_VARIATION;
-            buff[pos++] = messageContent->variationData.variation;
-            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            send_stop();
+            retVal = send_select_variation(messageContent->slot, messageContent->variationData.variation);
             send_start();
             break;
 
         case eMsgCmdSelectSlot:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            buff[pos++] = 0x01;
-            buff[pos++] = COMMAND_REQ | COMMAND_SYS;
-            buff[pos++] = gGlobalSettings.perfVersion;
-            buff[pos++] = SUB_COMMAND_SELECT_SLOT;
-            buff[pos++] = messageContent->slotData.slot;
-            retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+            send_stop();
+            retVal = send_select_slot(messageContent->slotData.slot);
             send_start();
             break;
 
         case eMsgCmdSetModuleLabel:
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            retVal      = send_set_module_label(messageContent->slot, messageContent->moduleLabelData.moduleKey, messageContent->moduleLabelData.name);
+            retVal = send_set_module_label(messageContent->slot, messageContent->moduleLabelData.moduleKey, messageContent->moduleLabelData.name);
             send_start();
             break;
 
         case eMsgCmdSetPatchName:
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            retVal      = send_set_patch_name(messageContent->slot, messageContent->patchName.name);
+            retVal = send_set_patch_name(messageContent->slot, messageContent->patchName.name);
             send_start();
             break;
 
         case eMsgCmdSetModuleColour:
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            retVal      = send_set_module_colour(messageContent->slot, messageContent->moduleColourData.moduleKey.location, messageContent->moduleColourData.moduleKey.index, messageContent->moduleColourData.colour);
+            retVal = send_set_module_colour(messageContent->slot, messageContent->moduleColourData.moduleKey.location, messageContent->moduleColourData.moduleKey.index, messageContent->moduleColourData.colour);
             send_start();
             break;
 
