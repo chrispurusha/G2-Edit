@@ -343,44 +343,38 @@ typedef enum {
 } tLabelLoc;
 
 typedef enum {
-    paramType1None,
-    paramType1Freq,
-    paramType1OscFreq,
-    paramType1Fine,
-    paramType1GeneralFreq,
-    paramType1FreqDrum,
-    paramType1Int,
-    paramType1LFORate,
-    paramType1Shape,
-    paramType1dB,
-    paramType1ADRTime,
-    paramType1PulseTime,
-    paramType1Time,
-    paramType1TimeClk,
-    paramType1Resonance,
-    paramType1Pitch,
-    paramType1Bypass,
-    paramType1BipLevel,
-    paramType1MixLevel,
-    paramType1LevAmpDial,
-    paramType1NoteDial,
-    paramType1Pan,
-    paramType1Slider,
-    paramType1CommonDial,
-    paramType1LRDial,
-    paramType1OscWave,
-    paramType1Enable,
-    paramType1StrMap,
-    paramType1FreqShift,
-    paramType1StandardToggle,
-} tParamType1;
-
-typedef enum {
-    paramType2Dial,
-    paramType2Toggle,
-    paramType2Menu,
-    paramType2Other // Could add button, slider etc.
-} tParamType2;
+    paramTypeNone,
+    paramTypeFreq,
+    paramTypeOscFreq,
+    paramTypeFine,
+    paramTypeGeneralFreq,
+    paramTypeFreqDrum,
+    paramTypeInt,
+    paramTypeLFORate,
+    paramTypeShape,
+    paramTypedB,
+    paramTypeADRTime,
+    paramTypePulseTime,
+    paramTypeTime,
+    paramTypeTimeClk,
+    paramTypeResonance,
+    paramTypePitch,
+    paramTypeBypass,
+    paramTypeBipLevel,
+    paramTypeMixLevel,
+    paramTypeLevAmpDial,
+    paramTypeNoteDial,
+    paramTypePan,
+    paramTypeSlider,
+    paramTypeCommonDial,
+    paramTypeLRDial,
+    paramTypeOscWave,
+    paramTypeEnable,
+    paramTypeStrMap,
+    paramTypeFreqShift,
+    paramTypeToggle,
+    paramTypeMenu,
+} tParamType;
 
 typedef enum {
     volumeTypeNone,
@@ -473,7 +467,7 @@ typedef enum {
 typedef enum {
 #define TOPBAR_COL(r, \
                    g, \
-                   b)               /* colour ignored when building enum */
+                   b)    /* colour ignored when building enum */
 #define TOPBAR_COL_BG_GREY     TOPBAR_COL(0.8, \
                                           0.8, \
                                           0.8)
@@ -642,7 +636,7 @@ typedef struct {
 
 typedef struct {
     const tModuleType moduleType;
-    const tParamType1 type;
+    const tParamType  type;
     const tCoord      coord;
 } tConstParameter;
 
@@ -655,8 +649,7 @@ typedef struct {
 
 typedef struct {
     const tModuleType moduleType;
-    const tParamType1 type1;
-    const tParamType2 type2;
+    const tParamType  type;
     const tRectangle  rectangle;
     const tAnchor     anchor;
     const char *      label;
@@ -678,8 +671,7 @@ typedef struct {
 
 typedef struct {
     const tModuleType moduleType;
-    const tParamType1 type1;
-    const tParamType2 type2;
+    const tParamType  type;
     const tRectangle  rectangle;
     const tAnchor     anchor;
     const char *      label;

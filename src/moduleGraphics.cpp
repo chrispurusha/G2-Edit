@@ -182,169 +182,32 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 
     //LOG_DEBUG("param %u\n", paramValue);
 
-    switch (paramLocationList[paramRef].type2) { // TODO: These function parameters can go straight into the auto-initialised structures in moduleResources.h
-        case paramType2Dial:
+    switch (paramLocationList[paramRef].type) {
+        case paramTypeToggle:
+        case paramTypeMenu:
         {
-            tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramRef);
-            render_param_function = NULL;
-
-            switch (paramLocationList[paramRef].type1) {
-                case paramType1Freq:
-                {
-                    render_param_function = &render_paramType1Freq;
-                    break;
-                }
-                case paramType1OscFreq:
-                {
-                    render_param_function = &render_paramType1OscFreq;
-                    break;
-                }
-                case paramType1Fine:
-                {
-                    render_param_function = &render_paramType1Fine;
-                    break;
-                }
-                case paramType1GeneralFreq:
-                {
-                    render_param_function = &render_paramType1GeneralFreq;
-                    break;
-                }
-                case paramType1Shape:
-                {
-                    render_param_function = &render_paramType1Shape;
-                    break;
-                }
-                case paramType1FreqDrum:
-                {
-                    render_param_function = &render_paramType1FreqDrum;
-                    break;
-                }
-                case paramType1LFORate:
-                {
-                    render_param_function = &render_paramType1LFORate;
-                    break;
-                }
-                case paramType1Int:
-                {
-                    render_param_function = &render_paramType1Int;
-                    break;
-                }
-                case paramType1dB:
-                {
-                    render_param_function = &render_paramType1dB;
-                    break;
-                }
-                case paramType1MixLevel:
-                {
-                    render_param_function = &render_paramType1MixLevel;
-                    break;
-                }
-                case paramType1Time:
-                {
-                    render_param_function = &render_paramType1Time;
-                    break;
-                }
-                case paramType1TimeClk:
-                {
-                    render_param_function = &render_paramType1TimeClk;
-                    break;
-                }
-                case paramType1ADRTime:
-                {
-                    render_param_function = &render_paramType1ADRTime;
-                    break;
-                }
-                case paramType1PulseTime:
-                {
-                    render_param_function = &render_paramType1PulseTime;
-                    break;
-                }
-                case paramType1Pitch:
-                {
-                    render_param_function = &render_paramType1Pitch;
-                    break;
-                }
-                case paramType1BipLevel:
-                {
-                    render_param_function = &render_paramType1BipLevel;
-                    break;
-                }
-                case paramType1LevAmpDial:
-                {
-                    render_param_function = &render_paramType1LevAmpDial;
-                    break;
-                }
-                case paramType1Pan:
-                {
-                    render_param_function = &render_paramType1Pan;
-                    break;
-                }
-                case paramType1NoteDial:
-                {
-                    render_param_function = &render_paramType1NoteDial;
-                    break;
-                }
-                case paramType1CommonDial: // Ultimately might not be a common dial, or could just be a default percent dial!?
-                case paramType1LRDial:     // Pan type dial, perhaps with reset triangle
-                case paramType1Resonance:
-                {
-                    render_param_function = &render_paramType1Resonance;
-                    break;
-                }
-                case paramType1Slider:
-                {
-                    render_param_function = &render_paramType1Slider;
-                    break;
-                }
-                case paramType1StrMap:
-                {
-                    render_param_function = &render_paramType1StrMap;
-                    break;
-                }
-                case paramType1FreqShift:
-                {
-                    render_param_function = &render_paramType1FreqShift;
-                    break;
-                }
-                default:
-                {
-                    LOG_ERROR("Unrecognised type1 %d\n", paramLocationList[paramRef].type1);
-                    break;
-                }
-            }
+            tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap);
+            render_param_function = &render_paramType1StandardToggle;
 
             if (render_param_function != NULL) {
-                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramRef);
+                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
             }
             break;
         }
-        case paramType2Toggle:
-        case paramType2Menu:
+        case paramTypeBypass:
         {
             tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap);
-            render_param_function = NULL;
+            render_param_function = &render_paramType1Bypass;
 
-            switch (paramLocationList[paramRef].type1) {
-                case paramType1StandardToggle:
-                {
-                    render_param_function = &render_paramType1StandardToggle;
-                    break;
-                }
-                case paramType1Bypass:
-                {
-                    render_param_function = &render_paramType1Bypass;
-                    break;
-                }
-                case paramType1Enable:
-                {
-                    render_param_function = &render_paramType1Enable;
-                    break;
-                }
-                default:
-                {
-                    LOG_ERROR("Reached wrong switch in case paramType2Toggle or paramType2UpDown");
-                }
+            if (render_param_function != NULL) {
+                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
             }
+            break;
+        }
+        case paramTypeEnable:
+        {
+            tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap);
+            render_param_function = &render_paramType1Enable;
 
             if (render_param_function != NULL) {
                 gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
@@ -353,7 +216,66 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         }
         default:
         {
-            LOG_ERROR("Reached wrong switch in switch paramType2");
+            tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramRef);
+            render_param_function = NULL;
+
+            switch (paramLocationList[paramRef].type) {
+                case paramTypeFreq:           render_param_function = &render_paramType1Freq;
+                    break;
+                case paramTypeOscFreq:        render_param_function = &render_paramType1OscFreq;
+                    break;
+                case paramTypeFine:           render_param_function = &render_paramType1Fine;
+                    break;
+                case paramTypeGeneralFreq:    render_param_function = &render_paramType1GeneralFreq;
+                    break;
+                case paramTypeShape:          render_param_function = &render_paramType1Shape;
+                    break;
+                case paramTypeFreqDrum:       render_param_function = &render_paramType1FreqDrum;
+                    break;
+                case paramTypeLFORate:        render_param_function = &render_paramType1LFORate;
+                    break;
+                case paramTypeInt:            render_param_function = &render_paramType1Int;
+                    break;
+                case paramTypedB:             render_param_function = &render_paramType1dB;
+                    break;
+                case paramTypeMixLevel:       render_param_function = &render_paramType1MixLevel;
+                    break;
+                case paramTypeTime:           render_param_function = &render_paramType1Time;
+                    break;
+                case paramTypeTimeClk:        render_param_function = &render_paramType1TimeClk;
+                    break;
+                case paramTypeADRTime:        render_param_function = &render_paramType1ADRTime;
+                    break;
+                case paramTypePulseTime:      render_param_function = &render_paramType1PulseTime;
+                    break;
+                case paramTypePitch:          render_param_function = &render_paramType1Pitch;
+                    break;
+                case paramTypeBipLevel:       render_param_function = &render_paramType1BipLevel;
+                    break;
+                case paramTypeLevAmpDial:     render_param_function = &render_paramType1LevAmpDial;
+                    break;
+                case paramTypePan:            render_param_function = &render_paramType1Pan;
+                    break;
+                case paramTypeNoteDial:       render_param_function = &render_paramType1NoteDial;
+                    break;
+                case paramTypeCommonDial:     // default percent dial
+                case paramTypeLRDial:         // pan-type dial
+                case paramTypeResonance:      render_param_function = &render_paramType1Resonance;
+                    break;
+                case paramTypeSlider:         render_param_function = &render_paramType1Slider;
+                    break;
+                case paramTypeStrMap:         render_param_function = &render_paramType1StrMap;
+                    break;
+                case paramTypeFreqShift:      render_param_function = &render_paramType1FreqShift;
+                    break;
+                default:                      LOG_ERROR("Unrecognised paramType %d\n", paramLocationList[paramRef].type);
+                    break;
+            }
+
+            if (render_param_function != NULL) {
+                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramRef);
+            }
+            break;
         }
     }
     {
@@ -389,8 +311,8 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
 
     module->mode[0].modeRef = modeRef;
 
-    switch (modeLocationList[modeRef].type1) {
-        case paramType1OscWave:
+    switch (modeLocationList[modeRef].type) {
+        case paramTypeOscWave:
         {
             char buff[16] = {0};
 
@@ -398,7 +320,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             module->mode[modeIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)modeLocationList[modeRef].label, buff, module->mode[0].value, modeLocationList[modeRef].range, 0, RGB_GREY_5);  // TODO: Check if Mode can be morphed
             break;
         }
-        case paramType1StandardToggle:
+        case paramTypeToggle:
         {
             const char ** strMap     = modeLocationList[modeRef].strMap;
             double        y          = rectangle.coord.y;

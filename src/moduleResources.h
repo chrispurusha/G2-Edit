@@ -412,627 +412,627 @@ const tModuleProperties  gModuleProperties[]  = {
     {"Unknown",      0, volumeTypeNone,      ledTypeNo },
     {"RndPattern",   3, volumeTypeNone,      ledTypeNo }, };
 
-// moduleType, paramType1, paramType2, position rectangle, anchor, label, range, defaultValue, string map, colour map
+// moduleType, paramType, position rectangle, anchor, label, range, defaultValue, string map, colour map
 const tParamLocation     paramLocationList[] = {
     //  0 Unknown
     //  1 Keyboard -- No params
     //  2 Unknown
     //  3 4-Out
-    {moduleType4toOut,     paramType1StandardToggle, paramType2Menu,   {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Out to",         3,   0, outTo4OutStrMap,                       NULL          }, // 3 4-Out
-    {moduleType4toOut,     paramType1Bypass,         paramType2Toggle, {{ 45,  -3}, { 5,  5}}, anchorBottomLeft,  "Bypass",         2,   1, NULL,                                  NULL          },
-    {moduleType4toOut,     paramType1StandardToggle, paramType2Menu,   {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Pad",            2,   0, padStrMap,                             NULL          },
+    {moduleType4toOut,     paramTypeMenu,        {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Out to",         3,   0, outTo4OutStrMap,                       NULL          }, // 3 4-Out
+    {moduleType4toOut,     paramTypeBypass,      {{ 45,  -3}, { 5,  5}}, anchorBottomLeft,  "Bypass",         2,   1, NULL,                                  NULL          },
+    {moduleType4toOut,     paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Pad",            2,   0, padStrMap,                             NULL          },
     // 4 2-Out
-    {moduleType2toOut,     paramType1StandardToggle, paramType2Menu,   {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Out to",         6,   0, outToStrMap,                           NULL          }, // 4 2-Out
-    {moduleType2toOut,     paramType1Bypass,         paramType2Toggle, {{ 45,  -3}, { 5,  5}}, anchorBottomLeft,  "Bypass",         2,   1, NULL,                                  NULL          },
-    {moduleType2toOut,     paramType1StandardToggle, paramType2Menu,   {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Pad",            2,   0, padStrMap,                             NULL          },
+    {moduleType2toOut,     paramTypeMenu,        {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Out to",         6,   0, outToStrMap,                           NULL          }, // 4 2-Out
+    {moduleType2toOut,     paramTypeBypass,      {{ 45,  -3}, { 5,  5}}, anchorBottomLeft,  "Bypass",         2,   1, NULL,                                  NULL          },
+    {moduleType2toOut,     paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Pad",            2,   0, padStrMap,                             NULL          },
     //  5 Invert -- No params
     //  6 Unknown
     //  7 OscB
-    {moduleTypeOscB,       paramType1OscFreq,        paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 7 Tune
-    {moduleTypeOscB,       paramType1Fine,           paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 7 Cent
-    {moduleTypeOscB,       paramType1StandardToggle, paramType2Toggle, {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   1, kbStrMap,                              offOnColourMap}, // 7 Kbt
-    {moduleTypeOscB,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 7 Pitch M
-    {moduleTypeOscB,       paramType1StandardToggle, paramType2Menu,   {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 7 Pitch Type
-    {moduleTypeOscB,       paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          }, // FM M
-    {moduleTypeOscB,       paramType1Shape,          paramType2Dial,   {{-15,   5}, { 7, 14}}, anchorTopRight,    "Shape",        128,   0, NULL,                                  NULL          }, // 7 Shape 50% to 99%, not decimals
-    {moduleTypeOscB,       paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "ShpM",         128,   0, NULL,                                  NULL          }, // 7 Shape M
-    {moduleTypeOscB,       paramType1StandardToggle, paramType2Menu,   {{-30,   5}, { 7,  7}}, anchorTopRight,    NULL,             5,   2, shapeTypeStrMap,                       NULL          }, // 7 Waveform
-    {moduleTypeOscB,       paramType1Bypass,         paramType2Toggle, {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 7 Bypass
-    {moduleTypeOscB,       paramType1StandardToggle, paramType2Menu,   {{ 60,  15}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,                          NULL          }, // 7 FM Type
+    {moduleTypeOscB,       paramTypeOscFreq,     {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 7 Tune
+    {moduleTypeOscB,       paramTypeFine,        {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 7 Cent
+    {moduleTypeOscB,       paramTypeToggle,      {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   1, kbStrMap,                              offOnColourMap}, // 7 Kbt
+    {moduleTypeOscB,       paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 7 Pitch M
+    {moduleTypeOscB,       paramTypeMenu,        {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 7 Pitch Type
+    {moduleTypeOscB,       paramTypeCommonDial,  {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          }, // FM M
+    {moduleTypeOscB,       paramTypeShape,       {{-15,   5}, { 7, 14}}, anchorTopRight,    "Shape",        128,   0, NULL,                                  NULL          }, // 7 Shape 50% to 99%, not decimals
+    {moduleTypeOscB,       paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "ShpM",         128,   0, NULL,                                  NULL          }, // 7 Shape M
+    {moduleTypeOscB,       paramTypeMenu,        {{-30,   5}, { 7,  7}}, anchorTopRight,    NULL,             5,   2, shapeTypeStrMap,                       NULL          }, // 7 Waveform
+    {moduleTypeOscB,       paramTypeBypass,      {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 7 Bypass
+    {moduleTypeOscB,       paramTypeMenu,        {{ 60,  15}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,                          NULL          }, // 7 FM Type
     // 8 OscShpB
-    {moduleTypeOscShpB,    paramType1OscFreq,        paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 8 Tune
-    {moduleTypeOscShpB,    paramType1Fine,           paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 8 Cent
-    {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Toggle, {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   1, kbStrMap,                              offOnColourMap}, // 8 Kbt
-    {moduleTypeOscShpB,    paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 8 Pitch M
-    {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Menu,   {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 8 Pitch Type
-    {moduleTypeOscShpB,    paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          }, // FM M
-    {moduleTypeOscShpB,    paramType1Shape,          paramType2Dial,   {{-15,   5}, { 7, 14}}, anchorTopRight,    "Shape",        128,   0, NULL,                                  NULL          }, // 8 Shape 50% to 99%, not decimals
-    {moduleTypeOscShpB,    paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "ShpCtrl",      128,   0, NULL,                                  NULL          }, // 8 Shape M
-    {moduleTypeOscShpB,    paramType1Bypass,         paramType2Toggle, {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 8 Bypass
-    {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Menu,   {{ 60,  15}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,                          NULL          }, // 8 FM Type
+    {moduleTypeOscShpB,    paramTypeOscFreq,     {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 8 Tune
+    {moduleTypeOscShpB,    paramTypeFine,        {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 8 Cent
+    {moduleTypeOscShpB,    paramTypeToggle,      {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   1, kbStrMap,                              offOnColourMap}, // 8 Kbt
+    {moduleTypeOscShpB,    paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 8 Pitch M
+    {moduleTypeOscShpB,    paramTypeMenu,        {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 8 Pitch Type
+    {moduleTypeOscShpB,    paramTypeCommonDial,  {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          }, // FM M
+    {moduleTypeOscShpB,    paramTypeShape,       {{-15,   5}, { 7, 14}}, anchorTopRight,    "Shape",        128,   0, NULL,                                  NULL          }, // 8 Shape 50% to 99%, not decimals
+    {moduleTypeOscShpB,    paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "ShpCtrl",      128,   0, NULL,                                  NULL          }, // 8 Shape M
+    {moduleTypeOscShpB,    paramTypeBypass,      {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 8 Bypass
+    {moduleTypeOscShpB,    paramTypeMenu,        {{ 60,  15}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,                          NULL          }, // 8 FM Type
     //  9 OscC
-    {moduleTypeOscC,       paramType1OscFreq,        paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 9 Coarse
-    {moduleTypeOscC,       paramType1Fine,           paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 9 Fine
-    {moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   1, kbStrMap,                              offOnColourMap}, // 9 Kbt
-    {moduleTypeOscC,       paramType1StandardToggle, paramType2Menu,   {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 9 Tune Mode
-    {moduleTypeOscC,       paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          }, // FM
-    {moduleTypeOscC,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 9 Bypass
-    {moduleTypeOscC,       paramType1StandardToggle, paramType2Menu,   {{ 70,  15}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,                          NULL          }, // 9 FM Type
-    {moduleTypeOscC,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // Pitch Mode
+    {moduleTypeOscC,       paramTypeOscFreq,     {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 9 Coarse
+    {moduleTypeOscC,       paramTypeFine,        {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 9 Fine
+    {moduleTypeOscC,       paramTypeToggle,      {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   1, kbStrMap,                              offOnColourMap}, // 9 Kbt
+    {moduleTypeOscC,       paramTypeMenu,        {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 9 Tune Mode
+    {moduleTypeOscC,       paramTypeCommonDial,  {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          }, // FM
+    {moduleTypeOscC,       paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 9 Bypass
+    {moduleTypeOscC,       paramTypeMenu,        {{ 70,  15}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,                          NULL          }, // 9 FM Type
+    {moduleTypeOscC,       paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // Pitch Mode
     // 10 Unknown
     // 11 Unknown
     // 12 Reverb
-    {moduleTypeReverb,     paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,  64, NULL,                                  NULL          }, // 12 Time. Needs to check range
-    {moduleTypeReverb,     paramType1CommonDial,     paramType2Dial,   {{ 37,  -3}, { 7, 14}}, anchorBottomLeft,  "Brightness",   128,  64, NULL,                                  NULL          }, // 12 Brightness
-    {moduleTypeReverb,     paramType1CommonDial,     paramType2Dial,   {{ 57,  -3}, { 7, 14}}, anchorBottomLeft,  "DryWet",       128,  64, NULL,                                  NULL          }, // 12 DryWet
-    {moduleTypeReverb,     paramType1Bypass,         paramType2Toggle, {{-20,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 12 Bypass
+    {moduleTypeReverb,     paramTypeCommonDial,  {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,  64, NULL,                                  NULL          }, // 12 Time. Needs to check range
+    {moduleTypeReverb,     paramTypeCommonDial,  {{ 37,  -3}, { 7, 14}}, anchorBottomLeft,  "Brightness",   128,  64, NULL,                                  NULL          }, // 12 Brightness
+    {moduleTypeReverb,     paramTypeCommonDial,  {{ 57,  -3}, { 7, 14}}, anchorBottomLeft,  "DryWet",       128,  64, NULL,                                  NULL          }, // 12 DryWet
+    {moduleTypeReverb,     paramTypeBypass,      {{-20,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 12 Bypass
     // 13 OscString
-    {moduleTypeOscString,  paramType1OscFreq,        paramType2Dial,   {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 13 OscString Tune
-    {moduleTypeOscString,  paramType1CommonDial,     paramType2Dial,   {{ 47,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 13 OscString Fine
-    {moduleTypeOscString,  paramType1StandardToggle, paramType2Toggle, {{ 22,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap}, // 13 OscString Kbt
-    {moduleTypeOscString,  paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 13 OscString Pitch modulation
-    {moduleTypeOscString,  paramType1StandardToggle, paramType2Menu,   {{ 30,  10}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 13 OscString Pitch mode
-    {moduleTypeOscString,  paramType1CommonDial,     paramType2Dial,   {{ 59,  -3}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,  64, NULL,                                  NULL          }, // 13 OscString Decay
-    {moduleTypeOscString,  paramType1CommonDial,     paramType2Dial,   {{ 71,  -3}, { 7, 14}}, anchorBottomLeft,  "Damp",         128,  64, NULL,                                  NULL          }, // 13 OscString Damp
-    {moduleTypeOscString,  paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 13 OscString Bypass
+    {moduleTypeOscString,  paramTypeOscFreq,     {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 13 OscString Tune
+    {moduleTypeOscString,  paramTypeCommonDial,  {{ 47,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 13 OscString Fine
+    {moduleTypeOscString,  paramTypeToggle,      {{ 22,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap}, // 13 OscString Kbt
+    {moduleTypeOscString,  paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 13 OscString Pitch modulation
+    {moduleTypeOscString,  paramTypeMenu,        {{ 30,  10}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 13 OscString Pitch mode
+    {moduleTypeOscString,  paramTypeCommonDial,  {{ 59,  -3}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,  64, NULL,                                  NULL          }, // 13 OscString Decay
+    {moduleTypeOscString,  paramTypeCommonDial,  {{ 71,  -3}, { 7, 14}}, anchorBottomLeft,  "Damp",         128,  64, NULL,                                  NULL          }, // 13 OscString Damp
+    {moduleTypeOscString,  paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 13 OscString Bypass
     // 14 Unknown
     // 15 Sw8-1 *** Needs more resources
-    {moduleTypeSw8to1,     paramType1StandardToggle, paramType2Menu,   {{ 10, -17}, { 7,  7}}, anchorBottomLeft,  "Sel",            8,   0, sw8to1SelStrMap,                       NULL          }, // 15 Sel
+    {moduleTypeSw8to1,     paramTypeMenu,        {{ 10, -17}, { 7,  7}}, anchorBottomLeft,  "Sel",            8,   0, sw8to1SelStrMap,                       NULL          }, // 15 Sel
     // 16 Unknown
     // 17 ValSw1-2
-    {moduleTypeValSw1to2,  paramType1StandardToggle, paramType2Menu,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, u128StrMap,                            NULL          }, // 17 Val
+    {moduleTypeValSw1to2,  paramTypeMenu,        {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, u128StrMap,                            NULL          }, // 17 Val
     // 18 X-Fade
-    {moduleTypeXtoFade,    paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 18 Mod
-    {moduleTypeXtoFade,    paramType1Pan,            paramType2Dial,   {{ 55,   4}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 18 X-fade
-    {moduleTypeXtoFade,    paramType1StandardToggle, paramType2Menu,   {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, logStrMap,                             NULL          },
+    {moduleTypeXtoFade,    paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 18 Mod
+    {moduleTypeXtoFade,    paramTypePan,         {{ 55,   4}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 18 X-fade
+    {moduleTypeXtoFade,    paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, logStrMap,                             NULL          },
     // 19 Mix4-1B
-    {moduleTypeMix4to1B,   paramType1CommonDial,     paramType2Dial,   {{ 37,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 19 Lev1
-    {moduleTypeMix4to1B,   paramType1CommonDial,     paramType2Dial,   {{ 52,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 19 Lev2
-    {moduleTypeMix4to1B,   paramType1CommonDial,     paramType2Dial,   {{ 67,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 19 Lev3
-    {moduleTypeMix4to1B,   paramType1CommonDial,     paramType2Dial,   {{ 82,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 19 Lev4
-    {moduleTypeMix4to1B,   paramType1StandardToggle, paramType2Menu,   {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 19 ExpLinDB
+    {moduleTypeMix4to1B,   paramTypeCommonDial,  {{ 37,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 19 Lev1
+    {moduleTypeMix4to1B,   paramTypeCommonDial,  {{ 52,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 19 Lev2
+    {moduleTypeMix4to1B,   paramTypeCommonDial,  {{ 67,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 19 Lev3
+    {moduleTypeMix4to1B,   paramTypeCommonDial,  {{ 82,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 19 Lev4
+    {moduleTypeMix4to1B,   paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 19 ExpLinDB
     // 20 EnvvADSR
-    {moduleTypeEnvADSR,    paramType1StandardToggle, paramType2Menu,   {{-26,  -3}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, envShapeStrMap,                        NULL          }, // 20 Env Shape
-    {moduleTypeEnvADSR,    paramType1ADRTime,        paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, NULL,                                  NULL          }, // 20 A
-    {moduleTypeEnvADSR,    paramType1ADRTime,        paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Delay",        128,   0, NULL,                                  NULL          }, // 20 D
-    {moduleTypeEnvADSR,    paramType1CommonDial,     paramType2Dial,   {{ 44,  -3}, { 7, 14}}, anchorBottomLeft,  "Sus",          128, 100, NULL,                                  NULL          }, // 20 S
-    {moduleTypeEnvADSR,    paramType1ADRTime,        paramType2Dial,   {{ 56,  -3}, { 7, 14}}, anchorBottomLeft,  "Rel",          128,   0, NULL,                                  NULL          }, // 20 R
-    {moduleTypeEnvADSR,    paramType1StandardToggle, paramType2Menu,   {{-26, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          }, // 20 Output Type
-    {moduleTypeEnvADSR,    paramType1StandardToggle, paramType2Toggle, {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, kbStrMap,                              offOnColourMap}, // 20 KB Active
-    {moduleTypeEnvADSR,    paramType1StandardToggle, paramType2Menu,   {{  5,  -8}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,                     NULL          }, // 20 Normal/Reset
+    {moduleTypeEnvADSR,    paramTypeMenu,        {{-26,  -3}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, envShapeStrMap,                        NULL          }, // 20 Env Shape
+    {moduleTypeEnvADSR,    paramTypeADRTime,     {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, NULL,                                  NULL          }, // 20 A
+    {moduleTypeEnvADSR,    paramTypeADRTime,     {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Delay",        128,   0, NULL,                                  NULL          }, // 20 D
+    {moduleTypeEnvADSR,    paramTypeCommonDial,  {{ 44,  -3}, { 7, 14}}, anchorBottomLeft,  "Sus",          128, 100, NULL,                                  NULL          }, // 20 S
+    {moduleTypeEnvADSR,    paramTypeADRTime,     {{ 56,  -3}, { 7, 14}}, anchorBottomLeft,  "Rel",          128,   0, NULL,                                  NULL          }, // 20 R
+    {moduleTypeEnvADSR,    paramTypeMenu,        {{-26, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          }, // 20 Output Type
+    {moduleTypeEnvADSR,    paramTypeToggle,      {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, kbStrMap,                              offOnColourMap}, // 20 KB Active
+    {moduleTypeEnvADSR,    paramTypeMenu,        {{  5,  -8}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,                     NULL          }, // 20 Normal/Reset
     // 21 Mux1-8 -- No params
     // 22 PartQuant
-    {moduleTypePartQuant,  paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Range",        128, 100, NULL,                                  NULL          }, // 22 Range
+    {moduleTypePartQuant,  paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Range",        128, 100, NULL,                                  NULL          }, // 22 Range
     // 23 ModADSR
-    {moduleTypeModADSR,    paramType1ADRTime,        paramType2Dial,   {{ 22, -17}, { 7, 14}}, anchorBottomLeft,  "A",            128,   0, NULL,                                  NULL          }, // 22 A
-    {moduleTypeModADSR,    paramType1ADRTime,        paramType2Dial,   {{ 37, -17}, { 7, 14}}, anchorBottomLeft,  "D",            128,   0, NULL,                                  NULL          }, // 22 D
-    {moduleTypeModADSR,    paramType1CommonDial,     paramType2Dial,   {{ 52, -17}, { 7, 14}}, anchorBottomLeft,  "S",            128, 100, NULL,                                  NULL          }, // 22 S
-    {moduleTypeModADSR,    paramType1ADRTime,        paramType2Dial,   {{ 67, -17}, { 7, 14}}, anchorBottomLeft,  "R",            128,   0, NULL,                                  NULL          }, // 22 R
-    {moduleTypeModADSR,    paramType1CommonDial,     paramType2Dial,   {{ 27,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 22 Attack M
-    {moduleTypeModADSR,    paramType1CommonDial,     paramType2Dial,   {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 22 Decay M
-    {moduleTypeModADSR,    paramType1CommonDial,     paramType2Dial,   {{ 57,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 22 Sustain M
-    {moduleTypeModADSR,    paramType1CommonDial,     paramType2Dial,   {{ 72,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 22 Release M
-    {moduleTypeModADSR,    paramType1StandardToggle, paramType2Menu,   {{-15, -17}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          }, // 22 Output Type
-    {moduleTypeModADSR,    paramType1StandardToggle, paramType2Toggle, {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, kbStrMap,                              offOnColourMap}, // 22 KB
+    {moduleTypeModADSR,    paramTypeADRTime,     {{ 22, -17}, { 7, 14}}, anchorBottomLeft,  "A",            128,   0, NULL,                                  NULL          }, // 22 A
+    {moduleTypeModADSR,    paramTypeADRTime,     {{ 37, -17}, { 7, 14}}, anchorBottomLeft,  "D",            128,   0, NULL,                                  NULL          }, // 22 D
+    {moduleTypeModADSR,    paramTypeCommonDial,  {{ 52, -17}, { 7, 14}}, anchorBottomLeft,  "S",            128, 100, NULL,                                  NULL          }, // 22 S
+    {moduleTypeModADSR,    paramTypeADRTime,     {{ 67, -17}, { 7, 14}}, anchorBottomLeft,  "R",            128,   0, NULL,                                  NULL          }, // 22 R
+    {moduleTypeModADSR,    paramTypeCommonDial,  {{ 27,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 22 Attack M
+    {moduleTypeModADSR,    paramTypeCommonDial,  {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 22 Decay M
+    {moduleTypeModADSR,    paramTypeCommonDial,  {{ 57,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 22 Sustain M
+    {moduleTypeModADSR,    paramTypeCommonDial,  {{ 72,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 22 Release M
+    {moduleTypeModADSR,    paramTypeMenu,        {{-15, -17}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          }, // 22 Output Type
+    {moduleTypeModADSR,    paramTypeToggle,      {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, kbStrMap,                              offOnColourMap}, // 22 KB
     // 24 LfoC
-    {moduleTypeLfoC,       paramType1LFORate,        paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 24 Rate  *** Could have Freq but tied to Range
-    {moduleTypeLfoC,       paramType1StandardToggle, paramType2Menu,   {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          }, // 24 Mode
-    {moduleTypeLfoC,       paramType1StandardToggle, paramType2Menu,   {{ 76,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, posStrMap,                             NULL          }, // 24 OutType
-    {moduleTypeLfoC,       paramType1StandardToggle, paramType2Menu,   {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, rangeLfoCStrMap,                       NULL          }, // 24 Range
-    {moduleTypeLfoC,       paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 24 Bypass
+    {moduleTypeLfoC,       paramTypeLFORate,     {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 24 Rate  *** Could have Freq but tied to Range
+    {moduleTypeLfoC,       paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          }, // 24 Mode
+    {moduleTypeLfoC,       paramTypeMenu,        {{ 76,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, posStrMap,                             NULL          }, // 24 OutType
+    {moduleTypeLfoC,       paramTypeMenu,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, rangeLfoCStrMap,                       NULL          }, // 24 Range
+    {moduleTypeLfoC,       paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 24 Bypass
     // 25 LfoShpA
-    {moduleTypeLfoShpA,    paramType1LFORate,        paramType2Dial,   {{ 36,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 25 Rate
-    {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Menu,   {{ 36, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,                           NULL          }, // 25 Range
-    {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Menu,   {{ 25, -28}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          }, // 25 Kbt
-    {moduleTypeLfoShpA,    paramType1CommonDial,     paramType2Dial,   {{ 25,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 25 Rate M
-    {moduleTypeLfoShpA,    paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 25 Bypass
-    {moduleTypeLfoShpA,    paramType1CommonDial,     paramType2Dial,   {{ 57, -17}, { 7, 14}}, anchorBottomLeft,  "Shape",        128,   0, NULL,                                  NULL          }, // 25 Shape
-    {moduleTypeLfoShpA,    paramType1CommonDial,     paramType2Dial,   {{ 74,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 25 Phase M
-    {moduleTypeLfoShpA,    paramType1CommonDial,     paramType2Dial,   {{ 74, -17}, { 7, 14}}, anchorBottomLeft,  "Phase",        128,  64, NULL,                                  NULL          }, // 25 Phase
-    {moduleTypeLfoShpA,    paramType1CommonDial,     paramType2Dial,   {{ 57,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 25 Shape M
-    {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Menu,   {{ 25, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          }, // 25 Mode
-    {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Menu,   {{-10, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          }, // 25 OutType
-    {moduleTypeLfoShpA,    paramType1StandardToggle, paramType2Menu,   {{ 57, -32}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, lfoShpAWaveStrMap,                     NULL          }, // 25 Wave
+    {moduleTypeLfoShpA,    paramTypeLFORate,     {{ 36,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 25 Rate
+    {moduleTypeLfoShpA,    paramTypeMenu,        {{ 36, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,                           NULL          }, // 25 Range
+    {moduleTypeLfoShpA,    paramTypeMenu,        {{ 25, -28}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          }, // 25 Kbt
+    {moduleTypeLfoShpA,    paramTypeCommonDial,  {{ 25,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 25 Rate M
+    {moduleTypeLfoShpA,    paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 25 Bypass
+    {moduleTypeLfoShpA,    paramTypeCommonDial,  {{ 57, -17}, { 7, 14}}, anchorBottomLeft,  "Shape",        128,   0, NULL,                                  NULL          }, // 25 Shape
+    {moduleTypeLfoShpA,    paramTypeCommonDial,  {{ 74,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 25 Phase M
+    {moduleTypeLfoShpA,    paramTypeCommonDial,  {{ 74, -17}, { 7, 14}}, anchorBottomLeft,  "Phase",        128,  64, NULL,                                  NULL          }, // 25 Phase
+    {moduleTypeLfoShpA,    paramTypeCommonDial,  {{ 57,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 25 Shape M
+    {moduleTypeLfoShpA,    paramTypeMenu,        {{ 25, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          }, // 25 Mode
+    {moduleTypeLfoShpA,    paramTypeMenu,        {{-10, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          }, // 25 OutType
+    {moduleTypeLfoShpA,    paramTypeMenu,        {{ 57, -32}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, lfoShpAWaveStrMap,                     NULL          }, // 25 Wave
     // 26 LfoA
-    {moduleTypeLfoA,       paramType1LFORate,        paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 26 Rate
-    {moduleTypeLfoA,       paramType1StandardToggle, paramType2Menu,   {{ 17, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          }, // 26 Mode
-    {moduleTypeLfoA,       paramType1StandardToggle, paramType2Menu,   {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          }, // 26 Kbt
-    {moduleTypeLfoA,       paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 26 Rate M
-    {moduleTypeLfoA,       paramType1StandardToggle, paramType2Menu,   {{ 65, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, lfoWaveStrMap,                         NULL          }, // 26 Wave
-    {moduleTypeLfoA,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 26 Bypass
-    {moduleTypeLfoA,       paramType1StandardToggle, paramType2Menu,   {{-10, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          }, // 26 OutType
-    {moduleTypeLfoA,       paramType1StandardToggle, paramType2Menu,   {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, rangeStrMap,                           NULL          }, // 26 Range
+    {moduleTypeLfoA,       paramTypeLFORate,     {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 26 Rate
+    {moduleTypeLfoA,       paramTypeMenu,        {{ 17, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          }, // 26 Mode
+    {moduleTypeLfoA,       paramTypeMenu,        {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          }, // 26 Kbt
+    {moduleTypeLfoA,       paramTypeCommonDial,  {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 26 Rate M
+    {moduleTypeLfoA,       paramTypeMenu,        {{ 65, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, lfoWaveStrMap,                         NULL          }, // 26 Wave
+    {moduleTypeLfoA,       paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 26 Bypass
+    {moduleTypeLfoA,       paramTypeMenu,        {{-10, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          }, // 26 OutType
+    {moduleTypeLfoA,       paramTypeMenu,        {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, rangeStrMap,                           NULL          }, // 26 Range
     // 27 OscMaster
-    {moduleTypeOscMaster,  paramType1OscFreq,        paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,  64, NULL,                                  NULL          }, // 27 Pitch
-    {moduleTypeOscMaster,  paramType1Fine,           paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 27 Fine
-    {moduleTypeOscMaster,  paramType1StandardToggle, paramType2Toggle, {{ 22,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap}, // 27 Kbt
-    {moduleTypeOscMaster,  paramType1StandardToggle, paramType2Menu,   {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, pitchTypeStrMap,                       NULL          }, // 27 Tune mode
-    {moduleTypeOscMaster,  paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch M",      128,   0, NULL,                                  NULL          }, // 27 Pitch M
+    {moduleTypeOscMaster,  paramTypeOscFreq,     {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,  64, NULL,                                  NULL          }, // 27 Pitch
+    {moduleTypeOscMaster,  paramTypeFine,        {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 27 Fine
+    {moduleTypeOscMaster,  paramTypeToggle,      {{ 22,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap}, // 27 Kbt
+    {moduleTypeOscMaster,  paramTypeMenu,        {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, pitchTypeStrMap,                       NULL          }, // 27 Tune mode
+    {moduleTypeOscMaster,  paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch M",      128,   0, NULL,                                  NULL          }, // 27 Pitch M
     // 28 Saturate
-    {moduleTypeSaturate,   paramType1CommonDial,     paramType2Dial,   {{ 54,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 28 Amount
-    {moduleTypeSaturate,   paramType1CommonDial,     paramType2Dial,   {{ 41,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 28 AmountMod
-    {moduleTypeSaturate,   paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 28 Bypass
-    {moduleTypeSaturate,   paramType1StandardToggle, paramType2Menu,   {{ 70,  -6}, { 7,  7}}, anchorBottomLeft,  "Curve",          4,   0, saturateCurveStrMap,                   NULL          }, // 28 Curve
+    {moduleTypeSaturate,   paramTypeCommonDial,  {{ 54,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 28 Amount
+    {moduleTypeSaturate,   paramTypeCommonDial,  {{ 41,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 28 AmountMod
+    {moduleTypeSaturate,   paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 28 Bypass
+    {moduleTypeSaturate,   paramTypeMenu,        {{ 70,  -6}, { 7,  7}}, anchorBottomLeft,  "Curve",          4,   0, saturateCurveStrMap,                   NULL          }, // 28 Curve
     // 29 MetNoise
-    {moduleTypeMetNoise,   paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "Color",        128,  64, NULL,                                  NULL          }, // 29 Color
-    {moduleTypeMetNoise,   paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,  64, NULL,                                  NULL          }, // 29 Freq
-    {moduleTypeMetNoise,   paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 28 Bypass
-    {moduleTypeMetNoise,   paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 29 Freq M
-    {moduleTypeMetNoise,   paramType1CommonDial,     paramType2Dial,   {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 29 Color M
+    {moduleTypeMetNoise,   paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "Color",        128,  64, NULL,                                  NULL          }, // 29 Color
+    {moduleTypeMetNoise,   paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,  64, NULL,                                  NULL          }, // 29 Freq
+    {moduleTypeMetNoise,   paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 28 Bypass
+    {moduleTypeMetNoise,   paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 29 Freq M
+    {moduleTypeMetNoise,   paramTypeCommonDial,  {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 29 Color M
     // 30 Device - No controls
     // 31 Noise
-    {moduleTypeNoise,      paramType1CommonDial,     paramType2Dial,   {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "Color",        128,   0, NULL,                                  NULL          }, // 31 Color  *** Or special dial
-    {moduleTypeNoise,      paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 31 Bypass
+    {moduleTypeNoise,      paramTypeCommonDial,  {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "Color",        128,   0, NULL,                                  NULL          }, // 31 Color  *** Or special dial
+    {moduleTypeNoise,      paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 31 Bypass
     // 32 Eq2Band
-    {moduleTypeEq2Band,    paramType1dB,             paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Lo (80Hz)",    128,  64, NULL,                                  NULL          }, // 32 Lo Gain
-    {moduleTypeEq2Band,    paramType1dB,             paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Hi (12kHz)",   128,  64, NULL,                                  NULL          }, // 32 Hi Gain
-    {moduleTypeEq2Band,    paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128, 127, NULL,                                  NULL          }, // 32 Level
-    {moduleTypeEq2Band,    paramType1Bypass,         paramType2Toggle, {{ -3,  -9}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 32 Bypass
-    {moduleTypeEq2Band,    paramType1StandardToggle, paramType2Menu,   {{ 30, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, eq2BandLoStrMap,                       NULL          }, // 32 Lo Freq
-    {moduleTypeEq2Band,    paramType1StandardToggle, paramType2Menu,   {{ 50, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   2, eq2BandHiStrMap,                       NULL          }, // 32 Hi Freq
+    {moduleTypeEq2Band,    paramTypedB,          {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Lo (80Hz)",    128,  64, NULL,                                  NULL          }, // 32 Lo Gain
+    {moduleTypeEq2Band,    paramTypedB,          {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Hi (12kHz)",   128,  64, NULL,                                  NULL          }, // 32 Hi Gain
+    {moduleTypeEq2Band,    paramTypeCommonDial,  {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128, 127, NULL,                                  NULL          }, // 32 Level
+    {moduleTypeEq2Band,    paramTypeBypass,      {{ -3,  -9}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 32 Bypass
+    {moduleTypeEq2Band,    paramTypeMenu,        {{ 30, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, eq2BandLoStrMap,                       NULL          }, // 32 Lo Freq
+    {moduleTypeEq2Band,    paramTypeMenu,        {{ 50, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   2, eq2BandHiStrMap,                       NULL          }, // 32 Hi Freq
     // 33 Eq3Band
-    {moduleTypeEq3band,    paramType1dB,             paramType2Dial,   {{  5,  -3}, { 7, 14}}, anchorBottomLeft,  "Lo",           128,  64, NULL,                                  NULL          }, // 33 Lo Gain
-    {moduleTypeEq3band,    paramType1dB,             paramType2Dial,   {{ 24,  -3}, { 7, 14}}, anchorBottomLeft,  "MidGn",        128,  64, NULL,                                  NULL          }, // 33 Mid Gain
-    {moduleTypeEq3band,    paramType1GeneralFreq,    paramType2Dial,   {{ 36,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,  64, NULL,                                  NULL          }, // 33 Mid Freq
-    {moduleTypeEq3band,    paramType1dB,             paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Hi",           128,  64, NULL,                                  NULL          }, // 33 Hi Gain
-    {moduleTypeEq3band,    paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128, 127, NULL,                                  NULL          }, // 33 Level
-    {moduleTypeEq3band,    paramType1Bypass,         paramType2Toggle, {{ -3,  -9}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 33 Bypass
-    {moduleTypeEq3band,    paramType1StandardToggle, paramType2Menu,   {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, eq2BandLoStrMap,                       NULL          }, // 33 Lo Freq
-    {moduleTypeEq3band,    paramType1StandardToggle, paramType2Menu,   {{ 53, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   2, eq2BandHiStrMap,                       NULL          }, // 33 Hi Freq
+    {moduleTypeEq3band,    paramTypedB,          {{  5,  -3}, { 7, 14}}, anchorBottomLeft,  "Lo",           128,  64, NULL,                                  NULL          }, // 33 Lo Gain
+    {moduleTypeEq3band,    paramTypedB,          {{ 24,  -3}, { 7, 14}}, anchorBottomLeft,  "MidGn",        128,  64, NULL,                                  NULL          }, // 33 Mid Gain
+    {moduleTypeEq3band,    paramTypeGeneralFreq, {{ 36,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,  64, NULL,                                  NULL          }, // 33 Mid Freq
+    {moduleTypeEq3band,    paramTypedB,          {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Hi",           128,  64, NULL,                                  NULL          }, // 33 Hi Gain
+    {moduleTypeEq3band,    paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128, 127, NULL,                                  NULL          }, // 33 Level
+    {moduleTypeEq3band,    paramTypeBypass,      {{ -3,  -9}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 33 Bypass
+    {moduleTypeEq3band,    paramTypeMenu,        {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, eq2BandLoStrMap,                       NULL          }, // 33 Lo Freq
+    {moduleTypeEq3band,    paramTypeMenu,        {{ 53, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   2, eq2BandHiStrMap,                       NULL          }, // 33 Hi Freq
     // 34 ShpExp
-    {moduleTypeShpExp,     paramType1CommonDial,     paramType2Dial,   {{ 54,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 34 Amount
-    {moduleTypeShpExp,     paramType1CommonDial,     paramType2Dial,   {{ 41,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 34 AmountMod
-    {moduleTypeShpExp,     paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 34 Bypass
-    {moduleTypeShpExp,     paramType1StandardToggle, paramType2Menu,   {{ 70,  -6}, { 7,  7}}, anchorBottomLeft,  "Curve",          4,   0, shpExpCurveStrMap,                     NULL          }, // 34 Curve
+    {moduleTypeShpExp,     paramTypeCommonDial,  {{ 54,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 34 Amount
+    {moduleTypeShpExp,     paramTypeCommonDial,  {{ 41,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 34 AmountMod
+    {moduleTypeShpExp,     paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 34 Bypass
+    {moduleTypeShpExp,     paramTypeMenu,        {{ 70,  -6}, { 7,  7}}, anchorBottomLeft,  "Curve",          4,   0, shpExpCurveStrMap,                     NULL          }, // 34 Curve
     // 35 Driver (Not in the Clavia editor)
-    {moduleTypeDriver,     paramType1CommonDial,     paramType2Dial,   {{ 54,  -3}, { 7, 14}}, anchorBottomLeft,  "Stiffness",    128,   0, NULL,                                  NULL          }, // 35 Embouchure
-    {moduleTypeDriver,     paramType1CommonDial,     paramType2Dial,   {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Embouchure",   128,   0, NULL,                                  NULL          }, // 35 Stiffness
+    {moduleTypeDriver,     paramTypeCommonDial,  {{ 54,  -3}, { 7, 14}}, anchorBottomLeft,  "Stiffness",    128,   0, NULL,                                  NULL          }, // 35 Embouchure
+    {moduleTypeDriver,     paramTypeCommonDial,  {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Embouchure",   128,   0, NULL,                                  NULL          }, // 35 Stiffness
     // 36 SwOnOffM
-    {moduleTypeSwOnOffM,   paramType1StandardToggle, paramType2Menu,   {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           NULL          }, // 36 On
+    {moduleTypeSwOnOffM,   paramTypeMenu,        {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           NULL          }, // 36 On
     // 37 Unknown
     // 38 Pulse
-    {moduleTypePulse,      paramType1PulseTime,      paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          }, // 38 Time
-    {moduleTypePulse,      paramType1CommonDial,     paramType2Dial,   {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 38 TimeMod
-    {moduleTypePulse,      paramType1StandardToggle, paramType2Menu,   {{ 52,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, pulseRangeStrMap,                      NULL          }, // 38 Range
+    {moduleTypePulse,      paramTypePulseTime,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          }, // 38 Time
+    {moduleTypePulse,      paramTypeCommonDial,  {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 38 TimeMod
+    {moduleTypePulse,      paramTypeMenu,        {{ 52,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, pulseRangeStrMap,                      NULL          }, // 38 Range
     // 39 Unknown
     // 40 Mix8-1B
-    {moduleTypeMix8to1B,   paramType1MixLevel,       paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 40 In1
-    {moduleTypeMix8to1B,   paramType1MixLevel,       paramType2Dial,   {{ 29,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 40 In2
-    {moduleTypeMix8to1B,   paramType1MixLevel,       paramType2Dial,   {{ 38,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 40 In3
-    {moduleTypeMix8to1B,   paramType1MixLevel,       paramType2Dial,   {{ 47,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 40 In4
-    {moduleTypeMix8to1B,   paramType1MixLevel,       paramType2Dial,   {{ 56,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 40 In5
-    {moduleTypeMix8to1B,   paramType1MixLevel,       paramType2Dial,   {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 40 In6
-    {moduleTypeMix8to1B,   paramType1MixLevel,       paramType2Dial,   {{ 74,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 40 In7
-    {moduleTypeMix8to1B,   paramType1MixLevel,       paramType2Dial,   {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 40 In8
-    {moduleTypeMix8to1B,   paramType1StandardToggle, paramType2Menu,   {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 40 ExpLinDB
-    {moduleTypeMix8to1B,   paramType1StandardToggle, paramType2Menu,   {{  3, -10}, { 7,  7}}, anchorBottomLeft,  "Pad",            3,   0, db12BPadStrMap,                        NULL          }, // 40 Pad
+    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 40 In1
+    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 29,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 40 In2
+    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 38,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 40 In3
+    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 47,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 40 In4
+    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 56,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 40 In5
+    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 40 In6
+    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 74,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 40 In7
+    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 40 In8
+    {moduleTypeMix8to1B,   paramTypeMenu,        {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 40 ExpLinDB
+    {moduleTypeMix8to1B,   paramTypeMenu,        {{  3, -10}, { 7,  7}}, anchorBottomLeft,  "Pad",            3,   0, db12BPadStrMap,                        NULL          }, // 40 Pad
     // 41 EnvH
-    {moduleTypeEnvH,       paramType1ADRTime,        paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 41 Hold
-    {moduleTypeEnvH,       paramType1StandardToggle, paramType2Menu,   {{-32,  -3}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, posNegInvStrMap,                       NULL          }, // 41 Pos
+    {moduleTypeEnvH,       paramTypeADRTime,     {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 41 Hold
+    {moduleTypeEnvH,       paramTypeMenu,        {{-32,  -3}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, posNegInvStrMap,                       NULL          }, // 41 Pos
     // 42 Delay (Logic Delay)
-    {moduleTypeDelay,      paramType1PulseTime,      paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          }, // 42 Time
-    {moduleTypeDelay,      paramType1CommonDial,     paramType2Dial,   {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 42 TimeMod
-    {moduleTypeDelay,      paramType1StandardToggle, paramType2Menu,   {{ 52,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, pulseRangeStrMap,                      NULL          }, // 42 Range
+    {moduleTypeDelay,      paramTypePulseTime,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          }, // 42 Time
+    {moduleTypeDelay,      paramTypeCommonDial,  {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 42 TimeMod
+    {moduleTypeDelay,      paramTypeMenu,        {{ 52,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, pulseRangeStrMap,                      NULL          }, // 42 Range
 
     // 43 Constant
-    {moduleTypeConstant,   paramType1BipLevel,       paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 43 Value
-    {moduleTypeConstant,   paramType1StandardToggle, paramType2Menu,   {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, bipUniStrMap,                          NULL          }, // 43 Bip/Uni
+    {moduleTypeConstant,   paramTypeBipLevel,    {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 43 Value
+    {moduleTypeConstant,   paramTypeMenu,        {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, bipUniStrMap,                          NULL          }, // 43 Bip/Uni
     // 44 LevMult  - No Controls
     // 45 FltVoice
-    {moduleTypeFltVoice,   paramType1StandardToggle, paramType2Menu,   {{ 40, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             9,   0, vowelStrMap,                           NULL          }, // 45 Vowel1
-    {moduleTypeFltVoice,   paramType1StandardToggle, paramType2Menu,   {{ 50, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             9,   1, vowelStrMap,                           NULL          }, // 45 Vowel2
-    {moduleTypeFltVoice,   paramType1StandardToggle, paramType2Menu,   {{ 60, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             9,   2, vowelStrMap,                           NULL          }, // 45 Vowel3
-    {moduleTypeFltVoice,   paramType1CommonDial,     paramType2Dial,   {{-15, -17}, { 7, 14}}, anchorBottomRight, NULL,           128,  80, NULL,                                  NULL          }, // 45 Level
-    {moduleTypeFltVoice,   paramType1BipLevel,       paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 45 Vowel
-    {moduleTypeFltVoice,   paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 45 VowelMod
-    {moduleTypeFltVoice,   paramType1BipLevel,       paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,  80, NULL,                                  NULL          }, // 45 Freq
-    {moduleTypeFltVoice,   paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 45 FreqMod
-    {moduleTypeFltVoice,   paramType1BipLevel,       paramType2Dial,   {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  "Res",          128,   0, NULL,                                  NULL          }, // 45 Res
-    {moduleTypeFltVoice,   paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 45 Bypass
+    {moduleTypeFltVoice,   paramTypeMenu,        {{ 40, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             9,   0, vowelStrMap,                           NULL          }, // 45 Vowel1
+    {moduleTypeFltVoice,   paramTypeMenu,        {{ 50, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             9,   1, vowelStrMap,                           NULL          }, // 45 Vowel2
+    {moduleTypeFltVoice,   paramTypeMenu,        {{ 60, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             9,   2, vowelStrMap,                           NULL          }, // 45 Vowel3
+    {moduleTypeFltVoice,   paramTypeCommonDial,  {{-15, -17}, { 7, 14}}, anchorBottomRight, NULL,           128,  80, NULL,                                  NULL          }, // 45 Level
+    {moduleTypeFltVoice,   paramTypeBipLevel,    {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 45 Vowel
+    {moduleTypeFltVoice,   paramTypeCommonDial,  {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 45 VowelMod
+    {moduleTypeFltVoice,   paramTypeBipLevel,    {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,  80, NULL,                                  NULL          }, // 45 Freq
+    {moduleTypeFltVoice,   paramTypeCommonDial,  {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 45 FreqMod
+    {moduleTypeFltVoice,   paramTypeBipLevel,    {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  "Res",          128,   0, NULL,                                  NULL          }, // 45 Res
+    {moduleTypeFltVoice,   paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 45 Bypass
     // 46 EnvAHD
-    {moduleTypeEnvAHD,     paramType1StandardToggle, paramType2Menu,   {{-26,  -3}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, envShapeStrMap,                        NULL          }, // 46 Shape
-    {moduleTypeEnvAHD,     paramType1ADRTime,        paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, NULL,                                  NULL          }, // 46 Attack
-    {moduleTypeEnvAHD,     paramType1ADRTime,        paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Hold",         128,   0, NULL,                                  NULL          }, // 46 Hold
-    {moduleTypeEnvAHD,     paramType1StandardToggle, paramType2Menu,   {{  5, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,                     NULL          }, // 46 Reset
-    {moduleTypeEnvAHD,     paramType1ADRTime,        paramType2Dial,   {{ 44,  -3}, { 7, 14}}, anchorBottomLeft,  "Release",      128,   0, NULL,                                  NULL          }, // 46 Release
-    {moduleTypeEnvAHD,     paramType1StandardToggle, paramType2Menu,   {{-26, -10}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, posNegInvStrMap,                       NULL          }, // 46 OutType
-    {moduleTypeEnvAHD,     paramType1StandardToggle, paramType2Toggle, {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, kbStrMap,                              offOnColourMap},
+    {moduleTypeEnvAHD,     paramTypeMenu,        {{-26,  -3}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, envShapeStrMap,                        NULL          }, // 46 Shape
+    {moduleTypeEnvAHD,     paramTypeADRTime,     {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, NULL,                                  NULL          }, // 46 Attack
+    {moduleTypeEnvAHD,     paramTypeADRTime,     {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Hold",         128,   0, NULL,                                  NULL          }, // 46 Hold
+    {moduleTypeEnvAHD,     paramTypeMenu,        {{  5, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,                     NULL          }, // 46 Reset
+    {moduleTypeEnvAHD,     paramTypeADRTime,     {{ 44,  -3}, { 7, 14}}, anchorBottomLeft,  "Release",      128,   0, NULL,                                  NULL          }, // 46 Release
+    {moduleTypeEnvAHD,     paramTypeMenu,        {{-26, -10}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, posNegInvStrMap,                       NULL          }, // 46 OutType
+    {moduleTypeEnvAHD,     paramTypeToggle,      {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, kbStrMap,                              offOnColourMap},
     // 47 Pan
-    {moduleTypePan,        paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 47 PanMod
-    {moduleTypePan,        paramType1LRDial,         paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 47 Pan
-    {moduleTypePan,        paramType1StandardToggle, paramType2Menu,   {{ 10,  -5}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, logStrMap,                             NULL          }, // 47 LogLin
+    {moduleTypePan,        paramTypeCommonDial,  {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 47 PanMod
+    {moduleTypePan,        paramTypeLRDial,      {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 47 Pan
+    {moduleTypePan,        paramTypeMenu,        {{ 10,  -5}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, logStrMap,                             NULL          }, // 47 LogLin
     // 48 MixStereo
-    {moduleTypeMixStereo,  paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 48 Lvl1
-    {moduleTypeMixStereo,  paramType1CommonDial,     paramType2Dial,   {{ 22,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 48 Lvl2
-    {moduleTypeMixStereo,  paramType1CommonDial,     paramType2Dial,   {{ 34,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 48 Lvl3
-    {moduleTypeMixStereo,  paramType1CommonDial,     paramType2Dial,   {{ 48,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 48 Lvl4
-    {moduleTypeMixStereo,  paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 48 Lvl5
-    {moduleTypeMixStereo,  paramType1CommonDial,     paramType2Dial,   {{ 72,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 48 Lvl6
-    {moduleTypeMixStereo,  paramType1LRDial,         paramType2Dial,   {{ 10, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 48 Pan1
-    {moduleTypeMixStereo,  paramType1LRDial,         paramType2Dial,   {{ 22, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 48 Pan2
-    {moduleTypeMixStereo,  paramType1LRDial,         paramType2Dial,   {{ 34, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 48 Pan3
-    {moduleTypeMixStereo,  paramType1LRDial,         paramType2Dial,   {{ 46, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 48 Pan4
-    {moduleTypeMixStereo,  paramType1LRDial,         paramType2Dial,   {{ 58, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 48 Pan5
-    {moduleTypeMixStereo,  paramType1LRDial,         paramType2Dial,   {{ 70, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 48 Pan6
-    {moduleTypeMixStereo,  paramType1CommonDial,     paramType2Dial,   {{ -7, -25}, { 7, 14}}, anchorBottomRight, NULL,           128,  80, NULL,                                  NULL          }, // 48 LvlMaster
+    {moduleTypeMixStereo,  paramTypeCommonDial,  {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 48 Lvl1
+    {moduleTypeMixStereo,  paramTypeCommonDial,  {{ 22,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 48 Lvl2
+    {moduleTypeMixStereo,  paramTypeCommonDial,  {{ 34,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 48 Lvl3
+    {moduleTypeMixStereo,  paramTypeCommonDial,  {{ 48,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 48 Lvl4
+    {moduleTypeMixStereo,  paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 48 Lvl5
+    {moduleTypeMixStereo,  paramTypeCommonDial,  {{ 72,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          }, // 48 Lvl6
+    {moduleTypeMixStereo,  paramTypeLRDial,      {{ 10, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 48 Pan1
+    {moduleTypeMixStereo,  paramTypeLRDial,      {{ 22, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 48 Pan2
+    {moduleTypeMixStereo,  paramTypeLRDial,      {{ 34, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 48 Pan3
+    {moduleTypeMixStereo,  paramTypeLRDial,      {{ 46, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 48 Pan4
+    {moduleTypeMixStereo,  paramTypeLRDial,      {{ 58, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 48 Pan5
+    {moduleTypeMixStereo,  paramTypeLRDial,      {{ 70, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 48 Pan6
+    {moduleTypeMixStereo,  paramTypeCommonDial,  {{ -7, -25}, { 7, 14}}, anchorBottomRight, NULL,           128,  80, NULL,                                  NULL          }, // 48 LvlMaster
     // 49 FltMulti
-    {moduleTypeFltMulti,   paramType1Freq,           paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,   0, NULL,                                  NULL          }, // 49 Freq
-    {moduleTypeFltMulti,   paramType1Pitch,          paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 49 Pitch M
-    {moduleTypeFltMulti,   paramType1StandardToggle, paramType2Menu,   {{ 25, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   4, offTo100KbStrMap,                      NULL          }, // 49 Kbt
-    {moduleTypeFltMulti,   paramType1StandardToggle, paramType2Toggle, {{ 55,   5}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, gcStrMap,                              offOnColourMap}, // 49 GC
-    {moduleTypeFltMulti,   paramType1StrMap,         paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Res",          128,   0, filter_resonanceStrMap,                NULL          }, // 49 Res
-    {moduleTypeFltMulti,   paramType1StandardToggle, paramType2Menu,   {{ 70, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, fltMultiDbStrMap,                      NULL          }, // 49 dB
-    {moduleTypeFltMulti,   paramType1Bypass,         paramType2Toggle, {{-17,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 49 Bypass
+    {moduleTypeFltMulti,   paramTypeFreq,        {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,   0, NULL,                                  NULL          }, // 49 Freq
+    {moduleTypeFltMulti,   paramTypePitch,       {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 49 Pitch M
+    {moduleTypeFltMulti,   paramTypeMenu,        {{ 25, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   4, offTo100KbStrMap,                      NULL          }, // 49 Kbt
+    {moduleTypeFltMulti,   paramTypeToggle,      {{ 55,   5}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, gcStrMap,                              offOnColourMap}, // 49 GC
+    {moduleTypeFltMulti,   paramTypeStrMap,      {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Res",          128,   0, filter_resonanceStrMap,                NULL          }, // 49 Res
+    {moduleTypeFltMulti,   paramTypeMenu,        {{ 70, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, fltMultiDbStrMap,                      NULL          }, // 49 dB
+    {moduleTypeFltMulti,   paramTypeBypass,      {{-17,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 49 Bypass
     // 50 ConstSwT
-    {moduleTypeConstSwT,   paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 50 Value
-    {moduleTypeConstSwT,   paramType1StandardToggle, paramType2Toggle, {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           offOnColourMap}, // 50 Switch
-    {moduleTypeConstSwT,   paramType1StandardToggle, paramType2Menu,   {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, bipUniStrMap,                          NULL          }, // 50 Bip/Uni
+    {moduleTypeConstSwT,   paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 50 Value
+    {moduleTypeConstSwT,   paramTypeToggle,      {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           offOnColourMap}, // 50 Switch
+    {moduleTypeConstSwT,   paramTypeMenu,        {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, bipUniStrMap,                          NULL          }, // 50 Bip/Uni
     // 51 FltNord
-    {moduleTypeFltNord,    paramType1Freq,           paramType2Dial,   {{ 30, -25}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,   0, NULL,                                  NULL          }, // 51 Freq
-    {moduleTypeFltNord,    paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 51 Pitch M
-    {moduleTypeFltNord,    paramType1StandardToggle, paramType2Menu,   {{ 15, -25}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   4, offTo100KbStrMap,                      NULL          }, // 51 Kbt
-    {moduleTypeFltNord,    paramType1StandardToggle, paramType2Toggle, {{ 40, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, gcStrMap,                              offOnColourMap}, // 51 GC
-    {moduleTypeFltNord,    paramType1StrMap,         paramType2Dial,   {{ 55, -25}, { 7, 14}}, anchorBottomLeft,  "Res",          128,   0, filter_resonanceStrMap,                NULL          }, // 51 Res
-    {moduleTypeFltNord,    paramType1StandardToggle, paramType2Menu,   {{ 70, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, fltNordDbStrMap,                       NULL          }, // 51 dB/Oct
-    {moduleTypeFltNord,    paramType1Bypass,         paramType2Toggle, {{-17,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 51 Bypass
-    {moduleTypeFltNord,    paramType1CommonDial,     paramType2Dial,   {{ 31,  -3}, { 7, 14}}, anchorBottomLeft,  "Fm Lin",       128,   0, NULL,                                  NULL          }, // 51 Fm Lin
-    {moduleTypeFltNord,    paramType1StandardToggle, paramType2Menu,   {{ 70, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, nordFilterTypeStrMap,                  NULL          }, // 51 FilterType
-    {moduleTypeFltNord,    paramType1CommonDial,     paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Res M",        128,   0, NULL,                                  NULL          }, // 51 Res M
+    {moduleTypeFltNord,    paramTypeFreq,        {{ 30, -25}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,   0, NULL,                                  NULL          }, // 51 Freq
+    {moduleTypeFltNord,    paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 51 Pitch M
+    {moduleTypeFltNord,    paramTypeMenu,        {{ 15, -25}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   4, offTo100KbStrMap,                      NULL          }, // 51 Kbt
+    {moduleTypeFltNord,    paramTypeToggle,      {{ 40, -15}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, gcStrMap,                              offOnColourMap}, // 51 GC
+    {moduleTypeFltNord,    paramTypeStrMap,      {{ 55, -25}, { 7, 14}}, anchorBottomLeft,  "Res",          128,   0, filter_resonanceStrMap,                NULL          }, // 51 Res
+    {moduleTypeFltNord,    paramTypeMenu,        {{ 70, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, fltNordDbStrMap,                       NULL          }, // 51 dB/Oct
+    {moduleTypeFltNord,    paramTypeBypass,      {{-17,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 51 Bypass
+    {moduleTypeFltNord,    paramTypeCommonDial,  {{ 31,  -3}, { 7, 14}}, anchorBottomLeft,  "Fm Lin",       128,   0, NULL,                                  NULL          }, // 51 Fm Lin
+    {moduleTypeFltNord,    paramTypeMenu,        {{ 70, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, nordFilterTypeStrMap,                  NULL          }, // 51 FilterType
+    {moduleTypeFltNord,    paramTypeCommonDial,  {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Res M",        128,   0, NULL,                                  NULL          }, // 51 Res M
     // 52 EnvMulti
-    {moduleTypeEnvMulti,   paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "L1",           128, 127, NULL,                                  NULL          }, // 52 Lvl1
-    {moduleTypeEnvMulti,   paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "L1",           128, 127, NULL,                                  NULL          }, // 52 Lvl2
-    {moduleTypeEnvMulti,   paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "L1",           128, 127, NULL,                                  NULL          }, // 52 Lvl3
-    {moduleTypeEnvMulti,   paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "L1",           128, 127, NULL,                                  NULL          }, // 52 Lvl4
-    {moduleTypeEnvMulti,   paramType1ADRTime,        paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "T1",           128,   0, NULL,                                  NULL          }, // 52 Time1
-    {moduleTypeEnvMulti,   paramType1ADRTime,        paramType2Dial,   {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  "T2",           128,   0, NULL,                                  NULL          }, // 52 Time2
-    {moduleTypeEnvMulti,   paramType1ADRTime,        paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "T3",           128,   0, NULL,                                  NULL          }, // 52 Time3
-    {moduleTypeEnvMulti,   paramType1ADRTime,        paramType2Dial,   {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "T4",           128,   0, NULL,                                  NULL          }, // 52 Time4
-    {moduleTypeEnvMulti,   paramType1StandardToggle, paramType2Menu,   {{  3, -22}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,                     NULL          }, // 52 Reset
-    {moduleTypeEnvMulti,   paramType1StandardToggle, paramType2Menu,   {{ 30, -22}, { 7,  7}}, anchorBottomLeft,  "Sust",           4,   2, multiEnvSustainStrMap,                 NULL          }, // 52 SustainPlacement
-    {moduleTypeEnvMulti,   paramType1StandardToggle, paramType2Menu,   {{-17, -29}, { 7,  7}}, anchorBottomRight, NULL,             5,   0, posNegInvBipStrMap,                    NULL          }, // 52 OutType
-    {moduleTypeEnvMulti,   paramType1StandardToggle, paramType2Toggle, {{ 10,  17}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, kbStrMap,                              offOnColourMap}, // 52 Kbt
-    {moduleTypeEnvMulti,   paramType1StandardToggle, paramType2Menu,   {{-26, -17}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, envShapeStrMap,                        NULL          }, // 52 Shape
+    {moduleTypeEnvMulti,   paramTypeCommonDial,  {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "L1",           128, 127, NULL,                                  NULL          }, // 52 Lvl1
+    {moduleTypeEnvMulti,   paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "L1",           128, 127, NULL,                                  NULL          }, // 52 Lvl2
+    {moduleTypeEnvMulti,   paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "L1",           128, 127, NULL,                                  NULL          }, // 52 Lvl3
+    {moduleTypeEnvMulti,   paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "L1",           128, 127, NULL,                                  NULL          }, // 52 Lvl4
+    {moduleTypeEnvMulti,   paramTypeADRTime,     {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "T1",           128,   0, NULL,                                  NULL          }, // 52 Time1
+    {moduleTypeEnvMulti,   paramTypeADRTime,     {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  "T2",           128,   0, NULL,                                  NULL          }, // 52 Time2
+    {moduleTypeEnvMulti,   paramTypeADRTime,     {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "T3",           128,   0, NULL,                                  NULL          }, // 52 Time3
+    {moduleTypeEnvMulti,   paramTypeADRTime,     {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "T4",           128,   0, NULL,                                  NULL          }, // 52 Time4
+    {moduleTypeEnvMulti,   paramTypeMenu,        {{  3, -22}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,                     NULL          }, // 52 Reset
+    {moduleTypeEnvMulti,   paramTypeMenu,        {{ 30, -22}, { 7,  7}}, anchorBottomLeft,  "Sust",           4,   2, multiEnvSustainStrMap,                 NULL          }, // 52 SustainPlacement
+    {moduleTypeEnvMulti,   paramTypeMenu,        {{-17, -29}, { 7,  7}}, anchorBottomRight, NULL,             5,   0, posNegInvBipStrMap,                    NULL          }, // 52 OutType
+    {moduleTypeEnvMulti,   paramTypeToggle,      {{ 10,  17}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, kbStrMap,                              offOnColourMap}, // 52 Kbt
+    {moduleTypeEnvMulti,   paramTypeMenu,        {{-26, -17}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, envShapeStrMap,                        NULL          }, // 52 Shape
     // 53 SandH -- No parameters
     // 54 FltStatic
-    {moduleTypeFltStatic,  paramType1Freq,           paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,   0, NULL,                                  NULL          }, // 54 Freq
-    {moduleTypeFltStatic,  paramType1Resonance,      paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Res",          128,   0, NULL,                                  NULL          }, // 54 Res
-    {moduleTypeFltStatic,  paramType1StandardToggle, paramType2Menu,   {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, staticFilterTypeStrMap,                NULL          }, // 54 FilterType
-    {moduleTypeFltStatic,  paramType1Bypass,         paramType2Toggle, {{ -3,   2}, { 5,  5}}, anchorMiddleRight, NULL,             2,   1, NULL,                                  NULL          }, // 54 Bypass
-    {moduleTypeFltStatic,  paramType1StandardToggle, paramType2Toggle, {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, gcStrMap,                              offOnColourMap}, // 54 GC
+    {moduleTypeFltStatic,  paramTypeFreq,        {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,   0, NULL,                                  NULL          }, // 54 Freq
+    {moduleTypeFltStatic,  paramTypeResonance,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Res",          128,   0, NULL,                                  NULL          }, // 54 Res
+    {moduleTypeFltStatic,  paramTypeMenu,        {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, staticFilterTypeStrMap,                NULL          }, // 54 FilterType
+    {moduleTypeFltStatic,  paramTypeBypass,      {{ -3,   2}, { 5,  5}}, anchorMiddleRight, NULL,             2,   1, NULL,                                  NULL          }, // 54 Bypass
+    {moduleTypeFltStatic,  paramTypeToggle,      {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, gcStrMap,                              offOnColourMap}, // 54 GC
     // 55 EnvD
-    {moduleTypeEnvD,       paramType1ADRTime,        paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,   0, NULL,                                  NULL          }, // 55 Decay
-    {moduleTypeEnvD,       paramType1StandardToggle, paramType2Menu,   {{ 55,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, posNegInvStrMap,                       NULL          }, // 55 OutType
+    {moduleTypeEnvD,       paramTypeADRTime,     {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,   0, NULL,                                  NULL          }, // 55 Decay
+    {moduleTypeEnvD,       paramTypeMenu,        {{ 55,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, posNegInvStrMap,                       NULL          }, // 55 OutType
     // 56 Resonator (Not in Clavia editor)
-    {moduleTypeResonator,  paramType1OscFreq,        paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 56 Tune
-    {moduleTypeResonator,  paramType1Fine,           paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 56 Cent
-    {moduleTypeResonator,  paramType1StandardToggle, paramType2Toggle, {{ 15, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap}, // 56 Kbt
-    {moduleTypeResonator,  paramType1CommonDial,     paramType2Dial,   {{ 17,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 56 Pitch M
-    {moduleTypeResonator,  paramType1StandardToggle, paramType2Menu,   {{ 30,  12}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 56 Pitch Type
-    {moduleTypeResonator,  paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,   0, NULL,                                  NULL          }, // 56 Decay
-    {moduleTypeResonator,  paramType1CommonDial,     paramType2Dial,   {{ 62, -17}, { 7, 14}}, anchorBottomLeft,  "Damp",         128,   0, NULL,                                  NULL          }, // 56 Damp
-    {moduleTypeResonator,  paramType1Bypass,         paramType2Toggle, {{ -3,  -3}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 56 Bypass
-    {moduleTypeResonator,  paramType1CommonDial,     paramType2Dial,   {{ 75, -17}, { 7, 14}}, anchorBottomLeft,  "Pos",          128,   0, NULL,                                  NULL          }, // 56 Pos
-    {moduleTypeResonator,  paramType1StandardToggle, paramType2Menu,   {{ 30,  20}, { 7,  7}}, anchorTopLeft,     "Alg",            5,   0, resonAlgStrMap,                        NULL          }, // 56 Algorithm
+    {moduleTypeResonator,  paramTypeOscFreq,     {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 56 Tune
+    {moduleTypeResonator,  paramTypeFine,        {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 56 Cent
+    {moduleTypeResonator,  paramTypeToggle,      {{ 15, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, kbStrMap,                              offOnColourMap}, // 56 Kbt
+    {moduleTypeResonator,  paramTypeCommonDial,  {{ 17,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 56 Pitch M
+    {moduleTypeResonator,  paramTypeMenu,        {{ 30,  12}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 56 Pitch Type
+    {moduleTypeResonator,  paramTypeCommonDial,  {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,   0, NULL,                                  NULL          }, // 56 Decay
+    {moduleTypeResonator,  paramTypeCommonDial,  {{ 62, -17}, { 7, 14}}, anchorBottomLeft,  "Damp",         128,   0, NULL,                                  NULL          }, // 56 Damp
+    {moduleTypeResonator,  paramTypeBypass,      {{ -3,  -3}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 56 Bypass
+    {moduleTypeResonator,  paramTypeCommonDial,  {{ 75, -17}, { 7, 14}}, anchorBottomLeft,  "Pos",          128,   0, NULL,                                  NULL          }, // 56 Pos
+    {moduleTypeResonator,  paramTypeMenu,        {{ 30,  20}, { 7,  7}}, anchorTopLeft,     "Alg",            5,   0, resonAlgStrMap,                        NULL          }, // 56 Algorithm
     // 57 Automate *** We lack an UI element for the CTRL selector
-    {moduleTypeAutomate,   paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Ctrl",         128,   7, NULL,                                  NULL          }, // 57 Ctrl CC
-    {moduleTypeAutomate,   paramType1CommonDial,     paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Val",          128,  64, NULL,                                  NULL          }, // 57 Val
-    {moduleTypeAutomate,   paramType1StandardToggle, paramType2Menu,   {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Ch",            17,   0, NULL,                                  NULL          }, // 57 Channel
-    {moduleTypeAutomate,   paramType1StandardToggle, paramType2Menu,   {{ 33,  -3}, { 7,  7}}, anchorBottomLeft,  "Echo",           2,   0, offOnStrMap,                           NULL          }, // 57 Echo
+    {moduleTypeAutomate,   paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Ctrl",         128,   7, NULL,                                  NULL          }, // 57 Ctrl CC
+    {moduleTypeAutomate,   paramTypeCommonDial,  {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Val",          128,  64, NULL,                                  NULL          }, // 57 Val
+    {moduleTypeAutomate,   paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Ch",            17,   0, NULL,                                  NULL          }, // 57 Channel
+    {moduleTypeAutomate,   paramTypeMenu,        {{ 33,  -3}, { 7,  7}}, anchorBottomLeft,  "Echo",           2,   0, offOnStrMap,                           NULL          }, // 57 Echo
     // 58 Drumsynth — 4 rows: MasterOsc(y=17) | NoiseFilter(y=33) | SlaveOsc(y=49) | Bend/Click/Noise(y=65)
-    {moduleTypeDrumSynth,  paramType1FreqDrum,       paramType2Dial,   {{ 10,  17}, { 7, 14}}, anchorTopLeft,     NULL,           128, 100, NULL,                                  NULL          }, // 58 Master Freq
-    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 10,  49}, { 7, 14}}, anchorTopLeft,     NULL,           128,   0, NULL,                                  NULL          }, // 58 Slave Ratio
-    {moduleTypeDrumSynth,  paramType1ADRTime,        paramType2Dial,   {{ 28,  17}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          }, // 58 MasterDecay
-    {moduleTypeDrumSynth,  paramType1ADRTime,        paramType2Dial,   {{ 28,  49}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          }, // 58 Slave Decay
-    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 46,  17}, { 7, 14}}, anchorTopLeft,     "Lev",          128, 100, NULL,                                  NULL          }, // 58 Master Level
-    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 46,  49}, { 7, 14}}, anchorTopLeft,     "Lev",          128, 100, NULL,                                  NULL          }, // 58 Slave Level
-    {moduleTypeDrumSynth,  paramType1Freq,           paramType2Dial,   {{ 10,  33}, { 7, 14}}, anchorTopLeft,     "Freq",         128,   0, NULL,                                  NULL          }, // 58 Noise Filter Freq
-    {moduleTypeDrumSynth,  paramType1Resonance,      paramType2Dial,   {{ 28,  33}, { 7, 14}}, anchorTopLeft,     "Res",          128,   0, NULL,                                  NULL          }, // 58 Noise Filter Res
-    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 46,  33}, { 7, 14}}, anchorTopLeft,     "Swp",          128,   0, NULL,                                  NULL          }, // 58 Noise Filter Sweep
-    {moduleTypeDrumSynth,  paramType1ADRTime,        paramType2Dial,   {{ 64,  33}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          }, // 58 Noise Filter Decay
-    {moduleTypeDrumSynth,  paramType1StandardToggle, paramType2Menu,   {{ 90,  37}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, staticFilterTypeStrMap,                NULL          }, // 58 Noise FilterType
-    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 10,  65}, { 7, 14}}, anchorTopLeft,     "Amt",          128,   0, NULL,                                  NULL          }, // 58 Bend Amount
-    {moduleTypeDrumSynth,  paramType1ADRTime,        paramType2Dial,   {{ 28,  65}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          }, // 58 BendDecay
-    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 46,  65}, { 7, 14}}, anchorTopLeft,     "Click",        128,   0, NULL,                                  NULL          }, // 58 Click Amount
-    {moduleTypeDrumSynth,  paramType1CommonDial,     paramType2Dial,   {{ 64,  65}, { 7, 14}}, anchorTopLeft,     "Noise",        128,   0, NULL,                                  NULL          }, // 58 Noise Amount
-    {moduleTypeDrumSynth,  paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 58 Bypass
-    //{moduleTypeDrumSynth,   paramType1StandardToggle, paramType2Menu, {{ 60, -35}, {7,  7}}, anchorBottomLeft,  NULL,        1,  0, drSynthPresetStrMap,   NULL          }, // 58 Preset *** Length must be updated  // TODO: Only 16 parameters on this one, decide which one is wrong
+    {moduleTypeDrumSynth,  paramTypeFreqDrum,    {{ 10,  17}, { 7, 14}}, anchorTopLeft,     NULL,           128, 100, NULL,                                  NULL          }, // 58 Master Freq
+    {moduleTypeDrumSynth,  paramTypeCommonDial,  {{ 10,  49}, { 7, 14}}, anchorTopLeft,     NULL,           128,   0, NULL,                                  NULL          }, // 58 Slave Ratio
+    {moduleTypeDrumSynth,  paramTypeADRTime,     {{ 28,  17}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          }, // 58 MasterDecay
+    {moduleTypeDrumSynth,  paramTypeADRTime,     {{ 28,  49}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          }, // 58 Slave Decay
+    {moduleTypeDrumSynth,  paramTypeCommonDial,  {{ 46,  17}, { 7, 14}}, anchorTopLeft,     "Lev",          128, 100, NULL,                                  NULL          }, // 58 Master Level
+    {moduleTypeDrumSynth,  paramTypeCommonDial,  {{ 46,  49}, { 7, 14}}, anchorTopLeft,     "Lev",          128, 100, NULL,                                  NULL          }, // 58 Slave Level
+    {moduleTypeDrumSynth,  paramTypeFreq,        {{ 10,  33}, { 7, 14}}, anchorTopLeft,     "Freq",         128,   0, NULL,                                  NULL          }, // 58 Noise Filter Freq
+    {moduleTypeDrumSynth,  paramTypeResonance,   {{ 28,  33}, { 7, 14}}, anchorTopLeft,     "Res",          128,   0, NULL,                                  NULL          }, // 58 Noise Filter Res
+    {moduleTypeDrumSynth,  paramTypeCommonDial,  {{ 46,  33}, { 7, 14}}, anchorTopLeft,     "Swp",          128,   0, NULL,                                  NULL          }, // 58 Noise Filter Sweep
+    {moduleTypeDrumSynth,  paramTypeADRTime,     {{ 64,  33}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          }, // 58 Noise Filter Decay
+    {moduleTypeDrumSynth,  paramTypeMenu,        {{ 90,  37}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, staticFilterTypeStrMap,                NULL          }, // 58 Noise FilterType
+    {moduleTypeDrumSynth,  paramTypeCommonDial,  {{ 10,  65}, { 7, 14}}, anchorTopLeft,     "Amt",          128,   0, NULL,                                  NULL          }, // 58 Bend Amount
+    {moduleTypeDrumSynth,  paramTypeADRTime,     {{ 28,  65}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          }, // 58 BendDecay
+    {moduleTypeDrumSynth,  paramTypeCommonDial,  {{ 46,  65}, { 7, 14}}, anchorTopLeft,     "Click",        128,   0, NULL,                                  NULL          }, // 58 Click Amount
+    {moduleTypeDrumSynth,  paramTypeCommonDial,  {{ 64,  65}, { 7, 14}}, anchorTopLeft,     "Noise",        128,   0, NULL,                                  NULL          }, // 58 Noise Amount
+    {moduleTypeDrumSynth,  paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 58 Bypass
+    //{moduleTypeDrumSynth,   paramTypeMenu, {{ 60, -35}, {7,  7}}, anchorBottomLeft,  NULL,        1,  0, drSynthPresetStrMap,   NULL          }, // 58 Preset *** Length must be updated  // TODO: Only 16 parameters on this one, decide which one is wrong
 
     // 59 CompLev
-    {moduleTypeCompLev,    paramType1BipLevel,       paramType2Dial,   {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "C",            128,  64, NULL,                                  NULL          }, // 59 Compare Level
+    {moduleTypeCompLev,    paramTypeBipLevel,    {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "C",            128,  64, NULL,                                  NULL          }, // 59 Compare Level
     // 60 Mux8-1X
-    {moduleTypeMux8to1X,   paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "X-fade",       128,   0, NULL,                                  NULL          }, // 58 X-fade
+    {moduleTypeMux8to1X,   paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "X-fade",       128,   0, NULL,                                  NULL          }, // 58 X-fade
     // 61 Clip
-    {moduleTypeClip,       paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 61 Clip level M
-    {moduleTypeClip,       paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 61 Clip level
-    {moduleTypeClip,       paramType1StandardToggle, paramType2Menu,   {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, asymSymStrMap,                         NULL          }, // 61 Shape
-    {moduleTypeClip,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 61 Bypass
+    {moduleTypeClip,       paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 61 Clip level M
+    {moduleTypeClip,       paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 61 Clip level
+    {moduleTypeClip,       paramTypeMenu,        {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, asymSymStrMap,                         NULL          }, // 61 Shape
+    {moduleTypeClip,       paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 61 Bypass
     // 62 OverDrive
-    {moduleTypeOverdrive,  paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 62 Amount M
-    {moduleTypeOverdrive,  paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 62 Amount
-    {moduleTypeOverdrive,  paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 62 Bypass
-    {moduleTypeOverdrive,  paramType1StandardToggle, paramType2Menu,   {{ 15,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, odTypeStrMap,                          NULL          }, // 62 Type
-    {moduleTypeOverdrive,  paramType1StandardToggle, paramType2Menu,   {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, asymSymStrMap,                         NULL          }, // 62 Shape
+    {moduleTypeOverdrive,  paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 62 Amount M
+    {moduleTypeOverdrive,  paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 62 Amount
+    {moduleTypeOverdrive,  paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 62 Bypass
+    {moduleTypeOverdrive,  paramTypeMenu,        {{ 15,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, odTypeStrMap,                          NULL          }, // 62 Type
+    {moduleTypeOverdrive,  paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, asymSymStrMap,                         NULL          }, // 62 Shape
     // 63 Scratch
-    {moduleTypeScratch,    paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 63 Ratio
-    {moduleTypeScratch,    paramType1CommonDial,     paramType2Dial,   {{ 15,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 63 Ratio Mod
-    {moduleTypeScratch,    paramType1StandardToggle, paramType2Menu,   {{ 75,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, delayStrMap,                           NULL          }, // 63 Delay
-    {moduleTypeScratch,    paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 63 Bypass
+    {moduleTypeScratch,    paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 63 Ratio
+    {moduleTypeScratch,    paramTypeCommonDial,  {{ 15,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 63 Ratio Mod
+    {moduleTypeScratch,    paramTypeMenu,        {{ 75,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, delayStrMap,                           NULL          }, // 63 Delay
+    {moduleTypeScratch,    paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 63 Bypass
     // 64 Gate (Logic Gate) -- no parameters, 2 modes
     // 65 Unknown
     // 66 Mix2-1B
-    {moduleTypeMix2to1B,   paramType1StandardToggle, paramType2Menu,   {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, invStrMap,                             NULL          }, // 66 Inv1
-    {moduleTypeMix2to1B,   paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 66 Lvl1
-    {moduleTypeMix2to1B,   paramType1StandardToggle, paramType2Menu,   {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, invStrMap,                             NULL          }, // 66 Inv2
-    {moduleTypeMix2to1B,   paramType1CommonDial,     paramType2Dial,   {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 66 Lvl2
-    {moduleTypeMix2to1B,   paramType1StandardToggle, paramType2Menu,   {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 66 ExpLinDB
+    {moduleTypeMix2to1B,   paramTypeMenu,        {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, invStrMap,                             NULL          }, // 66 Inv1
+    {moduleTypeMix2to1B,   paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 66 Lvl1
+    {moduleTypeMix2to1B,   paramTypeMenu,        {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, invStrMap,                             NULL          }, // 66 Inv2
+    {moduleTypeMix2to1B,   paramTypeCommonDial,  {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 66 Lvl2
+    {moduleTypeMix2to1B,   paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 66 ExpLinDB
     // 67 Unknown
     // 68 ClkGen
-    {moduleTypeClkGen,     paramType1CommonDial,     paramType2Dial,   {{ 60, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 68 Tempo *** needs new dial 24-214 BPM
-    {moduleTypeClkGen,     paramType1Bypass,         paramType2Toggle, {{ 70, -17}, { 5,  5}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  NULL          }, // 68 Bypass
-    {moduleTypeClkGen,     paramType1StandardToggle, paramType2Menu,   {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Source",         2,   0, clkSrcStrMap,                          NULL          }, // 66 Clk Source
-    {moduleTypeClkGen,     paramType1StandardToggle, paramType2Menu,   {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Sync every",    16,   3, int16StrMap,                           NULL          }, // 66 BeatSync
-    {moduleTypeClkGen,     paramType1CommonDial,     paramType2Dial,   {{ 25,  -3}, { 7, 14}}, anchorBottomLeft,  "Swing",        128,   0, NULL,                                  NULL          }, // 68 Swing
+    {moduleTypeClkGen,     paramTypeCommonDial,  {{ 60, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 68 Tempo *** needs new dial 24-214 BPM
+    {moduleTypeClkGen,     paramTypeBypass,      {{ 70, -17}, { 5,  5}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  NULL          }, // 68 Bypass
+    {moduleTypeClkGen,     paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Source",         2,   0, clkSrcStrMap,                          NULL          }, // 66 Clk Source
+    {moduleTypeClkGen,     paramTypeMenu,        {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Sync every",    16,   3, int16StrMap,                           NULL          }, // 66 BeatSync
+    {moduleTypeClkGen,     paramTypeCommonDial,  {{ 25,  -3}, { 7, 14}}, anchorBottomLeft,  "Swing",        128,   0, NULL,                                  NULL          }, // 68 Swing
     // 69 ClkDiv
-    {moduleTypeClkDiv,     paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 69 Divider *** needs other UI element
+    {moduleTypeClkDiv,     paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 69 Divider *** needs other UI element
 
     // 70 Unknown
     // 71 EnvFollow
-    {moduleTypeEnvFollow,  paramType1StrMap,         paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, env_follow_attackStrMap,               NULL          }, // 71 Attack
-    {moduleTypeEnvFollow,  paramType1StrMap,         paramType2Dial,   {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  "Release",      128,   0, env_follow_releaseStrMap,              NULL          }, // 71 Release
+    {moduleTypeEnvFollow,  paramTypeStrMap,      {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, env_follow_attackStrMap,               NULL          }, // 71 Attack
+    {moduleTypeEnvFollow,  paramTypeStrMap,      {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  "Release",      128,   0, env_follow_releaseStrMap,              NULL          }, // 71 Release
     // 72 NoteScaler
-    {moduleTypeNoteScaler, paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Range",        128,   0, NULL,                                  NULL          }, // 72 Range *** needs UI element
+    {moduleTypeNoteScaler, paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Range",        128,   0, NULL,                                  NULL          }, // 72 Range *** needs UI element
     // 73 Unknown
     // 74 WaveWrap
-    {moduleTypeWaveWrap,   paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 74 Amount Mod
-    {moduleTypeWaveWrap,   paramType1CommonDial,     paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 74 Amount
-    {moduleTypeWaveWrap,   paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 74 Bypass
+    {moduleTypeWaveWrap,   paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 74 Amount Mod
+    {moduleTypeWaveWrap,   paramTypeCommonDial,  {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 74 Amount
+    {moduleTypeWaveWrap,   paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 74 Bypass
     // 75 NoteQuant
-    {moduleTypeNoteQuant,  paramType1CommonDial,     paramType2Dial,   {{ 25,  -3}, { 7, 14}}, anchorBottomLeft,  "Range",        128, 127, NULL,                                  NULL          }, // 75 Range
-    {moduleTypeNoteQuant,  paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Notes",        128,   0, NULL,                                  NULL          }, // 75 Notes
+    {moduleTypeNoteQuant,  paramTypeCommonDial,  {{ 25,  -3}, { 7, 14}}, anchorBottomLeft,  "Range",        128, 127, NULL,                                  NULL          }, // 75 Range
+    {moduleTypeNoteQuant,  paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Notes",        128,   0, NULL,                                  NULL          }, // 75 Notes
     // 76 SwOnOffT
-    {moduleTypeSwOnOffT,   paramType1StandardToggle, paramType2Menu,   {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           NULL          }, // 76 On
+    {moduleTypeSwOnOffT,   paramTypeMenu,        {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           NULL          }, // 76 On
     // 77 Unknown
     // 78 Sw1-8
-    {moduleTypeSw1to8,     paramType1StandardToggle, paramType2Menu,   {{ 40, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             8,   0, out8StrMap,                            NULL          }, // 78 Selector
+    {moduleTypeSw1to8,     paramTypeMenu,        {{ 40, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             8,   0, out8StrMap,                            NULL          }, // 78 Selector
     // 79 Sw4-1
-    {moduleTypeSw4to1,     paramType1StandardToggle, paramType2Menu,   {{ 40, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, in8StrMap,                             NULL          }, // 79 Selector
+    {moduleTypeSw4to1,     paramTypeMenu,        {{ 40, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, in8StrMap,                             NULL          }, // 79 Selector
     // 80 Unknown
     // 81 LevAmp
-    {moduleTypeLevAmp,     paramType1LevAmpDial,     paramType2Dial,   {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 81 Gain
-    {moduleTypeLevAmp,     paramType1StandardToggle, paramType2Menu,   {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, expStrMap,                             NULL          }, // 81 Type
+    {moduleTypeLevAmp,     paramTypeLevAmpDial,  {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 81 Gain
+    {moduleTypeLevAmp,     paramTypeMenu,        {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, expStrMap,                             NULL          }, // 81 Type
     // 82 Rect
-    {moduleTypeRect,       paramType1StandardToggle, paramType2Menu,   {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, rectStrMap,                            NULL          }, // 82 Mode
-    {moduleTypeRect,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 82 Bypass
+    {moduleTypeRect,       paramTypeMenu,        {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, rectStrMap,                            NULL          }, // 82 Mode
+    {moduleTypeRect,       paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 82 Bypass
     // 83 ShpStatic
-    {moduleTypeShpStatic,  paramType1StandardToggle, paramType2Menu,   {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, shpStaticStrMap,                       NULL          }, // 83 Mode
-    {moduleTypeShpStatic,  paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 83 Bypass
+    {moduleTypeShpStatic,  paramTypeMenu,        {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, shpStaticStrMap,                       NULL          }, // 83 Mode
+    {moduleTypeShpStatic,  paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 83 Bypass
     // 84 EnvADR
-    {moduleTypeEnvADR,     paramType1StandardToggle, paramType2Menu,   {{ 70, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, envShapeStrMap,                        NULL          }, // 84 Shape
-    {moduleTypeEnvADR,     paramType1ADRTime,        paramType2Dial,   {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, NULL,                                  NULL          }, // 84 Attack
-    {moduleTypeEnvADR,     paramType1StandardToggle, paramType2Menu,   {{ 28, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,                     NULL          }, // 84 Reset
-    {moduleTypeEnvADR,     paramType1ADRTime,        paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 84 Release/Decay time
-    {moduleTypeEnvADR,     paramType1StandardToggle, paramType2Menu,   {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 84 Trig/Gate
-    {moduleTypeEnvADR,     paramType1StandardToggle, paramType2Menu,   {{ 70, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, posNegInvStrMap,                       NULL          }, // 84 OutType
-    {moduleTypeEnvADR,     paramType1StandardToggle, paramType2Toggle, {{  3, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, kbStrMap,                              offOnColourMap},
-    {moduleTypeEnvADR,     paramType1StandardToggle, paramType2Menu,   {{ 52, -12}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, decayReleaseStrMap,                    NULL          }, // 84 Decay/Release toggle
+    {moduleTypeEnvADR,     paramTypeMenu,        {{ 70, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, envShapeStrMap,                        NULL          }, // 84 Shape
+    {moduleTypeEnvADR,     paramTypeADRTime,     {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, NULL,                                  NULL          }, // 84 Attack
+    {moduleTypeEnvADR,     paramTypeMenu,        {{ 28, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,                     NULL          }, // 84 Reset
+    {moduleTypeEnvADR,     paramTypeADRTime,     {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 84 Release/Decay time
+    {moduleTypeEnvADR,     paramTypeMenu,        {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 84 Trig/Gate
+    {moduleTypeEnvADR,     paramTypeMenu,        {{ 70, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, posNegInvStrMap,                       NULL          }, // 84 OutType
+    {moduleTypeEnvADR,     paramTypeToggle,      {{  3, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, kbStrMap,                              offOnColourMap},
+    {moduleTypeEnvADR,     paramTypeMenu,        {{ 52, -12}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, decayReleaseStrMap,                    NULL          }, // 84 Decay/Release toggle
     // 85 WindSw
-    {moduleTypeWindSw,     paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "From",         128,   0, NULL,                                  NULL          }, // 85 From
-    {moduleTypeWindSw,     paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "To",           128,   0, NULL,                                  NULL          }, // 85 To
+    {moduleTypeWindSw,     paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "From",         128,   0, NULL,                                  NULL          }, // 85 From
+    {moduleTypeWindSw,     paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "To",           128,   0, NULL,                                  NULL          }, // 85 To
     // 86 8Counter -- No controls
     // 87 FltLP
-    {moduleTypeFltLP,      paramType1Freq,           paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 87 Freq
-    {moduleTypeFltLP,      paramType1CommonDial,     paramType2Dial,   {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 87 FreqMod
-    {moduleTypeFltLP,      paramType1StandardToggle, paramType2Menu,   {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   4, offTo100KbStrMap,                      NULL          },
-    //{moduleTypeFltLP, paramType1StandardToggle, paramType2Menu, {{ 67, -3}, {7,  7}}, anchorBottomLeft,  "Slope",       6,  2, fltLPSlopeStrMap,   NULL          }, // TODO: Possibly one of these should be a mode - only expecting 5 params
-    {moduleTypeFltLP,      paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 83 Bypass
+    {moduleTypeFltLP,      paramTypeFreq,        {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 87 Freq
+    {moduleTypeFltLP,      paramTypeCommonDial,  {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 87 FreqMod
+    {moduleTypeFltLP,      paramTypeMenu,        {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   4, offTo100KbStrMap,                      NULL          },
+    //{moduleTypeFltLP, paramTypeMenu, {{ 67, -3}, {7,  7}}, anchorBottomLeft,  "Slope",       6,  2, fltLPSlopeStrMap,   NULL          }, // TODO: Possibly one of these should be a mode - only expecting 5 params
+    {moduleTypeFltLP,      paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 83 Bypass
     // 88 Sw1-4
-    {moduleTypeSw1to4,     paramType1StandardToggle, paramType2Menu,   {{ 37,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, out8StrMap,                            NULL          }, // 88 Selector
+    {moduleTypeSw1to4,     paramTypeMenu,        {{ 37,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, out8StrMap,                            NULL          }, // 88 Selector
     // 89 Flanger
-    {moduleTypeFlanger,    paramType1StrMap,         paramType2Dial,   {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  "Rate",         128,  64, flanger_rateStrMap,                    NULL          }, // 89 Rate
-    {moduleTypeFlanger,    paramType1CommonDial,     paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Range",        128,  64, NULL,                                  NULL          }, // 89 Range
-    {moduleTypeFlanger,    paramType1CommonDial,     paramType2Dial,   {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Feedback",     128,  64, NULL,                                  NULL          }, // 89 Feedback
-    {moduleTypeFlanger,    paramType1Bypass,         paramType2Toggle, {{ -3,  -8}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 89 Bypass
+    {moduleTypeFlanger,    paramTypeStrMap,      {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  "Rate",         128,  64, flanger_rateStrMap,                    NULL          }, // 89 Rate
+    {moduleTypeFlanger,    paramTypeCommonDial,  {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Range",        128,  64, NULL,                                  NULL          }, // 89 Range
+    {moduleTypeFlanger,    paramTypeCommonDial,  {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Feedback",     128,  64, NULL,                                  NULL          }, // 89 Feedback
+    {moduleTypeFlanger,    paramTypeBypass,      {{ -3,  -8}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 89 Bypass
     // 90 Sw1-2
-    {moduleTypeSw1to2,     paramType1StandardToggle, paramType2Menu,   {{ 37,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, out8StrMap,                            NULL          }, // 90 Selector
+    {moduleTypeSw1to2,     paramTypeMenu,        {{ 37,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, out8StrMap,                            NULL          }, // 90 Selector
     // 91 FlipFlop
     // 92 FltClassic
-    {moduleTypeFltClassic, paramType1Freq,           paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,   0, NULL,                                  NULL          }, // 92
-    {moduleTypeFltClassic, paramType1Pitch,          paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Env",          128,   0, NULL,                                  NULL          },
-    {moduleTypeFltClassic, paramType1StandardToggle, paramType2Menu,   {{ 25, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   4, offTo100KbStrMap,                      NULL          },
-    {moduleTypeFltClassic, paramType1StrMap,         paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Res",          128,   0, filter_resonanceStrMap,                NULL          },
-    {moduleTypeFltClassic, paramType1StandardToggle, paramType2Menu,   {{ 70, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, fltClassicDbStrMap,                    NULL          },
-    {moduleTypeFltClassic, paramType1Bypass,         paramType2Toggle, {{ -3,   0}, { 5,  5}}, anchorMiddleRight, NULL,             2,   1, NULL,                                  NULL          },
+    {moduleTypeFltClassic, paramTypeFreq,        {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,   0, NULL,                                  NULL          }, // 92
+    {moduleTypeFltClassic, paramTypePitch,       {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Env",          128,   0, NULL,                                  NULL          },
+    {moduleTypeFltClassic, paramTypeMenu,        {{ 25, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   4, offTo100KbStrMap,                      NULL          },
+    {moduleTypeFltClassic, paramTypeStrMap,      {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Res",          128,   0, filter_resonanceStrMap,                NULL          },
+    {moduleTypeFltClassic, paramTypeMenu,        {{ 70, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, fltClassicDbStrMap,                    NULL          },
+    {moduleTypeFltClassic, paramTypeBypass,      {{ -3,   0}, { 5,  5}}, anchorMiddleRight, NULL,             2,   1, NULL,                                  NULL          },
     // 93 Unknown
     // 94 StChorus
-    {moduleTypeStChorus,   paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Detune",       128,   0, NULL,                                  NULL          }, // 94
-    {moduleTypeStChorus,   paramType1CommonDial,     paramType2Dial,   {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  "Amount",       128,   0, NULL,                                  NULL          },
-    {moduleTypeStChorus,   paramType1Bypass,         paramType2Toggle, {{ -3,   0}, { 5,  5}}, anchorMiddleRight, NULL,             2,   1, NULL,                                  NULL          },
+    {moduleTypeStChorus,   paramTypeCommonDial,  {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Detune",       128,   0, NULL,                                  NULL          },  // 94
+    {moduleTypeStChorus,   paramTypeCommonDial,  {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  "Amount",       128,   0, NULL,                                  NULL          },
+    {moduleTypeStChorus,   paramTypeBypass,      {{ -3,   0}, { 5,  5}}, anchorMiddleRight, NULL,             2,   1, NULL,                                  NULL          },
     // 95 Unknown
     // 96 OscD
-    {moduleTypeOscD,       paramType1Freq,           paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 96 Tune
-    {moduleTypeOscD,       paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 96 Fine
-    {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 96 Kbt
-    {moduleTypeOscD,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 96 Pitch M
-    {moduleTypeOscD,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 96 Bypass
+    {moduleTypeOscD,       paramTypeFreq,        {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 96 Tune
+    {moduleTypeOscD,       paramTypeCommonDial,  {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 96 Fine
+    {moduleTypeOscD,       paramTypeToggle,      {{ 22, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 96 Kbt
+    {moduleTypeOscD,       paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 96 Pitch M
+    {moduleTypeOscD,       paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 96 Bypass
 
     // 97 OscA
-    {moduleTypeOscA,       paramType1Freq,           paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 97 Tune
-    {moduleTypeOscA,       paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 97 Fine
-    {moduleTypeOscA,       paramType1StandardToggle, paramType2Toggle, {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   1, kbStrMap,                              offOnColourMap}, // 97 Kbt
-    {moduleTypeOscA,       paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 97 Pitch M
-    {moduleTypeOscA,       paramType1StandardToggle, paramType2Menu,   {{-20,   5}, { 7,  7}}, anchorTopRight,    NULL,             6,   2, shapeOscATypeStrMap,                   NULL          }, // 97 Waveform
-    {moduleTypeOscA,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 97 Bypass
-    {moduleTypeOscA,       paramType1StandardToggle, paramType2Menu,   {{ 30,  10}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 97 Pitch Type
+    {moduleTypeOscA,       paramTypeFreq,        {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 97 Tune
+    {moduleTypeOscA,       paramTypeCommonDial,  {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 97 Fine
+    {moduleTypeOscA,       paramTypeToggle,      {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   1, kbStrMap,                              offOnColourMap}, // 97 Kbt
+    {moduleTypeOscA,       paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 97 Pitch M
+    {moduleTypeOscA,       paramTypeMenu,        {{-20,   5}, { 7,  7}}, anchorTopRight,    NULL,             6,   2, shapeOscATypeStrMap,                   NULL          }, // 97 Waveform
+    {moduleTypeOscA,       paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 97 Bypass
+    {moduleTypeOscA,       paramTypeMenu,        {{ 30,  10}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 97 Pitch Type
 
     // 98 FreqShift
-    {moduleTypeFreqShift,  paramType1FreqShift,      paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "FreqShift",    128,  64, NULL,                                  NULL          }, // 98 FreqShift
-    {moduleTypeFreqShift,  paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 98 Mod
-    {moduleTypeFreqShift,  paramType1StandardToggle, paramType2Menu,   {{ 60, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, freqShiftRangeStrMap,                  NULL          }, // 98 Range
-    {moduleTypeFreqShift,  paramType1Bypass,         paramType2Toggle, {{-10, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 98 Bypass
+    {moduleTypeFreqShift,  paramTypeFreqShift,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "FreqShift",    128,  64, NULL,                                  NULL          }, // 98 FreqShift
+    {moduleTypeFreqShift,  paramTypeCommonDial,  {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 98 Mod
+    {moduleTypeFreqShift,  paramTypeMenu,        {{ 60, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, freqShiftRangeStrMap,                  NULL          }, // 98 Range
+    {moduleTypeFreqShift,  paramTypeBypass,      {{-10, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 98 Bypass
     // 99 Unknown
     // 100 Sw2-1
-    {moduleTypeSw2to1,     paramType1StandardToggle, paramType2Menu,   {{ 50,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, in8StrMap,                             NULL          }, // 100 Selector
+    {moduleTypeSw2to1,     paramTypeMenu,        {{ 50,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, in8StrMap,                             NULL          }, // 100 Selector
     // 101 Unknown
     // 102 FltPhase
-    {moduleTypeFltPhase,   paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 102 Pitch M
-    {moduleTypeFltPhase,   paramType1Freq,           paramType2Dial,   {{ 22, -10}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,   0, NULL,                                  NULL          }, // 102 Freq
-    {moduleTypeFltPhase,   paramType1CommonDial,     paramType2Dial,   {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 102 Spread M
-    {moduleTypeFltPhase,   paramType1CommonDial,     paramType2Dial,   {{ 57, -17}, { 7, 14}}, anchorBottomLeft,  "FB",           128,  64, NULL,                                  NULL          }, // 102 FB
-    {moduleTypeFltPhase,   paramType1StandardToggle, paramType2Menu,   {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  "Notch",          6,   4, int16StrMap,                           NULL          }, // 102 Notch count
-    {moduleTypeFltPhase,   paramType1CommonDial,     paramType2Dial,   {{ 38, -17}, { 7, 14}}, anchorBottomLeft,  "Spread",       128,  64, NULL,                                  NULL          }, // 102 Spread
-    {moduleTypeFltPhase,   paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 102 Bypass
-    {moduleTypeFltPhase,   paramType1CommonDial,     paramType2Dial,   {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128,   0, NULL,                                  NULL          }, // 102 Level
-    {moduleTypeFltPhase,   paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 102 FB Mod
-    {moduleTypeFltPhase,   paramType1StandardToggle, paramType2Menu,   {{ 68, -12}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, fltPhaseTypeStrMap,                    NULL          }, // 102 Type
-    {moduleTypeFltPhase,   paramType1StandardToggle, paramType2Menu,   {{  3, -22}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   4, offTo100KbStrMap,                      NULL          }, // 102 Kbt
+    {moduleTypeFltPhase,   paramTypeCommonDial,  {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 102 Pitch M
+    {moduleTypeFltPhase,   paramTypeFreq,        {{ 22, -10}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,   0, NULL,                                  NULL          }, // 102 Freq
+    {moduleTypeFltPhase,   paramTypeCommonDial,  {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 102 Spread M
+    {moduleTypeFltPhase,   paramTypeCommonDial,  {{ 57, -17}, { 7, 14}}, anchorBottomLeft,  "FB",           128,  64, NULL,                                  NULL          }, // 102 FB
+    {moduleTypeFltPhase,   paramTypeMenu,        {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  "Notch",          6,   4, int16StrMap,                           NULL          }, // 102 Notch count
+    {moduleTypeFltPhase,   paramTypeCommonDial,  {{ 38, -17}, { 7, 14}}, anchorBottomLeft,  "Spread",       128,  64, NULL,                                  NULL          }, // 102 Spread
+    {moduleTypeFltPhase,   paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 102 Bypass
+    {moduleTypeFltPhase,   paramTypeCommonDial,  {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128,   0, NULL,                                  NULL          }, // 102 Level
+    {moduleTypeFltPhase,   paramTypeCommonDial,  {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 102 FB Mod
+    {moduleTypeFltPhase,   paramTypeMenu,        {{ 68, -12}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, fltPhaseTypeStrMap,                    NULL          }, // 102 Type
+    {moduleTypeFltPhase,   paramTypeMenu,        {{  3, -22}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   4, offTo100KbStrMap,                      NULL          }, // 102 Kbt
     // 103 EqPeak
-    {moduleTypeEqPeak,     paramType1Freq,           paramType2Dial,   {{ 22,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,  64, NULL,                                  NULL          }, // 103 Freq
-    {moduleTypeEqPeak,     paramType1BipLevel,       paramType2Dial,   {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  "Gain",         128,  64, NULL,                                  NULL          }, // 103 Gain
-    {moduleTypeEqPeak,     paramType1CommonDial,     paramType2Dial,   {{ 62, -10}, { 7, 14}}, anchorBottomLeft,  "BW",           128,  64, NULL,                                  NULL          }, // 103 BW *** needs UI element
-    {moduleTypeEqPeak,     paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 103 Bypass
-    {moduleTypeEqPeak,     paramType1CommonDial,     paramType2Dial,   {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128, 127, NULL,                                  NULL          }, // 102 Level
+    {moduleTypeEqPeak,     paramTypeFreq,        {{ 22,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,  64, NULL,                                  NULL          }, // 103 Freq
+    {moduleTypeEqPeak,     paramTypeBipLevel,    {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  "Gain",         128,  64, NULL,                                  NULL          }, // 103 Gain
+    {moduleTypeEqPeak,     paramTypeCommonDial,  {{ 62, -10}, { 7, 14}}, anchorBottomLeft,  "BW",           128,  64, NULL,                                  NULL          }, // 103 BW *** needs UI element
+    {moduleTypeEqPeak,     paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 103 Bypass
+    {moduleTypeEqPeak,     paramTypeCommonDial,  {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128, 127, NULL,                                  NULL          }, // 102 Level
 
     // 104 Unknown
     // 105 ValSw2-1
-    {moduleTypeValSw2to1,  paramType1StandardToggle, paramType2Menu,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, u128StrMap,                            NULL          }, // 105 Val
+    {moduleTypeValSw2to1,  paramTypeMenu,        {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, u128StrMap,                            NULL          }, // 105 Val
     // 106 OscNoise
-    {moduleTypeOscNoise,   paramType1Freq,           paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 106 Tune
-    {moduleTypeOscNoise,   paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 106 Fine
-    {moduleTypeOscNoise,   paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 97 Kbt
-    {moduleTypeOscNoise,   paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 97 Pitch M
-    {moduleTypeOscNoise,   paramType1StandardToggle, paramType2Menu,   {{ 30,   6}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 97 Pitch Type
-    {moduleTypeOscNoise,   paramType1CommonDial,     paramType2Dial,   {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Width",        128,  64, NULL,                                  NULL          }, // 106 Width
-    {moduleTypeOscNoise,   paramType1CommonDial,     paramType2Dial,   {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 106 Width M
-    {moduleTypeOscNoise,   paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 106 Bypass
+    {moduleTypeOscNoise,   paramTypeFreq,        {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 106 Tune
+    {moduleTypeOscNoise,   paramTypeCommonDial,  {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 106 Fine
+    {moduleTypeOscNoise,   paramTypeToggle,      {{ 22, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 97 Kbt
+    {moduleTypeOscNoise,   paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 97 Pitch M
+    {moduleTypeOscNoise,   paramTypeMenu,        {{ 30,   6}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 97 Pitch Type
+    {moduleTypeOscNoise,   paramTypeCommonDial,  {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Width",        128,  64, NULL,                                  NULL          }, // 106 Width
+    {moduleTypeOscNoise,   paramTypeCommonDial,  {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 106 Width M
+    {moduleTypeOscNoise,   paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 106 Bypass
 
     // 107 Unknown
     // 108 Vocoder
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{ 10,  -3}, { 5,  7}}, anchorBottomLeft,  "1",             17,   1, vocoderStrMap,                         NULL          }, // 108 BandSel 1
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{ 15,  -3}, { 5,  7}}, anchorBottomLeft,  "2",             17,   2, vocoderStrMap,                         NULL          }, // 108 BandSel 2
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{ 20,  -3}, { 5,  7}}, anchorBottomLeft,  "3",             17,   3, vocoderStrMap,                         NULL          }, // 108 BandSel 3
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{ 25,  -3}, { 5,  7}}, anchorBottomLeft,  "4",             17,   4, vocoderStrMap,                         NULL          }, // 108 BandSel 4
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{ 30,  -3}, { 5,  7}}, anchorBottomLeft,  "5",             17,   5, vocoderStrMap,                         NULL          }, // 108 BandSel 5
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{ 35,  -3}, { 5,  7}}, anchorBottomLeft,  "6",             17,   6, vocoderStrMap,                         NULL          }, // 108 BandSel 6
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{ 40,  -3}, { 5,  7}}, anchorBottomLeft,  "7",             17,   7, vocoderStrMap,                         NULL          }, // 108 BandSel 7
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{ 45,  -3}, { 5,  7}}, anchorBottomLeft,  "8",             17,   8, vocoderStrMap,                         NULL          }, // 108 BandSel 8
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{ 50,  -3}, { 5,  7}}, anchorBottomLeft,  "9",             17,   9, vocoderStrMap,                         NULL          }, // 108 BandSel 9
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{ 55,  -3}, { 5,  7}}, anchorBottomLeft,  "10",            17,  10, vocoderStrMap,                         NULL          }, // 108 BandSel 10
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{ 60,  -3}, { 5,  7}}, anchorBottomLeft,  "11",            17,  11, vocoderStrMap,                         NULL          }, // 108 BandSel 11
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{ 65,  -3}, { 5,  7}}, anchorBottomLeft,  "12",            17,  12, vocoderStrMap,                         NULL          }, // 108 BandSel 12
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{ 70,  -3}, { 5,  7}}, anchorBottomLeft,  "13",            17,  13, vocoderStrMap,                         NULL          }, // 108 BandSel 13
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{ 75,  -3}, { 5,  7}}, anchorBottomLeft,  "14",            17,  14, vocoderStrMap,                         NULL          }, // 108 BandSel 14
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{ 80,  -3}, { 5,  7}}, anchorBottomLeft,  "15",            17,  15, vocoderStrMap,                         NULL          }, // 108 BandSel 15
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{ 85,  -3}, { 5,  7}}, anchorBottomLeft,  "16",            17,  16, vocoderStrMap,                         NULL          }, // 108 BandSel 16
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{  3, -12}, { 7,  7}}, anchorBottomLeft,  "Emp",            2,   0, offOnStrMap,                           NULL          }, // 108 Emphasis
-    {moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu,   {{  3, -24}, { 7,  7}}, anchorBottomLeft,  "Mon",            2,   0, offOnStrMap,                           NULL          }, // 108 Monitor
-    //{moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu, {{ 10, -24}, { 7,  7}}, anchorBottomLeft,  "-2",             1,   0, presetStrMap,           NULL          }, // 108 Preset -2  // TODO: should only be 18 parameters on this!
-    //{moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu, {{ 17, -24}, { 7,  7}}, anchorBottomLeft,  "-1",             1,   0, presetStrMap,           NULL          }, // 108 Preset -1
-    //{moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu, {{ 24, -24}, { 7,  7}}, anchorBottomLeft,  "-0",             1,   0, presetStrMap,           NULL          }, // 108 Preset 0
-    //{moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu, {{ 31, -24}, { 7,  7}}, anchorBottomLeft,  "+1",             1,   0, presetStrMap,           NULL          }, // 108 Preset +1
-    //{moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu, {{ 38, -24}, { 7,  7}}, anchorBottomLeft,  "+2",             1,   0, presetStrMap,           NULL          }, // 108 Preset +2
-    //{moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu, {{ 45, -24}, { 7,  7}}, anchorBottomLeft,  "Inv",            1,   0, presetStrMap,           NULL          }, // 108 Preset Inv
-    //{moduleTypeVocoder,    paramType1StandardToggle, paramType2Menu, {{ 52, -24}, { 7,  7}}, anchorBottomLeft,  "Rnd",            1,   0, presetStrMap,           NULL          }, // 108 Preset Rnd
+    {moduleTypeVocoder,    paramTypeMenu,        {{ 10,  -3}, { 5,  7}}, anchorBottomLeft,  "1",             17,   1, vocoderStrMap,                         NULL          }, // 108 BandSel 1
+    {moduleTypeVocoder,    paramTypeMenu,        {{ 15,  -3}, { 5,  7}}, anchorBottomLeft,  "2",             17,   2, vocoderStrMap,                         NULL          }, // 108 BandSel 2
+    {moduleTypeVocoder,    paramTypeMenu,        {{ 20,  -3}, { 5,  7}}, anchorBottomLeft,  "3",             17,   3, vocoderStrMap,                         NULL          }, // 108 BandSel 3
+    {moduleTypeVocoder,    paramTypeMenu,        {{ 25,  -3}, { 5,  7}}, anchorBottomLeft,  "4",             17,   4, vocoderStrMap,                         NULL          }, // 108 BandSel 4
+    {moduleTypeVocoder,    paramTypeMenu,        {{ 30,  -3}, { 5,  7}}, anchorBottomLeft,  "5",             17,   5, vocoderStrMap,                         NULL          }, // 108 BandSel 5
+    {moduleTypeVocoder,    paramTypeMenu,        {{ 35,  -3}, { 5,  7}}, anchorBottomLeft,  "6",             17,   6, vocoderStrMap,                         NULL          }, // 108 BandSel 6
+    {moduleTypeVocoder,    paramTypeMenu,        {{ 40,  -3}, { 5,  7}}, anchorBottomLeft,  "7",             17,   7, vocoderStrMap,                         NULL          }, // 108 BandSel 7
+    {moduleTypeVocoder,    paramTypeMenu,        {{ 45,  -3}, { 5,  7}}, anchorBottomLeft,  "8",             17,   8, vocoderStrMap,                         NULL          }, // 108 BandSel 8
+    {moduleTypeVocoder,    paramTypeMenu,        {{ 50,  -3}, { 5,  7}}, anchorBottomLeft,  "9",             17,   9, vocoderStrMap,                         NULL          }, // 108 BandSel 9
+    {moduleTypeVocoder,    paramTypeMenu,        {{ 55,  -3}, { 5,  7}}, anchorBottomLeft,  "10",            17,  10, vocoderStrMap,                         NULL          }, // 108 BandSel 10
+    {moduleTypeVocoder,    paramTypeMenu,        {{ 60,  -3}, { 5,  7}}, anchorBottomLeft,  "11",            17,  11, vocoderStrMap,                         NULL          }, // 108 BandSel 11
+    {moduleTypeVocoder,    paramTypeMenu,        {{ 65,  -3}, { 5,  7}}, anchorBottomLeft,  "12",            17,  12, vocoderStrMap,                         NULL          }, // 108 BandSel 12
+    {moduleTypeVocoder,    paramTypeMenu,        {{ 70,  -3}, { 5,  7}}, anchorBottomLeft,  "13",            17,  13, vocoderStrMap,                         NULL          }, // 108 BandSel 13
+    {moduleTypeVocoder,    paramTypeMenu,        {{ 75,  -3}, { 5,  7}}, anchorBottomLeft,  "14",            17,  14, vocoderStrMap,                         NULL          }, // 108 BandSel 14
+    {moduleTypeVocoder,    paramTypeMenu,        {{ 80,  -3}, { 5,  7}}, anchorBottomLeft,  "15",            17,  15, vocoderStrMap,                         NULL          }, // 108 BandSel 15
+    {moduleTypeVocoder,    paramTypeMenu,        {{ 85,  -3}, { 5,  7}}, anchorBottomLeft,  "16",            17,  16, vocoderStrMap,                         NULL          }, // 108 BandSel 16
+    {moduleTypeVocoder,    paramTypeMenu,        {{  3, -12}, { 7,  7}}, anchorBottomLeft,  "Emp",            2,   0, offOnStrMap,                           NULL          }, // 108 Emphasis
+    {moduleTypeVocoder,    paramTypeMenu,        {{  3, -24}, { 7,  7}}, anchorBottomLeft,  "Mon",            2,   0, offOnStrMap,                           NULL          }, // 108 Monitor
+    //{moduleTypeVocoder,    paramTypeMenu, {{ 10, -24}, { 7,  7}}, anchorBottomLeft,  "-2",             1,   0, presetStrMap,           NULL          }, // 108 Preset -2  // TODO: should only be 18 parameters on this!
+    //{moduleTypeVocoder,    paramTypeMenu, {{ 17, -24}, { 7,  7}}, anchorBottomLeft,  "-1",             1,   0, presetStrMap,           NULL          }, // 108 Preset -1
+    //{moduleTypeVocoder,    paramTypeMenu, {{ 24, -24}, { 7,  7}}, anchorBottomLeft,  "-0",             1,   0, presetStrMap,           NULL          }, // 108 Preset 0
+    //{moduleTypeVocoder,    paramTypeMenu, {{ 31, -24}, { 7,  7}}, anchorBottomLeft,  "+1",             1,   0, presetStrMap,           NULL          }, // 108 Preset +1
+    //{moduleTypeVocoder,    paramTypeMenu, {{ 38, -24}, { 7,  7}}, anchorBottomLeft,  "+2",             1,   0, presetStrMap,           NULL          }, // 108 Preset +2
+    //{moduleTypeVocoder,    paramTypeMenu, {{ 45, -24}, { 7,  7}}, anchorBottomLeft,  "Inv",            1,   0, presetStrMap,           NULL          }, // 108 Preset Inv
+    //{moduleTypeVocoder,    paramTypeMenu, {{ 52, -24}, { 7,  7}}, anchorBottomLeft,  "Rnd",            1,   0, presetStrMap,           NULL          }, // 108 Preset Rnd
     // 109 Unknown
     // 110 Unknown
     // 111 Unknown
     // 112 LevAdd
-    {moduleTypeLevAdd,     paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 112 Constant
-    {moduleTypeLevAdd,     paramType1StandardToggle, paramType2Menu,   {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, bipUniStrMap,                          NULL          }, // 112 Bip/Uni
+    {moduleTypeLevAdd,     paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 112 Constant
+    {moduleTypeLevAdd,     paramTypeMenu,        {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, bipUniStrMap,                          NULL          }, // 112 Bip/Uni
     // 113 Fade1-2
-    {moduleTypeFade1to2,   paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 113 Mix
-    {moduleTypeFade1to2,   paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 113 Mix M
+    {moduleTypeFade1to2,   paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 113 Mix
+    {moduleTypeFade1to2,   paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 113 Mix M
     // 114 Fade2-1
-    {moduleTypeFade2to1,   paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 114 Mix
-    {moduleTypeFade2to1,   paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 114 Mix M
+    {moduleTypeFade2to1,   paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 114 Mix
+    {moduleTypeFade2to1,   paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 114 Mix M
     // 115 LevScaler
-    {moduleTypeLevScaler,  paramType1dB,             paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "L",            128,  64, NULL,                                  NULL          }, // 115 Left slope +- 8 db/oct
-    {moduleTypeLevScaler,  paramType1CommonDial,     paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "BP",           128,  64, NULL,                                  NULL          }, // 115 BreakPoint
-    {moduleTypeLevScaler,  paramType1dB,             paramType2Dial,   {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "R",            128,  64, NULL,                                  NULL          }, // 115 Right slope +- 8 db/oct
-    {moduleTypeLevScaler,  paramType1StandardToggle, paramType2Toggle, {{ 22,  -3}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 115 Kbt
+    {moduleTypeLevScaler,  paramTypedB,          {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "L",            128,  64, NULL,                                  NULL          }, // 115 Left slope +- 8 db/oct
+    {moduleTypeLevScaler,  paramTypeCommonDial,  {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "BP",           128,  64, NULL,                                  NULL          }, // 115 BreakPoint
+    {moduleTypeLevScaler,  paramTypedB,          {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "R",            128,  64, NULL,                                  NULL          }, // 115 Right slope +- 8 db/oct
+    {moduleTypeLevScaler,  paramTypeToggle,      {{ 22,  -3}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 115 Kbt
     // 116 Mix8-1A
-    {moduleTypeMix8to1A,   paramType1StandardToggle, paramType2Menu,   {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Pad",            3,   0, db12BPadStrMap,                        NULL          }, // 116 Pad
+    {moduleTypeMix8to1A,   paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Pad",            3,   0, db12BPadStrMap,                        NULL          }, // 116 Pad
     // 117 LevMod
-    {moduleTypeLevMod,     paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 117 ModDepth
-    {moduleTypeLevMod,     paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 117 ModType
+    {moduleTypeLevMod,     paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 117 ModDepth
+    {moduleTypeLevMod,     paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 117 ModType
     // 118 Digitizer
-    {moduleTypeDigitizer,  paramType1StandardToggle, paramType2Menu,   {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  "Bits",          13,  11, bitsStrMap,                            NULL          }, // 118 Bits
-    {moduleTypeDigitizer,  paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Sample Rate",  128,  64, NULL,                                  NULL          }, // 118 Rate
-    {moduleTypeDigitizer,  paramType1CommonDial,     paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Rate",         128,   0, NULL,                                  NULL          }, // 118 Rate M
-    {moduleTypeDigitizer,  paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 106 Bypass
+    {moduleTypeDigitizer,  paramTypeMenu,        {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  "Bits",          13,  11, bitsStrMap,                            NULL          }, // 118 Bits
+    {moduleTypeDigitizer,  paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Sample Rate",  128,  64, NULL,                                  NULL          }, // 118 Rate
+    {moduleTypeDigitizer,  paramTypeCommonDial,  {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Rate",         128,   0, NULL,                                  NULL          }, // 118 Rate M
+    {moduleTypeDigitizer,  paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 106 Bypass
     // 119 EnvADDSR
-    {moduleTypeEnvADDSR,   paramType1StandardToggle, paramType2Toggle, {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, kbStrMap,                              offOnColourMap}, // 119 Kb
-    {moduleTypeEnvADDSR,   paramType1StandardToggle, paramType2Menu,   {{-30, -31}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, envShapeStrMap,                        NULL          }, // 119 Shape
-    {moduleTypeEnvADDSR,   paramType1ADRTime,        paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "A",            128,   0, NULL,                                  NULL          }, // 119 A
-    {moduleTypeEnvADDSR,   paramType1ADRTime,        paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "D1",           128,   0, NULL,                                  NULL          }, // 119 D1
-    {moduleTypeEnvADDSR,   paramType1CommonDial,     paramType2Dial,   {{ 44,  -3}, { 7, 14}}, anchorBottomLeft,  "L1",           128,   0, NULL,                                  NULL          }, // 119 L1
-    {moduleTypeEnvADDSR,   paramType1ADRTime,        paramType2Dial,   {{ 56,  -3}, { 7, 14}}, anchorBottomLeft,  "D2",           128,   0, NULL,                                  NULL          }, // 119 D2
-    {moduleTypeEnvADDSR,   paramType1CommonDial,     paramType2Dial,   {{ 68,  -3}, { 7, 14}}, anchorBottomLeft,  "L2",           128,   0, NULL,                                  NULL          }, // 119 L2
-    {moduleTypeEnvADDSR,   paramType1ADRTime,        paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "R",            128,   0, NULL,                                  NULL          }, // 119 R
-    {moduleTypeEnvADDSR,   paramType1StandardToggle, paramType2Menu,   {{ 20, -24}, { 7,  7}}, anchorBottomLeft,  "Sustain",        2,   0, sustainStrMap,                         NULL          }, // 119 Sustainmode
-    {moduleTypeEnvADDSR,   paramType1StandardToggle, paramType2Menu,   {{-30, -24}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          }, // 119 Pos
-    {moduleTypeEnvADDSR,   paramType1StandardToggle, paramType2Menu,   {{  5,  -8}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,                     NULL          }, // 119 Reset
+    {moduleTypeEnvADDSR,   paramTypeToggle,      {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, kbStrMap,                              offOnColourMap}, // 119 Kb
+    {moduleTypeEnvADDSR,   paramTypeMenu,        {{-30, -31}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, envShapeStrMap,                        NULL          }, // 119 Shape
+    {moduleTypeEnvADDSR,   paramTypeADRTime,     {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "A",            128,   0, NULL,                                  NULL          }, // 119 A
+    {moduleTypeEnvADDSR,   paramTypeADRTime,     {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "D1",           128,   0, NULL,                                  NULL          }, // 119 D1
+    {moduleTypeEnvADDSR,   paramTypeCommonDial,  {{ 44,  -3}, { 7, 14}}, anchorBottomLeft,  "L1",           128,   0, NULL,                                  NULL          }, // 119 L1
+    {moduleTypeEnvADDSR,   paramTypeADRTime,     {{ 56,  -3}, { 7, 14}}, anchorBottomLeft,  "D2",           128,   0, NULL,                                  NULL          }, // 119 D2
+    {moduleTypeEnvADDSR,   paramTypeCommonDial,  {{ 68,  -3}, { 7, 14}}, anchorBottomLeft,  "L2",           128,   0, NULL,                                  NULL          }, // 119 L2
+    {moduleTypeEnvADDSR,   paramTypeADRTime,     {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "R",            128,   0, NULL,                                  NULL          }, // 119 R
+    {moduleTypeEnvADDSR,   paramTypeMenu,        {{ 20, -24}, { 7,  7}}, anchorBottomLeft,  "Sustain",        2,   0, sustainStrMap,                         NULL          }, // 119 Sustainmode
+    {moduleTypeEnvADDSR,   paramTypeMenu,        {{-30, -24}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          }, // 119 Pos
+    {moduleTypeEnvADDSR,   paramTypeMenu,        {{  5,  -8}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, normalResetStrMap,                     NULL          }, // 119 Reset
 
     // 120 Unknown
     // 121 SeqNote
-    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
-    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Menu,   {{  0, -60}, {14, 14}}, anchorBottomRight, NULL,             8,   5, octaveStrMap,                          NULL          }, // 121 Octave
-    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Menu,   {{-15,  15}, { 8,  8}}, anchorTopRight,    "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Octave
-    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, -40}, {10,  7}}, anchorBottomRight, "Clr",            1,   0, emptyStrMap,                           NULL          }, // 121 Clear
-    {moduleTypeSeqNote,    paramType1StandardToggle, paramType2Toggle, {{  0, -30}, {10,  7}}, anchorBottomRight, "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 121 Randomize
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-1
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-2
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 28, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-3
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 32, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-4
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 36, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-5
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 40, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-6
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 44, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-7
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 48, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-8
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 52, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-9
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 56, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-10
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 60, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-11
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 64, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-12
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 68, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-13
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 72, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-14
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 76, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-15
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 80, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-16
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 20, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-1
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 24, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-2
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 28, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-3
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 32, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-4
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 36, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-5
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 40, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-6
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 44, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-7
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 48, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-8
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 52, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-9
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 56, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-10
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 60, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-11
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 64, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-12
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 68, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-13
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 72, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-14
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 76, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-15
-    {moduleTypeSeqNote,    paramType1Slider,         paramType2Dial,   {{ 80, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-16
+    {moduleTypeSeqNote,    paramTypeToggle,      {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
+    {moduleTypeSeqNote,    paramTypeMenu,        {{  0, -60}, {14, 14}}, anchorBottomRight, NULL,             8,   5, octaveStrMap,                          NULL          }, // 121 Octave
+    {moduleTypeSeqNote,    paramTypeMenu,        {{-15,  15}, { 8,  8}}, anchorTopRight,    "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Octave
+    {moduleTypeSeqNote,    paramTypeToggle,      {{  0, -40}, {10,  7}}, anchorBottomRight, "Clr",            1,   0, emptyStrMap,                           NULL          }, // 121 Clear
+    {moduleTypeSeqNote,    paramTypeToggle,      {{  0, -30}, {10,  7}}, anchorBottomRight, "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 121 Randomize
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-1
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-2
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 28, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-3
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 32, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-4
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 36, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-5
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 40, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-6
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 44, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-7
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 48, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-8
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 52, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-9
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 56, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-10
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 60, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-11
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 64, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-12
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 68, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-13
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 72, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-14
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 76, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-15
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 80, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-16
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 20, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-1
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 24, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-2
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 28, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-3
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 32, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-4
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 36, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-5
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 40, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-6
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 44, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-7
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 48, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-8
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 52, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-9
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 56, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-10
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 60, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-11
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 64, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-12
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 68, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-13
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 72, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-14
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 76, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-15
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 80, -46}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step2-16
     // 122 Unknown
     // 123 Mix4-1C
-    {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 11, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },   // 123 L1
-    {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 31, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },   // 123 L2
-    {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 51, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },   // 123 L3
-    {moduleTypeMix4to1C,   paramType1CommonDial,     paramType2Dial,   {{ 71, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },   // 123 L4
-    {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{  5,  -1}, {18,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},   // 123 Enable1
-    {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 25,  -1}, {18,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},   // 123 Enable2
-    {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 45,  -1}, {18,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},   // 123 Enable3
-    {moduleTypeMix4to1C,   paramType1Enable,         paramType2Toggle, {{ 65,  -1}, {18,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},   // 123 Enable4
-    {moduleTypeMix4to1C,   paramType1StandardToggle, paramType2Menu,   {{-12,   6}, { 7,  7}}, anchorTopRight,    "Pad",            2,   0, padStrMap,                             NULL          },   // 123 Pad
-    {moduleTypeMix4to1C,   paramType1StandardToggle, paramType2Menu,   {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Curve",          3,   0, expStrMap,                             NULL          },   // 123 Exp
+    {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 11, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L1
+    {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 31, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L2
+    {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 51, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L3
+    {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 71, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L4
+    {moduleTypeMix4to1C,   paramTypeEnable,      {{  5,  -1}, {18,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable1
+    {moduleTypeMix4to1C,   paramTypeEnable,      {{ 25,  -1}, {18,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable2
+    {moduleTypeMix4to1C,   paramTypeEnable,      {{ 45,  -1}, {18,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable3
+    {moduleTypeMix4to1C,   paramTypeEnable,      {{ 65,  -1}, {18,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable4
+    {moduleTypeMix4to1C,   paramTypeMenu,        {{-12,   6}, { 7,  7}}, anchorTopRight,    "Pad",            2,   0, padStrMap,                             NULL          }, // 123 Pad
+    {moduleTypeMix4to1C,   paramTypeMenu,        {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Curve",          3,   0, expStrMap,                             NULL          }, // 123 Exp
     // 124 Mux8-1 -- No params
     // 125 WahWah
-    {moduleTypeWahWah,     paramType1Freq,           paramType2Dial,   {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 125 Sweep M
-    {moduleTypeWahWah,     paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 125 Sweep
-    {moduleTypeWahWah,     paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 125 Bypass
+    {moduleTypeWahWah,     paramTypeFreq,        {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 125 Sweep M
+    {moduleTypeWahWah,     paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 125 Sweep
+    {moduleTypeWahWah,     paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 125 Bypass
     // 126 Name
     // 127 Fx-In
-    {moduleTypeFxtoIn,     paramType1StandardToggle, paramType2Menu,   {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "In FX",          2,   0, inFxStrMap,                            NULL          }, // 127 In
-    {moduleTypeFxtoIn,     paramType1Bypass,         paramType2Toggle, {{-35,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 127 Bypass
-    {moduleTypeFxtoIn,     paramType1StandardToggle, paramType2Menu,   {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Pad",            4,   0, db12PadStrMap,                         NULL          }, // 127 Pad
+    {moduleTypeFxtoIn,     paramTypeMenu,        {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "In FX",          2,   0, inFxStrMap,                            NULL          }, // 127 In
+    {moduleTypeFxtoIn,     paramTypeBypass,      {{-35,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 127 Bypass
+    {moduleTypeFxtoIn,     paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Pad",            4,   0, db12PadStrMap,                         NULL          }, // 127 Pad
     // 128 MinMax -- No params
     // 128 Unknown
     // 130 BinCounter -- No params
@@ -1040,530 +1040,530 @@ const tParamLocation     paramLocationList[] = {
     // 132 DAConv -- No params
     // 133 Unknown
     // 134 FltHP
-    {moduleTypeFltHP,      paramType1Freq,           paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 134 Freq
-    {moduleTypeFltHP,      paramType1CommonDial,     paramType2Dial,   {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 134 FreqMod
-    {moduleTypeFltHP,      paramType1StandardToggle, paramType2Menu,   {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   4, offTo100KbStrMap,                      NULL          }, // 134 Kbt
-    {moduleTypeFltHP,      paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 134 Bypass
+    {moduleTypeFltHP,      paramTypeFreq,        {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 134 Freq
+    {moduleTypeFltHP,      paramTypeCommonDial,  {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 134 FreqMod
+    {moduleTypeFltHP,      paramTypeMenu,        {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   4, offTo100KbStrMap,                      NULL          }, // 134 Kbt
+    {moduleTypeFltHP,      paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 134 Bypass
     // 135 Unknown
     // 136 Unknown
     // 137 Unknown
     // 138 Unknown
     // 139 T&H -- No params
     // 140 Mix4-1S
-    {moduleTypeMix4to1S,   paramType1CommonDial,     paramType2Dial,   {{ 15, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L1
-    {moduleTypeMix4to1S,   paramType1CommonDial,     paramType2Dial,   {{ 35, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L2
-    {moduleTypeMix4to1S,   paramType1CommonDial,     paramType2Dial,   {{ 55, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L3
-    {moduleTypeMix4to1S,   paramType1CommonDial,     paramType2Dial,   {{ 75, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L4
-    {moduleTypeMix4to1S,   paramType1Enable,         paramType2Toggle, {{  3,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable1
-    {moduleTypeMix4to1S,   paramType1Enable,         paramType2Toggle, {{ 23,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable2
-    {moduleTypeMix4to1S,   paramType1Enable,         paramType2Toggle, {{ 43,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable3
-    {moduleTypeMix4to1S,   paramType1Enable,         paramType2Toggle, {{ 63,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable4
-    {moduleTypeMix4to1S,   paramType1StandardToggle, paramType2Menu,   {{ 40, -25}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 123 Exp
+    {moduleTypeMix4to1S,   paramTypeCommonDial,  {{ 15, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L1
+    {moduleTypeMix4to1S,   paramTypeCommonDial,  {{ 35, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L2
+    {moduleTypeMix4to1S,   paramTypeCommonDial,  {{ 55, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L3
+    {moduleTypeMix4to1S,   paramTypeCommonDial,  {{ 75, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L4
+    {moduleTypeMix4to1S,   paramTypeEnable,      {{  3,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable1
+    {moduleTypeMix4to1S,   paramTypeEnable,      {{ 23,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable2
+    {moduleTypeMix4to1S,   paramTypeEnable,      {{ 43,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable3
+    {moduleTypeMix4to1S,   paramTypeEnable,      {{ 63,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable4
+    {moduleTypeMix4to1S,   paramTypeMenu,        {{ 40, -25}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 123 Exp
     // 141 CtrlSend
-    {moduleTypeCtrlSend,   paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Ctrl",         128,   1, NULL,                                  NULL          }, // 141 Ctrl
-    {moduleTypeCtrlSend,   paramType1CommonDial,     paramType2Dial,   {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Value",        128,   1, NULL,                                  NULL          }, // 141 Ctrl
-    {moduleTypeCtrlSend,   paramType1StandardToggle, paramType2Menu,   {{ 85,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          21,   0, midiChanStrMap,                        NULL          }, // 141 Channel
+    {moduleTypeCtrlSend,   paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Ctrl",         128,   1, NULL,                                  NULL          }, // 141 Ctrl
+    {moduleTypeCtrlSend,   paramTypeCommonDial,  {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Value",        128,   1, NULL,                                  NULL          }, // 141 Ctrl
+    {moduleTypeCtrlSend,   paramTypeMenu,        {{ 85,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          21,   0, midiChanStrMap,                        NULL          }, // 141 Channel
     // 142 PCSend
-    {moduleTypePCSend,     paramType1CommonDial,     paramType2Dial,   {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Program",      128,   1, NULL,                                  NULL          }, // 142 Program
-    {moduleTypePCSend,     paramType1StandardToggle, paramType2Menu,   {{ 85,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          21,   0, midiChanStrMap,                        NULL          }, // 142 Channel
+    {moduleTypePCSend,     paramTypeCommonDial,  {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Program",      128,   1, NULL,                                  NULL          }, // 142 Program
+    {moduleTypePCSend,     paramTypeMenu,        {{ 85,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          21,   0, midiChanStrMap,                        NULL          }, // 142 Channel
     // 143 NoteSend
-    {moduleTypeNoteSend,   paramType1CommonDial,     paramType2Dial,   {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  "Vel",          128, 100, NULL,                                  NULL          }, // 143 Vel
-    {moduleTypeNoteSend,   paramType1NoteDial,       paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "Note",         128,  64, NULL,                                  NULL          }, // 143 Ctrl
-    {moduleTypeNoteSend,   paramType1StandardToggle, paramType2Menu,   {{ 85,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          21,   0, midiChanStrMap,                        NULL          }, // 143 Channel
+    {moduleTypeNoteSend,   paramTypeCommonDial,  {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  "Vel",          128, 100, NULL,                                  NULL          }, // 143 Vel
+    {moduleTypeNoteSend,   paramTypeNoteDial,    {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "Note",         128,  64, NULL,                                  NULL          }, // 143 Ctrl
+    {moduleTypeNoteSend,   paramTypeMenu,        {{ 85,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          21,   0, midiChanStrMap,                        NULL          }, // 143 Channel
     // 144 SeqEvent
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 20, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-1
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 24, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-2
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 28, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-3
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 32, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-4
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 36, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-5
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 40, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-6
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 44, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-7
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 48, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-8
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 52, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-9
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 56, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-10
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 60, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-11
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 64, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-12
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 68, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-13
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 72, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-14
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 76, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-15
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 80, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-16
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-1
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-2
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-3
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 32,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-4
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 36,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-5
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 40,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-6
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 44,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-7
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 48,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-8
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 52,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-9
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 56,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-10
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 60,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-11
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 64,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-12
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 68,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-13
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-14
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-15
-    {moduleTypeSeqEvent,   paramType1Enable,         paramType2Toggle, {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-16
-    {moduleTypeSeqEvent,   paramType1StandardToggle, paramType2Toggle, {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
-    {moduleTypeSeqEvent,   paramType1StandardToggle, paramType2Menu,   {{ 25,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Length
-    {moduleTypeSeqEvent,   paramType1StandardToggle, paramType2Menu,   {{ 88, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T up
-    {moduleTypeSeqEvent,   paramType1StandardToggle, paramType2Menu,   {{ 88,  -6}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 20, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-1
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 24, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-2
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 28, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-3
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 32, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-4
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 36, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-5
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 40, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-6
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 44, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-7
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 48, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-8
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 52, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-9
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 56, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-10
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 60, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-11
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 64, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-12
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 68, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-13
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 72, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-14
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 76, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-15
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 80, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step1-16
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-1
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-2
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-3
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 32,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-4
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 36,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-5
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 40,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-6
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 44,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-7
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 48,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-8
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 52,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-9
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 56,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-10
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 60,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-11
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 64,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-12
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 68,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-13
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-14
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-15
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-16
+    {moduleTypeSeqEvent,   paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
+    {moduleTypeSeqEvent,   paramTypeMenu,        {{ 25,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Length
+    {moduleTypeSeqEvent,   paramTypeMenu,        {{ 88, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T up
+    {moduleTypeSeqEvent,   paramTypeMenu,        {{ 88,  -6}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
     // 145 SeqVal
-    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
-    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-2
-    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 28, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-3
-    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 32, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-4
-    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 36, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-5
-    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 40, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-6
-    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 44, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-7
-    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 48, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-8
-    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 52, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-1
-    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 56, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-2
-    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 60, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-3
-    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 64, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-4
-    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 68, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-5
-    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 72, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-6
-    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 76, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-7
-    {moduleTypeSeqVal,     paramType1Slider,         paramType2Dial,   {{ 80, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-8
-    {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-1
-    {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-2
-    {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-3
-    {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 32,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-4
-    {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 36,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-5
-    {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 40,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-68
-    {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 44,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-7
-    {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 48,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-8
-    {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 52,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-9
-    {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 56,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-10
-    {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 60,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-11
-    {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 64,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-12
-    {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 68,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-13
-    {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-14
-    {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-15
-    {moduleTypeSeqVal,     paramType1Enable,         paramType2Toggle, {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-16
-    {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Toggle, {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 144 Cycle
-    {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Menu,   {{ 25,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
-    {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Menu,   {{ 40,  10}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
-    {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Menu,   {{  3,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
-    {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Toggle, {{ 35, -60}, {20,  7}}, anchorBottomLeft,  "Clr",            1,   0, emptyStrMap,                           NULL          }, // 144 Clear
-    {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Toggle, {{ 45, -60}, {20,  7}}, anchorBottomLeft,  "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 144 Randomize
-    {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqVal,     paramType1StandardToggle, paramType2Toggle, {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-2
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 28, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-3
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 32, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-4
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 36, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-5
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 40, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-6
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 44, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-7
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 48, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-8
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 52, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-1
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 56, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-2
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 60, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-3
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 64, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-4
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 68, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-5
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 72, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-6
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 76, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-7
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 80, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2-8
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-1
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-2
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-3
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 32,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-4
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 36,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-5
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 40,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-68
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 44,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-7
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 48,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-8
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 52,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-9
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 56,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-10
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 60,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-11
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 64,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-12
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 68,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-13
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-14
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-15
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-16
+    {moduleTypeSeqVal,     paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 144 Cycle
+    {moduleTypeSeqVal,     paramTypeMenu,        {{ 25,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
+    {moduleTypeSeqVal,     paramTypeMenu,        {{ 40,  10}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
+    {moduleTypeSeqVal,     paramTypeMenu,        {{  3,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
+    {moduleTypeSeqVal,     paramTypeToggle,      {{ 35, -60}, {20,  7}}, anchorBottomLeft,  "Clr",            1,   0, emptyStrMap,                           NULL          }, // 144 Clear
+    {moduleTypeSeqVal,     paramTypeToggle,      {{ 45, -60}, {20,  7}}, anchorBottomLeft,  "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 144 Randomize
+    {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
+    {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
+    {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
+    {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
+    {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
+    {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
+    {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
     // 146 SeqLev
-    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1
-    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2
-    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 28, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step3
-    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 32, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step4
-    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 36, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step5
-    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 40, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step6
-    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 44, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step7
-    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 48, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step8
-    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 52, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step9
-    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 56, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step10
-    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 60, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step11
-    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 64, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step12
-    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 68, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step13
-    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 72, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step14
-    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 76, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step15
-    {moduleTypeSeqLev,     paramType1Slider,         paramType2Dial,   {{ 80, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step16
-    {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt1
-    {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt2
-    {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt3
-    {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 32,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt4
-    {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 36,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt5
-    {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 40,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt6
-    {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 44,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt7
-    {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 48,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt8
-    {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 52,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt9
-    {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 56,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt10
-    {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 60,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt11
-    {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 64,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt12
-    {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 68,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt13
-    {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt14
-    {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt15
-    {moduleTypeSeqLev,     paramType1Enable,         paramType2Toggle, {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt16
-    {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Toggle, {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 144 Cycle
-    {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Menu,   {{-15,  15}, { 7,  7}}, anchorTopRight,    "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
-    {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Menu,   {{  3,  20}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
-    {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Menu,   {{  3,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
-    {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Toggle, {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            1,   0, emptyStrMap,                           NULL          }, // 144 Clear
-    {moduleTypeSeqLev,     paramType1StandardToggle, paramType2Toggle, {{ 45, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 144 Randomize
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 28, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step3
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 32, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step4
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 36, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step5
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 40, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step6
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 44, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step7
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 48, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step8
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 52, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step9
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 56, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step10
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 60, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step11
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 64, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step12
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 68, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step13
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 72, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step14
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 76, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step15
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 80, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step16
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt1
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt2
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt3
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 32,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt4
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 36,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt5
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 40,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt6
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 44,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt7
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 48,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt8
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 52,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt9
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 56,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt10
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 60,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt11
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 64,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt12
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 68,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt13
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt14
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt15
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt16
+    {moduleTypeSeqLev,     paramTypeToggle,      {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 144 Cycle
+    {moduleTypeSeqLev,     paramTypeMenu,        {{-15,  15}, { 7,  7}}, anchorTopRight,    "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
+    {moduleTypeSeqLev,     paramTypeMenu,        {{  3,  20}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
+    {moduleTypeSeqLev,     paramTypeMenu,        {{  3,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
+    {moduleTypeSeqLev,     paramTypeToggle,      {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            1,   0, emptyStrMap,                           NULL          }, // 144 Clear
+    {moduleTypeSeqLev,     paramTypeToggle,      {{ 45, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 144 Randomize
 
     // 147 CtrRcv
-    {moduleTypeCtrlRcv,    paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Ctrl",         128,  64, NULL,                                  NULL          }, // 147 Ctrl
-    {moduleTypeCtrlRcv,    paramType1StandardToggle, paramType2Menu,   {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          18,  17, midiChanRcvStrMap,                     NULL          }, // 147 Channel
+    {moduleTypeCtrlRcv,    paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Ctrl",         128,  64, NULL,                                  NULL          }, // 147 Ctrl
+    {moduleTypeCtrlRcv,    paramTypeMenu,        {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          18,  17, midiChanRcvStrMap,                     NULL          }, // 147 Channel
     // 148 NoteRcv
-    {moduleTypeNoteRcv,    paramType1NoteDial,       paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Note",         128,  64, NULL,                                  NULL          }, // 148 Note
-    {moduleTypeNoteRcv,    paramType1StandardToggle, paramType2Menu,   {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          18,  17, midiChanRcvStrMap,                     NULL          }, // 148 Channel
+    {moduleTypeNoteRcv,    paramTypeNoteDial,    {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Note",         128,  64, NULL,                                  NULL          }, // 148 Note
+    {moduleTypeNoteRcv,    paramTypeMenu,        {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          18,  17, midiChanRcvStrMap,                     NULL          }, // 148 Channel
     // 149 NoteZone
-    {moduleTypeNoteZone,   paramType1StandardToggle, paramType2Menu,   {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "RChan",         18,  17, midiChanRcvStrMap,                     NULL          }, // 149 Receive Channel
-    {moduleTypeNoteZone,   paramType1NoteDial,       paramType2Dial,   {{ 23,  -3}, { 7, 14}}, anchorBottomLeft,  "Min",          128,   0, NULL,                                  NULL          }, // 149 Min note
-    {moduleTypeNoteZone,   paramType1NoteDial,       paramType2Dial,   {{ 43,  -3}, { 7, 14}}, anchorBottomLeft,  "Max",          128, 127, NULL,                                  NULL          }, // 149 Max note
-    {moduleTypeNoteZone,   paramType1CommonDial,     paramType2Dial,   {{ 63,  -3}, { 7, 14}}, anchorBottomLeft,  "Trans",        128,  64, NULL,                                  NULL          }, // 149 Transpose
-    {moduleTypeNoteZone,   paramType1StandardToggle, paramType2Menu,   {{ 83,  -3}, { 7,  7}}, anchorBottomLeft,  "SChan",         21,   0, midiChanStrMap,                        NULL          }, // 149 Send Channel
-    {moduleTypeNoteZone,   paramType1StandardToggle, paramType2Menu,   {{ 60, -17}, { 7,  7}}, anchorBottomLeft,  "Thru",           2,   0, thruStrMap,                            NULL          }, // 149 Thru mode
+    {moduleTypeNoteZone,   paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "RChan",         18,  17, midiChanRcvStrMap,                     NULL          }, // 149 Receive Channel
+    {moduleTypeNoteZone,   paramTypeNoteDial,    {{ 23,  -3}, { 7, 14}}, anchorBottomLeft,  "Min",          128,   0, NULL,                                  NULL          }, // 149 Min note
+    {moduleTypeNoteZone,   paramTypeNoteDial,    {{ 43,  -3}, { 7, 14}}, anchorBottomLeft,  "Max",          128, 127, NULL,                                  NULL          }, // 149 Max note
+    {moduleTypeNoteZone,   paramTypeCommonDial,  {{ 63,  -3}, { 7, 14}}, anchorBottomLeft,  "Trans",        128,  64, NULL,                                  NULL          }, // 149 Transpose
+    {moduleTypeNoteZone,   paramTypeMenu,        {{ 83,  -3}, { 7,  7}}, anchorBottomLeft,  "SChan",         21,   0, midiChanStrMap,                        NULL          }, // 149 Send Channel
+    {moduleTypeNoteZone,   paramTypeMenu,        {{ 60, -17}, { 7,  7}}, anchorBottomLeft,  "Thru",           2,   0, thruStrMap,                            NULL          }, // 149 Thru mode
     // 150 Compress
-    {moduleTypeCompress,   paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Thr",           43,   0, NULL,                                  NULL          }, // 150
-    {moduleTypeCompress,   paramType1CommonDial,     paramType2Dial,   {{ 24,  -3}, { 7, 14}}, anchorBottomLeft,  "Ratio",         67,   0, NULL,                                  NULL          },
-    {moduleTypeCompress,   paramType1StrMap,         paramType2Dial,   {{ 38,  -3}, { 7, 14}}, anchorBottomLeft,  "Att",          128,   0, compr_attack_timesStrMap,              NULL          },
-    {moduleTypeCompress,   paramType1StrMap,         paramType2Dial,   {{ 52,  -3}, { 7, 14}}, anchorBottomLeft,  "Rel",          128,   0, compr_release_timesStrMap,             NULL          },
-    {moduleTypeCompress,   paramType1CommonDial,     paramType2Dial,   {{ 66,  -3}, { 7, 14}}, anchorBottomLeft,  "RefLvl",        43,   0, NULL,                                  NULL          },
-    {moduleTypeCompress,   paramType1StandardToggle, paramType2Toggle, {{ 27,   5}, { 7,  7}}, anchorTopLeft,     NULL,             2,   1, sideChainStrMap,                       offOnColourMap},
-    {moduleTypeCompress,   paramType1Bypass,         paramType2Toggle, {{ -3,   0}, { 5,  5}}, anchorMiddleRight, NULL,             2,   1, NULL,                                  NULL          },
+    {moduleTypeCompress,   paramTypeCommonDial,  {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Thr",           43,   0, NULL,                                  NULL          }, // 150
+    {moduleTypeCompress,   paramTypeCommonDial,  {{ 24,  -3}, { 7, 14}}, anchorBottomLeft,  "Ratio",         67,   0, NULL,                                  NULL          },
+    {moduleTypeCompress,   paramTypeStrMap,      {{ 38,  -3}, { 7, 14}}, anchorBottomLeft,  "Att",          128,   0, compr_attack_timesStrMap,              NULL          },
+    {moduleTypeCompress,   paramTypeStrMap,      {{ 52,  -3}, { 7, 14}}, anchorBottomLeft,  "Rel",          128,   0, compr_release_timesStrMap,             NULL          },
+    {moduleTypeCompress,   paramTypeCommonDial,  {{ 66,  -3}, { 7, 14}}, anchorBottomLeft,  "RefLvl",        43,   0, NULL,                                  NULL          },
+    {moduleTypeCompress,   paramTypeToggle,      {{ 27,   5}, { 7,  7}}, anchorTopLeft,     NULL,             2,   1, sideChainStrMap,                       offOnColourMap},
+    {moduleTypeCompress,   paramTypeBypass,      {{ -3,   0}, { 5,  5}}, anchorMiddleRight, NULL,             2,   1, NULL,                                  NULL          },
     // 151 Unknown
     // 152 KeyQuant
-    {moduleTypeKeyQuant,   paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Range",        128,   0, NULL,                                  NULL          }, // 152 Range
-    {moduleTypeKeyQuant,   paramType1StandardToggle, paramType2Menu,   {{ 20,   5}, { 7,  7}}, anchorTopLeft,     "Capture",        2,   0, captureStrMap,                         NULL          },
-    {moduleTypeKeyQuant,   paramType1Enable,         paramType2Toggle, {{ 60,  -3}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note E
-    {moduleTypeKeyQuant,   paramType1Enable,         paramType2Toggle, {{ 64,  -3}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note F
-    {moduleTypeKeyQuant,   paramType1Enable,         paramType2Toggle, {{ 66,  -7}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note F#
-    {moduleTypeKeyQuant,   paramType1Enable,         paramType2Toggle, {{ 68,  -3}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note G
-    {moduleTypeKeyQuant,   paramType1Enable,         paramType2Toggle, {{ 70,  -7}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note G#
-    {moduleTypeKeyQuant,   paramType1Enable,         paramType2Toggle, {{ 72,  -3}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note A
-    {moduleTypeKeyQuant,   paramType1Enable,         paramType2Toggle, {{ 74,  -7}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note A#
-    {moduleTypeKeyQuant,   paramType1Enable,         paramType2Toggle, {{ 76,  -3}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note B
-    {moduleTypeKeyQuant,   paramType1Enable,         paramType2Toggle, {{ 52,  -3}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note C
-    {moduleTypeKeyQuant,   paramType1Enable,         paramType2Toggle, {{ 54,  -7}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note C#
-    {moduleTypeKeyQuant,   paramType1Enable,         paramType2Toggle, {{ 56,  -3}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note D
-    {moduleTypeKeyQuant,   paramType1Enable,         paramType2Toggle, {{ 58,  -7}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note D#
+    {moduleTypeKeyQuant,   paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Range",        128,   0, NULL,                                  NULL          }, // 152 Range
+    {moduleTypeKeyQuant,   paramTypeMenu,        {{ 20,   5}, { 7,  7}}, anchorTopLeft,     "Capture",        2,   0, captureStrMap,                         NULL          },
+    {moduleTypeKeyQuant,   paramTypeEnable,      {{ 60,  -3}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note E
+    {moduleTypeKeyQuant,   paramTypeEnable,      {{ 64,  -3}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note F
+    {moduleTypeKeyQuant,   paramTypeEnable,      {{ 66,  -7}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note F#
+    {moduleTypeKeyQuant,   paramTypeEnable,      {{ 68,  -3}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note G
+    {moduleTypeKeyQuant,   paramTypeEnable,      {{ 70,  -7}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note G#
+    {moduleTypeKeyQuant,   paramTypeEnable,      {{ 72,  -3}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note A
+    {moduleTypeKeyQuant,   paramTypeEnable,      {{ 74,  -7}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note A#
+    {moduleTypeKeyQuant,   paramTypeEnable,      {{ 76,  -3}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note B
+    {moduleTypeKeyQuant,   paramTypeEnable,      {{ 52,  -3}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note C
+    {moduleTypeKeyQuant,   paramTypeEnable,      {{ 54,  -7}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note C#
+    {moduleTypeKeyQuant,   paramTypeEnable,      {{ 56,  -3}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note D
+    {moduleTypeKeyQuant,   paramTypeEnable,      {{ 58,  -7}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 152 Note D#
     // 153 Unknown
     // 154 SeqCtr
-    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step1
-    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step2
-    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 28, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step3
-    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 32, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step4
-    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 36, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step5
-    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 40, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step6
-    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 44, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step7
-    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 48, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step8
-    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 52, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step9
-    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 56, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step10
-    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 60, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step11
-    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 64, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step12
-    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 68, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step13
-    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 72, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step14
-    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 76, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step15
-    {moduleTypeSeqCtr,     paramType1Slider,         paramType2Dial,   {{ 80, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step16
-    {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt1
-    {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt2
-    {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt3
-    {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 32,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt4
-    {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 36,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt5
-    {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 40,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt6
-    {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 44,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt7
-    {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 48,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt8
-    {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 52,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt9
-    {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 56,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt10
-    {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 60,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt11
-    {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 64,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt12
-    {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 68,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt13
-    {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt14
-    {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt15
-    {moduleTypeSeqCtr,     paramType1Enable,         paramType2Toggle, {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt16
-    {moduleTypeSeqCtr,     paramType1StandardToggle, paramType2Menu,   {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Pulse",          2,   0, trigGateStrMap,                        NULL          }, // 154 Pulse
-    {moduleTypeSeqCtr,     paramType1StandardToggle, paramType2Menu,   {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Pol",            2,   0, bipUniStrMap,                          NULL          }, // 154 Pol
-    {moduleTypeSeqCtr,     paramType1StandardToggle, paramType2Menu,   {{ -3, -50}, { 7,  7}}, anchorBottomRight, "XFade",          4,   0, seqXFadeStrMap,                        NULL          }, // 154 XFade
-    {moduleTypeSeqCtr,     paramType1StandardToggle, paramType2Toggle, {{ 55, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 154 Random
-    {moduleTypeSeqCtr,     paramType1StandardToggle, paramType2Toggle, {{ 65, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            1,   0, emptyStrMap,                           NULL          }, // 154 Clear
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step1
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step2
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 28, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step3
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 32, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step4
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 36, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step5
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 40, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step6
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 44, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step7
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 48, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step8
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 52, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step9
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 56, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step10
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 60, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step11
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 64, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step12
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 68, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step13
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 72, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step14
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 76, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step15
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 80, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 154 Step16
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt1
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt2
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt3
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 32,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt4
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 36,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt5
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 40,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt6
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 44,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt7
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 48,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt8
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 52,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt9
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 56,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt10
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 60,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt11
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 64,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt12
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 68,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt13
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt14
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt15
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt16
+    {moduleTypeSeqCtr,     paramTypeMenu,        {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Pulse",          2,   0, trigGateStrMap,                        NULL          }, // 154 Pulse
+    {moduleTypeSeqCtr,     paramTypeMenu,        {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Pol",            2,   0, bipUniStrMap,                          NULL          }, // 154 Pol
+    {moduleTypeSeqCtr,     paramTypeMenu,        {{ -3, -50}, { 7,  7}}, anchorBottomRight, "XFade",          4,   0, seqXFadeStrMap,                        NULL          }, // 154 XFade
+    {moduleTypeSeqCtr,     paramTypeToggle,      {{ 55, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 154 Random
+    {moduleTypeSeqCtr,     paramTypeToggle,      {{ 65, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            1,   0, emptyStrMap,                           NULL          }, // 154 Clear
     // 155 Unknown
     // 156 NoteDet
-    {moduleTypeNoteDet,    paramType1NoteDial,       paramType2Dial,   {{ 23,  -3}, { 7, 14}}, anchorBottomLeft,  "Note",         128,  64, NULL,                                  NULL          }, // 156 Note
+    {moduleTypeNoteDet,    paramTypeNoteDial,    {{ 23,  -3}, { 7, 14}}, anchorBottomLeft,  "Note",         128,  64, NULL,                                  NULL          }, // 156 Note
     // 157 LevConv
-    {moduleTypeLevConv,    paramType1StandardToggle, paramType2Menu,   {{-15,  -1}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          }, // 157 OutType
-    {moduleTypeLevConv,    paramType1StandardToggle, paramType2Menu,   {{-57,  -3}, { 7,  7}}, anchorBottomRight, "Input",          3,   0, levConvStrMap,                         NULL          }, // 157 In Signal Type
+    {moduleTypeLevConv,    paramTypeMenu,        {{-15,  -1}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          }, // 157 OutType
+    {moduleTypeLevConv,    paramTypeMenu,        {{-57,  -3}, { 7,  7}}, anchorBottomRight, "Input",          3,   0, levConvStrMap,                         NULL          }, // 157 In Signal Type
     // 158 Glide
-    {moduleTypeGlide,      paramType1StrMap,         paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, glide_timeStrMap,                      NULL          }, // 158 Time
-    {moduleTypeGlide,      paramType1StandardToggle, paramType2Menu,   {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           NULL          }, // 158 Glide on/off
-    {moduleTypeGlide,      paramType1StandardToggle, paramType2Menu,   {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, logStrMap,                             NULL          }, // 158 Shape
+    {moduleTypeGlide,      paramTypeStrMap,      {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, glide_timeStrMap,                      NULL          }, // 158 Time
+    {moduleTypeGlide,      paramTypeMenu,        {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           NULL          }, // 158 Glide on/off
+    {moduleTypeGlide,      paramTypeMenu,        {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, logStrMap,                             NULL          }, // 158 Shape
     // 159 CompSig -- no params
     // 160 ZeroCnt -- no params
     // 161 MixFader
-    {moduleTypeMixFader,   paramType1MixLevel,       paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev1
-    {moduleTypeMixFader,   paramType1MixLevel,       paramType2Dial,   {{ 29,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev2
-    {moduleTypeMixFader,   paramType1MixLevel,       paramType2Dial,   {{ 38,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev3
-    {moduleTypeMixFader,   paramType1MixLevel,       paramType2Dial,   {{ 47,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev4
-    {moduleTypeMixFader,   paramType1MixLevel,       paramType2Dial,   {{ 56,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev5
-    {moduleTypeMixFader,   paramType1MixLevel,       paramType2Dial,   {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev6
-    {moduleTypeMixFader,   paramType1MixLevel,       paramType2Dial,   {{ 74,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev7
-    {moduleTypeMixFader,   paramType1MixLevel,       paramType2Dial,   {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev8
-    {moduleTypeMixFader,   paramType1Enable,         paramType2Toggle, {{ 20, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On1
-    {moduleTypeMixFader,   paramType1Enable,         paramType2Toggle, {{ 29, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On2
-    {moduleTypeMixFader,   paramType1Enable,         paramType2Toggle, {{ 38, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On3
-    {moduleTypeMixFader,   paramType1Enable,         paramType2Toggle, {{ 47, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On4
-    {moduleTypeMixFader,   paramType1Enable,         paramType2Toggle, {{ 56, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On5
-    {moduleTypeMixFader,   paramType1Enable,         paramType2Toggle, {{ 65, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On6
-    {moduleTypeMixFader,   paramType1Enable,         paramType2Toggle, {{ 74, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On7
-    {moduleTypeMixFader,   paramType1Enable,         paramType2Toggle, {{ 83, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On8
-    {moduleTypeMixFader,   paramType1StandardToggle, paramType2Menu,   {{  3, -28}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 161 ExpLin
-    {moduleTypeMixFader,   paramType1StandardToggle, paramType2Menu,   {{  3, -35}, { 7,  7}}, anchorBottomLeft,  "Pad",            3,   0, db12BPadStrMap,                        NULL          }, // 161 Pad
+    {moduleTypeMixFader,   paramTypeMixLevel,    {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev1
+    {moduleTypeMixFader,   paramTypeMixLevel,    {{ 29,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev2
+    {moduleTypeMixFader,   paramTypeMixLevel,    {{ 38,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev3
+    {moduleTypeMixFader,   paramTypeMixLevel,    {{ 47,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev4
+    {moduleTypeMixFader,   paramTypeMixLevel,    {{ 56,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev5
+    {moduleTypeMixFader,   paramTypeMixLevel,    {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev6
+    {moduleTypeMixFader,   paramTypeMixLevel,    {{ 74,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev7
+    {moduleTypeMixFader,   paramTypeMixLevel,    {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev8
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 20, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On1
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 29, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On2
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 38, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On3
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 47, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On4
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 56, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On5
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 65, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On6
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 74, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On7
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 83, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On8
+    {moduleTypeMixFader,   paramTypeMenu,        {{  3, -28}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 161 ExpLin
+    {moduleTypeMixFader,   paramTypeMenu,        {{  3, -35}, { 7,  7}}, anchorBottomLeft,  "Pad",            3,   0, db12BPadStrMap,                        NULL          }, // 161 Pad
     // 162 FltComb
-    {moduleTypeFltComb,    paramType1Freq,           paramType2Dial,   {{ 22, -10}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,   0, NULL,                                  NULL          }, // 102 Freq
-    {moduleTypeFltComb,    paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 102 Pitch M
-    {moduleTypeFltComb,    paramType1StandardToggle, paramType2Menu,   {{  3, -22}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   4, offTo100KbStrMap,                      NULL          }, // 102 Kbt
-    {moduleTypeFltComb,    paramType1CommonDial,     paramType2Dial,   {{ 57, -17}, { 7, 14}}, anchorBottomLeft,  "FB",           128,  64, NULL,                                  NULL          }, // 102 FB
-    {moduleTypeFltComb,    paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 102 FB Mod
-    {moduleTypeFltComb,    paramType1StandardToggle, paramType2Menu,   {{ 68, -12}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, fltPhaseTypeStrMap,                    NULL          }, // 102 Type
-    {moduleTypeFltComb,    paramType1CommonDial,     paramType2Dial,   {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128,   0, NULL,                                  NULL          }, // 102 Level
-    {moduleTypeFltComb,    paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 102 Bypass
+    {moduleTypeFltComb,    paramTypeFreq,        {{ 22, -10}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,   0, NULL,                                  NULL          }, // 102 Freq
+    {moduleTypeFltComb,    paramTypeCommonDial,  {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 102 Pitch M
+    {moduleTypeFltComb,    paramTypeMenu,        {{  3, -22}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   4, offTo100KbStrMap,                      NULL          }, // 102 Kbt
+    {moduleTypeFltComb,    paramTypeCommonDial,  {{ 57, -17}, { 7, 14}}, anchorBottomLeft,  "FB",           128,  64, NULL,                                  NULL          }, // 102 FB
+    {moduleTypeFltComb,    paramTypeCommonDial,  {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 102 FB Mod
+    {moduleTypeFltComb,    paramTypeMenu,        {{ 68, -12}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, fltPhaseTypeStrMap,                    NULL          }, // 102 Type
+    {moduleTypeFltComb,    paramTypeCommonDial,  {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128,   0, NULL,                                  NULL          }, // 102 Level
+    {moduleTypeFltComb,    paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 102 Bypass
     // 163 OscShpA
-    {moduleTypeOscShpA,    paramType1Freq,           paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,  64, NULL,                                  NULL          }, // 163 Coarse
-    {moduleTypeOscShpA,    paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 163 Fine
-    {moduleTypeOscShpA,    paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 163 Kbt
-    {moduleTypeOscShpA,    paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 163 Pitch M
-    {moduleTypeOscShpA,    paramType1StandardToggle, paramType2Menu,   {{ 15,  15}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 163 Tune M
-    {moduleTypeOscShpA,    paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          }, // FM
-    {moduleTypeOscShpA,    paramType1StandardToggle, paramType2Menu,   {{ 60,  15}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,                          NULL          }, // FM Pitch Track
-    {moduleTypeOscShpA,    paramType1CommonDial,     paramType2Dial,   {{-15,   5}, { 7, 14}}, anchorTopRight,    "Shape",        128,   0, NULL,                                  NULL          }, // 50% to 99%, not decimals
-    {moduleTypeOscShpA,    paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "ShpCtrl",      128,   0, NULL,                                  NULL          }, // 163 Shape M
-    {moduleTypeOscShpA,    paramType1StandardToggle, paramType2Menu,   {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             6,   0, oscShpAStrMap,                         NULL          }, // 163 Wave
-    {moduleTypeOscShpA,    paramType1Bypass,         paramType2Toggle, {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },
+    {moduleTypeOscShpA,    paramTypeFreq,        {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,  64, NULL,                                  NULL          }, // 163 Coarse
+    {moduleTypeOscShpA,    paramTypeCommonDial,  {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 163 Fine
+    {moduleTypeOscShpA,    paramTypeToggle,      {{ 22, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 163 Kbt
+    {moduleTypeOscShpA,    paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 163 Pitch M
+    {moduleTypeOscShpA,    paramTypeMenu,        {{ 15,  15}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 163 Tune M
+    {moduleTypeOscShpA,    paramTypeCommonDial,  {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          }, // FM
+    {moduleTypeOscShpA,    paramTypeMenu,        {{ 60,  15}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,                          NULL          }, // FM Pitch Track
+    {moduleTypeOscShpA,    paramTypeCommonDial,  {{-15,   5}, { 7, 14}}, anchorTopRight,    "Shape",        128,   0, NULL,                                  NULL          }, // 50% to 99%, not decimals
+    {moduleTypeOscShpA,    paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "ShpCtrl",      128,   0, NULL,                                  NULL          }, // 163 Shape M
+    {moduleTypeOscShpA,    paramTypeMenu,        {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             6,   0, oscShpAStrMap,                         NULL          }, // 163 Wave
+    {moduleTypeOscShpA,    paramTypeBypass,      {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },
     // 164 OscDual
-    {moduleTypeOscDual,    paramType1Freq,           paramType2Dial,   {{ 25,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,  64, NULL,                                  NULL          }, // 164 Coarse
-    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 164 Fine
-    {moduleTypeOscDual,    paramType1StandardToggle, paramType2Toggle, {{ 12, -20}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 164 Kbt
-    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 164 Pitch M
-    {moduleTypeOscDual,    paramType1StandardToggle, paramType2Menu,   {{ 25, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 164 Tune M
-    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 75, -17}, { 7, 14}}, anchorBottomLeft,  "SqrLvl",       128, 100, NULL,                                  NULL          }, // 164 SqrLvl
-    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 65, -17}, { 7, 14}}, anchorBottomLeft,  "PW",           128,   0, NULL,                                  NULL          }, // 164 PW
-    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "SawLvl",       128, 100, NULL,                                  NULL          }, // 164 SawLvl
-    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  "Phase",        128,   0, NULL,                                  NULL          }, // 164 Phase
-    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 90, -17}, { 7, 14}}, anchorBottomLeft,  "ubLvl",        128, 100, NULL,                                  NULL          }, // 164 Suboct Lvl
-    {moduleTypeOscDual,    paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },
-    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 55, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 164 Sqr M
-    {moduleTypeOscDual,    paramType1CommonDial,     paramType2Dial,   {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 164 Saw M
-    {moduleTypeOscDual,    paramType1StandardToggle, paramType2Menu,   {{ -3, -10}, { 7,  7}}, anchorBottomRight, "Soft",           2,   0, offOnStrMap,                           NULL          }, // 164 Tune M
+    {moduleTypeOscDual,    paramTypeFreq,        {{ 25,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,  64, NULL,                                  NULL          }, // 164 Coarse
+    {moduleTypeOscDual,    paramTypeCommonDial,  {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 164 Fine
+    {moduleTypeOscDual,    paramTypeToggle,      {{ 12, -20}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 164 Kbt
+    {moduleTypeOscDual,    paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 164 Pitch M
+    {moduleTypeOscDual,    paramTypeMenu,        {{ 25, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 164 Tune M
+    {moduleTypeOscDual,    paramTypeCommonDial,  {{ 75, -17}, { 7, 14}}, anchorBottomLeft,  "SqrLvl",       128, 100, NULL,                                  NULL          }, // 164 SqrLvl
+    {moduleTypeOscDual,    paramTypeCommonDial,  {{ 65, -17}, { 7, 14}}, anchorBottomLeft,  "PW",           128,   0, NULL,                                  NULL          }, // 164 PW
+    {moduleTypeOscDual,    paramTypeCommonDial,  {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "SawLvl",       128, 100, NULL,                                  NULL          }, // 164 SawLvl
+    {moduleTypeOscDual,    paramTypeCommonDial,  {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  "Phase",        128,   0, NULL,                                  NULL          }, // 164 Phase
+    {moduleTypeOscDual,    paramTypeCommonDial,  {{ 90, -17}, { 7, 14}}, anchorBottomLeft,  "ubLvl",        128, 100, NULL,                                  NULL          }, // 164 Suboct Lvl
+    {moduleTypeOscDual,    paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },
+    {moduleTypeOscDual,    paramTypeCommonDial,  {{ 55, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 164 Sqr M
+    {moduleTypeOscDual,    paramTypeCommonDial,  {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 164 Saw M
+    {moduleTypeOscDual,    paramTypeMenu,        {{ -3, -10}, { 7,  7}}, anchorBottomRight, "Soft",           2,   0, offOnStrMap,                           NULL          }, // 164 Tune M
     // 165 DXRouter
-    {moduleTypeDXRouter,   paramType1StandardToggle, paramType2Menu,   {{ 10, -20}, { 7,  7}}, anchorBottomLeft,  "Algorithm",     32,   0, dxAlgStrMap,                           NULL          }, // 165 Algorithm
-    {moduleTypeDXRouter,   paramType1StandardToggle, paramType2Menu,   {{ 10, -10}, { 7,  7}}, anchorBottomLeft,  "Feedback",       8,   0, dxFeedbackStrMap,                      NULL          }, // 165 Feedback
+    {moduleTypeDXRouter,   paramTypeMenu,        {{ 10, -20}, { 7,  7}}, anchorBottomLeft,  "Algorithm",     32,   0, dxAlgStrMap,                           NULL          }, // 165 Algorithm
+    {moduleTypeDXRouter,   paramTypeMenu,        {{ 10, -10}, { 7,  7}}, anchorBottomLeft,  "Feedback",       8,   0, dxFeedbackStrMap,                      NULL          }, // 165 Feedback
     // 166 Unknown
     // 167 PShift
-    {moduleTypePShift,     paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Semi",         128,  64, NULL,                                  NULL          }, // 167 Semi
-    {moduleTypePShift,     paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Fine",         128,  64, NULL,                                  NULL          }, // 167 Fine
-    {moduleTypePShift,     paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 167 Shift M
-    {moduleTypePShift,     paramType1StandardToggle, paramType2Menu,   {{ 75, -10}, { 7,  7}}, anchorBottomLeft,  "Delay",          5,   0, pShiftDelayStrMod,                     NULL          }, // 167 Delay *** CHeck param vals
-    {moduleTypePShift,     paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 167 On/Off
+    {moduleTypePShift,     paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Semi",         128,  64, NULL,                                  NULL          }, // 167 Semi
+    {moduleTypePShift,     paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Fine",         128,  64, NULL,                                  NULL          }, // 167 Fine
+    {moduleTypePShift,     paramTypeCommonDial,  {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 167 Shift M
+    {moduleTypePShift,     paramTypeMenu,        {{ 75, -10}, { 7,  7}}, anchorBottomLeft,  "Delay",          5,   0, pShiftDelayStrMod,                     NULL          }, // 167 Delay *** CHeck param vals
+    {moduleTypePShift,     paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 167 On/Off
     // 168 Unknown
     // 169 ModAHD
-    {moduleTypeModAHD,     paramType1ADRTime,        paramType2Dial,   {{ 20, -17}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, NULL,                                  NULL          }, // 46 Attack
-    {moduleTypeModAHD,     paramType1ADRTime,        paramType2Dial,   {{ 40, -17}, { 7, 14}}, anchorBottomLeft,  "Hold",         128,   0, NULL,                                  NULL          }, // 46 Hold
-    {moduleTypeModAHD,     paramType1ADRTime,        paramType2Dial,   {{ 60, -17}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,   0, NULL,                                  NULL          }, // 46 Decay
-    {moduleTypeModAHD,     paramType1CommonDial,     paramType2Dial,   {{ 27,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 167 Attack M
-    {moduleTypeModAHD,     paramType1CommonDial,     paramType2Dial,   {{ 47,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 167 Hold M
-    {moduleTypeModAHD,     paramType1CommonDial,     paramType2Dial,   {{ 67,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 167 Attack M
-    {moduleTypeModAHD,     paramType1StandardToggle, paramType2Menu,   {{-20, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          },
-    {moduleTypeModAHD,     paramType1StandardToggle, paramType2Toggle, {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, kbStrMap,                              offOnColourMap},
+    {moduleTypeModAHD,     paramTypeADRTime,     {{ 20, -17}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, NULL,                                  NULL          }, // 46 Attack
+    {moduleTypeModAHD,     paramTypeADRTime,     {{ 40, -17}, { 7, 14}}, anchorBottomLeft,  "Hold",         128,   0, NULL,                                  NULL          }, // 46 Hold
+    {moduleTypeModAHD,     paramTypeADRTime,     {{ 60, -17}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,   0, NULL,                                  NULL          }, // 46 Decay
+    {moduleTypeModAHD,     paramTypeCommonDial,  {{ 27,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 167 Attack M
+    {moduleTypeModAHD,     paramTypeCommonDial,  {{ 47,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 167 Hold M
+    {moduleTypeModAHD,     paramTypeCommonDial,  {{ 67,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 167 Attack M
+    {moduleTypeModAHD,     paramTypeMenu,        {{-20, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          },
+    {moduleTypeModAHD,     paramTypeToggle,      {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, kbStrMap,                              offOnColourMap},
     // 170 2-In
-    {moduleType2toIn,      paramType1StandardToggle, paramType2Menu,   {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, twoToInSourceStrMap,                   NULL          },
-    {moduleType2toIn,      paramType1Bypass,         paramType2Toggle, {{-24,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 167 On/Off
-    {moduleType2toIn,      paramType1StandardToggle, paramType2Menu,   {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   1, db12PadStrMap,                         NULL          },
+    {moduleType2toIn,      paramTypeMenu,        {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, twoToInSourceStrMap,                   NULL          },
+    {moduleType2toIn,      paramTypeBypass,      {{-24,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 167 On/Off
+    {moduleType2toIn,      paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   1, db12PadStrMap,                         NULL          },
     // 171 4-In
-    {moduleType4toIn,      paramType1StandardToggle, paramType2Menu,   {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, fourToInSourceStrMap,                  NULL          }, // 171 source
-    {moduleType4toIn,      paramType1Bypass,         paramType2Toggle, {{-45,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 171 On/Off
-    {moduleType4toIn,      paramType1StandardToggle, paramType2Menu,   {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   1, db12PadStrMap,                         NULL          }, // 171 pad
+    {moduleType4toIn,      paramTypeMenu,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, fourToInSourceStrMap,                  NULL          }, // 171 source
+    {moduleType4toIn,      paramTypeBypass,      {{-45,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 171 On/Off
+    {moduleType4toIn,      paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   1, db12PadStrMap,                         NULL          }, // 171 pad
     // 172 DlySingleA
-    {moduleTypeDlySingleA, paramType1Time,           paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          }, // 158 Time
+    {moduleTypeDlySingleA, paramTypeTime,        {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          }, // 158 Time
     // 173 DlySingleB
-    {moduleTypeDlySingleB, paramType1Time,           paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          }, // 158 Time
-    {moduleTypeDlySingleB, paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 173 Time M
+    {moduleTypeDlySingleB, paramTypeTime,        {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          }, // 158 Time
+    {moduleTypeDlySingleB, paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 173 Time M
     // 174 DelayDual
-    {moduleTypeDelayDual,  paramType1Time,           paramType2Dial,   {{ 53, -10}, { 7, 14}}, anchorBottomLeft,  "Time1",        128,   0, NULL,                                  NULL          }, // 174 Time
-    {moduleTypeDelayDual,  paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 174 Time M
-    {moduleTypeDelayDual,  paramType1Time,           paramType2Dial,   {{ 88, -10}, { 7, 14}}, anchorBottomLeft,  "Time2",        128,   0, NULL,                                  NULL          }, // 174 Time2
-    {moduleTypeDelayDual,  paramType1CommonDial,     paramType2Dial,   {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 174 Time M
+    {moduleTypeDelayDual,  paramTypeTime,        {{ 53, -10}, { 7, 14}}, anchorBottomLeft,  "Time1",        128,   0, NULL,                                  NULL          }, // 174 Time
+    {moduleTypeDelayDual,  paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 174 Time M
+    {moduleTypeDelayDual,  paramTypeTime,        {{ 88, -10}, { 7, 14}}, anchorBottomLeft,  "Time2",        128,   0, NULL,                                  NULL          }, // 174 Time2
+    {moduleTypeDelayDual,  paramTypeCommonDial,  {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 174 Time M
     // 175 DelayQuad
-    {moduleTypeDelayQuad,  paramType1TimeClk,        paramType2Dial,   {{  3, -10}, { 7, 14}}, anchorBottomLeft,  "Time1",        128,   0, NULL,                                  NULL          }, // 175 Time1
-    {moduleTypeDelayQuad,  paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 175 Time1 M
-    {moduleTypeDelayQuad,  paramType1TimeClk,        paramType2Dial,   {{ 23, -10}, { 7, 14}}, anchorBottomLeft,  "Time2",        128,   0, NULL,                                  NULL          }, // 175 Time2
-    {moduleTypeDelayQuad,  paramType1CommonDial,     paramType2Dial,   {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 175 Time2 M
-    {moduleTypeDelayQuad,  paramType1TimeClk,        paramType2Dial,   {{ 43, -10}, { 7, 14}}, anchorBottomLeft,  "Time3",        128,   0, NULL,                                  NULL          }, // 175 Time3
-    {moduleTypeDelayQuad,  paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 175 Time3 M
-    {moduleTypeDelayQuad,  paramType1TimeClk,        paramType2Dial,   {{ 63, -10}, { 7, 14}}, anchorBottomLeft,  "Time4",        128,   0, NULL,                                  NULL          }, // 175 Time4
-    {moduleTypeDelayQuad,  paramType1CommonDial,     paramType2Dial,   {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 175 Time4 M
-    {moduleTypeDelayQuad,  paramType1StandardToggle, paramType2Menu,   {{ 80, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, timeClkStrMap,                         NULL          }, // 175 Time/Clk
+    {moduleTypeDelayQuad,  paramTypeTimeClk,     {{  3, -10}, { 7, 14}}, anchorBottomLeft,  "Time1",        128,   0, NULL,                                  NULL          }, // 175 Time1
+    {moduleTypeDelayQuad,  paramTypeCommonDial,  {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 175 Time1 M
+    {moduleTypeDelayQuad,  paramTypeTimeClk,     {{ 23, -10}, { 7, 14}}, anchorBottomLeft,  "Time2",        128,   0, NULL,                                  NULL          }, // 175 Time2
+    {moduleTypeDelayQuad,  paramTypeCommonDial,  {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 175 Time2 M
+    {moduleTypeDelayQuad,  paramTypeTimeClk,     {{ 43, -10}, { 7, 14}}, anchorBottomLeft,  "Time3",        128,   0, NULL,                                  NULL          }, // 175 Time3
+    {moduleTypeDelayQuad,  paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 175 Time3 M
+    {moduleTypeDelayQuad,  paramTypeTimeClk,     {{ 63, -10}, { 7, 14}}, anchorBottomLeft,  "Time4",        128,   0, NULL,                                  NULL          }, // 175 Time4
+    {moduleTypeDelayQuad,  paramTypeCommonDial,  {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 175 Time4 M
+    {moduleTypeDelayQuad,  paramTypeMenu,        {{ 80, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, timeClkStrMap,                         NULL          }, // 175 Time/Clk
     // 176 DelayA
-    {moduleTypeDelayA,     paramType1TimeClk,        paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          }, // 176 Time
-    {moduleTypeDelayA,     paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "FB",           128,   0, NULL,                                  NULL          }, // 176 FB
-    {moduleTypeDelayA,     paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Filter",       128,  64, NULL,                                  NULL          }, // 176 Filter
-    {moduleTypeDelayA,     paramType1CommonDial,     paramType2Dial,   {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Dry/Wet",      128,  64, NULL,                                  NULL          }, // 176 Filter
-    {moduleTypeDelayA,     paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 176 On/Off
-    {moduleTypeDelayA,     paramType1StandardToggle, paramType2Menu,   {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, timeClkStrMap,                         NULL          }, // 176 Time/Clk
+    {moduleTypeDelayA,     paramTypeTimeClk,     {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          }, // 176 Time
+    {moduleTypeDelayA,     paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "FB",           128,   0, NULL,                                  NULL          }, // 176 FB
+    {moduleTypeDelayA,     paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Filter",       128,  64, NULL,                                  NULL          }, // 176 Filter
+    {moduleTypeDelayA,     paramTypeCommonDial,  {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Dry/Wet",      128,  64, NULL,                                  NULL          }, // 176 Filter
+    {moduleTypeDelayA,     paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 176 On/Off
+    {moduleTypeDelayA,     paramTypeMenu,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, timeClkStrMap,                         NULL          }, // 176 Time/Clk
     // 177 DelayB
-    {moduleTypeDelayB,     paramType1TimeClk,        paramType2Dial,   {{ 40, -10}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          }, // 176 Time
-    {moduleTypeDelayB,     paramType1CommonDial,     paramType2Dial,   {{ 50, -17}, { 7, 14}}, anchorBottomLeft,  "FB",           128,   0, NULL,                                  NULL          }, // 176 FB
-    {moduleTypeDelayB,     paramType1Freq,           paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "LP",           128,  64, NULL,                                  NULL          }, // 176 Filter
-    {moduleTypeDelayB,     paramType1CommonDial,     paramType2Dial,   {{ 75, -17}, { 7, 14}}, anchorBottomLeft,  "Dry/Wet",      128,  64, NULL,                                  NULL          }, // 176 Filter
-    {moduleTypeDelayB,     paramType1StandardToggle, paramType2Menu,   {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, timeClkStrMap,                         NULL          }, // 176 Time/Clk
-    {moduleTypeDelayB,     paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 176 FBmod
-    {moduleTypeDelayB,     paramType1CommonDial,     paramType2Dial,   {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 176 DryWet mod
-    {moduleTypeDelayB,     paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 176 On/Off
-    {moduleTypeDelayB,     paramType1Freq,           paramType2Dial,   {{ 60, -17}, { 7, 14}}, anchorBottomLeft,  "HP",           128,  64, NULL,                                  NULL          }, // 176 Filter
+    {moduleTypeDelayB,     paramTypeTimeClk,     {{ 40, -10}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          }, // 176 Time
+    {moduleTypeDelayB,     paramTypeCommonDial,  {{ 50, -17}, { 7, 14}}, anchorBottomLeft,  "FB",           128,   0, NULL,                                  NULL          }, // 176 FB
+    {moduleTypeDelayB,     paramTypeFreq,        {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "LP",           128,  64, NULL,                                  NULL          }, // 176 Filter
+    {moduleTypeDelayB,     paramTypeCommonDial,  {{ 75, -17}, { 7, 14}}, anchorBottomLeft,  "Dry/Wet",      128,  64, NULL,                                  NULL          }, // 176 Filter
+    {moduleTypeDelayB,     paramTypeMenu,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, timeClkStrMap,                         NULL          }, // 176 Time/Clk
+    {moduleTypeDelayB,     paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 176 FBmod
+    {moduleTypeDelayB,     paramTypeCommonDial,  {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 176 DryWet mod
+    {moduleTypeDelayB,     paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 176 On/Off
+    {moduleTypeDelayB,     paramTypeFreq,        {{ 60, -17}, { 7, 14}}, anchorBottomLeft,  "HP",           128,  64, NULL,                                  NULL          }, // 176 Filter
     // 178 DlyClock
-    {moduleTypeDlyClock,   paramType1Int,            paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Sample delay", 128,   0, NULL,                                  NULL          }, // 176 Time
+    {moduleTypeDlyClock,   paramTypeInt,         {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Sample delay", 128,   0, NULL,                                  NULL          }, // 176 Time
     // 179 DlyShiftReg
     // 180 Operator
-    {moduleTypeOperator,   paramType1StandardToggle, paramType2Toggle, {{ 20, -60}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 180 Kbt
-    {moduleTypeOperator,   paramType1StandardToggle, paramType2Menu,   {{ 30, -60}, { 7,  7}}, anchorBottomLeft,  "Sync",           2,   0, offOnStrMap,                           NULL          }, // 180 Sync *** Check values
-    {moduleTypeOperator,   paramType1StandardToggle, paramType2Menu,   {{ 40, -60}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, ratioFixedStrMap,                      NULL          }, // 180 RatioFixes
-    {moduleTypeOperator,   paramType1Freq,           paramType2Dial,   {{ 60, -60}, { 7, 14}}, anchorBottomLeft,  "Coarse",       128,   0, NULL,                                  NULL          }, // 180 Freq
-    {moduleTypeOperator,   paramType1CommonDial,     paramType2Dial,   {{ 50, -60}, { 7, 14}}, anchorBottomLeft,  "Fine",         128,   0, NULL,                                  NULL          }, // 180 Freq
-    {moduleTypeOperator,   paramType1StandardToggle, paramType2Menu,   {{ 70, -60}, { 7,  7}}, anchorBottomLeft,  "Detune",        15,   7, detuneStrMap,                          NULL          }, // 180 FreqDetune
-    {moduleTypeOperator,   paramType1StandardToggle, paramType2Menu,   {{ 70, -50}, { 7,  7}}, anchorBottomLeft,  "Vel",            8,   0, operator07StrMap,                      NULL          }, // 180 Vel
-    {moduleTypeOperator,   paramType1StandardToggle, paramType2Menu,   {{ 83, -50}, { 7,  7}}, anchorBottomLeft,  "RateScale",      8,   0, operator07StrMap,                      NULL          }, // 180 RateScale
-    {moduleTypeOperator,   paramType1CommonDial,     paramType2Dial,   {{ 20, -30}, { 7, 14}}, anchorBottomLeft,  "R1",           128, 127, NULL,                                  NULL          }, // 180 R1
-    {moduleTypeOperator,   paramType1CommonDial,     paramType2Dial,   {{ 30, -30}, { 7, 14}}, anchorBottomLeft,  "L1",           128, 127, NULL,                                  NULL          }, // 180 L1
-    {moduleTypeOperator,   paramType1CommonDial,     paramType2Dial,   {{ 40, -30}, { 7, 14}}, anchorBottomLeft,  "R2",           128, 127, NULL,                                  NULL          }, // 180 R2
-    {moduleTypeOperator,   paramType1CommonDial,     paramType2Dial,   {{ 50, -30}, { 7, 14}}, anchorBottomLeft,  "L2",           128, 127, NULL,                                  NULL          }, // 180 L2
-    {moduleTypeOperator,   paramType1CommonDial,     paramType2Dial,   {{ 60, -30}, { 7, 14}}, anchorBottomLeft,  "R3",           128, 127, NULL,                                  NULL          }, // 180 R3
-    {moduleTypeOperator,   paramType1CommonDial,     paramType2Dial,   {{ 70, -30}, { 7, 14}}, anchorBottomLeft,  "L3",           128, 127, NULL,                                  NULL          }, // 180 L3
-    {moduleTypeOperator,   paramType1CommonDial,     paramType2Dial,   {{ 80, -30}, { 7, 14}}, anchorBottomLeft,  "R4",           128, 127, NULL,                                  NULL          }, // 180 R4
-    {moduleTypeOperator,   paramType1CommonDial,     paramType2Dial,   {{ 90, -30}, { 7, 14}}, anchorBottomLeft,  "L4",           128, 127, NULL,                                  NULL          }, // 180 L4
-    {moduleTypeOperator,   paramType1StandardToggle, paramType2Menu,   {{ 17, -20}, { 7,  7}}, anchorBottomLeft,  "AMod",           8,   0, operator07StrMap,                      NULL          }, // 180 AMod
-    {moduleTypeOperator,   paramType1NoteDial,       paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "BrPt",         128,  64, NULL,                                  NULL          }, // 180 AMod
-    {moduleTypeOperator,   paramType1StandardToggle, paramType2Menu,   {{ 35,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, operatorDepthStrMap,                   NULL          }, // 180 LDepth Mode
-    {moduleTypeOperator,   paramType1StandardToggle, paramType2Menu,   {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Ldepth",         8,   0, operator07StrMap,                      NULL          }, // 180 LDepth
-    {moduleTypeOperator,   paramType1StandardToggle, paramType2Menu,   {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, operatorDepthStrMap,                   NULL          }, // 180 RDepth Mode
-    {moduleTypeOperator,   paramType1StandardToggle, paramType2Menu,   {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  "Rdepth",         8,   0, operator07StrMap,                      NULL          }, // 180 RDepth
-    {moduleTypeOperator,   paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128, 127, NULL,                                  NULL          }, // 180 Level
-    {moduleTypeOperator,   paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 180 On/Off
-    {moduleTypeOperator,   paramType1StandardToggle, paramType2Toggle, {{ 20, -50}, { 7,  7}}, anchorBottomLeft,  "KBEnv",          2,   1, offOnStrMap,                           offOnColourMap}, // 180 EnvLB
+    {moduleTypeOperator,   paramTypeToggle,      {{ 20, -60}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 180 Kbt
+    {moduleTypeOperator,   paramTypeMenu,        {{ 30, -60}, { 7,  7}}, anchorBottomLeft,  "Sync",           2,   0, offOnStrMap,                           NULL          }, // 180 Sync *** Check values
+    {moduleTypeOperator,   paramTypeMenu,        {{ 40, -60}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, ratioFixedStrMap,                      NULL          }, // 180 RatioFixes
+    {moduleTypeOperator,   paramTypeFreq,        {{ 60, -60}, { 7, 14}}, anchorBottomLeft,  "Coarse",       128,   0, NULL,                                  NULL          }, // 180 Freq
+    {moduleTypeOperator,   paramTypeCommonDial,  {{ 50, -60}, { 7, 14}}, anchorBottomLeft,  "Fine",         128,   0, NULL,                                  NULL          }, // 180 Freq
+    {moduleTypeOperator,   paramTypeMenu,        {{ 70, -60}, { 7,  7}}, anchorBottomLeft,  "Detune",        15,   7, detuneStrMap,                          NULL          }, // 180 FreqDetune
+    {moduleTypeOperator,   paramTypeMenu,        {{ 70, -50}, { 7,  7}}, anchorBottomLeft,  "Vel",            8,   0, operator07StrMap,                      NULL          }, // 180 Vel
+    {moduleTypeOperator,   paramTypeMenu,        {{ 83, -50}, { 7,  7}}, anchorBottomLeft,  "RateScale",      8,   0, operator07StrMap,                      NULL          }, // 180 RateScale
+    {moduleTypeOperator,   paramTypeCommonDial,  {{ 20, -30}, { 7, 14}}, anchorBottomLeft,  "R1",           128, 127, NULL,                                  NULL          }, // 180 R1
+    {moduleTypeOperator,   paramTypeCommonDial,  {{ 30, -30}, { 7, 14}}, anchorBottomLeft,  "L1",           128, 127, NULL,                                  NULL          }, // 180 L1
+    {moduleTypeOperator,   paramTypeCommonDial,  {{ 40, -30}, { 7, 14}}, anchorBottomLeft,  "R2",           128, 127, NULL,                                  NULL          }, // 180 R2
+    {moduleTypeOperator,   paramTypeCommonDial,  {{ 50, -30}, { 7, 14}}, anchorBottomLeft,  "L2",           128, 127, NULL,                                  NULL          }, // 180 L2
+    {moduleTypeOperator,   paramTypeCommonDial,  {{ 60, -30}, { 7, 14}}, anchorBottomLeft,  "R3",           128, 127, NULL,                                  NULL          }, // 180 R3
+    {moduleTypeOperator,   paramTypeCommonDial,  {{ 70, -30}, { 7, 14}}, anchorBottomLeft,  "L3",           128, 127, NULL,                                  NULL          }, // 180 L3
+    {moduleTypeOperator,   paramTypeCommonDial,  {{ 80, -30}, { 7, 14}}, anchorBottomLeft,  "R4",           128, 127, NULL,                                  NULL          }, // 180 R4
+    {moduleTypeOperator,   paramTypeCommonDial,  {{ 90, -30}, { 7, 14}}, anchorBottomLeft,  "L4",           128, 127, NULL,                                  NULL          }, // 180 L4
+    {moduleTypeOperator,   paramTypeMenu,        {{ 17, -20}, { 7,  7}}, anchorBottomLeft,  "AMod",           8,   0, operator07StrMap,                      NULL          }, // 180 AMod
+    {moduleTypeOperator,   paramTypeNoteDial,    {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "BrPt",         128,  64, NULL,                                  NULL          }, // 180 AMod
+    {moduleTypeOperator,   paramTypeMenu,        {{ 35,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, operatorDepthStrMap,                   NULL          }, // 180 LDepth Mode
+    {moduleTypeOperator,   paramTypeMenu,        {{ 45,  -3}, { 7,  7}}, anchorBottomLeft,  "Ldepth",         8,   0, operator07StrMap,                      NULL          }, // 180 LDepth
+    {moduleTypeOperator,   paramTypeMenu,        {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, operatorDepthStrMap,                   NULL          }, // 180 RDepth Mode
+    {moduleTypeOperator,   paramTypeMenu,        {{ 70,  -3}, { 7,  7}}, anchorBottomLeft,  "Rdepth",         8,   0, operator07StrMap,                      NULL          }, // 180 RDepth
+    {moduleTypeOperator,   paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128, 127, NULL,                                  NULL          }, // 180 Level
+    {moduleTypeOperator,   paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 180 On/Off
+    {moduleTypeOperator,   paramTypeToggle,      {{ 20, -50}, { 7,  7}}, anchorBottomLeft,  "KBEnv",          2,   1, offOnStrMap,                           offOnColourMap}, // 180 EnvLB
     // 181 DlyEight
-    {moduleTypeDlyEight,   paramType1Time,           paramType2Dial,   {{ 40, -10}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          }, // 181 Time
+    {moduleTypeDlyEight,   paramTypeTime,        {{ 40, -10}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          }, // 181 Time
     // 182 DlyStereo
-    {moduleTypeDlyStereo,  paramType1TimeClk,        paramType2Dial,   {{ 30, -17}, { 7, 14}}, anchorBottomLeft,  "Left",         128,   0, NULL,                                  NULL          }, // 182 Time Left
-    {moduleTypeDlyStereo,  paramType1TimeClk,        paramType2Dial,   {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  "Right",        128,   0, NULL,                                  NULL          }, // 182 Time Right
-    {moduleTypeDlyStereo,  paramType1CommonDial,     paramType2Dial,   {{ 40, -17}, { 7, 14}}, anchorBottomLeft,  "FB",           128, 127, NULL,                                  NULL          }, // 182 FB L
-    {moduleTypeDlyStereo,  paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 127, NULL,                                  NULL          }, // 182 FB R
-    {moduleTypeDlyStereo,  paramType1CommonDial,     paramType2Dial,   {{ 50, -17}, { 7, 14}}, anchorBottomLeft,  "X-FB",         128, 127, NULL,                                  NULL          }, // 182 X-FB L
-    {moduleTypeDlyStereo,  paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "X-FB",         128, 127, NULL,                                  NULL          }, // 180 X-FB R
-    {moduleTypeDlyStereo,  paramType1StandardToggle, paramType2Menu,   {{ 20, -24}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, timeClkStrMap,                         NULL          }, // 182 Time/Clk
-    {moduleTypeDlyStereo,  paramType1Freq,           paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "LP",           128, 127, NULL,                                  NULL          }, // 182 LP
-    {moduleTypeDlyStereo,  paramType1CommonDial,     paramType2Dial,   {{ 80, -17}, { 7, 14}}, anchorBottomLeft,  "Dry/Wet",      128,  64, NULL,                                  NULL          }, // 182 Dry/Wet
-    {moduleTypeDlyStereo,  paramType1Bypass,         paramType2Toggle, {{ -3, -17}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 182 On/Off
-    {moduleTypeDlyStereo,  paramType1Freq,           paramType2Dial,   {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "HP",           128, 127, NULL,                                  NULL          }, // 180 HP
+    {moduleTypeDlyStereo,  paramTypeTimeClk,     {{ 30, -17}, { 7, 14}}, anchorBottomLeft,  "Left",         128,   0, NULL,                                  NULL          }, // 182 Time Left
+    {moduleTypeDlyStereo,  paramTypeTimeClk,     {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  "Right",        128,   0, NULL,                                  NULL          }, // 182 Time Right
+    {moduleTypeDlyStereo,  paramTypeCommonDial,  {{ 40, -17}, { 7, 14}}, anchorBottomLeft,  "FB",           128, 127, NULL,                                  NULL          }, // 182 FB L
+    {moduleTypeDlyStereo,  paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 127, NULL,                                  NULL          }, // 182 FB R
+    {moduleTypeDlyStereo,  paramTypeCommonDial,  {{ 50, -17}, { 7, 14}}, anchorBottomLeft,  "X-FB",         128, 127, NULL,                                  NULL          }, // 182 X-FB L
+    {moduleTypeDlyStereo,  paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "X-FB",         128, 127, NULL,                                  NULL          }, // 180 X-FB R
+    {moduleTypeDlyStereo,  paramTypeMenu,        {{ 20, -24}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, timeClkStrMap,                         NULL          }, // 182 Time/Clk
+    {moduleTypeDlyStereo,  paramTypeFreq,        {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "LP",           128, 127, NULL,                                  NULL          }, // 182 LP
+    {moduleTypeDlyStereo,  paramTypeCommonDial,  {{ 80, -17}, { 7, 14}}, anchorBottomLeft,  "Dry/Wet",      128,  64, NULL,                                  NULL          }, // 182 Dry/Wet
+    {moduleTypeDlyStereo,  paramTypeBypass,      {{ -3, -17}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 182 On/Off
+    {moduleTypeDlyStereo,  paramTypeFreq,        {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "HP",           128, 127, NULL,                                  NULL          }, // 180 HP
     // 183 OscPM
-    {moduleTypeOscPM,      paramType1CommonDial,     paramType2Dial,   {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 9 Coarse
-    {moduleTypeOscPM,      paramType1CommonDial,     paramType2Dial,   {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 9 Fine
-    {moduleTypeOscPM,      paramType1StandardToggle, paramType2Toggle, {{ 22, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 9 Kbt
-    {moduleTypeOscPM,      paramType1StandardToggle, paramType2Menu,   {{ 30,  10}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 9 Tune Mode
-    {moduleTypeOscPM,      paramType1CommonDial,     paramType2Dial,   {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "PhM",          128,   0, NULL,                                  NULL          }, // FM
-    {moduleTypeOscPM,      paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 9 Bypass
-    {moduleTypeOscPM,      paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // Pitch Mode
+    {moduleTypeOscPM,      paramTypeCommonDial,  {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 9 Coarse
+    {moduleTypeOscPM,      paramTypeCommonDial,  {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 9 Fine
+    {moduleTypeOscPM,      paramTypeToggle,      {{ 22, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 9 Kbt
+    {moduleTypeOscPM,      paramTypeMenu,        {{ 30,  10}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 9 Tune Mode
+    {moduleTypeOscPM,      paramTypeCommonDial,  {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "PhM",          128,   0, NULL,                                  NULL          }, // FM
+    {moduleTypeOscPM,      paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 9 Bypass
+    {moduleTypeOscPM,      paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // Pitch Mode
     // 184 Mix1-1A
-    {moduleTypeMix1to1A,   paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 184 Level
-    {moduleTypeMix1to1A,   paramType1Enable,         paramType2Toggle, {{ 40,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 184 Enable1
-    {moduleTypeMix1to1A,   paramType1StandardToggle, paramType2Menu,   {{ 30, -25}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 184 Exp
+    {moduleTypeMix1to1A,   paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 184 Level
+    {moduleTypeMix1to1A,   paramTypeEnable,      {{ 40,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 184 Enable1
+    {moduleTypeMix1to1A,   paramTypeMenu,        {{ 30, -25}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 184 Exp
     // 185 Mix1-1S
-    {moduleTypeMix1to1S,   paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 184 Level
-    {moduleTypeMix1to1S,   paramType1Enable,         paramType2Toggle, {{ 40,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 184 Enable1
-    {moduleTypeMix1to1S,   paramType1StandardToggle, paramType2Menu,   {{ 30, -25}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 184 Exp
+    {moduleTypeMix1to1S,   paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 184 Level
+    {moduleTypeMix1to1S,   paramTypeEnable,      {{ 40,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 184 Enable1
+    {moduleTypeMix1to1S,   paramTypeMenu,        {{ 30, -25}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 184 Exp
     // 186 Sw1-2M
-    {moduleTypeSw1to2M,    paramType1StandardToggle, paramType2Menu,   {{ 37,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           NULL          }, // 186 Selector *** Needs new UI element
+    {moduleTypeSw1to2M,    paramTypeMenu,        {{ 37,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           NULL          }, // 186 Selector *** Needs new UI element
     // 187 Sw2-1M
-    {moduleTypeSw2to1M,    paramType1StandardToggle, paramType2Menu,   {{ 37,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           NULL          }, // 187 Selector *** Needs new UI element
+    {moduleTypeSw2to1M,    paramTypeMenu,        {{ 37,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           NULL          }, // 187 Selector *** Needs new UI element
     // 188 ConstSwM
-    {moduleTypeConstSwM,   paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 188 Level
-    {moduleTypeConstSwM,   paramType1StandardToggle, paramType2Menu,   {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           NULL          }, // 188 Selector *** needs new UI element
-    {moduleTypeConstSwM,   paramType1StandardToggle, paramType2Menu,   {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, bipUniStrMap,                          NULL          }, // 188 Bip/Uni
+    {moduleTypeConstSwM,   paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 188 Level
+    {moduleTypeConstSwM,   paramTypeMenu,        {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           NULL          }, // 188 Selector *** needs new UI element
+    {moduleTypeConstSwM,   paramTypeMenu,        {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, bipUniStrMap,                          NULL          }, // 188 Bip/Uni
     // 189 NoiseGate
-    {moduleTypeNoiseGate,  paramType1StrMap,         paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Threshold",    128,  64, noisegate_pitchtrack_threshholdStrMap, NULL          }, // 189 Threshold
-    {moduleTypeNoiseGate,  paramType1StrMap,         paramType2Dial,   {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, noise_gate_attackStrMap,               NULL          }, // 189 Attack
-    {moduleTypeNoiseGate,  paramType1StrMap,         paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Release",      128,   0, noise_gate_releaseStrMap,              NULL          }, // 189 Release
-    {moduleTypeNoiseGate,  paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 9 Bypass
+    {moduleTypeNoiseGate,  paramTypeStrMap,      {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Threshold",    128,  64, noisegate_pitchtrack_threshholdStrMap, NULL          }, // 189 Threshold
+    {moduleTypeNoiseGate,  paramTypeStrMap,      {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, noise_gate_attackStrMap,               NULL          }, // 189 Attack
+    {moduleTypeNoiseGate,  paramTypeStrMap,      {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Release",      128,   0, noise_gate_releaseStrMap,              NULL          }, // 189 Release
+    {moduleTypeNoiseGate,  paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 9 Bypass
     // 190 LfoB
-    {moduleTypeLfoB,       paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 26 Rate  *** Could have Freq but tied to Range
-    {moduleTypeLfoB,       paramType1CommonDial,     paramType2Dial,   {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 26 Rate M
-    {moduleTypeLfoB,       paramType1StandardToggle, paramType2Menu,   {{ 40, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,                           NULL          }, // 26 Range
-    {moduleTypeLfoB,       paramType1StandardToggle, paramType2Menu,   {{ 50, -13}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          }, // 26 Kbt
-    {moduleTypeLfoB,       paramType1StandardToggle, paramType2Menu,   {{ 60, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, lfoWaveStrMap,                         NULL          }, // 26 Wave
-    {moduleTypeLfoB,       paramType1StandardToggle, paramType2Menu,   {{ 30, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          }, // 26 Mode
-    {moduleTypeLfoB,       paramType1CommonDial,     paramType2Dial,   {{ 77,  -3}, { 7, 14}}, anchorBottomLeft,  "Phase",        128,  64, NULL,                                  NULL          }, // 26 Phase
-    {moduleTypeLfoB,       paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 26 Bypass
-    {moduleTypeLfoB,       paramType1StandardToggle, paramType2Menu,   {{-17, -17}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          }, // 26 OutType
-    {moduleTypeLfoB,       paramType1CommonDial,     paramType2Dial,   {{ 67,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 26 Phase M
+    {moduleTypeLfoB,       paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 26 Rate  *** Could have Freq but tied to Range
+    {moduleTypeLfoB,       paramTypeCommonDial,  {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 26 Rate M
+    {moduleTypeLfoB,       paramTypeMenu,        {{ 40, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,                           NULL          }, // 26 Range
+    {moduleTypeLfoB,       paramTypeMenu,        {{ 50, -13}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          }, // 26 Kbt
+    {moduleTypeLfoB,       paramTypeMenu,        {{ 60, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, lfoWaveStrMap,                         NULL          }, // 26 Wave
+    {moduleTypeLfoB,       paramTypeMenu,        {{ 30, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          }, // 26 Mode
+    {moduleTypeLfoB,       paramTypeCommonDial,  {{ 77,  -3}, { 7, 14}}, anchorBottomLeft,  "Phase",        128,  64, NULL,                                  NULL          }, // 26 Phase
+    {moduleTypeLfoB,       paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 26 Bypass
+    {moduleTypeLfoB,       paramTypeMenu,        {{-17, -17}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          }, // 26 OutType
+    {moduleTypeLfoB,       paramTypeCommonDial,  {{ 67,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 26 Phase M
     // 191 Unknown
     // 192 Phaser
-    {moduleTypePhaser,     paramType1StandardToggle, paramType2Menu,   {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, phaserTypeStrMap,                      NULL          }, // 192 Type
-    {moduleTypePhaser,     paramType1StrMap,         paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Rate",         128,  64, phaser_freqStrMap,                     NULL          }, // 192 Rate
-    {moduleTypePhaser,     paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "FB",           128,   0, NULL,                                  NULL          }, // 192 FB
-    {moduleTypePhaser,     paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 192 Bypass
+    {moduleTypePhaser,     paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, phaserTypeStrMap,                      NULL          }, // 192 Type
+    {moduleTypePhaser,     paramTypeStrMap,      {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Rate",         128,  64, phaser_freqStrMap,                     NULL          }, // 192 Rate
+    {moduleTypePhaser,     paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "FB",           128,   0, NULL,                                  NULL          }, // 192 FB
+    {moduleTypePhaser,     paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 192 Bypass
     // 193 Mix4-1A -- no params
     // 194 Mix2-1A
-    {moduleTypeMix2to1A,   paramType1CommonDial,     paramType2Dial,   {{ 57,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L1
-    {moduleTypeMix2to1A,   paramType1Enable,         paramType2Toggle, {{ 37,  -3}, { 5,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable1
-    {moduleTypeMix2to1A,   paramType1CommonDial,     paramType2Dial,   {{ 82,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L2
-    {moduleTypeMix2to1A,   paramType1Enable,         paramType2Toggle, {{ 67,  -3}, { 5,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable2
-    {moduleTypeMix2to1A,   paramType1StandardToggle, paramType2Menu,   {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 123 Exp
+    {moduleTypeMix2to1A,   paramTypeCommonDial,  {{ 57,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L1
+    {moduleTypeMix2to1A,   paramTypeEnable,      {{ 37,  -3}, { 5,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable1
+    {moduleTypeMix2to1A,   paramTypeCommonDial,  {{ 82,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L2
+    {moduleTypeMix2to1A,   paramTypeEnable,      {{ 67,  -3}, { 5,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable2
+    {moduleTypeMix2to1A,   paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 123 Exp
     // 195 ModAmt
-    {moduleTypeModAmt,     paramType1CommonDial,     paramType2Dial,   {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Depth",        128,   0, NULL,                                  NULL          }, // 195 Depth
-    {moduleTypeModAmt,     paramType1StandardToggle, paramType2Toggle, {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, offOnStrMap,                           offOnColourMap}, // 195 Enable
-    {moduleTypeModAmt,     paramType1StandardToggle, paramType2Menu,   {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, expStrMap,                             NULL          }, // 195 Exp/Lin
-    {moduleTypeModAmt,     paramType1StandardToggle, paramType2Menu,   {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, invertStrMap,                          NULL          }, // 195 m/1-m
+    {moduleTypeModAmt,     paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Depth",        128,   0, NULL,                                  NULL          }, // 195 Depth
+    {moduleTypeModAmt,     paramTypeToggle,      {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, offOnStrMap,                           offOnColourMap}, // 195 Enable
+    {moduleTypeModAmt,     paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, expStrMap,                             NULL          }, // 195 Exp/Lin
+    {moduleTypeModAmt,     paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, invertStrMap,                          NULL          }, // 195 m/1-m
     // 196 OscPerc
-    {moduleTypeOscPerc,    paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 196 Coarse
-    {moduleTypeOscPerc,    paramType1CommonDial,     paramType2Dial,   {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 196 Fine
-    {moduleTypeOscPerc,    paramType1StandardToggle, paramType2Menu,   {{ 50, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 196 Tune Mode
-    {moduleTypeOscPerc,    paramType1StandardToggle, paramType2Toggle, {{ 40, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 196  Kbt
-    {moduleTypeOscPerc,    paramType1CommonDial,     paramType2Dial,   {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 196 Pitch M
-    {moduleTypeOscPerc,    paramType1ADRTime,        paramType2Dial,   {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,  64, NULL,                                  NULL          }, // 196 Decay
-    {moduleTypeOscPerc,    paramType1CommonDial,     paramType2Dial,   {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "Click",        128,  64, NULL,                                  NULL          }, // 196 Click
-    {moduleTypeOscPerc,    paramType1StandardToggle, paramType2Toggle, {{ 90, -10}, { 7,  7}}, anchorBottomLeft,  "Punch",          2,   1, offOnStrMap,                           offOnColourMap}, // 196 Punch
-    {moduleTypeOscPerc,    paramType1Bypass,         paramType2Toggle, {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 196 Bypass
+    {moduleTypeOscPerc,    paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 196 Coarse
+    {moduleTypeOscPerc,    paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 196 Fine
+    {moduleTypeOscPerc,    paramTypeMenu,        {{ 50, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 196 Tune Mode
+    {moduleTypeOscPerc,    paramTypeToggle,      {{ 40, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 196  Kbt
+    {moduleTypeOscPerc,    paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 196 Pitch M
+    {moduleTypeOscPerc,    paramTypeADRTime,     {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,  64, NULL,                                  NULL          }, // 196 Decay
+    {moduleTypeOscPerc,    paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "Click",        128,  64, NULL,                                  NULL          }, // 196 Click
+    {moduleTypeOscPerc,    paramTypeToggle,      {{ 90, -10}, { 7,  7}}, anchorBottomLeft,  "Punch",          2,   1, offOnStrMap,                           offOnColourMap}, // 196 Punch
+    {moduleTypeOscPerc,    paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 196 Bypass
     // 197 Status -- No params
     // 198 PitchTrack
-    {moduleTypePitchTrack, paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Threshold",    128,  64, NULL,                                  NULL          }, // 198 Threshold
+    {moduleTypePitchTrack, paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Threshold",    128,  64, NULL,                                  NULL          }, // 198 Threshold
     // 199 MonoKey
-    {moduleTypeMonoKey,    paramType1StandardToggle, paramType2Menu,   {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, monoKeyStrMap,                         NULL          }, // 199 Priority
+    {moduleTypeMonoKey,    paramTypeMenu,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, monoKeyStrMap,                         NULL          }, // 199 Priority
     // 200 RandomA
-    {moduleTypeRandomA,    paramType1Freq,           paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 200 Rate
-    {moduleTypeRandomA,    paramType1StandardToggle, paramType2Menu,   {{ 30,   0}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          }, // 200 Poly/Mono mode
-    {moduleTypeRandomA,    paramType1StandardToggle, paramType2Menu,   {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, bipPosNegStrMap,                       NULL          }, // 200 OutType
-    {moduleTypeRandomA,    paramType1StandardToggle, paramType2Menu,   {{ 30,  -9}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,                           NULL          }, // 200 Range
-    {moduleTypeRandomA,    paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 26 Bypass
-    {moduleTypeRandomA,    paramType1StandardToggle, paramType2Menu,   {{ 65,  -2}, { 7,  7}}, anchorBottomLeft,  "Edge",           5,   0, edgeStepStrMap,                        NULL          }, // 200 edge
-    {moduleTypeRandomA,    paramType1StandardToggle, paramType2Menu,   {{ 65, -10}, { 7,  7}}, anchorBottomLeft,  "Step",           4,   0, edgeStepStrMap,                        NULL          }, // 200 step
+    {moduleTypeRandomA,    paramTypeFreq,        {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 200 Rate
+    {moduleTypeRandomA,    paramTypeMenu,        {{ 30,   0}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          }, // 200 Poly/Mono mode
+    {moduleTypeRandomA,    paramTypeMenu,        {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, bipPosNegStrMap,                       NULL          }, // 200 OutType
+    {moduleTypeRandomA,    paramTypeMenu,        {{ 30,  -9}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,                           NULL          }, // 200 Range
+    {moduleTypeRandomA,    paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 26 Bypass
+    {moduleTypeRandomA,    paramTypeMenu,        {{ 65,  -2}, { 7,  7}}, anchorBottomLeft,  "Edge",           5,   0, edgeStepStrMap,                        NULL          }, // 200 edge
+    {moduleTypeRandomA,    paramTypeMenu,        {{ 65, -10}, { 7,  7}}, anchorBottomLeft,  "Step",           4,   0, edgeStepStrMap,                        NULL          }, // 200 step
     // 201 Red2Blue
     // 202 RandomB
-    {moduleTypeRandomB,    paramType1Freq,           paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 202 Rate
-    {moduleTypeRandomB,    paramType1StandardToggle, paramType2Menu,   {{ 30,   0}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          }, // 202 Poly/Mono mode
-    {moduleTypeRandomB,    paramType1StandardToggle, paramType2Toggle, {{ 40, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 202  Kbt
-    {moduleTypeRandomB,    paramType1CommonDial,     paramType2Dial,   {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Rate",         128,  64, NULL,                                  NULL          }, // 202 Rate M
-    {moduleTypeRandomB,    paramType1CommonDial,     paramType2Dial,   {{ 65, -10}, { 7, 14}}, anchorBottomLeft,  "Step",         128,  64, NULL,                                  NULL          }, // 202 Rate M
-    {moduleTypeRandomB,    paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 202 Bypass
-    {moduleTypeRandomB,    paramType1StandardToggle, paramType2Menu,   {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, bipPosNegStrMap,                       NULL          }, // 202 OutType
-    {moduleTypeRandomB,    paramType1StandardToggle, paramType2Menu,   {{ 20, -14}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,                           NULL          }, // 202 Range
-    {moduleTypeRandomB,    paramType1StandardToggle, paramType2Menu,   {{ 65,  -2}, { 7,  7}}, anchorBottomLeft,  "Edge",           5,   0, edgeStepStrMap,                        NULL          }, // 202 edge
+    {moduleTypeRandomB,    paramTypeFreq,        {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          }, // 202 Rate
+    {moduleTypeRandomB,    paramTypeMenu,        {{ 30,   0}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          }, // 202 Poly/Mono mode
+    {moduleTypeRandomB,    paramTypeToggle,      {{ 40, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 202  Kbt
+    {moduleTypeRandomB,    paramTypeCommonDial,  {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Rate",         128,  64, NULL,                                  NULL          }, // 202 Rate M
+    {moduleTypeRandomB,    paramTypeCommonDial,  {{ 65, -10}, { 7, 14}}, anchorBottomLeft,  "Step",         128,  64, NULL,                                  NULL          }, // 202 Rate M
+    {moduleTypeRandomB,    paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 202 Bypass
+    {moduleTypeRandomB,    paramTypeMenu,        {{ 80,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, bipPosNegStrMap,                       NULL          }, // 202 OutType
+    {moduleTypeRandomB,    paramTypeMenu,        {{ 20, -14}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,                           NULL          }, // 202 Range
+    {moduleTypeRandomB,    paramTypeMenu,        {{ 65,  -2}, { 7,  7}}, anchorBottomLeft,  "Edge",           5,   0, edgeStepStrMap,                        NULL          }, // 202 edge
     // 203 Blue2Red
     // 204 RndClkA
-    {moduleTypeRndClkA,    paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Step",         128, 127, NULL,                                  NULL          }, // 204 Step
-    {moduleTypeRndClkA,    paramType1StandardToggle, paramType2Menu,   {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Mode",           4,   0, NULL,                                  NULL          }, // 204 Mode
-    {moduleTypeRndClkA,    paramType1StandardToggle, paramType2Menu,   {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  "Dice",           4,   0, NULL,                                  NULL          }, // 204 Dice
-    {moduleTypeRndClkA,    paramType1StandardToggle, paramType2Menu,   {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  "Out",            4,   0, NULL,                                  NULL          }, // 204 OutType
-    {moduleTypeRndClkA,    paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 204 On/Off
+    {moduleTypeRndClkA,    paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Step",         128, 127, NULL,                                  NULL          }, // 204 Step
+    {moduleTypeRndClkA,    paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Mode",           4,   0, NULL,                                  NULL          }, // 204 Mode
+    {moduleTypeRndClkA,    paramTypeMenu,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  "Dice",           4,   0, NULL,                                  NULL          }, // 204 Dice
+    {moduleTypeRndClkA,    paramTypeMenu,        {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  "Out",            4,   0, NULL,                                  NULL          }, // 204 OutType
+    {moduleTypeRndClkA,    paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 204 On/Off
     // 205 RndTrig
-    {moduleTypeRndTrig,    paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Step",         128,  64, NULL,                                  NULL          }, // 205 Step
-    {moduleTypeRndTrig,    paramType1CommonDial,     paramType2Dial,   {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  "StepM",        128,   0, NULL,                                  NULL          }, // 205 Step M
-    {moduleTypeRndTrig,    paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 205 On/Off
-    {moduleTypeRndTrig,    paramType1StandardToggle, paramType2Menu,   {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Mode",           4,   0, NULL,                                  NULL          }, // 205 Mode
+    {moduleTypeRndTrig,    paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Step",         128,  64, NULL,                                  NULL          }, // 205 Step
+    {moduleTypeRndTrig,    paramTypeCommonDial,  {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  "StepM",        128,   0, NULL,                                  NULL          }, // 205 Step M
+    {moduleTypeRndTrig,    paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 205 On/Off
+    {moduleTypeRndTrig,    paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Mode",           4,   0, NULL,                                  NULL          }, // 205 Mode
 
     // 206 RndClkB
-    {moduleTypeRndClkB,    paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Step",         128, 127, NULL,                                  NULL          }, // 206 Step
-    {moduleTypeRndClkB,    paramType1StandardToggle, paramType2Menu,   {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  "Out",            4,   0, NULL,                                  NULL          }, // 206 OutType
-    {moduleTypeRndClkB,    paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 206 On/Off
-    {moduleTypeRndClkB,    paramType1StandardToggle, paramType2Menu,   {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Mode",           4,   0, NULL,                                  NULL          }, // 206 Mode
-    {moduleTypeRndClkB,    paramType1CommonDial,     paramType2Dial,   {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  "StepM",        128,   0, NULL,                                  NULL          }, // 206 Step M
+    {moduleTypeRndClkB,    paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Step",         128, 127, NULL,                                  NULL          }, // 206 Step
+    {moduleTypeRndClkB,    paramTypeMenu,        {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  "Out",            4,   0, NULL,                                  NULL          }, // 206 OutType
+    {moduleTypeRndClkB,    paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 206 On/Off
+    {moduleTypeRndClkB,    paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Mode",           4,   0, NULL,                                  NULL          }, // 206 Mode
+    {moduleTypeRndClkB,    paramTypeCommonDial,  {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  "StepM",        128,   0, NULL,                                  NULL          }, // 206 Step M
     // 207 Unknown
     // 208 RndPattern
-    {moduleTypeRndPattern, paramType1CommonDial,     paramType2Dial,   {{ 50, -14}, { 7, 14}}, anchorBottomLeft,  "PatA",         128,  64, NULL,                                  NULL          }, // 208 PatternA
-    {moduleTypeRndPattern, paramType1CommonDial,     paramType2Dial,   {{ 65, -14}, { 7, 14}}, anchorBottomLeft,  "PatB",         128,  64, NULL,                                  NULL          }, // 208 PatternB
-    {moduleTypeRndPattern, paramType1CommonDial,     paramType2Dial,   {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Step",         128, 127, NULL,                                  NULL          }, // 208 Step
-    {moduleTypeRndPattern, paramType1StandardToggle, paramType2Menu,   {{ 35,  -3}, { 7,  7}}, anchorBottomLeft,  "Loop",          16,  15, NULL,                                  NULL          }, // 208 LoopCount
-    {moduleTypeRndPattern, paramType1CommonDial,     paramType2Dial,   {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  "StepM",        128,   0, NULL,                                  NULL          }, // 208 Step M
-    {moduleTypeRndPattern, paramType1StandardToggle, paramType2Menu,   {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Out",            4,   0, NULL,                                  NULL          }, // 208 OutType
-    {moduleTypeRndPattern, paramType1Bypass,         paramType2Toggle, {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 208 On/Off
+    {moduleTypeRndPattern, paramTypeCommonDial,  {{ 50, -14}, { 7, 14}}, anchorBottomLeft,  "PatA",         128,  64, NULL,                                  NULL          }, // 208 PatternA
+    {moduleTypeRndPattern, paramTypeCommonDial,  {{ 65, -14}, { 7, 14}}, anchorBottomLeft,  "PatB",         128,  64, NULL,                                  NULL          }, // 208 PatternB
+    {moduleTypeRndPattern, paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Step",         128, 127, NULL,                                  NULL          }, // 208 Step
+    {moduleTypeRndPattern, paramTypeMenu,        {{ 35,  -3}, { 7,  7}}, anchorBottomLeft,  "Loop",          16,  15, NULL,                                  NULL          }, // 208 LoopCount
+    {moduleTypeRndPattern, paramTypeCommonDial,  {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  "StepM",        128,   0, NULL,                                  NULL          }, // 208 Step M
+    {moduleTypeRndPattern, paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Out",            4,   0, NULL,                                  NULL          }, // 208 OutType
+    {moduleTypeRndPattern, paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 208 On/Off
 };
 
 // Note these need to be in same order of connectors which are referenced by the hardware
@@ -2548,44 +2548,44 @@ const tConnectorLocation connectorLocationList[] = {
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
 const tModeLocation      modeLocationList[] = {
-    {moduleTypeOscShpB,    paramType1StandardToggle, paramType2Menu,   {{ 20,   5}, { 7, 7}}, anchorTopLeft,     "Wave",  8, 0, oscShpBStrMap       }, // 8 OscShpB
-    {moduleTypeOscC,       paramType1StandardToggle, paramType2Menu,   {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap }, // 9 Wave
-    {moduleTypeReverb,     paramType1StandardToggle, paramType2Menu,   {{  3,  -3}, {14, 7}}, anchorBottomLeft,  "Type",  4, 0, reverbTypeStrMap    }, // 12 Reverb
-    {moduleTypeLfoC,       paramType1StandardToggle, paramType2Menu,   {{ 64,  -3}, { 7, 7}}, anchorBottomLeft,  "Wave",  6, 0, lfoWaveStrMap       }, // 24 LfoC
-    {moduleTypeDriver,     paramType1StandardToggle, paramType2Menu,   {{ 35,  -3}, { 7, 7}}, anchorBottomLeft,  "Type",  4, 0, driverTypeStrMap    }, // 35 Type
-    {moduleTypePulse,      paramType1StandardToggle, paramType2Menu,   {{-13,  -3}, { 7, 7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap     }, // 38 Mode
-    {moduleTypeDelay,      paramType1StandardToggle, paramType2Menu,   {{-13,  -3}, { 7, 7}}, anchorBottomRight, "Mode",  3, 0, logicDelayModeStrMap}, // 42 Mode
-    {moduleTypeGate,       paramType1StandardToggle, paramType2Menu,   {{ 40,  -3}, { 7, 7}}, anchorBottomLeft,  "G1",    6, 0, gateTypeStrMap      }, // 64 Gate 1 Type
-    {moduleTypeGate,       paramType1StandardToggle, paramType2Menu,   {{ 70,  -3}, { 7, 7}}, anchorBottomLeft,  "G2",    6, 0, gateTypeStrMap      }, // 64 Gate 2 Type
-    {moduleTypeClkDiv,     paramType1StandardToggle, paramType2Menu,   {{ 80,  -3}, { 7, 7}}, anchorBottomLeft,  "Mode",  2, 0, divModeStrMap       }, // 69 DivMode
-    {moduleTypeFltLP,      paramType1StandardToggle, paramType2Menu,   {{ 67,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 6, 2, fltLPSlopeStrMap    }, // 87 FltLP
-    {moduleTypeFlipFlop,   paramType1StandardToggle, paramType2Menu,   {{ 45,  -3}, { 7, 7}}, anchorBottomLeft,  "Type",  2, 0, flipFlopStrMap      }, // 91 Selector
-    {moduleTypeOscD,       paramType1StandardToggle, paramType2Menu,   {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap }, // 96 Wave
-    {moduleTypeFltHP,      paramType1StandardToggle, paramType2Menu,   {{ 67,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 6, 2, fltLPSlopeStrMap    }, // 134 FltLP
-    {moduleTypeDlySingleA, paramType1StandardToggle, paramType2Menu,   {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap    }, // 172 Delay Range
-    {moduleTypeDlySingleB, paramType1StandardToggle, paramType2Menu,   {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap    }, // 173 Delay Range
-    {moduleTypeDelayDual,  paramType1StandardToggle, paramType2Menu,   {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap    }, // 174 Delay Range
-    {moduleTypeDelayQuad,  paramType1StandardToggle, paramType2Menu,   {{ 80,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap    }, // 175 Delay Range
-    {moduleTypeDelayA,     paramType1StandardToggle, paramType2Menu,   {{  3,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 4, 0, delayABRangeStrMap  }, // 176 Delay Range
-    {moduleTypeDelayB,     paramType1StandardToggle, paramType2Menu,   {{  3,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 4, 0, delayABRangeStrMap  }, // 177 Delay Range
-    {moduleTypeDlyStereo,  paramType1StandardToggle, paramType2Menu,   {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 3, 0, dlyStereoRangeStrMap}, // 182 Delay Range
-    {moduleTypeDlyEight,   paramType1StandardToggle, paramType2Menu,   {{ 10, -10}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap    }, // 181 Delay Range
-    {moduleTypeOscPM,      paramType1StandardToggle, paramType2Menu,   {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  2, 0, oscPmWaveStrMap     }, // 183 Wave
-    {moduleTypeRndClkB,    paramType1StandardToggle, paramType2Menu,   {{  3,   5}, { 7, 7}}, anchorTopLeft,     "Char",  2, 0, rndClkBCharStrMap   }, // 206 Character
-    {moduleTypeRndPattern, paramType1StandardToggle, paramType2Toggle, {{  3,   5}, { 7, 7}}, anchorTopLeft,     "Wave",  2, 0, NULL                }, // 208 Wave
+    {moduleTypeOscShpB,    paramTypeMenu,   {{ 20,   5}, { 7, 7}}, anchorTopLeft,     "Wave",  8, 0, oscShpBStrMap       }, // 8 OscShpB
+    {moduleTypeOscC,       paramTypeMenu,   {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap }, // 9 Wave
+    {moduleTypeReverb,     paramTypeMenu,   {{  3,  -3}, {14, 7}}, anchorBottomLeft,  "Type",  4, 0, reverbTypeStrMap    }, // 12 Reverb
+    {moduleTypeLfoC,       paramTypeMenu,   {{ 64,  -3}, { 7, 7}}, anchorBottomLeft,  "Wave",  6, 0, lfoWaveStrMap       }, // 24 LfoC
+    {moduleTypeDriver,     paramTypeMenu,   {{ 35,  -3}, { 7, 7}}, anchorBottomLeft,  "Type",  4, 0, driverTypeStrMap    }, // 35 Type
+    {moduleTypePulse,      paramTypeMenu,   {{-13,  -3}, { 7, 7}}, anchorBottomRight, "Mode",  2, 0, pulseModeStrMap     }, // 38 Mode
+    {moduleTypeDelay,      paramTypeMenu,   {{-13,  -3}, { 7, 7}}, anchorBottomRight, "Mode",  3, 0, logicDelayModeStrMap}, // 42 Mode
+    {moduleTypeGate,       paramTypeMenu,   {{ 40,  -3}, { 7, 7}}, anchorBottomLeft,  "G1",    6, 0, gateTypeStrMap      }, // 64 Gate 1 Type
+    {moduleTypeGate,       paramTypeMenu,   {{ 70,  -3}, { 7, 7}}, anchorBottomLeft,  "G2",    6, 0, gateTypeStrMap      }, // 64 Gate 2 Type
+    {moduleTypeClkDiv,     paramTypeMenu,   {{ 80,  -3}, { 7, 7}}, anchorBottomLeft,  "Mode",  2, 0, divModeStrMap       }, // 69 DivMode
+    {moduleTypeFltLP,      paramTypeMenu,   {{ 67,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 6, 2, fltLPSlopeStrMap    }, // 87 FltLP
+    {moduleTypeFlipFlop,   paramTypeMenu,   {{ 45,  -3}, { 7, 7}}, anchorBottomLeft,  "Type",  2, 0, flipFlopStrMap      }, // 91 Selector
+    {moduleTypeOscD,       paramTypeMenu,   {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap }, // 96 Wave
+    {moduleTypeFltHP,      paramTypeMenu,   {{ 67,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 6, 2, fltLPSlopeStrMap    }, // 134 FltLP
+    {moduleTypeDlySingleA, paramTypeMenu,   {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap    }, // 172 Delay Range
+    {moduleTypeDlySingleB, paramTypeMenu,   {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap    }, // 173 Delay Range
+    {moduleTypeDelayDual,  paramTypeMenu,   {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap    }, // 174 Delay Range
+    {moduleTypeDelayQuad,  paramTypeMenu,   {{ 80,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap    }, // 175 Delay Range
+    {moduleTypeDelayA,     paramTypeMenu,   {{  3,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 4, 0, delayABRangeStrMap  }, // 176 Delay Range
+    {moduleTypeDelayB,     paramTypeMenu,   {{  3,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 4, 0, delayABRangeStrMap  }, // 177 Delay Range
+    {moduleTypeDlyStereo,  paramTypeMenu,   {{ 10,  -3}, { 7, 7}}, anchorBottomLeft,  "Slope", 3, 0, dlyStereoRangeStrMap}, // 182 Delay Range
+    {moduleTypeDlyEight,   paramTypeMenu,   {{ 10, -10}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap    }, // 181 Delay Range
+    {moduleTypeOscPM,      paramTypeMenu,   {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  2, 0, oscPmWaveStrMap     }, // 183 Wave
+    {moduleTypeRndClkB,    paramTypeMenu,   {{  3,   5}, { 7, 7}}, anchorTopLeft,     "Char",  2, 0, rndClkBCharStrMap   }, // 206 Character
+    {moduleTypeRndPattern, paramTypeToggle, {{  3,   5}, { 7, 7}}, anchorTopLeft,     "Wave",  2, 0, NULL                }, // 208 Wave
 };
 
-//{moduleTypeReverb,     paramType1StandardToggle, paramType2Toggle, {{  3,  -3}, {14, 7}}, anchorBottomLeft,  "Type",      4, 0, reverbTypeStrMap,    NULL          },
-//{moduleTypeOscC,       paramType1StandardToggle, paramType2Toggle, {{-30,   5}, {7,  7}}, anchorTopRight,    NULL,        5,  0, shapeTypeStrMap,    NULL          },     // 9 Waveform
-//{moduleTypeLfoC,    paramType1StandardToggle,  paramType2Toggle, {{64, -3}, {7, 7}}, anchorBottomLeft,  NULL,  6, 0,  lfoWaveStrMap,  NULL},  // 24 Wave
-//    {moduleTypePulse,    paramType1StandardToggle, paramType2Toggle, {{ -13, -3}, {7,  7}}, anchorBottomRight,  NULL,       2,  0, pulseModeStrMap, NULL},  // 38 Range
-//    {moduleTypeDelay,    paramType1StandardToggle, paramType2Toggle, {{ -13, -3}, {7,  7}}, anchorBottomRight,  NULL,       2,  0, pulseModeStrMap, NULL},  // 42 Mode
-// {moduleTypeGate,   paramType1StandardToggle, paramType2Toggle, {{ 40, -3}, {7,  7}}, anchorBottomLeft,  NULL,        6,  0, gateTypeStrMap,   NULL          }, // 64 Gate 1 Type
-// {moduleTypeGate,   paramType1StandardToggle, paramType2Toggle, {{ 70, -3}, {7,  7}}, anchorBottomLeft,  NULL,        6,  0, gateTypeStrMap,   NULL          }, // 64 Gate 2 Type
-//    {moduleTypeClkDiv,  paramType1StandardToggle,     paramType2Toggle,   {{ 80,  -3}, {7, 7}}, anchorBottomLeft,  NULL,    2, 0, divModeStrMap,               NULL          },  // 69 DivMode
-// {moduleTypeFltLP, paramType1StandardToggle, paramType2Toggle, {{ 67, -3}, {7,  7}}, anchorBottomLeft,  "Slope",       6,  2, fltLPSlopeStrMap,   NULL          },
-// {moduleTypeFlipFlop,   paramType1StandardToggle, paramType2Toggle, {{ 45, -3}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, flipFlopStrMap,   NULL          }, // 91 Selector
-//    {moduleTypeOscD,       paramType1StandardToggle, paramType2Toggle, {{-20,   5}, {7,  7}}, anchorTopRight,    NULL,        5,  0, shapeTypeStrMap,    NULL          },     // 96 Waveform
+//{moduleTypeReverb,     paramTypeToggle, {{  3,  -3}, {14, 7}}, anchorBottomLeft,  "Type",      4, 0, reverbTypeStrMap,    NULL          },
+//{moduleTypeOscC,       paramTypeToggle, {{-30,   5}, {7,  7}}, anchorTopRight,    NULL,        5,  0, shapeTypeStrMap,    NULL          },     // 9 Waveform
+//{moduleTypeLfoC,    paramTypeToggle, {{64, -3}, {7, 7}}, anchorBottomLeft,  NULL,  6, 0,  lfoWaveStrMap,  NULL},  // 24 Wave
+//    {moduleTypePulse,    paramTypeToggle, {{ -13, -3}, {7,  7}}, anchorBottomRight,  NULL,       2,  0, pulseModeStrMap, NULL},  // 38 Range
+//    {moduleTypeDelay,    paramTypeToggle, {{ -13, -3}, {7,  7}}, anchorBottomRight,  NULL,       2,  0, pulseModeStrMap, NULL},  // 42 Mode
+// {moduleTypeGate,   paramTypeToggle, {{ 40, -3}, {7,  7}}, anchorBottomLeft,  NULL,        6,  0, gateTypeStrMap,   NULL          }, // 64 Gate 1 Type
+// {moduleTypeGate,   paramTypeToggle, {{ 70, -3}, {7,  7}}, anchorBottomLeft,  NULL,        6,  0, gateTypeStrMap,   NULL          }, // 64 Gate 2 Type
+//    {moduleTypeClkDiv,  paramTypeToggle,   {{ 80,  -3}, {7, 7}}, anchorBottomLeft,  NULL,    2, 0, divModeStrMap,               NULL          },  // 69 DivMode
+// {moduleTypeFltLP, paramTypeToggle, {{ 67, -3}, {7,  7}}, anchorBottomLeft,  "Slope",       6,  2, fltLPSlopeStrMap,   NULL          },
+// {moduleTypeFlipFlop,   paramTypeToggle, {{ 45, -3}, {7,  7}}, anchorBottomLeft,  NULL,        2,  0, flipFlopStrMap,   NULL          }, // 91 Selector
+//    {moduleTypeOscD,       paramTypeToggle, {{-20,   5}, {7,  7}}, anchorTopRight,    NULL,        5,  0, shapeTypeStrMap,    NULL          },     // 96 Waveform
 
 
 const tVolumeLocation    volumeLocationList[] = {

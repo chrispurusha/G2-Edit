@@ -279,9 +279,9 @@ static void send_master_clock_run(uint32_t running) {
 }
 
 static bool handle_module_press_for_module(tModule * module, tCoord coord, tMouseButton mouseButton, uint32_t variation) {
-    bool        retVal     = false;
-    uint32_t    paramCount = 0;
-    tParamType2 paramType2 = paramType2Dial;
+    bool       retVal     = false;
+    uint32_t   paramCount = 0;
+    tParamType paramType  = paramTypeCommonDial;
 
     if (module->key.location == locationMorph) {
         if (module->key.index == 1) {
@@ -298,12 +298,13 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
 
         if (within_rectangle(coord, gParamRectangle[module->key.slot][module->key.location][module->key.index][i]) && mouseButton == mouseButtonLeftDown) {
             if (module->key.location == locationMorph) {
-                paramType2 = (i < NUM_MORPHS) ? paramType2Dial : paramType2Toggle;
+                paramType = (i < NUM_MORPHS) ? paramTypeCommonDial : paramTypeToggle;
             } else {
-                paramType2 = (paramLocationList[param->paramRef].type2);
+                paramType = paramLocationList[param->paramRef].type;
             }
 
-            if (paramType2 == paramType2Dial) {
+            if (  paramType != paramTypeToggle && paramType != paramTypeMenu
+               && paramType != paramTypeBypass && paramType != paramTypeEnable) {
                 gParamDragging.moduleKey = module->key;
                 gParamDragging.type3     = paramType3Param;
                 gParamDragging.param     = i;
@@ -313,7 +314,7 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
                     gMorphGroupFocus = i;
                 }
                 bool isSlider = (module->key.location != locationMorph)
-                                && (paramLocationList[param->paramRef].type1 == paramType1Slider);
+                                && (paramType == paramTypeSlider);
 
                 if (gDialMode != eDialModeRotary || isSlider) {
                     glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
@@ -332,7 +333,8 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
             tMode * mode = &module->mode[i];
 
             if (within_rectangle(coord, module->mode[i].rectangle) && mouseButton == mouseButtonLeftDown) {
-                if ((modeLocationList[mode->modeRef].type2) == paramType2Dial) {
+                if (  modeLocationList[mode->modeRef].type != paramTypeToggle
+                   && modeLocationList[mode->modeRef].type != paramTypeMenu) {
                     memset(&gParamDragging, 0, sizeof(gParamDragging));
                     gParamDragging.moduleKey = module->key;
                     gParamDragging.type3     = paramType3Mode;
@@ -402,10 +404,10 @@ bool handle_module_press(tCoord coord, tMouseButton mouseButton) {
 }
 
 static bool handle_module_release_for_module(tModule * module, tCoord coord, tMouseButton mouseButton, uint32_t slot, uint32_t variation) {
-    bool        retVal     = false;
-    uint32_t    paramCount = 0;
-    tParamType2 paramType2 = paramType2Dial;
-    uint32_t    range      = 0;
+    bool       retVal     = false;
+    uint32_t   paramCount = 0;
+    tParamType paramType  = paramTypeCommonDial;
+    uint32_t   range      = 0;
 
     if (module->key.location == locationMorph) {
         paramCount = (module->key.index == 1) ? (NUM_MORPHS * 2) : 1;
@@ -418,15 +420,15 @@ static bool handle_module_release_for_module(tModule * module, tCoord coord, tMo
 
         if (within_rectangle(coord, gParamRectangle[module->key.slot][module->key.location][module->key.index][i]) && mouseButton == mouseButtonLeftUp) {
             if (module->key.location == locationMorph) {
-                paramType2 = (i < NUM_MORPHS) ? paramType2Dial : paramType2Toggle;
+                paramType = (i < NUM_MORPHS) ? paramTypeCommonDial : paramTypeToggle;
             } else {
-                paramType2 = (paramLocationList[param->paramRef].type2);
+                paramType = paramLocationList[param->paramRef].type;
             }
 
-            if (paramType2 == paramType2Menu) {
+            if (paramType == paramTypeMenu) {
                 open_toggle_menu(coord, module->key, (uint32_t)i, param->paramRef);
                 retVal = true;
-            } else if (paramType2 == paramType2Toggle) {
+            } else if (paramType == paramTypeToggle || paramType == paramTypeBypass || paramType == paramTypeEnable) {
                 range        = (module->key.location == locationMorph) ? 2 : paramLocationList[param->paramRef].range;
                 param->value = (param->value + 1) % range;
                 send_param_value(slot, module->key, (uint32_t)i, variation, param->value);
@@ -440,10 +442,10 @@ static bool handle_module_release_for_module(tModule * module, tCoord coord, tMo
             tMode * mode = &module->mode[i];
 
             if (within_rectangle(coord, module->mode[i].rectangle) && mouseButton == mouseButtonLeftUp) {
-                if (modeLocationList[mode->modeRef].type2 == paramType2Menu) {
+                if (modeLocationList[mode->modeRef].type == paramTypeMenu) {
                     open_mode_toggle_menu(coord, module->key, (uint32_t)i, mode->modeRef);
                     retVal = true;
-                } else if (modeLocationList[mode->modeRef].type2 == paramType2Toggle) {
+                } else if (modeLocationList[mode->modeRef].type == paramTypeToggle) {
                     mode->value = (mode->value + 1) % modeLocationList[mode->modeRef].range;
                     send_mode_value(slot, module->key, (uint32_t)i, mode->value);
                     retVal      = true;
@@ -1263,8 +1265,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     uint32_t        value          = 0;
     tMessageContent messageContent = {0};
     bool            noAction       = false; // unused — kept to avoid restructuring the else-chain below
-    tParamType2     paramType2     = paramType2Dial;
-    tParamType1     paramType1     = paramType1CommonDial;
+    tParamType      paramType      = paramTypeCommonDial;
     uint32_t        slot           = gSlot;
     uint32_t        variation      = gPatchDescr[slot].activeVariation;
     double          x              = 0;
@@ -1378,21 +1379,22 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                 case paramType3Param:
 
                     if (module->key.location == locationMorph) {
-                        paramType2 = paramType2Dial;
+                        paramType = paramTypeCommonDial;
                     } else {
-                        paramType2 = paramLocationList[module->param[variation][gParamDragging.param].paramRef].type2;
+                        paramType = paramLocationList[module->param[variation][gParamDragging.param].paramRef].type;
                     }
 
-                    if (paramType2 == paramType2Dial) {
+                    if (  paramType != paramTypeToggle && paramType != paramTypeMenu
+                       && paramType != paramTypeBypass && paramType != paramTypeEnable) {
                         if (module->key.location == locationMorph) {
-                            range      = 128;
-                            paramType1 = paramType1CommonDial;
+                            range     = 128;
+                            paramType = paramTypeCommonDial;
                         } else {
-                            range      = paramLocationList[module->param[variation][gParamDragging.param].paramRef].range;
-                            paramType1 = paramLocationList[module->param[variation][gParamDragging.param].paramRef].type1;
+                            range     = paramLocationList[module->param[variation][gParamDragging.param].paramRef].range;
+                            paramType = paramLocationList[module->param[variation][gParamDragging.param].paramRef].type;
                         }
 
-                        if (paramType1 == paramType1Slider) {
+                        if (paramType == paramTypeSlider) {
                             int newVal = (int)module->param[variation][gParamDragging.param].value + (int)((gDragPrevY - yCoord) * (double)range / 200.0);
                             gDragPrevY = yCoord;
 
@@ -1462,7 +1464,8 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                     break;
                 case paramType3Mode:
 
-                    if (modeLocationList[module->mode[gParamDragging.mode].modeRef].type2 == paramType2Dial) {
+                    if (  modeLocationList[module->mode[gParamDragging.mode].modeRef].type != paramTypeToggle
+                       && modeLocationList[module->mode[gParamDragging.mode].modeRef].type != paramTypeMenu) {
                         uint32_t modeRange = modeLocationList[module->mode[gParamDragging.mode].modeRef].range;
 
                         if (gDialMode == eDialModeVertical) {

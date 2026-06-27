@@ -895,7 +895,7 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
         tModule * mod       = get_module(moduleKey);
 
         if ((mod != NULL) && (paramIndex < MAX_NUM_PARAMETERS)) {
-            if (paramLocationList[mod->param[variation][paramIndex].paramRef].type1 == paramType1Enable) {
+            if (paramLocationList[mod->param[variation][paramIndex].paramRef].type == paramTypeEnable) {
                 menuItems[count++] = (tMenuItem){
                     "Rename", RGB_GREY_3, action_rename_param_label, 0, NULL
                 };
