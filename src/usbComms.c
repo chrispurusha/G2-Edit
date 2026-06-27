@@ -1905,6 +1905,7 @@ static int send_add_module(uint32_t slot, tModuleData * moduleData) {
     int     pos                     = COMMAND_OFFSET;
     int     avail                   = 0;
     int     written                 = 0;
+    int     i                       = 0;
 
     LOG_DEBUG("Writing module\n");
     usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_ADD_MODULE);
@@ -1917,7 +1918,7 @@ static int send_add_module(uint32_t slot, tModuleData * moduleData) {
     buff[pos++] = (uint8_t)moduleData->upRate;
     buff[pos++] = (uint8_t)moduleData->isLed;
 
-    for (int i = 0; i < (int)moduleData->modeCount; i++) {
+    for (i = 0; i < (int)moduleData->modeCount; i++) {
         buff[pos++] = (uint8_t)moduleData->mode[i];
     }
 
@@ -2280,7 +2281,7 @@ static int send_synth_settings(void) {
 
     usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_SET_SYNTH_SETTINGS);  // S_SYNTH_SETTINGS = 0x03
 
-    for (uint32_t i = 0; i < payloadBytes && pos < SEND_MESSAGE_SIZE; i++) {
+    for (i = 0; i < payloadBytes && pos < SEND_MESSAGE_SIZE; i++) {
         buff[pos++] = payload[i];
     }
 
@@ -2356,7 +2357,6 @@ static int send_perf_header(void) {
 static int send_perf_name(void) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     int      pos                     = COMMAND_OFFSET;
-    uint32_t j                       = 0;
     uint32_t bitPos                  = 0;
 
     usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_RESPONSE_PERFORMANCE_SETTINGS);
@@ -2545,19 +2545,19 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdSetModuleLabel:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
+            send_stop();
             retVal = send_set_module_label(messageContent->slot, messageContent->moduleLabelData.moduleKey, messageContent->moduleLabelData.name);
             send_start();
             break;
 
         case eMsgCmdSetPatchName:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
+            send_stop();
             retVal = send_set_patch_name(messageContent->slot, messageContent->patchName.name);
             send_start();
             break;
 
         case eMsgCmdSetModuleColour:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
+            send_stop();
             retVal = send_set_module_colour(messageContent->slot, messageContent->moduleColourData.moduleKey.location, messageContent->moduleColourData.moduleKey.index, messageContent->moduleColourData.colour);
             send_start();
             break;
@@ -2576,7 +2576,7 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdWritePatchDescr:
         {
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
+            send_stop();
             retVal = send_set_patch_descr(messageContent->slot);
             send_start();
             break;
