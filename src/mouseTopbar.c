@@ -57,9 +57,7 @@ static void send_master_clock_run(uint32_t running) {
 }
 
 static void handle_button(tTopbarControlId controlId) {
-    uint32_t slot      = gSlot;
-    uint32_t location  = gLocation;
-    uint32_t variation = gPatchDescr[slot].activeVariation;
+    uint32_t slot = gSlot;
 
     switch (controlId) {
         case topbarVaId:
@@ -135,8 +133,6 @@ static void handle_button(tTopbarControlId controlId) {
         default:
             break;
     }
-    (void)location;
-    (void)variation;
 }
 
 bool handle_topbar_left_down(tCoord coord, uint32_t slot) {
@@ -198,17 +194,13 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
     bool            found          = false;
     int             i              = 0;
     int             colour         = 0;
-    bool            current        = false;
     tMessageContent messageContent = {0};
-    tMessageContent msg            = {0};
 
-    if (found == false) {
-        for (i = 0; i < TOPBAR_STANDARD_BUTTON_COUNT; i++) {
-            if (within_rectangle(coord, gTopbarControls[i].rectangle)) {
-                handle_button((tTopbarControlId)i);
-                found = true;
-                break;
-            }
+    for (i = 0; i < TOPBAR_STANDARD_BUTTON_COUNT; i++) {
+        if (within_rectangle(coord, gTopbarControls[i].rectangle)) {
+            handle_button((tTopbarControlId)i);
+            found = true;
+            break;
         }
     }
 
@@ -220,7 +212,6 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
                 }
 
                 gReDraw             = true;
-                memset(&messageContent, 0, sizeof(messageContent));
                 messageContent.cmd  = eMsgCmdWritePatchDescr;
                 messageContent.slot = slot;
                 msg_send(&gCommandQueue, &messageContent);
@@ -232,8 +223,7 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
 
     if (found == false) {
         if (within_rectangle(coord, gTopbarControls[topbarHideAllCablesId].rectangle)) {
-            current        = gCablesHideAll;
-            gCablesHideAll = !current;
+            gCablesHideAll = !gCablesHideAll;
             gReDraw        = true;
             found          = true;
         }
@@ -241,8 +231,7 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
 
     if (found == false) {
         if (within_rectangle(coord, gTopbarControls[topbarTransparentCablesId].rectangle)) {
-            current            = gCablesTransparent;
-            gCablesTransparent = !current;
+            gCablesTransparent = !gCablesTransparent;
             gReDraw            = true;
             found              = true;
         }
@@ -263,16 +252,16 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
 
     if (found == false) {
         if (within_rectangle(coord, gTopbarControls[topbarPerfModeId].rectangle)) {
-            memset(&msg, 0, sizeof(msg));
+            memset(&messageContent, 0, sizeof(messageContent));
 
             if (gGlobalSettings.perfMode == 0) {
-                msg.cmd                  = eMsgCmdWriteModePerf;
+                messageContent.cmd       = eMsgCmdWriteModePerf;
                 gGlobalSettings.perfMode = 1;
             } else {
-                msg.cmd                  = eMsgCmdWriteModePatch;
+                messageContent.cmd       = eMsgCmdWriteModePatch;
                 gGlobalSettings.perfMode = 0;
             }
-            msg_send(&gCommandQueue, &msg);
+            msg_send(&gCommandQueue, &messageContent);
             found = true;
         }
     }

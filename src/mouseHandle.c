@@ -201,6 +201,10 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
     bool       retVal     = false;
     uint32_t   paramCount = 0;
     tParamType paramType  = paramTypeCommonDial;
+    int        i          = 0;
+    bool       isSlider   = false;
+    tParam *   param      = NULL;
+    tMode *    mode       = NULL;
 
     if (module->key.location == locationMorph) {
         if (module->key.index == 1) {
@@ -212,8 +216,8 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
         paramCount = module_param_count(module->type);
     }
 
-    for (int i = 0; (i < (int)paramCount) && (retVal == false); i++) {
-        tParam * param = &module->param[variation][i];
+    for (i = 0; (i < (int)paramCount) && (retVal == false); i++) {
+        param = &module->param[variation][i];
 
         if (within_rectangle(coord, gParamRectangle[module->key.slot][module->key.location][module->key.index][i]) && mouseButton == mouseButtonLeftDown) {
             if (module->key.location == locationMorph) {
@@ -232,8 +236,8 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
                 if (module->key.location == locationMorph) {
                     gMorphGroupFocus = i;
                 }
-                bool isSlider = (module->key.location != locationMorph)
-                                && (paramType == paramTypeSlider);
+                isSlider                 = (module->key.location != locationMorph)
+                                           && (paramType == paramTypeSlider);
 
                 if (gDialMode != eDialModeRotary || isSlider) {
                     start_cursor_drag();
@@ -244,8 +248,8 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
     }
 
     if (retVal == false) {
-        for (int i = 0; (i < (int)module->modeCount) && (retVal == false); i++) {
-            tMode * mode = &module->mode[i];
+        for (i = 0; (i < (int)module->modeCount) && (retVal == false); i++) {
+            mode = &module->mode[i];
 
             if (within_rectangle(coord, module->mode[i].rectangle) && mouseButton == mouseButtonLeftDown) {
                 if (  modeLocationList[mode->modeRef].type != paramTypeToggle
@@ -266,7 +270,7 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
     }
 
     if (retVal == false) {
-        for (int i = 0; (i < (int)module_connector_count(module->type)) && (retVal == false); i++) {
+        for (i = 0; (i < (int)module_connector_count(module->type)) && (retVal == false); i++) {
             if (within_rectangle(coord, module->connector[i].rectangle)) {
                 gCableDrag.fromModuleKey = module->key;
 
@@ -319,6 +323,9 @@ static bool handle_module_release_for_module(tModule * module, tCoord coord, tMo
     uint32_t   paramCount = 0;
     tParamType paramType  = paramTypeCommonDial;
     uint32_t   range      = 0;
+    int        i          = 0;
+    tParam *   param      = NULL;
+    tMode *    mode       = NULL;
 
     if (module->key.location == locationMorph) {
         paramCount = (module->key.index == 1) ? (NUM_MORPHS * 2) : 1;
@@ -326,8 +333,8 @@ static bool handle_module_release_for_module(tModule * module, tCoord coord, tMo
         paramCount = module_param_count(module->type);
     }
 
-    for (int i = 0; (i < (int)paramCount) && (retVal == false); i++) {
-        tParam * param = &module->param[variation][i];
+    for (i = 0; (i < (int)paramCount) && (retVal == false); i++) {
+        param = &module->param[variation][i];
 
         if (within_rectangle(coord, gParamRectangle[module->key.slot][module->key.location][module->key.index][i]) && mouseButton == mouseButtonLeftUp) {
             if (module->key.location == locationMorph) {
@@ -349,8 +356,8 @@ static bool handle_module_release_for_module(tModule * module, tCoord coord, tMo
     }
 
     if (retVal == false) {
-        for (int i = 0; (i < (int)module->modeCount) && (retVal == false); i++) {
-            tMode * mode = &module->mode[i];
+        for (i = 0; (i < (int)module->modeCount) && (retVal == false); i++) {
+            mode = &module->mode[i];
 
             if (within_rectangle(coord, module->mode[i].rectangle) && mouseButton == mouseButtonLeftUp) {
                 if (modeLocationList[mode->modeRef].type == paramTypeMenu) {
@@ -396,14 +403,12 @@ bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
     return false;
 }
 
-bool handle_module_area_click(tCoord coord, int button) {
-    bool found = false;
-
+bool handle_module_area_click(tCoord coord) {
     if (within_rectangle(coord, module_area())) {
         open_module_area_context_menu(coord);
-        found = true;
+        return true;
     }
-    return found;
+    return false;
 }
 
 void set_x_scroll_bar(double x) {
@@ -615,20 +620,16 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     switch (mouseButton) {
         case mouseButtonLeftDown:
         {
-            if (found == false) {
+            if (!found) {
                 found = handle_topbar_left_down(coord, slot);
             }
 
-            if (found == false) {
-                if (handle_scrollbar_click(coord)) {
-                    found = true;
-                }
+            if (!found) {
+                found = handle_scrollbar_click(coord);
             }
 
-            if (found == false) {
-                if (handle_module_press(coord, mouseButton) == true) {
-                    found = true;
-                }
+            if (!found) {
+                found = handle_module_press(coord, mouseButton);
             }
         }
         break;
@@ -649,7 +650,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             }
 
-            if (found == false) {
+            if (!found) {
                 found = handle_topbar_left_up(coord, slot);
             }
 
@@ -668,10 +669,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             }
 
-            if (found == false) {
-                if (handle_module_release(coord, mouseButton) == true) {
-                    found = true;
-                }
+            if (!found) {
+                found = handle_module_release(coord, mouseButton);
             }
             stop_dragging();
         }
@@ -704,7 +703,6 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
                 if (found == false) {
                     uint32_t paramCount = module_param_count(module->type);
-                    uint32_t variation  = gPatchDescr[slot].activeVariation;
 
                     for (uint32_t p = 0; p < paramCount && !found; p++) {
                         if (within_rectangle(coord, gParamRectangle[module->key.slot][module->key.location][module->key.index][p])) {
@@ -731,10 +729,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             }
 
-            if (found == false) {
-                if (handle_module_area_click(coord, button)) {
-                    found = true;
-                }
+            if (!found) {
+                found = handle_module_area_click(coord);
             }
 
             if (handle_topbar_right_up(coord)) {
@@ -750,13 +746,48 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     gReDraw = true;
 }
 
+static uint32_t calc_tempo_drag_value(double xCoord, double yCoord, double x, double y, tRectangle rotaryRect) {
+    int      newVal = 0;
+    double   angle  = 0.0;
+    uint32_t value  = 0;
+
+    if (gDialMode == eDialModeVertical) {
+        newVal     = (int)gGlobalSettings.masterClock + (int)((gDragPrevY - yCoord) * 241.0 / 200.0);
+        gDragPrevY = yCoord;
+
+        if (newVal < 0) {
+            newVal = 0;
+        }
+
+        if (newVal > 240) {
+            newVal = 240;
+        }
+        value      = (uint32_t)newVal;
+    } else if (gDialMode == eDialModeHorizontal) {
+        newVal     = (int)gGlobalSettings.masterClock + (int)((xCoord - gDragPrevX) * 241.0 / 200.0);
+        gDragPrevX = xCoord;
+
+        if (newVal < 0) {
+            newVal = 0;
+        }
+
+        if (newVal > 240) {
+            newVal = 240;
+        }
+        value      = (uint32_t)newVal;
+    } else {
+        angle = calculate_mouse_angle((tCoord){x, y}, rotaryRect);
+        value = angle_to_value(angle, 241);
+    }
+    return value;
+}
+
 void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     tCoord          coord          = {0};
     double          angle          = 0.0;
     uint32_t        range          = 0;
     uint32_t        value          = 0;
     tMessageContent messageContent = {0};
-    bool            noAction       = false; // unused — kept to avoid restructuring the else-chain below
     tParamType      paramType      = paramTypeCommonDial;
     uint32_t        slot           = gSlot;
     uint32_t        variation      = gPatchDescr[slot].activeVariation;
@@ -796,68 +827,14 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         // messageContent.slot          = slot;
         // msg_send(&gCommandQueue, &messageContent);
     } else if (gTempoDragging == true) {
-        if (gDialMode == eDialModeVertical) {
-            int newVal = (int)gGlobalSettings.masterClock + (int)((gDragPrevY - yCoord) * 241.0 / 200.0);
-            gDragPrevY = yCoord;
-
-            if (newVal < 0) {
-                newVal = 0;
-            }
-
-            if (newVal > 240) {
-                newVal = 240;
-            }
-            value      = (uint32_t)newVal;
-        } else if (gDialMode == eDialModeHorizontal) {
-            int newVal = (int)gGlobalSettings.masterClock + (int)((xCoord - gDragPrevX) * 241.0 / 200.0);
-            gDragPrevX = xCoord;
-
-            if (newVal < 0) {
-                newVal = 0;
-            }
-
-            if (newVal > 240) {
-                newVal = 240;
-            }
-            value      = (uint32_t)newVal;
-        } else {
-            angle = calculate_mouse_angle((tCoord){x, y}, gTopbarControls[topbarTempoDialId].rectangle);
-            value = angle_to_value(angle, 241);
-        }
+        value = calc_tempo_drag_value(xCoord, yCoord, x, y, gTopbarControls[topbarTempoDialId].rectangle);
 
         if (gGlobalSettings.masterClock != value) {
             gGlobalSettings.masterClock = (uint8_t)value;
             send_master_clock_bpm(value);
         }
     } else if (gPerfTempoDragging == true) {
-        if (gDialMode == eDialModeVertical) {
-            int newVal = (int)gGlobalSettings.masterClock + (int)((gDragPrevY - yCoord) * 241.0 / 200.0);
-            gDragPrevY = yCoord;
-
-            if (newVal < 0) {
-                newVal = 0;
-            }
-
-            if (newVal > 240) {
-                newVal = 240;
-            }
-            value      = (uint32_t)newVal;
-        } else if (gDialMode == eDialModeHorizontal) {
-            int newVal = (int)gGlobalSettings.masterClock + (int)((xCoord - gDragPrevX) * 241.0 / 200.0);
-            gDragPrevX = xCoord;
-
-            if (newVal < 0) {
-                newVal = 0;
-            }
-
-            if (newVal > 240) {
-                newVal = 240;
-            }
-            value      = (uint32_t)newVal;
-        } else {
-            angle = calculate_mouse_angle((tCoord){x, y}, gPerfSettingsPanelRects.masterClock);
-            value = angle_to_value(angle, 241);
-        }
+        value = calc_tempo_drag_value(xCoord, yCoord, x, y, gPerfSettingsPanelRects.masterClock);
 
         if (gGlobalSettings.masterClock != value) {
             gGlobalSettings.masterClock = (uint8_t)value;
@@ -1047,8 +1024,6 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                 break;
             }
         }
-
-        noAction = true;
     }
     // Limit re-draw/render if nothing's happened
     // if (noAction == false) {   // Used to have this check, TODO - see if there's a way to not redraw on every move

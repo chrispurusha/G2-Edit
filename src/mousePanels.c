@@ -52,11 +52,24 @@ extern "C" {
 // clicking outside it — prevents immediately re-triggering topbar controls.
 static bool gNoteEditDismissed = false;
 
+static bool handle_panel_context_menu(tCoord coord) {
+    if (!gContextMenu.active) {
+        return false;
+    }
+
+    if (!handle_context_menu_click(coord)) {
+        gContextMenu.active = false;
+    }
+    gReDraw = true;
+    return true;
+}
+
 bool handle_patch_notes_mouse(tCoord coord, tMouseButton mouseButton) {
-    size_t   len     = 0;
-    uint32_t newSize = 0;
-    size_t   origLen = 0;
-    int      newPos  = 0;
+    size_t          len     = 0;
+    uint32_t        newSize = 0;
+    size_t          origLen = 0;
+    int             newPos  = 0;
+    tMessageContent msg     = {0};
 
     if (gNoteEditDismissed) {
         if (mouseButton == mouseButtonLeftUp) {
@@ -83,7 +96,6 @@ bool handle_patch_notes_mouse(tCoord coord, tMouseButton mouseButton) {
             gPatchNotesSize[gPatchNotesEdit.slot]      = newSize;
             gPatchNotesEdit.active                     = false;
 
-            tMessageContent msg = {0};
             msg.cmd                                    = eMsgCmdWritePatch;
             msg.slot                                   = gPatchNotesEdit.slot;
             msg_send(&gCommandQueue, &msg);
@@ -127,11 +139,7 @@ bool handle_perf_settings_mouse(tCoord coord, tMouseButton mouseButton) {
     if (mouseButton == mouseButtonLeftUp) {
         stop_dragging();
 
-        if (gContextMenu.active) {
-            if (!handle_context_menu_click(coord)) {
-                gContextMenu.active = false;
-            }
-            gReDraw = true;
+        if (handle_panel_context_menu(coord)) {
             return true;
         }
 
@@ -203,11 +211,7 @@ bool handle_patch_params_mouse(tCoord coord, tMouseButton mouseButton) {
     }
 
     if (mouseButton == mouseButtonLeftUp) {
-        if (gContextMenu.active) {
-            if (!handle_context_menu_click(coord)) {
-                gContextMenu.active = false;
-            }
-            gReDraw = true;
+        if (handle_panel_context_menu(coord)) {
             return true;
         }
 
@@ -259,20 +263,14 @@ bool handle_patch_settings_mouse(tCoord coord, tMouseButton mouseButton) {
     }
 
     if (mouseButton == mouseButtonLeftUp) {
-        if (gContextMenu.active) {
-            if (!handle_context_menu_click(coord)) {
-                gContextMenu.active = false;
-            }
-            gReDraw = true;
+        if (handle_panel_context_menu(coord)) {
             return true;
         }
+        stop_synth_name_editing();
 
         if (within_rectangle(coord, gSettingsPanelRects.close)) {
             gPatchSettingsEdit.active = false;
-            stop_synth_name_editing();
         } else {
-            stop_synth_name_editing();
-
             for (s = 0; s < 4; s++) {
                 if (within_rectangle(coord, gSettingsPanelRects.midiChan[s])) {
                     open_midi_chan_dropdown(below_rect(gSettingsPanelRects.midiChan[s]), &gSynthSettings.midiChanSlot[s]);
