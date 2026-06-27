@@ -17,8 +17,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __MOUSE_HANDLE_H__
-#define __MOUSE_HANDLE_H__
+#ifndef __MOUSE_TOPBAR_H__
+#define __MOUSE_TOPBAR_H__
 
 #include "sysIncludes.h"
 
@@ -26,22 +26,12 @@
 extern "C" {
 #endif
 
-void init_patch(uint32_t slot);
-void get_global_gui_scaled_mouse_coord(tCoord * coord);
-void start_cursor_drag(void);
-void stop_dragging(void);
-void stop_synth_name_editing(void);
-bool handle_scrollbar_click(tCoord coord);
-void set_x_scroll_bar(double x);
-void set_y_scroll_bar(double y);
-void char_event(GLFWwindow * window, unsigned int value);
-void key_callback(GLFWwindow * window, int key, int scancode, int action, int mods);
-void cursor_pos(GLFWwindow * window, double x, double y);
-void mouse_button(GLFWwindow * window, int button, int action, int mods);
-void scroll_event(GLFWwindow * window, double x, double y);
+bool handle_topbar_left_down(tCoord coord, uint32_t slot);
+bool handle_topbar_left_up(tCoord coord, uint32_t slot);
+bool handle_topbar_right_up(tCoord coord);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // __MOUSE_HANDLE_H__
+#endif // __MOUSE_TOPBAR_H__

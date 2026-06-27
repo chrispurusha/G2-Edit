@@ -46,6 +46,8 @@ extern "C" {
 #include "globalVars.h"
 #include "protocol.h"
 #include "menus.h"
+#include "mousePanels.h"
+#include "mouseTopbar.h"
 
 // Drag-start state for vertical/horizontal dial modes
 static double gDragStartX    = 0.0;   // cursor position at press — used for restore on release
@@ -133,89 +135,6 @@ void init_patch(uint32_t slot) {  // Todo - think where this should really go
     COPY_STRING(gGlobalSettings.slot[slot].patchName, "Init");
 }
 
-void handle_button(tTopbarControlId controlId) {
-    uint32_t slot      = gSlot;
-    uint32_t location  = gLocation;
-    uint32_t variation = gPatchDescr[slot].activeVariation;
-
-    switch (controlId) {
-        case topbarVaId:
-        {
-            gLocation = locationVa;
-            set_exclusive_button_highlight(topbarVaId, topbarFxId, controlId);
-            set_x_scroll_bar(0); // or different scroll positions for va and fx!?
-            set_y_scroll_bar(0);
-            break;
-        }
-        case topbarFxId:
-        {
-            gLocation = locationFx;
-            set_exclusive_button_highlight(topbarVaId, topbarFxId, controlId);
-            set_x_scroll_bar(0);
-            set_y_scroll_bar(0);
-            break;
-        }
-        case topbarVariation1Id:
-        case topbarVariation2Id:
-        case topbarVariation3Id:
-        case topbarVariation4Id:
-        case topbarVariation5Id:
-        case topbarVariation6Id:
-        case topbarVariation7Id:
-        case topbarVariation8Id:
-        case topbarVariationInitId:
-        {
-            uint32_t        variation      = (uint32_t)controlId - (uint32_t)topbarVariation1Id;
-
-            gPatchDescr[slot].activeVariation      = variation;
-
-            set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId, controlId);
-
-            tMessageContent messageContent = {0};
-            messageContent.cmd                     = eMsgCmdSelectVariation;
-            messageContent.slot                    = slot;
-            messageContent.variationData.variation = variation;
-            msg_send(&gCommandQueue, &messageContent);
-
-            break;
-        }
-        case topbarSlotAId:
-        case topbarSlotBId:
-        case topbarSlotCId:
-        case topbarSlotDId:
-        {
-            uint32_t        slot           = (uint32_t)controlId - (uint32_t)topbarSlotAId;
-
-            gSlot                        = slot;
-
-            tMessageContent messageContent = {0};
-            messageContent.cmd           = eMsgCmdSelectSlot;
-            messageContent.slot          = slot;
-            messageContent.slotData.slot = slot;
-            msg_send(&gCommandQueue, &messageContent);
-
-            set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId, controlId);
-            set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
-                                           (tTopbarControlId)((uint32_t)topbarVariation1Id + gPatchDescr[slot].activeVariation));
-            break;
-        }
-        case topbarNewPatchId:
-        {
-            init_patch(slot);
-
-            tMessageContent messageContent = {0};
-            messageContent.cmd  = eMsgCmdWritePatch;
-            messageContent.slot = slot;
-            msg_send(&gCommandQueue, &messageContent);
-            break;
-        }
-        default:
-            break;
-    }
-    (void)location;
-    (void)variation;
-}
-
 void set_up_cable_key(tCableKey * cableKey, tModule * fromModule, tModule * toModule, int toConnectorIndex) {
     // This logic is pretty horrible - sorry
     cableKey->slot                 = fromModule->key.slot;
@@ -270,12 +189,12 @@ static void send_master_clock_bpm(uint32_t bpm) {
     msg_send(&gCommandQueue, &messageContent);
 }
 
-static void send_master_clock_run(uint32_t running) {
-    tMessageContent messageContent = {0};
-
-    messageContent.cmd                        = eMsgCmdSetMasterClockRun;
-    messageContent.masterClockRunData.running = running;
-    msg_send(&gCommandQueue, &messageContent);
+void start_cursor_drag(void) {
+    glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
+    gDragPrevX     = gDragStartX;
+    gDragPrevY     = gDragStartY;
+    glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    gDragFirstMove = true;
 }
 
 static bool handle_module_press_for_module(tModule * module, tCoord coord, tMouseButton mouseButton, uint32_t variation) {
@@ -317,11 +236,7 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
                                 && (paramType == paramTypeSlider);
 
                 if (gDialMode != eDialModeRotary || isSlider) {
-                    glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
-                    gDragPrevX     = gDragStartX;
-                    gDragPrevY     = gDragStartY;
-                    glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-                    gDragFirstMove = true;
+                    start_cursor_drag();
                 }
                 retVal                   = true;
             }
@@ -342,11 +257,7 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
                     gParamDragging.active    = true;
 
                     if (gDialMode != eDialModeRotary) {
-                        glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
-                        gDragPrevX     = gDragStartX;
-                        gDragPrevY     = gDragStartY;
-                        glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-                        gDragFirstMove = true;
+                        start_cursor_drag();
                     }
                     retVal                   = true;
                 }
@@ -666,264 +577,33 @@ tMouseButton convert_to_mouse_button(int button, int action) {
 }
 
 void mouse_button(GLFWwindow * window, int button, int action, int mods) {
-    static bool  noteEditDismissed = false;
-    tCoord       coord             = {0};
-    tMouseButton mouseButton       = mouseButtonNone;
-    bool         found             = false;
-    bool         running           = false;
-    int32_t      i                 = 0;
-    uint32_t     slot              = gSlot;
-    uint32_t     location          = gLocation;
+    tCoord       coord       = {0};
+    tMouseButton mouseButton = mouseButtonNone;
+    bool         found       = false;
+    int32_t      i           = 0;
+    uint32_t     slot        = gSlot;
+    uint32_t     location    = gLocation;
 
     mouseButton = convert_to_mouse_button(button, action);
 
     get_global_gui_scaled_mouse_coord(&coord);
 
-    if (noteEditDismissed) {
-        if (mouseButton == mouseButtonLeftUp) {
-            noteEditDismissed = false;
-        }
+    if (handle_patch_notes_mouse(coord, mouseButton)) {
         gReDraw = true;
         return;
     }
 
-    if (gPatchNotesEdit.active) {
-        if (mouseButton == mouseButtonLeftDown) {
-            if (within_rectangle(coord, gPatchNotesCloseRect)) {
-                size_t          len     = strlen(gPatchNotesEdit.buffer);
-                uint32_t        newSize = (uint32_t)len;
-
-                if (newSize > PATCH_NOTES_SIZE) {
-                    newSize = PATCH_NOTES_SIZE;
-                }
-                memcpy(gPatchNotes[gPatchNotesEdit.slot], gPatchNotesEdit.buffer, newSize);
-                gPatchNotes[gPatchNotesEdit.slot][newSize] = '\0';
-                gPatchNotesSize[gPatchNotesEdit.slot]      = newSize;
-                gPatchNotesEdit.active                     = false;
-                tMessageContent msg     = {0};
-                msg.cmd                                    = eMsgCmdWritePatch;
-                msg.slot                                   = gPatchNotesEdit.slot;
-                msg_send(&gCommandQueue, &msg);
-            } else if (within_rectangle(coord, gPatchNotesDiscardRect)) {
-                size_t origLen = strlen(gPatchNotesEdit.original);
-                memset(gPatchNotesEdit.buffer, 0, sizeof(gPatchNotesEdit.buffer));
-                memcpy(gPatchNotesEdit.buffer, gPatchNotesEdit.original, origLen);
-                gPatchNotesEdit.cursorPos = (uint32_t)origLen;
-            } else {
-                int newPos = note_editor_cursor_from_click(coord.x, coord.y);
-
-                if (newPos >= 0) {
-                    gPatchNotesEdit.cursorPos = (uint32_t)newPos;
-                } else {
-                    gPatchNotesEdit.active = false;
-                    noteEditDismissed      = true;
-                }
-            }
-        }
+    if (handle_perf_settings_mouse(coord, mouseButton)) {
         gReDraw = true;
         return;
     }
 
-    if (gPerfSettingsEdit.active) {
-        if (mouseButton == mouseButtonLeftDown) {
-            if (within_rectangle(coord, gPerfSettingsPanelRects.masterClock)) {
-                gPerfTempoDragging = true;
-
-                if (gDialMode != eDialModeRotary) {
-                    glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
-                    gDragPrevX     = gDragStartX;
-                    gDragPrevY     = gDragStartY;
-                    glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-                    gDragFirstMove = true;
-                }
-            }
-        }
-
-        if (mouseButton == mouseButtonLeftUp) {
-            stop_dragging();
-
-            if (gContextMenu.active) {
-                if (!handle_context_menu_click(coord)) {
-                    gContextMenu.active = false;
-                }
-                gReDraw = true;
-                return;
-            }
-
-            if (within_rectangle(coord, gPerfSettingsPanelRects.close)) {
-                gPerfSettingsEdit.active = false;
-            } else {
-                int s = 0;
-
-                if (within_rectangle(coord, gPerfSettingsPanelRects.masterClockRunning)) {
-                    open_stop_run_dropdown(below_rect(gPerfSettingsPanelRects.masterClockRunning), &gGlobalSettings.masterClockRunning);
-                } else if (within_rectangle(coord, gPerfSettingsPanelRects.keyboardRange)) {
-                    open_perf_on_off_dropdown(below_rect(gPerfSettingsPanelRects.keyboardRange), &gPerfSettings.keyboardRange);
-                } else {
-                    for (s = 0; s < MAX_SLOTS; s++) {
-                        if (within_rectangle(coord, gPerfSettingsPanelRects.slotEnabled[s])) {
-                            open_perf_on_off_dropdown(below_rect(gPerfSettingsPanelRects.slotEnabled[s]), &gGlobalSettings.slot[s].enabled);
-                        } else if (within_rectangle(coord, gPerfSettingsPanelRects.slotKeyboard[s])) {
-                            open_perf_on_off_dropdown(below_rect(gPerfSettingsPanelRects.slotKeyboard[s]), &gPerfSettings.slot[s].keyboardEnabled);
-                        } else if (within_rectangle(coord, gPerfSettingsPanelRects.slotHold[s])) {
-                            open_perf_on_off_dropdown(below_rect(gPerfSettingsPanelRects.slotHold[s]), &gPerfSettings.slot[s].holdEnabled);
-                        } else if (within_rectangle(coord, gPerfSettingsPanelRects.rangeLower[s])) {
-                            open_midi_note_dropdown(below_rect(gPerfSettingsPanelRects.rangeLower[s]), &gPerfSettings.slot[s].rangeLower);
-                        } else if (within_rectangle(coord, gPerfSettingsPanelRects.rangeUpper[s])) {
-                            open_midi_note_dropdown(below_rect(gPerfSettingsPanelRects.rangeUpper[s]), &gPerfSettings.slot[s].rangeUpper);
-                        }
-                    }
-                }
-            }
-        }
+    if (handle_patch_params_mouse(coord, mouseButton)) {
         gReDraw = true;
         return;
     }
 
-    if (gPatchParamsEdit.active) {
-        if (mouseButton == mouseButtonLeftUp) {
-            if (gContextMenu.active) {
-                if (!handle_context_menu_click(coord)) {
-                    gContextMenu.active = false;
-                }
-                gReDraw = true;
-                return;
-            }
-
-            if (within_rectangle(coord, gPatchParamClose)) {
-                gPatchParamsEdit.active = false;
-            } else {
-                bool switched = false;
-
-                for (uint32_t s = 0; s < MAX_SLOTS; s++) {
-                    if (within_rectangle(coord, gPatchParamSlots[s])) {
-                        gPatchParamsEdit.slot = s;
-                        switched              = true;
-                        break;
-                    }
-                }
-
-                if (!switched) {
-                    static const struct {
-                        tPatchParamRectId id;
-                        void              (*open_fn)(tCoord);
-                    } kPatchParamTable[] = {
-                        {pPSustainPedal,  NULL                            },
-                        {pPOctaveShift,   open_patch_octave_shift_dropdown},
-                        {pPArpEnabled,    NULL                            },
-                        {pPArpRate,       open_arp_rate_dropdown          },
-                        {pPArpDirection,  open_arp_direction_dropdown     },
-                        {pPArpOctaves,    open_arp_octave_dropdown        },
-                        {pPVibratoAmount, open_vibrato_amount_dropdown    },
-                        {pPVibratoSource, open_vibrato_source_dropdown    },
-                        {pPVibratoRate,   NULL                            },
-                        {pPGlideTime,     open_glide_time_dropdown        },
-                        {pPGlideMode,     open_glide_mode_dropdown        },
-                        {pPBendRange,     open_bend_range_dropdown        },
-                        {pPBendEnabled,   NULL                            },
-                    };
-                    static const struct {
-                        tPatchParamRectId id;
-                        uint32_t          moduleIndex;
-                        uint32_t          paramIndex;
-                    } kPatchOnOffTable[] = {
-                        {pPSustainPedal, PATCH_SUSTAIN,     SUSTAIN_PEDAL},
-                        {pPArpEnabled,   PATCH_ARPEGGIATOR, ARP_ON_OFF   },
-                        {pPBendEnabled,  PATCH_BEND,        BEND_ON_OFF  },
-                    };
-
-                    for (int i = 0; i < (int)(sizeof(kPatchParamTable) / sizeof(*kPatchParamTable)); i++) {
-                        tPatchParamRectId rid = kPatchParamTable[i].id;
-
-                        if (within_rectangle(coord, gPatchParamRects[rid])) {
-                            if (kPatchParamTable[i].open_fn != NULL) {
-                                kPatchParamTable[i].open_fn(below_rect(gPatchParamRects[rid]));
-                            } else {
-                                for (int j = 0; j < (int)(sizeof(kPatchOnOffTable) / sizeof(*kPatchOnOffTable)); j++) {
-                                    if (kPatchOnOffTable[j].id == rid) {
-                                        open_patch_on_off_dropdown(below_rect(gPatchParamRects[rid]),
-                                                                   kPatchOnOffTable[j].moduleIndex,
-                                                                   kPatchOnOffTable[j].paramIndex);
-                                        break;
-                                    }
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        gReDraw = true;
-        return;
-    }
-
-    if (gPatchSettingsEdit.active) {
-        if (mouseButton == mouseButtonLeftUp) {
-            if (gContextMenu.active) {
-                if (!handle_context_menu_click(coord)) {
-                    gContextMenu.active = false;
-                }
-                gReDraw = true;
-                return;
-            }
-
-            if (within_rectangle(coord, gSettingsPanelRects.close)) {
-                gPatchSettingsEdit.active = false;
-                stop_synth_name_editing();
-            } else {
-                int s = 0;
-
-                stop_synth_name_editing();
-
-                for (s = 0; s < 4; s++) {
-                    if (within_rectangle(coord, gSettingsPanelRects.midiChan[s])) {
-                        open_midi_chan_dropdown(below_rect(gSettingsPanelRects.midiChan[s]), &gSynthSettings.midiChanSlot[s]);
-                    }
-                }
-
-                if (within_rectangle(coord, gSettingsPanelRects.synthName)) {
-                    gSynthNameEdit.active = true;
-                    COPY_STRING(gSynthNameEdit.buffer, gSynthSettings.name);
-                } else if (within_rectangle(coord, gSettingsPanelRects.globalChan)) {
-                    open_midi_chan_dropdown(below_rect(gSettingsPanelRects.globalChan), &gSynthSettings.globalChan);
-                } else if (within_rectangle(coord, gSettingsPanelRects.sysexId)) {
-                    open_sysex_id_dropdown(below_rect(gSettingsPanelRects.sysexId), &gSynthSettings.sysexId);
-                } else if (within_rectangle(coord, gSettingsPanelRects.localOn)) {
-                    open_on_off_dropdown(below_rect(gSettingsPanelRects.localOn), &gSynthSettings.localOn);
-                } else if (within_rectangle(coord, gSettingsPanelRects.memoryProtect)) {
-                    open_on_off_dropdown(below_rect(gSettingsPanelRects.memoryProtect), &gSynthSettings.memoryProtect);
-                } else if (within_rectangle(coord, gSettingsPanelRects.progChangeRcv)) {
-                    open_on_off_dropdown(below_rect(gSettingsPanelRects.progChangeRcv), &gSynthSettings.progChangeRcv);
-                } else if (within_rectangle(coord, gSettingsPanelRects.progChangeSnd)) {
-                    open_on_off_dropdown(below_rect(gSettingsPanelRects.progChangeSnd), &gSynthSettings.progChangeSnd);
-                } else if (within_rectangle(coord, gSettingsPanelRects.controllersRcv)) {
-                    open_on_off_dropdown(below_rect(gSettingsPanelRects.controllersRcv), &gSynthSettings.controllersRcv);
-                } else if (within_rectangle(coord, gSettingsPanelRects.controllersSnd)) {
-                    open_on_off_dropdown(below_rect(gSettingsPanelRects.controllersSnd), &gSynthSettings.controllersSnd);
-                } else if (within_rectangle(coord, gSettingsPanelRects.sendClock)) {
-                    open_on_off_dropdown(below_rect(gSettingsPanelRects.sendClock), &gSynthSettings.sendClock);
-                } else if (within_rectangle(coord, gSettingsPanelRects.receiveClock)) {
-                    open_on_off_dropdown(below_rect(gSettingsPanelRects.receiveClock), &gSynthSettings.receiveClock);
-                } else if (within_rectangle(coord, gSettingsPanelRects.tuneSemi)) {
-                    open_tune_semi_dropdown(below_rect(gSettingsPanelRects.tuneSemi), &gSynthSettings.tuneSemi);
-                } else if (within_rectangle(coord, gSettingsPanelRects.tuneCent)) {
-                    open_tune_cent_dropdown(below_rect(gSettingsPanelRects.tuneCent), &gSynthSettings.tuneCent);
-                } else if (within_rectangle(coord, gSettingsPanelRects.globalShiftActive)) {
-                    open_active_off_dropdown(below_rect(gSettingsPanelRects.globalShiftActive), &gSynthSettings.globalShiftActive);
-                } else if (within_rectangle(coord, gSettingsPanelRects.globalOctaveShift)) {
-                    open_octave_shift_dropdown(below_rect(gSettingsPanelRects.globalOctaveShift), &gSynthSettings.globalOctaveShift);
-                } else if (within_rectangle(coord, gSettingsPanelRects.pedalPolarity)) {
-                    open_pedal_polarity_dropdown(below_rect(gSettingsPanelRects.pedalPolarity), &gSynthSettings.pedalPolarity);
-                } else if (within_rectangle(coord, gSettingsPanelRects.pedalGain)) {
-                    open_pedal_gain_dropdown(below_rect(gSettingsPanelRects.pedalGain), &gSynthSettings.pedalGain);
-                } else if (within_rectangle(coord, gSettingsPanelRects.patchSortMode)) {
-                    open_patch_sort_dropdown(below_rect(gSettingsPanelRects.patchSortMode), &gSynthSettings.patchSortMode);
-                } else if (within_rectangle(coord, gSettingsPanelRects.perfSortMode)) {
-                    open_perf_sort_dropdown(below_rect(gSettingsPanelRects.perfSortMode), &gSynthSettings.perfSortMode);
-                }
-            }
-        }
+    if (handle_patch_settings_mouse(coord, mouseButton)) {
         gReDraw = true;
         return;
     }
@@ -935,63 +615,13 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     switch (mouseButton) {
         case mouseButtonLeftDown:
         {
-            // Button down should only ever deal with start of drag, or graphical indication of button down
-
-            for (i = 0; i < TOPBAR_STANDARD_BUTTON_COUNT; i++) {
-                if (within_rectangle(coord, gTopbarControls[i].rectangle)) {
-                    found                        = true;
-                    gTopbarControls[i].isPressed = true;
-                    break;
-                }
+            if (found == false) {
+                found = handle_topbar_left_down(coord, slot);
             }
 
             if (found == false) {
                 if (handle_scrollbar_click(coord)) {
                     found = true;
-                }
-            }
-
-            if (found == false) {
-                if (within_rectangle(coord, gTopbarControls[topbarPatchVolumeId].rectangle)) {
-                    tModuleKey volKey = {slot, (uint32_t)locationMorph, PATCH_VOLUME};
-                    gParamDragging.moduleKey = volKey;
-                    gParamDragging.type3     = paramType3Param;
-                    gParamDragging.param     = VOLUME_LEVEL;
-                    gParamDragging.active    = true;
-
-                    if (gDialMode != eDialModeRotary) {
-                        glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
-                        gDragPrevX     = gDragStartX;
-                        gDragPrevY     = gDragStartY;
-                        glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-                        gDragFirstMove = true;
-                    }
-                    found                    = true;
-                }
-            }
-
-            if (found == false) {
-                if (within_rectangle(coord, gTopbarControls[topbarTempoDialId].rectangle)) {
-                    gTempoDragging = true;
-
-                    if (gDialMode != eDialModeRotary) {
-                        glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
-                        gDragPrevX     = gDragStartX;
-                        gDragPrevY     = gDragStartY;
-                        glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-                        gDragFirstMove = true;
-                    }
-                    found          = true;
-                }
-            }
-
-            if (found == false) {
-                if (within_rectangle(coord, gTopbarControls[topbarClockRunStopId].rectangle)) {
-                    running                            = !gGlobalSettings.masterClockRunning;
-                    gGlobalSettings.masterClockRunning = (uint8_t)running;
-                    send_master_clock_run((uint32_t)running);
-                    gReDraw                            = true;
-                    found                              = true;
                 }
             }
 
@@ -1020,139 +650,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                for (i = 0; i < TOPBAR_STANDARD_BUTTON_COUNT; i++) {
-                    if (within_rectangle(coord, gTopbarControls[i].rectangle)) {
-                        handle_button((tTopbarControlId)i);
-                        found = true;
-                        break;
-                    }
-                }
-            }
-
-            if (found == false) {
-                for (i = 0; i < cableColourMax; i++) {
-                    if (within_rectangle(coord, gTopbarControls[(int)topbarCableColourToggle0Id + i].rectangle)) {
-                        for (int colour = 0; colour < cableColourMax; colour++) {
-                            gPatchDescr[slot].visible[i] = !gPatchDescr[slot].visible[i];
-                        }
-
-                        gReDraw             = true;
-                        tMessageContent messageContent = {0};
-                        messageContent.cmd  = eMsgCmdWritePatchDescr;
-                        messageContent.slot = slot;
-                        msg_send(&gCommandQueue, &messageContent);
-                        found               = true;
-                        break;
-                    }
-                }
-            }
-
-            if (found == false) {
-                if (within_rectangle(coord, gTopbarControls[topbarHideAllCablesId].rectangle)) {
-                    bool current = gCablesHideAll;
-                    gCablesHideAll = !current;
-                    gReDraw        = true;
-                    found          = true;
-                }
-            }
-
-            if (found == false) {
-                if (within_rectangle(coord, gTopbarControls[topbarTransparentCablesId].rectangle)) {
-                    bool current = gCablesTransparent;
-                    gCablesTransparent = !current;
-                    gReDraw            = true;
-                    found              = true;
-                }
-            }
-
-            if (found == false) {
-                if (within_rectangle(coord, gTopbarControls[topbarPatchNotesId].rectangle)) {
-                    gPatchNotesEdit.active    = true;
-                    gPatchNotesEdit.slot      = slot;
-                    gPatchNotesEdit.cursorPos = gPatchNotesSize[slot];
-                    memset(gPatchNotesEdit.buffer, 0, sizeof(gPatchNotesEdit.buffer));
-                    memcpy(gPatchNotesEdit.buffer, gPatchNotes[slot], gPatchNotesSize[slot]);
-                    memset(gPatchNotesEdit.original, 0, sizeof(gPatchNotesEdit.original));
-                    memcpy(gPatchNotesEdit.original, gPatchNotes[slot], gPatchNotesSize[slot]);
-                    found                     = true;
-                }
-            }
-
-            if (found == false) {
-                if (within_rectangle(coord, gTopbarControls[topbarPerfModeId].rectangle)) {
-                    tMessageContent msg = {0};
-
-                    if (gGlobalSettings.perfMode == 0) {
-                        msg.cmd                  = eMsgCmdWriteModePerf;
-                        gGlobalSettings.perfMode = 1;
-                    } else {
-                        msg.cmd                  = eMsgCmdWriteModePatch;
-                        gGlobalSettings.perfMode = 0;
-                    }
-                    msg_send(&gCommandQueue, &msg);
-                    found = true;
-                }
-            }
-
-            if (found == false) {
-                if (gGlobalSettings.perfMode == 1 && within_rectangle(coord, gTopbarControls[topbarPerfNameId].rectangle)) {
-                    gPerfNameEdit.active = true;
-                    COPY_STRING(gPerfNameEdit.buffer, gGlobalSettings.perfName);
-                    found                = true;
-                }
-            }
-
-            if (found == false) {
-                if (within_rectangle(coord, gTopbarControls[topbarSettingsId].rectangle)) {
-                    gPatchSettingsEdit.active = true;
-                    gPatchSettingsEdit.slot   = slot;
-                    found                     = true;
-                }
-            }
-
-            if (found == false) {
-                if (within_rectangle(coord, gTopbarControls[topbarPerfSettingsId].rectangle)) {
-                    gPerfSettingsEdit.active = true;
-                    found                    = true;
-                }
-            }
-
-            if (found == false) {
-                if (within_rectangle(coord, gTopbarControls[topbarPatchSettingsId].rectangle)) {
-                    gPatchParamsEdit.active = true;
-                    gPatchParamsEdit.slot   = slot;
-                    found                   = true;
-                }
-            }
-
-            if (found == false) {
-                if (within_rectangle(coord, gTopbarControls[topbarPatchNameId].rectangle)) {
-                    gPatchNameEdit.active = true;
-                    gPatchNameEdit.slot   = slot;
-                    COPY_STRING(gPatchNameEdit.buffer, gGlobalSettings.slot[slot].patchName);
-                    found                 = true;
-                }
-            }
-
-            if (found == false) {
-                if (within_rectangle(coord, gTopbarControls[topbarPatchTypeId].rectangle)) {
-                    open_patch_type_context_menu(gTopbarControls[topbarPatchTypeId].rectangle.coord);
-                    found = true;
-                }
-            }
-
-            if (found == false) {
-                if (within_rectangle(coord, gTopbarControls[topbarMonoPolyId].rectangle)) {
-                    open_mono_poly_context_menu(coord);
-                    found = true;
-                }
-            }
-
-            if (found == false) {
-                if (within_rectangle(coord, gTopbarControls[topbarVoiceCountId].rectangle)) {
-                    open_voice_count_context_menu(coord);
-                    found = true;
-                }
+                found = handle_topbar_left_up(coord, slot);
             }
 
             if (found == false) {
@@ -1239,15 +737,9 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             }
 
-            for (i = (int)topbarVariation1Id; i <= (int)topbarVariationInitId; i++) {
-                if (within_rectangle(coord, gTopbarControls[i].rectangle)) {
-                    uint32_t sourceVariation = (uint32_t)i - (uint32_t)topbarVariation1Id;
-                    open_variation_copy_menu(coord, sourceVariation);
-                    found = true;
-                    break;
-                }
+            if (handle_topbar_right_up(coord)) {
+                found = true;
             }
-
             stop_dragging();
         }
         break;
