@@ -408,10 +408,10 @@ void render_top_bar(void) {
             break;
     }
     set_rgb_colour(commsStateColour);
-    rectangle        = {{220, 8}, {get_text_width("Offline", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}};
+    rectangle        = {{790, 8}, {get_text_width("Offline", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}};
     commsStateRect   = draw_button(mainArea, rectangle, commsStateText, commsStateColour);
-    draw_button(mainArea, {{220, 25}, {get_text_width("Tx", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6, eCache), (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6}}, "Tx", txActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
-    draw_button(mainArea, {{233, 25}, {get_text_width("Tx", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6, eCache), (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6}}, "Rx", rxActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
+    draw_button(mainArea, {{790, 25}, {get_text_width("Tx", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6, eCache), (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6}}, "Tx", txActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
+    draw_button(mainArea, {{803, 25}, {get_text_width("Tx", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6, eCache), (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6}}, "Rx", rxActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
 
     if (txActive || rxActive) {
         wake_glfw();

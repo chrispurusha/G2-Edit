@@ -155,16 +155,6 @@ void handle_button(tTopbarControlId controlId) {
             set_y_scroll_bar(0);
             break;
         }
-        case topbarOpenReadFileId:
-        {
-            gShowOpenFileReadDialogue = true;
-            break;
-        }
-        case topbarOpenWriteFileId:
-        {
-            gShowOpenFileWriteDialogue = true;
-            break;
-        }
         case topbarVariation1Id:
         case topbarVariation2Id:
         case topbarVariation3Id:

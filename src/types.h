@@ -474,8 +474,6 @@ typedef enum {
     // Standard buttons (IDs 0..topbarVariationInitId) — rendered generically from resource table
     topbarVaId = 0,
     topbarFxId,
-    topbarOpenReadFileId,
-    topbarOpenWriteFileId,
     topbarNewPatchId,
     topbarSlotAId,
     topbarSlotBId,
