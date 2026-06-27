@@ -1,0 +1,76 @@
+/*
+ * The G2 Editor application.
+ *
+ * Copyright (C) 2026 Chris Turner <chris_purusha@icloud.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*
+ * Single source of truth for topbar controls.
+ * Included twice — once to generate tTopbarControlId (in types.h) and once
+ * to generate topbarControlList (in topbarResources.h).  The caller defines
+ * X(id, x, y, label, colour, type) before including this file and #undefs it
+ * afterwards.  Colours use the TOPBAR_COL(r,g,b) wrapper so the brace
+ * initialiser survives macro argument parsing.
+ *
+ * Order here == enum value == array index.  Standard buttons (rendered
+ * generically) must come first, up to and including topbarVariationInitId.
+ */
+
+/* X(id, x, y, label, colour, type) */
+
+/* ── Standard buttons: generic rendering, IDs 0..topbarVariationInitId ──── */
+X(topbarVaId,                420,  8, "VA",       TOPBAR_COL_GREEN_ON, topbarControlTypeButton )
+X(topbarFxId,                445,  8, "FX",       TOPBAR_COL_BG_GREY,  topbarControlTypeButton )
+X(topbarNewPatchId,           20,  8, "New Patch", TOPBAR_COL_BG_GREY, topbarControlTypeButton )
+X(topbarSlotAId,             600,  8, "A",        TOPBAR_COL_GREEN_ON, topbarControlTypeButton )
+X(topbarSlotBId,             615,  8, "B",        TOPBAR_COL_BG_GREY,  topbarControlTypeButton )
+X(topbarSlotCId,             630,  8, "C",        TOPBAR_COL_BG_GREY,  topbarControlTypeButton )
+X(topbarSlotDId,             645,  8, "D",        TOPBAR_COL_BG_GREY,  topbarControlTypeButton )
+X(topbarVariation1Id,        400, 60, "1",        TOPBAR_COL_BG_GREY,  topbarControlTypeButton )
+X(topbarVariation2Id,        412, 60, "2",        TOPBAR_COL_BG_GREY,  topbarControlTypeButton )
+X(topbarVariation3Id,        424, 60, "3",        TOPBAR_COL_BG_GREY,  topbarControlTypeButton )
+X(topbarVariation4Id,        436, 60, "4",        TOPBAR_COL_BG_GREY,  topbarControlTypeButton )
+X(topbarVariation5Id,        448, 60, "5",        TOPBAR_COL_BG_GREY,  topbarControlTypeButton )
+X(topbarVariation6Id,        460, 60, "6",        TOPBAR_COL_BG_GREY,  topbarControlTypeButton )
+X(topbarVariation7Id,        472, 60, "7",        TOPBAR_COL_BG_GREY,  topbarControlTypeButton )
+X(topbarVariation8Id,        484, 60, "8",        TOPBAR_COL_BG_GREY,  topbarControlTypeButton )
+X(topbarVariationInitId,     500, 60, "Init",     TOPBAR_COL_BG_GREY,  topbarControlTypeButton )
+
+/* ── Special controls: dynamic text or custom rendering ─────────────────── */
+X(topbarPatchNameId,          20, 60, NULL,       TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
+X(topbarPatchTypeId,         170, 60, NULL,       TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
+X(topbarMonoPolyId,          270, 60, NULL,       TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
+X(topbarVoiceCountId,        248, 60, NULL,       TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
+X(topbarPatchNotesId,        240,  8, "Notes",    TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
+X(topbarSettingsId,           95,  8, "Settings", TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
+X(topbarClockRunStopId,      475,  8, NULL,       TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
+X(topbarTempoDialId,         535, 10, NULL,       TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
+X(topbarPatchVolumeId,       320, 56, NULL,       TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
+X(topbarPerfModeId,            0,  0, NULL,       TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
+X(topbarPerfNameId,          120, 42, NULL,       TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
+X(topbarPerfSettingsId,      155,  8, "Perf",     TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
+X(topbarPatchSettingsId,     300,  8, "Patch",    TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
+X(topbarHideAllCablesId,     700, 40, "Hide",     TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
+X(topbarTransparentCablesId, 740, 40, "Dim",      TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
+
+/* ── Cable colour toggles: x set at render time ─────────────────────────── */
+X(topbarCableColourToggle0Id,  0, 60, NULL,       TOPBAR_COL_BLACK,    topbarControlTypeSpecial)
+X(topbarCableColourToggle1Id,  0, 60, NULL,       TOPBAR_COL_BLACK,    topbarControlTypeSpecial)
+X(topbarCableColourToggle2Id,  0, 60, NULL,       TOPBAR_COL_BLACK,    topbarControlTypeSpecial)
+X(topbarCableColourToggle3Id,  0, 60, NULL,       TOPBAR_COL_BLACK,    topbarControlTypeSpecial)
+X(topbarCableColourToggle4Id,  0, 60, NULL,       TOPBAR_COL_BLACK,    topbarControlTypeSpecial)
+X(topbarCableColourToggle5Id,  0, 60, NULL,       TOPBAR_COL_BLACK,    topbarControlTypeSpecial)
+X(topbarCableColourToggle6Id,  0, 60, NULL,       TOPBAR_COL_BLACK,    topbarControlTypeSpecial)

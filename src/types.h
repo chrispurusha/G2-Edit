@@ -471,46 +471,26 @@ typedef enum {
 } tTopbarControlType;
 
 typedef enum {
-    // Standard buttons (IDs 0..topbarVariationInitId) — rendered generically from resource table
-    topbarVaId = 0,
-    topbarFxId,
-    topbarNewPatchId,
-    topbarSlotAId,
-    topbarSlotBId,
-    topbarSlotCId,
-    topbarSlotDId,
-    topbarVariation1Id,
-    topbarVariation2Id,
-    topbarVariation3Id,
-    topbarVariation4Id,
-    topbarVariation5Id,
-    topbarVariation6Id,
-    topbarVariation7Id,
-    topbarVariation8Id,
-    topbarVariationInitId,
-    // Special controls — dynamic text or custom rendering
-    topbarPatchNameId,
-    topbarPatchTypeId,
-    topbarMonoPolyId,
-    topbarVoiceCountId,
-    topbarPatchNotesId,
-    topbarSettingsId,
-    topbarClockRunStopId,
-    topbarTempoDialId,
-    topbarPatchVolumeId,
-    topbarPerfModeId,
-    topbarPerfNameId,
-    topbarPerfSettingsId,
-    topbarPatchSettingsId,
-    topbarHideAllCablesId,
-    topbarTransparentCablesId,
-    topbarCableColourToggle0Id,
-    topbarCableColourToggle1Id,
-    topbarCableColourToggle2Id,
-    topbarCableColourToggle3Id,
-    topbarCableColourToggle4Id,
-    topbarCableColourToggle5Id,
-    topbarCableColourToggle6Id,
+#define TOPBAR_COL(r, \
+                   g, \
+                   b)               /* colour ignored when building enum */
+#define TOPBAR_COL_BG_GREY     TOPBAR_COL(0.8, \
+                                          0.8, \
+                                          0.8)
+#define TOPBAR_COL_GREEN_ON    TOPBAR_COL(0.3, \
+                                          0.7, \
+                                          0.3)
+#define TOPBAR_COL_BLACK       TOPBAR_COL(0.0, \
+                                          0.0, \
+                                          0.0)
+#define X(id, \
+          ...)    id,
+#include "topbarControls.def"
+#undef X
+#undef TOPBAR_COL_BLACK
+#undef TOPBAR_COL_GREEN_ON
+#undef TOPBAR_COL_BG_GREY
+#undef TOPBAR_COL
     topbarControlMax
 } tTopbarControlId;
 
