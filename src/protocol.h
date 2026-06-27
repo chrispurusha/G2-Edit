@@ -49,6 +49,14 @@ void write_current_note_2_perf(uint32_t slot, uint8_t * buff, uint32_t * bitPos)
 void write_global_knobs(uint8_t * buff, uint32_t * bitPos);
 void write_slot_separator(uint8_t * buff, uint32_t * bitPos);
 void write_perf_header(uint8_t * buff, uint32_t * bitPos);
+void store_note2(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32_t count);
+void store_patch_notes(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32_t count);
+int parse_synth_settings(uint8_t * buff, int length);
+int parse_performance_settings(uint8_t * buff, int length);
+int parse_midi_cc(uint8_t * buff, int length);
+int parse_patch_version(uint8_t * buff, int length);
+int parse_patch(uint32_t slot, uint8_t * buff, int length);
+int parse_perf(uint8_t * buff, int length);
 void send_module_move_msg(tModule * module);
 void send_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, uint32_t variation, uint32_t value);
 void send_mode_value(uint32_t slot, tModuleKey moduleKey, uint32_t modeIdx, uint32_t value);
