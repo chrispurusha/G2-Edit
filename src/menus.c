@@ -392,6 +392,7 @@ static void action_rename_module(int index) {
         gModuleNameEdit.active    = true;
         gModuleNameEdit.moduleKey = gContextMenu.moduleKey;
         COPY_STRING(gModuleNameEdit.buffer, module->name);
+        gModuleNameEdit.cursorPos = (uint32_t)strlen(gModuleNameEdit.buffer);
     }
     gContextMenu.active = false;
     gReDraw             = true;
@@ -439,6 +440,7 @@ static void action_rename_morph_label(int index) {
         gParamNameEdit.moduleKey  = gContextMenu.moduleKey;
         gParamNameEdit.paramIndex = pi;
         COPY_STRING(gParamNameEdit.buffer, module->paramName[pi][0]);
+        gParamNameEdit.cursorPos  = (uint32_t)strlen(gParamNameEdit.buffer);
     }
     gContextMenu.active    = false;
     gReDraw                = true;
@@ -806,6 +808,7 @@ static void action_rename_param_label(int index) {
         if (module->paramNameSet[pi][0]) {
             COPY_STRING(gParamNameEdit.buffer, module->paramName[pi][0]);
         }
+        gParamNameEdit.cursorPos  = (uint32_t)strlen(gParamNameEdit.buffer);
     }
     gContextMenu.active = false;
     gReDraw             = true;

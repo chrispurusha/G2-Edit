@@ -260,9 +260,10 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
 
     if (found == false) {
         if (gGlobalSettings.perfMode == 1 && within_rectangle(coord, gTopbarControls[topbarPerfNameId].rectangle)) {
-            gPerfNameEdit.active = true;
+            gPerfNameEdit.active    = true;
             COPY_STRING(gPerfNameEdit.buffer, gGlobalSettings.perfName);
-            found                = true;
+            gPerfNameEdit.cursorPos = (uint32_t)strlen(gPerfNameEdit.buffer);
+            found                   = true;
         }
     }
 
@@ -291,10 +292,11 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
 
     if (found == false) {
         if (within_rectangle(coord, gTopbarControls[topbarPatchNameId].rectangle)) {
-            gPatchNameEdit.active = true;
-            gPatchNameEdit.slot   = slot;
+            gPatchNameEdit.active    = true;
+            gPatchNameEdit.slot      = slot;
             COPY_STRING(gPatchNameEdit.buffer, gGlobalSettings.slot[slot].patchName);
-            found                 = true;
+            gPatchNameEdit.cursorPos = (uint32_t)strlen(gPatchNameEdit.buffer);
+            found                    = true;
         }
     }
 

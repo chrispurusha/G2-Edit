@@ -331,9 +331,12 @@ void render_top_bar(void) {
     //render_text(mainArea, {{80, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Patch Name");
 
     if (gPatchNameEdit.active && gPatchNameEdit.slot == slot) {
-        // Show edit buffer with cursor
-        char displayBuf[CLAVIA_NAME_SIZE + 2] = {0};
-        snprintf(displayBuf, sizeof(displayBuf), "%s|", gPatchNameEdit.buffer);
+        // Show edit buffer with cursor at cursorPos
+        char     displayBuf[CLAVIA_NAME_SIZE + 2] = {0};
+        uint32_t cp                               = gPatchNameEdit.cursorPos;
+        memcpy(displayBuf, gPatchNameEdit.buffer, cp);
+        displayBuf[cp]                               = '|';
+        memcpy(&displayBuf[cp + 1], &gPatchNameEdit.buffer[cp], strlen(gPatchNameEdit.buffer) - cp + 1);
 
         gTopbarControls[topbarPatchNameId].rectangle = draw_button(mainArea, {topbar_control_def(topbarPatchNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, displayBuf, (tRgb)RGB_WHITE);
     } else {
@@ -479,7 +482,10 @@ void render_top_bar(void) {
         char perfNameDisplay[CLAVIA_NAME_SIZE + 2] = {0};
 
         if (gPerfNameEdit.active) {
-            snprintf(perfNameDisplay, sizeof(perfNameDisplay), "%s|", gPerfNameEdit.buffer);
+            uint32_t cp = gPerfNameEdit.cursorPos;
+            memcpy(perfNameDisplay, gPerfNameEdit.buffer, cp);
+            perfNameDisplay[cp]                         = '|';
+            memcpy(&perfNameDisplay[cp + 1], &gPerfNameEdit.buffer[cp], strlen(gPerfNameEdit.buffer) - cp + 1);
             gTopbarControls[topbarPerfNameId].rectangle = draw_button(mainArea,
                                                                       {topbar_control_def(topbarPerfNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                       perfNameDisplay, (tRgb)RGB_WHITE);
@@ -1137,7 +1143,10 @@ static void render_patch_settings_panel(void) {
         x += get_text_width((char *)"Name:", btnH, eCache) + 4.0;
 
         if (gSynthNameEdit.active) {
-            snprintf(displayBuf, sizeof(displayBuf), "%s|", gSynthNameEdit.buffer);
+            uint32_t cp = gSynthNameEdit.cursorPos;
+            memcpy(displayBuf, gSynthNameEdit.buffer, cp);
+            displayBuf[cp]                = '|';
+            memcpy(&displayBuf[cp + 1], &gSynthNameEdit.buffer[cp], strlen(gSynthNameEdit.buffer) - cp + 1);
             gSettingsPanelRects.synthName = draw_button(mainArea, {{x, y}, {get_text_width(LONGEST_PATCH_NAME, btnH, eCache), btnH}}, displayBuf, (tRgb)RGB_WHITE);
         } else {
             snprintf(displayBuf, sizeof(displayBuf), "%s", gSynthSettings.name);

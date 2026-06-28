@@ -644,8 +644,11 @@ void render_module(tModule * module) {
        && gModuleNameEdit.moduleKey.slot == module->key.slot
        && gModuleNameEdit.moduleKey.location == module->key.location
        && gModuleNameEdit.moduleKey.index == module->key.index) {
-        char editBuf[CLAVIA_NAME_SIZE + 2] = {0};
-        snprintf(editBuf, sizeof(editBuf), "%s|", gModuleNameEdit.buffer);
+        char     editBuf[CLAVIA_NAME_SIZE + 2] = {0};
+        uint32_t cp                            = gModuleNameEdit.cursorPos;
+        memcpy(editBuf, gModuleNameEdit.buffer, cp);
+        editBuf[cp] = '|';
+        memcpy(&editBuf[cp + 1], &gModuleNameEdit.buffer[cp], strlen(gModuleNameEdit.buffer) - cp + 1);
 
         // Highlight the drag area to show edit mode
         set_rgb_colour(RGB_WHITE);
@@ -876,8 +879,11 @@ void render_morph_groups(void) {
                && gParamNameEdit.moduleKey.location == module->key.location
                && gParamNameEdit.moduleKey.index == module->key.index
                && gParamNameEdit.paramIndex == i + NUM_MORPHS) {
-                char editBuf[PROTOCOL_PARAM_NAME_SIZE + 2] = {0};
-                snprintf(editBuf, sizeof(editBuf), "%s|", gParamNameEdit.buffer);
+                char     editBuf[PROTOCOL_PARAM_NAME_SIZE + 2] = {0};
+                uint32_t cp                                    = gParamNameEdit.cursorPos;
+                memcpy(editBuf, gParamNameEdit.buffer, cp);
+                editBuf[cp]        = '|';
+                memcpy(&editBuf[cp + 1], &gParamNameEdit.buffer[cp], strlen(gParamNameEdit.buffer) - cp + 1);
                 gMorphLabelRect[i] = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y + 57}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, editBuf, RGB_WHITE);
             } else {
                 gMorphLabelRect[i] = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y + 57}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, RGB_BACKGROUND_GREY);

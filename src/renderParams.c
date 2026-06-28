@@ -803,8 +803,11 @@ tRectangle render_paramType1Enable(tModule * module, tRectangle rectangle, char 
        && gParamNameEdit.moduleKey.location == module->key.location
        && gParamNameEdit.moduleKey.index == module->key.index
        && gParamNameEdit.paramIndex == paramIndex) {
-        char editBuf[PROTOCOL_PARAM_NAME_SIZE + 2] = {0};
-        snprintf(editBuf, sizeof(editBuf), "%s|", gParamNameEdit.buffer);
+        char     editBuf[PROTOCOL_PARAM_NAME_SIZE + 2] = {0};
+        uint32_t cp                                    = gParamNameEdit.cursorPos;
+        memcpy(editBuf, gParamNameEdit.buffer, cp);
+        editBuf[cp] = '|';
+        memcpy(&editBuf[cp + 1], &gParamNameEdit.buffer[cp], strlen(gParamNameEdit.buffer) - cp + 1);
         return draw_button(moduleArea, buttonRect, editBuf, (tRgb)RGB_WHITE);
     }
 

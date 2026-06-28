@@ -1089,12 +1089,15 @@ void scroll_event(GLFWwindow * window, double x, double y) {
 
 void char_event(GLFWwindow * window, unsigned int value) {
     if (gPatchNameEdit.active) {
-        size_t len = strlen(gPatchNameEdit.buffer);
+        size_t   len       = strlen(gPatchNameEdit.buffer);
+        uint32_t cursorPos = gPatchNameEdit.cursorPos;
 
-        // Accept printable ASCII only, up to PATCH_NAME_SIZE
         if ((value >= 0x20) && (value <= 0x7e) && (len < CLAVIA_NAME_SIZE)) {
-            gPatchNameEdit.buffer[len]     = (char)value;
-            gPatchNameEdit.buffer[len + 1] = '\0';
+            memmove(&gPatchNameEdit.buffer[cursorPos + 1],
+                    &gPatchNameEdit.buffer[cursorPos],
+                    len - cursorPos + 1);
+            gPatchNameEdit.buffer[cursorPos] = (char)value;
+            gPatchNameEdit.cursorPos++;
         }
     }
 
@@ -1112,38 +1115,54 @@ void char_event(GLFWwindow * window, unsigned int value) {
     }
 
     if (gModuleNameEdit.active) {
-        size_t len = strlen(gModuleNameEdit.buffer);
+        size_t   len       = strlen(gModuleNameEdit.buffer);
+        uint32_t cursorPos = gModuleNameEdit.cursorPos;
 
         if ((value >= 0x20) && (value <= 0x7e) && (len < CLAVIA_NAME_SIZE)) {
-            gModuleNameEdit.buffer[len]     = (char)value;
-            gModuleNameEdit.buffer[len + 1] = '\0';
+            memmove(&gModuleNameEdit.buffer[cursorPos + 1],
+                    &gModuleNameEdit.buffer[cursorPos],
+                    len - cursorPos + 1);
+            gModuleNameEdit.buffer[cursorPos] = (char)value;
+            gModuleNameEdit.cursorPos++;
         }
     }
 
     if (gParamNameEdit.active) {
-        size_t len = strlen(gParamNameEdit.buffer);
+        size_t   len       = strlen(gParamNameEdit.buffer);
+        uint32_t cursorPos = gParamNameEdit.cursorPos;
 
         if ((value >= 0x20) && (value <= 0x7e) && (len < PROTOCOL_PARAM_NAME_SIZE)) {
-            gParamNameEdit.buffer[len]     = (char)value;
-            gParamNameEdit.buffer[len + 1] = '\0';
+            memmove(&gParamNameEdit.buffer[cursorPos + 1],
+                    &gParamNameEdit.buffer[cursorPos],
+                    len - cursorPos + 1);
+            gParamNameEdit.buffer[cursorPos] = (char)value;
+            gParamNameEdit.cursorPos++;
         }
     }
 
     if (gSynthNameEdit.active) {
-        size_t len = strlen(gSynthNameEdit.buffer);
+        size_t   len       = strlen(gSynthNameEdit.buffer);
+        uint32_t cursorPos = gSynthNameEdit.cursorPos;
 
         if ((value >= 0x20) && (value <= 0x7e) && (len < CLAVIA_NAME_SIZE)) {
-            gSynthNameEdit.buffer[len]     = (char)value;
-            gSynthNameEdit.buffer[len + 1] = '\0';
+            memmove(&gSynthNameEdit.buffer[cursorPos + 1],
+                    &gSynthNameEdit.buffer[cursorPos],
+                    len - cursorPos + 1);
+            gSynthNameEdit.buffer[cursorPos] = (char)value;
+            gSynthNameEdit.cursorPos++;
         }
     }
 
     if (gPerfNameEdit.active) {
-        size_t len = strlen(gPerfNameEdit.buffer);
+        size_t   len       = strlen(gPerfNameEdit.buffer);
+        uint32_t cursorPos = gPerfNameEdit.cursorPos;
 
         if ((value >= 0x20) && (value <= 0x7e) && (len < CLAVIA_NAME_SIZE)) {
-            gPerfNameEdit.buffer[len]     = (char)value;
-            gPerfNameEdit.buffer[len + 1] = '\0';
+            memmove(&gPerfNameEdit.buffer[cursorPos + 1],
+                    &gPerfNameEdit.buffer[cursorPos],
+                    len - cursorPos + 1);
+            gPerfNameEdit.buffer[cursorPos] = (char)value;
+            gPerfNameEdit.cursorPos++;
         }
     }
     LOG_DEBUG("char=%d\n", value);
@@ -1220,12 +1239,34 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         return;
     } else if (gPatchNameEdit.active) {
         if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-            if (key == GLFW_KEY_BACKSPACE) {
-                size_t len = strlen(gPatchNameEdit.buffer);
+            size_t   len       = strlen(gPatchNameEdit.buffer);
+            uint32_t cursorPos = gPatchNameEdit.cursorPos;
 
-                if (len > 0) {
-                    gPatchNameEdit.buffer[len - 1] = '\0';
+            if (key == GLFW_KEY_BACKSPACE) {
+                if (cursorPos > 0) {
+                    memmove(&gPatchNameEdit.buffer[cursorPos - 1],
+                            &gPatchNameEdit.buffer[cursorPos],
+                            len - cursorPos + 1);
+                    gPatchNameEdit.cursorPos--;
                 }
+            } else if (key == GLFW_KEY_DELETE) {
+                if (cursorPos < len) {
+                    memmove(&gPatchNameEdit.buffer[cursorPos],
+                            &gPatchNameEdit.buffer[cursorPos + 1],
+                            len - cursorPos);
+                }
+            } else if (key == GLFW_KEY_LEFT) {
+                if (cursorPos > 0) {
+                    gPatchNameEdit.cursorPos--;
+                }
+            } else if (key == GLFW_KEY_RIGHT) {
+                if (cursorPos < len) {
+                    gPatchNameEdit.cursorPos++;
+                }
+            } else if (key == GLFW_KEY_HOME) {
+                gPatchNameEdit.cursorPos = 0;
+            } else if (key == GLFW_KEY_END) {
+                gPatchNameEdit.cursorPos = (uint32_t)len;
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
                 // Commit
                 gPatchNameEdit.active = false;
@@ -1242,12 +1283,34 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         }
     } else if (gModuleNameEdit.active) {
         if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-            if (key == GLFW_KEY_BACKSPACE) {
-                size_t len = strlen(gModuleNameEdit.buffer);
+            size_t   len       = strlen(gModuleNameEdit.buffer);
+            uint32_t cursorPos = gModuleNameEdit.cursorPos;
 
-                if (len > 0) {
-                    gModuleNameEdit.buffer[len - 1] = '\0';
+            if (key == GLFW_KEY_BACKSPACE) {
+                if (cursorPos > 0) {
+                    memmove(&gModuleNameEdit.buffer[cursorPos - 1],
+                            &gModuleNameEdit.buffer[cursorPos],
+                            len - cursorPos + 1);
+                    gModuleNameEdit.cursorPos--;
                 }
+            } else if (key == GLFW_KEY_DELETE) {
+                if (cursorPos < len) {
+                    memmove(&gModuleNameEdit.buffer[cursorPos],
+                            &gModuleNameEdit.buffer[cursorPos + 1],
+                            len - cursorPos);
+                }
+            } else if (key == GLFW_KEY_LEFT) {
+                if (cursorPos > 0) {
+                    gModuleNameEdit.cursorPos--;
+                }
+            } else if (key == GLFW_KEY_RIGHT) {
+                if (cursorPos < len) {
+                    gModuleNameEdit.cursorPos++;
+                }
+            } else if (key == GLFW_KEY_HOME) {
+                gModuleNameEdit.cursorPos = 0;
+            } else if (key == GLFW_KEY_END) {
+                gModuleNameEdit.cursorPos = (uint32_t)len;
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
                 gModuleNameEdit.active = false;
 
@@ -1268,12 +1331,34 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         }
     } else if (gParamNameEdit.active) {
         if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-            if (key == GLFW_KEY_BACKSPACE) {
-                size_t len = strlen(gParamNameEdit.buffer);
+            size_t   len       = strlen(gParamNameEdit.buffer);
+            uint32_t cursorPos = gParamNameEdit.cursorPos;
 
-                if (len > 0) {
-                    gParamNameEdit.buffer[len - 1] = '\0';
+            if (key == GLFW_KEY_BACKSPACE) {
+                if (cursorPos > 0) {
+                    memmove(&gParamNameEdit.buffer[cursorPos - 1],
+                            &gParamNameEdit.buffer[cursorPos],
+                            len - cursorPos + 1);
+                    gParamNameEdit.cursorPos--;
                 }
+            } else if (key == GLFW_KEY_DELETE) {
+                if (cursorPos < len) {
+                    memmove(&gParamNameEdit.buffer[cursorPos],
+                            &gParamNameEdit.buffer[cursorPos + 1],
+                            len - cursorPos);
+                }
+            } else if (key == GLFW_KEY_LEFT) {
+                if (cursorPos > 0) {
+                    gParamNameEdit.cursorPos--;
+                }
+            } else if (key == GLFW_KEY_RIGHT) {
+                if (cursorPos < len) {
+                    gParamNameEdit.cursorPos++;
+                }
+            } else if (key == GLFW_KEY_HOME) {
+                gParamNameEdit.cursorPos = 0;
+            } else if (key == GLFW_KEY_END) {
+                gParamNameEdit.cursorPos = (uint32_t)len;
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
                 gParamNameEdit.active = false;
 
@@ -1300,12 +1385,34 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         }
     } else if (gSynthNameEdit.active) {
         if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-            if (key == GLFW_KEY_BACKSPACE) {
-                size_t len = strlen(gSynthNameEdit.buffer);
+            size_t   len       = strlen(gSynthNameEdit.buffer);
+            uint32_t cursorPos = gSynthNameEdit.cursorPos;
 
-                if (len > 0) {
-                    gSynthNameEdit.buffer[len - 1] = '\0';
+            if (key == GLFW_KEY_BACKSPACE) {
+                if (cursorPos > 0) {
+                    memmove(&gSynthNameEdit.buffer[cursorPos - 1],
+                            &gSynthNameEdit.buffer[cursorPos],
+                            len - cursorPos + 1);
+                    gSynthNameEdit.cursorPos--;
                 }
+            } else if (key == GLFW_KEY_DELETE) {
+                if (cursorPos < len) {
+                    memmove(&gSynthNameEdit.buffer[cursorPos],
+                            &gSynthNameEdit.buffer[cursorPos + 1],
+                            len - cursorPos);
+                }
+            } else if (key == GLFW_KEY_LEFT) {
+                if (cursorPos > 0) {
+                    gSynthNameEdit.cursorPos--;
+                }
+            } else if (key == GLFW_KEY_RIGHT) {
+                if (cursorPos < len) {
+                    gSynthNameEdit.cursorPos++;
+                }
+            } else if (key == GLFW_KEY_HOME) {
+                gSynthNameEdit.cursorPos = 0;
+            } else if (key == GLFW_KEY_END) {
+                gSynthNameEdit.cursorPos = (uint32_t)len;
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
                 gSynthNameEdit.active = false;
                 COPY_STRING(gSynthSettings.name, gSynthNameEdit.buffer);
@@ -1316,12 +1423,34 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         }
     } else if (gPerfNameEdit.active) {
         if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-            if (key == GLFW_KEY_BACKSPACE) {
-                size_t len = strlen(gPerfNameEdit.buffer);
+            size_t   len       = strlen(gPerfNameEdit.buffer);
+            uint32_t cursorPos = gPerfNameEdit.cursorPos;
 
-                if (len > 0) {
-                    gPerfNameEdit.buffer[len - 1] = '\0';
+            if (key == GLFW_KEY_BACKSPACE) {
+                if (cursorPos > 0) {
+                    memmove(&gPerfNameEdit.buffer[cursorPos - 1],
+                            &gPerfNameEdit.buffer[cursorPos],
+                            len - cursorPos + 1);
+                    gPerfNameEdit.cursorPos--;
                 }
+            } else if (key == GLFW_KEY_DELETE) {
+                if (cursorPos < len) {
+                    memmove(&gPerfNameEdit.buffer[cursorPos],
+                            &gPerfNameEdit.buffer[cursorPos + 1],
+                            len - cursorPos);
+                }
+            } else if (key == GLFW_KEY_LEFT) {
+                if (cursorPos > 0) {
+                    gPerfNameEdit.cursorPos--;
+                }
+            } else if (key == GLFW_KEY_RIGHT) {
+                if (cursorPos < len) {
+                    gPerfNameEdit.cursorPos++;
+                }
+            } else if (key == GLFW_KEY_HOME) {
+                gPerfNameEdit.cursorPos = 0;
+            } else if (key == GLFW_KEY_END) {
+                gPerfNameEdit.cursorPos = (uint32_t)len;
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
                 gPerfNameEdit.active = false;
                 COPY_STRING(gGlobalSettings.perfName, gPerfNameEdit.buffer);

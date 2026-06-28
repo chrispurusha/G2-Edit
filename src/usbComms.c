@@ -2217,6 +2217,7 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdWriteModePerf:
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_perf_mode_change(1);
+            send_get_performance_settings();  // At least need the perf settings, otherwise name etc. don't come in after change. Might need other data too
             send_start();
             break;
 

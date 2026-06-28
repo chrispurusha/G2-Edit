@@ -307,8 +307,9 @@ bool handle_patch_settings_mouse(tCoord coord, tMouseButton mouseButton) {
             }
 
             if (within_rectangle(coord, gSettingsPanelRects.synthName)) {
-                gSynthNameEdit.active = true;
+                gSynthNameEdit.active    = true;
                 COPY_STRING(gSynthNameEdit.buffer, gSynthSettings.name);
+                gSynthNameEdit.cursorPos = (uint32_t)strlen(gSynthNameEdit.buffer);
             } else if (!check_ss_section(coord, kSSGlobal, kSSGlobalCount)) {
                 if (!check_ss_section(coord, kSSOptions, kSSOptionsCount)) {
                     if (!check_ss_section(coord, kSSTuning, kSSTuningCount)) {

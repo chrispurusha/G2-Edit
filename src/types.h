@@ -776,12 +776,14 @@ typedef struct {
     bool     active;
     char     buffer[CLAVIA_NAME_SIZE + 1];
     uint32_t slot;
+    uint32_t cursorPos;
 } tNameEdit;  // Todo - rename to patch name edit
 
 typedef struct {
     bool       active;
     tModuleKey moduleKey;
     char       buffer[CLAVIA_NAME_SIZE + 1];
+    uint32_t   cursorPos;
 } tModuleNameEdit;
 
 typedef struct {
@@ -789,6 +791,7 @@ typedef struct {
     tModuleKey moduleKey;
     uint32_t   paramIndex;
     char       buffer[PROTOCOL_PARAM_NAME_SIZE + 1];
+    uint32_t   cursorPos;
 } tParamNameEdit;
 
 typedef struct {
