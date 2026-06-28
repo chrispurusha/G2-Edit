@@ -1170,7 +1170,7 @@ int parse_performance_settings(uint8_t * buff, int length) {
     LOG_DEBUG("SelectedSlot         = %u\n", gGlobalSettings.selectedSlot);
     read_bit_stream(buff, &bitPos, 2);
     LOG_DEBUG("RangeEnable          = %u\n", read_bit_stream(buff, &bitPos, 8));
-    gGlobalSettings.masterClock        = read_bit_stream(buff, &bitPos, 8);
+    gGlobalSettings.masterClock        = read_bit_stream(buff, &bitPos, 8);  // This is used whether we're in performance mode or not. It's shared with non-perf mode
     LOG_DEBUG("MasterClock          = %u\n", gGlobalSettings.masterClock);
     LOG_DEBUG("KeyboardSplit        = %u\n", read_bit_stream(buff, &bitPos, 8));
     gGlobalSettings.masterClockRunning = read_bit_stream(buff, &bitPos, 8);
