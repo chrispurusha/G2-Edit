@@ -317,7 +317,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             char buff[16] = {0};
 
             snprintf(buff, sizeof(buff), "%u", module->mode[0].value);
-            module->mode[modeIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)modeLocationList[modeRef].label, buff, module->mode[0].value, modeLocationList[modeRef].range, 0, RGB_GREY_5);  // TODO: Check if Mode can be morphed
+            module->mode[modeIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)modeLocationList[modeRef].label, buff, rectangle.size.h / 4.0, module->mode[0].value, modeLocationList[modeRef].range, 0, RGB_GREY_5);  // TODO: Check if Mode can be morphed
             break;
         }
         case paramTypeToggle:
@@ -869,7 +869,7 @@ void render_morph_groups(void) {
             } else {
                 dialColour = RGB_GREY_3;
             }
-            gParamRectangle[module->key.slot][module->key.location][module->key.index][i]              = render_dial_with_text(mainArea, {{rectangle.coord.x, rectangle.coord.y + 16}, {rectangle.size.w, rectangle.size.h}}, NULL, dialValueStr, module->param[variation][i].value, 128, module->param[variation][i].morphRange[gMorphGroupFocus], dialColour);
+            gParamRectangle[module->key.slot][module->key.location][module->key.index][i]              = render_dial_with_text(mainArea, {{rectangle.coord.x, rectangle.coord.y + 16}, {rectangle.size.w, rectangle.size.h}}, NULL, dialValueStr, rectangle.size.h / 4.0, module->param[variation][i].value, 128, module->param[variation][i].morphRange[gMorphGroupFocus], dialColour);
 
             if (  gParamNameEdit.active
                && gParamNameEdit.moduleKey.slot == module->key.slot
