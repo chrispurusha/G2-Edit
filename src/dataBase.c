@@ -28,6 +28,7 @@ tModule gModule[MAX_SLOTS][locationMax][MAX_NUM_MODULES] = {0};
 
 tCable  gCable[MAX_SLOTS][locationMax][MAX_NUM_CABLES]   = {0};
 
+// Called from both threads — no internal locking.
 tModule * get_module_slot(uint32_t slot, uint32_t location, uint32_t index) {
     if ((slot < MAX_SLOTS) && (location < (uint32_t)locationMax) && (index < MAX_NUM_MODULES)) {
         return &gModule[slot][location][index];
@@ -35,6 +36,7 @@ tModule * get_module_slot(uint32_t slot, uint32_t location, uint32_t index) {
     return NULL;
 }
 
+// Called from both threads — no internal locking.
 tModule * get_module(tModuleKey key) {
     tModule * module = get_module_slot(key.slot, key.location, key.index);
 
@@ -123,6 +125,7 @@ void dump_modules(void) {
     LOG_DEBUG("\nModule Count=%u\n\n", count);
 }
 
+// Called from both threads — no internal locking.
 tCable * get_cable_slot(uint32_t slot, uint32_t location, uint32_t index) {
     if ((slot < MAX_SLOTS) && (location < (uint32_t)locationMax) && (index < MAX_NUM_CABLES)) {
         return &gCable[slot][location][index];
@@ -143,6 +146,7 @@ tCable * get_cable(tCableKey key) {
     return NULL;
 }
 
+// Called from both threads — no internal locking.
 void write_cable(tCableKey key, tCable * cable) {
     tCable * existing = get_cable(key);
 

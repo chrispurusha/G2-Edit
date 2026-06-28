@@ -67,6 +67,7 @@ uint32_t array_size_str_map(const char ** strMap) {
     return i;
 }
 
+// Called from both threads — caches are pre-warmed by init_module_resource_cache() before USB thread starts.
 uint32_t module_param_count(tModuleType moduleType) {
     static uint32_t cache[moduleTypeMax]      = {0};
     static bool     validCache[moduleTypeMax] = {0};
@@ -86,6 +87,7 @@ uint32_t module_param_count(tModuleType moduleType) {
     return cache[moduleType];
 }
 
+// Called from both threads — caches are pre-warmed by init_module_resource_cache() before USB thread starts.
 uint32_t module_connector_count(tModuleType moduleType) {
     static uint32_t cache[moduleTypeMax]      = {0};
     static bool     validCache[moduleTypeMax] = {0};
@@ -143,6 +145,7 @@ uint32_t module_volume_count(tModuleType moduleType) {
     return cache[moduleType];
 }
 
+// Called from both threads — caches are pre-warmed by init_module_resource_cache() before USB thread starts.
 uint32_t module_led_count(tModuleType moduleType) {
     static uint32_t cache[moduleTypeMax]      = {0};
     static bool     validCache[moduleTypeMax] = {0};
