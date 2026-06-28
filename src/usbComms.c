@@ -576,8 +576,6 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                 gGlobalSettings.slot[i].enabled = status;
                 LOG_DEBUG("  Slot %u enabled: %u\n", i, status != 0 ? 1 : 0);
             }
-
-            // TODO - There's another byte here, which likely has useful data!
             return EXIT_SUCCESS;
         }
 
@@ -645,10 +643,12 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("Got slot select %u\n", newSlot);
 
             gSlot = newSlot;
+            gPatchParamsEdit.slot = newSlot;
             set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
                                            (tTopbarControlId)(topbarSlotAId + newSlot));
             set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
                                            (tTopbarControlId)((uint32_t)topbarVariation1Id + gPatchDescr[newSlot].activeVariation));
+            
             return EXIT_SUCCESS;
         }
 

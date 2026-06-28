@@ -1245,13 +1245,13 @@ static void render_patch_params_panel(void) {
     // ── Slot buttons in title bar ──────────────────────────────────
     {
         static const char * slotLabels[MAX_SLOTS] = {"A", "B", "C", "D"};
-        double              slotBtnW              = get_text_width((char *)"A", btnH, eCache) + 6.0;
-        double              slotX                 = boxX + boxW - 44.0 - (slotBtnW + 2.0) * MAX_SLOTS - 8.0;
+        double              slotBtnW              = get_text_width((char *)"A", btnH, eCache)/* + 6.0*/;
+        double              slotX                 = boxX + boxW - 70.0 - (slotBtnW + 2.0) * MAX_SLOTS - 8.0;
 
         for (uint32_t s = 0; s < MAX_SLOTS; s++) {
             tRgb col = (s == slot) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
             gPatchParamSlots[s] = draw_button(mainArea,
-                                              {{slotX + s * (slotBtnW + 2.0), boxY + 4.0}, {slotBtnW, btnH}},
+                                              {{slotX + s * (slotBtnW + 8.0), boxY + 4.0}, {slotBtnW, btnH}},
                                               slotLabels[s], col);
         }
     }
