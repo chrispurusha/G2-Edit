@@ -46,11 +46,26 @@ extern "C" {
 #include "globalVars.h"
 #include "protocol.h"
 #include "menus.h"
+#include "synthSettingsResources.h"
+#include "perfSettingsResources.h"
 #include "mousePanels.h"
 
 // Suppresses a spurious leftUp event after dismissing the notes editor by
 // clicking outside it — prevents immediately re-triggering topbar controls.
 static bool gNoteEditDismissed = false;
+
+static bool check_ss_section(tCoord coord, const tSynthSettingItem * items, int count) {
+    int i = 0;
+
+    for (i = 0; i < count; i++) {
+        if (within_rectangle(coord, *items[i].rect)) {
+            items[i].act(below_rect(*items[i].rect));
+            return true;
+        }
+    }
+
+    return false;
+}
 
 static bool handle_panel_context_menu(tCoord coord) {
     if (!gContextMenu.active) {
@@ -120,7 +135,8 @@ bool handle_patch_notes_mouse(tCoord coord, tMouseButton mouseButton) {
 }
 
 bool handle_perf_settings_mouse(tCoord coord, tMouseButton mouseButton) {
-    int s = 0;
+    int s   = 0;
+    int col = 0;
 
     if (!gPerfSettingsEdit.active) {
         return false;
@@ -154,16 +170,13 @@ bool handle_perf_settings_mouse(tCoord coord, tMouseButton mouseButton) {
                 send_perf_settings_msg();
             } else {
                 for (s = 0; s < MAX_SLOTS; s++) {
-                    if (within_rectangle(coord, gPerfSettingsPanelRects.slotEnabled[s])) {
-                        gGlobalSettings.slot[s].enabled = !gGlobalSettings.slot[s].enabled;
-                        send_perf_settings_msg();
-                    } else if (within_rectangle(coord, gPerfSettingsPanelRects.slotKeyboard[s])) {
-                        gPerfSettings.slot[s].keyboardEnabled = !gPerfSettings.slot[s].keyboardEnabled;
-                        send_perf_settings_msg();
-                    } else if (within_rectangle(coord, gPerfSettingsPanelRects.slotHold[s])) {
-                        gPerfSettings.slot[s].holdEnabled = !gPerfSettings.slot[s].holdEnabled;
-                        send_perf_settings_msg();
-                    } else if (within_rectangle(coord, gPerfSettingsPanelRects.rangeLower[s])) {
+                    for (col = 0; col < kPSSlotToggleCount; col++) {
+                        if (within_rectangle(coord, kPSSlotToggles[col].rects[s])) {
+                            kPSSlotToggles[col].act(s);
+                        }
+                    }
+
+                    if (within_rectangle(coord, gPerfSettingsPanelRects.rangeLower[s])) {
                         open_midi_note_dropdown(below_rect(gPerfSettingsPanelRects.rangeLower[s]), &gPerfSettings.slot[s].rangeLower);
                     } else if (within_rectangle(coord, gPerfSettingsPanelRects.rangeUpper[s])) {
                         open_midi_note_dropdown(below_rect(gPerfSettingsPanelRects.rangeUpper[s]), &gPerfSettings.slot[s].rangeUpper);
@@ -284,51 +297,14 @@ bool handle_patch_settings_mouse(tCoord coord, tMouseButton mouseButton) {
             if (within_rectangle(coord, gSettingsPanelRects.synthName)) {
                 gSynthNameEdit.active = true;
                 COPY_STRING(gSynthNameEdit.buffer, gSynthSettings.name);
-            } else if (within_rectangle(coord, gSettingsPanelRects.globalChan)) {
-                open_midi_chan_dropdown(below_rect(gSettingsPanelRects.globalChan), &gSynthSettings.globalChan);
-            } else if (within_rectangle(coord, gSettingsPanelRects.sysexId)) {
-                open_sysex_id_dropdown(below_rect(gSettingsPanelRects.sysexId), &gSynthSettings.sysexId);
-            } else if (within_rectangle(coord, gSettingsPanelRects.localOn)) {
-                gSynthSettings.localOn = !gSynthSettings.localOn;
-                send_synth_settings_msg();
-            } else if (within_rectangle(coord, gSettingsPanelRects.memoryProtect)) {
-                gSynthSettings.memoryProtect = !gSynthSettings.memoryProtect;
-                send_synth_settings_msg();
-            } else if (within_rectangle(coord, gSettingsPanelRects.progChangeRcv)) {
-                gSynthSettings.progChangeRcv = !gSynthSettings.progChangeRcv;
-                send_synth_settings_msg();
-            } else if (within_rectangle(coord, gSettingsPanelRects.progChangeSnd)) {
-                gSynthSettings.progChangeSnd = !gSynthSettings.progChangeSnd;
-                send_synth_settings_msg();
-            } else if (within_rectangle(coord, gSettingsPanelRects.controllersRcv)) {
-                gSynthSettings.controllersRcv = !gSynthSettings.controllersRcv;
-                send_synth_settings_msg();
-            } else if (within_rectangle(coord, gSettingsPanelRects.controllersSnd)) {
-                gSynthSettings.controllersSnd = !gSynthSettings.controllersSnd;
-                send_synth_settings_msg();
-            } else if (within_rectangle(coord, gSettingsPanelRects.sendClock)) {
-                gSynthSettings.sendClock = !gSynthSettings.sendClock;
-                send_synth_settings_msg();
-            } else if (within_rectangle(coord, gSettingsPanelRects.receiveClock)) {
-                gSynthSettings.receiveClock = !gSynthSettings.receiveClock;
-                send_synth_settings_msg();
-            } else if (within_rectangle(coord, gSettingsPanelRects.tuneSemi)) {
-                open_tune_semi_dropdown(below_rect(gSettingsPanelRects.tuneSemi), &gSynthSettings.tuneSemi);
-            } else if (within_rectangle(coord, gSettingsPanelRects.tuneCent)) {
-                open_tune_cent_dropdown(below_rect(gSettingsPanelRects.tuneCent), &gSynthSettings.tuneCent);
-            } else if (within_rectangle(coord, gSettingsPanelRects.globalShiftActive)) {
-                gSynthSettings.globalShiftActive = !gSynthSettings.globalShiftActive;
-                send_synth_settings_msg();
-            } else if (within_rectangle(coord, gSettingsPanelRects.globalOctaveShift)) {
-                open_octave_shift_dropdown(below_rect(gSettingsPanelRects.globalOctaveShift), &gSynthSettings.globalOctaveShift);
-            } else if (within_rectangle(coord, gSettingsPanelRects.pedalPolarity)) {
-                open_pedal_polarity_dropdown(below_rect(gSettingsPanelRects.pedalPolarity), &gSynthSettings.pedalPolarity);
-            } else if (within_rectangle(coord, gSettingsPanelRects.pedalGain)) {
-                open_pedal_gain_dropdown(below_rect(gSettingsPanelRects.pedalGain), &gSynthSettings.pedalGain);
-            } else if (within_rectangle(coord, gSettingsPanelRects.patchSortMode)) {
-                open_patch_sort_dropdown(below_rect(gSettingsPanelRects.patchSortMode), &gSynthSettings.patchSortMode);
-            } else if (within_rectangle(coord, gSettingsPanelRects.perfSortMode)) {
-                open_perf_sort_dropdown(below_rect(gSettingsPanelRects.perfSortMode), &gSynthSettings.perfSortMode);
+            } else if (!check_ss_section(coord, kSSGlobal, kSSGlobalCount)) {
+                if (!check_ss_section(coord, kSSOptions, kSSOptionsCount)) {
+                    if (!check_ss_section(coord, kSSTuning, kSSTuningCount)) {
+                        if (!check_ss_section(coord, kSSPedal, kSSPedalCount)) {
+                            check_ss_section(coord, kSSSort, kSSSortCount);
+                        }
+                    }
+                }
             }
         }
     }
