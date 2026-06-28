@@ -29,6 +29,7 @@ extern "C" {
 #include "usbComms.h"
 #include "misc.h"
 #include "globalVars.h"
+#include "moduleResourcesAccess.h"
 #include "main.h"
 
 static void signal_handler(int sigraised) {
@@ -68,6 +69,7 @@ int main(int argc, char ** argv) {
     init_signals();
 
     init_database();
+    init_module_resource_cache();
 
     init_graphics();
 

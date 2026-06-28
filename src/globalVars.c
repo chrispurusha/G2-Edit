@@ -25,7 +25,7 @@ extern "C" {
 
 tDialMode               gDialMode                                                                    = eDialModeRotary;
 
-_Atomic double          gGlobalGuiScale                                                              = 2;
+double                  gGlobalGuiScale                                                              = 2;
 _Atomic bool            gQuitAll                                                                     = false;
 GLFWwindow *            gWindow                                                                      = NULL;
 _Atomic uint32_t        gLocation                                                                    = locationVa;
@@ -84,8 +84,8 @@ tRectangle              gPatchParamSlots[MAX_SLOTS]                             
 tRectangle              gPatchParamRects[pPCount]                                                    = {0};
 tRectangle              gMorphLabelRect[NUM_MORPHS]                                                  = {0};
 //_Atomic uint32_t       gHiddenCableMask                             = 0; // TODO - Send to G2 when changes
-_Atomic bool            gCablesTransparent                                                           = false;
-_Atomic bool            gCablesHideAll                                                               = false;
+bool                    gCablesTransparent                                                           = false;
+bool                    gCablesHideAll                                                               = false;
 tResourceAlloc          gResourceAlloc[MAX_SLOTS]                                                    = {0};
 
 tRectangle              gPatchNotesCloseRect                                                         = {0};

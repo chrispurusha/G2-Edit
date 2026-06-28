@@ -144,7 +144,7 @@ uint32_t module_volume_count(tModuleType moduleType) {
 }
 
 uint32_t module_led_count(tModuleType moduleType) {
-    static uint32_t cache[moduleTypeMax]      = {0};  //TODO - make this atomic, or thread safe along with other similar statics
+    static uint32_t cache[moduleTypeMax]      = {0};
     static bool     validCache[moduleTypeMax] = {0};
 
     if (validCache[moduleType] == false) {
@@ -160,6 +160,18 @@ uint32_t module_led_count(tModuleType moduleType) {
         validCache[moduleType] = true;
     }
     return cache[moduleType];
+}
+
+void init_module_resource_cache(void) {
+    tModuleType t = (tModuleType)0;
+
+    for (t = (tModuleType)0; t < moduleTypeMax; t++) {
+        module_param_count(t);
+        module_connector_count(t);
+        module_mode_count(t);
+        module_volume_count(t);
+        module_led_count(t);
+    }
 }
 
 #ifdef __cplusplus

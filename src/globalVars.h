@@ -38,7 +38,7 @@
 extern const char *            patchTypeStrMap[patchTypeUserMax];
 extern const char *            monoPolyStrMap[monoPolyMax];
 
-extern _Atomic double          gGlobalGuiScale;
+extern double                  gGlobalGuiScale;
 extern _Atomic bool            gQuitAll;
 extern GLFWwindow *            gWindow;
 extern _Atomic uint32_t        gLocation;
@@ -97,8 +97,8 @@ extern tRectangle              gPatchParamSlots[MAX_SLOTS];
 extern tRectangle              gPatchParamRects[pPCount];
 extern tRectangle              gMorphLabelRect[NUM_MORPHS];
 //extern _Atomic uint32_t    gHiddenCableMask;
-extern _Atomic bool            gCablesTransparent;  // true = draw all cables semi-transparent
-extern _Atomic bool            gCablesHideAll;
+extern bool                    gCablesTransparent;  // true = draw all cables semi-transparent
+extern bool                    gCablesHideAll;
 extern tResourceAlloc          gResourceAlloc[MAX_SLOTS];
 
 extern tRectangle              gPatchNotesCloseRect;

@@ -58,7 +58,7 @@ extern "C" {
 static _Atomic bool           gotBadConnectionIndication          = false;
 static _Atomic bool           gotPatchChangeIndication[MAX_SLOTS] = {0};
 static _Atomic bool           gotPerfSettingsChangeIndication     = false;
-static _Atomic int32_t        stopCount                           = 0;
+static int32_t                stopCount                           = 0;
 
 // Protected by usbStaticMutex
 static pthread_t              usbThread                           = NULL;
