@@ -2353,7 +2353,7 @@ static void state_handler(void) {
                 pthread_mutex_unlock(&usbStaticMutex);
                 gCommsState = eCommsReconnecting;
             }
-        } else {
+        } else if (!gotBadConnectionIndication) {
             LOG_DEBUG("G2 not ready yet — polling\n");
             usleep(500000);  // 500ms between readiness polls
         }
