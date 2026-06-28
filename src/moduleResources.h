@@ -894,7 +894,7 @@ const tParamLocation     paramLocationList[] = {
 
     // 104 Unknown
     // 105 ValSw2-1
-    {moduleTypeValSw2to1,  paramTypeMenu,        {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, u128StrMap,                            NULL          }, // 105 Val
+    {moduleTypeValSw2to1,  paramTypeMenu,        {{ 40,  -3}, { 7, 7}}, anchorBottomLeft,  NULL,           128,   0, u128StrMap,                            NULL          }, // 105 Val
     // 106 OscNoise
     {moduleTypeOscNoise,   paramTypeFreq,        {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 106 Tune
     {moduleTypeOscNoise,   paramTypeCommonDial,  {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 106 Fine
@@ -975,8 +975,8 @@ const tParamLocation     paramLocationList[] = {
     // 120 Unknown
     // 121 SeqNote
     {moduleTypeSeqNote,    paramTypeToggle,      {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
-    {moduleTypeSeqNote,    paramTypeMenu,        {{  0, -60}, {14, 14}}, anchorBottomRight, NULL,             8,   5, octaveStrMap,                          NULL          }, // 121 Octave
-    {moduleTypeSeqNote,    paramTypeMenu,        {{-15,  15}, { 8,  8}}, anchorTopRight,    "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Octave
+    {moduleTypeSeqNote,    paramTypeMenu,        {{  0, -60}, {7, 7}}, anchorBottomRight, NULL,             8,   5, octaveStrMap,                          NULL          }, // 121 Octave
+    {moduleTypeSeqNote,    paramTypeMenu,        {{-15,  15}, { 7,  7}}, anchorTopRight,    "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Octave
     {moduleTypeSeqNote,    paramTypeToggle,      {{  0, -40}, {10,  7}}, anchorBottomRight, "Clr",            1,   0, emptyStrMap,                           NULL          }, // 121 Clear
     {moduleTypeSeqNote,    paramTypeToggle,      {{  0, -30}, {10,  7}}, anchorBottomRight, "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 121 Randomize
     {moduleTypeSeqNote,    paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // 121 Step1-1
@@ -1144,8 +1144,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqVal,     paramTypeMenu,        {{ 25,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
     {moduleTypeSeqVal,     paramTypeMenu,        {{ 40,  10}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
     {moduleTypeSeqVal,     paramTypeMenu,        {{  3,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
-    {moduleTypeSeqVal,     paramTypeToggle,      {{ 35, -60}, {20,  7}}, anchorBottomLeft,  "Clr",            1,   0, emptyStrMap,                           NULL          }, // 144 Clear
-    {moduleTypeSeqVal,     paramTypeToggle,      {{ 45, -60}, {20,  7}}, anchorBottomLeft,  "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 144 Randomize
+    {moduleTypeSeqVal,     paramTypeToggle,      {{ 35, -60}, {32,  7}}, anchorBottomLeft,  "Clr",            1,   0, emptyStrMap,                           NULL          }, // 144 Clear
+    {moduleTypeSeqVal,     paramTypeToggle,      {{ 45, -60}, {32,  7}}, anchorBottomLeft,  "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 144 Randomize
     {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
     {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
     {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
@@ -1290,14 +1290,14 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeMixFader,   paramTypeMixLevel,    {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev6
     {moduleTypeMixFader,   paramTypeMixLevel,    {{ 74,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev7
     {moduleTypeMixFader,   paramTypeMixLevel,    {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          }, // 161 Lev8
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 20, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On1
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 29, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On2
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 38, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On3
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 47, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On4
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 56, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On5
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 65, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On6
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 74, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On7
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 83, -20}, { 8,  8}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On8
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 20, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On1
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 29, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On2
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 38, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On3
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 47, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On4
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 56, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On5
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 65, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On6
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 74, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On7
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 83, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 161 On8
     {moduleTypeMixFader,   paramTypeMenu,        {{  3, -28}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 161 ExpLin
     {moduleTypeMixFader,   paramTypeMenu,        {{  3, -35}, { 7,  7}}, anchorBottomLeft,  "Pad",            3,   0, db12BPadStrMap,                        NULL          }, // 161 Pad
     // 162 FltComb
