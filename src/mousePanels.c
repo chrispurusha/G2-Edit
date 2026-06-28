@@ -289,27 +289,36 @@ bool handle_patch_settings_mouse(tCoord coord, tMouseButton mouseButton) {
             } else if (within_rectangle(coord, gSettingsPanelRects.sysexId)) {
                 open_sysex_id_dropdown(below_rect(gSettingsPanelRects.sysexId), &gSynthSettings.sysexId);
             } else if (within_rectangle(coord, gSettingsPanelRects.localOn)) {
-                open_on_off_dropdown(below_rect(gSettingsPanelRects.localOn), &gSynthSettings.localOn);
+                gSynthSettings.localOn = !gSynthSettings.localOn;
+                send_synth_settings_msg();
             } else if (within_rectangle(coord, gSettingsPanelRects.memoryProtect)) {
-                open_on_off_dropdown(below_rect(gSettingsPanelRects.memoryProtect), &gSynthSettings.memoryProtect);
+                gSynthSettings.memoryProtect = !gSynthSettings.memoryProtect;
+                send_synth_settings_msg();
             } else if (within_rectangle(coord, gSettingsPanelRects.progChangeRcv)) {
-                open_on_off_dropdown(below_rect(gSettingsPanelRects.progChangeRcv), &gSynthSettings.progChangeRcv);
+                gSynthSettings.progChangeRcv = !gSynthSettings.progChangeRcv;
+                send_synth_settings_msg();
             } else if (within_rectangle(coord, gSettingsPanelRects.progChangeSnd)) {
-                open_on_off_dropdown(below_rect(gSettingsPanelRects.progChangeSnd), &gSynthSettings.progChangeSnd);
+                gSynthSettings.progChangeSnd = !gSynthSettings.progChangeSnd;
+                send_synth_settings_msg();
             } else if (within_rectangle(coord, gSettingsPanelRects.controllersRcv)) {
-                open_on_off_dropdown(below_rect(gSettingsPanelRects.controllersRcv), &gSynthSettings.controllersRcv);
+                gSynthSettings.controllersRcv = !gSynthSettings.controllersRcv;
+                send_synth_settings_msg();
             } else if (within_rectangle(coord, gSettingsPanelRects.controllersSnd)) {
-                open_on_off_dropdown(below_rect(gSettingsPanelRects.controllersSnd), &gSynthSettings.controllersSnd);
+                gSynthSettings.controllersSnd = !gSynthSettings.controllersSnd;
+                send_synth_settings_msg();
             } else if (within_rectangle(coord, gSettingsPanelRects.sendClock)) {
-                open_on_off_dropdown(below_rect(gSettingsPanelRects.sendClock), &gSynthSettings.sendClock);
+                gSynthSettings.sendClock = !gSynthSettings.sendClock;
+                send_synth_settings_msg();
             } else if (within_rectangle(coord, gSettingsPanelRects.receiveClock)) {
-                open_on_off_dropdown(below_rect(gSettingsPanelRects.receiveClock), &gSynthSettings.receiveClock);
+                gSynthSettings.receiveClock = !gSynthSettings.receiveClock;
+                send_synth_settings_msg();
             } else if (within_rectangle(coord, gSettingsPanelRects.tuneSemi)) {
                 open_tune_semi_dropdown(below_rect(gSettingsPanelRects.tuneSemi), &gSynthSettings.tuneSemi);
             } else if (within_rectangle(coord, gSettingsPanelRects.tuneCent)) {
                 open_tune_cent_dropdown(below_rect(gSettingsPanelRects.tuneCent), &gSynthSettings.tuneCent);
             } else if (within_rectangle(coord, gSettingsPanelRects.globalShiftActive)) {
-                open_active_off_dropdown(below_rect(gSettingsPanelRects.globalShiftActive), &gSynthSettings.globalShiftActive);
+                gSynthSettings.globalShiftActive = !gSynthSettings.globalShiftActive;
+                send_synth_settings_msg();
             } else if (within_rectangle(coord, gSettingsPanelRects.globalOctaveShift)) {
                 open_octave_shift_dropdown(below_rect(gSettingsPanelRects.globalOctaveShift), &gSynthSettings.globalOctaveShift);
             } else if (within_rectangle(coord, gSettingsPanelRects.pedalPolarity)) {

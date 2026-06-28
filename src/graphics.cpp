@@ -1147,8 +1147,11 @@ static void render_patch_settings_panel(void) {
         }
         set_rgb_colour(RGB_BLACK);
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, (char *)toggles[i].label);
-        x += get_text_width((char *)toggles[i].label, btnH, eCache) + 4.0;
-        render_dropdown(x, y, btnH, (*toggles[i].val) ? "On" : "Off", "On", toggles[i].rect);
+        x               += get_text_width((char *)toggles[i].label, btnH, eCache) + 4.0;
+        *toggles[i].rect = draw_button(mainArea,
+                                       {{x, y}, {get_text_width((char *)"On", btnH, eCache) + 8.0, btnH}},
+                                       (*toggles[i].val) ? "On" : "Off",
+                                       (*toggles[i].val) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
     }
 
     y += rowH;
@@ -1178,13 +1181,14 @@ static void render_patch_settings_panel(void) {
         double x = boxX + margin;
         set_rgb_colour(RGB_BLACK);
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Glob Shift:");
-        x += get_text_width((char *)"Glob Shift:", btnH, eCache) + 4.0;
-        render_dropdown(x, y, btnH,
-                        (gSynthSettings.globalShiftActive & 0x01) ? "Active" : "Off",
-                        "Active", &gSettingsPanelRects.globalShiftActive);
-        x += gSettingsPanelRects.globalShiftActive.size.w + 14.0;
+        x                                    += get_text_width((char *)"Glob Shift:", btnH, eCache) + 4.0;
+        gSettingsPanelRects.globalShiftActive = draw_button(mainArea,
+                                                            {{x, y}, {get_text_width((char *)"Active", btnH, eCache) + 8.0, btnH}},
+                                                            (gSynthSettings.globalShiftActive & 0x01) ? "Active" : "Off",
+                                                            (gSynthSettings.globalShiftActive & 0x01) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
+        x                                    += gSettingsPanelRects.globalShiftActive.size.w + 14.0;
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Oct:");
-        x += get_text_width((char *)"Oct:", btnH, eCache) + 4.0;
+        x                                    += get_text_width((char *)"Oct:", btnH, eCache) + 4.0;
         snprintf(buf, sizeof(buf), "%+d", (int)gSynthSettings.globalOctaveShift);
         render_dropdown(x, y, btnH, buf, "+2", &gSettingsPanelRects.globalOctaveShift);
     }
