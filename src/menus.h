@@ -56,6 +56,7 @@ void open_variation_copy_menu(tCoord coord, uint32_t sourceVariation);
 // Synth settings dropdowns
 void send_synth_settings_msg(void);
 void send_perf_settings_msg(void);
+void send_master_clock_run(uint32_t running);
 void open_midi_chan_dropdown(tCoord coord, _Atomic uint8_t * target);
 void open_sysex_id_dropdown(tCoord coord, _Atomic uint8_t * target);
 void open_tune_semi_dropdown(tCoord coord, _Atomic int8_t * target);
@@ -76,6 +77,7 @@ void open_midi_note_dropdown(tCoord coord, _Atomic uint8_t * target);
 
 // Patch settings dropdowns
 void open_patch_on_off_dropdown(tCoord coord, uint32_t moduleIndex, uint32_t paramIndex);
+void toggle_patch_on_off(uint32_t moduleIndex, uint32_t paramIndex);
 void open_arp_rate_dropdown(tCoord coord);
 void open_arp_direction_dropdown(tCoord coord);
 void open_arp_octave_dropdown(tCoord coord);

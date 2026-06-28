@@ -72,6 +72,14 @@ void send_perf_settings_msg(void) {
     msg_send(&gCommandQueue, &msg);
 }
 
+void send_master_clock_run(uint32_t running) {
+    tMessageContent msg = {0};
+
+    msg.cmd                        = eMsgCmdSetMasterClockRun;
+    msg.masterClockRunData.running = running;
+    msg_send(&gCommandQueue, &msg);
+}
+
 static void action_perf_setting_u8(int index) {
     *gPerfSettingU8Target = (uint8_t)gContextMenu.items[index].param;
     send_perf_settings_msg();
@@ -1207,6 +1215,18 @@ void open_midi_note_dropdown(tCoord coord, _Atomic uint8_t * target) {
 }
 
 // ── Patch settings dropdowns ────────────────────────────────────────────────
+
+void toggle_patch_on_off(uint32_t moduleIndex, uint32_t paramIndex) {
+    uint32_t  slot   = (uint32_t)gPatchParamsEdit.slot;
+    tModule * module = get_module_slot(slot, (uint32_t)locationMorph, moduleIndex);
+    uint32_t  value  = 0;
+
+    if (module != NULL) {
+        value                              = module->param[0][paramIndex].value ? 0 : 1;
+        module->param[0][paramIndex].value = (uint8_t)value;
+    }
+    send_patch_setting_param(slot, moduleIndex, paramIndex, value);
+}
 
 void open_patch_on_off_dropdown(tCoord coord, uint32_t moduleIndex, uint32_t paramIndex) {
     static tMenuItem items[] = {

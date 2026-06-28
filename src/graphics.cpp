@@ -1314,12 +1314,15 @@ static void render_patch_params_panel(void) {
         double x = boxX + margin;
         set_rgb_colour(RGB_BLACK);
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Sustain Pedal:");
-        x += get_text_width((char *)"Sustain Pedal:", btnH, eCache) + 4.0;
-        render_dropdown(x, y, btnH, sustainPedal ? "On" : "Off", "On", &gPatchParamRects[pPSustainPedal]);
+        x                               += get_text_width((char *)"Sustain Pedal:", btnH, eCache) + 4.0;
+        gPatchParamRects[pPSustainPedal] = draw_button(mainArea,
+                                                       {{x, y}, {get_text_width((char *)"On", btnH, eCache) + 8.0, btnH}},
+                                                       sustainPedal ? "On" : "Off",
+                                                       sustainPedal ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
-        x  = boxX + boxW / 2.0;
+        x                                = boxX + boxW / 2.0;
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Octave Shift:");
-        x += get_text_width((char *)"Octave Shift:", btnH, eCache) + 4.0;
+        x                               += get_text_width((char *)"Octave Shift:", btnH, eCache) + 4.0;
         snprintf(buf, sizeof(buf), "%+d", (int)octaveShift);
         render_dropdown(x, y, btnH, buf, "+2", &gPatchParamRects[pPOctaveShift]);
     }
@@ -1343,23 +1346,26 @@ static void render_patch_params_panel(void) {
 
         set_rgb_colour(RGB_BLACK);
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Rate:");
-        x += get_text_width((char *)"Rate:", btnH, eCache) + 4.0;
-        x  = render_dropdown(x, y, btnH, arpRateLabels[ri], "1/16T", &gPatchParamRects[pPArpRate]);
+        x                             += get_text_width((char *)"Rate:", btnH, eCache) + 4.0;
+        x                              = render_dropdown(x, y, btnH, arpRateLabels[ri], "1/16T", &gPatchParamRects[pPArpRate]);
 
-        x += 16.0;
+        x                             += 16.0;
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Dir:");
-        x += get_text_width((char *)"Dir:", btnH, eCache) + 4.0;
-        x  = render_dropdown(x, y, btnH, arpDirLabels[di], "Random", &gPatchParamRects[pPArpDirection]);
+        x                             += get_text_width((char *)"Dir:", btnH, eCache) + 4.0;
+        x                              = render_dropdown(x, y, btnH, arpDirLabels[di], "Random", &gPatchParamRects[pPArpDirection]);
 
-        x += 16.0;
+        x                             += 16.0;
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Range:");
-        x += get_text_width((char *)"Range:", btnH, eCache) + 4.0;
-        x  = render_dropdown(x, y, btnH, arpOctLabels[oi], "4 oct", &gPatchParamRects[pPArpOctaves]);
+        x                             += get_text_width((char *)"Range:", btnH, eCache) + 4.0;
+        x                              = render_dropdown(x, y, btnH, arpOctLabels[oi], "4 oct", &gPatchParamRects[pPArpOctaves]);
 
-        x += 16.0;
+        x                             += 16.0;
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Enable:");
-        x += get_text_width((char *)"Enable:", btnH, eCache) + 4.0;
-        render_dropdown(x, y, btnH, arpEnabled ? "On" : "Off", "On", &gPatchParamRects[pPArpEnabled]);
+        x                             += get_text_width((char *)"Enable:", btnH, eCache) + 4.0;
+        gPatchParamRects[pPArpEnabled] = draw_button(mainArea,
+                                                     {{x, y}, {get_text_width((char *)"On", btnH, eCache) + 8.0, btnH}},
+                                                     arpEnabled ? "On" : "Off",
+                                                     arpEnabled ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
     }
     y += rowH;
 
@@ -1422,14 +1428,17 @@ static void render_patch_params_panel(void) {
         double x = boxX + margin;
         set_rgb_colour(RGB_BLACK);
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Range:");
-        x += get_text_width((char *)"Range:", btnH, eCache) + 4.0;
+        x                              += get_text_width((char *)"Range:", btnH, eCache) + 4.0;
         snprintf(buf, sizeof(buf), "%u semi", (unsigned)bendRange);
-        x  = render_dropdown(x, y, btnH, buf, "24 semi", &gPatchParamRects[pPBendRange]);
+        x                               = render_dropdown(x, y, btnH, buf, "24 semi", &gPatchParamRects[pPBendRange]);
 
-        x += 16.0;
+        x                              += 16.0;
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Enable:");
-        x += get_text_width((char *)"Enable:", btnH, eCache) + 4.0;
-        render_dropdown(x, y, btnH, bendEnabled ? "On" : "Off", "On", &gPatchParamRects[pPBendEnabled]);
+        x                              += get_text_width((char *)"Enable:", btnH, eCache) + 4.0;
+        gPatchParamRects[pPBendEnabled] = draw_button(mainArea,
+                                                      {{x, y}, {get_text_width((char *)"On", btnH, eCache) + 8.0, btnH}},
+                                                      bendEnabled ? "On" : "Off",
+                                                      bendEnabled ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
     }
 
     (void)y;
@@ -1491,12 +1500,13 @@ static void render_perf_settings_panel(void) {
         double dialH = 48.0;
         double x     = boxX + margin;
         snprintf(buf, sizeof(buf), "%u BPM", (unsigned)gGlobalSettings.masterClock);
-        gPerfSettingsPanelRects.masterClock = render_dial_with_text(mainArea, {{x, y}, {20.0, dialH}}, NULL, buf, gGlobalSettings.masterClock, 241, 0, (tRgb)RGB_BACKGROUND_GREY);
-        x                                  += 20.0 + 12.0;
-        render_dropdown(x, y + (dialH - btnH) / 2.0, btnH,
-                        gGlobalSettings.masterClockRunning ? "Run" : "Stop",
-                        "Stop", &gPerfSettingsPanelRects.masterClockRunning);
-        y                                  += dialH + 4.0;
+        gPerfSettingsPanelRects.masterClock        = render_dial_with_text(mainArea, {{x, y}, {20.0, dialH}}, NULL, buf, gGlobalSettings.masterClock, 241, 0, (tRgb)RGB_BACKGROUND_GREY);
+        x                                         += 20.0 + 12.0;
+        gPerfSettingsPanelRects.masterClockRunning = draw_button(mainArea,
+                                                                 {{x, y + (dialH - btnH) / 2.0}, {get_text_width((char *)"Stopped", btnH, eCache) + 8.0, btnH}},
+                                                                 gGlobalSettings.masterClockRunning ? "Running" : "Stopped",
+                                                                 gGlobalSettings.masterClockRunning ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
+        y                                         += dialH + 4.0;
     }
 
     // ── Slots ──────────────────────────────────────────────────────
@@ -1526,10 +1536,11 @@ static void render_perf_settings_panel(void) {
     {
         double x = colRng;
         render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Kbd Range:");
-        x += get_text_width((char *)"Kbd Range:", btnH, eCache) + 4.0;
-        render_dropdown(x, y, btnH,
-                        gPerfSettings.keyboardRange ? "On" : "Off",
-                        "On", &gPerfSettingsPanelRects.keyboardRange);
+        x                                    += get_text_width((char *)"Kbd Range:", btnH, eCache) + 4.0;
+        gPerfSettingsPanelRects.keyboardRange = draw_button(mainArea,
+                                                            {{x, y}, {get_text_width((char *)"On", btnH, eCache) + 8.0, btnH}},
+                                                            gPerfSettings.keyboardRange ? "On" : "Off",
+                                                            gPerfSettings.keyboardRange ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
     }
     y += rowH;
 
@@ -1544,17 +1555,20 @@ static void render_perf_settings_panel(void) {
         set_rgb_colour(RGB_BLACK);
         render_text(mainArea, {{boxX + margin, y + 2.0}, {BLANK_SIZE, btnH}}, (char *)slotLabel[i]);
 
-        render_dropdown(colEn, y, btnH,
-                        gGlobalSettings.slot[i].enabled ? "On" : "Off",
-                        "On", &gPerfSettingsPanelRects.slotEnabled[i]);
+        gPerfSettingsPanelRects.slotEnabled[i]  = draw_button(mainArea,
+                                                              {{colEn, y}, {get_text_width((char *)"On", btnH, eCache) + 8.0, btnH}},
+                                                              gGlobalSettings.slot[i].enabled ? "On" : "Off",
+                                                              gGlobalSettings.slot[i].enabled ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
-        render_dropdown(colKbd, y, btnH,
-                        gPerfSettings.slot[i].keyboardEnabled ? "On" : "Off",
-                        "On", &gPerfSettingsPanelRects.slotKeyboard[i]);
+        gPerfSettingsPanelRects.slotKeyboard[i] = draw_button(mainArea,
+                                                              {{colKbd, y}, {get_text_width((char *)"On", btnH, eCache) + 8.0, btnH}},
+                                                              gPerfSettings.slot[i].keyboardEnabled ? "On" : "Off",
+                                                              gPerfSettings.slot[i].keyboardEnabled ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
-        render_dropdown(colHld, y, btnH,
-                        gPerfSettings.slot[i].holdEnabled ? "On" : "Off",
-                        "On", &gPerfSettingsPanelRects.slotHold[i]);
+        gPerfSettingsPanelRects.slotHold[i]     = draw_button(mainArea,
+                                                              {{colHld, y}, {get_text_width((char *)"On", btnH, eCache) + 8.0, btnH}},
+                                                              gPerfSettings.slot[i].holdEnabled ? "On" : "Off",
+                                                              gPerfSettings.slot[i].holdEnabled ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
         midi_note_name_str(gPerfSettings.slot[i].rangeLower, note, sizeof(note));
         render_dropdown(colLo, y, btnH, note, "C#-1", &gPerfSettingsPanelRects.rangeLower[i]);
@@ -1567,7 +1581,7 @@ static void render_perf_settings_panel(void) {
         snprintf(rangeBuf, sizeof(rangeBuf), "%s - %s", loNote, hiNote);
         render_text(mainArea, {{colRng, y + 2.0}, {BLANK_SIZE, btnH}}, rangeBuf);
 
-        y += rowH;
+        y                                      += rowH;
     }
 
     (void)buf;

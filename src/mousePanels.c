@@ -147,17 +147,22 @@ bool handle_perf_settings_mouse(tCoord coord, tMouseButton mouseButton) {
             gPerfSettingsEdit.active = false;
         } else {
             if (within_rectangle(coord, gPerfSettingsPanelRects.masterClockRunning)) {
-                open_stop_run_dropdown(below_rect(gPerfSettingsPanelRects.masterClockRunning), &gGlobalSettings.masterClockRunning);
+                gGlobalSettings.masterClockRunning = !gGlobalSettings.masterClockRunning;
+                send_master_clock_run((uint32_t)gGlobalSettings.masterClockRunning);
             } else if (within_rectangle(coord, gPerfSettingsPanelRects.keyboardRange)) {
-                open_perf_on_off_dropdown(below_rect(gPerfSettingsPanelRects.keyboardRange), &gPerfSettings.keyboardRange);
+                gPerfSettings.keyboardRange = !gPerfSettings.keyboardRange;
+                send_perf_settings_msg();
             } else {
                 for (s = 0; s < MAX_SLOTS; s++) {
                     if (within_rectangle(coord, gPerfSettingsPanelRects.slotEnabled[s])) {
-                        open_perf_on_off_dropdown(below_rect(gPerfSettingsPanelRects.slotEnabled[s]), &gGlobalSettings.slot[s].enabled);
+                        gGlobalSettings.slot[s].enabled = !gGlobalSettings.slot[s].enabled;
+                        send_perf_settings_msg();
                     } else if (within_rectangle(coord, gPerfSettingsPanelRects.slotKeyboard[s])) {
-                        open_perf_on_off_dropdown(below_rect(gPerfSettingsPanelRects.slotKeyboard[s]), &gPerfSettings.slot[s].keyboardEnabled);
+                        gPerfSettings.slot[s].keyboardEnabled = !gPerfSettings.slot[s].keyboardEnabled;
+                        send_perf_settings_msg();
                     } else if (within_rectangle(coord, gPerfSettingsPanelRects.slotHold[s])) {
-                        open_perf_on_off_dropdown(below_rect(gPerfSettingsPanelRects.slotHold[s]), &gPerfSettings.slot[s].holdEnabled);
+                        gPerfSettings.slot[s].holdEnabled = !gPerfSettings.slot[s].holdEnabled;
+                        send_perf_settings_msg();
                     } else if (within_rectangle(coord, gPerfSettingsPanelRects.rangeLower[s])) {
                         open_midi_note_dropdown(below_rect(gPerfSettingsPanelRects.rangeLower[s]), &gPerfSettings.slot[s].rangeLower);
                     } else if (within_rectangle(coord, gPerfSettingsPanelRects.rangeUpper[s])) {
@@ -238,9 +243,8 @@ bool handle_patch_params_mouse(tCoord coord, tMouseButton mouseButton) {
                         } else {
                             for (j = 0; j < (int)(sizeof(kPatchOnOffTable) / sizeof(*kPatchOnOffTable)); j++) {
                                 if (kPatchOnOffTable[j].id == rid) {
-                                    open_patch_on_off_dropdown(below_rect(gPatchParamRects[rid]),
-                                                               kPatchOnOffTable[j].moduleIndex,
-                                                               kPatchOnOffTable[j].paramIndex);
+                                    toggle_patch_on_off(kPatchOnOffTable[j].moduleIndex,
+                                                        kPatchOnOffTable[j].paramIndex);
                                     break;
                                 }
                             }

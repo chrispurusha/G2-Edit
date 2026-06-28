@@ -48,14 +48,6 @@ extern "C" {
 #include "menus.h"
 #include "mouseTopbar.h"
 
-static void send_master_clock_run(uint32_t running) {
-    tMessageContent messageContent = {0};
-
-    messageContent.cmd                        = eMsgCmdSetMasterClockRun;
-    messageContent.masterClockRunData.running = running;
-    msg_send(&gCommandQueue, &messageContent);
-}
-
 static void handle_button(tTopbarControlId controlId) {
     uint32_t slot = gSlot;
 
