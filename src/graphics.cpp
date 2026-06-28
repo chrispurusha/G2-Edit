@@ -1383,12 +1383,12 @@ static void render_perf_settings_panel(void) {
     render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Slots");
     y                            += secH;
 
-    double labelColW = get_text_width((char *)"Slot A:", btnH, eCache) + 8.0;
+    double labelColW = get_text_width((char *)"Slot X:", btnH, eCache) + 8.0;
     double dropW     = get_text_width((char *)"On", btnH, eCache) + 16.0;
     double noteDropW = get_text_width((char *)"C#-1", btnH, eCache) + 10.0;
     double colEn     = boxX + margin + labelColW;
     double colKbd    = colEn + dropW + 8.0;
-    double colHld    = colKbd + dropW + 8.0;
+    double colHld    = colKbd + dropW + 30.0;
     double colLo     = colHld + dropW + 16.0;
     double colHi     = colLo + noteDropW + 8.0;
     double colRng    = colHi + noteDropW + 12.0;
