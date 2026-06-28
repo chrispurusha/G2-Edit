@@ -439,7 +439,7 @@ bool handle_scrollbar_click(tCoord coord) {
 }
 
 void stop_dragging(void) {
-    if (gParamDragging.active || gTempoDragging || gPerfTempoDragging) {
+    if (gParamDragging.active || gTempoDragging || gPerfTempoDragging || gVibRateDragging) {
         glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
         if (gDialMode != eDialModeRotary) {
@@ -453,6 +453,7 @@ void stop_dragging(void) {
     memset(&gCableDrag, 0, sizeof(gCableDrag));
     gTempoDragging            = false;
     gPerfTempoDragging        = false;
+    gVibRateDragging          = false;
     gDragFirstMove            = false;
 }
 
@@ -839,6 +840,36 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         if (gGlobalSettings.masterClock != value) {
             gGlobalSettings.masterClock = (uint8_t)value;
             send_master_clock_bpm(value);
+        }
+    } else if (gVibRateDragging == true) {
+        tModuleKey vibKey    = {(uint32_t)gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_VIBRATO};
+        tModule *  vibModule = get_module(vibKey);
+        int        newVal    = 0;
+
+        if (vibModule != NULL) {
+            if (gDialMode == eDialModeHorizontal) {
+                newVal     = (int)vibModule->param[0][VIBRATO_RATE].value + (int)((xCoord - gDragPrevX) * 128.0 / 200.0);
+                gDragPrevX = xCoord;
+            } else if (gDialMode == eDialModeRotary) {
+                newVal = (int)angle_to_value(calculate_mouse_angle((tCoord){x, y}, gPatchParamRects[pPVibratoRate]), 128);
+            } else {
+                newVal     = (int)vibModule->param[0][VIBRATO_RATE].value + (int)((gDragPrevY - yCoord) * 128.0 / 200.0);
+                gDragPrevY = yCoord;
+            }
+
+            if (newVal < 0) {
+                newVal = 0;
+            }
+
+            if (newVal > 127) {
+                newVal = 127;
+            }
+            value = (uint32_t)newVal;
+
+            if (vibModule->param[0][VIBRATO_RATE].value != value) {
+                vibModule->param[0][VIBRATO_RATE].value = (uint8_t)value;
+                send_param_value(slot, vibKey, VIBRATO_RATE, 0, value);
+            }
         }
     } else if (gParamDragging.active == true) {
         tModule * module = get_module(gParamDragging.moduleKey);

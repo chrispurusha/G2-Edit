@@ -228,7 +228,19 @@ bool handle_patch_params_mouse(tCoord coord, tMouseButton mouseButton) {
         return false;
     }
 
+    if (mouseButton == mouseButtonLeftDown) {
+        if (within_rectangle(coord, gPatchParamRects[pPVibratoRate])) {
+            gVibRateDragging = true;
+
+            if (gDialMode != eDialModeRotary) {
+                start_cursor_drag();
+            }
+        }
+    }
+
     if (mouseButton == mouseButtonLeftUp) {
+        stop_dragging();
+
         if (handle_panel_context_menu(coord)) {
             return true;
         }

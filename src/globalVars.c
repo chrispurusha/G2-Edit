@@ -92,6 +92,7 @@ tRectangle              gPatchNotesCloseRect                                    
 tRectangle              gPatchNotesDiscardRect                                                       = {0};
 bool                    gTempoDragging                                                               = false;
 bool                    gPerfTempoDragging                                                           = false;
+bool                    gVibRateDragging                                                             = false;
 _Atomic uint64_t        gUsbTxTime                                                                   = 0;
 _Atomic uint64_t        gUsbRxTime                                                                   = 0;
 tRectangle              gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS] = {0};  // Rectangle references for each module. It's big - around 6mb
