@@ -894,7 +894,7 @@ const tParamLocation     paramLocationList[] = {
 
     // 104 Unknown
     // 105 ValSw2-1
-    {moduleTypeValSw2to1,  paramTypeMenu,        {{ 40,  -3}, { 7, 7}}, anchorBottomLeft,  NULL,           128,   0, u128StrMap,                            NULL          }, // 105 Val
+    {moduleTypeValSw2to1,  paramTypeMenu,        {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, u128StrMap,                            NULL          }, // 105 Val
     // 106 OscNoise
     {moduleTypeOscNoise,   paramTypeFreq,        {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 106 Tune
     {moduleTypeOscNoise,   paramTypeCommonDial,  {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 106 Fine
@@ -975,7 +975,7 @@ const tParamLocation     paramLocationList[] = {
     // 120 Unknown
     // 121 SeqNote
     {moduleTypeSeqNote,    paramTypeToggle,      {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
-    {moduleTypeSeqNote,    paramTypeMenu,        {{  0, -60}, {7, 7}}, anchorBottomRight, NULL,             8,   5, octaveStrMap,                          NULL          }, // 121 Octave
+    {moduleTypeSeqNote,    paramTypeMenu,        {{  0, -60}, { 7,  7}}, anchorBottomRight, NULL,             8,   5, octaveStrMap,                          NULL          }, // 121 Octave
     {moduleTypeSeqNote,    paramTypeMenu,        {{-15,  15}, { 7,  7}}, anchorTopRight,    "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Octave
     {moduleTypeSeqNote,    paramTypeToggle,      {{  0, -40}, {10,  7}}, anchorBottomRight, "Clr",            1,   0, emptyStrMap,                           NULL          }, // 121 Clear
     {moduleTypeSeqNote,    paramTypeToggle,      {{  0, -30}, {10,  7}}, anchorBottomRight, "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 121 Randomize

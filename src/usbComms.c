@@ -571,13 +571,13 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         {
             LOG_DEBUG("Got slot selection dump\n");
             read_bit_stream(buff, bitPos, 4); // 4 padding bits (always 0)
-
             for (uint32_t i = 0; i < MAX_SLOTS; i++) {
-                uint8_t status = (uint8_t)read_bit_stream(buff, bitPos, 8);
+                uint8_t status = (uint8_t)read_bit_stream(buff, bitPos, 1);
                 gGlobalSettings.slot[i].enabled = status;
                 LOG_DEBUG("  Slot %u enabled: %u\n", i, status != 0 ? 1 : 0);
             }
 
+            // TODO - There's another byte here, which likely has useful data!
             return EXIT_SUCCESS;
         }
 
@@ -2215,9 +2215,9 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdWriteModePerf:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
+            send_stop();                     // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_perf_mode_change(1);
-            send_get_performance_settings();  // At least need the perf settings, otherwise name etc. don't come in after change. Might need other data too
+            send_get_performance_settings(); // At least need the perf settings, otherwise name etc. don't come in after change. Might need other data too
             send_start();
             break;
 
