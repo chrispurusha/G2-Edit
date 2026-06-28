@@ -763,6 +763,7 @@ typedef struct {
 typedef enum {
     eCommsNeverConnected,
     eCommsReconnecting,
+    eCommsWaitingReady,
     eCommsInitialising,
     eCommsOnLine
 } tCommsState;

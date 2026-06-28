@@ -571,11 +571,13 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         {
             LOG_DEBUG("Got slot selection dump\n");
             read_bit_stream(buff, bitPos, 4); // 4 padding bits (always 0)
+
             for (uint32_t i = 0; i < MAX_SLOTS; i++) {
                 uint8_t status = (uint8_t)read_bit_stream(buff, bitPos, 1);
                 gGlobalSettings.slot[i].enabled = status;
                 LOG_DEBUG("  Slot %u enabled: %u\n", i, status != 0 ? 1 : 0);
             }
+
             return EXIT_SUCCESS;
         }
 
@@ -642,13 +644,13 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             uint32_t newSlot = read_bit_stream(buff, bitPos, 8);
             LOG_DEBUG("Got slot select %u\n", newSlot);
 
-            gSlot = newSlot;
+            gSlot                 = newSlot;
             gPatchParamsEdit.slot = newSlot;
             set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
                                            (tTopbarControlId)(topbarSlotAId + newSlot));
             set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
                                            (tTopbarControlId)((uint32_t)topbarVariation1Id + gPatchDescr[newSlot].activeVariation));
-            
+
             return EXIT_SUCCESS;
         }
 
@@ -2322,7 +2324,7 @@ static void state_handler(void) {
         return;
     }
 
-    if (gCommsState != eCommsOnLine) {
+    if (gCommsState == eCommsNeverConnected || gCommsState == eCommsReconnecting) {
         bool opened = false;
 
         pthread_mutex_lock(&usbStaticMutex);
@@ -2330,11 +2332,17 @@ static void state_handler(void) {
         pthread_mutex_unlock(&usbStaticMutex);
 
         if (opened) {
-            int result = EXIT_FAILURE;
+            gCommsState = eCommsWaitingReady;
+        } else {
+            usleep(500000);  // 500ms between open attempts — don't hammer the bus
+        }
+        return;
+    }
 
-            // Always pull from the G2 — it is authoritative on both first
-            // connection and reconnection after disconnect.
-            result = send_init_sequence_pull();
+    if (gCommsState == eCommsWaitingReady) {
+        if (send_get_patch_version(0) == EXIT_SUCCESS) {
+            LOG_DEBUG("G2 ready — starting init sequence\n");
+            int result = send_init_sequence_pull();
 
             if (result == EXIT_SUCCESS) {
                 gCommsState = eCommsOnLine;
@@ -2346,7 +2354,8 @@ static void state_handler(void) {
                 gCommsState = eCommsReconnecting;
             }
         } else {
-            usleep(500000);  // 500ms between open attempts — don't hammer the bus
+            LOG_DEBUG("G2 not ready yet — polling\n");
+            usleep(500000);  // 500ms between readiness polls
         }
         return;
     }
