@@ -106,6 +106,8 @@ extern tRectangle              gPatchNotesDiscardRect;
 extern bool                    gTempoDragging;
 extern bool                    gPerfTempoDragging;
 extern bool                    gVibRateDragging;
+extern bool                    gVibAmountDragging;
+extern bool                    gGlideTimeDragging;
 extern _Atomic uint64_t        gUsbTxTime;
 extern _Atomic uint64_t        gUsbRxTime;
 extern tRectangle              gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS];

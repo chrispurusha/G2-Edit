@@ -439,7 +439,7 @@ bool handle_scrollbar_click(tCoord coord) {
 }
 
 void stop_dragging(void) {
-    if (gParamDragging.active || gTempoDragging || gPerfTempoDragging || gVibRateDragging) {
+    if (gParamDragging.active || gTempoDragging || gPerfTempoDragging || gVibRateDragging || gVibAmountDragging || gGlideTimeDragging) {
         glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
         if (gDialMode != eDialModeRotary) {
@@ -454,6 +454,8 @@ void stop_dragging(void) {
     gTempoDragging            = false;
     gPerfTempoDragging        = false;
     gVibRateDragging          = false;
+    gVibAmountDragging        = false;
+    gGlideTimeDragging        = false;
     gDragFirstMove            = false;
 }
 
@@ -841,6 +843,36 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
             gGlobalSettings.masterClock = (uint8_t)value;
             send_master_clock_bpm(value);
         }
+    } else if (gVibAmountDragging == true) {
+        tModuleKey vibKey    = {(uint32_t)gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_VIBRATO};
+        tModule *  vibModule = get_module(vibKey);
+        int        newVal    = 0;
+
+        if (vibModule != NULL) {
+            if (gDialMode == eDialModeHorizontal) {
+                newVal     = (int)vibModule->param[0][VIBRATO_DEPTH].value + (int)((xCoord - gDragPrevX) * 101.0 / 200.0);
+                gDragPrevX = xCoord;
+            } else if (gDialMode == eDialModeRotary) {
+                newVal = (int)angle_to_value(calculate_mouse_angle((tCoord){x, y}, gPatchParamRects[pPVibratoAmount]), 101);
+            } else {
+                newVal     = (int)vibModule->param[0][VIBRATO_DEPTH].value + (int)((gDragPrevY - yCoord) * 101.0 / 200.0);
+                gDragPrevY = yCoord;
+            }
+
+            if (newVal < 0) {
+                newVal = 0;
+            }
+
+            if (newVal > 100) {
+                newVal = 100;
+            }
+            value = (uint32_t)newVal;
+
+            if (vibModule->param[0][VIBRATO_DEPTH].value != value) {
+                vibModule->param[0][VIBRATO_DEPTH].value = (uint8_t)value;
+                send_param_value(slot, vibKey, VIBRATO_DEPTH, 0, value);
+            }
+        }
     } else if (gVibRateDragging == true) {
         tModuleKey vibKey    = {(uint32_t)gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_VIBRATO};
         tModule *  vibModule = get_module(vibKey);
@@ -869,6 +901,36 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
             if (vibModule->param[0][VIBRATO_RATE].value != value) {
                 vibModule->param[0][VIBRATO_RATE].value = (uint8_t)value;
                 send_param_value(slot, vibKey, VIBRATO_RATE, 0, value);
+            }
+        }
+    } else if (gGlideTimeDragging == true) {
+        tModuleKey glideKey    = {(uint32_t)gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_GLIDE};
+        tModule *  glideModule = get_module(glideKey);
+        int        newVal      = 0;
+
+        if (glideModule != NULL) {
+            if (gDialMode == eDialModeHorizontal) {
+                newVal     = (int)glideModule->param[0][GLIDE_SPEED].value + (int)((xCoord - gDragPrevX) * 128.0 / 200.0);
+                gDragPrevX = xCoord;
+            } else if (gDialMode == eDialModeRotary) {
+                newVal = (int)angle_to_value(calculate_mouse_angle((tCoord){x, y}, gPatchParamRects[pPGlideTime]), 128);
+            } else {
+                newVal     = (int)glideModule->param[0][GLIDE_SPEED].value + (int)((gDragPrevY - yCoord) * 128.0 / 200.0);
+                gDragPrevY = yCoord;
+            }
+
+            if (newVal < 0) {
+                newVal = 0;
+            }
+
+            if (newVal > 127) {
+                newVal = 127;
+            }
+            value = (uint32_t)newVal;
+
+            if (glideModule->param[0][GLIDE_SPEED].value != value) {
+                glideModule->param[0][GLIDE_SPEED].value = (uint8_t)value;
+                send_param_value(slot, glideKey, GLIDE_SPEED, 0, value);
             }
         }
     } else if (gParamDragging.active == true) {

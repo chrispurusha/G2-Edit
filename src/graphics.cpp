@@ -1205,27 +1205,30 @@ static void render_patch_params_panel(void) {
     if (!gPatchParamsEdit.active) {
         return;
     }
-    uint32_t  slot         = gPatchParamsEdit.slot;
-    double    renderW      = get_render_width() / gGlobalGuiScale;
-    double    renderH      = get_render_height() / gGlobalGuiScale;
-    double    boxW         = 680.0;
-    double    boxH         = 320.0;
-    double    boxX         = (renderW - boxW) / 2.0;
-    double    boxY         = (renderH - boxH) / 2.0;
-    double    margin       = 10.0;
-    double    titleH       = 24.0;
-    double    rowH         = 26.0;
-    double    secH         = 18.0;
-    double    btnH         = STANDARD_BUTTON_TEXT_HEIGHT;
-    double    y            = boxY + titleH + margin;
-    double    x            = 0.0;
-    double    dialH        = 0.0;
-    tModule * sustMod      = get_module_slot(slot, (uint32_t)locationMorph, PATCH_SUSTAIN);
-    tModule * vibMod       = get_module_slot(slot, (uint32_t)locationMorph, PATCH_VIBRATO);
-    uint8_t   sustainPedal = sustMod ? sustMod->param[0][SUSTAIN_PEDAL].value : 0;
-    int8_t    octaveShift  = sustMod ? (int8_t)sustMod->param[0][OCTAVE_SHIFT].value : 0;
-    uint8_t   vibratoRate  = vibMod ? vibMod->param[0][VIBRATO_RATE].value : 0;
-    char      buf[16]      = {0};
+    uint32_t  slot          = gPatchParamsEdit.slot;
+    double    renderW       = get_render_width() / gGlobalGuiScale;
+    double    renderH       = get_render_height() / gGlobalGuiScale;
+    double    boxW          = 680.0;
+    double    boxH          = 320.0;
+    double    boxX          = (renderW - boxW) / 2.0;
+    double    boxY          = (renderH - boxH) / 2.0;
+    double    margin        = 10.0;
+    double    titleH        = 24.0;
+    double    rowH          = 26.0;
+    double    secH          = 18.0;
+    double    btnH          = STANDARD_BUTTON_TEXT_HEIGHT;
+    double    y             = boxY + titleH + margin;
+    double    x             = 0.0;
+    double    dialH         = 0.0;
+    tModule * sustMod       = get_module_slot(slot, (uint32_t)locationMorph, PATCH_SUSTAIN);
+    tModule * vibMod        = get_module_slot(slot, (uint32_t)locationMorph, PATCH_VIBRATO);
+    tModule * glideMod      = get_module_slot(slot, (uint32_t)locationMorph, PATCH_GLIDE);
+    uint8_t   sustainPedal  = sustMod ? sustMod->param[0][SUSTAIN_PEDAL].value : 0;
+    int8_t    octaveShift   = sustMod ? (int8_t)sustMod->param[0][OCTAVE_SHIFT].value : 0;
+    uint8_t   vibratoRate   = vibMod ? vibMod->param[0][VIBRATO_RATE].value : 0;
+    uint8_t   vibratoAmount = vibMod ? vibMod->param[0][VIBRATO_DEPTH].value : 0;
+    uint8_t   glideTime     = glideMod ? glideMod->param[0][GLIDE_SPEED].value : 0;
+    char      buf[16]       = {0};
 
     set_rgb_colour(RGB_GREY_2);
     render_rectangle(mainArea, {{0.0, 0.0}, {renderW, renderH}});
@@ -1273,35 +1276,40 @@ static void render_patch_params_panel(void) {
         snprintf(buf, sizeof(buf), "%+d", (int)octaveShift);
         render_dropdown(x, y, btnH, buf, "+2", &gPatchParamRects[pPOctaveShift]);
     }
-    y                              += rowH;
+    y                                += rowH;
 
     // ── Arpeggiator ────────────────────────────────────────────────
     set_rgb_colour(RGB_GREY_7);
     render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Arpeggiator");
-    y                              += secH;
+    y                                += secH;
     render_pp_row(boxX + margin, y, btnH, kPPArp, kPPArpCount);
-    y                              += rowH;
+    y                                += rowH;
 
     // ── Vibrato ────────────────────────────────────────────────────
     set_rgb_colour(RGB_GREY_7);
     render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Vibrato");
-    y                              += secH;
-    x                               = render_pp_row(boxX + margin, y, btnH, kPPVibrato, kPPVibratoCount);
-    dialH                           = rowH * 2.0;
-    gPatchParamRects[pPVibratoRate] = render_dial_with_text(mainArea, {{x, y + 2.0}, {20.0, dialH}}, "Rate", NULL, btnH, vibratoRate, 127, 0, (tRgb)RGB_BACKGROUND_GREY);
-    y                              += rowH;
+    y                                += secH;
+    x                                 = render_pp_row(boxX + margin, y, btnH, kPPVibrato, kPPVibratoCount);
+    dialH                             = rowH * 2.0;
+    snprintf(buf, sizeof(buf), "%u cnt", (unsigned)vibratoAmount);
+    gPatchParamRects[pPVibratoAmount] = render_dial_with_text(mainArea, {{x, y - 10.0}, {20.0, dialH}}, "Amount", buf, btnH, vibratoAmount, 100, 0, (tRgb)RGB_BACKGROUND_GREY);
+    x                                += get_text_width((char *)"100 cnt", btnH, eCache) + 8.0;
+    snprintf(buf, sizeof(buf), "%.2f Hz", 4.0 + (vibratoRate / 127.0) * 4.0);
+    gPatchParamRects[pPVibratoRate]   = render_dial_with_text(mainArea, {{x, y - 10.0}, {20.0, dialH}}, "Rate", buf, btnH, vibratoRate, 127, 0, (tRgb)RGB_BACKGROUND_GREY);
+    y                                += rowH;
 
     // ── Glide ──────────────────────────────────────────────────────
     set_rgb_colour(RGB_GREY_7);
     render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Glide");
-    y                              += secH;
-    render_pp_row(boxX + margin, y, btnH, kPPGlide, kPPGlideCount);
-    y                              += rowH;
+    y                                += secH;
+    x                                 = render_pp_row(boxX + margin, y, btnH, kPPGlide, kPPGlideCount);
+    gPatchParamRects[pPGlideTime]     = render_dial_with_text(mainArea, {{x, y - 10.0}, {20.0, dialH}}, "Time", get_glide_time_str(glideTime), btnH, glideTime, 127, 0, (tRgb)RGB_BACKGROUND_GREY);
+    y                                += rowH;
 
     // ── Bend ───────────────────────────────────────────────────────
     set_rgb_colour(RGB_GREY_7);
     render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Bend");
-    y                              += secH;
+    y                                += secH;
     render_pp_row(boxX + margin, y, btnH, kPPBend, kPPBendCount);
 
     (void)y;

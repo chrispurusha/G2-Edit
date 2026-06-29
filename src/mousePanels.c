@@ -206,10 +206,8 @@ bool handle_patch_params_mouse(tCoord coord, tMouseButton mouseButton) {
         {pPArpRate,       open_arp_rate_dropdown          },
         {pPArpDirection,  open_arp_direction_dropdown     },
         {pPArpOctaves,    open_arp_octave_dropdown        },
-        {pPVibratoAmount, open_vibrato_amount_dropdown    },
         {pPVibratoSource, open_vibrato_source_dropdown    },
         {pPVibratoRate,   NULL                            },
-        {pPGlideTime,     open_glide_time_dropdown        },
         {pPGlideMode,     open_glide_mode_dropdown        },
         {pPBendRange,     open_bend_range_dropdown        },
         {pPBendEnabled,   NULL                            },
@@ -229,8 +227,20 @@ bool handle_patch_params_mouse(tCoord coord, tMouseButton mouseButton) {
     }
 
     if (mouseButton == mouseButtonLeftDown) {
-        if (within_rectangle(coord, gPatchParamRects[pPVibratoRate])) {
+        if (within_rectangle(coord, gPatchParamRects[pPVibratoAmount])) {
+            gVibAmountDragging = true;
+
+            if (gDialMode != eDialModeRotary) {
+                start_cursor_drag();
+            }
+        } else if (within_rectangle(coord, gPatchParamRects[pPVibratoRate])) {
             gVibRateDragging = true;
+
+            if (gDialMode != eDialModeRotary) {
+                start_cursor_drag();
+            }
+        } else if (within_rectangle(coord, gPatchParamRects[pPGlideTime])) {
+            gGlideTimeDragging = true;
 
             if (gDialMode != eDialModeRotary) {
                 start_cursor_drag();

@@ -33,13 +33,14 @@ typedef struct {
 } tPatchParamItem;
 
 #define kPPArpCount        4
-#define kPPVibratoCount    2
-#define kPPGlideCount      2
+#define kPPVibratoCount    1
+#define kPPGlideCount      1
 #define kPPBendCount       2
 
 extern const tPatchParamItem kPPArp[kPPArpCount];
 extern const tPatchParamItem kPPVibrato[kPPVibratoCount];
 extern const tPatchParamItem kPPGlide[kPPGlideCount];
+const char * get_glide_time_str(uint8_t gi);
 extern const tPatchParamItem kPPBend[kPPBendCount];
 
 #endif /* PATCH_PARAMS_RESOURCES_H */

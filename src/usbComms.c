@@ -145,9 +145,9 @@ static void close_device(void) {
 
 // Opens the G2 and claims interface 0. Returns true on success.
 // On macOS: no kernel driver detach needed — libusb uses IOKit directly.
-// We do not call libusb_reset_device: on macOS 10.11+ it maps to
-// USBDeviceReEnumerate (full re-enumeration), which is disruptive on a
-// booting G2 and unnecessary when there is no kernel driver to evict.
+// libusb_reset_device on macOS triggers USBDeviceReEnumerate, which resets
+// the bulk endpoint DATA0/DATA1 toggle bits — without it the host and device
+// can be out of phase after a reconnect, causing all transfers to time out.
 static bool open_and_claim_device(void) {
     devHandle = libusb_open_device_with_vid_pid(libUsbCtx, VENDOR_ID, PRODUCT_ID);
 
@@ -158,6 +158,13 @@ static bool open_and_claim_device(void) {
 
     if (result != LIBUSB_SUCCESS) {
         LOG_ERROR("Failed to claim interface: %s\n", libusb_error_name(result));
+        close_device();
+        return false;
+    }
+    result    = libusb_reset_device(devHandle);
+
+    if (result != LIBUSB_SUCCESS) {
+        LOG_ERROR("Failed to reset device: %s\n", libusb_error_name(result));
         close_device();
         return false;
     }
