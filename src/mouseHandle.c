@@ -1764,8 +1764,8 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         tCoord     coord = {0};
 
         area    = module_area();
-        coord.x = area.coord.x + area.size.w / 2.0;
-        coord.y = area.coord.y + area.size.h / 2.0;
+        coord.x = area.coord.x;
+        coord.y = area.coord.y;
 
         // React on command key with - + keys for zooming
         if (key == GLFW_KEY_MINUS) {
