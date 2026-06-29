@@ -579,6 +579,7 @@ typedef struct {
     tParamType3 type3;      // Denotes param or mode, which should maybe be union-ed?
     uint32_t    param;
     uint32_t    mode;
+    uint32_t    startValue; // value at drag-start, for undo
 } tParamDragging;
 
 typedef struct {

@@ -72,10 +72,20 @@ typedef struct {
     tClipboardCable *  clipCables;   // malloc'd copy
 } tUndoPastePayload;
 
+typedef struct {
+    tModuleKey key;
+    uint32_t   index;    // param index or mode index
+    uint32_t   variation;
+    uint32_t   oldValue;
+    uint32_t   newValue;
+    bool       isMode;
+} tUndoParamPayload;
+
 typedef enum {
     eUndoCmdMove,
     eUndoCmdDelete,
     eUndoCmdPaste,
+    eUndoCmdParam,
 } tUndoCmdType;
 
 typedef struct {
@@ -118,6 +128,10 @@ static void free_command(tUndoCommand * cmd) {
             free(p);
             break;
         }
+
+        case eUndoCmdParam:
+            free(cmd->payload);
+            break;
     }
     cmd->payload = NULL;
 }
@@ -496,6 +510,62 @@ static void apply_paste_redo(tUndoPastePayload * p) {
                    p->clipCables, p->clipCableCount);
 }
 
+void undo_push_param_change(tModuleKey key, uint32_t paramIndex, uint32_t variation,
+                            uint32_t oldValue, uint32_t newValue) {
+    if (oldValue == newValue) {
+        return;
+    }
+    tUndoParamPayload * p = malloc(sizeof(tUndoParamPayload));
+
+    if (!p) {
+        return;
+    }
+    p->key       = key;
+    p->index     = paramIndex;
+    p->variation = variation;
+    p->oldValue  = oldValue;
+    p->newValue  = newValue;
+    p->isMode    = false;
+    stack_push(eUndoCmdParam, p);
+}
+
+void undo_push_mode_change(tModuleKey key, uint32_t modeIndex,
+                           uint32_t oldValue, uint32_t newValue) {
+    if (oldValue == newValue) {
+        return;
+    }
+    tUndoParamPayload * p = malloc(sizeof(tUndoParamPayload));
+
+    if (!p) {
+        return;
+    }
+    p->key       = key;
+    p->index     = modeIndex;
+    p->variation = 0;
+    p->oldValue  = oldValue;
+    p->newValue  = newValue;
+    p->isMode    = true;
+    stack_push(eUndoCmdParam, p);
+}
+
+static void apply_param(tUndoParamPayload * p, bool isUndo) {
+    tModule * mod   = get_module(p->key);
+
+    if (!mod) {
+        return;
+    }
+    uint32_t  value = isUndo ? p->oldValue : p->newValue;
+
+    if (p->isMode) {
+        mod->mode[p->index].value = value;
+        send_mode_value(p->key.slot, p->key, p->index, value);
+    } else {
+        mod->param[p->variation][p->index].value = (uint8_t)value;
+        send_param_value(p->key.slot, p->key, p->index, p->variation, value);
+    }
+    gReDraw = true;
+}
+
 // ─── Public undo / redo ────────────────────────────────────────────────────
 
 bool undo_can_undo(void) {
@@ -525,6 +595,10 @@ void undo_undo(void) {
         case eUndoCmdPaste:
             apply_paste_undo(cmd->payload);
             break;
+
+        case eUndoCmdParam:
+            apply_param(cmd->payload, true);
+            break;
     }
 }
 
@@ -546,6 +620,10 @@ void undo_redo(void) {
 
         case eUndoCmdPaste:
             apply_paste_redo(cmd->payload);
+            break;
+
+        case eUndoCmdParam:
+            apply_param(cmd->payload, false);
             break;
     }
 }

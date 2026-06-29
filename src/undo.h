@@ -41,6 +41,10 @@ void undo_push_move(uint32_t slot, uint32_t location, tUndoMoveEntry * entries, 
 // Record a paste operation so it can be undone and redone.
 void undo_push_paste(uint32_t slot, uint32_t location, uint32_t anchorCol, uint32_t anchorRow, tModuleKey * pastedKeys, uint32_t pastedCount, tClipboardModule * clipModules, uint32_t clipModuleCount, tClipboardCable * clipCables, uint32_t clipCableCount);
 
+// Record a single param value change (old → new). variation ignored for modes.
+void undo_push_param_change(tModuleKey key, uint32_t paramIndex, uint32_t variation, uint32_t oldValue, uint32_t newValue);
+void undo_push_mode_change(tModuleKey key, uint32_t modeIndex, uint32_t oldValue, uint32_t newValue);
+
 bool undo_can_undo(void);
 bool undo_can_redo(void);
 void undo_undo(void);

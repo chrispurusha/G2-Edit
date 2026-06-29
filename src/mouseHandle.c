@@ -230,21 +230,22 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
 
             if (  paramType != paramTypeToggle && paramType != paramTypeMenu
                && paramType != paramTypeBypass && paramType != paramTypeEnable) {
-                gParamDragging.moduleKey = module->key;
-                gParamDragging.type3     = paramType3Param;
-                gParamDragging.param     = i;
-                gParamDragging.active    = true;
+                gParamDragging.moduleKey  = module->key;
+                gParamDragging.type3      = paramType3Param;
+                gParamDragging.param      = i;
+                gParamDragging.startValue = param->value;
+                gParamDragging.active     = true;
 
                 if (module->key.location == locationMorph) {
                     gMorphGroupFocus = i;
                 }
-                isSlider                 = (module->key.location != locationMorph)
-                                           && (paramType == paramTypeSlider);
+                isSlider                  = (module->key.location != locationMorph)
+                                            && (paramType == paramTypeSlider);
 
                 if (gDialMode != eDialModeRotary || isSlider) {
                     start_cursor_drag();
                 }
-                retVal                   = true;
+                retVal                    = true;
             }
         }
     }
@@ -257,15 +258,16 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
                 if (  modeLocationList[mode->modeRef].type != paramTypeToggle
                    && modeLocationList[mode->modeRef].type != paramTypeMenu) {
                     memset(&gParamDragging, 0, sizeof(gParamDragging));
-                    gParamDragging.moduleKey = module->key;
-                    gParamDragging.type3     = paramType3Mode;
-                    gParamDragging.mode      = i;
-                    gParamDragging.active    = true;
+                    gParamDragging.moduleKey  = module->key;
+                    gParamDragging.type3      = paramType3Mode;
+                    gParamDragging.mode       = i;
+                    gParamDragging.startValue = mode->value;
+                    gParamDragging.active     = true;
 
                     if (gDialMode != eDialModeRotary) {
                         start_cursor_drag();
                     }
-                    retVal                   = true;
+                    retVal                    = true;
                 }
             }
         }
@@ -402,8 +404,10 @@ static bool handle_module_release_for_module(tModule * module, tCoord coord, tMo
                 retVal = true;
             } else if (paramType == paramTypeToggle || paramType == paramTypeBypass || paramType == paramTypeEnable) {
                 range        = (module->key.location == locationMorph) ? 2 : paramLocationList[param->paramRef].range;
+                uint32_t oldParamVal = param->value;
                 param->value = (param->value + 1) % range;
                 send_param_value(slot, module->key, (uint32_t)i, variation, param->value);
+                undo_push_param_change(module->key, (uint32_t)i, variation, oldParamVal, param->value);
                 retVal       = true;
             }
         }
@@ -418,8 +422,10 @@ static bool handle_module_release_for_module(tModule * module, tCoord coord, tMo
                     open_mode_toggle_menu(coord, module->key, (uint32_t)i, mode->modeRef);
                     retVal = true;
                 } else if (modeLocationList[mode->modeRef].type == paramTypeToggle) {
+                    uint32_t oldModeVal = mode->value;
                     mode->value = (mode->value + 1) % modeLocationList[mode->modeRef].range;
                     send_mode_value(slot, module->key, (uint32_t)i, mode->value);
+                    undo_push_mode_change(module->key, (uint32_t)i, oldModeVal, mode->value);
                     retVal      = true;
                 }
             }
@@ -798,6 +804,30 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 selection_add_rect(selRect, slot, location);
                 gRubberBand.active = false;
                 found              = true;
+            }
+
+            // Push param/mode undo before stop_dragging() zeros gParamDragging
+            if (gParamDragging.active) {
+                tModule * pdMod = get_module(gParamDragging.moduleKey);
+
+                if (pdMod) {
+                    uint32_t pdVariation = gPatchDescr[slot].activeVariation;
+
+                    if (gParamDragging.type3 == paramType3Param) {
+                        uint32_t curVal = pdMod->param[pdVariation][gParamDragging.param].value;
+                        undo_push_param_change(gParamDragging.moduleKey,
+                                               gParamDragging.param,
+                                               pdVariation,
+                                               gParamDragging.startValue,
+                                               curVal);
+                    } else {
+                        uint32_t curVal = pdMod->mode[gParamDragging.mode].value;
+                        undo_push_mode_change(gParamDragging.moduleKey,
+                                              gParamDragging.mode,
+                                              gParamDragging.startValue,
+                                              curVal);
+                    }
+                }
             }
             stop_dragging();
         }

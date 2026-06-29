@@ -156,19 +156,21 @@ bool handle_topbar_left_down(tCoord coord, uint32_t slot) {
 
     if (found == false) {
         if (within_rectangle(coord, gTopbarControls[topbarPatchVolumeId].rectangle)) {
-            volKey.slot              = slot;
-            volKey.location          = (uint32_t)locationMorph;
-            volKey.index             = PATCH_VOLUME;
+            volKey.slot               = slot;
+            volKey.location           = (uint32_t)locationMorph;
+            volKey.index              = PATCH_VOLUME;
 
-            gParamDragging.moduleKey = volKey;
-            gParamDragging.type3     = paramType3Param;
-            gParamDragging.param     = VOLUME_LEVEL;
-            gParamDragging.active    = true;
+            tModule * volMod = get_module(volKey);
+            gParamDragging.moduleKey  = volKey;
+            gParamDragging.type3      = paramType3Param;
+            gParamDragging.param      = VOLUME_LEVEL;
+            gParamDragging.startValue = volMod ? volMod->param[0][VOLUME_LEVEL].value : 0;
+            gParamDragging.active     = true;
 
             if (gDialMode != eDialModeRotary) {
                 start_cursor_drag();
             }
-            found                    = true;
+            found                     = true;
         }
     }
 
