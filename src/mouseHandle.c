@@ -246,8 +246,8 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
                 if (gDialMode != eDialModeRotary || isSlider) {
                     start_cursor_drag();
                 }
-                retVal                    = true;
             }
+            retVal = true;
         }
     }
 
