@@ -206,6 +206,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             break;
         }
         case paramTypeEnable:
+        case paramTypePush:
         {
             tRectangle (*render_param_function)(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramIndex, uint32_t paramRef, const char ** strMap);
             render_param_function = &render_paramType1Enable;

@@ -230,7 +230,8 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
             }
 
             if (  paramType != paramTypeToggle && paramType != paramTypeMenu
-               && paramType != paramTypeBypass && paramType != paramTypeEnable) {
+               && paramType != paramTypeBypass && paramType != paramTypeEnable
+               && paramType != paramTypePush) {
                 gParamDragging.moduleKey  = module->key;
                 gParamDragging.type3      = paramType3Param;
                 gParamDragging.param      = i;
@@ -246,6 +247,9 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
                 if (gDialMode != eDialModeRotary || isSlider) {
                     start_cursor_drag();
                 }
+            } else if (paramType == paramTypePush) {
+                send_param_value(module->key.slot, module->key, (uint32_t)i, variation, 0);
+                param->value = 0;
             }
             retVal = true;
         }
@@ -409,6 +413,10 @@ static bool handle_module_release_for_module(tModule * module, tCoord coord, tMo
                 param->value = (param->value + 1) % range;
                 send_param_value(slot, module->key, (uint32_t)i, variation, param->value);
                 undo_push_param_change(module->key, (uint32_t)i, variation, oldParamVal, param->value);
+                retVal       = true;
+            } else if (paramType == paramTypePush) {
+                send_param_value(slot, module->key, (uint32_t)i, variation, 1);
+                param->value = 0;
                 retVal       = true;
             }
         }
@@ -1111,7 +1119,8 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                     }
 
                     if (  paramType != paramTypeToggle && paramType != paramTypeMenu
-                       && paramType != paramTypeBypass && paramType != paramTypeEnable) {
+                       && paramType != paramTypeBypass && paramType != paramTypeEnable
+                       && paramType != paramTypePush) {
                         if (module->key.location == locationMorph) {
                             range     = 128;
                             paramType = paramTypeCommonDial;

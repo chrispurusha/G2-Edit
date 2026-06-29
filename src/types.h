@@ -370,6 +370,7 @@ typedef enum {
     paramTypeLRDial,
     paramTypeOscWave,
     paramTypeEnable,
+    paramTypePush,
     paramTypeStrMap,
     paramTypeFreqShift,
     paramTypeToggle,
