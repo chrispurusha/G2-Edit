@@ -433,7 +433,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                     tModule *  module = get_module(key);
 
                     if (module != NULL) {
-                        if (module_led_count(module->type) > 0) {
+                        if (gModuleProperties[module->type].ledType == ledTypeYes) {
                             if (led_count >= start_idx && led_count < (uint32_t)(start_idx + 40)) {
                                 module->led.value = read_bit_stream(buff, bitPos, 2);
                             }
