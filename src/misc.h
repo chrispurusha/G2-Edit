@@ -26,6 +26,7 @@ extern "C" {
 
 void register_sleep_wake_notifications(void);
 void setup_main_menu(void);
+void save_zoom_factor(double zoom);
 
 #ifdef __cplusplus
 }

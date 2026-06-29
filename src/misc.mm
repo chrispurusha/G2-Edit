@@ -21,10 +21,17 @@
 #import <Cocoa/Cocoa.h>
 #include <stdatomic.h>
 #include <string.h>
+#include "defs.h"
+#include "types.h"
 #include "globalVars.h"
 #include "graphics.h"
 #include "mouseHandle.h"
 #include "usbComms.h"
+
+extern "C" {
+void set_zoom_factor(double zoomFactor, tCoord mouseCoord);
+double get_zoom_factor(void);
+}
 
 @interface G2MenuTarget : NSObject
 - (void)openPatch:(id)sender;
@@ -35,6 +42,9 @@
 - (void)setDialModeRotary:(id)sender;
 - (void)setDialModeVertical:(id)sender;
 - (void)setDialModeHorizontal:(id)sender;
+- (void)zoomIn:(id)sender;
+- (void)zoomOut:(id)sender;
+- (void)zoomReset:(id)sender;
 - (BOOL)validateMenuItem:(NSMenuItem *)item;
 @end
 
@@ -91,6 +101,28 @@
     [[NSUserDefaults standardUserDefaults] setInteger:gDialMode forKey:@"dialMode"];
 }
 
+- (void)zoomIn:(id)sender {
+    double zoomFactor = get_zoom_factor() + ZOOM_DELTA;
+
+    set_zoom_factor(zoomFactor, (tCoord){0.0, 0.0});
+    save_zoom_factor(get_zoom_factor());
+    wake_glfw();
+}
+
+- (void)zoomOut:(id)sender {
+    double zoomFactor = get_zoom_factor() - ZOOM_DELTA;
+
+    set_zoom_factor(zoomFactor, (tCoord){0.0, 0.0});
+    save_zoom_factor(get_zoom_factor());
+    wake_glfw();
+}
+
+- (void)zoomReset:(id)sender {
+    set_zoom_factor(NO_ZOOM, (tCoord){0.0, 0.0});
+    save_zoom_factor(get_zoom_factor());
+    wake_glfw();
+}
+
 - (BOOL)validateMenuItem:(NSMenuItem *)item {
     SEL action = [item action];
 
@@ -130,6 +162,14 @@ void setup_main_menu(void) {
     if ([defaults objectForKey:@"dialMode"] != nil) {
         gDialMode = (tDialMode)[defaults integerForKey:@"dialMode"];
     }
+
+    if ([defaults objectForKey:@"zoomFactor"] != nil) {
+        double savedZoom = [defaults doubleForKey:@"zoomFactor"];
+
+        if (savedZoom >= 0.24) {
+            set_zoom_factor(savedZoom, (tCoord){0.0, 0.0});
+        }
+    }
     // File menu
     NSMenuItem *          fileMI    = [[NSMenuItem alloc] init];
     NSMenu *              fileMenu  = [[NSMenu alloc] initWithTitle:@"File"];
@@ -159,6 +199,23 @@ void setup_main_menu(void) {
     [ctrlMenu addItem:make_item(@"Horizontal", @selector(setDialModeHorizontal:), @"", target)];
     [ctrlMI setSubmenu:ctrlMenu];
     [menuBar insertItem:ctrlMI atIndex:3];
+
+    // View menu
+    NSMenuItem *          viewMI    = [[NSMenuItem alloc] init];
+    NSMenu *              viewMenu  = [[NSMenu alloc] initWithTitle:@"View"];
+
+    [viewMenu addItem:make_item(@"Zoom In [⌘=]", @selector(zoomIn:), @"", target)];
+    [viewMenu addItem:make_item(@"Zoom Out [⌘-]", @selector(zoomOut:), @"", target)];
+    [viewMenu addItem:make_item(@"Zoom Reset", @selector(zoomReset:), @"", target)];
+    [viewMI setSubmenu:viewMenu];
+    [menuBar insertItem:viewMI atIndex:4];
+}
+
+void save_zoom_factor(double zoom) {
+    NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
+
+    [defaults setDouble:zoom forKey:@"zoomFactor"];
+    [defaults synchronize];
 }
 
 void register_sleep_wake_notifications(void) {

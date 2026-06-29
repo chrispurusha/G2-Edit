@@ -50,6 +50,7 @@ extern "C" {
 #include "mouseTopbar.h"
 #include "selection.h"
 #include "undo.h"
+#include "misc.h"
 
 // Drag-start state for vertical/horizontal dial modes
 static double gDragStartX    = 0.0;   // cursor position at press — used for restore on release
@@ -1338,6 +1339,7 @@ void scroll_event(GLFWwindow * window, double x, double y) {
         zoomFactor  = get_zoom_factor();
         zoomFactor += y * ZOOM_DELTA;
         set_zoom_factor(zoomFactor, coord);
+        save_zoom_factor(get_zoom_factor());
     } else {
         if (x != 0) {
             gScrollState.xBar -= x / 2;
@@ -1771,6 +1773,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
             zoomFactor  = get_zoom_factor();
             zoomFactor -= ZOOM_DELTA;
             set_zoom_factor(zoomFactor, coord);
+            save_zoom_factor(get_zoom_factor());
         }
 
         if (key == GLFW_KEY_EQUAL) {
@@ -1778,6 +1781,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
             zoomFactor  = get_zoom_factor();
             zoomFactor += ZOOM_DELTA;
             set_zoom_factor(zoomFactor, coord);
+            save_zoom_factor(get_zoom_factor());
         }
 
         if (key == GLFW_KEY_C) {
