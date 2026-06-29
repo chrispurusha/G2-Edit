@@ -1458,7 +1458,7 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
         {"Copy",          RGB_GREY_3, menu_action_copy_module,   0, NULL           },
         {"Cut",           RGB_GREY_3, menu_action_cut_module,    0, NULL           },
         {"Paste",         RGB_GREY_3, menu_action_paste,         0, NULL           },
-        {"Delete module", RGB_GREY_3, menu_action_delete_module, 0, NULL           },
+        {"Delete",        RGB_GREY_3, menu_action_delete_module, 0, NULL           },
         {NULL,            RGB_BLACK,  NULL,                      0, NULL           }
     };
 
