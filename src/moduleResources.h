@@ -2513,26 +2513,26 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeBlue2Red,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 203 In
     {moduleTypeBlue2Red,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 203 Out
     // 204 RndClkA
-    {moduleTypeRndClkA,     connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocUp   },          // 204 Clk
-    {moduleTypeRndClkA,     connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocUp   },          // 204 Rst
+    {moduleTypeRndClkA,     connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight   },          // 204 Clk
+    {moduleTypeRndClkA,     connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocRight   },          // 204 Rst
     {moduleTypeRndClkA,     connectorDirIn,  connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Seed",         labelLocLeft },          // 204 Seed
     {moduleTypeRndClkA,     connectorDirOut, connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 204 Out
     // 205 RndTrig
-    {moduleTypeRndTrig,     connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocUp   },          // 205 Clk
-    {moduleTypeRndTrig,     connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocUp   },          // 205 Rst
+    {moduleTypeRndTrig,     connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight   },          // 205 Clk
+    {moduleTypeRndTrig,     connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocRight   },          // 205 Rst
     {moduleTypeRndTrig,     connectorDirIn,  connectorTypeControl, {{ -3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Seed",         labelLocLeft },          // 205 Seed
     {moduleTypeRndTrig,     connectorDirIn,  connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Prob",         labelLocLeft },          // 205 Prob
     {moduleTypeRndTrig,     connectorDirOut, connectorTypeLogic,   {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 205 Out
     // 206 RndClkB
-    {moduleTypeRndClkB,     connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocUp   },          // 206 Clk
-    {moduleTypeRndClkB,     connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocUp   },          // 206 Rst
+    {moduleTypeRndClkB,     connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight   },          // 206 Clk
+    {moduleTypeRndClkB,     connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocRight   },          // 206 Rst
     {moduleTypeRndClkB,     connectorDirIn,  connectorTypeControl, {{ -3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Seed",         labelLocLeft },          // 206 Seed
     {moduleTypeRndClkB,     connectorDirIn,  connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Step",         labelLocLeft },          // 206 Step input
     {moduleTypeRndClkB,     connectorDirOut, connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 206 Out
     // 207 Unknown
     // 208 RndPattern
-    {moduleTypeRndPattern,  connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocUp   },          // 208 Clk
-    {moduleTypeRndPattern,  connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocUp   },          // 208 Rst
+    {moduleTypeRndPattern,  connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight   },          // 208 Clk
+    {moduleTypeRndPattern,  connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocRight   },          // 208 Rst
     {moduleTypeRndPattern,  connectorDirIn,  connectorTypeControl, {{ -3, -21}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "A",            labelLocLeft },          // 208 A
     {moduleTypeRndPattern,  connectorDirIn,  connectorTypeControl, {{ -3, -14}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "B",            labelLocLeft },          // 208 B
     {moduleTypeRndPattern,  connectorDirIn,  connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Step",         labelLocLeft },          // 208 Step input
