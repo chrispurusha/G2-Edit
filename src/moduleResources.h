@@ -1009,8 +1009,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqNote,    paramTypeToggle,      {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
     {moduleTypeSeqNote,    paramTypeMenu,        {{-15,  15}, { 7,  7}}, anchorTopRight,    "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Length
     {moduleTypeSeqNote,    paramTypeMenu,        {{  3,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 121 T/G
-    {moduleTypeSeqNote,    paramTypeToggle,      {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 121 Randomize
-    {moduleTypeSeqNote,    paramTypeToggle,      {{ 45, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            1,   0, emptyStrMap,                           NULL          }, // 121 Clear
+    {moduleTypeSeqNote,    paramTypeEnable,      {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            2,   0, NULL,                                  offOnColourMap}, // 121 Randomize
+    {moduleTypeSeqNote,    paramTypeEnable,      {{ 45, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            2,   0, NULL,                                  offOnColourMap}, // 121 Clear
     // 122 Unknown
     // 123 Mix4-1C
     {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 11, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L1
@@ -1144,15 +1144,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqVal,     paramTypeMenu,        {{ 25,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
     {moduleTypeSeqVal,     paramTypeMenu,        {{ 40,  10}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
     {moduleTypeSeqVal,     paramTypeMenu,        {{  3,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
-    {moduleTypeSeqVal,     paramTypeToggle,      {{ 35, -60}, {32,  7}}, anchorBottomLeft,  "Clr",            1,   0, emptyStrMap,                           NULL          }, // 144 Clear
-    {moduleTypeSeqVal,     paramTypeToggle,      {{ 45, -60}, {32,  7}}, anchorBottomLeft,  "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 144 Randomize
-    {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
-    {moduleTypeSeqVal,     paramTypeToggle,      {{  0,   0}, { 1,  1}}, anchorBottomRight, NULL,             1,   0, emptyStrMap,                           NULL          }, // 144 Dummy
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            2,   0, NULL,                                  offOnColourMap}, // 145 Randomize
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 45, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            2,   0, NULL,                                  offOnColourMap}, // 145 Clear
     // 146 SeqLev
     {moduleTypeSeqLev,     paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1
     {moduleTypeSeqLev,     paramTypeSlider,      {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2
@@ -1190,8 +1183,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqLev,     paramTypeMenu,        {{-15,  15}, { 7,  7}}, anchorTopRight,    "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
     {moduleTypeSeqLev,     paramTypeMenu,        {{  3,  20}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
     {moduleTypeSeqLev,     paramTypeMenu,        {{  3,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
-    {moduleTypeSeqLev,     paramTypeToggle,      {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            1,   0, emptyStrMap,                           NULL          }, // 144 Clear
-    {moduleTypeSeqLev,     paramTypeToggle,      {{ 45, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 144 Randomize
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            2,   0, NULL,                                  offOnColourMap}, // 146 Randomize
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 45, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            2,   0, NULL,                                  offOnColourMap}, // 146 Clear
 
     // 147 CtrRcv
     {moduleTypeCtrlRcv,    paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Ctrl",         128,  64, NULL,                                  NULL          }, // 147 Ctrl
@@ -1264,11 +1257,11 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqCtr,     paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt14
     {moduleTypeSeqCtr,     paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt15
     {moduleTypeSeqCtr,     paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt16
-    {moduleTypeSeqCtr,     paramTypeMenu,        {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Pulse",          2,   0, trigGateStrMap,                        NULL          }, // 154 Pulse
+    {moduleTypeSeqCtr,     paramTypeMenu,        {{ 35, -60}, {10,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 154 T/G
     {moduleTypeSeqCtr,     paramTypeMenu,        {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Pol",            2,   0, bipUniStrMap,                          NULL          }, // 154 Pol
     {moduleTypeSeqCtr,     paramTypeMenu,        {{ -3, -50}, { 7,  7}}, anchorBottomRight, "XFade",          4,   0, seqXFadeStrMap,                        NULL          }, // 154 XFade
-    {moduleTypeSeqCtr,     paramTypeToggle,      {{ 55, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            1,   0, emptyStrMap,                           NULL          }, // 154 Random
-    {moduleTypeSeqCtr,     paramTypeToggle,      {{ 65, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            1,   0, emptyStrMap,                           NULL          }, // 154 Clear
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 55, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            2,   0, NULL,                                  offOnColourMap}, // 154 Randomize
+    {moduleTypeSeqCtr,     paramTypeEnable,      {{ 65, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            2,   0, NULL,                                  offOnColourMap}, // 154 Clear
     // 155 Unknown
     // 156 NoteDet
     {moduleTypeNoteDet,    paramTypeNoteDial,    {{ 23,  -3}, { 7, 14}}, anchorBottomLeft,  "Note",         128,  64, NULL,                                  NULL          }, // 156 Note
