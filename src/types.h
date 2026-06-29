@@ -647,6 +647,9 @@ typedef struct {
     char        name[CLAVIA_NAME_SIZE + 1];
     tParam      param[NUM_VARIATIONS_USB][MAX_NUM_PARAMETERS];
     uint32_t    mode[MAX_NUM_MODES];
+    uint32_t    paramNumLabels[MAX_NUM_PARAMETERS];
+    bool        paramNameSet[MAX_NUM_PARAMETERS][MAX_NUM_LABELS];
+    char        paramName[MAX_NUM_PARAMETERS][MAX_NUM_LABELS][PROTOCOL_PARAM_NAME_SIZE + 1];
 } tClipboardModule;
 
 typedef struct {

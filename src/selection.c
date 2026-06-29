@@ -285,6 +285,15 @@ void copy_selection(void) {
         for (uint32_t m = 0; m < MAX_NUM_MODES; m++) {
             cm->mode[m] = mod->mode[m].value;
         }
+
+        for (uint32_t p = 0; p < MAX_NUM_PARAMETERS; p++) {
+            cm->paramNumLabels[p] = mod->paramNumLabels[p];
+
+            for (uint32_t l = 0; l < MAX_NUM_LABELS; l++) {
+                cm->paramNameSet[p][l] = mod->paramNameSet[p][l];
+                COPY_STRING(cm->paramName[p][l], mod->paramName[p][l]);
+            }
+        }
     }
 
     // Only store cables where both endpoints are selected
@@ -405,6 +414,25 @@ void paste_clipboard(void) {
             for (uint32_t m = 0; m < module_mode_count(module.type); m++) {
                 dbMod->mode[m].value = cm->mode[m];
                 send_mode_value(slot, module.key, m, cm->mode[m]);
+            }
+
+            for (uint32_t p = 0; p < module_param_count(module.type); p++) {
+                dbMod->paramNumLabels[p] = cm->paramNumLabels[p];
+
+                for (uint32_t l = 0; l < MAX_NUM_LABELS; l++) {
+                    dbMod->paramNameSet[p][l] = cm->paramNameSet[p][l];
+                    COPY_STRING(dbMod->paramName[p][l], cm->paramName[p][l]);
+
+                    if (cm->paramNameSet[p][l]) {
+                        tMessageContent nmsg = {0};
+                        nmsg.cmd                       = eMsgCmdSetParamLabel;
+                        nmsg.slot                      = slot;
+                        nmsg.paramLabelData.moduleKey  = module.key;
+                        nmsg.paramLabelData.paramIndex = p;
+                        COPY_STRING(nmsg.paramLabelData.name, cm->paramName[p][l]);
+                        msg_send(&gCommandQueue, &nmsg);
+                    }
+                }
             }
         }
 
