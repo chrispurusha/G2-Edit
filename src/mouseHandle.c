@@ -853,11 +853,7 @@ static uint32_t calc_tempo_drag_value(double xCoord, double yCoord, double x, do
         value      = (uint32_t)newVal;
     } else {
         angle = calculate_mouse_angle((tCoord){x, y}, rotaryRect);
-        value = angle_to_value(angle, 241);
-
-        if (value < 30) {
-            value = 30;
-        }
+        value = angle_to_value(angle, 211) + 30;
     }
     return value;
 }

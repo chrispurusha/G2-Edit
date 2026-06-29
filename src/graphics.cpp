@@ -466,7 +466,7 @@ void render_top_bar(void) {
     }
 
     snprintf(buff, sizeof(buff), "%u BPM", gGlobalSettings.masterClock);
-    gTopbarControls[topbarTempoDialId].rectangle    = render_dial_with_text(mainArea, {topbar_control_def(topbarTempoDialId)->coord, {20, 48}}, NULL, buff, STANDARD_BUTTON_TEXT_HEIGHT, gGlobalSettings.masterClock, 241, 0, (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarTempoDialId].rectangle    = render_dial_with_text(mainArea, {topbar_control_def(topbarTempoDialId)->coord, {20, 48}}, NULL, buff, STANDARD_BUTTON_TEXT_HEIGHT, gGlobalSettings.masterClock >= 30 ? gGlobalSettings.masterClock - 30 : 0, 211, 0, (tRgb)RGB_BACKGROUND_GREY);
     gTopbarControls[topbarClockRunStopId].rectangle = draw_button(mainArea, {topbar_control_def(topbarClockRunStopId)->coord, {get_text_width("Stopped", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)(clockRunning ? "Running" : "Stopped"), clockRunning ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
     if (gGlobalSettings.perfMode == 1) {
@@ -1377,7 +1377,7 @@ static void render_perf_settings_panel(void) {
         double dialH = 48.0;
         double x     = boxX + margin;
         snprintf(buf, sizeof(buf), "%u BPM", (unsigned)gGlobalSettings.masterClock);
-        gPerfSettingsPanelRects.masterClock        = render_dial_with_text(mainArea, {{x, y}, {20.0, dialH}}, NULL, buf, STANDARD_BUTTON_TEXT_HEIGHT, gGlobalSettings.masterClock, 241, 0, (tRgb)RGB_BACKGROUND_GREY);
+        gPerfSettingsPanelRects.masterClock        = render_dial_with_text(mainArea, {{x, y}, {20.0, dialH}}, NULL, buf, STANDARD_BUTTON_TEXT_HEIGHT, gGlobalSettings.masterClock >= 30 ? gGlobalSettings.masterClock - 30 : 0, 211, 0, (tRgb)RGB_BACKGROUND_GREY);
         x                                         += 20.0 + 12.0;
         gPerfSettingsPanelRects.masterClockRunning = draw_button(mainArea,
                                                                  {{x, y + (dialH - btnH) / 2.0}, {get_text_width((char *)"Stopped", btnH, eCache) + 8.0, btnH}},
