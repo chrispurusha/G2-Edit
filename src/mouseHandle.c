@@ -287,10 +287,12 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
 
     if (retVal == false) {
         if (within_rectangle(coord, module->dragArea) && mouseButton == mouseButtonLeftDown) {
-            bool shiftHeld = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-                             || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+            bool multiSelectHeld = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
+                                   || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS
+                                   || glfwGetKey(gWindow, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS
+                                   || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
 
-            if (shiftHeld) {
+            if (multiSelectHeld) {
                 selection_toggle(module->key);
             } else if (!is_selected(module->key)) {
                 selection_set_single(module->key);
@@ -307,10 +309,12 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
     // Clicking anywhere else on the module body selects without starting a drag
     if (retVal == false) {
         if (within_rectangle(coord, module->rectangle) && mouseButton == mouseButtonLeftDown) {
-            bool shiftHeld = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-                             || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+            bool multiSelectHeld = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
+                                   || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS
+                                   || glfwGetKey(gWindow, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS
+                                   || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
 
-            if (shiftHeld) {
+            if (multiSelectHeld) {
                 selection_toggle(module->key);
             } else {
                 selection_set_single(module->key);
@@ -665,13 +669,13 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             // Click on empty module-area space: clear selection and start rubber-band
             if (!found && !gContextMenu.active && within_rectangle(coord, module_area())) {
-                bool   shiftHeld   = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-                                     || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+                bool   multiSelectHeld = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
+                                         || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
 
-                if (!shiftHeld) {
+                if (!multiSelectHeld) {
                     selection_clear();
                 }
-                tCoord moduleCoord = {0};
+                tCoord moduleCoord     = {0};
                 convert_mouse_coord_to_module_area_coord(&moduleCoord, coord);
                 gRubberBand.start   = moduleCoord;
                 gRubberBand.current = moduleCoord;
@@ -725,19 +729,19 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (gRubberBand.active) {
-                tCoord     moduleCoord = {0};
+                tCoord     moduleCoord     = {0};
                 convert_mouse_coord_to_module_area_coord(&moduleCoord, coord);
 
-                double     x1          = gRubberBand.start.x < moduleCoord.x ? gRubberBand.start.x : moduleCoord.x;
-                double     y1          = gRubberBand.start.y < moduleCoord.y ? gRubberBand.start.y : moduleCoord.y;
-                double     x2          = gRubberBand.start.x > moduleCoord.x ? gRubberBand.start.x : moduleCoord.x;
-                double     y2          = gRubberBand.start.y > moduleCoord.y ? gRubberBand.start.y : moduleCoord.y;
+                double     x1              = gRubberBand.start.x < moduleCoord.x ? gRubberBand.start.x : moduleCoord.x;
+                double     y1              = gRubberBand.start.y < moduleCoord.y ? gRubberBand.start.y : moduleCoord.y;
+                double     x2              = gRubberBand.start.x > moduleCoord.x ? gRubberBand.start.x : moduleCoord.x;
+                double     y2              = gRubberBand.start.y > moduleCoord.y ? gRubberBand.start.y : moduleCoord.y;
 
-                tRectangle selRect     = {{x1, y1}, {x2 - x1, y2 - y1}};
-                bool       shiftHeld   = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-                                         || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+                tRectangle selRect         = {{x1, y1}, {x2 - x1, y2 - y1}};
+                bool       multiSelectHeld = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
+                                             || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
 
-                if (!shiftHeld) {
+                if (!multiSelectHeld) {
                     selection_clear();
                 }
                 selection_add_rect(selRect, slot, location);
