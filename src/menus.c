@@ -102,27 +102,31 @@ static void send_patch_setting_param(uint32_t slot, uint32_t moduleIndex, uint32
 }
 
 static void action_patch_setting_u8(int index) {
-    uint32_t   value  = (uint32_t)gContextMenu.items[index].param;
-    uint32_t   slot   = (uint32_t)gPatchParamsEdit.slot;
-    tModuleKey key    = {slot, (uint32_t)locationMorph, gPatchSettingModule};
-    tModule *  module = get_module(key);
+    uint32_t   newValue = (uint32_t)gContextMenu.items[index].param;
+    uint32_t   slot     = (uint32_t)gPatchParamsEdit.slot;
+    tModuleKey key      = {slot, (uint32_t)locationMorph, gPatchSettingModule};
+    tModule *  module   = get_module(key);
+    uint32_t   oldValue = module ? module->param[0][gPatchSettingParam].value : newValue;
 
     if (module != NULL) {
-        module->param[0][gPatchSettingParam].value = (uint8_t)value;
+        module->param[0][gPatchSettingParam].value = (uint8_t)newValue;
     }
-    send_patch_setting_param(slot, gPatchSettingModule, gPatchSettingParam, value);
+    send_patch_setting_param(slot, gPatchSettingModule, gPatchSettingParam, newValue);
+    undo_push_param_change(key, gPatchSettingParam, 0, oldValue, newValue);
 }
 
 static void action_patch_setting_i8(int index) {
-    uint32_t   value  = (uint32_t)(uint8_t)(int8_t)(int32_t)gContextMenu.items[index].param;
-    uint32_t   slot   = (uint32_t)gPatchParamsEdit.slot;
-    tModuleKey key    = {slot, (uint32_t)locationMorph, gPatchSettingModule};
-    tModule *  module = get_module(key);
+    uint32_t   newValue = (uint32_t)(uint8_t)(int8_t)(int32_t)gContextMenu.items[index].param;
+    uint32_t   slot     = (uint32_t)gPatchParamsEdit.slot;
+    tModuleKey key      = {slot, (uint32_t)locationMorph, gPatchSettingModule};
+    tModule *  module   = get_module(key);
+    uint32_t   oldValue = module ? module->param[0][gPatchSettingParam].value : newValue;
 
     if (module != NULL) {
-        module->param[0][gPatchSettingParam].value = (uint8_t)value;
+        module->param[0][gPatchSettingParam].value = (uint8_t)newValue;
     }
-    send_patch_setting_param(slot, gPatchSettingModule, gPatchSettingParam, value);
+    send_patch_setting_param(slot, gPatchSettingModule, gPatchSettingParam, newValue);
+    undo_push_param_change(key, gPatchSettingParam, 0, oldValue, newValue);
 }
 
 // ── Patch descriptor action targets ────────────────────────────────────────
@@ -136,26 +140,35 @@ static void send_patch_descr_update(uint32_t slot) {
 }
 
 static void action_set_patch_type(int index) {
-    uint32_t slot = gSlot;
+    uint32_t slot     = gSlot;
+    uint8_t  oldValue = (uint8_t)gPatchDescr[slot].category;
+    uint8_t  newValue = (uint8_t)gContextMenu.items[index].param;
 
-    gPatchDescr[slot].category = gContextMenu.items[index].param;
+    gPatchDescr[slot].category = newValue;
     send_patch_descr_update(slot);
+    undo_push_patch_descr(slot, UNDO_PATCH_DESCR_CATEGORY, oldValue, newValue);
     gContextMenu.active        = false;
 }
 
 static void action_set_mono_poly(int index) {
-    uint32_t slot = gSlot;
+    uint32_t slot     = gSlot;
+    uint8_t  oldValue = gPatchDescr[slot].monoPoly;
+    uint8_t  newValue = (uint8_t)gContextMenu.items[index].param;
 
-    gPatchDescr[slot].monoPoly = (uint8_t)gContextMenu.items[index].param;
+    gPatchDescr[slot].monoPoly = newValue;
     send_patch_descr_update(slot);
+    undo_push_patch_descr(slot, UNDO_PATCH_DESCR_MONO_POLY, oldValue, newValue);
     gContextMenu.active        = false;
 }
 
 static void action_set_voice_count(int index) {
-    uint32_t slot = gSlot;
+    uint32_t slot     = gSlot;
+    uint8_t  oldValue = gPatchDescr[slot].voiceCount;
+    uint8_t  newValue = (uint8_t)gContextMenu.items[index].param;
 
-    gPatchDescr[slot].voiceCount = (uint8_t)gContextMenu.items[index].param;
+    gPatchDescr[slot].voiceCount = newValue;
     send_patch_descr_update(slot);
+    undo_push_patch_descr(slot, UNDO_PATCH_DESCR_VOICE_COUNT, oldValue, newValue);
     gContextMenu.active          = false;
 }
 
@@ -652,19 +665,22 @@ int32_t find_knob_for_param(uint32_t slot, uint32_t location, uint32_t moduleInd
 }
 
 static void action_assign_knob(int index) {
-    uint32_t        slot        = gSlot;
-    uint32_t        targetKnob  = (uint32_t)gContextMenu.items[index].param;
-    uint32_t        location    = gContextMenu.moduleKey.location;
-    uint32_t        moduleIndex = gContextMenu.moduleKey.index;
-    uint32_t        paramIndex  = gContextMenu.paramIndex;
+    uint32_t        slot           = gSlot;
+    uint32_t        targetKnob     = (uint32_t)gContextMenu.items[index].param;
+    uint32_t        location       = gContextMenu.moduleKey.location;
+    uint32_t        moduleIndex    = gContextMenu.moduleKey.index;
+    uint32_t        paramIndex     = gContextMenu.paramIndex;
     int32_t         existingKnob;
-    tMessageContent msg         = {0};
+    tMessageContent msg            = {0};
 
     // Snapshot before state for undo
-    tKnob   targetBefore    = gKnobArray[slot].knob[targetKnob];
-    existingKnob            = find_knob_for_param(slot, location, moduleIndex, paramIndex);
-    bool    hasSecond       = existingKnob >= 0 && (uint32_t)existingKnob != targetKnob;
-    tKnob   existingBefore  = hasSecond ? gKnobArray[slot].knob[existingKnob] : (tKnob){0};
+    tKnob           targetBefore   = gKnobArray[slot].knob[targetKnob];
+
+    existingKnob = find_knob_for_param(slot, location, moduleIndex, paramIndex);
+    bool            hasSecond      = existingKnob >= 0 && (uint32_t)existingKnob != targetKnob;
+    tKnob           existingBefore = hasSecond ? gKnobArray[slot].knob[existingKnob] : (tKnob){
+        0
+    };
 
     if (gKnobArray[slot].knob[targetKnob].assigned) {
         gKnobArray[slot].knob[targetKnob].assigned = false;
@@ -696,16 +712,18 @@ static void action_assign_knob(int index) {
     msg.knobAssignData.knobIndex                  = targetKnob;
     msg_send(&gCommandQueue, &msg);
 
-    tKnob targetAfter = gKnobArray[slot].knob[targetKnob];
-    tKnob existingAfter = hasSecond ? gKnobArray[slot].knob[existingKnob] : (tKnob){0};
+    tKnob targetAfter   = gKnobArray[slot].knob[targetKnob];
+    tKnob existingAfter = hasSecond ? gKnobArray[slot].knob[existingKnob] : (tKnob){
+        0
+    };
     undo_push_knob(slot,
                    targetKnob, &targetBefore, &targetAfter,
                    hasSecond ? existingKnob : -1,
                    hasSecond ? &existingBefore : NULL,
-                   hasSecond ? &existingAfter  : NULL);
+                   hasSecond ? &existingAfter : NULL);
 
-    gContextMenu.active = false;
-    gReDraw             = true;
+    gContextMenu.active                           = false;
+    gReDraw                                       = true;
 }
 
 static void action_deassign_knob(int index) {
@@ -717,13 +735,13 @@ static void action_deassign_knob(int index) {
     tMessageContent msg         = {0};
 
     if (knobIndex >= 0) {
-        tKnob before                              = gKnobArray[slot].knob[knobIndex];
+        tKnob before = gKnobArray[slot].knob[knobIndex];
         gKnobArray[slot].knob[knobIndex].assigned = false;
         msg.cmd                                   = eMsgCmdDeassignKnob;
         msg.slot                                  = slot;
         msg.knobDeassignData.knobIndex            = (uint32_t)knobIndex;
         msg_send(&gCommandQueue, &msg);
-        tKnob after = gKnobArray[slot].knob[knobIndex];
+        tKnob after  = gKnobArray[slot].knob[knobIndex];
         undo_push_knob(slot, (uint32_t)knobIndex, &before, &after, -1, NULL, NULL);
     }
     gContextMenu.active = false;
@@ -1234,15 +1252,17 @@ void open_midi_note_dropdown(tCoord coord, _Atomic uint8_t * target) {
 // ── Patch settings dropdowns ────────────────────────────────────────────────
 
 void toggle_patch_on_off(uint32_t moduleIndex, uint32_t paramIndex) {
-    uint32_t  slot   = (uint32_t)gPatchParamsEdit.slot;
-    tModule * module = get_module_slot(slot, (uint32_t)locationMorph, moduleIndex);
-    uint32_t  value  = 0;
+    uint32_t   slot     = (uint32_t)gPatchParamsEdit.slot;
+    tModuleKey key      = {slot, (uint32_t)locationMorph, moduleIndex};
+    tModule *  module   = get_module(key);
+    uint32_t   oldValue = module ? module->param[0][paramIndex].value : 0;
+    uint32_t   newValue = oldValue ? 0 : 1;
 
     if (module != NULL) {
-        value                              = module->param[0][paramIndex].value ? 0 : 1;
-        module->param[0][paramIndex].value = (uint8_t)value;
+        module->param[0][paramIndex].value = (uint8_t)newValue;
     }
-    send_patch_setting_param(slot, moduleIndex, paramIndex, value);
+    send_patch_setting_param(slot, moduleIndex, paramIndex, newValue);
+    undo_push_param_change(key, paramIndex, 0, oldValue, newValue);
 }
 
 void open_patch_on_off_dropdown(tCoord coord, uint32_t moduleIndex, uint32_t paramIndex) {

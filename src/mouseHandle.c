@@ -1537,12 +1537,16 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
                 // Commit
                 gPatchNameEdit.active = false;
-                COPY_STRING(gGlobalSettings.slot[gPatchNameEdit.slot].patchName, gPatchNameEdit.buffer);
+                uint32_t        pnSlot         = gPatchNameEdit.slot;
+                char            oldPatchName[CLAVIA_NAME_SIZE + 1];
+                COPY_STRING(oldPatchName, gGlobalSettings.slot[pnSlot].patchName);
+                COPY_STRING(gGlobalSettings.slot[pnSlot].patchName, gPatchNameEdit.buffer);
                 tMessageContent messageContent = {0};
                 messageContent.cmd    = eMsgCmdSetPatchName;
-                messageContent.slot   = gPatchNameEdit.slot;
-                COPY_STRING(messageContent.patchName.name, gGlobalSettings.slot[gPatchNameEdit.slot].patchName);
+                messageContent.slot   = pnSlot;
+                COPY_STRING(messageContent.patchName.name, gGlobalSettings.slot[pnSlot].patchName);
                 msg_send(&gCommandQueue, &messageContent);
+                undo_push_patch_name(pnSlot, oldPatchName, gPatchNameEdit.buffer);
             } else if (key == GLFW_KEY_ESCAPE) {
                 // Cancel — discard edits
                 gPatchNameEdit.active = false;
@@ -1584,7 +1588,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 tModule * module = get_module(gModuleNameEdit.moduleKey);
 
                 if (module != NULL) {
-                    tMessageContent msg     = {0};
+                    tMessageContent msg = {0};
                     char            oldName[CLAVIA_NAME_SIZE + 1];
                     COPY_STRING(oldName, module->name);
                     COPY_STRING(module->name, gModuleNameEdit.buffer);
@@ -1635,8 +1639,11 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 tModule * module = get_module(gParamNameEdit.moduleKey);
 
                 if (module != NULL) {
-                    tMessageContent msg = {0};
-                    uint32_t        pi  = gParamNameEdit.paramIndex;
+                    tMessageContent msg    = {0};
+                    uint32_t        pi     = gParamNameEdit.paramIndex;
+                    bool            oldSet = module->paramNameSet[pi][0];
+                    char            oldName[PROTOCOL_PARAM_NAME_SIZE + 1];
+                    COPY_STRING(oldName, module->paramName[pi][0]);
 
                     module->paramNameSet[pi][0]   = true;
                     COPY_STRING(module->paramName[pi][0], gParamNameEdit.buffer);
@@ -1648,6 +1655,9 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                     msg.paramLabelData.paramIndex = pi;
                     COPY_STRING(msg.paramLabelData.name, gParamNameEdit.buffer);
                     msg_send(&gCommandQueue, &msg);
+                    undo_push_param_name(gParamNameEdit.moduleKey, pi,
+                                         oldName, oldSet,
+                                         gParamNameEdit.buffer, true);
                 }
             } else if (key == GLFW_KEY_ESCAPE) {
                 gParamNameEdit.active = false;  // discard
@@ -1723,10 +1733,13 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 gPerfNameEdit.cursorPos = (uint32_t)len;
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
                 gPerfNameEdit.active = false;
+                char            oldPerfName[CLAVIA_NAME_SIZE + 1];
+                COPY_STRING(oldPerfName, gGlobalSettings.perfName);
                 COPY_STRING(gGlobalSettings.perfName, gPerfNameEdit.buffer);
                 tMessageContent messageContent = {0};
                 messageContent.cmd   = eMsgCmdWritePerfName;
                 msg_send(&gCommandQueue, &messageContent);
+                undo_push_perf_name(oldPerfName, gPerfNameEdit.buffer);
             } else if (key == GLFW_KEY_ESCAPE) {
                 gPerfNameEdit.active = false;
             }

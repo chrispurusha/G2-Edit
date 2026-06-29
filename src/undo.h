@@ -46,18 +46,38 @@ void undo_push_param_change(tModuleKey key, uint32_t paramIndex, uint32_t variat
 void undo_push_mode_change(tModuleKey key, uint32_t modeIndex, uint32_t oldValue, uint32_t newValue);
 
 // Record knob assignment change. idx2 == -1 if only one knob changed.
-void undo_push_knob(uint32_t slot,
-                    uint32_t idx1, const tKnob * before1, const tKnob * after1,
-                    int32_t idx2, const tKnob * before2, const tKnob * after2);
+void undo_push_knob(uint32_t slot, uint32_t idx1, const tKnob * before1, const tKnob * after1, int32_t idx2, const tKnob * before2, const tKnob * after2);
 
 // Record a module name change (old → new).
 void undo_push_module_name(tModuleKey key, const char * oldName, const char * newName);
 
 // Record a param label change (old → new). oldSet/newSet indicate whether
 // a custom label existed before/after.
-void undo_push_param_name(tModuleKey key, uint32_t paramIndex,
-                          const char * oldName, bool oldSet,
-                          const char * newName, bool newSet);
+void undo_push_param_name(tModuleKey key, uint32_t paramIndex, const char * oldName, bool oldSet, const char * newName, bool newSet);
+
+// Patch-descriptor field identifiers for undo_push_patch_descr.
+#define UNDO_PATCH_DESCR_VOICE_COUNT    0u
+#define UNDO_PATCH_DESCR_MONO_POLY      1u
+#define UNDO_PATCH_DESCR_CATEGORY       2u
+
+// Record a change to one field of gPatchDescr[slot]. Use the constants above.
+void undo_push_patch_descr(uint32_t slot, uint8_t which, uint8_t oldValue, uint8_t newValue);
+
+// Record a patch name change (old → new).
+void undo_push_patch_name(uint32_t slot, const char * oldName, const char * newName);
+
+// Record a perf name change (old → new).
+void undo_push_perf_name(const char * oldName, const char * newName);
+
+// Perf-setting field identifiers for undo_push_perf_setting.
+#define UNDO_PERF_SLOT_ENABLED      0u
+#define UNDO_PERF_SLOT_KEYBOARD     1u
+#define UNDO_PERF_SLOT_HOLD         2u
+#define UNDO_PERF_KEYBOARD_RANGE    3u
+
+// Record a change to one perf-settings boolean. slot is the slot index for
+// per-slot fields; ignored for UNDO_PERF_KEYBOARD_RANGE.
+void undo_push_perf_setting(uint8_t which, int32_t slot, uint8_t oldValue, uint8_t newValue);
 
 bool undo_can_undo(void);
 bool undo_can_redo(void);

@@ -25,6 +25,7 @@ extern "C" {
 #include "types.h"
 #include "globalVars.h"
 #include "menus.h"
+#include "undo.h"
 #include "perfSettingsResources.h"
 
 static tRgb col_on_off(uint8_t val) {
@@ -42,8 +43,11 @@ static tRgb col_slot_enabled(int slot) {
 }
 
 static void act_slot_enabled(int slot) {
-    gGlobalSettings.slot[slot].enabled = !gGlobalSettings.slot[slot].enabled;
+    uint8_t old = gGlobalSettings.slot[slot].enabled;
+
+    gGlobalSettings.slot[slot].enabled = !old;
     send_perf_settings_msg();
+    undo_push_perf_setting(UNDO_PERF_SLOT_ENABLED, slot, old, gGlobalSettings.slot[slot].enabled);
 }
 
 // ── Slot Keyboard ─────────────────────────────────────────────────────────────
@@ -57,8 +61,11 @@ static tRgb col_slot_keyboard(int slot) {
 }
 
 static void act_slot_keyboard(int slot) {
-    gPerfSettings.slot[slot].keyboardEnabled = !gPerfSettings.slot[slot].keyboardEnabled;
+    uint8_t old = gPerfSettings.slot[slot].keyboardEnabled;
+
+    gPerfSettings.slot[slot].keyboardEnabled = !old;
     send_perf_settings_msg();
+    undo_push_perf_setting(UNDO_PERF_SLOT_KEYBOARD, slot, old, gPerfSettings.slot[slot].keyboardEnabled);
 }
 
 // ── Slot Hold ─────────────────────────────────────────────────────────────────
@@ -72,8 +79,11 @@ static tRgb col_slot_hold(int slot) {
 }
 
 static void act_slot_hold(int slot) {
-    gPerfSettings.slot[slot].holdEnabled = !gPerfSettings.slot[slot].holdEnabled;
+    uint8_t old = gPerfSettings.slot[slot].holdEnabled;
+
+    gPerfSettings.slot[slot].holdEnabled = !old;
     send_perf_settings_msg();
+    undo_push_perf_setting(UNDO_PERF_SLOT_HOLD, slot, old, gPerfSettings.slot[slot].holdEnabled);
 }
 
 // ── Table ─────────────────────────────────────────────────────────────────────

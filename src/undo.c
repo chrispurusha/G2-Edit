@@ -27,6 +27,7 @@
 #include "msgQueue.h"
 #include "moduleResourcesAccess.h"
 #include "protocol.h"
+#include "menus.h"
 #include "selection.h"
 #include "undo.h"
 
@@ -104,6 +105,31 @@ typedef struct {
     bool       newSet;
 } tUndoParamNamePayload;
 
+typedef struct {
+    uint32_t slot;
+    uint8_t  which;
+    uint8_t  oldValue;
+    uint8_t  newValue;
+} tUndoPatchDescrPayload;
+
+typedef struct {
+    uint32_t slot;
+    char     oldName[CLAVIA_NAME_SIZE + 1];
+    char     newName[CLAVIA_NAME_SIZE + 1];
+} tUndoPatchNamePayload;
+
+typedef struct {
+    char oldName[CLAVIA_NAME_SIZE + 1];
+    char newName[CLAVIA_NAME_SIZE + 1];
+} tUndoPerfNamePayload;
+
+typedef struct {
+    uint8_t which;
+    int32_t slot;
+    uint8_t oldValue;
+    uint8_t newValue;
+} tUndoPerfSettingPayload;
+
 typedef enum {
     eUndoCmdMove,
     eUndoCmdDelete,
@@ -112,6 +138,10 @@ typedef enum {
     eUndoCmdKnob,
     eUndoCmdModuleName,
     eUndoCmdParamName,
+    eUndoCmdPatchDescr,
+    eUndoCmdPatchName,
+    eUndoCmdPerfName,
+    eUndoCmdPerfSetting,
 } tUndoCmdType;
 
 typedef struct {
@@ -159,6 +189,10 @@ static void free_command(tUndoCommand * cmd) {
         case eUndoCmdKnob:
         case eUndoCmdModuleName:
         case eUndoCmdParamName:
+        case eUndoCmdPatchDescr:
+        case eUndoCmdPatchName:
+        case eUndoCmdPerfName:
+        case eUndoCmdPerfSetting:
             free(cmd->payload);
             break;
     }
@@ -609,16 +643,18 @@ static void apply_knob_entry(uint32_t slot, uint32_t idx, const tKnob * k) {
     tMessageContent msg = {0};
 
     if (k->assigned) {
-        msg.cmd                          = eMsgCmdAssignKnob;
-        msg.slot                         = slot;
-        msg.knobAssignData.moduleKey     = (tModuleKey){slot, k->location, k->moduleIndex};
-        msg.knobAssignData.paramIndex    = k->paramIndex;
-        msg.knobAssignData.knobIndex     = idx;
+        msg.cmd                       = eMsgCmdAssignKnob;
+        msg.slot                      = slot;
+        msg.knobAssignData.moduleKey  = (tModuleKey){
+            slot, k->location, k->moduleIndex
+        };
+        msg.knobAssignData.paramIndex = k->paramIndex;
+        msg.knobAssignData.knobIndex  = idx;
         msg_send(&gCommandQueue, &msg);
     } else {
-        msg.cmd                          = eMsgCmdDeassignKnob;
-        msg.slot                         = slot;
-        msg.knobDeassignData.knobIndex   = idx;
+        msg.cmd                        = eMsgCmdDeassignKnob;
+        msg.slot                       = slot;
+        msg.knobDeassignData.knobIndex = idx;
         msg_send(&gCommandQueue, &msg);
     }
 }
@@ -627,6 +663,7 @@ static void apply_knob(tUndoKnobPayload * p, bool isUndo) {
     for (uint32_t i = 0; i < p->count; i++) {
         apply_knob_entry(p->slot, p->index[i], isUndo ? &p->before[i] : &p->after[i]);
     }
+
     gReDraw = true;
 }
 
@@ -638,11 +675,11 @@ void undo_push_knob(uint32_t slot,
     if (!p) {
         return;
     }
-    p->slot       = slot;
-    p->count      = 1;
-    p->index[0]   = idx1;
-    p->before[0]  = *before1;
-    p->after[0]   = *after1;
+    p->slot      = slot;
+    p->count     = 1;
+    p->index[0]  = idx1;
+    p->before[0] = *before1;
+    p->after[0]  = *after1;
 
     if (idx2 >= 0 && before2 && after2) {
         p->index[1]  = (uint32_t)idx2;
@@ -654,7 +691,7 @@ void undo_push_knob(uint32_t slot,
 }
 
 static void apply_module_name(tUndoModuleNamePayload * p, bool isUndo) {
-    tModule * mod = get_module(p->key);
+    tModule *       mod  = get_module(p->key);
 
     if (!mod) {
         return;
@@ -668,7 +705,7 @@ static void apply_module_name(tUndoModuleNamePayload * p, bool isUndo) {
     msg.moduleLabelData.moduleKey = p->key;
     COPY_STRING(msg.moduleLabelData.name, name);
     msg_send(&gCommandQueue, &msg);
-    gReDraw = true;
+    gReDraw                       = true;
 }
 
 void undo_push_module_name(tModuleKey key, const char * oldName, const char * newName) {
@@ -687,20 +724,20 @@ void undo_push_module_name(tModuleKey key, const char * oldName, const char * ne
 }
 
 static void apply_param_name(tUndoParamNamePayload * p, bool isUndo) {
-    tModule * mod = get_module(p->key);
+    tModule *       mod  = get_module(p->key);
 
     if (!mod || p->paramIndex >= MAX_NUM_PARAMETERS) {
         return;
     }
-    uint32_t     pi   = p->paramIndex;
-    const char * name = isUndo ? p->oldName : p->newName;
-    bool         set  = isUndo ? p->oldSet  : p->newSet;
+    uint32_t        pi   = p->paramIndex;
+    const char *    name = isUndo ? p->oldName : p->newName;
+    bool            set  = isUndo ? p->oldSet : p->newSet;
 
-    mod->paramNameSet[pi][0] = set;
+    mod->paramNameSet[pi][0]      = set;
     COPY_STRING(mod->paramName[pi][0], name);
-    mod->paramNumLabels[pi]  = set ? 1 : 0;
+    mod->paramNumLabels[pi]       = set ? 1 : 0;
 
-    tMessageContent msg = {0};
+    tMessageContent msg  = {0};
 
     msg.cmd                       = eMsgCmdSetParamLabel;
     msg.slot                      = p->key.slot;
@@ -708,7 +745,7 @@ static void apply_param_name(tUndoParamNamePayload * p, bool isUndo) {
     msg.paramLabelData.paramIndex = pi;
     COPY_STRING(msg.paramLabelData.name, set ? name : "");
     msg_send(&gCommandQueue, &msg);
-    gReDraw = true;
+    gReDraw                       = true;
 }
 
 void undo_push_param_name(tModuleKey key, uint32_t paramIndex,
@@ -729,6 +766,131 @@ void undo_push_param_name(tModuleKey key, uint32_t paramIndex,
     COPY_STRING(p->newName, newName);
     p->newSet     = newSet;
     stack_push(eUndoCmdParamName, p);
+}
+
+static void apply_patch_descr(tUndoPatchDescrPayload * p, bool isUndo) {
+    uint8_t         value = isUndo ? p->oldValue : p->newValue;
+
+    switch (p->which) {
+        case UNDO_PATCH_DESCR_VOICE_COUNT: gPatchDescr[p->slot].voiceCount = value;
+            break;
+        case UNDO_PATCH_DESCR_MONO_POLY:   gPatchDescr[p->slot].monoPoly   = value;
+            break;
+        case UNDO_PATCH_DESCR_CATEGORY:    gPatchDescr[p->slot].category   = value;
+            break;
+    }
+    tMessageContent msg   = {0};
+    msg.cmd  = eMsgCmdWritePatchDescr;
+    msg.slot = p->slot;
+    msg_send(&gCommandQueue, &msg);
+    gReDraw  = true;
+}
+
+void undo_push_patch_descr(uint32_t slot, uint8_t which, uint8_t oldValue, uint8_t newValue) {
+    if (oldValue == newValue) {
+        return;
+    }
+    tUndoPatchDescrPayload * p = malloc(sizeof(tUndoPatchDescrPayload));
+
+    if (!p) {
+        return;
+    }
+    p->slot     = slot;
+    p->which    = which;
+    p->oldValue = oldValue;
+    p->newValue = newValue;
+    stack_push(eUndoCmdPatchDescr, p);
+}
+
+static void apply_patch_name(tUndoPatchNamePayload * p, bool isUndo) {
+    const char *    name = isUndo ? p->oldName : p->newName;
+    tMessageContent msg  = {0};
+
+    COPY_STRING(gGlobalSettings.slot[p->slot].patchName, name);
+    msg.cmd  = eMsgCmdSetPatchName;
+    msg.slot = p->slot;
+    COPY_STRING(msg.patchName.name, name);
+    msg_send(&gCommandQueue, &msg);
+    gReDraw  = true;
+}
+
+void undo_push_patch_name(uint32_t slot, const char * oldName, const char * newName) {
+    if (strcmp(oldName, newName) == 0) {
+        return;
+    }
+    tUndoPatchNamePayload * p = malloc(sizeof(tUndoPatchNamePayload));
+
+    if (!p) {
+        return;
+    }
+    p->slot = slot;
+    COPY_STRING(p->oldName, oldName);
+    COPY_STRING(p->newName, newName);
+    stack_push(eUndoCmdPatchName, p);
+}
+
+static void apply_perf_name(tUndoPerfNamePayload * p, bool isUndo) {
+    const char *    name = isUndo ? p->oldName : p->newName;
+    tMessageContent msg  = {0};
+
+    COPY_STRING(gGlobalSettings.perfName, name);
+    msg.cmd = eMsgCmdWritePerfName;
+    msg_send(&gCommandQueue, &msg);
+    gReDraw = true;
+}
+
+void undo_push_perf_name(const char * oldName, const char * newName) {
+    if (strcmp(oldName, newName) == 0) {
+        return;
+    }
+    tUndoPerfNamePayload * p = malloc(sizeof(tUndoPerfNamePayload));
+
+    if (!p) {
+        return;
+    }
+    COPY_STRING(p->oldName, oldName);
+    COPY_STRING(p->newName, newName);
+    stack_push(eUndoCmdPerfName, p);
+}
+
+static void apply_perf_setting(tUndoPerfSettingPayload * p, bool isUndo) {
+    uint8_t value = isUndo ? p->oldValue : p->newValue;
+
+    switch (p->which) {
+        case UNDO_PERF_SLOT_ENABLED:
+            gGlobalSettings.slot[p->slot].enabled       = value;
+            break;
+
+        case UNDO_PERF_SLOT_KEYBOARD:
+            gPerfSettings.slot[p->slot].keyboardEnabled = value;
+            break;
+
+        case UNDO_PERF_SLOT_HOLD:
+            gPerfSettings.slot[p->slot].holdEnabled     = value;
+            break;
+
+        case UNDO_PERF_KEYBOARD_RANGE:
+            gPerfSettings.keyboardRange                 = value;
+            break;
+    }
+    send_perf_settings_msg();
+    gReDraw = true;
+}
+
+void undo_push_perf_setting(uint8_t which, int32_t slot, uint8_t oldValue, uint8_t newValue) {
+    if (oldValue == newValue) {
+        return;
+    }
+    tUndoPerfSettingPayload * p = malloc(sizeof(tUndoPerfSettingPayload));
+
+    if (!p) {
+        return;
+    }
+    p->which    = which;
+    p->slot     = slot;
+    p->oldValue = oldValue;
+    p->newValue = newValue;
+    stack_push(eUndoCmdPerfSetting, p);
 }
 
 // ─── Public undo / redo ────────────────────────────────────────────────────
@@ -776,6 +938,22 @@ void undo_undo(void) {
         case eUndoCmdParamName:
             apply_param_name(cmd->payload, true);
             break;
+
+        case eUndoCmdPatchDescr:
+            apply_patch_descr(cmd->payload, true);
+            break;
+
+        case eUndoCmdPatchName:
+            apply_patch_name(cmd->payload, true);
+            break;
+
+        case eUndoCmdPerfName:
+            apply_perf_name(cmd->payload, true);
+            break;
+
+        case eUndoCmdPerfSetting:
+            apply_perf_setting(cmd->payload, true);
+            break;
     }
 }
 
@@ -813,6 +991,22 @@ void undo_redo(void) {
 
         case eUndoCmdParamName:
             apply_param_name(cmd->payload, false);
+            break;
+
+        case eUndoCmdPatchDescr:
+            apply_patch_descr(cmd->payload, false);
+            break;
+
+        case eUndoCmdPatchName:
+            apply_patch_name(cmd->payload, false);
+            break;
+
+        case eUndoCmdPerfName:
+            apply_perf_name(cmd->payload, false);
+            break;
+
+        case eUndoCmdPerfSetting:
+            apply_perf_setting(cmd->payload, false);
             break;
     }
 }

@@ -48,6 +48,7 @@ extern "C" {
 #include "menus.h"
 #include "synthSettingsResources.h"
 #include "perfSettingsResources.h"
+#include "undo.h"
 #include "mousePanels.h"
 
 // Suppresses a spurious leftUp event after dismissing the notes editor by
@@ -166,8 +167,10 @@ bool handle_perf_settings_mouse(tCoord coord, tMouseButton mouseButton) {
                 gGlobalSettings.masterClockRunning = !gGlobalSettings.masterClockRunning;
                 send_master_clock_run((uint32_t)gGlobalSettings.masterClockRunning);
             } else if (within_rectangle(coord, gPerfSettingsPanelRects.keyboardRange)) {
-                gPerfSettings.keyboardRange = !gPerfSettings.keyboardRange;
+                uint8_t oldKbRange = gPerfSettings.keyboardRange;
+                gPerfSettings.keyboardRange = !oldKbRange;
                 send_perf_settings_msg();
+                undo_push_perf_setting(UNDO_PERF_KEYBOARD_RANGE, 0, oldKbRange, gPerfSettings.keyboardRange);
             } else {
                 for (s = 0; s < MAX_SLOTS; s++) {
                     for (col = 0; col < kPSSlotToggleCount; col++) {
