@@ -556,6 +556,10 @@ typedef struct {
     bool       isMulti;
     uint32_t   prevColumn;
     uint32_t   prevRow;
+    uint32_t   snapshotCount;
+    tModuleKey snapshotKeys[MAX_NUM_MODULES];
+    uint32_t   snapshotColumn[MAX_NUM_MODULES];
+    uint32_t   snapshotRow[MAX_NUM_MODULES];
 } tModuleDragging;
 
 typedef struct {
@@ -641,6 +645,8 @@ typedef struct {
     int32_t     dColumn;
     int32_t     dRow;
     uint32_t    origIndex;
+    uint32_t    origColumn;
+    uint32_t    origRow;
     uint32_t    colour;
     uint32_t    upRate;
     uint32_t    isLed;

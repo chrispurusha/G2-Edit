@@ -47,6 +47,7 @@ extern "C" {
 #include "protocol.h"
 #include "menus.h"
 #include "mouseTopbar.h"
+#include "undo.h"
 
 static void handle_button(tTopbarControlId controlId) {
     uint32_t slot = gSlot;
@@ -120,6 +121,18 @@ static void handle_button(tTopbarControlId controlId) {
             messageContent.cmd  = eMsgCmdWritePatch;
             messageContent.slot = slot;
             msg_send(&gCommandQueue, &messageContent);
+            break;
+        }
+        case topbarUndoId:
+        {
+            undo_undo();
+            gReDraw = true;
+            break;
+        }
+        case topbarRedoId:
+        {
+            undo_redo();
+            gReDraw = true;
             break;
         }
         default:

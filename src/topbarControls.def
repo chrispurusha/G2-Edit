@@ -35,6 +35,8 @@
 X(topbarVaId,                420,  8, "VA",       TOPBAR_COL_GREEN_ON, topbarControlTypeButton )
 X(topbarFxId,                445,  8, "FX",       TOPBAR_COL_BG_GREY,  topbarControlTypeButton )
 X(topbarNewPatchId,           20,  8, "New Patch", TOPBAR_COL_BG_GREY, topbarControlTypeButton )
+X(topbarUndoId,              300,  8, "Undo",     TOPBAR_COL_BG_GREY, topbarControlTypeButton )
+X(topbarRedoId,              335,  8, "Redo",     TOPBAR_COL_BG_GREY, topbarControlTypeButton )
 X(topbarSlotAId,             600,  8, "A",        TOPBAR_COL_GREEN_ON, topbarControlTypeButton )
 X(topbarSlotBId,             615,  8, "B",        TOPBAR_COL_BG_GREY,  topbarControlTypeButton )
 X(topbarSlotCId,             630,  8, "C",        TOPBAR_COL_BG_GREY,  topbarControlTypeButton )

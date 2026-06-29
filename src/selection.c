@@ -29,6 +29,7 @@
 #include "mouseHandle.h"
 #include "menus.h"
 #include "selection.h"
+#include "undo.h"
 
 bool is_selected(tModuleKey key) {
     for (uint32_t i = 0; i < gSelection.count; i++) {
@@ -267,13 +268,15 @@ void copy_selection(void) {
             continue;
         }
         tClipboardModule * cm  = &gClipboard.modules[gClipboard.moduleCount++];
-        cm->type      = mod->type;
-        cm->dColumn   = (int32_t)mod->column - (int32_t)minCol;
-        cm->dRow      = (int32_t)mod->row - (int32_t)minRow;
-        cm->origIndex = mod->key.index;
-        cm->colour    = mod->colour;
-        cm->upRate    = mod->upRate;
-        cm->isLed     = mod->isLed;
+        cm->type       = mod->type;
+        cm->dColumn    = (int32_t)mod->column - (int32_t)minCol;
+        cm->dRow       = (int32_t)mod->row - (int32_t)minRow;
+        cm->origIndex  = mod->key.index;
+        cm->origColumn = mod->column;
+        cm->origRow    = mod->row;
+        cm->colour     = mod->colour;
+        cm->upRate     = mod->upRate;
+        cm->isLed      = mod->isLed;
         COPY_STRING(cm->name, mod->name);
 
         for (uint32_t v = 0; v < NUM_VARIATIONS_USB; v++) {
@@ -333,33 +336,22 @@ void copy_selection(void) {
 
 void cut_selection(void) {
     copy_selection();
+    undo_push_delete_selection();
     delete_selection();
     update_module_up_rates();
     gReDraw = true;
 }
 
-void paste_clipboard(void) {
-    if (!gClipboard.active || gClipboard.moduleCount == 0) {
-        return;
-    }
-    uint32_t slot                      = (uint32_t)gSlot;
-    uint32_t location                  = (uint32_t)gLocation;
-
-    // Anchor paste at current mouse cursor position
-    uint32_t anchorCol                 = 0;
-    uint32_t anchorRow                 = 0;
-    tCoord   mouseCoord                = {0};
-
-    get_global_gui_scaled_mouse_coord(&mouseCoord);
-    convert_mouse_coord_to_module_column_row(&anchorCol, &anchorRow, mouseCoord);
-
-    // Map origIndex -> new index; sized to MAX_NUM_MODULES
+void paste_snapshot(uint32_t slot, uint32_t location,
+                    uint32_t anchorCol, uint32_t anchorRow,
+                    tClipboardModule * modules, uint32_t moduleCount,
+                    tClipboardCable * cables, uint32_t cableCount) {
     uint32_t indexMap[MAX_NUM_MODULES] = {0};
 
     selection_clear();
 
-    for (uint32_t ci = 0; ci < gClipboard.moduleCount; ci++) {
-        tClipboardModule * cm       = &gClipboard.modules[ci];
+    for (uint32_t ci = 0; ci < moduleCount; ci++) {
+        tClipboardModule * cm       = &modules[ci];
         int32_t            newIndex = find_unique_module_id(location);
 
         if (newIndex < 0) {
@@ -442,9 +434,9 @@ void paste_clipboard(void) {
         selection_add(module.key);
     }
 
-    // Reconnect internal cables using the remapped indices
-    for (uint32_t ci = 0; ci < gClipboard.cableCount; ci++) {
-        tClipboardCable * cc       = &gClipboard.cables[ci];
+    // Reconnect internal cables using remapped indices
+    for (uint32_t ci = 0; ci < cableCount; ci++) {
+        tClipboardCable * cc       = &cables[ci];
         uint32_t          newFrom  = indexMap[cc->fromOrigIndex];
         uint32_t          newTo    = indexMap[cc->toOrigIndex];
 
@@ -478,4 +470,27 @@ void paste_clipboard(void) {
 
     update_module_up_rates();
     gReDraw = true;
+}
+
+void paste_clipboard(void) {
+    if (!gClipboard.active || gClipboard.moduleCount == 0) {
+        return;
+    }
+    uint32_t slot       = (uint32_t)gSlot;
+    uint32_t location   = (uint32_t)gLocation;
+    uint32_t anchorCol  = 0;
+    uint32_t anchorRow  = 0;
+    tCoord   mouseCoord = {0};
+
+    get_global_gui_scaled_mouse_coord(&mouseCoord);
+    convert_mouse_coord_to_module_column_row(&anchorCol, &anchorRow, mouseCoord);
+
+    paste_snapshot(slot, location, anchorCol, anchorRow,
+                   gClipboard.modules, gClipboard.moduleCount,
+                   gClipboard.cables, gClipboard.cableCount);
+
+    undo_push_paste(slot, location, anchorCol, anchorRow,
+                    gSelection.keys, gSelection.count,
+                    gClipboard.modules, gClipboard.moduleCount,
+                    gClipboard.cables, gClipboard.cableCount);
 }

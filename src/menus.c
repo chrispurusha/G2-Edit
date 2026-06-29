@@ -34,6 +34,7 @@ extern "C" {
 #include "protocol.h"
 #include "menus.h"
 #include "selection.h"
+#include "undo.h"
 
 // ── Synth settings action targets ──────────────────────────────────────────
 
@@ -369,11 +370,9 @@ static void menu_action_delete_module(int index) {
     uint32_t location = gLocation;
 
     if (gContextMenu.moduleKey.slot == slot && gContextMenu.moduleKey.location == location) {
-        if (is_selected(gContextMenu.moduleKey) && gSelection.count > 0) {
-            delete_selection();
-        } else {
-            delete_module_and_cables(gContextMenu.moduleKey);
-        }
+        ensure_module_selected();
+        undo_push_delete_selection();
+        delete_selection();
         update_module_up_rates();
     }
 }
@@ -1453,13 +1452,13 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     };
 
     static tMenuItem menuItems[] = {
-        {"Rename",        RGB_GREY_3, action_rename_module,      0, NULL           },
-        {"Set colour",    RGB_GREY_3, action_set_module_colour,  0, colourMenuItems},
-        {"Copy",          RGB_GREY_3, menu_action_copy_module,   0, NULL           },
-        {"Cut",           RGB_GREY_3, menu_action_cut_module,    0, NULL           },
-        {"Paste",         RGB_GREY_3, menu_action_paste,         0, NULL           },
-        {"Delete",        RGB_GREY_3, menu_action_delete_module, 0, NULL           },
-        {NULL,            RGB_BLACK,  NULL,                      0, NULL           }
+        {"Rename",     RGB_GREY_3, action_rename_module,      0, NULL           },
+        {"Set colour", RGB_GREY_3, action_set_module_colour,  0, colourMenuItems},
+        {"Copy",       RGB_GREY_3, menu_action_copy_module,   0, NULL           },
+        {"Cut",        RGB_GREY_3, menu_action_cut_module,    0, NULL           },
+        {"Paste",      RGB_GREY_3, menu_action_paste,         0, NULL           },
+        {"Delete",     RGB_GREY_3, menu_action_delete_module, 0, NULL           },
+        {NULL,         RGB_BLACK,  NULL,                      0, NULL           }
     };
 
     gContextMenu.moduleKey = moduleKey;

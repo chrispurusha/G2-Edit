@@ -32,6 +32,7 @@ void delete_selection(void);
 void shift_selection_down(void);
 void copy_selection(void);
 void cut_selection(void);
+void paste_snapshot(uint32_t slot, uint32_t location, uint32_t anchorCol, uint32_t anchorRow, tClipboardModule * modules, uint32_t moduleCount, tClipboardCable * cables, uint32_t cableCount);
 void paste_clipboard(void);
 
 #endif /* SELECTION_H */

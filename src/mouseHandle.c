@@ -49,6 +49,7 @@ extern "C" {
 #include "mousePanels.h"
 #include "mouseTopbar.h"
 #include "selection.h"
+#include "undo.h"
 
 // Drag-start state for vertical/horizontal dial modes
 static double gDragStartX    = 0.0;   // cursor position at press — used for restore on release
@@ -297,12 +298,34 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
             } else if (!is_selected(module->key)) {
                 selection_set_single(module->key);
             }
-            gModuleDrag.moduleKey  = module->key;
-            gModuleDrag.isMulti    = is_selected(module->key) && gSelection.count > 1;
-            gModuleDrag.prevColumn = module->column;
-            gModuleDrag.prevRow    = module->row;
-            gModuleDrag.active     = true;
-            retVal                 = true;
+            gModuleDrag.moduleKey     = module->key;
+            gModuleDrag.isMulti       = is_selected(module->key) && gSelection.count > 1;
+            gModuleDrag.prevColumn    = module->column;
+            gModuleDrag.prevRow       = module->row;
+            gModuleDrag.active        = true;
+
+            // Snapshot starting positions for move undo
+            gModuleDrag.snapshotCount = 0;
+
+            if (gModuleDrag.isMulti) {
+                for (uint32_t si = 0; si < gSelection.count && si < MAX_NUM_MODULES; si++) {
+                    tModule * sel = get_module(gSelection.keys[si]);
+
+                    if (!sel) {
+                        continue;
+                    }
+                    gModuleDrag.snapshotKeys[gModuleDrag.snapshotCount]   = gSelection.keys[si];
+                    gModuleDrag.snapshotColumn[gModuleDrag.snapshotCount] = sel->column;
+                    gModuleDrag.snapshotRow[gModuleDrag.snapshotCount]    = sel->row;
+                    gModuleDrag.snapshotCount++;
+                }
+            } else {
+                gModuleDrag.snapshotKeys[0]   = module->key;
+                gModuleDrag.snapshotColumn[0] = module->column;
+                gModuleDrag.snapshotRow[0]    = module->row;
+                gModuleDrag.snapshotCount     = 1;
+            }
+            retVal                    = true;
         }
     }
 
@@ -711,6 +734,34 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                         shift_selection_down();
                     } else {
                         shift_modules_down(gModuleDrag.moduleKey);
+                    }
+                    // Push move undo: compare snapshot (before) with current (after)
+                    tUndoMoveEntry entries[MAX_NUM_MODULES];
+                    uint32_t       entryCount = 0;
+                    bool           anyMoved   = false;
+
+                    for (uint32_t si = 0; si < gModuleDrag.snapshotCount; si++) {
+                        tModule * mod = get_module(gModuleDrag.snapshotKeys[si]);
+
+                        if (!mod) {
+                            continue;
+                        }
+                        entries[entryCount].key       = gModuleDrag.snapshotKeys[si];
+                        entries[entryCount].oldColumn = gModuleDrag.snapshotColumn[si];
+                        entries[entryCount].oldRow    = gModuleDrag.snapshotRow[si];
+                        entries[entryCount].newColumn = mod->column;
+                        entries[entryCount].newRow    = mod->row;
+
+                        if (  entries[entryCount].oldColumn != entries[entryCount].newColumn
+                           || entries[entryCount].oldRow != entries[entryCount].newRow) {
+                            anyMoved = true;
+                        }
+                        entryCount++;
+                    }
+
+                    if (anyMoved && entryCount > 0) {
+                        undo_push_move((uint32_t)gSlot, (uint32_t)gLocation,
+                                       entries, entryCount);
                     }
                     found = true;
                 }
@@ -1649,6 +1700,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         }
     } else if ((key == GLFW_KEY_DELETE || key == GLFW_KEY_BACKSPACE) && action == GLFW_PRESS) {
         if (gSelection.count > 0) {
+            undo_push_delete_selection();
             delete_selection();
             update_module_up_rates();
             gReDraw = true;
@@ -1692,6 +1744,14 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 
         if (key == GLFW_KEY_V) {
             paste_clipboard();
+        }
+
+        if (key == GLFW_KEY_Z) {
+            if (mods & GLFW_MOD_SHIFT) {
+                undo_redo();
+            } else {
+                undo_undo();
+            }
         }
     }
     gReDraw = true;
