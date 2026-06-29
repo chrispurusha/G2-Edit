@@ -556,6 +556,17 @@ typedef struct {
 } tModuleDragging;
 
 typedef struct {
+    tModuleKey keys[MAX_NUM_MODULES];
+    uint32_t   count;
+} tSelection;
+
+typedef struct {
+    bool   active;
+    tCoord start;    // module-space coordinates
+    tCoord current;  // module-space coordinates
+} tRubberBand;
+
+typedef struct {
     bool        active;
     tModuleKey  moduleKey;
     tParamType3 type3;      // Denotes param or mode, which should maybe be union-ed?

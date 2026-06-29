@@ -41,6 +41,7 @@ extern "C" {
 #include "renderParams.h"
 #include "mouseHandle.h"
 #include "menus.h"
+#include "selection.h"
 
 void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) { // TODO: move to utilsgraphics!?
     switch (volumeType) {
@@ -634,6 +635,19 @@ void render_module(tModule * module) {
     set_rgb_colour(rgb);
     module->rectangle = render_rectangle_with_border(moduleArea, moduleRectangle);
 
+    if (is_selected(module->key)) {
+        double t = 2.0;
+        double x = moduleRectangle.coord.x;
+        double y = moduleRectangle.coord.y;
+        double w = moduleRectangle.size.w;
+        double h = moduleRectangle.size.h;
+
+        set_rgb_colour(RGB_YELLOW_7);
+        render_line(moduleArea, {x, y}, {x + w, y}, t);                 // top
+        render_line(moduleArea, {x + w, y}, {x + w, y + h}, t);         // right
+        render_line(moduleArea, {x + w, y + h}, {x, y + h}, t);         // bottom
+        render_line(moduleArea, {x, y + h}, {x, y}, t);                 // left
+    }
     rgb               = {rgb.red * 1.05, rgb.green * 1.05, rgb.blue * 1.05};
     set_rgb_colour(rgb);
     module->dragArea  = render_rectangle(moduleArea, {{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3}, {moduleRectangle.size.w - 6, STANDARD_TEXT_HEIGHT + 2}});
@@ -690,6 +704,18 @@ void render_modules(void) {
         }
     }
 
+    if (gRubberBand.active) {
+        double x1 = gRubberBand.start.x < gRubberBand.current.x ? gRubberBand.start.x : gRubberBand.current.x;
+        double y1 = gRubberBand.start.y < gRubberBand.current.y ? gRubberBand.start.y : gRubberBand.current.y;
+        double x2 = gRubberBand.start.x > gRubberBand.current.x ? gRubberBand.start.x : gRubberBand.current.x;
+        double y2 = gRubberBand.start.y > gRubberBand.current.y ? gRubberBand.start.y : gRubberBand.current.y;
+
+        set_rgb_colour(RGB_YELLOW_7);
+        render_line(moduleArea, {x1, y1}, {x2, y1}, 1.5); // top
+        render_line(moduleArea, {x2, y1}, {x2, y2}, 1.5); // right
+        render_line(moduleArea, {x2, y2}, {x1, y2}, 1.5); // bottom
+        render_line(moduleArea, {x1, y2}, {x1, y1}, 1.5); // left
+    }
     // Draw background areas
     //set_rgb_colour(RGB_RED_7/*RGB_BACKGROUND_GREY*/);
     //tRectangle area        = module_area();

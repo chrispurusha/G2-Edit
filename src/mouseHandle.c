@@ -48,6 +48,7 @@ extern "C" {
 #include "menus.h"
 #include "mousePanels.h"
 #include "mouseTopbar.h"
+#include "selection.h"
 
 // Drag-start state for vertical/horizontal dial modes
 static double gDragStartX    = 0.0;   // cursor position at press — used for restore on release
@@ -286,9 +287,32 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
 
     if (retVal == false) {
         if (within_rectangle(coord, module->dragArea) && mouseButton == mouseButtonLeftDown) {
+            bool shiftHeld = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
+                             || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+
+            if (shiftHeld) {
+                selection_toggle(module->key);
+            } else if (!is_selected(module->key)) {
+                selection_set_single(module->key);
+            }
             gModuleDrag.moduleKey = module->key;
             gModuleDrag.active    = true;
             retVal                = true;
+        }
+    }
+
+    // Clicking anywhere else on the module body selects without starting a drag
+    if (retVal == false) {
+        if (within_rectangle(coord, module->rectangle) && mouseButton == mouseButtonLeftDown) {
+            bool shiftHeld = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
+                             || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+
+            if (shiftHeld) {
+                selection_toggle(module->key);
+            } else {
+                selection_set_single(module->key);
+            }
+            retVal = true;
         }
     }
     return retVal;
@@ -456,6 +480,7 @@ void stop_dragging(void) {
     gVibRateDragging          = false;
     gVibAmountDragging        = false;
     gGlideTimeDragging        = false;
+    gRubberBand.active        = false;
     gDragFirstMove            = false;
 }
 
@@ -631,8 +656,24 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 found = handle_scrollbar_click(coord);
             }
 
-            if (!found) {
+            if (!found && !gContextMenu.active) {
                 found = handle_module_press(coord, mouseButton);
+            }
+
+            // Click on empty module-area space: clear selection and start rubber-band
+            if (!found && !gContextMenu.active && within_rectangle(coord, module_area())) {
+                bool   shiftHeld   = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
+                                     || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+
+                if (!shiftHeld) {
+                    selection_clear();
+                }
+                tCoord moduleCoord = {0};
+                convert_mouse_coord_to_module_area_coord(&moduleCoord, coord);
+                gRubberBand.start   = moduleCoord;
+                gRubberBand.current = moduleCoord;
+                gRubberBand.active  = true;
+                found               = true;
             }
         }
         break;
@@ -674,6 +715,27 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (!found) {
                 found = handle_module_release(coord, mouseButton);
+            }
+
+            if (gRubberBand.active) {
+                tCoord     moduleCoord = {0};
+                convert_mouse_coord_to_module_area_coord(&moduleCoord, coord);
+
+                double     x1          = gRubberBand.start.x < moduleCoord.x ? gRubberBand.start.x : moduleCoord.x;
+                double     y1          = gRubberBand.start.y < moduleCoord.y ? gRubberBand.start.y : moduleCoord.y;
+                double     x2          = gRubberBand.start.x > moduleCoord.x ? gRubberBand.start.x : moduleCoord.x;
+                double     y2          = gRubberBand.start.y > moduleCoord.y ? gRubberBand.start.y : moduleCoord.y;
+
+                tRectangle selRect     = {{x1, y1}, {x2 - x1, y2 - y1}};
+                bool       shiftHeld   = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
+                                         || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+
+                if (!shiftHeld) {
+                    selection_clear();
+                }
+                selection_add_rect(selRect, slot, location);
+                gRubberBand.active = false;
+                found              = true;
             }
             stop_dragging();
         }
@@ -1085,6 +1147,8 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     } else if (gCableDrag.active == true) {
         convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, (tCoord){x - scale_from_percent(CONNECTOR_SIZE / 2.0), y - scale_from_percent(CONNECTOR_SIZE / 2.0)});  // SOMETHING NOT RIGHT HERE
         adjust_scroll_for_drag();
+    } else if (gRubberBand.active == true) {
+        convert_mouse_coord_to_module_area_coord(&gRubberBand.current, coord);
     } else if (gContextMenu.active == true) {
         // Dummy
     } else if (  (coord.x >= 0.0)
@@ -1522,6 +1586,12 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
             } else if (key == GLFW_KEY_ESCAPE) {
                 gPerfNameEdit.active = false;
             }
+        }
+    } else if ((key == GLFW_KEY_DELETE || key == GLFW_KEY_BACKSPACE) && action == GLFW_PRESS) {
+        if (gSelection.count > 0) {
+            delete_selection();
+            update_module_up_rates();
+            gReDraw = true;
         }
     } else if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GL_TRUE);

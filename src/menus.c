@@ -33,6 +33,7 @@ extern "C" {
 #include "globalVars.h"
 #include "protocol.h"
 #include "menus.h"
+#include "selection.h"
 
 // ── Synth settings action targets ──────────────────────────────────────────
 
@@ -343,44 +344,15 @@ static void menu_action_delete_cable(int index) {
 }
 
 static void menu_action_delete_module(int index) {
-    uint32_t        slot           = gSlot;
-    uint32_t        location       = gLocation;
-    tMessageContent messageContent = {0};
+    uint32_t slot     = gSlot;
+    uint32_t location = gLocation;
 
     if (gContextMenu.moduleKey.slot == slot && gContextMenu.moduleKey.location == location) {
-        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
-            tCable * cable = get_cable_slot(slot, location, i);
-
-            if (cable == NULL || !cable->active) {
-                continue;
-            }
-
-            if (cable->key.moduleFromIndex == gContextMenu.moduleKey.index || cable->key.moduleToIndex == gContextMenu.moduleKey.index) {
-                memset(&messageContent, 0, sizeof(messageContent));
-                messageContent.cmd                            = eMsgCmdDeleteCable;
-                messageContent.slot                           = slot;
-                messageContent.cableData.location             = location;
-                messageContent.cableData.moduleFromIndex      = cable->key.moduleFromIndex;
-                messageContent.cableData.connectorFromIoIndex = cable->key.connectorFromIoCount;
-                messageContent.cableData.moduleToIndex        = cable->key.moduleToIndex;
-                messageContent.cableData.connectorToIoIndex   = cable->key.connectorToIoCount;
-                messageContent.cableData.linkType             = cable->key.linkType;
-
-                msg_send(&gCommandQueue, &messageContent);
-
-                delete_cable(cable->key);
-            }
+        if (is_selected(gContextMenu.moduleKey) && gSelection.count > 0) {
+            delete_selection();
+        } else {
+            delete_module_and_cables(gContextMenu.moduleKey);
         }
-
-        memset(&messageContent, 0, sizeof(messageContent));
-        messageContent.cmd                  = eMsgCmdDeleteModule;
-        messageContent.slot                 = slot;
-        messageContent.moduleData.moduleKey = gContextMenu.moduleKey;
-
-        msg_send(&gCommandQueue, &messageContent);
-
-        delete_module(gContextMenu.moduleKey);
-
         update_module_up_rates();
     }
 }
