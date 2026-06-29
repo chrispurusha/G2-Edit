@@ -334,7 +334,7 @@ void paste_clipboard(void) {
         return;
     }
     uint32_t slot                      = (uint32_t)gSlot;
-    uint32_t location                  = gClipboard.location;
+    uint32_t location                  = (uint32_t)gLocation;
 
     // Anchor paste at current mouse cursor position
     uint32_t anchorCol                 = 0;
