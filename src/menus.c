@@ -1556,9 +1556,13 @@ void open_module_area_context_menu(tCoord coord) {
         {NULL,             RGB_BLACK,  NULL,                                 0, NULL},
     };
     static tMenuItem randomMenuItems[] = {
-        {"Random A", RGB_GREY_3, menu_action_create, moduleTypeRandomA, NULL},
-        {"Random B", RGB_GREY_3, menu_action_create, moduleTypeRandomB, NULL},
-        {NULL,       RGB_BLACK,  NULL,                               0, NULL},
+        {"Random A",    RGB_GREY_3, menu_action_create, moduleTypeRandomA,    NULL},
+        {"Random B",    RGB_GREY_3, menu_action_create, moduleTypeRandomB,    NULL},
+        {"Rnd Clock A", RGB_GREY_3, menu_action_create, moduleTypeRndClkA,    NULL},
+        {"Rnd Clock B", RGB_GREY_3, menu_action_create, moduleTypeRndClkB,    NULL},
+        {"Rnd Trig",    RGB_GREY_3, menu_action_create, moduleTypeRndTrig,    NULL},
+        {"Rnd Pattern", RGB_GREY_3, menu_action_create, moduleTypeRndPattern, NULL},
+        {NULL,          RGB_BLACK,  NULL,                                  0, NULL},
     };
     static tMenuItem lfoMenuItems[]    = {
         {"LFO A",           RGB_GREY_3, menu_action_create, moduleTypeLfoA,    NULL},
@@ -1625,13 +1629,15 @@ void open_module_area_context_menu(tCoord coord) {
         {"ModAmt",    RGB_GREY_3, menu_action_create, moduleTypeModAmt,    NULL},
         {"NoiseGate", RGB_GREY_3, menu_action_create, moduleTypeNoiseGate, NULL},
         {"EnvFollow", RGB_GREY_3, menu_action_create, moduleTypeEnvFollow, NULL},
+        {"Red2Blue",  RGB_GREY_3, menu_action_create, moduleTypeRed2Blue,  NULL},
+        {"Blue2Red",  RGB_GREY_3, menu_action_create, moduleTypeBlue2Red,  NULL},
         {NULL,        RGB_BLACK,  NULL,                                 0, NULL},
     };
     static tMenuItem switchMenuItems[] = {
         {"SwOnOffM", RGB_GREY_3, menu_action_create, moduleTypeSwOnOffM,  NULL},
         {"SwOnOffT", RGB_GREY_3, menu_action_create, moduleTypeSwOnOffT,  NULL},
         {"Sw2-1",    RGB_GREY_3, menu_action_create, moduleTypeSw2to1,    NULL},
-        {"Sw2-1M",   RGB_GREY_3, menu_action_create, moduleTypeSw2to1,    NULL},
+        {"Sw2-1M",   RGB_GREY_3, menu_action_create, moduleTypeSw2to1M,   NULL},
         {"Sw4-1",    RGB_GREY_3, menu_action_create, moduleTypeSw4to1,    NULL},
         {"Sw8-1",    RGB_GREY_3, menu_action_create, moduleTypeSw8to1,    NULL},
         {"Sw1-2",    RGB_GREY_3, menu_action_create, moduleTypeSw1to2,    NULL},
@@ -1677,6 +1683,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"Mixer 2-1 B", RGB_GREY_3, menu_action_create, moduleTypeMix2to1B,  NULL},
         {"Mixer 8-1 A", RGB_GREY_3, menu_action_create, moduleTypeMix8to1A,  NULL},
         {"Mixer 8-1 B", RGB_GREY_3, menu_action_create, moduleTypeMix8to1B,  NULL},
+        {"MixFader",    RGB_GREY_3, menu_action_create, moduleTypeMixFader,  NULL},
         {"MixStereo",   RGB_GREY_3, menu_action_create, moduleTypeMixStereo, NULL},
         {"Fade 1-2",    RGB_GREY_3, menu_action_create, moduleTypeFade1to2,  NULL},
         {"Fade 2-1",    RGB_GREY_3, menu_action_create, moduleTypeFade2to1,  NULL},
@@ -1717,6 +1724,7 @@ void open_module_area_context_menu(tCoord coord) {
         {"NoteRcv",  RGB_GREY_3, menu_action_create, moduleTypeNoteRcv,  NULL},
         {"NoteDet",  RGB_GREY_3, menu_action_create, moduleTypeNoteDet,  NULL},
         {"NoteZone", RGB_GREY_3, menu_action_create, moduleTypeNoteZone, NULL},
+        {"Automate", RGB_GREY_3, menu_action_create, moduleTypeAutomate, NULL},
         {NULL,       RGB_BLACK,  NULL,                                0, NULL},
     };
     static tMenuItem moduleMenuItems[] = {
