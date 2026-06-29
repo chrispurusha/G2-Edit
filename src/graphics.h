@@ -30,6 +30,8 @@ void init_graphics(void);
 void do_graphics_loop(void);
 void clean_up_graphics(void);
 void wake_glfw(void);
+void resize_window(int w, int h);
+void reposition_window(int x, int y);
 
 int note_editor_cursor_move_line(int cursorPos, int delta);
 int note_editor_cursor_line_home(int cursorPos);

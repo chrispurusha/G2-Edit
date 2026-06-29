@@ -49,6 +49,7 @@ extern "C" {
 #include "topbarResourcesAccess.h"
 #include "globalVars.h"
 #include "synthSettingsResources.h"
+#include "misc.h"
 #include "patchParamsResources.h"
 #include "perfSettingsResources.h"
 
@@ -169,6 +170,22 @@ static int find_note_cursor_line(int cursorPos) {
 void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
     glViewport(0, 0, width, height);
     gReDraw = true;
+}
+
+void window_size_callback(GLFWwindow * window, int width, int height) {
+    save_window_size(width);
+}
+
+void window_pos_callback(GLFWwindow * window, int x, int y) {
+    save_window_pos(x, y);
+}
+
+void resize_window(int w, int h) {
+    glfwSetWindowSize(gWindow, w, h);
+}
+
+void reposition_window(int x, int y) {
+    glfwSetWindowPos(gWindow, x, y);
 }
 
 void window_close_callback(GLFWwindow * window) {
@@ -611,6 +628,8 @@ void init_graphics(void) {
     glViewport(0, 0, fbWidth, fbHeight);
 
     glfwSetFramebufferSizeCallback(gWindow, framebuffer_size_callback);
+    glfwSetWindowSizeCallback(gWindow, window_size_callback);
+    glfwSetWindowPosCallback(gWindow, window_pos_callback);
     glfwSwapInterval(1);
     glfwSetWindowCloseCallback(gWindow, window_close_callback);
     glfwSetKeyCallback(gWindow, key_callback);

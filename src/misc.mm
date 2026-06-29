@@ -146,8 +146,8 @@ static NSMenuItem * make_item(NSString * title, SEL action, NSString * key, G2Me
 }
 
 void setup_main_menu(void) {
-    NSMenu *              menuBar   = [[NSApplication sharedApplication] mainMenu];
-    static G2MenuTarget * target    = nil;
+    NSMenu *              menuBar  = [[NSApplication sharedApplication] mainMenu];
+    static G2MenuTarget * target   = nil;
 
     if (target == nil) {
         target = [[G2MenuTarget alloc] init];
@@ -157,7 +157,7 @@ void setup_main_menu(void) {
         menuBar = [[NSMenu alloc] init];
         [[NSApplication sharedApplication] setMainMenu:menuBar];
     }
-    NSUserDefaults *      defaults  = [NSUserDefaults standardUserDefaults];
+    NSUserDefaults *      defaults = [NSUserDefaults standardUserDefaults];
 
     if ([defaults objectForKey:@"dialMode"] != nil) {
         gDialMode = (tDialMode)[defaults integerForKey:@"dialMode"];
@@ -170,9 +170,25 @@ void setup_main_menu(void) {
             set_zoom_factor(savedZoom, (tCoord){0.0, 0.0});
         }
     }
+
+    if ([defaults objectForKey:@"windowWidth"] != nil) {
+        int savedW = (int)[defaults integerForKey:@"windowWidth"];
+        int savedH = savedW * TARGET_FRAME_BUFF_HEIGHT / TARGET_FRAME_BUFF_WIDTH;
+
+        if (savedW > 0) {
+            resize_window(savedW, savedH);
+        }
+    }
+
+    if ([defaults objectForKey:@"windowX"] != nil && [defaults objectForKey:@"windowY"] != nil) {
+        int savedX = (int)[defaults integerForKey:@"windowX"];
+        int savedY = (int)[defaults integerForKey:@"windowY"];
+
+        reposition_window(savedX, savedY);
+    }
     // File menu
-    NSMenuItem *          fileMI    = [[NSMenuItem alloc] init];
-    NSMenu *              fileMenu  = [[NSMenu alloc] initWithTitle:@"File"];
+    NSMenuItem * fileMI    = [[NSMenuItem alloc] init];
+    NSMenu *     fileMenu  = [[NSMenu alloc] initWithTitle:@"File"];
 
     [fileMenu addItem:make_item(@"Open Patch...", @selector(openPatch:), @"o", target)];
     [fileMenu addItem:make_item(@"Save Patch...", @selector(savePatch:), @"s", target)];
@@ -182,8 +198,8 @@ void setup_main_menu(void) {
     [menuBar insertItem:fileMI atIndex:1];
 
     // Patch menu
-    NSMenuItem *          patchMI   = [[NSMenuItem alloc] init];
-    NSMenu *              patchMenu = [[NSMenu alloc] initWithTitle:@"Patch"];
+    NSMenuItem * patchMI   = [[NSMenuItem alloc] init];
+    NSMenu *     patchMenu = [[NSMenu alloc] initWithTitle:@"Patch"];
 
     [patchMenu addItem:make_item(@"Notes", @selector(openNotes:), @"", target)];
     [patchMenu addItem:make_item(@"Settings", @selector(openSettings:), @",", target)];
@@ -191,8 +207,8 @@ void setup_main_menu(void) {
     [menuBar insertItem:patchMI atIndex:2];
 
     // Controls menu
-    NSMenuItem *          ctrlMI    = [[NSMenuItem alloc] init];
-    NSMenu *              ctrlMenu  = [[NSMenu alloc] initWithTitle:@"Controls"];
+    NSMenuItem * ctrlMI    = [[NSMenuItem alloc] init];
+    NSMenu *     ctrlMenu  = [[NSMenu alloc] initWithTitle:@"Controls"];
 
     [ctrlMenu addItem:make_item(@"Rotary", @selector(setDialModeRotary:), @"", target)];
     [ctrlMenu addItem:make_item(@"Vertical", @selector(setDialModeVertical:), @"", target)];
@@ -201,8 +217,8 @@ void setup_main_menu(void) {
     [menuBar insertItem:ctrlMI atIndex:3];
 
     // View menu
-    NSMenuItem *          viewMI    = [[NSMenuItem alloc] init];
-    NSMenu *              viewMenu  = [[NSMenu alloc] initWithTitle:@"View"];
+    NSMenuItem * viewMI    = [[NSMenuItem alloc] init];
+    NSMenu *     viewMenu  = [[NSMenu alloc] initWithTitle:@"View"];
 
     [viewMenu addItem:make_item(@"Zoom In [⌘=]", @selector(zoomIn:), @"", target)];
     [viewMenu addItem:make_item(@"Zoom Out [⌘-]", @selector(zoomOut:), @"", target)];
@@ -215,6 +231,21 @@ void save_zoom_factor(double zoom) {
     NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
 
     [defaults setDouble:zoom forKey:@"zoomFactor"];
+    [defaults synchronize];
+}
+
+void save_window_size(int w) {
+    NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
+
+    [defaults setInteger:w forKey:@"windowWidth"];
+    [defaults synchronize];
+}
+
+void save_window_pos(int x, int y) {
+    NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
+
+    [defaults setInteger:x forKey:@"windowX"];
+    [defaults setInteger:y forKey:@"windowY"];
     [defaults synchronize];
 }
 
