@@ -343,6 +343,27 @@ static void menu_action_delete_cable(int index) {
     }
 }
 
+static void ensure_module_selected(void) {
+    if (!is_selected(gContextMenu.moduleKey) || gSelection.count == 0) {
+        selection_set_single(gContextMenu.moduleKey);
+    }
+}
+
+static void menu_action_copy_module(int index) {
+    ensure_module_selected();
+    copy_selection();
+}
+
+static void menu_action_cut_module(int index) {
+    ensure_module_selected();
+    cut_selection();
+    gReDraw = true;
+}
+
+static void menu_action_paste(int index) {
+    paste_clipboard();
+}
+
 static void menu_action_delete_module(int index) {
     uint32_t slot     = gSlot;
     uint32_t location = gLocation;
@@ -453,7 +474,7 @@ static void init_params_on_module_all_variations(tModule * module, uint32_t loca
     }
 }
 
-static int32_t find_unique_module_id(uint32_t location) {
+int32_t find_unique_module_id(uint32_t location) {
     uint32_t slot = gSlot;
 
     for (uint32_t i = 1; i < MAX_NUM_MODULES; i++) {
@@ -1434,6 +1455,9 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     static tMenuItem menuItems[] = {
         {"Rename",        RGB_GREY_3, action_rename_module,      0, NULL           },
         {"Set colour",    RGB_GREY_3, action_set_module_colour,  0, colourMenuItems},
+        {"Copy",          RGB_GREY_3, menu_action_copy_module,   0, NULL           },
+        {"Cut",           RGB_GREY_3, menu_action_cut_module,    0, NULL           },
+        {"Paste",         RGB_GREY_3, menu_action_paste,         0, NULL           },
         {"Delete module", RGB_GREY_3, menu_action_delete_module, 0, NULL           },
         {NULL,            RGB_BLACK,  NULL,                      0, NULL           }
     };

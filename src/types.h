@@ -637,6 +637,37 @@ typedef enum {
 } tDoFree;
 
 typedef struct {
+    tModuleType type;
+    int32_t     dColumn;
+    int32_t     dRow;
+    uint32_t    origIndex;
+    uint32_t    colour;
+    uint32_t    upRate;
+    uint32_t    isLed;
+    char        name[CLAVIA_NAME_SIZE + 1];
+    tParam      param[NUM_VARIATIONS_USB][MAX_NUM_PARAMETERS];
+    uint32_t    mode[MAX_NUM_MODES];
+} tClipboardModule;
+
+typedef struct {
+    uint32_t fromOrigIndex;
+    uint32_t fromIoCount;
+    uint32_t toOrigIndex;
+    uint32_t toIoCount;
+    uint32_t linkType;
+    uint32_t colour;
+} tClipboardCable;
+
+typedef struct {
+    bool             active;
+    uint32_t         location;
+    tClipboardModule modules[MAX_NUM_MODULES];
+    uint32_t         moduleCount;
+    tClipboardCable  cables[MAX_NUM_CABLES];
+    uint32_t         cableCount;
+} tClipboard;
+
+typedef struct {
     double u1;         // Top-left texture coordinates
     double v1;
     double u2;         // Bottom-right texture coordinates

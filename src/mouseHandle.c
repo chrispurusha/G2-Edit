@@ -1681,6 +1681,18 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
             zoomFactor += ZOOM_DELTA;
             set_zoom_factor(zoomFactor, coord);
         }
+
+        if (key == GLFW_KEY_C) {
+            copy_selection();
+        }
+
+        if (key == GLFW_KEY_X) {
+            cut_selection();
+        }
+
+        if (key == GLFW_KEY_V) {
+            paste_clipboard();
+        }
     }
     gReDraw = true;
 }

@@ -49,6 +49,7 @@ tParamDragging          gParamDragging                                          
 tModuleDragging         gModuleDrag                                                                  = {0};
 tSelection              gSelection                                                                   = {0};
 tRubberBand             gRubberBand                                                                  = {0};
+tClipboard              gClipboard                                                                   = {0};
 tMessageQueue           gCommandQueue                                                                = {0};
 uint32_t                gMorphGroupFocus                                                             = 0;
 _Atomic uint32_t        gSlot                                                                        = 0;

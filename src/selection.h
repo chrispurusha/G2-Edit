@@ -30,5 +30,8 @@ void selection_add_rect(tRectangle rect, uint32_t slot, uint32_t location);
 void delete_module_and_cables(tModuleKey key);
 void delete_selection(void);
 void shift_selection_down(void);
+void copy_selection(void);
+void cut_selection(void);
+void paste_clipboard(void);
 
 #endif /* SELECTION_H */

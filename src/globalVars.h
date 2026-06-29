@@ -55,6 +55,7 @@ extern tParamDragging          gParamDragging;
 extern tModuleDragging         gModuleDrag;
 extern tSelection              gSelection;
 extern tRubberBand             gRubberBand;
+extern tClipboard              gClipboard;
 extern tMessageQueue           gCommandQueue;
 extern uint32_t                gMorphGroupFocus;
 extern _Atomic uint32_t        gSlot;
