@@ -1699,6 +1699,7 @@ void open_module_area_context_menu(tCoord coord) {
     };
     static tMenuItem menuItems[]       = {
         {"Create module", RGB_GREY_3, menu_action_create, 0, moduleMenuItems},
+        {"Paste",         RGB_GREY_3, menu_action_paste,  0, NULL           },
         {NULL,            RGB_BLACK,  NULL,               0, NULL           },
     };
 
