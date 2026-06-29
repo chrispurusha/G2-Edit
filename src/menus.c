@@ -1333,9 +1333,9 @@ void open_arp_octave_dropdown(tCoord coord) {
 
 void open_vibrato_source_dropdown(tCoord coord) {
     static tMenuItem items[] = {
-        {"Wheel",   RGB_GREY_3, action_patch_setting_u8, 0, NULL},
+        {"Off",     RGB_GREY_3, action_patch_setting_u8, 0, NULL},
         {"AfTouch", RGB_GREY_3, action_patch_setting_u8, 1, NULL},
-        {"Off",     RGB_GREY_3, action_patch_setting_u8, 2, NULL},
+        {"Wheel",   RGB_GREY_3, action_patch_setting_u8, 2, NULL},
         {NULL,      RGB_BLACK,  NULL,                    0, NULL},
     };
 
@@ -1369,9 +1369,9 @@ void open_vibrato_amount_dropdown(tCoord coord) {
 
 void open_glide_mode_dropdown(tCoord coord) {
     static tMenuItem items[] = {
-        {"Auto",   RGB_GREY_3, action_patch_setting_u8, 0, NULL},
+        {"Off",    RGB_GREY_3, action_patch_setting_u8, 0, NULL},
         {"Normal", RGB_GREY_3, action_patch_setting_u8, 1, NULL},
-        {"Off",    RGB_GREY_3, action_patch_setting_u8, 2, NULL},
+        {"Auto",   RGB_GREY_3, action_patch_setting_u8, 2, NULL},
         {NULL,     RGB_BLACK,  NULL,                    0, NULL},
     };
 

@@ -86,13 +86,13 @@ const tPatchParamItem kPPArp[kPPArpCount]         = {
 
 // ── Vibrato ───────────────────────────────────────────────────────────────────
 
-static const char *   srcLabels[]                 = {"Wheel", "AfTouch", "Off"};
+static const char *   srcLabels[]                 = {"Off", "AfTouch", "Wheel"};
 
 static const char * get_vibrato_source(void) {
     tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_VIBRATO);
-    uint8_t   si  = mod ? mod->param[0][VIBRATO_MOD].value : 2;
+    uint8_t   si  = mod ? mod->param[0][VIBRATO_MOD].value : 0;
 
-    return (si < 3) ? srcLabels[si] : srcLabels[2];
+    return (si < 3) ? srcLabels[si] : srcLabels[0];
 }
 
 const tPatchParamItem kPPVibrato[kPPVibratoCount] = {
