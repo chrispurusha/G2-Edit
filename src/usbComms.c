@@ -357,167 +357,333 @@ static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
     }
 }
 
+static void parse_volume_indicator(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
+    int volumesToRead = 0;
+
+    read_bit_stream(buff, bitPos, 8);  // start_idx (always 0 in practice)
+
+    for (int32_t location = 1; location >= 0; location--) {
+        for (int k = 0; k < MAX_NUM_MODULES; k++) {
+            tModuleKey key    = {slot, (uint32_t)location, (uint32_t)k};
+            tModule *  module = get_module(key);
+
+            if (module != NULL) {
+                switch (gModuleProperties[module->type].volumeType) {
+                    case volumeTypeMono:
+                    case volumeTypeCompress:
+                    case volumeTypeSequencer:
+                        volumesToRead = 1;
+                        break;
+                    case volumeTypeStereo:
+                        volumesToRead = 2;
+                        break;
+                    case volumeTypeQuad:
+                        volumesToRead = 4;
+                        break;
+                    case volumeTypeNone:
+                        volumesToRead = 0;
+                        break;
+                }
+
+                for (int i = 0; i < volumesToRead; i++) {
+                    module->volume.value[i] = read_bit_stream(buff, bitPos, 8);
+                    read_bit_stream(buff, bitPos, 8);  // hi byte: unused
+                }
+            }
+        }
+    }
+}
+
+static void parse_led_data(uint32_t slot, uint8_t * buff, uint32_t * bitPos, int length) {
+    uint8_t  start_idx = read_bit_stream(buff, bitPos, 8);
+    uint32_t led_count = 0;
+
+    // G2 packs 2-bit LED values LSB-first (bits 0-1 = first LED, bits 2-3 = second,
+    // etc.), but read_bit_stream reads MSB-first.  Reversing each data byte reconciles
+    // the two orderings.  Only the packed data bytes are reversed — start_idx (buff[4])
+    // is already consumed above and must not be touched.
+    for (int i = 5; i < (length - 2); i++) {
+        buff[i] = reverse_bits_in_byte(buff[i]);
+    }
+
+    // VA (location 1) first, then FX (location 0), each sorted by ascending module
+    // index — this matches the order in which the G2 assigns LED sequence numbers.
+    for (int32_t location = 1; location >= 0; location--) {
+        for (int k = 0; k < MAX_NUM_MODULES; k++) {
+            tModuleKey key    = {slot, (uint32_t)location, (uint32_t)k};
+            tModule *  module = get_module(key);
+
+            if (module != NULL) {
+                if (gModuleProperties[module->type].ledType == ledTypeYes) {
+                    if (led_count >= start_idx && led_count < (uint32_t)(start_idx + 40)) {
+                        module->led.value = read_bit_stream(buff, bitPos, 2);
+                    }
+                    led_count++;
+                }
+            }
+        }
+    }
+}
+
+static int parse_resources_used(uint32_t slot, uint8_t * buff, uint32_t * bitPos, int length) {
+    uint16_t cyclesRed  = 0;
+    uint16_t cyclesBlue = 0;
+    uint8_t  zpMem      = 0;
+    uint16_t xmemV1     = 0;
+    uint16_t ymemV1     = 0;
+    uint16_t pmemV1     = 0;
+    uint16_t xmemV2     = 0;
+    uint16_t ymemV2     = 0;
+    uint16_t pmemV2     = 0;
+    uint16_t ramRaw     = 0;
+    uint32_t qmemRaw    = 0;
+    uint16_t rmemRaw    = 0;
+    uint16_t unknown    = 0;
+    uint8_t  location   = 0;
+    uint8_t  sub        = 0;
+    float    cyclesLoad = 0.0f;
+    float    memLoad    = 0.0f;
+
+    LOG_DEBUG("Got resources in use slot %u\n", slot);
+
+    if (*bitPos < 8) {
+        LOG_ERROR("Resources used: bitPos underflow (%u)\n", *bitPos);
+        return EXIT_FAILURE;
+    }
+    *bitPos -= 8; // Multiple messages in here, so need to move back a byte to process each sub response
+
+    while ((BIT_TO_BYTE(*bitPos)) < (length - CRC_BYTES)) {
+        sub                                   = read_bit_stream(buff, bitPos, 8);
+
+        if (sub != SUB_RESPONSE_RESOURCES_USED) {
+            break;
+        }
+        location                              = read_bit_stream(buff, bitPos, 8);
+        cyclesRed                             = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+        cyclesBlue                            = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+        zpMem                                 = read_bit_stream(buff, bitPos, 8);
+        unknown                               = read_bit_stream(buff, bitPos, 16); // unknown5, discard
+        xmemV1                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+        ymemV1                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+        pmemV1                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+        xmemV2                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+        ymemV2                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+        pmemV2                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+        ramRaw                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+        qmemRaw                               = read_bit_stream(buff, bitPos, 32);
+        rmemRaw                               = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
+
+        cyclesLoad                            = ((float)cyclesRed + (float)cyclesBlue * 0.25f) * 100.0f / 1371.0f;
+
+        float xmem  = (float)(xmemV1 + xmemV2) * 100.0f / 4336.0f;
+        float ymem  = (float)(ymemV1 + ymemV2) * 100.0f / 2992.0f;
+        float pmem  = (float)(pmemV1 + pmemV2) * 100.0f / 6498.0f;
+        float zpmem = (float)zpMem * 100.0f / 128.0f;
+        float ram   = (float)ramRaw * 100.0f * 7.6293945e-06f;
+        float qmem  = (float)qmemRaw * 100.0f / 260096.0f;
+        float rmem  = (float)rmemRaw * 100.0f * 0.00390625f;
+
+        memLoad                               = fmaxf(fmaxf(fmaxf(fmaxf(fmaxf(fmaxf(xmem, ymem), pmem), zpmem), ram), qmem), rmem);
+
+        cyclesLoad                            = roundf(cyclesLoad * 10.0f) / 10.0f;
+        memLoad                               = roundf(memLoad * 10.0f) / 10.0f;
+        gResourceAlloc[slot].mem[location]    = memLoad;
+        gResourceAlloc[slot].cycles[location] = cyclesLoad;
+    }
+    return EXIT_SUCCESS;
+}
+
+static void parse_global_page(uint8_t * buff, uint32_t * bitPos) {
+    static uint32_t count      = 0;
+    uint8_t         globalPage = 0;
+
+    globalPage  = read_bit_stream(buff, bitPos, 8);
+    gGlobalPage = globalPage;
+    LOG_DEBUG("%u Got global page Page=%u Pos=%u\n", count++, globalPage / 3, globalPage % 3);
+}
+
+static void parse_patch_version_change(uint8_t * buff, uint32_t * bitPos) {
+    uint8_t changedSlot = read_bit_stream(buff, bitPos, 8);
+    uint8_t newVersion  = read_bit_stream(buff, bitPos, 8);
+
+    LOG_DEBUG("Patch version change: slot %u new version 0x%02x\n", changedSlot, newVersion);
+
+    if (changedSlot < MAX_SLOTS) {
+        if (newVersion != gGlobalSettings.slot[changedSlot].patchVersion) {
+            gGlobalSettings.slot[changedSlot].patchVersion = newVersion;
+            gotPatchChangeIndication[changedSlot]          = true;
+        }
+    }
+}
+
+static void parse_slot_selection(uint8_t * buff, uint32_t * bitPos) {
+    LOG_DEBUG("Got slot selection dump\n");
+    read_bit_stream(buff, bitPos, 4);  // 4 padding bits (always 0)
+
+    for (uint32_t i = 0; i < MAX_SLOTS; i++) {
+        uint8_t status = (uint8_t)read_bit_stream(buff, bitPos, 1);
+        gGlobalSettings.slot[i].enabled = status;
+        LOG_DEBUG("  Slot %u enabled: %u\n", i, status != 0 ? 1 : 0);
+    }
+}
+
+static void parse_assigned_voices(uint8_t * buff, uint32_t * bitPos) {
+    LOG_DEBUG("Got assigned voices response\n");
+
+    for (int i = 0; i < MAX_SLOTS; i++) {
+        gAssignedVoices[i] = read_bit_stream(buff, bitPos, 8);  // TODO - might have to set target assigned voices to lower number, before attempting increase?
+    }
+}
+
+static void parse_perf_mode_change(uint8_t * buff, uint32_t * bitPos) {
+    gGlobalSettings.perfMode = read_bit_stream(buff, bitPos, 8);
+    LOG_DEBUG("Got perf mode change: %u\n", gGlobalSettings.perfMode);  // TODO - check this one
+}
+
+static void parse_master_clock(uint8_t * buff, uint32_t * bitPos) {
+    uint8_t clock   = 0;
+    uint8_t running = 0;
+    uint8_t type    = 0;
+
+    LOG_DEBUG("Got master clock\n");
+    read_bit_stream(buff, bitPos, 8);  // 0xff - not sure what this is, or if it ever changes
+    type = read_bit_stream(buff, bitPos, 8);
+
+    if (type == 1) {
+        clock                       = read_bit_stream(buff, bitPos, 8);
+        gGlobalSettings.masterClock = clock;
+        LOG_DEBUG_DIRECT("Master clock = %u\n", clock);
+    } else if (type == 0) {
+        running                            = read_bit_stream(buff, bitPos, 8);
+        gGlobalSettings.masterClockRunning = running;
+        LOG_DEBUG_DIRECT("Clock running = %u\n", running);
+    }
+}
+
+static void parse_select_slot(uint8_t * buff, uint32_t * bitPos) {
+    uint32_t newSlot = read_bit_stream(buff, bitPos, 8);
+
+    LOG_DEBUG("Got slot select %u\n", newSlot);
+
+    gSlot                 = newSlot;
+    gPatchParamsEdit.slot = newSlot;
+    set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
+                                   (tTopbarControlId)(topbarSlotAId + newSlot));
+    set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
+                                   (tTopbarControlId)((uint32_t)topbarVariation1Id + gPatchDescr[newSlot].activeVariation));
+}
+
+static int parse_get_patch_name(uint32_t slot, uint8_t * buff, uint32_t * bitPos, int length) {
+    int nameBytes = length - 6;
+
+    LOG_DEBUG("Got patch name (length %d)\n", length);
+
+    if ((nameBytes < 0) || (nameBytes > CLAVIA_NAME_SIZE)) {
+        LOG_ERROR("Patch name length out of range: %d\n", nameBytes);
+        return EXIT_FAILURE;
+    }
+    read_clavia_string(buff, bitPos, gGlobalSettings.slot[slot].patchName, sizeof(gGlobalSettings.slot[slot].patchName));
+    LOG_DEBUG("Patch name: %s\n", gGlobalSettings.slot[slot].patchName);
+    return EXIT_SUCCESS;
+}
+
+static void parse_select_param(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
+    uint32_t unknown     = read_bit_stream(buff, bitPos, 8);
+    uint32_t location    = read_bit_stream(buff, bitPos, 8);
+    uint32_t moduleIndex = read_bit_stream(buff, bitPos, 8);
+    uint32_t paramIndex  = read_bit_stream(buff, bitPos, 8);
+
+    (void)unknown;
+
+    if (slot < MAX_SLOTS) {
+        gSelectedParam[slot].location    = location;
+        gSelectedParam[slot].moduleIndex = moduleIndex;
+        gSelectedParam[slot].paramIndex  = paramIndex;
+    }
+    LOG_DEBUG("Got select param: slot=%u location=%u module=%u param=%u\n",
+              slot, location, moduleIndex, paramIndex);
+}
+
+static void parse_select_variation(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
+    uint8_t variation = read_bit_stream(buff, bitPos, 8);
+
+    LOG_DEBUG("Got variation select\n");
+    gPatchDescr[slot].activeVariation = variation;
+    set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
+                                   (tTopbarControlId)(topbarVariation1Id + variation));
+}
+
+static void parse_sel_param_page(uint8_t * buff, uint32_t * bitPos) {
+    uint8_t paramPage = read_bit_stream(buff, bitPos, 8);
+
+    LOG_DEBUG("Got param page Page=%u Pos=%u\n", paramPage / 3, paramPage % 3);
+}
+
+static void parse_store_patch(uint8_t * buff, uint32_t * bitPos) {
+    uint32_t savedBitPos = *bitPos;
+
+    LOG_DEBUG("Got store patch\n");
+
+    for (int i = 0; i < 32; i++) {
+        LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, bitPos, 8));
+    }
+
+    LOG_DEBUG_DIRECT("\n");
+    *bitPos = savedBitPos;
+}
+
+static void parse_perf_patch_versions(uint8_t * buff, uint32_t * bitPos) {
+    uint8_t newVersion  = 0;
+    uint8_t readSlot    = 0;
+    uint8_t subResponse = 0;
+
+    LOG_DEBUG("\nGot performance patch versions\n\n");
+
+    newVersion = read_bit_stream(buff, bitPos, 8);
+    LOG_DEBUG("Old perf = %u new = %u\n", gGlobalSettings.perfVersion, newVersion);
+
+    if (newVersion != gGlobalSettings.perfVersion) {
+        gGlobalSettings.perfVersion     = newVersion;
+        // Use a flag rather than queuing so rapid switches coalesce into one resync.
+        gotPerfSettingsChangeIndication = true;
+    }
+
+    for (int i = 0; i < MAX_SLOTS; i++) {
+        subResponse = read_bit_stream(buff, bitPos, 8);
+        readSlot    = read_bit_stream(buff, bitPos, 8);
+        newVersion  = read_bit_stream(buff, bitPos, 8);
+
+        if (subResponse == SUB_RESPONSE_PATCH_VERSION) {
+            LOG_DEBUG("Store old patch %u ver = %u new = %u\n", readSlot, gGlobalSettings.slot[readSlot].patchVersion, newVersion);
+
+            if (newVersion != gGlobalSettings.slot[readSlot].patchVersion) {
+                gGlobalSettings.slot[readSlot].patchVersion = newVersion;
+                gotPatchChangeIndication[readSlot]          = true;
+            }
+        }
+    }
+}
+
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                                   uint8_t commandResponse, uint8_t subCommand,
                                   int length) {
     uint32_t slot = commandResponse & 0x03;
-    int      i    = 0;
 
     switch (subCommand) {
         case SUB_RESPONSE_VOLUME_INDICATOR:
-        {
-            int volumesToRead = 0;
-
-            read_bit_stream(buff, bitPos, 8);  // start_idx (always 0 in practice)
-
-            for (int32_t location = 1; location >= 0; location--) {
-                for (int k = 0; k < MAX_NUM_MODULES; k++) {
-                    tModuleKey key    = {slot, (uint32_t)location, (uint32_t)k};
-                    tModule *  module = get_module(key);
-
-                    if (module != NULL) {
-                        switch (gModuleProperties[module->type].volumeType) {
-                            case volumeTypeMono:
-                            case volumeTypeCompress:
-                            case volumeTypeSequencer:
-                            {
-                                volumesToRead = 1;
-                                break;
-                            }
-                            case volumeTypeStereo:
-                            {
-                                volumesToRead = 2;
-                                break;
-                            }
-                            case volumeTypeQuad:
-                            {
-                                volumesToRead = 4;
-                                break;
-                            }
-                            case volumeTypeNone:
-                            {
-                                volumesToRead = 0;
-                                break;
-                            }
-                        }
-
-                        for (i = 0; i < volumesToRead; i++) {
-                            module->volume.value[i] = read_bit_stream(buff, bitPos, 8);
-                            read_bit_stream(buff, bitPos, 8);  // hi byte: unused
-                        }
-                    }
-                }
-            }
-
+            parse_volume_indicator(slot, buff, bitPos);
             return EXIT_SUCCESS;
-        }
 
         case SUB_RESPONSE_LED_DATA:
-        {
-            uint8_t  start_idx = read_bit_stream(buff, bitPos, 8);
-            uint32_t led_count = 0;
-
-            // G2 packs 2-bit LED values LSB-first (bits 0-1 = first LED, bits 2-3 = second,
-            // etc.), but read_bit_stream reads MSB-first.  Reversing each data byte reconciles
-            // the two orderings.  Only the packed data bytes are reversed — start_idx (buff[4])
-            // is already consumed above and must not be touched.
-            for (int i = 5; i < (length - 2); i++) {
-                buff[i] = reverse_bits_in_byte(buff[i]);
-            }
-
-            // VA (location 1) first, then FX (location 0), each sorted by ascending module
-            // index — this matches the order in which the G2 assigns LED sequence numbers.
-            for (int32_t location = 1; location >= 0; location--) {
-                for (int k = 0; k < MAX_NUM_MODULES; k++) {
-                    tModuleKey key    = {slot, (uint32_t)location, (uint32_t)k};
-                    tModule *  module = get_module(key);
-
-                    if (module != NULL) {
-                        if (gModuleProperties[module->type].ledType == ledTypeYes) {
-                            if (led_count >= start_idx && led_count < (uint32_t)(start_idx + 40)) {
-                                module->led.value = read_bit_stream(buff, bitPos, 2);
-                            }
-                            led_count++;
-                        }
-                    }
-                }
-            }
-
+            parse_led_data(slot, buff, bitPos, length);
             return EXIT_SUCCESS;
-        }
 
         case SUB_RESPONSE_ERROR:
             LOG_DEBUG("Got Error!!!\n");
             return EXIT_FAILURE;
 
         case SUB_RESPONSE_RESOURCES_USED:
-        {
-            LOG_DEBUG("Got resources in use slot %u\n", commandResponse);
-
-            uint16_t cyclesRed  = 0;
-            uint16_t cyclesBlue = 0;
-            uint8_t  zpMem      = 0;
-            uint16_t xmemV1     = 0;
-            uint16_t ymemV1     = 0;
-            uint16_t pmemV1     = 0;
-            uint16_t xmemV2     = 0;
-            uint16_t ymemV2     = 0;
-            uint16_t pmemV2     = 0;
-            uint16_t ramRaw     = 0;
-            uint32_t qmemRaw    = 0;
-            uint16_t rmemRaw    = 0;
-            uint16_t unknown    = 0;
-            uint8_t  location   = 0;
-            uint8_t  sub        = 0;
-            float    cyclesLoad = 0.0f;
-            float    memLoad    = 0.0f;
-
-            if (*bitPos < 8) {
-                LOG_ERROR("Resources used: bitPos underflow (%u)\n", *bitPos);
-                return EXIT_FAILURE;
-            }
-            *bitPos -= 8; // Multiple messages in here, so need to move back a byte to process each sub response
-
-            while ((BIT_TO_BYTE(*bitPos)) < (length - CRC_BYTES)) {
-                sub                                   = read_bit_stream(buff, bitPos, 8);
-
-                if (sub != SUB_RESPONSE_RESOURCES_USED) {
-                    break;
-                }
-                location                              = read_bit_stream(buff, bitPos, 8);
-                cyclesRed                             = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
-                cyclesBlue                            = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
-                zpMem                                 = read_bit_stream(buff, bitPos, 8);
-                unknown                               = read_bit_stream(buff, bitPos, 16);              // unknown5, discard
-                xmemV1                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
-                ymemV1                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
-                pmemV1                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
-                xmemV2                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
-                ymemV2                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
-                pmemV2                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
-                ramRaw                                = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
-                qmemRaw                               = read_bit_stream(buff, bitPos, 32);
-                rmemRaw                               = read_bit_stream(buff, bitPos, 8) * 128 + read_bit_stream(buff, bitPos, 8);
-
-                cyclesLoad                            = ((float)cyclesRed + (float)cyclesBlue * 0.25f) * 100.0f / 1371.0f;
-
-                float xmem  = (float)(xmemV1 + xmemV2) * 100.0f / 4336.0f;
-                float ymem  = (float)(ymemV1 + ymemV2) * 100.0f / 2992.0f;
-                float pmem  = (float)(pmemV1 + pmemV2) * 100.0f / 6498.0f;
-                float zpmem = (float)zpMem * 100.0f / 128.0f;
-                float ram   = (float)ramRaw * 100.0f * 7.6293945e-06f;
-                float qmem  = (float)qmemRaw * 100.0f / 260096.0f;
-                float rmem  = (float)rmemRaw * 100.0f * 0.00390625f;
-
-                memLoad                               = fmaxf(fmaxf(fmaxf(fmaxf(fmaxf(fmaxf(xmem, ymem), pmem), zpmem), ram), qmem), rmem);
-
-                cyclesLoad                            = roundf(cyclesLoad * 10.0f) / 10.0f;
-                memLoad                               = roundf(memLoad * 10.0f) / 10.0f;
-                gResourceAlloc[slot].mem[location]    = memLoad;
-                gResourceAlloc[slot].cycles[location] = cyclesLoad;
-            }
-            return EXIT_SUCCESS;
-        }
+            return parse_resources_used(slot, buff, bitPos, length);
 
         case SUB_RESPONSE_KNOBS:
             LOG_DEBUG("Got knob snapshot slot %u\n", slot);
@@ -546,70 +712,28 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_GLOBAL_PAGE:
-        {
-            static uint32_t count      = 0;
-            uint8_t         globalPage = 0;
-
-            globalPage  = read_bit_stream(buff, bitPos, 8);
-            gGlobalPage = globalPage;
-            LOG_DEBUG("%u Got global page Page=%u Pos=%u\n", count++, globalPage / 3, globalPage % 3);
+            parse_global_page(buff, bitPos);
             return EXIT_SUCCESS;
-        }
 
         case SUB_RESPONSE_PATCH_VERSION_CHANGE:
-        {
-            uint8_t changedSlot = read_bit_stream(buff, bitPos, 8);
-            uint8_t newVersion  = read_bit_stream(buff, bitPos, 8);
-
-            LOG_DEBUG("Patch version change: slot %u new version 0x%02x\n", changedSlot, newVersion);
-
-            if (changedSlot < MAX_SLOTS) {
-                if (newVersion != gGlobalSettings.slot[changedSlot].patchVersion) {
-                    gGlobalSettings.slot[changedSlot].patchVersion = newVersion;
-                    gotPatchChangeIndication[changedSlot]          = true;
-                    //gChangedSlot= (uint32_t)changedSlot;
-                }
-            }
+            parse_patch_version_change(buff, bitPos);
             return EXIT_SUCCESS;
-        }
 
         case SUB_RESPONSE_SLOT_SELECTION:
-        {
-            LOG_DEBUG("Got slot selection dump\n");
-            read_bit_stream(buff, bitPos, 4); // 4 padding bits (always 0)
-
-            for (uint32_t i = 0; i < MAX_SLOTS; i++) {
-                uint8_t status = (uint8_t)read_bit_stream(buff, bitPos, 1);
-                gGlobalSettings.slot[i].enabled = status;
-                LOG_DEBUG("  Slot %u enabled: %u\n", i, status != 0 ? 1 : 0);
-            }
-
+            parse_slot_selection(buff, bitPos);
             return EXIT_SUCCESS;
-        }
 
         case SUB_RESPONSE_ASSIGNED_VOICES:
-        {
-            int i = 0;
-            LOG_DEBUG("Got assigned voices response\n");
-
-            for (i = 0; i < MAX_SLOTS; i++) {
-                gAssignedVoices[i] = read_bit_stream(buff, bitPos, 8);   // TODO - might have to set target assigned voices to lower number, before attempting increase?
-            }
-
+            parse_assigned_voices(buff, bitPos);
             return EXIT_SUCCESS;
-        }
 
         case SUB_RESPONSE_SET_ASSIGNED_VOICES:
             LOG_DEBUG("Got assigned voices command — unexpected\n");
             return EXIT_SUCCESS;
 
         case SUB_COMMAND_SET_PARAM_MODE:
-        {
-            gGlobalSettings.perfMode = read_bit_stream(buff, bitPos, 8);
-
-            LOG_DEBUG("Got perf mode change: %u\n", gGlobalSettings.perfMode); // TODO - check this one
+            parse_perf_mode_change(buff, bitPos);
             return EXIT_SUCCESS;
-        }
 
         case SUB_RESPONSE_PERF_HEADER:
             LOG_DEBUG("Got perf header dump\n");
@@ -623,42 +747,12 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_MASTER_CLOCK:
-        {
-            uint8_t clock   = 0;
-            uint8_t running = 0;
-            uint8_t type    = 0;
-
-            LOG_DEBUG("Got master clock\n");
-
-            read_bit_stream(buff, bitPos, 8); // 0xff - not sure what this is, or if it ever changes
-            type = read_bit_stream(buff, bitPos, 8);
-
-            if (type == 1) {
-                clock                       = read_bit_stream(buff, bitPos, 8);
-                gGlobalSettings.masterClock = clock;
-                LOG_DEBUG_DIRECT("Master clock = %u\n", clock);
-            } else if (type == 0) {
-                running                            = read_bit_stream(buff, bitPos, 8);
-                gGlobalSettings.masterClockRunning = running;
-                LOG_DEBUG_DIRECT("Clock running = %u\n", running);
-            }
+            parse_master_clock(buff, bitPos);
             return EXIT_SUCCESS;
-        }
 
         case SUB_RESPONSE_SELECT_SLOT:
-        {
-            uint32_t newSlot = read_bit_stream(buff, bitPos, 8);
-            LOG_DEBUG("Got slot select %u\n", newSlot);
-
-            gSlot                 = newSlot;
-            gPatchParamsEdit.slot = newSlot;
-            set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId,
-                                           (tTopbarControlId)(topbarSlotAId + newSlot));
-            set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
-                                           (tTopbarControlId)((uint32_t)topbarVariation1Id + gPatchDescr[newSlot].activeVariation));
-
+            parse_select_slot(buff, bitPos);
             return EXIT_SUCCESS;
-        }
 
         case SUB_RESPONSE_PATCH_DESCRIPTION:
             LOG_DEBUG("Got patch description\n");
@@ -667,124 +761,39 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_GET_PATCH_NAME:
-        {
-            int nameBytes = length - 6;
-
-            LOG_DEBUG("Got patch name (length %d)\n", length);
-
-            if ((nameBytes < 0) || (nameBytes > CLAVIA_NAME_SIZE)) {
-                LOG_ERROR("Patch name length out of range: %d\n", nameBytes);
-                return EXIT_FAILURE;
-            }
-            read_clavia_string(buff, bitPos, gGlobalSettings.slot[slot].patchName, sizeof(gGlobalSettings.slot[slot].patchName));
-            LOG_DEBUG("Patch name: %s\n", gGlobalSettings.slot[slot].patchName);
-
-            return EXIT_SUCCESS;
-        }
+            return parse_get_patch_name(slot, buff, bitPos, length);
 
         case SUB_RESPONSE_OK:
             //LOG_DEBUG("GOT OK %f\n", get_time_ms());
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_SELECT_PARAM:
-        {
-            uint32_t unknown     = read_bit_stream(buff, bitPos, 8);
-            uint32_t location    = read_bit_stream(buff, bitPos, 8);
-            uint32_t moduleIndex = read_bit_stream(buff, bitPos, 8);
-            uint32_t paramIndex  = read_bit_stream(buff, bitPos, 8);
-
-            (void)unknown;
-
-            if (slot < MAX_SLOTS) {
-                gSelectedParam[slot].location    = location;
-                gSelectedParam[slot].moduleIndex = moduleIndex;
-                gSelectedParam[slot].paramIndex  = paramIndex;
-            }
-            LOG_DEBUG("Got select param: slot=%u location=%u module=%u param=%u\n",
-                      slot, location, moduleIndex, paramIndex);
+            parse_select_param(slot, buff, bitPos);
             return EXIT_SUCCESS;
-        }
 
         case SUB_RESPONSE_SELECT_VARIATION:
-            LOG_DEBUG("Got variation select\n");
-            uint8_t variation = 0;
-
-            variation                         = read_bit_stream(buff, bitPos, 8);
-            gPatchDescr[slot].activeVariation = variation;
-
-            set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId, (tTopbarControlId)(topbarVariation1Id + variation));
+            parse_select_variation(slot, buff, bitPos);
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_SEL_PARAM_PAGE:
-        {
-            uint8_t paramPage = 0;
-
-            paramPage = read_bit_stream(buff, bitPos, 8);
-            LOG_DEBUG("Got param page Page=%u Pos=%u\n", paramPage / 3, paramPage % 3);
-
+            parse_sel_param_page(buff, bitPos);
             return EXIT_SUCCESS;
-        }
 
         case SUB_RESPONSE_STORE_PATCH:
-        {
-            uint32_t tmpSubOffset = *bitPos;
-
-            LOG_DEBUG("Got store patch\n");
-
-            for (int i = 0; i < 32; i++) {
-                LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, bitPos, 8));
-            }
-
-            LOG_DEBUG_DIRECT("\n");
-            *bitPos = tmpSubOffset;
-
+            parse_store_patch(buff, bitPos);
             return EXIT_SUCCESS;
-        }
+
         case SUB_RESPONSE_PERF_PATCH_VERSIONS:
-        {
-            uint8_t newVersion  = 0;
-            uint8_t readSlot    = 0;
-            uint8_t subResponse = 0;
-            int     i           = 0;
-
-            LOG_DEBUG("\nGot performance patch versions\n\n");
-
-            newVersion = read_bit_stream(buff, bitPos, 8);
-            LOG_DEBUG("Old perf = %u new = %u\n", gGlobalSettings.perfVersion, newVersion);
-
-            if (newVersion != gGlobalSettings.perfVersion) {
-                gGlobalSettings.perfVersion     = newVersion;
-                // Use a flag rather than queuing so rapid switches coalesce into one resync.
-                gotPerfSettingsChangeIndication = true;
-            }
-
-            for (i = 0; i < MAX_SLOTS; i++) {
-                subResponse = read_bit_stream(buff, bitPos, 8);
-                readSlot    = read_bit_stream(buff, bitPos, 8);
-                newVersion  = read_bit_stream(buff, bitPos, 8);
-
-                if (subResponse == SUB_RESPONSE_PATCH_VERSION) {
-                    LOG_DEBUG("Store old patch %u ver = %u new = %u\n", readSlot, gGlobalSettings.slot[readSlot].patchVersion, newVersion);
-
-                    if (newVersion != gGlobalSettings.slot[readSlot].patchVersion) {
-                        gGlobalSettings.slot[readSlot].patchVersion = newVersion;
-                        gotPatchChangeIndication[readSlot]          = true;
-                    }
-                }
-            }
-
+            parse_perf_patch_versions(buff, bitPos);
             return EXIT_SUCCESS;
-        }
 
         case SUB_RESPONSE_EXT_MASTER_CLOCK:
-        {
             // Don't think we need to process this since we're already setting data via unsolited and a bigger block of incoming data
             return EXIT_SUCCESS;
-        }
 
         case SUB_RESPONSE_GLOBAL_KNOBS:
             LOG_DEBUG("Got global knobs\n");
-            read_bit_stream(buff, bitPos, 16); // section byte count — consumed, not used
+            read_bit_stream(buff, bitPos, 16);  // section byte count — consumed, not used
             parse_global_knobs(buff, bitPos);
             return EXIT_SUCCESS;
 
@@ -1148,36 +1157,36 @@ static int send_and_receive(uint8_t * buff, int pos, int expectedResponse, unsig
 }
 
 static int send_init(void) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    buff[pos++] = 0x80;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    write_bit_stream(buff, &bitPos, 8, 0x80);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
-static void usb_cmd_sys(uint8_t * buff, int * pos, uint8_t version, uint8_t subCommand) {
-    buff[(*pos)++] = 0x01;
-    buff[(*pos)++] = COMMAND_REQ | COMMAND_SYS;
-    buff[(*pos)++] = version;
-    buff[(*pos)++] = subCommand;
+static void usb_cmd_sys(uint8_t * buff, uint32_t * bitPos, uint8_t version, uint8_t subCommand) {
+    write_bit_stream(buff, bitPos, 8, 0x01);
+    write_bit_stream(buff, bitPos, 8, COMMAND_REQ | COMMAND_SYS);
+    write_bit_stream(buff, bitPos, 8, version);
+    write_bit_stream(buff, bitPos, 8, subCommand);
 }
 
-static void usb_cmd_slot(uint8_t * buff, int * pos, uint32_t slot, uint8_t commandFlags, uint8_t subCommand) {
-    buff[(*pos)++] = 0x01;
-    buff[(*pos)++] = commandFlags | COMMAND_SLOT | (uint8_t)slot;
-    buff[(*pos)++] = (uint8_t)gGlobalSettings.slot[slot].patchVersion;
-    buff[(*pos)++] = subCommand;
+static void usb_cmd_slot(uint8_t * buff, uint32_t * bitPos, uint32_t slot, uint8_t commandFlags, uint8_t subCommand) {
+    write_bit_stream(buff, bitPos, 8, 0x01);
+    write_bit_stream(buff, bitPos, 8, commandFlags | COMMAND_SLOT | (uint8_t)slot);
+    write_bit_stream(buff, bitPos, 8, (uint8_t)gGlobalSettings.slot[slot].patchVersion);
+    write_bit_stream(buff, bitPos, 8, subCommand);
 }
 
 static int send_stop(void) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_SUCCESS;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+    int      retVal                  = EXIT_SUCCESS;
 
     if (stopCount == 0) {
-        usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_START_STOP);
-        buff[pos++] = 0x01;
-        retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+        usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_START_STOP);
+        write_bit_stream(buff, &bitPos, 8, 0x01);
+        retVal = send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
     }
     stopCount++;
 
@@ -1189,9 +1198,9 @@ static int send_stop(void) {
 }
 
 static int send_start(void) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
-    int     retVal                  = EXIT_SUCCESS;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+    int      retVal                  = EXIT_SUCCESS;
 
     stopCount--;
 
@@ -1201,132 +1210,128 @@ static int send_start(void) {
     }
 
     if (stopCount == 0) {
-        usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_START_STOP);  // Note: this sub command also starts, with correct param
-        buff[pos++] = 0x00;
-        retVal      = send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+        usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_START_STOP);  // Note: this sub command also starts, with correct param
+        write_bit_stream(buff, &bitPos, 8, 0x00);
+        retVal = send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
     }
     return retVal;
 }
 
 static int send_select_slot(uint32_t slot) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_SELECT_SLOT);   // Note that this is focus, not keyboard selection
-    buff[pos++] = (uint8_t)slot;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_sys(buff, &bitPos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_SELECT_SLOT);   // Note that this is focus, not keyboard selection
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)slot);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_get_synth_settings(void) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_GET_SYNTH_SETTINGS);
-    return send_and_receive(buff, pos, SUB_RESPONSE_SYNTH_SETTINGS, USB_RECV_DATA_MS);
+    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_GET_SYNTH_SETTINGS);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_SYNTH_SETTINGS, USB_RECV_DATA_MS);
 }
 
 static int send_get_midi_cc(void) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_GET_MIDI_CC);
-    return send_and_receive(buff, pos, SUB_RESPONSE_MIDI_CC, USB_RECV_DATA_MS);
+    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_GET_MIDI_CC);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_MIDI_CC, USB_RECV_DATA_MS);
 }
 
 static int send_get_slot_selection(void) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_GET_SLOT_SELECTION);
-    return send_and_receive(buff, pos, SUB_RESPONSE_SLOT_SELECTION, USB_RECV_DATA_MS);
+    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_GET_SLOT_SELECTION);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_SLOT_SELECTION, USB_RECV_DATA_MS);
 }
 
 static int send_get_assigned_voices(void) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_GET_ASSIGNED_VOICES);
-    return send_and_receive(buff, pos, SUB_RESPONSE_ASSIGNED_VOICES, USB_RECV_DATA_MS);
+    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_GET_ASSIGNED_VOICES);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_ASSIGNED_VOICES, USB_RECV_DATA_MS);
 }
 
 static int send_get_master_clock(void) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_QUERY_MASTER_CLOCK);
-    return send_and_receive(buff, pos, SUB_RESPONSE_EXT_MASTER_CLOCK, USB_RECV_DATA_MS);
+    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_QUERY_MASTER_CLOCK);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_EXT_MASTER_CLOCK, USB_RECV_DATA_MS);
 }
 
 static int send_get_global_page(void) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_GET_GLOBAL_PAGE);
-    return send_and_receive(buff, pos, SUB_RESPONSE_GLOBAL_PAGE, USB_RECV_DATA_MS);
+    usb_cmd_sys(buff, &bitPos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_GET_GLOBAL_PAGE);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_GLOBAL_PAGE, USB_RECV_DATA_MS);
 }
 
 static int send_get_performance_settings(void) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
     LOG_DEBUG("Send get performance settings\n");
-    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_PERFORMANCE_SETTINGS);
-    return send_and_receive(buff, pos, SUB_RESPONSE_PERFORMANCE_SETTINGS, USB_RECV_DATA_MS);
+    usb_cmd_sys(buff, &bitPos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_PERFORMANCE_SETTINGS);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_PERFORMANCE_SETTINGS, USB_RECV_DATA_MS);
 }
 
 static int send_get_patch_version(uint32_t slot) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
     LOG_DEBUG("Send get patch version\n");
-    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_GET_PATCH_VERSION);
-    buff[pos++] = (uint8_t)slot;
-    return send_and_receive(buff, pos, SUB_RESPONSE_PATCH_VERSION, USB_RECV_DATA_MS);
+    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_GET_PATCH_VERSION);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)slot);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_PATCH_VERSION, USB_RECV_DATA_MS);
 }
 
 static int send_get_patch(uint32_t slot) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_GET_PATCH_SLOT);
-    return send_and_receive(buff, pos, SUB_RESPONSE_PATCH_DESCRIPTION, USB_RECV_DATA_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_GET_PATCH_SLOT);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_PATCH_DESCRIPTION, USB_RECV_DATA_MS);
 }
 
 static int send_get_patch_name(uint32_t slot) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_GET_PATCH_NAME);
-    return send_and_receive(buff, pos, SUB_RESPONSE_GET_PATCH_NAME, USB_RECV_DATA_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_GET_PATCH_NAME);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_GET_PATCH_NAME, USB_RECV_DATA_MS);
 }
 
 static int send_get_resources_used(uint32_t slot, tLocation location) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_QUERY_RESOURCES);
-    buff[pos++] = location;
-    return send_and_receive(buff, pos, SUB_RESPONSE_RESOURCES_USED, USB_RECV_DATA_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_QUERY_RESOURCES);
+    write_bit_stream(buff, &bitPos, 8, location);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_RESOURCES_USED, USB_RECV_DATA_MS);
 }
 
 static int send_set_module_label(uint32_t slot, tModuleKey moduleKey, const char * name) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_MODULE_LABEL);
-    buff[pos++] = moduleKey.location;
-    buff[pos++] = moduleKey.index;
-    {
-        uint32_t bitPos = BYTE_TO_BIT(pos);
-        write_clavia_string(buff, &bitPos, name);
-        pos = BIT_TO_BYTE(bitPos);
-    }
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_SET_MODULE_LABEL);
+    write_bit_stream(buff, &bitPos, 8, moduleKey.location);
+    write_bit_stream(buff, &bitPos, 8, moduleKey.index);
+    write_clavia_string(buff, &bitPos, name);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_set_param_label(uint32_t slot, tModuleKey moduleKey, uint32_t paramIndex, const char * name) {
     uint8_t   buff[SEND_MESSAGE_SIZE]          = {0};
-    int       pos                              = COMMAND_OFFSET;
+    uint32_t  bitPos                           = BYTE_TO_BIT(COMMAND_OFFSET);
     int       i                                = 0;
     uint32_t  pi                               = 0;
     uint32_t  labelCount                       = 0;
@@ -1351,175 +1356,175 @@ static int send_set_param_label(uint32_t slot, tModuleKey moduleKey, uint32_t pa
     if (labelCount == 0) {
         return EXIT_SUCCESS;
     }
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_PARAM_LABEL);
-    buff[pos++] = moduleKey.location;
-    buff[pos++] = moduleKey.index;
-    buff[pos++] = (uint8_t)(labelCount * (3 + PROTOCOL_PARAM_NAME_SIZE));
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_SET_PARAM_LABEL);
+    write_bit_stream(buff, &bitPos, 8, moduleKey.location);
+    write_bit_stream(buff, &bitPos, 8, moduleKey.index);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)(labelCount * (3 + PROTOCOL_PARAM_NAME_SIZE)));
 
     for (uint32_t j = 0; j < labelCount; j++) {
-        pi          = labelIndices[j];
-        buff[pos++] = 1;                             // isString
-        buff[pos++] = PROTOCOL_PARAM_NAME_SIZE + 1;  // paramLength
-        buff[pos++] = (uint8_t)pi;                   // paramIndex
+        pi = labelIndices[j];
+        write_bit_stream(buff, &bitPos, 8, 1);                             // isString
+        write_bit_stream(buff, &bitPos, 8, PROTOCOL_PARAM_NAME_SIZE + 1);  // paramLength
+        write_bit_stream(buff, &bitPos, 8, (uint8_t)pi);                   // paramIndex
 
         for (i = 0; i < PROTOCOL_PARAM_NAME_SIZE; i++) {
-            buff[pos++] = (uint8_t)module->paramName[pi][0][i];
+            write_bit_stream(buff, &bitPos, 8, (uint8_t)module->paramName[pi][0][i]);
         }
     }
 
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_set_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t param, uint32_t value, uint32_t variation) {
-    int     retVal                  = EXIT_FAILURE;
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    int      retVal                  = EXIT_FAILURE;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_WRITE_NO_RESP, SUB_COMMAND_SET_PARAM);
-    buff[pos++] = moduleKey.location;
-    buff[pos++] = moduleKey.index;
-    buff[pos++] = param;
-    buff[pos++] = value;
-    buff[pos++] = variation;
-    retVal      = send_message(buff, pos);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_WRITE_NO_RESP, SUB_COMMAND_SET_PARAM);
+    write_bit_stream(buff, &bitPos, 8, moduleKey.location);
+    write_bit_stream(buff, &bitPos, 8, moduleKey.index);
+    write_bit_stream(buff, &bitPos, 8, param);
+    write_bit_stream(buff, &bitPos, 8, value);
+    write_bit_stream(buff, &bitPos, 8, variation);
+    retVal = send_message(buff, BIT_TO_BYTE(bitPos));
 
     return retVal;
 }
 
 static int send_set_module_colour(uint32_t slot, uint32_t location,
                                   uint32_t moduleIndex, uint32_t colour) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_MODULE_COLOUR);
-    buff[pos++] = (uint8_t)location;
-    buff[pos++] = (uint8_t)moduleIndex;
-    buff[pos++] = (uint8_t)colour;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_SET_MODULE_COLOUR);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)location);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleIndex);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)colour);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_set_mode(uint32_t slot, tModeData * modeData) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_MODE);
-    buff[pos++] = (uint8_t)modeData->moduleKey.location;
-    buff[pos++] = (uint8_t)modeData->moduleKey.index;
-    buff[pos++] = (uint8_t)modeData->mode;
-    buff[pos++] = (uint8_t)modeData->value;
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_SET_MODE);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)modeData->moduleKey.location);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)modeData->moduleKey.index);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)modeData->mode);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)modeData->value);
     LOG_DEBUG("SET MODE %u %u\n", modeData->mode, modeData->value);
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_write_cable(uint32_t slot, tCableData * cableData) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_WRITE_CABLE);
-    buff[pos++] = 0x10 | ((uint8_t)cableData->location << 3) | (uint8_t)cableData->colour;
-    buff[pos++] = (uint8_t)cableData->moduleFromIndex;
-    buff[pos++] = ((uint8_t)cableData->linkType << 6) | (uint8_t)cableData->connectorFromIoIndex;
-    buff[pos++] = (uint8_t)cableData->moduleToIndex;
-    buff[pos++] = (uint8_t)cableData->connectorToIoIndex;
-    return send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_WRITE_CABLE);
+    write_bit_stream(buff, &bitPos, 8, 0x10 | ((uint8_t)cableData->location << 3) | (uint8_t)cableData->colour);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)cableData->moduleFromIndex);
+    write_bit_stream(buff, &bitPos, 8, ((uint8_t)cableData->linkType << 6) | (uint8_t)cableData->connectorFromIoIndex);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)cableData->moduleToIndex);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)cableData->connectorToIoIndex);
+    return send_and_receive_once(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_delete_cable(uint32_t slot, tCableData * cableData) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_DELETE_CABLE);
-    buff[pos++] = 0x2 | (uint8_t)cableData->location;
-    buff[pos++] = (uint8_t)cableData->moduleFromIndex;
-    buff[pos++] = ((uint8_t)cableData->linkType << 6) | (uint8_t)cableData->connectorFromIoIndex;
-    buff[pos++] = (uint8_t)cableData->moduleToIndex;
-    buff[pos++] = (uint8_t)cableData->connectorToIoIndex;
-    return send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_DELETE_CABLE);
+    write_bit_stream(buff, &bitPos, 8, 0x2 | (uint8_t)cableData->location);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)cableData->moduleFromIndex);
+    write_bit_stream(buff, &bitPos, 8, ((uint8_t)cableData->linkType << 6) | (uint8_t)cableData->connectorFromIoIndex);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)cableData->moduleToIndex);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)cableData->connectorToIoIndex);
+    return send_and_receive_once(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_add_module(uint32_t slot, tModuleData * moduleData) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
-    int     avail                   = 0;
-    int     written                 = 0;
-    int     i                       = 0;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+    int      avail                   = 0;
+    int      written                 = 0;
+    int      i                       = 0;
 
     LOG_DEBUG("Writing module\n");
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_ADD_MODULE);
-    buff[pos++] = (uint8_t)moduleData->type;
-    buff[pos++] = (uint8_t)moduleData->moduleKey.location;
-    buff[pos++] = (uint8_t)moduleData->moduleKey.index;
-    buff[pos++] = (uint8_t)moduleData->column;
-    buff[pos++] = (uint8_t)moduleData->row;
-    buff[pos++] = (uint8_t)moduleData->colour;
-    buff[pos++] = (uint8_t)moduleData->upRate;
-    buff[pos++] = (uint8_t)moduleData->isLed;
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_ADD_MODULE);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleData->type);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleData->moduleKey.location);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleData->moduleKey.index);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleData->column);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleData->row);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleData->colour);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleData->upRate);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleData->isLed);
 
     for (i = 0; i < (int)moduleData->modeCount; i++) {
-        buff[pos++] = (uint8_t)moduleData->mode[i];
+        write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleData->mode[i]);
     }
 
-    avail       = SEND_MESSAGE_SIZE - pos;
-    written     = snprintf((char *)&buff[pos], avail, "%s", moduleData->name);
-    pos        += ((written >= 0) && (written < avail)) ? written + 1 : avail;
-    return send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    avail   = SEND_MESSAGE_SIZE - (int)BIT_TO_BYTE(bitPos);
+    written = snprintf((char *)&buff[BIT_TO_BYTE(bitPos)], avail, "%s", moduleData->name);
+    bitPos += (uint32_t)(((written >= 0) && (written < avail)) ? written + 1 : avail) * 8;
+    return send_and_receive_once(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_move_module(uint32_t slot, tModuleKey moduleKey, uint32_t column, uint32_t row) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_MOVE_MODULE);
-    buff[pos++] = (uint8_t)moduleKey.location;
-    buff[pos++] = (uint8_t)moduleKey.index;
-    buff[pos++] = (uint8_t)column;
-    buff[pos++] = (uint8_t)row;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_MOVE_MODULE);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleKey.location);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleKey.index);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)column);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)row);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_delete_module(uint32_t slot, tModuleKey moduleKey) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_DELETE_MODULE);
-    buff[pos++] = (uint8_t)moduleKey.location;
-    buff[pos++] = (uint8_t)moduleKey.index;
-    return send_and_receive_once(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_DELETE_MODULE);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleKey.location);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleKey.index);
+    return send_and_receive_once(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_set_module_uprate(uint32_t slot, tModuleKey moduleKey, uint32_t upRate) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_MODULE_UPRATE);
-    buff[pos++] = (uint8_t)moduleKey.location;
-    buff[pos++] = (uint8_t)moduleKey.index;
-    buff[pos++] = (uint8_t)upRate;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_SET_MODULE_UPRATE);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleKey.location);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleKey.index);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)upRate);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_set_morph_range(uint32_t slot, tParamMorphData * paramMorphData) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_WRITE_NO_RESP, SUB_COMMAND_SET_MORPH_RANGE);
-    buff[pos++] = (uint8_t)paramMorphData->moduleKey.location;
-    buff[pos++] = (uint8_t)paramMorphData->moduleKey.index;
-    buff[pos++] = (uint8_t)paramMorphData->param;
-    buff[pos++] = (uint8_t)paramMorphData->paramMorph;
-    buff[pos++] = (uint8_t)paramMorphData->value;
-    buff[pos++] = (uint8_t)paramMorphData->negative;
-    buff[pos++] = (uint8_t)paramMorphData->variation;
-    return send_message(buff, pos);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_WRITE_NO_RESP, SUB_COMMAND_SET_MORPH_RANGE);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)paramMorphData->moduleKey.location);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)paramMorphData->moduleKey.index);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)paramMorphData->param);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)paramMorphData->paramMorph);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)paramMorphData->value);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)paramMorphData->negative);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)paramMorphData->variation);
+    return send_message(buff, BIT_TO_BYTE(bitPos));
 }
 
 static int send_select_variation(uint32_t slot, uint32_t variation) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SELECT_VARIATION);
-    buff[pos++] = (uint8_t)variation;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_SELECT_VARIATION);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)variation);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 // ---------------------------------------------------------------------------
@@ -1540,43 +1545,43 @@ static void clear_slot_data(uint32_t slot) {
 }
 
 static int send_get_global_knobs(void) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_QUERY_GLOBAL_KNOBS);
-    return send_and_receive(buff, pos, SUB_RESPONSE_GLOBAL_KNOBS, USB_RECV_DATA_MS);
+    usb_cmd_sys(buff, &bitPos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_QUERY_GLOBAL_KNOBS);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_GLOBAL_KNOBS, USB_RECV_DATA_MS);
 }
 
 static int send_get_current_note(uint32_t slot) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_CURRENT_NOTE);
-    return send_and_receive(buff, pos, SUB_RESPONSE_CURRENT_NOTE_2, USB_RECV_DATA_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_CURRENT_NOTE);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_CURRENT_NOTE_2, USB_RECV_DATA_MS);
 }
 
 static int send_get_patch_notes(uint32_t slot) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_QUERY_PATCH_TEXT);
-    return send_and_receive(buff, pos, SUB_RESPONSE_PATCH_NOTES, USB_RECV_DATA_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_QUERY_PATCH_TEXT);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_PATCH_NOTES, USB_RECV_DATA_MS);
 }
 
 static int send_get_selected_param(uint32_t slot) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_GET_SELECTED_PARAM);
-    return send_and_receive(buff, pos, SUB_RESPONSE_SELECT_PARAM, USB_RECV_DATA_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_GET_SELECTED_PARAM);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_SELECT_PARAM, USB_RECV_DATA_MS);
 }
 
 static int send_get_knob_snapshot(uint32_t slot) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_KNOB_SNAPSHOT);
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS); // Really expected SUB_RESPONSE_KNOBS here
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_KNOB_SNAPSHOT);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS); // Really expected SUB_RESPONSE_KNOBS here
 }
 
 // Fetch patch data for a single slot. Synth must be stopped before calling.
@@ -1609,17 +1614,15 @@ static int send_get_patch_data(uint32_t slot) {
 
 static int push_slot_to_device(uint32_t slot) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
-    int      pos                     = COMMAND_OFFSET;
-    uint32_t bitPos                  = 0;
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
     LOG_DEBUG("Pushing slot %u to device\n", slot);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_PATCH);
-    buff[pos++] = 0x00;
-    buff[pos++] = 0x00;
-    buff[pos++] = 0x00;
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_SET_PATCH);
+    write_bit_stream(buff, &bitPos, 8, 0x00);
+    write_bit_stream(buff, &bitPos, 8, 0x00);
+    write_bit_stream(buff, &bitPos, 8, 0x00);
 
-    bitPos      = BYTE_TO_BIT(pos);
     write_clavia_string(buff, &bitPos, gGlobalSettings.slot[slot].patchName);
 
     write_patch_descr(slot, buff, &bitPos);
@@ -1641,208 +1644,192 @@ static int push_slot_to_device(uint32_t slot) {
     write_module_names(slot, locationFx, buff, &bitPos);
     write_patch_notes(slot, buff, &bitPos);
 
-    pos = BIT_TO_BYTE(bitPos);
     int expectedResp = SUB_RESPONSE_PATCH_VERSION;
-    return send_and_receive(buff, pos, expectedResp, USB_RECV_DATA_MS);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), expectedResp, USB_RECV_DATA_MS);
 }
 
 static int send_set_patch_name(uint32_t slot, const char * name) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_SET_PATCH_NAME);  // 0x27 — used for set AND response
-    {
-        uint32_t bitPos = BYTE_TO_BIT(pos);
-        write_clavia_string(buff, &bitPos, name);
-        pos = BIT_TO_BYTE(bitPos);
-    }
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_SET_PATCH_NAME);  // 0x27 — used for set AND response
+    write_clavia_string(buff, &bitPos, name);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_assign_knob(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex, uint32_t knobIndex) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_ASSIGN_KNOB);
-    buff[pos++] = (uint8_t)moduleIndex;
-    buff[pos++] = (uint8_t)paramIndex;
-    buff[pos++] = (uint8_t)(location << 6);
-    buff[pos++] = 0x00;
-    buff[pos++] = (uint8_t)knobIndex;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_ASSIGN_KNOB);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleIndex);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)paramIndex);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)(location << 6));
+    write_bit_stream(buff, &bitPos, 8, 0x00);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)knobIndex);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_deassign_knob(uint32_t slot, uint32_t knobIndex) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_DEASSIGN_KNOB);
-    buff[pos++] = 0x00;
-    buff[pos++] = (uint8_t)knobIndex;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_DEASSIGN_KNOB);
+    write_bit_stream(buff, &bitPos, 8, 0x00);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)knobIndex);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_assign_global_knob(uint32_t slotIndex, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex, uint32_t knobIndex) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_ASSIGN_GLOBAL_KNOB);
-    buff[pos++] = (uint8_t)((slotIndex << 4) | (location << 2));
-    buff[pos++] = (uint8_t)moduleIndex;
-    buff[pos++] = (uint8_t)paramIndex;
-    buff[pos++] = 0x00;
-    buff[pos++] = (uint8_t)knobIndex;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_sys(buff, &bitPos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_ASSIGN_GLOBAL_KNOB);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)((slotIndex << 4) | (location << 2)));
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleIndex);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)paramIndex);
+    write_bit_stream(buff, &bitPos, 8, 0x00);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)knobIndex);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_deassign_global_knob(uint32_t knobIndex) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_DEASSIGN_GLOBAL_KNOB);
-    buff[pos++] = 0x00;
-    buff[pos++] = (uint8_t)knobIndex;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_sys(buff, &bitPos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_DEASSIGN_GLOBAL_KNOB);
+    write_bit_stream(buff, &bitPos, 8, 0x00);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)knobIndex);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_assign_midi_cc(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex, uint32_t midiCC) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_ASSIGN_MIDICC);
-    buff[pos++] = (uint8_t)location;
-    buff[pos++] = (uint8_t)moduleIndex;
-    buff[pos++] = (uint8_t)paramIndex;
-    buff[pos++] = (uint8_t)midiCC;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_ASSIGN_MIDICC);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)location);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleIndex);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)paramIndex);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)midiCC);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_deassign_midi_cc(uint32_t slot, uint32_t midiCC) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_DEASSIGN_MIDICC);
-    buff[pos++] = (uint8_t)midiCC;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_DEASSIGN_MIDICC);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)midiCC);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_copy_variation(uint32_t slot, uint32_t fromVariation, uint32_t toVariation) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_slot(buff, &pos, slot, COMMAND_REQ, SUB_COMMAND_COPY_VARIATION);
-    buff[pos++] = (uint8_t)fromVariation;
-    buff[pos++] = (uint8_t)toVariation;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_COPY_VARIATION);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)fromVariation);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)toVariation);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_set_master_clock_bpm(uint32_t bpm) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_SET_MASTER_CLOCK);
-    buff[pos++] = 0xFF;
-    buff[pos++] = 0x01;
-    buff[pos++] = (uint8_t)bpm;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_sys(buff, &bitPos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_SET_MASTER_CLOCK);
+    write_bit_stream(buff, &bitPos, 8, 0xFF);
+    write_bit_stream(buff, &bitPos, 8, 0x01);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)bpm);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_set_master_clock_run(uint32_t running) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_SET_MASTER_CLOCK);
-    buff[pos++] = 0xFF;
-    buff[pos++] = 0x00;
-    buff[pos++] = running ? 0x01 : 0x00;
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    usb_cmd_sys(buff, &bitPos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_SET_MASTER_CLOCK);
+    write_bit_stream(buff, &bitPos, 8, 0xFF);
+    write_bit_stream(buff, &bitPos, 8, 0x00);
+    write_bit_stream(buff, &bitPos, 8, running ? 0x01 : 0x00);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 // Write all synth (global) settings back to the G2.
 static int send_synth_settings(void) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
-    int      pos                     = COMMAND_OFFSET;
-    uint32_t bitPos                  = 0;
-    uint8_t  payload[64]             = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
     uint32_t i                       = 0;
 
-    write_clavia_string(payload, &bitPos, gSynthSettings.name);
+    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_SET_SYNTH_SETTINGS);
 
-    write_bit_stream(payload, &bitPos, 1, gGlobalSettings.perfMode);
-    write_bit_stream(payload, &bitPos, 5, 0);
-    write_bit_stream(payload, &bitPos, 2, gSynthSettings.patchSortMode);
-    write_bit_stream(payload, &bitPos, 6, 0);
-    write_bit_stream(payload, &bitPos, 2, gSynthSettings.perfSortMode);
+    write_clavia_string(buff, &bitPos, gSynthSettings.name);
 
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.perfBank);
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.perfLocation);
-    write_bit_stream(payload, &bitPos, 1, gSynthSettings.memoryProtect);
-    write_bit_stream(payload, &bitPos, 7, 0);        // unknown
+    write_bit_stream(buff, &bitPos, 1, gGlobalSettings.perfMode);
+    write_bit_stream(buff, &bitPos, 5, 0);
+    write_bit_stream(buff, &bitPos, 2, gSynthSettings.patchSortMode);
+    write_bit_stream(buff, &bitPos, 6, 0);
+    write_bit_stream(buff, &bitPos, 2, gSynthSettings.perfSortMode);
+
+    write_bit_stream(buff, &bitPos, 8, gSynthSettings.perfBank);
+    write_bit_stream(buff, &bitPos, 8, gSynthSettings.perfLocation);
+    write_bit_stream(buff, &bitPos, 1, gSynthSettings.memoryProtect);
+    write_bit_stream(buff, &bitPos, 7, 0);        // unknown
 
     for (i = 0; i < 4; i++) {
-        write_bit_stream(payload, &bitPos, 8, gSynthSettings.midiChanSlot[i]);
+        write_bit_stream(buff, &bitPos, 8, gSynthSettings.midiChanSlot[i]);
     }
 
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.globalChan);
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.sysexId);
-    write_bit_stream(payload, &bitPos, 1, gSynthSettings.localOn);
-    write_bit_stream(payload, &bitPos, 7, 0);        // unknown
-    write_bit_stream(payload, &bitPos, 6, 0);        // unknown
-    write_bit_stream(payload, &bitPos, 1, gSynthSettings.progChangeRcv);
-    write_bit_stream(payload, &bitPos, 1, gSynthSettings.progChangeSnd);
-    write_bit_stream(payload, &bitPos, 6, 0);        // unknown
-    write_bit_stream(payload, &bitPos, 1, gSynthSettings.controllersRcv);
-    write_bit_stream(payload, &bitPos, 1, gSynthSettings.controllersSnd);
+    write_bit_stream(buff, &bitPos, 8, gSynthSettings.globalChan);
+    write_bit_stream(buff, &bitPos, 8, gSynthSettings.sysexId);
+    write_bit_stream(buff, &bitPos, 1, gSynthSettings.localOn);
+    write_bit_stream(buff, &bitPos, 7, 0);        // unknown
+    write_bit_stream(buff, &bitPos, 6, 0);        // unknown
+    write_bit_stream(buff, &bitPos, 1, gSynthSettings.progChangeRcv);
+    write_bit_stream(buff, &bitPos, 1, gSynthSettings.progChangeSnd);
+    write_bit_stream(buff, &bitPos, 6, 0);        // unknown
+    write_bit_stream(buff, &bitPos, 1, gSynthSettings.controllersRcv);
+    write_bit_stream(buff, &bitPos, 1, gSynthSettings.controllersSnd);
 
-    write_bit_stream(payload, &bitPos, 1, 0);
-    write_bit_stream(payload, &bitPos, 1, gSynthSettings.sendClock);
-    write_bit_stream(payload, &bitPos, 1, !gSynthSettings.receiveClock);
-    write_bit_stream(payload, &bitPos, 5, 0);
-    write_bit_stream(payload, &bitPos, 8, (uint8_t)gSynthSettings.tuneCent);
-    write_bit_stream(payload, &bitPos, 1, gSynthSettings.globalShiftActive);
-    write_bit_stream(payload, &bitPos, 7, 0);
-    write_bit_stream(payload, &bitPos, 8, (uint8_t)gSynthSettings.globalOctaveShift);
-    write_bit_stream(payload, &bitPos, 8, (uint8_t)gSynthSettings.tuneSemi);
+    write_bit_stream(buff, &bitPos, 1, 0);
+    write_bit_stream(buff, &bitPos, 1, gSynthSettings.sendClock);
+    write_bit_stream(buff, &bitPos, 1, !gSynthSettings.receiveClock);
+    write_bit_stream(buff, &bitPos, 5, 0);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)gSynthSettings.tuneCent);
+    write_bit_stream(buff, &bitPos, 1, gSynthSettings.globalShiftActive);
+    write_bit_stream(buff, &bitPos, 7, 0);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)gSynthSettings.globalOctaveShift);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)gSynthSettings.tuneSemi);
 
-    write_bit_stream(payload, &bitPos, 8, 0);        // filler - possibly should be vibrato rate, but doesn't seem to work
-    write_bit_stream(payload, &bitPos, 1, gSynthSettings.pedalPolarity);
-    write_bit_stream(payload, &bitPos, 1, 1);
-    write_bit_stream(payload, &bitPos, 6, 0);
-    write_bit_stream(payload, &bitPos, 8, gSynthSettings.pedalGain);
+    write_bit_stream(buff, &bitPos, 8, 0);        // filler - possibly should be vibrato rate, but doesn't seem to work
+    write_bit_stream(buff, &bitPos, 1, gSynthSettings.pedalPolarity);
+    write_bit_stream(buff, &bitPos, 1, 1);
+    write_bit_stream(buff, &bitPos, 6, 0);
+    write_bit_stream(buff, &bitPos, 8, gSynthSettings.pedalGain);
 
     for (i = 0; i < 16; i++) {
-        write_bit_stream(payload, &bitPos, 8, 0);
+        write_bit_stream(buff, &bitPos, 8, 0);
     }
 
-    uint32_t payloadBytes = BIT_TO_BYTE_ROUND_UP(bitPos);
-
-    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_SET_SYNTH_SETTINGS);  // S_SYNTH_SETTINGS = 0x03
-
-    for (i = 0; i < payloadBytes && pos < SEND_MESSAGE_SIZE; i++) {
-        buff[pos++] = payload[i];
-    }
-
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_set_patch_descr(uint32_t slot) { // Note - currently using values straight from patchDescr in sub-function
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
-    int      pos                     = COMMAND_OFFSET;
-    uint32_t bitPos                  = 0;
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    buff[pos++] = 0x01;
-    buff[pos++] = COMMAND_REQ | COMMAND_SLOT | slot;
-    buff[pos++] = gGlobalSettings.slot[slot].patchVersion;
-    bitPos      = BYTE_TO_BIT(pos);
+    write_bit_stream(buff, &bitPos, 8, 0x01);
+    write_bit_stream(buff, &bitPos, 8, COMMAND_REQ | COMMAND_SLOT | slot);
+    write_bit_stream(buff, &bitPos, 8, gGlobalSettings.slot[slot].patchVersion);
     write_patch_descr(slot, buff, &bitPos);
-    pos         = BIT_TO_BYTE(bitPos);
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_perf_header(void) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint8_t  payload[512]            = {0};
-    int      pos                     = COMMAND_OFFSET;
+    uint32_t buffBitPos              = BYTE_TO_BIT(COMMAND_OFFSET);
     uint32_t bitPos                  = 0;
     uint32_t i                       = 0;
 
@@ -1882,39 +1869,36 @@ static int send_perf_header(void) {
     payload[0] = (uint8_t)((contentBytes >> 8) & 0xff);
     payload[1] = (uint8_t)(contentBytes & 0xff);
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_RESPONSE_PERF_HEADER);
+    usb_cmd_sys(buff, &buffBitPos, (uint8_t)gGlobalSettings.perfVersion, SUB_RESPONSE_PERF_HEADER);
 
-    for (i = 0; i < totalBytes && (uint32_t)pos < SEND_MESSAGE_SIZE; i++) {
-        buff[pos++] = payload[i];
+    for (i = 0; i < totalBytes && BIT_TO_BYTE(buffBitPos) < SEND_MESSAGE_SIZE; i++) {
+        write_bit_stream(buff, &buffBitPos, 8, payload[i]);
     }
 
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    return send_and_receive(buff, BIT_TO_BYTE(buffBitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 static int send_perf_name(void) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
-    int      pos                     = COMMAND_OFFSET;
-    uint32_t bitPos                  = 0;
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_sys(buff, &pos, (uint8_t)gGlobalSettings.perfVersion, SUB_RESPONSE_PERFORMANCE_SETTINGS);
+    usb_cmd_sys(buff, &bitPos, (uint8_t)gGlobalSettings.perfVersion, SUB_RESPONSE_PERFORMANCE_SETTINGS);
 
-    bitPos = BYTE_TO_BIT(pos);
     write_clavia_string(buff, &bitPos, gGlobalSettings.perfName);
-    pos    = BIT_TO_BYTE(bitPos);
 
-    return send_and_receive(buff, pos, SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
 // SUB_COMMAND_SET_PARAM_MODE (0x3e) is the original editor's code in the reference.
 // Version byte 0x41 matches all other connection-level sys commands.
 static int send_perf_mode_change(uint8_t perfMode) {
-    uint8_t buff[SEND_MESSAGE_SIZE] = {0};
-    int     pos                     = COMMAND_OFFSET;
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_sys(buff, &pos, 0x41, SUB_COMMAND_SET_PARAM_MODE);
-    buff[pos++] = perfMode ? 1 : 0;
-    buff[pos++] = 0x00;
-    return send_and_receive(buff, pos, SUB_RESPONSE_PERF_PATCH_VERSIONS, USB_RECV_ACK_MS);
+    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_SET_PARAM_MODE);
+    write_bit_stream(buff, &bitPos, 8, perfMode ? 1 : 0);
+    write_bit_stream(buff, &bitPos, 8, 0x00);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_PERF_PATCH_VERSIONS, USB_RECV_ACK_MS);
 }
 
 // ---------------------------------------------------------------------------

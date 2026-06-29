@@ -386,8 +386,8 @@ const tModuleProperties  gModuleProperties[]  = {
     {"DlyEight",     3, volumeTypeNone,      ledTypeNo },
     {"DlyStereo",    5, volumeTypeNone,      ledTypeNo },
     {"OscPM",        3, volumeTypeNone,      ledTypeNo },
-    {"Mix1-1A",      2, volumeTypeNone,      ledTypeNo },
-    {"Mix1-1S",      2, volumeTypeNone,      ledTypeNo },
+    {"Mix1-1A",      3, volumeTypeNone,      ledTypeNo },
+    {"Mix1-1S",      3, volumeTypeNone,      ledTypeNo },
     {"Sw1-2M",       2, volumeTypeNone,      ledTypeNo },
     {"Sw2-1M",       2, volumeTypeNone,      ledTypeNo },
     {"ConstSwM",     2, volumeTypeNone,      ledTypeYes},
@@ -1446,13 +1446,13 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscPM,      paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 9 Bypass
     {moduleTypeOscPM,      paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // Pitch Mode
     // 184 Mix1-1A
-//{moduleTypeMix1to1A,   paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 184 Level (no CodeRef 0 in Delphi)
+    {moduleTypeMix1to1A,   paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 184 Level
     {moduleTypeMix1to1A,   paramTypeEnable,      {{ 40,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 184 Enable1
     {moduleTypeMix1to1A,   paramTypeMenu,        {{ 30, -25}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 184 Exp
     // 185 Mix1-1S
-//{moduleTypeMix1to1S,   paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 185 Level (no CodeRef 0 in Delphi)
-    {moduleTypeMix1to1S,   paramTypeEnable,      {{ 40,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 184 Enable1
-    {moduleTypeMix1to1S,   paramTypeMenu,        {{ 30, -25}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 184 Exp
+    {moduleTypeMix1to1S,   paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 185 Level
+    {moduleTypeMix1to1S,   paramTypeEnable,      {{ 40,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 185 Enable1
+    {moduleTypeMix1to1S,   paramTypeMenu,        {{ 30, -25}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 185 Exp
     // 186 Sw1-2M
     {moduleTypeSw1to2M,    paramTypeMenu,        {{ 37,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           NULL          }, // 186 Selector *** Needs new UI element
     // 187 Sw2-1M
