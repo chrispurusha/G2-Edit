@@ -1584,13 +1584,16 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 tModule * module = get_module(gModuleNameEdit.moduleKey);
 
                 if (module != NULL) {
-                    tMessageContent msg = {0};
+                    tMessageContent msg     = {0};
+                    char            oldName[CLAVIA_NAME_SIZE + 1];
+                    COPY_STRING(oldName, module->name);
                     COPY_STRING(module->name, gModuleNameEdit.buffer);
                     msg.cmd                       = eMsgCmdSetModuleLabel;
                     msg.slot                      = gModuleNameEdit.moduleKey.slot;
                     msg.moduleLabelData.moduleKey = gModuleNameEdit.moduleKey;
                     COPY_STRING(msg.moduleLabelData.name, gModuleNameEdit.buffer);
                     msg_send(&gCommandQueue, &msg);
+                    undo_push_module_name(gModuleNameEdit.moduleKey, oldName, gModuleNameEdit.buffer);
                 }
             } else if (key == GLFW_KEY_ESCAPE) {
                 gModuleNameEdit.active = false;  // discard

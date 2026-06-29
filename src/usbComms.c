@@ -343,7 +343,11 @@ static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
     tModule *  module    = get_module(key);
 
     if (module != NULL) {
-        module->param[variation][param].value = value;
+        if (variation < NUM_VARIATIONS_USB && param < MAX_NUM_PARAMETERS) {
+            module->param[variation][param].value = value;
+        } else {
+            LOG_ERROR("parse_param_change: out-of-range variation=%u param=%u from G2\n", variation, param);
+        }
     }
     LOG_DEBUG("Param change - module %u:%u param=%u value=%u\n",
               key.location, key.index, param, value);

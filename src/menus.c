@@ -660,6 +660,12 @@ static void action_assign_knob(int index) {
     int32_t         existingKnob;
     tMessageContent msg         = {0};
 
+    // Snapshot before state for undo
+    tKnob   targetBefore    = gKnobArray[slot].knob[targetKnob];
+    existingKnob            = find_knob_for_param(slot, location, moduleIndex, paramIndex);
+    bool    hasSecond       = existingKnob >= 0 && (uint32_t)existingKnob != targetKnob;
+    tKnob   existingBefore  = hasSecond ? gKnobArray[slot].knob[existingKnob] : (tKnob){0};
+
     if (gKnobArray[slot].knob[targetKnob].assigned) {
         gKnobArray[slot].knob[targetKnob].assigned = false;
         msg.cmd                                    = eMsgCmdDeassignKnob;
@@ -668,9 +674,8 @@ static void action_assign_knob(int index) {
         msg_send(&gCommandQueue, &msg);
         memset(&msg, 0, sizeof(msg));
     }
-    existingKnob                                  = find_knob_for_param(slot, location, moduleIndex, paramIndex);
 
-    if (existingKnob >= 0 && (uint32_t)existingKnob != targetKnob) {
+    if (hasSecond) {
         gKnobArray[slot].knob[existingKnob].assigned = false;
         msg.cmd                                      = eMsgCmdDeassignKnob;
         msg.slot                                     = slot;
@@ -691,8 +696,16 @@ static void action_assign_knob(int index) {
     msg.knobAssignData.knobIndex                  = targetKnob;
     msg_send(&gCommandQueue, &msg);
 
-    gContextMenu.active                           = false;
-    gReDraw                                       = true;
+    tKnob targetAfter = gKnobArray[slot].knob[targetKnob];
+    tKnob existingAfter = hasSecond ? gKnobArray[slot].knob[existingKnob] : (tKnob){0};
+    undo_push_knob(slot,
+                   targetKnob, &targetBefore, &targetAfter,
+                   hasSecond ? existingKnob : -1,
+                   hasSecond ? &existingBefore : NULL,
+                   hasSecond ? &existingAfter  : NULL);
+
+    gContextMenu.active = false;
+    gReDraw             = true;
 }
 
 static void action_deassign_knob(int index) {
@@ -704,11 +717,14 @@ static void action_deassign_knob(int index) {
     tMessageContent msg         = {0};
 
     if (knobIndex >= 0) {
+        tKnob before                              = gKnobArray[slot].knob[knobIndex];
         gKnobArray[slot].knob[knobIndex].assigned = false;
         msg.cmd                                   = eMsgCmdDeassignKnob;
         msg.slot                                  = slot;
         msg.knobDeassignData.knobIndex            = (uint32_t)knobIndex;
         msg_send(&gCommandQueue, &msg);
+        tKnob after = gKnobArray[slot].knob[knobIndex];
+        undo_push_knob(slot, (uint32_t)knobIndex, &before, &after, -1, NULL, NULL);
     }
     gContextMenu.active = false;
     gReDraw             = true;
@@ -721,8 +737,11 @@ static void action_set_toggle_value(int index) {
 
     if (module != NULL) {
         uint32_t paramIdx = gContextMenu.paramIndex;
-        module->param[variation][paramIdx].value = (uint32_t)gContextMenu.items[index].param;
-        send_param_value(slot, gContextMenu.moduleKey, paramIdx, variation, module->param[variation][paramIdx].value);
+        uint32_t oldValue = module->param[variation][paramIdx].value;
+        uint32_t newValue = (uint32_t)gContextMenu.items[index].param;
+        module->param[variation][paramIdx].value = (uint8_t)newValue;
+        send_param_value(slot, gContextMenu.moduleKey, paramIdx, variation, newValue);
+        undo_push_param_change(gContextMenu.moduleKey, paramIdx, variation, oldValue, newValue);
     }
     gContextMenu.active = false;
     gReDraw             = true;
@@ -756,9 +775,12 @@ static void action_set_mode_value(int index) {
     tModule * module = get_module(gContextMenu.moduleKey);
 
     if (module != NULL) {
-        uint32_t modeIdx = gContextMenu.paramIndex;
-        module->mode[modeIdx].value = (uint32_t)gContextMenu.items[index].param;
-        send_mode_value(slot, gContextMenu.moduleKey, modeIdx, module->mode[modeIdx].value);
+        uint32_t modeIdx  = gContextMenu.paramIndex;
+        uint32_t oldValue = module->mode[modeIdx].value;
+        uint32_t newValue = (uint32_t)gContextMenu.items[index].param;
+        module->mode[modeIdx].value = newValue;
+        send_mode_value(slot, gContextMenu.moduleKey, modeIdx, newValue);
+        undo_push_mode_change(gContextMenu.moduleKey, modeIdx, oldValue, newValue);
     }
     gContextMenu.active = false;
     gReDraw             = true;

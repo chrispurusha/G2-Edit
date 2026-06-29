@@ -81,11 +81,37 @@ typedef struct {
     bool       isMode;
 } tUndoParamPayload;
 
+typedef struct {
+    uint32_t slot;
+    uint32_t count;       // 1 or 2
+    uint32_t index[2];
+    tKnob    before[2];
+    tKnob    after[2];
+} tUndoKnobPayload;
+
+typedef struct {
+    tModuleKey key;
+    char       oldName[CLAVIA_NAME_SIZE + 1];
+    char       newName[CLAVIA_NAME_SIZE + 1];
+} tUndoModuleNamePayload;
+
+typedef struct {
+    tModuleKey key;
+    uint32_t   paramIndex;
+    char       oldName[PROTOCOL_PARAM_NAME_SIZE + 1];
+    bool       oldSet;
+    char       newName[PROTOCOL_PARAM_NAME_SIZE + 1];
+    bool       newSet;
+} tUndoParamNamePayload;
+
 typedef enum {
     eUndoCmdMove,
     eUndoCmdDelete,
     eUndoCmdPaste,
     eUndoCmdParam,
+    eUndoCmdKnob,
+    eUndoCmdModuleName,
+    eUndoCmdParamName,
 } tUndoCmdType;
 
 typedef struct {
@@ -130,6 +156,9 @@ static void free_command(tUndoCommand * cmd) {
         }
 
         case eUndoCmdParam:
+        case eUndoCmdKnob:
+        case eUndoCmdModuleName:
+        case eUndoCmdParamName:
             free(cmd->payload);
             break;
     }
@@ -397,7 +426,7 @@ static void recreate_module(tUndoDeletePayload * p, tClipboardModule * cm) {
     uint32_t  paramCount = module_param_count(cm->type);
     uint32_t  modeCount  = module_mode_count(cm->type);
 
-    for (uint32_t v = 0; v < NUM_VARIATIONS_USB; v++) {
+    for (uint32_t v = 0; v < NUM_VARIATIONS; v++) {  // NUM_VARIATIONS (9), not 10 — variation 9 is the G2's private init reference
         for (uint32_t pi = 0; pi < paramCount; pi++) {
             dbMod->param[v][pi] = cm->param[v][pi];
             send_param_value(p->slot, key, pi, v, cm->param[v][pi].value);
@@ -557,13 +586,149 @@ static void apply_param(tUndoParamPayload * p, bool isUndo) {
     uint32_t  value = isUndo ? p->oldValue : p->newValue;
 
     if (p->isMode) {
+        if (p->index >= MAX_NUM_MODES) {
+            LOG_ERROR("apply_param: mode index %u out of range\n", p->index);
+            return;
+        }
         mod->mode[p->index].value = value;
         send_mode_value(p->key.slot, p->key, p->index, value);
     } else {
+        if (p->variation >= NUM_VARIATIONS_USB || p->index >= MAX_NUM_PARAMETERS) {
+            LOG_ERROR("apply_param: param index %u or variation %u out of range\n", p->index, p->variation);
+            return;
+        }
         mod->param[p->variation][p->index].value = (uint8_t)value;
         send_param_value(p->key.slot, p->key, p->index, p->variation, value);
     }
     gReDraw = true;
+}
+
+static void apply_knob_entry(uint32_t slot, uint32_t idx, const tKnob * k) {
+    gKnobArray[slot].knob[idx] = *k;
+
+    tMessageContent msg = {0};
+
+    if (k->assigned) {
+        msg.cmd                          = eMsgCmdAssignKnob;
+        msg.slot                         = slot;
+        msg.knobAssignData.moduleKey     = (tModuleKey){slot, k->location, k->moduleIndex};
+        msg.knobAssignData.paramIndex    = k->paramIndex;
+        msg.knobAssignData.knobIndex     = idx;
+        msg_send(&gCommandQueue, &msg);
+    } else {
+        msg.cmd                          = eMsgCmdDeassignKnob;
+        msg.slot                         = slot;
+        msg.knobDeassignData.knobIndex   = idx;
+        msg_send(&gCommandQueue, &msg);
+    }
+}
+
+static void apply_knob(tUndoKnobPayload * p, bool isUndo) {
+    for (uint32_t i = 0; i < p->count; i++) {
+        apply_knob_entry(p->slot, p->index[i], isUndo ? &p->before[i] : &p->after[i]);
+    }
+    gReDraw = true;
+}
+
+void undo_push_knob(uint32_t slot,
+                    uint32_t idx1, const tKnob * before1, const tKnob * after1,
+                    int32_t idx2, const tKnob * before2, const tKnob * after2) {
+    tUndoKnobPayload * p = malloc(sizeof(tUndoKnobPayload));
+
+    if (!p) {
+        return;
+    }
+    p->slot       = slot;
+    p->count      = 1;
+    p->index[0]   = idx1;
+    p->before[0]  = *before1;
+    p->after[0]   = *after1;
+
+    if (idx2 >= 0 && before2 && after2) {
+        p->index[1]  = (uint32_t)idx2;
+        p->before[1] = *before2;
+        p->after[1]  = *after2;
+        p->count     = 2;
+    }
+    stack_push(eUndoCmdKnob, p);
+}
+
+static void apply_module_name(tUndoModuleNamePayload * p, bool isUndo) {
+    tModule * mod = get_module(p->key);
+
+    if (!mod) {
+        return;
+    }
+    const char *    name = isUndo ? p->oldName : p->newName;
+    tMessageContent msg  = {0};
+
+    COPY_STRING(mod->name, name);
+    msg.cmd                       = eMsgCmdSetModuleLabel;
+    msg.slot                      = p->key.slot;
+    msg.moduleLabelData.moduleKey = p->key;
+    COPY_STRING(msg.moduleLabelData.name, name);
+    msg_send(&gCommandQueue, &msg);
+    gReDraw = true;
+}
+
+void undo_push_module_name(tModuleKey key, const char * oldName, const char * newName) {
+    if (strcmp(oldName, newName) == 0) {
+        return;
+    }
+    tUndoModuleNamePayload * p = malloc(sizeof(tUndoModuleNamePayload));
+
+    if (!p) {
+        return;
+    }
+    p->key = key;
+    COPY_STRING(p->oldName, oldName);
+    COPY_STRING(p->newName, newName);
+    stack_push(eUndoCmdModuleName, p);
+}
+
+static void apply_param_name(tUndoParamNamePayload * p, bool isUndo) {
+    tModule * mod = get_module(p->key);
+
+    if (!mod || p->paramIndex >= MAX_NUM_PARAMETERS) {
+        return;
+    }
+    uint32_t     pi   = p->paramIndex;
+    const char * name = isUndo ? p->oldName : p->newName;
+    bool         set  = isUndo ? p->oldSet  : p->newSet;
+
+    mod->paramNameSet[pi][0] = set;
+    COPY_STRING(mod->paramName[pi][0], name);
+    mod->paramNumLabels[pi]  = set ? 1 : 0;
+
+    tMessageContent msg = {0};
+
+    msg.cmd                       = eMsgCmdSetParamLabel;
+    msg.slot                      = p->key.slot;
+    msg.paramLabelData.moduleKey  = p->key;
+    msg.paramLabelData.paramIndex = pi;
+    COPY_STRING(msg.paramLabelData.name, set ? name : "");
+    msg_send(&gCommandQueue, &msg);
+    gReDraw = true;
+}
+
+void undo_push_param_name(tModuleKey key, uint32_t paramIndex,
+                          const char * oldName, bool oldSet,
+                          const char * newName, bool newSet) {
+    if (oldSet == newSet && strcmp(oldName, newName) == 0) {
+        return;
+    }
+    tUndoParamNamePayload * p = malloc(sizeof(tUndoParamNamePayload));
+
+    if (!p) {
+        return;
+    }
+    p->key        = key;
+    p->paramIndex = paramIndex;
+    COPY_STRING(p->oldName, oldName);
+    p->oldSet     = oldSet;
+    COPY_STRING(p->newName, newName);
+    p->newSet     = newSet;
+    stack_push(eUndoCmdParamName, p);
 }
 
 // ─── Public undo / redo ────────────────────────────────────────────────────
@@ -599,6 +764,18 @@ void undo_undo(void) {
         case eUndoCmdParam:
             apply_param(cmd->payload, true);
             break;
+
+        case eUndoCmdKnob:
+            apply_knob(cmd->payload, true);
+            break;
+
+        case eUndoCmdModuleName:
+            apply_module_name(cmd->payload, true);
+            break;
+
+        case eUndoCmdParamName:
+            apply_param_name(cmd->payload, true);
+            break;
     }
 }
 
@@ -624,6 +801,18 @@ void undo_redo(void) {
 
         case eUndoCmdParam:
             apply_param(cmd->payload, false);
+            break;
+
+        case eUndoCmdKnob:
+            apply_knob(cmd->payload, false);
+            break;
+
+        case eUndoCmdModuleName:
+            apply_module_name(cmd->payload, false);
+            break;
+
+        case eUndoCmdParamName:
+            apply_param_name(cmd->payload, false);
             break;
     }
 }
