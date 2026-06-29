@@ -721,6 +721,15 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 gTopbarControls[i].isPressed = false;
             }
 
+            if (  gParamDragging.active
+               || gTempoDragging
+               || gPerfTempoDragging
+               || gVibRateDragging
+               || gVibAmountDragging
+               || gGlideTimeDragging) {
+                found = true;
+            }
+
             if (found == false) {
                 if (gContextMenu.active == true) {
                     if (handle_context_menu_click(coord)) {
