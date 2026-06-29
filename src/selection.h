@@ -29,5 +29,6 @@ void selection_toggle(tModuleKey key);
 void selection_add_rect(tRectangle rect, uint32_t slot, uint32_t location);
 void delete_module_and_cables(tModuleKey key);
 void delete_selection(void);
+void shift_selection_down(void);
 
 #endif /* SELECTION_H */

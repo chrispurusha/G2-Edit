@@ -553,6 +553,9 @@ typedef struct {
 typedef struct {
     bool       active;
     tModuleKey moduleKey;
+    bool       isMulti;
+    uint32_t   prevColumn;
+    uint32_t   prevRow;
 } tModuleDragging;
 
 typedef struct {

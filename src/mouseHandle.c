@@ -295,9 +295,12 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
             } else if (!is_selected(module->key)) {
                 selection_set_single(module->key);
             }
-            gModuleDrag.moduleKey = module->key;
-            gModuleDrag.active    = true;
-            retVal                = true;
+            gModuleDrag.moduleKey  = module->key;
+            gModuleDrag.isMulti    = is_selected(module->key) && gSelection.count > 1;
+            gModuleDrag.prevColumn = module->column;
+            gModuleDrag.prevRow    = module->row;
+            gModuleDrag.active     = true;
+            retVal                 = true;
         }
     }
 
@@ -700,7 +703,11 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (gModuleDrag.active == true) {
-                    shift_modules_down(gModuleDrag.moduleKey);
+                    if (gModuleDrag.isMulti) {
+                        shift_selection_down();
+                    } else {
+                        shift_modules_down(gModuleDrag.moduleKey);
+                    }
                     found = true;
                 }
             }
@@ -1130,17 +1137,66 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
             }
         }
     } else if (gModuleDrag.active == true) {
-        tModule * module = get_module(gModuleDrag.moduleKey);
+        if (gModuleDrag.isMulti) {
+            uint32_t newCol = 0;
+            uint32_t newRow = 0;
+            convert_mouse_coord_to_module_column_row(&newCol, &newRow, (tCoord){x, y});
 
-        if (module != NULL) {
-            convert_mouse_coord_to_module_column_row(&module->column, &module->row, (tCoord){x, y});
-
-            if (module->row > 127) {
-                module->row = 127;
+            if (newCol > MAX_COLUMNS) {
+                newCol = MAX_COLUMNS;
             }
 
-            if (module->column > 127) {
-                module->column = 127;
+            if (newRow > MAX_ROWS) {
+                newRow = MAX_ROWS;
+            }
+            int32_t  dc     = (int32_t)newCol - (int32_t)gModuleDrag.prevColumn;
+            int32_t  dr     = (int32_t)newRow - (int32_t)gModuleDrag.prevRow;
+
+            if (dc != 0 || dr != 0) {
+                for (uint32_t i = 0; i < gSelection.count; i++) {
+                    tModule * sel = get_module(gSelection.keys[i]);
+
+                    if (sel == NULL) {
+                        continue;
+                    }
+                    int32_t   nc  = (int32_t)sel->column + dc;
+                    int32_t   nr  = (int32_t)sel->row + dr;
+
+                    if (nc < 0) {
+                        nc = 0;
+                    }
+
+                    if (nr < 0) {
+                        nr = 0;
+                    }
+
+                    if (nc > (int32_t)MAX_COLUMNS) {
+                        nc = (int32_t)MAX_COLUMNS;
+                    }
+
+                    if (nr > (int32_t)MAX_ROWS) {
+                        nr = (int32_t)MAX_ROWS;
+                    }
+                    sel->column = (uint32_t)nc;
+                    sel->row    = (uint32_t)nr;
+                }
+
+                gModuleDrag.prevColumn = newCol;
+                gModuleDrag.prevRow    = newRow;
+            }
+        } else {
+            tModule * module = get_module(gModuleDrag.moduleKey);
+
+            if (module != NULL) {
+                convert_mouse_coord_to_module_column_row(&module->column, &module->row, (tCoord){x, y});
+
+                if (module->row > MAX_ROWS) {
+                    module->row = MAX_ROWS;
+                }
+
+                if (module->column > MAX_COLUMNS) {
+                    module->column = MAX_COLUMNS;
+                }
             }
         }
         adjust_scroll_for_drag();
