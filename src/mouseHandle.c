@@ -831,8 +831,8 @@ static uint32_t calc_tempo_drag_value(double xCoord, double yCoord, double x, do
         newVal     = (int)gGlobalSettings.masterClock + (int)((gDragPrevY - yCoord) * 241.0 / 200.0);
         gDragPrevY = yCoord;
 
-        if (newVal < 0) {
-            newVal = 0;
+        if (newVal < 30) {
+            newVal = 30;
         }
 
         if (newVal > 240) {
@@ -843,8 +843,8 @@ static uint32_t calc_tempo_drag_value(double xCoord, double yCoord, double x, do
         newVal     = (int)gGlobalSettings.masterClock + (int)((xCoord - gDragPrevX) * 241.0 / 200.0);
         gDragPrevX = xCoord;
 
-        if (newVal < 0) {
-            newVal = 0;
+        if (newVal < 30) {
+            newVal = 30;
         }
 
         if (newVal > 240) {
@@ -854,6 +854,10 @@ static uint32_t calc_tempo_drag_value(double xCoord, double yCoord, double x, do
     } else {
         angle = calculate_mouse_angle((tCoord){x, y}, rotaryRect);
         value = angle_to_value(angle, 241);
+
+        if (value < 30) {
+            value = 30;
+        }
     }
     return value;
 }
