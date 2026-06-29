@@ -1006,11 +1006,11 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqNote,    paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 121 Evnt14
     {moduleTypeSeqNote,    paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 121 Evnt15
     {moduleTypeSeqNote,    paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 121 Evnt16
-    {moduleTypeSeqNote,    paramTypeToggle,      {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
-    {moduleTypeSeqNote,    paramTypeMenu,        {{-15,  15}, { 7,  7}}, anchorTopRight,    "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Length
+    {moduleTypeSeqNote,    paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",           2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
+    {moduleTypeSeqNote,    paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,    "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Length
     {moduleTypeSeqNote,    paramTypeMenu,        {{  3,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 121 T/G
-    {moduleTypeSeqNote,    paramTypePush,        {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            2,   0, NULL,                                  NULL          }, // 121 Randomize
-    {moduleTypeSeqNote,    paramTypePush,        {{ 48, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            2,   0, NULL,                                  NULL          }, // 121 Clear
+    {moduleTypeSeqNote,    paramTypePush,        {{ 3, 34}, {10,  7}}, anchorTopLeft,  "Rnd",            2,   0, NULL,                                  NULL          }, // 121 Randomize
+    {moduleTypeSeqNote,    paramTypePush,        {{ 3, 40}, {10,  7}}, anchorTopLeft,  "Clr",            2,   0, NULL,                                  NULL          }, // 121 Clear
     // 122 Unknown
     // 123 Mix4-1C
     {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 11, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L1
@@ -1103,10 +1103,10 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqEvent,   paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-14
     {moduleTypeSeqEvent,   paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-15
     {moduleTypeSeqEvent,   paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-16
-    {moduleTypeSeqEvent,   paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
-    {moduleTypeSeqEvent,   paramTypeMenu,        {{ 25,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Length
-    {moduleTypeSeqEvent,   paramTypeMenu,        {{ 88, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T up
-    {moduleTypeSeqEvent,   paramTypeMenu,        {{ 88,  -6}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
+    {moduleTypeSeqEvent,   paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",           2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
+    {moduleTypeSeqEvent,   paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Length
+    {moduleTypeSeqEvent,   paramTypeMenu,        {{ 88, -21}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T up
+    {moduleTypeSeqEvent,   paramTypeMenu,        {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
     // 145 SeqVal
     {moduleTypeSeqVal,     paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-1
     {moduleTypeSeqVal,     paramTypeSlider,      {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1-2
@@ -1140,12 +1140,12 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqVal,     paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-14
     {moduleTypeSeqVal,     paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-15
     {moduleTypeSeqVal,     paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-16
-    {moduleTypeSeqVal,     paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 144 Cycle
-    {moduleTypeSeqVal,     paramTypeMenu,        {{ 25,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
-    {moduleTypeSeqVal,     paramTypeMenu,        {{ 40,  10}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
-    {moduleTypeSeqVal,     paramTypeMenu,        {{  3,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
-    {moduleTypeSeqVal,     paramTypePush,        {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            2,   0, NULL,                                  NULL          }, // 145 Randomize
-    {moduleTypeSeqVal,     paramTypePush,        {{ 48, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            2,   0, NULL,                                  NULL          }, // 145 Clear
+    {moduleTypeSeqVal,     paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",           2,   0, offOnStrMap,                           offOnColourMap}, // 144 Cycle
+    {moduleTypeSeqVal,     paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
+    {moduleTypeSeqVal,     paramTypeMenu,        {{ 3,  18}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
+    {moduleTypeSeqVal,     paramTypeMenu,        {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
+    {moduleTypeSeqVal,     paramTypePush,        {{ 3, 34}, {10,  7}}, anchorTopLeft,  "Rnd",            2,   0, NULL,                                  NULL          }, // 145 Randomize
+    {moduleTypeSeqVal,     paramTypePush,        {{ 3, 40}, {10,  7}}, anchorTopLeft,  "Clr",            2,   0, NULL,                                  NULL          }, // 145 Clear
     // 146 SeqLev
     {moduleTypeSeqLev,     paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1
     {moduleTypeSeqLev,     paramTypeSlider,      {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2
@@ -1179,12 +1179,12 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqLev,     paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt14
     {moduleTypeSeqLev,     paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt15
     {moduleTypeSeqLev,     paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt16
-    {moduleTypeSeqLev,     paramTypeToggle,      {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Cycl",           2,   0, offOnStrMap,                           offOnColourMap}, // 144 Cycle
-    {moduleTypeSeqLev,     paramTypeMenu,        {{-15,  15}, { 7,  7}}, anchorTopRight,    "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
-    {moduleTypeSeqLev,     paramTypeMenu,        {{  3,  20}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
-    {moduleTypeSeqLev,     paramTypeMenu,        {{  3,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
-    {moduleTypeSeqLev,     paramTypePush,        {{ 35, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            2,   0, NULL,                                  NULL          }, // 146 Randomize
-    {moduleTypeSeqLev,     paramTypePush,        {{ 48, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            2,   0, NULL,                                  NULL          }, // 146 Clear
+    {moduleTypeSeqLev,     paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",           2,   0, offOnStrMap,                           offOnColourMap}, // 144 Cycle
+    {moduleTypeSeqLev,     paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,    "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
+    {moduleTypeSeqLev,     paramTypeMenu,        {{ 3,  18}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
+    {moduleTypeSeqLev,     paramTypeMenu,        {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
+    {moduleTypeSeqLev,     paramTypePush,        {{ 3, 34}, {10,  7}}, anchorTopLeft,  "Rnd",            2,   0, NULL,                                  NULL          }, // 146 Randomize
+    {moduleTypeSeqLev,     paramTypePush,        {{ 3, 40}, {10,  7}}, anchorTopLeft,  "Clr",            2,   0, NULL,                                  NULL          }, // 146 Clear
 
     // 147 CtrRcv
     {moduleTypeCtrlRcv,    paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Ctrl",         128,  64, NULL,                                  NULL          }, // 147 Ctrl
@@ -1257,11 +1257,11 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqCtr,     paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt14
     {moduleTypeSeqCtr,     paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt15
     {moduleTypeSeqCtr,     paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt16
-    {moduleTypeSeqCtr,     paramTypeMenu,        {{ 35, -60}, {10,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 154 T/G
-    {moduleTypeSeqCtr,     paramTypeMenu,        {{  3,  10}, { 7,  7}}, anchorTopLeft,     "Pol",            2,   0, bipUniStrMap,                          NULL          }, // 154 Pol
+    {moduleTypeSeqCtr,     paramTypeMenu,        {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 154 T/G
+    {moduleTypeSeqCtr,     paramTypeMenu,        {{ 3,  18}, { 7,  7}}, anchorTopLeft,     NULL,            2,   0, bipUniStrMap,                          NULL          }, // 154 Pol
     {moduleTypeSeqCtr,     paramTypeMenu,        {{ -3, -50}, { 7,  7}}, anchorBottomRight, "XFade",          4,   0, seqXFadeStrMap,                        NULL          }, // 154 XFade
-    {moduleTypeSeqCtr,     paramTypePush,        {{ 55, -60}, {10,  7}}, anchorBottomLeft,  "Rnd",            2,   0, NULL,                                  NULL          }, // 154 Randomize
-    {moduleTypeSeqCtr,     paramTypePush,        {{ 68, -60}, {10,  7}}, anchorBottomLeft,  "Clr",            2,   0, NULL,                                  NULL          }, // 154 Clear
+    {moduleTypeSeqCtr,     paramTypePush,        {{ 3, 34}, {10,  7}}, anchorTopLeft,  "Rnd",            2,   0, NULL,                                  NULL          }, // 154 Randomize
+    {moduleTypeSeqCtr,     paramTypePush,        {{ 3, 40}, {10,  7}}, anchorTopLeft,  "Clr",            2,   0, NULL,                                  NULL          }, // 154 Clear
     // 155 Unknown
     // 156 NoteDet
     {moduleTypeNoteDet,    paramTypeNoteDial,    {{ 23,  -3}, { 7, 14}}, anchorBottomLeft,  "Note",         128,  64, NULL,                                  NULL          }, // 156 Note
@@ -2224,7 +2224,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{ 13, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},   // 145 Trig1
     {moduleTypeSeqVal,      connectorDirOut, connectorTypeLogic,   {{ -3, -60}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Link",         labelLocUp   },   // 145 Link
     {moduleTypeSeqVal,      connectorDirOut, connectorTypeControl, {{ -3, -35}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },   // 145 Val
-    {moduleTypeSeqVal,      connectorDirOut, connectorTypeLogic,   {{ -3,  -5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },   // 145 Trig
+    {moduleTypeSeqVal,      connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },   // 145 Trig
 
     // 146 SeqLev
     {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{  3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocUp   },   // 145 Clk
@@ -2235,7 +2235,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{ 13, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},   // 145 Trig1
     {moduleTypeSeqLev,      connectorDirOut, connectorTypeLogic,   {{ -3, -60}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Link",         labelLocUp   },   // 145 Link
     {moduleTypeSeqLev,      connectorDirOut, connectorTypeControl, {{ -3, -35}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },   // 145 Val
-    {moduleTypeSeqLev,      connectorDirOut, connectorTypeLogic,   {{ -3,  -5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },   // 145 Trig
+    {moduleTypeSeqLev,      connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },   // 145 Trig
 
     // 147 CtrRcv
     {moduleTypeCtrlRcv,     connectorDirOut, connectorTypeLogic,   {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rcv",          labelLocUp   },          // 147 Rcv
@@ -2262,7 +2262,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeControl, {{  3, -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Val",          labelLocRight},       // 154 Val
     {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Trig",         labelLocRight},       // 154 Trig
     {moduleTypeSeqCtr,      connectorDirOut, connectorTypeControl, {{ -3, -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Val",          labelLocLeft },       // 154 Val
-    {moduleTypeSeqCtr,      connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Trig",         labelLocLeft },       // 154 Trig
+    {moduleTypeSeqCtr,      connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,         labelLocLeft },       // 154 Trig
     // 155 Unknown
     // 156 NoteDet
     {moduleTypeNoteDet,     connectorDirOut, connectorTypeLogic,   {{ 70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Gate",         labelLocUp   },          // 156 Gate
@@ -2602,10 +2602,10 @@ const tVolumeLocation    volumeLocationList[] = {
     {moduleType2toIn,     volumeTypeStereo,    {{-25,  6}, { 3, 10}}, anchorTopRight}, // XPos:205+231 YPos:10 H:2
     {moduleType4toIn,     volumeTypeQuad,      {{-40,  6}, { 3, 10}}, anchorTopRight}, // XPos:153..231 YPos:10 H:2
     {moduleTypeSeqEvent,  volumeTypeSequencer, {{ 20, 24}, {64,  5}}, anchorTopLeft },
-    {moduleTypeSeqNote,   volumeTypeSequencer, {{ 20,  6}, {64,  5}}, anchorTopLeft },
+    {moduleTypeSeqNote,   volumeTypeSequencer, {{ 20,  40}, {64,  5}}, anchorTopLeft },
     {moduleTypeSeqVal,    volumeTypeSequencer, {{ 20, 40}, {64,  5}}, anchorTopLeft },
-    {moduleTypeSeqLev,    volumeTypeSequencer, {{ 20,  6}, {64,  5}}, anchorTopLeft },
-    {moduleTypeSeqCtr,    volumeTypeSequencer, {{ 20,  6}, {64,  5}}, anchorTopLeft }, };
+    {moduleTypeSeqLev,    volumeTypeSequencer, {{ 20, 40}, {64,  5}}, anchorTopLeft },
+    {moduleTypeSeqCtr,    volumeTypeSequencer, {{ 20, 40}, {64,  5}}, anchorTopLeft }, };
 
 const tLedLocation       ledLocationList[] = {
     {moduleTypeInvert,     ledTypeYes,  {{-40, 10}, {3, 3}}, anchorTopRight},
