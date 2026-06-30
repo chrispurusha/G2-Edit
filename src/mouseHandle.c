@@ -415,6 +415,16 @@ static bool handle_module_release_for_module(tModule * module, tCoord coord, tMo
                 undo_push_param_change(module->key, (uint32_t)i, variation, oldParamVal, param->value);
                 retVal       = true;
             } else if (paramType == paramTypePush) {
+                uint32_t listSize = array_size_param_location_list();
+
+                for (uint32_t ref = 0; ref < listSize; ref++) {
+                    if (  paramLocationList[ref].moduleType == module->type
+                       && paramLocationList[ref].type == paramTypeCustomData) {
+                        send_custom_data_value(slot, module->key);
+                        break;
+                    }
+                }
+
                 send_param_value(slot, module->key, (uint32_t)i, variation, 1);
                 param->value = 0;
                 retVal       = true;
