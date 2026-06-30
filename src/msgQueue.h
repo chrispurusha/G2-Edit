@@ -66,7 +66,8 @@ typedef enum {
     eMsgCmdWriteModePatch,
     eMsgCmdWritePerf,
     eMsgCmdWritePerfName,
-    eMsgCmdWritePerfSettings//,
+    eMsgCmdWritePerfSettings,
+    eMsgCmdSetCustomData//,
     //eMsgCmdReloadAllPatchData
 } eMsgCmd;
 
@@ -196,6 +197,11 @@ typedef struct {
 } tMasterClockRunData;
 
 typedef struct {
+    tModuleKey moduleKey;
+    uint32_t   customData[2]; // [0]=magnifier, [1]=octave; TLV order matches 0x42 packet
+} tCustomDataMsg;
+
+typedef struct {
     uint32_t cmd;
     uint32_t slot;
     union {
@@ -219,6 +225,7 @@ typedef struct {
         tMasterClockBPMData     masterClockBPMData;
         tMasterClockRunData     masterClockRunData;
         tParamLabelData         paramLabelData;
+        tCustomDataMsg          customDataMsg;
     };
 } tMessageContent;
 
