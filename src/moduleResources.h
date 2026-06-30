@@ -1006,11 +1006,11 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqNote,    paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 121 Evnt14
     {moduleTypeSeqNote,    paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 121 Evnt15
     {moduleTypeSeqNote,    paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 121 Evnt16
-    {moduleTypeSeqNote,    paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",           2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
-    {moduleTypeSeqNote,    paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,    "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Length
+    {moduleTypeSeqNote,    paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
+    {moduleTypeSeqNote,    paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Length
     {moduleTypeSeqNote,    paramTypeMenu,        {{  3,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 121 T/G
-    {moduleTypeSeqNote,    paramTypePush,        {{ 3, 34}, {10,  7}}, anchorTopLeft,  "Rnd",            2,   0, NULL,                                  NULL          }, // 121 Randomize
-    {moduleTypeSeqNote,    paramTypePush,        {{ 3, 40}, {10,  7}}, anchorTopLeft,  "Clr",            2,   0, NULL,                                  NULL          }, // 121 Clear
+    {moduleTypeSeqNote,    paramTypePush,        {{  3,  34}, {10,  7}}, anchorTopLeft,     "Rnd",            2,   0, NULL,                                  NULL          }, // 121 Randomize
+    {moduleTypeSeqNote,    paramTypePush,        {{  3,  40}, {10,  7}}, anchorTopLeft,     "Clr",            2,   0, NULL,                                  NULL          }, // 121 Clear
     // 122 Unknown
     // 123 Mix4-1C
     {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 11, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          }, // 123 L1
@@ -1103,7 +1103,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqEvent,   paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-14
     {moduleTypeSeqEvent,   paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-15
     {moduleTypeSeqEvent,   paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-16
-    {moduleTypeSeqEvent,   paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",           2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
+    {moduleTypeSeqEvent,   paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
     {moduleTypeSeqEvent,   paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Length
     {moduleTypeSeqEvent,   paramTypeMenu,        {{ 88, -21}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T up
     {moduleTypeSeqEvent,   paramTypeMenu,        {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
@@ -1140,12 +1140,12 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqVal,     paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-14
     {moduleTypeSeqVal,     paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-15
     {moduleTypeSeqVal,     paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 144 Step2-16
-    {moduleTypeSeqVal,     paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",           2,   0, offOnStrMap,                           offOnColourMap}, // 144 Cycle
+    {moduleTypeSeqVal,     paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   0, offOnStrMap,                           offOnColourMap}, // 144 Cycle
     {moduleTypeSeqVal,     paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
-    {moduleTypeSeqVal,     paramTypeMenu,        {{ 3,  18}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
+    {moduleTypeSeqVal,     paramTypeMenu,        {{  3,  18}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
     {moduleTypeSeqVal,     paramTypeMenu,        {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
-    {moduleTypeSeqVal,     paramTypePush,        {{ 3, 34}, {10,  7}}, anchorTopLeft,  "Rnd",            2,   0, NULL,                                  NULL          }, // 145 Randomize
-    {moduleTypeSeqVal,     paramTypePush,        {{ 3, 40}, {10,  7}}, anchorTopLeft,  "Clr",            2,   0, NULL,                                  NULL          }, // 145 Clear
+    {moduleTypeSeqVal,     paramTypePush,        {{  3,  34}, {10,  7}}, anchorTopLeft,     "Rnd",            2,   0, NULL,                                  NULL          }, // 145 Randomize
+    {moduleTypeSeqVal,     paramTypePush,        {{  3,  40}, {10,  7}}, anchorTopLeft,     "Clr",            2,   0, NULL,                                  NULL          }, // 145 Clear
     // 146 SeqLev
     {moduleTypeSeqLev,     paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step1
     {moduleTypeSeqLev,     paramTypeSlider,      {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          }, // Step2
@@ -1179,12 +1179,12 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqLev,     paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt14
     {moduleTypeSeqLev,     paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt15
     {moduleTypeSeqLev,     paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // Evnt16
-    {moduleTypeSeqLev,     paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",           2,   0, offOnStrMap,                           offOnColourMap}, // 144 Cycle
-    {moduleTypeSeqLev,     paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,    "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
-    {moduleTypeSeqLev,     paramTypeMenu,        {{ 3,  18}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
+    {moduleTypeSeqLev,     paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   0, offOnStrMap,                           offOnColourMap}, // 144 Cycle
+    {moduleTypeSeqLev,     paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          }, // 144 Length
+    {moduleTypeSeqLev,     paramTypeMenu,        {{  3,  18}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 144 Cycle
     {moduleTypeSeqLev,     paramTypeMenu,        {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 144 T down
-    {moduleTypeSeqLev,     paramTypePush,        {{ 3, 34}, {10,  7}}, anchorTopLeft,  "Rnd",            2,   0, NULL,                                  NULL          }, // 146 Randomize
-    {moduleTypeSeqLev,     paramTypePush,        {{ 3, 40}, {10,  7}}, anchorTopLeft,  "Clr",            2,   0, NULL,                                  NULL          }, // 146 Clear
+    {moduleTypeSeqLev,     paramTypePush,        {{  3,  34}, {10,  7}}, anchorTopLeft,     "Rnd",            2,   0, NULL,                                  NULL          }, // 146 Randomize
+    {moduleTypeSeqLev,     paramTypePush,        {{  3,  40}, {10,  7}}, anchorTopLeft,     "Clr",            2,   0, NULL,                                  NULL          }, // 146 Clear
 
     // 147 CtrRcv
     {moduleTypeCtrlRcv,    paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Ctrl",         128,  64, NULL,                                  NULL          }, // 147 Ctrl
@@ -1258,10 +1258,10 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqCtr,     paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt15
     {moduleTypeSeqCtr,     paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap}, // 154 Evnt16
     {moduleTypeSeqCtr,     paramTypeMenu,        {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 154 T/G
-    {moduleTypeSeqCtr,     paramTypeMenu,        {{ 3,  18}, { 7,  7}}, anchorTopLeft,     NULL,            2,   0, bipUniStrMap,                          NULL          }, // 154 Pol
+    {moduleTypeSeqCtr,     paramTypeMenu,        {{  3,  18}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          }, // 154 Pol
     {moduleTypeSeqCtr,     paramTypeMenu,        {{ -6, -60}, { 7,  7}}, anchorBottomRight, "XFade",          4,   0, seqXFadeStrMap,                        NULL          }, // 154 XFade
-    {moduleTypeSeqCtr,     paramTypePush,        {{ 3, 34}, {10,  7}}, anchorTopLeft,  "Rnd",            2,   0, NULL,                                  NULL          }, // 154 Randomize
-    {moduleTypeSeqCtr,     paramTypePush,        {{ 3, 40}, {10,  7}}, anchorTopLeft,  "Clr",            2,   0, NULL,                                  NULL          }, // 154 Clear
+    {moduleTypeSeqCtr,     paramTypePush,        {{  3,  34}, {10,  7}}, anchorTopLeft,     "Rnd",            2,   0, NULL,                                  NULL          }, // 154 Randomize
+    {moduleTypeSeqCtr,     paramTypePush,        {{  3,  40}, {10,  7}}, anchorTopLeft,     "Clr",            2,   0, NULL,                                  NULL          }, // 154 Clear
     // 155 Unknown
     // 156 NoteDet
     {moduleTypeNoteDet,    paramTypeNoteDial,    {{ 23,  -3}, { 7, 14}}, anchorBottomLeft,  "Note",         128,  64, NULL,                                  NULL          }, // 156 Note
@@ -1534,7 +1534,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeRndClkA,    paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Step",         128, 127, NULL,                                  NULL          }, // 204 Step
     {moduleTypeRndClkA,    paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Mode",           4,   0, NULL,                                  NULL          }, // 204 Mode
     {moduleTypeRndClkA,    paramTypeMenu,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  "Dice",           4,   0, NULL,                                  NULL          }, // 204 Dice
-    {moduleTypeRndClkA,    paramTypeMenu,        {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  "Out",            4,   0, NULL,                                  NULL          }, // 204 OutType
+    {moduleTypeRndClkA,    paramTypeMenu,        {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  "Out",            4,   0, posNegInvStrMap,                       NULL          }, // 204 OutType
     {moduleTypeRndClkA,    paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 204 On/Off
     // 205 RndTrig
     {moduleTypeRndTrig,    paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Step",         128,  64, NULL,                                  NULL          }, // 205 Step
@@ -1544,7 +1544,7 @@ const tParamLocation     paramLocationList[] = {
 
     // 206 RndClkB
     {moduleTypeRndClkB,    paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Step",         128, 127, NULL,                                  NULL          }, // 206 Step
-    {moduleTypeRndClkB,    paramTypeMenu,        {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  "Out",            4,   0, NULL,                                  NULL          }, // 206 OutType
+    {moduleTypeRndClkB,    paramTypeMenu,        {{ 65,  -3}, { 7,  7}}, anchorBottomLeft,  "Out",            4,   0, posNegInvStrMap,                       NULL          }, // 206 OutType
     {moduleTypeRndClkB,    paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 206 On/Off
     {moduleTypeRndClkB,    paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Mode",           4,   0, NULL,                                  NULL          }, // 206 Mode
     {moduleTypeRndClkB,    paramTypeCommonDial,  {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  "StepM",        128,   0, NULL,                                  NULL          }, // 206 Step M
@@ -1555,7 +1555,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeRndPattern, paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Step",         128, 127, NULL,                                  NULL          }, // 208 Step
     {moduleTypeRndPattern, paramTypeMenu,        {{ 35,  -3}, { 7,  7}}, anchorBottomLeft,  "Loop",          16,  15, NULL,                                  NULL          }, // 208 LoopCount
     {moduleTypeRndPattern, paramTypeCommonDial,  {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  "StepM",        128,   0, NULL,                                  NULL          }, // 208 Step M
-    {moduleTypeRndPattern, paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Out",            4,   0, NULL,                                  NULL          }, // 208 OutType
+    {moduleTypeRndPattern, paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Out",            4,   0, posNegInvStrMap,                       NULL          }, // 208 OutType
     {moduleTypeRndPattern, paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          }, // 208 On/Off
 };
 
@@ -2090,8 +2090,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeEnvADDSR,    connectorDirOut, connectorTypeControl, {{ -3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },          // 119 Out
     // 120 Unknown
     // 121 SeqNote
-    {moduleTypeSeqNote,     connectorDirIn,  connectorTypeLogic,   {{  3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clock",          labelLocUp   },        // 121 Clk
-    {moduleTypeSeqNote,     connectorDirIn,  connectorTypeLogic,   {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",          labelLocUp   },        // 121 Rst
+    {moduleTypeSeqNote,     connectorDirIn,  connectorTypeLogic,   {{  3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clock",        labelLocUp   },        // 121 Clk
+    {moduleTypeSeqNote,     connectorDirIn,  connectorTypeLogic,   {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",        labelLocUp   },        // 121 Rst
     {moduleTypeSeqNote,     connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Loop",         labelLocUp   },        // 121 Loop
     {moduleTypeSeqNote,     connectorDirIn,  connectorTypeLogic,   {{-14,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Park",         labelLocRight},        // 121 Park
     {moduleTypeSeqNote,     connectorDirIn,  connectorTypeControl, {{ -3, -28}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Note",         labelLocLeft },        // 121 Note
@@ -2206,9 +2206,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeNoteSend,    connectorDirIn,  connectorTypeControl, {{ 35,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",          labelLocUp   },   // 143 Velocity
     {moduleTypeNoteSend,    connectorDirIn,  connectorTypeControl, {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Note",         labelLocUp   },   // 143 Note
     // 144 SeqEvent
-    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{  3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clock",          labelLocUp   },   // 144 Clk
-    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",          labelLocUp   },   // 144 Rst
-    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Loop",           labelLocUp   },   // 144 Lp
+    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{  3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clock",        labelLocUp   },   // 144 Clk
+    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",        labelLocUp   },   // 144 Rst
+    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Loop",         labelLocUp   },   // 144 Lp
     {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{-14,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Park",         labelLocRight},   // 144 Park
     {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{ 14, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},   // 144 Trig1
     {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{ 14,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},   // 144 Trig1
@@ -2216,9 +2216,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSeqEvent,    connectorDirOut, connectorTypeLogic,   {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },   // 144 Out1
     {moduleTypeSeqEvent,    connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },   // 144 Out2
     // 145 SeqVal
-    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clock",          labelLocUp   },   // 145 Clk
-    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",          labelLocUp   },   // 145 Rst
-    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Loop",           labelLocUp   },   // 145 Lp
+    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clock",        labelLocUp   },   // 145 Clk
+    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",        labelLocUp   },   // 145 Rst
+    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Loop",         labelLocUp   },   // 145 Lp
     {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{-14,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Park",         labelLocRight},   // 145 Park
     {moduleTypeSeqVal,      connectorDirIn,  connectorTypeControl, {{ 13, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},   // 145 Val
     {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{ 13, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},   // 145 Trig1
@@ -2227,9 +2227,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSeqVal,      connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },   // 145 Trig
 
     // 146 SeqLev
-    {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{  3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clock",          labelLocUp   },   // 145 Clk
-    {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",          labelLocUp   },   // 145 Rst
-    {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Loop",           labelLocUp   },   // 145 Lp
+    {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{  3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clock",        labelLocUp   },   // 145 Clk
+    {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",        labelLocUp   },   // 145 Rst
+    {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Loop",         labelLocUp   },   // 145 Lp
     {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{-14,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Park",         labelLocRight},   // 145 Park
     {moduleTypeSeqLev,      connectorDirIn,  connectorTypeControl, {{ 13, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},   // 145 Val
     {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{ 13, -20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},   // 145 Trig1
@@ -2258,11 +2258,11 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeKeyQuant,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocRight},          // 152 Out
     // 153 Unknown
     // 154 SeqCtr
-    {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeControl, {{  3, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocUp   },       // 154 Ctrl
-    {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeControl, {{  3, -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Val",          labelLocRight},       // 154 Val
-    {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Trig",         labelLocRight},       // 154 Trig
-    {moduleTypeSeqCtr,      connectorDirOut, connectorTypeControl, {{ -3, -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Val",          labelLocLeft },       // 154 Val
-    {moduleTypeSeqCtr,      connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,         labelLocLeft },       // 154 Trig
+    {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeControl, {{  3, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocUp   },     // 154 Ctrl
+    {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeControl, {{  3, -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Val",          labelLocRight},     // 154 Val
+    {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Trig",         labelLocRight},     // 154 Trig
+    {moduleTypeSeqCtr,      connectorDirOut, connectorTypeControl, {{ -3, -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Val",          labelLocLeft },     // 154 Val
+    {moduleTypeSeqCtr,      connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },     // 154 Trig
     // 155 Unknown
     // 156 NoteDet
     {moduleTypeNoteDet,     connectorDirOut, connectorTypeLogic,   {{ 70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Gate",         labelLocUp   },          // 156 Gate
@@ -2513,26 +2513,26 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeBlue2Red,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 203 In
     {moduleTypeBlue2Red,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 203 Out
     // 204 RndClkA
-    {moduleTypeRndClkA,     connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight   },          // 204 Clk
-    {moduleTypeRndClkA,     connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocRight   },          // 204 Rst
+    {moduleTypeRndClkA,     connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight},          // 204 Clk
+    {moduleTypeRndClkA,     connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocRight},          // 204 Rst
     {moduleTypeRndClkA,     connectorDirIn,  connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Seed",         labelLocLeft },          // 204 Seed
     {moduleTypeRndClkA,     connectorDirOut, connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 204 Out
     // 205 RndTrig
-    {moduleTypeRndTrig,     connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight   },          // 205 Clk
-    {moduleTypeRndTrig,     connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocRight   },          // 205 Rst
+    {moduleTypeRndTrig,     connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight},          // 205 Clk
+    {moduleTypeRndTrig,     connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocRight},          // 205 Rst
     {moduleTypeRndTrig,     connectorDirIn,  connectorTypeControl, {{ -3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Seed",         labelLocLeft },          // 205 Seed
     {moduleTypeRndTrig,     connectorDirIn,  connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Prob",         labelLocLeft },          // 205 Prob
     {moduleTypeRndTrig,     connectorDirOut, connectorTypeLogic,   {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 205 Out
     // 206 RndClkB
-    {moduleTypeRndClkB,     connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight   },          // 206 Clk
-    {moduleTypeRndClkB,     connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocRight   },          // 206 Rst
+    {moduleTypeRndClkB,     connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight},          // 206 Clk
+    {moduleTypeRndClkB,     connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocRight},          // 206 Rst
     {moduleTypeRndClkB,     connectorDirIn,  connectorTypeControl, {{ -3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Seed",         labelLocLeft },          // 206 Seed
     {moduleTypeRndClkB,     connectorDirIn,  connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Step",         labelLocLeft },          // 206 Step input
     {moduleTypeRndClkB,     connectorDirOut, connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 206 Out
     // 207 Unknown
     // 208 RndPattern
-    {moduleTypeRndPattern,  connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight   },          // 208 Clk
-    {moduleTypeRndPattern,  connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocRight   },          // 208 Rst
+    {moduleTypeRndPattern,  connectorDirIn,  connectorTypeLogic,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clk",          labelLocRight},          // 208 Clk
+    {moduleTypeRndPattern,  connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Rst",          labelLocRight},          // 208 Rst
     {moduleTypeRndPattern,  connectorDirIn,  connectorTypeControl, {{ -3, -21}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "A",            labelLocLeft },          // 208 A
     {moduleTypeRndPattern,  connectorDirIn,  connectorTypeControl, {{ -3, -14}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "B",            labelLocLeft },          // 208 B
     {moduleTypeRndPattern,  connectorDirIn,  connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Step",         labelLocLeft },          // 208 Step input
@@ -2602,7 +2602,7 @@ const tVolumeLocation    volumeLocationList[] = {
     {moduleType2toIn,     volumeTypeStereo,    {{-25,  6}, { 3, 10}}, anchorTopRight}, // XPos:205+231 YPos:10 H:2
     {moduleType4toIn,     volumeTypeQuad,      {{-40,  6}, { 3, 10}}, anchorTopRight}, // XPos:153..231 YPos:10 H:2
     {moduleTypeSeqEvent,  volumeTypeSequencer, {{ 20, 24}, {64,  5}}, anchorTopLeft },
-    {moduleTypeSeqNote,   volumeTypeSequencer, {{ 20,  40}, {64,  5}}, anchorTopLeft },
+    {moduleTypeSeqNote,   volumeTypeSequencer, {{ 20, 40}, {64,  5}}, anchorTopLeft },
     {moduleTypeSeqVal,    volumeTypeSequencer, {{ 20, 40}, {64,  5}}, anchorTopLeft },
     {moduleTypeSeqLev,    volumeTypeSequencer, {{ 20, 40}, {64,  5}}, anchorTopLeft },
     {moduleTypeSeqCtr,    volumeTypeSequencer, {{ 20, 40}, {64,  5}}, anchorTopLeft }, };

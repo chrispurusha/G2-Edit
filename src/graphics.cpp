@@ -256,7 +256,7 @@ void render_context_menu(void) {
             set_rgb_colour(gContextMenu.items[i].colour);
             render_rectangle(mainArea, menuItem);
 
-            set_rgb_colour(RGB_GREY_9);
+            set_rgb_colour(RGB_WHITE);
             render_text(mainArea, {{x + 5, y + 5}, {BLANK_SIZE, itemHeight}}, gContextMenu.items[i].label);
 
             if (columns > 1) {
