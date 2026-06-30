@@ -223,7 +223,7 @@ const tModuleProperties  gModuleProperties[]  = {
     {"ValSw1-2",     2, volumeTypeNone,      ledTypeYes},
     {"X-Fade",       2, volumeTypeNone,      ledTypeNo },
     {"Mix4-1B",      2, volumeTypeMono,      ledTypeNo },
-    {"EnvADSR",      4, volumeTypeNone,      ledTypeNo },
+    {"EnvADSR",      4, volumeTypeNone,      ledTypeYes},
     {"Mux1-8",       2, volumeTypeSequencer, ledTypeNo },
     {"PartQuant",    2, volumeTypeNone,      ledTypeNo },
     {"ModADSR",      5, volumeTypeNone,      ledTypeNo },

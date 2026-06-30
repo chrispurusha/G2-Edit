@@ -414,7 +414,7 @@ static void parse_led_data(uint32_t slot, uint8_t * buff, uint32_t * bitPos, int
             tModule *  module = get_module(key);
 
             if (module != NULL) {
-                if (gModuleProperties[module->type].ledType == ledTypeYes) {
+                if (module_led_count(module->type) > 0) {
                     if (led_count >= start_idx && led_count < (uint32_t)(start_idx + 40)) {
                         module->led.value = read_bit_stream(buff, bitPos, 2);
                     }
