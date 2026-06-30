@@ -53,11 +53,11 @@ extern "C" {
 #include "misc.h"
 
 // Drag-start state for vertical/horizontal dial modes
-static double gDragStartX    = 0.0;   // cursor position at press — used for restore on release
+static double gDragStartX    = 0.0; // cursor position at press — used for restore on release
 static double gDragStartY    = 0.0;
-static double gDragPrevX     = 0.0;   // cursor position at previous cursor_pos call — used for incremental delta
+static double gDragPrevX     = 0.0; // cursor position at previous cursor_pos call — used for incremental delta
 static double gDragPrevY     = 0.0;
-static bool   gDragFirstMove = false; // absorbs the first cursor_pos after CURSOR_DISABLED is set (coordinate discontinuity on macOS)
+static int    gDragSkipCount = 0;   // skip first N cursor_pos events after CURSOR_DISABLED — covers stale NORMAL-mode events + transition event
 
 void get_global_gui_scaled_mouse_coord(tCoord * coord) {
     int winWidth  = 0;
@@ -196,8 +196,8 @@ void start_cursor_drag(void) {
     glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
     gDragPrevX     = gDragStartX;
     gDragPrevY     = gDragStartY;
+    gDragSkipCount = 3;
     glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    gDragFirstMove = true;
 }
 
 static bool handle_module_press_for_module(tModule * module, tCoord coord, tMouseButton mouseButton, uint32_t variation) {
@@ -508,13 +508,8 @@ bool handle_scrollbar_click(tCoord coord) {
 }
 
 void stop_dragging(void) {
-    if (gParamDragging.active || gTempoDragging || gPerfTempoDragging || gVibRateDragging || gVibAmountDragging || gGlideTimeDragging) {
-        glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    bool wasCursorDragging = gParamDragging.active || gTempoDragging || gPerfTempoDragging || gVibRateDragging || gVibAmountDragging || gGlideTimeDragging;
 
-        if (gDialMode != eDialModeRotary) {
-            glfwSetCursorPos(gWindow, gDragStartX, gDragStartY);
-        }
-    }
     gScrollState.yBarDragging = false;
     gScrollState.xBarDragging = false;
     memset(&gModuleDrag, 0, sizeof(gModuleDrag));
@@ -526,7 +521,15 @@ void stop_dragging(void) {
     gVibAmountDragging        = false;
     gGlideTimeDragging        = false;
     gRubberBand.active        = false;
-    gDragFirstMove            = false;
+    gDragSkipCount            = 0;
+
+    if (wasCursorDragging) {
+        glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+        if (gDialMode != eDialModeRotary) {
+            glfwSetCursorPos(gWindow, gDragStartX, gDragStartY);
+        }
+    }
 }
 
 void stop_patch_name_editing(void) {
@@ -981,11 +984,11 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
 
     gHoverConnector.active = false;
 
-    if (gDragFirstMove) {
-        gDragPrevX     = xCoord;
-        gDragPrevY     = yCoord;
-        gDragFirstMove = false;
-        gReDraw        = true;
+    if (gDragSkipCount > 0) {
+        gDragPrevX = xCoord;
+        gDragPrevY = yCoord;
+        gDragSkipCount--;
+        gReDraw    = true;
         return;
     }
 
