@@ -713,21 +713,45 @@ tRectangle render_paramType1Resonance(tModule * module, tRectangle rectangle, ch
 static const char * gNoteNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 
 tRectangle render_paramType1Slider(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
-    double     textH    = 8.0;
-    tRgb       black    = {0.0, 0.0, 0.0};
-    tRectangle textRect = {0};
+    double     textH     = 8.0;
+    tRgb       black     = {0.0, 0.0, 0.0};
+    tRectangle textRect  = {0};
 
     textRect.coord.x = rectangle.coord.x;
     textRect.coord.y = rectangle.coord.y - textH;
     textRect.size.w  = BLANK_SIZE;
     textRect.size.h  = textH;
 
+    uint32_t   slot      = gSlot;
+    uint32_t   variation = gPatchDescr[slot].activeVariation;
+
     if (module->type == moduleTypeSeqNote) {
         int octave = (int)((uint32_t)paramValue / 12) - 1;
         int note   = (int)((uint32_t)paramValue % 12);
         snprintf(buff, buffSize, "%s%d", gNoteNames[note], octave);
     } else {
-        snprintf(buff, buffSize, "%u", (uint32_t)paramValue);
+        uint32_t bipParamIdx = 0;
+        bool     hasBipolar  = false;
+
+        if (module->type == moduleTypeSeqVal || module->type == moduleTypeSeqLev) {
+            bipParamIdx = 34;
+            hasBipolar  = true;
+        } else if (module->type == moduleTypeSeqCtr) {
+            bipParamIdx = 33;
+            hasBipolar  = true;
+        }
+
+        if (hasBipolar && module->param[variation][bipParamIdx].value == 0) {
+            int displayValue = (int)paramValue - 64;
+
+            if (displayValue == 0) {
+                snprintf(buff, buffSize, "0");
+            } else {
+                snprintf(buff, buffSize, "%+d", displayValue);
+            }
+        } else {
+            snprintf(buff, buffSize, "%u", (uint32_t)paramValue);
+        }
     }
     set_rgb_colour(black);
     render_text(moduleArea, textRect, buff);
