@@ -56,6 +56,7 @@ extern "C" {
 static FT_Library      gLibrary        = {0};
 static FT_Face         gFace           = {0};
 static _Atomic bool    gNeedFocus      = false;
+static float           gContentScale   = 2.0f;
 
 #define MAX_NOTE_VISUAL_LINES    1000
 
@@ -167,9 +168,15 @@ static int find_note_cursor_line(int cursorPos) {
     return result;
 }
 
+void setup_render_context(void);
+
 void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
     glViewport(0, 0, width, height);
-    gReDraw = true;
+    set_render_width(width);
+    set_render_height(height);
+    gGlobalGuiScale = (double)gContentScale * (double)width / (double)TARGET_FRAME_BUFF_WIDTH;
+    setup_render_context();
+    gReDraw         = true;
 }
 
 void window_size_callback(GLFWwindow * window, int width, int height) {
@@ -587,7 +594,7 @@ void init_graphics(void) {
     register_full_patch_change_notify_cb(notify_full_patch_change);
     topbar_init_controls();
 
-    monitor      = glfwGetPrimaryMonitor();
+    monitor       = glfwGetPrimaryMonitor();
 
     int           x, y, width, height;
     double        widthScaleFactor  = 1;
@@ -595,8 +602,9 @@ void init_graphics(void) {
     double        scaleFactor       = 1;
     glfwGetMonitorWorkarea(monitor, &x, &y, &width, &height);
     glfwGetMonitorContentScale(monitor, &xScale, &yScale);
-    windowWidth  = TARGET_FRAME_BUFF_WIDTH / xScale;
-    windowHeight = TARGET_FRAME_BUFF_HEIGHT / yScale;
+    gContentScale = xScale;
+    windowWidth   = TARGET_FRAME_BUFF_WIDTH / xScale;
+    windowHeight  = TARGET_FRAME_BUFF_HEIGHT / yScale;
 
     if ((windowWidth > width) || (windowHeight > height)) {
         heightScaleFactor = (double)windowHeight / (double)height;
@@ -613,7 +621,7 @@ void init_graphics(void) {
     }
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
     glfwWindowHint(GLFW_COCOA_GRAPHICS_SWITCHING, GLFW_TRUE);
-    gWindow      = glfwCreateWindow(windowWidth, windowHeight, title, NULL, NULL);
+    gWindow       = glfwCreateWindow(windowWidth, windowHeight, title, NULL, NULL);
 
     if (!gWindow) {
         glfwTerminate();
