@@ -758,8 +758,15 @@ static void action_set_toggle_value(int index) {
         uint32_t oldValue = module->param[variation][paramIdx].value;
         uint32_t newValue = (uint32_t)gContextMenu.items[index].param;
         module->param[variation][paramIdx].value = (uint8_t)newValue;
-        send_param_value(slot, gContextMenu.moduleKey, paramIdx, variation, newValue);
-        undo_push_param_change(gContextMenu.moduleKey, paramIdx, variation, oldValue, newValue);
+
+        uint32_t paramRef = module->param[variation][paramIdx].paramRef;
+
+        if (paramLocationList[paramRef].type == paramTypeCustomData) {
+            send_custom_data_value(slot, gContextMenu.moduleKey);
+        } else {
+            send_param_value(slot, gContextMenu.moduleKey, paramIdx, variation, newValue);
+            undo_push_param_change(gContextMenu.moduleKey, paramIdx, variation, oldValue, newValue);
+        }
     }
     gContextMenu.active = false;
     gReDraw             = true;

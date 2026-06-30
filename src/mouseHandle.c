@@ -231,7 +231,7 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
 
             if (  paramType != paramTypeToggle && paramType != paramTypeMenu
                && paramType != paramTypeBypass && paramType != paramTypeEnable
-               && paramType != paramTypePush) {
+               && paramType != paramTypePush && paramType != paramTypeCustomData) {
                 gParamDragging.moduleKey  = module->key;
                 gParamDragging.type3      = paramType3Param;
                 gParamDragging.param      = i;
@@ -404,7 +404,7 @@ static bool handle_module_release_for_module(tModule * module, tCoord coord, tMo
                 paramType = paramLocationList[param->paramRef].type;
             }
 
-            if (paramType == paramTypeMenu) {
+            if (paramType == paramTypeMenu || paramType == paramTypeCustomData) {
                 open_toggle_menu(coord, module->key, (uint32_t)i, param->paramRef);
                 retVal = true;
             } else if (paramType == paramTypeToggle || paramType == paramTypeBypass || paramType == paramTypeEnable) {

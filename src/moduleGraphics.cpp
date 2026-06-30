@@ -184,6 +184,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
     //LOG_DEBUG("param %u\n", paramValue);
 
     switch (paramLocationList[paramRef].type) {
+        case paramTypeCustomData:
         case paramTypeToggle:
         case paramTypeMenu:
         {

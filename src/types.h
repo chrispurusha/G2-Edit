@@ -375,6 +375,7 @@ typedef enum {
     paramTypeFreqShift,
     paramTypeToggle,
     paramTypeMenu,
+    paramTypeCustomData, // value lives in param[] like other params; sent via custom data protocol (0x42)
 } tParamType;
 
 typedef enum {
@@ -502,6 +503,7 @@ typedef struct {
     uint32_t index;
 } tModuleKey;
 
+
 typedef struct {
     bool        active;
     tModuleKey  key;
@@ -537,7 +539,6 @@ typedef struct {
     //uint32_t                volume[2];
     tVolume     volume;
     tLed        led;
-    //uint32_t                led;
 } tModule;
 
 typedef struct {

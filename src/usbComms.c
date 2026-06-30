@@ -1584,6 +1584,23 @@ static int send_get_knob_snapshot(uint32_t slot) {
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS); // Really expected SUB_RESPONSE_KNOBS here
 }
 
+static int send_set_seq_note_custom_data(uint32_t slot, tModuleKey key, uint32_t magnifier, uint32_t octave) {
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_SET_PARAM_LABEL);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)key.location);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)key.index);
+    write_bit_stream(buff, &bitPos, 8, 6);                     // combined TLV data size
+    write_bit_stream(buff, &bitPos, 8, 0);                     // zoom TLV: type
+    write_bit_stream(buff, &bitPos, 8, 1);                     // zoom TLV: len
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)magnifier);    // zoom TLV: val (0=1oct, 1=2oct, 2=3oct)
+    write_bit_stream(buff, &bitPos, 8, 0);                     // offset TLV: type
+    write_bit_stream(buff, &bitPos, 8, 1);                     // offset TLV: len
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)octave);       // offset TLV: val (0=C0..7=C7)
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+}
+
 // Fetch patch data for a single slot. Synth must be stopped before calling.
 static int send_get_patch_data(uint32_t slot) {
     int retVal = EXIT_SUCCESS;
@@ -2279,6 +2296,20 @@ static int send_write_data(tMessageContent * messageContent) {
         //   call_full_patch_change_notify();
         //   call_wake_glfw();
         //   break;
+
+        case eMsgCmdSetCustomData:
+        {
+            tModuleKey key    = messageContent->customDataMsg.moduleKey;
+            tModule *  module = get_module_slot(messageContent->slot, key.location, key.index);
+
+            if (module->type == moduleTypeSeqNote) {
+                retVal = send_set_seq_note_custom_data(
+                    messageContent->slot, key,
+                    messageContent->customDataMsg.customData[0],
+                    messageContent->customDataMsg.customData[1]);
+            }
+            break;
+        }
 
         default:
             LOG_DEBUG("Unknown command %d\n", messageContent->cmd);

@@ -1536,6 +1536,37 @@ void send_mode_value(uint32_t slot, tModuleKey moduleKey, uint32_t modeIdx, uint
     msg_send(&gCommandQueue, &msg);
 }
 
+void send_custom_data_value(uint32_t slot, tModuleKey moduleKey) {
+    tModule *       module    = get_module_slot(slot, moduleKey.location, moduleKey.index);
+
+    if (module == NULL) {
+        return;
+    }
+    uint32_t        variation = gPatchDescr[slot].activeVariation;
+    tMessageContent msg       = {0};
+
+    msg.cmd                     = eMsgCmdSetCustomData;
+    msg.slot                    = slot;
+    msg.customDataMsg.moduleKey = moduleKey;
+
+    uint32_t        cdCount   = 0;
+    uint32_t        paramIdx  = 0;
+    uint32_t        listSize  = array_size_param_location_list();
+
+    for (uint32_t ref = 0; ref < listSize && cdCount < 2; ref++) {
+        if (paramLocationList[ref].moduleType != module->type) {
+            continue;
+        }
+
+        if (paramLocationList[ref].type == paramTypeCustomData) {
+            msg.customDataMsg.customData[cdCount++] = module->param[variation][paramIdx].value;
+        }
+        paramIdx++;
+    }
+
+    msg_send(&gCommandQueue, &msg);
+}
+
 void update_module_up_rates(void) {
     uint32_t slot        = gSlot;
     uint32_t location    = gLocation;
