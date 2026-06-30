@@ -1008,7 +1008,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqNote,    paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap}, // 121 Evnt16
     {moduleTypeSeqNote,    paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   0, offOnStrMap,                           offOnColourMap}, // 121 Cycle
     {moduleTypeSeqNote,    paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          }, // 121 Length
-    {moduleTypeSeqNote,    paramTypeMenu,        {{  3,  -4}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 121 T/G
+    {moduleTypeSeqNote,    paramTypeMenu,        {{ 88, -21}, { 7,  7}}, anchorBottomRight,  NULL,             2,   0, trigGateStrMap,                        NULL          }, // 121 T/G
     {moduleTypeSeqNote,    paramTypePush,        {{  3,  34}, {10,  7}}, anchorTopLeft,     "Rnd",            2,   0, NULL,                                  NULL          }, // 121 Randomize
     {moduleTypeSeqNote,    paramTypePush,        {{  3,  40}, {10,  7}}, anchorTopLeft,     "Clr",            2,   0, NULL,                                  NULL          }, // 121 Clear
     // 122 Unknown
@@ -2094,13 +2094,13 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeSeqNote,     connectorDirIn,  connectorTypeLogic,   {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",        labelLocUp   },        // 121 Rst
     {moduleTypeSeqNote,     connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Loop",         labelLocUp   },        // 121 Loop
     {moduleTypeSeqNote,     connectorDirIn,  connectorTypeLogic,   {{-14,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Park",         labelLocRight},        // 121 Park
-    {moduleTypeSeqNote,     connectorDirIn,  connectorTypeControl, {{ -3, -28}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Note",         labelLocLeft },        // 121 Note
-    {moduleTypeSeqNote,     connectorDirIn,  connectorTypeLogic,   {{ -3, -21}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Trig",         labelLocLeft },        // 121 Trig
-    {moduleTypeSeqNote,     connectorDirIn,  connectorTypeControl, {{ -3, -14}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "RecV",         labelLocLeft },        // 121 RecVal
-    {moduleTypeSeqNote,     connectorDirIn,  connectorTypeLogic,   {{ -3,  -7}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "RecE",         labelLocLeft },        // 121 RecEnable
-    {moduleTypeSeqNote,     connectorDirOut, connectorTypeLogic,   {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Link",         labelLocUp   },        // 121 Link
-    {moduleTypeSeqNote,     connectorDirOut, connectorTypeControl, {{ 45,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Note",         labelLocUp   },        // 121 Note
-    {moduleTypeSeqNote,     connectorDirOut, connectorTypeLogic,   {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Trig",         labelLocUp   },        // 121 Trig
+    {moduleTypeSeqNote,     connectorDirIn,  connectorTypeControl, {{ 14, -38}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,         labelLocLeft },        // 121 Note
+    {moduleTypeSeqNote,     connectorDirIn,  connectorTypeLogic,   {{ 14, -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft, NULL,         labelLocLeft },        // 121 Trig
+    {moduleTypeSeqNote,     connectorDirIn,  connectorTypeControl, {{ 40, 6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft, "Rec",         labelLocLeft },        // 121 RecVal
+    {moduleTypeSeqNote,     connectorDirIn,  connectorTypeLogic,   {{ 48,  6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft, NULL,         labelLocLeft },        // 121 RecEnable
+    {moduleTypeSeqNote,     connectorDirOut, connectorTypeLogic,   {{ -3,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,  "Link",         labelLocUp   },        // 121 Link
+    {moduleTypeSeqNote,     connectorDirOut, connectorTypeControl, {{ -3,  -38}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,         labelLocUp   },        // 121 Note
+    {moduleTypeSeqNote,     connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight,  NULL,         labelLocUp   },        // 121 Trig
 
     // 122 Unknown
     // 123 Mix4-1C
@@ -2259,9 +2259,9 @@ const tConnectorLocation connectorLocationList[] = {
     // 153 Unknown
     // 154 SeqCtr
     {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeControl, {{  3, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocUp   },     // 154 Ctrl
-    {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeControl, {{  3, -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Val",          labelLocRight},     // 154 Val
-    {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Trig",         labelLocRight},     // 154 Trig
-    {moduleTypeSeqCtr,      connectorDirOut, connectorTypeControl, {{ -3, -12}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Val",          labelLocLeft },     // 154 Val
+    {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeControl, {{  14, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,          labelLocRight},     // 154 Val
+    {moduleTypeSeqCtr,      connectorDirIn,  connectorTypeLogic,   {{  14,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,         labelLocRight},     // 154 Trig
+    {moduleTypeSeqCtr,      connectorDirOut, connectorTypeControl, {{ -3, -40}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,          labelLocLeft },     // 154 Val
     {moduleTypeSeqCtr,      connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },     // 154 Trig
     // 155 Unknown
     // 156 NoteDet
