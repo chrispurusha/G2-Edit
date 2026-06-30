@@ -773,7 +773,11 @@ void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, u
     uint32_t         range  = paramLocationList[paramRef].range;
 
     for (uint32_t v = 0; v < range && v < 32; v++) {
-        snprintf(labels[v], sizeof(labels[v]), "%s", (strMap && strMap[v]) ? strMap[v] : "");
+        if (strMap && strMap[v]) {
+            snprintf(labels[v], sizeof(labels[v]), "%s", strMap[v]);
+        } else {
+            snprintf(labels[v], sizeof(labels[v]), "%u", v);
+        }
         menuItems[v] = (tMenuItem){
             labels[v], RGB_GREY_3, action_set_toggle_value, v, NULL
         };
@@ -812,7 +816,11 @@ void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeInde
     uint32_t         range  = modeLocationList[modeRef].range;
 
     for (uint32_t v = 0; v < range && v < 32; v++) {
-        snprintf(labels[v], sizeof(labels[v]), "%s", (strMap && strMap[v]) ? strMap[v] : "");
+        if (strMap && strMap[v]) {
+            snprintf(labels[v], sizeof(labels[v]), "%s", strMap[v]);
+        } else {
+            snprintf(labels[v], sizeof(labels[v]), "%u", v);
+        }
         menuItems[v] = (tMenuItem){
             labels[v], RGB_GREY_3, action_set_mode_value, v, NULL
         };

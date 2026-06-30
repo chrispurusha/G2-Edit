@@ -766,15 +766,14 @@ tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangl
     double textHeight             = (double)STANDARD_BUTTON_TEXT_HEIGHT;
     tRgb   buttonBackgroundColour = RGB_BACKGROUND_GREY;
 
-    if (paramValue >= array_size_str_map(strMap)) {
-        LOG_ERROR("Bad strMap for module type %d %s ParamRef %u ParamIndex %u, map pointer = 0x%lx, Value %u >= Map array size %u\n", module->type, gModuleProperties[module->type].name, paramRef, paramIndex, (unsigned long)strMap, (int)paramValue, array_size_str_map(strMap));
-
-        //Debug help for value
+    if (strMap == NULL || paramValue >= array_size_str_map(strMap)) {
+        if (strMap != NULL) {
+            LOG_ERROR("Bad strMap for module type %d %s ParamRef %u ParamIndex %u, map pointer = 0x%lx, Value %u >= Map array size %u\n", module->type, gModuleProperties[module->type].name, paramRef, paramIndex, (unsigned long)strMap, (int)paramValue, array_size_str_map(strMap));
+        }
         char       debug[64]      = {0};
         snprintf(debug, sizeof(debug), "%u", (int)paramValue);
 
         tRectangle text_rectangle = {{rectangle.coord.x, y}, {30, textHeight}};
-        //set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
         return draw_button(moduleArea, text_rectangle, debug, (tRgb)RGB_BACKGROUND_GREY);
     }
 
