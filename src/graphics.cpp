@@ -629,7 +629,7 @@ void init_graphics(void) {
         glfwTerminate();
         exit(EXIT_FAILURE);
     }
-    glfwSetWindowSizeLimits(gWindow, windowWidth / gGlobalGuiScale, windowHeight / gGlobalGuiScale, GLFW_DONT_CARE, GLFW_DONT_CARE);
+    glfwSetWindowSizeLimits(gWindow, 320, 240, GLFW_DONT_CARE, GLFW_DONT_CARE);
     glfwSetWindowAspectRatio(gWindow, windowWidth, windowHeight);
 
     glfwMakeContextCurrent(gWindow);
