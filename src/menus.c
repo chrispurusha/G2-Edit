@@ -24,6 +24,7 @@ extern "C" {
 #include <math.h>
 
 #include "defs.h"
+#include "synthlibDefs.h"
 #include "types.h"
 #include "utils.h"
 #include "utilsGraphics.h"

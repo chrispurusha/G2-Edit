@@ -21,6 +21,8 @@
 extern "C" {
 #endif
 
+#include "defs.h"
+#include "synthlibDefs.h"
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 

@@ -21,9 +21,6 @@
 extern "C" {
 #endif
 
-// System header files
-#include <math.h>
-
 // Disable warnings from external library headers etc.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Weverything"
@@ -33,7 +30,11 @@ extern "C" {
 
 #pragma clang diagnostic pop
 
+
+#include <math.h>
+
 #include "defs.h"
+#include "synthlibDefs.h"
 #include "types.h"
 #include "utils.h"
 #include "msgQueue.h"

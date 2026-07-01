@@ -24,6 +24,7 @@ extern "C" {
 #include <signal.h>
 
 #include "defs.h"
+#include "synthlibDefs.h"
 #include "graphics.h"
 #include "dataBase.h"
 #include "usbComms.h"

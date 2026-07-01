@@ -21,7 +21,9 @@
 #import <Cocoa/Cocoa.h>
 #include <stdatomic.h>
 #include <string.h>
+
 #include "defs.h"
+#include "synthlibDefs.h"
 #include "types.h"
 #include "globalVars.h"
 #include "graphics.h"

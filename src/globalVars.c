@@ -21,11 +21,13 @@
 extern "C" {
 #endif
 
+#include "defs.h"
+#include "synthlibDefs.h"
 #include "globalVars.h"
 
 tDialMode               gDialMode                                                                    = eDialModeRotary;
 
-double                  gGlobalGuiScale                                                              = 2;
+//double                  gGlobalGuiScale                                                              = 2;
 _Atomic bool            gQuitAll                                                                     = false;
 GLFWwindow *            gWindow                                                                      = NULL;
 _Atomic uint32_t        gLocation                                                                    = locationVa;
@@ -41,7 +43,7 @@ const char *            monoPolyStrMap[monoPolyMax]                             
 bool                    gShowOpenFileReadDialogue                                                    = false;
 bool                    gShowOpenFileWriteDialogue                                                   = false;
 
-tScrollState            gScrollState                                                                 = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, 0.0, NULL_RECTANGLE, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, 0.0, NULL_RECTANGLE};
+//tScrollState            gScrollState                                                                 = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, 0.0, NULL_RECTANGLE, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, 0.0, NULL_RECTANGLE};
 tContextMenu            gContextMenu                                                                 = {0};
 tCableDragging          gCableDrag                                                                   = {0};
 tHoverConnector         gHoverConnector                                                              = {0};
