@@ -32,8 +32,10 @@ extern "C" {
 #include FT_FREETYPE_H
 #pragma clang diagnostic pop
 
-#include "math.h"
+#include <math.h>
+
 #include "defs.h"
+#include "synthlibDefs.h"
 #include "types.h"
 #include "utils.h"
 #include "msgQueue.h"

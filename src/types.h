@@ -289,20 +289,6 @@ typedef struct {
 } tString;
 
 typedef struct {
-    double red;
-    double green;
-    double blue;
-} tRgb;
-
-typedef struct {
-    double red;
-    double green;
-    double blue;
-    double alpha;
-} tRgba;
-
-
-typedef struct {
     int32_t x;
     int32_t y;
 } tIntCoord;
@@ -316,12 +302,6 @@ typedef struct {
     tIntCoord coord;
     tIntSize  size;
 } tIntRectangle;
-
-typedef struct {
-    tCoord coord1;
-    tCoord coord2rel;
-    tCoord coord3rel;
-} tTriangle;
 
 typedef enum {
     anchorTopLeft,
@@ -542,17 +522,6 @@ typedef struct {
 } tModule;
 
 typedef struct {
-    double     xBar;
-    bool       xBarDragging;
-    double     xGrabOffset;
-    tRectangle xThumb;
-    double     yBar;
-    bool       yBarDragging;
-    double     yGrabOffset;
-    tRectangle yThumb;
-} tScrollState;
-
-typedef struct {
     bool       active;
     tModuleKey moduleKey;
     bool       isMulti;
@@ -629,11 +598,6 @@ typedef struct {
 } tModuleProperties;
 
 typedef enum {
-    mainArea,
-    moduleArea
-} tArea;
-
-typedef enum {
     cableLinkTypeFromInput,
     cableLinkTypeFromOutput
 } tCableLinkType;
@@ -678,18 +642,6 @@ typedef struct {
     tClipboardCable  cables[MAX_NUM_CABLES];
     uint32_t         cableCount;
 } tClipboard;
-
-typedef struct {
-    double u1;         // Top-left texture coordinates
-    double v1;
-    double u2;         // Bottom-right texture coordinates
-    double v2;
-    double advance_x;  // Horizontal advance
-    int    width;      // Width and height of the glyph
-    int    height;
-    int    offset_x;   // Offset from the origin
-    int    offset_y;
-} GlyphInfo;
 
 typedef struct {
     const tModuleType moduleType;
@@ -977,11 +929,6 @@ typedef struct {
     tRectangle rangeLower[MAX_SLOTS];
     tRectangle rangeUpper[MAX_SLOTS];
 } tPerfSettingsPanelRects;
-
-typedef enum {
-    eNoCache,
-    eCache,
-} tCache;
 
 typedef enum {
     eDialModeRotary     = 0,   // angle from dial centre to cursor; cursor visible

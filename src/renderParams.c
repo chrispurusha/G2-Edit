@@ -36,6 +36,7 @@ extern "C" {
 #pragma clang diagnostic pop
 
 #include "defs.h"
+#include "synthlibDefs.h"
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "utilsGraphics.h"

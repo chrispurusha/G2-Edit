@@ -38,7 +38,7 @@
 extern const char *            patchTypeStrMap[patchTypeUserMax];
 extern const char *            monoPolyStrMap[monoPolyMax];
 
-extern double                  gGlobalGuiScale;
+//extern double                  gGlobalGuiScale;
 extern _Atomic bool            gQuitAll;
 extern GLFWwindow *            gWindow;
 extern _Atomic uint32_t        gLocation;
@@ -47,7 +47,7 @@ extern bool                    gCommandKeyPressed;
 extern tTopbarControl          gTopbarControls[topbarControlMax];
 extern bool                    gShowOpenFileReadDialogue;
 extern bool                    gShowOpenFileWriteDialogue;
-extern tScrollState            gScrollState;
+//extern tScrollState            gScrollState;
 extern tContextMenu            gContextMenu;
 extern tCableDragging          gCableDrag;
 extern tHoverConnector         gHoverConnector;

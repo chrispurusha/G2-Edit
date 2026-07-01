@@ -29,6 +29,7 @@ extern "C" {
 #endif
 
 #include "defs.h"
+#include "synthlibDefs.h"
 #include "types.h"
 #include "utils.h"
 #include "dataBase.h"

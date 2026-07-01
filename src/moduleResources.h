@@ -24,6 +24,7 @@
 
 #include "sysIncludes.h"
 #include "defs.h"
+#include "synthlibDefs.h"
 #include "types.h"
 
 // Terminate the string maps with a NULL, so that we can work out array size
