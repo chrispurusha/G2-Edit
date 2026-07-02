@@ -57,8 +57,8 @@ const char *             posNegInvStrMap[]                       = {"Pos", "PosI
 const char *             posNegInvBipStrMap[]                    = {"Pos", "PosInv", "Neg", "NegInv", "Bip", NULL};
 const char *             bipPosNegStrMap[]                       = {"BiPol", "Pos", "Neg", NULL};
 const char *             resonAlgStrMap[]                        = {"String1", "String2", "Tube1", "Tube2", "Tube3", NULL};
-const char *             outToStrMap[]                           = {"Main 1/2", "Main 3/4", "FX 1/2", "FX 3/4", "Bus 1/2", "Bus 3/4", NULL};
-const char *             outTo4OutStrMap[]                       = {"Main", "Fx", "Bus", NULL};
+const char *             outToStrMap[]                           = {"Out 1/2", "Out 3/4", "FX 1/2", "FX 3/4", "Bus 1/2", "Bus 3/4", NULL};
+const char *             outTo4OutStrMap[]                       = {"Out", "Fx", "Bus", NULL};
 const char *             inFxStrMap[]                            = {"1/2", "3/4", NULL};
 const char *             shapeTypeStrMap[]                       = {"sin", "tri", "saw", "squ", "sup", NULL};
 const char *             shapeOscATypeStrMap[]                   = {"sin", "tri", "saw", "squ", "p25", "p10", NULL};
@@ -89,8 +89,8 @@ const char *             invStrMap[]                             = {"Pos", "Inv"
 const char *             clkSrcStrMap[]                          = {"Internal", "Master", NULL};
 const char *             int16StrMap[]                           = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", NULL};
 const char *             divModeStrMap[]                         = {"Gated", "Toggled", NULL};
-const char *             out8StrMap[]                            = {"Out1", "Out2", "Out3", "Out4", "Out5", "Out6", "Out7", "Out8", NULL};
-const char *             in8StrMap[]                             = {"In1", "In2", "In3", "In4", "In5", "In6", "In7", "In8", NULL};
+const char *             out8StrMap[]                            = {"Out 1", "Out 2", "Out 3", "Out 4", "Out 5", "Out 6", "Out 7", "Out 8", NULL};
+const char *             in8StrMap[]                             = {"In 1", "In 2", "In 3", "In 4", "In 5", "In 6", "In 7", "In 8", NULL};
 const char *             rectStrMap[]                            = {"Half wave pos.", "Half wave neg.", "Full wave pos.", "Full wave neg.", NULL};
 const char *             shpStaticStrMap[]                       = {"Inv x3", "Inv x2", "x2", "x3", NULL};
 const char *             trigGateStrMap[]                        = {"Trig", "Gate", NULL};
@@ -113,7 +113,7 @@ const char *             oscShpBStrMap[]                         = {"Sine1", "Si
 const char *             dxFeedbackStrMap[]                      = {"0", "1", "2", "3", "4", "5", "6", "7", NULL};
 const char *             dxAlgStrMap[]                           = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", NULL};
 const char *             pShiftDelayStrMod[]                     = {"12.5ms", "25ms", "50ms", "100ms", NULL};
-const char *             twoToInSourceStrMap[]                   = {"In1/2", "In3/4", "Bus1/2", "Bus3/4", NULL};
+const char *             twoToInSourceStrMap[]                   = {"In 1/2", "In 3/4", "Bus 1/2", "Bus 3/4", NULL};
 const char *             fourToInSourceStrMap[]                  = {"In", "Bus", NULL};
 const char *             delayRangeStrMap[]                      = {"5ms", "25ms", "100ms", "500ms", "1.0s", "2.0s", "2.7s", NULL};
 const char *             delayABRangeStrMap[]                    = {"500ms", "1.0s", "2.0s", "2.7s", NULL};
@@ -420,12 +420,12 @@ const tParamLocation     paramLocationList[] = {
     //  1 Keyboard -- No params
     //  2 Unknown
     //  3 4-Out
-    {moduleType4toOut,     paramTypeMenu,        {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Out to",         3,   0, outTo4OutStrMap,                       NULL          },                         // 3 4-Out
-    {moduleType4toOut,     paramTypeBypass,      {{ 45,  -3}, { 5,  5}}, anchorBottomLeft,  "Bypass",         2,   1, NULL,                                  NULL          },
+    {moduleType4toOut,     paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Out to",         3,   0, outTo4OutStrMap,                       NULL          },                         // 3 4-Out
+    {moduleType4toOut,     paramTypeBypass,      {{ 39,  -3}, { 5,  5}}, anchorBottomLeft,  "Bypass",         2,   1, NULL,                                  NULL          },
     {moduleType4toOut,     paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Pad",            2,   0, padStrMap,                             NULL          },
     // 4 2-Out
-    {moduleType2toOut,     paramTypeMenu,        {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "Out to",         6,   0, outToStrMap,                           NULL          },                         // 4 2-Out
-    {moduleType2toOut,     paramTypeBypass,      {{ 45,  -3}, { 5,  5}}, anchorBottomLeft,  "Bypass",         2,   1, NULL,                                  NULL          },
+    {moduleType2toOut,     paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Out to",         6,   0, outToStrMap,                           NULL          },                         // 4 2-Out
+    {moduleType2toOut,     paramTypeBypass,      {{ 39,  -3}, { 5,  5}}, anchorBottomLeft,  "Bypass",         2,   1, NULL,                                  NULL          },
     {moduleType2toOut,     paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Pad",            2,   0, padStrMap,                             NULL          },
     //  5 Invert -- No params
     //  6 Unknown
@@ -1357,15 +1357,15 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeModAHD,     paramTypeMenu,        {{-20, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          },
     {moduleTypeModAHD,     paramTypeToggle,      {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, kbStrMap,                              offOnColourMap},
     // 170 2-In
-    {moduleType2toIn,      paramTypeMenu,        {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, twoToInSourceStrMap,                   NULL          },
-    {moduleType2toIn,      paramTypeBypass,      {{-24,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 167 On/Off
-    {moduleType2toIn,      paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   1, db12PadStrMap,                         NULL          },
+    {moduleType2toIn,      paramTypeMenu,        {{ 20,  -7}, { 7,  3}}, anchorBottomLeft,  "In from",             4,   0, twoToInSourceStrMap,                   NULL          },
+    {moduleType2toIn,      paramTypeBypass,      {{39,  -2}, { 5,  5}}, anchorBottomLeft, "Bypass",         2,   1, NULL,                                  NULL          },                         // 167 On/Off
+    {moduleType2toIn,      paramTypeMenu,        {{  3,  -7}, { 7,  3}}, anchorBottomLeft,  "Pad",             4,   1, db12PadStrMap,                         NULL          },
     // 171 4-In
-    {moduleType4toIn,      paramTypeMenu,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, fourToInSourceStrMap,                  NULL          },                         // 171 source
-    {moduleType4toIn,      paramTypeBypass,      {{-45,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 171 On/Off
-    {moduleType4toIn,      paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   1, db12PadStrMap,                         NULL          },                         // 171 pad
+    {moduleType4toIn,      paramTypeMenu,        {{ 20,  -7}, { 7,  3}}, anchorBottomLeft,  "In from",             2,   0, fourToInSourceStrMap,                  NULL          },                         // 171 source
+    {moduleType4toIn,      paramTypeBypass,      {{39,  -3}, { 5,  5}}, anchorBottomLeft, "Bypass",         2,   1, NULL,                                  NULL          },                         // 171 On/Off
+    {moduleType4toIn,      paramTypeMenu,        {{  3,  -7}, { 7,  3}}, anchorBottomLeft,  "Pad",             4,   1, db12PadStrMap,                         NULL          },                         // 171 pad
     // 172 DlySingleA
-    {moduleTypeDlySingleA, paramTypeTime,        {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          },                         // 158 Time
+    {moduleTypeDlySingleA, paramTypeTime,        {{ 50,  -6}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          },                         // 158 Time
     // 173 DlySingleB
     {moduleTypeDlySingleB, paramTypeTime,        {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          },                         // 158 Time
     {moduleTypeDlySingleB, paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 173 Time M
@@ -1578,13 +1578,13 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeKeyboard,    connectorDirOut, connectorTypeControl, {{ 72,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Exp",          labelLocLeft },
     // 2 Unknown
     // 3 4-Out
-    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-24,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "1",            labelLocUp   },          // 3 4-out
-    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-17,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "2",            labelLocUp   },
-    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-10,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "3",            labelLocUp   },
+    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-30,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "1",            labelLocUp   },          // 3 4-out
+    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-21,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "2",            labelLocUp   },
+    {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-12,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "3",            labelLocUp   },
     {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{ -3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "4",            labelLocUp   },
     //  4 2-Out
-    {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{-10,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },          // 4
-    {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },
+    {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{-12,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "L",           labelLocUp   },          // 4
+    {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{ -3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "R",           labelLocUp   },
     //  5 Invert
     {moduleTypeInvert,      connectorDirIn,  connectorTypeLogic,   {{-48,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft },          // 5 In 1
     {moduleTypeInvert,      connectorDirOut, connectorTypeLogic,   {{-33,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft },          // 5 Out 1
@@ -2351,12 +2351,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeModAHD,      connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",          labelLocLeft },          // 169 Env
     {moduleTypeModAHD,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 169 Out
     // 170 2-In
-    {moduleType2toIn,       connectorDirOut, connectorTypeAudio,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "L",            labelLocUp   },          // 170 OutL
+    {moduleType2toIn,       connectorDirOut, connectorTypeAudio,   {{-12,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "L",            labelLocUp   },          // 170 OutL
     {moduleType2toIn,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "R",            labelLocUp   },          // 170 OutR
     // 171 4-In
-    {moduleType4toIn,       connectorDirOut, connectorTypeAudio,   {{-45,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "1",            labelLocUp   },          // 170 Out1
-    {moduleType4toIn,       connectorDirOut, connectorTypeAudio,   {{-31,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "2",            labelLocUp   },          // 170 Out2
-    {moduleType4toIn,       connectorDirOut, connectorTypeAudio,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "3",            labelLocUp   },          // 170 Out3
+    {moduleType4toIn,       connectorDirOut, connectorTypeAudio,   {{-30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "1",            labelLocUp   },          // 170 Out1
+    {moduleType4toIn,       connectorDirOut, connectorTypeAudio,   {{-21,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "2",            labelLocUp   },          // 170 Out2
+    {moduleType4toIn,       connectorDirOut, connectorTypeAudio,   {{-12,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "3",            labelLocUp   },          // 170 Out3
     {moduleType4toIn,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "4",            labelLocUp   },          // 170 Out4
     // 172 DlySingleA
     {moduleTypeDlySingleA,  connectorDirIn,  connectorTypeAudio,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 172 In
@@ -2593,7 +2593,7 @@ const tVolumeLocation    volumeLocationList[] = {
     {moduleTypeMix4to1C,  volumeTypeMono,      {{ -4, 13}, { 3, 24}}, anchorTopRight},
     {moduleTypeCompress,  volumeTypeCompress,  {{-19,  7}, { 4, 50}}, anchorTopRight},
     {moduleType2toOut,    volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight},
-    {moduleType4toOut,    volumeTypeQuad,      {{-40,  6}, { 3, 10}}, anchorTopRight},
+    {moduleType4toOut,    volumeTypeQuad,      {{-50,  7}, { 3, 14}}, anchorTopRight},
     {moduleTypeFxtoIn,    volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight},
     {moduleTypeMix4to1S,  volumeTypeStereo,    {{ -9, 13}, { 3, 24}}, anchorTopRight},
     {moduleTypeMix4to1B,  volumeTypeMono,      {{-10,  6}, { 3, 10}}, anchorTopRight}, // XPos:231 YPos:10 H:2
@@ -2607,8 +2607,8 @@ const tVolumeLocation    volumeLocationList[] = {
     {moduleTypeFltVoice,  volumeTypeMono,      {{-10, 20}, { 3, 22}}, anchorTopRight}, // XPos:230 YPos:40 H:4
     {moduleTypeFltPhase,  volumeTypeMono,      {{-11, 22}, { 3, 18}}, anchorTopRight}, // XPos:227 YPos:55 H:5
     {moduleTypeFltComb,   volumeTypeMono,      {{-11, 20}, { 3, 22}}, anchorTopRight}, // XPos:227 YPos:40 H:4
-    {moduleType2toIn,     volumeTypeStereo,    {{-25,  6}, { 3, 10}}, anchorTopRight}, // XPos:205+231 YPos:10 H:2
-    {moduleType4toIn,     volumeTypeQuad,      {{-40,  6}, { 3, 10}}, anchorTopRight}, // XPos:153..231 YPos:10 H:2
+    {moduleType2toIn,     volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight}, // XPos:205+231 YPos:10 H:2
+    {moduleType4toIn,     volumeTypeQuad,      {{-50,  7}, { 3, 14}}, anchorTopRight}, // XPos:153..231 YPos:10 H:2
     {moduleTypeSeqEvent,  volumeTypeSequencer, {{ 20, 24}, {64,  5}}, anchorTopLeft },
     {moduleTypeSeqNote,   volumeTypeSequencer, {{ 20, 40}, {64,  5}}, anchorTopLeft },
     {moduleTypeSeqVal,    volumeTypeSequencer, {{ 20, 40}, {64,  5}}, anchorTopLeft },

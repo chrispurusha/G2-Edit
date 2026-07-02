@@ -1,6 +1,6 @@
   1 Keyboard OK (CT)
-  3 4-Out
-  4 2-Out OK OK (CT)
+  3 4-Out OK (CT)
+  4 2-Out OK (CT)
   7 OscB
   8 OscShpB check mode
   9 Oscar OK check Mode
@@ -45,6 +45,8 @@
 146 SeqLev OK(CT) apart from clashing value text, possibly need to consider park LED
 150 Compress OK (CT)
 161 MixFader OK (CT) except value needs to be 0 to 100 xx.x. 127=100 166=98.4 62=48.4, 63=49.2, 64=50, 65=50.8 as per Mix4-1C
+170 2-In OK (CT)
+171 4-In OK (CT)
 184 Mix1-1A OK (CT)
 185 Mix1-1S OK (CT)
 193 Mix4-1A OK (CT)
