@@ -604,7 +604,7 @@ void init_graphics(void) {
     double        scaleFactor       = 1;
     glfwGetMonitorWorkarea(monitor, &x, &y, &width, &height);
     glfwGetMonitorContentScale(monitor, &xScale, &yScale);
-    gContentScale = xScale;
+    //gContentScale = xScale;  // This seems to fix the non-retina mode
     windowWidth   = TARGET_FRAME_BUFF_WIDTH / xScale;
     windowHeight  = TARGET_FRAME_BUFF_HEIGHT / yScale;
 
