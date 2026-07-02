@@ -1207,11 +1207,11 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeNoteZone,   paramTypeMenu,        {{ 83,  -3}, { 7,  7}}, anchorBottomLeft,  "SChan",         21,   0, midiChanStrMap,                        NULL          },                         // 149 Send Channel
     {moduleTypeNoteZone,   paramTypeMenu,        {{ 60, -17}, { 7,  7}}, anchorBottomLeft,  "Thru",           2,   0, thruStrMap,                            NULL          },                         // 149 Thru mode
     // 150 Compress
-    {moduleTypeCompress,   paramTypeCommonDial,  {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Thr",           43,   0, NULL,                                  NULL          },                         // 150
-    {moduleTypeCompress,   paramTypeCommonDial,  {{ 24,  -3}, { 7, 14}}, anchorBottomLeft,  "Ratio",         67,   0, NULL,                                  NULL          },
-    {moduleTypeCompress,   paramTypeStrMap,      {{ 38,  -3}, { 7, 14}}, anchorBottomLeft,  "Att",          128,   0, compr_attack_timesStrMap,              NULL          },
-    {moduleTypeCompress,   paramTypeStrMap,      {{ 52,  -3}, { 7, 14}}, anchorBottomLeft,  "Rel",          128,   0, compr_release_timesStrMap,             NULL          },
-    {moduleTypeCompress,   paramTypeCommonDial,  {{ 66,  -3}, { 7, 14}}, anchorBottomLeft,  "RefLvl",        43,   0, NULL,                                  NULL          },
+    {moduleTypeCompress,   paramTypeCommonDial,  {{ 6,  -3}, { 7, 14}}, anchorBottomLeft,  "Thr",           43,   0, NULL,                                  NULL          },                         // 150
+    {moduleTypeCompress,   paramTypeCommonDial,  {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Ratio",         67,   0, NULL,                                  NULL          },
+    {moduleTypeCompress,   paramTypeStrMap,      {{ 34,  -3}, { 7, 14}}, anchorBottomLeft,  "Att",          128,   0, compr_attack_timesStrMap,              NULL          },
+    {moduleTypeCompress,   paramTypeStrMap,      {{ 48,  -3}, { 7, 14}}, anchorBottomLeft,  "Rel",          128,   0, compr_release_timesStrMap,             NULL          },
+    {moduleTypeCompress,   paramTypeCommonDial,  {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "RefLvl",        43,   0, NULL,                                  NULL          },
     {moduleTypeCompress,   paramTypeToggle,      {{ 27,   5}, { 7,  7}}, anchorTopLeft,     NULL,             2,   1, sideChainStrMap,                       offOnColourMap},
     {moduleTypeCompress,   paramTypeBypass,      {{ -3,   0}, { 5,  5}}, anchorMiddleRight, NULL,             2,   1, NULL,                                  NULL          },
     // 151 Unknown
@@ -2591,7 +2591,7 @@ const tModeLocation      modeLocationList[] = {
 
 const tVolumeLocation    volumeLocationList[] = {
     {moduleTypeMix4to1C,  volumeTypeMono,      {{ -4, 13}, { 3, 24}}, anchorTopRight},
-    {moduleTypeCompress,  volumeTypeCompress,  {{-18,  6}, { 4, 38}}, anchorTopRight},
+    {moduleTypeCompress,  volumeTypeCompress,  {{-19,  7}, { 4, 50}}, anchorTopRight},
     {moduleType2toOut,    volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight},
     {moduleType4toOut,    volumeTypeQuad,      {{-40,  6}, { 3, 10}}, anchorTopRight},
     {moduleTypeFxtoIn,    volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight},
