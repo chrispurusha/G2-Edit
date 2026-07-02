@@ -388,7 +388,7 @@ const tModuleProperties  gModuleProperties[]  = {
     {"DlyEight",     3, volumeTypeNone,      ledTypeNo },
     {"DlyStereo",    5, volumeTypeNone,      ledTypeNo },
     {"OscPM",        3, volumeTypeNone,      ledTypeNo },
-    {"Mix1-1A",      3, volumeTypeNone,      ledTypeNo },
+    {"Mix1-1A",      2, volumeTypeNone,      ledTypeNo },
     {"Mix1-1S",      3, volumeTypeNone,      ledTypeNo },
     {"Sw1-2M",       2, volumeTypeNone,      ledTypeNo },
     {"Sw2-1M",       2, volumeTypeNone,      ledTypeNo },
@@ -1451,9 +1451,9 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscPM,      paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 9 Bypass
     {moduleTypeOscPM,      paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                         // Pitch Mode
     // 184 Mix1-1A
-    {moduleTypeMix1to1A,   paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 184 Level
-    {moduleTypeMix1to1A,   paramTypeEnable,      {{ 40,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 184 Enable1
-    {moduleTypeMix1to1A,   paramTypeMenu,        {{ 30, -25}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          },                         // 184 Exp
+    {moduleTypeMix1to1A,   paramTypeCommonDial,  {{ 64,  6}, { 7, 14}}, anchorTopLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 184 Level
+    {moduleTypeMix1to1A,   paramTypeEnable,      {{ 40, 6}, {14,  4}}, anchorTopLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 184 Enable1
+    {moduleTypeMix1to1A,   paramTypeMenu,        {{ 28, 6}, { 7,  7}}, anchorTopLeft,  NULL,             3,   0, expStrMap,                             NULL          },                         // 184 Exp
     // 185 Mix1-1S
     {moduleTypeMix1to1S,   paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 185 Level
     {moduleTypeMix1to1S,   paramTypeEnable,      {{ 40,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 185 Enable1
@@ -2433,8 +2433,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeOscPM,       connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // Pitch
     {moduleTypeOscPM,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // Out
     // 184 Mix1-1A
-    {moduleTypeMix1to1A,    connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocRight}, // 184 In
-    {moduleTypeMix1to1A,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Chain",        labelLocRight}, // 184 Chain
+    {moduleTypeMix1to1A,    connectorDirIn,  connectorTypeControl, {{-3,  6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, NULL,           labelLocRight}, // 184 In
+    {moduleTypeMix1to1A,    connectorDirIn,  connectorTypeControl, {{  3,  6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,  "Chain",        labelLocRight}, // 184 Chain
     {moduleTypeMix1to1A,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocRight}, // 184 Out
     // 185 Mix1-1S
     {moduleTypeMix1to1S,    connectorDirIn,  connectorTypeControl, {{-24,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "L",            labelLocLeft }, // 185 InL
