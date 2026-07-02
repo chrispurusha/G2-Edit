@@ -21,7 +21,7 @@
  29 MetNoise OK
  31 Noise OK
  32 Eq2Band OK
- 33 Eq3Band OK
+ 33 Eq3Band OK (CT)
  34 ShpExp OK
  38 Pulse OK
  40 Mix8-1B OK
@@ -42,7 +42,7 @@
 144 SeqEvent OK(CT) apart from clashing value text, possibly need to consider park LED
 145 SeqVal OK(CT) apart from clashing value text, possibly need to consider park LED 
 146 SeqLev OK(CT) apart from clashing value text, possibly need to consider park LED
-161 MixFader OK (CT) except value needs to be 0 to 100 xx.x. 127=100 166=98.4 62=48.4, 63=49.2, 64=50, 65=50.8
+161 MixFader OK (CT) except value needs to be 0 to 100 xx.x. 127=100 166=98.4 62=48.4, 63=49.2, 64=50, 65=50.8 as per Mix4-1C
 184 Mix1-1A OK (CT)
 185 Mix1-1S OK (CT)
 193 Mix4-1A OK (CT)
