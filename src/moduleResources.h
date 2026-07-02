@@ -1023,10 +1023,10 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 31, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                       // 123 L2
     {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 51, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                       // 123 L3
     {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 71, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                       // 123 L4
-    {moduleTypeMix4to1C,   paramTypeEnable,      {{  5,  -1}, {17,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                       // 123 Enable1
-    {moduleTypeMix4to1C,   paramTypeEnable,      {{ 25,  -1}, {17,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                       // 123 Enable2
-    {moduleTypeMix4to1C,   paramTypeEnable,      {{ 45,  -1}, {17,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                       // 123 Enable3
-    {moduleTypeMix4to1C,   paramTypeEnable,      {{ 65,  -1}, {17,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                       // 123 Enable4
+    {moduleTypeMix4to1C,   paramTypeEnable,      {{  5,  -5}, {17,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                       // 123 Enable1
+    {moduleTypeMix4to1C,   paramTypeEnable,      {{ 25,  -5}, {17,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                       // 123 Enable2
+    {moduleTypeMix4to1C,   paramTypeEnable,      {{ 45,  -5}, {17,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                       // 123 Enable3
+    {moduleTypeMix4to1C,   paramTypeEnable,      {{ 65,  -5}, {17,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                       // 123 Enable4
     {moduleTypeMix4to1C,   paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,     "Pad",            2,   0, padStrMap,                             NULL          },                       // 123 Pad
     {moduleTypeMix4to1C,   paramTypeMenu,        {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Curve",          3,   0, expStrMap,                             NULL          },                       // 123 Exp
     // 124 Mux8-1 -- No params
@@ -1061,10 +1061,10 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeMix4to1S,   paramTypeCommonDial,  {{ 31, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                      // 123 L2
     {moduleTypeMix4to1S,   paramTypeCommonDial,  {{ 51, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                      // 123 L3
     {moduleTypeMix4to1S,   paramTypeCommonDial,  {{ 71, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                      // 123 L4
-    {moduleTypeMix4to1S,   paramTypeEnable,      {{  5,  -4}, {17,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 123 Enable1
-    {moduleTypeMix4to1S,   paramTypeEnable,      {{ 25,  -4}, {17,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 123 Enable2
-    {moduleTypeMix4to1S,   paramTypeEnable,      {{ 45,  -4}, {17,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 123 Enable3
-    {moduleTypeMix4to1S,   paramTypeEnable,      {{ 65,  -4}, {17,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 123 Enable4
+    {moduleTypeMix4to1S,   paramTypeEnable,      {{  5,  -5}, {17,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 123 Enable1
+    {moduleTypeMix4to1S,   paramTypeEnable,      {{ 25,  -5}, {17,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 123 Enable2
+    {moduleTypeMix4to1S,   paramTypeEnable,      {{ 45,  -5}, {17,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 123 Enable3
+    {moduleTypeMix4to1S,   paramTypeEnable,      {{ 65,  -5}, {17,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 123 Enable4
     {moduleTypeMix4to1S,   paramTypeMenu,        {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Curve",          3,   0, expStrMap,                             NULL          },                      // 123 Exp
     // 141 CtrlSend
     {moduleTypeCtrlSend,   paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Ctrl",         128,   1, NULL,                                  NULL          },                      // 141 Ctrl
