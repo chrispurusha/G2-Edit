@@ -847,9 +847,9 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeFltClassic, paramTypeBypass,      {{ -3,   0}, { 5,  5}}, anchorMiddleRight, NULL,             2,   1, NULL,                                  NULL          },
     // 93 Unknown
     // 94 StChorus
-    {moduleTypeStChorus,   paramTypeCommonDial,  {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Detune",       128,   0, NULL,                                  NULL          },                         // 94
-    {moduleTypeStChorus,   paramTypeCommonDial,  {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  "Amount",       128,   0, NULL,                                  NULL          },
-    {moduleTypeStChorus,   paramTypeBypass,      {{ -3,   0}, { 5,  5}}, anchorMiddleRight, NULL,             2,   1, NULL,                                  NULL          },
+    {moduleTypeStChorus,   paramTypeCommonDial,  {{ 33,  -3}, { 7, 14}}, anchorBottomLeft,  "Detune",       128,   0, NULL,                                  NULL          },                         // 94
+    {moduleTypeStChorus,   paramTypeCommonDial,  {{ 51,  -3}, { 7, 14}}, anchorBottomLeft,  "Amount",       128,   0, NULL,                                  NULL          },
+    {moduleTypeStChorus,   paramTypeBypass,      {{ -9,   1}, { 5,  5}}, anchorMiddleRight, NULL,             2,   1, NULL,                                  NULL          },
     // 95 Unknown
     // 96 OscD
     {moduleTypeOscD,       paramTypeFreq,        {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },                         // 96 Tune
@@ -2001,9 +2001,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeFltClassic,  connectorDirIn,  connectorTypeControl, {{  3,  15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     NULL,           labelLocUp   },
     // 93 Unknown
     // 94 StChorus
-    {moduleTypeStChorus,    connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },          // 94
-    {moduleTypeStChorus,    connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
-    {moduleTypeStChorus,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
+    {moduleTypeStChorus,    connectorDirIn,  connectorTypeAudio,   {{ -9,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },          // 94
+    {moduleTypeStChorus,    connectorDirOut, connectorTypeAudio,   {{-15,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "L",           labelLocLeft   },
+    {moduleTypeStChorus,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "R",           labelLocLeft   },
     // 95 Unknown
     // 96 OscD
     {moduleTypeOscD,        connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},          // 96 Pitch

@@ -34,10 +34,11 @@
  48 MixStereo OK
  51 FltNord OK
  66 Mix2-1B OK (CT)
- 94 StChorus OK
+ 94 StChorus OK (CT)
  97 OscA Works. Needs new UI element for the Freq control (param 0) which takes into account the value of param 6 Pitch Type.
 121 SeqNote OK(CT) possibly need to consider park LED
 123 Mix4-1C OK (CT)
+126 Name OK (CT)
 140 Mix4-1S OK (CT)
 144 SeqEvent OK(CT) apart from clashing value text, possibly need to consider park LED
 145 SeqVal OK(CT) apart from clashing value text, possibly need to consider park LED 
@@ -47,3 +48,7 @@
 185 Mix1-1S OK (CT)
 193 Mix4-1A OK (CT)
 194 Mix2-1A OK (CT)
+204 RndClkA
+205 RndTrig
+206 RndClkB
+208 RndPattern
