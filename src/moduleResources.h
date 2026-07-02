@@ -1282,24 +1282,24 @@ const tParamLocation     paramLocationList[] = {
     // 159 CompSig -- no params
     // 160 ZeroCnt -- no params
     // 161 MixFader
-    {moduleTypeMixFader,   paramTypeMixLevel,    {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev1
-    {moduleTypeMixFader,   paramTypeMixLevel,    {{ 29,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev2
-    {moduleTypeMixFader,   paramTypeMixLevel,    {{ 38,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev3
-    {moduleTypeMixFader,   paramTypeMixLevel,    {{ 47,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev4
-    {moduleTypeMixFader,   paramTypeMixLevel,    {{ 56,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev5
-    {moduleTypeMixFader,   paramTypeMixLevel,    {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev6
-    {moduleTypeMixFader,   paramTypeMixLevel,    {{ 74,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev7
-    {moduleTypeMixFader,   paramTypeMixLevel,    {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev8
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 20, -20}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On1
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 29, -20}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On2
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 38, -20}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On3
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 47, -20}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On4
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 56, -20}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On5
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 65, -20}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On6
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 74, -20}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On7
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 83, -20}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On8
-    {moduleTypeMixFader,   paramTypeMenu,        {{  3, -28}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          },                         // 161 ExpLin
-    {moduleTypeMixFader,   paramTypeMenu,        {{  3, -35}, { 7,  7}}, anchorBottomLeft,  "Pad",            3,   0, db12BPadStrMap,                        NULL          },                         // 161 Pad
+    {moduleTypeMixFader,   paramTypeSlider,    {{ 8,  28}, { 6, 65}}, anchorTopLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev1
+    {moduleTypeMixFader,   paramTypeSlider,    {{ 18,  28}, { 6, 65}}, anchorTopLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev2
+    {moduleTypeMixFader,   paramTypeSlider,    {{ 28,  28}, { 6, 65}}, anchorTopLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev3
+    {moduleTypeMixFader,   paramTypeSlider,    {{ 38,  28}, { 6, 65}}, anchorTopLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev4
+    {moduleTypeMixFader,   paramTypeSlider,    {{ 48,  28}, { 6, 65}}, anchorTopLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev5
+    {moduleTypeMixFader,   paramTypeSlider,    {{ 58,  28}, { 6, 65}}, anchorTopLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev6
+    {moduleTypeMixFader,   paramTypeSlider,    {{ 68,  28}, { 6, 65}}, anchorTopLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev7
+    {moduleTypeMixFader,   paramTypeSlider,    {{ 78,  28}, { 6, 65}}, anchorTopLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev8
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 2, -11}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On1
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 12, -5}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On2
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 22, -11}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On3
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 32, -5}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On4
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 42, -11}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On5
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 52, -5}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On6
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 62, -11}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On7
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 72, -5}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On8
+    {moduleTypeMixFader,   paramTypeMenu,        {{  3, 6}, { 7,  7}}, anchorTopLeft,  "Curve",             3,   0, expStrMap,                             NULL          },                         // 161 ExpLin
+    {moduleTypeMixFader,   paramTypeMenu,        {{  20, 6}, { 7,  7}}, anchorTopLeft,  "Pad",            3,   0, db12BPadStrMap,                        NULL          },                         // 161 Pad
     // 162 FltComb
     {moduleTypeFltComb,    paramTypeFreq,        {{ 22, -10}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,   0, NULL,                                  NULL          },                         // 102 Freq
     {moduleTypeFltComb,    paramTypeCommonDial,  {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                         // 102 Pitch M
@@ -2291,15 +2291,15 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeZeroCnt,     connectorDirIn,  connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 160 In
     {moduleTypeZeroCnt,     connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 160 Out
     // 161 MixFader
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{  3,   3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "1",            labelLocUp   },          // 161 In1
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 13,   3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "2",            labelLocUp   },          // 161 In2
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 23,   3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "3",            labelLocUp   },          // 161 In3
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 33,   3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "4",            labelLocUp   },          // 161 In4
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 43,   3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "5",            labelLocUp   },          // 161 In5
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 53,   3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "6",            labelLocUp   },          // 161 In6
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 63,   3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "7",            labelLocUp   },          // 161 In7
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 73,   3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "8",            labelLocUp   },          // 161 In8
-    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ -3,   3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Chain",        labelLocLeft },          // 161 Chain
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{  8,   19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "1",            labelLocUp   },          // 161 In1
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 18,   19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "2",            labelLocUp   },          // 161 In2
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 28,   19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "3",            labelLocUp   },          // 161 In3
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 38,   19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "4",            labelLocUp   },          // 161 In4
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 48,   19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "5",            labelLocUp   },          // 161 In5
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 58,   19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "6",            labelLocUp   },          // 161 In6
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 68,   19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "7",            labelLocUp   },          // 161 In7
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ 78,   19}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "8",            labelLocUp   },          // 161 In8
+    {moduleTypeMixFader,    connectorDirIn,  connectorTypeAudio,   {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Chain",        labelLocLeft },          // 161 Chain
     {moduleTypeMixFader,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 161 Out
     // 162 FltComb
     {moduleTypeFltComb,     connectorDirIn,  connectorTypeAudio,   {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 162 In
@@ -2600,7 +2600,7 @@ const tVolumeLocation    volumeLocationList[] = {
     {moduleTypeMix8to1A,  volumeTypeMono,      {{-10,  6}, { 3, 10}}, anchorTopRight}, // XPos:231 YPos:10 H:2
     {moduleTypeMix8to1B,  volumeTypeMono,      {{-15,  6}, { 3, 25}}, anchorTopRight}, // XPos:242 YPos:27 H:4
     {moduleTypeMixStereo, volumeTypeStereo,    {{-17, 22}, { 3, 15}}, anchorTopRight}, // XPos:207+231 YPos:55 H:5
-    {moduleTypeMixFader,  volumeTypeMono,      {{ -6, 23}, { 3, 55}}, anchorTopRight}, // XPos:242 YPos:102 H:9
+    {moduleTypeMixFader,  volumeTypeMono,      {{ -4, 23}, { 3, 55}}, anchorTopRight}, // XPos:242 YPos:102 H:9
     {moduleTypeEq2Band,   volumeTypeMono,      {{-11, 17}, { 3, 18}}, anchorTopRight}, // XPos:227 YPos:25 H:3
     {moduleTypeEq3band,   volumeTypeMono,      {{-11, 20}, { 3, 22}}, anchorTopRight}, // XPos:227 YPos:40 H:4
     {moduleTypeEqPeak,    volumeTypeMono,      {{-11, 20}, { 3, 22}}, anchorTopRight}, // XPos:227 YPos:40 H:4
