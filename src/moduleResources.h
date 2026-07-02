@@ -59,7 +59,7 @@ const char *             bipPosNegStrMap[]                       = {"BiPol", "Po
 const char *             resonAlgStrMap[]                        = {"String1", "String2", "Tube1", "Tube2", "Tube3", NULL};
 const char *             outToStrMap[]                           = {"Out 1/2", "Out 3/4", "FX 1/2", "FX 3/4", "Bus 1/2", "Bus 3/4", NULL};
 const char *             outTo4OutStrMap[]                       = {"Out", "Fx", "Bus", NULL};
-const char *             inFxStrMap[]                            = {"1/2", "3/4", NULL};
+const char *             inFxStrMap[]                            = {"FX 1/2", "FX 3/4", NULL};
 const char *             shapeTypeStrMap[]                       = {"sin", "tri", "saw", "squ", "sup", NULL};
 const char *             shapeOscATypeStrMap[]                   = {"sin", "tri", "saw", "squ", "p25", "p10", NULL};
 const char *             reverbTypeStrMap[]                      = {"Small", "Medium", "Large", "Hall", NULL};
@@ -1036,9 +1036,9 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeWahWah,     paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 125 Bypass
     // 126 Name
     // 127 Fx-In
-    {moduleTypeFxtoIn,     paramTypeMenu,        {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  "In FX",          2,   0, inFxStrMap,                            NULL          },                         // 127 In
-    {moduleTypeFxtoIn,     paramTypeBypass,      {{-35,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          },                         // 127 Bypass
-    {moduleTypeFxtoIn,     paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Pad",            4,   0, db12PadStrMap,                         NULL          },                         // 127 Pad
+    {moduleTypeFxtoIn,     paramTypeMenu,        {{ 20,  -7}, { 7,  3}}, anchorBottomLeft,  "In from",          2,   0, inFxStrMap,                            NULL          },                         // 127 In
+    {moduleTypeFxtoIn,     paramTypeBypass,      {{39,  -3}, { 5,  5}}, anchorBottomLeft, "Bypass",             2,   1, NULL,                                  NULL          },                         // 127 Bypass
+    {moduleTypeFxtoIn,     paramTypeMenu,        {{  3,  -7}, { 7,  3}}, anchorBottomLeft,  "Pad",            4,   0, db12PadStrMap,                         NULL          },                         // 127 Pad
     // 128 MinMax -- No params
     // 128 Unknown
     // 130 BinCounter -- No params
@@ -2136,12 +2136,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeWahWah,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // 112 Out
     // 126 Name
     // 127 Fx-In
-    {moduleTypeFxtoIn,      connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 127
-    {moduleTypeFxtoIn,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
+    {moduleTypeFxtoIn,      connectorDirOut, connectorTypeAudio,   {{-12,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "L",           labelLocUp   },          // 127
+    {moduleTypeFxtoIn,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "R",           labelLocUp   },
     // 128 MinMax
     {moduleTypeMinMax,      connectorDirIn,  connectorTypeControl, {{ 40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "A",            labelLocLeft },          // 128 In A
     {moduleTypeMinMax,      connectorDirIn,  connectorTypeControl, {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "B",            labelLocLeft },          // 128 In B
-    {moduleTypeMinMax,      connectorDirOut, connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Min",          labelLocLeft },          // 128 Min Out
+    {moduleTypeMinMax,      connectorDirOut, connectorTypeControl, {{-12,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Min",          labelLocLeft },          // 128 Min Out
     {moduleTypeMinMax,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Max",          labelLocLeft },          // 128 Max Out
     // 128 Unknown
     // 130 BinCounter
