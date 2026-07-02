@@ -566,17 +566,17 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeNoise,      paramTypeCommonDial,  {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "Color",        128,   0, NULL,                                  NULL          },                         // 31 Color  *** Or special dial
     {moduleTypeNoise,      paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 31 Bypass
     // 32 Eq2Band
-    {moduleTypeEq2Band,    paramTypedB,          {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Lo (80Hz)",    128,  64, NULL,                                  NULL          },                         // 32 Lo Gain
-    {moduleTypeEq2Band,    paramTypedB,          {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Hi (12kHz)",   128,  64, NULL,                                  NULL          },                         // 32 Hi Gain
-    {moduleTypeEq2Band,    paramTypeCommonDial,  {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128, 127, NULL,                                  NULL          },                         // 32 Level
-    {moduleTypeEq2Band,    paramTypeBypass,      {{ -3,  -9}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 32 Bypass
-    {moduleTypeEq2Band,    paramTypeMenu,        {{ 30, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, eq2BandLoStrMap,                       NULL          },                         // 32 Lo Freq
-    {moduleTypeEq2Band,    paramTypeMenu,        {{ 50, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   2, eq2BandHiStrMap,                       NULL          },                         // 32 Hi Freq
+    {moduleTypeEq2Band,    paramTypedB,          {{ 25,  -3}, { 7, 14}}, anchorBottomLeft,  "Lo (80Hz)",    128,  64, NULL,                                  NULL          },                         // 32 Lo Gain
+    {moduleTypeEq2Band,    paramTypedB,          {{ 43,  -3}, { 7, 14}}, anchorBottomLeft,  "Hi (12kHz)",   128,  64, NULL,                                  NULL          },                         // 32 Hi Gain
+    {moduleTypeEq2Band,    paramTypeCommonDial,  {{ 5,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128, 127, NULL,                                  NULL          },                         // 32 Level
+    {moduleTypeEq2Band,    paramTypeBypass,      {{ -3,  1}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 32 Bypass
+    {moduleTypeEq2Band,    paramTypeMenu,        {{ 25, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, eq2BandLoStrMap,                       NULL          },                         // 32 Lo Freq
+    {moduleTypeEq2Band,    paramTypeMenu,        {{ 43, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   2, eq2BandHiStrMap,                       NULL          },                         // 32 Hi Freq
     // 33 Eq3Band
-    {moduleTypeEq3band,    paramTypedB,          {{  5,  -3}, { 7, 14}}, anchorBottomLeft,  "Lo",           128,  64, NULL,                                  NULL          },                         // 33 Lo Gain
+    {moduleTypeEq3band,    paramTypedB,          {{  4,  -3}, { 7, 14}}, anchorBottomLeft,  "Lo",           128,  64, NULL,                                  NULL          },                         // 33 Lo Gain
     {moduleTypeEq3band,    paramTypedB,          {{ 22,  -3}, { 7, 14}}, anchorBottomLeft,  "MidGn",        128,  64, NULL,                                  NULL          },                         // 33 Mid Gain
     {moduleTypeEq3band,    paramTypeGeneralFreq, {{ 39,  -3}, { 7, 14}}, anchorBottomLeft,  "Freq",         128,  64, NULL,                                  NULL          },                         // 33 Mid Freq
-    {moduleTypeEq3band,    paramTypedB,          {{ 56,  -3}, { 7, 14}}, anchorBottomLeft,  "Hi",           128,  64, NULL,                                  NULL          },                         // 33 Hi Gain
+    {moduleTypeEq3band,    paramTypedB,          {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Hi",           128,  64, NULL,                                  NULL          },                         // 33 Hi Gain
     {moduleTypeEq3band,    paramTypeCommonDial,  {{ -20,  -3}, { 7, 14}}, anchorBottomRight,  "Level",        128, 127, NULL,                                  NULL          },                         // 33 Level
     {moduleTypeEq3band,    paramTypeBypass,      {{ -3,  23}, { 5,  5}}, anchorTopRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 33 Bypass
     {moduleTypeEq3band,    paramTypeMenu,        {{  4, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, eq2BandLoStrMap,                       NULL          },                         // 33 Lo Freq
@@ -1722,7 +1722,7 @@ const tConnectorLocation connectorLocationList[] = {
     // 31 Noise
     {moduleTypeNoise,       connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 31 Out
     // 32 Eq2Band
-    {moduleTypeEq2Band,     connectorDirIn,  connectorTypeAudio,   {{ -3, -15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 32 In
+    {moduleTypeEq2Band,     connectorDirIn,  connectorTypeAudio,   {{ -3, 6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, NULL,           labelLocUp   },          // 32 In
     {moduleTypeEq2Band,     connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 32 Out
     // 33 Eq3Band
     {moduleTypeEq3band,     connectorDirIn,  connectorTypeAudio,   {{ -3, 6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, NULL,           labelLocUp   },          // 33 In
@@ -2601,7 +2601,7 @@ const tVolumeLocation    volumeLocationList[] = {
     {moduleTypeMix8to1B,  volumeTypeMono,      {{-15,  6}, { 3, 25}}, anchorTopRight}, // XPos:242 YPos:27 H:4
     {moduleTypeMixStereo, volumeTypeStereo,    {{-17, 22}, { 3, 15}}, anchorTopRight}, // XPos:207+231 YPos:55 H:5
     {moduleTypeMixFader,  volumeTypeMono,      {{ -4, 16}, { 3, 80}}, anchorTopRight}, // XPos:242 YPos:102 H:9
-    {moduleTypeEq2Band,   volumeTypeMono,      {{-11, 17}, { 3, 18}}, anchorTopRight}, // XPos:227 YPos:25 H:3
+    {moduleTypeEq2Band,   volumeTypeMono,      {{-11, 6}, { 3, 28}}, anchorTopRight}, // XPos:227 YPos:25 H:3
     {moduleTypeEq3band,   volumeTypeMono,      {{-11, 6}, { 3, 40}}, anchorTopRight}, // XPos:227 YPos:40 H:4
     {moduleTypeEqPeak,    volumeTypeMono,      {{-11, 20}, { 3, 22}}, anchorTopRight}, // XPos:227 YPos:40 H:4
     {moduleTypeFltVoice,  volumeTypeMono,      {{-10, 20}, { 3, 22}}, anchorTopRight}, // XPos:230 YPos:40 H:4

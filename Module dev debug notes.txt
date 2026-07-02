@@ -20,7 +20,7 @@
  28 Saturate OK
  29 MetNoise OK
  31 Noise OK
- 32 Eq2Band OK
+ 32 Eq2Band OK (CT)
  33 Eq3Band OK (CT)
  34 ShpExp OK
  38 Pulse OK
