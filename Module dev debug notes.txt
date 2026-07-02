@@ -39,6 +39,7 @@
 121 SeqNote OK(CT) possibly need to consider park LED
 123 Mix4-1C OK (CT)
 126 Name OK (CT)
+127 Fx-In OK (CT)
 140 Mix4-1S OK (CT)
 144 SeqEvent OK(CT) apart from clashing value text, possibly need to consider park LED
 145 SeqVal OK(CT) apart from clashing value text, possibly need to consider park LED 
