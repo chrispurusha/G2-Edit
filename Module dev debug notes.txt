@@ -1,44 +1,48 @@
-7 OscB Params OK. All inputs and outputs tested OK.
-8 OK *** except Mode
-9 OK *** except Mode
-12 Reverb OK
-13 OscString OK
-15 Sw8-1 Needs more resources
-17 ValSw1-2 Needs more resources
-18 X-fade OK
-19 Mix4-1B OK
-20 EnvADSR OK (new table for ADRTime values). *** LED doesn't work as intended.
-22 PartQuant OK *** Needs better dial values from 0 to plus minus 63
-23 ModADSR OK
-24 LfoC OK *** Needs to check Range Sub parameter values
-25 LfoShpA OK
-26 LfoA OK
-27 OscMaster OK
-28 Saturate OK
-29 MetNoise OK
-31 Noise OK
-32 Eq2Band OK
-33 Eq3Band OK
-34 ShpExp OK
-38 Pulse OK
-40 Mix8-1B OK
-41 EnvH OK
-42 Delay OK
-43 Constant OK
-45 FltVowel OK
-46 EnvAHD OK
-47 Pan OK
-48 MixStereo OK
-51 FltNord OK
-66 Mix2-1B OK (CT)
-94 StChorus OK
-97 OscA Works. Needs new UI element for the Freq control (param 0) which takes into account the value of param 6 Pitch Type.
+  1 Keyboard
+  3 4-Out
+  4 2-Out OK (CT)
+  7 OscB
+  8 OscShpB check mode
+  9 Oscar OK check Mode
+ 12 Reverb OK
+ 13 OscString OK
+ 15 Sw8-1 Needs more resources
+ 17 ValSw1-2 Needs more resources
+ 18 X-fade OK
+ 19 Mix4-1B OK
+ 20 EnvADSR OK (CT) check values though
+ 22 PartQuant OK *** Needs better dial values from 0 to plus minus 63
+ 23 ModADSR OK
+ 24 LfoC OK *** Needs to check Range Sub parameter values
+ 25 LfoShpA OK
+ 26 LfoA OK
+ 27 OscMaster OK
+ 28 Saturate OK
+ 29 MetNoise OK
+ 31 Noise OK
+ 32 Eq2Band OK
+ 33 Eq3Band OK
+ 34 ShpExp OK
+ 38 Pulse OK
+ 40 Mix8-1B OK
+ 41 EnvH OK
+ 42 Delay OK
+ 43 Constant OK
+ 45 FltVowel OK
+ 46 EnvAHD OK
+ 47 Pan OK
+ 48 MixStereo OK
+ 51 FltNord OK
+ 66 Mix2-1B OK (CT)
+ 94 StChorus OK
+ 97 OscA Works. Needs new UI element for the Freq control (param 0) which takes into account the value of param 6 Pitch Type.
 121 SeqNote OK(CT) possibly need to consider park LED
 123 Mix4-1C OK (CT)
 140 Mix4-1S OK (CT)
 144 SeqEvent OK(CT) apart from clashing value text, possibly need to consider park LED
 145 SeqVal OK(CT) apart from clashing value text, possibly need to consider park LED 
 146 SeqLev OK(CT) apart from clashing value text, possibly need to consider park LED
+161 MixFader OK (CT) except value needs to be 0 to 100 xx.x. 127=100 166=98.4 62=48.4, 63=49.2, 64=50, 65=50.8
 184 Mix1-1A OK (CT)
 185 Mix1-1S OK (CT)
 193 Mix4-1A OK (CT)

@@ -1654,7 +1654,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeMix4to1B,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Chain",        labelLocRight},          // 19 Chain
     {moduleTypeMix4to1B,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 19 Out
     // 20 EnvADSR
-    {moduleTypeEnvADSR,     connectorDirIn,  connectorTypeControl, {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },          // 20
+    {moduleTypeEnvADSR,     connectorDirIn,  connectorTypeControl, {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },          // 20
     {moduleTypeEnvADSR,     connectorDirIn,  connectorTypeLogic,   {{  3,  15}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Gate",         labelLocRight},
     {moduleTypeEnvADSR,     connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "AM",           labelLocRight},
     {moduleTypeEnvADSR,     connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",          labelLocUp   },
@@ -2592,15 +2592,15 @@ const tModeLocation      modeLocationList[] = {
 const tVolumeLocation    volumeLocationList[] = {
     {moduleTypeMix4to1C,  volumeTypeMono,      {{ -4, 13}, { 3, 24}}, anchorTopRight},
     {moduleTypeCompress,  volumeTypeCompress,  {{-18,  6}, { 4, 38}}, anchorTopRight},
-    {moduleType2toOut,    volumeTypeStereo,    {{-25,  6}, { 3, 10}}, anchorTopRight},
+    {moduleType2toOut,    volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight},
     {moduleType4toOut,    volumeTypeQuad,      {{-40,  6}, { 3, 10}}, anchorTopRight},
-    {moduleTypeFxtoIn,    volumeTypeStereo,    {{-25,  6}, { 3, 10}}, anchorTopRight},
+    {moduleTypeFxtoIn,    volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight},
     {moduleTypeMix4to1S,  volumeTypeStereo,    {{ -9, 13}, { 3, 24}}, anchorTopRight},
     {moduleTypeMix4to1B,  volumeTypeMono,      {{-10,  6}, { 3, 10}}, anchorTopRight}, // XPos:231 YPos:10 H:2
     {moduleTypeMix8to1A,  volumeTypeMono,      {{-10,  6}, { 3, 10}}, anchorTopRight}, // XPos:231 YPos:10 H:2
     {moduleTypeMix8to1B,  volumeTypeMono,      {{-15,  6}, { 3, 25}}, anchorTopRight}, // XPos:242 YPos:27 H:4
     {moduleTypeMixStereo, volumeTypeStereo,    {{-17, 22}, { 3, 15}}, anchorTopRight}, // XPos:207+231 YPos:55 H:5
-    {moduleTypeMixFader,  volumeTypeMono,      {{ -4, 23}, { 3, 55}}, anchorTopRight}, // XPos:242 YPos:102 H:9
+    {moduleTypeMixFader,  volumeTypeMono,      {{ -4, 16}, { 3, 80}}, anchorTopRight}, // XPos:242 YPos:102 H:9
     {moduleTypeEq2Band,   volumeTypeMono,      {{-11, 17}, { 3, 18}}, anchorTopRight}, // XPos:227 YPos:25 H:3
     {moduleTypeEq3band,   volumeTypeMono,      {{-11, 20}, { 3, 22}}, anchorTopRight}, // XPos:227 YPos:40 H:4
     {moduleTypeEqPeak,    volumeTypeMono,      {{-11, 20}, { 3, 22}}, anchorTopRight}, // XPos:227 YPos:40 H:4
