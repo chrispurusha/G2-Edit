@@ -30,7 +30,7 @@ extern "C" {
 
 #include <math.h>
 #include <time.h>
-    
+
 #include "defs.h"
 #include "synthlibDefs.h"
 #include "usbLog.h"
