@@ -1290,14 +1290,14 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeMixFader,   paramTypeMixLevel,    {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev6
     {moduleTypeMixFader,   paramTypeMixLevel,    {{ 74,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev7
     {moduleTypeMixFader,   paramTypeMixLevel,    {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 161 Lev8
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 20, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On1
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 29, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On2
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 38, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On3
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 47, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On4
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 56, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On5
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 65, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On6
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 74, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On7
-    {moduleTypeMixFader,   paramTypeEnable,      {{ 83, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On8
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 20, -20}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On1
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 29, -20}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On2
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 38, -20}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On3
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 47, -20}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On4
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 56, -20}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On5
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 65, -20}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On6
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 74, -20}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On7
+    {moduleTypeMixFader,   paramTypeEnable,      {{ 83, -20}, { 17,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 161 On8
     {moduleTypeMixFader,   paramTypeMenu,        {{  3, -28}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          },                         // 161 ExpLin
     {moduleTypeMixFader,   paramTypeMenu,        {{  3, -35}, { 7,  7}}, anchorBottomLeft,  "Pad",            3,   0, db12BPadStrMap,                        NULL          },                         // 161 Pad
     // 162 FltComb
@@ -1454,11 +1454,11 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscPM,      paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                     // Pitch Mode
     // 184 Mix1-1A
     {moduleTypeMix1to1A,   paramTypeCommonDial,  {{ 64,   7}, { 7, 14}}, anchorTopLeft,     NULL,           128,   0, NULL,                                  NULL          },                     // 184 Level
-    {moduleTypeMix1to1A,   paramTypeEnable,      {{ 40,  16}, {14,  4}}, anchorTopLeft,     NULL,             2,   0, NULL,                                  offOnColourMap},                     // 184 Enable1
+    {moduleTypeMix1to1A,   paramTypeEnable,      {{ 40,  16}, {17,  3}}, anchorTopLeft,     NULL,             2,   0, NULL,                                  offOnColourMap},                     // 184 Enable1
     {moduleTypeMix1to1A,   paramTypeMenu,        {{ 28,  16}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, expStrMap,                             NULL          },                     // 184 Exp
     // 185 Mix1-1S
     {moduleTypeMix1to1S,   paramTypeCommonDial,  {{ 64,   7}, { 7, 14}}, anchorTopLeft,     NULL,           128,   0, NULL,                                  NULL          },                     // 185 Level
-    {moduleTypeMix1to1S,   paramTypeEnable,      {{ 40,  16}, {14,  4}}, anchorTopLeft,     NULL,             2,   0, NULL,                                  offOnColourMap},                     // 185 Enable1
+    {moduleTypeMix1to1S,   paramTypeEnable,      {{ 40,  16}, {17,  3}}, anchorTopLeft,     NULL,             2,   0, NULL,                                  offOnColourMap},                     // 185 Enable1
     {moduleTypeMix1to1S,   paramTypeMenu,        {{ 28,  16}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, expStrMap,                             NULL          },                     // 185 Exp
     // 186 Sw1-2M
     {moduleTypeSw1to2M,    paramTypeMenu,        {{ 37,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, offOnStrMap,                           NULL          },                     // 186 Selector *** Needs new UI element
