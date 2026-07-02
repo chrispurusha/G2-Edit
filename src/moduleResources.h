@@ -761,13 +761,13 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeScratch,    paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          },                         // 63 Bypass
     // 64 Gate (Logic Gate) -- no parameters, 2 modes
     // 65 Unknown
-    
+
     // 66 Mix2-1B
-    {moduleTypeMix2to1B,   paramTypeMenu,        {{ 30,  16}, { 7,  7}}, anchorTopLeft,  NULL,             2,   0, invStrMap,                             NULL          },                         // 66 Inv1
-    {moduleTypeMix2to1B,   paramTypeCommonDial,  {{ 47,  7}, { 7, 14}}, anchorTopLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 66 Lvl1
-    {moduleTypeMix2to1B,   paramTypeMenu,        {{ 64,  16}, { 7,  7}}, anchorTopLeft,  NULL,             2,   0, invStrMap,                             NULL          },                         // 66 Inv2
-    {moduleTypeMix2to1B,   paramTypeCommonDial,  {{ 82,  7}, { 7, 14}}, anchorTopLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 66 Lvl2
-    {moduleTypeMix2to1B,   paramTypeMenu,        {{ 21,  6}, { 7,  7}}, anchorTopLeft,  NULL,             3,   0, expStrMap,                             NULL          },                         // 66 ExpLinDB
+    {moduleTypeMix2to1B,   paramTypeMenu,        {{ 30,  16}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, invStrMap,                             NULL          },                     // 66 Inv1
+    {moduleTypeMix2to1B,   paramTypeCommonDial,  {{ 47,   7}, { 7, 14}}, anchorTopLeft,     NULL,           128, 100, NULL,                                  NULL          },                     // 66 Lvl1
+    {moduleTypeMix2to1B,   paramTypeMenu,        {{ 64,  16}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, invStrMap,                             NULL          },                     // 66 Inv2
+    {moduleTypeMix2to1B,   paramTypeCommonDial,  {{ 82,   7}, { 7, 14}}, anchorTopLeft,     NULL,           128, 100, NULL,                                  NULL          },                     // 66 Lvl2
+    {moduleTypeMix2to1B,   paramTypeMenu,        {{ 21,   6}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, expStrMap,                             NULL          },                     // 66 ExpLinDB
     // 67 Unknown
     // 68 ClkGen
     {moduleTypeClkGen,     paramTypeCommonDial,  {{ 60, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 68 Tempo *** needs new dial 24-214 BPM
@@ -1019,16 +1019,16 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqNote,    paramTypeCustomData,  {{ 20,  20}, {15,  7}}, anchorTopLeft,     "Oct",            8,   0, octaveStrMap,                          NULL          },                         // 121 Octave (custom data)
     // 122 Unknown
     // 123 Mix4-1C
-    {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 11, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 123 L1
-    {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 31, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 123 L2
-    {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 51, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 123 L3
-    {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 71, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 123 L4
-    {moduleTypeMix4to1C,   paramTypeEnable,      {{  5,  -1}, {18,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 123 Enable1
-    {moduleTypeMix4to1C,   paramTypeEnable,      {{ 25,  -1}, {18,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 123 Enable2
-    {moduleTypeMix4to1C,   paramTypeEnable,      {{ 45,  -1}, {18,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 123 Enable3
-    {moduleTypeMix4to1C,   paramTypeEnable,      {{ 65,  -1}, {18,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 123 Enable4
-    {moduleTypeMix4to1C,   paramTypeMenu,        {{-12,   6}, { 7,  7}}, anchorTopRight,    "Pad",            2,   0, padStrMap,                             NULL          },                         // 123 Pad
-    {moduleTypeMix4to1C,   paramTypeMenu,        {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Curve",          3,   0, expStrMap,                             NULL          },                         // 123 Exp
+    {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 11, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                       // 123 L1
+    {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 31, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                       // 123 L2
+    {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 51, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                       // 123 L3
+    {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 71, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                       // 123 L4
+    {moduleTypeMix4to1C,   paramTypeEnable,      {{  5,  -1}, {17,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                       // 123 Enable1
+    {moduleTypeMix4to1C,   paramTypeEnable,      {{ 25,  -1}, {17,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                       // 123 Enable2
+    {moduleTypeMix4to1C,   paramTypeEnable,      {{ 45,  -1}, {17,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                       // 123 Enable3
+    {moduleTypeMix4to1C,   paramTypeEnable,      {{ 65,  -1}, {17,  7}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                       // 123 Enable4
+    {moduleTypeMix4to1C,   paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,     "Pad",            2,   0, padStrMap,                             NULL          },                       // 123 Pad
+    {moduleTypeMix4to1C,   paramTypeMenu,        {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Curve",          3,   0, expStrMap,                             NULL          },                       // 123 Exp
     // 124 Mux8-1 -- No params
     // 125 WahWah
     {moduleTypeWahWah,     paramTypeFreq,        {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                         // 125 Sweep M
@@ -1055,142 +1055,143 @@ const tParamLocation     paramLocationList[] = {
     // 137 Unknown
     // 138 Unknown
     // 139 T&H -- No params
+
     // 140 Mix4-1S
-    {moduleTypeMix4to1S,   paramTypeCommonDial,  {{ 15, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 123 L1
-    {moduleTypeMix4to1S,   paramTypeCommonDial,  {{ 35, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 123 L2
-    {moduleTypeMix4to1S,   paramTypeCommonDial,  {{ 55, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 123 L3
-    {moduleTypeMix4to1S,   paramTypeCommonDial,  {{ 75, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 123 L4
-    {moduleTypeMix4to1S,   paramTypeEnable,      {{  3,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 123 Enable1
-    {moduleTypeMix4to1S,   paramTypeEnable,      {{ 23,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 123 Enable2
-    {moduleTypeMix4to1S,   paramTypeEnable,      {{ 43,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 123 Enable3
-    {moduleTypeMix4to1S,   paramTypeEnable,      {{ 63,  -3}, {14,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 123 Enable4
-    {moduleTypeMix4to1S,   paramTypeMenu,        {{ 40, -25}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          },                         // 123 Exp
+    {moduleTypeMix4to1S,   paramTypeCommonDial,  {{ 11, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                      // 123 L1
+    {moduleTypeMix4to1S,   paramTypeCommonDial,  {{ 31, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                      // 123 L2
+    {moduleTypeMix4to1S,   paramTypeCommonDial,  {{ 51, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                      // 123 L3
+    {moduleTypeMix4to1S,   paramTypeCommonDial,  {{ 71, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                      // 123 L4
+    {moduleTypeMix4to1S,   paramTypeEnable,      {{  5,  -4}, {17,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 123 Enable1
+    {moduleTypeMix4to1S,   paramTypeEnable,      {{ 25,  -4}, {17,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 123 Enable2
+    {moduleTypeMix4to1S,   paramTypeEnable,      {{ 45,  -4}, {17,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 123 Enable3
+    {moduleTypeMix4to1S,   paramTypeEnable,      {{ 65,  -4}, {17,  4}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 123 Enable4
+    {moduleTypeMix4to1S,   paramTypeMenu,        {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Curve",          3,   0, expStrMap,                             NULL          },                      // 123 Exp
     // 141 CtrlSend
-    {moduleTypeCtrlSend,   paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Ctrl",         128,   1, NULL,                                  NULL          },                         // 141 Ctrl
-    {moduleTypeCtrlSend,   paramTypeCommonDial,  {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Value",        128,   1, NULL,                                  NULL          },                         // 141 Ctrl
-    {moduleTypeCtrlSend,   paramTypeMenu,        {{ 85,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          21,   0, midiChanStrMap,                        NULL          },                         // 141 Channel
+    {moduleTypeCtrlSend,   paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Ctrl",         128,   1, NULL,                                  NULL          },                      // 141 Ctrl
+    {moduleTypeCtrlSend,   paramTypeCommonDial,  {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Value",        128,   1, NULL,                                  NULL          },                      // 141 Ctrl
+    {moduleTypeCtrlSend,   paramTypeMenu,        {{ 85,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          21,   0, midiChanStrMap,                        NULL          },                      // 141 Channel
     // 142 PCSend
-    {moduleTypePCSend,     paramTypeCommonDial,  {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Program",      128,   1, NULL,                                  NULL          },                         // 142 Program
-    {moduleTypePCSend,     paramTypeMenu,        {{ 85,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          21,   0, midiChanStrMap,                        NULL          },                         // 142 Channel
+    {moduleTypePCSend,     paramTypeCommonDial,  {{ 75,  -3}, { 7, 14}}, anchorBottomLeft,  "Program",      128,   1, NULL,                                  NULL          },                      // 142 Program
+    {moduleTypePCSend,     paramTypeMenu,        {{ 85,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          21,   0, midiChanStrMap,                        NULL          },                      // 142 Channel
     // 143 NoteSend
-    {moduleTypeNoteSend,   paramTypeCommonDial,  {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  "Vel",          128, 100, NULL,                                  NULL          },                         // 143 Vel
-    {moduleTypeNoteSend,   paramTypeNoteDial,    {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "Note",         128,  64, NULL,                                  NULL          },                         // 143 Ctrl
-    {moduleTypeNoteSend,   paramTypeMenu,        {{ 85,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          21,   0, midiChanStrMap,                        NULL          },                         // 143 Channel
+    {moduleTypeNoteSend,   paramTypeCommonDial,  {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  "Vel",          128, 100, NULL,                                  NULL          },                      // 143 Vel
+    {moduleTypeNoteSend,   paramTypeNoteDial,    {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "Note",         128,  64, NULL,                                  NULL          },                      // 143 Ctrl
+    {moduleTypeNoteSend,   paramTypeMenu,        {{ 85,  -3}, { 7,  7}}, anchorBottomLeft,  "Chan",          21,   0, midiChanStrMap,                        NULL          },                      // 143 Channel
     // 144 SeqEvent
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 20, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step1-1
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 24, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step1-2
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 28, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step1-3
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 32, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step1-4
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 36, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step1-5
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 40, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step1-6
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 44, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step1-7
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 48, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step1-8
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 52, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step1-9
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 56, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step1-10
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 60, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step1-11
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 64, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step1-12
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 68, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step1-13
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 72, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step1-14
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 76, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step1-15
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 80, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step1-16
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-1
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-2
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-3
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 32,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-4
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 36,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-5
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 40,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-6
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 44,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-7
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 48,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-8
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 52,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-9
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 56,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-10
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 60,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-11
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 64,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-12
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 68,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-13
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-14
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-15
-    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-16
-    {moduleTypeSeqEvent,   paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   0, offOnStrMap,                           offOnColourMap},                         // 121 Cycle
-    {moduleTypeSeqEvent,   paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          },                         // 121 Length
-    {moduleTypeSeqEvent,   paramTypeMenu,        {{ 88, -21}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          },                         // 144 T up
-    {moduleTypeSeqEvent,   paramTypeMenu,        {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          },                         // 144 T down
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 20, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step1-1
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 24, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step1-2
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 28, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step1-3
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 32, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step1-4
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 36, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step1-5
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 40, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step1-6
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 44, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step1-7
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 48, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step1-8
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 52, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step1-9
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 56, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step1-10
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 60, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step1-11
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 64, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step1-12
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 68, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step1-13
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 72, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step1-14
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 76, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step1-15
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 80, -19}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step1-16
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-1
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-2
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-3
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 32,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-4
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 36,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-5
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 40,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-6
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 44,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-7
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 48,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-8
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 52,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-9
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 56,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-10
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 60,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-11
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 64,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-12
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 68,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-13
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-14
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-15
+    {moduleTypeSeqEvent,   paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-16
+    {moduleTypeSeqEvent,   paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   0, offOnStrMap,                           offOnColourMap},                      // 121 Cycle
+    {moduleTypeSeqEvent,   paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          },                      // 121 Length
+    {moduleTypeSeqEvent,   paramTypeMenu,        {{ 88, -21}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          },                      // 144 T up
+    {moduleTypeSeqEvent,   paramTypeMenu,        {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          },                      // 144 T down
     // 145 SeqVal
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step1-1
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step1-2
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 28, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step1-3
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 32, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step1-4
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 36, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step1-5
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 40, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step1-6
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 44, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step1-7
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 48, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step1-8
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 52, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step2-1
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 56, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step2-2
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 60, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step2-3
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 64, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step2-4
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 68, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step2-5
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 72, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step2-6
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 76, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step2-7
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 80, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step2-8
-    {moduleTypeSeqVal,     paramTypeEnable,      {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-1
-    {moduleTypeSeqVal,     paramTypeEnable,      {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-2
-    {moduleTypeSeqVal,     paramTypeEnable,      {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-3
-    {moduleTypeSeqVal,     paramTypeEnable,      {{ 32,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-4
-    {moduleTypeSeqVal,     paramTypeEnable,      {{ 36,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-5
-    {moduleTypeSeqVal,     paramTypeEnable,      {{ 40,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-68
-    {moduleTypeSeqVal,     paramTypeEnable,      {{ 44,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-7
-    {moduleTypeSeqVal,     paramTypeEnable,      {{ 48,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-8
-    {moduleTypeSeqVal,     paramTypeEnable,      {{ 52,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-9
-    {moduleTypeSeqVal,     paramTypeEnable,      {{ 56,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-10
-    {moduleTypeSeqVal,     paramTypeEnable,      {{ 60,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-11
-    {moduleTypeSeqVal,     paramTypeEnable,      {{ 64,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-12
-    {moduleTypeSeqVal,     paramTypeEnable,      {{ 68,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-13
-    {moduleTypeSeqVal,     paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-14
-    {moduleTypeSeqVal,     paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-15
-    {moduleTypeSeqVal,     paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 144 Step2-16
-    {moduleTypeSeqVal,     paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   0, offOnStrMap,                           offOnColourMap},                         // 144 Cycle
-    {moduleTypeSeqVal,     paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          },                         // 144 Length
-    {moduleTypeSeqVal,     paramTypeMenu,        {{  3,  18}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          },                         // 144 Cycle
-    {moduleTypeSeqVal,     paramTypeMenu,        {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          },                         // 144 T down
-    {moduleTypeSeqVal,     paramTypePush,        {{  3,  34}, {10,  7}}, anchorTopLeft,     "Rnd",            2,   0, NULL,                                  NULL          },                         // 145 Randomize
-    {moduleTypeSeqVal,     paramTypePush,        {{  3,  40}, {10,  7}}, anchorTopLeft,     "Clr",            2,   0, NULL,                                  NULL          },                         // 145 Clear
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-1
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-2
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 28, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-3
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 32, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-4
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 36, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-5
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 40, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-6
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 44, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-7
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 48, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-8
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 52, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-1
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 56, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-2
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 60, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-3
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 64, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-4
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 68, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-5
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 72, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-6
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 76, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-7
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 80, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-8
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-1
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-2
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-3
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 32,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-4
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 36,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-5
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 40,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-68
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 44,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-7
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 48,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-8
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 52,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-9
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 56,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-10
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 60,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-11
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 64,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-12
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 68,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-13
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-14
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-15
+    {moduleTypeSeqVal,     paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-16
+    {moduleTypeSeqVal,     paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   0, offOnStrMap,                           offOnColourMap},                      // 144 Cycle
+    {moduleTypeSeqVal,     paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          },                      // 144 Length
+    {moduleTypeSeqVal,     paramTypeMenu,        {{  3,  18}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          },                      // 144 Cycle
+    {moduleTypeSeqVal,     paramTypeMenu,        {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          },                      // 144 T down
+    {moduleTypeSeqVal,     paramTypePush,        {{  3,  34}, {10,  7}}, anchorTopLeft,     "Rnd",            2,   0, NULL,                                  NULL          },                      // 145 Randomize
+    {moduleTypeSeqVal,     paramTypePush,        {{  3,  40}, {10,  7}}, anchorTopLeft,     "Clr",            2,   0, NULL,                                  NULL          },                      // 145 Clear
     // 146 SeqLev
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step1
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step2
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 28, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step3
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 32, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step4
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 36, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step5
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 40, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step6
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 44, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step7
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 48, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step8
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 52, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step9
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 56, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step10
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 60, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step11
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 64, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step12
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 68, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step13
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 72, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step14
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 76, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step15
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 80, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // Step16
-    {moduleTypeSeqLev,     paramTypeEnable,      {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // Evnt1
-    {moduleTypeSeqLev,     paramTypeEnable,      {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // Evnt2
-    {moduleTypeSeqLev,     paramTypeEnable,      {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // Evnt3
-    {moduleTypeSeqLev,     paramTypeEnable,      {{ 32,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // Evnt4
-    {moduleTypeSeqLev,     paramTypeEnable,      {{ 36,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // Evnt5
-    {moduleTypeSeqLev,     paramTypeEnable,      {{ 40,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // Evnt6
-    {moduleTypeSeqLev,     paramTypeEnable,      {{ 44,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // Evnt7
-    {moduleTypeSeqLev,     paramTypeEnable,      {{ 48,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // Evnt8
-    {moduleTypeSeqLev,     paramTypeEnable,      {{ 52,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // Evnt9
-    {moduleTypeSeqLev,     paramTypeEnable,      {{ 56,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // Evnt10
-    {moduleTypeSeqLev,     paramTypeEnable,      {{ 60,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // Evnt11
-    {moduleTypeSeqLev,     paramTypeEnable,      {{ 64,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // Evnt12
-    {moduleTypeSeqLev,     paramTypeEnable,      {{ 68,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // Evnt13
-    {moduleTypeSeqLev,     paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // Evnt14
-    {moduleTypeSeqLev,     paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // Evnt15
-    {moduleTypeSeqLev,     paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // Evnt16
-    {moduleTypeSeqLev,     paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   0, offOnStrMap,                           offOnColourMap},                         // 144 Cycle
-    {moduleTypeSeqLev,     paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          },                         // 144 Length
-    {moduleTypeSeqLev,     paramTypeMenu,        {{  3,  18}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          },                         // 144 Cycle
-    {moduleTypeSeqLev,     paramTypeMenu,        {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          },                         // 144 T down
-    {moduleTypeSeqLev,     paramTypePush,        {{  3,  34}, {10,  7}}, anchorTopLeft,     "Rnd",            2,   0, NULL,                                  NULL          },                         // 146 Randomize
-    {moduleTypeSeqLev,     paramTypePush,        {{  3,  40}, {10,  7}}, anchorTopLeft,     "Clr",            2,   0, NULL,                                  NULL          },                         // 146 Clear
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 28, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step3
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 32, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step4
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 36, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step5
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 40, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step6
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 44, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step7
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 48, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step8
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 52, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step9
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 56, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step10
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 60, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step11
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 64, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step12
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 68, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step13
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 72, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step14
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 76, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step15
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 80, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step16
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt1
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt2
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt3
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 32,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt4
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 36,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt5
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 40,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt6
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 44,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt7
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 48,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt8
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 52,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt9
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 56,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt10
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 60,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt11
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 64,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt12
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 68,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt13
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 72,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt14
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 76,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt15
+    {moduleTypeSeqLev,     paramTypeEnable,      {{ 80,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt16
+    {moduleTypeSeqLev,     paramTypeToggle,      {{  3,   6}, { 7,  7}}, anchorTopLeft,     "Cycle",          2,   0, offOnStrMap,                           offOnColourMap},                      // 144 Cycle
+    {moduleTypeSeqLev,     paramTypeMenu,        {{ 16,   6}, { 7,  7}}, anchorTopLeft,     "Length",        16,  15, int16StrMap,                           NULL          },                      // 144 Length
+    {moduleTypeSeqLev,     paramTypeMenu,        {{  3,  18}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, bipUniStrMap,                          NULL          },                      // 144 Cycle
+    {moduleTypeSeqLev,     paramTypeMenu,        {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          },                      // 144 T down
+    {moduleTypeSeqLev,     paramTypePush,        {{  3,  34}, {10,  7}}, anchorTopLeft,     "Rnd",            2,   0, NULL,                                  NULL          },                      // 146 Randomize
+    {moduleTypeSeqLev,     paramTypePush,        {{  3,  40}, {10,  7}}, anchorTopLeft,     "Clr",            2,   0, NULL,                                  NULL          },                      // 146 Clear
 
     // 147 CtrRcv
     {moduleTypeCtrlRcv,    paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Ctrl",         128,  64, NULL,                                  NULL          },                         // 147 Ctrl
@@ -1491,26 +1492,26 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypePhaser,     paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 192 Bypass
     // 193 Mix4-1A -- no params
     // 194 Mix2-1A
-    {moduleTypeMix2to1A,   paramTypeCommonDial,  {{ 47,  7}, { 7, 14}}, anchorTopLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 123 L1
-    {moduleTypeMix2to1A,   paramTypeEnable,      {{ 21,  16}, { 17,  3}}, anchorTopLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 123 Enable1
-    {moduleTypeMix2to1A,   paramTypeCommonDial,  {{ 82,  7}, { 7, 14}}, anchorTopLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 123 L2
-    {moduleTypeMix2to1A,   paramTypeEnable,      {{ 56,  16}, { 17,  3}}, anchorTopLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 123 Enable2
-    {moduleTypeMix2to1A,   paramTypeMenu,        {{ 21,  6}, { 7,  7}}, anchorTopLeft,  NULL,             3,   0, expStrMap,                             NULL          }, // 123 Exp
+    {moduleTypeMix2to1A,   paramTypeCommonDial,  {{ 47,   7}, { 7, 14}}, anchorTopLeft,     NULL,           128,   0, NULL,                                  NULL          }, // 123 L1
+    {moduleTypeMix2to1A,   paramTypeEnable,      {{ 21,  16}, {17,  3}}, anchorTopLeft,     NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable1
+    {moduleTypeMix2to1A,   paramTypeCommonDial,  {{ 82,   7}, { 7, 14}}, anchorTopLeft,     NULL,           128,   0, NULL,                                  NULL          }, // 123 L2
+    {moduleTypeMix2to1A,   paramTypeEnable,      {{ 56,  16}, {17,  3}}, anchorTopLeft,     NULL,             2,   0, NULL,                                  offOnColourMap}, // 123 Enable2
+    {moduleTypeMix2to1A,   paramTypeMenu,        {{ 21,   6}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, expStrMap,                             NULL          }, // 123 Exp
     // 195 ModAmt
-    {moduleTypeModAmt,     paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Depth",        128,   0, NULL,                                  NULL          },                         // 195 Depth
-    {moduleTypeModAmt,     paramTypeToggle,      {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, offOnStrMap,                           offOnColourMap},                         // 195 Enable
-    {moduleTypeModAmt,     paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, expStrMap,                             NULL          },                         // 195 Exp/Lin
-    {moduleTypeModAmt,     paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, invertStrMap,                          NULL          },                         // 195 m/1-m
+    {moduleTypeModAmt,     paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "Depth",        128,   0, NULL,                                  NULL          }, // 195 Depth
+    {moduleTypeModAmt,     paramTypeToggle,      {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   1, offOnStrMap,                           offOnColourMap}, // 195 Enable
+    {moduleTypeModAmt,     paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, expStrMap,                             NULL          }, // 195 Exp/Lin
+    {moduleTypeModAmt,     paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, invertStrMap,                          NULL          }, // 195 m/1-m
     // 196 OscPerc
-    {moduleTypeOscPerc,    paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },                         // 196 Coarse
-    {moduleTypeOscPerc,    paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                         // 196 Fine
-    {moduleTypeOscPerc,    paramTypeMenu,        {{ 50, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          },                         // 196 Tune Mode
-    {moduleTypeOscPerc,    paramTypeToggle,      {{ 40, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap},                         // 196  Kbt
-    {moduleTypeOscPerc,    paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                         // 196 Pitch M
-    {moduleTypeOscPerc,    paramTypeADRTime,     {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,  64, NULL,                                  NULL          },                         // 196 Decay
-    {moduleTypeOscPerc,    paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "Click",        128,  64, NULL,                                  NULL          },                         // 196 Click
-    {moduleTypeOscPerc,    paramTypeToggle,      {{ 90, -10}, { 7,  7}}, anchorBottomLeft,  "Punch",          2,   1, offOnStrMap,                           offOnColourMap},                         // 196 Punch
-    {moduleTypeOscPerc,    paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 196 Bypass
+    {moduleTypeOscPerc,    paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          }, // 196 Coarse
+    {moduleTypeOscPerc,    paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          }, // 196 Fine
+    {moduleTypeOscPerc,    paramTypeMenu,        {{ 50, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, pitchTypeStrMap,                       NULL          }, // 196 Tune Mode
+    {moduleTypeOscPerc,    paramTypeToggle,      {{ 40, -10}, { 7,  7}}, anchorBottomLeft,  "Kbt",            2,   1, offOnStrMap,                           offOnColourMap}, // 196  Kbt
+    {moduleTypeOscPerc,    paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          }, // 196 Pitch M
+    {moduleTypeOscPerc,    paramTypeADRTime,     {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "Decay",        128,  64, NULL,                                  NULL          }, // 196 Decay
+    {moduleTypeOscPerc,    paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "Click",        128,  64, NULL,                                  NULL          }, // 196 Click
+    {moduleTypeOscPerc,    paramTypeToggle,      {{ 90, -10}, { 7,  7}}, anchorBottomLeft,  "Punch",          2,   1, offOnStrMap,                           offOnColourMap}, // 196 Punch
+    {moduleTypeOscPerc,    paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          }, // 196 Bypass
     // 197 Status -- No params
     // 198 PitchTrack
     {moduleTypePitchTrack, paramTypeCommonDial,  {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "Threshold",    128,  64, NULL,                                  NULL          },                         // 198 Threshold
@@ -1880,12 +1881,12 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeGate,        connectorDirOut, connectorTypeLogic,   {{ 52,  -6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },        // 64 Out1
     {moduleTypeGate,        connectorDirOut, connectorTypeLogic,   {{ 82,  -6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },        // 64 Out1
     // 65 Unknown
-    
+
     // 66 Mix2-1B
-    {moduleTypeMix2to1B,    connectorDirIn,  connectorTypeControl, {{ 40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",           labelLocUp   },          // 66 In1
-    {moduleTypeMix2to1B,    connectorDirIn,  connectorTypeControl, {{ 75,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",           labelLocUp   },          // 66 In2
-    {moduleTypeMix2to1B,    connectorDirIn,  connectorTypeControl, {{  3,  6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,  "Chain",        labelLocRight},          // 66 Chain
-    {moduleTypeMix2to1B,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 66 Out
+    {moduleTypeMix2to1B,    connectorDirIn,  connectorTypeControl, {{ 40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },      // 66 In1
+    {moduleTypeMix2to1B,    connectorDirIn,  connectorTypeControl, {{ 75,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },      // 66 In2
+    {moduleTypeMix2to1B,    connectorDirIn,  connectorTypeControl, {{  3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Chain",        labelLocRight},      // 66 Chain
+    {moduleTypeMix2to1B,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },      // 66 Out
     // 67 Unknown
     // 68 ClkGen
     {moduleTypeClkGen,      connectorDirIn,  connectorTypeLogic,   {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",        labelLocRight},          // 68 Reset
@@ -2112,27 +2113,27 @@ const tConnectorLocation connectorLocationList[] = {
 
     // 122 Unknown
     // 123 Mix4-1C
-    {moduleTypeMix4to1C,    connectorDirIn,  connectorTypeControl, {{ 12,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "1",            labelLocUp   },          // 123 In1
-    {moduleTypeMix4to1C,    connectorDirIn,  connectorTypeControl, {{ 32,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "2",            labelLocUp   },          // 123 In2
-    {moduleTypeMix4to1C,    connectorDirIn,  connectorTypeControl, {{ 52,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "3",            labelLocUp   },          // 123 In3
-    {moduleTypeMix4to1C,    connectorDirIn,  connectorTypeControl, {{ 72,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "4",            labelLocUp   },          // 123 In4
-    {moduleTypeMix4to1C,    connectorDirIn,  connectorTypeControl, {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Chain",        labelLocLeft },          // 123 Chain
-    {moduleTypeMix4to1C,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 123 Out
+    {moduleTypeMix4to1C,    connectorDirIn,  connectorTypeControl, {{ 12,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "1",            labelLocUp   },     // 123 In1
+    {moduleTypeMix4to1C,    connectorDirIn,  connectorTypeControl, {{ 32,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "2",            labelLocUp   },     // 123 In2
+    {moduleTypeMix4to1C,    connectorDirIn,  connectorTypeControl, {{ 52,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "3",            labelLocUp   },     // 123 In3
+    {moduleTypeMix4to1C,    connectorDirIn,  connectorTypeControl, {{ 72,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "4",            labelLocUp   },     // 123 In4
+    {moduleTypeMix4to1C,    connectorDirIn,  connectorTypeControl, {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Chain",        labelLocLeft },     // 123 Chain
+    {moduleTypeMix4to1C,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // 123 Out
     // 124 Mux8-1
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },          // 60 In1
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 18,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },          // 60 In2
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 26,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   },          // 60 In3
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 34,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   },          // 60 In4
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 42,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",            labelLocUp   },          // 60 In5
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",            labelLocUp   },          // 60 In6
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 58,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",            labelLocUp   },          // 60 In7
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 66,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",            labelLocUp   },          // 60 In8
-    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocUp   },          // 60 Ctrl
-    {moduleTypeMux8to1,     connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 60 Out
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },     // 60 In1
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 18,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },     // 60 In2
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 26,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   },     // 60 In3
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 34,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   },     // 60 In4
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 42,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",            labelLocUp   },     // 60 In5
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 50,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",            labelLocUp   },     // 60 In6
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 58,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",            labelLocUp   },     // 60 In7
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{ 66,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",            labelLocUp   },     // 60 In8
+    {moduleTypeMux8to1,     connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocUp   },     // 60 Ctrl
+    {moduleTypeMux8to1,     connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },     // 60 Out
     // 125 WahWah
-    {moduleTypeWahWah,      connectorDirIn,  connectorTypeAudio,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 112 In
-    {moduleTypeWahWah,      connectorDirIn,  connectorTypeControl, {{ 28,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 112 Sweep
-    {moduleTypeWahWah,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 112 Out
+    {moduleTypeWahWah,      connectorDirIn,  connectorTypeAudio,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // 112 In
+    {moduleTypeWahWah,      connectorDirIn,  connectorTypeControl, {{ 28,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },     // 112 Sweep
+    {moduleTypeWahWah,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // 112 Out
     // 126 Name
     // 127 Fx-In
     {moduleTypeFxtoIn,      connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 127
@@ -2184,55 +2185,54 @@ const tConnectorLocation connectorLocationList[] = {
     // 137 Unknown
     // 138 Unknown
     // 139 T&H
-    {moduleTypeTandH,       connectorDirIn,  connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 139 In
-    {moduleTypeTandH,       connectorDirIn,  connectorTypeLogic,   {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocLeft },          // 139 Ctrl
-    {moduleTypeTandH,       connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 139 Out
-
+    {moduleTypeTandH,       connectorDirIn,  connectorTypeControl, {{ 80,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 139 In
+    {moduleTypeTandH,       connectorDirIn,  connectorTypeLogic,   {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocLeft }, // 139 Ctrl
+    {moduleTypeTandH,       connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // 139 Out
     // 140 Mix4-1S
-    {moduleTypeMix4to1S,    connectorDirOut, connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },  // 140 OutL
-    {moduleTypeMix4to1S,    connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },  // 140 OutR
-    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeAudio,   {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },  // 140 In1L
-    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeAudio,   {{ 10, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },  // 140 In1R
-    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeAudio,   {{ 23, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },  // 140 In2L
-    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeAudio,   {{ 30, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },  // 140 In2R
-    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeAudio,   {{ 43, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },  // 140 In3L
-    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeAudio,   {{ 50, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },  // 140 In3R
-    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeAudio,   {{ 63, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },  // 140 In4L
-    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeAudio,   {{ 70, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },  // 140 In4R
-    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeAudio,   {{-10,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },  // 140 ChainL
-    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeAudio,   {{ -3,   5}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   },  // 140 ChainR
+    {moduleTypeMix4to1S,    connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // 140 OutL
+    {moduleTypeMix4to1S,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   }, // 140 OutR
+    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{  9,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "L",            labelLocUp   }, // 140 In1L
+    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{ 16,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "R",            labelLocUp   }, // 140 In1R
+    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{ 29,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "L",            labelLocUp   }, // 140 In2L
+    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{ 36,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "R",            labelLocUp   }, // 140 In2R
+    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{ 49,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "L",            labelLocUp   }, // 140 In3L
+    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{ 56,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "R",            labelLocUp   }, // 140 In3R
+    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{ 69,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "L",            labelLocUp   }, // 140 In4L
+    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{ 76,  20}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "R",            labelLocUp   }, // 140 In4R
+    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{-10,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Chain",        labelLocLeft }, // 140 ChainL
+    {moduleTypeMix4to1S,    connectorDirIn,  connectorTypeControl, {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocUp   }, // 140 ChainR
     // 141 CtrlSend
-    {moduleTypeCtrlSend,    connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Send",         labelLocRight},  // 141 Send In
-    {moduleTypeCtrlSend,    connectorDirOut, connectorTypeLogic,   {{ 20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},  // 141 Send Out
-    {moduleTypeCtrlSend,    connectorDirIn,  connectorTypeControl, {{ 65,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },  // 141 Value
+    {moduleTypeCtrlSend,    connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Send",         labelLocRight}, // 141 Send In
+    {moduleTypeCtrlSend,    connectorDirOut, connectorTypeLogic,   {{ 20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // 141 Send Out
+    {moduleTypeCtrlSend,    connectorDirIn,  connectorTypeControl, {{ 65,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 141 Value
     // 142 PCSend
-    {moduleTypePCSend,      connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Send",         labelLocRight},  // 142 Send In
-    {moduleTypePCSend,      connectorDirOut, connectorTypeLogic,   {{ 20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},  // 142 Send Out
-    {moduleTypePCSend,      connectorDirIn,  connectorTypeControl, {{ 65,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },  // 142 Program
+    {moduleTypePCSend,      connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Send",         labelLocRight}, // 142 Send In
+    {moduleTypePCSend,      connectorDirOut, connectorTypeLogic,   {{ 20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // 142 Send Out
+    {moduleTypePCSend,      connectorDirIn,  connectorTypeControl, {{ 65,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 142 Program
     // 143 NoteSend
-    {moduleTypeNoteSend,    connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Gate",         labelLocRight},  // 143 Gate
-    {moduleTypeNoteSend,    connectorDirIn,  connectorTypeControl, {{ 35,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",          labelLocUp   },  // 143 Velocity
-    {moduleTypeNoteSend,    connectorDirIn,  connectorTypeControl, {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Note",         labelLocUp   },  // 143 Note
+    {moduleTypeNoteSend,    connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Gate",         labelLocRight}, // 143 Gate
+    {moduleTypeNoteSend,    connectorDirIn,  connectorTypeControl, {{ 35,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Vel",          labelLocUp   }, // 143 Velocity
+    {moduleTypeNoteSend,    connectorDirIn,  connectorTypeControl, {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Note",         labelLocUp   }, // 143 Note
     // 144 SeqEvent
-    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{  3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clock",        labelLocUp   },  // 144 Clk
-    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",        labelLocUp   },  // 144 Rst
-    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Loop",         labelLocUp   },  // 144 Lp
-    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{-14,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Park",         labelLocRight},  // 144 Park
-    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{ 14, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},  // 144 Trig1
-    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{ 14,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},  // 144 Trig1
-    {moduleTypeSeqEvent,    connectorDirOut, connectorTypeLogic,   {{ -3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Link",         labelLocUp   },  // 144 Link
-    {moduleTypeSeqEvent,    connectorDirOut, connectorTypeLogic,   {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },  // 144 Out1
-    {moduleTypeSeqEvent,    connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },  // 144 Out2
+    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{  3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clock",        labelLocUp   }, // 144 Clk
+    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",        labelLocUp   }, // 144 Rst
+    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Loop",         labelLocUp   }, // 144 Lp
+    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{-14,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Park",         labelLocRight}, // 144 Park
+    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{ 14, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // 144 Trig1
+    {moduleTypeSeqEvent,    connectorDirIn,  connectorTypeLogic,   {{ 14,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // 144 Trig1
+    {moduleTypeSeqEvent,    connectorDirOut, connectorTypeLogic,   {{ -3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Link",         labelLocUp   }, // 144 Link
+    {moduleTypeSeqEvent,    connectorDirOut, connectorTypeLogic,   {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft }, // 144 Out1
+    {moduleTypeSeqEvent,    connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft }, // 144 Out2
     // 145 SeqVal
-    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clock",        labelLocUp   },  // 145 Clk
-    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",        labelLocUp   },  // 145 Rst
-    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Loop",         labelLocUp   },  // 145 Lp
-    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{-14,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Park",         labelLocRight},  // 145 Park
-    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeControl, {{ 14, -38}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},  // 145 Val
-    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{ 14,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},  // 145 Trig1
-    {moduleTypeSeqVal,      connectorDirOut, connectorTypeLogic,   {{ -3, -60}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Link",         labelLocUp   },  // 145 Link
-    {moduleTypeSeqVal,      connectorDirOut, connectorTypeControl, {{ -3, -38}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },  // 145 Val
-    {moduleTypeSeqVal,      connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },  // 145 Trig
+    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clock",        labelLocUp   }, // 145 Clk
+    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",        labelLocUp   }, // 145 Rst
+    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Loop",         labelLocUp   }, // 145 Lp
+    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{-14,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Park",         labelLocRight}, // 145 Park
+    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeControl, {{ 14, -38}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // 145 Val
+    {moduleTypeSeqVal,      connectorDirIn,  connectorTypeLogic,   {{ 14,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight}, // 145 Trig1
+    {moduleTypeSeqVal,      connectorDirOut, connectorTypeLogic,   {{ -3, -60}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Link",         labelLocUp   }, // 145 Link
+    {moduleTypeSeqVal,      connectorDirOut, connectorTypeControl, {{ -3, -38}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft }, // 145 Val
+    {moduleTypeSeqVal,      connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft }, // 145 Trig
 
     // 146 SeqLev
     {moduleTypeSeqLev,      connectorDirIn,  connectorTypeLogic,   {{  3, -31}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clock",        labelLocUp   },  // 145 Clk
@@ -2470,23 +2470,23 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeLfoB,        connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   }, // 190 Sync
     // 191 Unknown
     // 192 Phaser
-    {moduleTypePhaser,      connectorDirIn,  connectorTypeAudio,   {{-18,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 192 In
-    {moduleTypePhaser,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 192 Out
+    {moduleTypePhaser,      connectorDirIn,  connectorTypeAudio,   {{-18,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },      // 192 In
+    {moduleTypePhaser,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },      // 192 Out
     // 193 Mix4-1A
-    {moduleTypeMix4to1A,    connectorDirIn,  connectorTypeControl, {{ 25,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },          // 193 In1
-    {moduleTypeMix4to1A,    connectorDirIn,  connectorTypeControl, {{ 40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },          // 193 In2
-    {moduleTypeMix4to1A,    connectorDirIn,  connectorTypeControl, {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   },          // 193 In3
-    {moduleTypeMix4to1A,    connectorDirIn,  connectorTypeControl, {{ 70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   },          // 193 In4
-    {moduleTypeMix4to1A,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 193 Out
+    {moduleTypeMix4to1A,    connectorDirIn,  connectorTypeControl, {{ 25,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },      // 193 In1
+    {moduleTypeMix4to1A,    connectorDirIn,  connectorTypeControl, {{ 40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },      // 193 In2
+    {moduleTypeMix4to1A,    connectorDirIn,  connectorTypeControl, {{ 55,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   },      // 193 In3
+    {moduleTypeMix4to1A,    connectorDirIn,  connectorTypeControl, {{ 70,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   },      // 193 In4
+    {moduleTypeMix4to1A,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },      // 193 Out
     // 194 Mix2-1A
-    {moduleTypeMix2to1A,    connectorDirIn,  connectorTypeControl, {{ 40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },          // 194 In1
-    {moduleTypeMix2to1A,    connectorDirIn,  connectorTypeControl, {{ 75,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },          // 194 In2
-    {moduleTypeMix2to1A,    connectorDirIn,  connectorTypeControl, {{  3,  6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,  "Chain",        labelLocRight},          // 185 Chain L
-    {moduleTypeMix2to1A,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 194 Out
+    {moduleTypeMix2to1A,    connectorDirIn,  connectorTypeControl, {{ 40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },      // 194 In1
+    {moduleTypeMix2to1A,    connectorDirIn,  connectorTypeControl, {{ 75,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },      // 194 In2
+    {moduleTypeMix2to1A,    connectorDirIn,  connectorTypeControl, {{  3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopLeft,     "Chain",        labelLocRight},      // 185 Chain L
+    {moduleTypeMix2to1A,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },      // 194 Out
     // 195 ModAmt
-    {moduleTypeModAmt,      connectorDirIn,  connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 194 In1
-    {moduleTypeModAmt,      connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Mod",          labelLocLeft },          // 194 In2
-    {moduleTypeModAmt,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 194 Out
+    {moduleTypeModAmt,      connectorDirIn,  connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },      // 194 In1
+    {moduleTypeModAmt,      connectorDirIn,  connectorTypeControl, {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Mod",          labelLocLeft },      // 194 In2
+    {moduleTypeModAmt,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },      // 194 Out
 
     // 196 OscPerc
     {moduleTypeOscPerc,     connectorDirIn,  connectorTypeControl, {{  3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},          // 196 Pitch
@@ -2590,12 +2590,12 @@ const tModeLocation      modeLocationList[] = {
 
 
 const tVolumeLocation    volumeLocationList[] = {
-    {moduleTypeMix4to1C,  volumeTypeMono,      {{ -4,  6}, { 3, 15}}, anchorTopRight},
+    {moduleTypeMix4to1C,  volumeTypeMono,      {{ -4, 13}, { 3, 24}}, anchorTopRight},
     {moduleTypeCompress,  volumeTypeCompress,  {{-18,  6}, { 4, 38}}, anchorTopRight},
     {moduleType2toOut,    volumeTypeStereo,    {{-25,  6}, { 3, 10}}, anchorTopRight},
     {moduleType4toOut,    volumeTypeQuad,      {{-40,  6}, { 3, 10}}, anchorTopRight},
     {moduleTypeFxtoIn,    volumeTypeStereo,    {{-25,  6}, { 3, 10}}, anchorTopRight},
-    {moduleTypeMix4to1S,  volumeTypeStereo,    {{-10, 13}, { 3, 15}}, anchorTopRight},
+    {moduleTypeMix4to1S,  volumeTypeStereo,    {{ -9, 13}, { 3, 24}}, anchorTopRight},
     {moduleTypeMix4to1B,  volumeTypeMono,      {{-10,  6}, { 3, 10}}, anchorTopRight}, // XPos:231 YPos:10 H:2
     {moduleTypeMix8to1A,  volumeTypeMono,      {{-10,  6}, { 3, 10}}, anchorTopRight}, // XPos:231 YPos:10 H:2
     {moduleTypeMix8to1B,  volumeTypeMono,      {{-15,  6}, { 3, 25}}, anchorTopRight}, // XPos:242 YPos:27 H:4
