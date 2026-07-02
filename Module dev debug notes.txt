@@ -1,6 +1,6 @@
-  1 Keyboard
+  1 Keyboard OK (CT)
   3 4-Out
-  4 2-Out OK (CT)
+  4 2-Out OK OK (CT)
   7 OscB
   8 OscShpB check mode
   9 Oscar OK check Mode
