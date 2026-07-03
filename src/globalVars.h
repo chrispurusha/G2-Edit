@@ -40,7 +40,7 @@ extern const char *            monoPolyStrMap[monoPolyMax];
 
 //extern double                  gGlobalGuiScale;
 extern _Atomic bool            gQuitAll;
-extern void *            gWindow;
+extern void *                  gWindow;
 extern _Atomic uint32_t        gLocation;
 extern _Atomic bool            gReDraw;
 extern bool                    gCommandKeyPressed;
