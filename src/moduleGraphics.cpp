@@ -158,14 +158,14 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
     }
 }
 
-// The knob-assignment label(s) are recorded here (during per-module
-// rendering) but only actually painted by render_knob_assignment_overlay(),
-// called once the whole frame's modules/cables are drawn — otherwise later
-// components (this module's own name/text, or modules drawn afterwards)
-// paint over it. A param can be assigned to both a local (patch) knob and a
-// Global Parameter Page knob at once — they're independent pools, so up to
-// one overlay row of each is queued and shown stacked.
-#define MAX_KNOB_OVERLAYS    2
+// The assignment label(s) are recorded here (during per-module rendering)
+// but only actually painted by render_knob_assignment_overlay(), called once
+// the whole frame's modules/cables are drawn — otherwise later components
+// (this module's own name/text, or modules drawn afterwards) paint over it.
+// A param can be assigned to a local (patch) knob, a Global Parameter Page
+// knob, and a MIDI CC all at once — they're independent — so up to one
+// overlay row of each is queued and shown stacked.
+#define MAX_KNOB_OVERLAYS    3
 
 static int        gKnobOverlayCount                        = 0;
 static tRectangle gKnobOverlayRect[MAX_KNOB_OVERLAYS]      = {0};
@@ -177,29 +177,36 @@ void render_knob_assignment_overlay(void) {
     }
 }
 
-// Queues one hover overlay row (local or global knob assignment) below the
-// given param rectangle; additional rows stack further down.
-static void queue_knob_overlay(tRectangle rectangle, int32_t knobIdx, bool isGlobal) {
+// Queues one hover overlay row below the given param rectangle with the
+// given (already-formatted) label; additional rows stack further down.
+static void queue_overlay_row(tRectangle rectangle, const char * label) {
     if (gKnobOverlayCount >= MAX_KNOB_OVERLAYS) {
         return;
     }
-    int          page        = knobIdx / 24;
-    int          bank        = (knobIdx % 24) / 8;
-    int          pos         = knobIdx % 8;
-    const char * widthSample = isGlobal ? "G X X X" : "X X X";
-    double       labelWidth  = get_text_width(widthSample, (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8, eCache);
-    double       rowHeight   = ((double)STANDARD_TEXT_HEIGHT * 0.8) + 2.0;
-    tRectangle   labelRect   = {{rectangle.coord.x + (rectangle.size.w - labelWidth) / 2.0,
+    double     labelWidth = get_text_width(label, (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8, eCache);
+    double     rowHeight  = ((double)STANDARD_TEXT_HEIGHT * 0.8) + 2.0;
+    tRectangle labelRect  = {{rectangle.coord.x + (rectangle.size.w - labelWidth) / 2.0,
         rectangle.coord.y + rectangle.size.h + 2.0 + (rowHeight * (double)gKnobOverlayCount)},
         {labelWidth,                                               (double)STANDARD_TEXT_HEIGHT * 0.8}};
 
-    if (isGlobal) {
-        snprintf(gKnobOverlayLabel[gKnobOverlayCount], sizeof(gKnobOverlayLabel[0]), "G %c %d %d", 'A' + page, bank + 1, pos + 1);
-    } else {
-        snprintf(gKnobOverlayLabel[gKnobOverlayCount], sizeof(gKnobOverlayLabel[0]), "%c %d %d", 'A' + page, bank + 1, pos + 1);
-    }
+    COPY_STRING(gKnobOverlayLabel[gKnobOverlayCount], label);
     gKnobOverlayRect[gKnobOverlayCount] = labelRect;
     gKnobOverlayCount++;
+}
+
+// Local/Global knob labels ("A 1 3" / "G A 1 3") from a 0-119 knob index.
+static void queue_knob_overlay(tRectangle rectangle, int32_t knobIdx, bool isGlobal) {
+    int  page = knobIdx / 24;
+    int  bank = (knobIdx % 24) / 8;
+    int  pos  = knobIdx % 8;
+    char label[16];
+
+    if (isGlobal) {
+        snprintf(label, sizeof(label), "G %c %d %d", 'A' + page, bank + 1, pos + 1);
+    } else {
+        snprintf(label, sizeof(label), "%c %d %d", 'A' + page, bank + 1, pos + 1);
+    }
+    queue_overlay_row(rectangle, label);
 }
 
 // This might be too generic and won't be able to use, or we add extra params!
@@ -327,17 +334,19 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         }
     }
     {
-        // A param can be assigned to both a local (patch) knob and a Global
-        // Parameter Page knob at the same time — they're independent pools
-        // (the manual counts 120 per Slot plus 120 Global as fully
-        // additive, with no exclusivity between them) — so show both rows
-        // when both are assigned.
+        // A param can be assigned to a local (patch) knob, a Global
+        // Parameter Page knob, and a MIDI CC all at the same time — they're
+        // independent (the manual counts 120 per Slot plus 120 Global as
+        // fully additive, and MIDI CC deassign is keyed purely by CC
+        // number, not by param) — so show all rows that apply.
         int32_t localKnobIdx  = find_knob_for_param(module->key.slot, module->key.location,
                                                     module->key.index, paramIndex);
         int32_t globalKnobIdx = find_global_knob_for_param(module->key.slot, module->key.location,
                                                            module->key.index, paramIndex);
+        int32_t ccIdx         = find_controller_for_param(module->key.slot, module->key.location,
+                                                          module->key.index, paramIndex);
 
-        if (localKnobIdx >= 0 || globalKnobIdx >= 0) {
+        if (localKnobIdx >= 0 || globalKnobIdx >= 0 || ccIdx >= 0) {
             tCoord mouseCoord = {0};
 
             get_global_gui_scaled_mouse_coord(&mouseCoord);
@@ -349,6 +358,13 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 
                 if (globalKnobIdx >= 0) {
                     queue_knob_overlay(rectangle, globalKnobIdx, true);
+                }
+
+                if (ccIdx >= 0) {
+                    char ccLabel[16];
+
+                    snprintf(ccLabel, sizeof(ccLabel), "CC %u", gControllerArray[module->key.slot].controller[ccIdx].midiCC);
+                    queue_overlay_row(rectangle, ccLabel);
                 }
             }
         }

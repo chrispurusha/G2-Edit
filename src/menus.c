@@ -829,6 +829,119 @@ static void action_deassign_global_knob(int index) {
     gReDraw             = true;
 }
 
+// ── MIDI CC actions ──────────────────────────────────────────────────────────
+// gControllerArray[slot] is a compact list (0..gControllerCount[slot]-1), not
+// a fixed 128-slot array like gKnobArray — each param can hold at most one
+// CC (matches module->param[0][paramIndex].midiCC/hasMidiCC being singular
+// fields), and send_deassign_midi_cc() takes only a CC number (no param),
+// confirming a CC number is exclusive to one param at a time — assigning an
+// already-used CC steals it, same as assigning an occupied knob position.
+
+int32_t find_controller_for_param(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex) {
+    for (uint32_t i = 0; i < gControllerCount[slot]; i++) {
+        if (  gControllerArray[slot].controller[i].location == location
+           && gControllerArray[slot].controller[i].moduleIndex == moduleIndex
+           && gControllerArray[slot].controller[i].paramIndex == paramIndex) {
+            return (int32_t)i;
+        }
+    }
+
+    return -1;
+}
+
+static int32_t find_controller_for_cc(uint32_t slot, uint32_t midiCC) {
+    for (uint32_t i = 0; i < gControllerCount[slot]; i++) {
+        if (gControllerArray[slot].controller[i].midiCC == midiCC) {
+            return (int32_t)i;
+        }
+    }
+
+    return -1;
+}
+
+// Removes entry idx from the compact list via swap-with-last, and clears the
+// shadow hasMidiCC flag on the module param it used to point to.
+static void remove_controller_entry(uint32_t slot, uint32_t idx) {
+    tModuleKey key  = {slot, gControllerArray[slot].controller[idx].location, gControllerArray[slot].controller[idx].moduleIndex};
+    uint32_t   pi   = gControllerArray[slot].controller[idx].paramIndex;
+    tModule *  mod  = get_module(key);
+
+    if ((mod != NULL) && (pi < MAX_NUM_PARAMETERS)) {
+        mod->param[0][pi].hasMidiCC = false;
+    }
+    uint32_t   last = gControllerCount[slot] - 1;
+    gControllerArray[slot].controller[idx] = gControllerArray[slot].controller[last];
+    gControllerCount[slot]                 = last;
+}
+
+static void action_assign_midi_cc(int index) {
+    uint32_t        slot        = gSlot;
+    uint32_t        targetCC    = (uint32_t)gContextMenu.items[index].param;
+    uint32_t        location    = gContextMenu.moduleKey.location;
+    uint32_t        moduleIndex = gContextMenu.moduleKey.index;
+    uint32_t        paramIndex  = gContextMenu.paramIndex;
+    int32_t         ccOwner     = find_controller_for_cc(slot, targetCC);
+    int32_t         paramEntry;
+    tMessageContent msg         = {0};
+
+    if (  ccOwner >= 0
+       && !(  gControllerArray[slot].controller[ccOwner].location == location
+           && gControllerArray[slot].controller[ccOwner].moduleIndex == moduleIndex
+           && gControllerArray[slot].controller[ccOwner].paramIndex == paramIndex)) {
+        remove_controller_entry(slot, (uint32_t)ccOwner);
+        msg.cmd                       = eMsgCmdDeassignMidiCC;
+        msg.slot                      = slot;
+        msg.midiCCDeassignData.midiCC = targetCC;
+        msg_send(&gCommandQueue, &msg);
+        memset(&msg, 0, sizeof(msg));
+    }
+    paramEntry                      = find_controller_for_param(slot, location, moduleIndex, paramIndex);
+
+    if (paramEntry >= 0) {
+        gControllerArray[slot].controller[paramEntry].midiCC = (uint8_t)targetCC;
+    } else if (gControllerCount[slot] < MAX_NUM_CONTROLLERS) {
+        uint32_t idx = gControllerCount[slot]++;
+        gControllerArray[slot].controller[idx] = (tController){
+            (uint8_t)targetCC, location, moduleIndex, paramIndex
+        };
+    }
+    tModule * mod = get_module(gContextMenu.moduleKey);
+
+    if ((mod != NULL) && (paramIndex < MAX_NUM_PARAMETERS)) {
+        mod->param[0][paramIndex].midiCC    = (uint8_t)targetCC;
+        mod->param[0][paramIndex].hasMidiCC = true;
+    }
+    msg.cmd                         = eMsgCmdAssignMidiCC;
+    msg.slot                        = slot;
+    msg.midiCCAssignData.moduleKey  = gContextMenu.moduleKey;
+    msg.midiCCAssignData.paramIndex = paramIndex;
+    msg.midiCCAssignData.midiCC     = targetCC;
+    msg_send(&gCommandQueue, &msg);
+
+    gContextMenu.active             = false;
+    gReDraw                         = true;
+}
+
+static void action_deassign_midi_cc(int index) {
+    uint32_t        slot        = gSlot;
+    uint32_t        location    = gContextMenu.moduleKey.location;
+    uint32_t        moduleIndex = gContextMenu.moduleKey.index;
+    uint32_t        paramIndex  = gContextMenu.paramIndex;
+    int32_t         entry       = find_controller_for_param(slot, location, moduleIndex, paramIndex);
+    tMessageContent msg         = {0};
+
+    if (entry >= 0) {
+        uint32_t cc = gControllerArray[slot].controller[entry].midiCC;
+        remove_controller_entry(slot, (uint32_t)entry);
+        msg.cmd                       = eMsgCmdDeassignMidiCC;
+        msg.slot                      = slot;
+        msg.midiCCDeassignData.midiCC = cc;
+        msg_send(&gCommandQueue, &msg);
+    }
+    gContextMenu.active = false;
+    gReDraw             = true;
+}
+
 static void action_set_toggle_value(int index) {
     uint32_t  slot      = gSlot;
     uint32_t  variation = gPatchDescr[slot].activeVariation;
@@ -960,11 +1073,21 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
     static tMenuItem globalSlotMenuItems[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK + 1];
     static char      globalSlotLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK][64];
 
-    static tMenuItem menuItems[6];
+    // MIDI CC — grouped in the same 8-per-list shape as the knob banks
+    // (submenus opened via tMenuItem::subMenu always render single-column,
+    // so 128 flat entries would run off the bottom of the screen).
+    static tMenuItem ccGroupMenuItems[NUM_MIDI_CC_GROUPS + 1];
+    static char      ccGroupLabels[NUM_MIDI_CC_GROUPS][16];
+    static tMenuItem ccMenuItems[NUM_MIDI_CC_GROUPS][MIDI_CC_GROUP_SIZE + 1];
+    static char      ccLabels[NUM_MIDI_CC_GROUPS][MIDI_CC_GROUP_SIZE][20];
+
+    static tMenuItem menuItems[8];
 
     uint32_t         slot           = gSlot;
     int32_t          assigned       = find_knob_for_param(slot, moduleKey.location, moduleKey.index, paramIndex);
     int32_t          globalAssigned = find_global_knob_for_param(slot, moduleKey.location, moduleKey.index, paramIndex);
+    int32_t          ccAssigned     = find_controller_for_param(slot, moduleKey.location, moduleKey.index, paramIndex);
+    uint32_t         currentCC      = (ccAssigned >= 0) ? gControllerArray[slot].controller[ccAssigned].midiCC : (uint32_t)MAX_NUM_CONTROLLERS;
     int              count          = 0;
 
     for (int pg = 0; pg < NUM_PARAM_PAGES; pg++) {
@@ -1098,6 +1221,33 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
         NULL, RGB_BLACK, NULL, 0, NULL
     };
 
+    for (int g = 0; g < NUM_MIDI_CC_GROUPS; g++) {
+        snprintf(ccGroupLabels[g], sizeof(ccGroupLabels[g]), "CC %d - %d",
+                 g * MIDI_CC_GROUP_SIZE, (g * MIDI_CC_GROUP_SIZE) + MIDI_CC_GROUP_SIZE - 1);
+
+        for (int k = 0; k < MIDI_CC_GROUP_SIZE; k++) {
+            uint32_t cc     = (uint32_t)((g * MIDI_CC_GROUP_SIZE) + k);
+            bool     isCurr = (cc == currentCC);
+
+            snprintf(ccLabels[g][k], sizeof(ccLabels[g][k]), isCurr ? "CC %u (current)" : "CC %u", cc);
+            ccMenuItems[g][k] = (tMenuItem){
+                ccLabels[g][k], isCurr ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_GREY_3, action_assign_midi_cc, cc, NULL
+            };
+        }
+
+        ccMenuItems[g][MIDI_CC_GROUP_SIZE] = (tMenuItem){
+            NULL, RGB_BLACK, NULL, 0, NULL
+        };
+
+        ccGroupMenuItems[g]                = (tMenuItem){
+            ccGroupLabels[g], RGB_GREY_3, NULL, 0, ccMenuItems[g]
+        };
+    }
+
+    ccGroupMenuItems[NUM_MIDI_CC_GROUPS] = (tMenuItem){
+        NULL, RGB_BLACK, NULL, 0, NULL
+    };
+
     menuItems[count++]                   = (tMenuItem){
         "Assign knob...", RGB_GREY_3, NULL, 0, pageMenuItems
     };
@@ -1114,6 +1264,15 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
     if (globalAssigned >= 0) {
         menuItems[count++] = (tMenuItem){
             "Deassign global knob", RGB_GREY_3, action_deassign_global_knob, 0, NULL
+        };
+    }
+    menuItems[count++]                   = (tMenuItem){
+        "MIDI CC...", RGB_GREY_3, NULL, 0, ccGroupMenuItems
+    };
+
+    if (ccAssigned >= 0) {
+        menuItems[count++] = (tMenuItem){
+            "Remove MIDI CC", RGB_GREY_3, action_deassign_midi_cc, 0, NULL
         };
     }
     {

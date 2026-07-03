@@ -52,6 +52,8 @@
 #define NUM_PARAM_PAGES                      (5)
 #define NUM_BANKS_PER_PAGE                   (3)
 #define NUM_KNOBS_PER_BANK                   (8)
+#define MIDI_CC_GROUP_SIZE                   (8)
+#define NUM_MIDI_CC_GROUPS                   (MAX_NUM_CONTROLLERS / MIDI_CC_GROUP_SIZE)
 
 #define INTERRUPT_MESSAGE_SIZE               (16)
 #define EXTENDED_MESSAGE_SIZE                (65536)
