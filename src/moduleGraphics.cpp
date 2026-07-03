@@ -297,8 +297,19 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         }
     }
     {
-        int32_t knobIdx = find_knob_for_param(module->key.slot, module->key.location,
-                                              module->key.index, paramIndex);
+        // Local (patch) assignment takes priority for display; if the param
+        // isn't locally assigned, fall back to a Global Parameter Page
+        // assignment (prefixed "G ", same colour as a local knob) — a param
+        // can be globally assigned without ever being assigned in the patch.
+        int32_t knobIdx  = find_knob_for_param(module->key.slot, module->key.location,
+                                               module->key.index, paramIndex);
+        bool    isGlobal = false;
+
+        if (knobIdx < 0) {
+            knobIdx  = find_global_knob_for_param(module->key.slot, module->key.location,
+                                                  module->key.index, paramIndex);
+            isGlobal = true;
+        }
 
         if (knobIdx >= 0) {
             tCoord mouseCoord = {0};
@@ -306,15 +317,20 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             get_global_gui_scaled_mouse_coord(&mouseCoord);
 
             if (within_rectangle(mouseCoord, gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex])) {
-                int        page       = knobIdx / 24;
-                int        bank       = (knobIdx % 24) / 8;
-                int        pos        = knobIdx % 8;
-                double     labelWidth = get_text_width("X X X", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8, eCache);
-                tRectangle labelRect  = {{rectangle.coord.x + (rectangle.size.w - labelWidth) / 2.0,
+                int          page        = knobIdx / 24;
+                int          bank        = (knobIdx % 24) / 8;
+                int          pos         = knobIdx % 8;
+                const char * widthSample = isGlobal ? "G X X X" : "X X X";
+                double       labelWidth  = get_text_width(widthSample, (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8, eCache);
+                tRectangle   labelRect   = {{rectangle.coord.x + (rectangle.size.w - labelWidth) / 2.0,
                     rectangle.coord.y + rectangle.size.h + 2.0},
                     {labelWidth,                                               (double)STANDARD_TEXT_HEIGHT * 0.8}};
 
-                snprintf(gKnobOverlayLabel, sizeof(gKnobOverlayLabel), "%c %d %d", 'A' + page, bank + 1, pos + 1);
+                if (isGlobal) {
+                    snprintf(gKnobOverlayLabel, sizeof(gKnobOverlayLabel), "G %c %d %d", 'A' + page, bank + 1, pos + 1);
+                } else {
+                    snprintf(gKnobOverlayLabel, sizeof(gKnobOverlayLabel), "%c %d %d", 'A' + page, bank + 1, pos + 1);
+                }
                 gKnobOverlayRect    = labelRect;
                 gKnobOverlayPending = true;
             }
