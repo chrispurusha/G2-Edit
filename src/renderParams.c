@@ -717,10 +717,10 @@ tRectangle render_paramType1Slider(tModule * module, tRectangle rectangle, char 
     double     textH        = 8.0;
     tRgb       black        = {0.0, 0.0, 0.0};
     tRectangle textRect     = {0};
-    tRectangle overflowRect = {0};
-    char       hundreds[2]  = {0};
-    char       tensOnes[3]  = {0};
-    bool       isOverflow   = false;
+    tRectangle topRect      = {0};
+    char       topStr[8]    = {0};
+    char       bottomStr[8] = {0};
+    bool       twoRow       = false;
 
     textRect.coord.x = rectangle.coord.x;
     textRect.coord.y = rectangle.coord.y - textH;
@@ -733,7 +733,9 @@ tRectangle render_paramType1Slider(tModule * module, tRectangle rectangle, char 
     if (module->type == moduleTypeSeqNote) {
         int octave = (int)((uint32_t)paramValue / 12) - 1;
         int note   = (int)((uint32_t)paramValue % 12);
-        snprintf(buff, buffSize, "%s%d", gNoteNames[note], octave);
+        twoRow = true;
+        snprintf(topStr, sizeof(topStr), "%s", gNoteNames[note]);
+        snprintf(bottomStr, sizeof(bottomStr), "%d", octave);
     } else if (module->type == moduleTypeMixFader) {
         // Display 0-100, matching the CommonDial-type mix level dials (e.g. Mix4-1C)
         double level = (paramValue < 127) ? round(((double)paramValue * 100.0 * 10.0) / 128.0) / 10.0 : 100.0;
@@ -760,25 +762,26 @@ tRectangle render_paramType1Slider(tModule * module, tRectangle rectangle, char 
             }
         } else {
             snprintf(buff, buffSize, "%u", (uint32_t)paramValue);
+
+            // Unipolar SeqVal/SeqLev/SeqCtr values of 100-127 are the only 3-digit case here
+            if (hasBipolar && buff[0] == '1' && buff[1] >= '0' && buff[1] <= '9' && buff[2] >= '0' && buff[2] <= '9' && buff[3] == '\0') {
+                twoRow       = true;
+                topStr[0]    = buff[0];
+                bottomStr[0] = buff[1];
+                bottomStr[1] = buff[2];
+            }
         }
     }
-    // Matches the 3-digit unsigned format the unipolar SeqVal/SeqLev/SeqCtr branch above produces (100-127)
-    isOverflow = (module->type == moduleTypeSeqVal || module->type == moduleTypeSeqLev || module->type == moduleTypeSeqCtr) && (buff[0] == '1') && (buff[1] >= '0') && (buff[1] <= '9') && (buff[2] >= '0') && (buff[2] <= '9') && (buff[3] == '\0');
-
     set_rgb_colour(black);
 
-    if (isOverflow) {
-        hundreds[0]          = buff[0];
-        tensOnes[0]          = buff[1];
-        tensOnes[1]          = buff[2];
+    if (twoRow) {
+        topRect.coord.x = textRect.coord.x;
+        topRect.coord.y = textRect.coord.y - textH;
+        topRect.size.w  = BLANK_SIZE;
+        topRect.size.h  = textH;
 
-        overflowRect.coord.x = textRect.coord.x;
-        overflowRect.coord.y = textRect.coord.y - textH;
-        overflowRect.size.w  = BLANK_SIZE;
-        overflowRect.size.h  = textH;
-
-        render_text(moduleArea, overflowRect, hundreds);
-        render_text(moduleArea, textRect, tensOnes);
+        render_text(moduleArea, topRect, topStr);
+        render_text(moduleArea, textRect, bottomStr);
     } else {
         render_text(moduleArea, textRect, buff);
     }
