@@ -1,6 +1,7 @@
   1 Keyboard OK (CT)
   3 4-Out OK (CT)
   4 2-Out OK (CT)
+  5 Invert
   7 OscB
   8 OscShpB check mode
   9 Oscar OK check Mode
@@ -11,6 +12,7 @@
  18 X-fade OK
  19 Mix4-1B OK
  20 EnvADSR OK (CT) check values though
+ 21 Mux1-8
  22 PartQuant OK *** Needs better dial values from 0 to plus minus 63
  23 ModADSR OK
  24 LfoC OK *** Needs to check Range Sub parameter values
@@ -19,39 +21,149 @@
  27 OscMaster OK
  28 Saturate OK
  29 MetNoise OK
+ 30 Device
  31 Noise OK
  32 Eq2Band OK (CT)
  33 Eq3Band OK (CT)
  34 ShpExp OK
+ 35 Driver
+ 36 SwOnOffM
  38 Pulse OK
  40 Mix8-1B OK
  41 EnvH OK
  42 Delay OK
  43 Constant OK
+ 44 LevMult
  45 FltVowel OK
  46 EnvAHD OK
  47 Pan OK
  48 MixStereo OK
+ 49 FltMulti
+ 50 ConstSwT
  51 FltNord OK
+ 52 EnvMulti
+ 53 SandH
+ 54 FltStatic
+ 55 EnvD
+ 56 Resonator
+ 57 Automate
+ 58 DrumSynth
+ 59 CompLev
+ 60 Mux8-1X
+ 61 Clip
+ 62 Overdrive
+ 63 Scratch
+ 64 Gate
  66 Mix2-1B OK (CT)
+ 68 ClkGen
+ 69 ClkDiv
+ 71 EnvFollow
+ 72 NoteScaler
+ 74 WaveWrap
+ 75 NoteQuant
+ 76 SwOnOffT
+ 78 Sw1-8
+ 79 Sw4-1
+ 81 LevAmp
+ 82 Rect
+ 83 ShpStatic
+ 84 EnvADR
+ 85 WindSw
+ 86 8Counter
+ 87 FltLP
+ 88 Sw1-4
+ 89 Flanger
+ 90 Sw1-2
+ 91 FlipFlop
+ 92 FltClassic
  94 StChorus OK (CT)
+ 96 OscD
  97 OscA Works. Needs new UI element for the Freq control (param 0) which takes into account the value of param 6 Pitch Type.
+ 98 FreqShift
+100 Sw2-1
+102 FltPhase
+103 EqPeak
+105 ValSw2-1
+106 OscNoise
+108 Vocoder
+112 LevAdd
+113 Fade1-2
+114 Fade2-1
+115 LevScaler
+116 Mix8-1A
+117 LevMod
+118 Digitizer
+119 EnvADDSR
 121 SeqNote OK(CT) possibly need to consider park LED
 123 Mix4-1C OK (CT)
+124 Mux8-1
+125 WahWah
 126 Name OK (CT)
 127 Fx-In OK (CT)
+128 MinMax
+130 BinCounter
+131 ADConv
+132 DAConv
+134 FltHP
+139 T&H
 140 Mix4-1S OK (CT)
+141 CtrlSend
+142 PCSend
+143 NoteSend
 144 SeqEvent OK(CT) apart from clashing value text, possibly need to consider park LED
 145 SeqVal OK(CT) apart from clashing value text, possibly need to consider park LED 
 146 SeqLev OK(CT) apart from clashing value text, possibly need to consider park LED
+147 CtrlRcv
+148 NoteRcv
+149 NoteZone
 150 Compress OK (CT)
+152 KeyQuant
+154 SeqCtr
+156 NoteDet
+157 LevConv
+158 Glide
+159 CompSig
+160 ZeroCnt
 161 MixFader OK (CT) except value needs to be 0 to 100 xx.x. 127=100 166=98.4 62=48.4, 63=49.2, 64=50, 65=50.8 as per Mix4-1C
+162 FltComb
+163 OscShpA
+164 OscDual
+165 DXRouter
+167 PShift
+169 ModAHD
 170 2-In OK (CT)
 171 4-In OK (CT)
+172 DlySingleA
+173 DlySingleB
+174 DelayDual
+175 DelayQuad
+176 DelayA
+177 DelayB
+178 DlyClock
+179 DlyShiftReg
+180 Operator
+181 DlyEight
+182 DlyStereo
+183 OscPM
 184 Mix1-1A OK (CT)
 185 Mix1-1S OK (CT)
+186 Sw1-2M
+187 Sw2-1M
+188 ConstSwM
+189 NoiseGate
+190 LfoB
+192 Phaser
 193 Mix4-1A OK (CT)
 194 Mix2-1A OK (CT)
+195 ModAmt
+196 OscPerc
+197 Status
+198 PitchTrack
+199 MonoKey
+200 RandomA
+201 Red2Blue
+202 RandomB
+203 Blue2Red
 204 RndClkA
 205 RndTrig
 206 RndClkB
