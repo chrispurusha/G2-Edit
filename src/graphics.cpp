@@ -199,25 +199,25 @@ void window_pos_callback(GLFWwindow * window, int x, int y) {
 }
 
 void resize_window(int w, int h) {
-    glfwSetWindowSize(gWindow, w, h);
+    glfwSetWindowSize((GLFWwindow *)gWindow, w, h);
 }
 
 void reposition_window(int x, int y) {
-    glfwSetWindowPos(gWindow, x, y);
+    glfwSetWindowPos((GLFWwindow *)gWindow, x, y);
 }
 
 void window_close_callback(GLFWwindow * window) {
     gReDraw = false;
 
-    glfwSetFramebufferSizeCallback(gWindow, NULL);
-    glfwSetWindowCloseCallback(gWindow, NULL);
-    glfwSetKeyCallback(gWindow, NULL);
-    glfwSetCharCallback(gWindow, NULL);
-    glfwSetCursorPosCallback(gWindow, NULL);
-    glfwSetMouseButtonCallback(gWindow, NULL);
-    glfwSetScrollCallback(gWindow, NULL);
+    glfwSetFramebufferSizeCallback((GLFWwindow *)gWindow, NULL);
+    glfwSetWindowCloseCallback((GLFWwindow *)gWindow, NULL);
+    glfwSetKeyCallback((GLFWwindow *)gWindow, NULL);
+    glfwSetCharCallback((GLFWwindow *)gWindow, NULL);
+    glfwSetCursorPosCallback((GLFWwindow *)gWindow, NULL);
+    glfwSetMouseButtonCallback((GLFWwindow *)gWindow, NULL);
+    glfwSetScrollCallback((GLFWwindow *)gWindow, NULL);
 
-    glfwSetWindowShouldClose(gWindow, GLFW_TRUE);
+    glfwSetWindowShouldClose((GLFWwindow *)gWindow, GLFW_TRUE);
     glfwPostEmptyEvent();
 }
 
@@ -231,7 +231,7 @@ void set_window_title(const char * filePath) {
         filename = filePath;
     }
     snprintf(newTitle, sizeof(newTitle), "%s - %s", WINDOW_TITLE, filename);
-    glfwSetWindowTitle(gWindow, newTitle);
+    glfwSetWindowTitle((GLFWwindow *)gWindow, newTitle);
 }
 
 void error_callback(int error, const char * description) {
@@ -592,28 +592,31 @@ void init_graphics(void) {
 
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
     glfwWindowHint(GLFW_COCOA_GRAPHICS_SWITCHING, GLFW_TRUE);  // Needed for Intel systems with discrete graphics
-    gWindow       = glfwCreateWindow(TARGET_FRAME_BUFF_WIDTH/4, TARGET_FRAME_BUFF_HEIGHT/4, title, NULL, NULL);
+    gWindow       = (void *)glfwCreateWindow(TARGET_FRAME_BUFF_WIDTH/4, TARGET_FRAME_BUFF_HEIGHT/4, title, NULL, NULL);
 
     if (!gWindow) {
         glfwTerminate();
         exit(EXIT_FAILURE);
     }
-    glfwSetWindowSizeLimits(gWindow, TARGET_FRAME_BUFF_WIDTH/8, TARGET_FRAME_BUFF_HEIGHT/8, GLFW_DONT_CARE, GLFW_DONT_CARE);
-    glfwSetWindowAspectRatio(gWindow, TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT);
+    glfwSetWindowSizeLimits((GLFWwindow *)gWindow, TARGET_FRAME_BUFF_WIDTH/8, TARGET_FRAME_BUFF_HEIGHT/8, GLFW_DONT_CARE, GLFW_DONT_CARE);
+    glfwSetWindowAspectRatio((GLFWwindow *)gWindow, TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT);
 
-    glfwMakeContextCurrent(gWindow);
+    glfwMakeContextCurrent((GLFWwindow *)gWindow);
     
-    glfwSetFramebufferSizeCallback(gWindow, framebuffer_size_callback);
-    glfwSetWindowSizeCallback(gWindow, window_size_callback);
-    glfwSetWindowPosCallback(gWindow, window_pos_callback);
+    glfwSetFramebufferSizeCallback((GLFWwindow *)gWindow, framebuffer_size_callback);
+    glfwSetWindowSizeCallback((GLFWwindow *)gWindow, window_size_callback);
+    glfwSetWindowPosCallback((GLFWwindow *)gWindow, window_pos_callback);
     glfwSwapInterval(1);
-    glfwSetWindowCloseCallback(gWindow, window_close_callback);
-    glfwSetKeyCallback(gWindow, key_callback);
-    glfwSetCharCallback(gWindow, char_event);
-    glfwSetCursorPosCallback(gWindow, cursor_pos);
-    glfwSetMouseButtonCallback(gWindow, mouse_button);
-    glfwSetScrollCallback(gWindow, scroll_event);
+    glfwSetWindowCloseCallback((GLFWwindow *)gWindow, window_close_callback);
+    glfwSetKeyCallback((GLFWwindow *)gWindow, key_callback);
+    glfwSetCharCallback((GLFWwindow *)gWindow, char_event);
+    glfwSetCursorPosCallback((GLFWwindow *)gWindow, cursor_pos);
+    glfwSetMouseButtonCallback((GLFWwindow *)gWindow, mouse_button);
+    glfwSetScrollCallback((GLFWwindow *)gWindow, scroll_event);
 
+    glEnable(GL_BLEND);  // TODO - since we're doing these 2 here, probably doesn't need to be in the text rendering in SynthLib
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
     FT_Init_FreeType(&gLibrary);
     FT_New_Face(gLibrary, "/System/Library/Fonts/Supplemental/Arial.ttf", 0, &gFace);
     FT_Set_Char_Size(gFace, 0, 48 * 64, 300, 300);
@@ -1005,7 +1008,7 @@ static void check_action_flags(void) {
 
     if (gNeedFocus == true) {
         gNeedFocus = false;
-        glfwFocusWindow(gWindow);
+        glfwFocusWindow((GLFWwindow *)gWindow);
     }
 }
 
@@ -1649,7 +1652,7 @@ int note_editor_cursor_from_click(double logicalX, double logicalY) {
 void do_graphics_loop(void) {
     bool reDraw = false;
 
-    while ((gQuitAll == false) && (!glfwWindowShouldClose(gWindow))) {
+    while ((gQuitAll == false) && (!glfwWindowShouldClose((GLFWwindow *)gWindow))) {
         check_action_flags();
 
         reDraw  = gReDraw;
@@ -1673,7 +1676,7 @@ void do_graphics_loop(void) {
             }
             render_top_bar();
             render_morph_groups();
-            render_scrollbars(gWindow);
+            render_scrollbars((GLFWwindow *)gWindow);
             render_patch_settings_panel();
             render_perf_settings_panel();
             render_patch_params_panel();
@@ -1699,14 +1702,14 @@ void do_graphics_loop(void) {
             //}
 
             // Swap buffers and look for events
-            glfwSwapBuffers(gWindow);
+            glfwSwapBuffers((GLFWwindow *)gWindow);
         }
 
         if ((gModuleDrag.active == true) || (gCableDrag.active == true)) {
             double x = 0.0;
             double y = 0.0;
-            glfwGetCursorPos(gWindow, &x, &y);
-            cursor_pos(gWindow, x, y);  // Artificially do cursor_pos call for drag scrolling when cursor not moving
+            glfwGetCursorPos((GLFWwindow *)gWindow, &x, &y);
+            cursor_pos((GLFWwindow *)gWindow, x, y);  // Artificially do cursor_pos call for drag scrolling when cursor not moving
             glfwWaitEventsTimeout(0.016);
         } else {
             glfwWaitEvents();
@@ -1721,7 +1724,7 @@ void clean_up_graphics(void) {
     free_textures();
 
     // glfwMakeContextCurrent(NULL); // TODO: Probably not needed, leaving whilst more tests are done
-    glfwDestroyWindow(gWindow);
+    glfwDestroyWindow((GLFWwindow *)gWindow);
     gWindow = NULL;
     glfwTerminate();
 }
