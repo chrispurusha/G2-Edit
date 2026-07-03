@@ -714,17 +714,21 @@ tRectangle render_paramType1Resonance(tModule * module, tRectangle rectangle, ch
 static const char * gNoteNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 
 tRectangle render_paramType1Slider(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
-    double     textH     = 8.0;
-    tRgb       black     = {0.0, 0.0, 0.0};
-    tRectangle textRect  = {0};
+    double     textH        = 8.0;
+    tRgb       black        = {0.0, 0.0, 0.0};
+    tRectangle textRect     = {0};
+    tRectangle overflowRect = {0};
+    char       hundreds[2]  = {0};
+    char       tensOnes[3]  = {0};
+    bool       isOverflow   = false;
 
     textRect.coord.x = rectangle.coord.x;
     textRect.coord.y = rectangle.coord.y - textH;
     textRect.size.w  = BLANK_SIZE;
     textRect.size.h  = textH;
 
-    uint32_t   slot      = gSlot;
-    uint32_t   variation = gPatchDescr[slot].activeVariation;
+    uint32_t   slot         = gSlot;
+    uint32_t   variation    = gPatchDescr[slot].activeVariation;
 
     if (module->type == moduleTypeSeqNote) {
         int octave = (int)((uint32_t)paramValue / 12) - 1;
@@ -758,8 +762,26 @@ tRectangle render_paramType1Slider(tModule * module, tRectangle rectangle, char 
             snprintf(buff, buffSize, "%u", (uint32_t)paramValue);
         }
     }
+    // Matches the 3-digit unsigned format the unipolar SeqVal/SeqLev/SeqCtr branch above produces (100-127)
+    isOverflow = (module->type == moduleTypeSeqVal || module->type == moduleTypeSeqLev || module->type == moduleTypeSeqCtr) && (buff[0] == '1') && (buff[1] >= '0') && (buff[1] <= '9') && (buff[2] >= '0') && (buff[2] <= '9') && (buff[3] == '\0');
+
     set_rgb_colour(black);
-    render_text(moduleArea, textRect, buff);
+
+    if (isOverflow) {
+        hundreds[0]          = buff[0];
+        tensOnes[0]          = buff[1];
+        tensOnes[1]          = buff[2];
+
+        overflowRect.coord.x = textRect.coord.x;
+        overflowRect.coord.y = textRect.coord.y - textH;
+        overflowRect.size.w  = BLANK_SIZE;
+        overflowRect.size.h  = textH;
+
+        render_text(moduleArea, overflowRect, hundreds);
+        render_text(moduleArea, textRect, tensOnes);
+    } else {
+        render_text(moduleArea, textRect, buff);
+    }
     return draw_slider(moduleArea, rectangle, (uint32_t)paramValue, range, morphRange, colour);
 }
 
