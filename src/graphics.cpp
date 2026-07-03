@@ -170,24 +170,28 @@ static int find_note_cursor_line(int cursorPos) {
     return result;
 }
 
-void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
+static void update_framebuffer_state(int width, int height) {
     // Update the OpenGL viewport to match the current framebuffer size
     glViewport(0, 0, width, height);
-    
-    set_render_width(width);  // Inform utilsGraphics
-    set_render_height(height);  // Inform utilsGraphics
+
+    set_render_width(width);   // Inform utilsGraphics
+    set_render_height(height); // Inform utilsGraphics
     gGlobalGuiScale = (double)gContentScale * (double)width / (double)TARGET_FRAME_BUFF_WIDTH;
-    
+
     // Configure a 2D orthographic projection in framebuffer pixels
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glOrtho(0, width, height, 0, -1, 1);
-    
+
     // Restore the model-view matrix ready for normal rendering
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    
-    gReDraw         = true;
+}
+
+void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
+    update_framebuffer_state(width, height);
+
+    gReDraw = true;
 }
 
 void window_size_callback(GLFWwindow * window, int width, int height) {
@@ -577,7 +581,7 @@ void notify_full_patch_change(void) {
 }
 
 void init_graphics(void) {
-    char          title[128]        = {0};
+    char title[128] = {0};
 
     snprintf(title, sizeof(title), "%s - Build %s %s", WINDOW_TITLE, __DATE__, __TIME__);
 
@@ -592,19 +596,19 @@ void init_graphics(void) {
 
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
     glfwWindowHint(GLFW_COCOA_GRAPHICS_SWITCHING, GLFW_TRUE);  // Needed for Intel systems with discrete graphics
-    gWindow       = (void *)glfwCreateWindow(TARGET_FRAME_BUFF_WIDTH/4, TARGET_FRAME_BUFF_HEIGHT/4, title, NULL, NULL);
+    gWindow = (void *)glfwCreateWindow(TARGET_FRAME_BUFF_WIDTH / 4, TARGET_FRAME_BUFF_HEIGHT / 4, title, NULL, NULL);
 
     if (!gWindow) {
         glfwTerminate();
         exit(EXIT_FAILURE);
     }
-    glfwSetWindowSizeLimits((GLFWwindow *)gWindow, TARGET_FRAME_BUFF_WIDTH/8, TARGET_FRAME_BUFF_HEIGHT/8, GLFW_DONT_CARE, GLFW_DONT_CARE);
+    glfwSetWindowSizeLimits((GLFWwindow *)gWindow, TARGET_FRAME_BUFF_WIDTH / 8, TARGET_FRAME_BUFF_HEIGHT / 8, GLFW_DONT_CARE, GLFW_DONT_CARE);
     glfwSetWindowAspectRatio((GLFWwindow *)gWindow, TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT);
 
     glfwMakeContextCurrent((GLFWwindow *)gWindow);
-    
-    framebuffer_size_callback((GLFWwindow *)gWindow, TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT);
-    
+
+    update_framebuffer_state(TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT);
+
     glfwSetFramebufferSizeCallback((GLFWwindow *)gWindow, framebuffer_size_callback);  // TODO - consider if we even need this, since might not be making a difference
     glfwSetWindowSizeCallback((GLFWwindow *)gWindow, window_size_callback);
     glfwSetWindowPosCallback((GLFWwindow *)gWindow, window_pos_callback);
@@ -618,7 +622,7 @@ void init_graphics(void) {
 
     glEnable(GL_BLEND);  // TODO - since we're doing these 2 here, probably doesn't need to be in the text rendering in SynthLib
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
+
     FT_Init_FreeType(&gLibrary);
     FT_New_Face(gLibrary, "/System/Library/Fonts/Supplemental/Arial.ttf", 0, &gFace);
     FT_Set_Char_Size(gFace, 0, 48 * 64, 300, 300);
