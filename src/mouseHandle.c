@@ -361,8 +361,13 @@ bool handle_module_press(tCoord coord, tMouseButton mouseButton) {
     uint32_t location  = gLocation;
     uint32_t variation = gPatchDescr[slot].activeVariation;
 
+    // Morph group knobs are drawn on top of the scrollable module canvas
+    // (render_morph_groups() runs after render_modules() each frame), so
+    // they must also win hit-testing first — otherwise a regular module
+    // param that happens to sit at the same screen location intercepts the
+    // click instead.
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-        tModule * module = get_module_slot(slot, location, i);
+        tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
 
         if (module->active && handle_module_press_for_module(module, coord, mouseButton, variation)) {
             return true;
@@ -370,7 +375,7 @@ bool handle_module_press(tCoord coord, tMouseButton mouseButton) {
     }
 
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-        tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
+        tModule * module = get_module_slot(slot, location, i);
 
         if (module->active && handle_module_press_for_module(module, coord, mouseButton, variation)) {
             return true;
@@ -464,8 +469,10 @@ bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
         return false;
     }
 
+    // Same priority as handle_module_press: morph knobs are drawn on top of
+    // the module canvas, so they must be hit-tested first.
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-        tModule * module = get_module_slot(slot, location, i);
+        tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
 
         if (module->active && handle_module_release_for_module(module, coord, mouseButton, slot, variation)) {
             return true;
@@ -473,7 +480,7 @@ bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
     }
 
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-        tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
+        tModule * module = get_module_slot(slot, location, i);
 
         if (module->active && handle_module_release_for_module(module, coord, mouseButton, slot, variation)) {
             return true;
