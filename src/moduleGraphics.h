@@ -25,6 +25,7 @@
 
 void render_module(tModule * module);
 void render_modules(void);
+void render_knob_assignment_overlay(void);
 void render_cables(void);
 void render_morph_groups(void);
 void calculate_module_bounds(double * xEndMax, double * yEndMax, tRectangle moduleArea);
