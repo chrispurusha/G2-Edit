@@ -977,22 +977,22 @@ const tParamLocation     paramLocationList[] = {
 
     // 120 Unknown
     // 121 SeqNote - params 0-15: note sliders, 16-31: step enables, 32: Cycle, 33: Length, 34: T/G, 35: Rnd, 36: Clr
-    {moduleTypeSeqNote,    paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step1
-    {moduleTypeSeqNote,    paramTypeSlider,      {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step2
-    {moduleTypeSeqNote,    paramTypeSlider,      {{ 28, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step3
-    {moduleTypeSeqNote,    paramTypeSlider,      {{ 32, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step4
-    {moduleTypeSeqNote,    paramTypeSlider,      {{ 36, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step5
-    {moduleTypeSeqNote,    paramTypeSlider,      {{ 40, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step6
-    {moduleTypeSeqNote,    paramTypeSlider,      {{ 44, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step7
-    {moduleTypeSeqNote,    paramTypeSlider,      {{ 48, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step8
-    {moduleTypeSeqNote,    paramTypeSlider,      {{ 52, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step9
-    {moduleTypeSeqNote,    paramTypeSlider,      {{ 56, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step10
-    {moduleTypeSeqNote,    paramTypeSlider,      {{ 60, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step11
-    {moduleTypeSeqNote,    paramTypeSlider,      {{ 64, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step12
-    {moduleTypeSeqNote,    paramTypeSlider,      {{ 68, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step13
-    {moduleTypeSeqNote,    paramTypeSlider,      {{ 72, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step14
-    {moduleTypeSeqNote,    paramTypeSlider,      {{ 76, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step15
-    {moduleTypeSeqNote,    paramTypeSlider,      {{ 80, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step16
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 20, -12}, { 4, 68}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step1
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 24, -12}, { 4, 68}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step2
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 28, -12}, { 4, 68}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step3
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 32, -12}, { 4, 68}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step4
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 36, -12}, { 4, 68}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step5
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 40, -12}, { 4, 68}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step6
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 44, -12}, { 4, 68}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step7
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 48, -12}, { 4, 68}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step8
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 52, -12}, { 4, 68}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step9
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 56, -12}, { 4, 68}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step10
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 60, -12}, { 4, 68}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step11
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 64, -12}, { 4, 68}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step12
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 68, -12}, { 4, 68}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step13
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 72, -12}, { 4, 68}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step14
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 76, -12}, { 4, 68}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step15
+    {moduleTypeSeqNote,    paramTypeSlider,      {{ 80, -12}, { 4, 68}}, anchorBottomLeft,  NULL,           128,  64, bip128StrMap,                          NULL          },                         // 121 Step16
     {moduleTypeSeqNote,    paramTypeEnable,      {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 121 Evnt1
     {moduleTypeSeqNote,    paramTypeEnable,      {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 121 Evnt2
     {moduleTypeSeqNote,    paramTypeEnable,      {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  offOnColourMap},                         // 121 Evnt3
@@ -1014,9 +1014,9 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqNote,    paramTypeMenu,        {{ 88, -21}, { 7,  7}}, anchorBottomRight, NULL,             2,   0, trigGateStrMap,                        NULL          },                         // 121 T/G
     {moduleTypeSeqNote,    paramTypePush,        {{  3,  34}, {10,  7}}, anchorTopLeft,     "Rnd",            2,   0, NULL,                                  NULL          },                         // 121 Randomize
     {moduleTypeSeqNote,    paramTypePush,        {{  3,  40}, {10,  7}}, anchorTopLeft,     "Clr",            2,   0, NULL,                                  NULL          },                         // 121 Clear
-    {moduleTypeSeqNote,    paramTypeCustomData,  {{  3,  20}, {10,  7}}, anchorTopLeft,     "Mag",            3,   0, seqNoteMagStrMap,                      NULL          },                         // 121 Magnifier (custom data)
-    {moduleTypeSeqNote,    paramTypeCustomData,  {{ 20,  20}, {15,  7}}, anchorTopLeft,     "Oct",            8,   0, octaveStrMap,                          NULL          },                         // 121 Octave (custom data)
-    {moduleTypeSeqNote,    paramTypeCustomData,  {{ 20,  20}, {15,  7}}, anchorTopLeft,     "Oct",            8,   0, octaveStrMap,                          NULL          },                         // 121 Octave (custom data)
+    {moduleTypeSeqNote,    paramTypeCustomData,  {{  3,  56}, {10,  7}}, anchorTopLeft,     "Mag",            3,   0, seqNoteMagStrMap,                      NULL          },                         // 121 Magnifier (custom data)
+    {moduleTypeSeqNote,    paramTypeCustomData,  {{ 3,  46}, {15,  7}}, anchorTopLeft,     "Oct",            8,   0, octaveStrMap,                          NULL          },                         // 121 Octave (custom data)
+    //{moduleTypeSeqNote,    paramTypeCustomData,  {{ 20,  20}, {15,  7}}, anchorTopLeft,     "Oct",            8,   0, octaveStrMap,                          NULL          },                         // 121 Octave (custom data)
     // 122 Unknown
     // 123 Mix4-1C
     {moduleTypeMix4to1C,   paramTypeCommonDial,  {{ 11, -10}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                       // 123 L1
@@ -1115,22 +1115,22 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqEvent,   paramTypeMenu,        {{ 88, -21}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          },                      // 144 T up
     {moduleTypeSeqEvent,   paramTypeMenu,        {{ 88,  -7}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          },                      // 144 T down
     // 145 SeqVal
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-1
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-2
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 28, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-3
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 32, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-4
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 36, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-5
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 40, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-6
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 44, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-7
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 48, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-8
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 52, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-1
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 56, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-2
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 60, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-3
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 64, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-4
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 68, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-5
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 72, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-6
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 76, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-7
-    {moduleTypeSeqVal,     paramTypeSlider,      {{ 80, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-8
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 20, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-1
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 24, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-2
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 28, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-3
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 32, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-4
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 36, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-5
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 40, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-6
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 44, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-7
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 48, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1-8
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 52, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-1
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 56, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-2
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 60, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-3
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 64, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-4
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 68, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-5
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 72, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-6
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 76, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-7
+    {moduleTypeSeqVal,     paramTypeSlider,      {{ 80, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2-8
     {moduleTypeSeqVal,     paramTypeEnable,      {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-1
     {moduleTypeSeqVal,     paramTypeEnable,      {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-2
     {moduleTypeSeqVal,     paramTypeEnable,      {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // 144 Step2-3
@@ -1154,22 +1154,22 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeSeqVal,     paramTypePush,        {{  3,  34}, {10,  7}}, anchorTopLeft,     "Rnd",            2,   0, NULL,                                  NULL          },                      // 145 Randomize
     {moduleTypeSeqVal,     paramTypePush,        {{  3,  40}, {10,  7}}, anchorTopLeft,     "Clr",            2,   0, NULL,                                  NULL          },                      // 145 Clear
     // 146 SeqLev
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 28, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step3
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 32, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step4
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 36, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step5
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 40, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step6
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 44, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step7
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 48, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step8
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 52, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step9
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 56, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step10
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 60, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step11
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 64, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step12
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 68, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step13
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 72, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step14
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 76, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step15
-    {moduleTypeSeqLev,     paramTypeSlider,      {{ 80, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step16
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 20, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step1
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 24, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step2
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 28, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step3
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 32, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step4
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 36, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step5
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 40, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step6
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 44, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step7
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 48, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step8
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 52, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step9
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 56, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step10
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 60, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step11
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 64, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step12
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 68, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step13
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 72, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step14
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 76, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step15
+    {moduleTypeSeqLev,     paramTypeSlider,      {{ 80, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                      // Step16
     {moduleTypeSeqLev,     paramTypeEnable,      {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt1
     {moduleTypeSeqLev,     paramTypeEnable,      {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt2
     {moduleTypeSeqLev,     paramTypeEnable,      {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                      // Evnt3
@@ -1232,22 +1232,22 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeKeyQuant,   paramTypeEnable,      {{ 58,  -7}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 152 Note D#
     // 153 Unknown
     // 154 SeqCtr
-    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 20, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step1
-    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 24, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step2
-    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 28, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step3
-    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 32, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step4
-    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 36, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step5
-    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 40, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step6
-    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 44, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step7
-    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 48, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step8
-    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 52, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step9
-    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 56, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step10
-    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 60, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step11
-    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 64, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step12
-    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 68, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step13
-    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 72, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step14
-    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 76, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step15
-    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 80, -12}, { 4, 32}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step16
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 20, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step1
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 24, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step2
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 28, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step3
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 32, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step4
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 36, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step5
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 40, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step6
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 44, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step7
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 48, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step8
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 52, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step9
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 56, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step10
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 60, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step11
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 64, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step12
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 68, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step13
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 72, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step14
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 76, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step15
+    {moduleTypeSeqCtr,     paramTypeSlider,      {{ 80, -12}, { 4, 56}}, anchorBottomLeft,  NULL,           128,   0, bip128StrMap,                          NULL          },                         // 154 Step16
     {moduleTypeSeqCtr,     paramTypeEnable,      {{ 20,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 154 Evnt1
     {moduleTypeSeqCtr,     paramTypeEnable,      {{ 24,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 154 Evnt2
     {moduleTypeSeqCtr,     paramTypeEnable,      {{ 28,  -5}, { 3,  3}}, anchorBottomLeft,  NULL,             2,   0, NULL,                                  offOnColourMap},                         // 154 Evnt3
@@ -2610,10 +2610,10 @@ const tVolumeLocation    volumeLocationList[] = {
     {moduleType2toIn,     volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight}, // XPos:205+231 YPos:10 H:2
     {moduleType4toIn,     volumeTypeQuad,      {{-50,  7}, { 3, 14}}, anchorTopRight}, // XPos:153..231 YPos:10 H:2
     {moduleTypeSeqEvent,  volumeTypeSequencer, {{ 20, 24}, {64,  5}}, anchorTopLeft },
-    {moduleTypeSeqNote,   volumeTypeSequencer, {{ 20, 40}, {64,  5}}, anchorTopLeft },
-    {moduleTypeSeqVal,    volumeTypeSequencer, {{ 20, 40}, {64,  5}}, anchorTopLeft },
-    {moduleTypeSeqLev,    volumeTypeSequencer, {{ 20, 40}, {64,  5}}, anchorTopLeft },
-    {moduleTypeSeqCtr,    volumeTypeSequencer, {{ 20, 40}, {64,  5}}, anchorTopLeft }, };
+    {moduleTypeSeqNote,   volumeTypeSequencer, {{ 20, 17}, {64,  5}}, anchorTopLeft },
+    {moduleTypeSeqVal,    volumeTypeSequencer, {{ 20, 17}, {64,  5}}, anchorTopLeft },
+    {moduleTypeSeqLev,    volumeTypeSequencer, {{ 20, 17}, {64,  5}}, anchorTopLeft },
+    {moduleTypeSeqCtr,    volumeTypeSequencer, {{ 20, 17}, {64,  5}}, anchorTopLeft }, };
 
 const tLedLocation       ledLocationList[] = {
     {moduleTypeInvert,     ledTypeYes,  {{-40, 10}, {3, 3}}, anchorTopRight},
