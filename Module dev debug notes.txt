@@ -110,9 +110,9 @@
 141 CtrlSend
 142 PCSend
 143 NoteSend
-144 SeqEvent OK(CT) apart from clashing value text, possibly need to consider park LED
-145 SeqVal OK(CT) apart from clashing value text, possibly need to consider park LED 
-146 SeqLev OK(CT) apart from clashing value text, possibly need to consider park LED
+144 SeqEvent OK(CT) possibly need to consider park LED
+145 SeqVal OK(CT) possibly need to consider park LED 
+146 SeqLev OK(CT) possibly need to consider park LED
 147 CtrlRcv
 148 NoteRcv
 149 NoteZone
