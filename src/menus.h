@@ -40,6 +40,7 @@ void open_module_area_context_menu(tCoord coord);
 // Parameter / knob menus
 int32_t find_knob_for_param(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex);
 int32_t find_global_knob_for_param(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex);
+int32_t find_controller_for_param(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex);
 void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex);
 void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, uint32_t paramRef);
 void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeIndex, uint32_t modeRef);
