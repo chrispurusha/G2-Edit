@@ -170,14 +170,23 @@ static int find_note_cursor_line(int cursorPos) {
     return result;
 }
 
-void setup_render_context(void);
-
 void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
+    // Update the OpenGL viewport to match the current framebuffer size
     glViewport(0, 0, width, height);
-    set_render_width(width);
-    set_render_height(height);
+    
+    set_render_width(width);  // Inform utilsGraphics
+    set_render_height(height);  // Inform utilsGraphics
     gGlobalGuiScale = (double)gContentScale * (double)width / (double)TARGET_FRAME_BUFF_WIDTH;
-    setup_render_context();
+    
+    // Configure a 2D orthographic projection in framebuffer pixels
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(0, width, height, 0, -1, 1);
+    
+    // Restore the model-view matrix ready for normal rendering
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    
     gReDraw         = true;
 }
 
@@ -567,22 +576,7 @@ void notify_full_patch_change(void) {
     set_y_scroll_bar(gScrollState.yBar);
 }
 
-void setup_render_context(void) {
-    glDisable(GL_DEPTH_TEST);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0, get_render_width(), get_render_height(), 0, -1, 1);
-    glMatrixMode(GL_MODELVIEW);
-}
-
 void init_graphics(void) {
-    int           fbWidth           = 0;
-    int           fbHeight          = 0;
-    int           windowWidth       = 0;
-    int           windowHeight      = 0;
-    GLFWmonitor * monitor           = NULL;
-    float         xScale            = 1;
-    float         yScale            = 1;
     char          title[128]        = {0};
 
     snprintf(title, sizeof(title), "%s - Build %s %s", WINDOW_TITLE, __DATE__, __TIME__);
@@ -596,47 +590,19 @@ void init_graphics(void) {
     register_full_patch_change_notify_cb(notify_full_patch_change);
     topbar_init_controls();
 
-    monitor       = glfwGetPrimaryMonitor();
-
-    int           x, y, width, height;
-    double        widthScaleFactor  = 1;
-    double        heightScaleFactor = 1;
-    double        scaleFactor       = 1;
-    glfwGetMonitorWorkarea(monitor, &x, &y, &width, &height);
-    glfwGetMonitorContentScale(monitor, &xScale, &yScale);
-    //gContentScale = xScale;  // This seems to fix the non-retina mode
-    windowWidth   = TARGET_FRAME_BUFF_WIDTH / xScale;
-    windowHeight  = TARGET_FRAME_BUFF_HEIGHT / yScale;
-
-    if ((windowWidth > width) || (windowHeight > height)) {
-        heightScaleFactor = (double)windowHeight / (double)height;
-        widthScaleFactor  = (double)windowWidth / (double)width;
-
-        if (heightScaleFactor >= widthScaleFactor) {
-            scaleFactor = heightScaleFactor;
-        } else {
-            scaleFactor = widthScaleFactor;
-        }
-        windowWidth       = (int)((double)windowWidth / scaleFactor);
-        windowHeight      = (int)((double)windowHeight / scaleFactor);
-        gGlobalGuiScale   = gGlobalGuiScale / scaleFactor;
-    }
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
-    glfwWindowHint(GLFW_COCOA_GRAPHICS_SWITCHING, GLFW_TRUE);
-    gWindow       = glfwCreateWindow(windowWidth, windowHeight, title, NULL, NULL);
+    glfwWindowHint(GLFW_COCOA_GRAPHICS_SWITCHING, GLFW_TRUE);  // Needed for Intel systems with discrete graphics
+    gWindow       = glfwCreateWindow(TARGET_FRAME_BUFF_WIDTH/4, TARGET_FRAME_BUFF_HEIGHT/4, title, NULL, NULL);
 
     if (!gWindow) {
         glfwTerminate();
         exit(EXIT_FAILURE);
     }
-    glfwSetWindowSizeLimits(gWindow, 320, 240, GLFW_DONT_CARE, GLFW_DONT_CARE);
-    glfwSetWindowAspectRatio(gWindow, windowWidth, windowHeight);
+    glfwSetWindowSizeLimits(gWindow, TARGET_FRAME_BUFF_WIDTH/8, TARGET_FRAME_BUFF_HEIGHT/8, GLFW_DONT_CARE, GLFW_DONT_CARE);
+    glfwSetWindowAspectRatio(gWindow, TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT);
 
     glfwMakeContextCurrent(gWindow);
-
-    glfwGetFramebufferSize(gWindow, &fbWidth, &fbHeight);
-    glViewport(0, 0, fbWidth, fbHeight);
-
+    
     glfwSetFramebufferSizeCallback(gWindow, framebuffer_size_callback);
     glfwSetWindowSizeCallback(gWindow, window_size_callback);
     glfwSetWindowPosCallback(gWindow, window_pos_callback);
@@ -656,14 +622,6 @@ void init_graphics(void) {
     if (!preload_glyph_textures("/System/Library/Fonts/Supplemental/Arial.ttf", 72.0f)) {
         LOG_ERROR("Failed to preload glyph textures\n");
     }
-    int renderWidth  = 0;
-    int renderHeight = 0;
-    //glfwGetWindowSize(gWindow, &renderWidth, &renderHeight);
-    glfwGetFramebufferSize(gWindow, &renderWidth, &renderHeight);
-    set_render_width(renderWidth);
-    set_render_height(renderHeight);
-
-    setup_render_context();
 }
 
 void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
