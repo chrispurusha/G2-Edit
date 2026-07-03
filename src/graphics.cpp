@@ -603,7 +603,9 @@ void init_graphics(void) {
 
     glfwMakeContextCurrent((GLFWwindow *)gWindow);
     
-    glfwSetFramebufferSizeCallback((GLFWwindow *)gWindow, framebuffer_size_callback);
+    framebuffer_size_callback((GLFWwindow *)gWindow, TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT);
+    
+    glfwSetFramebufferSizeCallback((GLFWwindow *)gWindow, framebuffer_size_callback);  // TODO - consider if we even need this, since might not be making a difference
     glfwSetWindowSizeCallback((GLFWwindow *)gWindow, window_size_callback);
     glfwSetWindowPosCallback((GLFWwindow *)gWindow, window_pos_callback);
     glfwSwapInterval(1);
