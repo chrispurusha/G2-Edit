@@ -158,6 +158,20 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
     }
 }
 
+// The knob-assignment label is recorded here (during per-module rendering)
+// but only actually painted by render_knob_assignment_overlay(), called once
+// the whole frame's modules/cables are drawn — otherwise later components
+// (this module's own name/text, or modules drawn afterwards) paint over it.
+static bool       gKnobOverlayPending   = false;
+static tRectangle gKnobOverlayRect      = {0};
+static char       gKnobOverlayLabel[32] = {0};
+
+void render_knob_assignment_overlay(void) {
+    if (gKnobOverlayPending) {
+        draw_button(moduleArea, gKnobOverlayRect, gKnobOverlayLabel, RGB_GREY_9);
+    }
+}
+
 // This might be too generic and won't be able to use, or we add extra params!
 // TODO: possibly move all the type cases into functions in a new source file, references by function pointer?
 void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramRef, uint32_t paramIndex) {
@@ -292,17 +306,17 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             get_global_gui_scaled_mouse_coord(&mouseCoord);
 
             if (within_rectangle(mouseCoord, gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex])) {
-                char       knobLabel[32] = {0};
-                int        page          = knobIdx / 24;
-                int        bank          = (knobIdx % 24) / 8;
-                int        pos           = knobIdx % 8;
-                double     labelWidth    = get_text_width("X X X", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8, eCache);
-                tRectangle labelRect     = {{rectangle.coord.x + (rectangle.size.w - labelWidth) / 2.0,
+                int        page       = knobIdx / 24;
+                int        bank       = (knobIdx % 24) / 8;
+                int        pos        = knobIdx % 8;
+                double     labelWidth = get_text_width("X X X", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8, eCache);
+                tRectangle labelRect  = {{rectangle.coord.x + (rectangle.size.w - labelWidth) / 2.0,
                     rectangle.coord.y + rectangle.size.h + 2.0},
                     {labelWidth,                                               (double)STANDARD_TEXT_HEIGHT * 0.8}};
 
-                snprintf(knobLabel, sizeof(knobLabel), "%c %d %d", 'A' + page, bank + 1, pos + 1);
-                draw_button(moduleArea, labelRect, knobLabel, RGB_GREY_9);
+                snprintf(gKnobOverlayLabel, sizeof(gKnobOverlayLabel), "%c %d %d", 'A' + page, bank + 1, pos + 1);
+                gKnobOverlayRect    = labelRect;
+                gKnobOverlayPending = true;
             }
         }
     }
@@ -698,6 +712,8 @@ void render_module(tModule * module) {
 void render_modules(void) {
     uint32_t slot     = gSlot;
     uint32_t location = gLocation;
+
+    gKnobOverlayPending = false; // re-armed below only if a knob-assigned param is under the mouse this frame
 
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
         tModule * module = get_module_slot(slot, location, i);

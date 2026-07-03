@@ -1692,6 +1692,7 @@ void do_graphics_loop(void) {
             render_patch_params_panel();
             render_context_menu();
             render_patch_notes_edit();
+            render_knob_assignment_overlay(); // drawn last so nothing else can paint over it
             //Debug only
             //{
             //    double x        = 0.0;
