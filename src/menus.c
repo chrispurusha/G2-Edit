@@ -665,6 +665,20 @@ int32_t find_knob_for_param(uint32_t slot, uint32_t location, uint32_t moduleInd
     return -1;
 }
 
+int32_t find_global_knob_for_param(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex) {
+    for (int i = 0; i < MAX_NUM_KNOBS; i++) {
+        if (  gGlobalKnobArray[i].assigned
+           && gGlobalKnobArray[i].slotIndex == slot
+           && gGlobalKnobArray[i].location == location
+           && gGlobalKnobArray[i].moduleIndex == moduleIndex
+           && gGlobalKnobArray[i].paramIndex == paramIndex) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 static void action_assign_knob(int index) {
     uint32_t        slot           = gSlot;
     uint32_t        targetKnob     = (uint32_t)gContextMenu.items[index].param;
@@ -744,6 +758,72 @@ static void action_deassign_knob(int index) {
         msg_send(&gCommandQueue, &msg);
         tKnob after  = gKnobArray[slot].knob[knobIndex];
         undo_push_knob(slot, (uint32_t)knobIndex, &before, &after, -1, NULL, NULL);
+    }
+    gContextMenu.active = false;
+    gReDraw             = true;
+}
+
+// Global knob assignments live in a single flat array shared across all Slots
+// (gGlobalKnobArray), each entry additionally recording which Slot's module it
+// targets. Unlike patch knobs there's no per-slot undo history for these yet.
+static void action_assign_global_knob(int index) {
+    uint32_t        slot        = gSlot;
+    uint32_t        targetKnob  = (uint32_t)gContextMenu.items[index].param;
+    uint32_t        location    = gContextMenu.moduleKey.location;
+    uint32_t        moduleIndex = gContextMenu.moduleKey.index;
+    uint32_t        paramIndex  = gContextMenu.paramIndex;
+    int32_t         existingKnob;
+    tMessageContent msg         = {0};
+
+    existingKnob                             = find_global_knob_for_param(slot, location, moduleIndex, paramIndex);
+
+    if (gGlobalKnobArray[targetKnob].assigned) {
+        gGlobalKnobArray[targetKnob].assigned = false;
+        msg.cmd                               = eMsgCmdDeassignGlobalKnob;
+        msg.globalKnobDeassignData.knobIndex  = targetKnob;
+        msg_send(&gCommandQueue, &msg);
+        memset(&msg, 0, sizeof(msg));
+    }
+
+    if (existingKnob >= 0 && (uint32_t)existingKnob != targetKnob) {
+        gGlobalKnobArray[existingKnob].assigned = false;
+        msg.cmd                                 = eMsgCmdDeassignGlobalKnob;
+        msg.globalKnobDeassignData.knobIndex    = (uint32_t)existingKnob;
+        msg_send(&gCommandQueue, &msg);
+        memset(&msg, 0, sizeof(msg));
+    }
+    gGlobalKnobArray[targetKnob].assigned    = true;
+    gGlobalKnobArray[targetKnob].location    = location;
+    gGlobalKnobArray[targetKnob].moduleIndex = moduleIndex;
+    gGlobalKnobArray[targetKnob].isLed       = 0;
+    gGlobalKnobArray[targetKnob].paramIndex  = paramIndex;
+    gGlobalKnobArray[targetKnob].slotIndex   = slot;
+
+    msg.cmd                                  = eMsgCmdAssignGlobalKnob;
+    msg.globalKnobAssignData.slotIndex       = slot;
+    msg.globalKnobAssignData.location        = location;
+    msg.globalKnobAssignData.moduleIndex     = moduleIndex;
+    msg.globalKnobAssignData.paramIndex      = paramIndex;
+    msg.globalKnobAssignData.knobIndex       = targetKnob;
+    msg_send(&gCommandQueue, &msg);
+
+    gContextMenu.active                      = false;
+    gReDraw                                  = true;
+}
+
+static void action_deassign_global_knob(int index) {
+    uint32_t        slot        = gSlot;
+    uint32_t        location    = gContextMenu.moduleKey.location;
+    uint32_t        moduleIndex = gContextMenu.moduleKey.index;
+    uint32_t        paramIndex  = gContextMenu.paramIndex;
+    int32_t         knobIndex   = find_global_knob_for_param(slot, location, moduleIndex, paramIndex);
+    tMessageContent msg         = {0};
+
+    if (knobIndex >= 0) {
+        gGlobalKnobArray[knobIndex].assigned = false;
+        msg.cmd                              = eMsgCmdDeassignGlobalKnob;
+        msg.globalKnobDeassignData.knobIndex = (uint32_t)knobIndex;
+        msg_send(&gCommandQueue, &msg);
     }
     gContextMenu.active = false;
     gReDraw             = true;
@@ -869,11 +949,23 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
     static char      bankLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][24];
     static tMenuItem slotMenuItems[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK + 1];
     static char      slotLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK][64];
-    static tMenuItem menuItems[4];
 
-    uint32_t         slot     = gSlot;
-    int32_t          assigned = find_knob_for_param(slot, moduleKey.location, moduleKey.index, paramIndex);
-    int              count    = 0;
+    // Global Parameter Pages — same 5 page x 3 bank x 8 knob layout (labelled
+    // "Global A1".."Global E3" per the manual), but backed by the single
+    // flat gGlobalKnobArray shared across all Slots rather than gKnobArray[slot].
+    static tMenuItem globalPageMenuItems[NUM_PARAM_PAGES + 1];
+    static char      globalPageLabels[NUM_PARAM_PAGES][14];
+    static tMenuItem globalBankMenuItems[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE + 1];
+    static char      globalBankLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][24];
+    static tMenuItem globalSlotMenuItems[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK + 1];
+    static char      globalSlotLabels[NUM_PARAM_PAGES][NUM_BANKS_PER_PAGE][NUM_KNOBS_PER_BANK][64];
+
+    static tMenuItem menuItems[6];
+
+    uint32_t         slot           = gSlot;
+    int32_t          assigned       = find_knob_for_param(slot, moduleKey.location, moduleKey.index, paramIndex);
+    int32_t          globalAssigned = find_global_knob_for_param(slot, moduleKey.location, moduleKey.index, paramIndex);
+    int              count          = 0;
 
     for (int pg = 0; pg < NUM_PARAM_PAGES; pg++) {
         snprintf(pageLabels[pg], sizeof(pageLabels[pg]), "Page %c", 'A' + pg);
@@ -940,13 +1032,88 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
         NULL, RGB_BLACK, NULL, 0, NULL
     };
 
-    menuItems[count++]             = (tMenuItem){
+    for (int pg = 0; pg < NUM_PARAM_PAGES; pg++) {
+        snprintf(globalPageLabels[pg], sizeof(globalPageLabels[pg]), "Global %c", 'A' + pg);
+
+        for (int bk = 0; bk < NUM_BANKS_PER_PAGE; bk++) {
+            snprintf(globalBankLabels[pg][bk], sizeof(globalBankLabels[pg][bk]), "Global %c%d", 'A' + pg, bk + 1);
+
+            for (int k = 0; k < NUM_KNOBS_PER_BANK; k++) {
+                uint32_t knobIdx = (uint32_t)((pg * NUM_BANKS_PER_PAGE + bk) * NUM_KNOBS_PER_BANK + k);
+                bool     inUse   = gGlobalKnobArray[knobIdx].assigned;
+
+                if (inUse) {
+                    uint32_t     gSlotIdx = gGlobalKnobArray[knobIdx].slotIndex;
+                    tModuleKey   modKey   = {gSlotIdx, gGlobalKnobArray[knobIdx].location, gGlobalKnobArray[knobIdx].moduleIndex};
+                    uint32_t     pi       = gGlobalKnobArray[knobIdx].paramIndex;
+                    const char * modName  = "";
+                    const char * parName  = "";
+                    tModule *    mod      = get_module(modKey);
+
+                    if (mod != NULL) {
+                        uint32_t variation = gPatchDescr[gSlotIdx].activeVariation;
+
+                        modName = (mod->name[0] != '\0') ? mod->name : gModuleProperties[mod->type].name;
+
+                        if ((pi < MAX_NUM_PARAMETERS) && mod->paramNameSet[pi][0]) {
+                            parName = mod->paramName[pi][0];
+                        } else if (pi < MAX_NUM_PARAMETERS) {
+                            const char * label = paramLocationList[mod->param[variation][pi].paramRef].label;
+
+                            if (label != NULL && label[0] != '\0') {
+                                parName = label;
+                            }
+                        }
+                    }
+                    snprintf(globalSlotLabels[pg][bk][k], sizeof(globalSlotLabels[pg][bk][k]),
+                             "%c %d - %d Used - Slot %u %s %s", 'A' + pg, bk + 1, k + 1, gSlotIdx + 1, modName, parName);
+                } else {
+                    snprintf(globalSlotLabels[pg][bk][k], sizeof(globalSlotLabels[pg][bk][k]),
+                             "%c %d - %d ---", 'A' + pg, bk + 1, k + 1);
+                }
+                globalSlotMenuItems[pg][bk][k] = (tMenuItem){
+                    globalSlotLabels[pg][bk][k], RGB_GREY_3, action_assign_global_knob, knobIdx, NULL
+                };
+            }
+
+            globalSlotMenuItems[pg][bk][NUM_KNOBS_PER_BANK] = (tMenuItem){
+                NULL, RGB_BLACK, NULL, 0, NULL
+            };
+
+            globalBankMenuItems[pg][bk]                     = (tMenuItem){
+                globalBankLabels[pg][bk], RGB_GREY_3, NULL, 0, globalSlotMenuItems[pg][bk]
+            };
+        }
+
+        globalBankMenuItems[pg][NUM_BANKS_PER_PAGE] = (tMenuItem){
+            NULL, RGB_BLACK, NULL, 0, NULL
+        };
+
+        globalPageMenuItems[pg]                     = (tMenuItem){
+            globalPageLabels[pg], RGB_GREY_3, NULL, 0, globalBankMenuItems[pg]
+        };
+    }
+
+    globalPageMenuItems[NUM_PARAM_PAGES] = (tMenuItem){
+        NULL, RGB_BLACK, NULL, 0, NULL
+    };
+
+    menuItems[count++]                   = (tMenuItem){
         "Assign knob...", RGB_GREY_3, NULL, 0, pageMenuItems
     };
 
     if (assigned >= 0) {
         menuItems[count++] = (tMenuItem){
             "Deassign knob", RGB_GREY_3, action_deassign_knob, 0, NULL
+        };
+    }
+    menuItems[count++]                   = (tMenuItem){
+        "Global assign knob...", RGB_GREY_3, NULL, 0, globalPageMenuItems
+    };
+
+    if (globalAssigned >= 0) {
+        menuItems[count++] = (tMenuItem){
+            "Deassign global knob", RGB_GREY_3, action_deassign_global_knob, 0, NULL
         };
     }
     {
