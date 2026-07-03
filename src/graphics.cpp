@@ -581,8 +581,8 @@ void notify_full_patch_change(void) {
 }
 
 void init_graphics(void) {
-    int fbWidth  = 0;
-    int fbHeight = 0;
+    int  fbWidth    = 0;
+    int  fbHeight   = 0;
     char title[128] = {0};
 
     snprintf(title, sizeof(title), "%s - Build %s %s", WINDOW_TITLE, __DATE__, __TIME__);
