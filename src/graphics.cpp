@@ -581,6 +581,8 @@ void notify_full_patch_change(void) {
 }
 
 void init_graphics(void) {
+    int fbWidth  = 0;
+    int fbHeight = 0;
     char title[128] = {0};
 
     snprintf(title, sizeof(title), "%s - Build %s %s", WINDOW_TITLE, __DATE__, __TIME__);
@@ -607,9 +609,11 @@ void init_graphics(void) {
 
     glfwMakeContextCurrent((GLFWwindow *)gWindow);
 
-    update_framebuffer_state(TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT);
 
-    glfwSetFramebufferSizeCallback((GLFWwindow *)gWindow, framebuffer_size_callback);  // TODO - consider if we even need this, since might not be making a difference
+    glfwGetFramebufferSize((GLFWwindow *)gWindow, &fbWidth, &fbHeight);
+    update_framebuffer_state(fbWidth, fbHeight);
+
+    glfwSetFramebufferSizeCallback((GLFWwindow *)gWindow, framebuffer_size_callback);
     glfwSetWindowSizeCallback((GLFWwindow *)gWindow, window_size_callback);
     glfwSetWindowPosCallback((GLFWwindow *)gWindow, window_pos_callback);
     glfwSwapInterval(1);
