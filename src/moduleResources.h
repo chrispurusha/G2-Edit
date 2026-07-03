@@ -2648,14 +2648,14 @@ const tLedLocation       ledLocationList[] = {
     {moduleTypeRandomB,    ledTypeYes,  {{ -6, 14}, {3, 3}}, anchorTopRight}, // XPos:242 YPos:21 H:3
     {moduleTypeOperator,   ledTypeYes,  {{  8, 13}, {3, 3}}, anchorTopLeft }, // XPos:17  YPos:77 H:12
     // Mux1to8 (ID 21) — 8 LEDs across the upper-right strip
-    {moduleTypeMux1to8,    ledTypeYes,  {{-51,  3}, {3, 3}}, anchorTopRight}, // XPos:102
-    {moduleTypeMux1to8,    ledTypeYes,  {{-45,  3}, {3, 3}}, anchorTopRight}, // XPos:122
-    {moduleTypeMux1to8,    ledTypeYes,  {{-38,  3}, {3, 3}}, anchorTopRight}, // XPos:142
-    {moduleTypeMux1to8,    ledTypeYes,  {{-32,  3}, {3, 3}}, anchorTopRight}, // XPos:162
-    {moduleTypeMux1to8,    ledTypeYes,  {{-25,  3}, {3, 3}}, anchorTopRight}, // XPos:182
-    {moduleTypeMux1to8,    ledTypeYes,  {{-19,  3}, {3, 3}}, anchorTopRight}, // XPos:202
-    {moduleTypeMux1to8,    ledTypeYes,  {{-13,  3}, {3, 3}}, anchorTopRight}, // XPos:222
-    {moduleTypeMux1to8,    ledTypeYes,  {{ -6,  3}, {3, 3}}, anchorTopRight}, // XPos:242
+    {moduleTypeMux1to8,    ledTypeYes,  {{13,  7}, {3, 3}}, anchorTopLeft}, // XPos:102
+    {moduleTypeMux1to8,    ledTypeYes,  {{21,  7}, {3, 3}}, anchorTopLeft}, // XPos:122
+    {moduleTypeMux1to8,    ledTypeYes,  {{28,  7}, {3, 3}}, anchorTopLeft}, // XPos:142
+    {moduleTypeMux1to8,    ledTypeYes,  {{36,  7}, {3, 3}}, anchorTopLeft}, // XPos:162
+    {moduleTypeMux1to8,    ledTypeYes,  {{44,  7}, {3, 3}}, anchorTopLeft}, // XPos:182
+    {moduleTypeMux1to8,    ledTypeYes,  {{52,  7}, {3, 3}}, anchorTopLeft}, // XPos:202
+    {moduleTypeMux1to8,    ledTypeYes,  {{59,  7}, {3, 3}}, anchorTopLeft}, // XPos:222
+    {moduleTypeMux1to8,    ledTypeYes,  {{ 67,  7}, {3, 3}}, anchorTopLeft}, // XPos:242
     // Mux8to1X (ID 60) — 8 LEDs spread across the middle
     {moduleTypeMux8to1X,   ledTypeYes,  {{ 13, 14}, {3, 3}}, anchorTopLeft }, // XPos:34
     {moduleTypeMux8to1X,   ledTypeYes,  {{ 21, 14}, {3, 3}}, anchorTopLeft }, // XPos:54
@@ -2666,41 +2666,41 @@ const tLedLocation       ledLocationList[] = {
     {moduleTypeMux8to1X,   ledTypeYes,  {{ 59, 14}, {3, 3}}, anchorTopLeft }, // XPos:154
     {moduleTypeMux8to1X,   ledTypeYes,  {{ 67, 14}, {3, 3}}, anchorTopLeft }, // XPos:174
     // Mux8to1 (ID 124) — 8 LEDs across the upper-right strip
-    {moduleTypeMux8to1,    ledTypeYes,  {{-58,  3}, {3, 3}}, anchorTopRight}, // XPos:82
-    {moduleTypeMux8to1,    ledTypeYes,  {{-51,  3}, {3, 3}}, anchorTopRight}, // XPos:102
-    {moduleTypeMux8to1,    ledTypeYes,  {{-45,  3}, {3, 3}}, anchorTopRight}, // XPos:122
-    {moduleTypeMux8to1,    ledTypeYes,  {{-38,  3}, {3, 3}}, anchorTopRight}, // XPos:142
-    {moduleTypeMux8to1,    ledTypeYes,  {{-32,  3}, {3, 3}}, anchorTopRight}, // XPos:162
-    {moduleTypeMux8to1,    ledTypeYes,  {{-25,  3}, {3, 3}}, anchorTopRight}, // XPos:202
-    {moduleTypeMux8to1,    ledTypeYes,  {{-19,  3}, {3, 3}}, anchorTopRight}, // XPos:202
-    {moduleTypeMux8to1,    ledTypeYes,  {{-13,  3}, {3, 3}}, anchorTopRight}, // XPos:222
+    {moduleTypeMux8to1,    ledTypeYes,  {{-58,  7}, {3, 3}}, anchorTopRight}, // XPos:82
+    {moduleTypeMux8to1,    ledTypeYes,  {{-51,  7}, {3, 3}}, anchorTopRight}, // XPos:102
+    {moduleTypeMux8to1,    ledTypeYes,  {{-45,  7}, {3, 3}}, anchorTopRight}, // XPos:122
+    {moduleTypeMux8to1,    ledTypeYes,  {{-38,  7}, {3, 3}}, anchorTopRight}, // XPos:142
+    {moduleTypeMux8to1,    ledTypeYes,  {{-32,  7}, {3, 3}}, anchorTopRight}, // XPos:162
+    {moduleTypeMux8to1,    ledTypeYes,  {{-25,  7}, {3, 3}}, anchorTopRight}, // XPos:202
+    {moduleTypeMux8to1,    ledTypeYes,  {{-19,  7}, {3, 3}}, anchorTopRight}, // XPos:202
+    {moduleTypeMux8to1,    ledTypeYes,  {{-13,  7}, {3, 3}}, anchorTopRight}, // XPos:222
     // BinCounter (ID 130) — 8 LEDs across the upper-right strip
-    {moduleTypeBinCounter, ledTypeYes,  {{-58,  3}, {3, 3}}, anchorTopRight}, // XPos:81
-    {moduleTypeBinCounter, ledTypeYes,  {{-51,  3}, {3, 3}}, anchorTopRight}, // XPos:104
-    {moduleTypeBinCounter, ledTypeYes,  {{-43,  3}, {3, 3}}, anchorTopRight}, // XPos:127
-    {moduleTypeBinCounter, ledTypeYes,  {{-36,  3}, {3, 3}}, anchorTopRight}, // XPos:150
-    {moduleTypeBinCounter, ledTypeYes,  {{-28,  3}, {3, 3}}, anchorTopRight}, // XPos:173
-    {moduleTypeBinCounter, ledTypeYes,  {{-21,  3}, {3, 3}}, anchorTopRight}, // XPos:196
-    {moduleTypeBinCounter, ledTypeYes,  {{-14,  3}, {3, 3}}, anchorTopRight}, // XPos:219
-    {moduleTypeBinCounter, ledTypeYes,  {{ -6,  3}, {3, 3}}, anchorTopRight}, // XPos:242
+    {moduleTypeBinCounter, ledTypeYes,  {{-58,  7}, {3, 3}}, anchorTopRight}, // XPos:81
+    {moduleTypeBinCounter, ledTypeYes,  {{-51,  7}, {3, 3}}, anchorTopRight}, // XPos:104
+    {moduleTypeBinCounter, ledTypeYes,  {{-43,  7}, {3, 3}}, anchorTopRight}, // XPos:127
+    {moduleTypeBinCounter, ledTypeYes,  {{-36,  7}, {3, 3}}, anchorTopRight}, // XPos:150
+    {moduleTypeBinCounter, ledTypeYes,  {{-28,  7}, {3, 3}}, anchorTopRight}, // XPos:173
+    {moduleTypeBinCounter, ledTypeYes,  {{-21,  7}, {3, 3}}, anchorTopRight}, // XPos:196
+    {moduleTypeBinCounter, ledTypeYes,  {{-14,  7}, {3, 3}}, anchorTopRight}, // XPos:219
+    {moduleTypeBinCounter, ledTypeYes,  {{ -6,  7}, {3, 3}}, anchorTopRight}, // XPos:242
     // ADConv (ID 131) — 8 LEDs across the upper-right strip
-    {moduleTypeADConv,     ledTypeYes,  {{-58,  3}, {3, 3}}, anchorTopRight}, // XPos:81
-    {moduleTypeADConv,     ledTypeYes,  {{-50,  3}, {3, 3}}, anchorTopRight}, // XPos:105
-    {moduleTypeADConv,     ledTypeYes,  {{-43,  3}, {3, 3}}, anchorTopRight}, // XPos:127
-    {moduleTypeADConv,     ledTypeYes,  {{-36,  3}, {3, 3}}, anchorTopRight}, // XPos:150
-    {moduleTypeADConv,     ledTypeYes,  {{-28,  3}, {3, 3}}, anchorTopRight}, // XPos:173
-    {moduleTypeADConv,     ledTypeYes,  {{-21,  3}, {3, 3}}, anchorTopRight}, // XPos:196
-    {moduleTypeADConv,     ledTypeYes,  {{-14,  3}, {3, 3}}, anchorTopRight}, // XPos:219
-    {moduleTypeADConv,     ledTypeYes,  {{ -6,  3}, {3, 3}}, anchorTopRight}, // XPos:242
+    {moduleTypeADConv,     ledTypeYes,  {{-58,  7}, {3, 3}}, anchorTopRight}, // XPos:81
+    {moduleTypeADConv,     ledTypeYes,  {{-50,  7}, {3, 3}}, anchorTopRight}, // XPos:105
+    {moduleTypeADConv,     ledTypeYes,  {{-43,  7}, {3, 3}}, anchorTopRight}, // XPos:127
+    {moduleTypeADConv,     ledTypeYes,  {{-36,  7}, {3, 3}}, anchorTopRight}, // XPos:150
+    {moduleTypeADConv,     ledTypeYes,  {{-28,  7}, {3, 3}}, anchorTopRight}, // XPos:173
+    {moduleTypeADConv,     ledTypeYes,  {{-21,  7}, {3, 3}}, anchorTopRight}, // XPos:196
+    {moduleTypeADConv,     ledTypeYes,  {{-14,  7}, {3, 3}}, anchorTopRight}, // XPos:219
+    {moduleTypeADConv,     ledTypeYes,  {{ -6,  7}, {3, 3}}, anchorTopRight}, // XPos:242
     // 8Counter (ID 86) — 8 LEDs across the upper-right strip
-    {moduleType8Counter,   ledTypeYes,  {{-58,  3}, {3, 3}}, anchorTopRight}, // XPos:81
-    {moduleType8Counter,   ledTypeYes,  {{-51,  3}, {3, 3}}, anchorTopRight}, // XPos:104
-    {moduleType8Counter,   ledTypeYes,  {{-43,  3}, {3, 3}}, anchorTopRight}, // XPos:127
-    {moduleType8Counter,   ledTypeYes,  {{-36,  3}, {3, 3}}, anchorTopRight}, // XPos:150
-    {moduleType8Counter,   ledTypeYes,  {{-28,  3}, {3, 3}}, anchorTopRight}, // XPos:173
-    {moduleType8Counter,   ledTypeYes,  {{-21,  3}, {3, 3}}, anchorTopRight}, // XPos:196
-    {moduleType8Counter,   ledTypeYes,  {{-14,  3}, {3, 3}}, anchorTopRight}, // XPos:219
-    {moduleType8Counter,   ledTypeYes,  {{ -6,  3}, {3, 3}}, anchorTopRight}, // XPos:242
+    {moduleType8Counter,   ledTypeYes,  {{-58,  7}, {3, 3}}, anchorTopRight}, // XPos:81
+    {moduleType8Counter,   ledTypeYes,  {{-51,  7}, {3, 3}}, anchorTopRight}, // XPos:104
+    {moduleType8Counter,   ledTypeYes,  {{-43,  7}, {3, 3}}, anchorTopRight}, // XPos:127
+    {moduleType8Counter,   ledTypeYes,  {{-36,  7}, {3, 3}}, anchorTopRight}, // XPos:150
+    {moduleType8Counter,   ledTypeYes,  {{-28,  7}, {3, 3}}, anchorTopRight}, // XPos:173
+    {moduleType8Counter,   ledTypeYes,  {{-21,  7}, {3, 3}}, anchorTopRight}, // XPos:196
+    {moduleType8Counter,   ledTypeYes,  {{-14,  7}, {3, 3}}, anchorTopRight}, // XPos:219
+    {moduleType8Counter,   ledTypeYes,  {{ -6,  7}, {3, 3}}, anchorTopRight}, // XPos:242
 
     {moduleTypeSeqEvent,   ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight}, // Park LED — display-only, not in LED stream
     {moduleTypeSeqNote,    ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight},
