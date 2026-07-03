@@ -29,7 +29,7 @@ tDialMode               gDialMode                                               
 
 //double                  gGlobalGuiScale                                                              = 2;
 _Atomic bool            gQuitAll                                                                     = false;
-GLFWwindow *            gWindow                                                                      = NULL;
+void *            gWindow                                                                      = NULL;
 _Atomic uint32_t        gLocation                                                                    = locationVa;
 _Atomic bool            gReDraw                                                                      = true;
 
