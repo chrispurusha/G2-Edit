@@ -730,6 +730,10 @@ tRectangle render_paramType1Slider(tModule * module, tRectangle rectangle, char 
         int octave = (int)((uint32_t)paramValue / 12) - 1;
         int note   = (int)((uint32_t)paramValue % 12);
         snprintf(buff, buffSize, "%s%d", gNoteNames[note], octave);
+    } else if (module->type == moduleTypeMixFader) {
+        // Display 0-100, matching the CommonDial-type mix level dials (e.g. Mix4-1C)
+        double level = (paramValue < 127) ? round(((double)paramValue * 100.0 * 10.0) / 128.0) / 10.0 : 100.0;
+        snprintf(buff, buffSize, "%.1f", level);
     } else {
         uint32_t bipParamIdx = 0;
         bool     hasBipolar  = false;
