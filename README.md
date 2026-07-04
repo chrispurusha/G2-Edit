@@ -2,9 +2,9 @@
 
 A macOS GUI editor for the Nord G2 modular synthesizer. Work in progress.
 
-Binary beta releases: https://github.com/chrispurusha/G2-Edit/tags
+Binary beta releases: https://github.com/chrispurusha/G2-Edit/releases
 
-If anyone is interested in helping, especially with the GUI side of things, please drop me a line.
+If anyone is interested in helping, please drop me a line.
 
 Since I'm now incurring costs (I recently started using LLMs) which would be good to at least cover, I now have a Buy Me a Coffee page:
 
@@ -113,9 +113,5 @@ After editing source files, run from the repository root:
 ```
 ./do-uncrustify
 ```
-
-## Todo
-
-Many mechanisms yet to implement — including copying, etc. 200+ modules to test. Graphical representation of filter curves / oscillator waves etc.
 
 See [THIRD_PARTY.md](./THIRD_PARTY.md) for open-source acknowledgments.
