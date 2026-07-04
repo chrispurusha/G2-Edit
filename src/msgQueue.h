@@ -69,7 +69,8 @@ typedef enum {
     eMsgCmdWritePerfSettings,
     eMsgCmdSetCustomData,
     eMsgCmdBackupBank,
-    eMsgCmdBackupSynthSettings//,
+    eMsgCmdBackupSynthSettings,
+    eMsgCmdBackupEverything//,
     //eMsgCmdReloadAllPatchData
 } eMsgCmd;
 

@@ -115,6 +115,7 @@ extern _Atomic uint64_t        gUsbTxTime;
 extern _Atomic uint64_t        gUsbRxTime;
 extern _Atomic bool            gBankBackupActive;
 extern _Atomic bool            gBankBackupIsPerf;            // true = backing up a Performance Bank, false = Patch Bank
+extern _Atomic bool            gBankBackupIsEverything;      // true = part of a "Backup Everything" sweep
 extern _Atomic uint32_t        gBankBackupBank;              // 0-indexed bank currently being backed up
 extern _Atomic uint32_t        gBankBackupLocation;          // 0-indexed location currently being requested
 extern _Atomic uint32_t        gBankBackupWritten;           // count of patches actually written so far
