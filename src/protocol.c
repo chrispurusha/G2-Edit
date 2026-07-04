@@ -28,6 +28,8 @@
 extern "C" {
 #endif
 
+#include <stdio.h>
+
 #include "defs.h"
 #include "synthlibDefs.h"
 #include "types.h"
@@ -1694,6 +1696,47 @@ void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
         write_bit_stream(buff, bitPos, 8, 0x00);
         write_bit_stream(buff, bitPos, 8, 0x00);  // TODO - this all needs fixing, based on the parsing in usbscomms..c
     }
+}
+
+// Writes a .pch2 file from pre-serialized raw content taken directly off the wire during
+// a Bank Upload (backup) request — NOT from the live in-memory database. The content
+// (version byte, type byte, patch descriptor, ... , trailing CRC) is byte-identical to a
+// normal .pch2 file's binary body (confirmed by diffing a captured response against a real
+// sample file), so it's written verbatim — no re-serialization or CRC recompute needed.
+void write_bank_upload_pch2(const char * filepath, const uint8_t * content, uint32_t contentLen) {
+    FILE * file         = NULL;
+    char   charBuff[64] = {0};
+    char   eol[]        = {0x0d, 0x0a, 0x00};
+
+    if ((content == NULL) || (contentLen == 0)) {
+        LOG_ERROR("write_bank_upload_pch2: empty content\n");
+        return;
+    }
+    file        = fopen(filepath, "wb");
+
+    if (!file) {
+        LOG_ERROR("Error opening file %s\n", filepath);
+        return;
+    }
+    snprintf(charBuff, sizeof(charBuff) - 1, "Version=Nord Modular G2 File Format 1");
+    fwrite(charBuff, 1, strlen(charBuff), file);
+    fwrite(eol, 1, strlen(eol), file);
+    snprintf(charBuff, sizeof(charBuff) - 1, "Type=Patch");
+    fwrite(charBuff, 1, strlen(charBuff), file);
+    fwrite(eol, 1, strlen(eol), file);
+    snprintf(charBuff, sizeof(charBuff) - 1, "Version=%u", content[0]);  // matches the version byte already embedded in content
+    fwrite(charBuff, 1, strlen(charBuff), file);
+    fwrite(eol, 1, strlen(eol), file);
+    snprintf(charBuff, sizeof(charBuff) - 1, "Info=BUILD 320");
+    fwrite(charBuff, 1, strlen(charBuff), file);
+    fwrite(eol, 1, strlen(eol), file);
+    charBuff[0] = '\0';
+    fwrite(charBuff, 1, 1, file);
+
+    if (fwrite(content, 1, contentLen, file) != contentLen) {
+        LOG_ERROR("write_bank_upload_pch2: short write to %s\n", filepath);
+    }
+    fclose(file);
 }
 
 #ifdef __cplusplus

@@ -45,6 +45,49 @@ void open_file_read_dialogue_async(tFileDialogueCallback callback) {
     });
 }
 
+void show_alert_async(const char * title, const char * message) {
+    NSString * titleString   = [NSString stringWithUTF8String:(title ? title : "")];
+    NSString * messageString = [NSString stringWithUTF8String:(message ? message : "")];
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSAlert * alert = [[NSAlert alloc] init];
+
+        [alert setMessageText:titleString];
+        [alert setInformativeText:messageString];
+        [alert addButtonWithTitle:@"OK"];
+        [alert runModal];
+    });
+}
+
+void open_folder_dialogue_async(tFileDialogueCallback callback, const char * title) {
+    NSString * titleString = (title && title[0] != '\0')
+                            ? [NSString stringWithUTF8String:title]
+                            : @"Select a Folder";
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSOpenPanel * panel = [NSOpenPanel openPanel];
+        [panel setCanChooseFiles:NO];
+        [panel setCanChooseDirectories:YES];
+        [panel setAllowsMultipleSelection:NO];
+        [panel setCanCreateDirectories:YES];
+        [panel setTitle:titleString];
+
+        [panel beginWithCompletionHandler:^(NSModalResponse result) {
+             if (result == NSModalResponseOK) {
+                 NSString * path = [panel.URL path];
+
+                 if (callback) {
+                     callback([path UTF8String]);
+                 }
+             } else {
+                 if (callback) {
+                     callback(NULL);
+                 }
+             }
+         }];
+    });
+}
+
 void open_file_write_dialogue_async(tFileDialogueCallback callback, const char * defaultName) {
     // Capture defaultName before dispatching — it may be stack-allocated
     NSString * nameString = (defaultName && defaultName[0] != '\0')

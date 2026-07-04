@@ -1020,6 +1020,11 @@ static void check_action_flags(void) {
         gNeedFocus = false;
         glfwFocusWindow((GLFWwindow *)gWindow);
     }
+
+    if (gBankBackupComplete) {
+        gBankBackupComplete = false;
+        show_alert_async("Bank Backup", gBankBackupResultMessage);
+    }
 }
 
 // Helper: draw a fixed-width dropdown trigger button, return updated x.
@@ -1456,6 +1461,53 @@ static void render_perf_settings_panel(void) {
     (void)buf;
 }
 
+static void render_bank_backup_progress(void) {
+    if (!gBankBackupActive) {
+        return;
+    }
+    double renderW      = get_render_width() / gGlobalGuiScale;
+    double renderH      = get_render_height() / gGlobalGuiScale;
+    double boxW         = 360.0;
+    double boxH         = 90.0;
+    double boxX         = (renderW - boxW) / 2.0;
+    double boxY         = (renderH - boxH) / 2.0;
+    double margin       = 10.0;
+    double titleH       = 24.0;
+    char   lineBuf[128] = {0};
+
+    // Background overlay to de-emphasise content beneath the dialog
+    set_rgb_colour(RGB_GREY_2);
+    render_rectangle(mainArea, {{0.0, 0.0}, {renderW, renderH}});
+
+    // Dialog box
+    set_rgb_colour(RGB_GREY_5);
+    render_rectangle_with_border(mainArea, {{boxX, boxY}, {boxW, boxH}});
+
+    // Title bar
+    set_rgb_colour(RGB_GREY_3);
+    render_rectangle(mainArea, {{boxX, boxY}, {boxW, titleH}});
+    set_rgb_colour(RGB_BLACK);
+    render_text(mainArea, {{boxX + margin, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Backing Up Bank");
+
+    snprintf(lineBuf, sizeof(lineBuf), "Bank %u - location %u / %u",
+             gBankBackupBank + 1, gBankBackupLocation + 1, NUM_LOCATIONS_PER_BANK);
+    render_text(mainArea, {{boxX + margin, boxY + titleH + margin}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, lineBuf);
+
+    snprintf(lineBuf, sizeof(lineBuf), "%u patch%s written so far",
+             gBankBackupWritten, gBankBackupWritten == 1 ? "" : "es");
+    render_text(mainArea, {{boxX + margin, boxY + titleH + margin + STANDARD_TEXT_HEIGHT + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, lineBuf);
+
+    // Progress bar
+    double barY = boxY + boxH - margin - 8.0;
+    double barW = boxW - margin * 2.0;
+    double frac = (double)(gBankBackupLocation + 1) / (double)NUM_LOCATIONS_PER_BANK;
+
+    set_rgb_colour(RGB_GREY_9);
+    render_rectangle(mainArea, {{boxX + margin, barY}, {barW, 8.0}});
+    set_rgb_colour(RGB_GREEN_ON);
+    render_rectangle(mainArea, {{boxX + margin, barY}, {barW * frac, 8.0}});
+}
+
 static void render_patch_notes_edit(void) {
     if (!gPatchNotesEdit.active) {
         return;
@@ -1692,6 +1744,7 @@ void do_graphics_loop(void) {
             render_patch_params_panel();
             render_context_menu();
             render_patch_notes_edit();
+            render_bank_backup_progress();
             render_knob_assignment_overlay(); // drawn last so nothing else can paint over it
             //Debug only
             //{

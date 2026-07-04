@@ -29,6 +29,7 @@
 #include "graphics.h"
 #include "mouseHandle.h"
 #include "usbComms.h"
+#include "fileDialogue.h"
 
 extern "C" {
 void set_zoom_factor(double zoomFactor, tCoord mouseCoord);
@@ -44,11 +45,29 @@ double get_zoom_factor(void);
 - (void)setDialModeRotary:(id)sender;
 - (void)setDialModeVertical:(id)sender;
 - (void)setDialModeHorizontal:(id)sender;
+- (void)backupBank:(id)sender;
 - (void)zoomIn:(id)sender;
 - (void)zoomOut:(id)sender;
 - (void)zoomReset:(id)sender;
 - (BOOL)validateMenuItem:(NSMenuItem *)item;
 @end
+
+// Bank number (0-indexed) selected from the "Backup Bank" submenu, stashed here between the
+// menu click and the folder-choose panel's completion callback (tFileDialogueCallback is a
+// plain C function pointer with no room for captured context).
+static uint32_t sPendingBackupBank = 0;
+
+static void on_bank_backup_folder_chosen(const char * path) {
+    if (path == NULL) {
+        return;
+    }
+    tMessageContent msg = {0};
+
+    msg.cmd                 = eMsgCmdBackupBank;
+    msg.bankBackupData.bank = sPendingBackupBank;
+    strncpy(msg.bankBackupData.destFolder, path, sizeof(msg.bankBackupData.destFolder) - 1);
+    msg_send(&gCommandQueue, &msg);
+}
 
 @implementation G2MenuTarget
 
@@ -101,6 +120,15 @@ double get_zoom_factor(void);
 - (void)setDialModeHorizontal:(id)sender {
     gDialMode = eDialModeHorizontal;
     [[NSUserDefaults standardUserDefaults] setInteger:gDialMode forKey:@"dialMode"];
+}
+
+- (void)backupBank:(id)sender {
+    NSMenuItem * item      = (NSMenuItem *)sender;
+    char         title[64] = {0};
+
+    sPendingBackupBank = (uint32_t)[item tag];
+    snprintf(title, sizeof(title), "Choose a Folder for Bank %ld Backup", (long)[item tag] + 1);
+    open_folder_dialogue_async(on_bank_backup_folder_chosen, title);
 }
 
 - (void)zoomIn:(id)sender {
@@ -189,8 +217,8 @@ void setup_main_menu(void) {
         reposition_window(savedX, savedY);
     }
     // File menu
-    NSMenuItem * fileMI    = [[NSMenuItem alloc] init];
-    NSMenu *     fileMenu  = [[NSMenu alloc] initWithTitle:@"File"];
+    NSMenuItem * fileMI        = [[NSMenuItem alloc] init];
+    NSMenu *     fileMenu      = [[NSMenu alloc] initWithTitle:@"File"];
 
     [fileMenu addItem:make_item(@"Open Patch...", @selector(openPatch:), @"o", target)];
     [fileMenu addItem:make_item(@"Save Patch...", @selector(savePatch:), @"s", target)];
@@ -200,33 +228,53 @@ void setup_main_menu(void) {
     [menuBar insertItem:fileMI atIndex:1];
 
     // Patch menu
-    NSMenuItem * patchMI   = [[NSMenuItem alloc] init];
-    NSMenu *     patchMenu = [[NSMenu alloc] initWithTitle:@"Patch"];
+    NSMenuItem * patchMI       = [[NSMenuItem alloc] init];
+    NSMenu *     patchMenu     = [[NSMenu alloc] initWithTitle:@"Patch"];
 
     [patchMenu addItem:make_item(@"Notes", @selector(openNotes:), @"", target)];
     [patchMenu addItem:make_item(@"Settings", @selector(openSettings:), @",", target)];
     [patchMI setSubmenu:patchMenu];
     [menuBar insertItem:patchMI atIndex:2];
 
+    // Bank menu
+    NSMenuItem * bankMI        = [[NSMenuItem alloc] init];
+    NSMenu *     bankMenu      = [[NSMenu alloc] initWithTitle:@"Bank"];
+    NSMenuItem * backupSubMI   = [[NSMenuItem alloc] initWithTitle:@"Backup Bank" action:NULL keyEquivalent:@""];
+    NSMenu *     backupSubMenu = [[NSMenu alloc] initWithTitle:@"Backup Bank"];
+
+    for (NSInteger i = 0; i < NUM_PATCH_BANKS; i++) {
+        NSMenuItem * bankItem = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Bank %ld", (long)i + 1]
+                                 action:@selector(backupBank:)
+                                 keyEquivalent:@""];
+        [bankItem setTarget:target];
+        [bankItem setTag:i];
+        [backupSubMenu addItem:bankItem];
+    }
+
+    [backupSubMI setSubmenu:backupSubMenu];
+    [bankMenu addItem:backupSubMI];
+    [bankMI setSubmenu:bankMenu];
+    [menuBar insertItem:bankMI atIndex:3];
+
     // Controls menu
-    NSMenuItem * ctrlMI    = [[NSMenuItem alloc] init];
-    NSMenu *     ctrlMenu  = [[NSMenu alloc] initWithTitle:@"Controls"];
+    NSMenuItem * ctrlMI        = [[NSMenuItem alloc] init];
+    NSMenu *     ctrlMenu      = [[NSMenu alloc] initWithTitle:@"Controls"];
 
     [ctrlMenu addItem:make_item(@"Rotary", @selector(setDialModeRotary:), @"", target)];
     [ctrlMenu addItem:make_item(@"Vertical", @selector(setDialModeVertical:), @"", target)];
     [ctrlMenu addItem:make_item(@"Horizontal", @selector(setDialModeHorizontal:), @"", target)];
     [ctrlMI setSubmenu:ctrlMenu];
-    [menuBar insertItem:ctrlMI atIndex:3];
+    [menuBar insertItem:ctrlMI atIndex:4];
 
     // View menu
-    NSMenuItem * viewMI    = [[NSMenuItem alloc] init];
-    NSMenu *     viewMenu  = [[NSMenu alloc] initWithTitle:@"View"];
+    NSMenuItem * viewMI        = [[NSMenuItem alloc] init];
+    NSMenu *     viewMenu      = [[NSMenu alloc] initWithTitle:@"View"];
 
     [viewMenu addItem:make_item(@"Zoom In [⌘=]", @selector(zoomIn:), @"", target)];
     [viewMenu addItem:make_item(@"Zoom Out [⌘-]", @selector(zoomOut:), @"", target)];
     [viewMenu addItem:make_item(@"Zoom Reset", @selector(zoomReset:), @"", target)];
     [viewMI setSubmenu:viewMenu];
-    [menuBar insertItem:viewMI atIndex:4];
+    [menuBar insertItem:viewMI atIndex:5];
 }
 
 void save_zoom_factor(double zoom) {

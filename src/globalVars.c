@@ -104,6 +104,12 @@ _Atomic uint64_t        gUsbTxTime                                              
 _Atomic uint64_t        gUsbRxTime                                                                   = 0;
 tRectangle              gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS] = {0};  // Rectangle references for each module. It's big - around 6mb
 pthread_mutex_t         gStringCopyMutex                                                             = PTHREAD_MUTEX_INITIALIZER;
+_Atomic bool            gBankBackupActive                                                            = false;
+_Atomic uint32_t        gBankBackupBank                                                              = 0;
+_Atomic uint32_t        gBankBackupLocation                                                          = 0;
+_Atomic uint32_t        gBankBackupWritten                                                           = 0;
+_Atomic bool            gBankBackupComplete                                                          = false;
+char                    gBankBackupResultMessage[256]                                                = {0};
 
 void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active) {
     tTopbarControlId i = first;
