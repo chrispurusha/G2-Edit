@@ -30,6 +30,7 @@ extern "C" {
 
 #include <math.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "defs.h"
 #include "synthlibDefs.h"
@@ -1372,6 +1373,25 @@ static int send_bank_upload_request(uint32_t bank, uint32_t location) {
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_COMMAND_PATCH_BANK_DATA, USB_RECV_DATA_MS);
 }
 
+// Fills outName with "baseName.pch2", or "baseName(2).pch2", "baseName(3).pch2", etc. if a file
+// by that name already exists in destFolder. Patch names are free text on the hardware and often
+// repeat across (or even within) banks, so this keeps a same-named patch from a different slot
+// from silently overwriting an earlier backup. The device write path never sees the suffix — the
+// patch name that matters is embedded in the .pch2 content, not the filename (see read_clavia_string
+// in protocol.c), so restore logic can ignore it entirely.
+static void build_unique_backup_filename(char * outName, size_t outNameSize, const char * destFolder,
+                                         const char * baseName) {
+    char probePath[1280] = {0};
+
+    snprintf(outName, outNameSize, "%s.pch2", baseName);
+    snprintf(probePath, sizeof(probePath), "%s/%s", destFolder, outName);
+
+    for (uint32_t n = 2; access(probePath, F_OK) == 0 && n < 1000; n++) {
+        snprintf(outName, outNameSize, "%s(%u).pch2", baseName, n);
+        snprintf(probePath, sizeof(probePath), "%s/%s", destFolder, outName);
+    }
+}
+
 // Loops every location in a Patch Bank, writing each populated slot to destFolder as a
 // .pch2 file plus a .pchList manifest matching the real Nord editor's own bank-dump format.
 // Read-only against the connected G2 — never touches the live in-memory slot/patch state.
@@ -1413,6 +1433,7 @@ static int backup_bank(uint32_t bank, const char * destFolder) {
 
         if (sBankUploadGotData) {
             char sanitizedName[CLAVIA_NAME_SIZE + 1] = {0};
+            char fileName[CLAVIA_NAME_SIZE + 16]     = {0};
             char filePath[1280]                      = {0};
 
             strncpy(sanitizedName, sBankUploadName, CLAVIA_NAME_SIZE);
@@ -1423,11 +1444,12 @@ static int backup_bank(uint32_t bank, const char * destFolder) {
                 }
             }
 
-            snprintf(filePath, sizeof(filePath), "%s/%s.pch2", destFolder, sanitizedName);
+            build_unique_backup_filename(fileName, sizeof(fileName), destFolder, sanitizedName);
+            snprintf(filePath, sizeof(filePath), "%s/%s", destFolder, fileName);
             write_bank_upload_pch2(filePath, sBankUploadContent, sBankUploadContentLen);
 
             if (manifest != NULL) {
-                fprintf(manifest, "%u:%u: %s.pch2\r\n", bank + 1, location + 1, sanitizedName);
+                fprintf(manifest, "%u:%u: %s\r\n", bank + 1, location + 1, fileName);
             }
             written++;
             gBankBackupWritten = written;
