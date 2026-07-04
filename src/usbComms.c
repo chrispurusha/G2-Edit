@@ -1412,7 +1412,10 @@ static void build_unique_backup_filename(char * outName, size_t outNameSize, con
 // after the L-1-byte content (likely an outer CRC) — harmless, since only contentLength bytes are
 // ever copied out. Not confirmed from the capture: the empty-slot response (0x18) — every one of
 // the 29 sampled locations was populated, so this assumes it matches the Patch case exactly.
-static int backup_bank(uint32_t bank, const char * destFolder, bool isPerf) {
+// silent suppresses this bank's own completion popup/flag and leaves gBankBackupActive set on
+// return — used by backup_everything() to chain many banks under one continuous progress dialog
+// and a single final summary alert instead of one popup per bank.
+static int backup_bank(uint32_t bank, const char * destFolder, bool isPerf, bool silent) {
     char         manifestPath[1280] = {0};
     FILE *       manifest           = NULL;
     uint32_t     written            = 0;
@@ -1425,11 +1428,14 @@ static int backup_bank(uint32_t bank, const char * destFolder, bool isPerf) {
         // Fail fast rather than looping NUM_LOCATIONS_PER_BANK times at USB_RECV_DATA_MS each
         // (over 6 minutes) waiting for a device that isn't there.
         LOG_ERROR("backup_bank: G2 is not connected\n");
-        gBankBackupIsPerf   = isPerf;
-        snprintf(gBankBackupResultMessage, sizeof(gBankBackupResultMessage),
-                 "Backup of %s Bank %u failed: the G2 is not connected", typeLabel, bank + 1);
-        gBankBackupComplete = true;
-        call_wake_glfw();
+
+        if (!silent) {
+            gBankBackupIsPerf   = isPerf;
+            snprintf(gBankBackupResultMessage, sizeof(gBankBackupResultMessage),
+                     "Backup of %s Bank %u failed: the G2 is not connected", typeLabel, bank + 1);
+            gBankBackupComplete = true;
+            call_wake_glfw();
+        }
         return EXIT_FAILURE;
     }
     gBankBackupActive   = true;
@@ -1493,12 +1499,15 @@ static int backup_bank(uint32_t bank, const char * destFolder, bool isPerf) {
     if (manifest != NULL) {
         fclose(manifest);
     }
-    snprintf(gBankBackupResultMessage, sizeof(gBankBackupResultMessage),
-             "Backup of %s Bank %u complete: %u %s%s written to %s",
-             typeLabel, bank + 1, written, typeLabel, written == 1 ? "" : (isPerf ? "s" : "es"), destFolder);
-    gBankBackupActive   = false;
-    gBankBackupComplete = true;
-    call_wake_glfw();
+
+    if (!silent) {
+        snprintf(gBankBackupResultMessage, sizeof(gBankBackupResultMessage),
+                 "Backup of %s Bank %u complete: %u %s%s written to %s",
+                 typeLabel, bank + 1, written, typeLabel, written == 1 ? "" : (isPerf ? "s" : "es"), destFolder);
+        gBankBackupActive   = false;
+        gBankBackupComplete = true;
+        call_wake_glfw();
+    }
     return EXIT_SUCCESS;
 }
 
@@ -1539,7 +1548,9 @@ static const char * midi_chan_text(char * buf, size_t bufSize, uint8_t chan) {
 // plain-text key:value file. Unlike Bank Upload there's no Clavia wire format for this — it's a
 // house format for reviewing instrument-wide config (MIDI/sysex/tuning/pedal/etc.) alongside
 // patch and performance backups, not something restorable via the .pch2/.pchList path.
-static int backup_synth_settings(const char * destFolder) {
+// silent suppresses this call's own completion popup/flag — used by backup_everything() so only
+// a single final summary alert fires for the whole sweep.
+static int backup_synth_settings(const char * destFolder, bool silent) {
     char   fileName[64]     = {0};
     char   filePath[1280]   = {0};
     char   chanBuf[4][8]    = {{0}};
@@ -1549,18 +1560,23 @@ static int backup_synth_settings(const char * destFolder) {
 
     if (gCommsState != eCommsOnLine) {
         LOG_ERROR("backup_synth_settings: G2 is not connected\n");
-        snprintf(gSynthSettingsBackupResultMessage, sizeof(gSynthSettingsBackupResultMessage),
-                 "Synth Settings Backup failed: the G2 is not connected");
-        gSynthSettingsBackupComplete = true;
-        call_wake_glfw();
+
+        if (!silent) {
+            snprintf(gSynthSettingsBackupResultMessage, sizeof(gSynthSettingsBackupResultMessage),
+                     "Synth Settings Backup failed: the G2 is not connected");
+            gSynthSettingsBackupComplete = true;
+            call_wake_glfw();
+        }
         return EXIT_FAILURE;
     }
 
     if (send_get_synth_settings() != EXIT_SUCCESS) {
-        snprintf(gSynthSettingsBackupResultMessage, sizeof(gSynthSettingsBackupResultMessage),
-                 "Synth Settings Backup failed: could not read settings from device");
-        gSynthSettingsBackupComplete = true;
-        call_wake_glfw();
+        if (!silent) {
+            snprintf(gSynthSettingsBackupResultMessage, sizeof(gSynthSettingsBackupResultMessage),
+                     "Synth Settings Backup failed: could not read settings from device");
+            gSynthSettingsBackupComplete = true;
+            call_wake_glfw();
+        }
         return EXIT_FAILURE;
     }
     build_synth_settings_backup_filename(fileName, sizeof(fileName));
@@ -1570,10 +1586,13 @@ static int backup_synth_settings(const char * destFolder) {
 
     if (file == NULL) {
         LOG_ERROR("backup_synth_settings: could not create %s\n", filePath);
-        snprintf(gSynthSettingsBackupResultMessage, sizeof(gSynthSettingsBackupResultMessage),
-                 "Synth Settings Backup failed: could not write to %s", destFolder);
-        gSynthSettingsBackupComplete = true;
-        call_wake_glfw();
+
+        if (!silent) {
+            snprintf(gSynthSettingsBackupResultMessage, sizeof(gSynthSettingsBackupResultMessage),
+                     "Synth Settings Backup failed: could not write to %s", destFolder);
+            gSynthSettingsBackupComplete = true;
+            call_wake_glfw();
+        }
         return EXIT_FAILURE;
     }
 
@@ -1610,11 +1629,90 @@ static int backup_synth_settings(const char * destFolder) {
     fprintf(file, "Current Perf Location: %u\r\n", gSynthSettings.perfLocation + 1);
     fclose(file);
 
-    snprintf(gSynthSettingsBackupResultMessage, sizeof(gSynthSettingsBackupResultMessage),
-             "Synth Settings Backup complete: %s written to %s", fileName, destFolder);
-    gSynthSettingsBackupComplete = true;
-    call_wake_glfw();
+    if (!silent) {
+        snprintf(gSynthSettingsBackupResultMessage, sizeof(gSynthSettingsBackupResultMessage),
+                 "Synth Settings Backup complete: %s written to %s", fileName, destFolder);
+        gSynthSettingsBackupComplete = true;
+        call_wake_glfw();
+    }
     return EXIT_SUCCESS;
+}
+
+// Runs a full Patch Bank + Performance Bank + Synth Settings backup in one sweep, using the
+// per-item functions above in "silent" mode so only a single combined summary alert fires at the
+// end instead of one popup per bank. gBankBackupActive/IsPerf/Bank/Location/Written stay driven
+// by whichever backup_bank() call is currently running, so the existing progress dialog keeps
+// updating continuously across the whole sweep; gBankBackupIsEverything just changes its title.
+static int backup_everything(const char * destFolder) {
+    uint32_t totalPatches = 0;
+    uint32_t totalPerfs   = 0;
+    bool     settingsOk   = false;
+    bool     aborted      = false;
+
+    if (gCommsState != eCommsOnLine) {
+        LOG_ERROR("backup_everything: G2 is not connected\n");
+        gBankBackupIsEverything = true;
+        snprintf(gBankBackupResultMessage, sizeof(gBankBackupResultMessage),
+                 "Backup Everything failed: the G2 is not connected");
+        gBankBackupComplete     = true;
+        call_wake_glfw();
+        return EXIT_FAILURE;
+    }
+    gBankBackupIsEverything = true;
+    gBankBackupActive       = true;
+    call_wake_glfw();
+
+    for (uint32_t bank = 0; bank < NUM_PATCH_BANKS; bank++) {
+        if (gotBadConnectionIndication) {
+            LOG_ERROR("backup_everything: aborting early — lost connection to device\n");
+            aborted = true;
+            break;
+        }
+
+        if (backup_bank(bank, destFolder, false, true) != EXIT_SUCCESS) {
+            aborted = true;
+            break;
+        }
+        totalPatches += gBankBackupWritten;
+    }
+
+    if (!aborted) {
+        for (uint32_t bank = 0; bank < NUM_PERF_BANKS; bank++) {
+            if (gotBadConnectionIndication) {
+                LOG_ERROR("backup_everything: aborting early — lost connection to device\n");
+                aborted = true;
+                break;
+            }
+
+            if (backup_bank(bank, destFolder, true, true) != EXIT_SUCCESS) {
+                aborted = true;
+                break;
+            }
+            totalPerfs += gBankBackupWritten;
+        }
+    }
+
+    if (!aborted) {
+        settingsOk = backup_synth_settings(destFolder, true) == EXIT_SUCCESS;
+    }
+    gBankBackupActive   = false;
+    // gBankBackupIsEverything stays true until check_action_flags() has shown the alert below,
+    // so it can still pick the right title — it resets that flag itself, same as gBankBackupComplete.
+
+    if (aborted) {
+        snprintf(gBankBackupResultMessage, sizeof(gBankBackupResultMessage),
+                 "Backup Everything aborted: lost connection to the G2 after %u patch%s and %u performance%s written to %s",
+                 totalPatches, totalPatches == 1 ? "" : "es", totalPerfs, totalPerfs == 1 ? "" : "s", destFolder);
+    } else {
+        snprintf(gBankBackupResultMessage, sizeof(gBankBackupResultMessage),
+                 "Backup Everything complete: %u patch%s across %u bank%s, %u performance%s across %u bank%s, and synth settings%s written to %s",
+                 totalPatches, totalPatches == 1 ? "" : "es", NUM_PATCH_BANKS, NUM_PATCH_BANKS == 1 ? "" : "s",
+                 totalPerfs, totalPerfs == 1 ? "" : "s", NUM_PERF_BANKS, NUM_PERF_BANKS == 1 ? "" : "s",
+                 settingsOk ? "" : " (settings failed)", destFolder);
+    }
+    gBankBackupComplete = true;
+    call_wake_glfw();
+    return aborted ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 static int send_get_patch_name(uint32_t slot) {
@@ -2631,7 +2729,7 @@ static int send_write_data(tMessageContent * messageContent) {
         {
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = backup_bank(messageContent->bankBackupData.bank, messageContent->bankBackupData.destFolder,
-                                 messageContent->bankBackupData.isPerf);
+                                 messageContent->bankBackupData.isPerf, false);
             send_start();
             break;
         }
@@ -2639,7 +2737,15 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdBackupSynthSettings:
         {
             send_stop();
-            retVal = backup_synth_settings(messageContent->settingsBackupData.destFolder);
+            retVal = backup_synth_settings(messageContent->settingsBackupData.destFolder, false);
+            send_start();
+            break;
+        }
+
+        case eMsgCmdBackupEverything:
+        {
+            send_stop();
+            retVal = backup_everything(messageContent->settingsBackupData.destFolder);
             send_start();
             break;
         }

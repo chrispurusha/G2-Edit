@@ -1023,7 +1023,13 @@ static void check_action_flags(void) {
 
     if (gBankBackupComplete) {
         gBankBackupComplete = false;
-        show_alert_async(gBankBackupIsPerf ? "Performance Bank Backup" : "Patch Bank Backup", gBankBackupResultMessage);
+
+        if (gBankBackupIsEverything) {
+            gBankBackupIsEverything = false;
+            show_alert_async("Backup Everything", gBankBackupResultMessage);
+        } else {
+            show_alert_async(gBankBackupIsPerf ? "Performance Bank Backup" : "Patch Bank Backup", gBankBackupResultMessage);
+        }
     }
 
     if (gSynthSettingsBackupComplete) {
@@ -1480,6 +1486,7 @@ static void render_bank_backup_progress(void) {
     double titleH       = 24.0;
     char   lineBuf[128] = {0};
     bool   isPerf       = gBankBackupIsPerf;
+    bool   isEverything = gBankBackupIsEverything;
 
     // Background overlay to de-emphasise content beneath the dialog
     set_rgb_colour(RGB_GREY_2);
@@ -1494,10 +1501,16 @@ static void render_bank_backup_progress(void) {
     render_rectangle(mainArea, {{boxX, boxY}, {boxW, titleH}});
     set_rgb_colour(RGB_BLACK);
     render_text(mainArea, {{boxX + margin, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}},
-                isPerf ? "Backing Up Performance Bank" : "Backing Up Patch Bank");
+                isEverything ? "Backup Everything" : (isPerf ? "Backing Up Performance Bank" : "Backing Up Patch Bank"));
 
-    snprintf(lineBuf, sizeof(lineBuf), "Bank %u - location %u / %u",
-             gBankBackupBank + 1, gBankBackupLocation + 1, NUM_LOCATIONS_PER_BANK);
+    if (isEverything) {
+        snprintf(lineBuf, sizeof(lineBuf), "%s Bank %u of %u - location %u / %u",
+                 isPerf ? "Performance" : "Patch", gBankBackupBank + 1,
+                 isPerf ? NUM_PERF_BANKS : NUM_PATCH_BANKS, gBankBackupLocation + 1, NUM_LOCATIONS_PER_BANK);
+    } else {
+        snprintf(lineBuf, sizeof(lineBuf), "Bank %u - location %u / %u",
+                 gBankBackupBank + 1, gBankBackupLocation + 1, NUM_LOCATIONS_PER_BANK);
+    }
     render_text(mainArea, {{boxX + margin, boxY + titleH + margin}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, lineBuf);
 
     snprintf(lineBuf, sizeof(lineBuf), "%u %s%s written so far",

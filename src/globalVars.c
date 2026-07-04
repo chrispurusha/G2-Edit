@@ -106,6 +106,7 @@ tRectangle              gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES]
 pthread_mutex_t         gStringCopyMutex                                                             = PTHREAD_MUTEX_INITIALIZER;
 _Atomic bool            gBankBackupActive                                                            = false;
 _Atomic bool            gBankBackupIsPerf                                                            = false;
+_Atomic bool            gBankBackupIsEverything                                                      = false;
 _Atomic uint32_t        gBankBackupBank                                                              = 0;
 _Atomic uint32_t        gBankBackupLocation                                                          = 0;
 _Atomic uint32_t        gBankBackupWritten                                                           = 0;

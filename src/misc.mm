@@ -42,12 +42,15 @@ double get_zoom_factor(void);
 - (void)newPatch:(id)sender;
 - (void)openNotes:(id)sender;
 - (void)openSettings:(id)sender;
+- (void)openPatchParams:(id)sender;
+- (void)openPerfSettings:(id)sender;
 - (void)setDialModeRotary:(id)sender;
 - (void)setDialModeVertical:(id)sender;
 - (void)setDialModeHorizontal:(id)sender;
 - (void)backupBank:(id)sender;
 - (void)backupPerfBank:(id)sender;
 - (void)backupSynthSettings:(id)sender;
+- (void)backupEverything:(id)sender;
 - (void)zoomIn:(id)sender;
 - (void)zoomOut:(id)sender;
 - (void)zoomReset:(id)sender;
@@ -80,6 +83,17 @@ static void on_synth_settings_backup_folder_chosen(const char * path) {
     tMessageContent msg = {0};
 
     msg.cmd = eMsgCmdBackupSynthSettings;
+    strncpy(msg.settingsBackupData.destFolder, path, sizeof(msg.settingsBackupData.destFolder) - 1);
+    msg_send(&gCommandQueue, &msg);
+}
+
+static void on_everything_backup_folder_chosen(const char * path) {
+    if (path == NULL) {
+        return;
+    }
+    tMessageContent msg = {0};
+
+    msg.cmd = eMsgCmdBackupEverything;
     strncpy(msg.settingsBackupData.destFolder, path, sizeof(msg.settingsBackupData.destFolder) - 1);
     msg_send(&gCommandQueue, &msg);
 }
@@ -119,6 +133,19 @@ static void on_synth_settings_backup_folder_chosen(const char * path) {
 
     gPatchSettingsEdit.active = true;
     gPatchSettingsEdit.slot   = slot;
+    wake_glfw();
+}
+
+- (void)openPatchParams:(id)sender {
+    uint32_t slot = gSlot;
+
+    gPatchParamsEdit.active = true;
+    gPatchParamsEdit.slot   = slot;
+    wake_glfw();
+}
+
+- (void)openPerfSettings:(id)sender {
+    gPerfSettingsEdit.active = true;
     wake_glfw();
 }
 
@@ -173,6 +200,14 @@ static void on_synth_settings_backup_folder_chosen(const char * path) {
     open_folder_dialogue_async(on_synth_settings_backup_folder_chosen, "Choose a Folder for Synth Settings Backup");
 }
 
+- (void)backupEverything:(id)sender {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up everything.");
+        return;
+    }
+    open_folder_dialogue_async(on_everything_backup_folder_chosen, "Choose a Folder for Backup Everything");
+}
+
 - (void)zoomIn:(id)sender {
     double zoomFactor = get_zoom_factor() + ZOOM_DELTA;
 
@@ -205,8 +240,10 @@ static void on_synth_settings_backup_folder_chosen(const char * path) {
     } else if (action == @selector(setDialModeHorizontal:)) {
         [item setState:(gDialMode == eDialModeHorizontal) ? NSControlStateValueOn : NSControlStateValueOff];
     } else if (  action == @selector(backupBank:) || action == @selector(backupPerfBank:)
-              || action == @selector(backupSynthSettings:)) {
+              || action == @selector(backupSynthSettings:) || action == @selector(backupEverything:)) {
         return gCommsState == eCommsOnLine;
+    } else if (action == @selector(savePatch:)) {
+        [item setTitle:(gGlobalSettings.perfMode == 1) ? @"Save Perf..." : @"Save Patch..."];
     }
     return YES;
 }
@@ -265,27 +302,30 @@ void setup_main_menu(void) {
     NSMenuItem * fileMI            = [[NSMenuItem alloc] init];
     NSMenu *     fileMenu          = [[NSMenu alloc] initWithTitle:@"File"];
 
-    [fileMenu addItem:make_item(@"Open Patch...", @selector(openPatch:), @"o", target)];
+    [fileMenu addItem:make_item(@"Open Patch/Perf...", @selector(openPatch:), @"o", target)];
     [fileMenu addItem:make_item(@"Save Patch...", @selector(savePatch:), @"s", target)];
     [fileMenu addItem:[NSMenuItem separatorItem]];
     [fileMenu addItem:make_item(@"New Patch", @selector(newPatch:), @"n", target)];
     [fileMI setSubmenu:fileMenu];
     [menuBar insertItem:fileMI atIndex:1];
 
-    // Patch menu
+    // Settings menu
     NSMenuItem * patchMI           = [[NSMenuItem alloc] init];
-    NSMenu *     patchMenu         = [[NSMenu alloc] initWithTitle:@"Patch"];
+    NSMenu *     patchMenu         = [[NSMenu alloc] initWithTitle:@"Settings"];
 
+    [patchMenu addItem:make_item(@"Synth", @selector(openSettings:), @",", target)];
+    [patchMenu addItem:make_item(@"Patch", @selector(openPatchParams:), @"", target)];
+    [patchMenu addItem:make_item(@"Perf", @selector(openPerfSettings:), @"", target)];
+    [patchMenu addItem:[NSMenuItem separatorItem]];
     [patchMenu addItem:make_item(@"Notes", @selector(openNotes:), @"", target)];
-    [patchMenu addItem:make_item(@"Settings", @selector(openSettings:), @",", target)];
     [patchMI setSubmenu:patchMenu];
     [menuBar insertItem:patchMI atIndex:2];
 
-    // Bank menu
+    // Backup menu
     NSMenuItem * bankMI            = [[NSMenuItem alloc] init];
-    NSMenu *     bankMenu          = [[NSMenu alloc] initWithTitle:@"Bank"];
-    NSMenuItem * backupSubMI       = [[NSMenuItem alloc] initWithTitle:@"Backup Bank" action:NULL keyEquivalent:@""];
-    NSMenu *     backupSubMenu     = [[NSMenu alloc] initWithTitle:@"Backup Bank"];
+    NSMenu *     bankMenu          = [[NSMenu alloc] initWithTitle:@"Backup"];
+    NSMenuItem * backupSubMI       = [[NSMenuItem alloc] initWithTitle:@"Patch Bank" action:NULL keyEquivalent:@""];
+    NSMenu *     backupSubMenu     = [[NSMenu alloc] initWithTitle:@"Patch Bank"];
 
     for (NSInteger i = 0; i < NUM_PATCH_BANKS; i++) {
         NSMenuItem * bankItem = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Bank %ld", (long)i + 1]
@@ -296,8 +336,8 @@ void setup_main_menu(void) {
         [backupSubMenu addItem:bankItem];
     }
 
-    NSMenuItem * backupPerfSubMI   = [[NSMenuItem alloc] initWithTitle:@"Backup Performance Bank" action:NULL keyEquivalent:@""];
-    NSMenu *     backupPerfSubMenu = [[NSMenu alloc] initWithTitle:@"Backup Performance Bank"];
+    NSMenuItem * backupPerfSubMI   = [[NSMenuItem alloc] initWithTitle:@"Performance Bank" action:NULL keyEquivalent:@""];
+    NSMenu *     backupPerfSubMenu = [[NSMenu alloc] initWithTitle:@"Performance Bank"];
 
     for (NSInteger i = 0; i < NUM_PERF_BANKS; i++) {
         NSMenuItem * perfBankItem = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Bank %ld", (long)i + 1]
@@ -313,7 +353,9 @@ void setup_main_menu(void) {
     [backupPerfSubMI setSubmenu:backupPerfSubMenu];
     [bankMenu addItem:backupPerfSubMI];
     [bankMenu addItem:[NSMenuItem separatorItem]];
-    [bankMenu addItem:make_item(@"Backup Synth Settings...", @selector(backupSynthSettings:), @"", target)];
+    [bankMenu addItem:make_item(@"Synth Settings...", @selector(backupSynthSettings:), @"", target)];
+    [bankMenu addItem:[NSMenuItem separatorItem]];
+    [bankMenu addItem:make_item(@"Everything...", @selector(backupEverything:), @"", target)];
     [bankMI setSubmenu:bankMenu];
     [menuBar insertItem:bankMI atIndex:3];
 
