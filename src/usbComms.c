@@ -57,26 +57,34 @@ extern "C" {
 #define USB_KEEPALIVE_INTERVAL_S    (2)    // macOS suspends USB after ~3s idle; keep well inside that
 
 // Atomic flags for cross-thread signalling
-static _Atomic bool           gotBadConnectionIndication          = false;
-static _Atomic bool           gotPatchChangeIndication[MAX_SLOTS] = {0};
-static _Atomic bool           gotPerfSettingsChangeIndication     = false;
-static int32_t                stopCount                           = 0;
+static _Atomic bool           gotBadConnectionIndication            = false;
+static _Atomic bool           gotPatchChangeIndication[MAX_SLOTS]   = {0};
+static _Atomic bool           gotPerfSettingsChangeIndication       = false;
+static int32_t                stopCount                             = 0;
+
+// Bank upload (backup) response scratch state — populated by parse_bank_upload_data/
+// parse_bank_upload_empty on the USB thread, consumed by backup_bank() immediately
+// after send_bank_upload_request() returns (single-threaded round trip, no locking needed).
+static uint8_t                sBankUploadContent[PATCH_FILE_SIZE];
+static uint32_t               sBankUploadContentLen                 = 0;
+static char                   sBankUploadName[CLAVIA_NAME_SIZE + 1] = {0};
+static bool                   sBankUploadGotData                    = false;
 
 // Protected by usbStaticMutex
-static pthread_t              usbThread                           = NULL;
-static libusb_context *       libUsbCtx                           = NULL;
-static libusb_device_handle * devHandle                           = NULL;
+static pthread_t              usbThread                             = NULL;
+static libusb_context *       libUsbCtx                             = NULL;
+static libusb_device_handle * devHandle                             = NULL;
 
 // Callback pointers protected by callbackMutex
 static void                   (*wake_glfw_func_ptr)(void) = NULL;
 static void                   (*full_patch_change_notify_func_ptr)(void) = NULL;
 
 // Mutexes
-static pthread_mutex_t        usbStaticMutex                      = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t        callbackMutex                       = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t        usbStaticMutex                        = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t        callbackMutex                         = PTHREAD_MUTEX_INITIALIZER;
 
 // Keepalive: timestamp of the last successful inbound or outbound USB transfer
-static time_t                 gLastActivityTime                   = 0;
+static time_t                 gLastActivityTime                     = 0;
 
 // ---------------------------------------------------------------------------
 // Callback registration
@@ -666,6 +674,40 @@ static void parse_perf_patch_versions(uint8_t * buff, uint32_t * bitPos) {
     }
 }
 
+// Wire format (reverse-engineered from a real Bank Upload capture): after the
+// [responseType][commandResponse][version][subCommand] header already consumed by the
+// caller: 2 reserved bytes, 1 location byte (0-indexed, echoes the request), a
+// null-terminated Clavia name, a 16-bit length L, a 2-byte echoed [version][type] marker
+// (discarded — the real one is repeated at the start of the content that follows), then
+// L+1 raw bytes that are byte-identical to a .pch2 file's own binary body (confirmed by
+// diffing a captured response against a real sample file) — safe to write to disk as-is.
+static void parse_bank_upload_data(uint8_t * buff, uint32_t * bitPos) {
+    uint32_t contentLength = 0;
+    uint32_t contentStart  = 0;
+
+    read_bit_stream(buff, bitPos, 8);  // reserved, always 0x00
+    read_bit_stream(buff, bitPos, 8);  // reserved, always 0x00
+    read_bit_stream(buff, bitPos, 8);  // location echo — caller already knows which location it asked for
+    read_clavia_string(buff, bitPos, sBankUploadName, sizeof(sBankUploadName));
+    contentLength         = read_bit_stream(buff, bitPos, 16) + 1;
+    read_bit_stream(buff, bitPos, 16);  // echoed [version][type] marker — discarded, repeated in content below
+    contentStart          = BIT_TO_BYTE(*bitPos);
+
+    if (contentLength > sizeof(sBankUploadContent)) {
+        LOG_ERROR("Bank upload content length %u exceeds buffer %zu, truncating\n", contentLength, sizeof(sBankUploadContent));
+        contentLength = sizeof(sBankUploadContent);
+    }
+    memcpy(sBankUploadContent, &buff[contentStart], contentLength);
+    sBankUploadContentLen = contentLength;
+    sBankUploadGotData    = true;
+    LOG_DEBUG("Bank upload: got patch '%s' (%u bytes)\n", sBankUploadName, contentLength);
+}
+
+static void parse_bank_upload_empty(void) {
+    sBankUploadGotData = false;
+    LOG_DEBUG("Bank upload: location empty\n");
+}
+
 static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
                                   uint8_t commandResponse, uint8_t subCommand,
                                   int length) {
@@ -816,6 +858,14 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             store_patch_notes(slot, buff, bitPos, count);
             return EXIT_SUCCESS;
         }
+
+        case SUB_COMMAND_PATCH_BANK_DATA:
+            parse_bank_upload_data(buff, bitPos);
+            return EXIT_SUCCESS;
+
+        case SUB_RESPONSE_PATCH_BANK_UPLOAD:
+            parse_bank_upload_empty();
+            return EXIT_SUCCESS;
 
         default:
             LOG_DEBUG("Got unknown sub-command 0x%02x - must implement!!!\n", subCommand);
@@ -1043,7 +1093,10 @@ static int int_rec(tPoll poll, int expectedResponse, unsigned int timeout_ms) {
         } else {
             LOG_DEBUG("response = 0x%02x expected = 0x%02x\n", response, expectedResponse);
 
-            if (response == expectedResponse) {
+            // A Bank Upload request can legitimately come back either with patch data or
+            // with an "empty location" response — both are valid terminal outcomes.
+            if (  (response == expectedResponse)
+               || ((expectedResponse == SUB_COMMAND_PATCH_BANK_DATA) && (response == SUB_RESPONSE_PATCH_BANK_UPLOAD))) {
                 doLoop = false;                   // Got what we wanted — retVal already correct
             } else {
                 if (response == SUB_RESPONSE_ERROR) {
@@ -1301,6 +1354,96 @@ static int send_get_patch(uint32_t slot) {
 
     usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_GET_PATCH_SLOT);
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_PATCH_DESCRIPTION, USB_RECV_DATA_MS);
+}
+
+// Requests a single (bank, location) slot during a Bank Upload (backup). Response lands in
+// sBankUploadContent/sBankUploadName (via parse_bank_upload_data) or sBankUploadGotData is
+// left false if the slot is empty (via parse_bank_upload_empty) — both are accepted as
+// success by int_rec's special-cased termination check for SUB_COMMAND_PATCH_BANK_DATA.
+static int send_bank_upload_request(uint32_t bank, uint32_t location) {
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+
+    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_PATCH_BANK_UPLOAD);
+    write_bit_stream(buff, &bitPos, 8, 0x00);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)bank);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)location);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_COMMAND_PATCH_BANK_DATA, USB_RECV_DATA_MS);
+}
+
+// Loops every location in a Patch Bank, writing each populated slot to destFolder as a
+// .pch2 file plus a .pchList manifest matching the real Nord editor's own bank-dump format.
+// Read-only against the connected G2 — never touches the live in-memory slot/patch state.
+static int backup_bank(uint32_t bank, const char * destFolder) {
+    char     manifestPath[1280] = {0};
+    FILE *   manifest           = NULL;
+    uint32_t written            = 0;
+
+    gBankBackupActive   = true;
+    gBankBackupBank     = bank;
+    gBankBackupLocation = 0;
+    gBankBackupWritten  = 0;
+    gBankBackupComplete = false;
+    call_wake_glfw();
+
+    snprintf(manifestPath, sizeof(manifestPath), "%s/PatchBank%u.pchList", destFolder, bank + 1);
+    manifest            = fopen(manifestPath, "wb");
+
+    if (manifest != NULL) {
+        fprintf(manifest, "Version=Nord Modular G2 Bank Dump\r\n");
+    } else {
+        LOG_ERROR("backup_bank: could not create manifest %s\n", manifestPath);
+    }
+
+    for (uint32_t location = 0; location < NUM_LOCATIONS_PER_BANK; location++) {
+        if (gotBadConnectionIndication) {
+            LOG_ERROR("backup_bank: aborting early — lost connection to device\n");
+            break;
+        }
+        gBankBackupLocation = location;
+        call_wake_glfw();
+
+        sBankUploadGotData  = false;
+
+        if (send_bank_upload_request(bank, location) != EXIT_SUCCESS) {
+            LOG_ERROR("Bank upload request failed for bank %u location %u\n", bank, location);
+            continue;
+        }
+
+        if (sBankUploadGotData) {
+            char sanitizedName[CLAVIA_NAME_SIZE + 1] = {0};
+            char filePath[1280]                      = {0};
+
+            strncpy(sanitizedName, sBankUploadName, CLAVIA_NAME_SIZE);
+
+            for (char * p = sanitizedName; *p != '\0'; p++) {
+                if (*p == '/' || *p == ':') {
+                    *p = '_';  // keep the name filesystem-safe — patch names are free text on the hardware
+                }
+            }
+
+            snprintf(filePath, sizeof(filePath), "%s/%s.pch2", destFolder, sanitizedName);
+            write_bank_upload_pch2(filePath, sBankUploadContent, sBankUploadContentLen);
+
+            if (manifest != NULL) {
+                fprintf(manifest, "%u:%u: %s.pch2\r\n", bank + 1, location + 1, sanitizedName);
+            }
+            written++;
+            gBankBackupWritten = written;
+            call_wake_glfw();
+        }
+    }
+
+    if (manifest != NULL) {
+        fclose(manifest);
+    }
+    snprintf(gBankBackupResultMessage, sizeof(gBankBackupResultMessage),
+             "Backup of Bank %u complete: %u patch%s written to %s",
+             bank + 1, written, written == 1 ? "" : "es", destFolder);
+    gBankBackupActive   = false;
+    gBankBackupComplete = true;
+    call_wake_glfw();
+    return EXIT_SUCCESS;
 }
 
 static int send_get_patch_name(uint32_t slot) {
@@ -2310,6 +2453,14 @@ static int send_write_data(tMessageContent * messageContent) {
                     messageContent->customDataMsg.customData[0],
                     messageContent->customDataMsg.customData[1]);
             }
+            break;
+        }
+
+        case eMsgCmdBackupBank:
+        {
+            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
+            retVal = backup_bank(messageContent->bankBackupData.bank, messageContent->bankBackupData.destFolder);
+            send_start();
             break;
         }
 

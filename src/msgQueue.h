@@ -67,7 +67,8 @@ typedef enum {
     eMsgCmdWritePerf,
     eMsgCmdWritePerfName,
     eMsgCmdWritePerfSettings,
-    eMsgCmdSetCustomData//,
+    eMsgCmdSetCustomData,
+    eMsgCmdBackupBank//,
     //eMsgCmdReloadAllPatchData
 } eMsgCmd;
 
@@ -202,6 +203,11 @@ typedef struct {
 } tCustomDataMsg;
 
 typedef struct {
+    uint32_t bank; // 0-indexed
+    char     destFolder[1024];
+} tBankBackupData;
+
+typedef struct {
     uint32_t cmd;
     uint32_t slot;
     union {
@@ -226,6 +232,7 @@ typedef struct {
         tMasterClockRunData     masterClockRunData;
         tParamLabelData         paramLabelData;
         tCustomDataMsg          customDataMsg;
+        tBankBackupData         bankBackupData;
     };
 } tMessageContent;
 
@@ -243,9 +250,17 @@ typedef struct {
     tMessage *      tail;
 } tMessageQueue;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void msg_init(tMessageQueue * msgQueue, char * semName);
 int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageContent);
 void msg_send(tMessageQueue * msgQueue, tMessageContent * messageContent);
 int msg_count(tMessageQueue * msgQueue);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __MSG_QUEUE_H__

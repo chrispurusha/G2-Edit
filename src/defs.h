@@ -169,6 +169,9 @@
 #define SUB_RESPONSE_PATCH_BANK_UPLOAD       (0x18)
 #define SUB_COMMAND_PATCH_BANK_DATA          (0x19)
 
+#define NUM_PATCH_BANKS                      (32)
+#define NUM_LOCATIONS_PER_BANK               (128)
+
 #define COMMAND_REQ                          (0x20) // High nibble, expects response
 #define COMMAND_WRITE_NO_RESP                (0x30) // High nibble, expects response
 #define COMMAND_SYS                          (0x0c) // Low nibble

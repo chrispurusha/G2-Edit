@@ -28,6 +28,8 @@ typedef void (*tFileDialogueCallback)(const char * path);
 
 void open_file_read_dialogue_async(tFileDialogueCallback callback);
 void open_file_write_dialogue_async(tFileDialogueCallback callback, const char * defaultName);
+void open_folder_dialogue_async(tFileDialogueCallback callback, const char * title);
+void show_alert_async(const char * title, const char * message);
 
 #ifdef __cplusplus
 }
