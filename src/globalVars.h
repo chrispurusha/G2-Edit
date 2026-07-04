@@ -114,11 +114,14 @@ extern bool                    gGlideTimeDragging;
 extern _Atomic uint64_t        gUsbTxTime;
 extern _Atomic uint64_t        gUsbRxTime;
 extern _Atomic bool            gBankBackupActive;
-extern _Atomic uint32_t        gBankBackupBank;      // 0-indexed bank currently being backed up
-extern _Atomic uint32_t        gBankBackupLocation;  // 0-indexed location currently being requested
-extern _Atomic uint32_t        gBankBackupWritten;   // count of patches actually written so far
-extern _Atomic bool            gBankBackupComplete;  // set once finished, so the UI can show a completion alert
+extern _Atomic bool            gBankBackupIsPerf;            // true = backing up a Performance Bank, false = Patch Bank
+extern _Atomic uint32_t        gBankBackupBank;              // 0-indexed bank currently being backed up
+extern _Atomic uint32_t        gBankBackupLocation;          // 0-indexed location currently being requested
+extern _Atomic uint32_t        gBankBackupWritten;           // count of patches actually written so far
+extern _Atomic bool            gBankBackupComplete;          // set once finished, so the UI can show a completion alert
 extern char                    gBankBackupResultMessage[256];
+extern _Atomic bool            gSynthSettingsBackupComplete; // set once finished, so the UI can show a completion alert
+extern char                    gSynthSettingsBackupResultMessage[256];
 extern tRectangle              gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS];
 extern tDialMode               gDialMode;
 extern pthread_mutex_t         gStringCopyMutex;

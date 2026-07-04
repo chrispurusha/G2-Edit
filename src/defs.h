@@ -170,7 +170,10 @@
 #define SUB_COMMAND_PATCH_BANK_DATA          (0x19)
 
 #define NUM_PATCH_BANKS                      (32)
+#define NUM_PERF_BANKS                       (8)
 #define NUM_LOCATIONS_PER_BANK               (128)
+#define BANK_UPLOAD_DOMAIN_PATCH             (0x00)  // Selects Patch vs Performance Bank Upload domain
+#define BANK_UPLOAD_DOMAIN_PERFORMANCE       (0x01)
 
 #define COMMAND_REQ                          (0x20) // High nibble, expects response
 #define COMMAND_WRITE_NO_RESP                (0x30) // High nibble, expects response

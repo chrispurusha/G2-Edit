@@ -1023,7 +1023,12 @@ static void check_action_flags(void) {
 
     if (gBankBackupComplete) {
         gBankBackupComplete = false;
-        show_alert_async("Bank Backup", gBankBackupResultMessage);
+        show_alert_async(gBankBackupIsPerf ? "Performance Bank Backup" : "Patch Bank Backup", gBankBackupResultMessage);
+    }
+
+    if (gSynthSettingsBackupComplete) {
+        gSynthSettingsBackupComplete = false;
+        show_alert_async("Synth Settings Backup", gSynthSettingsBackupResultMessage);
     }
 }
 
@@ -1474,6 +1479,7 @@ static void render_bank_backup_progress(void) {
     double margin       = 10.0;
     double titleH       = 24.0;
     char   lineBuf[128] = {0};
+    bool   isPerf       = gBankBackupIsPerf;
 
     // Background overlay to de-emphasise content beneath the dialog
     set_rgb_colour(RGB_GREY_2);
@@ -1487,14 +1493,16 @@ static void render_bank_backup_progress(void) {
     set_rgb_colour(RGB_GREY_3);
     render_rectangle(mainArea, {{boxX, boxY}, {boxW, titleH}});
     set_rgb_colour(RGB_BLACK);
-    render_text(mainArea, {{boxX + margin, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Backing Up Bank");
+    render_text(mainArea, {{boxX + margin, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}},
+                isPerf ? "Backing Up Performance Bank" : "Backing Up Patch Bank");
 
     snprintf(lineBuf, sizeof(lineBuf), "Bank %u - location %u / %u",
              gBankBackupBank + 1, gBankBackupLocation + 1, NUM_LOCATIONS_PER_BANK);
     render_text(mainArea, {{boxX + margin, boxY + titleH + margin}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, lineBuf);
 
-    snprintf(lineBuf, sizeof(lineBuf), "%u patch%s written so far",
-             gBankBackupWritten, gBankBackupWritten == 1 ? "" : "es");
+    snprintf(lineBuf, sizeof(lineBuf), "%u %s%s written so far",
+             gBankBackupWritten, isPerf ? "performance" : "patch",
+             gBankBackupWritten == 1 ? "" : (isPerf ? "s" : "es"));
     render_text(mainArea, {{boxX + margin, boxY + titleH + margin + STANDARD_TEXT_HEIGHT + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, lineBuf);
 
     // Progress bar
