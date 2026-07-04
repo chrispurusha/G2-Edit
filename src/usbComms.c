@@ -679,18 +679,19 @@ static void parse_perf_patch_versions(uint8_t * buff, uint32_t * bitPos) {
 // caller: 2 reserved bytes, 1 location byte (0-indexed, echoes the request), a
 // null-terminated Clavia name, a 16-bit length L, a 2-byte echoed [version][type] marker
 // (discarded — the real one is repeated at the start of the content that follows), then
-// L+1 raw bytes that are byte-identical to a .pch2 file's own binary body (confirmed by
-// diffing a captured response against a real sample file) — safe to write to disk as-is.
+// L-1 raw bytes that are byte-identical to a .pch2 file's own binary body (confirmed by a
+// full byte-for-byte diff of a captured response against a real sample file) — safe to
+// write to disk as-is.
 static void parse_bank_upload_data(uint8_t * buff, uint32_t * bitPos) {
     uint32_t contentLength = 0;
     uint32_t contentStart  = 0;
 
-    read_bit_stream(buff, bitPos, 8);  // reserved, always 0x00
-    read_bit_stream(buff, bitPos, 8);  // reserved, always 0x00
-    read_bit_stream(buff, bitPos, 8);  // location echo — caller already knows which location it asked for
+    read_bit_stream(buff, bitPos, 8);                              // reserved, always 0x00
+    read_bit_stream(buff, bitPos, 8);                              // reserved, always 0x00
+    read_bit_stream(buff, bitPos, 8);                              // location echo — caller already knows which location it asked for
     read_clavia_string(buff, bitPos, sBankUploadName, sizeof(sBankUploadName));
-    contentLength         = read_bit_stream(buff, bitPos, 16) + 1;
-    read_bit_stream(buff, bitPos, 16);  // echoed [version][type] marker — discarded, repeated in content below
+    contentLength         = read_bit_stream(buff, bitPos, 16) - 1; // confirmed empirically against a known-good .pch2 file
+    read_bit_stream(buff, bitPos, 16);                             // echoed [version][type] marker — discarded, repeated in content below
     contentStart          = BIT_TO_BYTE(*bitPos);
 
     if (contentLength > sizeof(sBankUploadContent)) {
