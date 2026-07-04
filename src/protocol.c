@@ -1698,18 +1698,19 @@ void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
     }
 }
 
-// Writes a .pch2 file from pre-serialized raw content taken directly off the wire during
+// Writes a .pch2/.prf2 file from pre-serialized raw content taken directly off the wire during
 // a Bank Upload (backup) request — NOT from the live in-memory database. The content
-// (version byte, type byte, patch descriptor, ... , trailing CRC) is byte-identical to a
-// normal .pch2 file's binary body (confirmed by diffing a captured response against a real
-// sample file), so it's written verbatim — no re-serialization or CRC recompute needed.
-void write_bank_upload_pch2(const char * filepath, const uint8_t * content, uint32_t contentLen) {
+// (version byte, type byte, patch/performance descriptor, ... , trailing CRC) is byte-identical
+// to a normal .pch2/.prf2 file's binary body (confirmed by diffing captured responses against
+// real sample files of both types), so it's written verbatim — no re-serialization or CRC
+// recompute needed. typeLabel is "Patch" or "Performance", matching the file's own "Type=" line.
+void write_bank_upload_file(const char * filepath, const char * typeLabel, const uint8_t * content, uint32_t contentLen) {
     FILE * file         = NULL;
     char   charBuff[64] = {0};
     char   eol[]        = {0x0d, 0x0a, 0x00};
 
     if ((content == NULL) || (contentLen == 0)) {
-        LOG_ERROR("write_bank_upload_pch2: empty content\n");
+        LOG_ERROR("write_bank_upload_file: empty content\n");
         return;
     }
     file        = fopen(filepath, "wb");
@@ -1721,7 +1722,7 @@ void write_bank_upload_pch2(const char * filepath, const uint8_t * content, uint
     snprintf(charBuff, sizeof(charBuff) - 1, "Version=Nord Modular G2 File Format 1");
     fwrite(charBuff, 1, strlen(charBuff), file);
     fwrite(eol, 1, strlen(eol), file);
-    snprintf(charBuff, sizeof(charBuff) - 1, "Type=Patch");
+    snprintf(charBuff, sizeof(charBuff) - 1, "Type=%s", typeLabel);
     fwrite(charBuff, 1, strlen(charBuff), file);
     fwrite(eol, 1, strlen(eol), file);
     snprintf(charBuff, sizeof(charBuff) - 1, "Version=%u", content[0]);  // matches the version byte already embedded in content
@@ -1734,7 +1735,7 @@ void write_bank_upload_pch2(const char * filepath, const uint8_t * content, uint
     fwrite(charBuff, 1, 1, file);
 
     if (fwrite(content, 1, contentLen, file) != contentLen) {
-        LOG_ERROR("write_bank_upload_pch2: short write to %s\n", filepath);
+        LOG_ERROR("write_bank_upload_file: short write to %s\n", filepath);
     }
     fclose(file);
 }

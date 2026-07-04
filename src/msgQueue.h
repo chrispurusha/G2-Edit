@@ -68,7 +68,8 @@ typedef enum {
     eMsgCmdWritePerfName,
     eMsgCmdWritePerfSettings,
     eMsgCmdSetCustomData,
-    eMsgCmdBackupBank//,
+    eMsgCmdBackupBank,
+    eMsgCmdBackupSynthSettings//,
     //eMsgCmdReloadAllPatchData
 } eMsgCmd;
 
@@ -203,9 +204,14 @@ typedef struct {
 } tCustomDataMsg;
 
 typedef struct {
-    uint32_t bank; // 0-indexed
+    uint32_t bank;   // 0-indexed
+    bool     isPerf; // true = Performance Bank, false = Patch Bank
     char     destFolder[1024];
 } tBankBackupData;
+
+typedef struct {
+    char destFolder[1024];
+} tSettingsBackupData;
 
 typedef struct {
     uint32_t cmd;
@@ -233,6 +239,7 @@ typedef struct {
         tParamLabelData         paramLabelData;
         tCustomDataMsg          customDataMsg;
         tBankBackupData         bankBackupData;
+        tSettingsBackupData     settingsBackupData;
     };
 } tMessageContent;
 

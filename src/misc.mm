@@ -46,16 +46,19 @@ double get_zoom_factor(void);
 - (void)setDialModeVertical:(id)sender;
 - (void)setDialModeHorizontal:(id)sender;
 - (void)backupBank:(id)sender;
+- (void)backupPerfBank:(id)sender;
+- (void)backupSynthSettings:(id)sender;
 - (void)zoomIn:(id)sender;
 - (void)zoomOut:(id)sender;
 - (void)zoomReset:(id)sender;
 - (BOOL)validateMenuItem:(NSMenuItem *)item;
 @end
 
-// Bank number (0-indexed) selected from the "Backup Bank" submenu, stashed here between the
-// menu click and the folder-choose panel's completion callback (tFileDialogueCallback is a
-// plain C function pointer with no room for captured context).
-static uint32_t sPendingBackupBank = 0;
+// Bank number (0-indexed) selected from the "Backup Bank"/"Backup Performance Bank" submenu,
+// stashed here between the menu click and the folder-choose panel's completion callback
+// (tFileDialogueCallback is a plain C function pointer with no room for captured context).
+static uint32_t sPendingBackupBank   = 0;
+static bool     sPendingBackupIsPerf = false;
 
 static void on_bank_backup_folder_chosen(const char * path) {
     if (path == NULL) {
@@ -63,9 +66,21 @@ static void on_bank_backup_folder_chosen(const char * path) {
     }
     tMessageContent msg = {0};
 
-    msg.cmd                 = eMsgCmdBackupBank;
-    msg.bankBackupData.bank = sPendingBackupBank;
+    msg.cmd                   = eMsgCmdBackupBank;
+    msg.bankBackupData.bank   = sPendingBackupBank;
+    msg.bankBackupData.isPerf = sPendingBackupIsPerf;
     strncpy(msg.bankBackupData.destFolder, path, sizeof(msg.bankBackupData.destFolder) - 1);
+    msg_send(&gCommandQueue, &msg);
+}
+
+static void on_synth_settings_backup_folder_chosen(const char * path) {
+    if (path == NULL) {
+        return;
+    }
+    tMessageContent msg = {0};
+
+    msg.cmd = eMsgCmdBackupSynthSettings;
+    strncpy(msg.settingsBackupData.destFolder, path, sizeof(msg.settingsBackupData.destFolder) - 1);
     msg_send(&gCommandQueue, &msg);
 }
 
@@ -126,9 +141,36 @@ static void on_bank_backup_folder_chosen(const char * path) {
     NSMenuItem * item      = (NSMenuItem *)sender;
     char         title[64] = {0};
 
-    sPendingBackupBank = (uint32_t)[item tag];
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up a bank.");
+        return;
+    }
+    sPendingBackupBank   = (uint32_t)[item tag];
+    sPendingBackupIsPerf = false;
     snprintf(title, sizeof(title), "Choose a Folder for Bank %ld Backup", (long)[item tag] + 1);
     open_folder_dialogue_async(on_bank_backup_folder_chosen, title);
+}
+
+- (void)backupPerfBank:(id)sender {
+    NSMenuItem * item      = (NSMenuItem *)sender;
+    char         title[64] = {0};
+
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up a performance bank.");
+        return;
+    }
+    sPendingBackupBank   = (uint32_t)[item tag];
+    sPendingBackupIsPerf = true;
+    snprintf(title, sizeof(title), "Choose a Folder for Performance Bank %ld Backup", (long)[item tag] + 1);
+    open_folder_dialogue_async(on_bank_backup_folder_chosen, title);
+}
+
+- (void)backupSynthSettings:(id)sender {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up synth settings.");
+        return;
+    }
+    open_folder_dialogue_async(on_synth_settings_backup_folder_chosen, "Choose a Folder for Synth Settings Backup");
 }
 
 - (void)zoomIn:(id)sender {
@@ -162,6 +204,9 @@ static void on_bank_backup_folder_chosen(const char * path) {
         [item setState:(gDialMode == eDialModeVertical) ? NSControlStateValueOn : NSControlStateValueOff];
     } else if (action == @selector(setDialModeHorizontal:)) {
         [item setState:(gDialMode == eDialModeHorizontal) ? NSControlStateValueOn : NSControlStateValueOff];
+    } else if (  action == @selector(backupBank:) || action == @selector(backupPerfBank:)
+              || action == @selector(backupSynthSettings:)) {
+        return gCommsState == eCommsOnLine;
     }
     return YES;
 }
@@ -217,8 +262,8 @@ void setup_main_menu(void) {
         reposition_window(savedX, savedY);
     }
     // File menu
-    NSMenuItem * fileMI        = [[NSMenuItem alloc] init];
-    NSMenu *     fileMenu      = [[NSMenu alloc] initWithTitle:@"File"];
+    NSMenuItem * fileMI            = [[NSMenuItem alloc] init];
+    NSMenu *     fileMenu          = [[NSMenu alloc] initWithTitle:@"File"];
 
     [fileMenu addItem:make_item(@"Open Patch...", @selector(openPatch:), @"o", target)];
     [fileMenu addItem:make_item(@"Save Patch...", @selector(savePatch:), @"s", target)];
@@ -228,8 +273,8 @@ void setup_main_menu(void) {
     [menuBar insertItem:fileMI atIndex:1];
 
     // Patch menu
-    NSMenuItem * patchMI       = [[NSMenuItem alloc] init];
-    NSMenu *     patchMenu     = [[NSMenu alloc] initWithTitle:@"Patch"];
+    NSMenuItem * patchMI           = [[NSMenuItem alloc] init];
+    NSMenu *     patchMenu         = [[NSMenu alloc] initWithTitle:@"Patch"];
 
     [patchMenu addItem:make_item(@"Notes", @selector(openNotes:), @"", target)];
     [patchMenu addItem:make_item(@"Settings", @selector(openSettings:), @",", target)];
@@ -237,10 +282,10 @@ void setup_main_menu(void) {
     [menuBar insertItem:patchMI atIndex:2];
 
     // Bank menu
-    NSMenuItem * bankMI        = [[NSMenuItem alloc] init];
-    NSMenu *     bankMenu      = [[NSMenu alloc] initWithTitle:@"Bank"];
-    NSMenuItem * backupSubMI   = [[NSMenuItem alloc] initWithTitle:@"Backup Bank" action:NULL keyEquivalent:@""];
-    NSMenu *     backupSubMenu = [[NSMenu alloc] initWithTitle:@"Backup Bank"];
+    NSMenuItem * bankMI            = [[NSMenuItem alloc] init];
+    NSMenu *     bankMenu          = [[NSMenu alloc] initWithTitle:@"Bank"];
+    NSMenuItem * backupSubMI       = [[NSMenuItem alloc] initWithTitle:@"Backup Bank" action:NULL keyEquivalent:@""];
+    NSMenu *     backupSubMenu     = [[NSMenu alloc] initWithTitle:@"Backup Bank"];
 
     for (NSInteger i = 0; i < NUM_PATCH_BANKS; i++) {
         NSMenuItem * bankItem = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Bank %ld", (long)i + 1]
@@ -251,14 +296,30 @@ void setup_main_menu(void) {
         [backupSubMenu addItem:bankItem];
     }
 
+    NSMenuItem * backupPerfSubMI   = [[NSMenuItem alloc] initWithTitle:@"Backup Performance Bank" action:NULL keyEquivalent:@""];
+    NSMenu *     backupPerfSubMenu = [[NSMenu alloc] initWithTitle:@"Backup Performance Bank"];
+
+    for (NSInteger i = 0; i < NUM_PERF_BANKS; i++) {
+        NSMenuItem * perfBankItem = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Bank %ld", (long)i + 1]
+                                     action:@selector(backupPerfBank:)
+                                     keyEquivalent:@""];
+        [perfBankItem setTarget:target];
+        [perfBankItem setTag:i];
+        [backupPerfSubMenu addItem:perfBankItem];
+    }
+
     [backupSubMI setSubmenu:backupSubMenu];
     [bankMenu addItem:backupSubMI];
+    [backupPerfSubMI setSubmenu:backupPerfSubMenu];
+    [bankMenu addItem:backupPerfSubMI];
+    [bankMenu addItem:[NSMenuItem separatorItem]];
+    [bankMenu addItem:make_item(@"Backup Synth Settings...", @selector(backupSynthSettings:), @"", target)];
     [bankMI setSubmenu:bankMenu];
     [menuBar insertItem:bankMI atIndex:3];
 
     // Controls menu
-    NSMenuItem * ctrlMI        = [[NSMenuItem alloc] init];
-    NSMenu *     ctrlMenu      = [[NSMenu alloc] initWithTitle:@"Controls"];
+    NSMenuItem * ctrlMI   = [[NSMenuItem alloc] init];
+    NSMenu *     ctrlMenu = [[NSMenu alloc] initWithTitle:@"Controls"];
 
     [ctrlMenu addItem:make_item(@"Rotary", @selector(setDialModeRotary:), @"", target)];
     [ctrlMenu addItem:make_item(@"Vertical", @selector(setDialModeVertical:), @"", target)];
@@ -267,8 +328,8 @@ void setup_main_menu(void) {
     [menuBar insertItem:ctrlMI atIndex:4];
 
     // View menu
-    NSMenuItem * viewMI        = [[NSMenuItem alloc] init];
-    NSMenu *     viewMenu      = [[NSMenu alloc] initWithTitle:@"View"];
+    NSMenuItem * viewMI   = [[NSMenuItem alloc] init];
+    NSMenu *     viewMenu = [[NSMenu alloc] initWithTitle:@"View"];
 
     [viewMenu addItem:make_item(@"Zoom In [⌘=]", @selector(zoomIn:), @"", target)];
     [viewMenu addItem:make_item(@"Zoom Out [⌘-]", @selector(zoomOut:), @"", target)];

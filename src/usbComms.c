@@ -675,23 +675,27 @@ static void parse_perf_patch_versions(uint8_t * buff, uint32_t * bitPos) {
     }
 }
 
-// Wire format (reverse-engineered from a real Bank Upload capture): after the
+// Wire format (reverse-engineered from real Bank Upload captures, both Patch and Performance
+// domains — identical framing in both cases): after the
 // [responseType][commandResponse][version][subCommand] header already consumed by the
-// caller: 2 reserved bytes, 1 location byte (0-indexed, echoes the request), a
-// null-terminated Clavia name, a 16-bit length L, a 2-byte echoed [version][type] marker
-// (discarded — the real one is repeated at the start of the content that follows), then
-// L-1 raw bytes that are byte-identical to a .pch2 file's own binary body (confirmed by a
-// full byte-for-byte diff of a captured response against a real sample file) — safe to
-// write to disk as-is.
+// caller: 1 byte echoing the request's domain (BANK_UPLOAD_DOMAIN_PATCH/_PERFORMANCE), 1
+// reserved byte, 1 location byte (0-indexed, echoes the request), a Clavia name (up to
+// CLAVIA_NAME_SIZE bytes, null-terminated unless it fills all 16 — see read_clavia_string), a
+// 16-bit length L, a 2-byte echoed [version][type] marker (discarded — the real one is repeated
+// at the start of the content that follows), then L-1 raw bytes that are byte-identical to a
+// .pch2/.prf2 file's own binary body (confirmed by full byte-for-byte diffs of captured responses
+// against real sample files of both types) — safe to write to disk as-is. Performance responses
+// have 2 further trailing bytes after that (likely an outer CRC) that are simply never read,
+// same as they would be for Patch if present.
 static void parse_bank_upload_data(uint8_t * buff, uint32_t * bitPos) {
     uint32_t contentLength = 0;
     uint32_t contentStart  = 0;
 
-    read_bit_stream(buff, bitPos, 8);                              // reserved, always 0x00
+    read_bit_stream(buff, bitPos, 8);                              // domain echo — caller already knows which domain it asked for
     read_bit_stream(buff, bitPos, 8);                              // reserved, always 0x00
     read_bit_stream(buff, bitPos, 8);                              // location echo — caller already knows which location it asked for
     read_clavia_string(buff, bitPos, sBankUploadName, sizeof(sBankUploadName));
-    contentLength         = read_bit_stream(buff, bitPos, 16) - 1; // confirmed empirically against a known-good .pch2 file
+    contentLength         = read_bit_stream(buff, bitPos, 16) - 1; // confirmed empirically against known-good .pch2/.prf2 files
     read_bit_stream(buff, bitPos, 16);                             // echoed [version][type] marker — discarded, repeated in content below
     contentStart          = BIT_TO_BYTE(*bitPos);
 
@@ -702,7 +706,7 @@ static void parse_bank_upload_data(uint8_t * buff, uint32_t * bitPos) {
     memcpy(sBankUploadContent, &buff[contentStart], contentLength);
     sBankUploadContentLen = contentLength;
     sBankUploadGotData    = true;
-    LOG_DEBUG("Bank upload: got patch '%s' (%u bytes)\n", sBankUploadName, contentLength);
+    LOG_DEBUG("Bank upload: got '%s' (%u bytes)\n", sBankUploadName, contentLength);
 }
 
 static void parse_bank_upload_empty(void) {
@@ -1358,56 +1362,85 @@ static int send_get_patch(uint32_t slot) {
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_PATCH_DESCRIPTION, USB_RECV_DATA_MS);
 }
 
-// Requests a single (bank, location) slot during a Bank Upload (backup). Response lands in
-// sBankUploadContent/sBankUploadName (via parse_bank_upload_data) or sBankUploadGotData is
-// left false if the slot is empty (via parse_bank_upload_empty) — both are accepted as
-// success by int_rec's special-cased termination check for SUB_COMMAND_PATCH_BANK_DATA.
-static int send_bank_upload_request(uint32_t bank, uint32_t location) {
+// Requests a single (bank, location) slot during a Bank Upload (backup). domain selects Patch
+// (BANK_UPLOAD_DOMAIN_PATCH) vs Performance (BANK_UPLOAD_DOMAIN_PERFORMANCE) — reverse-engineered
+// from a Performance Bank Upload capture: identical framing to the Patch case, with this one byte
+// switched from 0x00 to 0x01 (confirmed against 29 sample slots + a byte-for-byte diff of the
+// decoded content against real .prf2 files). Response lands in sBankUploadContent/sBankUploadName
+// (via parse_bank_upload_data) or sBankUploadGotData is left false if the slot is empty (via
+// parse_bank_upload_empty) — both are accepted as success by int_rec's special-cased termination
+// check for SUB_COMMAND_PATCH_BANK_DATA.
+static int send_bank_upload_request(uint8_t domain, uint32_t bank, uint32_t location) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
     usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_PATCH_BANK_UPLOAD);
-    write_bit_stream(buff, &bitPos, 8, 0x00);
+    write_bit_stream(buff, &bitPos, 8, domain);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)bank);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)location);
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_COMMAND_PATCH_BANK_DATA, USB_RECV_DATA_MS);
 }
 
-// Fills outName with "baseName.pch2", or "baseName(2).pch2", "baseName(3).pch2", etc. if a file
-// by that name already exists in destFolder. Patch names are free text on the hardware and often
-// repeat across (or even within) banks, so this keeps a same-named patch from a different slot
-// from silently overwriting an earlier backup. The device write path never sees the suffix — the
-// patch name that matters is embedded in the .pch2 content, not the filename (see read_clavia_string
+// Fills outName with "baseName.<ext>", or "baseName(2).<ext>", "baseName(3).<ext>", etc. if a
+// file by that name already exists in destFolder. Patch/performance names are free text on the
+// hardware and often repeat across (or even within) banks, so this keeps a same-named item from
+// a different slot from silently overwriting an earlier backup. The device write path never sees
+// the suffix — the name that matters is embedded in the file content itself (see read_clavia_string
 // in protocol.c), so restore logic can ignore it entirely.
 static void build_unique_backup_filename(char * outName, size_t outNameSize, const char * destFolder,
-                                         const char * baseName) {
+                                         const char * baseName, const char * ext) {
     char probePath[1280] = {0};
 
-    snprintf(outName, outNameSize, "%s.pch2", baseName);
+    snprintf(outName, outNameSize, "%s.%s", baseName, ext);
     snprintf(probePath, sizeof(probePath), "%s/%s", destFolder, outName);
 
     for (uint32_t n = 2; access(probePath, F_OK) == 0 && n < 1000; n++) {
-        snprintf(outName, outNameSize, "%s(%u).pch2", baseName, n);
+        snprintf(outName, outNameSize, "%s(%u).%s", baseName, n, ext);
         snprintf(probePath, sizeof(probePath), "%s/%s", destFolder, outName);
     }
 }
 
-// Loops every location in a Patch Bank, writing each populated slot to destFolder as a
-// .pch2 file plus a .pchList manifest matching the real Nord editor's own bank-dump format.
-// Read-only against the connected G2 — never touches the live in-memory slot/patch state.
-static int backup_bank(uint32_t bank, const char * destFolder) {
-    char     manifestPath[1280] = {0};
-    FILE *   manifest           = NULL;
-    uint32_t written            = 0;
+// Loops every location in a Patch or Performance Bank (isPerf selects which), writing each
+// populated slot to destFolder as a .pch2/.prf2 file plus a .pchList manifest matching the real
+// Nord editor's own bank-dump format ("Version=Nord Modular G2 Bank Dump", confirmed identical
+// for both domains against a captured PerfBank1.pchList sample). Read-only against the connected
+// G2 — never touches the live in-memory slot/patch state.
+//
+// Performance framing was reverse-engineered from a real capture: request/response are identical
+// to the Patch case (same subcommands 0x17/0x19/0x18) with the domain byte switched to
+// BANK_UPLOAD_DOMAIN_PERFORMANCE. One difference from Patch responses: there are 2 extra bytes
+// after the L-1-byte content (likely an outer CRC) — harmless, since only contentLength bytes are
+// ever copied out. Not confirmed from the capture: the empty-slot response (0x18) — every one of
+// the 29 sampled locations was populated, so this assumes it matches the Patch case exactly.
+static int backup_bank(uint32_t bank, const char * destFolder, bool isPerf) {
+    char         manifestPath[1280] = {0};
+    FILE *       manifest           = NULL;
+    uint32_t     written            = 0;
+    uint8_t      domain             = isPerf ? BANK_UPLOAD_DOMAIN_PERFORMANCE : BANK_UPLOAD_DOMAIN_PATCH;
+    const char * ext                = isPerf ? "prf2" : "pch2";
+    const char * typeLabel          = isPerf ? "Performance" : "Patch";
+    const char * manifestPrefix     = isPerf ? "PerfBank" : "PatchBank";
 
+    if (gCommsState != eCommsOnLine) {
+        // Fail fast rather than looping NUM_LOCATIONS_PER_BANK times at USB_RECV_DATA_MS each
+        // (over 6 minutes) waiting for a device that isn't there.
+        LOG_ERROR("backup_bank: G2 is not connected\n");
+        gBankBackupIsPerf   = isPerf;
+        snprintf(gBankBackupResultMessage, sizeof(gBankBackupResultMessage),
+                 "Backup of %s Bank %u failed: the G2 is not connected", typeLabel, bank + 1);
+        gBankBackupComplete = true;
+        call_wake_glfw();
+        return EXIT_FAILURE;
+    }
     gBankBackupActive   = true;
+    gBankBackupIsPerf   = isPerf;
     gBankBackupBank     = bank;
     gBankBackupLocation = 0;
     gBankBackupWritten  = 0;
     gBankBackupComplete = false;
     call_wake_glfw();
 
-    snprintf(manifestPath, sizeof(manifestPath), "%s/PatchBank%u.pchList", destFolder, bank + 1);
+    snprintf(manifestPath, sizeof(manifestPath), "%s/%s%u.pchList", destFolder, manifestPrefix, bank + 1);
     manifest            = fopen(manifestPath, "wb");
 
     if (manifest != NULL) {
@@ -1426,7 +1459,7 @@ static int backup_bank(uint32_t bank, const char * destFolder) {
 
         sBankUploadGotData  = false;
 
-        if (send_bank_upload_request(bank, location) != EXIT_SUCCESS) {
+        if (send_bank_upload_request(domain, bank, location) != EXIT_SUCCESS) {
             LOG_ERROR("Bank upload request failed for bank %u location %u\n", bank, location);
             continue;
         }
@@ -1444,9 +1477,9 @@ static int backup_bank(uint32_t bank, const char * destFolder) {
                 }
             }
 
-            build_unique_backup_filename(fileName, sizeof(fileName), destFolder, sanitizedName);
+            build_unique_backup_filename(fileName, sizeof(fileName), destFolder, sanitizedName, ext);
             snprintf(filePath, sizeof(filePath), "%s/%s", destFolder, fileName);
-            write_bank_upload_pch2(filePath, sBankUploadContent, sBankUploadContentLen);
+            write_bank_upload_file(filePath, typeLabel, sBankUploadContent, sBankUploadContentLen);
 
             if (manifest != NULL) {
                 fprintf(manifest, "%u:%u: %s\r\n", bank + 1, location + 1, fileName);
@@ -1461,10 +1494,125 @@ static int backup_bank(uint32_t bank, const char * destFolder) {
         fclose(manifest);
     }
     snprintf(gBankBackupResultMessage, sizeof(gBankBackupResultMessage),
-             "Backup of Bank %u complete: %u patch%s written to %s",
-             bank + 1, written, written == 1 ? "" : "es", destFolder);
+             "Backup of %s Bank %u complete: %u %s%s written to %s",
+             typeLabel, bank + 1, written, typeLabel, written == 1 ? "" : (isPerf ? "s" : "es"), destFolder);
     gBankBackupActive   = false;
     gBankBackupComplete = true;
+    call_wake_glfw();
+    return EXIT_SUCCESS;
+}
+
+// Builds "synth-<h>.<mm><am|pm>-<dd><Mon><yy>.txt", e.g. "synth-2.34pm-25Jun26.txt" for 2:34pm on
+// 25 June 2026. Deliberately avoids ':' in the timestamp — Finder/HFS's legacy handling of colons
+// in filenames makes them unsafe, the same reason patch names get sanitized in
+// build_unique_backup_filename() above.
+static void build_synth_settings_backup_filename(char * outName, size_t outNameSize) {
+    static const char * monthAbbrev[12] = {
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    };
+    time_t              now             = time(NULL);
+    struct tm           tmNow;
+    int                 hour12;
+
+    localtime_r(&now, &tmNow);
+    hour12 = tmNow.tm_hour % 12;
+
+    if (hour12 == 0) {
+        hour12 = 12;
+    }
+    snprintf(outName, outNameSize, "synth-%d.%02d%s-%02d%s%02d.txt",
+             hour12, tmNow.tm_min, tmNow.tm_hour < 12 ? "am" : "pm",
+             tmNow.tm_mday, monthAbbrev[tmNow.tm_mon], (tmNow.tm_year + 1900) % 100);
+}
+
+// Same "0x00-0x0F = ch 1-16, 0x10 = off" encoding used by the UI (synthSettingsResources.c).
+static const char * midi_chan_text(char * buf, size_t bufSize, uint8_t chan) {
+    if (chan >= 0x10) {
+        snprintf(buf, bufSize, "Off");
+    } else {
+        snprintf(buf, bufSize, "%u", (unsigned)chan + 1u);
+    }
+    return buf;
+}
+
+// Snapshots gSynthSettings (populated by send_get_synth_settings(), below) to a timestamped,
+// plain-text key:value file. Unlike Bank Upload there's no Clavia wire format for this — it's a
+// house format for reviewing instrument-wide config (MIDI/sysex/tuning/pedal/etc.) alongside
+// patch and performance backups, not something restorable via the .pch2/.pchList path.
+static int backup_synth_settings(const char * destFolder) {
+    char   fileName[64]     = {0};
+    char   filePath[1280]   = {0};
+    char   chanBuf[4][8]    = {{0}};
+    char   globalChanBuf[8] = {0};
+    char   sysexBuf[8]      = {0};
+    FILE * file             = NULL;
+
+    if (gCommsState != eCommsOnLine) {
+        LOG_ERROR("backup_synth_settings: G2 is not connected\n");
+        snprintf(gSynthSettingsBackupResultMessage, sizeof(gSynthSettingsBackupResultMessage),
+                 "Synth Settings Backup failed: the G2 is not connected");
+        gSynthSettingsBackupComplete = true;
+        call_wake_glfw();
+        return EXIT_FAILURE;
+    }
+
+    if (send_get_synth_settings() != EXIT_SUCCESS) {
+        snprintf(gSynthSettingsBackupResultMessage, sizeof(gSynthSettingsBackupResultMessage),
+                 "Synth Settings Backup failed: could not read settings from device");
+        gSynthSettingsBackupComplete = true;
+        call_wake_glfw();
+        return EXIT_FAILURE;
+    }
+    build_synth_settings_backup_filename(fileName, sizeof(fileName));
+    snprintf(filePath, sizeof(filePath), "%s/%s", destFolder, fileName);
+
+    file = fopen(filePath, "wb");
+
+    if (file == NULL) {
+        LOG_ERROR("backup_synth_settings: could not create %s\n", filePath);
+        snprintf(gSynthSettingsBackupResultMessage, sizeof(gSynthSettingsBackupResultMessage),
+                 "Synth Settings Backup failed: could not write to %s", destFolder);
+        gSynthSettingsBackupComplete = true;
+        call_wake_glfw();
+        return EXIT_FAILURE;
+    }
+
+    if (gSynthSettings.sysexId < 16) {
+        snprintf(sysexBuf, sizeof(sysexBuf), "%u", gSynthSettings.sysexId + 1);
+    } else {
+        snprintf(sysexBuf, sizeof(sysexBuf), "All");
+    }
+    fprintf(file, "Version=G2-Edit Synth Settings Backup\r\n");
+    fprintf(file, "Name: %s\r\n", gSynthSettings.name);
+    fprintf(file, "MIDI Channel A: %s\r\n", midi_chan_text(chanBuf[0], sizeof(chanBuf[0]), gSynthSettings.midiChanSlot[0]));
+    fprintf(file, "MIDI Channel B: %s\r\n", midi_chan_text(chanBuf[1], sizeof(chanBuf[1]), gSynthSettings.midiChanSlot[1]));
+    fprintf(file, "MIDI Channel C: %s\r\n", midi_chan_text(chanBuf[2], sizeof(chanBuf[2]), gSynthSettings.midiChanSlot[2]));
+    fprintf(file, "MIDI Channel D: %s\r\n", midi_chan_text(chanBuf[3], sizeof(chanBuf[3]), gSynthSettings.midiChanSlot[3]));
+    fprintf(file, "Global MIDI Channel: %s\r\n", midi_chan_text(globalChanBuf, sizeof(globalChanBuf), gSynthSettings.globalChan));
+    fprintf(file, "Sysex ID: %s\r\n", sysexBuf);
+    fprintf(file, "Local On: %u\r\n", gSynthSettings.localOn);
+    fprintf(file, "Memory Protect: %u\r\n", gSynthSettings.memoryProtect);
+    fprintf(file, "Program Change Receive: %u\r\n", gSynthSettings.progChangeRcv);
+    fprintf(file, "Program Change Send: %u\r\n", gSynthSettings.progChangeSnd);
+    fprintf(file, "Controllers Receive: %u\r\n", gSynthSettings.controllersRcv);
+    fprintf(file, "Controllers Send: %u\r\n", gSynthSettings.controllersSnd);
+    fprintf(file, "Send Clock: %u\r\n", gSynthSettings.sendClock);
+    fprintf(file, "Receive Clock: %u\r\n", gSynthSettings.receiveClock);
+    fprintf(file, "Tune Cents: %d\r\n", gSynthSettings.tuneCent);
+    fprintf(file, "Tune Semitones: %d\r\n", gSynthSettings.tuneSemi);
+    fprintf(file, "Global Octave Shift: %d\r\n", gSynthSettings.globalOctaveShift);
+    fprintf(file, "Global Shift Active: %u\r\n", gSynthSettings.globalShiftActive);
+    fprintf(file, "Pedal Polarity: %s\r\n", gSynthSettings.pedalPolarity ? "Closed" : "Open");
+    fprintf(file, "Pedal Gain: %.2f\r\n", 1.0 + gSynthSettings.pedalGain / 64.0);
+    fprintf(file, "Patch Sort Mode: %u\r\n", gSynthSettings.patchSortMode);
+    fprintf(file, "Perf Sort Mode: %u\r\n", gSynthSettings.perfSortMode);
+    fprintf(file, "Current Perf Bank: %u\r\n", gSynthSettings.perfBank + 1);
+    fprintf(file, "Current Perf Location: %u\r\n", gSynthSettings.perfLocation + 1);
+    fclose(file);
+
+    snprintf(gSynthSettingsBackupResultMessage, sizeof(gSynthSettingsBackupResultMessage),
+             "Synth Settings Backup complete: %s written to %s", fileName, destFolder);
+    gSynthSettingsBackupComplete = true;
     call_wake_glfw();
     return EXIT_SUCCESS;
 }
@@ -2482,7 +2630,16 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdBackupBank:
         {
             send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
-            retVal = backup_bank(messageContent->bankBackupData.bank, messageContent->bankBackupData.destFolder);
+            retVal = backup_bank(messageContent->bankBackupData.bank, messageContent->bankBackupData.destFolder,
+                                 messageContent->bankBackupData.isPerf);
+            send_start();
+            break;
+        }
+
+        case eMsgCmdBackupSynthSettings:
+        {
+            send_stop();
+            retVal = backup_synth_settings(messageContent->settingsBackupData.destFolder);
             send_start();
             break;
         }
