@@ -30,6 +30,15 @@ void init_patch(uint32_t slot);
 void get_global_gui_scaled_mouse_coord(tCoord * coord);
 void start_cursor_drag(void);
 void stop_dragging(void);
+
+// True while any drag that hides the cursor (CURSOR_DISABLED) is active —
+// param/tempo/perf-tempo/vibrato-rate/vibrato-amount/glide-time dragging.
+// During these, the reported cursor position is a virtual/relative-delta
+// accumulator, not a real on-screen point — it can drift over an unrelated
+// control, so anything that hover-highlights "what's under the mouse"
+// (e.g. render_knob_assignment_overlay()'s per-param hover check) needs to
+// suppress itself while this is true, or it'll highlight the wrong control.
+bool is_cursor_hidden_dragging(void);
 void stop_synth_name_editing(void);
 bool handle_scrollbar_click(tCoord coord);
 void set_x_scroll_bar(double x);

@@ -552,8 +552,12 @@ bool handle_scrollbar_click(tCoord coord) {
     return false;
 }
 
+bool is_cursor_hidden_dragging(void) {
+    return gParamDragging.active || gTempoDragging || gPerfTempoDragging || gVibRateDragging || gVibAmountDragging || gGlideTimeDragging;
+}
+
 void stop_dragging(void) {
-    bool wasCursorDragging = gParamDragging.active || gTempoDragging || gPerfTempoDragging || gVibRateDragging || gVibAmountDragging || gGlideTimeDragging;
+    bool wasCursorDragging = is_cursor_hidden_dragging();
 
     gScrollState.yBarDragging = false;
     gScrollState.xBarDragging = false;
