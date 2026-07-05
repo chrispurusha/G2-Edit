@@ -62,14 +62,16 @@ double get_zoom_factor(void);
 // Bank number (0-indexed) selected from the "Backup Bank"/"Backup Performance Bank" submenu,
 // stashed here between the menu click and the folder-choose panel's completion callback
 // (tFileDialogueCallback is a plain C function pointer with no room for captured context).
-static uint32_t sPendingBackupBank    = 0;
-static bool     sPendingBackupIsPerf  = false;
+static uint32_t sPendingBackupBank        = 0;
+static bool     sPendingBackupIsPerf      = false;
 
-// Same stash-between-callbacks pattern as the backup statics above, but for Restore: the bank
-// number/domain is fixed by the confirmation alert (already destructive at that point), then the
-// folder-choose panel supplies the source folder once the user has confirmed.
-static uint32_t sPendingRestoreBank   = 0;
-static bool     sPendingRestoreIsPerf = false;
+// Same stash-between-callbacks pattern as the backup statics above, but for Restore: the source
+// bank/domain is fixed by which menu item was clicked; the confirmation alert's accessory field
+// then supplies the (possibly different) target bank; the folder-choose panel supplies the source
+// folder once the user has confirmed.
+static uint32_t sPendingRestoreBank       = 0;
+static bool     sPendingRestoreIsPerf     = false;
+static uint32_t sPendingRestoreTargetBank = 0;
 
 static void on_bank_backup_folder_chosen(const char * path) {
     if (path == NULL) {
@@ -114,18 +116,19 @@ static void on_bank_restore_folder_chosen(const char * path) {
 
     msg.cmd                        = eMsgCmdRestoreBank;
     msg.bankRestoreData.sourceBank = sPendingRestoreBank;
-    msg.bankRestoreData.destBank   = sPendingRestoreBank;
+    msg.bankRestoreData.destBank   = sPendingRestoreTargetBank;
     msg.bankRestoreData.isPerf     = sPendingRestoreIsPerf;
     strncpy(msg.bankRestoreData.srcFolder, path, sizeof(msg.bankRestoreData.srcFolder) - 1);
     msg_send(&gCommandQueue, &msg);
 }
 
-static void on_bank_restore_confirmed(bool confirmed) {
+static void on_bank_restore_confirmed(bool confirmed, uint32_t targetBank1Indexed) {
     char title[80] = {0};
 
     if (!confirmed) {
         return;
     }
+    sPendingRestoreTargetBank = targetBank1Indexed - 1;
     snprintf(title, sizeof(title), "Choose the Backup Folder to Restore %s Bank %u From",
              sPendingRestoreIsPerf ? "Performance" : "Patch", sPendingRestoreBank + 1);
     open_folder_dialogue_async(on_bank_restore_folder_chosen, title);
@@ -252,10 +255,11 @@ static void on_bank_restore_confirmed(bool confirmed) {
     sPendingRestoreBank   = (uint32_t)[item tag];
     sPendingRestoreIsPerf = false;
     snprintf(message, sizeof(message),
-             "This replaces every patch in Bank %ld on the G2 with the contents of a backup folder you choose next. "
-             "Any location not present in that folder will be erased. This cannot be undone.",
+             "This reads Patch Bank %ld's backup and writes it to the target bank chosen below on the G2. "
+             "Any location not present in that backup will be erased there. This cannot be undone.",
              (long)[item tag] + 1);
-    show_confirm_dialogue_async("Restore Patch Bank", message, "Restore...", on_bank_restore_confirmed);
+    show_bank_target_confirm_dialogue_async("Restore Patch Bank", message, "Restore...",
+                                            (uint32_t)[item tag] + 1, NUM_PATCH_BANKS, on_bank_restore_confirmed);
 }
 
 - (void)restorePerfBank:(id)sender {
@@ -269,10 +273,11 @@ static void on_bank_restore_confirmed(bool confirmed) {
     sPendingRestoreBank   = (uint32_t)[item tag];
     sPendingRestoreIsPerf = true;
     snprintf(message, sizeof(message),
-             "This replaces every performance in Performance Bank %ld on the G2 with the contents of a backup folder you choose next. "
-             "Any location not present in that folder will be erased. This cannot be undone.",
+             "This reads Performance Bank %ld's backup and writes it to the target bank chosen below on the G2. "
+             "Any location not present in that backup will be erased there. This cannot be undone.",
              (long)[item tag] + 1);
-    show_confirm_dialogue_async("Restore Performance Bank", message, "Restore...", on_bank_restore_confirmed);
+    show_bank_target_confirm_dialogue_async("Restore Performance Bank", message, "Restore...",
+                                            (uint32_t)[item tag] + 1, NUM_PERF_BANKS, on_bank_restore_confirmed);
 }
 
 - (void)zoomIn:(id)sender {

@@ -84,6 +84,69 @@ void show_confirm_dialogue_async(const char * title, const char * message, const
     });
 }
 
+// Same as show_confirm_dialogue_async above, plus an accessory NSTextField for picking a target
+// bank number that may differ from whatever bank the title/message refer to (Bank Restore's
+// "restore this backup into a different bank" case). The field is clamped to
+// [1, maxBank1Indexed] via NSNumberFormatter and pre-filled with defaultTargetBank1Indexed.
+void show_bank_target_confirm_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle,
+                                             uint32_t defaultTargetBank1Indexed, uint32_t maxBank1Indexed,
+                                             tBankTargetConfirmCallback callback) {
+    NSString * titleString   = [NSString stringWithUTF8String:(title ? title : "")];
+    NSString * messageString = [NSString stringWithUTF8String:(message ? message : "")];
+    NSString * confirmString = [NSString stringWithUTF8String:(confirmButtonTitle ? confirmButtonTitle : "OK")];
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSAlert * alert               = [[NSAlert alloc] init];
+
+        [alert setAlertStyle:NSAlertStyleWarning];
+        [alert setMessageText:titleString];
+        [alert setInformativeText:messageString];
+        [alert addButtonWithTitle:@"Cancel"];
+        [alert addButtonWithTitle:confirmString];
+
+        NSTextField * label           = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 26, 260, 18)];
+        [label setStringValue:@"Restore to Bank:"];
+        [label setBezeled:NO];
+        [label setDrawsBackground:NO];
+        [label setEditable:NO];
+        [label setSelectable:NO];
+
+        NSNumberFormatter * formatter = [[NSNumberFormatter alloc] init];
+        [formatter setAllowsFloats:NO];
+        [formatter setMinimum:@(1)];
+        [formatter setMaximum:@(maxBank1Indexed)];
+
+        NSTextField * field           = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 2, 80, 22)];
+        [field setFormatter:formatter];
+        [field setStringValue:[NSString stringWithFormat:@"%u", defaultTargetBank1Indexed]];
+
+        NSView * accessory            = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 260, 50)];
+        [accessory addSubview:label];
+        [accessory addSubview:field];
+        [alert setAccessoryView:accessory];
+        [[alert window] setInitialFirstResponder:field];
+
+        NSModalResponse response      = [alert runModal];
+        bool confirmed                = (response == NSAlertSecondButtonReturn);
+        uint32_t target               = defaultTargetBank1Indexed;
+
+        if (confirmed) {
+            NSInteger value = [field integerValue];
+
+            if (value < 1) {
+                value = 1;
+            } else if (value > (NSInteger)maxBank1Indexed) {
+                value = (NSInteger)maxBank1Indexed;
+            }
+            target          = (uint32_t)value;
+        }
+
+        if (callback) {
+            callback(confirmed, target);
+        }
+    });
+}
+
 void open_folder_dialogue_async(tFileDialogueCallback callback, const char * title) {
     NSString * titleString = (title && title[0] != '\0')
                             ? [NSString stringWithUTF8String:title]
