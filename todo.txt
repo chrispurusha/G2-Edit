@@ -19,3 +19,8 @@ G2-Edit TODO (priority order)
 - msgQueue.h:284 — remove unused mutex
 - defs.h:162 — confirm whether perf-header sub-response is ever actually used
 - rationalise architecture and commonalise components for other projects
+  - Add a generic hit-rectangle registry to SynthLib (hitRegistry.h/.c): tHitId keyed off existing tModuleKey/tCableKey convention (make_module_hit_id), hit_registry_begin_frame/register/find/get, flat fixed-capacity array cleared per frame — modeled on immediate-mode GUI hit-testing (Dear ImGui style) rather than per-project fixed-size arrays
+  - Migrate G2-Edit's gParamRectangle[slot][location][index][param] and other named hit rects (gPatchParamClose, gTopbarControls[].rectangle, etc.) onto the SynthLib registry, module-by-module, replacing direct array indexing with register/get calls
+  - Once mouse hit-testing is decoupled from render-time global arrays, generalize mousePanels.c/mouseTopbar.c/selection.c into shared SynthLib components so Z1-Edit/EmuUtility can adopt them instead of maintaining independent mouseHandle.c implementations
+  - Evaluate generalizing the msgQueue.c + usbComms.c thread/message-queue pattern into SynthLib as a transport-agnostic comms layer (USB vs MIDI as pluggable backend), since Z1-Edit/EmuUtility currently talk to MIDI directly with no shared queue abstraction
+  - Evaluate extracting menus.c's declarative build/dispatch mechanism into SynthLib (item tables stay per-project; G2-Edit's menus.c is 2186 lines vs 114 in Z1-Edit/EmuUtility with ~100% divergence)
