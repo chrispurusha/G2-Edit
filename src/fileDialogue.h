@@ -43,10 +43,6 @@ void show_confirm_dialogue_async(const char * title, const char * message, const
 // bank 5's backup into bank 7" case. callback's targetBank1Indexed is only meaningful when
 // confirmed is true.
 void show_bank_target_confirm_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle, uint32_t defaultTargetBank1Indexed, uint32_t maxBank1Indexed, tBankTargetConfirmCallback callback);
-// Same idea, but two accessory fields (Bank and Location), each independently clamped — used by
-// Store to Bank's initial "which bank/location?" step, before the overwrite-warning peek runs.
-// callback's bank1Indexed/location1Indexed are only meaningful when confirmed is true.
-void show_bank_location_confirm_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle, uint32_t defaultBank1Indexed, uint32_t maxBank1Indexed, uint32_t defaultLocation1Indexed, uint32_t maxLocation1Indexed, tBankLocationConfirmCallback callback);
 
 // One row of show_bank_location_list_dialogue_async()'s picker — label is a caller-owned string
 // (copied synchronously before the function returns, so it only needs to survive the call itself,
@@ -57,12 +53,10 @@ typedef struct {
     uint32_t     location1Indexed;
 } tBankLocationListItem;
 
-// Same callback contract as show_bank_location_confirm_dialogue_async (so callers can swap between
-// the two without touching anything downstream), but presents a dropdown of pre-built, named
-// bank/location choices instead of two blind numeric fields — used once a name table (e.g.
-// gPatchNameTable/gPerfNameTable, populated by the List Names sweep) is available to build the
-// list from. If itemCount is 0, the dropdown shows a disabled placeholder and confirming is a
-// no-op (callback still fires with confirmed=false in that case).
+// Presents a scrollable, named list of pre-built bank/location choices (e.g. from
+// gPatchNameTable/gPerfNameTable, populated by the List Names sweep) instead of blind numeric
+// fields — used by every Load/Store/Delete bank/location picker. If itemCount is 0, the list is
+// empty and confirming is a no-op (callback still fires with confirmed=false in that case).
 void show_bank_location_list_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle, const tBankLocationListItem * items, uint32_t itemCount, tBankLocationConfirmCallback callback);
 
 #ifdef __cplusplus
