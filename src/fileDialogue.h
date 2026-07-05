@@ -44,19 +44,24 @@ void show_confirm_dialogue_async(const char * title, const char * message, const
 // confirmed is true.
 void show_bank_target_confirm_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle, uint32_t defaultTargetBank1Indexed, uint32_t maxBank1Indexed, tBankTargetConfirmCallback callback);
 
-// One row of show_bank_location_list_dialogue_async()'s picker — label is a caller-owned string
+// One row of show_bank_location_list_dialogue_async()'s picker — name is a caller-owned string
 // (copied synchronously before the function returns, so it only needs to survive the call itself,
-// not the async dialog's lifetime).
+// not the async dialog's lifetime). category is a patchTypeStrMap index (0-15); the dialog itself
+// builds the visible "Bank X, Loc Y: name" label and the category grouping, so callers don't need
+// to format anything.
 typedef struct {
-    const char * label;
+    const char * name;
+    uint8_t      category;
     uint32_t     bank1Indexed;
     uint32_t     location1Indexed;
 } tBankLocationListItem;
 
 // Presents a scrollable, named list of pre-built bank/location choices (e.g. from
 // gPatchNameTable/gPerfNameTable, populated by the List Names sweep) instead of blind numeric
-// fields — used by every Load/Store/Delete bank/location picker. If itemCount is 0, the list is
-// empty and confirming is a no-op (callback still fires with confirmed=false in that case).
+// fields — used by every Load/Store/Delete bank/location picker. A segmented control lets the user
+// switch between Bank/Location order, Category (alphabetical within each category), and fully
+// alphabetical. If itemCount is 0, the list is empty and confirming is a no-op (callback still
+// fires with confirmed=false in that case).
 void show_bank_location_list_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle, const tBankLocationListItem * items, uint32_t itemCount, tBankLocationConfirmCallback callback);
 
 #ifdef __cplusplus
