@@ -1,0 +1,21 @@
+G2-Edit TODO (priority order)
+
+- Fix moduleResources.h param-count mismatches blocking DrumSynth(58), FltLP(87), Vocoder(108) — tables currently commented out
+- protocol.c:1670 — master volume is hardcoded (0x50) instead of read from gMasterVolume
+- protocol.c:1697 — write-side patch-settings parsing needs rewriting to match read-side logic in usbComms.c
+- graphics.cpp:752-753 — perf-mode write path relies on a blind 2-second usleep instead of real state confirmation
+- usbComms.c — centralize repeated unsolicited send_stop() calls (lines ~3590-3781) instead of scattering them
+- usbComms.c — resolve perf-mode ambiguities: synth vs. perf ownership (line 342), voice-count ordering on increase (line 576/582), unconfirmed message case (line 903)
+- graphics.cpp:738 — move parse_patch to a shared file so both USB and file-load paths can use it
+- moduleGraphics.cpp — refactor volume-meter/label rendering into utilsGraphics.cpp; fix upRate flag being applied too broadly (should be audio-connector-only, line 540); resolve "can Mode be morphed?" question (line 387)
+- OscA(97) — add new UI element for Freq control (param 0) that accounts for param 6 Pitch Type
+- Sw8-1(15), ValSw1-2(17) — need more resources
+- OscShpB(8) — check mode handling
+- Fix known caveats on otherwise-OK modules: Oscar(9) mode, EnvADSR(20) values, PartQuant(22) dial range (0 to +/-63), LfoC(24) Range Sub param, SeqNote/SeqEvent/SeqVal/SeqLev park LED handling, MixFader(161) value scale (match Mix4-1C's 0-100/xx.x mapping)
+- Verify remaining 117 unverified module types (filters, oscillators, delay lines, sequencer/logic, MIDI send/receive, Resonator, Operator, Random* family, etc.) — see "Module dev debug notes.txt"
+- Add performance keyboard split/layer/zone UI (manual's "Layering Patches" section) — currently only the standalone NoteZone module exists
+- Add a dedicated master-clock/tempo panel (currently only basic send/receive clock toggles exist)
+- globalVars.h:63,70,71 — nullify knob/controller arrays on new patch load
+- msgQueue.h:284 — remove unused mutex
+- defs.h:162 — confirm whether perf-header sub-response is ever actually used
+- rationalise architecture and commonalise components for other projects
