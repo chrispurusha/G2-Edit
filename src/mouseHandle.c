@@ -54,7 +54,7 @@ extern "C" {
 #include "misc.h"
 
 // Drag-start state for vertical/horizontal dial modes
-static double gDragStartX    = 0.0; // cursor position at press — used for restore on release
+static double gDragStartX    = 0.0; // cursor position at press — fixed reference point for Alt-held morph-offset dragging
 static double gDragStartY    = 0.0;
 static double gDragPrevX     = 0.0; // cursor position at previous cursor_pos call — used for incremental delta
 static double gDragPrevY     = 0.0;
@@ -568,12 +568,15 @@ void stop_dragging(void) {
     gRubberBand.active        = false;
     gDragSkipCount            = 0;
 
+    // No explicit glfwSetCursorPos(gDragStartX, gDragStartY) here — GLFW's
+    // cocoa backend already restores the cursor to wherever it was when
+    // CURSOR_DISABLED was entered, as soon as we switch back to NORMAL (see
+    // updateCursorMode() in cocoa_window.m). An extra explicit warp on top
+    // of that was redundant, and two independent warps in a row can land a
+    // pixel or two off from each other — enough, in SynthEdit's tightly
+    // packed filter dials, to spill onto a neighbouring control.
     if (wasCursorDragging) {
         glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-
-        if (gDialMode != eDialModeRotary) {
-            glfwSetCursorPos(gWindow, gDragStartX, gDragStartY);
-        }
     }
 }
 
