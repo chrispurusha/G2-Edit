@@ -240,29 +240,101 @@ void show_bank_location_confirm_dialogue_async(const char * title, const char * 
     });
 }
 
-// Same idea as show_bank_location_confirm_dialogue_async above, but a single NSPopUpButton listing
-// pre-built named choices (items) instead of two blind numeric fields. Items are copied into
-// Cocoa objects synchronously, before this function returns, so the caller's items/label pointers
-// only need to survive the call itself.
+// Backs show_bank_location_list_dialogue_async()'s NSTableView — a label-per-row list, no
+// selection pre-set (see that function's comment for why: the whole point is not defaulting to
+// "row 0" the way an NSPopUpButton silently does). Some rows are thin non-selectable dividers
+// (rowIsSeparator) marking where one bank's entries end and the next begin — inserted by the
+// builder function below, not something the caller specifies directly.
+@interface G2BankLocationListSource : NSObject<NSTableViewDataSource, NSTableViewDelegate>
+@property (nonatomic, strong) NSArray<NSString *> * rowLabels;
+@property (nonatomic, strong) NSArray<NSNumber *> * rowIsSeparator;
+@end
+
+@implementation G2BankLocationListSource
+
+- (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView {
+    return (NSInteger)self.rowLabels.count;
+}
+
+- (NSView *)tableView:(NSTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row {
+    // Reused via makeViewWithIdentifier:owner: rather than alloc'd fresh on every call — handing
+    // NSTableView un-pooled one-off views breaks its internal view lifecycle bookkeeping and left
+    // dangling nextKeyView links between discarded row views, crashing in
+    // -[NSWindow dealloc] -> _recursiveBreakKeyViewLoop -> setNextKeyView: once the alert closed.
+    if ([self.rowIsSeparator[(NSUInteger)row] boolValue]) {
+        NSString *const separatorId = @"separator";
+        NSBox *         box         = [tableView makeViewWithIdentifier:separatorId owner:self];
+
+        if (!box) {
+            box            = [[NSBox alloc] initWithFrame:NSMakeRect(0, 0, tableView.bounds.size.width, 1)];
+            box.identifier = separatorId;
+            [box setBoxType:NSBoxSeparator];
+        }
+        return box;
+    }
+    NSString *const cellId = @"label";
+    NSTextField *   cell   = [tableView makeViewWithIdentifier:cellId owner:self];
+
+    if (!cell) {
+        cell            = [[NSTextField alloc] initWithFrame:NSZeroRect];
+        cell.identifier = cellId;
+        [cell setBezeled:NO];
+        [cell setDrawsBackground:NO];
+        [cell setEditable:NO];
+        [cell setSelectable:NO];
+    }
+    [cell setStringValue:self.rowLabels[(NSUInteger)row]];
+    return cell;
+}
+
+- (CGFloat)tableView:(NSTableView *)tableView heightOfRow:(NSInteger)row {
+    return [self.rowIsSeparator[(NSUInteger)row] boolValue] ? 9.0 : tableView.rowHeight;
+}
+
+- (BOOL)tableView:(NSTableView *)tableView shouldSelectRow:(NSInteger)row {
+    return ![self.rowIsSeparator[(NSUInteger)row] boolValue];
+}
+
+@end
+
+// Same idea as show_bank_location_confirm_dialogue_async above, but a scrollable NSTableView
+// listing pre-built named choices (items) instead of two blind numeric fields. Unlike an
+// NSPopUpButton (which always shows some item as "currently selected", defaulting to the first —
+// exactly the "looks like Bank 1/Location 1 is already chosen" behavior this replaced), the table
+// starts with nothing selected and is fully visible without an extra click to expand it; the user
+// must click a row before confirming. Items are copied into Cocoa objects synchronously, before
+// this function returns, so the caller's items/label pointers only need to survive the call itself.
 void show_bank_location_list_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle,
                                             const tBankLocationListItem * items, uint32_t itemCount,
                                             tBankLocationConfirmCallback callback) {
-    NSString *                   titleString   = [NSString stringWithUTF8String:(title ? title : "")];
-    NSString *                   messageString = [NSString stringWithUTF8String:(message ? message : "")];
-    NSString *                   confirmString = [NSString stringWithUTF8String:(confirmButtonTitle ? confirmButtonTitle : "OK")];
+    NSString *                   titleString    = [NSString stringWithUTF8String:(title ? title : "")];
+    NSString *                   messageString  = [NSString stringWithUTF8String:(message ? message : "")];
+    NSString *                   confirmString  = [NSString stringWithUTF8String:(confirmButtonTitle ? confirmButtonTitle : "OK")];
 
-    NSMutableArray<NSString *> * labels        = [NSMutableArray arrayWithCapacity:itemCount];
-    NSMutableArray<NSNumber *> * banks         = [NSMutableArray arrayWithCapacity:itemCount];
-    NSMutableArray<NSNumber *> * locs          = [NSMutableArray arrayWithCapacity:itemCount];
+    // Flattened into per-row arrays (not per-item) since a thin separator row is inserted
+    // whenever the bank number changes from one item to the next — separators get placeholder
+    // bank/location values that are never read (shouldSelectRow: keeps them from ever becoming
+    // the selected row).
+    NSMutableArray<NSString *> * rowLabels      = [NSMutableArray arrayWithCapacity:itemCount];
+    NSMutableArray<NSNumber *> * rowIsSeparator = [NSMutableArray arrayWithCapacity:itemCount];
+    NSMutableArray<NSNumber *> * rowBanks       = [NSMutableArray arrayWithCapacity:itemCount];
+    NSMutableArray<NSNumber *> * rowLocs        = [NSMutableArray arrayWithCapacity:itemCount];
 
     for (uint32_t i = 0; i < itemCount; i++) {
-        [labels addObject:[NSString stringWithUTF8String:(items[i].label ? items[i].label : "")]];
-        [banks addObject:@(items[i].bank1Indexed)];
-        [locs addObject:@(items[i].location1Indexed)];
+        if ((i > 0) && (items[i].bank1Indexed != items[i - 1].bank1Indexed)) {
+            [rowLabels addObject:@""];
+            [rowIsSeparator addObject:@YES];
+            [rowBanks addObject:@0];
+            [rowLocs addObject:@0];
+        }
+        [rowLabels addObject:[NSString stringWithUTF8String:(items[i].label ? items[i].label : "")]];
+        [rowIsSeparator addObject:@NO];
+        [rowBanks addObject:@(items[i].bank1Indexed)];
+        [rowLocs addObject:@(items[i].location1Indexed)];
     }
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        NSAlert * alert          = [[NSAlert alloc] init];
+        NSAlert * alert                   = [[NSAlert alloc] init];
 
         [alert setAlertStyle:NSAlertStyleWarning];
         [alert setMessageText:titleString];
@@ -270,29 +342,44 @@ void show_bank_location_list_dialogue_async(const char * title, const char * mes
         [alert addButtonWithTitle:@"Cancel"];
         [alert addButtonWithTitle:confirmString];
 
-        NSPopUpButton * popup    = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(0, 0, 360, 26) pullsDown:NO];
+        CGFloat listWidth                 = 360;
+        CGFloat listHeight                = 220;
+        NSScrollView * scrollView         = [[NSScrollView alloc] initWithFrame:NSMakeRect(0, 0, listWidth, listHeight)];
+        NSTableView * tableView           = [[NSTableView alloc] initWithFrame:NSMakeRect(0, 0, listWidth, listHeight)];
+        NSTableColumn * column            = [[NSTableColumn alloc] initWithIdentifier:@"name"];
+        G2BankLocationListSource * source = [[G2BankLocationListSource alloc] init];
 
-        if (labels.count == 0) {
-            [popup addItemWithTitle:@"(none found)"];
-            [popup setEnabled:NO];
-        } else {
-            [popup addItemsWithTitles:labels];
-        }
-        NSView * accessory       = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 360, 26)];
-        [accessory addSubview:popup];
-        [alert setAccessoryView:accessory];
-        [[alert window] setInitialFirstResponder:popup];
+        source.rowLabels                  = rowLabels;
+        source.rowIsSeparator             = rowIsSeparator;
 
-        NSModalResponse response = [alert runModal];
-        bool confirmed           = (response == NSAlertSecondButtonReturn) && (labels.count > 0);
-        uint32_t bank            = 0;
-        uint32_t location        = 0;
+        [column setWidth:listWidth - 4];
+        [tableView addTableColumn:column];
+        [tableView setHeaderView:nil];
+        [tableView setDataSource:source];
+        [tableView setDelegate:source];
+        [tableView setAllowsEmptySelection:YES];
+        [tableView setAllowsMultipleSelection:NO];
+        [tableView reloadData];
+
+        [scrollView setDocumentView:tableView];
+        [scrollView setHasVerticalScroller:YES];
+        [scrollView setAutohidesScrollers:YES];
+        [scrollView setBorderType:NSBezelBorder];
+
+        [alert setAccessoryView:scrollView];
+        [[alert window] setInitialFirstResponder:tableView];
+
+        NSModalResponse response          = [alert runModal];
+        NSInteger selected                = [tableView selectedRow];
+        bool confirmed                    = (response == NSAlertSecondButtonReturn)
+                                            && (selected >= 0) && ((NSUInteger)selected < rowLabels.count)
+                                            && !([rowIsSeparator[(NSUInteger)selected] boolValue]);
+        uint32_t bank                     = 0;
+        uint32_t location                 = 0;
 
         if (confirmed) {
-            NSInteger idx = [popup indexOfSelectedItem];
-
-            bank          = [banks[(NSUInteger)idx] unsignedIntValue];
-            location      = [locs[(NSUInteger)idx] unsignedIntValue];
+            bank     = [rowBanks[(NSUInteger)selected] unsignedIntValue];
+            location = [rowLocs[(NSUInteger)selected] unsignedIntValue];
         }
 
         if (callback) {

@@ -692,10 +692,26 @@ static void parse_list_names_response(uint8_t * buff, uint32_t * bitPos, int len
     sListNamesMode     = mode;
 
     for ( ; ;) {
-        while (  (location < NUM_LOCATIONS_PER_BANK)
-              && (BIT_TO_BYTE(*bitPos) - BIT_TO_BYTE(bodyStartBitPos) + 3 <= bodyLen)) {
-            char    name[CLAVIA_NAME_SIZE + 1] = {0};
-            uint8_t category;
+        while (location < NUM_LOCATIONS_PER_BANK) {
+            int      bytesLeft                  = bodyLen - (BIT_TO_BYTE(*bitPos) - BIT_TO_BYTE(bodyStartBitPos));
+
+            if (bytesLeft < 1) {
+                break; // no bytes left at all; resume from here next request
+            }
+            uint32_t peekBitPos                 = *bitPos;
+            uint8_t  peekByte                   = (uint8_t)read_bit_stream(buff, &peekBitPos, 8);
+
+            if (peekByte == 0x03) {
+                break; // bank/location transition marker — a sparse bank can end well
+                       // before location 128, so this must be checked before every
+                       // entry, not just after the loop naturally exhausts the bank
+            }
+
+            if (bytesLeft < 2) {
+                break; // not enough bytes left for even a minimal entry; resume from here next request
+            }
+            char     name[CLAVIA_NAME_SIZE + 1] = {0};
+            uint8_t  category;
 
             read_clavia_string(buff, bitPos, name, sizeof(name));
             category = (uint8_t)read_bit_stream(buff, bitPos, 8);
@@ -712,12 +728,8 @@ static void parse_list_names_response(uint8_t * buff, uint32_t * bitPos, int len
             location++;
         }
 
-        if (location < NUM_LOCATIONS_PER_BANK) {
-            break; // ran out of packet space mid-bank; resume from here next request
-        }
-
         if (BIT_TO_BYTE(*bitPos) - BIT_TO_BYTE(bodyStartBitPos) >= bodyLen) {
-            break; // bank exactly finished and no bytes left at all
+            break; // no bytes left at all; resume from (bank, location) next request
         }
         uint8_t code = (uint8_t)read_bit_stream(buff, bitPos, 8);
 
