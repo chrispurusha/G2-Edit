@@ -124,6 +124,7 @@ extern char                    gBankBackupResultMessage[256];
 extern _Atomic bool            gSynthSettingsBackupComplete; // set once finished, so the UI can show a completion alert
 extern char                    gSynthSettingsBackupResultMessage[256];
 extern _Atomic bool            gBankRestoreActive;
+extern _Atomic bool            gBankRestoreIsEverything;                    // true = part of a "Restore Everything" sweep
 extern _Atomic bool            gBankRestoreIsPerf;                          // true = restoring a Performance Bank, false = Patch Bank
 extern _Atomic uint32_t        gBankRestoreBank;                            // 0-indexed bank currently being restored (destination)
 extern _Atomic uint32_t        gBankRestoreLocation;                        // 0-indexed location currently being written/cleared

@@ -54,6 +54,7 @@ double get_zoom_factor(void);
 - (void)backupEverything:(id)sender;
 - (void)restoreBank:(id)sender;
 - (void)restorePerfBank:(id)sender;
+- (void)restoreEverything:(id)sender;
 - (void)storeToBank:(id)sender;
 - (void)deletePatchLocation:(id)sender;
 - (void)deletePerfLocation:(id)sender;
@@ -126,6 +127,24 @@ static void on_everything_backup_folder_chosen(const char * path) {
     msg.cmd = eMsgCmdBackupEverything;
     strncpy(msg.settingsBackupData.destFolder, path, sizeof(msg.settingsBackupData.destFolder) - 1);
     msg_send(&gCommandQueue, &msg);
+}
+
+static void on_everything_restore_folder_chosen(const char * path) {
+    if (path == NULL) {
+        return;
+    }
+    tMessageContent msg = {0};
+
+    msg.cmd = eMsgCmdRestoreEverything;
+    strncpy(msg.synthSettingsRestoreData.srcFolder, path, sizeof(msg.synthSettingsRestoreData.srcFolder) - 1);
+    msg_send(&gCommandQueue, &msg);
+}
+
+static void on_restore_everything_confirmed(bool confirmed) {
+    if (!confirmed) {
+        return;
+    }
+    open_folder_dialogue_async(on_everything_restore_folder_chosen, "Choose the Backup Folder to Restore Everything From");
 }
 
 static void on_bank_restore_folder_chosen(const char * path) {
@@ -371,6 +390,18 @@ static void on_load_bank_location_chosen(bool confirmed, uint32_t bank1Indexed, 
                                             (uint32_t)[item tag] + 1, NUM_PERF_BANKS, on_bank_restore_confirmed);
 }
 
+- (void)restoreEverything:(id)sender {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring everything.");
+        return;
+    }
+    show_confirm_dialogue_async("Restore Everything",
+                                "This restores every Patch Bank, Performance Bank, and Synth Settings backup found in a folder you choose next, "
+                                "overwriting the G2's current contents to match. Any bank with no manifest file in that folder is left untouched "
+                                "rather than erased. This cannot be undone.",
+                                "Next...", on_restore_everything_confirmed);
+}
+
 - (void)storeToBank:(id)sender {
     bool         isPerf       = gGlobalSettings.perfMode == 1;
     const char * typeName     = isPerf ? "performance" : "patch";
@@ -472,6 +503,7 @@ static void on_load_bank_location_chosen(bool confirmed, uint32_t bank1Indexed, 
               || action == @selector(backupSynthSettings:) || action == @selector(restoreSynthSettings:)
               || action == @selector(backupEverything:)
               || action == @selector(restoreBank:) || action == @selector(restorePerfBank:)
+              || action == @selector(restoreEverything:)
               || action == @selector(deletePatchLocation:) || action == @selector(deletePerfLocation:)
               || action == @selector(loadPatchLocation:) || action == @selector(loadPerfLocation:)) {
         return gCommsState == eCommsOnLine;
@@ -635,6 +667,8 @@ void setup_main_menu(void) {
     [restoreMenu addItem:restorePerfSubMI];
     [restoreMenu addItem:[NSMenuItem separatorItem]];
     [restoreMenu addItem:make_item(@"Synth Settings...", @selector(restoreSynthSettings:), @"", target)];
+    [restoreMenu addItem:[NSMenuItem separatorItem]];
+    [restoreMenu addItem:make_item(@"Everything...", @selector(restoreEverything:), @"", target)];
     [restoreMI setSubmenu:restoreMenu];
     [menuBar insertItem:restoreMI atIndex:4];
 

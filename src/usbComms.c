@@ -2970,6 +2970,116 @@ static int apply_synth_settings_restore(void) {
     return result;
 }
 
+// Mirrors backup_everything(): walks all Patch Banks, all Performance Banks, then Synth Settings,
+// restoring each from srcFolder in one sweep. Unlike a single restore_bank() call — where a missing
+// manifest is almost certainly a wrong-folder mistake, and so refuses to touch the device at all —
+// a missing manifest here is the normal, expected case (e.g. an incremental backup that only ever
+// covered some banks), so this just skips that one bank and moves on, leaving it untouched, rather
+// than treating it as a failure. Synth Settings restore is skipped the same way if no backup file
+// is found. A genuine device-level failure (disconnected, a push/clear rejected) still stops the
+// whole sweep immediately and reports exactly how far it got, same rule as restore_bank() itself.
+static int restore_everything(const char * srcFolder) {
+    uint32_t     totalPatches       = 0;
+    uint32_t     totalPerfs         = 0;
+    uint32_t     patchBanksSkipped  = 0;
+    uint32_t     perfBanksSkipped   = 0;
+    uint32_t     patchBanksRestored = 0;
+    uint32_t     perfBanksRestored  = 0;
+    const char * settingsStatus     = "failed";
+    bool         aborted            = false;
+    char         manifestPath[1280] = {0};
+
+    if (gCommsState != eCommsOnLine) {
+        LOG_ERROR("restore_everything: G2 is not connected\n");
+        gBankRestoreIsEverything = true;
+        snprintf(gBankRestoreResultMessage, sizeof(gBankRestoreResultMessage),
+                 "Restore Everything failed: the G2 is not connected");
+        gBankRestoreComplete     = true;
+        call_wake_glfw();
+        return EXIT_FAILURE;
+    }
+    gBankRestoreIsEverything = true;
+    gBankRestoreActive       = true;
+    call_wake_glfw();
+
+    for (uint32_t bank = 0; (bank < NUM_PATCH_BANKS) && !aborted; bank++) {
+        if (gotBadConnectionIndication) {
+            LOG_ERROR("restore_everything: aborting early — lost connection to device\n");
+            aborted = true;
+            break;
+        }
+        snprintf(manifestPath, sizeof(manifestPath), "%s/PatchBank%u.pchList", srcFolder, bank + 1);
+
+        if (access(manifestPath, F_OK) != 0) {
+            patchBanksSkipped++;
+            continue;
+        }
+
+        if (restore_bank(bank, bank, srcFolder, false, true) != EXIT_SUCCESS) {
+            aborted = true;
+            break;
+        }
+        totalPatches += gBankRestoreWritten;
+        patchBanksRestored++;
+    }
+
+    if (!aborted) {
+        for (uint32_t bank = 0; bank < NUM_PERF_BANKS; bank++) {
+            if (gotBadConnectionIndication) {
+                LOG_ERROR("restore_everything: aborting early — lost connection to device\n");
+                aborted = true;
+                break;
+            }
+            snprintf(manifestPath, sizeof(manifestPath), "%s/PerfBank%u.pchList", srcFolder, bank + 1);
+
+            if (access(manifestPath, F_OK) != 0) {
+                perfBanksSkipped++;
+                continue;
+            }
+
+            if (restore_bank(bank, bank, srcFolder, true, true) != EXIT_SUCCESS) {
+                aborted = true;
+                break;
+            }
+            totalPerfs += gBankRestoreWritten;
+            perfBanksRestored++;
+        }
+    }
+
+    if (!aborted) {
+        char synthPath[1280] = {0};
+
+        if (!find_latest_synth_settings_backup(srcFolder, synthPath, sizeof(synthPath))) {
+            settingsStatus = "skipped, no backup found";
+        } else if (!parse_synth_settings_backup_file(synthPath, &sSynthSettingsRestoreStaged)) {
+            settingsStatus = "skipped, backup file unreadable";
+        } else {
+            gSynthSettings = sSynthSettingsRestoreStaged;
+            settingsStatus = (send_synth_settings() == EXIT_SUCCESS) ? "restored" : "failed";
+        }
+    }
+    gBankRestoreActive   = false;
+    // gBankRestoreIsEverything stays true until check_action_flags() has shown the alert below,
+    // same reasoning as gBankBackupIsEverything in backup_everything() above.
+
+    if (aborted) {
+        snprintf(gBankRestoreResultMessage, sizeof(gBankRestoreResultMessage),
+                 "Restore Everything stopped: %u patch%s across %u bank%s and %u performance%s across %u bank%s written before the failure",
+                 totalPatches, totalPatches == 1 ? "" : "es", patchBanksRestored, patchBanksRestored == 1 ? "" : "s",
+                 totalPerfs, totalPerfs == 1 ? "" : "s", perfBanksRestored, perfBanksRestored == 1 ? "" : "s");
+    } else {
+        snprintf(gBankRestoreResultMessage, sizeof(gBankRestoreResultMessage),
+                 "Restore Everything complete: %u patch%s across %u bank%s (%u skipped, no manifest), "
+                 "%u performance%s across %u bank%s (%u skipped, no manifest), synth settings %s",
+                 totalPatches, totalPatches == 1 ? "" : "es", patchBanksRestored, patchBanksRestored == 1 ? "" : "s", patchBanksSkipped,
+                 totalPerfs, totalPerfs == 1 ? "" : "s", perfBanksRestored, perfBanksRestored == 1 ? "" : "s", perfBanksSkipped,
+                 settingsStatus);
+    }
+    gBankRestoreComplete = true;
+    call_wake_glfw();
+    return aborted ? EXIT_FAILURE : EXIT_SUCCESS;
+}
+
 static int send_set_patch_descr(uint32_t slot) { // Note - currently using values straight from patchDescr in sub-function
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
@@ -3544,6 +3654,12 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdApplySynthSettingsRestore:
             send_stop();
             retVal = apply_synth_settings_restore();
+            send_start();
+            break;
+
+        case eMsgCmdRestoreEverything:
+            send_stop();
+            retVal = restore_everything(messageContent->synthSettingsRestoreData.srcFolder);
             send_start();
             break;
 

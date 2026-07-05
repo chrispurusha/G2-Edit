@@ -115,6 +115,7 @@ char                    gBankBackupResultMessage[256]                           
 _Atomic bool            gSynthSettingsBackupComplete                                                 = false;
 char                    gSynthSettingsBackupResultMessage[256]                                       = {0};
 _Atomic bool            gBankRestoreActive                                                           = false;
+_Atomic bool            gBankRestoreIsEverything                                                     = false;
 _Atomic bool            gBankRestoreIsPerf                                                           = false;
 _Atomic uint32_t        gBankRestoreBank                                                             = 0;
 _Atomic uint32_t        gBankRestoreLocation                                                         = 0;
