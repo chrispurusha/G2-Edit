@@ -1191,7 +1191,12 @@ static void check_action_flags(void) {
 
     if (gLoadComplete) {
         gLoadComplete = false;
-        show_alert_async("Load", gLoadResultMessage);
+
+        // Success is shown by the redrawn canvas itself — an alert here would just be a modal
+        // the user has to dismiss before they can see the patch that already loaded underneath it.
+        if (gLoadFailed) {
+            show_alert_async("Load", gLoadResultMessage);
+        }
     }
 
     if (gSynthRestorePeekComplete) {

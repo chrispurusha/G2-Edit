@@ -148,6 +148,7 @@ _Atomic uint32_t        gLoadPeekBank                                           
 _Atomic uint32_t        gLoadPeekLocation                                                            = 0;
 char                    gLoadPeekName[CLAVIA_NAME_SIZE + 1]                                          = {0};
 _Atomic bool            gLoadComplete                                                                = false;
+_Atomic bool            gLoadFailed                                                                  = false;
 char                    gLoadResultMessage[256]                                                      = {0};
 _Atomic bool            gSynthRestorePeekComplete                                                    = false;
 _Atomic bool            gSynthRestorePeekFailed                                                      = false;
