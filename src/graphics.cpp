@@ -1017,6 +1017,21 @@ static void on_delete_confirmed(bool confirmed) {
     msg_send(&gCommandQueue, &msg);
 }
 
+// Same shape as on_store_confirmed/on_delete_confirmed above, but for Load — target comes from
+// gLoadPeekBank/gLoadPeekLocation/gLoadPeekIsPerf, set by peek_load_target().
+static void on_load_confirmed(bool confirmed) {
+    tMessageContent msg = {0};
+
+    if (!confirmed) {
+        return;
+    }
+    msg.cmd                           = eMsgCmdLoadPatch;
+    msg.bankLocationPerfData.bank     = gLoadPeekBank;
+    msg.bankLocationPerfData.location = gLoadPeekLocation;
+    msg.bankLocationPerfData.isPerf   = gLoadPeekIsPerf;
+    msg_send(&gCommandQueue, &msg);
+}
+
 static void check_action_flags(void) {
     uint32_t slot                              = gSlot;
     //bool     perfMode                          = gPerfMode != 0;
@@ -1129,6 +1144,34 @@ static void check_action_flags(void) {
     if (gDeleteComplete) {
         gDeleteComplete = false;
         show_alert_async("Delete", gDeleteResultMessage);
+    }
+
+    if (gLoadPeekComplete) {
+        gLoadPeekComplete = false;
+        char title[64]    = {0};
+        char message[320] = {0};
+        bool isPerf       = gLoadPeekIsPerf;
+
+        snprintf(title, sizeof(title), "Load %s from Bank %u, Location %u",
+                 isPerf ? "Performance" : "Patch", gLoadPeekBank + 1, gLoadPeekLocation + 1);
+
+        if (gLoadPeekFailed) {
+            show_alert_async(title, "Could not check what's at this location — the G2 may have gone offline. Try again.");
+        } else if (!gLoadPeekPopulated) {
+            // Nothing captured confirms what RETRIEVE does against an empty location, and there's
+            // nothing useful to load anyway — inform rather than offering to proceed.
+            show_alert_async(title, "This location is empty. There's nothing to load.");
+        } else {
+            snprintf(message, sizeof(message),
+                     "This location contains \"%s\". Loading it will replace the current edit buffer %s, "
+                     "including any unsaved changes. Continue?", gLoadPeekName, isPerf ? "performance" : "patch");
+            show_confirm_dialogue_async(title, message, "Load...", on_load_confirmed);
+        }
+    }
+
+    if (gLoadComplete) {
+        gLoadComplete = false;
+        show_alert_async("Load", gLoadResultMessage);
     }
 }
 

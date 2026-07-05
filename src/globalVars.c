@@ -139,6 +139,15 @@ _Atomic uint32_t        gDeletePeekLocation                                     
 char                    gDeletePeekName[CLAVIA_NAME_SIZE + 1]                                        = {0};
 _Atomic bool            gDeleteComplete                                                              = false;
 char                    gDeleteResultMessage[256]                                                    = {0};
+_Atomic bool            gLoadPeekComplete                                                            = false;
+_Atomic bool            gLoadPeekFailed                                                              = false;
+_Atomic bool            gLoadPeekPopulated                                                           = false;
+_Atomic bool            gLoadPeekIsPerf                                                              = false;
+_Atomic uint32_t        gLoadPeekBank                                                                = 0;
+_Atomic uint32_t        gLoadPeekLocation                                                            = 0;
+char                    gLoadPeekName[CLAVIA_NAME_SIZE + 1]                                          = {0};
+_Atomic bool            gLoadComplete                                                                = false;
+char                    gLoadResultMessage[256]                                                      = {0};
 
 void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active) {
     tTopbarControlId i = first;

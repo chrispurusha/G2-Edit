@@ -1463,6 +1463,27 @@ static int send_store_patch(uint8_t domain, uint32_t bank, uint32_t location) {
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_STORE_PATCH, USB_RECV_DATA_MS);
 }
 
+// Loads bank/location into the active edit-buffer slot (SUB_COMMAND_RETRIEVE, 0x0a) —
+// reverse-engineered from a real capture (LoadFromBankLocationToCurrentSlot.pcapng): same 3-byte
+// domain/bank/location framing as send_store_patch, no content either direction. Which edit-buffer
+// slot receives it is implicit (device's own current focus), same as Store. Acked with
+// SUB_RESPONSE_PATCH_VERSION_CHANGE (0x38) — already fully handled by existing code:
+// parse_patch_version_change() sets gotPatchChangeIndication[slot], and state_handler()'s existing
+// per-cycle loop already reacts to that by calling send_get_patch_data() and
+// call_full_patch_change_notify() to pull the new patch in and refresh the UI (this is the same
+// path the app already uses when a patch changes from the front panel while connected) — no new
+// response parsing needed here at all.
+static int send_retrieve_patch(uint8_t domain, uint32_t bank, uint32_t location) {
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+
+    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_RETRIEVE);
+    write_bit_stream(buff, &bitPos, 8, domain);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)bank);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)location);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_PATCH_VERSION_CHANGE, USB_RECV_DATA_MS);
+}
+
 // Reads back just the name (and whether it's populated) of whatever currently occupies bank/
 // location — for showing an overwrite warning before Store, without needing any new wire protocol:
 // reuses the already-confirmed Bank Upload request/response path (send_bank_upload_request),
@@ -1908,6 +1929,68 @@ static int delete_bank_location(uint32_t bank, uint32_t location, bool isPerf) {
         snprintf(gDeleteResultMessage, sizeof(gDeleteResultMessage), "Delete of %s Bank %u, Location %u failed", typeLabel, bank + 1, location + 1);
     }
     gDeleteComplete = true;
+    call_wake_glfw();
+    return result;
+}
+
+// Looks up what's currently at bank/location before Load — same mechanism as peek_store_target()/
+// peek_delete_target() (reuses peek_bank_location(), no new wire protocol). Here the point isn't an
+// overwrite warning about the target (Load doesn't touch it) but (a) letting the user confirm this
+// is really the patch/performance they meant to load, and (b) warning that loading replaces
+// whatever's currently in the edit buffer, which could be unsaved. Result lands in gLoadPeek*
+// globals, polled by check_action_flags() in graphics.cpp.
+static int peek_load_target(uint32_t bank, uint32_t location, bool isPerf) {
+    char    name[CLAVIA_NAME_SIZE + 1] = {0};
+    bool    populated                  = false;
+    int     result                     = EXIT_FAILURE;
+    uint8_t domain                     = isPerf ? BANK_UPLOAD_DOMAIN_PERFORMANCE : BANK_UPLOAD_DOMAIN_PATCH;
+
+    gLoadPeekBank      = bank;
+    gLoadPeekLocation  = location;
+    gLoadPeekIsPerf    = isPerf;
+
+    if (gCommsState != eCommsOnLine) {
+        LOG_ERROR("peek_load_target: G2 is not connected\n");
+        gLoadPeekFailed   = true;
+        gLoadPeekComplete = true;
+        call_wake_glfw();
+        return EXIT_FAILURE;
+    }
+    result             = peek_bank_location(domain, bank, location, name, sizeof(name), &populated);
+
+    gLoadPeekFailed    = (result != EXIT_SUCCESS);
+    gLoadPeekPopulated = populated;
+    strncpy(gLoadPeekName, name, sizeof(gLoadPeekName) - 1);
+    gLoadPeekComplete  = true;
+    call_wake_glfw();
+    return result;
+}
+
+// Loads bank/location into the edit buffer via send_retrieve_patch(), once the user has confirmed
+// past the peek_load_target() warning. Result lands in gLoadComplete/gLoadResultMessage — the
+// actual patch content arriving into the editor happens separately/automatically via the existing
+// patch-change-notification path (see send_retrieve_patch's comment), not something this function
+// needs to wait for.
+static int load_patch_from_bank(uint32_t bank, uint32_t location, bool isPerf) {
+    uint8_t      domain    = isPerf ? BANK_UPLOAD_DOMAIN_PERFORMANCE : BANK_UPLOAD_DOMAIN_PATCH;
+    const char * typeLabel = isPerf ? "Performance" : "Patch";
+    int          result    = EXIT_FAILURE;
+
+    if (gCommsState != eCommsOnLine) {
+        LOG_ERROR("load_patch_from_bank: G2 is not connected\n");
+        snprintf(gLoadResultMessage, sizeof(gLoadResultMessage), "Load failed: the G2 is not connected");
+        gLoadComplete = true;
+        call_wake_glfw();
+        return EXIT_FAILURE;
+    }
+    result        = send_retrieve_patch(domain, bank, location);
+
+    if (result == EXIT_SUCCESS) {
+        snprintf(gLoadResultMessage, sizeof(gLoadResultMessage), "Loaded %s from Bank %u, Location %u", typeLabel, bank + 1, location + 1);
+    } else {
+        snprintf(gLoadResultMessage, sizeof(gLoadResultMessage), "Load of %s from Bank %u, Location %u failed", typeLabel, bank + 1, location + 1);
+    }
+    gLoadComplete = true;
     call_wake_glfw();
     return result;
 }
@@ -3191,6 +3274,24 @@ static int send_write_data(tMessageContent * messageContent) {
         {
             send_stop();
             retVal = delete_bank_location(messageContent->bankLocationPerfData.bank, messageContent->bankLocationPerfData.location,
+                                          messageContent->bankLocationPerfData.isPerf);
+            send_start();
+            break;
+        }
+
+        case eMsgCmdPeekLoadTarget:
+        {
+            send_stop();
+            retVal = peek_load_target(messageContent->bankLocationPerfData.bank, messageContent->bankLocationPerfData.location,
+                                      messageContent->bankLocationPerfData.isPerf);
+            send_start();
+            break;
+        }
+
+        case eMsgCmdLoadPatch:
+        {
+            send_stop();
+            retVal = load_patch_from_bank(messageContent->bankLocationPerfData.bank, messageContent->bankLocationPerfData.location,
                                           messageContent->bankLocationPerfData.isPerf);
             send_start();
             break;
