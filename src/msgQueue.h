@@ -71,7 +71,11 @@ typedef enum {
     eMsgCmdBackupBank,
     eMsgCmdBackupSynthSettings,
     eMsgCmdBackupEverything,
-    eMsgCmdRestoreBank//,
+    eMsgCmdRestoreBank,
+    eMsgCmdPeekBankLocation,
+    eMsgCmdStorePatch,
+    eMsgCmdPeekDeleteTarget,
+    eMsgCmdDeleteBankLocation//,
     //eMsgCmdReloadAllPatchData
 } eMsgCmd;
 
@@ -223,6 +227,17 @@ typedef struct {
 } tBankRestoreData;
 
 typedef struct {
+    uint32_t bank;     // 0-indexed
+    uint32_t location; // 0-indexed
+} tBankLocationData;
+
+typedef struct {
+    uint32_t bank;     // 0-indexed
+    uint32_t location; // 0-indexed
+    bool     isPerf;   // true = Performance Bank, false = Patch Bank
+} tBankLocationPerfData;
+
+typedef struct {
     uint32_t cmd;
     uint32_t slot;
     union {
@@ -250,6 +265,8 @@ typedef struct {
         tBankBackupData         bankBackupData;
         tSettingsBackupData     settingsBackupData;
         tBankRestoreData        bankRestoreData;
+        tBankLocationData       bankLocationData;
+        tBankLocationPerfData   bankLocationPerfData;
     };
 } tMessageContent;
 

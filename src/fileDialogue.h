@@ -30,6 +30,7 @@ extern "C" {
 typedef void (*tFileDialogueCallback)(const char * path);
 typedef void (*tConfirmCallback)(bool confirmed);
 typedef void (*tBankTargetConfirmCallback)(bool confirmed, uint32_t targetBank1Indexed);
+typedef void (*tBankLocationConfirmCallback)(bool confirmed, uint32_t bank1Indexed, uint32_t location1Indexed);
 
 void open_file_read_dialogue_async(tFileDialogueCallback callback);
 void open_file_write_dialogue_async(tFileDialogueCallback callback, const char * defaultName);
@@ -42,6 +43,10 @@ void show_confirm_dialogue_async(const char * title, const char * message, const
 // bank 5's backup into bank 7" case. callback's targetBank1Indexed is only meaningful when
 // confirmed is true.
 void show_bank_target_confirm_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle, uint32_t defaultTargetBank1Indexed, uint32_t maxBank1Indexed, tBankTargetConfirmCallback callback);
+// Same idea, but two accessory fields (Bank and Location), each independently clamped — used by
+// Store to Bank's initial "which bank/location?" step, before the overwrite-warning peek runs.
+// callback's bank1Indexed/location1Indexed are only meaningful when confirmed is true.
+void show_bank_location_confirm_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle, uint32_t defaultBank1Indexed, uint32_t maxBank1Indexed, uint32_t defaultLocation1Indexed, uint32_t maxLocation1Indexed, tBankLocationConfirmCallback callback);
 
 #ifdef __cplusplus
 }

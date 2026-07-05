@@ -984,6 +984,38 @@ static void on_file_saved(const char * path) {
     wake_glfw();
 }
 
+// Fires after the user has seen the overwrite warning built from a gStorePeekComplete result
+// (below) and clicked "Store...". The target is whatever peek_store_target() just recorded in
+// gStorePeekBank/gStorePeekLocation — no separate captured-context state needed here since nothing
+// can change those globals between the peek landing and this callback firing (both happen on the
+// main thread, and the user can't trigger a second Store attempt while this alert is up).
+static void on_store_confirmed(bool confirmed) {
+    tMessageContent msg = {0};
+
+    if (!confirmed) {
+        return;
+    }
+    msg.cmd                       = eMsgCmdStorePatch;
+    msg.bankLocationData.bank     = gStorePeekBank;
+    msg.bankLocationData.location = gStorePeekLocation;
+    msg_send(&gCommandQueue, &msg);
+}
+
+// Same shape as on_store_confirmed above, but for Delete — target comes from
+// gDeletePeekBank/gDeletePeekLocation/gDeletePeekIsPerf, set by peek_delete_target().
+static void on_delete_confirmed(bool confirmed) {
+    tMessageContent msg = {0};
+
+    if (!confirmed) {
+        return;
+    }
+    msg.cmd                           = eMsgCmdDeleteBankLocation;
+    msg.bankLocationPerfData.bank     = gDeletePeekBank;
+    msg.bankLocationPerfData.location = gDeletePeekLocation;
+    msg.bankLocationPerfData.isPerf   = gDeletePeekIsPerf;
+    msg_send(&gCommandQueue, &msg);
+}
+
 static void check_action_flags(void) {
     uint32_t slot                              = gSlot;
     //bool     perfMode                          = gPerfMode != 0;
@@ -1040,6 +1072,60 @@ static void check_action_flags(void) {
     if (gBankRestoreComplete) {
         gBankRestoreComplete = false;
         show_alert_async(gBankRestoreIsPerf ? "Performance Bank Restore" : "Patch Bank Restore", gBankRestoreResultMessage);
+    }
+
+    if (gStorePeekComplete) {
+        gStorePeekComplete = false;
+        char title[64]    = {0};
+        char message[320] = {0};
+
+        snprintf(title, sizeof(title), "Store to Bank %u, Location %u", gStorePeekBank + 1, gStorePeekLocation + 1);
+
+        if (gStorePeekFailed) {
+            show_alert_async(title, "Could not check what's currently at this location — the G2 may have gone offline. Try again.");
+        } else {
+            if (gStorePeekPopulated) {
+                snprintf(message, sizeof(message),
+                         "This location currently contains \"%s\". Storing will overwrite it with the current edit buffer patch. "
+                         "This cannot be undone.", gStorePeekName);
+            } else {
+                snprintf(message, sizeof(message),
+                         "This location is currently empty. Store the current edit buffer patch there?");
+            }
+            show_confirm_dialogue_async(title, message, "Store...", on_store_confirmed);
+        }
+    }
+
+    if (gStorePatchComplete) {
+        gStorePatchComplete = false;
+        show_alert_async("Store to Bank", gStorePatchResultMessage);
+    }
+
+    if (gDeletePeekComplete) {
+        gDeletePeekComplete = false;
+        char title[64]    = {0};
+        char message[320] = {0};
+        bool isPerf       = gDeletePeekIsPerf;
+
+        snprintf(title, sizeof(title), "Delete %s Bank %u, Location %u",
+                 isPerf ? "Performance" : "Patch", gDeletePeekBank + 1, gDeletePeekLocation + 1);
+
+        if (gDeletePeekFailed) {
+            show_alert_async(title, "Could not check what's currently at this location — the G2 may have gone offline. Try again.");
+        } else {
+            if (gDeletePeekPopulated) {
+                snprintf(message, sizeof(message),
+                         "This location currently contains \"%s\". Deleting will erase it. This cannot be undone.", gDeletePeekName);
+            } else {
+                snprintf(message, sizeof(message), "This location is already empty. Nothing to delete — continue anyway?");
+            }
+            show_confirm_dialogue_async(title, message, "Delete...", on_delete_confirmed);
+        }
+    }
+
+    if (gDeleteComplete) {
+        gDeleteComplete = false;
+        show_alert_async("Delete", gDeleteResultMessage);
     }
 }
 

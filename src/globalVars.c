@@ -121,6 +121,23 @@ _Atomic uint32_t        gBankRestoreLocation                                    
 _Atomic uint32_t        gBankRestoreWritten                                                          = 0;
 _Atomic bool            gBankRestoreComplete                                                         = false;
 char                    gBankRestoreResultMessage[256]                                               = {0};
+_Atomic bool            gStorePeekComplete                                                           = false;
+_Atomic bool            gStorePeekFailed                                                             = false;
+_Atomic bool            gStorePeekPopulated                                                          = false;
+_Atomic uint32_t        gStorePeekBank                                                               = 0;
+_Atomic uint32_t        gStorePeekLocation                                                           = 0;
+char                    gStorePeekName[CLAVIA_NAME_SIZE + 1]                                         = {0};
+_Atomic bool            gStorePatchComplete                                                          = false;
+char                    gStorePatchResultMessage[256]                                                = {0};
+_Atomic bool            gDeletePeekComplete                                                          = false;
+_Atomic bool            gDeletePeekFailed                                                            = false;
+_Atomic bool            gDeletePeekPopulated                                                         = false;
+_Atomic bool            gDeletePeekIsPerf                                                            = false;
+_Atomic uint32_t        gDeletePeekBank                                                              = 0;
+_Atomic uint32_t        gDeletePeekLocation                                                          = 0;
+char                    gDeletePeekName[CLAVIA_NAME_SIZE + 1]                                        = {0};
+_Atomic bool            gDeleteComplete                                                              = false;
+char                    gDeleteResultMessage[256]                                                    = {0};
 
 void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active) {
     tTopbarControlId i = first;
