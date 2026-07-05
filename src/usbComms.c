@@ -2075,6 +2075,7 @@ static int load_patch_from_bank(uint32_t bank, uint32_t location, bool isPerf) {
     if (gCommsState != eCommsOnLine) {
         LOG_ERROR("load_patch_from_bank: G2 is not connected\n");
         snprintf(gLoadResultMessage, sizeof(gLoadResultMessage), "Load failed: the G2 is not connected");
+        gLoadFailed   = true;
         gLoadComplete = true;
         call_wake_glfw();
         return EXIT_FAILURE;
@@ -2086,6 +2087,7 @@ static int load_patch_from_bank(uint32_t bank, uint32_t location, bool isPerf) {
     } else {
         snprintf(gLoadResultMessage, sizeof(gLoadResultMessage), "Load of %s from Bank %u, Location %u failed", typeLabel, bank + 1, location + 1);
     }
+    gLoadFailed   = (result != EXIT_SUCCESS);
     gLoadComplete = true;
     call_wake_glfw();
     return result;

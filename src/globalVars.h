@@ -157,6 +157,7 @@ extern _Atomic uint32_t        gLoadPeekBank;                                   
 extern _Atomic uint32_t        gLoadPeekLocation;                                        // 0-indexed location that was peeked (== the Load source)
 extern char                    gLoadPeekName[CLAVIA_NAME_SIZE + 1];                      // name of what's currently there, if populated
 extern _Atomic bool            gLoadComplete;                                            // set once Load itself finishes, so the UI can show a completion alert
+extern _Atomic bool            gLoadFailed;                                              // true if the Load itself failed — success is shown by the redrawn canvas, not an alert
 extern char                    gLoadResultMessage[256];
 extern _Atomic bool            gSynthRestorePeekComplete;                                // set once find+parse of the latest backup file finishes, polled by check_action_flags
 extern _Atomic bool            gSynthRestorePeekFailed;                                  // true if no backup file was found, or it couldn't be parsed
