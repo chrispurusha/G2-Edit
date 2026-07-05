@@ -21,6 +21,7 @@
 #define FILE_DIALOG_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,12 +29,19 @@ extern "C" {
 
 typedef void (*tFileDialogueCallback)(const char * path);
 typedef void (*tConfirmCallback)(bool confirmed);
+typedef void (*tBankTargetConfirmCallback)(bool confirmed, uint32_t targetBank1Indexed);
 
 void open_file_read_dialogue_async(tFileDialogueCallback callback);
 void open_file_write_dialogue_async(tFileDialogueCallback callback, const char * defaultName);
 void open_folder_dialogue_async(tFileDialogueCallback callback, const char * title);
 void show_alert_async(const char * title, const char * message);
 void show_confirm_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle, tConfirmCallback callback);
+// Same as show_confirm_dialogue_async, plus a numeric accessory field (clamped to
+// [1, maxBank1Indexed], pre-filled with defaultTargetBank1Indexed) for picking a target bank that
+// may differ from the one the dialog's message/title refer to — used by Bank Restore's "restore
+// bank 5's backup into bank 7" case. callback's targetBank1Indexed is only meaningful when
+// confirmed is true.
+void show_bank_target_confirm_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle, uint32_t defaultTargetBank1Indexed, uint32_t maxBank1Indexed, tBankTargetConfirmCallback callback);
 
 #ifdef __cplusplus
 }
