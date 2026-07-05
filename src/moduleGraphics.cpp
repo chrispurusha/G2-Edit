@@ -346,7 +346,13 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
         int32_t ccIdx         = find_controller_for_param(module->key.slot, module->key.location,
                                                           module->key.index, paramIndex);
 
-        if (localKnobIdx >= 0 || globalKnobIdx >= 0 || ccIdx >= 0) {
+        // Skip the hover check entirely while a cursor-hiding drag (param,
+        // tempo, vibrato, glide-time...) is active: the reported cursor
+        // position during those is a virtual/relative-delta accumulator,
+        // not a real on-screen point, and can drift over an unrelated
+        // param — showing its knob/CC overlay instead of (or as well as)
+        // the one actually being dragged.
+        if ((localKnobIdx >= 0 || globalKnobIdx >= 0 || ccIdx >= 0) && !is_cursor_hidden_dragging()) {
             tCoord mouseCoord = {0};
 
             get_global_gui_scaled_mouse_coord(&mouseCoord);
