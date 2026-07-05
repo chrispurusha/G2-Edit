@@ -33,6 +33,25 @@ static NSString * category_name_for(uint8_t category) {
     return @"Unknown";
 }
 
+// Clavia patch/perf names are raw device bytes (up to CLAVIA_NAME_SIZE), not guaranteed valid
+// UTF-8 the way our own string literals are — stringWithUTF8String: returns nil on invalid input,
+// which crashes NSMutableArray's addObject:. Falls back to Latin-1, which maps every byte 0-255 to
+// a codepoint and therefore never fails, so garbled bytes show as odd characters instead of
+// crashing the picker.
+static NSString * safe_nsstring_from_device_bytes(const char * cstr) {
+    NSString * result;
+
+    if (!cstr) {
+        return @"";
+    }
+    result = [NSString stringWithUTF8String:cstr];
+
+    if (!result) {
+        result = [NSString stringWithCString:cstr encoding:NSISOLatin1StringEncoding];
+    }
+    return result ? result : @"";
+}
+
 // A single left-aligned tab stop so every row's name lands at the same x position regardless of
 // how many digits "Bank X, Loc Y:" needs — without this, names drift left/right against each
 // other depending on bank/location number width and don't read as a column.
@@ -363,7 +382,7 @@ void show_bank_location_list_dialogue_async(const char * title, const char * mes
     NSMutableArray<NSNumber *> * rawLocations     = [NSMutableArray arrayWithCapacity:itemCount];
 
     for (uint32_t i = 0; i < itemCount; i++) {
-        [rawNames addObject:[NSString stringWithUTF8String:(items[i].name ? items[i].name : "")]];
+        [rawNames addObject:safe_nsstring_from_device_bytes(items[i].name)];
         [rawCategoryNames addObject:category_name_for(items[i].category)];
         [rawBanks addObject:@(items[i].bank1Indexed)];
         [rawLocations addObject:@(items[i].location1Indexed)];
