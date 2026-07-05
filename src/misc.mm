@@ -56,6 +56,8 @@ double get_zoom_factor(void);
 - (void)storeToBank:(id)sender;
 - (void)deletePatchLocation:(id)sender;
 - (void)deletePerfLocation:(id)sender;
+- (void)loadPatchLocation:(id)sender;
+- (void)loadPerfLocation:(id)sender;
 - (void)zoomIn:(id)sender;
 - (void)zoomOut:(id)sender;
 - (void)zoomReset:(id)sender;
@@ -178,6 +180,25 @@ static void on_delete_bank_location_chosen(bool confirmed, uint32_t bank1Indexed
     msg.bankLocationPerfData.bank     = bank1Indexed - 1;
     msg.bankLocationPerfData.location = location1Indexed - 1;
     msg.bankLocationPerfData.isPerf   = sPendingDeleteIsPerf;
+    msg_send(&gCommandQueue, &msg);
+}
+
+// Domain for the pending Load flow, set by loadPatchLocation:/loadPerfLocation: right before
+// opening the bank/location dialog — same stash pattern as sPendingDeleteIsPerf above.
+static bool sPendingLoadIsPerf   = false;
+
+// Same "kick off the peek, let graphics.cpp take it from there" shape as
+// on_store_bank_location_chosen/on_delete_bank_location_chosen above.
+static void on_load_bank_location_chosen(bool confirmed, uint32_t bank1Indexed, uint32_t location1Indexed) {
+    tMessageContent msg = {0};
+
+    if (!confirmed) {
+        return;
+    }
+    msg.cmd                           = eMsgCmdPeekLoadTarget;
+    msg.bankLocationPerfData.bank     = bank1Indexed - 1;
+    msg.bankLocationPerfData.location = location1Indexed - 1;
+    msg.bankLocationPerfData.isPerf   = sPendingLoadIsPerf;
     msg_send(&gCommandQueue, &msg);
 }
 
@@ -369,6 +390,30 @@ static void on_delete_bank_location_chosen(bool confirmed, uint32_t bank1Indexed
                                               "Next...", 1, NUM_PERF_BANKS, 1, NUM_LOCATIONS_PER_BANK, on_delete_bank_location_chosen);
 }
 
+- (void)loadPatchLocation:(id)sender {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before loading a patch.");
+        return;
+    }
+    sPendingLoadIsPerf = false;
+    show_bank_location_confirm_dialogue_async("Load Patch",
+                                              "Choose the bank and location of the patch to load into the current edit buffer. "
+                                              "You'll be shown its name before anything is replaced.",
+                                              "Next...", 1, NUM_PATCH_BANKS, 1, NUM_LOCATIONS_PER_BANK, on_load_bank_location_chosen);
+}
+
+- (void)loadPerfLocation:(id)sender {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before loading a performance.");
+        return;
+    }
+    sPendingLoadIsPerf = true;
+    show_bank_location_confirm_dialogue_async("Load Performance",
+                                              "Choose the bank and location of the performance to load into the current edit buffer. "
+                                              "You'll be shown its name before anything is replaced.",
+                                              "Next...", 1, NUM_PERF_BANKS, 1, NUM_LOCATIONS_PER_BANK, on_load_bank_location_chosen);
+}
+
 - (void)zoomIn:(id)sender {
     double zoomFactor = get_zoom_factor() + ZOOM_DELTA;
 
@@ -403,7 +448,8 @@ static void on_delete_bank_location_chosen(bool confirmed, uint32_t bank1Indexed
     } else if (  action == @selector(backupBank:) || action == @selector(backupPerfBank:)
               || action == @selector(backupSynthSettings:) || action == @selector(backupEverything:)
               || action == @selector(restoreBank:) || action == @selector(restorePerfBank:)
-              || action == @selector(deletePatchLocation:) || action == @selector(deletePerfLocation:)) {
+              || action == @selector(deletePatchLocation:) || action == @selector(deletePerfLocation:)
+              || action == @selector(loadPatchLocation:) || action == @selector(loadPerfLocation:)) {
         return gCommsState == eCommsOnLine;
     } else if (action == @selector(storeToBank:)) {
         [item setTitle:(gGlobalSettings.perfMode == 1) ? @"Store Perf to Bank..." : @"Store Patch to Bank..."];
@@ -468,7 +514,10 @@ void setup_main_menu(void) {
     NSMenuItem * fileMI            = [[NSMenuItem alloc] init];
     NSMenu *     fileMenu          = [[NSMenu alloc] initWithTitle:@"File"];
 
-    [fileMenu addItem:make_item(@"Open Patch/Perf...", @selector(openPatch:), @"o", target)];
+    [fileMenu addItem:make_item(@"Open Patch/Perf File...", @selector(openPatch:), @"o", target)];
+    [fileMenu addItem:make_item(@"Load Patch from Bank...", @selector(loadPatchLocation:), @"", target)];
+    [fileMenu addItem:make_item(@"Load Performance from Bank...", @selector(loadPerfLocation:), @"", target)];
+    [fileMenu addItem:[NSMenuItem separatorItem]];
     [fileMenu addItem:make_item(@"Save Patch to File...", @selector(savePatch:), @"s", target)];
     [fileMenu addItem:make_item(@"Store Patch to Bank...", @selector(storeToBank:), @"", target)];
     [fileMenu addItem:[NSMenuItem separatorItem]];

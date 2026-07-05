@@ -75,7 +75,9 @@ typedef enum {
     eMsgCmdPeekBankLocation,
     eMsgCmdStorePatch,
     eMsgCmdPeekDeleteTarget,
-    eMsgCmdDeleteBankLocation//,
+    eMsgCmdDeleteBankLocation,
+    eMsgCmdPeekLoadTarget,
+    eMsgCmdLoadPatch//,
     //eMsgCmdReloadAllPatchData
 } eMsgCmd;
 

@@ -148,6 +148,15 @@ extern _Atomic uint32_t        gDeletePeekLocation;                   // 0-index
 extern char                    gDeletePeekName[CLAVIA_NAME_SIZE + 1]; // name of what's currently there, if populated
 extern _Atomic bool            gDeleteComplete;                       // set once Delete itself finishes, so the UI can show a completion alert
 extern char                    gDeleteResultMessage[256];
+extern _Atomic bool            gLoadPeekComplete;                     // set once a pre-Load location lookup returns, polled by check_action_flags
+extern _Atomic bool            gLoadPeekFailed;                       // true if the lookup round-trip itself failed (e.g. offline)
+extern _Atomic bool            gLoadPeekPopulated;                    // true if the peeked location currently has a patch/performance to load
+extern _Atomic bool            gLoadPeekIsPerf;                       // true = Performance Bank, false = Patch Bank
+extern _Atomic uint32_t        gLoadPeekBank;                         // 0-indexed bank that was peeked (== the Load source)
+extern _Atomic uint32_t        gLoadPeekLocation;                     // 0-indexed location that was peeked (== the Load source)
+extern char                    gLoadPeekName[CLAVIA_NAME_SIZE + 1];   // name of what's currently there, if populated
+extern _Atomic bool            gLoadComplete;                         // set once Load itself finishes, so the UI can show a completion alert
+extern char                    gLoadResultMessage[256];
 extern tRectangle              gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS];
 extern tDialMode               gDialMode;
 extern pthread_mutex_t         gStringCopyMutex;
