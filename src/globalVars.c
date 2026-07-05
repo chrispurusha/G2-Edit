@@ -148,6 +148,13 @@ _Atomic uint32_t        gLoadPeekLocation                                       
 char                    gLoadPeekName[CLAVIA_NAME_SIZE + 1]                                          = {0};
 _Atomic bool            gLoadComplete                                                                = false;
 char                    gLoadResultMessage[256]                                                      = {0};
+_Atomic bool            gSynthRestorePeekComplete                                                    = false;
+_Atomic bool            gSynthRestorePeekFailed                                                      = false;
+char                    gSynthRestorePeekErrorMessage[256]                                           = {0};
+char                    gSynthRestorePeekFileName[64]                                                = {0};
+char                    gSynthRestorePeekName[CLAVIA_NAME_SIZE + 1]                                  = {0};
+_Atomic bool            gSynthRestoreComplete                                                        = false;
+char                    gSynthRestoreResultMessage[256]                                              = {0};
 
 void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active) {
     tTopbarControlId i = first;

@@ -1032,6 +1032,20 @@ static void on_load_confirmed(bool confirmed) {
     msg_send(&gCommandQueue, &msg);
 }
 
+// Fires once the user has confirmed past the file-found warning built from a
+// gSynthRestorePeekComplete result (below). Sends eMsgCmdApplySynthSettingsRestore with no
+// payload — the parsed settings are already staged on the USB thread
+// (sSynthSettingsRestoreStaged), set by peek_synth_settings_restore().
+static void on_synth_restore_confirmed(bool confirmed) {
+    tMessageContent msg = {0};
+
+    if (!confirmed) {
+        return;
+    }
+    msg.cmd = eMsgCmdApplySynthSettingsRestore;
+    msg_send(&gCommandQueue, &msg);
+}
+
 static void check_action_flags(void) {
     uint32_t slot                              = gSlot;
     //bool     perfMode                          = gPerfMode != 0;
@@ -1172,6 +1186,25 @@ static void check_action_flags(void) {
     if (gLoadComplete) {
         gLoadComplete = false;
         show_alert_async("Load", gLoadResultMessage);
+    }
+
+    if (gSynthRestorePeekComplete) {
+        gSynthRestorePeekComplete = false;
+        char message[400] = {0};
+
+        if (gSynthRestorePeekFailed) {
+            show_alert_async("Restore Synth Settings", gSynthRestorePeekErrorMessage);
+        } else {
+            snprintf(message, sizeof(message),
+                     "This will overwrite the current synth settings on the G2 with the contents of \"%s\" (Name: %s). "
+                     "This cannot be undone.", gSynthRestorePeekFileName, gSynthRestorePeekName);
+            show_confirm_dialogue_async("Restore Synth Settings", message, "Restore...", on_synth_restore_confirmed);
+        }
+    }
+
+    if (gSynthRestoreComplete) {
+        gSynthRestoreComplete = false;
+        show_alert_async("Restore Synth Settings", gSynthRestoreResultMessage);
     }
 }
 
