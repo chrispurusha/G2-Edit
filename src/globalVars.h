@@ -133,6 +133,7 @@ extern char                    gBankRestoreResultMessage[256];
 extern _Atomic bool            gStorePeekComplete;                    // set once a pre-Store location lookup returns, polled by check_action_flags
 extern _Atomic bool            gStorePeekFailed;                      // true if the lookup round-trip itself failed (e.g. offline)
 extern _Atomic bool            gStorePeekPopulated;                   // true if the peeked location currently has a patch
+extern _Atomic bool            gStorePeekIsPerf;                      // true = storing/peeking a Performance, false = Patch (mirrors edit buffer's mode)
 extern _Atomic uint32_t        gStorePeekBank;                        // 0-indexed bank that was peeked (== the Store target)
 extern _Atomic uint32_t        gStorePeekLocation;                    // 0-indexed location that was peeked (== the Store target)
 extern char                    gStorePeekName[CLAVIA_NAME_SIZE + 1];  // name of what's currently there, if populated

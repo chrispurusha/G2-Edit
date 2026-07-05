@@ -137,6 +137,12 @@ static void on_bank_restore_confirmed(bool confirmed, uint32_t targetBank1Indexe
     open_folder_dialogue_async(on_bank_restore_folder_chosen, title);
 }
 
+// Domain for the pending Store flow, set by storeToBank: right before opening the bank/location
+// dialog (mirrors gGlobalSettings.perfMode — Store always acts on whatever's in the edit buffer) —
+// same stash pattern as sPendingRestoreIsPerf above, needed because tBankLocationConfirmCallback's
+// signature has no room for it.
+static bool sPendingStoreIsPerf = false;
+
 // Kicks off the peek — the actual overwrite-warning confirm and eMsgCmdStorePatch send happen
 // later in graphics.cpp's check_action_flags(), once the async peek result lands in gStorePeek*
 // (there's no captured-context callback chain needed here, unlike Restore: the target bank/
@@ -148,9 +154,10 @@ static void on_store_bank_location_chosen(bool confirmed, uint32_t bank1Indexed,
     if (!confirmed) {
         return;
     }
-    msg.cmd                       = eMsgCmdPeekBankLocation;
-    msg.bankLocationData.bank     = bank1Indexed - 1;
-    msg.bankLocationData.location = location1Indexed - 1;
+    msg.cmd                           = eMsgCmdPeekBankLocation;
+    msg.bankLocationPerfData.bank     = bank1Indexed - 1;
+    msg.bankLocationPerfData.location = location1Indexed - 1;
+    msg.bankLocationPerfData.isPerf   = sPendingStoreIsPerf;
     msg_send(&gCommandQueue, &msg);
 }
 
@@ -321,14 +328,21 @@ static void on_delete_bank_location_chosen(bool confirmed, uint32_t bank1Indexed
 }
 
 - (void)storeToBank:(id)sender {
+    bool         isPerf       = gGlobalSettings.perfMode == 1;
+    const char * typeName     = isPerf ? "performance" : "patch";
+    char         message[320] = {0};
+
     if (gCommsState != eCommsOnLine) {
         show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before storing to a bank.");
         return;
     }
-    show_bank_location_confirm_dialogue_async("Store to Bank",
-                                              "Choose the bank and location to store the current edit buffer patch to. "
-                                              "You'll be shown what's currently there before anything is written.",
-                                              "Next...", 1, NUM_PATCH_BANKS, 1, NUM_LOCATIONS_PER_BANK, on_store_bank_location_chosen);
+    sPendingStoreIsPerf = isPerf;
+    snprintf(message, sizeof(message),
+             "Choose the bank and location to store the current edit buffer %s to. "
+             "You'll be shown what's currently there before anything is written.", typeName);
+    show_bank_location_confirm_dialogue_async(isPerf ? "Store Performance to Bank" : "Store Patch to Bank", message, "Next...",
+                                              1, isPerf ? NUM_PERF_BANKS : NUM_PATCH_BANKS, 1, NUM_LOCATIONS_PER_BANK,
+                                              on_store_bank_location_chosen);
 }
 
 - (void)deletePatchLocation:(id)sender {
@@ -389,11 +403,13 @@ static void on_delete_bank_location_chosen(bool confirmed, uint32_t bank1Indexed
     } else if (  action == @selector(backupBank:) || action == @selector(backupPerfBank:)
               || action == @selector(backupSynthSettings:) || action == @selector(backupEverything:)
               || action == @selector(restoreBank:) || action == @selector(restorePerfBank:)
-              || action == @selector(storeToBank:)
               || action == @selector(deletePatchLocation:) || action == @selector(deletePerfLocation:)) {
         return gCommsState == eCommsOnLine;
+    } else if (action == @selector(storeToBank:)) {
+        [item setTitle:(gGlobalSettings.perfMode == 1) ? @"Store Perf to Bank..." : @"Store Patch to Bank..."];
+        return gCommsState == eCommsOnLine;
     } else if (action == @selector(savePatch:)) {
-        [item setTitle:(gGlobalSettings.perfMode == 1) ? @"Save Perf..." : @"Save Patch..."];
+        [item setTitle:(gGlobalSettings.perfMode == 1) ? @"Save Perf to File..." : @"Save Patch to File..."];
     }
     return YES;
 }
@@ -453,8 +469,8 @@ void setup_main_menu(void) {
     NSMenu *     fileMenu          = [[NSMenu alloc] initWithTitle:@"File"];
 
     [fileMenu addItem:make_item(@"Open Patch/Perf...", @selector(openPatch:), @"o", target)];
-    [fileMenu addItem:make_item(@"Save Patch...", @selector(savePatch:), @"s", target)];
-    [fileMenu addItem:make_item(@"Store to Bank...", @selector(storeToBank:), @"", target)];
+    [fileMenu addItem:make_item(@"Save Patch to File...", @selector(savePatch:), @"s", target)];
+    [fileMenu addItem:make_item(@"Store Patch to Bank...", @selector(storeToBank:), @"", target)];
     [fileMenu addItem:[NSMenuItem separatorItem]];
     [fileMenu addItem:make_item(@"Delete Patch...", @selector(deletePatchLocation:), @"", target)];
     [fileMenu addItem:make_item(@"Delete Performance...", @selector(deletePerfLocation:), @"", target)];
