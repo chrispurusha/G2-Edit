@@ -444,16 +444,53 @@ static void on_load_bank_location_chosen(bool confirmed, uint32_t bank1Indexed, 
                                               "Next...", 1, NUM_PERF_BANKS, 1, NUM_LOCATIONS_PER_BANK, on_delete_bank_location_chosen);
 }
 
+// Pilot for replacing the blind Bank/Location number fields with a real name-based picker, now
+// that gPatchNameTable is populated by the List Names sweep at connection time (see project
+// memory) — built directly from the cache, no device round-trip needed just to show the list.
+// Everything downstream (peek/confirm/load) is unchanged: this only changes how bank/location get
+// chosen, reusing the same tBankLocationConfirmCallback contract as the old two-field dialog.
 - (void)loadPatchLocation:(id)sender {
+    uint32_t                count = 0;
+    tBankLocationListItem * items = NULL;
+
+    char(*labels)[48]  = NULL;
+    uint32_t                i     = 0;
+
     if (gCommsState != eCommsOnLine) {
         show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before loading a patch.");
         return;
     }
     sPendingLoadIsPerf = false;
-    show_bank_location_confirm_dialogue_async("Load Patch",
-                                              "Choose the bank and location of the patch to load into the current edit buffer. "
-                                              "You'll be shown its name before anything is replaced.",
-                                              "Next...", 1, NUM_PATCH_BANKS, 1, NUM_LOCATIONS_PER_BANK, on_load_bank_location_chosen);
+
+    for (uint32_t bank = 0; bank < NUM_PATCH_BANKS; bank++) {
+        for (uint32_t location = 0; location < NUM_LOCATIONS_PER_BANK; location++) {
+            if (gPatchNameTable[bank][location].populated) {
+                count++;
+            }
+        }
+    }
+
+    items              = (tBankLocationListItem *)malloc(count * sizeof(tBankLocationListItem));
+    labels             = (char(*)[48])malloc(count * sizeof(*labels));
+
+    for (uint32_t bank = 0; (bank < NUM_PATCH_BANKS) && (i < count); bank++) {
+        for (uint32_t location = 0; (location < NUM_LOCATIONS_PER_BANK) && (i < count); location++) {
+            if (gPatchNameTable[bank][location].populated) {
+                snprintf(labels[i], sizeof(labels[i]), "Bank %u, Loc %u: %s", bank + 1, location + 1, gPatchNameTable[bank][location].name);
+                items[i].label            = labels[i];
+                items[i].bank1Indexed     = bank + 1;
+                items[i].location1Indexed = location + 1;
+                i++;
+            }
+        }
+    }
+
+    show_bank_location_list_dialogue_async("Load Patch",
+                                           "Choose the patch to load into the current edit buffer. "
+                                           "You'll be shown its name again before anything is replaced.",
+                                           "Next...", items, count, on_load_bank_location_chosen);
+    free(items);
+    free(labels);
 }
 
 - (void)loadPerfLocation:(id)sender {

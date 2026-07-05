@@ -240,6 +240,67 @@ void show_bank_location_confirm_dialogue_async(const char * title, const char * 
     });
 }
 
+// Same idea as show_bank_location_confirm_dialogue_async above, but a single NSPopUpButton listing
+// pre-built named choices (items) instead of two blind numeric fields. Items are copied into
+// Cocoa objects synchronously, before this function returns, so the caller's items/label pointers
+// only need to survive the call itself.
+void show_bank_location_list_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle,
+                                            const tBankLocationListItem * items, uint32_t itemCount,
+                                            tBankLocationConfirmCallback callback) {
+    NSString *                   titleString   = [NSString stringWithUTF8String:(title ? title : "")];
+    NSString *                   messageString = [NSString stringWithUTF8String:(message ? message : "")];
+    NSString *                   confirmString = [NSString stringWithUTF8String:(confirmButtonTitle ? confirmButtonTitle : "OK")];
+
+    NSMutableArray<NSString *> * labels        = [NSMutableArray arrayWithCapacity:itemCount];
+    NSMutableArray<NSNumber *> * banks         = [NSMutableArray arrayWithCapacity:itemCount];
+    NSMutableArray<NSNumber *> * locs          = [NSMutableArray arrayWithCapacity:itemCount];
+
+    for (uint32_t i = 0; i < itemCount; i++) {
+        [labels addObject:[NSString stringWithUTF8String:(items[i].label ? items[i].label : "")]];
+        [banks addObject:@(items[i].bank1Indexed)];
+        [locs addObject:@(items[i].location1Indexed)];
+    }
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSAlert * alert          = [[NSAlert alloc] init];
+
+        [alert setAlertStyle:NSAlertStyleWarning];
+        [alert setMessageText:titleString];
+        [alert setInformativeText:messageString];
+        [alert addButtonWithTitle:@"Cancel"];
+        [alert addButtonWithTitle:confirmString];
+
+        NSPopUpButton * popup    = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(0, 0, 360, 26) pullsDown:NO];
+
+        if (labels.count == 0) {
+            [popup addItemWithTitle:@"(none found)"];
+            [popup setEnabled:NO];
+        } else {
+            [popup addItemsWithTitles:labels];
+        }
+        NSView * accessory       = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 360, 26)];
+        [accessory addSubview:popup];
+        [alert setAccessoryView:accessory];
+        [[alert window] setInitialFirstResponder:popup];
+
+        NSModalResponse response = [alert runModal];
+        bool confirmed           = (response == NSAlertSecondButtonReturn) && (labels.count > 0);
+        uint32_t bank            = 0;
+        uint32_t location        = 0;
+
+        if (confirmed) {
+            NSInteger idx = [popup indexOfSelectedItem];
+
+            bank          = [banks[(NSUInteger)idx] unsignedIntValue];
+            location      = [locs[(NSUInteger)idx] unsignedIntValue];
+        }
+
+        if (callback) {
+            callback(confirmed, bank, location);
+        }
+    });
+}
+
 void open_folder_dialogue_async(tFileDialogueCallback callback, const char * title) {
     NSString * titleString = (title && title[0] != '\0')
                             ? [NSString stringWithUTF8String:title]
