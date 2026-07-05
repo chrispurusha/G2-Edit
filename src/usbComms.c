@@ -1443,6 +1443,48 @@ static int send_bank_download_push(uint8_t domain, uint32_t bank, uint32_t locat
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_PATCH_BANK_UPLOAD, USB_RECV_DATA_MS);
 }
 
+// Commits whatever patch is currently loaded in the active edit-buffer slot to bank/location on the
+// device (SUB_COMMAND_STORE, 0x0b) — reverse-engineered from a real capture
+// (SaveEditBufferToBank7-1.pcapng): domain, bank, location, no patch content — the device already
+// has the patch in its edit buffer, so there's nothing to transmit. Which edit-buffer slot is
+// implicit (the device's own current focus, tracked separately via SUB_COMMAND_SELECT_SLOT) —
+// there's no slot field in this message. Acked with SUB_RESPONSE_STORE_PATCH (0x13), already routed
+// in parse_command_response to parse_store_patch (currently just a debug logging stub — the byte
+// layout after the header wasn't pinned down from a single sample, but the store completes on the
+// device from this request alone, so that's not a blocker).
+static int send_store_patch(uint8_t domain, uint32_t bank, uint32_t location) {
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+
+    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_STORE);
+    write_bit_stream(buff, &bitPos, 8, domain);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)bank);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)location);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_STORE_PATCH, USB_RECV_DATA_MS);
+}
+
+// Reads back just the name (and whether it's populated) of whatever currently occupies bank/
+// location — for showing an overwrite warning before Store, without needing any new wire protocol:
+// reuses the already-confirmed Bank Upload request/response path (send_bank_upload_request),
+// discarding the content and keeping only sBankUploadName/sBankUploadGotData.
+static int peek_bank_location(uint8_t domain, uint32_t bank, uint32_t location,
+                              char * outName, size_t outNameSize, bool * outPopulated) {
+    sBankUploadGotData = false;
+
+    if (send_bank_upload_request(domain, bank, location) != EXIT_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+    *outPopulated      = sBankUploadGotData;
+
+    if (sBankUploadGotData) {
+        strncpy(outName, sBankUploadName, outNameSize - 1);
+        outName[outNameSize - 1] = '\0';
+    } else {
+        outName[0] = '\0';
+    }
+    return EXIT_SUCCESS;
+}
+
 // Fills outName with "baseName.<ext>", or "baseName(2).<ext>", "baseName(3).<ext>", etc. if a
 // file by that name already exists in destFolder. Patch/performance names are free text on the
 // hardware and often repeat across (or even within) banks, so this keeps a same-named item from
@@ -1745,6 +1787,122 @@ static int restore_bank(uint32_t sourceBank, uint32_t destBank, const char * src
         call_wake_glfw();
     }
     return aborted ? EXIT_FAILURE : EXIT_SUCCESS;
+}
+
+// Looks up what's currently at bank/location (Patch domain only — Store hasn't been captured for
+// Performance, and "edit buffer" isn't really a Performance concept the same way) so the UI can
+// warn before overwriting it. Reuses the already-confirmed Bank Upload wire path via
+// peek_bank_location() — no content is kept, just the name and populated flag. Result lands in
+// gStorePeek* globals, polled by check_action_flags() in graphics.cpp.
+static int peek_store_target(uint32_t bank, uint32_t location) {
+    char name[CLAVIA_NAME_SIZE + 1] = {0};
+    bool populated                  = false;
+    int  result                     = EXIT_FAILURE;
+
+    gStorePeekBank      = bank;
+    gStorePeekLocation  = location;
+
+    if (gCommsState != eCommsOnLine) {
+        LOG_ERROR("peek_store_target: G2 is not connected\n");
+        gStorePeekFailed   = true;
+        gStorePeekComplete = true;
+        call_wake_glfw();
+        return EXIT_FAILURE;
+    }
+    result              = peek_bank_location(BANK_UPLOAD_DOMAIN_PATCH, bank, location, name, sizeof(name), &populated);
+
+    gStorePeekFailed    = (result != EXIT_SUCCESS);
+    gStorePeekPopulated = populated;
+    strncpy(gStorePeekName, name, sizeof(gStorePeekName) - 1);
+    gStorePeekComplete  = true;
+    call_wake_glfw();
+    return result;
+}
+
+// Commits the current edit-buffer patch to bank/location on the device via send_store_patch(),
+// once the user has confirmed past the overwrite warning peek_store_target() set up. Result lands
+// in gStorePatchComplete/gStorePatchResultMessage, polled by check_action_flags() in graphics.cpp.
+static int store_patch_to_bank(uint32_t bank, uint32_t location) {
+    int result = EXIT_FAILURE;
+
+    if (gCommsState != eCommsOnLine) {
+        LOG_ERROR("store_patch_to_bank: G2 is not connected\n");
+        snprintf(gStorePatchResultMessage, sizeof(gStorePatchResultMessage), "Store failed: the G2 is not connected");
+        gStorePatchComplete = true;
+        call_wake_glfw();
+        return EXIT_FAILURE;
+    }
+    result              = send_store_patch(BANK_UPLOAD_DOMAIN_PATCH, bank, location);
+
+    if (result == EXIT_SUCCESS) {
+        snprintf(gStorePatchResultMessage, sizeof(gStorePatchResultMessage), "Stored to Bank %u, Location %u", bank + 1, location + 1);
+    } else {
+        snprintf(gStorePatchResultMessage, sizeof(gStorePatchResultMessage), "Store to Bank %u, Location %u failed", bank + 1, location + 1);
+    }
+    gStorePatchComplete = true;
+    call_wake_glfw();
+    return result;
+}
+
+// Looks up what's currently at bank/location (Patch or Performance domain) before Delete, same
+// reasoning and mechanism as peek_store_target() above — reuses the Bank Upload read path via
+// peek_bank_location(), no new wire protocol. Result lands in gDeletePeek* globals, polled by
+// check_action_flags() in graphics.cpp.
+static int peek_delete_target(uint32_t bank, uint32_t location, bool isPerf) {
+    char    name[CLAVIA_NAME_SIZE + 1] = {0};
+    bool    populated                  = false;
+    int     result                     = EXIT_FAILURE;
+    uint8_t domain                     = isPerf ? BANK_UPLOAD_DOMAIN_PERFORMANCE : BANK_UPLOAD_DOMAIN_PATCH;
+
+    gDeletePeekBank      = bank;
+    gDeletePeekLocation  = location;
+    gDeletePeekIsPerf    = isPerf;
+
+    if (gCommsState != eCommsOnLine) {
+        LOG_ERROR("peek_delete_target: G2 is not connected\n");
+        gDeletePeekFailed   = true;
+        gDeletePeekComplete = true;
+        call_wake_glfw();
+        return EXIT_FAILURE;
+    }
+    result               = peek_bank_location(domain, bank, location, name, sizeof(name), &populated);
+
+    gDeletePeekFailed    = (result != EXIT_SUCCESS);
+    gDeletePeekPopulated = populated;
+    strncpy(gDeletePeekName, name, sizeof(gDeletePeekName) - 1);
+    gDeletePeekComplete  = true;
+    call_wake_glfw();
+    return result;
+}
+
+// Erases bank/location (Patch or Performance domain) via SUB_COMMAND_CLEAR — the same request
+// send_bank_clear() already makes internally for every unpopulated location during restore_bank(),
+// here exposed directly as a standalone user-facing delete. The Patch-domain framing was confirmed
+// from a real capture (see [[bank-backup-protocol]]); Performance-domain CLEAR is assumed by the
+// same domain-byte symmetry already relied on for Performance Bank Restore, not independently
+// captured. Result lands in gDeleteComplete/gDeleteResultMessage.
+static int delete_bank_location(uint32_t bank, uint32_t location, bool isPerf) {
+    uint8_t      domain    = isPerf ? BANK_UPLOAD_DOMAIN_PERFORMANCE : BANK_UPLOAD_DOMAIN_PATCH;
+    const char * typeLabel = isPerf ? "Performance" : "Patch";
+    int          result    = EXIT_FAILURE;
+
+    if (gCommsState != eCommsOnLine) {
+        LOG_ERROR("delete_bank_location: G2 is not connected\n");
+        snprintf(gDeleteResultMessage, sizeof(gDeleteResultMessage), "Delete failed: the G2 is not connected");
+        gDeleteComplete = true;
+        call_wake_glfw();
+        return EXIT_FAILURE;
+    }
+    result          = send_bank_clear(domain, bank, location);
+
+    if (result == EXIT_SUCCESS) {
+        snprintf(gDeleteResultMessage, sizeof(gDeleteResultMessage), "Deleted %s Bank %u, Location %u", typeLabel, bank + 1, location + 1);
+    } else {
+        snprintf(gDeleteResultMessage, sizeof(gDeleteResultMessage), "Delete of %s Bank %u, Location %u failed", typeLabel, bank + 1, location + 1);
+    }
+    gDeleteComplete = true;
+    call_wake_glfw();
+    return result;
 }
 
 // Builds "synth-<h>.<mm><am|pm>-<dd><Mon><yy>.txt", e.g. "synth-2.34pm-25Jun26.txt" for 2:34pm on
@@ -2991,6 +3149,40 @@ static int send_write_data(tMessageContent * messageContent) {
             send_stop();
             retVal = restore_bank(messageContent->bankRestoreData.sourceBank, messageContent->bankRestoreData.destBank,
                                   messageContent->bankRestoreData.srcFolder, messageContent->bankRestoreData.isPerf, false);
+            send_start();
+            break;
+        }
+
+        case eMsgCmdPeekBankLocation:
+        {
+            send_stop();
+            retVal = peek_store_target(messageContent->bankLocationData.bank, messageContent->bankLocationData.location);
+            send_start();
+            break;
+        }
+
+        case eMsgCmdStorePatch:
+        {
+            send_stop();
+            retVal = store_patch_to_bank(messageContent->bankLocationData.bank, messageContent->bankLocationData.location);
+            send_start();
+            break;
+        }
+
+        case eMsgCmdPeekDeleteTarget:
+        {
+            send_stop();
+            retVal = peek_delete_target(messageContent->bankLocationPerfData.bank, messageContent->bankLocationPerfData.location,
+                                        messageContent->bankLocationPerfData.isPerf);
+            send_start();
+            break;
+        }
+
+        case eMsgCmdDeleteBankLocation:
+        {
+            send_stop();
+            retVal = delete_bank_location(messageContent->bankLocationPerfData.bank, messageContent->bankLocationPerfData.location,
+                                          messageContent->bankLocationPerfData.isPerf);
             send_start();
             break;
         }

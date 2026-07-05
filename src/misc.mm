@@ -53,6 +53,9 @@ double get_zoom_factor(void);
 - (void)backupEverything:(id)sender;
 - (void)restoreBank:(id)sender;
 - (void)restorePerfBank:(id)sender;
+- (void)storeToBank:(id)sender;
+- (void)deletePatchLocation:(id)sender;
+- (void)deletePerfLocation:(id)sender;
 - (void)zoomIn:(id)sender;
 - (void)zoomOut:(id)sender;
 - (void)zoomReset:(id)sender;
@@ -132,6 +135,43 @@ static void on_bank_restore_confirmed(bool confirmed, uint32_t targetBank1Indexe
     snprintf(title, sizeof(title), "Choose the Backup Folder to Restore %s Bank %u From",
              sPendingRestoreIsPerf ? "Performance" : "Patch", sPendingRestoreBank + 1);
     open_folder_dialogue_async(on_bank_restore_folder_chosen, title);
+}
+
+// Kicks off the peek — the actual overwrite-warning confirm and eMsgCmdStorePatch send happen
+// later in graphics.cpp's check_action_flags(), once the async peek result lands in gStorePeek*
+// (there's no captured-context callback chain needed here, unlike Restore: the target bank/
+// location the peek was for is recorded in gStorePeekBank/gStorePeekLocation, so nothing has to be
+// stashed on the misc.mm side past this point).
+static void on_store_bank_location_chosen(bool confirmed, uint32_t bank1Indexed, uint32_t location1Indexed) {
+    tMessageContent msg = {0};
+
+    if (!confirmed) {
+        return;
+    }
+    msg.cmd                       = eMsgCmdPeekBankLocation;
+    msg.bankLocationData.bank     = bank1Indexed - 1;
+    msg.bankLocationData.location = location1Indexed - 1;
+    msg_send(&gCommandQueue, &msg);
+}
+
+// Domain for the pending Delete flow, set by deletePatchLocation:/deletePerfLocation: right before
+// opening the bank/location dialog — same stash pattern as sPendingRestoreIsPerf above, needed
+// because tBankLocationConfirmCallback's signature has no room for it.
+static bool sPendingDeleteIsPerf = false;
+
+// Same "kick off the peek, let graphics.cpp take it from there" shape as
+// on_store_bank_location_chosen above.
+static void on_delete_bank_location_chosen(bool confirmed, uint32_t bank1Indexed, uint32_t location1Indexed) {
+    tMessageContent msg = {0};
+
+    if (!confirmed) {
+        return;
+    }
+    msg.cmd                           = eMsgCmdPeekDeleteTarget;
+    msg.bankLocationPerfData.bank     = bank1Indexed - 1;
+    msg.bankLocationPerfData.location = location1Indexed - 1;
+    msg.bankLocationPerfData.isPerf   = sPendingDeleteIsPerf;
+    msg_send(&gCommandQueue, &msg);
 }
 
 @implementation G2MenuTarget
@@ -280,6 +320,41 @@ static void on_bank_restore_confirmed(bool confirmed, uint32_t targetBank1Indexe
                                             (uint32_t)[item tag] + 1, NUM_PERF_BANKS, on_bank_restore_confirmed);
 }
 
+- (void)storeToBank:(id)sender {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before storing to a bank.");
+        return;
+    }
+    show_bank_location_confirm_dialogue_async("Store to Bank",
+                                              "Choose the bank and location to store the current edit buffer patch to. "
+                                              "You'll be shown what's currently there before anything is written.",
+                                              "Next...", 1, NUM_PATCH_BANKS, 1, NUM_LOCATIONS_PER_BANK, on_store_bank_location_chosen);
+}
+
+- (void)deletePatchLocation:(id)sender {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before deleting a patch.");
+        return;
+    }
+    sPendingDeleteIsPerf = false;
+    show_bank_location_confirm_dialogue_async("Delete Patch",
+                                              "Choose the bank and location of the patch to delete. "
+                                              "You'll be shown what's currently there before anything is erased.",
+                                              "Next...", 1, NUM_PATCH_BANKS, 1, NUM_LOCATIONS_PER_BANK, on_delete_bank_location_chosen);
+}
+
+- (void)deletePerfLocation:(id)sender {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before deleting a performance.");
+        return;
+    }
+    sPendingDeleteIsPerf = true;
+    show_bank_location_confirm_dialogue_async("Delete Performance",
+                                              "Choose the bank and location of the performance to delete. "
+                                              "You'll be shown what's currently there before anything is erased.",
+                                              "Next...", 1, NUM_PERF_BANKS, 1, NUM_LOCATIONS_PER_BANK, on_delete_bank_location_chosen);
+}
+
 - (void)zoomIn:(id)sender {
     double zoomFactor = get_zoom_factor() + ZOOM_DELTA;
 
@@ -313,7 +388,9 @@ static void on_bank_restore_confirmed(bool confirmed, uint32_t targetBank1Indexe
         [item setState:(gDialMode == eDialModeHorizontal) ? NSControlStateValueOn : NSControlStateValueOff];
     } else if (  action == @selector(backupBank:) || action == @selector(backupPerfBank:)
               || action == @selector(backupSynthSettings:) || action == @selector(backupEverything:)
-              || action == @selector(restoreBank:) || action == @selector(restorePerfBank:)) {
+              || action == @selector(restoreBank:) || action == @selector(restorePerfBank:)
+              || action == @selector(storeToBank:)
+              || action == @selector(deletePatchLocation:) || action == @selector(deletePerfLocation:)) {
         return gCommsState == eCommsOnLine;
     } else if (action == @selector(savePatch:)) {
         [item setTitle:(gGlobalSettings.perfMode == 1) ? @"Save Perf..." : @"Save Patch..."];
@@ -377,6 +454,10 @@ void setup_main_menu(void) {
 
     [fileMenu addItem:make_item(@"Open Patch/Perf...", @selector(openPatch:), @"o", target)];
     [fileMenu addItem:make_item(@"Save Patch...", @selector(savePatch:), @"s", target)];
+    [fileMenu addItem:make_item(@"Store to Bank...", @selector(storeToBank:), @"", target)];
+    [fileMenu addItem:[NSMenuItem separatorItem]];
+    [fileMenu addItem:make_item(@"Delete Patch...", @selector(deletePatchLocation:), @"", target)];
+    [fileMenu addItem:make_item(@"Delete Performance...", @selector(deletePerfLocation:), @"", target)];
     [fileMenu addItem:[NSMenuItem separatorItem]];
     [fileMenu addItem:make_item(@"New Patch", @selector(newPatch:), @"n", target)];
     [fileMI setSubmenu:fileMenu];
