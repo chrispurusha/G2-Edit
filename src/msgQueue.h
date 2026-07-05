@@ -79,7 +79,8 @@ typedef enum {
     eMsgCmdPeekLoadTarget,
     eMsgCmdLoadPatch,
     eMsgCmdPeekSynthSettingsRestore,
-    eMsgCmdApplySynthSettingsRestore//,
+    eMsgCmdApplySynthSettingsRestore,
+    eMsgCmdRestoreEverything//,
     //eMsgCmdReloadAllPatchData
 } eMsgCmd;
 
