@@ -123,6 +123,13 @@ extern _Atomic bool            gBankBackupComplete;          // set once finishe
 extern char                    gBankBackupResultMessage[256];
 extern _Atomic bool            gSynthSettingsBackupComplete; // set once finished, so the UI can show a completion alert
 extern char                    gSynthSettingsBackupResultMessage[256];
+extern _Atomic bool            gBankRestoreActive;
+extern _Atomic bool            gBankRestoreIsPerf;           // true = restoring a Performance Bank, false = Patch Bank
+extern _Atomic uint32_t        gBankRestoreBank;             // 0-indexed bank currently being restored (destination)
+extern _Atomic uint32_t        gBankRestoreLocation;         // 0-indexed location currently being written/cleared
+extern _Atomic uint32_t        gBankRestoreWritten;          // count of patches actually written so far
+extern _Atomic bool            gBankRestoreComplete;         // set once finished, so the UI can show a completion alert
+extern char                    gBankRestoreResultMessage[256];
 extern tRectangle              gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS];
 extern tDialMode               gDialMode;
 extern pthread_mutex_t         gStringCopyMutex;

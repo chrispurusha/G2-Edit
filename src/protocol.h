@@ -63,5 +63,6 @@ void send_mode_value(uint32_t slot, tModuleKey moduleKey, uint32_t modeIdx, uint
 void send_custom_data_value(uint32_t slot, tModuleKey moduleKey);
 void update_module_up_rates(void);
 void write_bank_upload_file(const char * filepath, const char * typeLabel, const uint8_t * content, uint32_t contentLen);
+bool read_bank_upload_file(const char * filepath, uint8_t * outContent, uint32_t outContentSize, uint32_t * outContentLen);
 
 #endif // __PROTOCOL_H__

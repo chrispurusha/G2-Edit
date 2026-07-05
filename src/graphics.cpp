@@ -1036,6 +1036,11 @@ static void check_action_flags(void) {
         gSynthSettingsBackupComplete = false;
         show_alert_async("Synth Settings Backup", gSynthSettingsBackupResultMessage);
     }
+
+    if (gBankRestoreComplete) {
+        gBankRestoreComplete = false;
+        show_alert_async(gBankRestoreIsPerf ? "Performance Bank Restore" : "Patch Bank Restore", gBankRestoreResultMessage);
+    }
 }
 
 // Helper: draw a fixed-width dropdown trigger button, return updated x.
@@ -1529,6 +1534,56 @@ static void render_bank_backup_progress(void) {
     render_rectangle(mainArea, {{boxX + margin, barY}, {barW * frac, 8.0}});
 }
 
+static void render_bank_restore_progress(void) {
+    if (!gBankRestoreActive) {
+        return;
+    }
+    double renderW      = get_render_width() / gGlobalGuiScale;
+    double renderH      = get_render_height() / gGlobalGuiScale;
+    double boxW         = 360.0;
+    double boxH         = 90.0;
+    double boxX         = (renderW - boxW) / 2.0;
+    double boxY         = (renderH - boxH) / 2.0;
+    double margin       = 10.0;
+    double titleH       = 24.0;
+    char   lineBuf[128] = {0};
+    bool   isPerf       = gBankRestoreIsPerf;
+
+    // Background overlay to de-emphasise content beneath the dialog
+    set_rgb_colour(RGB_GREY_2);
+    render_rectangle(mainArea, {{0.0, 0.0}, {renderW, renderH}});
+
+    // Dialog box
+    set_rgb_colour(RGB_GREY_5);
+    render_rectangle_with_border(mainArea, {{boxX, boxY}, {boxW, boxH}});
+
+    // Title bar
+    set_rgb_colour(RGB_GREY_3);
+    render_rectangle(mainArea, {{boxX, boxY}, {boxW, titleH}});
+    set_rgb_colour(RGB_BLACK);
+    render_text(mainArea, {{boxX + margin, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}},
+                isPerf ? "Restoring Performance Bank" : "Restoring Patch Bank");
+
+    snprintf(lineBuf, sizeof(lineBuf), "Bank %u - location %u / %u",
+             gBankRestoreBank + 1, gBankRestoreLocation + 1, NUM_LOCATIONS_PER_BANK);
+    render_text(mainArea, {{boxX + margin, boxY + titleH + margin}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, lineBuf);
+
+    snprintf(lineBuf, sizeof(lineBuf), "%u %s%s written so far",
+             gBankRestoreWritten, isPerf ? "performance" : "patch",
+             gBankRestoreWritten == 1 ? "" : (isPerf ? "s" : "es"));
+    render_text(mainArea, {{boxX + margin, boxY + titleH + margin + STANDARD_TEXT_HEIGHT + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, lineBuf);
+
+    // Progress bar
+    double barY = boxY + boxH - margin - 8.0;
+    double barW = boxW - margin * 2.0;
+    double frac = (double)(gBankRestoreLocation + 1) / (double)NUM_LOCATIONS_PER_BANK;
+
+    set_rgb_colour(RGB_GREY_9);
+    render_rectangle(mainArea, {{boxX + margin, barY}, {barW, 8.0}});
+    set_rgb_colour(RGB_GREEN_ON);
+    render_rectangle(mainArea, {{boxX + margin, barY}, {barW * frac, 8.0}});
+}
+
 static void render_patch_notes_edit(void) {
     if (!gPatchNotesEdit.active) {
         return;
@@ -1766,6 +1821,7 @@ void do_graphics_loop(void) {
             render_context_menu();
             render_patch_notes_edit();
             render_bank_backup_progress();
+            render_bank_restore_progress();
             render_knob_assignment_overlay(); // drawn last so nothing else can paint over it
             //Debug only
             //{

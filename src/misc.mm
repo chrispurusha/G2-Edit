@@ -51,6 +51,8 @@ double get_zoom_factor(void);
 - (void)backupPerfBank:(id)sender;
 - (void)backupSynthSettings:(id)sender;
 - (void)backupEverything:(id)sender;
+- (void)restoreBank:(id)sender;
+- (void)restorePerfBank:(id)sender;
 - (void)zoomIn:(id)sender;
 - (void)zoomOut:(id)sender;
 - (void)zoomReset:(id)sender;
@@ -60,8 +62,14 @@ double get_zoom_factor(void);
 // Bank number (0-indexed) selected from the "Backup Bank"/"Backup Performance Bank" submenu,
 // stashed here between the menu click and the folder-choose panel's completion callback
 // (tFileDialogueCallback is a plain C function pointer with no room for captured context).
-static uint32_t sPendingBackupBank   = 0;
-static bool     sPendingBackupIsPerf = false;
+static uint32_t sPendingBackupBank    = 0;
+static bool     sPendingBackupIsPerf  = false;
+
+// Same stash-between-callbacks pattern as the backup statics above, but for Restore: the bank
+// number/domain is fixed by the confirmation alert (already destructive at that point), then the
+// folder-choose panel supplies the source folder once the user has confirmed.
+static uint32_t sPendingRestoreBank   = 0;
+static bool     sPendingRestoreIsPerf = false;
 
 static void on_bank_backup_folder_chosen(const char * path) {
     if (path == NULL) {
@@ -96,6 +104,31 @@ static void on_everything_backup_folder_chosen(const char * path) {
     msg.cmd = eMsgCmdBackupEverything;
     strncpy(msg.settingsBackupData.destFolder, path, sizeof(msg.settingsBackupData.destFolder) - 1);
     msg_send(&gCommandQueue, &msg);
+}
+
+static void on_bank_restore_folder_chosen(const char * path) {
+    if (path == NULL) {
+        return;
+    }
+    tMessageContent msg = {0};
+
+    msg.cmd                        = eMsgCmdRestoreBank;
+    msg.bankRestoreData.sourceBank = sPendingRestoreBank;
+    msg.bankRestoreData.destBank   = sPendingRestoreBank;
+    msg.bankRestoreData.isPerf     = sPendingRestoreIsPerf;
+    strncpy(msg.bankRestoreData.srcFolder, path, sizeof(msg.bankRestoreData.srcFolder) - 1);
+    msg_send(&gCommandQueue, &msg);
+}
+
+static void on_bank_restore_confirmed(bool confirmed) {
+    char title[80] = {0};
+
+    if (!confirmed) {
+        return;
+    }
+    snprintf(title, sizeof(title), "Choose the Backup Folder to Restore %s Bank %u From",
+             sPendingRestoreIsPerf ? "Performance" : "Patch", sPendingRestoreBank + 1);
+    open_folder_dialogue_async(on_bank_restore_folder_chosen, title);
 }
 
 @implementation G2MenuTarget
@@ -208,6 +241,40 @@ static void on_everything_backup_folder_chosen(const char * path) {
     open_folder_dialogue_async(on_everything_backup_folder_chosen, "Choose a Folder for Backup Everything");
 }
 
+- (void)restoreBank:(id)sender {
+    NSMenuItem * item         = (NSMenuItem *)sender;
+    char         message[320] = {0};
+
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring a bank.");
+        return;
+    }
+    sPendingRestoreBank   = (uint32_t)[item tag];
+    sPendingRestoreIsPerf = false;
+    snprintf(message, sizeof(message),
+             "This replaces every patch in Bank %ld on the G2 with the contents of a backup folder you choose next. "
+             "Any location not present in that folder will be erased. This cannot be undone.",
+             (long)[item tag] + 1);
+    show_confirm_dialogue_async("Restore Patch Bank", message, "Restore...", on_bank_restore_confirmed);
+}
+
+- (void)restorePerfBank:(id)sender {
+    NSMenuItem * item         = (NSMenuItem *)sender;
+    char         message[320] = {0};
+
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring a performance bank.");
+        return;
+    }
+    sPendingRestoreBank   = (uint32_t)[item tag];
+    sPendingRestoreIsPerf = true;
+    snprintf(message, sizeof(message),
+             "This replaces every performance in Performance Bank %ld on the G2 with the contents of a backup folder you choose next. "
+             "Any location not present in that folder will be erased. This cannot be undone.",
+             (long)[item tag] + 1);
+    show_confirm_dialogue_async("Restore Performance Bank", message, "Restore...", on_bank_restore_confirmed);
+}
+
 - (void)zoomIn:(id)sender {
     double zoomFactor = get_zoom_factor() + ZOOM_DELTA;
 
@@ -240,7 +307,8 @@ static void on_everything_backup_folder_chosen(const char * path) {
     } else if (action == @selector(setDialModeHorizontal:)) {
         [item setState:(gDialMode == eDialModeHorizontal) ? NSControlStateValueOn : NSControlStateValueOff];
     } else if (  action == @selector(backupBank:) || action == @selector(backupPerfBank:)
-              || action == @selector(backupSynthSettings:) || action == @selector(backupEverything:)) {
+              || action == @selector(backupSynthSettings:) || action == @selector(backupEverything:)
+              || action == @selector(restoreBank:) || action == @selector(restorePerfBank:)) {
         return gCommsState == eCommsOnLine;
     } else if (action == @selector(savePatch:)) {
         [item setTitle:(gGlobalSettings.perfMode == 1) ? @"Save Perf..." : @"Save Patch..."];
@@ -359,25 +427,59 @@ void setup_main_menu(void) {
     [bankMI setSubmenu:bankMenu];
     [menuBar insertItem:bankMI atIndex:3];
 
+    // Restore menu
+    NSMenuItem * restoreMI          = [[NSMenuItem alloc] init];
+    NSMenu *     restoreMenu        = [[NSMenu alloc] initWithTitle:@"Restore"];
+    NSMenuItem * restoreSubMI       = [[NSMenuItem alloc] initWithTitle:@"Patch Bank" action:NULL keyEquivalent:@""];
+    NSMenu *     restoreSubMenu     = [[NSMenu alloc] initWithTitle:@"Patch Bank"];
+
+    for (NSInteger i = 0; i < NUM_PATCH_BANKS; i++) {
+        NSMenuItem * bankItem = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Bank %ld", (long)i + 1]
+                                 action:@selector(restoreBank:)
+                                 keyEquivalent:@""];
+        [bankItem setTarget:target];
+        [bankItem setTag:i];
+        [restoreSubMenu addItem:bankItem];
+    }
+
+    NSMenuItem * restorePerfSubMI   = [[NSMenuItem alloc] initWithTitle:@"Performance Bank" action:NULL keyEquivalent:@""];
+    NSMenu *     restorePerfSubMenu = [[NSMenu alloc] initWithTitle:@"Performance Bank"];
+
+    for (NSInteger i = 0; i < NUM_PERF_BANKS; i++) {
+        NSMenuItem * perfBankItem = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Bank %ld", (long)i + 1]
+                                     action:@selector(restorePerfBank:)
+                                     keyEquivalent:@""];
+        [perfBankItem setTarget:target];
+        [perfBankItem setTag:i];
+        [restorePerfSubMenu addItem:perfBankItem];
+    }
+
+    [restoreSubMI setSubmenu:restoreSubMenu];
+    [restoreMenu addItem:restoreSubMI];
+    [restorePerfSubMI setSubmenu:restorePerfSubMenu];
+    [restoreMenu addItem:restorePerfSubMI];
+    [restoreMI setSubmenu:restoreMenu];
+    [menuBar insertItem:restoreMI atIndex:4];
+
     // Controls menu
-    NSMenuItem * ctrlMI   = [[NSMenuItem alloc] init];
-    NSMenu *     ctrlMenu = [[NSMenu alloc] initWithTitle:@"Controls"];
+    NSMenuItem * ctrlMI             = [[NSMenuItem alloc] init];
+    NSMenu *     ctrlMenu           = [[NSMenu alloc] initWithTitle:@"Controls"];
 
     [ctrlMenu addItem:make_item(@"Rotary", @selector(setDialModeRotary:), @"", target)];
     [ctrlMenu addItem:make_item(@"Vertical", @selector(setDialModeVertical:), @"", target)];
     [ctrlMenu addItem:make_item(@"Horizontal", @selector(setDialModeHorizontal:), @"", target)];
     [ctrlMI setSubmenu:ctrlMenu];
-    [menuBar insertItem:ctrlMI atIndex:4];
+    [menuBar insertItem:ctrlMI atIndex:5];
 
     // View menu
-    NSMenuItem * viewMI   = [[NSMenuItem alloc] init];
-    NSMenu *     viewMenu = [[NSMenu alloc] initWithTitle:@"View"];
+    NSMenuItem * viewMI             = [[NSMenuItem alloc] init];
+    NSMenu *     viewMenu           = [[NSMenu alloc] initWithTitle:@"View"];
 
     [viewMenu addItem:make_item(@"Zoom In [⌘=]", @selector(zoomIn:), @"", target)];
     [viewMenu addItem:make_item(@"Zoom Out [⌘-]", @selector(zoomOut:), @"", target)];
     [viewMenu addItem:make_item(@"Zoom Reset", @selector(zoomReset:), @"", target)];
     [viewMI setSubmenu:viewMenu];
-    [menuBar insertItem:viewMI atIndex:5];
+    [menuBar insertItem:viewMI atIndex:6];
 }
 
 void save_zoom_factor(double zoom) {

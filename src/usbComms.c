@@ -71,6 +71,12 @@ static uint32_t               sBankUploadContentLen                 = 0;
 static char                   sBankUploadName[CLAVIA_NAME_SIZE + 1] = {0};
 static bool                   sBankUploadGotData                    = false;
 
+// Bank Restore file-read scratch buffer — read_bank_upload_file() fills this from disk immediately
+// before each send_bank_download_push() call in restore_bank() below (single-threaded, no locking
+// needed, same reasoning as the upload scratch state above).
+static uint8_t                sBankRestoreContent[PATCH_FILE_SIZE];
+static uint32_t               sBankRestoreContentLen                = 0;
+
 // Protected by usbStaticMutex
 static pthread_t              usbThread                             = NULL;
 static libusb_context *       libUsbCtx                             = NULL;
@@ -873,6 +879,12 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             parse_bank_upload_empty();
             return EXIT_SUCCESS;
 
+        case SUB_RESPONSE_CLEAR:
+            // Ack for SUB_COMMAND_CLEAR (Bank Restore erasing an unpopulated location) — no
+            // fields we need beyond the fact that it arrived; send_and_receive's caller already
+            // knows which location it was clearing.
+            return EXIT_SUCCESS;
+
         default:
             LOG_DEBUG("Got unknown sub-command 0x%02x - must implement!!!\n", subCommand);
             exit(1);
@@ -1381,6 +1393,56 @@ static int send_bank_upload_request(uint8_t domain, uint32_t bank, uint32_t loca
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_COMMAND_PATCH_BANK_DATA, USB_RECV_DATA_MS);
 }
 
+// Erases one Bank Restore location (SUB_COMMAND_CLEAR, 0x0c) — reverse-engineered from a real
+// restore capture (PatchRestore.pcapng): domain, bank, location, then a trailing byte that was
+// constant 0x01 across all 126 samples in the capture (meaning unconfirmed, hardcoded here).
+// Acked with SUB_RESPONSE_CLEAR (0x15). Used for every location in the target bank that the
+// restore folder doesn't have a file for, so the bank ends up matching the folder exactly
+// rather than being merged into — this is the "erase" the stock editor warns about.
+static int send_bank_clear(uint8_t domain, uint32_t bank, uint32_t location) {
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+
+    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_CLEAR);
+    write_bit_stream(buff, &bitPos, 8, domain);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)bank);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)location);
+    write_bit_stream(buff, &bitPos, 8, 0x01);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_CLEAR, USB_RECV_ACK_MS);
+}
+
+// Pushes one Bank Restore location's content (SUB_COMMAND_PATCH_BANK_DATA, 0x19) — the exact same
+// message shape as a Bank Upload response, just sent host->device instead of device->host (same
+// capture as send_bank_clear above). Fields: domain, bank, location, Clavia name, a 16-bit length
+// (contentLen + 1, mirroring backup's "L-1" the other way), a 2-byte [version][type] marker that
+// echoes content's own first 2 bytes, then the raw .pch2/.prf2 body verbatim. Acked with
+// SUB_RESPONSE_PATCH_BANK_UPLOAD (0x18) — the same code Bank Upload uses for "location empty";
+// here it just means "write accepted". name is best-effort (stripped of any backup-collision
+// "(2)" suffix) — the name that actually sticks is the one embedded in content itself.
+static int send_bank_download_push(uint8_t domain, uint32_t bank, uint32_t location,
+                                   const char * name, const uint8_t * content, uint32_t contentLen) {
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+    uint32_t byteStart               = 0;
+
+    if (contentLen == 0 || BIT_TO_BYTE(bitPos) + CLAVIA_NAME_SIZE + 32 + contentLen > SEND_MESSAGE_SIZE) {
+        LOG_ERROR("send_bank_download_push: content length %u out of range\n", contentLen);
+        return EXIT_FAILURE;
+    }
+    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_PATCH_BANK_DATA);
+    write_bit_stream(buff, &bitPos, 8, domain);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)bank);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)location);
+    write_clavia_string(buff, &bitPos, name);
+    write_bit_stream(buff, &bitPos, 16, (uint16_t)(contentLen + 1));
+    write_bit_stream(buff, &bitPos, 8, content[0]);
+    write_bit_stream(buff, &bitPos, 8, content[1]);
+    byteStart = BIT_TO_BYTE(bitPos);
+    memcpy(&buff[byteStart], content, contentLen);
+    bitPos   += BYTE_TO_BIT(contentLen);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_PATCH_BANK_UPLOAD, USB_RECV_DATA_MS);
+}
+
 // Fills outName with "baseName.<ext>", or "baseName(2).<ext>", "baseName(3).<ext>", etc. if a
 // file by that name already exists in destFolder. Patch/performance names are free text on the
 // hardware and often repeat across (or even within) banks, so this keeps a same-named item from
@@ -1509,6 +1571,180 @@ static int backup_bank(uint32_t bank, const char * destFolder, bool isPerf, bool
         call_wake_glfw();
     }
     return EXIT_SUCCESS;
+}
+
+// Reads a "PatchBankN.pchList"/"PerfBankN.pchList" manifest (as written by backup_bank() above)
+// into a per-location filename table for restore_bank() below. Lines are "bank:location: filename"
+// (CRLF-terminated, 1-indexed on both fields, as written by backup_bank()); only lines matching
+// sourceBank1Indexed are kept. fileNames[location] is left as an empty string for any location the
+// manifest doesn't mention (or if the manifest can't be opened at all) — restore_bank() erases
+// every one of those, same as the stock editor does for an unpopulated location.
+// Returns false if manifestPath couldn't be opened at all — the caller must treat that as a hard
+// failure rather than "every location happens to be empty": an all-empty fileNames table is
+// otherwise indistinguishable from a genuinely empty bank, and restore_bank() would silently erase
+// every location in destBank instead of refusing to proceed.
+static bool parse_bank_manifest(const char * manifestPath, uint32_t sourceBank1Indexed,
+                                char fileNames[NUM_LOCATIONS_PER_BANK][CLAVIA_NAME_SIZE + 16]) {
+    FILE * manifest   = fopen(manifestPath, "rb");
+    char   line[1280] = {0};
+
+    if (manifest == NULL) {
+        LOG_ERROR("parse_bank_manifest: could not open %s\n", manifestPath);
+        return false;
+    }
+
+    while (fgets(line, sizeof(line), manifest) != NULL) {
+        uint32_t bank       = 0;
+        uint32_t location   = 0;
+        int      nameOffset = 0;
+
+        if ((sscanf(line, "%u:%u:%n", &bank, &location, &nameOffset) == 2) && (nameOffset > 0)) {
+            if ((bank == sourceBank1Indexed) && (location >= 1) && (location <= NUM_LOCATIONS_PER_BANK)) {
+                char * namePtr = line + nameOffset;
+
+                while (*namePtr == ' ') {
+                    namePtr++;
+                }
+                namePtr[strcspn(namePtr, "\r\n")] = '\0';
+                strncpy(fileNames[location - 1], namePtr, sizeof(fileNames[0]) - 1);
+            }
+        }
+    }
+    fclose(manifest);
+    return true;
+}
+
+// Restores a Bank Backup folder onto the connected G2 — the mirror of backup_bank() above. Every
+// one of NUM_LOCATIONS_PER_BANK locations in destBank is acted on: a location the manifest has a
+// file for gets that file pushed (send_bank_download_push); everything else gets erased
+// (send_bank_clear). destBank therefore ends up exactly matching the source folder rather than
+// being merged into — confirmed from a real restore capture (PatchRestore.pcapng) where the stock
+// editor did exactly this (pushed the 2 populated locations it had files for, then cleared the
+// other 126 in the bank). sourceBank is the bank the manifest was recorded against (used to build
+// the manifest filename and to filter its lines); destBank is where the write actually goes —
+// normally the same bank ("restore to where it came from") but callers may pass a different value
+// for a cross-bank restore, since nothing in the wire protocol ties push/clear to a particular bank
+// beyond the explicit bank byte in each message. Unlike backup_bank(), a failure partway through
+// stops immediately rather than continuing best-effort — this is writing to the device, so the
+// caller needs to know exactly how far it got. silent mirrors backup_bank()'s chaining support, for
+// a future restore_everything().
+static int restore_bank(uint32_t sourceBank, uint32_t destBank, const char * srcFolder, bool isPerf, bool silent) {
+    char         manifestPath[1280] = {0};
+    char         fileNames[NUM_LOCATIONS_PER_BANK][CLAVIA_NAME_SIZE + 16];
+    uint8_t      domain             = isPerf ? BANK_UPLOAD_DOMAIN_PERFORMANCE : BANK_UPLOAD_DOMAIN_PATCH;
+    const char * typeLabel          = isPerf ? "Performance" : "Patch";
+    const char * manifestPrefix     = isPerf ? "PerfBank" : "PatchBank";
+    uint32_t     written            = 0;
+    uint32_t     cleared            = 0;
+    bool         aborted            = false;
+
+    memset(fileNames, 0, sizeof(fileNames));
+
+    if (gCommsState != eCommsOnLine) {
+        LOG_ERROR("restore_bank: G2 is not connected\n");
+
+        if (!silent) {
+            gBankRestoreIsPerf   = isPerf;
+            snprintf(gBankRestoreResultMessage, sizeof(gBankRestoreResultMessage),
+                     "Restore of %s Bank %u failed: the G2 is not connected", typeLabel, destBank + 1);
+            gBankRestoreComplete = true;
+            call_wake_glfw();
+        }
+        return EXIT_FAILURE;
+    }
+    snprintf(manifestPath, sizeof(manifestPath), "%s/%s%u.pchList", srcFolder, manifestPrefix, sourceBank + 1);
+
+    if (!parse_bank_manifest(manifestPath, sourceBank + 1, fileNames)) {
+        LOG_ERROR("restore_bank: no manifest at %s — refusing to touch destination bank %u\n", manifestPath, destBank + 1);
+
+        if (!silent) {
+            gBankRestoreIsPerf   = isPerf;
+            snprintf(gBankRestoreResultMessage, sizeof(gBankRestoreResultMessage),
+                     "Restore of %s Bank %u failed: no %s found in the chosen folder — nothing was written or cleared",
+                     typeLabel, destBank + 1, manifestPath + strlen(srcFolder) + 1);
+            gBankRestoreComplete = true;
+            call_wake_glfw();
+        }
+        return EXIT_FAILURE;
+    }
+    gBankRestoreActive   = true;
+    gBankRestoreIsPerf   = isPerf;
+    gBankRestoreBank     = destBank;
+    gBankRestoreLocation = 0;
+    gBankRestoreWritten  = 0;
+    gBankRestoreComplete = false;
+    call_wake_glfw();
+
+    for (uint32_t location = 0; location < NUM_LOCATIONS_PER_BANK; location++) {
+        if (gotBadConnectionIndication) {
+            LOG_ERROR("restore_bank: aborting — lost connection to device\n");
+            aborted = true;
+            break;
+        }
+        gBankRestoreLocation = location;
+        call_wake_glfw();
+
+        if (fileNames[location][0] != '\0') {
+            char   filePath[1280]                 = {0};
+            char   pushName[CLAVIA_NAME_SIZE + 1] = {0};
+            char * ext                            = NULL;
+            char * suffix                         = NULL;
+
+            snprintf(filePath, sizeof(filePath), "%s/%s", srcFolder, fileNames[location]);
+
+            if (!read_bank_upload_file(filePath, sBankRestoreContent, sizeof(sBankRestoreContent), &sBankRestoreContentLen)) {
+                LOG_ERROR("restore_bank: could not read %s\n", filePath);
+                aborted = true;
+                break;
+            }
+            // Best-effort name for the outer wire field (strip extension and any "(2)"-style
+            // backup-collision suffix) — the name that actually sticks on the device is the one
+            // embedded in the content itself, per send_bank_download_push above.
+            strncpy(pushName, fileNames[location], CLAVIA_NAME_SIZE);
+            ext                 = strrchr(pushName, '.');
+
+            if (ext != NULL) {
+                *ext = '\0';
+            }
+            suffix              = strrchr(pushName, '(');
+
+            if ((suffix != NULL) && (suffix != pushName)) {
+                *suffix = '\0';
+            }
+
+            if (send_bank_download_push(domain, destBank, location, pushName, sBankRestoreContent, sBankRestoreContentLen) != EXIT_SUCCESS) {
+                LOG_ERROR("restore_bank: push failed for bank %u location %u\n", destBank, location);
+                aborted = true;
+                break;
+            }
+            written++;
+            gBankRestoreWritten = written;
+        } else {
+            if (send_bank_clear(domain, destBank, location) != EXIT_SUCCESS) {
+                LOG_ERROR("restore_bank: clear failed for bank %u location %u\n", destBank, location);
+                aborted = true;
+                break;
+            }
+            cleared++;
+        }
+        call_wake_glfw();
+    }
+
+    if (!silent) {
+        if (aborted) {
+            snprintf(gBankRestoreResultMessage, sizeof(gBankRestoreResultMessage),
+                     "Restore of %s Bank %u stopped at location %u: %u written, %u cleared before the failure",
+                     typeLabel, destBank + 1, gBankRestoreLocation + 1, written, cleared);
+        } else {
+            snprintf(gBankRestoreResultMessage, sizeof(gBankRestoreResultMessage),
+                     "Restore of %s Bank %u complete: %u written, %u location%s cleared",
+                     typeLabel, destBank + 1, written, cleared, cleared == 1 ? "" : "s");
+        }
+        gBankRestoreActive   = false;
+        gBankRestoreComplete = true;
+        call_wake_glfw();
+    }
+    return aborted ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 // Builds "synth-<h>.<mm><am|pm>-<dd><Mon><yy>.txt", e.g. "synth-2.34pm-25Jun26.txt" for 2:34pm on
@@ -2746,6 +2982,15 @@ static int send_write_data(tMessageContent * messageContent) {
         {
             send_stop();
             retVal = backup_everything(messageContent->settingsBackupData.destFolder);
+            send_start();
+            break;
+        }
+
+        case eMsgCmdRestoreBank:
+        {
+            send_stop();
+            retVal = restore_bank(messageContent->bankRestoreData.sourceBank, messageContent->bankRestoreData.destBank,
+                                  messageContent->bankRestoreData.srcFolder, messageContent->bankRestoreData.isPerf, false);
             send_start();
             break;
         }

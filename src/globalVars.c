@@ -114,6 +114,13 @@ _Atomic bool            gBankBackupComplete                                     
 char                    gBankBackupResultMessage[256]                                                = {0};
 _Atomic bool            gSynthSettingsBackupComplete                                                 = false;
 char                    gSynthSettingsBackupResultMessage[256]                                       = {0};
+_Atomic bool            gBankRestoreActive                                                           = false;
+_Atomic bool            gBankRestoreIsPerf                                                           = false;
+_Atomic uint32_t        gBankRestoreBank                                                             = 0;
+_Atomic uint32_t        gBankRestoreLocation                                                         = 0;
+_Atomic uint32_t        gBankRestoreWritten                                                          = 0;
+_Atomic bool            gBankRestoreComplete                                                         = false;
+char                    gBankRestoreResultMessage[256]                                               = {0};
 
 void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active) {
     tTopbarControlId i = first;
