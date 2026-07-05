@@ -128,6 +128,23 @@ void init_patch(uint32_t slot) {  // Todo - think where this should really go
     database_delete_cables_by_slot(slot);
     database_delete_modules_by_slot(slot);
     gMorphCount[slot]                 = 8; // Check default!?
+
+    // database_delete_modules_by_slot() above zeroes every module for this slot, including the
+    // morph-groups pseudo-module (locationMorph/PATCH_MORPH) that every patch structurally has.
+    // render_morph_groups() reads it via get_module(), which returns NULL unless active is set, so
+    // without this the morph knobs would silently render nothing for a freshly-initialised patch —
+    // reactivate it here with its key set, same as parse_module_list() does when a real patch
+    // arrives from the device. Zeroed param values are an acceptable default (8 unnamed knobs, all
+    // at 0, no morph depth assigned) since no capture confirms what a factory Init Patch defaults
+    // its morph assignments to.
+    {
+        tModule * morphModule = get_module_slot(slot, (uint32_t)locationMorph, PATCH_MORPH);
+
+        morphModule->active = true;
+        morphModule->key    = (tModuleKey){
+            slot, (uint32_t)locationMorph, PATCH_MORPH
+        };
+    }
     gNote2Size[slot]                  = 0;
     gControllerCount[slot]            = 0; // Seems to default to 2, so might need to set up defaults
     gPatchNotesSize[slot]             = 0;
