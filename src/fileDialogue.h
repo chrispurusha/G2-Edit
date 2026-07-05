@@ -20,16 +20,20 @@
 #ifndef FILE_DIALOG_H
 #define FILE_DIALOG_H
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef void (*tFileDialogueCallback)(const char * path);
+typedef void (*tConfirmCallback)(bool confirmed);
 
 void open_file_read_dialogue_async(tFileDialogueCallback callback);
 void open_file_write_dialogue_async(tFileDialogueCallback callback, const char * defaultName);
 void open_folder_dialogue_async(tFileDialogueCallback callback, const char * title);
 void show_alert_async(const char * title, const char * message);
+void show_confirm_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle, tConfirmCallback callback);
 
 #ifdef __cplusplus
 }

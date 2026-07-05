@@ -1740,6 +1740,68 @@ void write_bank_upload_file(const char * filepath, const char * typeLabel, const
     fclose(file);
 }
 
+// Reads a .pch2/.prf2 file for Bank Restore and hands back the raw binary body — the counterpart
+// to write_bank_upload_file's text header. The header lines it writes ("Version=...", "Type=...",
+// etc.) are plain ASCII followed by a single 0x00 separator byte, then the binary body begins; the
+// header text itself never contains a null byte, so the first 0x00 in the file unambiguously marks
+// where the body starts. Fills outContent (caller-owned, size outContentSize) rather than
+// allocating, matching this codebase's static-buffer convention (see sBankUploadContent).
+bool read_bank_upload_file(const char * filepath, uint8_t * outContent, uint32_t outContentSize, uint32_t * outContentLen) {
+    FILE *   file            = NULL;
+    long     fileSize        = 0;
+    uint32_t headerLen       = 0;
+    uint32_t bodyLen         = 0;
+    uint8_t  headerBuff[256] = {0};
+    size_t   headerRead      = 0;
+
+    *outContentLen = 0;
+    file           = fopen(filepath, "rb");
+
+    if (!file) {
+        LOG_ERROR("read_bank_upload_file: could not open %s\n", filepath);
+        return false;
+    }
+    fseek(file, 0, SEEK_END);
+    fileSize       = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    if (fileSize <= 0) {
+        LOG_ERROR("read_bank_upload_file: empty file %s\n", filepath);
+        fclose(file);
+        return false;
+    }
+    headerRead     = fread(headerBuff, 1, sizeof(headerBuff), file);
+
+    for (headerLen = 0; headerLen < headerRead; headerLen++) {
+        if (headerBuff[headerLen] == 0) {
+            break;
+        }
+    }
+
+    if (headerLen >= headerRead) {
+        LOG_ERROR("read_bank_upload_file: no header terminator found in %s\n", filepath);
+        fclose(file);
+        return false;
+    }
+    headerLen++;  // skip the separator itself
+    bodyLen        = (uint32_t)fileSize - headerLen;
+
+    if (bodyLen > outContentSize) {
+        LOG_ERROR("read_bank_upload_file: content length %u exceeds buffer %u, truncating\n", bodyLen, outContentSize);
+        bodyLen = outContentSize;
+    }
+    fseek(file, (long)headerLen, SEEK_SET);
+
+    if (fread(outContent, 1, bodyLen, file) != bodyLen) {
+        LOG_ERROR("read_bank_upload_file: short read on %s\n", filepath);
+        fclose(file);
+        return false;
+    }
+    fclose(file);
+    *outContentLen = bodyLen;
+    return true;
+}
+
 #ifdef __cplusplus
 }
 #endif

@@ -59,6 +59,31 @@ void show_alert_async(const char * title, const char * message) {
     });
 }
 
+// Shows a two-button confirm/cancel alert for destructive actions (e.g. Bank Restore, which
+// overwrites the target bank on the device). "Cancel" is added first so it's the default
+// (Return-key) action — an accidental Enter should never trigger the destructive path.
+void show_confirm_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle, tConfirmCallback callback) {
+    NSString * titleString   = [NSString stringWithUTF8String:(title ? title : "")];
+    NSString * messageString = [NSString stringWithUTF8String:(message ? message : "")];
+    NSString * confirmString = [NSString stringWithUTF8String:(confirmButtonTitle ? confirmButtonTitle : "OK")];
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSAlert * alert          = [[NSAlert alloc] init];
+
+        [alert setAlertStyle:NSAlertStyleWarning];
+        [alert setMessageText:titleString];
+        [alert setInformativeText:messageString];
+        [alert addButtonWithTitle:@"Cancel"];
+        [alert addButtonWithTitle:confirmString];
+
+        NSModalResponse response = [alert runModal];
+
+        if (callback) {
+            callback(response == NSAlertSecondButtonReturn);
+        }
+    });
+}
+
 void open_folder_dialogue_async(tFileDialogueCallback callback, const char * title) {
     NSString * titleString = (title && title[0] != '\0')
                             ? [NSString stringWithUTF8String:title]
