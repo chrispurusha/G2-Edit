@@ -866,6 +866,17 @@ typedef struct {                     // Note - should reflect settings in the G2
     _Atomic uint8_t perfSortMode;
 } tSynthSettings;
 
+// One bank/location's worth of what SUB_COMMAND_LIST_NAMES (0x14) reports — see
+// gPatchNameTable/gPerfNameTable in globalVars.h. populated distinguishes a real (possibly
+// zero-length-named) entry from a location the device never mentioned at all (List Names is a
+// sparse listing — unpopulated locations are never sent on the wire, not represented by a
+// placeholder entry).
+typedef struct {
+    bool    populated;
+    char    name[CLAVIA_NAME_SIZE + 1];
+    uint8_t category; // 0-15, see patchTypeStrMap in globalVars.c
+} tNameTableEntry;
+
 typedef struct {  // Note - should reflect settings in the G2
     _Atomic uint8_t globalMode;
     _Atomic uint8_t rangeAndFlags;

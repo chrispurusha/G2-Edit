@@ -156,6 +156,8 @@ char                    gSynthRestorePeekFileName[64]                           
 char                    gSynthRestorePeekName[CLAVIA_NAME_SIZE + 1]                                  = {0};
 _Atomic bool            gSynthRestoreComplete                                                        = false;
 char                    gSynthRestoreResultMessage[256]                                              = {0};
+tNameTableEntry         gPatchNameTable[NUM_PATCH_BANKS][NUM_LOCATIONS_PER_BANK]                     = {0};
+tNameTableEntry         gPerfNameTable[NUM_PERF_BANKS][NUM_LOCATIONS_PER_BANK]                       = {0};
 
 void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId last, tTopbarControlId active) {
     tTopbarControlId i = first;

@@ -85,6 +85,14 @@ static uint32_t               sBankRestoreContentLen                = 0;
 // through the USB thread, same reasoning as the scratch state above).
 static tSynthSettings         sSynthSettingsRestoreStaged           = {0};
 
+// List Names sweep scratch state — parse_list_names_response() fills these in on each response;
+// send_list_names_sweep() reads them immediately after each send_and_receive() call returns
+// (single-threaded round trip, no locking needed, same reasoning as the scratch state above).
+static uint8_t                sListNamesMode                        = 0;
+static uint8_t                sListNamesNextBank                    = 0;
+static uint8_t                sListNamesNextLoc                     = 0;
+static bool                   sListNamesFinished                    = false;
+
 // Protected by usbStaticMutex
 static pthread_t              usbThread                             = NULL;
 static libusb_context *       libUsbCtx                             = NULL;
@@ -644,17 +652,85 @@ static void parse_sel_param_page(uint8_t * buff, uint32_t * bitPos) {
     LOG_DEBUG("Got param page Page=%u Pos=%u\n", paramPage / 3, paramPage % 3);
 }
 
-static void parse_store_patch(uint8_t * buff, uint32_t * bitPos) {
-    uint32_t savedBitPos = *bitPos;
+// Reads a SUB_COMMAND_LIST_NAMES (0x14) response — reverse-engineered from a real startup capture
+// (StartupCapture.pcapng, see project memory): [4 bytes unknown][mode][0x03 marker][bank]
+// [location], then repeating [Clavia name][category:1] entries in ascending location order
+// (a sparse listing — unpopulated locations are simply never sent, not represented by a
+// placeholder). If the current bank's real content runs out before the packet does, a literal
+// 0x03 byte followed by a 2-byte [newBank][newLocation] pair appears inline and more entries
+// continue for the new bank. A short (6-byte) response — just [4 unknown][mode][0x04], no bank/
+// location/entries — means that whole domain (patch or performance) is exhausted.
+//
+// This subcommand (0x13) is the same value as SUB_RESPONSE_STORE_PATCH — Store's ack turns out to
+// be a one-entry instance of this exact format (confirmed by decoding a captured Store ack against
+// this same layout), so no separate handler is needed for it; send_store_patch()'s caller doesn't
+// consult the scratch state this fills in, so the (harmless) reuse costs nothing.
+//
+// Leaves the result in sListNamesMode/sListNamesFinished (this response's outcome) and
+// sListNamesNextBank/sListNamesNextLoc (where send_list_names_sweep() should resume next, when not
+// finished) — see globalVars.h's gPatchNameTable/gPerfNameTable for where entries themselves land.
+static void parse_list_names_response(uint8_t * buff, uint32_t * bitPos, int length) {
+    uint32_t bodyStartBitPos = *bitPos;
+    int      bodyLen         = length - BIT_TO_BYTE(*bitPos) - CRC_BYTES;
+    uint8_t  mode;
+    uint8_t  bank;
+    uint8_t  location;
 
-    LOG_DEBUG("Got store patch\n");
+    sListNamesFinished = false;
 
-    for (int i = 0; i < 32; i++) {
-        LOG_DEBUG_DIRECT("0x%02x ", read_bit_stream(buff, bitPos, 8));
+    if (bodyLen < 8) {
+        read_bit_stream(buff, bitPos, 32); // 4 unknown bytes
+        sListNamesMode     = (uint8_t)read_bit_stream(buff, bitPos, 8);
+        sListNamesFinished = true;         // bodyLen<8 only ever seen as the "domain exhausted" message
+        return;
+    }
+    read_bit_stream(buff, bitPos, 32);     // 4 unknown bytes
+    mode               = (uint8_t)read_bit_stream(buff, bitPos, 8);
+    read_bit_stream(buff, bitPos, 8);      // 0x03 marker, constant
+    bank               = (uint8_t)read_bit_stream(buff, bitPos, 8);
+    location           = (uint8_t)read_bit_stream(buff, bitPos, 8);
+    sListNamesMode     = mode;
+
+    for ( ; ;) {
+        while (  (location < NUM_LOCATIONS_PER_BANK)
+              && (BIT_TO_BYTE(*bitPos) - BIT_TO_BYTE(bodyStartBitPos) + 3 <= bodyLen)) {
+            char    name[CLAVIA_NAME_SIZE + 1] = {0};
+            uint8_t category;
+
+            read_clavia_string(buff, bitPos, name, sizeof(name));
+            category = (uint8_t)read_bit_stream(buff, bitPos, 8);
+
+            if ((mode == BANK_UPLOAD_DOMAIN_PATCH) && (bank < NUM_PATCH_BANKS)) {
+                gPatchNameTable[bank][location].populated = true;
+                strncpy(gPatchNameTable[bank][location].name, name, CLAVIA_NAME_SIZE);
+                gPatchNameTable[bank][location].category  = category;
+            } else if ((mode == BANK_UPLOAD_DOMAIN_PERFORMANCE) && (bank < NUM_PERF_BANKS)) {
+                gPerfNameTable[bank][location].populated = true;
+                strncpy(gPerfNameTable[bank][location].name, name, CLAVIA_NAME_SIZE);
+                gPerfNameTable[bank][location].category  = category;
+            }
+            location++;
+        }
+
+        if (location < NUM_LOCATIONS_PER_BANK) {
+            break; // ran out of packet space mid-bank; resume from here next request
+        }
+
+        if (BIT_TO_BYTE(*bitPos) - BIT_TO_BYTE(bodyStartBitPos) >= bodyLen) {
+            break; // bank exactly finished and no bytes left at all
+        }
+        uint8_t code = (uint8_t)read_bit_stream(buff, bitPos, 8);
+
+        if ((code == 0x03) && (BIT_TO_BYTE(*bitPos) - BIT_TO_BYTE(bodyStartBitPos) + 2 <= bodyLen)) {
+            bank     = (uint8_t)read_bit_stream(buff, bitPos, 8);
+            location = (uint8_t)read_bit_stream(buff, bitPos, 8);
+            continue;
+        }
+        break; // some other trailing status code — always safe to just resume from (bank, location)
     }
 
-    LOG_DEBUG_DIRECT("\n");
-    *bitPos = savedBitPos;
+    sListNamesNextBank = bank;
+    sListNamesNextLoc  = location;
 }
 
 static void parse_perf_patch_versions(uint8_t * buff, uint32_t * bitPos) {
@@ -844,7 +920,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_STORE_PATCH:
-            parse_store_patch(buff, bitPos);
+            parse_list_names_response(buff, bitPos, length);
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_PERF_PATCH_VERSIONS:
@@ -3166,6 +3242,82 @@ static int send_perf_mode_change(uint8_t perfMode) {
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_PERF_PATCH_VERSIONS, USB_RECV_ACK_MS);
 }
 
+// Sends SUB_COMMAND_LIST_NAMES (0x14) repeatedly, following whatever continuation
+// parse_list_names_response() reports, until both the Patch and Performance domains report
+// "finished" — populating gPatchNameTable/gPerfNameTable with every currently-populated location's
+// name and category, device-wide, in one sweep. Placed at the same point in the init sequence
+// where a real startup capture showed the stock editor doing this same read (right after the
+// master clock query, at the very end of the pull sequence).
+static int send_list_names_sweep(void) {
+    for (uint8_t mode = BANK_UPLOAD_DOMAIN_PATCH; mode <= BANK_UPLOAD_DOMAIN_PERFORMANCE; mode++) {
+        uint8_t bank     = 0;
+        uint8_t location = 0;
+        int     guard    = 0;  // safety cap in case a response is ever malformed enough to not converge
+
+        for ( ; ;) {
+            uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+            uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+
+            usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_LIST_NAMES);
+            write_bit_stream(buff, &bitPos, 8, mode);
+            write_bit_stream(buff, &bitPos, 8, bank);
+            write_bit_stream(buff, &bitPos, 8, location);
+
+            if (send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_LIST_NAMES, USB_RECV_DATA_MS) != EXIT_SUCCESS) {
+                LOG_ERROR("send_list_names_sweep: request failed for mode=%u bank=%u location=%u\n", mode, bank, location);
+                return EXIT_FAILURE;
+            }
+
+            if (sListNamesFinished) {
+                break;
+            }
+            bank     = sListNamesNextBank;
+            location = sListNamesNextLoc;
+
+            if (++guard > 2000) {
+                LOG_ERROR("send_list_names_sweep: guard tripped for mode=%u, aborting to avoid an infinite loop\n", mode);
+                break;
+            }
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
+// Debug-only: dumps every populated entry in gPatchNameTable/gPerfNameTable to the console. No UI
+// consumes this table yet — this is purely so the sweep's results can be eyeballed during
+// development.
+static void debug_dump_name_tables(void) {
+    uint32_t patchCount = 0;
+    uint32_t perfCount  = 0;
+
+    LOG_DEBUG("List Names: Patch table:\n");
+
+    for (uint32_t bank = 0; bank < NUM_PATCH_BANKS; bank++) {
+        for (uint32_t location = 0; location < NUM_LOCATIONS_PER_BANK; location++) {
+            if (gPatchNameTable[bank][location].populated) {
+                LOG_DEBUG_DIRECT("  Bank %2u Loc %3u: \"%s\" (cat %u)\n", bank + 1, location + 1,
+                                 gPatchNameTable[bank][location].name, gPatchNameTable[bank][location].category);
+                patchCount++;
+            }
+        }
+    }
+
+    LOG_DEBUG("List Names: Performance table:\n");
+
+    for (uint32_t bank = 0; bank < NUM_PERF_BANKS; bank++) {
+        for (uint32_t location = 0; location < NUM_LOCATIONS_PER_BANK; location++) {
+            if (gPerfNameTable[bank][location].populated) {
+                LOG_DEBUG_DIRECT("  Bank %2u Loc %3u: \"%s\" (cat %u)\n", bank + 1, location + 1,
+                                 gPerfNameTable[bank][location].name, gPerfNameTable[bank][location].category);
+                perfCount++;
+            }
+        }
+    }
+
+    LOG_DEBUG("List Names: %u patches, %u performances total\n", patchCount, perfCount);
+}
+
 // ---------------------------------------------------------------------------
 // Init sequences — linear, no state machine
 // ---------------------------------------------------------------------------
@@ -3205,6 +3357,9 @@ static int send_init_sequence_pull(void) {
     send_get_assigned_voices();
     send_get_global_knobs();
     send_get_master_clock();
+
+    send_list_names_sweep();
+    debug_dump_name_tables();
 
     send_start();
 
