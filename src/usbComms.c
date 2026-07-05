@@ -1956,10 +1956,24 @@ static int store_patch_to_bank(uint32_t bank, uint32_t location, bool isPerf) {
         call_wake_glfw();
         return EXIT_FAILURE;
     }
-    result              = send_store_patch(domain, bank, location);
+    result = send_store_patch(domain, bank, location);
 
     if (result == EXIT_SUCCESS) {
         snprintf(gStorePatchResultMessage, sizeof(gStorePatchResultMessage), "Stored %s to Bank %u, Location %u", typeLabel, bank + 1, location + 1);
+
+        // Keep the name-table cache in sync immediately — otherwise a picker built from it (Load/
+        // Store/Delete) would keep showing the old contents of this location until the next full
+        // reconnect sweep. The name/category just written are whatever's in the current edit
+        // buffer (that's what Store just sent), no device round-trip needed to know them.
+        if (isPerf && (bank < NUM_PERF_BANKS)) {
+            gPerfNameTable[bank][location].populated = true;
+            strncpy(gPerfNameTable[bank][location].name, gGlobalSettings.perfName, CLAVIA_NAME_SIZE);
+            gPerfNameTable[bank][location].category  = 0;
+        } else if (!isPerf && (bank < NUM_PATCH_BANKS)) {
+            gPatchNameTable[bank][location].populated = true;
+            strncpy(gPatchNameTable[bank][location].name, gGlobalSettings.slot[gSlot].patchName, CLAVIA_NAME_SIZE);
+            gPatchNameTable[bank][location].category  = gPatchDescr[gSlot].category;
+        }
     } else {
         snprintf(gStorePatchResultMessage, sizeof(gStorePatchResultMessage), "Store of %s to Bank %u, Location %u failed", typeLabel, bank + 1, location + 1);
     }
@@ -2021,6 +2035,19 @@ static int delete_bank_location(uint32_t bank, uint32_t location, bool isPerf) {
 
     if (result == EXIT_SUCCESS) {
         snprintf(gDeleteResultMessage, sizeof(gDeleteResultMessage), "Deleted %s Bank %u, Location %u", typeLabel, bank + 1, location + 1);
+
+        // Keep the name-table cache in sync immediately — same reasoning as store_patch_to_bank()
+        // above, otherwise the deleted location keeps showing (with its old name) in Load/Store/
+        // Delete pickers until the next full reconnect sweep.
+        if (isPerf && (bank < NUM_PERF_BANKS)) {
+            gPerfNameTable[bank][location].populated = false;
+            gPerfNameTable[bank][location].name[0]   = '\0';
+            gPerfNameTable[bank][location].category  = 0;
+        } else if (!isPerf && (bank < NUM_PATCH_BANKS)) {
+            gPatchNameTable[bank][location].populated = false;
+            gPatchNameTable[bank][location].name[0]   = '\0';
+            gPatchNameTable[bank][location].category  = 0;
+        }
     } else {
         snprintf(gDeleteResultMessage, sizeof(gDeleteResultMessage), "Delete of %s Bank %u, Location %u failed", typeLabel, bank + 1, location + 1);
     }
@@ -3372,6 +3399,11 @@ static int send_init_sequence_pull(void) {
     send_get_global_knobs();
     send_get_master_clock();
 
+    // Clear before re-sweeping — the sweep only overwrites locations the device actually reports
+    // as populated, so without this, a location that's since been erased on the device (or a stale
+    // entry from a previous connection) would keep showing here forever across reconnects.
+    memset(gPatchNameTable, 0, sizeof(gPatchNameTable));
+    memset(gPerfNameTable, 0, sizeof(gPerfNameTable));
     send_list_names_sweep();
     debug_dump_name_tables();
 
