@@ -240,18 +240,18 @@ static void on_load_bank_location_chosen(bool confirmed, uint32_t bank1Indexed, 
 // the cached name tables (see project memory: List Names sweep) — no device round-trip needed
 // just to show the list. populatedOnly restricts to locations that already contain something
 // (Load/Delete: you can only act on what exists); when false, every location in the domain is
-// listed, with unpopulated ones labeled "(empty)" (Store: the target may be a blank slot).
-// Caller must free() both *outItems and *outLabels once done — show_bank_location_list_dialogue_
+// listed, with unpopulated ones named "(empty)" (Store: the target may be a blank slot).
+// Caller must free() both *outItems and *outNames once done — show_bank_location_list_dialogue_
 // async() copies everything into Cocoa objects synchronously before returning, so they only need
 // to survive the call itself.
 static void build_bank_location_items(bool isPerf, bool populatedOnly,
-                                      tBankLocationListItem ** outItems, char(**outLabels)[48], uint32_t * outCount) {
+                                      tBankLocationListItem ** outItems, char(**outNames)[CLAVIA_NAME_SIZE + 1], uint32_t * outCount) {
     uint32_t                numBanks = isPerf ? NUM_PERF_BANKS : NUM_PATCH_BANKS;
     uint32_t                count    = 0;
     uint32_t                i        = 0;
     tBankLocationListItem * items    = NULL;
 
-    char(*labels)[48] = NULL;
+    char(*names)[CLAVIA_NAME_SIZE + 1] = NULL;
 
     for (uint32_t bank = 0; bank < numBanks; bank++) {
         for (uint32_t location = 0; location < NUM_LOCATIONS_PER_BANK; location++) {
@@ -263,19 +263,22 @@ static void build_bank_location_items(bool isPerf, bool populatedOnly,
         }
     }
 
-    items             = (tBankLocationListItem *)malloc(count * sizeof(tBankLocationListItem));
-    labels            = (char(*)[48])malloc(count * sizeof(*labels));
+    items                              = (tBankLocationListItem *)malloc(count * sizeof(tBankLocationListItem));
+    names                              = (char(*)[CLAVIA_NAME_SIZE + 1])malloc(count * sizeof(*names));
 
     for (uint32_t bank = 0; (bank < numBanks) && (i < count); bank++) {
         for (uint32_t location = 0; (location < NUM_LOCATIONS_PER_BANK) && (i < count); location++) {
             bool populated = isPerf ? gPerfNameTable[bank][location].populated : gPatchNameTable[bank][location].populated;
 
             if (!populatedOnly || populated) {
-                const char * name = populated
-                                   ? (isPerf ? gPerfNameTable[bank][location].name : gPatchNameTable[bank][location].name)
-                                   : "(empty)";
-                snprintf(labels[i], sizeof(labels[i]), "Bank %u, Loc %u: %s", bank + 1, location + 1, name);
-                items[i].label            = labels[i];
+                if (populated) {
+                    strncpy(names[i], isPerf ? gPerfNameTable[bank][location].name : gPatchNameTable[bank][location].name,
+                            sizeof(names[i]) - 1);
+                } else {
+                    strncpy(names[i], "(empty)", sizeof(names[i]) - 1);
+                }
+                items[i].name             = names[i];
+                items[i].category         = populated ? (isPerf ? gPerfNameTable[bank][location].category : gPatchNameTable[bank][location].category) : 0;
                 items[i].bank1Indexed     = bank + 1;
                 items[i].location1Indexed = location + 1;
                 i++;
@@ -283,9 +286,9 @@ static void build_bank_location_items(bool isPerf, bool populatedOnly,
         }
     }
 
-    *outItems         = items;
-    *outLabels        = labels;
-    *outCount         = count;
+    *outItems = items;
+    *outNames = names;
+    *outCount = count;
 }
 
 @implementation G2MenuTarget
@@ -460,102 +463,102 @@ static void build_bank_location_items(bool isPerf, bool populatedOnly,
     char                    message[320] = {0};
     tBankLocationListItem * items        = NULL;
 
-    char(*labels)[48]   = NULL;
+    char(*names)[CLAVIA_NAME_SIZE + 1] = NULL;
     uint32_t                count        = 0;
 
     if (gCommsState != eCommsOnLine) {
         show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before storing to a bank.");
         return;
     }
-    sPendingStoreIsPerf = isPerf;
+    sPendingStoreIsPerf                = isPerf;
     snprintf(message, sizeof(message),
              "Choose the bank and location to store the current edit buffer %s to. "
              "You'll be shown what's currently there before anything is written.", typeName);
-    build_bank_location_items(isPerf, false, &items, &labels, &count);
+    build_bank_location_items(isPerf, false, &items, &names, &count);
     show_bank_location_list_dialogue_async(isPerf ? "Store Performance to Bank" : "Store Patch to Bank", message, "Next...",
                                            items, count, on_store_bank_location_chosen);
     free(items);
-    free(labels);
+    free(names);
 }
 
 - (void)deletePatchLocation:(id)sender {
     tBankLocationListItem * items = NULL;
 
-    char(*labels)[48]    = NULL;
+    char(*names)[CLAVIA_NAME_SIZE + 1] = NULL;
     uint32_t                count = 0;
 
     if (gCommsState != eCommsOnLine) {
         show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before deleting a patch.");
         return;
     }
-    sPendingDeleteIsPerf = false;
-    build_bank_location_items(false, true, &items, &labels, &count);
+    sPendingDeleteIsPerf               = false;
+    build_bank_location_items(false, true, &items, &names, &count);
     show_bank_location_list_dialogue_async("Delete Patch",
                                            "Choose the patch to delete. "
                                            "You'll be shown its name again before anything is erased.",
                                            "Next...", items, count, on_delete_bank_location_chosen);
     free(items);
-    free(labels);
+    free(names);
 }
 
 - (void)deletePerfLocation:(id)sender {
     tBankLocationListItem * items = NULL;
 
-    char(*labels)[48]    = NULL;
+    char(*names)[CLAVIA_NAME_SIZE + 1] = NULL;
     uint32_t                count = 0;
 
     if (gCommsState != eCommsOnLine) {
         show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before deleting a performance.");
         return;
     }
-    sPendingDeleteIsPerf = true;
-    build_bank_location_items(true, true, &items, &labels, &count);
+    sPendingDeleteIsPerf               = true;
+    build_bank_location_items(true, true, &items, &names, &count);
     show_bank_location_list_dialogue_async("Delete Performance",
                                            "Choose the performance to delete. "
                                            "You'll be shown its name again before anything is erased.",
                                            "Next...", items, count, on_delete_bank_location_chosen);
     free(items);
-    free(labels);
+    free(names);
 }
 
 - (void)loadPatchLocation:(id)sender {
     tBankLocationListItem * items = NULL;
 
-    char(*labels)[48]  = NULL;
+    char(*names)[CLAVIA_NAME_SIZE + 1] = NULL;
     uint32_t                count = 0;
 
     if (gCommsState != eCommsOnLine) {
         show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before loading a patch.");
         return;
     }
-    sPendingLoadIsPerf = false;
-    build_bank_location_items(false, true, &items, &labels, &count);
+    sPendingLoadIsPerf                 = false;
+    build_bank_location_items(false, true, &items, &names, &count);
     show_bank_location_list_dialogue_async("Load Patch",
                                            "Choose the patch to load into the current edit buffer. "
                                            "You'll be shown its name again before anything is replaced.",
                                            "Next...", items, count, on_load_bank_location_chosen);
     free(items);
-    free(labels);
+    free(names);
 }
 
 - (void)loadPerfLocation:(id)sender {
     tBankLocationListItem * items = NULL;
 
-    char(*labels)[48]  = NULL;
+    char(*names)[CLAVIA_NAME_SIZE + 1] = NULL;
     uint32_t                count = 0;
 
     if (gCommsState != eCommsOnLine) {
         show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before loading a performance.");
         return;
     }
-    sPendingLoadIsPerf = true;
-    build_bank_location_items(true, true, &items, &labels, &count);
+    sPendingLoadIsPerf                 = true;
+    build_bank_location_items(true, true, &items, &names, &count);
     show_bank_location_list_dialogue_async("Load Performance",
                                            "Choose the performance to load into the current edit buffer. "
                                            "You'll be shown its name again before anything is replaced.",
                                            "Next...", items, count, on_load_bank_location_chosen);
     free(items);
-    free(labels);
+    free(names);
 }
 
 - (void)zoomIn:(id)sender {
