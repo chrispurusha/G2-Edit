@@ -134,9 +134,7 @@ void init_patch(uint32_t slot) {  // Todo - think where this should really go
     // render_morph_groups() reads it via get_module(), which returns NULL unless active is set, so
     // without this the morph knobs would silently render nothing for a freshly-initialised patch —
     // reactivate it here with its key set, same as parse_module_list() does when a real patch
-    // arrives from the device. Zeroed param values are an acceptable default (8 unnamed knobs, all
-    // at 0, no morph depth assigned) since no capture confirms what a factory Init Patch defaults
-    // its morph assignments to.
+    // arrives from the device.
     {
         tModule * morphModule = get_module_slot(slot, (uint32_t)locationMorph, PATCH_MORPH);
 
@@ -144,10 +142,21 @@ void init_patch(uint32_t slot) {  // Todo - think where this should really go
         morphModule->key    = (tModuleKey){
             slot, (uint32_t)locationMorph, PATCH_MORPH
         };
+
+        // Each morph group's "mode" param (index i+NUM_MORPHS) is 0 for plain manual-knob mode,
+        // nonzero for assigned-to-a-fixed-source mode (see render_morph_groups()'s isKnob check) —
+        // default every group to its fixed source (Wheel, Vel, Keyb, ... per morphStrMap[i]) rather
+        // than leaving all 8 as unnamed knobs, across every variation so it holds regardless of
+        // which one is active.
+        for (uint32_t variation = 0; variation < NUM_VARIATIONS_USB; variation++) {
+            for (uint32_t morph = 0; morph < NUM_MORPHS; morph++) {
+                morphModule->param[variation][morph + NUM_MORPHS].value = 1;
+            }
+        }
     }
-    gNote2Size[slot]                  = 0;
-    gControllerCount[slot]            = 0; // Seems to default to 2, so might need to set up defaults
-    gPatchNotesSize[slot]             = 0;
+    gNote2Size[slot]       = 0;
+    gControllerCount[slot] = 0;            // Seems to default to 2, so might need to set up defaults
+    gPatchNotesSize[slot]  = 0;
     memset(&(gKnobArray[slot]), 0, sizeof(gKnobArray[0]));
     memset(gNote2[slot], 0, sizeof(gNote2[0]));
     memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
