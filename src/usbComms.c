@@ -93,6 +93,15 @@ static uint8_t                sListNamesNextBank                    = 0;
 static uint8_t                sListNamesNextLoc                     = 0;
 static bool                   sListNamesFinished                    = false;
 
+// Set around send_store_patch()'s send_and_receive() call — Store's ack reuses this exact
+// one-entry response format (see parse_list_names_response()'s comment), but it is not a List
+// Names update: store_patch_to_bank() already updates gPatchNameTable/gPerfNameTable directly from
+// the edit buffer, and any trailing bytes in the ack past that one entry are not a real bank
+// continuation, so parsing them as one would fabricate phantom entries. This suppresses just the
+// name-table writes for that call, harmlessly leaving the rest of parse_list_names_response's
+// bookkeeping (sListNamesMode/NextBank/NextLoc) alone since nothing consults it for a Store ack.
+static bool                   sSuppressNameTableUpdate              = false;
+
 // Protected by usbStaticMutex
 static pthread_t              usbThread                             = NULL;
 static libusb_context *       libUsbCtx                             = NULL;
@@ -716,14 +725,16 @@ static void parse_list_names_response(uint8_t * buff, uint32_t * bitPos, int len
             read_clavia_string(buff, bitPos, name, sizeof(name));
             category = (uint8_t)read_bit_stream(buff, bitPos, 8);
 
-            if ((mode == BANK_UPLOAD_DOMAIN_PATCH) && (bank < NUM_PATCH_BANKS)) {
-                gPatchNameTable[bank][location].populated = true;
-                strncpy(gPatchNameTable[bank][location].name, name, CLAVIA_NAME_SIZE);
-                gPatchNameTable[bank][location].category  = category;
-            } else if ((mode == BANK_UPLOAD_DOMAIN_PERFORMANCE) && (bank < NUM_PERF_BANKS)) {
-                gPerfNameTable[bank][location].populated = true;
-                strncpy(gPerfNameTable[bank][location].name, name, CLAVIA_NAME_SIZE);
-                gPerfNameTable[bank][location].category  = category;
+            if (!sSuppressNameTableUpdate) {
+                if ((mode == BANK_UPLOAD_DOMAIN_PATCH) && (bank < NUM_PATCH_BANKS)) {
+                    gPatchNameTable[bank][location].populated = true;
+                    strncpy(gPatchNameTable[bank][location].name, name, CLAVIA_NAME_SIZE);
+                    gPatchNameTable[bank][location].category  = category;
+                } else if ((mode == BANK_UPLOAD_DOMAIN_PERFORMANCE) && (bank < NUM_PERF_BANKS)) {
+                    gPerfNameTable[bank][location].populated = true;
+                    strncpy(gPerfNameTable[bank][location].name, name, CLAVIA_NAME_SIZE);
+                    gPerfNameTable[bank][location].category  = category;
+                }
             }
             location++;
         }
@@ -1544,19 +1555,24 @@ static int send_bank_download_push(uint8_t domain, uint32_t bank, uint32_t locat
 // (SaveEditBufferToBank7-1.pcapng): domain, bank, location, no patch content — the device already
 // has the patch in its edit buffer, so there's nothing to transmit. Which edit-buffer slot is
 // implicit (the device's own current focus, tracked separately via SUB_COMMAND_SELECT_SLOT) —
-// there's no slot field in this message. Acked with SUB_RESPONSE_STORE_PATCH (0x13), already routed
-// in parse_command_response to parse_store_patch (currently just a debug logging stub — the byte
-// layout after the header wasn't pinned down from a single sample, but the store completes on the
-// device from this request alone, so that's not a blocker).
+// there's no slot field in this message. Acked with SUB_RESPONSE_STORE_PATCH (0x13), routed in
+// parse_command_response to parse_list_names_response (same value as SUB_RESPONSE_LIST_NAMES,
+// see that function's comment) — sSuppressNameTableUpdate is set around the call below so that
+// ack doesn't get misread as a List Names update (store_patch_to_bank() updates the name-table
+// cache directly instead, from the edit buffer it just told the device to store).
 static int send_store_patch(uint8_t domain, uint32_t bank, uint32_t location) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+    int      result;
 
     usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_STORE);
     write_bit_stream(buff, &bitPos, 8, domain);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)bank);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)location);
-    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_STORE_PATCH, USB_RECV_DATA_MS);
+    sSuppressNameTableUpdate = true;
+    result                   = send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_STORE_PATCH, USB_RECV_DATA_MS);
+    sSuppressNameTableUpdate = false;
+    return result;
 }
 
 // Loads bank/location into the active edit-buffer slot (SUB_COMMAND_RETRIEVE, 0x0a) —
