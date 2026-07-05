@@ -50,6 +50,7 @@ double get_zoom_factor(void);
 - (void)backupBank:(id)sender;
 - (void)backupPerfBank:(id)sender;
 - (void)backupSynthSettings:(id)sender;
+- (void)restoreSynthSettings:(id)sender;
 - (void)backupEverything:(id)sender;
 - (void)restoreBank:(id)sender;
 - (void)restorePerfBank:(id)sender;
@@ -99,6 +100,20 @@ static void on_synth_settings_backup_folder_chosen(const char * path) {
 
     msg.cmd = eMsgCmdBackupSynthSettings;
     strncpy(msg.settingsBackupData.destFolder, path, sizeof(msg.settingsBackupData.destFolder) - 1);
+    msg_send(&gCommandQueue, &msg);
+}
+
+// Kicks off the find+parse of the latest backup file in the chosen folder — the actual confirm
+// dialog and eMsgCmdApplySynthSettingsRestore send happen later in graphics.cpp's
+// check_action_flags(), once the (fast, local-disk-only) peek result lands in gSynthRestorePeek*.
+static void on_synth_settings_restore_folder_chosen(const char * path) {
+    if (path == NULL) {
+        return;
+    }
+    tMessageContent msg = {0};
+
+    msg.cmd = eMsgCmdPeekSynthSettingsRestore;
+    strncpy(msg.synthSettingsRestoreData.srcFolder, path, sizeof(msg.synthSettingsRestoreData.srcFolder) - 1);
     msg_send(&gCommandQueue, &msg);
 }
 
@@ -304,6 +319,14 @@ static void on_load_bank_location_chosen(bool confirmed, uint32_t bank1Indexed, 
     open_folder_dialogue_async(on_synth_settings_backup_folder_chosen, "Choose a Folder for Synth Settings Backup");
 }
 
+- (void)restoreSynthSettings:(id)sender {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring synth settings.");
+        return;
+    }
+    open_folder_dialogue_async(on_synth_settings_restore_folder_chosen, "Choose the Backup Folder to Restore Synth Settings From");
+}
+
 - (void)backupEverything:(id)sender {
     if (gCommsState != eCommsOnLine) {
         show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up everything.");
@@ -446,7 +469,8 @@ static void on_load_bank_location_chosen(bool confirmed, uint32_t bank1Indexed, 
     } else if (action == @selector(setDialModeHorizontal:)) {
         [item setState:(gDialMode == eDialModeHorizontal) ? NSControlStateValueOn : NSControlStateValueOff];
     } else if (  action == @selector(backupBank:) || action == @selector(backupPerfBank:)
-              || action == @selector(backupSynthSettings:) || action == @selector(backupEverything:)
+              || action == @selector(backupSynthSettings:) || action == @selector(restoreSynthSettings:)
+              || action == @selector(backupEverything:)
               || action == @selector(restoreBank:) || action == @selector(restorePerfBank:)
               || action == @selector(deletePatchLocation:) || action == @selector(deletePerfLocation:)
               || action == @selector(loadPatchLocation:) || action == @selector(loadPerfLocation:)) {
@@ -572,7 +596,7 @@ void setup_main_menu(void) {
     [backupPerfSubMI setSubmenu:backupPerfSubMenu];
     [bankMenu addItem:backupPerfSubMI];
     [bankMenu addItem:[NSMenuItem separatorItem]];
-    [bankMenu addItem:make_item(@"Synth Settings...", @selector(backupSynthSettings:), @"", target)];
+    [bankMenu addItem:make_item(@"Backup Synth Settings...", @selector(backupSynthSettings:), @"", target)];
     [bankMenu addItem:[NSMenuItem separatorItem]];
     [bankMenu addItem:make_item(@"Everything...", @selector(backupEverything:), @"", target)];
     [bankMI setSubmenu:bankMenu];
@@ -609,12 +633,14 @@ void setup_main_menu(void) {
     [restoreMenu addItem:restoreSubMI];
     [restorePerfSubMI setSubmenu:restorePerfSubMenu];
     [restoreMenu addItem:restorePerfSubMI];
+    [restoreMenu addItem:[NSMenuItem separatorItem]];
+    [restoreMenu addItem:make_item(@"Synth Settings...", @selector(restoreSynthSettings:), @"", target)];
     [restoreMI setSubmenu:restoreMenu];
     [menuBar insertItem:restoreMI atIndex:4];
 
     // Controls menu
-    NSMenuItem * ctrlMI             = [[NSMenuItem alloc] init];
-    NSMenu *     ctrlMenu           = [[NSMenu alloc] initWithTitle:@"Controls"];
+    NSMenuItem * ctrlMI   = [[NSMenuItem alloc] init];
+    NSMenu *     ctrlMenu = [[NSMenu alloc] initWithTitle:@"Controls"];
 
     [ctrlMenu addItem:make_item(@"Rotary", @selector(setDialModeRotary:), @"", target)];
     [ctrlMenu addItem:make_item(@"Vertical", @selector(setDialModeVertical:), @"", target)];
@@ -623,8 +649,8 @@ void setup_main_menu(void) {
     [menuBar insertItem:ctrlMI atIndex:5];
 
     // View menu
-    NSMenuItem * viewMI             = [[NSMenuItem alloc] init];
-    NSMenu *     viewMenu           = [[NSMenu alloc] initWithTitle:@"View"];
+    NSMenuItem * viewMI   = [[NSMenuItem alloc] init];
+    NSMenu *     viewMenu = [[NSMenu alloc] initWithTitle:@"View"];
 
     [viewMenu addItem:make_item(@"Zoom In [⌘=]", @selector(zoomIn:), @"", target)];
     [viewMenu addItem:make_item(@"Zoom Out [⌘-]", @selector(zoomOut:), @"", target)];

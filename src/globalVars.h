@@ -124,39 +124,46 @@ extern char                    gBankBackupResultMessage[256];
 extern _Atomic bool            gSynthSettingsBackupComplete; // set once finished, so the UI can show a completion alert
 extern char                    gSynthSettingsBackupResultMessage[256];
 extern _Atomic bool            gBankRestoreActive;
-extern _Atomic bool            gBankRestoreIsPerf;                    // true = restoring a Performance Bank, false = Patch Bank
-extern _Atomic uint32_t        gBankRestoreBank;                      // 0-indexed bank currently being restored (destination)
-extern _Atomic uint32_t        gBankRestoreLocation;                  // 0-indexed location currently being written/cleared
-extern _Atomic uint32_t        gBankRestoreWritten;                   // count of patches actually written so far
-extern _Atomic bool            gBankRestoreComplete;                  // set once finished, so the UI can show a completion alert
+extern _Atomic bool            gBankRestoreIsPerf;                          // true = restoring a Performance Bank, false = Patch Bank
+extern _Atomic uint32_t        gBankRestoreBank;                            // 0-indexed bank currently being restored (destination)
+extern _Atomic uint32_t        gBankRestoreLocation;                        // 0-indexed location currently being written/cleared
+extern _Atomic uint32_t        gBankRestoreWritten;                         // count of patches actually written so far
+extern _Atomic bool            gBankRestoreComplete;                        // set once finished, so the UI can show a completion alert
 extern char                    gBankRestoreResultMessage[256];
-extern _Atomic bool            gStorePeekComplete;                    // set once a pre-Store location lookup returns, polled by check_action_flags
-extern _Atomic bool            gStorePeekFailed;                      // true if the lookup round-trip itself failed (e.g. offline)
-extern _Atomic bool            gStorePeekPopulated;                   // true if the peeked location currently has a patch
-extern _Atomic bool            gStorePeekIsPerf;                      // true = storing/peeking a Performance, false = Patch (mirrors edit buffer's mode)
-extern _Atomic uint32_t        gStorePeekBank;                        // 0-indexed bank that was peeked (== the Store target)
-extern _Atomic uint32_t        gStorePeekLocation;                    // 0-indexed location that was peeked (== the Store target)
-extern char                    gStorePeekName[CLAVIA_NAME_SIZE + 1];  // name of what's currently there, if populated
-extern _Atomic bool            gStorePatchComplete;                   // set once Store itself finishes, so the UI can show a completion alert
+extern _Atomic bool            gStorePeekComplete;                          // set once a pre-Store location lookup returns, polled by check_action_flags
+extern _Atomic bool            gStorePeekFailed;                            // true if the lookup round-trip itself failed (e.g. offline)
+extern _Atomic bool            gStorePeekPopulated;                         // true if the peeked location currently has a patch
+extern _Atomic bool            gStorePeekIsPerf;                            // true = storing/peeking a Performance, false = Patch (mirrors edit buffer's mode)
+extern _Atomic uint32_t        gStorePeekBank;                              // 0-indexed bank that was peeked (== the Store target)
+extern _Atomic uint32_t        gStorePeekLocation;                          // 0-indexed location that was peeked (== the Store target)
+extern char                    gStorePeekName[CLAVIA_NAME_SIZE + 1];        // name of what's currently there, if populated
+extern _Atomic bool            gStorePatchComplete;                         // set once Store itself finishes, so the UI can show a completion alert
 extern char                    gStorePatchResultMessage[256];
-extern _Atomic bool            gDeletePeekComplete;                   // set once a pre-Delete location lookup returns, polled by check_action_flags
-extern _Atomic bool            gDeletePeekFailed;                     // true if the lookup round-trip itself failed (e.g. offline)
-extern _Atomic bool            gDeletePeekPopulated;                  // true if the peeked location currently has a patch/performance
-extern _Atomic bool            gDeletePeekIsPerf;                     // true = Performance Bank, false = Patch Bank
-extern _Atomic uint32_t        gDeletePeekBank;                       // 0-indexed bank that was peeked (== the Delete target)
-extern _Atomic uint32_t        gDeletePeekLocation;                   // 0-indexed location that was peeked (== the Delete target)
-extern char                    gDeletePeekName[CLAVIA_NAME_SIZE + 1]; // name of what's currently there, if populated
-extern _Atomic bool            gDeleteComplete;                       // set once Delete itself finishes, so the UI can show a completion alert
+extern _Atomic bool            gDeletePeekComplete;                         // set once a pre-Delete location lookup returns, polled by check_action_flags
+extern _Atomic bool            gDeletePeekFailed;                           // true if the lookup round-trip itself failed (e.g. offline)
+extern _Atomic bool            gDeletePeekPopulated;                        // true if the peeked location currently has a patch/performance
+extern _Atomic bool            gDeletePeekIsPerf;                           // true = Performance Bank, false = Patch Bank
+extern _Atomic uint32_t        gDeletePeekBank;                             // 0-indexed bank that was peeked (== the Delete target)
+extern _Atomic uint32_t        gDeletePeekLocation;                         // 0-indexed location that was peeked (== the Delete target)
+extern char                    gDeletePeekName[CLAVIA_NAME_SIZE + 1];       // name of what's currently there, if populated
+extern _Atomic bool            gDeleteComplete;                             // set once Delete itself finishes, so the UI can show a completion alert
 extern char                    gDeleteResultMessage[256];
-extern _Atomic bool            gLoadPeekComplete;                     // set once a pre-Load location lookup returns, polled by check_action_flags
-extern _Atomic bool            gLoadPeekFailed;                       // true if the lookup round-trip itself failed (e.g. offline)
-extern _Atomic bool            gLoadPeekPopulated;                    // true if the peeked location currently has a patch/performance to load
-extern _Atomic bool            gLoadPeekIsPerf;                       // true = Performance Bank, false = Patch Bank
-extern _Atomic uint32_t        gLoadPeekBank;                         // 0-indexed bank that was peeked (== the Load source)
-extern _Atomic uint32_t        gLoadPeekLocation;                     // 0-indexed location that was peeked (== the Load source)
-extern char                    gLoadPeekName[CLAVIA_NAME_SIZE + 1];   // name of what's currently there, if populated
-extern _Atomic bool            gLoadComplete;                         // set once Load itself finishes, so the UI can show a completion alert
+extern _Atomic bool            gLoadPeekComplete;                           // set once a pre-Load location lookup returns, polled by check_action_flags
+extern _Atomic bool            gLoadPeekFailed;                             // true if the lookup round-trip itself failed (e.g. offline)
+extern _Atomic bool            gLoadPeekPopulated;                          // true if the peeked location currently has a patch/performance to load
+extern _Atomic bool            gLoadPeekIsPerf;                             // true = Performance Bank, false = Patch Bank
+extern _Atomic uint32_t        gLoadPeekBank;                               // 0-indexed bank that was peeked (== the Load source)
+extern _Atomic uint32_t        gLoadPeekLocation;                           // 0-indexed location that was peeked (== the Load source)
+extern char                    gLoadPeekName[CLAVIA_NAME_SIZE + 1];         // name of what's currently there, if populated
+extern _Atomic bool            gLoadComplete;                               // set once Load itself finishes, so the UI can show a completion alert
 extern char                    gLoadResultMessage[256];
+extern _Atomic bool            gSynthRestorePeekComplete;                   // set once find+parse of the latest backup file finishes, polled by check_action_flags
+extern _Atomic bool            gSynthRestorePeekFailed;                     // true if no backup file was found, or it couldn't be parsed
+extern char                    gSynthRestorePeekErrorMessage[256];          // reason for the failure above, if any
+extern char                    gSynthRestorePeekFileName[64];               // basename of the backup file that was found
+extern char                    gSynthRestorePeekName[CLAVIA_NAME_SIZE + 1]; // the backup's own "Name" field, for display
+extern _Atomic bool            gSynthRestoreComplete;                       // set once the restore itself finishes, so the UI can show a completion alert
+extern char                    gSynthRestoreResultMessage[256];
 extern tRectangle              gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS];
 extern tDialMode               gDialMode;
 extern pthread_mutex_t         gStringCopyMutex;

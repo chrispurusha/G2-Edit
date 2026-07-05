@@ -31,6 +31,8 @@ extern "C" {
 #include <math.h>
 #include <time.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <sys/stat.h>
 
 #include "defs.h"
 #include "synthlibDefs.h"
@@ -76,6 +78,12 @@ static bool                   sBankUploadGotData                    = false;
 // needed, same reasoning as the upload scratch state above).
 static uint8_t                sBankRestoreContent[PATCH_FILE_SIZE];
 static uint32_t               sBankRestoreContentLen                = 0;
+
+// Parsed-but-not-yet-applied Synth Settings Restore staging area — peek_synth_settings_restore()
+// fills this in immediately before setting gSynthRestorePeekComplete; apply_synth_settings_restore()
+// copies it into the live gSynthSettings once the user has confirmed (single-threaded round trip
+// through the USB thread, same reasoning as the scratch state above).
+static tSynthSettings         sSynthSettingsRestoreStaged           = {0};
 
 // Protected by usbStaticMutex
 static pthread_t              usbThread                             = NULL;
@@ -2122,6 +2130,211 @@ static int backup_synth_settings(const char * destFolder, bool silent) {
     return EXIT_SUCCESS;
 }
 
+// Reverse of midi_chan_text() above: "Off" or a 1-16 channel number back to the 0x00-0x0F/0x10
+// encoding. Only ever fed this codebase's own backup_synth_settings() output, so no need for
+// case-insensitive matching or malformed-input recovery beyond clamping the range.
+static uint8_t parse_midi_chan_value(const char * value) {
+    int chan = 0;
+
+    if (strcmp(value, "Off") == 0) {
+        return 0x10;
+    }
+    chan = atoi(value);
+
+    if (chan < 1) {
+        chan = 1;
+    } else if (chan > 16) {
+        chan = 16;
+    }
+    return (uint8_t)(chan - 1);
+}
+
+// Reverse of backup_synth_settings()'s "All"/1-16 Sysex ID encoding (0-15 = that ID, 16 = "All").
+static uint8_t parse_sysex_value(const char * value) {
+    int sysexId = 0;
+
+    if (strcmp(value, "All") == 0) {
+        return 16;
+    }
+    sysexId = atoi(value);
+
+    if (sysexId < 1) {
+        sysexId = 1;
+    } else if (sysexId > 16) {
+        sysexId = 16;
+    }
+    return (uint8_t)(sysexId - 1);
+}
+
+// Scans folder for "synth-*.txt" backup files (see build_synth_settings_backup_filename() above)
+// and returns the most recently modified one by filesystem mtime in outFilePath — simpler and just
+// as reliable as parsing the "2.34pm-25Jun26" timestamp back out of the filename, since mtime
+// already reflects when the file was written.
+static bool find_latest_synth_settings_backup(const char * folder, char * outFilePath, size_t outFilePathSize) {
+    DIR *           dir                 = opendir(folder);
+    struct dirent * entry               = NULL;
+    time_t          latestMtime         = 0;
+    bool            found               = false;
+    char            candidatePath[1280] = {0};
+    struct stat     st;
+
+    if (dir == NULL) {
+        LOG_ERROR("find_latest_synth_settings_backup: could not open folder %s\n", folder);
+        return false;
+    }
+
+    while ((entry = readdir(dir)) != NULL) {
+        size_t nameLen = strlen(entry->d_name);
+
+        if (  (strncmp(entry->d_name, "synth-", 6) != 0)
+           || (nameLen < 10)
+           || (strcmp(entry->d_name + nameLen - 4, ".txt") != 0)) {
+            continue;
+        }
+        snprintf(candidatePath, sizeof(candidatePath), "%s/%s", folder, entry->d_name);
+
+        if ((stat(candidatePath, &st) == 0) && (!found || (st.st_mtime > latestMtime))) {
+            latestMtime                      = st.st_mtime;
+            strncpy(outFilePath, candidatePath, outFilePathSize - 1);
+            outFilePath[outFilePathSize - 1] = '\0';
+            found                            = true;
+        }
+    }
+    closedir(dir);
+    return found;
+}
+
+// Reverse of backup_synth_settings()'s fprintf lines above — reads the house key:value text format
+// back into outSettings. Rejects anything that doesn't start with the expected "Version=" header
+// (not a recognizable Synth Settings Backup); unrecognized keys are otherwise ignored rather than
+// failing, so a file from a slightly different version of this house format still restores what it
+// can.
+static bool parse_synth_settings_backup_file(const char * filePath, tSynthSettings * outSettings) {
+    FILE * file      = fopen(filePath, "rb");
+    char   line[512] = {0};
+    char * colon     = NULL;
+    char * value     = NULL;
+
+    if (file == NULL) {
+        LOG_ERROR("parse_synth_settings_backup_file: could not open %s\n", filePath);
+        return false;
+    }
+    memset(outSettings, 0, sizeof(*outSettings));
+
+    if (  (fgets(line, sizeof(line), file) == NULL)
+       || (strncmp(line, "Version=G2-Edit Synth Settings Backup", strlen("Version=G2-Edit Synth Settings Backup")) != 0)) {
+        LOG_ERROR("parse_synth_settings_backup_file: %s is not a recognized Synth Settings Backup\n", filePath);
+        fclose(file);
+        return false;
+    }
+
+    while (fgets(line, sizeof(line), file) != NULL) {
+        line[strcspn(line, "\r\n")] = '\0';
+        colon                       = strchr(line, ':');
+
+        if (colon == NULL) {
+            continue;
+        }
+        *colon                      = '\0';
+        value                       = colon + 1;
+
+        while (*value == ' ') {
+            value++;
+        }
+
+        if (strcmp(line, "Name") == 0) {
+            strncpy(outSettings->name, value, CLAVIA_NAME_SIZE);
+        } else if (strcmp(line, "MIDI Channel A") == 0) {
+            outSettings->midiChanSlot[0] = parse_midi_chan_value(value);
+        } else if (strcmp(line, "MIDI Channel B") == 0) {
+            outSettings->midiChanSlot[1] = parse_midi_chan_value(value);
+        } else if (strcmp(line, "MIDI Channel C") == 0) {
+            outSettings->midiChanSlot[2] = parse_midi_chan_value(value);
+        } else if (strcmp(line, "MIDI Channel D") == 0) {
+            outSettings->midiChanSlot[3] = parse_midi_chan_value(value);
+        } else if (strcmp(line, "Global MIDI Channel") == 0) {
+            outSettings->globalChan = parse_midi_chan_value(value);
+        } else if (strcmp(line, "Sysex ID") == 0) {
+            outSettings->sysexId = parse_sysex_value(value);
+        } else if (strcmp(line, "Local On") == 0) {
+            outSettings->localOn = (uint8_t)atoi(value);
+        } else if (strcmp(line, "Memory Protect") == 0) {
+            outSettings->memoryProtect = (uint8_t)atoi(value);
+        } else if (strcmp(line, "Program Change Receive") == 0) {
+            outSettings->progChangeRcv = (uint8_t)atoi(value);
+        } else if (strcmp(line, "Program Change Send") == 0) {
+            outSettings->progChangeSnd = (uint8_t)atoi(value);
+        } else if (strcmp(line, "Controllers Receive") == 0) {
+            outSettings->controllersRcv = (uint8_t)atoi(value);
+        } else if (strcmp(line, "Controllers Send") == 0) {
+            outSettings->controllersSnd = (uint8_t)atoi(value);
+        } else if (strcmp(line, "Send Clock") == 0) {
+            outSettings->sendClock = (uint8_t)atoi(value);
+        } else if (strcmp(line, "Receive Clock") == 0) {
+            outSettings->receiveClock = (uint8_t)atoi(value);
+        } else if (strcmp(line, "Tune Cents") == 0) {
+            outSettings->tuneCent = (int8_t)atoi(value);
+        } else if (strcmp(line, "Tune Semitones") == 0) {
+            outSettings->tuneSemi = (int8_t)atoi(value);
+        } else if (strcmp(line, "Global Octave Shift") == 0) {
+            outSettings->globalOctaveShift = (int8_t)atoi(value);
+        } else if (strcmp(line, "Global Shift Active") == 0) {
+            outSettings->globalShiftActive = (uint8_t)atoi(value);
+        } else if (strcmp(line, "Pedal Polarity") == 0) {
+            outSettings->pedalPolarity = (strcmp(value, "Closed") == 0) ? 1 : 0;
+        } else if (strcmp(line, "Pedal Gain") == 0) {
+            outSettings->pedalGain = (uint8_t)lround((atof(value) - 1.0) * 64.0);
+        } else if (strcmp(line, "Patch Sort Mode") == 0) {
+            outSettings->patchSortMode = (uint8_t)atoi(value);
+        } else if (strcmp(line, "Perf Sort Mode") == 0) {
+            outSettings->perfSortMode = (uint8_t)atoi(value);
+        } else if (strcmp(line, "Current Perf Bank") == 0) {
+            outSettings->perfBank = (uint8_t)(atoi(value) - 1);
+        } else if (strcmp(line, "Current Perf Location") == 0) {
+            outSettings->perfLocation = (uint8_t)(atoi(value) - 1);
+        }
+    }
+    fclose(file);
+    return true;
+}
+
+// Finds and parses the latest Synth Settings Backup in folder (pure local file I/O, no device
+// round trip — still runs on the USB thread rather than directly from the UI thread, for
+// consistency with every other multi-step device action in this file). Leaves the parsed result in
+// sSynthSettingsRestoreStaged for apply_synth_settings_restore() below once the user confirms.
+// Result lands in gSynthRestorePeek* globals, polled by check_action_flags() in graphics.cpp.
+static int peek_synth_settings_restore(const char * folder) {
+    char         filePath[1280] = {0};
+    const char * baseName       = NULL;
+
+    if (!find_latest_synth_settings_backup(folder, filePath, sizeof(filePath))) {
+        snprintf(gSynthRestorePeekErrorMessage, sizeof(gSynthRestorePeekErrorMessage),
+                 "No Synth Settings Backup file found in %s", folder);
+        gSynthRestorePeekFailed   = true;
+        gSynthRestorePeekComplete = true;
+        call_wake_glfw();
+        return EXIT_FAILURE;
+    }
+
+    if (!parse_synth_settings_backup_file(filePath, &sSynthSettingsRestoreStaged)) {
+        snprintf(gSynthRestorePeekErrorMessage, sizeof(gSynthRestorePeekErrorMessage),
+                 "Could not parse %s — it may not be a valid Synth Settings Backup", filePath);
+        gSynthRestorePeekFailed   = true;
+        gSynthRestorePeekComplete = true;
+        call_wake_glfw();
+        return EXIT_FAILURE;
+    }
+    baseName                  = strrchr(filePath, '/');
+    baseName                  = (baseName != NULL) ? baseName + 1 : filePath;
+
+    gSynthRestorePeekFailed   = false;
+    strncpy(gSynthRestorePeekFileName, baseName, sizeof(gSynthRestorePeekFileName) - 1);
+    strncpy(gSynthRestorePeekName, sSynthSettingsRestoreStaged.name, sizeof(gSynthRestorePeekName) - 1);
+    gSynthRestorePeekComplete = true;
+    call_wake_glfw();
+    return EXIT_SUCCESS;
+}
+
 // Runs a full Patch Bank + Performance Bank + Synth Settings backup in one sweep, using the
 // per-item functions above in "silent" mode so only a single combined summary alert fires at the
 // end instead of one popup per bank. gBankBackupActive/IsPerf/Bank/Location/Written stay driven
@@ -2730,6 +2943,33 @@ static int send_synth_settings(void) {
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
+// Applies whatever peek_synth_settings_restore() staged, once the user has confirmed. Copies the
+// staged struct into the live gSynthSettings and pushes it to the device via send_synth_settings()
+// just above — the same wire path the Settings panel's own "apply" already uses, so no new wire
+// protocol was needed for this feature at all.
+static int apply_synth_settings_restore(void) {
+    int result = EXIT_FAILURE;
+
+    if (gCommsState != eCommsOnLine) {
+        LOG_ERROR("apply_synth_settings_restore: G2 is not connected\n");
+        snprintf(gSynthRestoreResultMessage, sizeof(gSynthRestoreResultMessage), "Restore failed: the G2 is not connected");
+        gSynthRestoreComplete = true;
+        call_wake_glfw();
+        return EXIT_FAILURE;
+    }
+    gSynthSettings        = sSynthSettingsRestoreStaged;
+    result                = send_synth_settings();
+
+    if (result == EXIT_SUCCESS) {
+        snprintf(gSynthRestoreResultMessage, sizeof(gSynthRestoreResultMessage), "Synth Settings restored from %s", gSynthRestorePeekFileName);
+    } else {
+        snprintf(gSynthRestoreResultMessage, sizeof(gSynthRestoreResultMessage), "Synth Settings restore failed");
+    }
+    gSynthRestoreComplete = true;
+    call_wake_glfw();
+    return result;
+}
+
 static int send_set_patch_descr(uint32_t slot) { // Note - currently using values straight from patchDescr in sub-function
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
@@ -3296,6 +3536,16 @@ static int send_write_data(tMessageContent * messageContent) {
             send_start();
             break;
         }
+
+        case eMsgCmdPeekSynthSettingsRestore:
+            retVal = peek_synth_settings_restore(messageContent->synthSettingsRestoreData.srcFolder);
+            break;
+
+        case eMsgCmdApplySynthSettingsRestore:
+            send_stop();
+            retVal = apply_synth_settings_restore();
+            send_start();
+            break;
 
         default:
             LOG_DEBUG("Unknown command %d\n", messageContent->cmd);

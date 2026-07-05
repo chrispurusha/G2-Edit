@@ -77,7 +77,9 @@ typedef enum {
     eMsgCmdPeekDeleteTarget,
     eMsgCmdDeleteBankLocation,
     eMsgCmdPeekLoadTarget,
-    eMsgCmdLoadPatch//,
+    eMsgCmdLoadPatch,
+    eMsgCmdPeekSynthSettingsRestore,
+    eMsgCmdApplySynthSettingsRestore//,
     //eMsgCmdReloadAllPatchData
 } eMsgCmd;
 
@@ -222,6 +224,10 @@ typedef struct {
 } tSettingsBackupData;
 
 typedef struct {
+    char srcFolder[1024];
+} tSynthSettingsRestoreData;
+
+typedef struct {
     uint32_t sourceBank; // 0-indexed — which bank's manifest to read
     uint32_t destBank;   // 0-indexed — where the write actually goes (usually == sourceBank)
     bool     isPerf;     // true = Performance Bank, false = Patch Bank
@@ -238,31 +244,32 @@ typedef struct {
     uint32_t cmd;
     uint32_t slot;
     union {
-        tParamData              paramData;
-        tParamMorphData         paramMorphData;
-        tModeData               modeData;
-        tModuleData             moduleData;
-        tCableData              cableData;
-        tVariationData          variationData;
-        tSlotData               slotData;
-        tModuleLabelData        moduleLabelData;
-        tPatchName              patchName;
-        tModuleColourData       moduleColourData;
-        tKnobAssignData         knobAssignData;
-        tKnobDeassignData       knobDeassignData;
-        tGlobalKnobAssignData   globalKnobAssignData;
-        tGlobalKnobDeassignData globalKnobDeassignData;
-        tMidiCCAssignData       midiCCAssignData;
-        tMidiCCDeassignData     midiCCDeassignData;
-        tCopyVariationData      copyVariationData;
-        tMasterClockBPMData     masterClockBPMData;
-        tMasterClockRunData     masterClockRunData;
-        tParamLabelData         paramLabelData;
-        tCustomDataMsg          customDataMsg;
-        tBankBackupData         bankBackupData;
-        tSettingsBackupData     settingsBackupData;
-        tBankRestoreData        bankRestoreData;
-        tBankLocationPerfData   bankLocationPerfData;
+        tParamData                paramData;
+        tParamMorphData           paramMorphData;
+        tModeData                 modeData;
+        tModuleData               moduleData;
+        tCableData                cableData;
+        tVariationData            variationData;
+        tSlotData                 slotData;
+        tModuleLabelData          moduleLabelData;
+        tPatchName                patchName;
+        tModuleColourData         moduleColourData;
+        tKnobAssignData           knobAssignData;
+        tKnobDeassignData         knobDeassignData;
+        tGlobalKnobAssignData     globalKnobAssignData;
+        tGlobalKnobDeassignData   globalKnobDeassignData;
+        tMidiCCAssignData         midiCCAssignData;
+        tMidiCCDeassignData       midiCCDeassignData;
+        tCopyVariationData        copyVariationData;
+        tMasterClockBPMData       masterClockBPMData;
+        tMasterClockRunData       masterClockRunData;
+        tParamLabelData           paramLabelData;
+        tCustomDataMsg            customDataMsg;
+        tBankBackupData           bankBackupData;
+        tSettingsBackupData       settingsBackupData;
+        tSynthSettingsRestoreData synthSettingsRestoreData;
+        tBankRestoreData          bankRestoreData;
+        tBankLocationPerfData     bankLocationPerfData;
     };
 } tMessageContent;
 
