@@ -1789,18 +1789,22 @@ static int restore_bank(uint32_t sourceBank, uint32_t destBank, const char * src
     return aborted ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
-// Looks up what's currently at bank/location (Patch domain only — Store hasn't been captured for
-// Performance, and "edit buffer" isn't really a Performance concept the same way) so the UI can
-// warn before overwriting it. Reuses the already-confirmed Bank Upload wire path via
+// Looks up what's currently at bank/location (Patch or Performance domain, matching whichever the
+// edit buffer is currently in — gGlobalSettings.perfMode, read by the caller) so the UI can warn
+// before overwriting it. Reuses the already-confirmed Bank Upload wire path via
 // peek_bank_location() — no content is kept, just the name and populated flag. Result lands in
-// gStorePeek* globals, polled by check_action_flags() in graphics.cpp.
-static int peek_store_target(uint32_t bank, uint32_t location) {
-    char name[CLAVIA_NAME_SIZE + 1] = {0};
-    bool populated                  = false;
-    int  result                     = EXIT_FAILURE;
+// gStorePeek* globals, polled by check_action_flags() in graphics.cpp. Performance-domain Store
+// itself is assumed by the same domain-byte symmetry already relied on for Performance Bank
+// Restore/Delete — not independently captured.
+static int peek_store_target(uint32_t bank, uint32_t location, bool isPerf) {
+    char    name[CLAVIA_NAME_SIZE + 1] = {0};
+    bool    populated                  = false;
+    int     result                     = EXIT_FAILURE;
+    uint8_t domain                     = isPerf ? BANK_UPLOAD_DOMAIN_PERFORMANCE : BANK_UPLOAD_DOMAIN_PATCH;
 
     gStorePeekBank      = bank;
     gStorePeekLocation  = location;
+    gStorePeekIsPerf    = isPerf;
 
     if (gCommsState != eCommsOnLine) {
         LOG_ERROR("peek_store_target: G2 is not connected\n");
@@ -1809,7 +1813,7 @@ static int peek_store_target(uint32_t bank, uint32_t location) {
         call_wake_glfw();
         return EXIT_FAILURE;
     }
-    result              = peek_bank_location(BANK_UPLOAD_DOMAIN_PATCH, bank, location, name, sizeof(name), &populated);
+    result              = peek_bank_location(domain, bank, location, name, sizeof(name), &populated);
 
     gStorePeekFailed    = (result != EXIT_SUCCESS);
     gStorePeekPopulated = populated;
@@ -1819,11 +1823,14 @@ static int peek_store_target(uint32_t bank, uint32_t location) {
     return result;
 }
 
-// Commits the current edit-buffer patch to bank/location on the device via send_store_patch(),
-// once the user has confirmed past the overwrite warning peek_store_target() set up. Result lands
-// in gStorePatchComplete/gStorePatchResultMessage, polled by check_action_flags() in graphics.cpp.
-static int store_patch_to_bank(uint32_t bank, uint32_t location) {
-    int result = EXIT_FAILURE;
+// Commits the current edit-buffer patch/performance to bank/location on the device via
+// send_store_patch(), once the user has confirmed past the overwrite warning peek_store_target()
+// set up. Result lands in gStorePatchComplete/gStorePatchResultMessage, polled by
+// check_action_flags() in graphics.cpp.
+static int store_patch_to_bank(uint32_t bank, uint32_t location, bool isPerf) {
+    uint8_t      domain    = isPerf ? BANK_UPLOAD_DOMAIN_PERFORMANCE : BANK_UPLOAD_DOMAIN_PATCH;
+    const char * typeLabel = isPerf ? "Performance" : "Patch";
+    int          result    = EXIT_FAILURE;
 
     if (gCommsState != eCommsOnLine) {
         LOG_ERROR("store_patch_to_bank: G2 is not connected\n");
@@ -1832,12 +1839,12 @@ static int store_patch_to_bank(uint32_t bank, uint32_t location) {
         call_wake_glfw();
         return EXIT_FAILURE;
     }
-    result              = send_store_patch(BANK_UPLOAD_DOMAIN_PATCH, bank, location);
+    result              = send_store_patch(domain, bank, location);
 
     if (result == EXIT_SUCCESS) {
-        snprintf(gStorePatchResultMessage, sizeof(gStorePatchResultMessage), "Stored to Bank %u, Location %u", bank + 1, location + 1);
+        snprintf(gStorePatchResultMessage, sizeof(gStorePatchResultMessage), "Stored %s to Bank %u, Location %u", typeLabel, bank + 1, location + 1);
     } else {
-        snprintf(gStorePatchResultMessage, sizeof(gStorePatchResultMessage), "Store to Bank %u, Location %u failed", bank + 1, location + 1);
+        snprintf(gStorePatchResultMessage, sizeof(gStorePatchResultMessage), "Store of %s to Bank %u, Location %u failed", typeLabel, bank + 1, location + 1);
     }
     gStorePatchComplete = true;
     call_wake_glfw();
@@ -3156,7 +3163,8 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdPeekBankLocation:
         {
             send_stop();
-            retVal = peek_store_target(messageContent->bankLocationData.bank, messageContent->bankLocationData.location);
+            retVal = peek_store_target(messageContent->bankLocationPerfData.bank, messageContent->bankLocationPerfData.location,
+                                       messageContent->bankLocationPerfData.isPerf);
             send_start();
             break;
         }
@@ -3164,7 +3172,8 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdStorePatch:
         {
             send_stop();
-            retVal = store_patch_to_bank(messageContent->bankLocationData.bank, messageContent->bankLocationData.location);
+            retVal = store_patch_to_bank(messageContent->bankLocationPerfData.bank, messageContent->bankLocationPerfData.location,
+                                         messageContent->bankLocationPerfData.isPerf);
             send_start();
             break;
         }

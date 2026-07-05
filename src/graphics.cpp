@@ -995,9 +995,10 @@ static void on_store_confirmed(bool confirmed) {
     if (!confirmed) {
         return;
     }
-    msg.cmd                       = eMsgCmdStorePatch;
-    msg.bankLocationData.bank     = gStorePeekBank;
-    msg.bankLocationData.location = gStorePeekLocation;
+    msg.cmd                           = eMsgCmdStorePatch;
+    msg.bankLocationPerfData.bank     = gStorePeekBank;
+    msg.bankLocationPerfData.location = gStorePeekLocation;
+    msg.bankLocationPerfData.isPerf   = gStorePeekIsPerf;
     msg_send(&gCommandQueue, &msg);
 }
 
@@ -1078,19 +1079,21 @@ static void check_action_flags(void) {
         gStorePeekComplete = false;
         char title[64]    = {0};
         char message[320] = {0};
+        bool isPerf       = gStorePeekIsPerf;
 
-        snprintf(title, sizeof(title), "Store to Bank %u, Location %u", gStorePeekBank + 1, gStorePeekLocation + 1);
+        snprintf(title, sizeof(title), "Store %s to Bank %u, Location %u",
+                 isPerf ? "Performance" : "Patch", gStorePeekBank + 1, gStorePeekLocation + 1);
 
         if (gStorePeekFailed) {
             show_alert_async(title, "Could not check what's currently at this location — the G2 may have gone offline. Try again.");
         } else {
             if (gStorePeekPopulated) {
                 snprintf(message, sizeof(message),
-                         "This location currently contains \"%s\". Storing will overwrite it with the current edit buffer patch. "
-                         "This cannot be undone.", gStorePeekName);
+                         "This location currently contains \"%s\". Storing will overwrite it with the current edit buffer %s. "
+                         "This cannot be undone.", gStorePeekName, isPerf ? "performance" : "patch");
             } else {
                 snprintf(message, sizeof(message),
-                         "This location is currently empty. Store the current edit buffer patch there?");
+                         "This location is currently empty. Store the current edit buffer %s there?", isPerf ? "performance" : "patch");
             }
             show_confirm_dialogue_async(title, message, "Store...", on_store_confirmed);
         }

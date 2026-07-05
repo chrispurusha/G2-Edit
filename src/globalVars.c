@@ -124,6 +124,7 @@ char                    gBankRestoreResultMessage[256]                          
 _Atomic bool            gStorePeekComplete                                                           = false;
 _Atomic bool            gStorePeekFailed                                                             = false;
 _Atomic bool            gStorePeekPopulated                                                          = false;
+_Atomic bool            gStorePeekIsPerf                                                             = false;
 _Atomic uint32_t        gStorePeekBank                                                               = 0;
 _Atomic uint32_t        gStorePeekLocation                                                           = 0;
 char                    gStorePeekName[CLAVIA_NAME_SIZE + 1]                                         = {0};
