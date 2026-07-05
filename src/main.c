@@ -31,6 +31,7 @@ extern "C" {
 #include "misc.h"
 #include "globalVars.h"
 #include "moduleResourcesAccess.h"
+#include "mouseHandle.h"
 #include "main.h"
 
 static void signal_handler(int sigraised) {
@@ -71,6 +72,15 @@ int main(int argc, char ** argv) {
 
     init_database();
     init_module_resource_cache();
+
+    // Give every slot a default patch (including an activated, source-assigned morph module — see
+    // init_patch()) before the first frame renders, rather than leaving the database's zeroed/
+    // inactive startup state on screen until a G2 connects and sends real patch data. If a
+    // connection succeeds shortly after, send_init_sequence_pull()'s real data simply overwrites
+    // this placeholder per slot, same as loading over a manually-created New Patch would.
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        init_patch(slot);
+    }
 
     init_graphics();
 
