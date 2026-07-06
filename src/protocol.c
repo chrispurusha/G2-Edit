@@ -115,6 +115,42 @@ void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     }
 }
 
+// Extracts just the category byte from a raw .pch2/.prf2 body (parse_patch()/parse_perf()'s own
+// chunk stream: repeating [type:8][count:16][payload:count bytes], type SUB_RESPONSE_SEL_PARAM_PAGE
+// excepted). Used by restore_bank() (usbComms.c) to refresh gPatchNameTable/gPerfNameTable's
+// category for a freshly-pushed location — deliberately NOT parse_patch_descr() itself, which
+// writes into gPatchDescr[slot] and touches topbar highlight state keyed by a live edit-buffer
+// slot; a bank/location being restored isn't a slot, so re-using that function would corrupt
+// whatever real slot happened to share its index. Returns 0 (patchTypeStrMap's first entry) if no
+// SUB_RESPONSE_PATCH_DESCRIPTION chunk is found.
+uint8_t peek_patch_category(const uint8_t * content, uint32_t contentLen) {
+    uint32_t bitOffset = 0;
+
+    while (BIT_TO_BYTE(bitOffset) < contentLen) {
+        uint8_t type  = (uint8_t)read_bit_stream((uint8_t *)content, &bitOffset, 8);
+        int16_t count = 0;
+
+        if (type != SUB_RESPONSE_SEL_PARAM_PAGE) {
+            count = (int16_t)read_bit_stream((uint8_t *)content, &bitOffset, 16);
+
+            if ((count < 0) || (BIT_TO_BYTE(bitOffset) + (uint32_t)count > contentLen)) {
+                break;
+            }
+        }
+
+        if (type == SUB_RESPONSE_PATCH_DESCRIPTION) {
+            // category sits 100 bits into patch_descr's payload: unknown1(32) + unknown2(29) +
+            // voiceCount(5) + barPosition(14) + unknown3(3) + visible[0..6](7*1) + monoPoly(2) +
+            // activeVariation(8) — see parse_patch_descr above.
+            uint32_t categoryBitOffset = bitOffset + 100;
+
+            return (uint8_t)read_bit_stream((uint8_t *)content, &categoryBitOffset, 8);
+        }
+        bitOffset += SIGNED_BYTE_TO_BIT(count);
+    }
+    return 0;
+}
+
 void write_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * bitPos) {
     write_bit_stream(buff, bitPos, 8, SUB_RESPONSE_PATCH_DESCRIPTION);
     write_bit_stream(buff, bitPos, 16, 15); // Length of following in bytes

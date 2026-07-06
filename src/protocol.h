@@ -64,5 +64,6 @@ void send_custom_data_value(uint32_t slot, tModuleKey moduleKey);
 void update_module_up_rates(void);
 void write_bank_upload_file(const char * filepath, const char * typeLabel, const uint8_t * content, uint32_t contentLen);
 bool read_bank_upload_file(const char * filepath, uint8_t * outContent, uint32_t outContentSize, uint32_t * outContentLen);
+uint8_t peek_patch_category(const uint8_t * content, uint32_t contentLen);
 
 #endif // __PROTOCOL_H__
