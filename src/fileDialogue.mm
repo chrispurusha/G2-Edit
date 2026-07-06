@@ -131,19 +131,26 @@ void show_confirm_dialogue_async(const char * title, const char * message, const
     });
 }
 
-// Same as show_confirm_dialogue_async above, plus an accessory NSTextField for picking a target
-// bank number that may differ from whatever bank the title/message refer to (Bank Restore's
-// "restore this backup into a different bank" case). The field is clamped to
-// [1, maxBank1Indexed] via NSNumberFormatter and pre-filled with defaultTargetBank1Indexed.
+// Same as show_confirm_dialogue_async above, plus an accessory NSPopUpButton (labeled fieldLabel)
+// for picking a bank number — a dropdown rather than a typed number field, consistent with how
+// Load/Store/Delete let the user pick from a list instead of typing an index. Generic across every
+// "pick a bank number" case in Backup/Restore (which bank to back up, which bank's backup to
+// restore, and the possibly-different target bank to restore into), hence the caller-supplied
+// fieldLabel rather than a hardcoded one. Unlike show_bank_location_list_dialogue_async's table
+// (which deliberately starts unselected — see that function's comment), defaulting to a
+// pre-selected item here is correct: there's no name/identity per bank to force the user to confirm
+// by eye, just a number, and re-picking the same bank as last time is the common case.
 void show_bank_target_confirm_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle,
+                                             const char * fieldLabel,
                                              uint32_t defaultTargetBank1Indexed, uint32_t maxBank1Indexed,
                                              tBankTargetConfirmCallback callback) {
     NSString * titleString   = [NSString stringWithUTF8String:(title ? title : "")];
     NSString * messageString = [NSString stringWithUTF8String:(message ? message : "")];
     NSString * confirmString = [NSString stringWithUTF8String:(confirmButtonTitle ? confirmButtonTitle : "OK")];
+    NSString * labelString   = [NSString stringWithUTF8String:(fieldLabel ? fieldLabel : "Bank:")];
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        NSAlert * alert               = [[NSAlert alloc] init];
+        NSAlert * alert          = [[NSAlert alloc] init];
 
         [alert setAlertStyle:NSAlertStyleWarning];
         [alert setMessageText:titleString];
@@ -151,41 +158,38 @@ void show_bank_target_confirm_dialogue_async(const char * title, const char * me
         [alert addButtonWithTitle:@"Cancel"];
         [alert addButtonWithTitle:confirmString];
 
-        NSTextField * label           = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 26, 260, 18)];
-        [label setStringValue:@"Restore to Bank:"];
+        NSTextField * label      = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 26, 260, 18)];
+        [label setStringValue:labelString];
         [label setBezeled:NO];
         [label setDrawsBackground:NO];
         [label setEditable:NO];
         [label setSelectable:NO];
 
-        NSNumberFormatter * formatter = [[NSNumberFormatter alloc] init];
-        [formatter setAllowsFloats:NO];
-        [formatter setMinimum:@(1)];
-        [formatter setMaximum:@(maxBank1Indexed)];
+        NSPopUpButton * popup    = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(0, 2, 140, 22) pullsDown:NO];
 
-        NSTextField * field           = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 2, 80, 22)];
-        [field setFormatter:formatter];
-        [field setStringValue:[NSString stringWithFormat:@"%u", defaultTargetBank1Indexed]];
+        for (uint32_t bank1Indexed = 1; bank1Indexed <= maxBank1Indexed; bank1Indexed++) {
+            [popup addItemWithTitle:[NSString stringWithFormat:@"Bank %u", bank1Indexed]];
+        }
 
-        NSView * accessory            = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 260, 50)];
+        if ((defaultTargetBank1Indexed >= 1) && (defaultTargetBank1Indexed <= maxBank1Indexed)) {
+            [popup selectItemAtIndex:(NSInteger)(defaultTargetBank1Indexed - 1)];
+        }
+        NSView * accessory       = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 260, 50)];
         [accessory addSubview:label];
-        [accessory addSubview:field];
+        [accessory addSubview:popup];
         [alert setAccessoryView:accessory];
-        [[alert window] setInitialFirstResponder:field];
+        [[alert window] setInitialFirstResponder:popup];
 
-        NSModalResponse response      = [alert runModal];
-        bool confirmed                = (response == NSAlertSecondButtonReturn);
-        uint32_t target               = defaultTargetBank1Indexed;
+        NSModalResponse response = [alert runModal];
+        bool confirmed           = (response == NSAlertSecondButtonReturn);
+        uint32_t target          = defaultTargetBank1Indexed;
 
         if (confirmed) {
-            NSInteger value = [field integerValue];
+            NSInteger selected = [popup indexOfSelectedItem];
 
-            if (value < 1) {
-                value = 1;
-            } else if (value > (NSInteger)maxBank1Indexed) {
-                value = (NSInteger)maxBank1Indexed;
+            if (selected >= 0) {
+                target = (uint32_t)selected + 1;
             }
-            target          = (uint32_t)value;
         }
 
         if (callback) {
