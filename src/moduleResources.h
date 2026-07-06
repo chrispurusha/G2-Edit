@@ -736,8 +736,14 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeDrumSynth,  paramTypeADRTime,     {{ 28,  65}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          },                         // 58 BendDecay
     {moduleTypeDrumSynth,  paramTypeCommonDial,  {{ 46,  65}, { 7, 14}}, anchorTopLeft,     "Click",        128,   0, NULL,                                  NULL          },                         // 58 Click Amount
     {moduleTypeDrumSynth,  paramTypeCommonDial,  {{ 64,  65}, { 7, 14}}, anchorTopLeft,     "Noise",        128,   0, NULL,                                  NULL          },                         // 58 Noise Amount
-    {moduleTypeDrumSynth,  paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          },                         // 58 Bypass
-    //{moduleTypeDrumSynth,   paramTypeMenu, {{ 60, -35}, {7,  7}}, anchorBottomLeft,  NULL,        1,  0, drSynthPresetStrMap,   NULL          }, // 58 Preset *** Length must be updated  // TODO: Only 16 parameters on this one, decide which one is wrong
+    // No Bypass row: DrumSynth is a sound source (Trig/Pitch/Vel in, audio out
+    // only per the manual's own module reference), not an audio processor —
+    // unlike filters/effects, there's no incoming signal to bypass. A Bypass
+    // row was previously here, which — combined with Preset below — put the
+    // module at 17 params against the G2's own reported count of 16; removing
+    // it (rather than Preset, which the manual explicitly documents as a real
+    // control with up/down buttons and a name display) resolves that.
+    {moduleTypeDrumSynth,  paramTypeMenu,        {{ 60, -35}, { 7,  7}}, anchorBottomLeft,  NULL,            30,   0, drSynthPresetStrMap,                   NULL          },                         // 58 Preset
 
     // 59 CompLev
     {moduleTypeCompLev,    paramTypeBipLevel,    {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  "C",            128,  64, NULL,                                  NULL          },                         // 59 Compare Level
@@ -826,8 +832,12 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeFltLP,      paramTypeFreq,        {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                         // 87 Freq
     {moduleTypeFltLP,      paramTypeCommonDial,  {{ 35,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                         // 87 FreqMod
     {moduleTypeFltLP,      paramTypeMenu,        {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   4, offTo100KbStrMap,                      NULL          },
-    //{moduleTypeFltLP, paramTypeMenu, {{ 67, -3}, {7,  7}}, anchorBottomLeft,  "Slope",       6,  2, fltLPSlopeStrMap,   NULL          }, // TODO: Possibly one of these should be a mode - only expecting 5 params
-    {moduleTypeFltLP,      paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          },                         // 83 Bypass
+    // Slope (6/12/18/24/30/36 dB/Oct per the manual's own FltLP section) —
+    // already correctly formed (max=6 matches fltLPSlopeStrMap's 6 entries
+    // exactly), just needed uncommenting: Freq+FreqMod+Kbt+Slope+Bypass = 5,
+    // matching the G2's own reported count.
+    {moduleTypeFltLP,      paramTypeMenu,        {{ 67,  -3}, { 7,  7}}, anchorBottomLeft,  "Slope",          6,   2, fltLPSlopeStrMap,                      NULL          },                         // 87 Slope
+    {moduleTypeFltLP,      paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          },                         // 87 Bypass
     // 88 Sw1-4
     {moduleTypeSw1to4,     paramTypeMenu,        {{ 37,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, out8StrMap,                            NULL          },                         // 88 Selector
     // 89 Flanger
@@ -928,7 +938,16 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeVocoder,    paramTypeMenu,        {{ 85,  -3}, { 5,  7}}, anchorBottomLeft,  "16",            17,  16, vocoderStrMap,                         NULL          },                         // 108 BandSel 16
     {moduleTypeVocoder,    paramTypeMenu,        {{  3, -12}, { 7,  7}}, anchorBottomLeft,  "Emp",            2,   0, offOnStrMap,                           NULL          },                         // 108 Emphasis
     {moduleTypeVocoder,    paramTypeMenu,        {{  3, -24}, { 7,  7}}, anchorBottomLeft,  "Mon",            2,   0, offOnStrMap,                           NULL          },                         // 108 Monitor
-    //{moduleTypeVocoder,    paramTypeMenu, {{ 10, -24}, { 7,  7}}, anchorBottomLeft,  "-2",             1,   0, presetStrMap,           NULL          }, // 108 Preset -2  // TODO: should only be 18 parameters on this!
+    // Preset buttons (-2/-1/-0/+1/+2/Inv/Rnd) deliberately excluded, not just
+    // pending: the manual describes them as one-shot actions that reroute
+    // all 16 BandSel values by N steps (or invert/randomize them) — there's
+    // nothing of their own to store, they just bulk-update the BandSel
+    // params above. Adding them as 7 more paramLocationList rows would bring
+    // this module to 25, well past the G2's own reported count of 18
+    // (16 BandSel + Emphasis + Monitor, already exactly matched above).
+    // Left here as reference/rows to reuse if these ever get wired up as
+    // real one-shot UI actions rather than persisted parameters.
+    //{moduleTypeVocoder,    paramTypeMenu, {{ 10, -24}, { 7,  7}}, anchorBottomLeft,  "-2",             1,   0, presetStrMap,           NULL          }, // 108 Preset -2
     //{moduleTypeVocoder,    paramTypeMenu, {{ 17, -24}, { 7,  7}}, anchorBottomLeft,  "-1",             1,   0, presetStrMap,           NULL          }, // 108 Preset -1
     //{moduleTypeVocoder,    paramTypeMenu, {{ 24, -24}, { 7,  7}}, anchorBottomLeft,  "-0",             1,   0, presetStrMap,           NULL          }, // 108 Preset 0
     //{moduleTypeVocoder,    paramTypeMenu, {{ 31, -24}, { 7,  7}}, anchorBottomLeft,  "+1",             1,   0, presetStrMap,           NULL          }, // 108 Preset +1
