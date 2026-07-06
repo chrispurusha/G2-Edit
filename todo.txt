@@ -1,7 +1,5 @@
 G2-Edit TODO (priority order)
 
-- protocol.c:1670 — master volume is hardcoded (0x50) instead of read from gMasterVolume
-- protocol.c:1697 — write-side patch-settings parsing needs rewriting to match read-side logic in usbComms.c
 - graphics.cpp:752-753 — perf-mode write path relies on a blind 2-second usleep instead of real state confirmation
 - usbComms.c — centralize repeated unsolicited send_stop() calls (lines ~3590-3781) instead of scattering them
 - usbComms.c — resolve perf-mode ambiguities: synth vs. perf ownership (line 342), voice-count ordering on increase (line 576/582), unconfirmed message case (line 903)
