@@ -1894,6 +1894,22 @@ static int restore_bank(uint32_t sourceBank, uint32_t destBank, const char * src
             }
             written++;
             gBankRestoreWritten = written;
+
+            // Keep the name-table cache in sync immediately — same reasoning as
+            // store_patch_to_bank()/delete_bank_location() above, otherwise every location this
+            // restore just wrote keeps showing its old (or empty) contents in Load/Store/Delete
+            // pickers until the next full reconnect sweep. Unlike Store, there's no live edit
+            // buffer to read the category from, so peek_patch_category() pulls it straight out of
+            // the pushed content itself.
+            if (isPerf && (destBank < NUM_PERF_BANKS)) {
+                gPerfNameTable[destBank][location].populated = true;
+                strncpy(gPerfNameTable[destBank][location].name, pushName, CLAVIA_NAME_SIZE);
+                gPerfNameTable[destBank][location].category  = peek_patch_category(sBankRestoreContent, sBankRestoreContentLen);
+            } else if (!isPerf && (destBank < NUM_PATCH_BANKS)) {
+                gPatchNameTable[destBank][location].populated = true;
+                strncpy(gPatchNameTable[destBank][location].name, pushName, CLAVIA_NAME_SIZE);
+                gPatchNameTable[destBank][location].category  = peek_patch_category(sBankRestoreContent, sBankRestoreContentLen);
+            }
         } else {
             if (send_bank_clear(domain, destBank, location) != EXIT_SUCCESS) {
                 LOG_ERROR("restore_bank: clear failed for bank %u location %u\n", destBank, location);
@@ -1901,6 +1917,16 @@ static int restore_bank(uint32_t sourceBank, uint32_t destBank, const char * src
                 break;
             }
             cleared++;
+
+            if (isPerf && (destBank < NUM_PERF_BANKS)) {
+                gPerfNameTable[destBank][location].populated = false;
+                gPerfNameTable[destBank][location].name[0]   = '\0';
+                gPerfNameTable[destBank][location].category  = 0;
+            } else if (!isPerf && (destBank < NUM_PATCH_BANKS)) {
+                gPatchNameTable[destBank][location].populated = false;
+                gPatchNameTable[destBank][location].name[0]   = '\0';
+                gPatchNameTable[destBank][location].category  = 0;
+            }
         }
         call_wake_glfw();
     }
