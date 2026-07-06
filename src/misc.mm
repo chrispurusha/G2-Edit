@@ -66,16 +66,18 @@ double get_zoom_factor(void);
 - (BOOL)validateMenuItem:(NSMenuItem *)item;
 @end
 
-// Bank number (0-indexed) selected from the "Backup Bank"/"Backup Performance Bank" submenu,
-// stashed here between the menu click and the folder-choose panel's completion callback
-// (tFileDialogueCallback is a plain C function pointer with no room for captured context).
+// Bank number (0-indexed) chosen from the "Backup Patch Bank"/"Backup Performance Bank" dropdown
+// dialog, stashed here between that dialog's confirm callback and the folder-choose panel's
+// completion callback (tFileDialogueCallback is a plain C function pointer with no room for
+// captured context). Defaults the dropdown to whatever was picked last time (see backupBank:/
+// backupPerfBank: below), rather than always resetting to Bank 1.
 static uint32_t sPendingBackupBank        = 0;
 static bool     sPendingBackupIsPerf      = false;
 
-// Same stash-between-callbacks pattern as the backup statics above, but for Restore: the source
-// bank/domain is fixed by which menu item was clicked; the confirmation alert's accessory field
-// then supplies the (possibly different) target bank; the folder-choose panel supplies the source
-// folder once the user has confirmed.
+// Same stash-between-callbacks pattern as the backup statics above, but for Restore: a first
+// dropdown dialog picks the source bank/domain (on_restore_source_bank_picked), a second supplies
+// the (possibly different) target bank (on_bank_restore_confirmed), then the folder-choose panel
+// supplies the source folder once the user has confirmed.
 static uint32_t sPendingRestoreBank       = 0;
 static bool     sPendingRestoreIsPerf     = false;
 static uint32_t sPendingRestoreTargetBank = 0;
@@ -91,6 +93,21 @@ static void on_bank_backup_folder_chosen(const char * path) {
     msg.bankBackupData.isPerf = sPendingBackupIsPerf;
     strncpy(msg.bankBackupData.destFolder, path, sizeof(msg.bankBackupData.destFolder) - 1);
     msg_send(&gCommandQueue, &msg);
+}
+
+// Confirm callback for the "which bank to back up" dropdown dialog opened by backupBank:/
+// backupPerfBank: below — sPendingBackupIsPerf was already set by whichever of those two called us,
+// so this only needs to record the bank and move on to the folder picker.
+static void on_backup_bank_picked(bool confirmed, uint32_t bank1Indexed) {
+    char title[64] = {0};
+
+    if (!confirmed) {
+        return;
+    }
+    sPendingBackupBank = bank1Indexed - 1;
+    snprintf(title, sizeof(title), "Choose a Folder for %s Bank %u Backup",
+             sPendingBackupIsPerf ? "Performance" : "Patch", bank1Indexed);
+    open_folder_dialogue_async(on_bank_backup_folder_chosen, title);
 }
 
 static void on_synth_settings_backup_folder_chosen(const char * path) {
@@ -171,6 +188,28 @@ static void on_bank_restore_confirmed(bool confirmed, uint32_t targetBank1Indexe
     snprintf(title, sizeof(title), "Choose the Backup Folder to Restore %s Bank %u From",
              sPendingRestoreIsPerf ? "Performance" : "Patch", sPendingRestoreBank + 1);
     open_folder_dialogue_async(on_bank_restore_folder_chosen, title);
+}
+
+// Confirm callback for the "which bank's backup to restore" dropdown dialog opened by
+// restoreBank:/restorePerfBank: below — sPendingRestoreIsPerf was already set by whichever of those
+// two called us. Chains straight into the existing target-bank dropdown dialog, defaulting it to
+// the same bank just picked (the common "restore into itself" case), exactly mirroring what used to
+// default from the clicked submenu item's tag.
+static void on_restore_source_bank_picked(bool confirmed, uint32_t bank1Indexed) {
+    char message[320] = {0};
+
+    if (!confirmed) {
+        return;
+    }
+    sPendingRestoreBank = bank1Indexed - 1;
+    snprintf(message, sizeof(message),
+             "This reads %s Bank %u's backup and writes it to the target bank chosen below on the G2. "
+             "Any location not present in that backup will be erased there. This cannot be undone.",
+             sPendingRestoreIsPerf ? "Performance" : "Patch", bank1Indexed);
+    show_bank_target_confirm_dialogue_async(sPendingRestoreIsPerf ? "Restore Performance Bank" : "Restore Patch Bank",
+                                            message, "Restore...", "Restore to Bank:", bank1Indexed,
+                                            sPendingRestoreIsPerf ? NUM_PERF_BANKS : NUM_PATCH_BANKS,
+                                            on_bank_restore_confirmed);
 }
 
 // Domain for the pending Store flow, set by storeToBank: right before opening the bank/location
@@ -358,31 +397,25 @@ static void build_bank_location_items(bool isPerf, bool populatedOnly,
 }
 
 - (void)backupBank:(id)sender {
-    NSMenuItem * item      = (NSMenuItem *)sender;
-    char         title[64] = {0};
-
     if (gCommsState != eCommsOnLine) {
         show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up a bank.");
         return;
     }
-    sPendingBackupBank   = (uint32_t)[item tag];
     sPendingBackupIsPerf = false;
-    snprintf(title, sizeof(title), "Choose a Folder for Bank %ld Backup", (long)[item tag] + 1);
-    open_folder_dialogue_async(on_bank_backup_folder_chosen, title);
+    show_bank_target_confirm_dialogue_async("Backup Patch Bank", "Choose which patch bank to back up.", "Backup...",
+                                            "Bank to Back Up:", sPendingBackupBank + 1, NUM_PATCH_BANKS,
+                                            on_backup_bank_picked);
 }
 
 - (void)backupPerfBank:(id)sender {
-    NSMenuItem * item      = (NSMenuItem *)sender;
-    char         title[64] = {0};
-
     if (gCommsState != eCommsOnLine) {
         show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up a performance bank.");
         return;
     }
-    sPendingBackupBank   = (uint32_t)[item tag];
     sPendingBackupIsPerf = true;
-    snprintf(title, sizeof(title), "Choose a Folder for Performance Bank %ld Backup", (long)[item tag] + 1);
-    open_folder_dialogue_async(on_bank_backup_folder_chosen, title);
+    show_bank_target_confirm_dialogue_async("Backup Performance Bank", "Choose which performance bank to back up.", "Backup...",
+                                            "Bank to Back Up:", sPendingBackupBank + 1, NUM_PERF_BANKS,
+                                            on_backup_bank_picked);
 }
 
 - (void)backupSynthSettings:(id)sender {
@@ -410,39 +443,25 @@ static void build_bank_location_items(bool isPerf, bool populatedOnly,
 }
 
 - (void)restoreBank:(id)sender {
-    NSMenuItem * item         = (NSMenuItem *)sender;
-    char         message[320] = {0};
-
     if (gCommsState != eCommsOnLine) {
         show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring a bank.");
         return;
     }
-    sPendingRestoreBank   = (uint32_t)[item tag];
     sPendingRestoreIsPerf = false;
-    snprintf(message, sizeof(message),
-             "This reads Patch Bank %ld's backup and writes it to the target bank chosen below on the G2. "
-             "Any location not present in that backup will be erased there. This cannot be undone.",
-             (long)[item tag] + 1);
-    show_bank_target_confirm_dialogue_async("Restore Patch Bank", message, "Restore...",
-                                            (uint32_t)[item tag] + 1, NUM_PATCH_BANKS, on_bank_restore_confirmed);
+    show_bank_target_confirm_dialogue_async("Restore Patch Bank", "Choose which patch bank's backup to restore.", "Next...",
+                                            "Restore from Bank:", sPendingRestoreBank + 1, NUM_PATCH_BANKS,
+                                            on_restore_source_bank_picked);
 }
 
 - (void)restorePerfBank:(id)sender {
-    NSMenuItem * item         = (NSMenuItem *)sender;
-    char         message[320] = {0};
-
     if (gCommsState != eCommsOnLine) {
         show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring a performance bank.");
         return;
     }
-    sPendingRestoreBank   = (uint32_t)[item tag];
     sPendingRestoreIsPerf = true;
-    snprintf(message, sizeof(message),
-             "This reads Performance Bank %ld's backup and writes it to the target bank chosen below on the G2. "
-             "Any location not present in that backup will be erased there. This cannot be undone.",
-             (long)[item tag] + 1);
-    show_bank_target_confirm_dialogue_async("Restore Performance Bank", message, "Restore...",
-                                            (uint32_t)[item tag] + 1, NUM_PERF_BANKS, on_bank_restore_confirmed);
+    show_bank_target_confirm_dialogue_async("Restore Performance Bank", "Choose which performance bank's backup to restore.", "Next...",
+                                            "Restore from Bank:", sPendingRestoreBank + 1, NUM_PERF_BANKS,
+                                            on_restore_source_bank_picked);
 }
 
 - (void)restoreEverything:(id)sender {
@@ -660,8 +679,8 @@ void setup_main_menu(void) {
         reposition_window(savedX, savedY);
     }
     // File menu
-    NSMenuItem * fileMI            = [[NSMenuItem alloc] init];
-    NSMenu *     fileMenu          = [[NSMenu alloc] initWithTitle:@"File"];
+    NSMenuItem * fileMI      = [[NSMenuItem alloc] init];
+    NSMenu *     fileMenu    = [[NSMenu alloc] initWithTitle:@"File"];
 
     [fileMenu addItem:make_item(@"Open Patch/Perf File...", @selector(openPatch:), @"o", target)];
     [fileMenu addItem:make_item(@"Load Patch from Bank...", @selector(loadPatchLocation:), @"", target)];
@@ -678,8 +697,8 @@ void setup_main_menu(void) {
     [menuBar insertItem:fileMI atIndex:1];
 
     // Settings menu
-    NSMenuItem * patchMI           = [[NSMenuItem alloc] init];
-    NSMenu *     patchMenu         = [[NSMenu alloc] initWithTitle:@"Settings"];
+    NSMenuItem * patchMI     = [[NSMenuItem alloc] init];
+    NSMenu *     patchMenu   = [[NSMenu alloc] initWithTitle:@"Settings"];
 
     [patchMenu addItem:make_item(@"Synth", @selector(openSettings:), @",", target)];
     [patchMenu addItem:make_item(@"Patch", @selector(openPatchParams:), @"", target)];
@@ -689,37 +708,14 @@ void setup_main_menu(void) {
     [patchMI setSubmenu:patchMenu];
     [menuBar insertItem:patchMI atIndex:2];
 
-    // Backup menu
-    NSMenuItem * bankMI            = [[NSMenuItem alloc] init];
-    NSMenu *     bankMenu          = [[NSMenu alloc] initWithTitle:@"Backup"];
-    NSMenuItem * backupSubMI       = [[NSMenuItem alloc] initWithTitle:@"Patch Bank" action:NULL keyEquivalent:@""];
-    NSMenu *     backupSubMenu     = [[NSMenu alloc] initWithTitle:@"Patch Bank"];
+    // Backup menu — "Patch Bank..."/"Performance Bank..." are single leaf items rather than
+    // cascading 32/8-item bank submenus; the target action methods now open a dropdown dialog to
+    // pick the bank number instead of reading it off a clicked submenu item's tag.
+    NSMenuItem * bankMI      = [[NSMenuItem alloc] init];
+    NSMenu *     bankMenu    = [[NSMenu alloc] initWithTitle:@"Backup"];
 
-    for (NSInteger i = 0; i < NUM_PATCH_BANKS; i++) {
-        NSMenuItem * bankItem = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Bank %ld", (long)i + 1]
-                                 action:@selector(backupBank:)
-                                 keyEquivalent:@""];
-        [bankItem setTarget:target];
-        [bankItem setTag:i];
-        [backupSubMenu addItem:bankItem];
-    }
-
-    NSMenuItem * backupPerfSubMI   = [[NSMenuItem alloc] initWithTitle:@"Performance Bank" action:NULL keyEquivalent:@""];
-    NSMenu *     backupPerfSubMenu = [[NSMenu alloc] initWithTitle:@"Performance Bank"];
-
-    for (NSInteger i = 0; i < NUM_PERF_BANKS; i++) {
-        NSMenuItem * perfBankItem = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Bank %ld", (long)i + 1]
-                                     action:@selector(backupPerfBank:)
-                                     keyEquivalent:@""];
-        [perfBankItem setTarget:target];
-        [perfBankItem setTag:i];
-        [backupPerfSubMenu addItem:perfBankItem];
-    }
-
-    [backupSubMI setSubmenu:backupSubMenu];
-    [bankMenu addItem:backupSubMI];
-    [backupPerfSubMI setSubmenu:backupPerfSubMenu];
-    [bankMenu addItem:backupPerfSubMI];
+    [bankMenu addItem:make_item(@"Patch Bank...", @selector(backupBank:), @"", target)];
+    [bankMenu addItem:make_item(@"Performance Bank...", @selector(backupPerfBank:), @"", target)];
     [bankMenu addItem:[NSMenuItem separatorItem]];
     [bankMenu addItem:make_item(@"Backup Synth Settings...", @selector(backupSynthSettings:), @"", target)];
     [bankMenu addItem:[NSMenuItem separatorItem]];
@@ -727,37 +723,12 @@ void setup_main_menu(void) {
     [bankMI setSubmenu:bankMenu];
     [menuBar insertItem:bankMI atIndex:3];
 
-    // Restore menu
-    NSMenuItem * restoreMI          = [[NSMenuItem alloc] init];
-    NSMenu *     restoreMenu        = [[NSMenu alloc] initWithTitle:@"Restore"];
-    NSMenuItem * restoreSubMI       = [[NSMenuItem alloc] initWithTitle:@"Patch Bank" action:NULL keyEquivalent:@""];
-    NSMenu *     restoreSubMenu     = [[NSMenu alloc] initWithTitle:@"Patch Bank"];
+    // Restore menu — same leaf-item-plus-dropdown-dialog shape as Backup above.
+    NSMenuItem * restoreMI   = [[NSMenuItem alloc] init];
+    NSMenu *     restoreMenu = [[NSMenu alloc] initWithTitle:@"Restore"];
 
-    for (NSInteger i = 0; i < NUM_PATCH_BANKS; i++) {
-        NSMenuItem * bankItem = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Bank %ld", (long)i + 1]
-                                 action:@selector(restoreBank:)
-                                 keyEquivalent:@""];
-        [bankItem setTarget:target];
-        [bankItem setTag:i];
-        [restoreSubMenu addItem:bankItem];
-    }
-
-    NSMenuItem * restorePerfSubMI   = [[NSMenuItem alloc] initWithTitle:@"Performance Bank" action:NULL keyEquivalent:@""];
-    NSMenu *     restorePerfSubMenu = [[NSMenu alloc] initWithTitle:@"Performance Bank"];
-
-    for (NSInteger i = 0; i < NUM_PERF_BANKS; i++) {
-        NSMenuItem * perfBankItem = [[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Bank %ld", (long)i + 1]
-                                     action:@selector(restorePerfBank:)
-                                     keyEquivalent:@""];
-        [perfBankItem setTarget:target];
-        [perfBankItem setTag:i];
-        [restorePerfSubMenu addItem:perfBankItem];
-    }
-
-    [restoreSubMI setSubmenu:restoreSubMenu];
-    [restoreMenu addItem:restoreSubMI];
-    [restorePerfSubMI setSubmenu:restorePerfSubMenu];
-    [restoreMenu addItem:restorePerfSubMI];
+    [restoreMenu addItem:make_item(@"Patch Bank...", @selector(restoreBank:), @"", target)];
+    [restoreMenu addItem:make_item(@"Performance Bank...", @selector(restorePerfBank:), @"", target)];
     [restoreMenu addItem:[NSMenuItem separatorItem]];
     [restoreMenu addItem:make_item(@"Synth Settings...", @selector(restoreSynthSettings:), @"", target)];
     [restoreMenu addItem:[NSMenuItem separatorItem]];
@@ -766,8 +737,8 @@ void setup_main_menu(void) {
     [menuBar insertItem:restoreMI atIndex:4];
 
     // Controls menu
-    NSMenuItem * ctrlMI   = [[NSMenuItem alloc] init];
-    NSMenu *     ctrlMenu = [[NSMenu alloc] initWithTitle:@"Controls"];
+    NSMenuItem * ctrlMI      = [[NSMenuItem alloc] init];
+    NSMenu *     ctrlMenu    = [[NSMenu alloc] initWithTitle:@"Controls"];
 
     [ctrlMenu addItem:make_item(@"Rotary", @selector(setDialModeRotary:), @"", target)];
     [ctrlMenu addItem:make_item(@"Vertical", @selector(setDialModeVertical:), @"", target)];
@@ -776,8 +747,8 @@ void setup_main_menu(void) {
     [menuBar insertItem:ctrlMI atIndex:5];
 
     // View menu
-    NSMenuItem * viewMI   = [[NSMenuItem alloc] init];
-    NSMenu *     viewMenu = [[NSMenu alloc] initWithTitle:@"View"];
+    NSMenuItem * viewMI      = [[NSMenuItem alloc] init];
+    NSMenu *     viewMenu    = [[NSMenu alloc] initWithTitle:@"View"];
 
     [viewMenu addItem:make_item(@"Zoom In [⌘=]", @selector(zoomIn:), @"", target)];
     [viewMenu addItem:make_item(@"Zoom Out [⌘-]", @selector(zoomOut:), @"", target)];

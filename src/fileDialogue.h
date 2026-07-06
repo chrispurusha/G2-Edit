@@ -37,12 +37,12 @@ void open_file_write_dialogue_async(tFileDialogueCallback callback, const char *
 void open_folder_dialogue_async(tFileDialogueCallback callback, const char * title);
 void show_alert_async(const char * title, const char * message);
 void show_confirm_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle, tConfirmCallback callback);
-// Same as show_confirm_dialogue_async, plus a numeric accessory field (clamped to
-// [1, maxBank1Indexed], pre-filled with defaultTargetBank1Indexed) for picking a target bank that
-// may differ from the one the dialog's message/title refer to — used by Bank Restore's "restore
-// bank 5's backup into bank 7" case. callback's targetBank1Indexed is only meaningful when
-// confirmed is true.
-void show_bank_target_confirm_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle, uint32_t defaultTargetBank1Indexed, uint32_t maxBank1Indexed, tBankTargetConfirmCallback callback);
+// Same as show_confirm_dialogue_async, plus a dropdown (labeled fieldLabel) listing "Bank 1"
+// through "Bank maxBank1Indexed" for picking a bank number without typing one — pre-selected to
+// defaultTargetBank1Indexed. Generic across every "pick a bank number" case in Backup/Restore: the
+// bank to back up, the bank whose backup to restore, and the (possibly different) target bank to
+// restore into. callback's targetBank1Indexed is only meaningful when confirmed is true.
+void show_bank_target_confirm_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle, const char * fieldLabel, uint32_t defaultTargetBank1Indexed, uint32_t maxBank1Indexed, tBankTargetConfirmCallback callback);
 
 // One row of show_bank_location_list_dialogue_async()'s picker — name is a caller-owned string
 // (copied synchronously before the function returns, so it only needs to survive the call itself,
