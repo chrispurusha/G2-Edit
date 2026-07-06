@@ -1,6 +1,5 @@
 G2-Edit TODO (priority order)
 
-- Fix moduleResources.h param-count mismatches blocking DrumSynth(58), FltLP(87), Vocoder(108) — tables currently commented out
 - protocol.c:1670 — master volume is hardcoded (0x50) instead of read from gMasterVolume
 - protocol.c:1697 — write-side patch-settings parsing needs rewriting to match read-side logic in usbComms.c
 - graphics.cpp:752-753 — perf-mode write path relies on a blind 2-second usleep instead of real state confirmation
