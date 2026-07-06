@@ -3722,8 +3722,14 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdWriteModePatch:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
+            send_stop();                     // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_perf_mode_change(0);
+            send_get_performance_settings(); // Same reasoning as the Perf-mode case above: masterClock (and
+                                             // the rest of parse_performance_settings()'s data) is shared
+                                             // with patch mode, not perf-only — see parse_performance_settings()'s
+                                             // own comment on gGlobalSettings.masterClock. Without this,
+                                             // switching to patch mode left the clock display showing
+                                             // whatever was last fetched until the app was restarted.
             send_start();
             break;
 

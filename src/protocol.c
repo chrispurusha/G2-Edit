@@ -1411,7 +1411,7 @@ int parse_perf(uint8_t * buff, int length) {
         return EXIT_FAILURE;
     }
     read_bit_stream(buff, &bitOffset, 8);                                    // unknown (0x00)
-    LOG_DEBUG("MasterVolume        = %u\n", read_bit_stream(buff, &bitOffset, 8));
+    gGlobalSettings.masterVolume       = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
     read_bit_stream(buff, &bitOffset, 8);                                    // unknown (0x00)
     selSlotByte                        = (uint8_t)read_bit_stream(buff, &bitOffset, 8);
     selSlot                            = (uint32_t)(selSlotByte / 4);
@@ -1703,7 +1703,7 @@ void write_perf_header(uint8_t * buff, uint32_t * bitPos) {
 
     write_bit_stream(buff, bitPos, 8, 0x11);                 // constant observed in all perf files
     write_bit_stream(buff, bitPos, 8, 0x00);
-    write_bit_stream(buff, bitPos, 8, 0x50);                 // TODO: use real gMasterVolume once stored; 0x50 is the G2 default
+    write_bit_stream(buff, bitPos, 8, gGlobalSettings.masterVolume);
     write_bit_stream(buff, bitPos, 8, 0x00);
     write_bit_stream(buff, bitPos, 8, (uint8_t)(gSlot * 4)); // selected slot encoding
     write_bit_stream(buff, bitPos, 8, 0x00);

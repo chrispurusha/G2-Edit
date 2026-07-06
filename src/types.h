@@ -895,6 +895,7 @@ typedef struct {  // Note - should reflect settings in the G2
     _Atomic uint8_t perfVersion;
     _Atomic uint8_t masterClock;
     _Atomic uint8_t masterClockRunning;
+    _Atomic uint8_t masterVolume;
     _Atomic uint8_t selectedSlot;
     struct {
         char            patchName[CLAVIA_NAME_SIZE + 1];
