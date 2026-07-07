@@ -46,7 +46,7 @@
  54 FltStatic OK
  55 EnvD OK
  56 Resonator OK
- 57 Automate OK
+ 57 Automate OK - fixed Ch (channel) param missing strMap, was showing raw number instead of "1".."16"/"This" (17 options, matching manual's MIDI automation channel description)
  58 DrumSynth OK - fixed Pitch M connector overlap + comment typos
  59 CompLev OK - fixed stale comment numbers
  60 Mux8-1X OK - fixed stale comment number
@@ -160,11 +160,11 @@
 197 Status
 198 PitchTrack
 199 MonoKey
-200 RandomA
+200 RandomA OK - fixed Step reusing Edge's map with range 4 instead of 5 (couldn't reach "0%")
 201 Red2Blue
 202 RandomB
 203 Blue2Red
-204 RndClkA
-205 RndTrig
-206 RndClkB
-208 RndPattern
+204 RndClkA check Mode/Dice params (range4, NULL strMap - renders as raw number fallback; couldn't determine correct labels from manual, needs hardware verification)
+205 RndTrig check Mode param (same NULL strMap issue as RndClkA)
+206 RndClkB check Mode param (same NULL strMap issue as RndClkA)
+208 RndPattern OK - fixed missing strMap on Wave mode toggle (was logging "No strMap for module type RndPattern" + fixed Loop being a paramTypeMenu with no strMap (showed raw "15") -> now a proper dial like Step/StepM
