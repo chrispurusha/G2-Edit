@@ -21,26 +21,11 @@
 #define __MENUS_H__
 
 #include "sysIncludes.h"
+#include "contextMenu.h" // Generic mac-style nested menu mechanism + tMenuItem/tMenuFrame/tContextMenu — see SynthLib
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-// Core context menu mechanism
-//
-// open_context_menu() opens (or replaces) the top-level menu, closing any
-// flyouts opened beneath a previous one. From there the mechanism is mac-like:
-// clicking an item with a subMenu, or hovering it for MENU_HOVER_DELAY_SECS,
-// opens that subMenu as a flyout beside it while the parent stays visible;
-// hovering a different item at any still-visible level collapses whatever was
-// open beneath it. Clicking a plain item (no subMenu) runs its action and
-// closes the whole stack, same as today.
-void open_context_menu(tCoord coord, tMenuItem * items, uint32_t columns, double cellWidth);
-void close_context_menu(void);
-bool handle_context_menu_click(tCoord coord);
-void update_context_menu_hover(void); // Call once per frame while gContextMenu.active — drives the hover-dwell timer
-tCoord below_rect(tRectangle r);
-tCoord side_of_rect(tRectangle r);
 
 // Module creation utilities
 void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row, tCoord coord);
