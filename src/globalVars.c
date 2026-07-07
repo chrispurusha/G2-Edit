@@ -74,6 +74,7 @@ _Atomic uint8_t         gGlobalPage                                             
 tNameEdit               gPatchNameEdit                                                               = {0};
 tModuleNameEdit         gModuleNameEdit                                                              = {0};
 tParamNameEdit          gParamNameEdit                                                               = {0};
+tMenuContext            gMenuContext                                                                 = {0};
 tNameEdit               gSynthNameEdit                                                               = {0};
 tNameEdit               gPerfNameEdit                                                                = {0};
 tPerfSettings           gPerfSettings                                                                = {0};  // Note - should reflect settings in the G2

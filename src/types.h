@@ -599,13 +599,9 @@ typedef struct {
                                        // handle_context_menu_click()/update_context_menu_hover() so existing
                                        // action(index) callbacks can read gContextMenu.items[index].param unchanged
                                        // regardless of which frame the item actually lives in
-    int32_t       hoverFrame;          // Frame index the mouse is currently over an item of, -1 = none
-    int32_t       hoverIndex;          // Item index within hoverFrame, -1 = none
-    double        hoverStartTime;      // glfwGetTime() timestamp when (hoverFrame, hoverIndex) last changed
-    tModuleKey    moduleKey;
-    tConnectorDir connectorDir;
-    uint32_t      connectorIndex;
-    uint32_t      paramIndex;
+    int32_t hoverFrame;                // Frame index the mouse is currently over an item of, -1 = none
+    int32_t hoverIndex;                // Item index within hoverFrame, -1 = none
+    double  hoverStartTime;            // glfwGetTime() timestamp when (hoverFrame, hoverIndex) last changed
 } tContextMenu;
 
 typedef struct {
@@ -821,6 +817,18 @@ typedef struct {
     char       buffer[PROTOCOL_PARAM_NAME_SIZE + 1];
     uint32_t   cursorPos;
 } tParamNameEdit;
+
+// G2-Edit's own record of what the currently open context menu was raised
+// against — deliberately kept out of the generic tContextMenu (see menus.c),
+// which knows nothing about modules/connectors/params, only about menu items
+// and screen positions. Set by whichever open_*_context_menu() raised the
+// menu; read back by that same menu's action(index) callbacks.
+typedef struct {
+    tModuleKey    moduleKey;
+    tConnectorDir connectorDir;
+    uint32_t      connectorIndex;
+    uint32_t      paramIndex;
+} tMenuContext;
 
 typedef struct {
     float cycles[locationMax];
