@@ -22,8 +22,11 @@
 
 #define G2_EDIT
 
-#define ENABLE_LOG_DEBUG    // Comment out if not required
-//#define ENABLE_LOG_MODULE_DATA    // Comment out if not required
+// ENABLE_LOG_DEBUG is supplied by the Debug build configuration's
+// Preprocessor Macros in the Xcode project (so it's off in Release, and so
+// SynthLib's own source files get it too, without needing to include this
+// header — see contextMenu.c/utilsGraphics.cpp).
+//#define ENABLE_LOG_MODULE_DATA    // Uncomment for module-data logging in any configuration
 //#define ENABLE_USB_LOG    // Uncomment to enable USB message logging to ~/G2_usb.log
 
 #define PATCH_FILE_SIZE                      (10 * 1024 * 1024)
