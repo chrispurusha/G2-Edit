@@ -1,8 +1,8 @@
   1 Keyboard OK (CT)
   3 4-Out OK (CT)
   4 2-Out OK (CT)
-  5 Invert
-  7 OscB
+  5 Invert OK
+  7 OscB OK
   8 OscShpB check mode
   9 Oscar OK check Mode
  12 Reverb OK
@@ -12,7 +12,7 @@
  18 X-fade OK
  19 Mix4-1B OK
  20 EnvADSR OK (CT) check values though
- 21 Mux1-8
+ 21 Mux1-8 OK
  22 PartQuant OK *** Needs better dial values from 0 to plus minus 63
  23 ModADSR OK
  24 LfoC OK *** Needs to check Range Sub parameter values
@@ -21,58 +21,58 @@
  27 OscMaster OK
  28 Saturate OK
  29 MetNoise OK
- 30 Device
+ 30 Device OK
  31 Noise OK
  32 Eq2Band OK (CT)
  33 Eq3Band OK (CT)
  34 ShpExp OK
- 35 Driver
- 36 SwOnOffM
+ 35 Driver OK - fixed In1 connector labelLoc
+ 36 SwOnOffM OK - fixed Ctrl connector labelLoc
  38 Pulse OK
  40 Mix8-1B OK
  41 EnvH OK
  42 Delay OK
  43 Constant OK
- 44 LevMult
+ 44 LevMult OK
  45 FltVowel OK
  46 EnvAHD OK
  47 Pan OK
  48 MixStereo OK
- 49 FltMulti
- 50 ConstSwT
+ 49 FltMulti OK
+ 50 ConstSwT check paramTypeBipLevel dispatch
  51 FltNord OK
- 52 EnvMulti
- 53 SandH
- 54 FltStatic
- 55 EnvD
- 56 Resonator
- 57 Automate
- 58 DrumSynth
- 59 CompLev
- 60 Mux8-1X
- 61 Clip
- 62 Overdrive
- 63 Scratch
- 64 Gate
+ 52 EnvMulti OK - fixed L1-L4 dial labels (were all L1)
+ 53 SandH OK
+ 54 FltStatic OK
+ 55 EnvD OK
+ 56 Resonator OK
+ 57 Automate OK
+ 58 DrumSynth OK - fixed Pitch M connector overlap + comment typos
+ 59 CompLev OK - fixed stale comment numbers
+ 60 Mux8-1X OK - fixed stale comment number
+ 61 Clip OK
+ 62 Overdrive OK
+ 63 Scratch OK
+ 64 Gate OK - fixed modeLocationList paramTypeMenu render bug (G1/G2 selectors were invisible) + 2 stale comments; LED/connector crowding deferred (2-row module, LED math unclear)
  66 Mix2-1B OK (CT)
- 68 ClkGen
- 69 ClkDiv
- 71 EnvFollow
- 72 NoteScaler
- 74 WaveWrap
- 75 NoteQuant
- 76 SwOnOffT
- 78 Sw1-8
- 79 Sw4-1
- 81 LevAmp
- 82 Rect
- 83 ShpStatic
- 84 EnvADR
- 85 WindSw
- 86 8Counter
- 87 FltLP
- 88 Sw1-4
- 89 Flanger
+ 68 ClkGen OK - fixed stale comment numbers
+ 69 ClkDiv OK - has harmless dead commented-out line
+ 71 EnvFollow OK
+ 72 NoteScaler OK
+ 74 WaveWrap OK
+ 75 NoteQuant OK
+ 76 SwOnOffT OK - fixed Ctrl connector labelLoc
+ 78 Sw1-8 check labelLocLeft vs Mux8-1X convention
+ 79 Sw4-1 check labelLocLeft vs Mux8-1X convention
+ 81 LevAmp OK
+ 82 Rect OK
+ 83 ShpStatic OK
+ 84 EnvADR OK - fixed Decay/Release toggle overlapping its own dial (x52->55) + stale comment (46->84 End)
+ 85 WindSw LED/connector crowding deferred (2-row module, same as Gate)
+ 86 8Counter OK
+ 87 FltLP OK - harmless dead commented-out line, optional cleanup
+ 88 Sw1-4 check labelLocLeft vs Mux8-1X convention (same family question as Sw1-8/Sw4-1)
+ 89 Flanger OK
  90 Sw1-2
  91 FlipFlop
  92 FltClassic
