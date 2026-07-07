@@ -77,6 +77,7 @@ tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char
         case moduleTypeOscB:
         case moduleTypeResonator:
         case moduleTypeOscShpB:
+        case moduleTypeOscString:
         {
             pitchTypeParamIndex = 4;
             break;

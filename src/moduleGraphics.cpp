@@ -394,6 +394,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             break;
         }
         case paramTypeToggle:
+        case paramTypeMenu:
         {
             const char ** strMap     = modeLocationList[modeRef].strMap;
             double        y          = rectangle.coord.y;

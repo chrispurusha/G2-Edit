@@ -778,8 +778,8 @@ const tParamLocation     paramLocationList[] = {
     // 68 ClkGen
     {moduleTypeClkGen,     paramTypeCommonDial,  {{ 60, -17}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 68 Tempo *** needs new dial 24-214 BPM
     {moduleTypeClkGen,     paramTypeBypass,      {{ 70, -17}, { 5,  5}}, anchorBottomLeft,  NULL,             2,   1, NULL,                                  NULL          },                         // 68 Bypass
-    {moduleTypeClkGen,     paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Source",         2,   0, clkSrcStrMap,                          NULL          },                         // 66 Clk Source
-    {moduleTypeClkGen,     paramTypeMenu,        {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Sync every",    16,   3, int16StrMap,                           NULL          },                         // 66 BeatSync
+    {moduleTypeClkGen,     paramTypeMenu,        {{  3,  -3}, { 7,  7}}, anchorBottomLeft,  "Source",         2,   0, clkSrcStrMap,                          NULL          },                         // 68 Clk Source
+    {moduleTypeClkGen,     paramTypeMenu,        {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "Sync every",    16,   3, int16StrMap,                           NULL          },                         // 68 BeatSync
     {moduleTypeClkGen,     paramTypeCommonDial,  {{ 25,  -3}, { 7, 14}}, anchorBottomLeft,  "Swing",        128,   0, NULL,                                  NULL          },                         // 68 Swing
     // 69 ClkDiv
     {moduleTypeClkDiv,     paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 69 Divider *** needs other UI element
@@ -823,7 +823,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeEnvADR,     paramTypeMenu,        {{ 10,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, trigGateStrMap,                        NULL          },                         // 84 Trig/Gate
     {moduleTypeEnvADR,     paramTypeMenu,        {{ 70, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, posNegInvStrMap,                       NULL          },                         // 84 OutType
     {moduleTypeEnvADR,     paramTypeToggle,      {{  3, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, kbStrMap,                              offOnColourMap},
-    {moduleTypeEnvADR,     paramTypeMenu,        {{ 52, -12}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, decayReleaseStrMap,                    NULL          },                         // 84 Decay/Release toggle
+    {moduleTypeEnvADR,     paramTypeMenu,        {{ 55, -12}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, decayReleaseStrMap,                    NULL          },                         // 84 Decay/Release toggle
     // 85 WindSw
     {moduleTypeWindSw,     paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "From",         128,   0, NULL,                                  NULL          },                         // 85 From
     {moduleTypeWindSw,     paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "To",           128,   0, NULL,                                  NULL          },                         // 85 To
@@ -1896,9 +1896,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 35, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In1_1
     {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In1_2
     {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 65, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In2_1
-    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In2_1
+    {moduleTypeGate,        connectorDirIn,  connectorTypeLogic,   {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},        // 64 In2_2
     {moduleTypeGate,        connectorDirOut, connectorTypeLogic,   {{ 52,  -6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },        // 64 Out1
-    {moduleTypeGate,        connectorDirOut, connectorTypeLogic,   {{ 82,  -6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },        // 64 Out1
+    {moduleTypeGate,        connectorDirOut, connectorTypeLogic,   {{ 82,  -6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },        // 64 Out2
     // 65 Unknown
 
     // 66 Mix2-1B
@@ -1911,8 +1911,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeClkGen,      connectorDirIn,  connectorTypeLogic,   {{  3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",        labelLocRight},          // 68 Reset
     {moduleTypeClkGen,      connectorDirOut, connectorTypeLogic,   {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "1/96",         labelLocLeft },          // 68 1/96
     {moduleTypeClkGen,      connectorDirOut, connectorTypeLogic,   {{ -3, -10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "1/16",         labelLocLeft },          // 68 1/16
-    {moduleTypeClkGen,      connectorDirOut, connectorTypeLogic,   {{ -3, -24}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "ClkActive",    labelLocLeft },          // 68 1/96
-    {moduleTypeClkGen,      connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Sync",         labelLocLeft },          // 68 1/96
+    {moduleTypeClkGen,      connectorDirOut, connectorTypeLogic,   {{ -3, -24}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "ClkActive",    labelLocLeft },          // 68 ClkActive
+    {moduleTypeClkGen,      connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Sync",         labelLocLeft },          // 68 Sync
     // 69 ClkDiv
     {moduleTypeClkDiv,      connectorDirIn,  connectorTypeLogic,   {{ 20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Clock",        labelLocRight},          // 69 Clock
     {moduleTypeClkDiv,      connectorDirIn,  connectorTypeLogic,   {{ 40,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Reset",        labelLocRight},          // 69 Reset
@@ -1935,7 +1935,7 @@ const tConnectorLocation connectorLocationList[] = {
     // 76 SwOnOffT
     {moduleTypeSwOnOffT,    connectorDirIn,  connectorTypeControl, {{-20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 76 In
     {moduleTypeSwOnOffT,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 76 Out
-    {moduleTypeSwOnOffT,    connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 76 Ctrl
+    {moduleTypeSwOnOffT,    connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},          // 76 Ctrl
     // 77 Unknown
     // 78 Sw1-8
     {moduleTypeSw1to8,      connectorDirIn,  connectorTypeControl, {{ 15,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 78 In
@@ -1971,7 +1971,7 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeEnvADR,      connectorDirIn,  connectorTypeControl, {{ 25,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "AM",           labelLocUp   },          // 84 AM
     {moduleTypeEnvADR,      connectorDirOut, connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Env",          labelLocUp   },          // 84 Env
     {moduleTypeEnvADR,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 84 Out
-    {moduleTypeEnvADR,      connectorDirOut, connectorTypeLogic,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 46 End
+    {moduleTypeEnvADR,      connectorDirOut, connectorTypeLogic,   {{-17,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 84 End
     // 85 WindSw
     {moduleTypeWindSw,      connectorDirIn,  connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocRight},          // 85 In
     {moduleTypeWindSw,      connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Ctrl",         labelLocRight},          // 85 In
