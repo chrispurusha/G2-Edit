@@ -54,6 +54,7 @@ extern "C" {
 #include "misc.h"
 #include "patchParamsResources.h"
 #include "perfSettingsResources.h"
+#include "menus.h"
 
 static FT_Library      gLibrary        = {0};
 static FT_Face         gFace           = {0};
@@ -242,74 +243,87 @@ void error_callback(int error, const char * description) {
     LOG_ERROR("GLFW error [%d]: %s\n", error, description);
 }
 
-void render_context_menu(void) {
+// Renders every currently open level (gContextMenu.frame[0..depth-1]) — the
+// original top-level menu plus any submenu flyouts opened beneath it (see
+// update_context_menu_hover() / handle_context_menu_click() in menus.c).
+// Ancestors are drawn first so the deepest, frontmost flyout paints on top.
+static void render_menu_frame(const tMenuFrame * frameData, tCoord mouseCoord) {
     double     size        = 0.0;
     double     largestSize = 0.0;
-    tCoord     mouseCoord  = {0};
     tRectangle menuItem    = {0};
     double     itemHeight  = STANDARD_TEXT_HEIGHT;
-    uint32_t   columns     = (gContextMenu.columns > 1) ? gContextMenu.columns : 1;
+    uint32_t   columns     = (frameData->columns > 1) ? frameData->columns : 1;
+
+    if (frameData->items == NULL) {
+        return;
+    }
+
+    for (int i = 0; frameData->items[i].label != NULL; i++) {
+        size = get_text_width(frameData->items[i].label, itemHeight, eNoCache);
+
+        if (size > largestSize) {
+            largestSize = size;
+        }
+    }
+
+    double     computed    = (largestSize + (5 * 2) > itemHeight) ? largestSize + (5 * 2) : itemHeight;
+    double     cellW       = (frameData->cellWidth > 0.0) ? frameData->cellWidth : computed;
+    double     cellH       = itemHeight + (5 * 2);
+
+    for (int i = 0; frameData->items[i].label != NULL; i++) {
+        int    col = (int)(i % columns);
+        int    row = (int)(i / columns);
+        double x   = frameData->coord.x + col * cellW;
+        double y   = frameData->coord.y + row * cellH;
+        menuItem = {{x, y}, {cellW, cellH}};
+
+        set_rgb_colour(frameData->items[i].colour);
+        render_rectangle(mainArea, menuItem);
+
+        set_rgb_colour(RGB_WHITE);
+        render_text(mainArea, {{x + 5, y + 5}, {BLANK_SIZE, itemHeight}}, frameData->items[i].label);
+
+        if (columns > 1) {
+            set_rgb_colour(RGB_BLACK);
+            render_line(mainArea, {x, y}, {x + cellW, y}, 1);
+            render_line(mainArea, {x + cellW, y}, {x + cellW, y + cellH}, 1);
+            render_line(mainArea, {x, y + cellH}, {x + cellW, y + cellH}, 1);
+            render_line(mainArea, {x, y}, {x, y + cellH}, 1);
+        }
+    }
+
+    for (int i = 0; frameData->items[i].label != NULL; i++) {
+        int    col = (int)(i % columns);
+        int    row = (int)(i / columns);
+        double x   = frameData->coord.x + col * cellW;
+        double y   = frameData->coord.y + row * cellH;
+        menuItem = {{x, y}, {cellW, cellH}};
+
+        if (within_rectangle(mouseCoord, menuItem)) {
+            set_rgb_colour(RGB_BLACK);
+            render_line(mainArea, {menuItem.coord.x, menuItem.coord.y}, {menuItem.coord.x + menuItem.size.w, menuItem.coord.y}, 1);
+            render_line(mainArea, {menuItem.coord.x + menuItem.size.w, menuItem.coord.y}, {menuItem.coord.x + menuItem.size.w, menuItem.coord.y + menuItem.size.h}, 1);
+            render_line(mainArea, {menuItem.coord.x, menuItem.coord.y}, {menuItem.coord.x, menuItem.coord.y + menuItem.size.h}, 1);
+            render_line(mainArea, {menuItem.coord.x, menuItem.coord.y + menuItem.size.h}, {menuItem.coord.x + menuItem.size.w, menuItem.coord.y + menuItem.size.h}, 1);
+            set_rgb_colour(RGB_WHITE);
+            render_line(mainArea, {menuItem.coord.x + 1, menuItem.coord.y + 1}, {(menuItem.coord.x + menuItem.size.w) - 1, menuItem.coord.y + 1}, 1);
+            render_line(mainArea, {(menuItem.coord.x + menuItem.size.w - 1), menuItem.coord.y + 1}, {(menuItem.coord.x + menuItem.size.w) - 1, (menuItem.coord.y + menuItem.size.h) - 1}, 1);
+            render_line(mainArea, {menuItem.coord.x + 1, menuItem.coord.y + 1}, {menuItem.coord.x + 1, (menuItem.coord.y + menuItem.size.h) - 1}, 1);
+            render_line(mainArea, {menuItem.coord.x + 1, (menuItem.coord.y + menuItem.size.h) - 1}, {(menuItem.coord.x + menuItem.size.w) - 1, (menuItem.coord.y + menuItem.size.h) - 1}, 1);
+        }
+    }
+}
+
+void render_context_menu(void) {
+    tCoord mouseCoord = {0};
 
     if (!gContextMenu.active) {
         return;
     }
     get_global_gui_scaled_mouse_coord(&mouseCoord);
 
-    if (gContextMenu.items != NULL) {
-        for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
-            size = get_text_width(gContextMenu.items[i].label, itemHeight, eNoCache);
-
-            if (size > largestSize) {
-                largestSize = size;
-            }
-        }
-
-        double computed = (largestSize + (5 * 2) > itemHeight) ? largestSize + (5 * 2) : itemHeight;
-        double cellW    = (gContextMenu.cellWidth > 0.0) ? gContextMenu.cellWidth : computed;
-        double cellH    = itemHeight + (5 * 2);
-
-        for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
-            int    col = (int)(i % columns);
-            int    row = (int)(i / columns);
-            double x   = gContextMenu.coord.x + col * cellW;
-            double y   = gContextMenu.coord.y + row * cellH;
-            menuItem = {{x, y}, {cellW, cellH}};
-
-            set_rgb_colour(gContextMenu.items[i].colour);
-            render_rectangle(mainArea, menuItem);
-
-            set_rgb_colour(RGB_WHITE);
-            render_text(mainArea, {{x + 5, y + 5}, {BLANK_SIZE, itemHeight}}, gContextMenu.items[i].label);
-
-            if (columns > 1) {
-                set_rgb_colour(RGB_BLACK);
-                render_line(mainArea, {x, y}, {x + cellW, y}, 1);
-                render_line(mainArea, {x + cellW, y}, {x + cellW, y + cellH}, 1);
-                render_line(mainArea, {x, y + cellH}, {x + cellW, y + cellH}, 1);
-                render_line(mainArea, {x, y}, {x, y + cellH}, 1);
-            }
-        }
-
-        for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
-            int    col = (int)(i % columns);
-            int    row = (int)(i / columns);
-            double x   = gContextMenu.coord.x + col * cellW;
-            double y   = gContextMenu.coord.y + row * cellH;
-            menuItem = {{x, y}, {cellW, cellH}};
-
-            if (within_rectangle(mouseCoord, menuItem)) {
-                set_rgb_colour(RGB_BLACK);
-                render_line(mainArea, {menuItem.coord.x, menuItem.coord.y}, {menuItem.coord.x + menuItem.size.w, menuItem.coord.y}, 1);
-                render_line(mainArea, {menuItem.coord.x + menuItem.size.w, menuItem.coord.y}, {menuItem.coord.x + menuItem.size.w, menuItem.coord.y + menuItem.size.h}, 1);
-                render_line(mainArea, {menuItem.coord.x, menuItem.coord.y}, {menuItem.coord.x, menuItem.coord.y + menuItem.size.h}, 1);
-                render_line(mainArea, {menuItem.coord.x, menuItem.coord.y + menuItem.size.h}, {menuItem.coord.x + menuItem.size.w, menuItem.coord.y + menuItem.size.h}, 1);
-                set_rgb_colour(RGB_WHITE);
-                render_line(mainArea, {menuItem.coord.x + 1, menuItem.coord.y + 1}, {(menuItem.coord.x + menuItem.size.w) - 1, menuItem.coord.y + 1}, 1);
-                render_line(mainArea, {(menuItem.coord.x + menuItem.size.w - 1), menuItem.coord.y + 1}, {(menuItem.coord.x + menuItem.size.w) - 1, (menuItem.coord.y + menuItem.size.h) - 1}, 1);
-                render_line(mainArea, {menuItem.coord.x + 1, menuItem.coord.y + 1}, {menuItem.coord.x + 1, (menuItem.coord.y + menuItem.size.h) - 1}, 1);
-                render_line(mainArea, {menuItem.coord.x + 1, (menuItem.coord.y + menuItem.size.h) - 1}, {(menuItem.coord.x + menuItem.size.w) - 1, (menuItem.coord.y + menuItem.size.h) - 1}, 1);
-            }
-        }
+    for (uint32_t f = 0; f < gContextMenu.depth; f++) {
+        render_menu_frame(&gContextMenu.frame[f], mouseCoord);
     }
 }
 
@@ -1975,6 +1989,7 @@ void do_graphics_loop(void) {
 
     while ((gQuitAll == false) && (!glfwWindowShouldClose((GLFWwindow *)gWindow))) {
         check_action_flags();
+        update_context_menu_hover(); // Polled every tick (not just on cursor move) so a hover-dwell timer elapses even while the mouse sits still
 
         reDraw  = gReDraw;
         gReDraw = false;
@@ -2029,7 +2044,7 @@ void do_graphics_loop(void) {
             glfwSwapBuffers((GLFWwindow *)gWindow);
         }
 
-        if ((gModuleDrag.active == true) || (gCableDrag.active == true)) {
+        if ((gModuleDrag.active == true) || (gCableDrag.active == true) || (gContextMenu.active == true)) {
             double x = 0.0;
             double y = 0.0;
             glfwGetCursorPos((GLFWwindow *)gWindow, &x, &y);
