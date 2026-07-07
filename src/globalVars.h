@@ -48,7 +48,6 @@ extern tTopbarControl          gTopbarControls[topbarControlMax];
 extern bool                    gShowOpenFileReadDialogue;
 extern bool                    gShowOpenFileWriteDialogue;
 //extern tScrollState            gScrollState;
-extern tContextMenu            gContextMenu;
 extern tCableDragging          gCableDrag;
 extern tHoverConnector         gHoverConnector;
 extern tParamDragging          gParamDragging;

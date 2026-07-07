@@ -269,9 +269,6 @@
 #define STANDARD_TEXT_HEIGHT           (12.0)
 #define STANDARD_BUTTON_TEXT_HEIGHT    (12.0)
 
-#define MAX_MENU_DEPTH                 (4)         // Top-level menu + nested submenu flyouts (mac-style: click opens top level, hover dwell opens each next level)
-#define MENU_HOVER_DELAY_SECS          (0.3)       // Dwell time over a submenu-bearing item before it auto-opens, matching macOS's feel
-
 #define CONNECTOR_SIZE                 (5)
 
 #define MAX_ROWS                       (127)
