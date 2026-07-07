@@ -22,6 +22,7 @@ extern "C" {
 #endif
 
 #include <math.h>
+#include <GLFW/glfw3.h>
 
 #include "defs.h"
 #include "synthlibDefs.h"
@@ -33,6 +34,7 @@ extern "C" {
 #include "moduleResourcesAccess.h"
 #include "globalVars.h"
 #include "protocol.h"
+#include "mouseHandle.h"
 #include "menus.h"
 #include "selection.h"
 #include "undo.h"
@@ -404,29 +406,24 @@ static void action_rename_module(int index) {
     gReDraw             = true;
 }
 
+// Only ever called for items with no subMenu — handle_context_menu_click()/
+// update_context_menu_hover() open a subMenu-bearing item's flyout themselves
+// and never invoke its action.
 static void action_set_module_colour(int index) {
-    if (gContextMenu.items[index].subMenu == NULL) {
-        tMessageContent messageContent = {0};
-        tModule *       module         = get_module(gContextMenu.moduleKey);
+    tMessageContent messageContent = {0};
+    tModule *       module         = get_module(gContextMenu.moduleKey);
 
-        if (module == NULL) {
-            return;
-        }
-        module->colour                            = gContextMenu.items[index].param;
-
-        messageContent.cmd                        = eMsgCmdSetModuleColour;
-        messageContent.slot                       = module->key.slot;
-        messageContent.moduleColourData.moduleKey = module->key;
-        messageContent.moduleColourData.colour    = module->colour;
-
-        msg_send(&gCommandQueue, &messageContent);
-    } else {
-        tMenuItem * subMenu = gContextMenu.items[index].subMenu;
-
-        if (subMenu != NULL) {
-            open_context_menu(gContextMenu.coord, subMenu, 6, STANDARD_TEXT_HEIGHT * 2);
-        }
+    if (module == NULL) {
+        return;
     }
+    module->colour                            = gContextMenu.items[index].param;
+
+    messageContent.cmd                        = eMsgCmdSetModuleColour;
+    messageContent.slot                       = module->key.slot;
+    messageContent.moduleColourData.moduleKey = module->key;
+    messageContent.moduleColourData.colour    = module->colour;
+
+    msg_send(&gCommandQueue, &messageContent);
 }
 
 static void action_rename_morph_label(int index) {
@@ -640,12 +637,6 @@ static void menu_action_create(int index) {
             init_params_on_module_all_variations(get_module(module.key), location);
 
             shift_modules_down(module.key);
-        }
-    } else {
-        tMenuItem * subMenu = gContextMenu.items[index].subMenu;
-
-        if (subMenu != NULL) {
-            open_context_menu(gContextMenu.coord, subMenu, 0, 0.0);
         }
     }
 }
@@ -1302,104 +1293,243 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
 #include "menuResources.h"
 
 // ── Core context menu mechanism ─────────────────────────────────────────────
+//
+// gContextMenu.frame[0..depth-1] is the stack of currently visible levels —
+// frame[0] is the original top-level menu, frame[depth-1] the deepest open
+// flyout. Every level stays visible and clickable while a deeper one is open,
+// matching the mac menu bar: click (or hover-dwell, see
+// update_context_menu_hover()) on an item with a subMenu opens it beside that
+// item; hovering a different item at an already-visible level collapses
+// whatever was open beneath it.
 
-static void clamp_menu_to_screen(tMenuItem * items, uint32_t columns) {
-    int      count        = 0;
-    double   renderWidth  = get_render_width() / gGlobalGuiScale;
-    double   renderHeight = get_render_height() / gGlobalGuiScale;
-    double   cellH        = STANDARD_TEXT_HEIGHT + (5 * 2);
-    uint32_t cols         = (columns > 1) ? columns : 1;
-
-    while (items[count].label != NULL) {
-        count++;
+static double menu_cell_width(const tMenuFrame * frame) {
+    if (frame->cellWidth > 0.0) {
+        return frame->cellWidth;
     }
-    int      rows         = (count + (int)cols - 1) / (int)cols;
-    double   menuHeight   = rows * cellH;
+    double itemHeight  = STANDARD_TEXT_HEIGHT;
+    double largestSize = 0.0;
 
-    if (gContextMenu.coord.y + menuHeight > (renderHeight - SCROLLBAR_WIDTH)) {
-        gContextMenu.coord.y = (renderHeight - SCROLLBAR_WIDTH) - menuHeight;
-    }
-
-    if (gContextMenu.coord.y < 0.0) {
-        gContextMenu.coord.y = 0.0;
-    }
-
-    if (gContextMenu.cellWidth > 0.0) {
-        double menuWidth = gContextMenu.cellWidth * (double)cols;
-
-        if (gContextMenu.coord.x + menuWidth > renderWidth - SCROLLBAR_WIDTH) {
-            gContextMenu.coord.x = renderWidth - SCROLLBAR_WIDTH - menuWidth;
-        }
-
-        if (gContextMenu.coord.x < 0.0) {
-            gContextMenu.coord.x = 0.0;
-        }
-    }
-}
-
-void open_context_menu(tCoord coord, tMenuItem * items, uint32_t columns, double cellWidth) {
-    gContextMenu.coord     = coord;
-    gContextMenu.items     = items;
-    gContextMenu.columns   = columns;
-    gContextMenu.cellWidth = cellWidth;
-    gContextMenu.active    = true;
-    clamp_menu_to_screen(items, (columns > 1) ? columns : 1);
-}
-
-bool handle_context_menu_click(tCoord coord) {
-    if ((gContextMenu.active == false) || (gContextMenu.items == NULL)) {
-        return false;
-    }
-    double   size        = 0.0;
-    double   largestSize = 0.0;
-    double   itemHeight  = STANDARD_TEXT_HEIGHT;
-    uint32_t columns     = (gContextMenu.columns > 1) ? gContextMenu.columns : 1;
-
-    for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
-        size = get_text_width(gContextMenu.items[i].label, itemHeight, eNoCache);
+    for (int i = 0; frame->items[i].label != NULL; i++) {
+        double size = get_text_width(frame->items[i].label, itemHeight, eNoCache);
 
         if (size > largestSize) {
             largestSize = size;
         }
     }
 
-    double   cellW       = (largestSize + (5 * 2) > itemHeight) ? largestSize + (5 * 2) : itemHeight;
-    double   cellH       = itemHeight + (5 * 2);
+    return (largestSize + (5 * 2) > itemHeight) ? largestSize + (5 * 2) : itemHeight;
+}
 
-    cellW = (gContextMenu.cellWidth > 0.0) ? gContextMenu.cellWidth : cellW;
+static uint32_t menu_columns(const tMenuFrame * frame) {
+    return (frame->columns > 1) ? frame->columns : 1;
+}
 
-    for (int i = 0; gContextMenu.items[i].label != NULL; i++) {
-        int        col      = (int)(i % columns);
-        int        row      = (int)(i / columns);
-        tRectangle itemRect = {
-            {gContextMenu.coord.x + col * cellW, gContextMenu.coord.y + row * cellH},
-            {cellW,                              cellH                             }
-        };
+static tRectangle menu_item_rect(const tMenuFrame * frame, int index) {
+    double   cellW   = menu_cell_width(frame);
+    double   cellH   = STANDARD_TEXT_HEIGHT + (5 * 2);
+    uint32_t columns = menu_columns(frame);
+    int      col     = index % (int)columns;
+    int      row     = index / (int)columns;
 
-        if (within_rectangle(coord, itemRect)) {
-            if (gContextMenu.items[i].action != NULL) {
-                if (gContextMenu.items[i].subMenu == NULL) {
-                    gContextMenu.active = false;
-                }
-                gContextMenu.items[i].action(i);
-            } else if (gContextMenu.items[i].subMenu != NULL) {
-                open_context_menu(gContextMenu.coord, gContextMenu.items[i].subMenu, 0, 0.0);
-            } else {
-                gContextMenu.active = false;
-            }
-            return true;
+    return (tRectangle){
+        {
+            frame->coord.x + col * cellW, frame->coord.y + row * cellH
+        },
+        {
+            cellW, cellH
+        }
+    };
+}
+
+// Returns the index of the item in frame that contains coord, or -1.
+static int32_t menu_hit_test(const tMenuFrame * frame, tCoord coord) {
+    for (int i = 0; frame->items[i].label != NULL; i++) {
+        if (within_rectangle(coord, menu_item_rect(frame, i))) {
+            return i;
         }
     }
 
+    return -1;
+}
+
+static void clamp_menu_to_screen(tMenuFrame * frame) {
+    int      count        = 0;
+    double   renderWidth  = get_render_width() / gGlobalGuiScale;
+    double   renderHeight = get_render_height() / gGlobalGuiScale;
+    double   cellH        = STANDARD_TEXT_HEIGHT + (5 * 2);
+    uint32_t cols         = menu_columns(frame);
+
+    while (frame->items[count].label != NULL) {
+        count++;
+    }
+    int      rows         = (count + (int)cols - 1) / (int)cols;
+    double   menuHeight   = rows * cellH;
+
+    if (frame->coord.y + menuHeight > (renderHeight - SCROLLBAR_WIDTH)) {
+        frame->coord.y = (renderHeight - SCROLLBAR_WIDTH) - menuHeight;
+    }
+
+    if (frame->coord.y < 0.0) {
+        frame->coord.y = 0.0;
+    }
+    double   menuWidth    = menu_cell_width(frame) * (double)cols;
+
+    if (frame->coord.x + menuWidth > renderWidth - SCROLLBAR_WIDTH) {
+        frame->coord.x = renderWidth - SCROLLBAR_WIDTH - menuWidth;
+    }
+
+    if (frame->coord.x < 0.0) {
+        frame->coord.x = 0.0;
+    }
+}
+
+void open_context_menu(tCoord coord, tMenuItem * items, uint32_t columns, double cellWidth) {
+    gContextMenu.frame[0]       = (tMenuFrame){
+        coord, items, columns, cellWidth
+    };
+    gContextMenu.depth          = 1;
+    gContextMenu.active         = true;
+    gContextMenu.hoverFrame     = -1;
+    gContextMenu.hoverIndex     = -1;
+    gContextMenu.hoverStartTime = 0.0;
+    clamp_menu_to_screen(&gContextMenu.frame[0]);
+}
+
+void close_context_menu(void) {
     memset(&gContextMenu, 0, sizeof(gContextMenu));
+    gContextMenu.hoverFrame = -1;
+    gContextMenu.hoverIndex = -1;
+}
+
+// Collapses the stack down to newDepth open frames; 0 closes the whole menu.
+static void pop_menu_frames_to(uint32_t newDepth) {
+    if (newDepth == 0) {
+        close_context_menu();
+        return;
+    }
+    gContextMenu.depth = newDepth;
+}
+
+// Deliberately leaves gContextMenu.hoverFrame/hoverIndex/hoverStartTime alone:
+// the mouse is still physically sitting over whichever item just triggered
+// this push (that's true whether the trigger was a click or a hover-dwell), so
+// clearing them here would make the very next update_context_menu_hover() tick
+// see that item as "newly hovered" and immediately collapse the frame just
+// pushed. Callers that push from somewhere other than the current hover
+// target (none today) are responsible for updating hover state themselves.
+static void push_menu_frame(tCoord coord, tMenuItem * items, uint32_t columns, double cellWidth) {
+    if (gContextMenu.depth >= MAX_MENU_DEPTH) {
+        return;
+    }
+    gContextMenu.frame[gContextMenu.depth] = (tMenuFrame){
+        coord, items, columns, cellWidth
+    };
+    gContextMenu.depth++;
+    clamp_menu_to_screen(&gContextMenu.frame[gContextMenu.depth - 1]);
+}
+
+bool handle_context_menu_click(tCoord coord) {
+    if (gContextMenu.active == false) {
+        return false;
+    }
+
+    for (int f = (int)gContextMenu.depth - 1; f >= 0; f--) {
+        tMenuFrame * frame = &gContextMenu.frame[f];
+        int32_t      index = menu_hit_test(frame, coord);
+
+        if (index < 0) {
+            continue;
+        }
+        gContextMenu.items = frame->items; // action(index) below reads gContextMenu.items[index].param
+
+        tMenuItem *  item  = &frame->items[index];
+
+        if (item->subMenu != NULL) {
+            tRectangle itemRect = menu_item_rect(frame, index);
+
+            pop_menu_frames_to((uint32_t)f + 1);
+            push_menu_frame(side_of_rect(itemRect), item->subMenu, item->subMenuColumns, item->subMenuCellWidth);
+            gContextMenu.hoverFrame     = f;
+            gContextMenu.hoverIndex     = index;
+            gContextMenu.hoverStartTime = glfwGetTime();
+        } else if (item->action != NULL) {
+            void (*action)(int) = item->action;
+            action(index);
+            close_context_menu();
+        } else {
+            close_context_menu();
+        }
+        return true;
+    }
+
+    close_context_menu();
 
     return false;
+}
+
+// Called once per frame while gContextMenu.active (see do_graphics_loop()) —
+// tracks which item the mouse is over and, if it has a subMenu and the mouse
+// dwells on it for MENU_HOVER_DELAY_SECS, opens it exactly as a click would.
+// Hovering a different item at a still-visible ancestor level collapses
+// whatever flyout was open beneath it, same as real menus.
+void update_context_menu_hover(void) {
+    if (gContextMenu.active == false) {
+        return;
+    }
+    tCoord  mouseCoord = {0};
+
+    get_global_gui_scaled_mouse_coord(&mouseCoord);
+
+    int32_t hitFrame   = -1;
+    int32_t hitIndex   = -1;
+
+    for (int f = (int)gContextMenu.depth - 1; (f >= 0) && (hitIndex < 0); f--) {
+        int32_t index = menu_hit_test(&gContextMenu.frame[f], mouseCoord);
+
+        if (index >= 0) {
+            hitFrame = f;
+            hitIndex = index;
+        }
+    }
+
+    if (hitIndex < 0) {
+        gContextMenu.hoverFrame = -1;
+        gContextMenu.hoverIndex = -1;
+        return;
+    }
+
+    if ((hitFrame != gContextMenu.hoverFrame) || (hitIndex != gContextMenu.hoverIndex)) {
+        if (hitFrame < (int)gContextMenu.depth - 1) {
+            pop_menu_frames_to((uint32_t)hitFrame + 1);
+        }
+        gContextMenu.hoverFrame     = hitFrame;
+        gContextMenu.hoverIndex     = hitIndex;
+        gContextMenu.hoverStartTime = glfwGetTime();
+        gReDraw                     = true;
+        return;
+    }
+    tMenuItem * item = &gContextMenu.frame[hitFrame].items[hitIndex];
+
+    if (  (item->subMenu != NULL)
+       && (hitFrame == (int)gContextMenu.depth - 1)
+       && ((glfwGetTime() - gContextMenu.hoverStartTime) >= MENU_HOVER_DELAY_SECS)) {
+        tRectangle itemRect = menu_item_rect(&gContextMenu.frame[hitFrame], hitIndex);
+
+        push_menu_frame(side_of_rect(itemRect), item->subMenu, item->subMenuColumns, item->subMenuCellWidth);
+        gReDraw = true;
+    }
 }
 
 // ── Helper ──────────────────────────────────────────────────────────────────
 
 tCoord below_rect(tRectangle r) {
     tCoord c = {r.coord.x, r.coord.y + r.size.h};
+
+    return c;
+}
+
+tCoord side_of_rect(tRectangle r) {
+    tCoord c = {r.coord.x + r.size.w, r.coord.y};
 
     return c;
 }
@@ -1836,13 +1966,13 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     };
 
     static tMenuItem menuItems[] = {
-        {"Rename",     RGB_GREY_3, action_rename_module,      0, NULL           },
-        {"Set colour", RGB_GREY_3, action_set_module_colour,  0, colourMenuItems},
-        {"Copy",       RGB_GREY_3, menu_action_copy_module,   0, NULL           },
-        {"Cut",        RGB_GREY_3, menu_action_cut_module,    0, NULL           },
-        {"Paste",      RGB_GREY_3, menu_action_paste,         0, NULL           },
-        {"Delete",     RGB_GREY_3, menu_action_delete_module, 0, NULL           },
-        {NULL,         RGB_BLACK,  NULL,                      0, NULL           }
+        {"Rename",     RGB_GREY_3, action_rename_module,      0, NULL,            0,                      0.0},
+        {"Set colour", RGB_GREY_3, NULL,                      0, colourMenuItems, 6, STANDARD_TEXT_HEIGHT * 2},
+        {"Copy",       RGB_GREY_3, menu_action_copy_module,   0, NULL,            0,                      0.0},
+        {"Cut",        RGB_GREY_3, menu_action_cut_module,    0, NULL},
+        {"Paste",      RGB_GREY_3, menu_action_paste,         0, NULL},
+        {"Delete",     RGB_GREY_3, menu_action_delete_module, 0, NULL},
+        {NULL,         RGB_BLACK,  NULL,                      0, NULL}
     };
 
     gContextMenu.moduleKey = moduleKey;
