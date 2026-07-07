@@ -682,9 +682,9 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeFltNord,    paramTypeCommonDial,  {{ 55,  -3}, { 7, 14}}, anchorBottomLeft,  "Res M",        128,   0, NULL,                                  NULL          },                         // 51 Res M
     // 52 EnvMulti
     {moduleTypeEnvMulti,   paramTypeCommonDial,  {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "L1",           128, 127, NULL,                                  NULL          },                         // 52 Lvl1
-    {moduleTypeEnvMulti,   paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "L1",           128, 127, NULL,                                  NULL          },                         // 52 Lvl2
-    {moduleTypeEnvMulti,   paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "L1",           128, 127, NULL,                                  NULL          },                         // 52 Lvl3
-    {moduleTypeEnvMulti,   paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "L1",           128, 127, NULL,                                  NULL          },                         // 52 Lvl4
+    {moduleTypeEnvMulti,   paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  "L2",           128, 127, NULL,                                  NULL          },                         // 52 Lvl2
+    {moduleTypeEnvMulti,   paramTypeCommonDial,  {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "L3",           128, 127, NULL,                                  NULL          },                         // 52 Lvl3
+    {moduleTypeEnvMulti,   paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "L4",           128, 127, NULL,                                  NULL          },                         // 52 Lvl4
     {moduleTypeEnvMulti,   paramTypeADRTime,     {{ 10,  -3}, { 7, 14}}, anchorBottomLeft,  "T1",           128,   0, NULL,                                  NULL          },                         // 52 Time1
     {moduleTypeEnvMulti,   paramTypeADRTime,     {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  "T2",           128,   0, NULL,                                  NULL          },                         // 52 Time2
     {moduleTypeEnvMulti,   paramTypeADRTime,     {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  "T3",           128,   0, NULL,                                  NULL          },                         // 52 Time3
@@ -1751,13 +1751,13 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeShpExp,      connectorDirIn,  connectorTypeControl, {{ 35,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },     // 34 Mod
     {moduleTypeShpExp,      connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // 34 Out
     // 35 Driver
-    {moduleTypeDriver,      connectorDirIn,  connectorTypeAudio,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },     // 35 In1
+    {moduleTypeDriver,      connectorDirIn,  connectorTypeAudio,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},     // 35 In1
     {moduleTypeDriver,      connectorDirIn,  connectorTypeAudio,   {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // 35 In2
     {moduleTypeDriver,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // 35 Out
     // 36 SwOnOffM
     {moduleTypeSwOnOffM,    connectorDirIn,  connectorTypeControl, {{-20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // 36 In
     {moduleTypeSwOnOffM,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },     // 36 Out
-    {moduleTypeSwOnOffM,    connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },     // 36 Ctrl
+    {moduleTypeSwOnOffM,    connectorDirOut, connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocRight},     // 36 Ctrl
     // 37 Unknown
     // 38 Pulse
     {moduleTypePulse,       connectorDirIn,  connectorTypeLogic,   {{-21,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 38 In
