@@ -226,21 +226,21 @@ static void menu_action_set_cable_colour(int index) {
 
     gContextMenu.active = false;
 
-    if ((gContextMenu.moduleKey.slot != slot) || (gContextMenu.moduleKey.location != location)) {
+    if ((gMenuContext.moduleKey.slot != slot) || (gMenuContext.moduleKey.location != location)) {
         return;
     }
-    tModule * module    = get_module(gContextMenu.moduleKey);
+    tModule * module    = get_module(gMenuContext.moduleKey);
 
     if (module == NULL) {
         return;
     }
 
-    switch (module->connector[gContextMenu.connectorIndex].dir) {
+    switch (module->connector[gMenuContext.connectorIndex].dir) {
         case connectorDirOut:
-            outIndex = find_io_count_from_index(module, connectorDirOut, gContextMenu.connectorIndex);
+            outIndex = find_io_count_from_index(module, connectorDirOut, gMenuContext.connectorIndex);
             break;
         case connectorDirIn:
-            inIndex  = find_io_count_from_index(module, connectorDirIn, gContextMenu.connectorIndex);
+            inIndex  = find_io_count_from_index(module, connectorDirIn, gMenuContext.connectorIndex);
             break;
     }
 
@@ -252,7 +252,7 @@ static void menu_action_set_cable_colour(int index) {
             continue;
         }
 
-        if (cable->key.moduleFromIndex == gContextMenu.moduleKey.index) {
+        if (cable->key.moduleFromIndex == gMenuContext.moduleKey.index) {
             if (cable->key.linkType == cableLinkTypeFromInput) {
                 if ((int)cable->key.connectorFromIoCount == inIndex) {
                     doUpdate = true;
@@ -264,7 +264,7 @@ static void menu_action_set_cable_colour(int index) {
             }
         }
 
-        if (cable->key.moduleToIndex == gContextMenu.moduleKey.index) {
+        if (cable->key.moduleToIndex == gMenuContext.moduleKey.index) {
             if ((int)cable->key.connectorToIoCount == inIndex) {
                 doUpdate = true;
             }
@@ -296,19 +296,19 @@ static void menu_action_delete_cable(int index) {
     uint32_t slot     = gSlot;
     uint32_t location = gLocation;
 
-    if ((gContextMenu.moduleKey.slot == slot) && (gContextMenu.moduleKey.location == location)) {
-        tModule * module = get_module(gContextMenu.moduleKey);
+    if ((gMenuContext.moduleKey.slot == slot) && (gMenuContext.moduleKey.location == location)) {
+        tModule * module = get_module(gMenuContext.moduleKey);
 
         if (module == NULL) {
             return;
         }
 
-        switch (module->connector[gContextMenu.connectorIndex].dir) {
+        switch (module->connector[gMenuContext.connectorIndex].dir) {
             case connectorDirOut:
-                outIndex = find_io_count_from_index(module, connectorDirOut, gContextMenu.connectorIndex);
+                outIndex = find_io_count_from_index(module, connectorDirOut, gMenuContext.connectorIndex);
                 break;
             case connectorDirIn:
-                inIndex  = find_io_count_from_index(module, connectorDirIn, gContextMenu.connectorIndex);
+                inIndex  = find_io_count_from_index(module, connectorDirIn, gMenuContext.connectorIndex);
                 break;
         }
 
@@ -320,7 +320,7 @@ static void menu_action_delete_cable(int index) {
                 continue;
             }
 
-            if (cable->key.moduleFromIndex == gContextMenu.moduleKey.index) {
+            if (cable->key.moduleFromIndex == gMenuContext.moduleKey.index) {
                 if (cable->key.linkType == cableLinkTypeFromInput) {
                     if ((int)cable->key.connectorFromIoCount == inIndex) {
                         doDelete = true;
@@ -332,7 +332,7 @@ static void menu_action_delete_cable(int index) {
                 }
             }
 
-            if (cable->key.moduleToIndex == gContextMenu.moduleKey.index) {
+            if (cable->key.moduleToIndex == gMenuContext.moduleKey.index) {
                 if ((int)cable->key.connectorToIoCount == inIndex) {
                     doDelete = true;
                 }
@@ -361,8 +361,8 @@ static void menu_action_delete_cable(int index) {
 }
 
 static void ensure_module_selected(void) {
-    if (!is_selected(gContextMenu.moduleKey) || gSelection.count == 0) {
-        selection_set_single(gContextMenu.moduleKey);
+    if (!is_selected(gMenuContext.moduleKey) || gSelection.count == 0) {
+        selection_set_single(gMenuContext.moduleKey);
     }
 }
 
@@ -385,7 +385,7 @@ static void menu_action_delete_module(int index) {
     uint32_t slot     = gSlot;
     uint32_t location = gLocation;
 
-    if (gContextMenu.moduleKey.slot == slot && gContextMenu.moduleKey.location == location) {
+    if (gMenuContext.moduleKey.slot == slot && gMenuContext.moduleKey.location == location) {
         ensure_module_selected();
         undo_push_delete_selection();
         delete_selection();
@@ -394,11 +394,11 @@ static void menu_action_delete_module(int index) {
 }
 
 static void action_rename_module(int index) {
-    tModule * module = get_module(gContextMenu.moduleKey);
+    tModule * module = get_module(gMenuContext.moduleKey);
 
     if (module != NULL) {
         gModuleNameEdit.active    = true;
-        gModuleNameEdit.moduleKey = gContextMenu.moduleKey;
+        gModuleNameEdit.moduleKey = gMenuContext.moduleKey;
         COPY_STRING(gModuleNameEdit.buffer, module->name);
         gModuleNameEdit.cursorPos = (uint32_t)strlen(gModuleNameEdit.buffer);
     }
@@ -411,7 +411,7 @@ static void action_rename_module(int index) {
 // and never invoke its action.
 static void action_set_module_colour(int index) {
     tMessageContent messageContent = {0};
-    tModule *       module         = get_module(gContextMenu.moduleKey);
+    tModule *       module         = get_module(gMenuContext.moduleKey);
 
     if (module == NULL) {
         return;
@@ -430,17 +430,17 @@ static void action_rename_morph_label(int index) {
     uint32_t  morphIndex = (uint32_t)gContextMenu.items[index].param;
     uint32_t  slot       = gSlot;
 
-    gContextMenu.moduleKey = (tModuleKey){
+    gMenuContext.moduleKey = (tModuleKey){
         slot, locationMorph, 1
     };
 
-    tModule * module     = get_module(gContextMenu.moduleKey);
+    tModule * module     = get_module(gMenuContext.moduleKey);
 
     if (module != NULL) {
         uint32_t pi = morphIndex;
 
         gParamNameEdit.active     = true;
-        gParamNameEdit.moduleKey  = gContextMenu.moduleKey;
+        gParamNameEdit.moduleKey  = gMenuContext.moduleKey;
         gParamNameEdit.paramIndex = pi;
         COPY_STRING(gParamNameEdit.buffer, module->paramName[pi][0]);
         gParamNameEdit.cursorPos  = (uint32_t)strlen(gParamNameEdit.buffer);
@@ -673,9 +673,9 @@ int32_t find_global_knob_for_param(uint32_t slot, uint32_t location, uint32_t mo
 static void action_assign_knob(int index) {
     uint32_t        slot           = gSlot;
     uint32_t        targetKnob     = (uint32_t)gContextMenu.items[index].param;
-    uint32_t        location       = gContextMenu.moduleKey.location;
-    uint32_t        moduleIndex    = gContextMenu.moduleKey.index;
-    uint32_t        paramIndex     = gContextMenu.paramIndex;
+    uint32_t        location       = gMenuContext.moduleKey.location;
+    uint32_t        moduleIndex    = gMenuContext.moduleKey.index;
+    uint32_t        paramIndex     = gMenuContext.paramIndex;
     int32_t         existingKnob;
     tMessageContent msg            = {0};
 
@@ -713,7 +713,7 @@ static void action_assign_knob(int index) {
 
     msg.cmd                                       = eMsgCmdAssignKnob;
     msg.slot                                      = slot;
-    msg.knobAssignData.moduleKey                  = gContextMenu.moduleKey;
+    msg.knobAssignData.moduleKey                  = gMenuContext.moduleKey;
     msg.knobAssignData.paramIndex                 = paramIndex;
     msg.knobAssignData.knobIndex                  = targetKnob;
     msg_send(&gCommandQueue, &msg);
@@ -734,9 +734,9 @@ static void action_assign_knob(int index) {
 
 static void action_deassign_knob(int index) {
     uint32_t        slot        = gSlot;
-    uint32_t        location    = gContextMenu.moduleKey.location;
-    uint32_t        moduleIndex = gContextMenu.moduleKey.index;
-    uint32_t        paramIndex  = gContextMenu.paramIndex;
+    uint32_t        location    = gMenuContext.moduleKey.location;
+    uint32_t        moduleIndex = gMenuContext.moduleKey.index;
+    uint32_t        paramIndex  = gMenuContext.paramIndex;
     int32_t         knobIndex   = find_knob_for_param(slot, location, moduleIndex, paramIndex);
     tMessageContent msg         = {0};
 
@@ -760,9 +760,9 @@ static void action_deassign_knob(int index) {
 static void action_assign_global_knob(int index) {
     uint32_t        slot        = gSlot;
     uint32_t        targetKnob  = (uint32_t)gContextMenu.items[index].param;
-    uint32_t        location    = gContextMenu.moduleKey.location;
-    uint32_t        moduleIndex = gContextMenu.moduleKey.index;
-    uint32_t        paramIndex  = gContextMenu.paramIndex;
+    uint32_t        location    = gMenuContext.moduleKey.location;
+    uint32_t        moduleIndex = gMenuContext.moduleKey.index;
+    uint32_t        paramIndex  = gMenuContext.paramIndex;
     int32_t         existingKnob;
     tMessageContent msg         = {0};
 
@@ -804,9 +804,9 @@ static void action_assign_global_knob(int index) {
 
 static void action_deassign_global_knob(int index) {
     uint32_t        slot        = gSlot;
-    uint32_t        location    = gContextMenu.moduleKey.location;
-    uint32_t        moduleIndex = gContextMenu.moduleKey.index;
-    uint32_t        paramIndex  = gContextMenu.paramIndex;
+    uint32_t        location    = gMenuContext.moduleKey.location;
+    uint32_t        moduleIndex = gMenuContext.moduleKey.index;
+    uint32_t        paramIndex  = gMenuContext.paramIndex;
     int32_t         knobIndex   = find_global_knob_for_param(slot, location, moduleIndex, paramIndex);
     tMessageContent msg         = {0};
 
@@ -868,9 +868,9 @@ static void remove_controller_entry(uint32_t slot, uint32_t idx) {
 static void action_assign_midi_cc(int index) {
     uint32_t        slot        = gSlot;
     uint32_t        targetCC    = (uint32_t)gContextMenu.items[index].param;
-    uint32_t        location    = gContextMenu.moduleKey.location;
-    uint32_t        moduleIndex = gContextMenu.moduleKey.index;
-    uint32_t        paramIndex  = gContextMenu.paramIndex;
+    uint32_t        location    = gMenuContext.moduleKey.location;
+    uint32_t        moduleIndex = gMenuContext.moduleKey.index;
+    uint32_t        paramIndex  = gMenuContext.paramIndex;
     int32_t         ccOwner     = find_controller_for_cc(slot, targetCC);
     int32_t         paramEntry;
     tMessageContent msg         = {0};
@@ -896,7 +896,7 @@ static void action_assign_midi_cc(int index) {
             (uint8_t)targetCC, location, moduleIndex, paramIndex
         };
     }
-    tModule * mod = get_module(gContextMenu.moduleKey);
+    tModule * mod = get_module(gMenuContext.moduleKey);
 
     if ((mod != NULL) && (paramIndex < MAX_NUM_PARAMETERS)) {
         mod->param[0][paramIndex].midiCC    = (uint8_t)targetCC;
@@ -904,7 +904,7 @@ static void action_assign_midi_cc(int index) {
     }
     msg.cmd                         = eMsgCmdAssignMidiCC;
     msg.slot                        = slot;
-    msg.midiCCAssignData.moduleKey  = gContextMenu.moduleKey;
+    msg.midiCCAssignData.moduleKey  = gMenuContext.moduleKey;
     msg.midiCCAssignData.paramIndex = paramIndex;
     msg.midiCCAssignData.midiCC     = targetCC;
     msg_send(&gCommandQueue, &msg);
@@ -915,9 +915,9 @@ static void action_assign_midi_cc(int index) {
 
 static void action_deassign_midi_cc(int index) {
     uint32_t        slot        = gSlot;
-    uint32_t        location    = gContextMenu.moduleKey.location;
-    uint32_t        moduleIndex = gContextMenu.moduleKey.index;
-    uint32_t        paramIndex  = gContextMenu.paramIndex;
+    uint32_t        location    = gMenuContext.moduleKey.location;
+    uint32_t        moduleIndex = gMenuContext.moduleKey.index;
+    uint32_t        paramIndex  = gMenuContext.paramIndex;
     int32_t         entry       = find_controller_for_param(slot, location, moduleIndex, paramIndex);
     tMessageContent msg         = {0};
 
@@ -936,10 +936,10 @@ static void action_deassign_midi_cc(int index) {
 static void action_set_toggle_value(int index) {
     uint32_t  slot      = gSlot;
     uint32_t  variation = gPatchDescr[slot].activeVariation;
-    tModule * module    = get_module(gContextMenu.moduleKey);
+    tModule * module    = get_module(gMenuContext.moduleKey);
 
     if (module != NULL) {
-        uint32_t paramIdx = gContextMenu.paramIndex;
+        uint32_t paramIdx = gMenuContext.paramIndex;
         uint32_t oldValue = module->param[variation][paramIdx].value;
         uint32_t newValue = (uint32_t)gContextMenu.items[index].param;
         module->param[variation][paramIdx].value = (uint8_t)newValue;
@@ -947,10 +947,10 @@ static void action_set_toggle_value(int index) {
         uint32_t paramRef = module->param[variation][paramIdx].paramRef;
 
         if (paramLocationList[paramRef].type == paramTypeCustomData) {
-            send_custom_data_value(slot, gContextMenu.moduleKey);
+            send_custom_data_value(slot, gMenuContext.moduleKey);
         } else {
-            send_param_value(slot, gContextMenu.moduleKey, paramIdx, variation, newValue);
-            undo_push_param_change(gContextMenu.moduleKey, paramIdx, variation, oldValue, newValue);
+            send_param_value(slot, gMenuContext.moduleKey, paramIdx, variation, newValue);
+            undo_push_param_change(gMenuContext.moduleKey, paramIdx, variation, oldValue, newValue);
         }
     }
     gContextMenu.active = false;
@@ -979,22 +979,22 @@ void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, u
         NULL, RGB_BLACK, NULL, 0, NULL
     };
 
-    gContextMenu.moduleKey             = moduleKey;
-    gContextMenu.paramIndex            = paramIndex;
+    gMenuContext.moduleKey             = moduleKey;
+    gMenuContext.paramIndex            = paramIndex;
     open_context_menu(coord, menuItems, 0, 0.0);
 }
 
 static void action_set_mode_value(int index) {
     uint32_t  slot   = gSlot;
-    tModule * module = get_module(gContextMenu.moduleKey);
+    tModule * module = get_module(gMenuContext.moduleKey);
 
     if (module != NULL) {
-        uint32_t modeIdx  = gContextMenu.paramIndex;
+        uint32_t modeIdx  = gMenuContext.paramIndex;
         uint32_t oldValue = module->mode[modeIdx].value;
         uint32_t newValue = (uint32_t)gContextMenu.items[index].param;
         module->mode[modeIdx].value = newValue;
-        send_mode_value(slot, gContextMenu.moduleKey, modeIdx, newValue);
-        undo_push_mode_change(gContextMenu.moduleKey, modeIdx, oldValue, newValue);
+        send_mode_value(slot, gMenuContext.moduleKey, modeIdx, newValue);
+        undo_push_mode_change(gMenuContext.moduleKey, modeIdx, oldValue, newValue);
     }
     gContextMenu.active = false;
     gReDraw             = true;
@@ -1022,18 +1022,18 @@ void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeInde
         NULL, RGB_BLACK, NULL, 0, NULL
     };
 
-    gContextMenu.moduleKey             = moduleKey;
-    gContextMenu.paramIndex            = modeIndex;
+    gMenuContext.moduleKey             = moduleKey;
+    gMenuContext.paramIndex            = modeIndex;
     open_context_menu(coord, menuItems, 0, 0.0);
 }
 
 static void action_rename_param_label(int index) {
-    uint32_t  pi     = gContextMenu.paramIndex;
-    tModule * module = get_module(gContextMenu.moduleKey);
+    uint32_t  pi     = gMenuContext.paramIndex;
+    tModule * module = get_module(gMenuContext.moduleKey);
 
     if (module != NULL) {
         gParamNameEdit.active     = true;
-        gParamNameEdit.moduleKey  = gContextMenu.moduleKey;
+        gParamNameEdit.moduleKey  = gMenuContext.moduleKey;
         gParamNameEdit.paramIndex = pi;
         memset(gParamNameEdit.buffer, 0, sizeof(gParamNameEdit.buffer));
 
@@ -1283,8 +1283,8 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
         NULL, RGB_BLACK, NULL, 0, NULL
     };
 
-    gContextMenu.moduleKey  = moduleKey;
-    gContextMenu.paramIndex = paramIndex;
+    gMenuContext.moduleKey  = moduleKey;
+    gMenuContext.paramIndex = paramIndex;
     open_context_menu(coord, menuItems, 0, 0.0);
 }
 
@@ -1930,8 +1930,8 @@ void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t co
         {NULL,           RGB_BLACK,  NULL,                     0, NULL            }
     };
 
-    gContextMenu.moduleKey      = moduleKey;
-    gContextMenu.connectorIndex = connectorIndex;
+    gMenuContext.moduleKey      = moduleKey;
+    gMenuContext.connectorIndex = connectorIndex;
     open_context_menu(coord, menuItems, 0, 0.0);
 }
 
@@ -1975,7 +1975,7 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
         {NULL,         RGB_BLACK,  NULL,                      0, NULL}
     };
 
-    gContextMenu.moduleKey = moduleKey;
+    gMenuContext.moduleKey = moduleKey;
     open_context_menu(coord, menuItems, 0, 0.0);
 }
 

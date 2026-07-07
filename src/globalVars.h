@@ -85,6 +85,7 @@ extern _Atomic uint8_t         gGlobalPage;
 extern tNameEdit               gPatchNameEdit;
 extern tModuleNameEdit         gModuleNameEdit;
 extern tParamNameEdit          gParamNameEdit;
+extern tMenuContext            gMenuContext;
 extern tNameEdit               gSynthNameEdit;
 extern tNameEdit               gPerfNameEdit;
 extern tPerfSettings           gPerfSettings;
