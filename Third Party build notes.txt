@@ -24,7 +24,8 @@ cmake -B build \
       -DFT_DISABLE_ZLIB=ON \
       -DFT_DISABLE_BZIP2=ON \
       -DFT_DISABLE_BROTLI=ON \
-      -DFT_DISABLE_HVF=ON
+      -DFT_DISABLE_HVF=ON \
+      -DFT_DISABLE_HARFBUZZ=ON
 
 cmake --build build --config Release
 
