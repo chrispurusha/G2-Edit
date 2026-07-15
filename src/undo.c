@@ -795,12 +795,13 @@ static void apply_patch_descr(tUndoPatchDescrPayload * p, bool isUndo) {
     gReDraw  = true;
 }
 
-// Local/in-memory only - see undo_push_module_exclude()'s comment for why no USB message is sent.
 static void apply_module_exclude(tUndoModuleExcludePayload * p, bool isUndo) {
     tModule * module = get_module(p->key);
+    uint32_t  value  = isUndo ? p->oldValue : p->newValue;
 
     if (module != NULL) {
-        module->excludeFromMutation = isUndo ? p->oldValue : p->newValue;
+        module->excludeFromMutation = value;
+        send_mutation_lock_value(p->key.slot, p->key, value);
     }
     gReDraw = true;
 }

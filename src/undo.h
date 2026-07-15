@@ -51,9 +51,8 @@ void undo_push_knob(uint32_t slot, uint32_t idx1, const tKnob * before1, const t
 // Record a module name change (old → new).
 void undo_push_module_name(tModuleKey key, const char * oldName, const char * newName);
 
-// Record a Patch Mutator "Exclude From Mutation" toggle (old → new). Local/in-memory only - no
-// USB message is sent (there's no verified live wire command for this single bit; it rides inside
-// the full module dump, so it round-trips correctly on the next patch save/load).
+// Record a Patch Mutator "Exclude From Mutation" toggle (old → new). Applying (undo/redo) also
+// sends the change live via send_mutation_lock_value() - see its comment in protocol.h/defs.h.
 void undo_push_module_exclude(tModuleKey key, uint8_t oldValue, uint8_t newValue);
 
 // Record a param label change (old → new). oldSet/newSet indicate whether
