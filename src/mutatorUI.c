@@ -35,6 +35,7 @@ extern "C" {
 #include "geometry.h"
 #include "utilsGraphics.h"
 #include "globalVars.h"
+#include "fileDialogue.h"
 
 tMutatorState            gMutator                       = {0};
 
@@ -43,6 +44,21 @@ static const char *const kCategoryLabel[mutatorCatNone] = {
 };
 
 static const char *const kOperatorLabel[4]              = {"Mutate", "Randomise", "Interpolate", "Cross"};
+
+// Per-role palette ported from the decompiled original editor's Mutator dialog constructor
+// (CDialogMutaBackground::CDialogMutaBackground: Mother/Children built with
+// _kSingleLineColor/_kSingleBackColor, Father with _kCoupleLineColor/_kCoupleBackColor, the Patch
+// Variations row with _kVariationLineColor/_kVariationBackColor, Temporary Storage - "Gene Bank" -
+// with _kGeneBankLineColor/_kGeneBankBackColor). Values are the same colours, normalized from the
+// original's 16-bit-per-channel constants.
+#define MUTATOR_RGB_SINGLE_BACK       {0.0, 0.0, 0.5}
+#define MUTATOR_RGB_SINGLE_LINE       {0.0, 1.0, 1.0}
+#define MUTATOR_RGB_COUPLE_BACK       {0.5, 0.5, 0.0}
+#define MUTATOR_RGB_COUPLE_LINE       {1.0, 1.0, 0.0}
+#define MUTATOR_RGB_VARIATION_BACK    {0.87, 0.87, 0.87}
+#define MUTATOR_RGB_VARIATION_LINE    {0.0, 0.0, 0.0}
+#define MUTATOR_RGB_GENEBANK_BACK     {0.0, 0.5, 0.5}
+#define MUTATOR_RGB_GENEBANK_LINE     {0.0, 1.0, 0.0}
 
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
 
@@ -167,6 +183,41 @@ static void copy_focused_to(int32_t targetBox) {
     gMutator.genomeValid[targetBox] = true;
 }
 
+// ─── Commit to a real variation ──────────────────────────────────────────────
+// Cmd-click on a Patch Variation box permanently writes the focused box's genome into that real
+// variation (undoable), unlike a plain click which only loads/auditions. This is the only way
+// anything from the Mutator becomes permanent - a stand-in for the Temporary Storage row's "v"
+// (commit row) button until that's built.
+
+static int32_t  gPendingCommitBox       = -1;
+static uint32_t gPendingCommitVariation = 0;
+
+static void on_variation_commit_confirmed(bool confirmed) {
+    if (!confirmed || (gPendingCommitBox < 0)) {
+        gPendingCommitBox = -1;
+        return;
+    }
+    mutator_apply_genome(gMutator.schema, gMutator.schemaCount, gMutator.slot,
+                         gPendingCommitVariation, gMutator.genome[gPendingCommitBox], true);
+    gPendingCommitBox = -1;
+}
+
+static void request_commit_to_variation(uint32_t variationIndex) {
+    if (gMutator.focus == mutatorFocusNone) {
+        return;
+    }
+    gPendingCommitBox       = gMutator.focus;
+    gPendingCommitVariation = variationIndex;
+
+    char title[48];
+    char message[192];
+    snprintf(title, sizeof(title), "Commit to Variation %u", variationIndex + 1);
+    snprintf(message, sizeof(message),
+             "Overwrite edit buffer variation %u with the focused sound? (Cmd-Z).",
+             variationIndex + 1);
+    show_confirm_dialogue_async(title, message, "Commit...", on_variation_commit_confirmed);
+}
+
 // ─── Rendering ───────────────────────────────────────────────────────────────
 
 static tRectangle draw_category_button(double x, double y, double w, double h, const char * label, bool on) {
@@ -199,7 +250,7 @@ static void draw_horizontal_bar(tRectangle rect, double value01) {
 // centered - mirrors the original editor's DrawChromosome bounding-box fit) and draws it as a
 // connected polyline. Not a single bezier: the path can have hundreds of points, and
 // render_bezier_curve() only draws one curve through three control points.
-static void draw_chromosome(tRectangle rect, const uint8_t * genome) {
+static void draw_chromosome(tRectangle rect, const uint8_t * genome, tRgb lineColour) {
     static tCoord path[MUTATOR_MAX_SCHEMA];
     uint32_t      count = gMutator.schemaCount;
 
@@ -239,7 +290,7 @@ static void draw_chromosome(tRectangle rect, const uint8_t * genome) {
     double        centreX = rect.coord.x + (rect.size.w * 0.5);
     double        centreY = rect.coord.y + (rect.size.h * 0.5);
 
-    set_rgb_colour((tRgb)RGB_GREY_2);
+    set_rgb_colour(lineColour);
     tCoord        prev    = {centreX + ((path[0].x - midX) * scale), centreY + ((path[0].y - midY) * scale)};
 
     for (uint32_t i = 1; i < count; i++) {
@@ -342,15 +393,29 @@ void render_mutator_panel(void) {
     static const char *const boxLabel[MUTATOR_NUM_BOXES] = {"Mother", "1", "2", "3", "4", "5", "6", "Father"};
 
     for (int i = 0; i < MUTATOR_NUM_BOXES; i++) {
-        double     bx      = x + margin + (boxW + 7.0) * i;
-        tRectangle boxRect = {{bx, rowY}, {boxW, boxH}};
+        double     bx         = x + margin + (boxW + 7.0) * i;
+        tRectangle boxRect    = {{bx, rowY}, {boxW, boxH}};
 
         gMutator.boxRect[i] = boxRect;
 
-        bool       focused = (gMutator.focus == i);
-        bool       valid   = gMutator.genomeValid[i];
-        tRgb       bg      = focused ? (tRgb)RGB_GREY_9 : (valid ? (tRgb)RGB_GREY_5 : (tRgb)RGB_GREY_3);
+        bool       focused    = (gMutator.focus == i);
+        bool       valid      = gMutator.genomeValid[i];
+        bool       isFather   = (i == mutatorFocusFather);
+        tRgb       roleBack   = isFather ? (tRgb)MUTATOR_RGB_COUPLE_BACK : (tRgb)MUTATOR_RGB_SINGLE_BACK;
+        tRgb       lineColour = isFather ? (tRgb)MUTATOR_RGB_COUPLE_LINE : (tRgb)MUTATOR_RGB_SINGLE_LINE;
+        tRgb       bg;
 
+        if (!valid) {
+            bg = (tRgb)RGB_GREY_3;
+        } else if (focused) {
+            // Focused: role colour lightened towards white, so it's still identifiable as
+            // Mother/Child/Father but clearly the one currently playing.
+            bg = (tRgb){
+                (roleBack.red + 1.0) / 2.0, (roleBack.green + 1.0) / 2.0, (roleBack.blue + 1.0) / 2.0
+            };
+        } else {
+            bg = roleBack;
+        }
         // Manual box drawing (not draw_button()) - draw_button() scales its text to fill the
         // whole rectangle height, which is fine for slim controls but produces oversized/clipped
         // text on a box this tall; a small top-aligned label reads better.
@@ -360,7 +425,7 @@ void render_mutator_panel(void) {
         render_text(mainArea, (tRectangle){{bx + 4.0, rowY + 4.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, boxLabel[i]);
 
         if (valid) {
-            draw_chromosome((tRectangle){{bx + 3.0, rowY + 18.0}, {boxW - 6.0, boxH - 22.0}}, gMutator.genome[i]);
+            draw_chromosome((tRectangle){{bx + 3.0, rowY + 18.0}, {boxW - 6.0, boxH - 22.0}}, gMutator.genome[i], lineColour);
         }
     }
 
@@ -384,11 +449,11 @@ void render_mutator_panel(void) {
     // variation as Mother; Shift-click loads it as Father - a stand-in for the Temporary
     // Storage/drag-and-drop mechanism the manual describes, until that's built.
     set_rgb_colour((tRgb)RGB_WHITE);
-    render_text(mainArea, (tRectangle){{x + margin, rowY}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Patch Variations (click = Mother, Shift-click = Father)");
+    render_text(mainArea, (tRectangle){{x + margin, rowY}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Patch Variations (click = Mother, Shift-click = Father, Cmd-click = commit focused sound here)");
     rowY += STANDARD_TEXT_HEIGHT + 6.0;
 
     double varBoxW = (w - margin * 2.0 - 7.0 * (MUTATOR_NUM_REAL_VARIATIONS - 1)) / (double)MUTATOR_NUM_REAL_VARIATIONS;
-    double varBoxH = 24.0;
+    double varBoxH = STANDARD_BUTTON_TEXT_HEIGHT;
 
     for (int v = 0; v < MUTATOR_NUM_REAL_VARIATIONS; v++) {
         double     vx      = x + margin + (varBoxW + 7.0) * v;
@@ -399,7 +464,7 @@ void render_mutator_panel(void) {
         bool       active  = ((uint32_t)v == gPatchDescr[gMutator.slot].activeVariation);
         char       label[4];
         snprintf(label, sizeof(label), "%d", v + 1);
-        draw_button(mainArea, varRect, label, active ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
+        draw_button(mainArea, varRect, label, active ? (tRgb)RGB_GREEN_ON : (tRgb)MUTATOR_RGB_VARIATION_BACK);
     }
 
     rowY += varBoxH;
@@ -518,6 +583,13 @@ bool handle_mutator_mouse(tCoord coord, tMouseButton mouseButton) {
 
         for (int v = 0; v < MUTATOR_NUM_REAL_VARIATIONS; v++) {
             if (within_rectangle(coord, gMutator.variationRect[v])) {
+                bool    cmdHeld   = (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS)
+                                    || (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS);
+
+                if (cmdHeld) {
+                    request_commit_to_variation((uint32_t)v);
+                    return true;
+                }
                 bool    shiftHeld = (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
                                     || (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
                 int32_t target    = shiftHeld ? mutatorFocusFather : mutatorFocusMother;
