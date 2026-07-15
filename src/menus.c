@@ -406,22 +406,39 @@ static void action_rename_module(int index) {
     gReDraw             = true;
 }
 
-// Patch Mutator "Exclude From Mutation" toggle. Local/in-memory only, matching
-// undo_push_module_exclude()'s reasoning: the flag rides inside the full module dump and already
-// round-trips correctly on patch save/load, but there's no verified live single-bit wire command
-// for it, so we don't invent one - toggling here takes effect in the Mutator immediately and
-// persists next time the patch is saved.
+// Patch Mutator "Exclude From Mutation" toggle. Applies to every module in the current
+// multi-selection if the right-clicked module is part of one (same ensure_module_selected()/
+// gSelection pattern menu_action_delete_module already uses), taking its new value from the
+// right-clicked module's own current state (matching what the menu's checkbox label shows).
+// Each toggled module gets its own undo entry rather than one grouped entry for the whole batch -
+// deliberately simple, since this flag has no audible/hardware effect and is trivial to re-toggle
+// by hand, so it doesn't warrant a dedicated bulk-undo payload type the way delete_selection has.
 static void action_toggle_exclude_from_mutation(int index) {
     (void)index;
-    tModule * module = get_module(gMenuContext.moduleKey);
+    ensure_module_selected();
+    tModule * clicked  = get_module(gMenuContext.moduleKey);
 
-    if (module != NULL) {
-        uint8_t oldValue = (uint8_t)module->excludeFromMutation;
-        uint8_t newValue = oldValue ? 0 : 1;
-
-        module->excludeFromMutation = newValue;
-        undo_push_module_exclude(gMenuContext.moduleKey, oldValue, newValue);
+    if (clicked == NULL) {
+        gContextMenu.active = false;
+        return;
     }
+    uint8_t   newValue = clicked->excludeFromMutation ? 0 : 1;
+
+    for (uint32_t i = 0; i < gSelection.count; i++) {
+        tModule * module   = get_module(gSelection.keys[i]);
+
+        if (module == NULL) {
+            continue;
+        }
+        uint8_t   oldValue = (uint8_t)module->excludeFromMutation;
+
+        if (oldValue == newValue) {
+            continue;
+        }
+        module->excludeFromMutation = newValue;
+        undo_push_module_exclude(gSelection.keys[i], oldValue, newValue);
+    }
+
     gContextMenu.active = false;
     gReDraw             = true;
 }
