@@ -21,6 +21,7 @@
 extern "C" {
 #endif
 
+#include <math.h>
 #include <string.h>
 
 #pragma clang diagnostic push
@@ -77,11 +78,10 @@ void open_mutator_panel(uint32_t slot) {
         80.0, 80.0
     };
     gMutator.panelRect.size                  = (tSize){
-        620.0, 320.0
+        700.0, 320.0
     };
 
-    // Seed Mother from whatever's currently playing, so there's something to work with even
-    // before the (not-yet-built) Temporary Storage / Patch Variations rows exist.
+    // Seed Mother from whatever's currently playing, so there's something to work with right away.
     uint32_t activeVariation = gPatchDescr[slot].activeVariation;
 
     mutator_read_genome(gMutator.schema, gMutator.schemaCount, slot, activeVariation, gMutator.genome[mutatorFocusMother]);
@@ -183,6 +183,21 @@ static void copy_focused_to(int32_t targetBox) {
     gMutator.genomeValid[targetBox] = true;
 }
 
+// Manual's `S` shortcut: "Save focused variation to first empty box in the Temporary Storage."
+static void save_focused_to_storage(void) {
+    if (gMutator.focus == mutatorFocusNone) {
+        return;
+    }
+
+    for (int s = 0; s < MUTATOR_NUM_STORAGE; s++) {
+        if (!gMutator.storageValid[s]) {
+            memcpy(gMutator.storageGenome[s], gMutator.genome[gMutator.focus], sizeof(gMutator.genome[0]));
+            gMutator.storageValid[s] = true;
+            return;
+        }
+    }
+}
+
 // ─── Commit to a real variation ──────────────────────────────────────────────
 // Cmd-click on a Patch Variation box permanently writes the focused box's genome into that real
 // variation (undoable), unlike a plain click which only loads/auditions. This is the only way
@@ -224,26 +239,6 @@ static tRectangle draw_category_button(double x, double y, double w, double h, c
     tRgb bg = on ? (tRgb)RGB_GREY_9 : (tRgb)RGB_GREY_5;
 
     return draw_button(mainArea, (tRectangle){{x, y}, {w, h}}, label, bg);
-}
-
-// draw_slider() fills bottom-up (built for the G2's own vertical faders) - not usable for a
-// left-to-right probability bar, so this fills horizontally instead: a dark track with a lighter
-// fill proportional to value01 (0..1).
-static void draw_horizontal_bar(tRectangle rect, double value01) {
-    if (value01 < 0.0) {
-        value01 = 0.0;
-    } else if (value01 > 1.0) {
-        value01 = 1.0;
-    }
-    set_rgb_colour((tRgb)RGB_GREY_3);
-    render_rectangle_with_border(mainArea, rect);
-
-    double fillW = rect.size.w * value01;
-
-    if (fillW > 0.0) {
-        set_rgb_colour((tRgb)RGB_GREY_9);
-        render_rectangle(mainArea, (tRectangle){{rect.coord.x, rect.coord.y}, {fillW, rect.size.h}});
-    }
 }
 
 // Fits mutator_chromosome_path()'s turtle-walk path into rect (uniform scale, aspect preserved,
@@ -333,61 +328,67 @@ void render_mutator_panel(void) {
 
     double                   rowY                        = y + titleH + margin;
 
-    // Region 1: operator buttons + sliders
-    double                   btnW                        = 110.0;
+    // Region 1: operator buttons + sliders. Sized to their own text (plus a little padding)
+    // rather than a fixed width, and centred as a group in the panel.
     double                   btnH                        = STANDARD_BUTTON_TEXT_HEIGHT;
+    double                   btnGap                      = 8.0;
+    double                   btnW[4];
+    double                   btnRowW                     = 0.0;
 
     for (int i = 0; i < 4; i++) {
-        gMutator.operatorRect[i] = draw_button(mainArea, (tRectangle){{x + margin + (btnW + 6.0) * i, rowY}, {btnW, btnH}},
-                                               (char *)kOperatorLabel[i], (tRgb)RGB_BACKGROUND_GREY);
+        btnW[i]  = get_text_width((char *)kOperatorLabel[i], STANDARD_BUTTON_TEXT_HEIGHT, eCache) + 14.0;
+        btnRowW += btnW[i] + ((i > 0) ? btnGap : 0.0);
     }
 
-    rowY                    += btnH + 18.0;
+    double                   btnRowX                     = x + ((w - btnRowW) / 2.0);
 
-    double                   sliderW                     = 150.0;
+    for (int i = 0; i < 4; i++) {
+        tRgb bg = gMutator.operatorPressed[i] ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
 
-    set_rgb_colour((tRgb)RGB_WHITE);
-    render_text(mainArea, (tRectangle){{x + margin, rowY}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Prob");
-    gMutator.probSliderRect  = (tRectangle){{
-                                                x + margin + 34.0, rowY - 2.0
-                                            }, {
-                                                sliderW, STANDARD_TEXT_HEIGHT + 4.0
-                                            }
-    };
-    draw_horizontal_bar(gMutator.probSliderRect, gMutator.mutateProb);
+        gMutator.operatorRect[i] = draw_button(mainArea, (tRectangle){{btnRowX, rowY}, {btnW[i], btnH}},
+                                               (char *)kOperatorLabel[i], bg);
+        btnRowX                 += btnW[i] + btnGap;
+    }
 
-    double                   rangeX                      = x + margin + 34.0 + sliderW + 20.0;
+    rowY                    += btnH + 12.0;
 
-    set_rgb_colour((tRgb)RGB_WHITE);
-    render_text(mainArea, (tRectangle){{rangeX, rowY}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Range");
-    gMutator.rangeSliderRect = (tRectangle){{
-                                                rangeX + 40.0, rowY - 2.0
-                                            }, {
-                                                sliderW, STANDARD_TEXT_HEIGHT + 4.0
-                                            }
-    };
-    draw_horizontal_bar(gMutator.rangeSliderRect, gMutator.mutateRange);
+    // Real rotary dials (matching the original editor) instead of flat bars - Prob/Range on the
+    // left (linked by default), Cross Prob on the right.
+    double                   dialW                       = 26.0;
+    double                   dialRowH                    = STANDARD_TEXT_HEIGHT * 2.0 + dialW;
+    char                     buf[16];
 
-    double                   linkX                       = rangeX + 40.0 + sliderW + 12.0;
+    snprintf(buf, sizeof(buf), "%d%%", (int)lround(gMutator.mutateProb * 100.0));
+    gMutator.probSliderRect  = render_dial_with_text(mainArea, (tRectangle){{x + margin, rowY}, {dialW, dialW}},
+                                                     "Prob", buf, STANDARD_TEXT_HEIGHT,
+                                                     (uint32_t)lround(gMutator.mutateProb * 100.0), 101, 0, (tRgb)RGB_GREY_9);
 
-    gMutator.linkButtonRect  = draw_button(mainArea, (tRectangle){{linkX, rowY}, {50.0, STANDARD_BUTTON_TEXT_HEIGHT}},
+    double                   rangeX                      = x + margin + dialW + 20.0;
+
+    snprintf(buf, sizeof(buf), "+/-%d%%", (int)lround(gMutator.mutateRange * 100.0));
+    gMutator.rangeSliderRect = render_dial_with_text(mainArea, (tRectangle){{rangeX, rowY}, {dialW, dialW}},
+                                                     "Range", buf, STANDARD_TEXT_HEIGHT,
+                                                     (uint32_t)lround(gMutator.mutateRange * 100.0), 101, 0, (tRgb)RGB_GREY_9);
+
+    double                   linkX                       = rangeX + dialW + 20.0;
+
+    gMutator.linkButtonRect  = draw_button(mainArea, (tRectangle){{linkX, rowY + STANDARD_TEXT_HEIGHT * 2.0}, {50.0, STANDARD_BUTTON_TEXT_HEIGHT}},
                                            gMutator.linkProbRange ? (char *)"Link" : (char *)"Free",
                                            gMutator.linkProbRange ? (tRgb)RGB_GREY_9 : (tRgb)RGB_GREY_5);
-    rowY                    += STANDARD_TEXT_HEIGHT + 10.0;
 
-    set_rgb_colour((tRgb)RGB_WHITE);
-    render_text(mainArea, (tRectangle){{x + margin, rowY}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Cross Prob");
-    gMutator.crossSliderRect = (tRectangle){{
-                                                x + margin + 70.0, rowY - 2.0
-                                            }, {
-                                                sliderW, STANDARD_TEXT_HEIGHT + 4.0
-                                            }
-    };
-    draw_horizontal_bar(gMutator.crossSliderRect, gMutator.crossProb);
-    rowY                    += STANDARD_TEXT_HEIGHT + 16.0;
+    double                   crossX                      = x + w - margin - dialW;
 
-    // Region 2: Mother / Children x6 / Father
-    double                   boxW                        = (w - margin * 2.0 - 7.0 * 6.0) / 8.0;
+    snprintf(buf, sizeof(buf), "%d%%", (int)lround(gMutator.crossProb * 100.0));
+    gMutator.crossSliderRect = render_dial_with_text(mainArea, (tRectangle){{crossX, rowY}, {dialW, dialW}},
+                                                     "Cross", buf, STANDARD_TEXT_HEIGHT,
+                                                     (uint32_t)lround(gMutator.crossProb * 100.0), 101, 0, (tRgb)RGB_GREY_9);
+
+    rowY                    += dialRowH + 10.0;
+
+    // Region 2: Mother / Children x6 / Father. rowBoxW is shared with the Temporary Storage and
+    // Patch Variations rows below so all three stay vertically aligned (8 boxes, 7 gaps, each row).
+    double                   rowBoxW                     = (w - margin * 2.0 - 7.0 * 7.0) / 8.0;
+    double                   boxW                        = rowBoxW;
     double                   boxH                        = 46.0;
 
     static const char *const boxLabel[MUTATOR_NUM_BOXES] = {"Mother", "1", "2", "3", "4", "5", "6", "Father"};
@@ -400,9 +401,9 @@ void render_mutator_panel(void) {
 
         bool       focused    = (gMutator.focus == i);
         bool       valid      = gMutator.genomeValid[i];
-        bool       isFather   = (i == mutatorFocusFather);
-        tRgb       roleBack   = isFather ? (tRgb)MUTATOR_RGB_COUPLE_BACK : (tRgb)MUTATOR_RGB_SINGLE_BACK;
-        tRgb       lineColour = isFather ? (tRgb)MUTATOR_RGB_COUPLE_LINE : (tRgb)MUTATOR_RGB_SINGLE_LINE;
+        bool       isMother   = (i == mutatorFocusMother);
+        tRgb       roleBack   = isMother ? (tRgb)MUTATOR_RGB_SINGLE_BACK : (tRgb)MUTATOR_RGB_COUPLE_BACK;
+        tRgb       lineColour = isMother ? (tRgb)MUTATOR_RGB_SINGLE_LINE : (tRgb)MUTATOR_RGB_COUPLE_LINE;
         tRgb       bg;
 
         if (!valid) {
@@ -431,8 +432,42 @@ void render_mutator_panel(void) {
 
     rowY += boxH + 14.0;
 
+    // Temporary Storage: 24 slots (3 rows of 8). Click an empty slot to save the focused genome
+    // there; click a saved slot to load it as Mother (Shift-click = Father); Cmd-click to clear.
+    set_rgb_colour((tRgb)RGB_WHITE);
+    render_text(mainArea, (tRectangle){{x + margin, rowY}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}},
+                "Temporary Storage (click empty = save focused, click saved = load Mother, Shift = Father, Cmd = clear)");
+    rowY += STANDARD_TEXT_HEIGHT + 6.0;
+
+    double storeBoxW = rowBoxW;
+    double storeBoxH = 30.0;
+
+    for (int s = 0; s < MUTATOR_NUM_STORAGE; s++) {
+        int        row       = s / 8;
+        int        col       = s % 8;
+        double     sx        = x + margin + (storeBoxW + 7.0) * col;
+        double     sy        = rowY + (storeBoxH + 4.0) * row;
+        tRectangle storeRect = {{sx, sy}, {storeBoxW, storeBoxH}};
+
+        gMutator.storageRect[s] = storeRect;
+
+        bool       valid     = gMutator.storageValid[s];
+
+        // Manual reference: empty slots are plain "Gene Bank" teal too, not a distinct empty
+        // colour - only the chromosome line (drawn below) distinguishes filled from empty.
+        set_rgb_colour((tRgb)MUTATOR_RGB_GENEBANK_BACK);
+        render_rectangle_with_border(mainArea, storeRect);
+
+        if (valid) {
+            draw_chromosome((tRectangle){{sx + 2.0, sy + 2.0}, {storeBoxW - 4.0, storeBoxH - 4.0}},
+                            gMutator.storageGenome[s], (tRgb)MUTATOR_RGB_GENEBANK_LINE);
+        }
+    }
+
+    rowY += (storeBoxH + 4.0) * 3.0;
+
     // Region 5 (deferred 3/4 skipped): Quick Lock row - Lock + Solo per category
-    double catW    = (w - margin * 2.0) / (double)mutatorCatNone;
+    double         catW    = (w - margin * 2.0) / (double)mutatorCatNone;
 
     for (int cat = 0; cat < mutatorCatNone; cat++) {
         double catX = x + margin + catW * cat;
@@ -452,8 +487,9 @@ void render_mutator_panel(void) {
     render_text(mainArea, (tRectangle){{x + margin, rowY}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Patch Variations (click = Mother, Shift-click = Father, Cmd-click = commit focused sound here)");
     rowY += STANDARD_TEXT_HEIGHT + 6.0;
 
-    double varBoxW = (w - margin * 2.0 - 7.0 * (MUTATOR_NUM_REAL_VARIATIONS - 1)) / (double)MUTATOR_NUM_REAL_VARIATIONS;
-    double varBoxH = STANDARD_BUTTON_TEXT_HEIGHT;
+    double         varBoxW = rowBoxW;
+    double         varBoxH = 32.0;
+    static uint8_t varGenome[MUTATOR_MAX_SCHEMA];
 
     for (int v = 0; v < MUTATOR_NUM_REAL_VARIATIONS; v++) {
         double     vx      = x + margin + (varBoxW + 7.0) * v;
@@ -462,9 +498,17 @@ void render_mutator_panel(void) {
         gMutator.variationRect[v] = varRect;
 
         bool       active  = ((uint32_t)v == gPatchDescr[gMutator.slot].activeVariation);
+        tRgb       bg      = active ? (tRgb)RGB_GREEN_ON : (tRgb)MUTATOR_RGB_VARIATION_BACK;
         char       label[4];
         snprintf(label, sizeof(label), "%d", v + 1);
-        draw_button(mainArea, varRect, label, active ? (tRgb)RGB_GREEN_ON : (tRgb)MUTATOR_RGB_VARIATION_BACK);
+
+        set_rgb_colour(bg);
+        render_rectangle_with_border(mainArea, varRect);
+        set_rgb_colour(contrasting_text_colour(bg));
+        render_text(mainArea, (tRectangle){{vx + 2.0, rowY + 2.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT * 0.7}}, label);
+
+        mutator_read_genome(gMutator.schema, gMutator.schemaCount, gMutator.slot, (uint32_t)v, varGenome);
+        draw_chromosome((tRectangle){{vx + 2.0, rowY + 11.0}, {varBoxW - 4.0, varBoxH - 13.0}}, varGenome, (tRgb)MUTATOR_RGB_VARIATION_LINE);
     }
 
     rowY += varBoxH;
@@ -476,40 +520,55 @@ void render_mutator_panel(void) {
 
 // ─── Mouse ───────────────────────────────────────────────────────────────────
 
-// index: 0=Prob, 1=Range, 2=Cross Prob. Called on initial click and on every subsequent
-// cursor_pos() while that slider is being dragged.
-static void set_slider_from_mouse(int32_t index, tCoord coord) {
-    const tRectangle * rect  = (index == 0) ? &gMutator.probSliderRect
-                             : (index == 1) ? &gMutator.rangeSliderRect
-                                            : &gMutator.crossSliderRect;
-    double             value = (coord.x - rect->coord.x) / rect->size.w;
+static bool shift_held(void) {
+    return (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+           || (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
+}
 
-    if (value < 0.0) {
-        value = 0.0;
-    } else if (value > 1.0) {
-        value = 1.0;
+static bool cmd_held(void) {
+    return (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS)
+           || (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS);
+}
+
+// index: 0=Prob, 1=Range, 2=Cross Prob. A real dial, dragged vertically like every other knob in
+// this app (drag up = increase) rather than jumping straight to an absolute position.
+static double * dial_value_ptr(int32_t index) {
+    switch (index) {
+        case 0: return &gMutator.mutateProb;
+
+        case 1: return &gMutator.mutateRange;
+
+        default: return &gMutator.crossProb;
+    }
+}
+
+static void begin_dial_drag(int32_t index, tCoord coord) {
+    gMutator.draggingSlider = index;
+    gMutator.dragLastY      = coord.y;
+}
+
+// Called on every cursor_pos() while a dial is being dragged.
+static void continue_dial_drag(tCoord coord) {
+    double   deltaY = gMutator.dragLastY - coord.y;   // up = positive = increase
+
+    gMutator.dragLastY = coord.y;
+
+    double * value  = dial_value_ptr(gMutator.draggingSlider);
+
+    *value            += deltaY * 0.005;
+
+    if (*value < 0.0) {
+        *value = 0.0;
+    } else if (*value > 1.0) {
+        *value = 1.0;
     }
 
-    switch (index) {
-        case 0:
-            gMutator.mutateProb  = value;
-
-            if (gMutator.linkProbRange) {
-                gMutator.mutateRange = 1.0 - value;
-            }
-            break;
-
-        case 1:
-            gMutator.mutateRange = value;
-
-            if (gMutator.linkProbRange) {
-                gMutator.mutateProb = 1.0 - value;
-            }
-            break;
-
-        default:
-            gMutator.crossProb   = value;
-            break;
+    if (gMutator.linkProbRange) {
+        if (gMutator.draggingSlider == 0) {
+            gMutator.mutateRange = 1.0 - gMutator.mutateProb;
+        } else if (gMutator.draggingSlider == 1) {
+            gMutator.mutateProb = 1.0 - gMutator.mutateRange;
+        }
     }
 }
 
@@ -540,6 +599,8 @@ bool handle_mutator_mouse(tCoord coord, tMouseButton mouseButton) {
 
         for (int i = 0; i < 4; i++) {
             if (within_rectangle(coord, gMutator.operatorRect[i])) {
+                gMutator.operatorPressed[i] = true;
+
                 switch (i) {
                     case 0: run_mutate();
                         break;
@@ -583,15 +644,11 @@ bool handle_mutator_mouse(tCoord coord, tMouseButton mouseButton) {
 
         for (int v = 0; v < MUTATOR_NUM_REAL_VARIATIONS; v++) {
             if (within_rectangle(coord, gMutator.variationRect[v])) {
-                bool    cmdHeld   = (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS)
-                                    || (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS);
-
-                if (cmdHeld) {
+                if (cmd_held()) {
                     request_commit_to_variation((uint32_t)v);
                     return true;
                 }
-                bool    shiftHeld = (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-                                    || (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
+                bool    shiftHeld = shift_held();
                 int32_t target    = shiftHeld ? mutatorFocusFather : mutatorFocusMother;
 
                 mutator_read_genome(gMutator.schema, gMutator.schemaCount, gMutator.slot, (uint32_t)v, gMutator.genome[target]);
@@ -606,21 +663,45 @@ bool handle_mutator_mouse(tCoord coord, tMouseButton mouseButton) {
             }
         }
 
+        for (int s = 0; s < MUTATOR_NUM_STORAGE; s++) {
+            if (within_rectangle(coord, gMutator.storageRect[s])) {
+                if (cmd_held()) {
+                    gMutator.storageValid[s] = false;
+                    return true;
+                }
+
+                if (gMutator.storageValid[s]) {
+                    bool    shiftHeld = shift_held();
+                    int32_t target    = shiftHeld ? mutatorFocusFather : mutatorFocusMother;
+
+                    memcpy(gMutator.genome[target], gMutator.storageGenome[s], sizeof(gMutator.genome[0]));
+                    gMutator.genomeValid[target] = true;
+
+                    if (!shiftHeld) {
+                        audition(target);
+                    } else {
+                        gMutator.focus = target;
+                    }
+                } else if (gMutator.focus != mutatorFocusNone) {
+                    memcpy(gMutator.storageGenome[s], gMutator.genome[gMutator.focus], sizeof(gMutator.genome[0]));
+                    gMutator.storageValid[s] = true;
+                }
+                return true;
+            }
+        }
+
         if (within_rectangle(coord, gMutator.probSliderRect)) {
-            gMutator.draggingSlider = 0;
-            set_slider_from_mouse(0, coord);
+            begin_dial_drag(0, coord);
             return true;
         }
 
         if (within_rectangle(coord, gMutator.rangeSliderRect)) {
-            gMutator.draggingSlider = 1;
-            set_slider_from_mouse(1, coord);
+            begin_dial_drag(1, coord);
             return true;
         }
 
         if (within_rectangle(coord, gMutator.crossSliderRect)) {
-            gMutator.draggingSlider = 2;
-            set_slider_from_mouse(2, coord);
+            begin_dial_drag(2, coord);
             return true;
         }
         // Swallow clicks inside the panel that didn't hit a control, so they don't fall through
@@ -629,6 +710,10 @@ bool handle_mutator_mouse(tCoord coord, tMouseButton mouseButton) {
     }
 
     if (mouseButton == mouseButtonLeftUp) {
+        for (int i = 0; i < 4; i++) {
+            gMutator.operatorPressed[i] = false;
+        }
+
         if (gMutator.draggingPanel) {
             gMutator.draggingPanel = false;
             return true;
@@ -655,7 +740,7 @@ void handle_mutator_cursor_pos(tCoord coord) {
     }
 
     if (gMutator.draggingSlider >= 0) {
-        set_slider_from_mouse(gMutator.draggingSlider, coord);
+        continue_dial_drag(coord);
     }
 }
 
@@ -704,6 +789,9 @@ bool handle_mutator_key(int key, int mods, int action) {
             return true;
 
         case GLFW_KEY_X: run_cross();
+            return true;
+
+        case GLFW_KEY_S: save_focused_to_storage();
             return true;
 
         default: break;
