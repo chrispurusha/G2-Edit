@@ -29,21 +29,17 @@
 //#define ENABLE_LOG_MODULE_DATA    // Uncomment for module-data logging in any configuration
 //#define ENABLE_USB_LOG    // Uncomment to enable USB message logging to ~/G2_usb.log
 
-#define PATCH_FILE_SIZE                    (10 * 1024 * 1024)
-#define PERF_FILE_SIZE                     (40 * 1024 * 1024)
-#define TARGET_FRAME_BUFF_WIDTH            (2560)
-#define TARGET_FRAME_BUFF_HEIGHT           (1440)
+#define PATCH_FILE_SIZE                      (10 * 1024 * 1024)
+#define PERF_FILE_SIZE                       (40 * 1024 * 1024)
+#define TARGET_FRAME_BUFF_WIDTH              (2560)
+#define TARGET_FRAME_BUFF_HEIGHT             (1440)
 //#define GLOBAL_GUI_SCALE                     (2)  // Should be related to window size
 
-#define WINDOW_TITLE                       "G2 Editor"
+#define WINDOW_TITLE                         "G2 Editor"
 
-#define NUM_VARIATIONS_USB                 (10)   // 10 variations per patch, but only fist 8 presented on the GUI
-#define NUM_VARIATIONS                     (9)    // One less variation for file access or without the USB extra = 9
-#define VARIATION_INIT                     (8)
-#define MUTATION_LOCK_MIN_PATCH_VERSION    (23)   // Patch format version the Patch Mutator's "Exclude From
-                                                  // Mutation" defaulting shipped in - confirmed by decoding
-                                                  // 395 real captured patches (v19/v22 never had the bit
-                                                  // populated; v23 matched module-type defaults 100%)
+#define NUM_VARIATIONS_USB                   (10) // 10 variations per patch, but only fist 8 presented on the GUI
+#define NUM_VARIATIONS                       (9)  // One less variation for file access or without the USB extra = 9
+#define VARIATION_INIT                       (8)
 #define NUM_MORPHS                           (8)  // Not sure if we can go higher with this, so remember to check
 #define MAX_PARAMS_PER_MODULE                (38)
 #define MAX_CONNECTORS_PER_MODULE            (10)
@@ -166,30 +162,44 @@
 #define SUB_RESPONSE_MIDI_CC                 (0x80)
 #define SUB_COMMAND_GET_MIDI_CC              (0x81) // A.k.a. Unknown 1!?
 
-#define SUB_RESPONSE_PERF_HEADER             (0x11) // TODO - Don't think we've ever seen one of these. Might be worth removing
-#define SUB_RESPONSE_CLEAR_BANK              (0x12)
-#define SUB_RESPONSE_LIST_NAMES              (0x13)
-#define SUB_COMMAND_LIST_NAMES               (0x14)
-#define SUB_RESPONSE_CLEAR                   (0x15)
-#define SUB_RESPONSE_ADD_NAMES               (0x16)
-#define SUB_COMMAND_PATCH_BANK_UPLOAD        (0x17)
-#define SUB_RESPONSE_PATCH_BANK_UPLOAD       (0x18)
-#define SUB_COMMAND_PATCH_BANK_DATA          (0x19)
+// CONFIRMED on real hardware 2026-07-15: location(8)/moduleIndex(8)/locked-bool(8) payload,
+// verified by toggling live then restarting the app to force a fresh patch redump from the
+// device - the bit came back correctly changed. Derived from the decompiled original editor
+// (Original Editor/G2Editor.c): CMMutaLock::WriteStream calls
+// CMIDIOutStream::Initialize(stream, 0x90, 0, 0), the same pattern used by CMParamChange (tag
+// 0x40 == our confirmed SUB_COMMAND_SET_PARAM) and CMModuleMove (tag 0x34 == our confirmed
+// SUB_COMMAND_MOVE_MODULE); CMMutaLock's own WriteStream is structurally identical (same 3 field
+// offsets, same vtable call sequence) to CMModuleRecolor::WriteStream (tag 0x31 == our confirmed
+// SUB_COMMAND_SET_MODULE_COLOUR), which is where the location/moduleIndex/value payload guess
+// came from. (An earlier test looked like the write "didn't stick" - that was a false alarm from
+// unrelated version-gated defaulting logic in parse_module_list clobbering the freshly-read bit
+// on every reparse of an old-format patch; that logic has since been removed.)
+#define SUB_COMMAND_SET_MUTATION_LOCK     (0x90)
 
-#define NUM_PATCH_BANKS                      (32)
-#define NUM_PERF_BANKS                       (8)
-#define NUM_LOCATIONS_PER_BANK               (128)
-#define BANK_UPLOAD_DOMAIN_PATCH             (0x00)  // Selects Patch vs Performance Bank Upload domain
-#define BANK_UPLOAD_DOMAIN_PERFORMANCE       (0x01)
+#define SUB_RESPONSE_PERF_HEADER          (0x11)    // TODO - Don't think we've ever seen one of these. Might be worth removing
+#define SUB_RESPONSE_CLEAR_BANK           (0x12)
+#define SUB_RESPONSE_LIST_NAMES           (0x13)
+#define SUB_COMMAND_LIST_NAMES            (0x14)
+#define SUB_RESPONSE_CLEAR                (0x15)
+#define SUB_RESPONSE_ADD_NAMES            (0x16)
+#define SUB_COMMAND_PATCH_BANK_UPLOAD     (0x17)
+#define SUB_RESPONSE_PATCH_BANK_UPLOAD    (0x18)
+#define SUB_COMMAND_PATCH_BANK_DATA       (0x19)
 
-#define COMMAND_REQ                          (0x20) // High nibble, expects response
-#define COMMAND_WRITE_NO_RESP                (0x30) // High nibble, expects response
-#define COMMAND_SYS                          (0x0c) // Low nibble
-#define COMMAND_SLOT                         (0x08) // Low nibble
+#define NUM_PATCH_BANKS                   (32)
+#define NUM_PERF_BANKS                    (8)
+#define NUM_LOCATIONS_PER_BANK            (128)
+#define BANK_UPLOAD_DOMAIN_PATCH          (0x00)     // Selects Patch vs Performance Bank Upload domain
+#define BANK_UPLOAD_DOMAIN_PERFORMANCE    (0x01)
 
-#define COMMAND_OFFSET                       (2)    // Shouldn't need when write_uint16 is replaced by bit stream write
+#define COMMAND_REQ                       (0x20)    // High nibble, expects response
+#define COMMAND_WRITE_NO_RESP             (0x30)    // High nibble, expects response
+#define COMMAND_SYS                       (0x0c)    // Low nibble
+#define COMMAND_SLOT                      (0x08)    // Low nibble
 
-#define CRC_BYTES                            (2)
+#define COMMAND_OFFSET                    (2)       // Shouldn't need when write_uint16 is replaced by bit stream write
+
+#define CRC_BYTES                         (2)
 
 // Patch settings module indices (locationMorph, location 2)
 // These are module indices within the patch settings location - TODO - should probably be enumerations in types.h

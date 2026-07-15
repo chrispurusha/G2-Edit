@@ -2673,6 +2673,21 @@ static int send_set_module_colour(uint32_t slot, uint32_t location,
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
+// CONFIRMED on real hardware - see SUB_COMMAND_SET_MUTATION_LOCK's comment in defs.h. Mirrors
+// send_set_module_colour's exact shape (same location/moduleIndex/value byte layout, same
+// COMMAND_REQ + SUB_RESPONSE_OK ack convention).
+static int send_set_mutation_lock(uint32_t slot, uint32_t location,
+                                  uint32_t moduleIndex, uint32_t locked) {
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_SET_MUTATION_LOCK);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)location);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleIndex);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)locked);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+}
+
 static int send_set_mode(uint32_t slot, tModeData * modeData) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
@@ -3588,6 +3603,14 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdSetModuleColour:
             send_stop();
             retVal = send_set_module_colour(messageContent->slot, messageContent->moduleColourData.moduleKey.location, messageContent->moduleColourData.moduleKey.index, messageContent->moduleColourData.colour);
+            send_start();
+            break;
+
+        // CONFIRMED on real hardware - see SUB_COMMAND_SET_MUTATION_LOCK's comment in defs.h.
+        // Enqueued from action_toggle_exclude_from_mutation() (menus.c) for each toggled module.
+        case eMsgCmdSetMutationLock:
+            send_stop();
+            retVal = send_set_mutation_lock(messageContent->slot, messageContent->moduleMutationLockData.moduleKey.location, messageContent->moduleMutationLockData.moduleKey.index, messageContent->moduleMutationLockData.locked);
             send_start();
             break;
 

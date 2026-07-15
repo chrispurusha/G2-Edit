@@ -80,7 +80,8 @@ typedef enum {
     eMsgCmdLoadPatch,
     eMsgCmdPeekSynthSettingsRestore,
     eMsgCmdApplySynthSettingsRestore,
-    eMsgCmdRestoreEverything//,
+    eMsgCmdRestoreEverything,
+    eMsgCmdSetMutationLock
     //eMsgCmdReloadAllPatchData
 } eMsgCmd;
 
@@ -163,6 +164,12 @@ typedef struct {
     tModuleKey moduleKey;
     uint32_t   colour;
 } tModuleColourData;
+
+// SUB_COMMAND_SET_MUTATION_LOCK (0x90) - unverified/experimental, see defs.h.
+typedef struct {
+    tModuleKey moduleKey;
+    uint32_t   locked;
+} tModuleMutationLockData;
 
 typedef struct {
     tModuleKey moduleKey;
@@ -255,6 +262,7 @@ typedef struct {
         tModuleLabelData          moduleLabelData;
         tPatchName                patchName;
         tModuleColourData         moduleColourData;
+        tModuleMutationLockData   moduleMutationLockData;
         tKnobAssignData           knobAssignData;
         tKnobDeassignData         knobDeassignData;
         tGlobalKnobAssignData     globalKnobAssignData;

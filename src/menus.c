@@ -413,6 +413,8 @@ static void action_rename_module(int index) {
 // Each toggled module gets its own undo entry rather than one grouped entry for the whole batch -
 // deliberately simple, since this flag has no audible/hardware effect and is trivial to re-toggle
 // by hand, so it doesn't warrant a dedicated bulk-undo payload type the way delete_selection has.
+// Also sends the change live via send_mutation_lock_value() (SUB_COMMAND_SET_MUTATION_LOCK,
+// confirmed working on real hardware - see its comment in defs.h).
 static void action_toggle_exclude_from_mutation(int index) {
     (void)index;
     ensure_module_selected();
@@ -437,6 +439,7 @@ static void action_toggle_exclude_from_mutation(int index) {
         }
         module->excludeFromMutation = newValue;
         undo_push_module_exclude(gSelection.keys[i], oldValue, newValue);
+        send_mutation_lock_value(gSelection.keys[i].slot, gSelection.keys[i], newValue);
     }
 
     gContextMenu.active = false;

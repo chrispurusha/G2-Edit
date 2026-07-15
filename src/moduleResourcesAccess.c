@@ -167,8 +167,10 @@ uint32_t module_led_count(tModuleType moduleType) {
 
 // Patch Mutator "Exclude From Mutation" default per module type, recovered from the decompiled
 // original editor's GetDefaultMutationLock() and confirmed against 395 real captured patches (see
-// mutator.c). Applied to newly created modules and to modules from patches saved before
-// MUTATION_LOCK_MIN_PATCH_VERSION (see parse_module_list in protocol.c).
+// mutator.c). Applied to newly created modules. (Previously also reapplied on every patch reparse
+// for old-format patches - removed 2026-07-15 once live writes via SUB_COMMAND_SET_MUTATION_LOCK
+// were confirmed working on hardware, since that reapply was clobbering live-toggled bits on
+// every resync. Old patches now simply trust whatever's on the wire, same as new ones.)
 bool default_mutation_lock(tModuleType moduleType) {
     switch (moduleType) {
         case moduleType4toOut:

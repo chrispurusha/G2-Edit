@@ -209,13 +209,6 @@ void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
         module->unknown1            = read_bit_stream(buff, subOffset, 6);
         module->modeCount           = read_bit_stream(buff, subOffset, 4);
 
-        // Patches saved before the Patch Mutator existed (patchVersion < 23, confirmed empirically
-        // against 395 real captured patches - see mutator.c) never had this bit populated by the
-        // original editor's "apply defaults on import" logic, so trusting the raw bit for those
-        // would misreport almost every module as not-excluded. Apply the type default instead.
-        if (gGlobalSettings.slot[slot].patchVersion < MUTATION_LOCK_MIN_PATCH_VERSION) {
-            module->excludeFromMutation = default_mutation_lock(module->type) ? 1 : 0;
-        }
         LOG_MODULE_DATA("Module type %u\n", module->type);
         LOG_MODULE_DATA("Module column %u\n", module->column);
         LOG_MODULE_DATA("Module row %u\n", module->row);
@@ -1581,6 +1574,17 @@ void send_mode_value(uint32_t slot, tModuleKey moduleKey, uint32_t modeIdx, uint
     msg.modeData.moduleKey = moduleKey;
     msg.modeData.mode      = modeIdx;
     msg.modeData.value     = value;
+    msg_send(&gCommandQueue, &msg);
+}
+
+// SUB_COMMAND_SET_MUTATION_LOCK (0x90) - see its comment in defs.h. Confirmed on real hardware.
+void send_mutation_lock_value(uint32_t slot, tModuleKey moduleKey, uint32_t locked) {
+    tMessageContent msg = {0};
+
+    msg.cmd                              = eMsgCmdSetMutationLock;
+    msg.slot                             = slot;
+    msg.moduleMutationLockData.moduleKey = moduleKey;
+    msg.moduleMutationLockData.locked    = locked;
     msg_send(&gCommandQueue, &msg);
 }
 
