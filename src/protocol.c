@@ -190,28 +190,37 @@ void parse_module_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     LOG_MODULE_DATA("Module Count   %d\n", moduleCount);
 
     for (i = 0; i < moduleCount; i++) {
-        type              = read_bit_stream(buff, subOffset, 8);
-        key.index         = read_bit_stream(buff, subOffset, 8);
+        type                        = read_bit_stream(buff, subOffset, 8);
+        key.index                   = read_bit_stream(buff, subOffset, 8);
 
         if ((key.location >= (uint32_t)locationMax) || (key.index >= MAX_NUM_MODULES)) {
             LOG_ERROR("Module key out of bounds location=%u index=%u\n", key.location, key.index);
             break;
         }
-        module            = get_module_slot(key.slot, key.location, key.index);
-        module->active    = true;
-        module->key       = key;
-        module->type      = type;
-        module->column    = read_bit_stream(buff, subOffset, 7);
-        module->row       = read_bit_stream(buff, subOffset, 7);
-        module->colour    = read_bit_stream(buff, subOffset, 8);
-        module->upRate    = read_bit_stream(buff, subOffset, 1);
-        module->isLed     = read_bit_stream(buff, subOffset, 1);
-        module->unknown1  = read_bit_stream(buff, subOffset, 6);
-        module->modeCount = read_bit_stream(buff, subOffset, 4);
+        module                      = get_module_slot(key.slot, key.location, key.index);
+        module->active              = true;
+        module->key                 = key;
+        module->type                = type;
+        module->column              = read_bit_stream(buff, subOffset, 7);
+        module->row                 = read_bit_stream(buff, subOffset, 7);
+        module->colour              = read_bit_stream(buff, subOffset, 8);
+        module->upRate              = read_bit_stream(buff, subOffset, 1);
+        module->excludeFromMutation = read_bit_stream(buff, subOffset, 1);
+        module->unknown1            = read_bit_stream(buff, subOffset, 6);
+        module->modeCount           = read_bit_stream(buff, subOffset, 4);
 
+        // Patches saved before the Patch Mutator existed (patchVersion < 23, confirmed empirically
+        // against 395 real captured patches - see mutator.c) never had this bit populated by the
+        // original editor's "apply defaults on import" logic, so trusting the raw bit for those
+        // would misreport almost every module as not-excluded. Apply the type default instead.
+        if (gGlobalSettings.slot[slot].patchVersion < MUTATION_LOCK_MIN_PATCH_VERSION) {
+            module->excludeFromMutation = default_mutation_lock(module->type) ? 1 : 0;
+        }
         LOG_MODULE_DATA("Module type %u\n", module->type);
         LOG_MODULE_DATA("Module column %u\n", module->column);
         LOG_MODULE_DATA("Module row %u\n", module->row);
+        LOG_MODULE_DATA("Module index=%u type=%u excludeFromMutation=%u unknown1=%u\n",
+                        key.index, type, module->excludeFromMutation, module->unknown1);
 
         for (j = 0; j < module->modeCount; j++) {
             module->mode[j].value = read_bit_stream(buff, subOffset, 6);
@@ -251,7 +260,7 @@ void write_module_list(uint32_t slot, tLocation location, uint8_t * buff, uint32
         write_bit_stream(buff, bitPos, 7, module->row);
         write_bit_stream(buff, bitPos, 8, module->colour);
         write_bit_stream(buff, bitPos, 1, module->upRate);
-        write_bit_stream(buff, bitPos, 1, module->isLed);
+        write_bit_stream(buff, bitPos, 1, module->excludeFromMutation);
         write_bit_stream(buff, bitPos, 6, module->unknown1);
         write_bit_stream(buff, bitPos, 4, module->modeCount);
 

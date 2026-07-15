@@ -121,7 +121,7 @@ typedef struct {
     uint32_t   column;
     uint32_t   colour;
     uint32_t   upRate;
-    uint32_t   isLed;
+    uint32_t   excludeFromMutation;
     uint32_t   unknown1;
     uint32_t   modeCount;
     uint32_t   mode[MAX_NUM_MODES];

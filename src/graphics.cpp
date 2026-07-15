@@ -55,6 +55,7 @@ extern "C" {
 #include "patchParamsResources.h"
 #include "perfSettingsResources.h"
 #include "menus.h"
+#include "mutatorUI.h"
 
 static FT_Library      gLibrary        = {0};
 static FT_Face         gFace           = {0};
@@ -321,6 +322,11 @@ void render_top_bar(void) {
     {
         const tTopbarControlDef * def = topbar_control_def(topbarSettingsId);
         gTopbarControls[topbarSettingsId].rectangle = draw_button(mainArea, {def->coord, {get_text_width(def->text, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, def->text, (tRgb)RGB_BACKGROUND_GREY);
+    }
+    {
+        const tTopbarControlDef * def           = topbar_control_def(topbarMutatorId);
+        tRgb                      mutatorColour = gMutator.active ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
+        gTopbarControls[topbarMutatorId].rectangle = draw_button(mainArea, {def->coord, {get_text_width(def->text, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, def->text, mutatorColour);
     }
     {
         const tTopbarControlDef * def = topbar_control_def(topbarPerfSettingsId);
@@ -1946,6 +1952,7 @@ void do_graphics_loop(void) {
             render_patch_notes_edit();
             render_bank_backup_progress();
             render_bank_restore_progress();
+            render_mutator_panel();
             render_knob_assignment_overlay(); // drawn last so nothing else can paint over it
             //Debug only
             //{

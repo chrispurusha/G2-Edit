@@ -57,6 +57,7 @@ X(topbarPatchTypeId,         170, 60, NULL,       TOPBAR_COL_BG_GREY,  topbarCon
 X(topbarMonoPolyId,          270, 60, NULL,       TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
 X(topbarVoiceCountId,        248, 60, NULL,       TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
 X(topbarPatchNotesId,        240,  8, "Notes",    TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
+X(topbarMutatorId,           720,  8, "Mutator",  TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
 X(topbarSettingsId,           95,  8, "Synth", TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
 X(topbarClockRunStopId,      475,  8, NULL,       TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
 X(topbarTempoDialId,         535, 10, NULL,       TOPBAR_COL_BG_GREY,  topbarControlTypeSpecial)
