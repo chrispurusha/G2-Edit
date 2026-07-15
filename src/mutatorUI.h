@@ -23,14 +23,18 @@
 #include "mutator.h"
 #include "synthlibTypes.h"
 
-// First-pass Patch Mutator floater: panel chrome + drag, Mutate/Randomize/Interpolate/Cross
-// operators with Probability/Range/Cross-probability sliders, Mother/Children x6/Father row
-// (click to focus+audition, double-click to Mutate), and the 7 Quick Lock category buttons.
-// Deliberately deferred to a follow-up pass: Temporary Storage grid, Patch Variations mirror row
-// + commit, drag-and-drop between boxes, chromosome sparklines (plain boxes for now).
+// Patch Mutator floater: panel chrome + drag, Mutate/Randomize/Interpolate/Cross operators with
+// Probability/Range/Cross-probability sliders, Mother/Children x6/Father row (click to
+// focus+audition), 7 Quick Lock category buttons, a Temporary Storage grid (click an empty slot
+// to save the focused genome there, click a saved slot to load it as Mother/Shift-click as
+// Father, Cmd-click to clear it), and a Patch Variations mirror row (click = load as Mother,
+// Shift-click = load as Father, Cmd-click = commit the focused genome into that variation's edit
+// buffer). Deliberately deferred: drag-and-drop between boxes (this build uses click + modifier
+// keys throughout instead), multi-select for the Exclude From Mutation toggle.
 
-#define MUTATOR_NUM_BOXES              8   // 0=Mother, 1-6=Children, 7=Father
+#define MUTATOR_NUM_BOXES              8    // 0=Mother, 1-6=Children, 7=Father
 #define MUTATOR_NUM_REAL_VARIATIONS    8
+#define MUTATOR_NUM_STORAGE            24   // 3 rows of 8, per the manual
 
 typedef enum {
     mutatorFocusNone   = -1,
@@ -48,6 +52,7 @@ typedef struct {
     tCoord              dragMouseStart;
     tCoord              dragPanelStart;
     int32_t             draggingSlider;   // -1 = none, else 0=Prob, 1=Range, 2=Cross Prob
+    double              dragLastY;        // last mouse y while dragging a dial (vertical drag = adjust)
 
     tMutatorSchemaEntry schema[MUTATOR_MAX_SCHEMA];
     uint32_t            schemaCount;
@@ -68,9 +73,13 @@ typedef struct {
 
     tMutatorLocks       locks;
 
+    uint8_t             storageGenome[MUTATOR_NUM_STORAGE][MUTATOR_MAX_SCHEMA];
+    bool                storageValid[MUTATOR_NUM_STORAGE];
+
     // Hit-rects, recomputed every render() call, read back by the mouse handler.
     tRectangle          boxRect[MUTATOR_NUM_BOXES];
-    tRectangle          operatorRect[4]; // Mutate, Randomize, Interpolate, Cross
+    tRectangle          operatorRect[4];   // Mutate, Randomize, Interpolate, Cross
+    bool                operatorPressed[4];
     tRectangle          probSliderRect;
     tRectangle          rangeSliderRect;
     tRectangle          crossSliderRect;
@@ -78,6 +87,7 @@ typedef struct {
     tRectangle          categoryLockRect[mutatorCatNone];           // one per real category (excludes mutatorCatNone itself)
     tRectangle          categorySoloRect[mutatorCatNone];
     tRectangle          variationRect[MUTATOR_NUM_REAL_VARIATIONS]; // mirrors the 8 real hardware variations
+    tRectangle          storageRect[MUTATOR_NUM_STORAGE];
     tRectangle          titleBarRect;
     tRectangle          closeButtonRect;
 } tMutatorState;
