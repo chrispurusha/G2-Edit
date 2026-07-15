@@ -29,7 +29,8 @@
 // Deliberately deferred to a follow-up pass: Temporary Storage grid, Patch Variations mirror row
 // + commit, drag-and-drop between boxes, chromosome sparklines (plain boxes for now).
 
-#define MUTATOR_NUM_BOXES    8   // 0=Mother, 1-6=Children, 7=Father
+#define MUTATOR_NUM_BOXES              8   // 0=Mother, 1-6=Children, 7=Father
+#define MUTATOR_NUM_REAL_VARIATIONS    8
 
 typedef enum {
     mutatorFocusNone   = -1,
@@ -74,8 +75,9 @@ typedef struct {
     tRectangle          rangeSliderRect;
     tRectangle          crossSliderRect;
     tRectangle          linkButtonRect;
-    tRectangle          categoryLockRect[mutatorCatNone]; // one per real category (excludes mutatorCatNone itself)
+    tRectangle          categoryLockRect[mutatorCatNone];           // one per real category (excludes mutatorCatNone itself)
     tRectangle          categorySoloRect[mutatorCatNone];
+    tRectangle          variationRect[MUTATOR_NUM_REAL_VARIATIONS]; // mirrors the 8 real hardware variations
     tRectangle          titleBarRect;
     tRectangle          closeButtonRect;
 } tMutatorState;
