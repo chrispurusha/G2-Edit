@@ -339,7 +339,7 @@ void render_mutator_panel(void) {
     rowY += boxH + 14.0;
 
     // Region 5 (deferred 3/4 skipped): Quick Lock row - Lock + Solo per category
-    double catW = (w - margin * 2.0) / (double)mutatorCatNone;
+    double catW    = (w - margin * 2.0) / (double)mutatorCatNone;
 
     for (int cat = 0; cat < mutatorCatNone; cat++) {
         double catX = x + margin + catW * cat;
@@ -348,6 +348,36 @@ void render_mutator_panel(void) {
                                                               kCategoryLabel[cat], gMutator.locks.locked[cat]);
         gMutator.categorySoloRect[cat] = draw_category_button(catX, rowY + STANDARD_BUTTON_TEXT_HEIGHT + 4.0, catW - 4.0, STANDARD_BUTTON_TEXT_HEIGHT,
                                                               "Solo", gMutator.locks.solo[cat]);
+    }
+
+    rowY += (STANDARD_BUTTON_TEXT_HEIGHT + 4.0) * 2.0 + 14.0;
+
+    // Patch Variations row: read-only mirror of the 8 real hardware variations. Click loads that
+    // variation as Mother; Shift-click loads it as Father - a stand-in for the Temporary
+    // Storage/drag-and-drop mechanism the manual describes, until that's built.
+    set_rgb_colour((tRgb)RGB_WHITE);
+    render_text(mainArea, (tRectangle){{x + margin, rowY}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Patch Variations (click = Mother, Shift-click = Father)");
+    rowY += STANDARD_TEXT_HEIGHT + 6.0;
+
+    double varBoxW = (w - margin * 2.0 - 7.0 * (MUTATOR_NUM_REAL_VARIATIONS - 1)) / (double)MUTATOR_NUM_REAL_VARIATIONS;
+    double varBoxH = 24.0;
+
+    for (int v = 0; v < MUTATOR_NUM_REAL_VARIATIONS; v++) {
+        double     vx      = x + margin + (varBoxW + 7.0) * v;
+        tRectangle varRect = {{vx, rowY}, {varBoxW, varBoxH}};
+
+        gMutator.variationRect[v] = varRect;
+
+        bool       active  = ((uint32_t)v == gPatchDescr[gMutator.slot].activeVariation);
+        char       label[4];
+        snprintf(label, sizeof(label), "%d", v + 1);
+        draw_button(mainArea, varRect, label, active ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
+    }
+
+    rowY += varBoxH;
+
+    if ((rowY + margin) > (y + panel.size.h)) {
+        gMutator.panelRect.size.h = (rowY + margin) - y;
     }
 }
 
@@ -454,6 +484,24 @@ bool handle_mutator_mouse(tCoord coord, tMouseButton mouseButton) {
 
             if (within_rectangle(coord, gMutator.categorySoloRect[cat])) {
                 gMutator.locks.solo[cat] = !gMutator.locks.solo[cat];
+                return true;
+            }
+        }
+
+        for (int v = 0; v < MUTATOR_NUM_REAL_VARIATIONS; v++) {
+            if (within_rectangle(coord, gMutator.variationRect[v])) {
+                bool    shiftHeld = (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+                                    || (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
+                int32_t target    = shiftHeld ? mutatorFocusFather : mutatorFocusMother;
+
+                mutator_read_genome(gMutator.schema, gMutator.schemaCount, gMutator.slot, (uint32_t)v, gMutator.genome[target]);
+                gMutator.genomeValid[target] = true;
+
+                if (!shiftHeld) {
+                    audition(target);
+                } else {
+                    gMutator.focus = target;
+                }
                 return true;
             }
         }
