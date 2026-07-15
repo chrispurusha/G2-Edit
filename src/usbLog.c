@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <time.h>
+#include <errno.h>
+#include <string.h>
 #include "defs.h"
 #include "usbLog.h"
 
@@ -40,7 +42,7 @@ void usb_log_open(void) {
     logFile = fopen(path, "w");
 
     if (logFile == NULL) {
-        fprintf(stderr, "usb_log_open: failed to open %s\n", path);
+        fprintf(stderr, "usb_log_open: failed to open %s (errno=%d %s)\n", path, errno, strerror(errno));
         return;
     }
     fprintf(logFile, "--- session start ---\n");
