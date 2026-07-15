@@ -78,13 +78,27 @@ tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char
         case moduleTypeResonator:
         case moduleTypeOscShpB:
         case moduleTypeOscString:
+        case moduleTypeOscNoise:
+        case moduleTypeOscShpA:
+        case moduleTypeOscDual:
         {
             pitchTypeParamIndex = 4;
             break;
         }
         case moduleTypeOscC:
+        case moduleTypeOscPM:
         {
             pitchTypeParamIndex = 3;
+            break;
+        }
+        case moduleTypeOscPerc:
+        {
+            pitchTypeParamIndex = 2;
+            break;
+        }
+        case moduleTypeOscA:
+        {
+            pitchTypeParamIndex = 6;
             break;
         }
         default:
@@ -130,7 +144,7 @@ tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char
             double min_factor = .0248;
             double max_factor = 38.072;
             res = exp((double)paramValue / 127.0 * log(max_factor / min_factor)) * min_factor;
-            snprintf(buff, buffSize, "%.4fHz", res);
+            snprintf(buff, buffSize, "%.4fx", res);
             break;
         }
         case 3:   // Partial. Displays partials for values from 33 upwards, Hz below.

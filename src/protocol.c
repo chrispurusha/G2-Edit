@@ -39,8 +39,11 @@ extern "C" {
 #include "msgQueue.h"
 #include "globalVars.h"
 
-static pthread_mutex_t patchNameMutex = PTHREAD_MUTEX_INITIALIZER;
-
+// Shares gStringCopyMutex (defined in globalVars.c) with the COPY_STRING macro used
+// everywhere on the UI thread to read these same name buffers — a previous private
+// mutex here provided no actual exclusion against those reads (two different locks
+// don't exclude each other), which raced against the UI thread's wake-driven render
+// loop and could leave the topbar showing a name mid-clear until the next redraw.
 void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, int nameSize) {
     int i = 0;
 
@@ -48,7 +51,7 @@ void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, int name
         LOG_ERROR("Called with invalid size of %d\n", nameSize);
         exit(1);
     }
-    pthread_mutex_lock(&patchNameMutex);
+    pthread_mutex_lock(&gStringCopyMutex);
 
     memset(name, 0, nameSize);
 
@@ -60,13 +63,13 @@ void read_clavia_string(uint8_t * buff, uint32_t * bitPos, char * name, int name
         }
     }
 
-    pthread_mutex_unlock(&patchNameMutex);
+    pthread_mutex_unlock(&gStringCopyMutex);
 }
 
 void write_clavia_string(uint8_t * buff, uint32_t * bitPos, const char * name) {
     int i = 0;
 
-    pthread_mutex_lock(&patchNameMutex);
+    pthread_mutex_lock(&gStringCopyMutex);
 
     for (i = 0; i < CLAVIA_NAME_SIZE; i++) {
         write_bit_stream(buff, bitPos, 8, (uint8_t)name[i]);
@@ -76,7 +79,7 @@ void write_clavia_string(uint8_t * buff, uint32_t * bitPos, const char * name) {
         }
     }
 
-    pthread_mutex_unlock(&patchNameMutex);
+    pthread_mutex_unlock(&gStringCopyMutex);
 }
 
 void parse_patch_descr(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
