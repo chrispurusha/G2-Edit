@@ -51,6 +51,7 @@ extern "C" {
 #include "mouseTopbar.h"
 #include "selection.h"
 #include "undo.h"
+#include "mutatorUI.h"
 #include "misc.h"
 
 // Drag-start state for vertical/horizontal dial modes
@@ -721,6 +722,11 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
     get_global_gui_scaled_mouse_coord(&coord);
 
+    if (handle_mutator_mouse(coord, mouseButton)) {
+        gReDraw = true;
+        return;
+    }
+
     if (handle_patch_notes_mouse(coord, mouseButton)) {
         gReDraw = true;
         return;
@@ -1035,6 +1041,12 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     //y = (y * (double)get_render_height()) / (double)height;
 
     gHoverConnector.active = false;
+
+    if (gMutator.active && (gMutator.draggingPanel || (gMutator.draggingSlider >= 0))) {
+        handle_mutator_cursor_pos(coord);
+        gReDraw = true;
+        return;
+    }
 
     if (gDragSkipCount > 0) {
         gDragPrevX = xCoord;
@@ -1546,6 +1558,11 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 
     LOG_DEBUG("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
 
+    if (handle_mutator_key(key, mods, action)) {
+        gReDraw = true;
+        return;
+    }
+
     if (gPatchNotesEdit.active) {
         if (action == GLFW_PRESS || action == GLFW_REPEAT) {
             size_t   len       = strlen(gPatchNotesEdit.buffer);
@@ -1907,6 +1924,14 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 undo_redo();
             } else {
                 undo_undo();
+            }
+        }
+
+        if (key == GLFW_KEY_2) {
+            if (gMutator.active) {
+                close_mutator_panel();
+            } else {
+                open_mutator_panel(gSlot);
             }
         }
     }

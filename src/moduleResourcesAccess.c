@@ -165,6 +165,60 @@ uint32_t module_led_count(tModuleType moduleType) {
     return cache[moduleType];
 }
 
+// Patch Mutator "Exclude From Mutation" default per module type, recovered from the decompiled
+// original editor's GetDefaultMutationLock() and confirmed against 395 real captured patches (see
+// mutator.c). Applied to newly created modules and to modules from patches saved before
+// MUTATION_LOCK_MIN_PATCH_VERSION (see parse_module_list in protocol.c).
+bool default_mutation_lock(tModuleType moduleType) {
+    switch (moduleType) {
+        case moduleType4toOut:
+        case moduleType2toOut:
+        case moduleTypeFxtoIn:
+        case moduleType2toIn:
+        case moduleType4toIn:
+        case moduleTypeCtrlSend:
+        case moduleTypePCSend:
+        case moduleTypeNoteSend:
+        case moduleTypeCtrlRcv:
+        case moduleTypeNoteRcv:
+        case moduleTypeNoteZone:
+        case moduleTypeVocoder:
+        case moduleTypeMixStereo:
+        case moduleTypeCompLev:
+        case moduleTypeCompress:
+        case moduleTypePitchTrack:
+        case moduleTypeNoteQuant:
+        case moduleTypeNoteDet:
+        case moduleTypeValSw1to2:
+        case moduleTypeValSw2to1:
+        case moduleTypePulse:
+        case moduleTypeDelay:
+        case moduleTypeDlyClock:
+        case moduleTypeConstSwT:
+        case moduleTypeConstSwM:
+        case moduleTypeClkGen:
+        case moduleTypeClkDiv:
+        case moduleTypeLevAmp:
+        case moduleTypeLevAdd:
+        case moduleTypeLevScaler:
+        case moduleTypeLevConv:
+        case moduleTypeRect:
+        case moduleTypeShpStatic:
+        case moduleTypeWindSw:
+        case moduleTypeSwOnOffT:
+        case moduleTypeMux8to1X:
+        case moduleTypeAutomate:
+        case moduleTypeEnvFollow:
+        case moduleTypeNoiseGate:
+        case moduleTypeMonoKey:
+        case moduleTypeRndPattern:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 void init_module_resource_cache(void) {
     tModuleType t = (tModuleType)0;
 

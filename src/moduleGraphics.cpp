@@ -43,6 +43,7 @@ extern "C" {
 #include "mouseHandle.h"
 #include "menus.h"
 #include "selection.h"
+#include "mutatorUI.h"
 
 void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) { // TODO: move to utilsgraphics!?
     switch (volumeType) {
@@ -721,9 +722,25 @@ void render_module(tModule * module) {
         render_line(moduleArea, {x + w, y + h}, {x, y + h}, t);         // bottom
         render_line(moduleArea, {x, y + h}, {x, y}, t);                 // left
     }
-    rgb               = {rgb.red * 1.05, rgb.green * 1.05, rgb.blue * 1.05};
+
+    // Patch Mutator: mark excluded modules with a thin red frame, but only while the panel is
+    // open - matches the original editor's SetMutaLockVisible (pure display state, not persisted).
+    if (gMutator.active && module->excludeFromMutation) {
+        double t = 1.0;
+        double x = moduleRectangle.coord.x;
+        double y = moduleRectangle.coord.y;
+        double w = moduleRectangle.size.w;
+        double h = moduleRectangle.size.h;
+
+        set_rgb_colour(RGB_RED_7);
+        render_line(moduleArea, {x, y}, {x + w, y}, t);                 // top
+        render_line(moduleArea, {x + w, y}, {x + w, y + h}, t);         // right
+        render_line(moduleArea, {x + w, y + h}, {x, y + h}, t);         // bottom
+        render_line(moduleArea, {x, y + h}, {x, y}, t);                 // left
+    }
+    rgb              = {rgb.red * 1.05, rgb.green * 1.05, rgb.blue * 1.05};
     set_rgb_colour(rgb);
-    module->dragArea  = render_rectangle(moduleArea, {{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3}, {moduleRectangle.size.w - 6, STANDARD_TEXT_HEIGHT + 2}});
+    module->dragArea = render_rectangle(moduleArea, {{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3}, {moduleRectangle.size.w - 6, STANDARD_TEXT_HEIGHT + 2}});
 
     render_module_common(moduleRectangle, module);
 

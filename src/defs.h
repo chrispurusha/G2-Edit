@@ -29,17 +29,21 @@
 //#define ENABLE_LOG_MODULE_DATA    // Uncomment for module-data logging in any configuration
 //#define ENABLE_USB_LOG    // Uncomment to enable USB message logging to ~/G2_usb.log
 
-#define PATCH_FILE_SIZE                      (10 * 1024 * 1024)
-#define PERF_FILE_SIZE                       (40 * 1024 * 1024)
-#define TARGET_FRAME_BUFF_WIDTH              (2560)
-#define TARGET_FRAME_BUFF_HEIGHT             (1440)
+#define PATCH_FILE_SIZE                    (10 * 1024 * 1024)
+#define PERF_FILE_SIZE                     (40 * 1024 * 1024)
+#define TARGET_FRAME_BUFF_WIDTH            (2560)
+#define TARGET_FRAME_BUFF_HEIGHT           (1440)
 //#define GLOBAL_GUI_SCALE                     (2)  // Should be related to window size
 
-#define WINDOW_TITLE                         "G2 Editor"
+#define WINDOW_TITLE                       "G2 Editor"
 
-#define NUM_VARIATIONS_USB                   (10) // 10 variations per patch, but only fist 8 presented on the GUI
-#define NUM_VARIATIONS                       (9)  // One less variation for file access or without the USB extra = 9
-#define VARIATION_INIT                       (8)
+#define NUM_VARIATIONS_USB                 (10)   // 10 variations per patch, but only fist 8 presented on the GUI
+#define NUM_VARIATIONS                     (9)    // One less variation for file access or without the USB extra = 9
+#define VARIATION_INIT                     (8)
+#define MUTATION_LOCK_MIN_PATCH_VERSION    (23)   // Patch format version the Patch Mutator's "Exclude From
+                                                  // Mutation" defaulting shipped in - confirmed by decoding
+                                                  // 395 real captured patches (v19/v22 never had the bit
+                                                  // populated; v23 matched module-type defaults 100%)
 #define NUM_MORPHS                           (8)  // Not sure if we can go higher with this, so remember to check
 #define MAX_PARAMS_PER_MODULE                (38)
 #define MAX_CONNECTORS_PER_MODULE            (10)

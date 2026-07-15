@@ -2728,7 +2728,7 @@ static int send_add_module(uint32_t slot, tModuleData * moduleData) {
     write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleData->row);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleData->colour);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleData->upRate);
-    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleData->isLed);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleData->excludeFromMutation);
 
     for (i = 0; i < (int)moduleData->modeCount; i++) {
         write_bit_stream(buff, &bitPos, 8, (uint8_t)moduleData->mode[i]);

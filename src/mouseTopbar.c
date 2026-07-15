@@ -48,6 +48,7 @@ extern "C" {
 #include "menus.h"
 #include "mouseTopbar.h"
 #include "undo.h"
+#include "mutatorUI.h"
 
 static void handle_button(tTopbarControlId controlId) {
     uint32_t slot = gSlot;
@@ -287,6 +288,17 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
             gPatchSettingsEdit.active = true;
             gPatchSettingsEdit.slot   = slot;
             found                     = true;
+        }
+    }
+
+    if (found == false) {
+        if (within_rectangle(coord, gTopbarControls[topbarMutatorId].rectangle)) {
+            if (gMutator.active) {
+                close_mutator_panel();
+            } else {
+                open_mutator_panel(slot);
+            }
+            found = true;
         }
     }
 

@@ -406,6 +406,26 @@ static void action_rename_module(int index) {
     gReDraw             = true;
 }
 
+// Patch Mutator "Exclude From Mutation" toggle. Local/in-memory only, matching
+// undo_push_module_exclude()'s reasoning: the flag rides inside the full module dump and already
+// round-trips correctly on patch save/load, but there's no verified live single-bit wire command
+// for it, so we don't invent one - toggling here takes effect in the Mutator immediately and
+// persists next time the patch is saved.
+static void action_toggle_exclude_from_mutation(int index) {
+    (void)index;
+    tModule * module = get_module(gMenuContext.moduleKey);
+
+    if (module != NULL) {
+        uint8_t oldValue = (uint8_t)module->excludeFromMutation;
+        uint8_t newValue = oldValue ? 0 : 1;
+
+        module->excludeFromMutation = newValue;
+        undo_push_module_exclude(gMenuContext.moduleKey, oldValue, newValue);
+    }
+    gContextMenu.active = false;
+    gReDraw             = true;
+}
+
 // Only ever called for items with no subMenu — handle_context_menu_click()/
 // update_context_menu_hover() open a subMenu-bearing item's flyout themselves
 // and never invoke its action.
@@ -606,23 +626,24 @@ static void menu_action_create(int index) {
         uniqueIndex         = find_unique_module_id(module.key.location);
 
         if (uniqueIndex >= 0) {
-            module.key.index                    = (uint32_t)uniqueIndex;
-            module.type                         = (tModuleType)gContextMenu.items[index].param;
+            module.key.index                              = (uint32_t)uniqueIndex;
+            module.type                                   = (tModuleType)gContextMenu.items[index].param;
             convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.originCoord);
+            module.excludeFromMutation                    = default_mutation_lock(module.type) ? 1 : 0;
 
             COPY_STRING(module.name, gModuleProperties[module.type].name);
 
-            messageContent.cmd                  = eMsgCmdWriteModule;
-            messageContent.slot                 = slot;
-            messageContent.moduleData.moduleKey = module.key;
-            messageContent.moduleData.type      = module.type;
-            messageContent.moduleData.row       = module.row;
-            messageContent.moduleData.column    = module.column;
-            messageContent.moduleData.colour    = module.colour;
-            messageContent.moduleData.upRate    = module.upRate;
-            messageContent.moduleData.isLed     = module.isLed;
-            messageContent.moduleData.unknown1  = module.unknown1;
-            messageContent.moduleData.modeCount = module_mode_count(module.type);
+            messageContent.cmd                            = eMsgCmdWriteModule;
+            messageContent.slot                           = slot;
+            messageContent.moduleData.moduleKey           = module.key;
+            messageContent.moduleData.type                = module.type;
+            messageContent.moduleData.row                 = module.row;
+            messageContent.moduleData.column              = module.column;
+            messageContent.moduleData.colour              = module.colour;
+            messageContent.moduleData.upRate              = module.upRate;
+            messageContent.moduleData.excludeFromMutation = module.excludeFromMutation;
+            messageContent.moduleData.unknown1            = module.unknown1;
+            messageContent.moduleData.modeCount           = module_mode_count(module.type);
 
             for (int i = 0; i < module_mode_count(module.type); i++) {
                 messageContent.moduleData.mode[i] = module.mode[i].value;
@@ -1693,6 +1714,8 @@ void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t co
     open_context_menu(coord, menuItems, 0, 0.0);
 }
 
+static char gExcludeMutationMenuLabel[40];
+
 void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     static tMenuItem colourMenuItems[] = {
         {"",   MODULE_RED_1,         action_set_module_colour,  6, NULL},
@@ -1724,14 +1747,22 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
     };
 
     static tMenuItem menuItems[] = {
-        {"Rename",     RGB_GREY_3, action_rename_module,      0, NULL,            0,                      0.0},
-        {"Set colour", RGB_GREY_3, NULL,                      0, colourMenuItems, 6, STANDARD_TEXT_HEIGHT * 2},
-        {"Copy",       RGB_GREY_3, menu_action_copy_module,   0, NULL,            0,                      0.0},
-        {"Cut",        RGB_GREY_3, menu_action_cut_module,    0, NULL},
-        {"Paste",      RGB_GREY_3, menu_action_paste,         0, NULL},
-        {"Delete",     RGB_GREY_3, menu_action_delete_module, 0, NULL},
-        {NULL,         RGB_BLACK,  NULL,                      0, NULL}
+        {"Rename",     RGB_GREY_3, action_rename_module,                0, NULL,            0,                      0.0},
+        {"Set colour", RGB_GREY_3, NULL,                                0, colourMenuItems, 6, STANDARD_TEXT_HEIGHT * 2},
+        {"Copy",       RGB_GREY_3, menu_action_copy_module,             0, NULL,            0,                      0.0},
+        {"Cut",        RGB_GREY_3, menu_action_cut_module,              0, NULL},
+        {"Paste",      RGB_GREY_3, menu_action_paste,                   0, NULL},
+        {"Delete",     RGB_GREY_3, menu_action_delete_module,           0, NULL},
+        {NULL,         RGB_GREY_3, action_toggle_exclude_from_mutation, 0, NULL},
+        {NULL,         RGB_BLACK,  NULL,                                0, NULL}
     };
+
+    tModule *        module      = get_module(moduleKey);
+    bool             excluded    = (module != NULL) && module->excludeFromMutation;
+
+    snprintf(gExcludeMutationMenuLabel, sizeof(gExcludeMutationMenuLabel), "[%s] Exclude From Mutation",
+             excluded ? "x" : " ");
+    menuItems[6].label     = gExcludeMutationMenuLabel;
 
     gMenuContext.moduleKey = moduleKey;
     open_context_menu(coord, menuItems, 0, 0.0);
