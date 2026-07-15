@@ -73,10 +73,14 @@ tMutatorCategory classify_param(tModuleType moduleType, tLocation location, tPar
 // written (capped at maxEntries).
 uint32_t mutator_build_schema(uint32_t slot, tMutatorSchemaEntry * entries, uint32_t maxEntries);
 
-// Normalizes a genome to 0..1 per entry (value / (range-1), each param's own span) for drawing a
-// "chromosome" sparkline - the manual's "curvy line derived from the actual parameter values" used
-// to show at a glance how different two genomes are.
-void mutator_chromosome(const uint8_t * genome, const tMutatorSchemaEntry * schema, uint32_t count, double * outNormalized);
+// Builds the "chromosome" turtle-walk path, ported from the original Clavia editor's decompiled
+// CDialogMutaBox::DrawChromosome: walks the genome two entries at a time - the first (even index)
+// turns a running heading in degrees (raw byte value minus 63, i.e. centered on a mid-range dial
+// value), the second (odd index) steps forward by its own raw byte value in that heading. One
+// unscaled 2D point is written per genome entry (outPoints[0] is always {0,0}); the caller fits
+// the resulting path to its own rectangle (min/max bounds vary per genome, by design - that's what
+// makes two genomes' chromosomes visually comparable at a glance).
+void mutator_chromosome_path(const uint8_t * genome, uint32_t count, tCoord * outPoints);
 
 // Reads/writes a flat genome (one uint8_t value per schema entry, same order) from/to the live
 // module database at the given variation index.

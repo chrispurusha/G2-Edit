@@ -160,13 +160,25 @@ uint32_t mutator_build_schema(uint32_t slot, tMutatorSchemaEntry * entries, uint
     return count;
 }
 
-void mutator_chromosome(const uint8_t * genome, const tMutatorSchemaEntry * schema, uint32_t count, double * outNormalized) {
-    uint32_t i = 0;
+void mutator_chromosome_path(const uint8_t * genome, uint32_t count, tCoord * outPoints) {
+    double   heading = 0.0;   // degrees, running accumulator (not wrapped - cos/sin below wrap it)
+    double   x       = 0.0;
+    double   y       = 0.0;
+    uint32_t i       = 0;
 
     for (i = 0; i < count; i++) {
-        uint32_t range = schema[i].range;
+        outPoints[i].x = x;
+        outPoints[i].y = y;
 
-        outNormalized[i] = (range > 1) ? ((double)genome[i] / (double)(range - 1)) : 0.0;
+        if ((i & 1) == 0) {
+            heading += (double)genome[i] - 63.0;
+        } else {
+            double radians = heading * (M_PI / 180.0);
+            double step    = (double)genome[i];
+
+            x += step * cos(radians);
+            y += step * sin(radians);
+        }
     }
 }
 
