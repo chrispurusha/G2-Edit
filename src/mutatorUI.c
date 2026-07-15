@@ -37,6 +37,7 @@ extern "C" {
 #include "utilsGraphics.h"
 #include "globalVars.h"
 #include "fileDialogue.h"
+#include "mouseHandle.h"
 
 tMutatorState            gMutator                       = {0};
 
@@ -143,6 +144,12 @@ static void run_randomize(void) {
         gMutator.genomeValid[1 + c] = true;
     }
 
+    // Seed Father too if nothing's there yet, so Interpolate/Cross are usable right after a first
+    // Randomize without an extra manual step. Never overwrites a Father the user already set up.
+    if (!gMutator.genomeValid[mutatorFocusFather]) {
+        mutator_randomize(gMutator.genome[base], gMutator.schema, gMutator.schemaCount, &gMutator.locks, gMutator.genome[mutatorFocusFather]);
+        gMutator.genomeValid[mutatorFocusFather] = true;
+    }
     audition(1);
 }
 
@@ -204,24 +211,25 @@ static void save_focused_to_storage(void) {
 // anything from the Mutator becomes permanent - a stand-in for the Temporary Storage row's "v"
 // (commit row) button until that's built.
 
-static int32_t  gPendingCommitBox       = -1;
+static uint8_t  gPendingCommitGenome[MUTATOR_MAX_SCHEMA];
+static bool     gPendingCommitValid     = false;
 static uint32_t gPendingCommitVariation = 0;
 
 static void on_variation_commit_confirmed(bool confirmed) {
-    if (!confirmed || (gPendingCommitBox < 0)) {
-        gPendingCommitBox = -1;
+    if (!confirmed || !gPendingCommitValid) {
+        gPendingCommitValid = false;
         return;
     }
     mutator_apply_genome(gMutator.schema, gMutator.schemaCount, gMutator.slot,
-                         gPendingCommitVariation, gMutator.genome[gPendingCommitBox], true);
-    gPendingCommitBox = -1;
+                         gPendingCommitVariation, gPendingCommitGenome, true);
+    gPendingCommitValid = false;
 }
 
-static void request_commit_to_variation(uint32_t variationIndex) {
-    if (gMutator.focus == mutatorFocusNone) {
-        return;
-    }
-    gPendingCommitBox       = gMutator.focus;
+// genome is snapshotted immediately (the caller's buffer - e.g. a box being dragged - isn't
+// guaranteed to still be valid/unchanged by the time the async dialog resolves).
+static void request_commit_to_variation(const uint8_t * genome, uint32_t variationIndex) {
+    memcpy(gPendingCommitGenome, genome, sizeof(gPendingCommitGenome));
+    gPendingCommitValid     = true;
     gPendingCommitVariation = variationIndex;
 
     char title[48];
@@ -294,6 +302,10 @@ static void draw_chromosome(tRectangle rect, const uint8_t * genome, tRgb lineCo
         prev = next;
     }
 }
+
+// Defined further down, once gPendingKind/gPendingBoxFam/gPendingBoxIdx exist - forward declared
+// here so render_mutator_panel can draw it last (on top of everything else in the panel).
+static void draw_drag_ghost(void);
 
 void render_mutator_panel(void) {
     if (!gMutator.active) {
@@ -373,8 +385,8 @@ void render_mutator_panel(void) {
     double                   linkX                       = rangeX + dialW + 20.0;
 
     gMutator.linkButtonRect  = draw_button(mainArea, (tRectangle){{linkX, rowY + STANDARD_TEXT_HEIGHT * 2.0}, {50.0, STANDARD_BUTTON_TEXT_HEIGHT}},
-                                           gMutator.linkProbRange ? (char *)"Link" : (char *)"Free",
-                                           gMutator.linkProbRange ? (tRgb)RGB_GREY_9 : (tRgb)RGB_GREY_5);
+                                           (char *)"Link",
+                                           gMutator.linkProbRange ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
     double                   crossX                      = x + w - margin - dialW;
 
@@ -433,10 +445,15 @@ void render_mutator_panel(void) {
     rowY += boxH + 14.0;
 
     // Temporary Storage: 24 slots (3 rows of 8). Click an empty slot to save the focused genome
-    // there; click a saved slot to load it as Mother (Shift-click = Father); Cmd-click to clear.
+    // there; click a saved slot to load it as Mother; right-click to clear. Drag onto Father to
+    // load it there instead (quietly, no audition) - Shift/Cmd-drag = Interpolate/Cross. Split
+    // across two lines - the full sentence is wider than the panel at its default size.
     set_rgb_colour((tRgb)RGB_WHITE);
     render_text(mainArea, (tRectangle){{x + margin, rowY}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}},
-                "Temporary Storage (click empty = save focused, click saved = load Mother, Shift = Father, Cmd = clear)");
+                "Temporary Storage (click empty = save, click saved = load Mother, right-click = clear)");
+    rowY += STANDARD_TEXT_HEIGHT + 2.0;
+    render_text(mainArea, (tRectangle){{x + margin, rowY}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}},
+                "drag = copy (drop on Father = quiet load), Shift-drag = Interpolate, Cmd-drag = Cross");
     rowY += STANDARD_TEXT_HEIGHT + 6.0;
 
     double storeBoxW = rowBoxW;
@@ -467,7 +484,7 @@ void render_mutator_panel(void) {
     rowY += (storeBoxH + 4.0) * 3.0;
 
     // Region 5 (deferred 3/4 skipped): Quick Lock row - Lock + Solo per category
-    double         catW    = (w - margin * 2.0) / (double)mutatorCatNone;
+    double catW = (w - margin * 2.0) / (double)mutatorCatNone;
 
     for (int cat = 0; cat < mutatorCatNone; cat++) {
         double catX = x + margin + catW * cat;
@@ -480,11 +497,12 @@ void render_mutator_panel(void) {
 
     rowY += (STANDARD_BUTTON_TEXT_HEIGHT + 4.0) * 2.0 + 14.0;
 
-    // Patch Variations row: read-only mirror of the 8 real hardware variations. Click loads that
-    // variation as Mother; Shift-click loads it as Father - a stand-in for the Temporary
-    // Storage/drag-and-drop mechanism the manual describes, until that's built.
+    // Patch Variations row: mirrors the 8 real hardware variations. Click loads that variation as
+    // Mother; Cmd-click, or a plain drop here, commits (with confirmation, since it's a real write
+    // to the edit buffer). Also a full drag source/destination like every other box - drag = copy
+    // (drag onto Father loads it quietly instead), Shift-drag = Interpolate, Cmd-drag = Cross.
     set_rgb_colour((tRgb)RGB_WHITE);
-    render_text(mainArea, (tRectangle){{x + margin, rowY}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Patch Variations (click = Mother, Shift-click = Father, Cmd-click = commit focused sound here)");
+    render_text(mainArea, (tRectangle){{x + margin, rowY}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Patch Variations (click = Mother, Cmd/drop = commit, drag = copy/Shift = Interp/Cmd = Cross)");
     rowY += STANDARD_TEXT_HEIGHT + 6.0;
 
     double         varBoxW = rowBoxW;
@@ -516,6 +534,7 @@ void render_mutator_panel(void) {
     if ((rowY + margin) > (y + panel.size.h)) {
         gMutator.panelRect.size.h = (rowY + margin) - y;
     }
+    draw_drag_ghost();
 }
 
 // ─── Mouse ───────────────────────────────────────────────────────────────────
@@ -572,122 +591,276 @@ static void continue_dial_drag(tCoord coord) {
     }
 }
 
+// ─── Click-and-drag model ────────────────────────────────────────────────────
+// All discrete controls arm on mouse-down and only fire on mouse-up if the release is still over
+// the same control (standard button behaviour - drag off before releasing cancels). Mother/
+// Children/Father, Temporary Storage, and Patch Variation boxes all support drag-and-drop between
+// any two of them, per the manual: plain drag = copy (a plain drop onto a Variation commits there,
+// with confirmation, since that's a real hardware write), Shift-drag = Interpolate, Cmd-drag =
+// Cross. Same-box press-then-release (i.e. a plain click, no drag) keeps each box's own click
+// meaning instead - notably Cmd-click on a Variation still means "commit the focused sound here",
+// distinct from Cmd-drag *onto* that same Variation meaning Cross.
+
+typedef enum {
+    pendingNone,
+    pendingClose,
+    pendingOperator,
+    pendingLink,
+    pendingCategoryLock,
+    pendingCategorySolo,
+    pendingBoxDrag,   // Mother/Children/Father, Temporary Storage, and Patch Variations - the full drag-and-drop family
+} tMutatorPendingKind;
+
+// boxFamVariation participates fully in the drag family now: a plain click still does the old
+// load-Mother/Shift-Father/Cmd-commit thing (click_drag_box), but it can now also be dragged onto
+// any other box (as a source) or dropped onto (as a destination) just like Mother/Children/Father
+// and Temporary Storage.
+typedef enum {
+    boxFamMCF,
+    boxFamStorage,
+    boxFamVariation,
+} tBoxFamily;
+
+static tMutatorPendingKind gPendingKind   = pendingNone;
+static int32_t             gPendingIndex  = -1;
+static tBoxFamily          gPendingBoxFam = boxFamMCF;
+static int32_t             gPendingBoxIdx = -1;
+
+static bool box_ref_valid(tBoxFamily fam, int32_t idx) {
+    switch (fam) {
+        case boxFamMCF:       return gMutator.genomeValid[idx];
+
+        case boxFamStorage:   return gMutator.storageValid[idx];
+
+        case boxFamVariation: return gMutator.schemaCount > 0;
+    }
+    return false;
+}
+
+// For boxFamVariation this reads the variation's live values on demand into a shared scratch
+// buffer - safe because callers that need to keep a source's values across a later mutation of
+// gMutator state (see drop_drag_box) copy out of this buffer immediately, before it can be
+// overwritten by a second call for the destination side.
+static const uint8_t * box_ref_genome(tBoxFamily fam, int32_t idx) {
+    static uint8_t variationScratch[MUTATOR_MAX_SCHEMA];
+
+    switch (fam) {
+        case boxFamMCF:     return gMutator.genome[idx];
+
+        case boxFamStorage: return gMutator.storageGenome[idx];
+
+        case boxFamVariation:
+            mutator_read_genome(gMutator.schema, gMutator.schemaCount, gMutator.slot, (uint32_t)idx, variationScratch);
+            return variationScratch;
+    }
+    return NULL;
+}
+
+static void box_ref_set_genome(tBoxFamily fam, int32_t idx, const uint8_t * values) {
+    if (fam == boxFamMCF) {
+        memcpy(gMutator.genome[idx], values, sizeof(gMutator.genome[0]));
+        gMutator.genomeValid[idx] = true;
+    } else {
+        memcpy(gMutator.storageGenome[idx], values, sizeof(gMutator.genome[0]));
+        gMutator.storageValid[idx] = true;
+    }
+}
+
+static bool hit_test_drag_box(tCoord coord, tBoxFamily * outFam, int32_t * outIdx) {
+    for (int i = 0; i < MUTATOR_NUM_BOXES; i++) {
+        if (within_rectangle(coord, gMutator.boxRect[i])) {
+            *outFam = boxFamMCF;
+            *outIdx = i;
+            return true;
+        }
+    }
+
+    for (int s = 0; s < MUTATOR_NUM_STORAGE; s++) {
+        if (within_rectangle(coord, gMutator.storageRect[s])) {
+            *outFam = boxFamStorage;
+            *outIdx = s;
+            return true;
+        }
+    }
+
+    for (int v = 0; v < MUTATOR_NUM_REAL_VARIATIONS; v++) {
+        if (within_rectangle(coord, gMutator.variationRect[v])) {
+            *outFam = boxFamVariation;
+            *outIdx = v;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// While a box-drag is armed (mouse down on a box, not yet released), draw a small floating
+// chromosome preview next to the cursor - mirrors a native drag's "ghost", but drawn as the
+// dragged genome's own sparkline so it also hints at what's being carried, not just that
+// something is.
+static void draw_drag_ghost(void) {
+    if (gPendingKind != pendingBoxDrag) {
+        return;
+    }
+    tCoord          mouse;
+
+    get_global_gui_scaled_mouse_coord(&mouse);
+
+    double          size      = 40.0;
+    tRectangle      ghostRect = (tRectangle){{
+                                                 mouse.x + 12.0, mouse.y + 12.0
+                                             }, {
+                                                 size, size
+                                             }
+    };
+
+    set_rgb_colour((tRgb)RGB_GREY_3);
+    render_rectangle_with_border(mainArea, ghostRect);
+
+    const uint8_t * genome    = box_ref_genome(gPendingBoxFam, gPendingBoxIdx);
+
+    draw_chromosome(ghostRect, genome, (tRgb)RGB_WHITE);
+}
+
+// The plain-click behaviour for a Mother/Child/Father, Temporary Storage, or Patch Variation box
+// (i.e. pressed and released on the very same box, or a Storage box being used as a drag source
+// with nothing in it). Shift-click-to-Father and Cmd-click-to-clear were dropped once drag/right-
+// click covered the same ground: dragging onto Father now loads it just as quietly (see
+// drop_drag_box), and right-click clears any box (see clear_box).
+static void click_drag_box(tBoxFamily fam, int32_t idx) {
+    if (fam == boxFamMCF) {
+        audition(idx);
+        return;
+    }
+
+    if (fam == boxFamVariation) {
+        if (cmd_held()) {
+            if (gMutator.focus != mutatorFocusNone) {
+                request_commit_to_variation(gMutator.genome[gMutator.focus], (uint32_t)idx);
+            }
+            return;
+        }
+        mutator_read_genome(gMutator.schema, gMutator.schemaCount, gMutator.slot, (uint32_t)idx, gMutator.genome[mutatorFocusMother]);
+        gMutator.genomeValid[mutatorFocusMother] = true;
+        audition(mutatorFocusMother);
+        return;
+    }
+
+    if (gMutator.storageValid[idx]) {
+        memcpy(gMutator.genome[mutatorFocusMother], gMutator.storageGenome[idx], sizeof(gMutator.genome[0]));
+        gMutator.genomeValid[mutatorFocusMother] = true;
+        audition(mutatorFocusMother);
+    } else if (gMutator.focus != mutatorFocusNone) {
+        memcpy(gMutator.storageGenome[idx], gMutator.genome[gMutator.focus], sizeof(gMutator.genome[0]));
+        gMutator.storageValid[idx] = true;
+    }
+}
+
+// A genuine drag from one box to a *different* box. Modifier held at release decides the
+// operation, matching the manual's mouse shortcuts table. The source is snapshotted into a local
+// buffer up front, since box_ref_genome's boxFamVariation case reads through a single shared
+// scratch buffer that a second call (for the destination side) would otherwise overwrite.
+static void drop_drag_box(tBoxFamily srcFam, int32_t srcIdx, tBoxFamily dstFam, int32_t dstIdx) {
+    uint8_t srcGenome[MUTATOR_MAX_SCHEMA];
+
+    memcpy(srcGenome, box_ref_genome(srcFam, srcIdx), sizeof(srcGenome));
+
+    if (shift_held() || cmd_held()) {
+        uint8_t dstGenome[MUTATOR_MAX_SCHEMA];
+
+        memcpy(dstGenome, box_ref_genome(dstFam, dstIdx), sizeof(dstGenome));
+
+        memcpy(gMutator.genome[mutatorFocusMother], srcGenome, sizeof(gMutator.genome[0]));
+        memcpy(gMutator.genome[mutatorFocusFather], dstGenome, sizeof(gMutator.genome[0]));
+        gMutator.genomeValid[mutatorFocusMother] = true;
+        gMutator.genomeValid[mutatorFocusFather] = true;
+
+        if (shift_held()) {
+            run_interpolate();
+        } else {
+            run_cross();
+        }
+        return;
+    }
+
+    // A plain drop onto a real Variation is a real hardware write - always confirm, exactly like
+    // Cmd-click on a Variation box already does.
+    if (dstFam == boxFamVariation) {
+        request_commit_to_variation(srcGenome, (uint32_t)dstIdx);
+        return;
+    }
+    box_ref_set_genome(dstFam, dstIdx, srcGenome);
+
+    if (dstFam == boxFamMCF) {
+        // Father is a breeding partner, not something to preview on drop - loading it should stay
+        // quiet (no write to real hardware), same as every other route into Father used to be.
+        if (dstIdx == mutatorFocusFather) {
+            gMutator.focus = dstIdx;
+        } else {
+            audition(dstIdx);
+        }
+    }
+}
+
+// Right-click shortcut to empty a box, instead of Cmd-click (Storage) or a drag (everywhere).
+// Real hardware Variations have nothing to "clear" - a no-op there.
+static void clear_box(tBoxFamily fam, int32_t idx) {
+    switch (fam) {
+        case boxFamMCF:
+            gMutator.genomeValid[idx]  = false;
+
+            if (gMutator.focus == idx) {
+                gMutator.focus = mutatorFocusNone;
+            }
+            break;
+
+        case boxFamStorage:
+            gMutator.storageValid[idx] = false;
+            break;
+
+        case boxFamVariation:
+            break;
+    }
+}
+
 bool handle_mutator_mouse(tCoord coord, tMouseButton mouseButton) {
     if (!gMutator.active) {
         return false;
     }
 
-    // Right-click (and any other button/action this handler doesn't specifically act on) must
-    // still be swallowed while the cursor is over the panel, so it can't reach the module canvas
-    // underneath and open e.g. a module's context menu.
+    if (mouseButton == mouseButtonRightUp) {
+        tBoxFamily fam;
+        int32_t    idx;
+
+        if (hit_test_drag_box(coord, &fam, &idx)) {
+            clear_box(fam, idx);
+        }
+        return within_rectangle(coord, gMutator.panelRect);
+    }
+
+    // Any other button/action this handler doesn't specifically act on must still be swallowed
+    // while the cursor is over the panel, so it can't reach the module canvas underneath and open
+    // e.g. a module's context menu.
     if ((mouseButton != mouseButtonLeftDown) && (mouseButton != mouseButtonLeftUp)) {
         return within_rectangle(coord, gMutator.panelRect);
     }
 
     if (mouseButton == mouseButtonLeftDown) {
+        // Close sits visually inside the title bar rect, so it must be checked first - otherwise
+        // a press on Close arms a panel-drag instead, and the drag release swallows the click
+        // before the close action ever gets a chance to fire.
         if (within_rectangle(coord, gMutator.closeButtonRect)) {
-            close_mutator_panel();
+            gPendingKind = pendingClose;
             return true;
         }
 
+        // Continuous drag controls (panel title bar, dials) still act immediately on press -
+        // they aren't discrete "click" actions.
         if (within_rectangle(coord, gMutator.titleBarRect)) {
             gMutator.draggingPanel  = true;
             gMutator.dragMouseStart = coord;
             gMutator.dragPanelStart = gMutator.panelRect.coord;
             return true;
-        }
-
-        for (int i = 0; i < 4; i++) {
-            if (within_rectangle(coord, gMutator.operatorRect[i])) {
-                gMutator.operatorPressed[i] = true;
-
-                switch (i) {
-                    case 0: run_mutate();
-                        break;
-
-                    case 1: run_randomize();
-                        break;
-
-                    case 2: run_interpolate();
-                        break;
-
-                    case 3: run_cross();
-                        break;
-                }
-                return true;
-            }
-        }
-
-        if (within_rectangle(coord, gMutator.linkButtonRect)) {
-            gMutator.linkProbRange = !gMutator.linkProbRange;
-            return true;
-        }
-
-        for (int i = 0; i < MUTATOR_NUM_BOXES; i++) {
-            if (within_rectangle(coord, gMutator.boxRect[i])) {
-                audition(i);
-                return true;
-            }
-        }
-
-        for (int cat = 0; cat < mutatorCatNone; cat++) {
-            if (within_rectangle(coord, gMutator.categoryLockRect[cat])) {
-                gMutator.locks.locked[cat] = !gMutator.locks.locked[cat];
-                return true;
-            }
-
-            if (within_rectangle(coord, gMutator.categorySoloRect[cat])) {
-                gMutator.locks.solo[cat] = !gMutator.locks.solo[cat];
-                return true;
-            }
-        }
-
-        for (int v = 0; v < MUTATOR_NUM_REAL_VARIATIONS; v++) {
-            if (within_rectangle(coord, gMutator.variationRect[v])) {
-                if (cmd_held()) {
-                    request_commit_to_variation((uint32_t)v);
-                    return true;
-                }
-                bool    shiftHeld = shift_held();
-                int32_t target    = shiftHeld ? mutatorFocusFather : mutatorFocusMother;
-
-                mutator_read_genome(gMutator.schema, gMutator.schemaCount, gMutator.slot, (uint32_t)v, gMutator.genome[target]);
-                gMutator.genomeValid[target] = true;
-
-                if (!shiftHeld) {
-                    audition(target);
-                } else {
-                    gMutator.focus = target;
-                }
-                return true;
-            }
-        }
-
-        for (int s = 0; s < MUTATOR_NUM_STORAGE; s++) {
-            if (within_rectangle(coord, gMutator.storageRect[s])) {
-                if (cmd_held()) {
-                    gMutator.storageValid[s] = false;
-                    return true;
-                }
-
-                if (gMutator.storageValid[s]) {
-                    bool    shiftHeld = shift_held();
-                    int32_t target    = shiftHeld ? mutatorFocusFather : mutatorFocusMother;
-
-                    memcpy(gMutator.genome[target], gMutator.storageGenome[s], sizeof(gMutator.genome[0]));
-                    gMutator.genomeValid[target] = true;
-
-                    if (!shiftHeld) {
-                        audition(target);
-                    } else {
-                        gMutator.focus = target;
-                    }
-                } else if (gMutator.focus != mutatorFocusNone) {
-                    memcpy(gMutator.storageGenome[s], gMutator.genome[gMutator.focus], sizeof(gMutator.genome[0]));
-                    gMutator.storageValid[s] = true;
-                }
-                return true;
-            }
         }
 
         if (within_rectangle(coord, gMutator.probSliderRect)) {
@@ -704,28 +877,136 @@ bool handle_mutator_mouse(tCoord coord, tMouseButton mouseButton) {
             begin_dial_drag(2, coord);
             return true;
         }
+
+        // Everything else just arms here; the action fires on release, only if the mouse is
+        // still (or, for the drag family, now) over a valid target.
+        for (int i = 0; i < 4; i++) {
+            if (within_rectangle(coord, gMutator.operatorRect[i])) {
+                gPendingKind                = pendingOperator;
+                gPendingIndex               = i;
+                gMutator.operatorPressed[i] = true;
+                return true;
+            }
+        }
+
+        if (within_rectangle(coord, gMutator.linkButtonRect)) {
+            gPendingKind = pendingLink;
+            return true;
+        }
+
+        for (int cat = 0; cat < mutatorCatNone; cat++) {
+            if (within_rectangle(coord, gMutator.categoryLockRect[cat])) {
+                gPendingKind  = pendingCategoryLock;
+                gPendingIndex = cat;
+                return true;
+            }
+
+            if (within_rectangle(coord, gMutator.categorySoloRect[cat])) {
+                gPendingKind  = pendingCategorySolo;
+                gPendingIndex = cat;
+                return true;
+            }
+        }
+
+        tBoxFamily fam;
+        int32_t    idx;
+
+        if (hit_test_drag_box(coord, &fam, &idx)) {
+            gPendingKind   = pendingBoxDrag;
+            gPendingBoxFam = fam;
+            gPendingBoxIdx = idx;
+            return true;
+        }
         // Swallow clicks inside the panel that didn't hit a control, so they don't fall through
         // to the module canvas underneath.
         return within_rectangle(coord, gMutator.panelRect);
     }
 
-    if (mouseButton == mouseButtonLeftUp) {
-        for (int i = 0; i < 4; i++) {
-            gMutator.operatorPressed[i] = false;
-        }
-
-        if (gMutator.draggingPanel) {
-            gMutator.draggingPanel = false;
-            return true;
-        }
-
-        if (gMutator.draggingSlider >= 0) {
-            gMutator.draggingSlider = -1;
-            return true;
-        }
-        return within_rectangle(coord, gMutator.panelRect);
+    // mouseButtonLeftUp
+    for (int i = 0; i < 4; i++) {
+        gMutator.operatorPressed[i] = false;
     }
-    return false;
+
+    if (gMutator.draggingPanel) {
+        gMutator.draggingPanel = false;
+        return true;
+    }
+
+    if (gMutator.draggingSlider >= 0) {
+        gMutator.draggingSlider = -1;
+        return true;
+    }
+    tMutatorPendingKind kind = gPendingKind;
+
+    gPendingKind = pendingNone;
+
+    switch (kind) {
+        case pendingClose:
+
+            if (within_rectangle(coord, gMutator.closeButtonRect)) {
+                close_mutator_panel();
+            }
+            return true;
+
+        case pendingOperator:
+
+            if (within_rectangle(coord, gMutator.operatorRect[gPendingIndex])) {
+                switch (gPendingIndex) {
+                    case 0: run_mutate();
+                        break;
+
+                    case 1: run_randomize();
+                        break;
+
+                    case 2: run_interpolate();
+                        break;
+
+                    case 3: run_cross();
+                        break;
+                }
+            }
+            return true;
+
+        case pendingLink:
+
+            if (within_rectangle(coord, gMutator.linkButtonRect)) {
+                gMutator.linkProbRange = !gMutator.linkProbRange;
+            }
+            return true;
+
+        case pendingCategoryLock:
+
+            if (within_rectangle(coord, gMutator.categoryLockRect[gPendingIndex])) {
+                gMutator.locks.locked[gPendingIndex] = !gMutator.locks.locked[gPendingIndex];
+            }
+            return true;
+
+        case pendingCategorySolo:
+
+            if (within_rectangle(coord, gMutator.categorySoloRect[gPendingIndex])) {
+                gMutator.locks.solo[gPendingIndex] = !gMutator.locks.solo[gPendingIndex];
+            }
+            return true;
+
+        case pendingBoxDrag:
+        {
+            tBoxFamily dstFam;
+            int32_t    dstIdx;
+            bool       foundTarget = hit_test_drag_box(coord, &dstFam, &dstIdx);
+
+            if (foundTarget && (dstFam == gPendingBoxFam) && (dstIdx == gPendingBoxIdx)) {
+                click_drag_box(gPendingBoxFam, gPendingBoxIdx);
+            } else if (foundTarget && box_ref_valid(gPendingBoxFam, gPendingBoxIdx)) {
+                drop_drag_box(gPendingBoxFam, gPendingBoxIdx, dstFam, dstIdx);
+            }
+            // Released somewhere else entirely, or dragged an empty box: no-op.
+            return true;
+        }
+
+        default:
+            break;
+    }
+    return within_rectangle(coord, gMutator.panelRect);
 }
 
 void handle_mutator_cursor_pos(tCoord coord) {
