@@ -1048,6 +1048,14 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         return;
     }
 
+    // Mouse is just hovering over the (non-dragging) Mutator panel - skip all the hover detection
+    // below (cable highlight, knob/CC overlays, etc.) so nothing hidden behind the floater lights
+    // up. gHoverConnector.active is already false from just above.
+    if (gMutator.active && within_rectangle(coord, gMutator.panelRect)) {
+        gReDraw = true;
+        return;
+    }
+
     if (gDragSkipCount > 0) {
         gDragPrevX = xCoord;
         gDragPrevY = yCoord;
