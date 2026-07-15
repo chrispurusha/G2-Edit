@@ -26,11 +26,15 @@
 // Patch Mutator floater: panel chrome + drag, Mutate/Randomize/Interpolate/Cross operators with
 // Probability/Range/Cross-probability sliders, Mother/Children x6/Father row (click to
 // focus+audition), 7 Quick Lock category buttons, a Temporary Storage grid (click an empty slot
-// to save the focused genome there, click a saved slot to load it as Mother/Shift-click as
-// Father, Cmd-click to clear it), and a Patch Variations mirror row (click = load as Mother,
-// Shift-click = load as Father, Cmd-click = commit the focused genome into that variation's edit
-// buffer). Deliberately deferred: drag-and-drop between boxes (this build uses click + modifier
-// keys throughout instead), multi-select for the Exclude From Mutation toggle.
+// to save the focused genome there, click a saved slot to load it as Mother), and a Patch
+// Variations mirror row (click = load as Mother, Cmd-click = commit the focused genome into that
+// variation's edit buffer). Right-click empties a Storage or Mother/Children/Father box.
+// Drag-and-drop works between any two boxes across all three rows - Mother/Children/Father,
+// Temporary Storage, and Patch Variations (plain drag = copy - dragging onto Father loads it
+// quietly, without auditioning, since it's just the other breeding parent; Shift-drag =
+// Interpolate; Cmd-drag = Cross); a plain drop onto a Variation commits there with confirmation,
+// since that's a real hardware write. Deliberately deferred: multi-select for the Exclude From
+// Mutation toggle.
 
 #define MUTATOR_NUM_BOXES              8    // 0=Mother, 1-6=Children, 7=Father
 #define MUTATOR_NUM_REAL_VARIATIONS    8
