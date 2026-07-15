@@ -269,15 +269,15 @@ void copy_selection(void) {
             continue;
         }
         tClipboardModule * cm  = &gClipboard.modules[gClipboard.moduleCount++];
-        cm->type       = mod->type;
-        cm->dColumn    = (int32_t)mod->column - (int32_t)minCol;
-        cm->dRow       = (int32_t)mod->row - (int32_t)minRow;
-        cm->origIndex  = mod->key.index;
-        cm->origColumn = mod->column;
-        cm->origRow    = mod->row;
-        cm->colour     = mod->colour;
-        cm->upRate     = mod->upRate;
-        cm->isLed      = mod->isLed;
+        cm->type                = mod->type;
+        cm->dColumn             = (int32_t)mod->column - (int32_t)minCol;
+        cm->dRow                = (int32_t)mod->row - (int32_t)minRow;
+        cm->origIndex           = mod->key.index;
+        cm->origColumn          = mod->column;
+        cm->origRow             = mod->row;
+        cm->colour              = mod->colour;
+        cm->upRate              = mod->upRate;
+        cm->excludeFromMutation = mod->excludeFromMutation;
         COPY_STRING(cm->name, mod->name);
 
         for (uint32_t v = 0; v < NUM_VARIATIONS_USB; v++) {
@@ -359,31 +359,31 @@ void paste_snapshot(uint32_t slot, uint32_t location,
             continue;
         }
         tModule            module   = {0};
-        module.key.slot          = slot;
-        module.key.location      = location;
-        module.key.index         = (uint32_t)newIndex;
-        module.type              = cm->type;
+        module.key.slot                    = slot;
+        module.key.location                = location;
+        module.key.index                   = (uint32_t)newIndex;
+        module.type                        = cm->type;
 
         int32_t            nc       = (int32_t)anchorCol + cm->dColumn;
         int32_t            nr       = (int32_t)anchorRow + cm->dRow;
-        module.column            = (uint32_t)(nc < 0 ? 0 : (nc > (int32_t)MAX_COLUMNS ? MAX_COLUMNS : nc));
-        module.row               = (uint32_t)(nr < 0 ? 0 : (nr > (int32_t)MAX_ROWS ? MAX_ROWS : nr));
-        module.colour            = cm->colour;
-        module.upRate            = cm->upRate;
-        module.isLed             = cm->isLed;
+        module.column                      = (uint32_t)(nc < 0 ? 0 : (nc > (int32_t)MAX_COLUMNS ? MAX_COLUMNS : nc));
+        module.row                         = (uint32_t)(nr < 0 ? 0 : (nr > (int32_t)MAX_ROWS ? MAX_ROWS : nr));
+        module.colour                      = cm->colour;
+        module.upRate                      = cm->upRate;
+        module.excludeFromMutation         = cm->excludeFromMutation;
         COPY_STRING(module.name, cm->name);
 
         tMessageContent    msg      = {0};
-        msg.cmd                  = eMsgCmdWriteModule;
-        msg.slot                 = slot;
-        msg.moduleData.moduleKey = module.key;
-        msg.moduleData.type      = module.type;
-        msg.moduleData.row       = module.row;
-        msg.moduleData.column    = module.column;
-        msg.moduleData.colour    = module.colour;
-        msg.moduleData.upRate    = module.upRate;
-        msg.moduleData.isLed     = module.isLed;
-        msg.moduleData.modeCount = module_mode_count(module.type);
+        msg.cmd                            = eMsgCmdWriteModule;
+        msg.slot                           = slot;
+        msg.moduleData.moduleKey           = module.key;
+        msg.moduleData.type                = module.type;
+        msg.moduleData.row                 = module.row;
+        msg.moduleData.column              = module.column;
+        msg.moduleData.colour              = module.colour;
+        msg.moduleData.upRate              = module.upRate;
+        msg.moduleData.excludeFromMutation = module.excludeFromMutation;
+        msg.moduleData.modeCount           = module_mode_count(module.type);
 
         for (uint32_t m = 0; m < MAX_NUM_MODES; m++) {
             msg.moduleData.mode[m] = (uint8_t)cm->mode[m];

@@ -114,6 +114,12 @@ typedef struct {
 } tUndoPatchDescrPayload;
 
 typedef struct {
+    tModuleKey key;
+    uint8_t    oldValue;
+    uint8_t    newValue;
+} tUndoModuleExcludePayload;
+
+typedef struct {
     uint32_t slot;
     char     oldName[CLAVIA_NAME_SIZE + 1];
     char     newName[CLAVIA_NAME_SIZE + 1];
@@ -143,6 +149,7 @@ typedef enum {
     eUndoCmdPatchName,
     eUndoCmdPerfName,
     eUndoCmdPerfSetting,
+    eUndoCmdModuleExclude,
 } tUndoCmdType;
 
 typedef struct {
@@ -194,6 +201,7 @@ static void free_command(tUndoCommand * cmd) {
         case eUndoCmdPatchName:
         case eUndoCmdPerfName:
         case eUndoCmdPerfSetting:
+        case eUndoCmdModuleExclude:
             free(cmd->payload);
             break;
     }
@@ -261,15 +269,15 @@ void undo_push_delete_selection(void) {
         }
         tClipboardModule * cm  = &p->modules[p->moduleCount++];
         memset(cm, 0, sizeof(*cm));
-        cm->type       = mod->type;
-        cm->origIndex  = mod->key.index;
-        cm->origColumn = mod->column;
-        cm->origRow    = mod->row;
-        cm->dColumn    = 0;
-        cm->dRow       = 0;
-        cm->colour     = mod->colour;
-        cm->upRate     = mod->upRate;
-        cm->isLed      = mod->isLed;
+        cm->type                = mod->type;
+        cm->origIndex           = mod->key.index;
+        cm->origColumn          = mod->column;
+        cm->origRow             = mod->row;
+        cm->dColumn             = 0;
+        cm->dRow                = 0;
+        cm->colour              = mod->colour;
+        cm->upRate              = mod->upRate;
+        cm->excludeFromMutation = mod->excludeFromMutation;
         COPY_STRING(cm->name, mod->name);
         memcpy(cm->param, mod->param, sizeof(cm->param));
 
@@ -423,26 +431,26 @@ static void recreate_module(tUndoDeletePayload * p, tClipboardModule * cm) {
         return;
     }
     tModule         module   = {0};
-    module.key               = key;
-    module.type              = cm->type;
-    module.column            = cm->origColumn;
-    module.row               = cm->origRow;
-    module.colour            = cm->colour;
-    module.upRate            = cm->upRate;
-    module.isLed             = cm->isLed;
+    module.key                         = key;
+    module.type                        = cm->type;
+    module.column                      = cm->origColumn;
+    module.row                         = cm->origRow;
+    module.colour                      = cm->colour;
+    module.upRate                      = cm->upRate;
+    module.excludeFromMutation         = cm->excludeFromMutation;
     COPY_STRING(module.name, cm->name);
 
     tMessageContent msg      = {0};
-    msg.cmd                  = eMsgCmdWriteModule;
-    msg.slot                 = p->slot;
-    msg.moduleData.moduleKey = key;
-    msg.moduleData.type      = cm->type;
-    msg.moduleData.row       = cm->origRow;
-    msg.moduleData.column    = cm->origColumn;
-    msg.moduleData.colour    = cm->colour;
-    msg.moduleData.upRate    = cm->upRate;
-    msg.moduleData.isLed     = cm->isLed;
-    msg.moduleData.modeCount = module_mode_count(cm->type);
+    msg.cmd                            = eMsgCmdWriteModule;
+    msg.slot                           = p->slot;
+    msg.moduleData.moduleKey           = key;
+    msg.moduleData.type                = cm->type;
+    msg.moduleData.row                 = cm->origRow;
+    msg.moduleData.column              = cm->origColumn;
+    msg.moduleData.colour              = cm->colour;
+    msg.moduleData.upRate              = cm->upRate;
+    msg.moduleData.excludeFromMutation = cm->excludeFromMutation;
+    msg.moduleData.modeCount           = module_mode_count(cm->type);
 
     for (uint32_t m = 0; m < MAX_NUM_MODES; m++) {
         msg.moduleData.mode[m] = (uint8_t)cm->mode[m];
@@ -787,6 +795,31 @@ static void apply_patch_descr(tUndoPatchDescrPayload * p, bool isUndo) {
     gReDraw  = true;
 }
 
+// Local/in-memory only - see undo_push_module_exclude()'s comment for why no USB message is sent.
+static void apply_module_exclude(tUndoModuleExcludePayload * p, bool isUndo) {
+    tModule * module = get_module(p->key);
+
+    if (module != NULL) {
+        module->excludeFromMutation = isUndo ? p->oldValue : p->newValue;
+    }
+    gReDraw = true;
+}
+
+void undo_push_module_exclude(tModuleKey key, uint8_t oldValue, uint8_t newValue) {
+    if (oldValue == newValue) {
+        return;
+    }
+    tUndoModuleExcludePayload * p = malloc(sizeof(tUndoModuleExcludePayload));
+
+    if (!p) {
+        return;
+    }
+    p->key      = key;
+    p->oldValue = oldValue;
+    p->newValue = newValue;
+    stack_push(eUndoCmdModuleExclude, p);
+}
+
 void undo_push_patch_descr(uint32_t slot, uint8_t which, uint8_t oldValue, uint8_t newValue) {
     if (oldValue == newValue) {
         return;
@@ -955,6 +988,10 @@ void undo_undo(void) {
         case eUndoCmdPerfSetting:
             apply_perf_setting(cmd->payload, true);
             break;
+
+        case eUndoCmdModuleExclude:
+            apply_module_exclude(cmd->payload, true);
+            break;
     }
 }
 
@@ -1008,6 +1045,10 @@ void undo_redo(void) {
 
         case eUndoCmdPerfSetting:
             apply_perf_setting(cmd->payload, false);
+            break;
+
+        case eUndoCmdModuleExclude:
+            apply_module_exclude(cmd->payload, false);
             break;
     }
 }

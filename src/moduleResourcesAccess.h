@@ -59,6 +59,7 @@ uint32_t module_connector_count(tModuleType moduleType);
 uint32_t module_mode_count(tModuleType moduleType);
 uint32_t module_volume_count(tModuleType moduleType);
 uint32_t module_led_count(tModuleType moduleType);
+bool default_mutation_lock(tModuleType moduleType);
 void init_module_resource_cache(void);
 
 #endif // __MODULE_RESOURCE_ACCESS_H__
