@@ -195,27 +195,55 @@ static void draw_horizontal_bar(tRectangle rect, double value01) {
     }
 }
 
-// "Chromosome" sparkline (manual: "a curvy line derived from the actual parameter values" - shows
-// at a glance how different two genomes are). Plots every schema entry left-to-right, normalized
-// height, connected by straight segments - not a single bezier, since a genome can have hundreds
-// of entries and render_bezier_curve() only draws one curve through three points.
+// Fits mutator_chromosome_path()'s turtle-walk path into rect (uniform scale, aspect preserved,
+// centered - mirrors the original editor's DrawChromosome bounding-box fit) and draws it as a
+// connected polyline. Not a single bezier: the path can have hundreds of points, and
+// render_bezier_curve() only draws one curve through three control points.
 static void draw_chromosome(tRectangle rect, const uint8_t * genome) {
-    static double normalized[MUTATOR_MAX_SCHEMA];
+    static tCoord path[MUTATOR_MAX_SCHEMA];
     uint32_t      count = gMutator.schemaCount;
 
     if (count < 2) {
         return;
     }
-    mutator_chromosome(genome, gMutator.schema, count, normalized);
+    mutator_chromosome_path(genome, count, path);
 
-    set_rgb_colour((tRgb)RGB_GREY_2);
-    tCoord        prev  = {rect.coord.x, rect.coord.y + rect.size.h * (1.0 - normalized[0])};
+    double        minX = path[0].x, maxX = path[0].x;
+    double        minY = path[0].y, maxY = path[0].y;
 
     for (uint32_t i = 1; i < count; i++) {
-        tCoord next = {
-            rect.coord.x + rect.size.w * ((double)i / (double)(count - 1)),
-            rect.coord.y + rect.size.h * (1.0 - normalized[i])
-        };
+        if (path[i].x < minX) {
+            minX = path[i].x;
+        }
+
+        if (path[i].x > maxX) {
+            maxX = path[i].x;
+        }
+
+        if (path[i].y < minY) {
+            minY = path[i].y;
+        }
+
+        if (path[i].y > maxY) {
+            maxY = path[i].y;
+        }
+    }
+
+    double        xRange  = (maxX > minX) ? (maxX - minX) : 1.0;
+    double        yRange  = (maxY > minY) ? (maxY - minY) : 1.0;
+    double        scaleX  = rect.size.w / xRange;
+    double        scaleY  = rect.size.h / yRange;
+    double        scale   = ((scaleX < scaleY) ? scaleX : scaleY) * 0.9;
+    double        midX    = (minX + maxX) * 0.5;
+    double        midY    = (minY + maxY) * 0.5;
+    double        centreX = rect.coord.x + (rect.size.w * 0.5);
+    double        centreY = rect.coord.y + (rect.size.h * 0.5);
+
+    set_rgb_colour((tRgb)RGB_GREY_2);
+    tCoord        prev    = {centreX + ((path[0].x - midX) * scale), centreY + ((path[0].y - midY) * scale)};
+
+    for (uint32_t i = 1; i < count; i++) {
+        tCoord next = {centreX + ((path[i].x - midX) * scale), centreY + ((path[i].y - midY) * scale)};
         render_line(mainArea, prev, next, 1.0);
         prev = next;
     }
