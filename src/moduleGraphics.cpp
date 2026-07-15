@@ -358,6 +358,12 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 
             get_global_gui_scaled_mouse_coord(&mouseCoord);
 
+            // Don't show a knob/CC overlay for a param that's actually hidden behind the Mutator
+            // floater right now.
+            if ((gMutator.active && within_rectangle(mouseCoord, gMutator.panelRect))) {
+                return;
+            }
+
             if (within_rectangle(mouseCoord, gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex])) {
                 if (localKnobIdx >= 0) {
                     queue_knob_overlay(rectangle, localKnobIdx, false);

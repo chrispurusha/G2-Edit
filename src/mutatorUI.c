@@ -195,6 +195,32 @@ static void draw_horizontal_bar(tRectangle rect, double value01) {
     }
 }
 
+// "Chromosome" sparkline (manual: "a curvy line derived from the actual parameter values" - shows
+// at a glance how different two genomes are). Plots every schema entry left-to-right, normalized
+// height, connected by straight segments - not a single bezier, since a genome can have hundreds
+// of entries and render_bezier_curve() only draws one curve through three points.
+static void draw_chromosome(tRectangle rect, const uint8_t * genome) {
+    static double normalized[MUTATOR_MAX_SCHEMA];
+    uint32_t      count = gMutator.schemaCount;
+
+    if (count < 2) {
+        return;
+    }
+    mutator_chromosome(genome, gMutator.schema, count, normalized);
+
+    set_rgb_colour((tRgb)RGB_GREY_2);
+    tCoord        prev  = {rect.coord.x, rect.coord.y + rect.size.h * (1.0 - normalized[0])};
+
+    for (uint32_t i = 1; i < count; i++) {
+        tCoord next = {
+            rect.coord.x + rect.size.w * ((double)i / (double)(count - 1)),
+            rect.coord.y + rect.size.h * (1.0 - normalized[i])
+        };
+        render_line(mainArea, prev, next, 1.0);
+        prev = next;
+    }
+}
+
 void render_mutator_panel(void) {
     if (!gMutator.active) {
         return;
@@ -304,6 +330,10 @@ void render_mutator_panel(void) {
         render_rectangle_with_border(mainArea, boxRect);
         set_rgb_colour(contrasting_text_colour(bg));
         render_text(mainArea, (tRectangle){{bx + 4.0, rowY + 4.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, boxLabel[i]);
+
+        if (valid) {
+            draw_chromosome((tRectangle){{bx + 3.0, rowY + 18.0}, {boxW - 6.0, boxH - 22.0}}, gMutator.genome[i]);
+        }
     }
 
     rowY += boxH + 14.0;
@@ -363,6 +393,13 @@ static void set_slider_from_mouse(int32_t index, tCoord coord) {
 bool handle_mutator_mouse(tCoord coord, tMouseButton mouseButton) {
     if (!gMutator.active) {
         return false;
+    }
+
+    // Right-click (and any other button/action this handler doesn't specifically act on) must
+    // still be swallowed while the cursor is over the panel, so it can't reach the module canvas
+    // underneath and open e.g. a module's context menu.
+    if ((mouseButton != mouseButtonLeftDown) && (mouseButton != mouseButtonLeftUp)) {
+        return within_rectangle(coord, gMutator.panelRect);
     }
 
     if (mouseButton == mouseButtonLeftDown) {

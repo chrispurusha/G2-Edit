@@ -73,6 +73,11 @@ tMutatorCategory classify_param(tModuleType moduleType, tLocation location, tPar
 // written (capped at maxEntries).
 uint32_t mutator_build_schema(uint32_t slot, tMutatorSchemaEntry * entries, uint32_t maxEntries);
 
+// Normalizes a genome to 0..1 per entry (value / (range-1), each param's own span) for drawing a
+// "chromosome" sparkline - the manual's "curvy line derived from the actual parameter values" used
+// to show at a glance how different two genomes are.
+void mutator_chromosome(const uint8_t * genome, const tMutatorSchemaEntry * schema, uint32_t count, double * outNormalized);
+
 // Reads/writes a flat genome (one uint8_t value per schema entry, same order) from/to the live
 // module database at the given variation index.
 void mutator_read_genome(const tMutatorSchemaEntry * schema, uint32_t count, uint32_t slot, uint32_t variation, uint8_t * outValues);

@@ -160,6 +160,16 @@ uint32_t mutator_build_schema(uint32_t slot, tMutatorSchemaEntry * entries, uint
     return count;
 }
 
+void mutator_chromosome(const uint8_t * genome, const tMutatorSchemaEntry * schema, uint32_t count, double * outNormalized) {
+    uint32_t i = 0;
+
+    for (i = 0; i < count; i++) {
+        uint32_t range = schema[i].range;
+
+        outNormalized[i] = (range > 1) ? ((double)genome[i] / (double)(range - 1)) : 0.0;
+    }
+}
+
 // ─── Genome read/write ───────────────────────────────────────────────────────
 
 void mutator_read_genome(const tMutatorSchemaEntry * schema, uint32_t count, uint32_t slot, uint32_t variation, uint8_t * outValues) {
