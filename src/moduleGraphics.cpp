@@ -986,7 +986,7 @@ void render_cables(void) {
 }
 
 void render_morph_groups(void) {
-    tRectangle rectangle        = {{840, 4}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
+    tRectangle rectangle        = {{840, 4 + MENU_BAR_HEIGHT}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
     char       dialValueStr[16] = {0};
     char       label[16]        = {0};
     tRgb       dialColour       = RGB_BACKGROUND_GREY;

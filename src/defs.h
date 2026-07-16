@@ -286,16 +286,22 @@
 #define STANDARD_TEXT_HEIGHT           (12.0)
 #define STANDARD_BUTTON_TEXT_HEIGHT    (12.0)
 
-#define CONNECTOR_SIZE                 (5)
+// Persistent in-window menu bar (see src/menuBar.c) — sits above the existing
+// topbar, which is why every topbar element's Y coordinate has this added
+// in (topbarControls.def's X macro, and the handful of literal-coordinate
+// exceptions in graphics.cpp's render_top_bar()).
+#define MENU_BAR_HEIGHT        (24.0)
 
-#define MAX_ROWS                       (127)
-#define MAX_COLUMNS                    (127)
-#define MAX_ROWS_MODULE                (12)       // Operator type is 12 rows - largest we have
+#define CONNECTOR_SIZE         (5)
 
-#define LONGEST_PATCH_NAME             "XXXXXXXXXXXXXXXX"
-#define LONGEST_MODULE_NAME            "XXXXXXXXXXXXXXXX"
+#define MAX_ROWS               (127)
+#define MAX_COLUMNS            (127)
+#define MAX_ROWS_MODULE        (12)               // Operator type is 12 rows - largest we have
 
-#define NULL_RECTANGLE                 {{0.0, 0.0}, {0.0, 0.0}}
+#define LONGEST_PATCH_NAME     "XXXXXXXXXXXXXXXX"
+#define LONGEST_MODULE_NAME    "XXXXXXXXXXXXXXXX"
+
+#define NULL_RECTANGLE         {{0.0, 0.0}, {0.0, 0.0}}
 #define ARRAY_SIZE(arr)    (sizeof(arr) / sizeof(arr[0]))
 
 #define COPY_STRING(dst, src)                     \
