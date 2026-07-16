@@ -36,36 +36,6 @@ void set_zoom_factor(double zoomFactor, tCoord mouseCoord);
 double get_zoom_factor(void);
 }
 
-@interface G2MenuTarget : NSObject
-- (void)openPatch:(id)sender;
-- (void)savePatch:(id)sender;
-- (void)newPatch:(id)sender;
-- (void)openNotes:(id)sender;
-- (void)openSettings:(id)sender;
-- (void)openPatchParams:(id)sender;
-- (void)openPerfSettings:(id)sender;
-- (void)setDialModeRotary:(id)sender;
-- (void)setDialModeVertical:(id)sender;
-- (void)setDialModeHorizontal:(id)sender;
-- (void)backupBank:(id)sender;
-- (void)backupPerfBank:(id)sender;
-- (void)backupSynthSettings:(id)sender;
-- (void)restoreSynthSettings:(id)sender;
-- (void)backupEverything:(id)sender;
-- (void)restoreBank:(id)sender;
-- (void)restorePerfBank:(id)sender;
-- (void)restoreEverything:(id)sender;
-- (void)storeToBank:(id)sender;
-- (void)deletePatchLocation:(id)sender;
-- (void)deletePerfLocation:(id)sender;
-- (void)loadPatchLocation:(id)sender;
-- (void)loadPerfLocation:(id)sender;
-- (void)zoomIn:(id)sender;
-- (void)zoomOut:(id)sender;
-- (void)zoomReset:(id)sender;
-- (BOOL)validateMenuItem:(NSMenuItem *)item;
-@end
-
 // Bank number (0-indexed) chosen from the "Backup Patch Bank"/"Backup Performance Bank" dropdown
 // dialog, stashed here between that dialog's confirm callback and the folder-choose panel's
 // completion callback (tFileDialogueCallback is a plain C function pointer with no room for
@@ -330,153 +300,22 @@ static void build_bank_location_items(bool isPerf, bool populatedOnly,
     *outCount = count;
 }
 
-@implementation G2MenuTarget
-
-- (void)openPatch:(id)sender {
+void file_menu_open_patch(void) {
     gShowOpenFileReadDialogue = true;
     wake_glfw();
 }
 
-- (void)savePatch:(id)sender {
+void file_menu_save_patch(void) {
     gShowOpenFileWriteDialogue = true;
     wake_glfw();
 }
 
-- (void)newPatch:(id)sender {
+void file_menu_new_patch(void) {
     init_patch(gSlot);
     wake_glfw();
 }
 
-- (void)openNotes:(id)sender {
-    uint32_t slot = gSlot;
-
-    gPatchNotesEdit.active    = true;
-    gPatchNotesEdit.slot      = slot;
-    gPatchNotesEdit.cursorPos = gPatchNotesSize[slot];
-    memset(gPatchNotesEdit.buffer, 0, sizeof(gPatchNotesEdit.buffer));
-    memcpy(gPatchNotesEdit.buffer, gPatchNotes[slot], gPatchNotesSize[slot]);
-    memset(gPatchNotesEdit.original, 0, sizeof(gPatchNotesEdit.original));
-    memcpy(gPatchNotesEdit.original, gPatchNotes[slot], gPatchNotesSize[slot]);
-    wake_glfw();
-}
-
-- (void)openSettings:(id)sender {
-    uint32_t slot = gSlot;
-
-    gPatchSettingsEdit.active = true;
-    gPatchSettingsEdit.slot   = slot;
-    wake_glfw();
-}
-
-- (void)openPatchParams:(id)sender {
-    uint32_t slot = gSlot;
-
-    gPatchParamsEdit.active = true;
-    gPatchParamsEdit.slot   = slot;
-    wake_glfw();
-}
-
-- (void)openPerfSettings:(id)sender {
-    gPerfSettingsEdit.active = true;
-    wake_glfw();
-}
-
-- (void)setDialModeRotary:(id)sender {
-    gDialMode = eDialModeRotary;
-    [[NSUserDefaults standardUserDefaults] setInteger:gDialMode forKey:@"dialMode"];
-}
-
-- (void)setDialModeVertical:(id)sender {
-    gDialMode = eDialModeVertical;
-    [[NSUserDefaults standardUserDefaults] setInteger:gDialMode forKey:@"dialMode"];
-}
-
-- (void)setDialModeHorizontal:(id)sender {
-    gDialMode = eDialModeHorizontal;
-    [[NSUserDefaults standardUserDefaults] setInteger:gDialMode forKey:@"dialMode"];
-}
-
-- (void)backupBank:(id)sender {
-    if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up a bank.");
-        return;
-    }
-    sPendingBackupIsPerf = false;
-    show_bank_target_confirm_dialogue_async("Backup Patch Bank", "Choose which patch bank to back up.", "Backup...",
-                                            "Bank to Back Up:", sPendingBackupBank + 1, NUM_PATCH_BANKS,
-                                            on_backup_bank_picked);
-}
-
-- (void)backupPerfBank:(id)sender {
-    if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up a performance bank.");
-        return;
-    }
-    sPendingBackupIsPerf = true;
-    show_bank_target_confirm_dialogue_async("Backup Performance Bank", "Choose which performance bank to back up.", "Backup...",
-                                            "Bank to Back Up:", sPendingBackupBank + 1, NUM_PERF_BANKS,
-                                            on_backup_bank_picked);
-}
-
-- (void)backupSynthSettings:(id)sender {
-    if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up synth settings.");
-        return;
-    }
-    open_folder_dialogue_async(on_synth_settings_backup_folder_chosen, "Choose a Folder for Synth Settings Backup");
-}
-
-- (void)restoreSynthSettings:(id)sender {
-    if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring synth settings.");
-        return;
-    }
-    open_folder_dialogue_async(on_synth_settings_restore_folder_chosen, "Choose the Backup Folder to Restore Synth Settings From");
-}
-
-- (void)backupEverything:(id)sender {
-    if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up everything.");
-        return;
-    }
-    open_folder_dialogue_async(on_everything_backup_folder_chosen, "Choose a Folder for Backup Everything");
-}
-
-- (void)restoreBank:(id)sender {
-    if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring a bank.");
-        return;
-    }
-    sPendingRestoreIsPerf = false;
-    show_bank_target_confirm_dialogue_async("Restore Patch Bank", "Choose which patch bank's backup to restore.", "Next...",
-                                            "Restore from Bank:", sPendingRestoreBank + 1, NUM_PATCH_BANKS,
-                                            on_restore_source_bank_picked);
-}
-
-- (void)restorePerfBank:(id)sender {
-    if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring a performance bank.");
-        return;
-    }
-    sPendingRestoreIsPerf = true;
-    show_bank_target_confirm_dialogue_async("Restore Performance Bank", "Choose which performance bank's backup to restore.", "Next...",
-                                            "Restore from Bank:", sPendingRestoreBank + 1, NUM_PERF_BANKS,
-                                            on_restore_source_bank_picked);
-}
-
-- (void)restoreEverything:(id)sender {
-    if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring everything.");
-        return;
-    }
-    show_confirm_dialogue_async("Restore Everything",
-                                "This restores every Patch Bank, Performance Bank, and Synth Settings backup found in a folder you choose next, "
-                                "overwriting the G2's current contents to match. Any bank with no manifest file in that folder is left untouched "
-                                "rather than erased. This cannot be undone.",
-                                "Next...", on_restore_everything_confirmed);
-}
-
-- (void)storeToBank:(id)sender {
+void file_menu_store_to_bank(void) {
     bool                    isPerf       = gGlobalSettings.perfMode == 1;
     const char *            typeName     = isPerf ? "performance" : "patch";
     char                    message[320] = {0};
@@ -500,7 +339,7 @@ static void build_bank_location_items(bool isPerf, bool populatedOnly,
     free(names);
 }
 
-- (void)deletePatchLocation:(id)sender {
+void file_menu_delete_patch_location(void) {
     tBankLocationListItem * items = NULL;
 
     char(*names)[CLAVIA_NAME_SIZE + 1] = NULL;
@@ -520,7 +359,7 @@ static void build_bank_location_items(bool isPerf, bool populatedOnly,
     free(names);
 }
 
-- (void)deletePerfLocation:(id)sender {
+void file_menu_delete_perf_location(void) {
     tBankLocationListItem * items = NULL;
 
     char(*names)[CLAVIA_NAME_SIZE + 1] = NULL;
@@ -540,7 +379,7 @@ static void build_bank_location_items(bool isPerf, bool populatedOnly,
     free(names);
 }
 
-- (void)loadPatchLocation:(id)sender {
+void file_menu_load_patch_location(void) {
     tBankLocationListItem * items = NULL;
 
     char(*names)[CLAVIA_NAME_SIZE + 1] = NULL;
@@ -560,7 +399,7 @@ static void build_bank_location_items(bool isPerf, bool populatedOnly,
     free(names);
 }
 
-- (void)loadPerfLocation:(id)sender {
+void file_menu_load_perf_location(void) {
     tBankLocationListItem * items = NULL;
 
     char(*names)[CLAVIA_NAME_SIZE + 1] = NULL;
@@ -580,76 +419,140 @@ static void build_bank_location_items(bool isPerf, bool populatedOnly,
     free(names);
 }
 
-- (void)zoomIn:(id)sender {
-    double zoomFactor = get_zoom_factor() + ZOOM_DELTA;
+void settings_menu_open_synth(void) {
+    uint32_t slot = gSlot;
 
-    set_zoom_factor(zoomFactor, (tCoord){0.0, 0.0});
-    save_zoom_factor(get_zoom_factor());
+    gPatchSettingsEdit.active = true;
+    gPatchSettingsEdit.slot   = slot;
     wake_glfw();
 }
 
-- (void)zoomOut:(id)sender {
-    double zoomFactor = get_zoom_factor() - ZOOM_DELTA;
+void settings_menu_open_patch(void) {
+    uint32_t slot = gSlot;
 
-    set_zoom_factor(zoomFactor, (tCoord){0.0, 0.0});
-    save_zoom_factor(get_zoom_factor());
+    gPatchParamsEdit.active = true;
+    gPatchParamsEdit.slot   = slot;
     wake_glfw();
 }
 
-- (void)zoomReset:(id)sender {
-    set_zoom_factor(NO_ZOOM, (tCoord){0.0, 0.0});
-    save_zoom_factor(get_zoom_factor());
+void settings_menu_open_perf(void) {
+    gPerfSettingsEdit.active = true;
     wake_glfw();
 }
 
-- (BOOL)validateMenuItem:(NSMenuItem *)item {
-    SEL action = [item action];
+void settings_menu_open_notes(void) {
+    uint32_t slot = gSlot;
 
-    if (action == @selector(setDialModeRotary:)) {
-        [item setState:(gDialMode == eDialModeRotary) ? NSControlStateValueOn : NSControlStateValueOff];
-    } else if (action == @selector(setDialModeVertical:)) {
-        [item setState:(gDialMode == eDialModeVertical) ? NSControlStateValueOn : NSControlStateValueOff];
-    } else if (action == @selector(setDialModeHorizontal:)) {
-        [item setState:(gDialMode == eDialModeHorizontal) ? NSControlStateValueOn : NSControlStateValueOff];
-    } else if (  action == @selector(backupBank:) || action == @selector(backupPerfBank:)
-              || action == @selector(backupSynthSettings:) || action == @selector(restoreSynthSettings:)
-              || action == @selector(backupEverything:)
-              || action == @selector(restoreBank:) || action == @selector(restorePerfBank:)
-              || action == @selector(restoreEverything:)
-              || action == @selector(deletePatchLocation:) || action == @selector(deletePerfLocation:)
-              || action == @selector(loadPatchLocation:) || action == @selector(loadPerfLocation:)) {
-        return gCommsState == eCommsOnLine;
-    } else if (action == @selector(storeToBank:)) {
-        [item setTitle:(gGlobalSettings.perfMode == 1) ? @"Store Perf to Bank..." : @"Store Patch to Bank..."];
-        return gCommsState == eCommsOnLine;
-    } else if (action == @selector(savePatch:)) {
-        [item setTitle:(gGlobalSettings.perfMode == 1) ? @"Save Perf to File..." : @"Save Patch to File..."];
+    gPatchNotesEdit.active    = true;
+    gPatchNotesEdit.slot      = slot;
+    gPatchNotesEdit.cursorPos = gPatchNotesSize[slot];
+    memset(gPatchNotesEdit.buffer, 0, sizeof(gPatchNotesEdit.buffer));
+    memcpy(gPatchNotesEdit.buffer, gPatchNotes[slot], gPatchNotesSize[slot]);
+    memset(gPatchNotesEdit.original, 0, sizeof(gPatchNotesEdit.original));
+    memcpy(gPatchNotesEdit.original, gPatchNotes[slot], gPatchNotesSize[slot]);
+    wake_glfw();
+}
+
+void backup_menu_patch_bank(void) {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up a bank.");
+        return;
     }
-    return YES;
+    sPendingBackupIsPerf = false;
+    show_bank_target_confirm_dialogue_async("Backup Patch Bank", "Choose which patch bank to back up.", "Backup...",
+                                            "Bank to Back Up:", sPendingBackupBank + 1, NUM_PATCH_BANKS,
+                                            on_backup_bank_picked);
 }
 
-@end
-
-static NSMenuItem * make_item(NSString * title, SEL action, NSString * key, G2MenuTarget * target) {
-    NSMenuItem * item = [[NSMenuItem alloc] initWithTitle:title action:action keyEquivalent:key];
-
-    [item setTarget:target];
-    return item;
+void backup_menu_perf_bank(void) {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up a performance bank.");
+        return;
+    }
+    sPendingBackupIsPerf = true;
+    show_bank_target_confirm_dialogue_async("Backup Performance Bank", "Choose which performance bank to back up.", "Backup...",
+                                            "Bank to Back Up:", sPendingBackupBank + 1, NUM_PERF_BANKS,
+                                            on_backup_bank_picked);
 }
 
+void backup_menu_synth_settings(void) {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up synth settings.");
+        return;
+    }
+    open_folder_dialogue_async(on_synth_settings_backup_folder_chosen, "Choose a Folder for Synth Settings Backup");
+}
+
+void backup_menu_everything(void) {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up everything.");
+        return;
+    }
+    open_folder_dialogue_async(on_everything_backup_folder_chosen, "Choose a Folder for Backup Everything");
+}
+
+void restore_menu_patch_bank(void) {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring a bank.");
+        return;
+    }
+    sPendingRestoreIsPerf = false;
+    show_bank_target_confirm_dialogue_async("Restore Patch Bank", "Choose which patch bank's backup to restore.", "Next...",
+                                            "Restore from Bank:", sPendingRestoreBank + 1, NUM_PATCH_BANKS,
+                                            on_restore_source_bank_picked);
+}
+
+void restore_menu_perf_bank(void) {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring a performance bank.");
+        return;
+    }
+    sPendingRestoreIsPerf = true;
+    show_bank_target_confirm_dialogue_async("Restore Performance Bank", "Choose which performance bank's backup to restore.", "Next...",
+                                            "Restore from Bank:", sPendingRestoreBank + 1, NUM_PERF_BANKS,
+                                            on_restore_source_bank_picked);
+}
+
+void restore_menu_synth_settings(void) {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring synth settings.");
+        return;
+    }
+    open_folder_dialogue_async(on_synth_settings_restore_folder_chosen, "Choose the Backup Folder to Restore Synth Settings From");
+}
+
+void restore_menu_everything(void) {
+    if (gCommsState != eCommsOnLine) {
+        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring everything.");
+        return;
+    }
+    show_confirm_dialogue_async("Restore Everything",
+                                "This restores every Patch Bank, Performance Bank, and Synth Settings backup found in a folder you choose next, "
+                                "overwriting the G2's current contents to match. Any bank with no manifest file in that folder is left untouched "
+                                "rather than erased. This cannot be undone.",
+                                "Next...", on_restore_everything_confirmed);
+}
+
+void save_dial_mode(int mode) {
+    NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
+
+    [defaults setInteger:mode forKey:@"dialMode"];
+    [defaults synchronize];
+}
+
+// Sets up the minimal native Cocoa app menu (Quit/About/Hide/Services — GLFW's Cocoa backend
+// already populates these at index 0) and restores window/zoom/dial-mode state saved from a
+// previous run. File/Settings/Backup/Restore/Controls/View menus used to be constructed here
+// too; they're now the in-window bar built in src/appMenuBar.c on top of SynthLib's menuBar
+// engine, sharing the same action functions defined below.
 void setup_main_menu(void) {
-    NSMenu *              menuBar  = [[NSApplication sharedApplication] mainMenu];
-    static G2MenuTarget * target   = nil;
-
-    if (target == nil) {
-        target = [[G2MenuTarget alloc] init];
-    }
+    NSMenu *         menuBar  = [[NSApplication sharedApplication] mainMenu];
 
     if (menuBar == nil) {
         menuBar = [[NSMenu alloc] init];
         [[NSApplication sharedApplication] setMainMenu:menuBar];
     }
-    NSUserDefaults *      defaults = [NSUserDefaults standardUserDefaults];
+    NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
 
     if ([defaults objectForKey:@"dialMode"] != nil) {
         gDialMode = (tDialMode)[defaults integerForKey:@"dialMode"];
@@ -678,83 +581,6 @@ void setup_main_menu(void) {
 
         reposition_window(savedX, savedY);
     }
-    // File menu
-    NSMenuItem * fileMI      = [[NSMenuItem alloc] init];
-    NSMenu *     fileMenu    = [[NSMenu alloc] initWithTitle:@"File"];
-
-    [fileMenu addItem:make_item(@"Open Patch/Perf File...", @selector(openPatch:), @"o", target)];
-    [fileMenu addItem:make_item(@"Load Patch from Bank...", @selector(loadPatchLocation:), @"", target)];
-    [fileMenu addItem:make_item(@"Load Performance from Bank...", @selector(loadPerfLocation:), @"", target)];
-    [fileMenu addItem:[NSMenuItem separatorItem]];
-    [fileMenu addItem:make_item(@"Save Patch to File...", @selector(savePatch:), @"s", target)];
-    [fileMenu addItem:make_item(@"Store Patch to Bank...", @selector(storeToBank:), @"", target)];
-    [fileMenu addItem:[NSMenuItem separatorItem]];
-    [fileMenu addItem:make_item(@"Delete Patch...", @selector(deletePatchLocation:), @"", target)];
-    [fileMenu addItem:make_item(@"Delete Performance...", @selector(deletePerfLocation:), @"", target)];
-    [fileMenu addItem:[NSMenuItem separatorItem]];
-    [fileMenu addItem:make_item(@"New Patch", @selector(newPatch:), @"n", target)];
-    [fileMI setSubmenu:fileMenu];
-    [menuBar insertItem:fileMI atIndex:1];
-
-    // Settings menu
-    NSMenuItem * patchMI     = [[NSMenuItem alloc] init];
-    NSMenu *     patchMenu   = [[NSMenu alloc] initWithTitle:@"Settings"];
-
-    [patchMenu addItem:make_item(@"Synth", @selector(openSettings:), @",", target)];
-    [patchMenu addItem:make_item(@"Patch", @selector(openPatchParams:), @"", target)];
-    [patchMenu addItem:make_item(@"Perf", @selector(openPerfSettings:), @"", target)];
-    [patchMenu addItem:[NSMenuItem separatorItem]];
-    [patchMenu addItem:make_item(@"Notes", @selector(openNotes:), @"", target)];
-    [patchMI setSubmenu:patchMenu];
-    [menuBar insertItem:patchMI atIndex:2];
-
-    // Backup menu — "Patch Bank..."/"Performance Bank..." are single leaf items rather than
-    // cascading 32/8-item bank submenus; the target action methods now open a dropdown dialog to
-    // pick the bank number instead of reading it off a clicked submenu item's tag.
-    NSMenuItem * bankMI      = [[NSMenuItem alloc] init];
-    NSMenu *     bankMenu    = [[NSMenu alloc] initWithTitle:@"Backup"];
-
-    [bankMenu addItem:make_item(@"Patch Bank...", @selector(backupBank:), @"", target)];
-    [bankMenu addItem:make_item(@"Performance Bank...", @selector(backupPerfBank:), @"", target)];
-    [bankMenu addItem:[NSMenuItem separatorItem]];
-    [bankMenu addItem:make_item(@"Backup Synth Settings...", @selector(backupSynthSettings:), @"", target)];
-    [bankMenu addItem:[NSMenuItem separatorItem]];
-    [bankMenu addItem:make_item(@"Everything...", @selector(backupEverything:), @"", target)];
-    [bankMI setSubmenu:bankMenu];
-    [menuBar insertItem:bankMI atIndex:3];
-
-    // Restore menu — same leaf-item-plus-dropdown-dialog shape as Backup above.
-    NSMenuItem * restoreMI   = [[NSMenuItem alloc] init];
-    NSMenu *     restoreMenu = [[NSMenu alloc] initWithTitle:@"Restore"];
-
-    [restoreMenu addItem:make_item(@"Patch Bank...", @selector(restoreBank:), @"", target)];
-    [restoreMenu addItem:make_item(@"Performance Bank...", @selector(restorePerfBank:), @"", target)];
-    [restoreMenu addItem:[NSMenuItem separatorItem]];
-    [restoreMenu addItem:make_item(@"Synth Settings...", @selector(restoreSynthSettings:), @"", target)];
-    [restoreMenu addItem:[NSMenuItem separatorItem]];
-    [restoreMenu addItem:make_item(@"Everything...", @selector(restoreEverything:), @"", target)];
-    [restoreMI setSubmenu:restoreMenu];
-    [menuBar insertItem:restoreMI atIndex:4];
-
-    // Controls menu
-    NSMenuItem * ctrlMI      = [[NSMenuItem alloc] init];
-    NSMenu *     ctrlMenu    = [[NSMenu alloc] initWithTitle:@"Controls"];
-
-    [ctrlMenu addItem:make_item(@"Rotary", @selector(setDialModeRotary:), @"", target)];
-    [ctrlMenu addItem:make_item(@"Vertical", @selector(setDialModeVertical:), @"", target)];
-    [ctrlMenu addItem:make_item(@"Horizontal", @selector(setDialModeHorizontal:), @"", target)];
-    [ctrlMI setSubmenu:ctrlMenu];
-    [menuBar insertItem:ctrlMI atIndex:5];
-
-    // View menu
-    NSMenuItem * viewMI      = [[NSMenuItem alloc] init];
-    NSMenu *     viewMenu    = [[NSMenu alloc] initWithTitle:@"View"];
-
-    [viewMenu addItem:make_item(@"Zoom In [⌘=]", @selector(zoomIn:), @"", target)];
-    [viewMenu addItem:make_item(@"Zoom Out [⌘-]", @selector(zoomOut:), @"", target)];
-    [viewMenu addItem:make_item(@"Zoom Reset", @selector(zoomReset:), @"", target)];
-    [viewMI setSubmenu:viewMenu];
-    [menuBar insertItem:viewMI atIndex:6];
 }
 
 void save_zoom_factor(double zoom) {

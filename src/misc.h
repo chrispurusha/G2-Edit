@@ -30,6 +30,42 @@ void save_zoom_factor(double zoom);
 void save_window_size(int w);
 void save_window_pos(int x, int y);
 
+// File menu actions — plain-C-callable bodies shared by the (soon to be removed) Cocoa File
+// menu in this file and the new in-window menu bar (src/appMenuBar.c). Native file/bank-picker
+// dialogs are still shown via the async Cocoa panels in fileDialogue.mm; only the dispatch logic
+// (which dialog to open, with what pre-filled state) lives here.
+void file_menu_open_patch(void);
+void file_menu_save_patch(void);
+void file_menu_new_patch(void);
+void file_menu_load_patch_location(void);
+void file_menu_load_perf_location(void);
+void file_menu_delete_patch_location(void);
+void file_menu_delete_perf_location(void);
+void file_menu_store_to_bank(void);
+
+// Settings menu actions
+void settings_menu_open_synth(void);
+void settings_menu_open_patch(void);
+void settings_menu_open_perf(void);
+void settings_menu_open_notes(void);
+
+// Backup menu actions
+void backup_menu_patch_bank(void);
+void backup_menu_perf_bank(void);
+void backup_menu_synth_settings(void);
+void backup_menu_everything(void);
+
+// Restore menu actions
+void restore_menu_patch_bank(void);
+void restore_menu_perf_bank(void);
+void restore_menu_synth_settings(void);
+void restore_menu_everything(void);
+
+// Controls menu — save_dial_mode persists the choice the same way save_zoom_factor/
+// save_window_size/save_window_pos do; setting gDialMode itself is plain global state the
+// caller sets directly (see src/appMenuBar.c).
+void save_dial_mode(int mode);
+
 #ifdef __cplusplus
 }
 #endif
