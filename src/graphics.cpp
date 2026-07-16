@@ -327,32 +327,6 @@ void render_top_bar(void) {
         tRgb                      col = gTopbarControls[topbarMonoPolyId].isPressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
         gTopbarControls[topbarMonoPolyId].rectangle = draw_button(mainArea, {def->coord, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], col);
     }
-    {
-        const tTopbarControlDef * def = topbar_control_def(topbarPatchNotesId);
-        tRgb                      col = gTopbarControls[topbarPatchNotesId].isPressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
-        gTopbarControls[topbarPatchNotesId].rectangle = draw_button(mainArea, {def->coord, {get_text_width(def->text, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, def->text, col);
-    }
-    {
-        const tTopbarControlDef * def = topbar_control_def(topbarSettingsId);
-        tRgb                      col = gTopbarControls[topbarSettingsId].isPressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
-        gTopbarControls[topbarSettingsId].rectangle = draw_button(mainArea, {def->coord, {get_text_width(def->text, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, def->text, col);
-    }
-    {
-        const tTopbarControlDef * def           = topbar_control_def(topbarMutatorId);
-        tRgb                      mutatorColour = gMutator.active ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
-        tRgb                      col           = gTopbarControls[topbarMutatorId].isPressed ? (tRgb)RGB_GREY_7 : mutatorColour;
-        gTopbarControls[topbarMutatorId].rectangle = draw_button(mainArea, {def->coord, {get_text_width(def->text, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, def->text, col);
-    }
-    {
-        const tTopbarControlDef * def = topbar_control_def(topbarPerfSettingsId);
-        tRgb                      col = gTopbarControls[topbarPerfSettingsId].isPressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
-        gTopbarControls[topbarPerfSettingsId].rectangle = draw_button(mainArea, {def->coord, {get_text_width(def->text, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, def->text, col);
-    }
-    {
-        const tTopbarControlDef * def = topbar_control_def(topbarPatchSettingsId);
-        tRgb                      col = gTopbarControls[topbarPatchSettingsId].isPressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
-        gTopbarControls[topbarPatchSettingsId].rectangle = draw_button(mainArea, {def->coord, {get_text_width(def->text, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, def->text, col);
-    }
 
     if (gPatchDescr[slot].monoPoly == monoPolyPoly) {
         voiceCount = gPatchDescr[slot].voiceCount + 1;

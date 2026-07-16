@@ -31,6 +31,7 @@ extern "C" {
 #include "globalVars.h"
 #include "misc.h"
 #include "graphics.h"
+#include "mutatorUI.h"
 #include "appMenuBar.h"
 
 // Real actions land in these six open_*_menu() functions as misc.mm's Cocoa
@@ -308,12 +309,38 @@ static void open_view_menu(tCoord anchor) {
     open_context_menu(anchor, items, 0, 0.0);
 }
 
+static void action_toggle_mutator(int index) {
+    (void)index;
+
+    if (gMutator.active) {
+        close_mutator_panel();
+    } else {
+        open_mutator_panel(gSlot);
+    }
+}
+
+static void open_tools_menu(tCoord anchor) {
+    static tMenuItem items[] = {
+        {"Mutator", (tRgb)RGB_GREY_3, action_toggle_mutator, 0, NULL, 0, 0.0},
+        {NULL,      (tRgb)RGB_BLACK,  NULL,                  0, NULL, 0, 0.0},
+    };
+
+    // Label reflects current state the same way Controls' dial-mode items do (checkmark-style
+    // "* " prefix — see open_controls_menu — isn't used here since there's only one item and
+    // its own name already says what it does; a "Close Mutator" vs "Open Mutator" label reads
+    // clearer for a single toggle than a checkmark would).
+    items[0].label = gMutator.active ? "Close Mutator" : "Open Mutator";
+
+    open_context_menu(anchor, items, 0, 0.0);
+}
+
 tMenuBarItem gAppMenuBar[] = {
     {"File",     open_file_menu    },
     {"Settings", open_settings_menu},
     {"Backup",   open_backup_menu  },
     {"Restore",  open_restore_menu },
     {"Controls", open_controls_menu},
+    {"Tools",    open_tools_menu   },
     {"View",     open_view_menu    },
     {NULL,       NULL              },
 };

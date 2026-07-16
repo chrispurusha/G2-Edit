@@ -48,7 +48,6 @@ extern "C" {
 #include "menus.h"
 #include "mouseTopbar.h"
 #include "undo.h"
-#include "mutatorUI.h"
 
 static void handle_button(tTopbarControlId controlId) {
     uint32_t slot = gSlot;
@@ -114,16 +113,6 @@ static void handle_button(tTopbarControlId controlId) {
                                            (tTopbarControlId)((uint32_t)topbarVariation1Id + gPatchDescr[slot].activeVariation));
             break;
         }
-        case topbarNewPatchId:
-        {
-            init_patch(slot);
-
-            tMessageContent messageContent = {0};
-            messageContent.cmd  = eMsgCmdWritePatch;
-            messageContent.slot = slot;
-            msg_send(&gCommandQueue, &messageContent);
-            break;
-        }
         case topbarUndoId:
         {
             undo_undo();
@@ -156,11 +145,9 @@ bool handle_topbar_left_down(tCoord coord, uint32_t slot) {
 
     if (found == false) {
         static const tTopbarControlId pressableButtonIds[] = {
-            topbarPatchNameId,    topbarPatchTypeId,     topbarMonoPolyId,
-            topbarPatchNotesId,   topbarSettingsId,      topbarMutatorId,
-            topbarPerfSettingsId, topbarPatchSettingsId, topbarClockRunStopId,
-            topbarPerfModeId,     topbarPerfNameId,      topbarHideAllCablesId,
-            topbarTransparentCablesId
+            topbarPatchNameId,     topbarPatchTypeId, topbarMonoPolyId,
+            topbarClockRunStopId,  topbarPerfModeId,  topbarPerfNameId,
+            topbarHideAllCablesId, topbarTransparentCablesId
         };
 
         for (i = 0; i < (int)ARRAY_SIZE(pressableButtonIds); i++) {
@@ -275,19 +262,6 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
     }
 
     if (found == false) {
-        if (within_rectangle(coord, gTopbarControls[topbarPatchNotesId].rectangle)) {
-            gPatchNotesEdit.active    = true;
-            gPatchNotesEdit.slot      = slot;
-            gPatchNotesEdit.cursorPos = gPatchNotesSize[slot];
-            memset(gPatchNotesEdit.buffer, 0, sizeof(gPatchNotesEdit.buffer));
-            memcpy(gPatchNotesEdit.buffer, gPatchNotes[slot], gPatchNotesSize[slot]);
-            memset(gPatchNotesEdit.original, 0, sizeof(gPatchNotesEdit.original));
-            memcpy(gPatchNotesEdit.original, gPatchNotes[slot], gPatchNotesSize[slot]);
-            found                     = true;
-        }
-    }
-
-    if (found == false) {
         if (within_rectangle(coord, gTopbarControls[topbarPerfModeId].rectangle)) {
             memset(&messageContent, 0, sizeof(messageContent));
 
@@ -308,40 +282,6 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
             gPerfNameEdit.active    = true;
             COPY_STRING(gPerfNameEdit.buffer, gGlobalSettings.perfName);
             gPerfNameEdit.cursorPos = (uint32_t)strlen(gPerfNameEdit.buffer);
-            found                   = true;
-        }
-    }
-
-    if (found == false) {
-        if (within_rectangle(coord, gTopbarControls[topbarSettingsId].rectangle)) {
-            gPatchSettingsEdit.active = true;
-            gPatchSettingsEdit.slot   = slot;
-            found                     = true;
-        }
-    }
-
-    if (found == false) {
-        if (within_rectangle(coord, gTopbarControls[topbarMutatorId].rectangle)) {
-            if (gMutator.active) {
-                close_mutator_panel();
-            } else {
-                open_mutator_panel(slot);
-            }
-            found = true;
-        }
-    }
-
-    if (found == false) {
-        if (within_rectangle(coord, gTopbarControls[topbarPerfSettingsId].rectangle)) {
-            gPerfSettingsEdit.active = true;
-            found                    = true;
-        }
-    }
-
-    if (found == false) {
-        if (within_rectangle(coord, gTopbarControls[topbarPatchSettingsId].rectangle)) {
-            gPatchParamsEdit.active = true;
-            gPatchParamsEdit.slot   = slot;
             found                   = true;
         }
     }
