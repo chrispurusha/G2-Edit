@@ -23,13 +23,12 @@
 #include <string.h>
 
 #include "defs.h"
-#include "synthlibDefs.h"
 #include "types.h"
 #include "globalVars.h"
 #include "graphics.h"
 #include "mouseHandle.h"
 #include "usbComms.h"
-#include "fileDialogue.h"
+#include "alertDialog.h"
 #include "fileBrowser.h"
 #include "bankBrowser.h"
 
@@ -40,9 +39,9 @@ double get_zoom_factor(void);
 
 // Bank number (0-indexed) chosen from the "Backup Patch Bank"/"Backup Performance Bank" dropdown
 // dialog, stashed here between that dialog's confirm callback and the folder-choose panel's
-// completion callback (tFileDialogueCallback is a plain C function pointer with no room for
-// captured context). Defaults the dropdown to whatever was picked last time (see backupBank:/
-// backupPerfBank: below), rather than always resetting to Bank 1.
+// completion callback (tFileBrowserCallback is a plain C function pointer with no room for
+// captured context). Defaults the dropdown to whatever was picked last time (see
+// backup_menu_patch_bank()/backup_menu_perf_bank() below), rather than always resetting to Bank 1.
 static uint32_t sPendingBackupBank        = 0;
 static bool     sPendingBackupIsPerf      = false;
 
@@ -67,9 +66,10 @@ static void on_bank_backup_folder_chosen(const char * path) {
     msg_send(&gCommandQueue, &msg);
 }
 
-// Confirm callback for the "which bank to back up" dropdown dialog opened by backupBank:/
-// backupPerfBank: below — sPendingBackupIsPerf was already set by whichever of those two called us,
-// so this only needs to record the bank and move on to the folder picker.
+// Confirm callback for the "which bank to back up" dropdown dialog opened by
+// backup_menu_patch_bank()/backup_menu_perf_bank() below — sPendingBackupIsPerf was already set by
+// whichever of those two called us, so this only needs to record the bank and move on to the
+// folder picker.
 static void on_backup_bank_picked(bool confirmed, uint32_t bank1Indexed) {
     char title[64] = {0};
 
@@ -163,10 +163,10 @@ static void on_bank_restore_confirmed(bool confirmed, uint32_t targetBank1Indexe
 }
 
 // Confirm callback for the "which bank's backup to restore" dropdown dialog opened by
-// restoreBank:/restorePerfBank: below — sPendingRestoreIsPerf was already set by whichever of those
-// two called us. Chains straight into the existing target-bank dropdown dialog, defaulting it to
-// the same bank just picked (the common "restore into itself" case), exactly mirroring what used to
-// default from the clicked submenu item's tag.
+// restore_menu_patch_bank()/restore_menu_perf_bank() below — sPendingRestoreIsPerf was already set
+// by whichever of those two called us. Chains straight into the existing target-bank dropdown
+// dialog, defaulting it to the same bank just picked (the common "restore into itself" case),
+// exactly mirroring what used to default from the clicked submenu item's tag.
 static void on_restore_source_bank_picked(bool confirmed, uint32_t bank1Indexed) {
     char message[320] = {0};
 
@@ -178,16 +178,16 @@ static void on_restore_source_bank_picked(bool confirmed, uint32_t bank1Indexed)
              "This reads %s Bank %u's backup and writes it to the target bank chosen below on the G2. "
              "Any location not present in that backup will be erased there. This cannot be undone.",
              sPendingRestoreIsPerf ? "Performance" : "Patch", bank1Indexed);
-    show_bank_target_confirm_dialogue_async(sPendingRestoreIsPerf ? "Restore Performance Bank" : "Restore Patch Bank",
-                                            message, "Restore...", "Restore to Bank:", bank1Indexed,
-                                            sPendingRestoreIsPerf ? NUM_PERF_BANKS : NUM_PATCH_BANKS,
-                                            on_bank_restore_confirmed);
+    show_bank_confirm(sPendingRestoreIsPerf ? "Restore Performance Bank" : "Restore Patch Bank",
+                      message, "Restore...", "Restore to Bank:", bank1Indexed,
+                      sPendingRestoreIsPerf ? NUM_PERF_BANKS : NUM_PATCH_BANKS,
+                      on_bank_restore_confirmed);
 }
 
-// Domain for the pending Store flow, set by storeToBank: right before opening the bank/location
-// dialog (mirrors gGlobalSettings.perfMode — Store always acts on whatever's in the edit buffer) —
-// same stash pattern as sPendingRestoreIsPerf above, needed because tBankBrowserCallback's
-// signature has no room for it.
+// Domain for the pending Store flow, set by file_menu_store_to_bank() right before opening the
+// bank/location dialog (mirrors gGlobalSettings.perfMode — Store always acts on whatever's in the
+// edit buffer) — same stash pattern as sPendingRestoreIsPerf above, needed because
+// tBankBrowserCallback's signature has no room for it.
 static bool sPendingStoreIsPerf = false;
 
 // Kicks off the peek — the actual overwrite-warning confirm and eMsgCmdStorePatch send happen
@@ -208,9 +208,10 @@ static void on_store_bank_location_chosen(bool confirmed, uint32_t bank1Indexed,
     msg_send(&gCommandQueue, &msg);
 }
 
-// Domain for the pending Delete flow, set by deletePatchLocation:/deletePerfLocation: right before
-// opening the bank/location dialog — same stash pattern as sPendingRestoreIsPerf above, needed
-// because tBankBrowserCallback's signature has no room for it.
+// Domain for the pending Delete flow, set by file_menu_delete_patch_location()/
+// file_menu_delete_perf_location() right before opening the bank/location dialog — same stash
+// pattern as sPendingRestoreIsPerf above, needed because tBankBrowserCallback's signature has no
+// room for it.
 static bool sPendingDeleteIsPerf = false;
 
 // Same "kick off the peek, let graphics.cpp take it from there" shape as
@@ -228,8 +229,9 @@ static void on_delete_bank_location_chosen(bool confirmed, uint32_t bank1Indexed
     msg_send(&gCommandQueue, &msg);
 }
 
-// Domain for the pending Load flow, set by loadPatchLocation:/loadPerfLocation: right before
-// opening the bank/location dialog — same stash pattern as sPendingDeleteIsPerf above.
+// Domain for the pending Load flow, set by file_menu_load_patch_location()/
+// file_menu_load_perf_location() right before opening the bank/location dialog — same stash
+// pattern as sPendingDeleteIsPerf above.
 static bool sPendingLoadIsPerf   = false;
 
 // Same "kick off the peek, let graphics.cpp take it from there" shape as
@@ -326,7 +328,7 @@ void file_menu_store_to_bank(void) {
     uint32_t           count        = 0;
 
     if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before storing to a bank.");
+        show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before storing to a bank.");
         return;
     }
     sPendingStoreIsPerf                = isPerf;
@@ -347,7 +349,7 @@ void file_menu_delete_patch_location(void) {
     uint32_t           count = 0;
 
     if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before deleting a patch.");
+        show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before deleting a patch.");
         return;
     }
     sPendingDeleteIsPerf               = false;
@@ -367,7 +369,7 @@ void file_menu_delete_perf_location(void) {
     uint32_t           count = 0;
 
     if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before deleting a performance.");
+        show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before deleting a performance.");
         return;
     }
     sPendingDeleteIsPerf               = true;
@@ -387,7 +389,7 @@ void file_menu_load_patch_location(void) {
     uint32_t           count = 0;
 
     if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before loading a patch.");
+        show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before loading a patch.");
         return;
     }
     sPendingLoadIsPerf                 = false;
@@ -407,7 +409,7 @@ void file_menu_load_perf_location(void) {
     uint32_t           count = 0;
 
     if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before loading a performance.");
+        show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before loading a performance.");
         return;
     }
     sPendingLoadIsPerf                 = true;
@@ -456,29 +458,29 @@ void settings_menu_open_notes(void) {
 
 void backup_menu_patch_bank(void) {
     if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up a bank.");
+        show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up a bank.");
         return;
     }
     sPendingBackupIsPerf = false;
-    show_bank_target_confirm_dialogue_async("Backup Patch Bank", "Choose which patch bank to back up.", "Backup...",
-                                            "Bank to Back Up:", sPendingBackupBank + 1, NUM_PATCH_BANKS,
-                                            on_backup_bank_picked);
+    show_bank_confirm("Backup Patch Bank", "Choose which patch bank to back up.", "Backup...",
+                      "Bank to Back Up:", sPendingBackupBank + 1, NUM_PATCH_BANKS,
+                      on_backup_bank_picked);
 }
 
 void backup_menu_perf_bank(void) {
     if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up a performance bank.");
+        show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up a performance bank.");
         return;
     }
     sPendingBackupIsPerf = true;
-    show_bank_target_confirm_dialogue_async("Backup Performance Bank", "Choose which performance bank to back up.", "Backup...",
-                                            "Bank to Back Up:", sPendingBackupBank + 1, NUM_PERF_BANKS,
-                                            on_backup_bank_picked);
+    show_bank_confirm("Backup Performance Bank", "Choose which performance bank to back up.", "Backup...",
+                      "Bank to Back Up:", sPendingBackupBank + 1, NUM_PERF_BANKS,
+                      on_backup_bank_picked);
 }
 
 void backup_menu_synth_settings(void) {
     if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up synth settings.");
+        show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up synth settings.");
         return;
     }
     open_file_browser_folder(on_synth_settings_backup_folder_chosen, "Choose a Folder for Synth Settings Backup");
@@ -486,7 +488,7 @@ void backup_menu_synth_settings(void) {
 
 void backup_menu_everything(void) {
     if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up everything.");
+        show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up everything.");
         return;
     }
     open_file_browser_folder(on_everything_backup_folder_chosen, "Choose a Folder for Backup Everything");
@@ -494,29 +496,29 @@ void backup_menu_everything(void) {
 
 void restore_menu_patch_bank(void) {
     if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring a bank.");
+        show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring a bank.");
         return;
     }
     sPendingRestoreIsPerf = false;
-    show_bank_target_confirm_dialogue_async("Restore Patch Bank", "Choose which patch bank's backup to restore.", "Next...",
-                                            "Restore from Bank:", sPendingRestoreBank + 1, NUM_PATCH_BANKS,
-                                            on_restore_source_bank_picked);
+    show_bank_confirm("Restore Patch Bank", "Choose which patch bank's backup to restore.", "Next...",
+                      "Restore from Bank:", sPendingRestoreBank + 1, NUM_PATCH_BANKS,
+                      on_restore_source_bank_picked);
 }
 
 void restore_menu_perf_bank(void) {
     if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring a performance bank.");
+        show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring a performance bank.");
         return;
     }
     sPendingRestoreIsPerf = true;
-    show_bank_target_confirm_dialogue_async("Restore Performance Bank", "Choose which performance bank's backup to restore.", "Next...",
-                                            "Restore from Bank:", sPendingRestoreBank + 1, NUM_PERF_BANKS,
-                                            on_restore_source_bank_picked);
+    show_bank_confirm("Restore Performance Bank", "Choose which performance bank's backup to restore.", "Next...",
+                      "Restore from Bank:", sPendingRestoreBank + 1, NUM_PERF_BANKS,
+                      on_restore_source_bank_picked);
 }
 
 void restore_menu_synth_settings(void) {
     if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring synth settings.");
+        show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring synth settings.");
         return;
     }
     open_file_browser_folder(on_synth_settings_restore_folder_chosen, "Choose the Backup Folder to Restore Synth Settings From");
@@ -524,14 +526,14 @@ void restore_menu_synth_settings(void) {
 
 void restore_menu_everything(void) {
     if (gCommsState != eCommsOnLine) {
-        show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring everything.");
+        show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring everything.");
         return;
     }
-    show_confirm_dialogue_async("Restore Everything",
-                                "This restores every Patch Bank, Performance Bank, and Synth Settings backup found in a folder you choose next, "
-                                "overwriting the G2's current contents to match. Any bank with no manifest file in that folder is left untouched "
-                                "rather than erased. This cannot be undone.",
-                                "Next...", on_restore_everything_confirmed);
+    show_confirm("Restore Everything",
+                 "This restores every Patch Bank, Performance Bank, and Synth Settings backup found in a folder you choose next, "
+                 "overwriting the G2's current contents to match. Any bank with no manifest file in that folder is left untouched "
+                 "rather than erased. This cannot be undone.",
+                 "Next...", on_restore_everything_confirmed);
 }
 
 void save_dial_mode(int mode) {

@@ -56,6 +56,7 @@ extern "C" {
 #include "appMenuBar.h"
 #include "fileBrowser.h"
 #include "bankBrowser.h"
+#include "alertDialog.h"
 
 // Drag-start state for vertical/horizontal dial modes
 static double gDragStartX    = 0.0; // cursor position at press — fixed reference point for Alt-held morph-offset dragging
@@ -746,6 +747,30 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             handle_bank_browser_mouse_down(coord);
         } else if (mouseButton == mouseButtonLeftUp) {
             handle_bank_browser_click(coord);
+        }
+        gReDraw = true;
+        return;
+    }
+
+    if (alert_dialog_active()) {
+        // Same modal gating as file_browser_active()/bank_browser_active() above, plus routing
+        // around the bank-picker's own dropdown: that flyout is opened (from
+        // handle_alert_dialog_click()) using the app's shared context-menu system, so once it's
+        // open, clicks must go to handle_context_menu_click() — exactly how the main window's own
+        // menu bar already defers to it — rather than being swallowed here as if they'd landed on
+        // the dialog panel itself.
+        if (mouseButton == mouseButtonLeftDown) {
+            if (!gContextMenu.active) {
+                handle_alert_dialog_mouse_down(coord);
+            }
+        } else if (mouseButton == mouseButtonLeftUp) {
+            if (gContextMenu.active) {
+                if (!handle_context_menu_click(coord)) {
+                    gContextMenu.active = false;
+                }
+            } else {
+                handle_alert_dialog_click(coord);
+            }
         }
         gReDraw = true;
         return;
@@ -1630,6 +1655,18 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 
     if (bank_browser_active()) {
         handle_bank_browser_key(key, action);
+        gReDraw = true;
+        return;
+    }
+
+    if (alert_dialog_active()) {
+        // Escape closes just the bank-picker dropdown first, if it's open, rather than the whole
+        // dialog underneath it — same precedence the main window's own menu-vs-Escape handling uses.
+        if (gContextMenu.active && (key == GLFW_KEY_ESCAPE) && (action == GLFW_PRESS)) {
+            gContextMenu.active = false;
+        } else {
+            handle_alert_dialog_key(key, action);
+        }
         gReDraw = true;
         return;
     }
