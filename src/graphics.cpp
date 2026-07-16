@@ -1300,7 +1300,7 @@ static void render_patch_settings_panel(void) {
         double closeW = get_text_width((char *)"Close", btnH, eCache) + 4.0;
         tRgb   col    = gSettingsPanelRects.closePressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
         gSettingsPanelRects.close = draw_button(mainArea,
-                                                {{boxX + boxW - closeW - 4.0 - BORDER_LINE_WIDTH, boxY + (titleH - btnH) / 2.0}, {closeW, btnH}},
+                                                {{boxX + boxW - closeW - 8.0 - BORDER_LINE_WIDTH, boxY + 4.0}, {closeW, btnH}},
                                                 "Close", col);
     }
 
@@ -1416,7 +1416,7 @@ static void render_patch_params_panel(void) {
         double closeW = get_text_width((char *)"Close", btnH, eCache) + 4.0;
         tRgb   col    = gPatchParamClosePressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
         gPatchParamClose = draw_button(mainArea,
-                                       {{boxX + boxW - closeW - 4.0 - BORDER_LINE_WIDTH, boxY + (titleH - btnH) / 2.0}, {closeW, btnH}},
+                                       {{boxX + boxW - closeW - 8.0 - BORDER_LINE_WIDTH, boxY + 4.0}, {closeW, btnH}},
                                        "Close", col);
     }
 
@@ -1530,7 +1530,7 @@ static void render_perf_settings_panel(void) {
         double closeW = get_text_width((char *)"Close", btnH, eCache) + 4.0;
         tRgb   col    = gPerfSettingsPanelRects.closePressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
         gPerfSettingsPanelRects.close = draw_button(mainArea,
-                                                    {{boxX + boxW - closeW - 4.0 - BORDER_LINE_WIDTH, boxY + (titleH - btnH) / 2.0}, {closeW, btnH}},
+                                                    {{boxX + boxW - closeW - 8.0 - BORDER_LINE_WIDTH, boxY + 4.0}, {closeW, btnH}},
                                                     "Close", col);
     }
 
@@ -1794,7 +1794,7 @@ static void render_patch_notes_edit(void) {
         double closeW = get_text_width((char *)"Close", btnH, eCache) + 4.0;
         tRgb   col    = gPatchNotesClosePressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
         gPatchNotesCloseRect = draw_button(mainArea,
-                                           {{boxX + boxW - closeW - 4.0 - BORDER_LINE_WIDTH, boxY + (titleH - btnH) / 2.0}, {closeW, btnH}},
+                                           {{boxX + boxW - closeW - 8.0 - BORDER_LINE_WIDTH, boxY + 4.0}, {closeW, btnH}},
                                            (char *)"Close", col);
     }
 
