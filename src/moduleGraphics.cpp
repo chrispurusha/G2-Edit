@@ -609,15 +609,40 @@ tRectangle adjust_rectangle(tRectangle moduleBase, tRectangle relative, tAnchor 
     return relative;
 }
 
+// Registers module->connector[i].coord (logical, moduleArea-local — the same space cables
+// read it back in, applying scale/scroll themselves at draw time) and draws the small
+// connector glyphs. Split out of render_module_common() so it can run on its own for a
+// module that's currently scrolled off-screen: cables reference connector positions on
+// BOTH their endpoint modules regardless of which one (if either) is actually visible right
+// now, so this must stay up to date even when the rest of that module's rendering is skipped.
+static void render_module_connectors(tRectangle rectangle, tModule * module) {
+    uint32_t connector = 0;
+
+    for (uint32_t i = module->connectorIndexCache; i < array_size_connector_location_list(); i++) {
+        if (connectorLocationList[i].moduleType == module->type) {
+            if (module->gotConnectorIndexCache == false) {
+                module->connectorIndexCache    = i;
+                module->gotConnectorIndexCache = true;
+            }
+            tRectangle adjusted = adjust_rectangle(rectangle, connectorLocationList[i].rectangle, connectorLocationList[i].anchor, module);
+            adjusted.size.h = adjusted.size.w; // We want this one to be square
+            render_connector_common(adjusted, module, connectorLocationList[i].direction, connectorLocationList[i].type, i, connector++);
+
+            if (connector >= module_connector_count(module->type)) {
+                break;
+            }
+        }
+    }
+}
+
 void render_module_common(tRectangle rectangle, tModule * module) {
     if (module == NULL) {
         return;
     }
-    uint32_t param     = 0;
-    uint32_t mode      = 0;
-    uint32_t connector = 0;
-    uint32_t volume    = 0;
-    uint32_t led       = 0;
+    uint32_t param  = 0;
+    uint32_t mode   = 0;
+    uint32_t volume = 0;
+    uint32_t led    = 0;
 
     for (uint32_t i = module->paramIndexCache; i < array_size_param_location_list(); i++) {
         if (paramLocationList[i].moduleType == module->type) {
@@ -652,21 +677,7 @@ void render_module_common(tRectangle rectangle, tModule * module) {
         }
     }
 
-    for (uint32_t i = module->connectorIndexCache; i < array_size_connector_location_list(); i++) {
-        if (connectorLocationList[i].moduleType == module->type) {
-            if (module->gotConnectorIndexCache == false) {
-                module->connectorIndexCache    = i;
-                module->gotConnectorIndexCache = true;
-            }
-            tRectangle adjusted = adjust_rectangle(rectangle, connectorLocationList[i].rectangle, connectorLocationList[i].anchor, module);
-            adjusted.size.h = adjusted.size.w; // We want this one to be square
-            render_connector_common(adjusted, module, connectorLocationList[i].direction, connectorLocationList[i].type, i, connector++);
-
-            if (connector >= module_connector_count(module->type)) {
-                break;
-            }
-        }
-    }
+    render_module_connectors(rectangle, module);
 
     for (uint32_t i = module->volumeIndexCache; i < array_size_volume_location_list(); i++) {
         if (volumeLocationList[i].moduleType == module->type) {
@@ -798,6 +809,20 @@ void render_modules(void) {
         tModule * module = get_module_slot(slot, location, i);
 
         if (module->active && module->type != moduleTypeUnknown0) {
+            // Skip the (relatively expensive, many-sub-element) render for modules currently
+            // scrolled entirely outside the visible canvas. Rect here mirrors render_module()'s
+            // own moduleRectangle exactly; rectangle_visible_in_module_area() applies the real
+            // scale/scroll transform so a module straddling the viewport edge still renders.
+            double     moduleHeight    = gModuleProperties[module->type].height;
+            tRectangle moduleRectangle = {{module->column * MODULE_X_SPAN, module->row * MODULE_Y_SPAN                  },
+                {MODULE_WIDTH,                   (moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP}};
+
+            if (!rectangle_visible_in_module_area(moduleRectangle)) {
+                // Still off-screen — but cables reference this module's connector positions
+                // regardless of whether it's currently visible, so those must stay registered.
+                render_module_connectors(moduleRectangle, module);
+                continue;
+            }
             render_module(module);
         }
     }
@@ -843,6 +868,18 @@ void render_cable_from_to(tConnector from, tConnector to, double thickness) {
     }
     control.y     = fmax(from.coord.y, to.coord.y) + 40.0;
 
+    // A quadratic bezier curve is always fully contained within the bounding box of its 3
+    // control points, so this bbox — built from the endpoints AND the sag point, not just
+    // the endpoints — is a correct (if slightly loose) bound on where the curve can actually
+    // fall. Skip the draw if none of that box is visible.
+    double minX      = fmin(fmin(from.coord.x, to.coord.x), control.x);
+    double maxX      = fmax(fmax(from.coord.x, to.coord.x), control.x);
+    double minY      = fmin(fmin(from.coord.y, to.coord.y), control.y);
+    double maxY      = fmax(fmax(from.coord.y, to.coord.y), control.y);
+
+    if (!rectangle_visible_in_module_area({{minX, minY}, {maxX - minX, maxY - minY}})) {
+        return;
+    }
     render_bezier_curve(moduleArea, from.coord, control, to.coord, thickness, 15);
 }
 
