@@ -30,10 +30,10 @@ void save_zoom_factor(double zoom);
 void save_window_size(int w);
 void save_window_pos(int x, int y);
 
-// File menu actions — plain-C-callable bodies shared by the (soon to be removed) Cocoa File
-// menu in this file and the new in-window menu bar (src/appMenuBar.c). File open/save and
-// folder picking all now go through the custom in-window browser
-// (SynthLib/src/fileBrowser.cpp) rather than fileDialogue.mm's native panels. Only the dispatch
+// File/Settings/Backup/Restore menu actions — plain-C-callable bodies used by the in-window menu
+// bar (src/appMenuBar.c). File open/save and folder picking all go through the custom in-window
+// browser (SynthLib/src/fileBrowser.cpp); alerts/confirms/bank-target pickers go through
+// SynthLib/src/alertDialog.cpp — none of it uses native Cocoa panels any more. Only the dispatch
 // logic (which browser mode to open, with what pre-filled state) lives here.
 void file_menu_open_patch(void);
 void file_menu_save_patch(void);
