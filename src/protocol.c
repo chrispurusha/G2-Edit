@@ -1195,8 +1195,8 @@ int parse_synth_settings(uint8_t * buff, int length) {
 }
 
 int parse_performance_settings(uint8_t * buff, int length) {
-    uint32_t bitPos = 0;
-    int      i      = 0;
+    uint32_t bitPos            = 0;
+    int      i                 = 0;
 
     if (buff == NULL) {
         return EXIT_FAILURE;
@@ -1205,18 +1205,25 @@ int parse_performance_settings(uint8_t * buff, int length) {
     read_clavia_string(buff, &bitPos, gGlobalSettings.perfName, sizeof(gGlobalSettings.perfName));
     LOG_DEBUG("Performance Name     = '%s'\n", gGlobalSettings.perfName);
 
+    uint32_t keyboardRangeEnab = 0;
+    uint32_t rangeEnable       = 0;
+    uint32_t keyboardSplit     = 0;
+
     read_bit_stream(buff, &bitPos, 8);                                           // Regular val of 17?
     read_bit_stream(buff, &bitPos, 8);
-    LOG_DEBUG("Keyboard Range Enab  = %u\n", read_bit_stream(buff, &bitPos, 8)); // Regular val of 82 for standard mode and 87 for performance mode? Seen 0x74 for standard an 0x80 for perf too. Seems to be keyboard range enabled!
+    keyboardRangeEnab                  = read_bit_stream(buff, &bitPos, 8);      // Regular val of 82 for standard mode and 87 for performance mode? Seen 0x74 for standard an 0x80 for perf too. Seems to be keyboard range enabled!
+    LOG_DEBUG("Keyboard Range Enab  = %u\n", keyboardRangeEnab);
     read_bit_stream(buff, &bitPos, 8);
     read_bit_stream(buff, &bitPos, 4);
     gGlobalSettings.selectedSlot       = read_bit_stream(buff, &bitPos, 2);
     LOG_DEBUG("SelectedSlot         = %u\n", gGlobalSettings.selectedSlot);
     read_bit_stream(buff, &bitPos, 2);
-    LOG_DEBUG("RangeEnable          = %u\n", read_bit_stream(buff, &bitPos, 8));
+    rangeEnable                        = read_bit_stream(buff, &bitPos, 8);
+    LOG_DEBUG("RangeEnable          = %u\n", rangeEnable);
     gGlobalSettings.masterClock        = read_bit_stream(buff, &bitPos, 8);  // This is used whether we're in performance mode or not. It's shared with non-perf mode
     LOG_DEBUG("MasterClock          = %u\n", gGlobalSettings.masterClock);
-    LOG_DEBUG("KeyboardSplit        = %u\n", read_bit_stream(buff, &bitPos, 8));
+    keyboardSplit                      = read_bit_stream(buff, &bitPos, 8);
+    LOG_DEBUG("KeyboardSplit        = %u\n", keyboardSplit);
     gGlobalSettings.masterClockRunning = read_bit_stream(buff, &bitPos, 8);
     LOG_DEBUG("MasterClockRun       = %u\n", gGlobalSettings.masterClockRunning);
     read_bit_stream(buff, &bitPos, 8);
@@ -1258,8 +1265,11 @@ int parse_midi_cc(uint8_t * buff, int length) {
     }
 
     while ((BIT_TO_BYTE_ROUND_UP(bitPos) + 3) <= length) {
-        LOG_DEBUG("MIDI Chan 0x%x\n", read_bit_stream(buff, &bitPos, 8));
-        LOG_DEBUG("CC Numb/value 0x%x\n", read_bit_stream(buff, &bitPos, 8));
+        uint32_t midiChan = read_bit_stream(buff, &bitPos, 8);
+        uint32_t ccNumVal = read_bit_stream(buff, &bitPos, 8);
+
+        LOG_DEBUG("MIDI Chan 0x%x\n", midiChan);
+        LOG_DEBUG("CC Numb/value 0x%x\n", ccNumVal);
         subResponse = read_bit_stream(buff, &bitPos, 8);
 
         if (subResponse != SUB_RESPONSE_MIDI_CC) {
