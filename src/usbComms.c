@@ -60,38 +60,56 @@ extern "C" {
 #define USB_KEEPALIVE_INTERVAL_S    (2)    // macOS suspends USB after ~3s idle; keep well inside that
 
 // Atomic flags for cross-thread signalling
-static _Atomic bool           gotBadConnectionIndication            = false;
-static _Atomic bool           gotPatchChangeIndication[MAX_SLOTS]   = {0};
-static _Atomic bool           gotPerfSettingsChangeIndication       = false;
-static int32_t                stopCount                             = 0;
+static _Atomic bool gotBadConnectionIndication            = false;
+static _Atomic bool gotPatchChangeIndication[MAX_SLOTS]   = {0};
+static _Atomic bool gotPerfSettingsChangeIndication       = false;
+static int32_t      stopCount                             = 0;
 
 // Bank upload (backup) response scratch state — populated by parse_bank_upload_data/
 // parse_bank_upload_empty on the USB thread, consumed by backup_bank() immediately
 // after send_bank_upload_request() returns (single-threaded round trip, no locking needed).
-static uint8_t                sBankUploadContent[PATCH_FILE_SIZE];
-static uint32_t               sBankUploadContentLen                 = 0;
-static char                   sBankUploadName[CLAVIA_NAME_SIZE + 1] = {0};
-static bool                   sBankUploadGotData                    = false;
+// Allocated lazily (see ensure_bank_scratch_buffer()) and kept for the rest of the session —
+// most sessions never touch Bank Backup/Restore at all, so this keeps 20MB (2 x
+// PATCH_FILE_SIZE) off the app's permanent baseline footprint for everyone else.
+static uint8_t *    sBankUploadContent                    = NULL;
+static uint32_t     sBankUploadContentLen                 = 0;
+static char         sBankUploadName[CLAVIA_NAME_SIZE + 1] = {0};
+static bool         sBankUploadGotData                    = false;
 
 // Bank Restore file-read scratch buffer — read_bank_upload_file() fills this from disk immediately
 // before each send_bank_download_push() call in restore_bank() below (single-threaded, no locking
 // needed, same reasoning as the upload scratch state above).
-static uint8_t                sBankRestoreContent[PATCH_FILE_SIZE];
-static uint32_t               sBankRestoreContentLen                = 0;
+static uint8_t *    sBankRestoreContent                   = NULL;
+static uint32_t     sBankRestoreContentLen                = 0;
+
+// Lazily allocates a PATCH_FILE_SIZE scratch buffer on first use and keeps it for the rest of
+// the session (freeing/reallocating on every backup or restore run isn't worth the complexity
+// for state that's reused every time this feature runs again). Returns NULL (and logs) on
+// allocation failure; callers must check before using the buffer.
+static uint8_t * ensure_bank_scratch_buffer(uint8_t ** buffer) {
+    if (*buffer == NULL) {
+        *buffer = (uint8_t *)malloc(PATCH_FILE_SIZE);
+
+        if (*buffer == NULL) {
+            LOG_ERROR("Failed to allocate %d-byte bank scratch buffer\n", PATCH_FILE_SIZE);
+        }
+    }
+    return *buffer;
+}
 
 // Parsed-but-not-yet-applied Synth Settings Restore staging area — peek_synth_settings_restore()
 // fills this in immediately before setting gSynthRestorePeekComplete; apply_synth_settings_restore()
 // copies it into the live gSynthSettings once the user has confirmed (single-threaded round trip
 // through the USB thread, same reasoning as the scratch state above).
-static tSynthSettings         sSynthSettingsRestoreStaged           = {0};
+static tSynthSettings         sSynthSettingsRestoreStaged = {0};
 
 // List Names sweep scratch state — parse_list_names_response() fills these in on each response;
 // send_list_names_sweep() reads them immediately after each send_and_receive() call returns
 // (single-threaded round trip, no locking needed, same reasoning as the scratch state above).
-static uint8_t                sListNamesMode                        = 0;
-static uint8_t                sListNamesNextBank                    = 0;
-static uint8_t                sListNamesNextLoc                     = 0;
-static bool                   sListNamesFinished                    = false;
+static uint8_t                sListNamesMode              = 0;
+static uint8_t                sListNamesNextBank          = 0;
+static uint8_t                sListNamesNextLoc           = 0;
+static bool                   sListNamesFinished          = false;
 
 // Set around send_store_patch()'s send_and_receive() call — Store's ack reuses this exact
 // one-entry response format (see parse_list_names_response()'s comment), but it is not a List
@@ -100,23 +118,23 @@ static bool                   sListNamesFinished                    = false;
 // continuation, so parsing them as one would fabricate phantom entries. This suppresses just the
 // name-table writes for that call, harmlessly leaving the rest of parse_list_names_response's
 // bookkeeping (sListNamesMode/NextBank/NextLoc) alone since nothing consults it for a Store ack.
-static bool                   sSuppressNameTableUpdate              = false;
+static bool                   sSuppressNameTableUpdate    = false;
 
 // Protected by usbStaticMutex
-static pthread_t              usbThread                             = NULL;
-static libusb_context *       libUsbCtx                             = NULL;
-static libusb_device_handle * devHandle                             = NULL;
+static pthread_t              usbThread                   = NULL;
+static libusb_context *       libUsbCtx                   = NULL;
+static libusb_device_handle * devHandle                   = NULL;
 
 // Callback pointers protected by callbackMutex
 static void                   (*wake_glfw_func_ptr)(void) = NULL;
 static void                   (*full_patch_change_notify_func_ptr)(void) = NULL;
 
 // Mutexes
-static pthread_mutex_t        usbStaticMutex                        = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t        callbackMutex                         = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t        usbStaticMutex              = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t        callbackMutex               = PTHREAD_MUTEX_INITIALIZER;
 
 // Keepalive: timestamp of the last successful inbound or outbound USB transfer
-static time_t                 gLastActivityTime                     = 0;
+static time_t                 gLastActivityTime           = 0;
 
 // ---------------------------------------------------------------------------
 // Callback registration
@@ -812,9 +830,13 @@ static void parse_bank_upload_data(uint8_t * buff, uint32_t * bitPos) {
     read_bit_stream(buff, bitPos, 16);                             // echoed [version][type] marker — discarded, repeated in content below
     contentStart          = BIT_TO_BYTE(*bitPos);
 
-    if (contentLength > sizeof(sBankUploadContent)) {
-        LOG_ERROR("Bank upload content length %u exceeds buffer %zu, truncating\n", contentLength, sizeof(sBankUploadContent));
-        contentLength = sizeof(sBankUploadContent);
+    if (contentLength > PATCH_FILE_SIZE) {
+        LOG_ERROR("Bank upload content length %u exceeds buffer %d, truncating\n", contentLength, PATCH_FILE_SIZE);
+        contentLength = PATCH_FILE_SIZE;
+    }
+
+    if (ensure_bank_scratch_buffer(&sBankUploadContent) == NULL) {
+        return;
     }
     memcpy(sBankUploadContent, &buff[contentStart], contentLength);
     sBankUploadContentLen = contentLength;
@@ -1867,7 +1889,12 @@ static int restore_bank(uint32_t sourceBank, uint32_t destBank, const char * src
 
             snprintf(filePath, sizeof(filePath), "%s/%s", srcFolder, fileNames[location]);
 
-            if (!read_bank_upload_file(filePath, sBankRestoreContent, sizeof(sBankRestoreContent), &sBankRestoreContentLen)) {
+            if (ensure_bank_scratch_buffer(&sBankRestoreContent) == NULL) {
+                aborted = true;
+                break;
+            }
+
+            if (!read_bank_upload_file(filePath, sBankRestoreContent, PATCH_FILE_SIZE, &sBankRestoreContentLen)) {
                 LOG_ERROR("restore_bank: could not read %s\n", filePath);
                 aborted = true;
                 break;
