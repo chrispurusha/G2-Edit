@@ -904,6 +904,7 @@ typedef struct {  // Note - should reflect settings in the G2
 
 typedef struct {
     tRectangle close;
+    bool       closePressed;
     tRectangle midiChan[4];
     tRectangle globalChan;
     tRectangle sysexId;
@@ -932,6 +933,7 @@ typedef struct {
 
 typedef struct {
     tRectangle close;
+    bool       closePressed;
     tRectangle masterClock;
     tRectangle masterClockRunning;
     tRectangle keyboardRange;

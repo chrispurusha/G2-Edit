@@ -96,6 +96,7 @@ extern tPerfSettingsEdit       gPerfSettingsEdit;
 extern tPerfSettingsPanelRects gPerfSettingsPanelRects;
 extern tPatchSettingsEdit      gPatchParamsEdit;
 extern tRectangle              gPatchParamClose;
+extern bool                    gPatchParamClosePressed;
 extern tRectangle              gPatchParamSlots[MAX_SLOTS];
 extern tRectangle              gPatchParamRects[pPCount];
 extern tRectangle              gMorphLabelRect[NUM_MORPHS];
@@ -105,7 +106,9 @@ extern bool                    gCablesHideAll;
 extern tResourceAlloc          gResourceAlloc[MAX_SLOTS];
 
 extern tRectangle              gPatchNotesCloseRect;
+extern bool                    gPatchNotesClosePressed;
 extern tRectangle              gPatchNotesDiscardRect;
+extern bool                    gPatchNotesDiscardPressed;
 extern bool                    gTempoDragging;
 extern bool                    gPerfTempoDragging;
 extern bool                    gVibRateDragging;

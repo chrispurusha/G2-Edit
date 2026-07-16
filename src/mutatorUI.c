@@ -321,7 +321,9 @@ void render_mutator_panel(void) {
     set_rgb_colour((tRgb)RGB_GREY_5);
     render_rectangle_with_border(mainArea, panel);
 
-    // Title bar (also the drag handle)
+    // Title bar (also the drag handle). titleBarRect stays the full-width rect used for
+    // drag hit-testing; the fill is inset by BORDER_LINE_WIDTH so it doesn't paint over the
+    // panel's white/black border line.
     gMutator.titleBarRect    = (tRectangle){{
                                                 x, y
                                             }, {
@@ -329,14 +331,15 @@ void render_mutator_panel(void) {
                                             }
     };
     set_rgb_colour((tRgb)RGB_GREY_3);
-    render_rectangle(mainArea, gMutator.titleBarRect);
-    set_rgb_colour((tRgb)RGB_BLACK);
+    render_rectangle(mainArea, (tRectangle){{x + BORDER_LINE_WIDTH, y + BORDER_LINE_WIDTH}, {w - 2.0 * BORDER_LINE_WIDTH, titleH - BORDER_LINE_WIDTH}});
+    set_rgb_colour((tRgb)RGB_WHITE);
     render_text(mainArea, (tRectangle){{x + margin, y + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Patch Mutator");
 
     double                   closeW                      = get_text_width((char *)"Close", STANDARD_BUTTON_TEXT_HEIGHT, eCache) + 4.0;
+    tRgb                     closeCol                    = gMutator.closeButtonPressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
 
-    gMutator.closeButtonRect = draw_button(mainArea, (tRectangle){{x + w - closeW - 4.0, y + 4.0}, {closeW, STANDARD_BUTTON_TEXT_HEIGHT}},
-                                           (char *)"Close", (tRgb)RGB_BACKGROUND_GREY);
+    gMutator.closeButtonRect = draw_button(mainArea, (tRectangle){{x + w - closeW - 4.0 - BORDER_LINE_WIDTH, y + (titleH - STANDARD_BUTTON_TEXT_HEIGHT) / 2.0}, {closeW, STANDARD_BUTTON_TEXT_HEIGHT}},
+                                           (char *)"Close", closeCol);
 
     double                   rowY                        = y + titleH + margin;
 

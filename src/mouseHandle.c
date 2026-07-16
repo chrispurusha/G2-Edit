@@ -786,7 +786,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
         case mouseButtonLeftUp:
         {
-            for (i = 0; i < TOPBAR_STANDARD_BUTTON_COUNT; i++) {
+            for (i = 0; i < (int)topbarControlMax; i++) {
                 gTopbarControls[i].isPressed = false;
             }
 

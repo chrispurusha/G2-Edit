@@ -94,6 +94,7 @@ typedef struct {
     tRectangle          storageRect[MUTATOR_NUM_STORAGE];
     tRectangle          titleBarRect;
     tRectangle          closeButtonRect;
+    bool                closeButtonPressed;
 } tMutatorState;
 
 extern tMutatorState gMutator;
