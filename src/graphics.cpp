@@ -1115,9 +1115,8 @@ static void check_action_flags(void) {
 
     if (gLoadPeekComplete) {
         gLoadPeekComplete = false;
-        char title[64]    = {0};
-        char message[320] = {0};
-        bool isPerf       = gLoadPeekIsPerf;
+        char title[64] = {0};
+        bool isPerf    = gLoadPeekIsPerf;
 
         snprintf(title, sizeof(title), "Load %s from Bank %u, Location %u",
                  isPerf ? "Performance" : "Patch", gLoadPeekBank + 1, gLoadPeekLocation + 1);
@@ -1129,10 +1128,9 @@ static void check_action_flags(void) {
             // nothing useful to load anyway — inform rather than offering to proceed.
             show_alert_async(title, "This location is empty. There's nothing to load.");
         } else {
-            snprintf(message, sizeof(message),
-                     "This location contains \"%s\". Loading it will replace the current edit buffer %s, "
-                     "including any unsaved changes. Continue?", gLoadPeekName, isPerf ? "performance" : "patch");
-            show_confirm_dialogue_async(title, message, "Load...", on_load_confirmed);
+            // No confirm prompt here — loading from a file doesn't ask "replace the current edit
+            // buffer?" either, so loading from a bank/location shouldn't behave differently.
+            on_load_confirmed(true);
         }
     }
 
