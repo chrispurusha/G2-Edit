@@ -57,6 +57,7 @@ extern "C" {
 #include "menus.h"
 #include "mutatorUI.h"
 #include "appMenuBar.h"
+#include "fileBrowser.h"
 
 static FT_Library      gLibrary        = {0};
 static FT_Face         gFace           = {0};
@@ -1025,7 +1026,7 @@ static void check_action_flags(void) {
 
     if (gShowOpenFileReadDialogue) {
         gShowOpenFileReadDialogue = false;
-        open_file_read_dialogue_async(on_file_opened);
+        open_file_browser_read(on_file_opened);
     }
 
     if (gShowOpenFileWriteDialogue) {
@@ -1046,7 +1047,7 @@ static void check_action_flags(void) {
                 snprintf(defaultName, sizeof(defaultName), "patch.pch2");
             }
         }
-        open_file_write_dialogue_async(on_file_saved, defaultName);
+        open_file_browser_write(on_file_saved, defaultName);
     }
 
     if (gNeedFocus == true) {
@@ -1961,7 +1962,8 @@ void do_graphics_loop(void) {
             render_bank_backup_progress();
             render_bank_restore_progress();
             render_mutator_panel();
-            render_knob_assignment_overlay(); // drawn last so nothing else can paint over it
+            render_knob_assignment_overlay();
+            render_file_browser(); // drawn last of all — modal, must paint over everything else
             //Debug only
             //{
             //    double x        = 0.0;

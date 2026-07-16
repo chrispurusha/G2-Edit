@@ -31,9 +31,10 @@ void save_window_size(int w);
 void save_window_pos(int x, int y);
 
 // File menu actions — plain-C-callable bodies shared by the (soon to be removed) Cocoa File
-// menu in this file and the new in-window menu bar (src/appMenuBar.c). Native file/bank-picker
-// dialogs are still shown via the async Cocoa panels in fileDialogue.mm; only the dispatch logic
-// (which dialog to open, with what pre-filled state) lives here.
+// menu in this file and the new in-window menu bar (src/appMenuBar.c). File open/save and
+// folder picking all now go through the custom in-window browser
+// (SynthLib/src/fileBrowser.cpp) rather than fileDialogue.mm's native panels. Only the dispatch
+// logic (which browser mode to open, with what pre-filled state) lives here.
 void file_menu_open_patch(void);
 void file_menu_save_patch(void);
 void file_menu_new_patch(void);
@@ -65,6 +66,11 @@ void restore_menu_everything(void);
 // save_window_size/save_window_pos do; setting gDialMode itself is plain global state the
 // caller sets directly (see src/appMenuBar.c).
 void save_dial_mode(int mode);
+
+// Registered with the file browser (SynthLib/src/fileBrowser.cpp) via
+// set_file_browser_directory_changed_callback() at startup — see setup_main_menu() — so it can
+// persist the last folder browsed across app launches the same way zoom/window/dial-mode are.
+void save_file_browser_directory(const char * path);
 
 #ifdef __cplusplus
 }
