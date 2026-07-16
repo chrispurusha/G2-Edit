@@ -24,8 +24,17 @@
 extern "C" {
 #endif
 
+// register_sleep_wake_notifications() and setup_main_menu() are implemented in misc.mm — the only
+// two things left in this codebase that genuinely need Objective-C/Cocoa. Everything else
+// declared below is plain C: menu actions live in menuActions.c, settings persistence (backed by
+// SynthLib's cross-platform prefs.h rather than NSUserDefaults) lives in persistence.c.
 void register_sleep_wake_notifications(void);
 void setup_main_menu(void);
+
+// Applies saved window size/position, zoom, dial mode, and last-browsed folder — called once by
+// setup_main_menu() right after prefs_init(). Implemented in persistence.c.
+void load_saved_settings(void);
+
 void save_zoom_factor(double zoom);
 void save_window_size(int w);
 void save_window_pos(int x, int y);
