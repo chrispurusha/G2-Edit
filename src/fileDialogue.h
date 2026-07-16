@@ -30,7 +30,6 @@ extern "C" {
 typedef void (*tFileDialogueCallback)(const char * path);
 typedef void (*tConfirmCallback)(bool confirmed);
 typedef void (*tBankTargetConfirmCallback)(bool confirmed, uint32_t targetBank1Indexed);
-typedef void (*tBankLocationConfirmCallback)(bool confirmed, uint32_t bank1Indexed, uint32_t location1Indexed);
 
 void open_file_read_dialogue_async(tFileDialogueCallback callback);
 void open_file_write_dialogue_async(tFileDialogueCallback callback, const char * defaultName);
@@ -44,25 +43,8 @@ void show_confirm_dialogue_async(const char * title, const char * message, const
 // restore into. callback's targetBank1Indexed is only meaningful when confirmed is true.
 void show_bank_target_confirm_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle, const char * fieldLabel, uint32_t defaultTargetBank1Indexed, uint32_t maxBank1Indexed, tBankTargetConfirmCallback callback);
 
-// One row of show_bank_location_list_dialogue_async()'s picker — name is a caller-owned string
-// (copied synchronously before the function returns, so it only needs to survive the call itself,
-// not the async dialog's lifetime). category is a patchTypeStrMap index (0-15); the dialog itself
-// builds the visible "Bank X, Loc Y: name" label and the category grouping, so callers don't need
-// to format anything.
-typedef struct {
-    const char * name;
-    uint8_t      category;
-    uint32_t     bank1Indexed;
-    uint32_t     location1Indexed;
-} tBankLocationListItem;
-
-// Presents a scrollable, named list of pre-built bank/location choices (e.g. from
-// gPatchNameTable/gPerfNameTable, populated by the List Names sweep) instead of blind numeric
-// fields — used by every Load/Store/Delete bank/location picker. A segmented control lets the user
-// switch between Bank/Location order, Category (alphabetical within each category), and fully
-// alphabetical. If itemCount is 0, the list is empty and confirming is a no-op (callback still
-// fires with confirmed=false in that case).
-void show_bank_location_list_dialogue_async(const char * title, const char * message, const char * confirmButtonTitle, const tBankLocationListItem * items, uint32_t itemCount, tBankLocationConfirmCallback callback);
+// Every Load/Store/Delete bank/location picker (previously an NSAlert+NSTableView here) now uses
+// SynthLib's cross-platform open_bank_browser() — see bankBrowser.h.
 
 #ifdef __cplusplus
 }
