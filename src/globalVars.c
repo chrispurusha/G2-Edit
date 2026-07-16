@@ -85,6 +85,7 @@ tPerfSettingsEdit       gPerfSettingsEdit                                       
 tPerfSettingsPanelRects gPerfSettingsPanelRects                                                      = {0};
 tPatchSettingsEdit      gPatchParamsEdit                                                             = {0};
 tRectangle              gPatchParamClose                                                             = {0};
+bool                    gPatchParamClosePressed                                                      = false;
 tRectangle              gPatchParamSlots[MAX_SLOTS]                                                  = {0};
 tRectangle              gPatchParamRects[pPCount]                                                    = {0};
 tRectangle              gMorphLabelRect[NUM_MORPHS]                                                  = {0};
@@ -94,7 +95,9 @@ bool                    gCablesHideAll                                          
 tResourceAlloc          gResourceAlloc[MAX_SLOTS]                                                    = {0};
 
 tRectangle              gPatchNotesCloseRect                                                         = {0};
+bool                    gPatchNotesClosePressed                                                      = false;
 tRectangle              gPatchNotesDiscardRect                                                       = {0};
+bool                    gPatchNotesDiscardPressed                                                    = false;
 bool                    gTempoDragging                                                               = false;
 bool                    gPerfTempoDragging                                                           = false;
 bool                    gVibRateDragging                                                             = false;

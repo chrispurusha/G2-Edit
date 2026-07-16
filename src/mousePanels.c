@@ -101,6 +101,29 @@ bool handle_patch_notes_mouse(tCoord coord, tMouseButton mouseButton) {
 
     if (mouseButton == mouseButtonLeftDown) {
         if (within_rectangle(coord, gPatchNotesCloseRect)) {
+            gPatchNotesClosePressed = true;
+        } else if (within_rectangle(coord, gPatchNotesDiscardRect)) {
+            gPatchNotesDiscardPressed = true;
+        } else {
+            newPos = note_editor_cursor_from_click(coord.x, coord.y);
+
+            if (newPos >= 0) {
+                gPatchNotesEdit.cursorPos = (uint32_t)newPos;
+            } else {
+                gPatchNotesEdit.active = false;
+                gNoteEditDismissed     = true;
+            }
+        }
+    }
+
+    if (mouseButton == mouseButtonLeftUp) {
+        bool wasClosePressed   = gPatchNotesClosePressed;
+        bool wasDiscardPressed = gPatchNotesDiscardPressed;
+
+        gPatchNotesClosePressed   = false;
+        gPatchNotesDiscardPressed = false;
+
+        if (wasClosePressed && within_rectangle(coord, gPatchNotesCloseRect)) {
             len                                        = strlen(gPatchNotesEdit.buffer);
             newSize                                    = (uint32_t)len;
 
@@ -115,20 +138,11 @@ bool handle_patch_notes_mouse(tCoord coord, tMouseButton mouseButton) {
             msg.cmd                                    = eMsgCmdWritePatch;
             msg.slot                                   = gPatchNotesEdit.slot;
             msg_send(&gCommandQueue, &msg);
-        } else if (within_rectangle(coord, gPatchNotesDiscardRect)) {
+        } else if (wasDiscardPressed && within_rectangle(coord, gPatchNotesDiscardRect)) {
             origLen                   = strlen(gPatchNotesEdit.original);
             memset(gPatchNotesEdit.buffer, 0, sizeof(gPatchNotesEdit.buffer));
             memcpy(gPatchNotesEdit.buffer, gPatchNotesEdit.original, origLen);
             gPatchNotesEdit.cursorPos = (uint32_t)origLen;
-        } else {
-            newPos = note_editor_cursor_from_click(coord.x, coord.y);
-
-            if (newPos >= 0) {
-                gPatchNotesEdit.cursorPos = (uint32_t)newPos;
-            } else {
-                gPatchNotesEdit.active = false;
-                gNoteEditDismissed     = true;
-            }
         }
     }
     gReDraw = true;
@@ -144,7 +158,9 @@ bool handle_perf_settings_mouse(tCoord coord, tMouseButton mouseButton) {
     }
 
     if (mouseButton == mouseButtonLeftDown) {
-        if (within_rectangle(coord, gPerfSettingsPanelRects.masterClock)) {
+        if (within_rectangle(coord, gPerfSettingsPanelRects.close)) {
+            gPerfSettingsPanelRects.closePressed = true;
+        } else if (within_rectangle(coord, gPerfSettingsPanelRects.masterClock)) {
             gPerfTempoDragging = true;
 
             if (gDialMode != eDialModeRotary) {
@@ -154,13 +170,16 @@ bool handle_perf_settings_mouse(tCoord coord, tMouseButton mouseButton) {
     }
 
     if (mouseButton == mouseButtonLeftUp) {
+        bool wasClosePressed = gPerfSettingsPanelRects.closePressed;
+
+        gPerfSettingsPanelRects.closePressed = false;
         stop_dragging();
 
         if (handle_panel_context_menu(coord)) {
             return true;
         }
 
-        if (within_rectangle(coord, gPerfSettingsPanelRects.close)) {
+        if (wasClosePressed && within_rectangle(coord, gPerfSettingsPanelRects.close)) {
             gPerfSettingsEdit.active = false;
         } else {
             if (within_rectangle(coord, gPerfSettingsPanelRects.masterClockRunning)) {
@@ -230,7 +249,9 @@ bool handle_patch_params_mouse(tCoord coord, tMouseButton mouseButton) {
     }
 
     if (mouseButton == mouseButtonLeftDown) {
-        if (within_rectangle(coord, gPatchParamRects[pPVibratoAmount])) {
+        if (within_rectangle(coord, gPatchParamClose)) {
+            gPatchParamClosePressed = true;
+        } else if (within_rectangle(coord, gPatchParamRects[pPVibratoAmount])) {
             gVibAmountDragging = true;
 
             if (gDialMode != eDialModeRotary) {
@@ -252,13 +273,16 @@ bool handle_patch_params_mouse(tCoord coord, tMouseButton mouseButton) {
     }
 
     if (mouseButton == mouseButtonLeftUp) {
+        bool wasClosePressed = gPatchParamClosePressed;
+
+        gPatchParamClosePressed = false;
         stop_dragging();
 
         if (handle_panel_context_menu(coord)) {
             return true;
         }
 
-        if (within_rectangle(coord, gPatchParamClose)) {
+        if (wasClosePressed && within_rectangle(coord, gPatchParamClose)) {
             gPatchParamsEdit.active = false;
         } else {
             switched = false;
@@ -304,13 +328,23 @@ bool handle_patch_settings_mouse(tCoord coord, tMouseButton mouseButton) {
         return false;
     }
 
+    if (mouseButton == mouseButtonLeftDown) {
+        if (within_rectangle(coord, gSettingsPanelRects.close)) {
+            gSettingsPanelRects.closePressed = true;
+        }
+    }
+
     if (mouseButton == mouseButtonLeftUp) {
+        bool wasClosePressed = gSettingsPanelRects.closePressed;
+
+        gSettingsPanelRects.closePressed = false;
+
         if (handle_panel_context_menu(coord)) {
             return true;
         }
         stop_synth_name_editing();
 
-        if (within_rectangle(coord, gSettingsPanelRects.close)) {
+        if (wasClosePressed && within_rectangle(coord, gSettingsPanelRects.close)) {
             gPatchSettingsEdit.active = false;
         } else {
             for (s = 0; s < 4; s++) {

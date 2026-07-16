@@ -142,16 +142,45 @@ static void handle_button(tTopbarControlId controlId) {
 }
 
 bool handle_topbar_left_down(tCoord coord, uint32_t slot) {
-    bool       found   = false;
-    int        i       = 0;
-    bool       running = false;
-    tModuleKey volKey  = {0, 0, 0};
+    bool       found  = false;
+    int        i      = 0;
+    tModuleKey volKey = {0, 0, 0};
 
     for (i = 0; i < TOPBAR_STANDARD_BUTTON_COUNT; i++) {
         if (within_rectangle(coord, gTopbarControls[i].rectangle)) {
             found                        = true;
             gTopbarControls[i].isPressed = true;
             break;
+        }
+    }
+
+    if (found == false) {
+        static const tTopbarControlId pressableButtonIds[] = {
+            topbarPatchNameId,    topbarPatchTypeId,     topbarMonoPolyId,
+            topbarPatchNotesId,   topbarSettingsId,      topbarMutatorId,
+            topbarPerfSettingsId, topbarPatchSettingsId, topbarClockRunStopId,
+            topbarPerfModeId,     topbarPerfNameId,      topbarHideAllCablesId,
+            topbarTransparentCablesId
+        };
+
+        for (i = 0; i < (int)ARRAY_SIZE(pressableButtonIds); i++) {
+            if (within_rectangle(coord, gTopbarControls[pressableButtonIds[i]].rectangle)) {
+                found                                            = true;
+                gTopbarControls[pressableButtonIds[i]].isPressed = true;
+                break;
+            }
+        }
+    }
+
+    if (found == false) {
+        for (i = 0; i < cableColourMax; i++) {
+            tTopbarControlId toggleId = (tTopbarControlId)((int)topbarCableColourToggle0Id + i);
+
+            if (within_rectangle(coord, gTopbarControls[toggleId].rectangle)) {
+                found                               = true;
+                gTopbarControls[toggleId].isPressed = true;
+                break;
+            }
         }
     }
 
@@ -183,16 +212,6 @@ bool handle_topbar_left_down(tCoord coord, uint32_t slot) {
                 start_cursor_drag();
             }
             found          = true;
-        }
-    }
-
-    if (found == false) {
-        if (within_rectangle(coord, gTopbarControls[topbarClockRunStopId].rectangle)) {
-            running                            = !gGlobalSettings.masterClockRunning;
-            gGlobalSettings.masterClockRunning = (uint8_t)running;
-            send_master_clock_run((uint32_t)running);
-            gReDraw                            = true;
-            found                              = true;
         }
     }
     return found;
@@ -242,6 +261,16 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
             gCablesTransparent = !gCablesTransparent;
             gReDraw            = true;
             found              = true;
+        }
+    }
+
+    if (found == false) {
+        if (within_rectangle(coord, gTopbarControls[topbarClockRunStopId].rectangle)) {
+            bool running = !gGlobalSettings.masterClockRunning;
+            gGlobalSettings.masterClockRunning = (uint8_t)running;
+            send_master_clock_run((uint32_t)running);
+            gReDraw                            = true;
+            found                              = true;
         }
     }
 
