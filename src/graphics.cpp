@@ -58,6 +58,7 @@ extern "C" {
 #include "mutatorUI.h"
 #include "appMenuBar.h"
 #include "fileBrowser.h"
+#include "bankBrowser.h"
 
 static FT_Library      gLibrary        = {0};
 static FT_Face         gFace           = {0};
@@ -1937,7 +1938,8 @@ void do_graphics_loop(void) {
             render_bank_restore_progress();
             render_mutator_panel();
             render_knob_assignment_overlay();
-            render_file_browser(); // drawn last of all — modal, must paint over everything else
+            render_file_browser();
+            render_bank_browser(); // drawn last of all — modal, must paint over everything else
             //Debug only
             //{
             //    double x        = 0.0;

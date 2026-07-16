@@ -55,6 +55,7 @@ extern "C" {
 #include "misc.h"
 #include "appMenuBar.h"
 #include "fileBrowser.h"
+#include "bankBrowser.h"
 
 // Drag-start state for vertical/horizontal dial modes
 static double gDragStartX    = 0.0; // cursor position at press — fixed reference point for Alt-held morph-offset dragging
@@ -734,6 +735,17 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             handle_file_browser_mouse_down(coord);
         } else if (mouseButton == mouseButtonLeftUp) {
             handle_file_browser_click(coord);
+        }
+        gReDraw = true;
+        return;
+    }
+
+    if (bank_browser_active()) {
+        // Same modal mouse-down/up gating as file_browser_active() above.
+        if (mouseButton == mouseButtonLeftDown) {
+            handle_bank_browser_mouse_down(coord);
+        } else if (mouseButton == mouseButtonLeftUp) {
+            handle_bank_browser_click(coord);
         }
         gReDraw = true;
         return;
@@ -1491,6 +1503,11 @@ void scroll_event(GLFWwindow * window, double x, double y) {
         return;
     }
 
+    if (bank_browser_active()) {
+        handle_bank_browser_scroll(y);
+        return;
+    }
+
     if (gCommandKeyPressed == true) {
         get_global_gui_scaled_mouse_coord(&coord);
         zoomFactor  = get_zoom_factor();
@@ -1607,6 +1624,12 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 
     if (file_browser_active()) {
         handle_file_browser_key(key, action);
+        gReDraw = true;
+        return;
+    }
+
+    if (bank_browser_active()) {
+        handle_bank_browser_key(key, action);
         gReDraw = true;
         return;
     }
