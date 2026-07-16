@@ -46,7 +46,7 @@ extern "C" {
 #include "mouseHandle.h"
 #include "dataBase.h"
 #include "moduleGraphics.h"
-#include "fileDialogue.h"
+#include "alertDialog.h"
 #include "moduleResourcesAccess.h"
 #include "topbarResourcesAccess.h"
 #include "globalVars.h"
@@ -59,6 +59,7 @@ extern "C" {
 #include "appMenuBar.h"
 #include "fileBrowser.h"
 #include "bankBrowser.h"
+#include "alertDialog.h"
 
 static FT_Library      gLibrary        = {0};
 static FT_Face         gFace           = {0};
@@ -1035,15 +1036,15 @@ static void check_action_flags(void) {
 
         if (gBankBackupIsEverything) {
             gBankBackupIsEverything = false;
-            show_alert_async("Backup Everything", gBankBackupResultMessage);
+            show_alert("Backup Everything", gBankBackupResultMessage);
         } else {
-            show_alert_async(gBankBackupIsPerf ? "Performance Bank Backup" : "Patch Bank Backup", gBankBackupResultMessage);
+            show_alert(gBankBackupIsPerf ? "Performance Bank Backup" : "Patch Bank Backup", gBankBackupResultMessage);
         }
     }
 
     if (gSynthSettingsBackupComplete) {
         gSynthSettingsBackupComplete = false;
-        show_alert_async("Synth Settings Backup", gSynthSettingsBackupResultMessage);
+        show_alert("Synth Settings Backup", gSynthSettingsBackupResultMessage);
     }
 
     if (gBankRestoreComplete) {
@@ -1051,9 +1052,9 @@ static void check_action_flags(void) {
 
         if (gBankRestoreIsEverything) {
             gBankRestoreIsEverything = false;
-            show_alert_async("Restore Everything", gBankRestoreResultMessage);
+            show_alert("Restore Everything", gBankRestoreResultMessage);
         } else {
-            show_alert_async(gBankRestoreIsPerf ? "Performance Bank Restore" : "Patch Bank Restore", gBankRestoreResultMessage);
+            show_alert(gBankRestoreIsPerf ? "Performance Bank Restore" : "Patch Bank Restore", gBankRestoreResultMessage);
         }
     }
 
@@ -1067,7 +1068,7 @@ static void check_action_flags(void) {
                  isPerf ? "Performance" : "Patch", gStorePeekBank + 1, gStorePeekLocation + 1);
 
         if (gStorePeekFailed) {
-            show_alert_async(title, "Could not check what's currently at this location — the G2 may have gone offline. Try again.");
+            show_alert(title, "Could not check what's currently at this location — the G2 may have gone offline. Try again.");
         } else {
             if (gStorePeekPopulated) {
                 snprintf(message, sizeof(message),
@@ -1077,13 +1078,13 @@ static void check_action_flags(void) {
                 snprintf(message, sizeof(message),
                          "This location is currently empty. Store the current edit buffer %s there?", isPerf ? "performance" : "patch");
             }
-            show_confirm_dialogue_async(title, message, "Store...", on_store_confirmed);
+            show_confirm(title, message, "Store...", on_store_confirmed);
         }
     }
 
     if (gStorePatchComplete) {
         gStorePatchComplete = false;
-        show_alert_async("Store to Bank", gStorePatchResultMessage);
+        show_alert("Store to Bank", gStorePatchResultMessage);
     }
 
     if (gDeletePeekComplete) {
@@ -1096,7 +1097,7 @@ static void check_action_flags(void) {
                  isPerf ? "Performance" : "Patch", gDeletePeekBank + 1, gDeletePeekLocation + 1);
 
         if (gDeletePeekFailed) {
-            show_alert_async(title, "Could not check what's currently at this location — the G2 may have gone offline. Try again.");
+            show_alert(title, "Could not check what's currently at this location — the G2 may have gone offline. Try again.");
         } else {
             if (gDeletePeekPopulated) {
                 snprintf(message, sizeof(message),
@@ -1104,13 +1105,13 @@ static void check_action_flags(void) {
             } else {
                 snprintf(message, sizeof(message), "This location is already empty. Nothing to delete — continue anyway?");
             }
-            show_confirm_dialogue_async(title, message, "Delete...", on_delete_confirmed);
+            show_confirm(title, message, "Delete...", on_delete_confirmed);
         }
     }
 
     if (gDeleteComplete) {
         gDeleteComplete = false;
-        show_alert_async("Delete", gDeleteResultMessage);
+        show_alert("Delete", gDeleteResultMessage);
     }
 
     if (gLoadPeekComplete) {
@@ -1122,11 +1123,11 @@ static void check_action_flags(void) {
                  isPerf ? "Performance" : "Patch", gLoadPeekBank + 1, gLoadPeekLocation + 1);
 
         if (gLoadPeekFailed) {
-            show_alert_async(title, "Could not check what's at this location — the G2 may have gone offline. Try again.");
+            show_alert(title, "Could not check what's at this location — the G2 may have gone offline. Try again.");
         } else if (!gLoadPeekPopulated) {
             // Nothing captured confirms what RETRIEVE does against an empty location, and there's
             // nothing useful to load anyway — inform rather than offering to proceed.
-            show_alert_async(title, "This location is empty. There's nothing to load.");
+            show_alert(title, "This location is empty. There's nothing to load.");
         } else {
             // No confirm prompt here — loading from a file doesn't ask "replace the current edit
             // buffer?" either, so loading from a bank/location shouldn't behave differently.
@@ -1140,7 +1141,7 @@ static void check_action_flags(void) {
         // Success is shown by the redrawn canvas itself — an alert here would just be a modal
         // the user has to dismiss before they can see the patch that already loaded underneath it.
         if (gLoadFailed) {
-            show_alert_async("Load", gLoadResultMessage);
+            show_alert("Load", gLoadResultMessage);
         }
     }
 
@@ -1149,18 +1150,18 @@ static void check_action_flags(void) {
         char message[400] = {0};
 
         if (gSynthRestorePeekFailed) {
-            show_alert_async("Restore Synth Settings", gSynthRestorePeekErrorMessage);
+            show_alert("Restore Synth Settings", gSynthRestorePeekErrorMessage);
         } else {
             snprintf(message, sizeof(message),
                      "This will overwrite the current synth settings on the G2 with the contents of \"%s\" (Name: %s). "
                      "This cannot be undone.", gSynthRestorePeekFileName, gSynthRestorePeekName);
-            show_confirm_dialogue_async("Restore Synth Settings", message, "Restore...", on_synth_restore_confirmed);
+            show_confirm("Restore Synth Settings", message, "Restore...", on_synth_restore_confirmed);
         }
     }
 
     if (gSynthRestoreComplete) {
         gSynthRestoreComplete = false;
-        show_alert_async("Restore Synth Settings", gSynthRestoreResultMessage);
+        show_alert("Restore Synth Settings", gSynthRestoreResultMessage);
     }
 }
 
@@ -1937,7 +1938,8 @@ void do_graphics_loop(void) {
             render_mutator_panel();
             render_knob_assignment_overlay();
             render_file_browser();
-            render_bank_browser(); // drawn last of all — modal, must paint over everything else
+            render_bank_browser();
+            render_alert_dialog(); // drawn last of all — modal, must paint over everything else
             //Debug only
             //{
             //    double x        = 0.0;

@@ -36,7 +36,7 @@ extern "C" {
 #include "geometry.h"
 #include "utilsGraphics.h"
 #include "globalVars.h"
-#include "fileDialogue.h"
+#include "alertDialog.h"
 #include "mouseHandle.h"
 #include "graphics.h"
 
@@ -239,7 +239,7 @@ static void request_commit_to_variation(const uint8_t * genome, uint32_t variati
     snprintf(message, sizeof(message),
              "Overwrite edit buffer variation %u with the focused sound? (Cmd-Z).",
              variationIndex + 1);
-    show_confirm_dialogue_async(title, message, "Commit...", on_variation_commit_confirmed);
+    show_confirm(title, message, "Commit...", on_variation_commit_confirmed);
 }
 
 // ─── Rendering ───────────────────────────────────────────────────────────────
