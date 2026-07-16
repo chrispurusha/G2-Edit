@@ -25,6 +25,7 @@ extern "C" {
 
 #include "defs.h"
 #include "synthlibDefs.h"
+#include "types.h"
 #include "graphics.h"
 #include "dataBase.h"
 #include "usbComms.h"

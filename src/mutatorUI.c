@@ -38,6 +38,7 @@ extern "C" {
 #include "globalVars.h"
 #include "fileDialogue.h"
 #include "mouseHandle.h"
+#include "graphics.h"
 
 tMutatorState            gMutator                       = {0};
 
@@ -318,28 +319,10 @@ void render_mutator_panel(void) {
     double                   margin                      = 10.0;
     double                   titleH                      = 24.0;
 
-    set_rgb_colour((tRgb)RGB_GREY_5);
-    render_rectangle_with_border(mainArea, panel);
-
-    // Title bar (also the drag handle). titleBarRect stays the full-width rect used for
-    // drag hit-testing; the fill is inset by BORDER_LINE_WIDTH so it doesn't paint over the
-    // panel's white/black border line.
-    gMutator.titleBarRect    = (tRectangle){{
-                                                x, y
-                                            }, {
-                                                w, titleH
-                                            }
-    };
-    set_rgb_colour((tRgb)RGB_GREY_3);
-    render_rectangle(mainArea, (tRectangle){{x + BORDER_LINE_WIDTH, y + BORDER_LINE_WIDTH}, {w - 2.0 * BORDER_LINE_WIDTH, titleH - BORDER_LINE_WIDTH}});
-    set_rgb_colour((tRgb)RGB_WHITE);
-    render_text(mainArea, (tRectangle){{x + margin, y + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Patch Mutator");
-
-    double                   closeW                      = get_text_width((char *)"Close", STANDARD_BUTTON_TEXT_HEIGHT, eCache) + 4.0;
-    tRgb                     closeCol                    = gMutator.closeButtonPressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
-
-    gMutator.closeButtonRect = draw_button(mainArea, (tRectangle){{x + w - closeW - 8.0 - BORDER_LINE_WIDTH, y + 4.0}, {closeW, STANDARD_BUTTON_TEXT_HEIGHT}},
-                                           (char *)"Close", closeCol);
+    // titleBarRect is also the drag handle, so it stays the full-width rect returned by
+    // draw_panel_chrome() (whose visual fill is inset from the border internally).
+    gMutator.titleBarRect    = draw_panel_chrome(panel, titleH, "Patch Mutator");
+    gMutator.closeButtonRect = draw_panel_close_button(panel, gMutator.closeButtonPressed);
 
     double                   rowY                        = y + titleH + margin;
 

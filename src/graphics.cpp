@@ -1257,6 +1257,55 @@ static void midi_chan_str(uint8_t val, char * buf, size_t bufLen) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Shared popup-panel chrome — every dialog-style panel (Synth/Perf/Patch
+// Settings, Patch Notes, Mutator) draws the same bordered box + inset title
+// bar + right-aligned Close button. Pulled out here so the border-inset and
+// close-button-position fixes only need to exist in one place.
+// ---------------------------------------------------------------------------
+
+// Dims the module canvas behind a modal dialog. Not used by Mutator, which floats
+// alongside the canvas rather than blocking it.
+void draw_dialog_background_overlay(void) {
+    double renderW = get_render_width() / gGlobalGuiScale;
+    double renderH = get_render_height() / gGlobalGuiScale;
+
+    set_rgb_colour((tRgb)RGB_GREY_2);
+    render_rectangle(mainArea, {{0.0, 0.0}, {renderW, renderH}});
+}
+
+// Draws the bordered box and the title bar (inset from the border so it never paints
+// over the white/black border line) with white title text. Returns the full-width,
+// non-inset title bar rectangle — callers that need it as a drag handle (Mutator) can
+// hit-test against that; everyone else can ignore the return value.
+tRectangle draw_panel_chrome(tRectangle box, double titleH, const char * title) {
+    tRectangle titleBar = {box.coord, {box.size.w, titleH}};
+
+    set_rgb_colour((tRgb)RGB_GREY_5);
+    render_rectangle_with_border(mainArea, box);
+
+    set_rgb_colour((tRgb)RGB_GREY_3);
+    render_rectangle(mainArea, {{box.coord.x + BORDER_LINE_WIDTH, box.coord.y + BORDER_LINE_WIDTH}, {box.size.w - 2.0 * BORDER_LINE_WIDTH, titleH - BORDER_LINE_WIDTH}});
+    set_rgb_colour((tRgb)RGB_WHITE);
+    render_text(mainArea, {{box.coord.x + 10.0, box.coord.y + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, title);
+
+    return titleBar;
+}
+
+// Draws the standard "Close" button, right-aligned in the title bar at the app's
+// standard inset, darkened while closePressed is true. Returns its rectangle for the
+// caller's own hit-testing (this function does not track press state itself, since
+// each panel already has its own closePressed bool wired into its mouse handler).
+tRectangle draw_panel_close_button(tRectangle box, bool closePressed) {
+    double btnH   = STANDARD_BUTTON_TEXT_HEIGHT;
+    double closeW = get_text_width("Close", btnH, eCache) + 4.0;
+    tRgb   col    = closePressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
+
+    return draw_button(mainArea,
+                       {{box.coord.x + box.size.w - closeW - 8.0 - BORDER_LINE_WIDTH, box.coord.y + 4.0}, {closeW, btnH}},
+                       "Close", col);
+}
+
 static void render_patch_settings_panel(void) {
     static const char * slotLabel[4] = {"A", "B", "C", "D"};
     double              renderW      = 0.0;
@@ -1279,30 +1328,15 @@ static void render_patch_settings_panel(void) {
     if (!gPatchSettingsEdit.active) {
         return;
     }
-    renderW = get_render_width() / gGlobalGuiScale;
-    renderH = get_render_height() / gGlobalGuiScale;
-    boxX    = (renderW - boxW) / 2.0;
-    boxY    = (renderH - boxH) / 2.0;
-    y       = boxY + titleH + margin;
+    renderW                   = get_render_width() / gGlobalGuiScale;
+    renderH                   = get_render_height() / gGlobalGuiScale;
+    boxX                      = (renderW - boxW) / 2.0;
+    boxY                      = (renderH - boxH) / 2.0;
+    y                         = boxY + titleH + margin;
 
-    set_rgb_colour(RGB_GREY_2);
-    render_rectangle(mainArea, {{0.0, 0.0}, {renderW, renderH}});
-
-    set_rgb_colour(RGB_GREY_5);
-    render_rectangle_with_border(mainArea, {{boxX, boxY}, {boxW, boxH}});
-
-    set_rgb_colour(RGB_GREY_3);
-    render_rectangle(mainArea, {{boxX + BORDER_LINE_WIDTH, boxY + BORDER_LINE_WIDTH}, {boxW - 2.0 * BORDER_LINE_WIDTH, titleH - BORDER_LINE_WIDTH}});
-    set_rgb_colour(RGB_WHITE);
-    render_text(mainArea, {{boxX + margin, boxY + 6.0}, {BLANK_SIZE, btnH}}, "Synth Settings");
-
-    {
-        double closeW = get_text_width((char *)"Close", btnH, eCache) + 4.0;
-        tRgb   col    = gSettingsPanelRects.closePressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
-        gSettingsPanelRects.close = draw_button(mainArea,
-                                                {{boxX + boxW - closeW - 8.0 - BORDER_LINE_WIDTH, boxY + 4.0}, {closeW, btnH}},
-                                                "Close", col);
-    }
+    draw_dialog_background_overlay();
+    draw_panel_chrome({{boxX, boxY}, {boxW, boxH}}, titleH, "Synth Settings");
+    gSettingsPanelRects.close = draw_panel_close_button({{boxX, boxY}, {boxW, boxH}}, gSettingsPanelRects.closePressed);
 
     // ── Synth Name ─────────────────────────────────────────────────
     {
@@ -1401,24 +1435,9 @@ static void render_patch_params_panel(void) {
     uint8_t   glideTime     = glideMod ? glideMod->param[0][GLIDE_SPEED].value : 0;
     char      buf[16]       = {0};
 
-    set_rgb_colour(RGB_GREY_2);
-    render_rectangle(mainArea, {{0.0, 0.0}, {renderW, renderH}});
-
-    set_rgb_colour(RGB_GREY_5);
-    render_rectangle_with_border(mainArea, {{boxX, boxY}, {boxW, boxH}});
-
-    set_rgb_colour(RGB_GREY_3);
-    render_rectangle(mainArea, {{boxX + BORDER_LINE_WIDTH, boxY + BORDER_LINE_WIDTH}, {boxW - 2.0 * BORDER_LINE_WIDTH, titleH - BORDER_LINE_WIDTH}});
-    set_rgb_colour(RGB_WHITE);
-    render_text(mainArea, {{boxX + margin, boxY + 6.0}, {BLANK_SIZE, btnH}}, "Patch Settings");
-
-    {
-        double closeW = get_text_width((char *)"Close", btnH, eCache) + 4.0;
-        tRgb   col    = gPatchParamClosePressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
-        gPatchParamClose = draw_button(mainArea,
-                                       {{boxX + boxW - closeW - 8.0 - BORDER_LINE_WIDTH, boxY + 4.0}, {closeW, btnH}},
-                                       "Close", col);
-    }
+    draw_dialog_background_overlay();
+    draw_panel_chrome({{boxX, boxY}, {boxW, boxH}}, titleH, "Patch Settings");
+    gPatchParamClose = draw_panel_close_button({{boxX, boxY}, {boxW, boxH}}, gPatchParamClosePressed);
 
     // ── Slot buttons in title bar ──────────────────────────────────
     {
@@ -1515,24 +1534,9 @@ static void render_perf_settings_panel(void) {
     char   hiNote[8]                = {0};
     char   rangeBuf[18]             = {0};
 
-    set_rgb_colour(RGB_GREY_2);
-    render_rectangle(mainArea, {{0.0, 0.0}, {renderW, renderH}});
-
-    set_rgb_colour(RGB_GREY_5);
-    render_rectangle_with_border(mainArea, {{boxX, boxY}, {boxW, boxH}});
-
-    set_rgb_colour(RGB_GREY_3);
-    render_rectangle(mainArea, {{boxX + BORDER_LINE_WIDTH, boxY + BORDER_LINE_WIDTH}, {boxW - 2.0 * BORDER_LINE_WIDTH, titleH - BORDER_LINE_WIDTH}});
-    set_rgb_colour(RGB_WHITE);
-    render_text(mainArea, {{boxX + margin, boxY + 6.0}, {BLANK_SIZE, btnH}}, "Performance Settings");
-
-    {
-        double closeW = get_text_width((char *)"Close", btnH, eCache) + 4.0;
-        tRgb   col    = gPerfSettingsPanelRects.closePressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
-        gPerfSettingsPanelRects.close = draw_button(mainArea,
-                                                    {{boxX + boxW - closeW - 8.0 - BORDER_LINE_WIDTH, boxY + 4.0}, {closeW, btnH}},
-                                                    "Close", col);
-    }
+    draw_dialog_background_overlay();
+    draw_panel_chrome({{boxX, boxY}, {boxW, boxH}}, titleH, "Performance Settings");
+    gPerfSettingsPanelRects.close = draw_panel_close_button({{boxX, boxY}, {boxW, boxH}}, gPerfSettingsPanelRects.closePressed);
 
     // ── Perf Name ──────────────────────────────────────────────────
     {
@@ -1545,12 +1549,12 @@ static void render_perf_settings_panel(void) {
         draw_button(mainArea, {{x, y}, {get_text_width(LONGEST_PATCH_NAME, btnH, eCache), btnH}},
                     nameBuf, (tRgb)RGB_BACKGROUND_GREY);
     }
-    y      += rowH;
+    y                            += rowH;
 
     // ── Master Clock ───────────────────────────────────────────────
     set_rgb_colour(RGB_GREY_7);
     render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Master Clock");
-    y      += secH;
+    y                            += secH;
 
     {
         double dialH = 48.0;
@@ -1568,7 +1572,7 @@ static void render_perf_settings_panel(void) {
     // ── Slots ──────────────────────────────────────────────────────
     set_rgb_colour(RGB_GREY_7);
     render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Slots");
-    y      += secH;
+    y                            += secH;
 
     double labelColW = get_text_width((char *)"Slot X:", btnH, eCache) + 8.0;
     double dropW     = get_text_width((char *)"On", btnH, eCache) + 16.0;
@@ -1580,9 +1584,9 @@ static void render_perf_settings_panel(void) {
     double colHi     = colLo + noteDropW + 8.0;
     double colRng    = colHi + noteDropW + 12.0;
 
-    colX[0] = colEn;
-    colX[1] = colKbd;
-    colX[2] = colHld;
+    colX[0]                       = colEn;
+    colX[1]                       = colKbd;
+    colX[2]                       = colHld;
 
     // Column headers
     set_rgb_colour(RGB_BLACK);
@@ -1602,7 +1606,7 @@ static void render_perf_settings_panel(void) {
                                                             gPerfSettings.keyboardRange ? "On" : "Off",
                                                             gPerfSettings.keyboardRange ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
     }
-    y      += rowH;
+    y                            += rowH;
 
     // Slot rows A–D
     static const char * slotLabel[] = {"Slot A:", "Slot B:", "Slot C:", "Slot D:"};
@@ -1651,20 +1655,9 @@ static void render_bank_backup_progress(void) {
     bool   isPerf       = gBankBackupIsPerf;
     bool   isEverything = gBankBackupIsEverything;
 
-    // Background overlay to de-emphasise content beneath the dialog
-    set_rgb_colour(RGB_GREY_2);
-    render_rectangle(mainArea, {{0.0, 0.0}, {renderW, renderH}});
-
-    // Dialog box
-    set_rgb_colour(RGB_GREY_5);
-    render_rectangle_with_border(mainArea, {{boxX, boxY}, {boxW, boxH}});
-
-    // Title bar
-    set_rgb_colour(RGB_GREY_3);
-    render_rectangle(mainArea, {{boxX + BORDER_LINE_WIDTH, boxY + BORDER_LINE_WIDTH}, {boxW - 2.0 * BORDER_LINE_WIDTH, titleH - BORDER_LINE_WIDTH}});
-    set_rgb_colour(RGB_WHITE);
-    render_text(mainArea, {{boxX + margin, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}},
-                isEverything ? "Backup Everything" : (isPerf ? "Backing Up Performance Bank" : "Backing Up Patch Bank"));
+    draw_dialog_background_overlay();
+    draw_panel_chrome({{boxX, boxY}, {boxW, boxH}}, titleH,
+                      isEverything ? "Backup Everything" : (isPerf ? "Backing Up Performance Bank" : "Backing Up Patch Bank"));
 
     if (isEverything) {
         snprintf(lineBuf, sizeof(lineBuf), "%s Bank %u of %u - location %u / %u",
@@ -1708,20 +1701,9 @@ static void render_bank_restore_progress(void) {
     bool   isPerf       = gBankRestoreIsPerf;
     bool   isEverything = gBankRestoreIsEverything;
 
-    // Background overlay to de-emphasise content beneath the dialog
-    set_rgb_colour(RGB_GREY_2);
-    render_rectangle(mainArea, {{0.0, 0.0}, {renderW, renderH}});
-
-    // Dialog box
-    set_rgb_colour(RGB_GREY_5);
-    render_rectangle_with_border(mainArea, {{boxX, boxY}, {boxW, boxH}});
-
-    // Title bar
-    set_rgb_colour(RGB_GREY_3);
-    render_rectangle(mainArea, {{boxX + BORDER_LINE_WIDTH, boxY + BORDER_LINE_WIDTH}, {boxW - 2.0 * BORDER_LINE_WIDTH, titleH - BORDER_LINE_WIDTH}});
-    set_rgb_colour(RGB_WHITE);
-    render_text(mainArea, {{boxX + margin, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}},
-                isEverything ? "Restore Everything" : (isPerf ? "Restoring Performance Bank" : "Restoring Patch Bank"));
+    draw_dialog_background_overlay();
+    draw_panel_chrome({{boxX, boxY}, {boxW, boxH}}, titleH,
+                      isEverything ? "Restore Everything" : (isPerf ? "Restoring Performance Bank" : "Restoring Patch Bank"));
 
     if (isEverything) {
         snprintf(lineBuf, sizeof(lineBuf), "%s Bank %u of %u - location %u / %u",
@@ -1769,47 +1751,29 @@ static void render_patch_notes_edit(void) {
     double maxTextH     = boxH - titleH - hintH - margin * 3.0;
     char   countBuf[32] = {0};
 
-    // Background overlay to de-emphasise content beneath the dialog
-    set_rgb_colour(RGB_GREY_2);
-    render_rectangle(mainArea, {{0.0, 0.0}, {renderW, renderH}});
-
-    // Dialog box
-    set_rgb_colour(RGB_GREY_5);
-    render_rectangle_with_border(mainArea, {{boxX, boxY}, {boxW, boxH}});
-
-    // Title bar
     double btnH         = STANDARD_BUTTON_TEXT_HEIGHT;
-    set_rgb_colour(RGB_GREY_3);
-    render_rectangle(mainArea, {{boxX + BORDER_LINE_WIDTH, boxY + BORDER_LINE_WIDTH}, {boxW - 2.0 * BORDER_LINE_WIDTH, titleH - BORDER_LINE_WIDTH}});
-    set_rgb_colour(RGB_WHITE);
-    render_text(mainArea, {{boxX + margin, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Patch Notes");
+
+    draw_dialog_background_overlay();
+    draw_panel_chrome({{boxX, boxY}, {boxW, boxH}}, titleH, "Patch Notes");
+    gPatchNotesCloseRect = draw_panel_close_button({{boxX, boxY}, {boxW, boxH}}, gPatchNotesClosePressed);
 
     // Character count
     snprintf(countBuf, sizeof(countBuf), "%zu / %d", strlen(gPatchNotesEdit.buffer), PATCH_NOTES_SIZE);
     set_rgb_colour(RGB_GREY_9);
     render_text(mainArea, {{boxX + boxW / 2.0 - 30.0, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, countBuf);
 
-    // Close button in title bar
-    {
-        double closeW = get_text_width((char *)"Close", btnH, eCache) + 4.0;
-        tRgb   col    = gPatchNotesClosePressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
-        gPatchNotesCloseRect = draw_button(mainArea,
-                                           {{boxX + boxW - closeW - 8.0 - BORDER_LINE_WIDTH, boxY + 4.0}, {closeW, btnH}},
-                                           (char *)"Close", col);
-    }
-
     // Cache geometry for click-to-cursor and keyboard navigation
-    gNoteTextX      = textX;
-    gNoteTextY0     = textY0;
-    gNoteLineH      = lineH;
-    gNoteTextW      = textW;
-    gNoteTextHParam = STANDARD_TEXT_HEIGHT;
+    gNoteTextX           = textX;
+    gNoteTextY0          = textY0;
+    gNoteLineH           = lineH;
+    gNoteTextW           = textW;
+    gNoteTextHParam      = STANDARD_TEXT_HEIGHT;
 
     build_note_visual_lines(gPatchNotesEdit.buffer, textW, STANDARD_TEXT_HEIGHT);
 
-    int cursorPos  = (int)gPatchNotesEdit.cursorPos;
-    int cursorLine = find_note_cursor_line(cursorPos);
-    int visLines   = (int)(maxTextH / lineH);
+    int    cursorPos    = (int)gPatchNotesEdit.cursorPos;
+    int    cursorLine   = find_note_cursor_line(cursorPos);
+    int    visLines     = (int)(maxTextH / lineH);
 
     // Keep scroll so the cursor line is always visible
     if (cursorLine < gNoteScrollLine) {
