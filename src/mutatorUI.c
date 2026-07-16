@@ -338,7 +338,7 @@ void render_mutator_panel(void) {
     double                   closeW                      = get_text_width((char *)"Close", STANDARD_BUTTON_TEXT_HEIGHT, eCache) + 4.0;
     tRgb                     closeCol                    = gMutator.closeButtonPressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
 
-    gMutator.closeButtonRect = draw_button(mainArea, (tRectangle){{x + w - closeW - 4.0 - BORDER_LINE_WIDTH, y + (titleH - STANDARD_BUTTON_TEXT_HEIGHT) / 2.0}, {closeW, STANDARD_BUTTON_TEXT_HEIGHT}},
+    gMutator.closeButtonRect = draw_button(mainArea, (tRectangle){{x + w - closeW - 8.0 - BORDER_LINE_WIDTH, y + 4.0}, {closeW, STANDARD_BUTTON_TEXT_HEIGHT}},
                                            (char *)"Close", closeCol);
 
     double                   rowY                        = y + titleH + margin;
