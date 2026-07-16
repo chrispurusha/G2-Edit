@@ -31,7 +31,7 @@
 #define TOPBAR_COL_BLACK       TOPBAR_COL(0.0, 0.0, 0.0)
 
 #define X(id, x, y, label, col, type) \
-   {id, {x, y}, anchorTopLeft, label, col, type},
+   {id, {x, (y) + MENU_BAR_HEIGHT}, anchorTopLeft, label, col, type},
 
 static const tTopbarControlDef topbarControlList[] = {
 #include "topbarControls.def"

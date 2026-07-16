@@ -53,6 +53,7 @@ extern "C" {
 #include "undo.h"
 #include "mutatorUI.h"
 #include "misc.h"
+#include "appMenuBar.h"
 
 // Drag-start state for vertical/horizontal dial modes
 static double gDragStartX    = 0.0; // cursor position at press — fixed reference point for Alt-held morph-offset dragging
@@ -755,6 +756,10 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         case mouseButtonLeftDown:
         {
             if (!found) {
+                found = handle_menu_bar_click(gAppMenuBar, app_menu_bar_rect(), coord);
+            }
+
+            if (!found) {
                 found = handle_topbar_left_down(coord, slot);
             }
 
@@ -801,7 +806,15 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             if (found == false) {
                 if (gContextMenu.active == true) {
-                    if (handle_context_menu_click(coord)) {
+                    if (within_rectangle(coord, app_menu_bar_rect())) {
+                        // Same click's mouse-down just opened/switched/closed this dropdown via
+                        // handle_menu_bar_click() — landing back on the bar itself on mouse-up is
+                        // not a dropdown-item selection, so leave the state exactly as mouse-down
+                        // left it. Must be checked before handle_context_menu_click(): that call
+                        // has the side effect of closing the menu itself whenever coord doesn't
+                        // land on any open item, which a bar click never does.
+                        found = true;
+                    } else if (handle_context_menu_click(coord)) {
                         found = true;
                     } else {
                         gContextMenu.active = false;  // Close if clicked outside - TODO: think if this is the right thing to do here
@@ -1417,7 +1430,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     } else if (gContextMenu.active == true) {
         // Dummy
     } else if (  (coord.x >= 0.0)
-              && (coord.y >= TOP_BAR_HEIGHT)
+              && (coord.y >= TOP_BAR_HEIGHT + MENU_BAR_HEIGHT)
               && (coord.x < (get_render_width() / gGlobalGuiScale) - SCROLLBAR_WIDTH)
               && (coord.y < (get_render_height() / gGlobalGuiScale) - SCROLLBAR_WIDTH)) {
         uint32_t hoverSlot = gSlot;
@@ -1941,6 +1954,25 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
             } else {
                 open_mutator_panel(gSlot);
             }
+        }
+
+        // File/Settings menu shortcuts — same keys as the old Cocoa menu's keyEquivalents
+        // ("o"/"s"/"n"/","), now dispatched straight to the plain-C action functions the
+        // in-window menu bar (src/appMenuBar.c) also calls.
+        if (key == GLFW_KEY_O) {
+            file_menu_open_patch();
+        }
+
+        if (key == GLFW_KEY_S) {
+            file_menu_save_patch();
+        }
+
+        if (key == GLFW_KEY_N) {
+            file_menu_new_patch();
+        }
+
+        if (key == GLFW_KEY_COMMA) {
+            settings_menu_open_synth();
         }
     }
     gReDraw = true;

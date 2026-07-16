@@ -77,7 +77,7 @@ void open_mutator_panel(uint32_t slot) {
     gMutator.linkProbRange                   = true;
     gMutator.crossProb                       = 0.5;
     gMutator.panelRect.coord                 = (tCoord){
-        80.0, 80.0
+        80.0, 80.0 + MENU_BAR_HEIGHT
     };
     gMutator.panelRect.size                  = (tSize){
         700.0, 320.0

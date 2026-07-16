@@ -56,6 +56,7 @@ extern "C" {
 #include "perfSettingsResources.h"
 #include "menus.h"
 #include "mutatorUI.h"
+#include "appMenuBar.h"
 
 static FT_Library      gLibrary        = {0};
 static FT_Face         gFace           = {0};
@@ -287,10 +288,10 @@ void render_top_bar(void) {
     double      indicatorW                          = 0.0;
 
     set_rgb_colour(RGB_GREY_5);
-    render_rectangle_with_border(mainArea, {{0.0, 0.0}, {(get_render_width() / gGlobalGuiScale) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
+    render_rectangle_with_border(mainArea, {{0.0, MENU_BAR_HEIGHT}, {(get_render_width() / gGlobalGuiScale) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
 
     set_rgb_colour(RGB_BLACK);
-    render_text(mainArea, {{400, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Variation");
+    render_text(mainArea, {{400, 43 + MENU_BAR_HEIGHT}, {NULL, STANDARD_TEXT_HEIGHT}}, "Variation");
 
     COPY_STRING(patchNameCopy, gGlobalSettings.slot[slot].patchName);
 
@@ -414,10 +415,10 @@ void render_top_bar(void) {
             break;
     }
     set_rgb_colour(commsStateColour);
-    rectangle        = {{790, 8}, {get_text_width("Offline", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}};
+    rectangle        = {{790, 8 + MENU_BAR_HEIGHT}, {get_text_width("Offline", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}};
     commsStateRect   = draw_button(mainArea, rectangle, commsStateText, commsStateColour);
-    draw_button(mainArea, {{790, 25}, {get_text_width("Tx", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6, eCache), (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6}}, "Tx", txActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
-    draw_button(mainArea, {{803, 25}, {get_text_width("Tx", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6, eCache), (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6}}, "Rx", rxActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
+    draw_button(mainArea, {{790, 25 + MENU_BAR_HEIGHT}, {get_text_width("Tx", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6, eCache), (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6}}, "Tx", txActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
+    draw_button(mainArea, {{803, 25 + MENU_BAR_HEIGHT}, {get_text_width("Tx", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6, eCache), (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6}}, "Rx", rxActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
 
     if (txActive || rxActive) {
         wake_glfw();
@@ -472,7 +473,7 @@ void render_top_bar(void) {
     {
         tRgb perfModeCol = gTopbarControls[topbarPerfModeId].isPressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
         gTopbarControls[topbarPerfModeId].rectangle = draw_button(mainArea,
-                                                                  {{20, 42}, {get_text_width("Patch Mode", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
+                                                                  {{20, 42 + MENU_BAR_HEIGHT}, {get_text_width("Patch Mode", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                   buff, perfModeCol);
     }
 
@@ -499,8 +500,8 @@ void render_top_bar(void) {
         double resLabelH  = STANDARD_TEXT_HEIGHT * 0.7;
         double col1X      = 600.0;
         double col2X      = 644.0;
-        double row1Y      = 44.0;
-        double row2Y      = 60.0;
+        double row1Y      = 44.0 + MENU_BAR_HEIGHT;
+        double row2Y      = 60.0 + MENU_BAR_HEIGHT;
         double valW       = get_text_width("XX.X%", STANDARD_BUTTON_TEXT_HEIGHT, eCache);
         double labelX     = 581.0;
         double headerY    = row1Y - resLabelH - 2.0;
@@ -550,7 +551,7 @@ void init_graphics(void) {
     // Tells SynthLib's utilsGraphics.cpp which app it's drawing for, without
     // it needing to include this app's defs.h — see configure_synthlib_theme().
     configure_synthlib_theme((tSynthLibTheme){
-        .topBarHeight   = TOP_BAR_HEIGHT,
+        .topBarHeight   = TOP_BAR_HEIGHT + MENU_BAR_HEIGHT,
         .orange1        = (tRgb)RGB_ORANGE_1,
         .orange2        = (tRgb)RGB_ORANGE_2,
         .greenOn        = (tRgb)RGB_GREEN_ON,
@@ -1927,6 +1928,7 @@ void do_graphics_loop(void) {
     while ((gQuitAll == false) && (!glfwWindowShouldClose((GLFWwindow *)gWindow))) {
         check_action_flags();
         update_context_menu_hover(); // Polled every tick (not just on cursor move) so a hover-dwell timer elapses even while the mouse sits still
+        update_menu_bar_hover(gAppMenuBar, app_menu_bar_rect());
 
         reDraw  = gReDraw;
         gReDraw = false;
@@ -1948,6 +1950,7 @@ void do_graphics_loop(void) {
                 }
             }
             render_top_bar();
+            render_menu_bar(gAppMenuBar, app_menu_bar_rect());
             render_morph_groups();
             render_scrollbars((GLFWwindow *)gWindow);
             render_patch_settings_panel();

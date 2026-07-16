@@ -17,34 +17,28 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#ifndef __APP_MENU_BAR_H__
+#define __APP_MENU_BAR_H__
+
+#include "sysIncludes.h"
+#include "menuBar.h" // tMenuBarItem/render_menu_bar/handle_menu_bar_click/update_menu_bar_hover — see SynthLib
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "topbarResources.h"
-#include "topbarResourcesAccess.h"
-#include "globalVars.h"
+// G2-Edit's own File/Settings/Backup/Restore/Controls/View row, replacing the
+// native Cocoa menu bar (misc.mm) with SynthLib's cross-platform menuBar
+// engine. gAppMenuBar is a NULL-label-terminated tMenuBarItem[] suitable for
+// passing straight into render_menu_bar()/handle_menu_bar_click()/
+// update_menu_bar_hover(); app_menu_bar_rect() is the bar's screen rectangle
+// for this frame.
+extern tMenuBarItem gAppMenuBar[];
 
-const tTopbarControlDef * topbar_control_def(tTopbarControlId id) {
-    return &topbarControlList[id];
-}
-
-void topbar_init_controls(void) {
-    int i = 0;
-
-    for (i = 0; i < topbarControlMax; i++) {
-        gTopbarControls[i].colour    = topbarControlList[i].defaultColour;
-        gTopbarControls[i].isPressed = false;
-    }
-
-    gTopbarControls[topbarPatchVolumeId].rectangle = (tRectangle){{
-                                                                      320.0, 56.0 + MENU_BAR_HEIGHT
-                                                                  }, {
-                                                                      20.0, 20.0
-                                                                  }
-    };
-}
+tRectangle app_menu_bar_rect(void);
 
 #ifdef __cplusplus
 }
 #endif
+
+#endif // __APP_MENU_BAR_H__
