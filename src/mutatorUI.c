@@ -836,7 +836,8 @@ bool handle_mutator_mouse(tCoord coord, tMouseButton mouseButton) {
         // a press on Close arms a panel-drag instead, and the drag release swallows the click
         // before the close action ever gets a chance to fire.
         if (within_rectangle(coord, gMutator.closeButtonRect)) {
-            gPendingKind = pendingClose;
+            gPendingKind                = pendingClose;
+            gMutator.closeButtonPressed = true;
             return true;
         }
 
@@ -928,6 +929,7 @@ bool handle_mutator_mouse(tCoord coord, tMouseButton mouseButton) {
 
     switch (kind) {
         case pendingClose:
+            gMutator.closeButtonPressed = false;
 
             if (within_rectangle(coord, gMutator.closeButtonRect)) {
                 close_mutator_panel();
