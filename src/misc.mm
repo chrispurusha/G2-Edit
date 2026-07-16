@@ -30,6 +30,7 @@
 #include "mouseHandle.h"
 #include "usbComms.h"
 #include "fileDialogue.h"
+#include "fileBrowser.h"
 
 extern "C" {
 void set_zoom_factor(double zoomFactor, tCoord mouseCoord);
@@ -77,7 +78,7 @@ static void on_backup_bank_picked(bool confirmed, uint32_t bank1Indexed) {
     sPendingBackupBank = bank1Indexed - 1;
     snprintf(title, sizeof(title), "Choose a Folder for %s Bank %u Backup",
              sPendingBackupIsPerf ? "Performance" : "Patch", bank1Indexed);
-    open_folder_dialogue_async(on_bank_backup_folder_chosen, title);
+    open_file_browser_folder(on_bank_backup_folder_chosen, title);
 }
 
 static void on_synth_settings_backup_folder_chosen(const char * path) {
@@ -131,7 +132,7 @@ static void on_restore_everything_confirmed(bool confirmed) {
     if (!confirmed) {
         return;
     }
-    open_folder_dialogue_async(on_everything_restore_folder_chosen, "Choose the Backup Folder to Restore Everything From");
+    open_file_browser_folder(on_everything_restore_folder_chosen, "Choose the Backup Folder to Restore Everything From");
 }
 
 static void on_bank_restore_folder_chosen(const char * path) {
@@ -157,7 +158,7 @@ static void on_bank_restore_confirmed(bool confirmed, uint32_t targetBank1Indexe
     sPendingRestoreTargetBank = targetBank1Indexed - 1;
     snprintf(title, sizeof(title), "Choose the Backup Folder to Restore %s Bank %u From",
              sPendingRestoreIsPerf ? "Performance" : "Patch", sPendingRestoreBank + 1);
-    open_folder_dialogue_async(on_bank_restore_folder_chosen, title);
+    open_file_browser_folder(on_bank_restore_folder_chosen, title);
 }
 
 // Confirm callback for the "which bank's backup to restore" dropdown dialog opened by
@@ -480,7 +481,7 @@ void backup_menu_synth_settings(void) {
         show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up synth settings.");
         return;
     }
-    open_folder_dialogue_async(on_synth_settings_backup_folder_chosen, "Choose a Folder for Synth Settings Backup");
+    open_file_browser_folder(on_synth_settings_backup_folder_chosen, "Choose a Folder for Synth Settings Backup");
 }
 
 void backup_menu_everything(void) {
@@ -488,7 +489,7 @@ void backup_menu_everything(void) {
         show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before backing up everything.");
         return;
     }
-    open_folder_dialogue_async(on_everything_backup_folder_chosen, "Choose a Folder for Backup Everything");
+    open_file_browser_folder(on_everything_backup_folder_chosen, "Choose a Folder for Backup Everything");
 }
 
 void restore_menu_patch_bank(void) {
@@ -518,7 +519,7 @@ void restore_menu_synth_settings(void) {
         show_alert_async("G2 Not Connected", "Connect the G2 and wait for it to come online before restoring synth settings.");
         return;
     }
-    open_folder_dialogue_async(on_synth_settings_restore_folder_chosen, "Choose the Backup Folder to Restore Synth Settings From");
+    open_file_browser_folder(on_synth_settings_restore_folder_chosen, "Choose the Backup Folder to Restore Synth Settings From");
 }
 
 void restore_menu_everything(void) {
@@ -581,6 +582,22 @@ void setup_main_menu(void) {
 
         reposition_window(savedX, savedY);
     }
+    NSString * savedBrowserDir = [defaults stringForKey:@"fileBrowserLastDirectory"];
+
+    if (savedBrowserDir != nil) {
+        set_file_browser_start_directory([savedBrowserDir UTF8String]);
+    }
+    set_file_browser_directory_changed_callback(save_file_browser_directory);
+}
+
+void save_file_browser_directory(const char * path) {
+    if (path == NULL) {
+        return;
+    }
+    NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
+
+    [defaults setObject:[NSString stringWithUTF8String:path] forKey:@"fileBrowserLastDirectory"];
+    [defaults synchronize];
 }
 
 void save_zoom_factor(double zoom) {

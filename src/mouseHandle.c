@@ -54,6 +54,7 @@ extern "C" {
 #include "mutatorUI.h"
 #include "misc.h"
 #include "appMenuBar.h"
+#include "fileBrowser.h"
 
 // Drag-start state for vertical/horizontal dial modes
 static double gDragStartX    = 0.0; // cursor position at press — fixed reference point for Alt-held morph-offset dragging
@@ -722,6 +723,21 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     mouseButton = convert_to_mouse_button(button, action);
 
     get_global_gui_scaled_mouse_coord(&coord);
+
+    if (file_browser_active()) {
+        // Modal: swallow mouse-down entirely so nothing underneath (module press, scrollbar
+        // drag, rubber-band select) starts while it's open — handle_file_browser_click() only
+        // needs to see mouse-up, but mouse-down was previously falling straight through to the
+        // module-area/topbar/scrollbar handling below, so the down-half of a click on e.g. the
+        // browser's Cancel button could also press a module control underneath it.
+        if (mouseButton == mouseButtonLeftDown) {
+            handle_file_browser_mouse_down(coord);
+        } else if (mouseButton == mouseButtonLeftUp) {
+            handle_file_browser_click(coord);
+        }
+        gReDraw = true;
+        return;
+    }
 
     if (handle_mutator_mouse(coord, mouseButton)) {
         gReDraw = true;
@@ -1470,6 +1486,11 @@ void scroll_event(GLFWwindow * window, double x, double y) {
     tCoord coord      = {0};
     double zoomFactor = 0.0;
 
+    if (file_browser_active()) {
+        handle_file_browser_scroll(y);
+        return;
+    }
+
     if (gCommandKeyPressed == true) {
         get_global_gui_scaled_mouse_coord(&coord);
         zoomFactor  = get_zoom_factor();
@@ -1493,6 +1514,11 @@ void scroll_event(GLFWwindow * window, double x, double y) {
 }
 
 void char_event(GLFWwindow * window, unsigned int value) {
+    if (file_browser_active()) {
+        handle_file_browser_char(value);
+        return;
+    }
+
     if (gPatchNameEdit.active) {
         size_t   len       = strlen(gPatchNameEdit.buffer);
         uint32_t cursorPos = gPatchNameEdit.cursorPos;
@@ -1578,6 +1604,12 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
     double zoomFactor = 0.0;
 
     LOG_DEBUG("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
+
+    if (file_browser_active()) {
+        handle_file_browser_key(key, action);
+        gReDraw = true;
+        return;
+    }
 
     if (handle_mutator_key(key, mods, action)) {
         gReDraw = true;
