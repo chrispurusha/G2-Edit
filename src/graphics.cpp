@@ -203,6 +203,28 @@ void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
     gReDraw = true;
 }
 
+// Fires when the window moves to a display with a different HiDPI scale
+// (e.g. dragging from a Retina built-in display to a non-Retina external
+// one, or vice versa) — gContentScale was previously hardcoded 2.0f, so
+// right-click menus and anything else deriving screen position from
+// gGlobalGuiScale landed mispositioned on any display where the real scale
+// wasn't 2.0. Recomputes gGlobalGuiScale via the same update_framebuffer_state()
+// framebuffer_size_callback() already uses, using the framebuffer's CURRENT
+// size — GLFW fires this alongside its own framebuffer-size change for the
+// same move, so querying rather than assuming avoids a stale width/height.
+static void content_scale_callback(GLFWwindow * window, float xscale, float yscale) {
+    (void)yscale; // this app only ever uses a single uniform scale factor
+
+    gContentScale = xscale;
+
+    int fbWidth  = 0;
+    int fbHeight = 0;
+    glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+    update_framebuffer_state(fbWidth, fbHeight);
+
+    gReDraw       = true;
+}
+
 void window_size_callback(GLFWwindow * window, int width, int height) {
     save_window_size(width);
 }
@@ -223,6 +245,7 @@ void window_close_callback(GLFWwindow * window) {
     gReDraw = false;
 
     glfwSetFramebufferSizeCallback((GLFWwindow *)gWindow, NULL);
+    glfwSetWindowContentScaleCallback((GLFWwindow *)gWindow, NULL);
     glfwSetWindowCloseCallback((GLFWwindow *)gWindow, NULL);
     glfwSetKeyCallback((GLFWwindow *)gWindow, NULL);
     glfwSetCharCallback((GLFWwindow *)gWindow, NULL);
@@ -558,11 +581,24 @@ void init_graphics(void) {
 
     glfwMakeContextCurrent((GLFWwindow *)gWindow);
 
+    // Real initial scale for whichever display the window opens on, not the
+    // 2.0 (Retina-only) assumption this used to hardcode — see
+    // content_scale_callback()'s own comment for what that broke.
+    {
+        float xscale = 0.0f;
+        float yscale = 0.0f;
+        glfwGetWindowContentScale((GLFWwindow *)gWindow, &xscale, &yscale);
+
+        if (xscale > 0.0f) {
+            gContentScale = xscale;
+        }
+    }
 
     glfwGetFramebufferSize((GLFWwindow *)gWindow, &fbWidth, &fbHeight);
     update_framebuffer_state(fbWidth, fbHeight);
 
     glfwSetFramebufferSizeCallback((GLFWwindow *)gWindow, framebuffer_size_callback);
+    glfwSetWindowContentScaleCallback((GLFWwindow *)gWindow, content_scale_callback);
     glfwSetWindowSizeCallback((GLFWwindow *)gWindow, window_size_callback);
     glfwSetWindowPosCallback((GLFWwindow *)gWindow, window_pos_callback);
     glfwSwapInterval(1);
