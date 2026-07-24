@@ -63,6 +63,7 @@ extern "C" {
 #include "alertDialog.h"
 #include "synthlibHost.h"
 #include "synthlibScale.h"
+#include "synthlibPersistence.h"
 
 static FT_Library      gLibrary        = {0};
 static FT_Face         gFace           = {0};
@@ -184,7 +185,7 @@ void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
     (void)window;
     synthlib_scale_update(width, height);
 
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 // Fires when the window moves to a display with a different HiDPI scale (e.g. dragging from a
@@ -195,38 +196,38 @@ static void content_scale_callback(GLFWwindow * window, float xscale, float ysca
 
     synthlib_scale_set_content_scale(window, xscale);
 
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 void window_size_callback(GLFWwindow * window, int width, int height) {
-    save_window_size(width);
+    synthlib_save_window_size(width);
 }
 
 void window_pos_callback(GLFWwindow * window, int x, int y) {
-    save_window_pos(x, y);
+    synthlib_save_window_pos(x, y);
 }
 
 void resize_window(int w, int h) {
-    glfwSetWindowSize((GLFWwindow *)gWindow, w, h);
+    glfwSetWindowSize((GLFWwindow *)synthlib_window(), w, h);
 }
 
 void reposition_window(int x, int y) {
-    glfwSetWindowPos((GLFWwindow *)gWindow, x, y);
+    glfwSetWindowPos((GLFWwindow *)synthlib_window(), x, y);
 }
 
 void window_close_callback(GLFWwindow * window) {
-    gReDraw = false;
+    synthlib_clear_redraw();
 
-    glfwSetFramebufferSizeCallback((GLFWwindow *)gWindow, NULL);
-    glfwSetWindowContentScaleCallback((GLFWwindow *)gWindow, NULL);
-    glfwSetWindowCloseCallback((GLFWwindow *)gWindow, NULL);
-    glfwSetKeyCallback((GLFWwindow *)gWindow, NULL);
-    glfwSetCharCallback((GLFWwindow *)gWindow, NULL);
-    glfwSetCursorPosCallback((GLFWwindow *)gWindow, NULL);
-    glfwSetMouseButtonCallback((GLFWwindow *)gWindow, NULL);
-    glfwSetScrollCallback((GLFWwindow *)gWindow, NULL);
+    glfwSetFramebufferSizeCallback((GLFWwindow *)synthlib_window(), NULL);
+    glfwSetWindowContentScaleCallback((GLFWwindow *)synthlib_window(), NULL);
+    glfwSetWindowCloseCallback((GLFWwindow *)synthlib_window(), NULL);
+    glfwSetKeyCallback((GLFWwindow *)synthlib_window(), NULL);
+    glfwSetCharCallback((GLFWwindow *)synthlib_window(), NULL);
+    glfwSetCursorPosCallback((GLFWwindow *)synthlib_window(), NULL);
+    glfwSetMouseButtonCallback((GLFWwindow *)synthlib_window(), NULL);
+    glfwSetScrollCallback((GLFWwindow *)synthlib_window(), NULL);
 
-    glfwSetWindowShouldClose((GLFWwindow *)gWindow, GLFW_TRUE);
+    glfwSetWindowShouldClose((GLFWwindow *)synthlib_window(), GLFW_TRUE);
     glfwPostEmptyEvent();
 }
 
@@ -240,7 +241,7 @@ void set_window_title(const char * filePath) {
         filename = filePath;
     }
     snprintf(newTitle, sizeof(newTitle), "%s - %s", WINDOW_TITLE, filename);
-    glfwSetWindowTitle((GLFWwindow *)gWindow, newTitle);
+    glfwSetWindowTitle((GLFWwindow *)synthlib_window(), newTitle);
 }
 
 void error_callback(int error, const char * description) {
@@ -498,10 +499,8 @@ void render_top_bar(void) {
 }
 
 void wake_glfw(void) {
-    gReDraw = true;
-
-    // Safe GLFW call from any thread
-    glfwPostEmptyEvent();
+    // synthlib_request_redraw() already does both of these (safe to call from any thread).
+    synthlib_request_redraw();
 }
 
 void notify_full_patch_change(void) {
@@ -522,6 +521,12 @@ void init_graphics(void) {
 
     snprintf(title, sizeof(title), "%s - Build %s %s", WINDOW_TITLE, __DATE__, __TIME__);
 
+    // The dial mode now lives in SynthLib (synthlibGlobals.h/.c), defaulting to eDialModeVertical
+    // to match EmuUtility/SynthEdit — this app's own default was eDialModeRotary instead, so it's
+    // set explicitly here, before setup_main_menu()'s load_saved_settings() (misc.mm) runs and
+    // overwrites it from a real saved value if one exists.
+    synthlib_set_dial_mode(eDialModeRotary);
+
     // Tells SynthLib's utilsGraphics.cpp which app it's drawing for, without
     // it needing to include this app's defs.h — see configure_synthlib_theme().
     configure_synthlib_theme((tSynthLibTheme){
@@ -532,14 +537,11 @@ void init_graphics(void) {
         .backgroundGrey = (tRgb)RGB_BACKGROUND_GREY,
     });
 
-    // Single injection point replacing the `extern "C" _Atomic bool gReDraw;` / `extern "C" void
-    // get_global_gui_scaled_mouse_coord(tCoord *);` previously redeclared in every SynthLib popup/
-    // panel file (contextMenu.c, menuBar.c, alertDialog.cpp, bankBrowser.cpp, fileBrowser.cpp) —
-    // see synthlibHost.h's own comment. wake_glfw() already does exactly "gReDraw = true" plus a
-    // GLFW wakeup, so it doubles as the redraw-request callback with no extra wrapper needed.
+    // Injection point for the mouse-coord query every SynthLib popup/panel file (contextMenu.c,
+    // menuBar.c, alertDialog.cpp, bankBrowser.cpp, fileBrowser.cpp) needs — see synthlibHost.h's
+    // own comment.
     synthlib_host_init((tSynthLibHost){
-        .requestRedraw = wake_glfw,
-        .mouseCoord    = get_global_gui_scaled_mouse_coord,
+        .mouseCoord = get_global_gui_scaled_mouse_coord,
     });
     synthlib_scale_init(TARGET_FRAME_BUFF_WIDTH);
 
@@ -554,36 +556,36 @@ void init_graphics(void) {
 
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
     glfwWindowHint(GLFW_COCOA_GRAPHICS_SWITCHING, GLFW_TRUE);  // Needed for Intel systems with discrete graphics
-    gWindow = (void *)glfwCreateWindow(TARGET_FRAME_BUFF_WIDTH / 4, TARGET_FRAME_BUFF_HEIGHT / 4, title, NULL, NULL);
+    synthlib_set_window((void *)glfwCreateWindow(TARGET_FRAME_BUFF_WIDTH / 4, TARGET_FRAME_BUFF_HEIGHT / 4, title, NULL, NULL));
 
-    if (!gWindow) {
+    if (!synthlib_window()) {
         glfwTerminate();
         exit(EXIT_FAILURE);
     }
-    glfwSetWindowSizeLimits((GLFWwindow *)gWindow, TARGET_FRAME_BUFF_WIDTH / 8, TARGET_FRAME_BUFF_HEIGHT / 8, GLFW_DONT_CARE, GLFW_DONT_CARE);
-    glfwSetWindowAspectRatio((GLFWwindow *)gWindow, TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT);
+    glfwSetWindowSizeLimits((GLFWwindow *)synthlib_window(), TARGET_FRAME_BUFF_WIDTH / 8, TARGET_FRAME_BUFF_HEIGHT / 8, GLFW_DONT_CARE, GLFW_DONT_CARE);
+    glfwSetWindowAspectRatio((GLFWwindow *)synthlib_window(), TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT);
 
-    glfwMakeContextCurrent((GLFWwindow *)gWindow);
+    glfwMakeContextCurrent((GLFWwindow *)synthlib_window());
 
     // Real initial scale for whichever display the window opens on, not the
     // 2.0 (Retina-only) assumption this used to hardcode — see
     // content_scale_callback()'s own comment for what that broke.
-    synthlib_scale_query_initial(gWindow);
+    synthlib_scale_query_initial(synthlib_window());
 
-    glfwGetFramebufferSize((GLFWwindow *)gWindow, &fbWidth, &fbHeight);
+    glfwGetFramebufferSize((GLFWwindow *)synthlib_window(), &fbWidth, &fbHeight);
     synthlib_scale_update(fbWidth, fbHeight);
 
-    glfwSetFramebufferSizeCallback((GLFWwindow *)gWindow, framebuffer_size_callback);
-    glfwSetWindowContentScaleCallback((GLFWwindow *)gWindow, content_scale_callback);
-    glfwSetWindowSizeCallback((GLFWwindow *)gWindow, window_size_callback);
-    glfwSetWindowPosCallback((GLFWwindow *)gWindow, window_pos_callback);
+    glfwSetFramebufferSizeCallback((GLFWwindow *)synthlib_window(), framebuffer_size_callback);
+    glfwSetWindowContentScaleCallback((GLFWwindow *)synthlib_window(), content_scale_callback);
+    glfwSetWindowSizeCallback((GLFWwindow *)synthlib_window(), window_size_callback);
+    glfwSetWindowPosCallback((GLFWwindow *)synthlib_window(), window_pos_callback);
     glfwSwapInterval(1);
-    glfwSetWindowCloseCallback((GLFWwindow *)gWindow, window_close_callback);
-    glfwSetKeyCallback((GLFWwindow *)gWindow, key_callback);
-    glfwSetCharCallback((GLFWwindow *)gWindow, char_event);
-    glfwSetCursorPosCallback((GLFWwindow *)gWindow, cursor_pos);
-    glfwSetMouseButtonCallback((GLFWwindow *)gWindow, mouse_button);
-    glfwSetScrollCallback((GLFWwindow *)gWindow, scroll_event);
+    glfwSetWindowCloseCallback((GLFWwindow *)synthlib_window(), window_close_callback);
+    glfwSetKeyCallback((GLFWwindow *)synthlib_window(), key_callback);
+    glfwSetCharCallback((GLFWwindow *)synthlib_window(), char_event);
+    glfwSetCursorPosCallback((GLFWwindow *)synthlib_window(), cursor_pos);
+    glfwSetMouseButtonCallback((GLFWwindow *)synthlib_window(), mouse_button);
+    glfwSetScrollCallback((GLFWwindow *)synthlib_window(), scroll_event);
 
     glEnable(GL_BLEND);  // TODO - since we're doing these 2 here, probably doesn't need to be in the text rendering in SynthLib
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1041,7 +1043,7 @@ static void check_action_flags(void) {
 
     if (gNeedFocus == true) {
         gNeedFocus = false;
-        glfwFocusWindow((GLFWwindow *)gWindow);
+        glfwFocusWindow((GLFWwindow *)synthlib_window());
     }
 
     if (gBankBackupComplete) {
@@ -1913,13 +1915,12 @@ int note_editor_cursor_from_click(double logicalX, double logicalY) {
 void do_graphics_loop(void) {
     bool reDraw = false;
 
-    while ((gQuitAll == false) && (!glfwWindowShouldClose((GLFWwindow *)gWindow))) {
+    while ((!synthlib_quit_requested()) && (!glfwWindowShouldClose((GLFWwindow *)synthlib_window()))) {
         check_action_flags();
         update_context_menu_hover(); // Polled every tick (not just on cursor move) so a hover-dwell timer elapses even while the mouse sits still
         update_menu_bar_hover(gAppMenuBar, app_menu_bar_rect());
 
-        reDraw  = gReDraw;
-        gReDraw = false;
+        reDraw = synthlib_consume_redraw();
 
         if (reDraw == true) {
             glClearColor(0.8, 0.8, 0.8, 1.0);
@@ -1941,7 +1942,7 @@ void do_graphics_loop(void) {
             render_top_bar();
             render_menu_bar(gAppMenuBar, app_menu_bar_rect());
             render_morph_groups();
-            render_scrollbars((GLFWwindow *)gWindow);
+            render_scrollbars((GLFWwindow *)synthlib_window());
             render_patch_settings_panel();
             render_perf_settings_panel();
             render_patch_params_panel();
@@ -1960,8 +1961,8 @@ void do_graphics_loop(void) {
             //    double y        = 0.0;
             //    int    fbWidth  = 0;
             //    int    fbHeight = 0;
-            //    glfwGetCursorPos(gWindow, &x, &y);
-            //    glfwGetFramebufferSize(gWindow, &fbWidth, &fbHeight);
+            //    glfwGetCursorPos(synthlib_window(), &x, &y);
+            //    glfwGetFramebufferSize(synthlib_window(), &fbWidth, &fbHeight);
             //
             //    x /= fbWidth;
             //    y /= fbHeight;
@@ -1974,14 +1975,14 @@ void do_graphics_loop(void) {
             //}
 
             // Swap buffers and look for events
-            glfwSwapBuffers((GLFWwindow *)gWindow);
+            glfwSwapBuffers((GLFWwindow *)synthlib_window());
         }
 
         if ((gModuleDrag.active == true) || (gCableDrag.active == true) || (gContextMenu.active == true)) {
             double x = 0.0;
             double y = 0.0;
-            glfwGetCursorPos((GLFWwindow *)gWindow, &x, &y);
-            cursor_pos((GLFWwindow *)gWindow, x, y);  // Artificially do cursor_pos call for drag scrolling when cursor not moving
+            glfwGetCursorPos((GLFWwindow *)synthlib_window(), &x, &y);
+            cursor_pos((GLFWwindow *)synthlib_window(), x, y);  // Artificially do cursor_pos call for drag scrolling when cursor not moving
             glfwWaitEventsTimeout(0.016);
         } else {
             glfwWaitEvents();
@@ -1996,8 +1997,8 @@ void clean_up_graphics(void) {
     free_textures();
 
     // glfwMakeContextCurrent(NULL); // TODO: Probably not needed, leaving whilst more tests are done
-    glfwDestroyWindow((GLFWwindow *)gWindow);
-    gWindow = NULL;
+    glfwDestroyWindow((GLFWwindow *)synthlib_window());
+    synthlib_set_window(NULL);
     glfwTerminate();
 }
 

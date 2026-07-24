@@ -76,7 +76,7 @@ static bool handle_panel_context_menu(tCoord coord) {
     if (!handle_context_menu_click(coord)) {
         gContextMenu.active = false;
     }
-    gReDraw = true;
+    synthlib_request_redraw();
     return true;
 }
 
@@ -91,7 +91,7 @@ bool handle_patch_notes_mouse(tCoord coord, tMouseButton mouseButton) {
         if (mouseButton == mouseButtonLeftUp) {
             gNoteEditDismissed = false;
         }
-        gReDraw = true;
+        synthlib_request_redraw();
         return true;
     }
 
@@ -145,7 +145,7 @@ bool handle_patch_notes_mouse(tCoord coord, tMouseButton mouseButton) {
             gPatchNotesEdit.cursorPos = (uint32_t)origLen;
         }
     }
-    gReDraw = true;
+    synthlib_request_redraw();
     return true;
 }
 
@@ -163,7 +163,7 @@ bool handle_perf_settings_mouse(tCoord coord, tMouseButton mouseButton) {
         } else if (within_rectangle(coord, gPerfSettingsPanelRects.masterClock)) {
             gPerfTempoDragging = true;
 
-            if (gDialMode != eDialModeRotary) {
+            if (synthlib_dial_mode() != eDialModeRotary) {
                 start_cursor_drag();
             }
         }
@@ -207,7 +207,7 @@ bool handle_perf_settings_mouse(tCoord coord, tMouseButton mouseButton) {
             }
         }
     }
-    gReDraw = true;
+    synthlib_request_redraw();
     return true;
 }
 
@@ -254,19 +254,19 @@ bool handle_patch_params_mouse(tCoord coord, tMouseButton mouseButton) {
         } else if (within_rectangle(coord, gPatchParamRects[pPVibratoAmount])) {
             gVibAmountDragging = true;
 
-            if (gDialMode != eDialModeRotary) {
+            if (synthlib_dial_mode() != eDialModeRotary) {
                 start_cursor_drag();
             }
         } else if (within_rectangle(coord, gPatchParamRects[pPVibratoRate])) {
             gVibRateDragging = true;
 
-            if (gDialMode != eDialModeRotary) {
+            if (synthlib_dial_mode() != eDialModeRotary) {
                 start_cursor_drag();
             }
         } else if (within_rectangle(coord, gPatchParamRects[pPGlideTime])) {
             gGlideTimeDragging = true;
 
-            if (gDialMode != eDialModeRotary) {
+            if (synthlib_dial_mode() != eDialModeRotary) {
                 start_cursor_drag();
             }
         }
@@ -317,7 +317,7 @@ bool handle_patch_params_mouse(tCoord coord, tMouseButton mouseButton) {
             }
         }
     }
-    gReDraw = true;
+    synthlib_request_redraw();
     return true;
 }
 
@@ -368,7 +368,7 @@ bool handle_patch_settings_mouse(tCoord coord, tMouseButton mouseButton) {
             }
         }
     }
-    gReDraw = true;
+    synthlib_request_redraw();
     return true;
 }
 

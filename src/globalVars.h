@@ -33,16 +33,14 @@
 #include "defs.h"
 #include "types.h"
 #include "msgQueue.h"
+#include "synthlibGlobals.h" // synthlib_quit_requested()/synthlib_request_redraw()/synthlib_window()/synthlib_dial_mode() etc.
 #include <pthread.h>
 
 extern const char *            patchTypeStrMap[patchTypeUserMax];
 extern const char *            monoPolyStrMap[monoPolyMax];
 
 //extern double                  gGlobalGuiScale;
-extern _Atomic bool            gQuitAll;
-extern void *                  gWindow;
 extern _Atomic uint32_t        gLocation;
-extern _Atomic bool            gReDraw;
 extern bool                    gCommandKeyPressed;
 extern tTopbarControl          gTopbarControls[topbarControlMax];
 extern bool                    gShowOpenFileReadDialogue;
@@ -172,7 +170,6 @@ extern char                    gSynthRestoreResultMessage[256];
 extern tNameTableEntry         gPatchNameTable[NUM_PATCH_BANKS][NUM_LOCATIONS_PER_BANK]; // filled by send_list_names_sweep() during init
 extern tNameTableEntry         gPerfNameTable[NUM_PERF_BANKS][NUM_LOCATIONS_PER_BANK];
 extern tRectangle              gParamRectangle[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS];
-extern tDialMode               gDialMode;
 extern pthread_mutex_t         gStringCopyMutex;
 
 #ifdef __cplusplus

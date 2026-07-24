@@ -25,13 +25,8 @@ extern "C" {
 #include "synthlibDefs.h"
 #include "globalVars.h"
 
-tDialMode               gDialMode                                                                    = eDialModeRotary;
-
 //double                  gGlobalGuiScale                                                              = 2;
-_Atomic bool            gQuitAll                                                                     = false;
-void *                  gWindow                                                                      = NULL;
 _Atomic uint32_t        gLocation                                                                    = locationVa;
-_Atomic bool            gReDraw                                                                      = true;
 
 bool                    gCommandKeyPressed                                                           = false;
 

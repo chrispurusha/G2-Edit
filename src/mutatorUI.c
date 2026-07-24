@@ -526,13 +526,13 @@ void render_mutator_panel(void) {
 // ─── Mouse ───────────────────────────────────────────────────────────────────
 
 static bool shift_held(void) {
-    return (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-           || (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
+    return (glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+           || (glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
 }
 
 static bool cmd_held(void) {
-    return (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS)
-           || (glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS);
+    return (glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_LEFT_SUPER) == GLFW_PRESS)
+           || (glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS);
 }
 
 // index: 0=Prob, 1=Range, 2=Cross Prob. A real dial, dragged vertically like every other knob in

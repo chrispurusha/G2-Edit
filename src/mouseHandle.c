@@ -70,8 +70,8 @@ void get_global_gui_scaled_mouse_coord(tCoord * coord) {
     int winWidth  = 0;
     int winHeight = 0;
 
-    glfwGetCursorPos(gWindow, &(coord->x), &(coord->y));
-    glfwGetWindowSize(gWindow, &winWidth, &winHeight);
+    glfwGetCursorPos(synthlib_window(), &(coord->x), &(coord->y));
+    glfwGetWindowSize(synthlib_window(), &winWidth, &winHeight);
 
     coord->x = (coord->x / (double)winWidth) * (get_render_width() / gGlobalGuiScale);
     coord->y = (coord->y / (double)winHeight) * (get_render_height() / gGlobalGuiScale);
@@ -226,11 +226,11 @@ static void send_master_clock_bpm(uint32_t bpm) {
 }
 
 void start_cursor_drag(void) {
-    glfwGetCursorPos(gWindow, &gDragStartX, &gDragStartY);
+    glfwGetCursorPos(synthlib_window(), &gDragStartX, &gDragStartY);
     gDragPrevX     = gDragStartX;
     gDragPrevY     = gDragStartY;
     gDragSkipCount = 3;
-    glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(synthlib_window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 static bool handle_module_press_for_module(tModule * module, tCoord coord, tMouseButton mouseButton, uint32_t variation) {
@@ -278,7 +278,7 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
                 isSlider                       = (module->key.location != locationMorph)
                                                  && (paramType == paramTypeSlider);
 
-                if (gDialMode != eDialModeRotary || isSlider) {
+                if (synthlib_dial_mode() != eDialModeRotary || isSlider) {
                     start_cursor_drag();
                 }
             } else if (paramType == paramTypePush) {
@@ -303,7 +303,7 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
                     gParamDragging.startValue = mode->value;
                     gParamDragging.active     = true;
 
-                    if (gDialMode != eDialModeRotary) {
+                    if (synthlib_dial_mode() != eDialModeRotary) {
                         start_cursor_drag();
                     }
                     retVal                    = true;
@@ -329,10 +329,10 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
 
     if (retVal == false) {
         if (within_rectangle(coord, module->dragArea) && mouseButton == mouseButtonLeftDown) {
-            bool multiSelectHeld = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-                                   || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS
-                                   || glfwGetKey(gWindow, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS
-                                   || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
+            bool multiSelectHeld = glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
+                                   || glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS
+                                   || glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SUPER) == GLFW_PRESS
+                                   || glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
 
             if (multiSelectHeld) {
                 selection_toggle(module->key);
@@ -373,10 +373,10 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
     // Clicking anywhere else on the module body selects without starting a drag
     if (retVal == false) {
         if (within_rectangle(coord, module->rectangle) && mouseButton == mouseButtonLeftDown) {
-            bool multiSelectHeld = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-                                   || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS
-                                   || glfwGetKey(gWindow, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS
-                                   || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
+            bool multiSelectHeld = glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
+                                   || glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS
+                                   || glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SUPER) == GLFW_PRESS
+                                   || glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
 
             if (multiSelectHeld) {
                 selection_toggle(module->key);
@@ -625,7 +625,7 @@ void stop_dragging(void) {
     // pixel or two off from each other — enough, in SynthEdit's tightly
     // packed filter dials, to spill onto a neighbouring control.
     if (wasCursorDragging) {
-        glfwSetInputMode(gWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        glfwSetInputMode(synthlib_window(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     }
 }
 
@@ -777,7 +777,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         } else if (mouseButton == mouseButtonLeftUp) {
             handle_file_browser_click(coord);
         }
-        gReDraw = true;
+        synthlib_request_redraw();
         return;
     }
 
@@ -788,7 +788,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         } else if (mouseButton == mouseButtonLeftUp) {
             handle_bank_browser_click(coord);
         }
-        gReDraw = true;
+        synthlib_request_redraw();
         return;
     }
 
@@ -812,32 +812,32 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 handle_alert_dialog_click(coord);
             }
         }
-        gReDraw = true;
+        synthlib_request_redraw();
         return;
     }
 
     if (handle_mutator_mouse(coord, mouseButton)) {
-        gReDraw = true;
+        synthlib_request_redraw();
         return;
     }
 
     if (handle_patch_notes_mouse(coord, mouseButton)) {
-        gReDraw = true;
+        synthlib_request_redraw();
         return;
     }
 
     if (handle_perf_settings_mouse(coord, mouseButton)) {
-        gReDraw = true;
+        synthlib_request_redraw();
         return;
     }
 
     if (handle_patch_params_mouse(coord, mouseButton)) {
-        gReDraw = true;
+        synthlib_request_redraw();
         return;
     }
 
     if (handle_patch_settings_mouse(coord, mouseButton)) {
-        gReDraw = true;
+        synthlib_request_redraw();
         return;
     }
     stop_patch_name_editing();
@@ -882,8 +882,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
             // Click on empty module-area space: clear selection and start rubber-band
             if (!found && !gContextMenu.active && within_rectangle(coord, module_area())) {
-                bool   multiSelectHeld = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-                                         || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+                bool   multiSelectHeld = glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
+                                         || glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
 
                 if (!multiSelectHeld) {
                     selection_clear();
@@ -1008,8 +1008,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 double     y2              = gRubberBand.start.y > moduleCoord.y ? gRubberBand.start.y : moduleCoord.y;
 
                 tRectangle selRect         = {{x1, y1}, {x2 - x1, y2 - y1}};
-                bool       multiSelectHeld = glfwGetKey(gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-                                             || glfwGetKey(gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+                bool       multiSelectHeld = glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
+                                             || glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
 
                 if (!multiSelectHeld) {
                     selection_clear();
@@ -1113,7 +1113,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         default:
             break;
     }
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 static uint32_t calc_tempo_drag_value(double xCoord, double yCoord, double x, double y, tRectangle rotaryRect) {
@@ -1121,7 +1121,7 @@ static uint32_t calc_tempo_drag_value(double xCoord, double yCoord, double x, do
     double   angle  = 0.0;
     uint32_t value  = 0;
 
-    if (gDialMode == eDialModeVertical) {
+    if (synthlib_dial_mode() == eDialModeVertical) {
         newVal     = (int)gGlobalSettings.masterClock + (int)((gDragPrevY - yCoord) * 241.0 / 200.0);
         gDragPrevY = yCoord;
 
@@ -1133,7 +1133,7 @@ static uint32_t calc_tempo_drag_value(double xCoord, double yCoord, double x, do
             newVal = 240;
         }
         value      = (uint32_t)newVal;
-    } else if (gDialMode == eDialModeHorizontal) {
+    } else if (synthlib_dial_mode() == eDialModeHorizontal) {
         newVal     = (int)gGlobalSettings.masterClock + (int)((xCoord - gDragPrevX) * 241.0 / 200.0);
         gDragPrevX = xCoord;
 
@@ -1178,7 +1178,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
 
     if (gMutator.active && (gMutator.draggingPanel || (gMutator.draggingSlider >= 0))) {
         handle_mutator_cursor_pos(coord);
-        gReDraw = true;
+        synthlib_request_redraw();
         return;
     }
 
@@ -1186,7 +1186,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     // below (cable highlight, knob/CC overlays, etc.) so nothing hidden behind the floater lights
     // up. gHoverConnector.active is already false from just above.
     if (gMutator.active && within_rectangle(coord, gMutator.panelRect)) {
-        gReDraw = true;
+        synthlib_request_redraw();
         return;
     }
 
@@ -1194,7 +1194,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         gDragPrevX = xCoord;
         gDragPrevY = yCoord;
         gDragSkipCount--;
-        gReDraw    = true;
+        synthlib_request_redraw();
         return;
     }
 
@@ -1230,10 +1230,10 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         int        newVal    = 0;
 
         if (vibModule != NULL) {
-            if (gDialMode == eDialModeHorizontal) {
+            if (synthlib_dial_mode() == eDialModeHorizontal) {
                 newVal     = (int)vibModule->param[0][VIBRATO_DEPTH].value + (int)((xCoord - gDragPrevX) * 101.0 / 200.0);
                 gDragPrevX = xCoord;
-            } else if (gDialMode == eDialModeRotary) {
+            } else if (synthlib_dial_mode() == eDialModeRotary) {
                 newVal = (int)angle_to_value(calculate_mouse_angle((tCoord){x, y}, gPatchParamRects[pPVibratoAmount]), 101);
             } else {
                 newVal     = (int)vibModule->param[0][VIBRATO_DEPTH].value + (int)((gDragPrevY - yCoord) * 101.0 / 200.0);
@@ -1260,10 +1260,10 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         int        newVal    = 0;
 
         if (vibModule != NULL) {
-            if (gDialMode == eDialModeHorizontal) {
+            if (synthlib_dial_mode() == eDialModeHorizontal) {
                 newVal     = (int)vibModule->param[0][VIBRATO_RATE].value + (int)((xCoord - gDragPrevX) * 128.0 / 200.0);
                 gDragPrevX = xCoord;
-            } else if (gDialMode == eDialModeRotary) {
+            } else if (synthlib_dial_mode() == eDialModeRotary) {
                 newVal = (int)angle_to_value(calculate_mouse_angle((tCoord){x, y}, gPatchParamRects[pPVibratoRate]), 128);
             } else {
                 newVal     = (int)vibModule->param[0][VIBRATO_RATE].value + (int)((gDragPrevY - yCoord) * 128.0 / 200.0);
@@ -1290,10 +1290,10 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         int        newVal      = 0;
 
         if (glideModule != NULL) {
-            if (gDialMode == eDialModeHorizontal) {
+            if (synthlib_dial_mode() == eDialModeHorizontal) {
                 newVal     = (int)glideModule->param[0][GLIDE_SPEED].value + (int)((xCoord - gDragPrevX) * 128.0 / 200.0);
                 gDragPrevX = xCoord;
-            } else if (gDialMode == eDialModeRotary) {
+            } else if (synthlib_dial_mode() == eDialModeRotary) {
                 newVal = (int)angle_to_value(calculate_mouse_angle((tCoord){x, y}, gPatchParamRects[pPGlideTime]), 128);
             } else {
                 newVal     = (int)glideModule->param[0][GLIDE_SPEED].value + (int)((gDragPrevY - yCoord) * 128.0 / 200.0);
@@ -1373,7 +1373,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                                 newVal = (int)range - 1;
                             }
                             value      = (uint32_t)newVal;
-                        } else if (gDialMode == eDialModeVertical) {
+                        } else if (synthlib_dial_mode() == eDialModeVertical) {
                             double refY   = altHeld ? gDragStartY : gDragPrevY;
                             int    newVal = (int)module->param[variation][gParamDragging.param].value + altBaseOffset + (int)((refY - yCoord) * (double)range / 200.0);
                             gDragPrevY = yCoord;
@@ -1386,7 +1386,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                                 newVal = (int)range - 1;
                             }
                             value      = (uint32_t)newVal;
-                        } else if (gDialMode == eDialModeHorizontal) {
+                        } else if (synthlib_dial_mode() == eDialModeHorizontal) {
                             double refX   = altHeld ? gDragStartX : gDragPrevX;
                             int    newVal = (int)module->param[variation][gParamDragging.param].value + altBaseOffset + (int)((xCoord - refX) * (double)range / 200.0);
                             gDragPrevX = xCoord;
@@ -1442,7 +1442,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                        && modeLocationList[module->mode[gParamDragging.mode].modeRef].type != paramTypeMenu) {
                         uint32_t modeRange = modeLocationList[module->mode[gParamDragging.mode].modeRef].range;
 
-                        if (gDialMode == eDialModeVertical) {
+                        if (synthlib_dial_mode() == eDialModeVertical) {
                             int newVal = (int)module->mode[gParamDragging.mode].value + (int)((gDragPrevY - yCoord) * (double)modeRange / 200.0);
                             gDragPrevY = yCoord;
 
@@ -1454,7 +1454,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                                 newVal = (int)modeRange - 1;
                             }
                             value      = (uint32_t)newVal;
-                        } else if (gDialMode == eDialModeHorizontal) {
+                        } else if (synthlib_dial_mode() == eDialModeHorizontal) {
                             int newVal = (int)module->mode[gParamDragging.mode].value + (int)((xCoord - gDragPrevX) * (double)modeRange / 200.0);
                             gDragPrevX = xCoord;
 
@@ -1583,7 +1583,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     }
     // Limit re-draw/render if nothing's happened
     // if (noAction == false) {   // Used to have this check, TODO - see if there's a way to not redraw on every move
-    gReDraw = true;
+    synthlib_request_redraw();
     // }
 }
 
@@ -1620,7 +1620,7 @@ void scroll_event(GLFWwindow * window, double x, double y) {
     }
 //    LOG_DEBUG("Area: %f %f - size: %i %i - barY %f %f %f \n", moduleArea.size.w,moduleArea.size.h, width,height, gScrollState.yBar, gScrollState.yRectangle.size.h,gScrollState.yRectangle.coord.y);
 
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 void char_event(GLFWwindow * window, unsigned int value) {
@@ -1707,7 +1707,7 @@ void char_event(GLFWwindow * window, unsigned int value) {
         }
     }
     LOG_DEBUG("char=%d\n", value);
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 void key_callback(GLFWwindow * window, int key, int scancode, int action, int mods) {
@@ -1717,13 +1717,13 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 
     if (file_browser_active()) {
         handle_file_browser_key(key, action);
-        gReDraw = true;
+        synthlib_request_redraw();
         return;
     }
 
     if (bank_browser_active()) {
         handle_bank_browser_key(key, action);
-        gReDraw = true;
+        synthlib_request_redraw();
         return;
     }
 
@@ -1735,12 +1735,12 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         } else {
             handle_alert_dialog_key(key, action);
         }
-        gReDraw = true;
+        synthlib_request_redraw();
         return;
     }
 
     if (handle_mutator_key(key, mods, action)) {
-        gReDraw = true;
+        synthlib_request_redraw();
         return;
     }
 
@@ -1805,7 +1805,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 gPatchNotesEdit.active = false;
             }
         }
-        gReDraw = true;
+        synthlib_request_redraw();
         return;
     } else if (gPatchNameEdit.active) {
         if (action == GLFW_PRESS || action == GLFW_REPEAT) {
@@ -2049,13 +2049,13 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         }
     } else if (gContextMenu.active && key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         close_context_menu();
-        gReDraw = true;
+        synthlib_request_redraw();
     } else if ((key == GLFW_KEY_DELETE || key == GLFW_KEY_BACKSPACE) && action == GLFW_PRESS) {
         if (gSelection.count > 0) {
             undo_push_delete_selection();
             delete_selection();
             update_module_up_rates();
-            gReDraw = true;
+            synthlib_request_redraw();
         }
     } else if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GL_TRUE);
@@ -2135,7 +2135,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
             settings_menu_open_synth();
         }
     }
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 #ifdef __cplusplus

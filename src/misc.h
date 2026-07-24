@@ -36,8 +36,6 @@ void setup_main_menu(void);
 void load_saved_settings(void);
 
 void save_zoom_factor(double zoom);
-void save_window_size(int w);
-void save_window_pos(int x, int y);
 
 // File/Settings/Backup/Restore menu actions — plain-C-callable bodies used by the in-window menu
 // bar (src/appMenuBar.c). File open/save and folder picking all go through the custom in-window
@@ -70,11 +68,6 @@ void restore_menu_patch_bank(void);
 void restore_menu_perf_bank(void);
 void restore_menu_synth_settings(void);
 void restore_menu_everything(void);
-
-// Controls menu — save_dial_mode persists the choice the same way save_zoom_factor/
-// save_window_size/save_window_pos do; setting gDialMode itself is plain global state the
-// caller sets directly (see src/appMenuBar.c).
-void save_dial_mode(int mode);
 
 // Registered with the file browser (SynthLib/src/fileBrowser.cpp) via
 // set_file_browser_directory_changed_callback() at startup — see setup_main_menu() — so it can

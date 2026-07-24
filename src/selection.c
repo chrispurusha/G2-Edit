@@ -340,7 +340,7 @@ void cut_selection(void) {
     undo_push_delete_selection();
     delete_selection();
     update_module_up_rates();
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 void paste_snapshot(uint32_t slot, uint32_t location,
@@ -470,7 +470,7 @@ void paste_snapshot(uint32_t slot, uint32_t location,
     }
 
     update_module_up_rates();
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 void paste_clipboard(void) {

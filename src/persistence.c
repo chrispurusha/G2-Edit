@@ -29,22 +29,10 @@
 #include "utilsGraphics.h"
 #include "fileBrowser.h"
 #include "prefs.h"
-
-void save_dial_mode(int mode) {
-    prefs_set_int("dialMode", mode);
-}
+#include "synthlibPersistence.h"
 
 void save_zoom_factor(double zoom) {
     prefs_set_double("zoomFactor", zoom);
-}
-
-void save_window_size(int w) {
-    prefs_set_int("windowWidth", w);
-}
-
-void save_window_pos(int x, int y) {
-    prefs_set_int("windowX", x);
-    prefs_set_int("windowY", y);
 }
 
 void save_file_browser_directory(const char * path) {
@@ -58,26 +46,12 @@ void save_file_browser_directory(const char * path) {
 // at startup from setup_main_menu() (misc.mm) — prefs_init() must run before this (also there),
 // so the settings file is loaded before any of these get_* calls.
 void load_saved_settings(void) {
-    gDialMode = (tDialMode)prefs_get_int("dialMode", (long)gDialMode);
+    synthlib_load_window_and_dial_mode(TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT);
 
     double       savedZoom       = prefs_get_double("zoomFactor", -1.0);
 
     if (savedZoom >= 0.24) {
         set_zoom_factor(savedZoom, (tCoord){0.0, 0.0});
-    }
-    long         savedW          = prefs_get_int("windowWidth", 0);
-
-    if (savedW > 0) {
-        int savedH = (int)savedW * TARGET_FRAME_BUFF_HEIGHT / TARGET_FRAME_BUFF_WIDTH;
-
-        resize_window((int)savedW, savedH);
-    }
-
-    if (prefs_has_key("windowX") && prefs_has_key("windowY")) {
-        int savedX = (int)prefs_get_int("windowX", 0);
-        int savedY = (int)prefs_get_int("windowY", 0);
-
-        reposition_window(savedX, savedY);
     }
     const char * savedBrowserDir = prefs_get_string("fileBrowserLastDirectory", NULL);
 
