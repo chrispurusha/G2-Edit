@@ -62,11 +62,11 @@ extern "C" {
 #include "bankBrowser.h"
 #include "alertDialog.h"
 #include "synthlibHost.h"
+#include "synthlibScale.h"
 
 static FT_Library      gLibrary        = {0};
 static FT_Face         gFace           = {0};
 static _Atomic bool    gNeedFocus      = false;
-static float           gContentScale   = 2.0f;
 
 #define MAX_NOTE_VISUAL_LINES    1000
 
@@ -180,50 +180,22 @@ static int find_note_cursor_line(int cursorPos) {
     return result;
 }
 
-static void update_framebuffer_state(int width, int height) {
-    // Update the OpenGL viewport to match the current framebuffer size
-    glViewport(0, 0, width, height);
-
-    set_render_width(width);   // Inform utilsGraphics
-    set_render_height(height); // Inform utilsGraphics
-    gGlobalGuiScale = (double)gContentScale * (double)width / (double)TARGET_FRAME_BUFF_WIDTH;
-
-    // Configure a 2D orthographic projection in framebuffer pixels
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0, width, height, 0, -1, 1);
-
-    // Restore the model-view matrix ready for normal rendering
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-}
-
 void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
-    update_framebuffer_state(width, height);
+    (void)window;
+    synthlib_scale_update(width, height);
 
     gReDraw = true;
 }
 
-// Fires when the window moves to a display with a different HiDPI scale
-// (e.g. dragging from a Retina built-in display to a non-Retina external
-// one, or vice versa) — gContentScale was previously hardcoded 2.0f, so
-// right-click menus and anything else deriving screen position from
-// gGlobalGuiScale landed mispositioned on any display where the real scale
-// wasn't 2.0. Recomputes gGlobalGuiScale via the same update_framebuffer_state()
-// framebuffer_size_callback() already uses, using the framebuffer's CURRENT
-// size — GLFW fires this alongside its own framebuffer-size change for the
-// same move, so querying rather than assuming avoids a stale width/height.
+// Fires when the window moves to a display with a different HiDPI scale (e.g. dragging from a
+// Retina built-in display to a non-Retina external one, or vice versa) — see synthlibScale.h's
+// own comment for the bug this fixes (gContentScale used to be hardcoded 2.0f here).
 static void content_scale_callback(GLFWwindow * window, float xscale, float yscale) {
     (void)yscale; // this app only ever uses a single uniform scale factor
 
-    gContentScale = xscale;
+    synthlib_scale_set_content_scale(window, xscale);
 
-    int fbWidth  = 0;
-    int fbHeight = 0;
-    glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
-    update_framebuffer_state(fbWidth, fbHeight);
-
-    gReDraw       = true;
+    gReDraw = true;
 }
 
 void window_size_callback(GLFWwindow * window, int width, int height) {
@@ -569,6 +541,7 @@ void init_graphics(void) {
         .requestRedraw = wake_glfw,
         .mouseCoord    = get_global_gui_scaled_mouse_coord,
     });
+    synthlib_scale_init(TARGET_FRAME_BUFF_WIDTH);
 
     glfwSetErrorCallback(error_callback);
 
@@ -595,18 +568,10 @@ void init_graphics(void) {
     // Real initial scale for whichever display the window opens on, not the
     // 2.0 (Retina-only) assumption this used to hardcode — see
     // content_scale_callback()'s own comment for what that broke.
-    {
-        float xscale = 0.0f;
-        float yscale = 0.0f;
-        glfwGetWindowContentScale((GLFWwindow *)gWindow, &xscale, &yscale);
-
-        if (xscale > 0.0f) {
-            gContentScale = xscale;
-        }
-    }
+    synthlib_scale_query_initial(gWindow);
 
     glfwGetFramebufferSize((GLFWwindow *)gWindow, &fbWidth, &fbHeight);
-    update_framebuffer_state(fbWidth, fbHeight);
+    synthlib_scale_update(fbWidth, fbHeight);
 
     glfwSetFramebufferSizeCallback((GLFWwindow *)gWindow, framebuffer_size_callback);
     glfwSetWindowContentScaleCallback((GLFWwindow *)gWindow, content_scale_callback);
