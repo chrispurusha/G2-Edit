@@ -38,7 +38,7 @@ extern "C" {
 static void signal_handler(int sigraised) {
     LOG_DEBUG("\nSig Handler!!! %d\n", sigraised);
 
-    gQuitAll = true;
+    synthlib_request_quit();
 
     _exit(0);
 }

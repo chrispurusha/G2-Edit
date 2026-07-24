@@ -114,7 +114,7 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
             gParamDragging.active          = true;
             gParamDragging.startMorphRange = param->morphRange[gMorphGroupFocus];
 
-            if ((gDialMode != eDialModeRotary) || (paramType == paramTypeSlider)) {
+            if ((synthlib_dial_mode() != eDialModeRotary) || (paramType == paramTypeSlider)) {
                 start_cursor_drag();
             }
         } else if (paramType == paramTypePush) {
@@ -167,7 +167,7 @@ static void mode_click_handler(tCoord coord, eClickPhase phase, void * userData)
             gParamDragging.startValue = mode->value;
             gParamDragging.active     = true;
 
-            if (gDialMode != eDialModeRotary) {
+            if (synthlib_dial_mode() != eDialModeRotary) {
                 start_cursor_drag();
             }
         }
@@ -214,10 +214,10 @@ static void module_body_click_handler(tCoord coord, eClickPhase phase, void * us
     }
     tModuleClickCtx * ctx             = (tModuleClickCtx *)userData;
     tModule *         module          = get_module(ctx->key);
-    bool              multiSelectHeld = glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-                                        || glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS
-                                        || glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS
-                                        || glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
+    bool              multiSelectHeld = glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
+                                        || glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS
+                                        || glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_LEFT_SUPER) == GLFW_PRESS
+                                        || glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
 
     if (multiSelectHeld) {
         selection_toggle(module->key);
@@ -239,10 +239,10 @@ static void drag_area_click_handler(tCoord coord, eClickPhase phase, void * user
     }
     tModuleClickCtx * ctx             = (tModuleClickCtx *)userData;
     tModule *         module          = get_module(ctx->key);
-    bool              multiSelectHeld = glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-                                        || glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS
-                                        || glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS
-                                        || glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
+    bool              multiSelectHeld = glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
+                                        || glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS
+                                        || glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_LEFT_SUPER) == GLFW_PRESS
+                                        || glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
 
     if (multiSelectHeld) {
         selection_toggle(module->key);
@@ -312,7 +312,7 @@ static void morph_param_click_handler(tCoord coord, eClickPhase phase, void * us
             gMorphGroupFocus               = i;
             gParamDragging.startMorphRange = param->morphRange[gMorphGroupFocus];
 
-            if (gDialMode != eDialModeRotary) {
+            if (synthlib_dial_mode() != eDialModeRotary) {
                 start_cursor_drag();
             }
         }

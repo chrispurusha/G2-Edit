@@ -116,13 +116,13 @@ static void handle_button(tTopbarControlId controlId) {
         case topbarUndoId:
         {
             undo_undo();
-            gReDraw = true;
+            synthlib_request_redraw();
             break;
         }
         case topbarRedoId:
         {
             undo_redo();
-            gReDraw = true;
+            synthlib_request_redraw();
             break;
         }
         default:
@@ -184,7 +184,7 @@ bool handle_topbar_left_down(tCoord coord, uint32_t slot) {
             gParamDragging.startValue = volMod ? volMod->param[0][VOLUME_LEVEL].value : 0;
             gParamDragging.active     = true;
 
-            if (gDialMode != eDialModeRotary) {
+            if (synthlib_dial_mode() != eDialModeRotary) {
                 start_cursor_drag();
             }
             found                     = true;
@@ -195,7 +195,7 @@ bool handle_topbar_left_down(tCoord coord, uint32_t slot) {
         if (within_rectangle(coord, gTopbarControls[topbarTempoDialId].rectangle)) {
             gTempoDragging = true;
 
-            if (gDialMode != eDialModeRotary) {
+            if (synthlib_dial_mode() != eDialModeRotary) {
                 start_cursor_drag();
             }
             found          = true;
@@ -225,7 +225,7 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
                     gPatchDescr[slot].visible[i] = !gPatchDescr[slot].visible[i];
                 }
 
-                gReDraw             = true;
+                synthlib_request_redraw();
                 messageContent.cmd  = eMsgCmdWritePatchDescr;
                 messageContent.slot = slot;
                 msg_send(&gCommandQueue, &messageContent);
@@ -238,7 +238,7 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
     if (found == false) {
         if (within_rectangle(coord, gTopbarControls[topbarHideAllCablesId].rectangle)) {
             gCablesHideAll = !gCablesHideAll;
-            gReDraw        = true;
+            synthlib_request_redraw();
             found          = true;
         }
     }
@@ -246,7 +246,7 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
     if (found == false) {
         if (within_rectangle(coord, gTopbarControls[topbarTransparentCablesId].rectangle)) {
             gCablesTransparent = !gCablesTransparent;
-            gReDraw            = true;
+            synthlib_request_redraw();
             found              = true;
         }
     }
@@ -256,7 +256,7 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
             bool running = !gGlobalSettings.masterClockRunning;
             gGlobalSettings.masterClockRunning = (uint8_t)running;
             send_master_clock_run((uint32_t)running);
-            gReDraw                            = true;
+            synthlib_request_redraw();
             found                              = true;
         }
     }

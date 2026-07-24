@@ -417,7 +417,7 @@ static void apply_move(tUndoMovePayload * p, bool isUndo) {
         send_module_move_msg(mod);
     }
 
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 static void recreate_module(tUndoDeletePayload * p, tClipboardModule * cm) {
@@ -540,7 +540,7 @@ static void apply_delete_undo(tUndoDeletePayload * p) {
     }
 
     update_module_up_rates();
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 static void apply_delete_redo(tUndoDeletePayload * p) {
@@ -555,7 +555,7 @@ static void apply_delete_redo(tUndoDeletePayload * p) {
 
     selection_clear();
     update_module_up_rates();
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 static void apply_paste_undo(tUndoPastePayload * p) {
@@ -569,7 +569,7 @@ static void apply_paste_undo(tUndoPastePayload * p) {
 
     selection_clear();
     update_module_up_rates();
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 static void apply_paste_redo(tUndoPastePayload * p) {
@@ -643,7 +643,7 @@ static void apply_param(tUndoParamPayload * p, bool isUndo) {
         mod->param[p->variation][p->index].value = (uint8_t)value;
         send_param_value(p->key.slot, p->key, p->index, p->variation, value);
     }
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 static void apply_knob_entry(uint32_t slot, uint32_t idx, const tKnob * k) {
@@ -673,7 +673,7 @@ static void apply_knob(tUndoKnobPayload * p, bool isUndo) {
         apply_knob_entry(p->slot, p->index[i], isUndo ? &p->before[i] : &p->after[i]);
     }
 
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 void undo_push_knob(uint32_t slot,
@@ -714,7 +714,7 @@ static void apply_module_name(tUndoModuleNamePayload * p, bool isUndo) {
     msg.moduleLabelData.moduleKey = p->key;
     COPY_STRING(msg.moduleLabelData.name, name);
     msg_send(&gCommandQueue, &msg);
-    gReDraw                       = true;
+    synthlib_request_redraw();
 }
 
 void undo_push_module_name(tModuleKey key, const char * oldName, const char * newName) {
@@ -754,7 +754,7 @@ static void apply_param_name(tUndoParamNamePayload * p, bool isUndo) {
     msg.paramLabelData.paramIndex = pi;
     COPY_STRING(msg.paramLabelData.name, set ? name : "");
     msg_send(&gCommandQueue, &msg);
-    gReDraw                       = true;
+    synthlib_request_redraw();
 }
 
 void undo_push_param_name(tModuleKey key, uint32_t paramIndex,
@@ -792,7 +792,7 @@ static void apply_patch_descr(tUndoPatchDescrPayload * p, bool isUndo) {
     msg.cmd  = eMsgCmdWritePatchDescr;
     msg.slot = p->slot;
     msg_send(&gCommandQueue, &msg);
-    gReDraw  = true;
+    synthlib_request_redraw();
 }
 
 static void apply_module_exclude(tUndoModuleExcludePayload * p, bool isUndo) {
@@ -803,7 +803,7 @@ static void apply_module_exclude(tUndoModuleExcludePayload * p, bool isUndo) {
         module->excludeFromMutation = value;
         send_mutation_lock_value(p->key.slot, p->key, value);
     }
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 void undo_push_module_exclude(tModuleKey key, uint8_t oldValue, uint8_t newValue) {
@@ -846,7 +846,7 @@ static void apply_patch_name(tUndoPatchNamePayload * p, bool isUndo) {
     msg.slot = p->slot;
     COPY_STRING(msg.patchName.name, name);
     msg_send(&gCommandQueue, &msg);
-    gReDraw  = true;
+    synthlib_request_redraw();
 }
 
 void undo_push_patch_name(uint32_t slot, const char * oldName, const char * newName) {
@@ -871,7 +871,7 @@ static void apply_perf_name(tUndoPerfNamePayload * p, bool isUndo) {
     COPY_STRING(gGlobalSettings.perfName, name);
     msg.cmd = eMsgCmdWritePerfName;
     msg_send(&gCommandQueue, &msg);
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 void undo_push_perf_name(const char * oldName, const char * newName) {
@@ -909,7 +909,7 @@ static void apply_perf_setting(tUndoPerfSettingPayload * p, bool isUndo) {
             break;
     }
     send_perf_settings_msg();
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 void undo_push_perf_setting(uint8_t which, int32_t slot, uint8_t oldValue, uint8_t newValue) {
