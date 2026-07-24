@@ -212,7 +212,7 @@ static void action_copy_variation(int index) {
     msg_send(&gCommandQueue, &msg);
 
     gContextMenu.active                 = false;
-    gReDraw                             = true;
+    synthlib_request_redraw();
 }
 
 // ── Module / cable / morph actions ─────────────────────────────────────────
@@ -287,7 +287,7 @@ static void menu_action_set_cable_colour(int index) {
         }
     }
 
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 static void menu_action_delete_cable(int index) {
@@ -374,7 +374,7 @@ static void menu_action_copy_module(int index) {
 static void menu_action_cut_module(int index) {
     ensure_module_selected();
     cut_selection();
-    gReDraw = true;
+    synthlib_request_redraw();
 }
 
 static void menu_action_paste(int index) {
@@ -403,7 +403,7 @@ static void action_rename_module(int index) {
         gModuleNameEdit.cursorPos = (uint32_t)strlen(gModuleNameEdit.buffer);
     }
     gContextMenu.active = false;
-    gReDraw             = true;
+    synthlib_request_redraw();
 }
 
 // Patch Mutator "Exclude From Mutation" toggle. Applies to every module in the current
@@ -443,7 +443,7 @@ static void action_toggle_exclude_from_mutation(int index) {
     }
 
     gContextMenu.active = false;
-    gReDraw             = true;
+    synthlib_request_redraw();
 }
 
 // Only ever called for items with no subMenu — handle_context_menu_click()/
@@ -486,7 +486,7 @@ static void action_rename_morph_label(int index) {
         gParamNameEdit.cursorPos  = (uint32_t)strlen(gParamNameEdit.buffer);
     }
     gContextMenu.active    = false;
-    gReDraw                = true;
+    synthlib_request_redraw();
 }
 
 // ── Module creation helpers ─────────────────────────────────────────────────
@@ -770,7 +770,7 @@ static void action_assign_knob(int index) {
                    hasSecond ? &existingAfter : NULL);
 
     gContextMenu.active                           = false;
-    gReDraw                                       = true;
+    synthlib_request_redraw();
 }
 
 static void action_deassign_knob(int index) {
@@ -792,7 +792,7 @@ static void action_deassign_knob(int index) {
         undo_push_knob(slot, (uint32_t)knobIndex, &before, &after, -1, NULL, NULL);
     }
     gContextMenu.active = false;
-    gReDraw             = true;
+    synthlib_request_redraw();
 }
 
 // Global knob assignments live in a single flat array shared across all Slots
@@ -840,7 +840,7 @@ static void action_assign_global_knob(int index) {
     msg_send(&gCommandQueue, &msg);
 
     gContextMenu.active                      = false;
-    gReDraw                                  = true;
+    synthlib_request_redraw();
 }
 
 static void action_deassign_global_knob(int index) {
@@ -858,7 +858,7 @@ static void action_deassign_global_knob(int index) {
         msg_send(&gCommandQueue, &msg);
     }
     gContextMenu.active = false;
-    gReDraw             = true;
+    synthlib_request_redraw();
 }
 
 // ── MIDI CC actions ──────────────────────────────────────────────────────────
@@ -951,7 +951,7 @@ static void action_assign_midi_cc(int index) {
     msg_send(&gCommandQueue, &msg);
 
     gContextMenu.active             = false;
-    gReDraw                         = true;
+    synthlib_request_redraw();
 }
 
 static void action_deassign_midi_cc(int index) {
@@ -971,7 +971,7 @@ static void action_deassign_midi_cc(int index) {
         msg_send(&gCommandQueue, &msg);
     }
     gContextMenu.active = false;
-    gReDraw             = true;
+    synthlib_request_redraw();
 }
 
 static void action_set_toggle_value(int index) {
@@ -995,7 +995,7 @@ static void action_set_toggle_value(int index) {
         }
     }
     gContextMenu.active = false;
-    gReDraw             = true;
+    synthlib_request_redraw();
 }
 
 void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, uint32_t paramRef) {
@@ -1038,7 +1038,7 @@ static void action_set_mode_value(int index) {
         undo_push_mode_change(gMenuContext.moduleKey, modeIdx, oldValue, newValue);
     }
     gContextMenu.active = false;
-    gReDraw             = true;
+    synthlib_request_redraw();
 }
 
 void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeIndex, uint32_t modeRef) {
@@ -1084,7 +1084,7 @@ static void action_rename_param_label(int index) {
         gParamNameEdit.cursorPos  = (uint32_t)strlen(gParamNameEdit.buffer);
     }
     gContextMenu.active = false;
-    gReDraw             = true;
+    synthlib_request_redraw();
 }
 
 void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex) {

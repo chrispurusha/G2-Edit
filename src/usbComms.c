@@ -4129,7 +4129,7 @@ static void * usb_thread_loop(void * arg) {
     }
     // Only if needed: libusb_set_option(libUsbCtx, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_WARNING);
 
-    while (gQuitAll == false) {
+    while (!synthlib_quit_requested()) {
         state_handler();
     }
     pthread_mutex_lock(&usbStaticMutex);
