@@ -31,6 +31,7 @@ extern "C" {
 #pragma clang diagnostic pop
 
 #include <math.h>
+#include <stdint.h>
 
 #include "defs.h"
 #include "synthlibDefs.h"
@@ -48,27 +49,45 @@ extern "C" {
 #include "undo.h"
 #include "clickRegion.h"
 
-// ── Click-region registration (dial/module click, proof of concept) ────────
+// ── Click-region registration ────────────────────────────────────────────────
 //
-// Regular (non-morph) module params and the module body itself register a
-// clickable rect each frame right where render_param_common()/render_module()
-// already compute it, instead of mouseHandle.c re-deriving hit-testing over
-// every active module. Morph group dials, mode toggles, connectors, and the
-// module drag area are not yet migrated — those still go through the legacy
-// per-module loops in mouseHandle.c.
+// Every clickable widget on the canvas — module params, mode toggles,
+// connectors, the module body/drag-handle strip, and the morph group
+// overlay — registers a clickable rect each frame right where its render
+// function already computes it, instead of mouseHandle.c re-deriving
+// hit-testing over every active module. Morph group dials register at
+// eClickLayerPanel (a fixed on-screen overlay, unlike everything else here,
+// which is eClickLayerCanvas and scrolls with the module area) — dispatch
+// checks Panel before Canvas unconditionally, which is what lets a scrolled
+// regular module sit visually underneath the morph overlay without stealing
+// its clicks (see mouse_button()'s own comment on this).
 
 typedef struct {
     tModuleKey key;
     uint32_t   paramIndex;
 } tParamClickCtx;
 
-static tParamClickCtx  sParamClickCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS];
+static tParamClickCtx     sParamClickCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS];
 
 typedef struct {
     tModuleKey key;
 } tModuleClickCtx;
 
-static tModuleClickCtx sModuleClickCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES];
+static tModuleClickCtx    sModuleClickCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES];
+
+typedef struct {
+    tModuleKey key;
+    uint32_t   modeIndex;
+} tModeClickCtx;
+
+static tModeClickCtx      sModeClickCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_MODES];
+
+typedef struct {
+    tModuleKey key;
+    uint32_t   connectorIndex;
+} tConnectorClickCtx;
+
+static tConnectorClickCtx sConnectorClickCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_CONNECTORS];
 
 // Mirrors the params loop previously in mouseHandle.c's
 // handle_module_press_for_module()/handle_module_release_for_module() — see
@@ -126,6 +145,62 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
             param->value = 0;
         }
     }
+}
+
+// Mirrors the modes loop previously in mouseHandle.c's
+// handle_module_press_for_module()/handle_module_release_for_module() — see
+// git history for that code. Modes only ever have two release-relevant
+// types (Menu, Toggle); anything else (e.g. paramTypeOscWave) is a plain
+// drag, armed on press.
+static void mode_click_handler(tCoord coord, eClickPhase phase, void * userData) {
+    tModeClickCtx * ctx      = (tModeClickCtx *)userData;
+    tModule *       module   = get_module(ctx->key);
+    tMode *         mode     = &module->mode[ctx->modeIndex];
+    tParamType      modeType = modeLocationList[mode->modeRef].type;
+
+    if (phase == eClickPress) {
+        if ((modeType != paramTypeToggle) && (modeType != paramTypeMenu)) {
+            memset(&gParamDragging, 0, sizeof(gParamDragging));
+            gParamDragging.moduleKey  = module->key;
+            gParamDragging.type3      = paramType3Mode;
+            gParamDragging.mode       = ctx->modeIndex;
+            gParamDragging.startValue = mode->value;
+            gParamDragging.active     = true;
+
+            if (gDialMode != eDialModeRotary) {
+                start_cursor_drag();
+            }
+        }
+    } else if (phase == eClickRelease) {
+        if (modeType == paramTypeMenu) {
+            open_mode_toggle_menu(coord, module->key, ctx->modeIndex, mode->modeRef);
+        } else if (modeType == paramTypeToggle) {
+            uint32_t oldModeVal = mode->value;
+
+            mode->value = (mode->value + 1) % modeLocationList[mode->modeRef].range;
+            send_mode_value(ctx->key.slot, module->key, ctx->modeIndex, mode->value);
+            undo_push_mode_change(module->key, ctx->modeIndex, oldModeVal, mode->value);
+        }
+    }
+}
+
+// Mirrors the connectors loop previously in mouseHandle.c's
+// handle_module_press_for_module() — see git history for that code. Press
+// only: connector release (completing a cable) is handled entirely
+// separately, by handle_cable_connect() re-scanning every connector against
+// the release coord directly — it doesn't care which connector (if any) was
+// originally pressed, so it isn't a per-widget dispatch target.
+static void connector_click_handler(tCoord coord, eClickPhase phase, void * userData) {
+    if (phase != eClickPress) {
+        return;
+    }
+    tConnectorClickCtx * ctx    = (tConnectorClickCtx *)userData;
+    tModule *            module = get_module(ctx->key);
+
+    gCableDrag.fromModuleKey      = module->key;
+    gCableDrag.fromConnectorIndex = ctx->connectorIndex;
+    convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, coord);
+    gCableDrag.active             = true;
 }
 
 // Mirrors the final "clicking anywhere else on the module body selects
@@ -198,6 +273,57 @@ static void drag_area_click_handler(tCoord coord, eClickPhase phase, void * user
         gModuleDrag.snapshotColumn[0] = module->column;
         gModuleDrag.snapshotRow[0]    = module->row;
         gModuleDrag.snapshotCount     = 1;
+    }
+}
+
+// Mirrors the morph-specific branch of the params loop previously in
+// mouseHandle.c's handle_module_press_for_module()/
+// handle_module_release_for_module() (location == locationMorph) — see git
+// history for that code. Registered at eClickLayerPanel by
+// render_morph_groups() below, not eClickLayerCanvas like every other
+// handler in this file — see this file's own top-of-file comment for why.
+// userData carries the param index (0..NUM_MORPHS*2-1) as a plain integer,
+// not a pointer — the morph module is a fixed singleton ({gSlot,
+// locationMorph, 1}), so there's no per-instance context to point to the way
+// a regular module's tModuleKey needs.
+//
+// Unlike a regular module param, morph's own paramType is derived purely
+// from which half of the index range i falls in (i < NUM_MORPHS = the dial
+// itself, always paramTypeCommonDial; i >= NUM_MORPHS = the knob/morph-name
+// label underneath it, always paramTypeToggle) — never from
+// paramLocationList[param->paramRef].type the way param_click_handler reads
+// it. That collapses the original 3-way paramType branch down to: the dial
+// half only ever arms a drag (on press), the label half only ever toggles
+// (on release, flipping the isKnob flag render_morph_groups() reads).
+static void morph_param_click_handler(tCoord coord, eClickPhase phase, void * userData) {
+    (void)coord;
+    uint32_t  i         = (uint32_t)(intptr_t)userData;
+    tModule * module    = get_module((tModuleKey){gSlot, (uint32_t)locationMorph, 1});
+    uint32_t  variation = gPatchDescr[gSlot].activeVariation;
+    tParam *  param     = &module->param[variation][i];
+
+    if (phase == eClickPress) {
+        if (i < NUM_MORPHS) {
+            gParamDragging.moduleKey       = module->key;
+            gParamDragging.type3           = paramType3Param;
+            gParamDragging.param           = i;
+            gParamDragging.startValue      = param->value;
+            gParamDragging.active          = true;
+            gMorphGroupFocus               = i;
+            gParamDragging.startMorphRange = param->morphRange[gMorphGroupFocus];
+
+            if (gDialMode != eDialModeRotary) {
+                start_cursor_drag();
+            }
+        }
+    } else if (phase == eClickRelease) {
+        if (i >= NUM_MORPHS) {
+            uint32_t oldParamVal = param->value;
+
+            param->value = (param->value + 1) % 2;
+            send_param_value(gSlot, module->key, i, variation, param->value);
+            undo_push_param_change(module->key, i, variation, oldParamVal, param->value);
+        }
     }
 }
 
@@ -547,8 +673,6 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
 
 void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef, uint32_t modeIndex) {
     uint32_t modeValue = module->mode[modeIndex].value;
-    uint32_t slot      = gSlot;
-    uint32_t variation = gPatchDescr[slot].activeVariation;
 
     module->mode[0].modeRef = modeRef;
 
@@ -558,7 +682,12 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             char buff[16] = {0};
 
             snprintf(buff, sizeof(buff), "%u", module->mode[0].value);
-            module->mode[modeIndex].rectangle = render_dial_with_text(moduleArea, rectangle, (char *)modeLocationList[modeRef].label, buff, rectangle.size.h / 4.0, module->mode[0].value, modeLocationList[modeRef].range, 0, RGB_GREY_5);  // TODO: Check if Mode can be morphed
+            module->mode[modeIndex].rectangle                                                   = render_dial_with_text(moduleArea, rectangle, (char *)modeLocationList[modeRef].label, buff, rectangle.size.h / 4.0, module->mode[0].value, modeLocationList[modeRef].range, 0, RGB_GREY_5); // TODO: Check if Mode can be morphed
+            sModeClickCtx[module->key.slot][module->key.location][module->key.index][modeIndex] = (tModeClickCtx){
+                module->key, modeIndex
+            };
+            register_click_region(module->mode[modeIndex].rectangle, eClickLayerCanvas, mode_click_handler,
+                                  &sModeClickCtx[module->key.slot][module->key.location][module->key.index][modeIndex]);
             break;
         }
         case paramTypeToggle:
@@ -584,7 +713,12 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             //    set_rgb_colour(RGB_BACKGROUND_GREY);
             //}
 
-            module->mode[modeIndex].rectangle = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight, eCache), textHeight}}, strMap[modeValue], RGB_BACKGROUND_GREY);
+            module->mode[modeIndex].rectangle                                                   = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight, eCache), textHeight}}, strMap[modeValue], RGB_BACKGROUND_GREY);
+            sModeClickCtx[module->key.slot][module->key.location][module->key.index][modeIndex] = (tModeClickCtx){
+                module->key, modeIndex
+            };
+            register_click_region(module->mode[modeIndex].rectangle, eClickLayerCanvas, mode_click_handler,
+                                  &sModeClickCtx[module->key.slot][module->key.location][module->key.index][modeIndex]);
             break;
         }
         default:
@@ -722,6 +856,11 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
     } else {
         module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, {rectangle.coord, {rectangle.size.w, rectangle.size.h}});
     }
+    sConnectorClickCtx[module->key.slot][module->key.location][module->key.index][connectorIndex] = (tConnectorClickCtx){
+        module->key, connectorIndex
+    };
+    register_click_region(module->connector[connectorIndex].rectangle, eClickLayerCanvas, connector_click_handler,
+                          &sConnectorClickCtx[module->key.slot][module->key.location][module->key.index][connectorIndex]);
     set_rgb_colour(RGB_BLACK);
     render_circle_part(moduleArea, {rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)}, rectangle.size.w / 4.0, 10.0, 0.0, 10.0);
 }
@@ -1203,6 +1342,8 @@ void render_morph_groups(void) {
                 dialColour = RGB_GREY_3;
             }
             gParamRectangle[module->key.slot][module->key.location][module->key.index][i]              = render_dial_with_text(mainArea, {{rectangle.coord.x, rectangle.coord.y + 16}, {rectangle.size.w, rectangle.size.h}}, NULL, dialValueStr, rectangle.size.h / 4.0, module->param[variation][i].value, 128, module->param[variation][i].morphRange[gMorphGroupFocus], dialColour);
+            register_click_region(gParamRectangle[module->key.slot][module->key.location][module->key.index][i],
+                                  eClickLayerPanel, morph_param_click_handler, (void *)(intptr_t)i);
 
             if (  gParamNameEdit.active
                && gParamNameEdit.moduleKey.slot == module->key.slot
@@ -1219,6 +1360,8 @@ void render_morph_groups(void) {
                 gMorphLabelRect[i] = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y + 57}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, RGB_BACKGROUND_GREY);
             }
             gParamRectangle[module->key.slot][module->key.location][module->key.index][i + NUM_MORPHS] = gMorphLabelRect[i];
+            register_click_region(gParamRectangle[module->key.slot][module->key.location][module->key.index][i + NUM_MORPHS],
+                                  eClickLayerPanel, morph_param_click_handler, (void *)(intptr_t)(i + NUM_MORPHS));
 
             rectangle.coord.x                                                                         += (STANDARD_TEXT_HEIGHT * 4) + 5;
         }

@@ -389,12 +389,10 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
     return retVal;
 }
 
-// Morph group knobs are drawn as a fixed on-screen overlay (render_morph_groups()
-// runs after render_modules() each frame, at a screen position independent of
-// canvas scroll), so a regular module can scroll to sit visually underneath
-// them. This must be checked — and win — before dispatch_click_region(), which
-// only knows about regular (non-morph) modules' registered regions and would
-// otherwise happily fire for whatever's hidden underneath. See mouse_button().
+// Pure legacy fallback now — morph group dials register their own click
+// region (eClickLayerPanel, moduleGraphics.cpp's morph_param_click_handler)
+// which dispatch_click_region() already checks, and wins over regular
+// modules, before this is ever reached. See mouse_button().
 static bool handle_morph_press(tCoord coord, tMouseButton mouseButton) {
     uint32_t slot      = gSlot;
     uint32_t variation = gPatchDescr[slot].activeVariation;
@@ -862,19 +860,20 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 found = handle_scrollbar_click(coord);
             }
 
-            // Morph group dials are a fixed on-screen overlay that a scrolled regular
-            // module can sit visually underneath, so they must be checked — and win —
-            // before the click-region dispatch below, which doesn't know about morph.
-            if (!found && !gContextMenu.active) {
-                found = handle_morph_press(coord, mouseButton);
-            }
-
-            // Fast path for regular (non-morph) module param/body clicks, registered at
-            // render time (see moduleGraphics.cpp). Falls through to the legacy per-module
-            // loop below for anything not yet migrated: mode toggles, connectors, and the
-            // module drag area (morph is already handled above).
+            // Every clickable widget — module params/modes/connectors/body/drag-handle
+            // AND the morph group overlay — registers a click region at render time (see
+            // moduleGraphics.cpp). Morph registers at eClickLayerPanel, everything else at
+            // eClickLayerCanvas, so dispatch itself (not call order) guarantees morph wins
+            // over a scrolled regular module that happens to sit visually underneath it —
+            // see moduleGraphics.cpp's own top-of-file comment. handle_morph_press() and
+            // handle_module_press() below are now pure legacy fallback, kept for anything
+            // dispatch doesn't match (should be nothing today).
             if (!found && !gContextMenu.active) {
                 found = dispatch_click_region(coord, eClickPress);
+            }
+
+            if (!found && !gContextMenu.active) {
+                found = handle_morph_press(coord, mouseButton);
             }
 
             if (!found && !gContextMenu.active) {
@@ -983,13 +982,16 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 }
             }
 
-            // See the matching mouseButtonLeftDown case: morph must win before dispatch.
+            // See the matching mouseButtonLeftDown case: dispatch is layer-ordered
+            // (morph's eClickLayerPanel beats everything else's eClickLayerCanvas), so
+            // call order here no longer matters — handle_morph_release()/
+            // handle_module_release() are pure legacy fallback.
             if (!found) {
-                found = handle_morph_release(coord, mouseButton);
+                found = dispatch_click_region(coord, eClickRelease);
             }
 
             if (!found) {
-                found = dispatch_click_region(coord, eClickRelease);
+                found = handle_morph_release(coord, mouseButton);
             }
 
             if (!found) {
