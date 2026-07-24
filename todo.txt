@@ -1,10 +1,10 @@
 G2-Edit TODO (priority order)
 
-- graphics.cpp:752-753 — perf-mode write path relies on a blind 2-second usleep instead of real state confirmation
-- usbComms.c — centralize repeated unsolicited send_stop() calls (lines ~3590-3781) instead of scattering them
-- usbComms.c — resolve perf-mode ambiguities: synth vs. perf ownership (line 342), voice-count ordering on increase (line 576/582), unconfirmed message case (line 903)
-- graphics.cpp:738 — move parse_patch to a shared file so both USB and file-load paths can use it
-- moduleGraphics.cpp — refactor volume-meter/label rendering into utilsGraphics.cpp; fix upRate flag being applied too broadly (should be audio-connector-only, line 540); resolve "can Mode be morphed?" question (line 387)
+- graphics.cpp:716 — perf-mode write path relies on a blind 2-second usleep instead of real state confirmation
+- usbComms.c — centralize repeated unsolicited send_stop() calls (6 sites, ~3460-4066) instead of scattering them
+- usbComms.c — resolve perf-mode ambiguities: synth vs. perf ownership, voice-count ordering on increase, unconfirmed message case (search parse_perf_header/parse_slot_selection/SUB_RESPONSE_PATCH_VERSION_CHANGE area — exact line numbers have drifted, topic still open)
+- graphics.cpp:701 — move parse_patch to a shared file so both USB and file-load paths can use it
+- moduleGraphics.cpp — refactor volume-meter/label rendering into utilsGraphics.cpp; fix upRate flag being applied too broadly (should be audio-connector-only); resolve "can Mode be morphed?" question
 - OscA(97) — add new UI element for Freq control (param 0) that accounts for param 6 Pitch Type
 - Sw8-1(15), ValSw1-2(17) — need more resources
 - OscShpB(8) — check mode handling
@@ -12,18 +12,72 @@ G2-Edit TODO (priority order)
 - Verify remaining 117 unverified module types (filters, oscillators, delay lines, sequencer/logic, MIDI send/receive, Resonator, Operator, Random* family, etc.) — see "Module dev debug notes.txt"
 - Add performance keyboard split/layer/zone UI (manual's "Layering Patches" section) — currently only the standalone NoteZone module exists
 - Add a dedicated master-clock/tempo panel (currently only basic send/receive clock toggles exist)
-- globalVars.h:63,70,71 — nullify knob/controller arrays on new patch load
-- msgQueue.h:284 — remove unused mutex
-- defs.h:162 — confirm whether perf-header sub-response is ever actually used
-- rationalise architecture and commonalise components for other projects
-  - Add a generic hit-rectangle registry to SynthLib (hitRegistry.h/.c): tHitId keyed off existing tModuleKey/tCableKey convention (make_module_hit_id), hit_registry_begin_frame/register/find/get, flat fixed-capacity array cleared per frame — modeled on immediate-mode GUI hit-testing (Dear ImGui style) rather than per-project fixed-size arrays
-  - Migrate G2-Edit's gParamRectangle[slot][location][index][param] and other named hit rects (gPatchParamClose, gTopbarControls[].rectangle, etc.) onto the SynthLib registry, module-by-module, replacing direct array indexing with register/get calls
-  - Once mouse hit-testing is decoupled from render-time global arrays, generalize mousePanels.c/mouseTopbar.c/selection.c into shared SynthLib components so Z1-Edit/EmuUtility can adopt them instead of maintaining independent mouseHandle.c implementations
-  - Evaluate generalizing the msgQueue.c + usbComms.c thread/message-queue pattern into SynthLib as a transport-agnostic comms layer (USB vs MIDI as pluggable backend), since Z1-Edit/EmuUtility currently talk to MIDI directly with no shared queue abstraction
-  - Evaluate extracting menus.c's declarative build/dispatch mechanism into SynthLib (item tables stay per-project; G2-Edit's menus.c is 2186 lines vs 114 in Z1-Edit/EmuUtility with ~100% divergence)
-  - Finish moving G2-Edit's remaining imperative layout math into moduleResources.h-style declarative entries (e.g. render_volume_common's inline coord stepping, one-off globals like gKnobOverlayRect) so position data is consistently table-driven, not computed ad hoc
-  - Design one shared descriptor schema (control type, rect+anchor, range/default, string-map ref, colour-map ref) reusable as both a compile-time C table (G2-Edit) and a runtime-parsed file (Z1-Edit) — same shape, swappable loader — rather than Z1 growing a divergent format
-  - Prototype a runtime-parsed panel description for Z1-Edit as the pilot (single fixed panel, no dynamic module instantiation like G2), replacing z1Graphics.cpp's named-global dial rects and inline literal coords
-  - Land the anchor-based layout resolver (adjust_rectangle equivalent) alongside the hit-registry in SynthLib, so both G2's compile-time tables and Z1's runtime-parsed descriptions feed the same generic panel engine
-  - Add page-selection tabs to Z1-Edit's top bar (e.g. Synth, Effects; split further e.g. Oscillators/Filters if a page runs out of room) — generalize G2-Edit's existing topbarControls.def X-macro + set_exclusive_button_highlight() pattern (currently used for the VA/FX toggle and slot A-D tabs) into a shared SynthLib "page tab row" concept instead of reimplementing it in Z1
-  - Represent pages as a grouping construct in the shared descriptor schema (page = label + hit id + set of controls); only the active page's controls get rendered/registered per frame, which the hit-registry's per-frame clear already gives for free
+- globalVars.h:60,67,68 — nullify knob/controller arrays on new patch load
+- msgQueue.h:291 — remove unused mutex (semMutex/semCond at 292-293 replaced it; plain mutex now dead)
+- defs.h:179 — confirm whether perf-header sub-response (SUB_RESPONSE_PERF_HEADER, 0x11) is ever actually used
+
+- rationalise architecture and commonalise components for other projects (status as of 2026-07-24)
+
+  DONE:
+  - Generic hit-rectangle registry — shipped as SynthLib's clickRegion.h/.c (tClickHandler/eClickLayer/
+    register_click_region/dispatch_click_region), rolled out to all three apps' render/mouse code.
+  - Runtime-parsed panel description, prototyped on Z1-Edit — Z1-Edit was carried further than planned and
+    is now SynthEdit, a fully generic multi-synth editor driven entirely by layouts/*.txt (no per-device C
+    code at all). Supersedes the original narrower "single fixed panel" pilot scope.
+  - Shared host injection point (tSynthLibHost, synthlibHost.h/.c) — replaced the old convention of every
+    SynthLib popup file (contextMenu.c, menuBar.c, alertDialog.cpp, bankBrowser.cpp, fileBrowser.cpp)
+    redeclaring its own `extern gReDraw`/`get_global_gui_scaled_mouse_coord` externs. Not in the original
+    list below but the same spirit — done alongside it.
+  - gWindow/gQuitAll/gReDraw/gDialMode + tDialMode — moved into SynthLib (synthlibGlobals.h/.c,
+    synthlibTypes.h) as accessor functions, not raw externs, across all three apps.
+  - HiDPI content-scale mechanism (synthlibScale.h/.c) — the gContentScale/gGlobalGuiScale recompute
+    G2-Edit fixed first (issue #9) is now shared; EmuUtility and SynthEdit picked up the same fix for free.
+  - Window-position/size + dial-mode persistence (synthlibPersistence.h/.c) — shared core, each app keeps
+    its own extra settings (zoom, last-browsed folder, device config) local.
+
+  PARTIALLY DONE / STILL OPEN:
+  - Migrate G2-Edit's gParamRectangle[slot][location][index][param] onto the click-region registry —
+    NOT finished. It's a 6MB static array (globalVars.c's own comment says so) still doing double duty:
+    feeds register_click_region() at render time (moduleGraphics.cpp) AND is read directly via
+    within_rectangle() in a few mouseHandle.c spots (~258, 458, 1078) that look like they may predate the
+    click-region migration — worth checking whether those are dead code now shadowed by
+    dispatch_click_region(), or still load-bearing (e.g. mid-drag angle calculation genuinely needs the
+    rect, not just a hit test). Other named hit rects (gPatchParamClose, gTopbarControls[].rectangle) are
+    still direct array indexing too.
+  - Generalize mousePanels.c/mouseTopbar.c/selection.c into shared SynthLib components — blocked on the
+    above: hit-testing needs to be fully decoupled from render-time global arrays first, same ordering
+    the original note had.
+  - Page-selection tabs — SynthEdit built its own render_page_tabs()/page-tab mechanism independently
+    rather than as a generalization of G2-Edit's topbarControls.def X-macro + set_exclusive_button_
+    highlight() pattern. Both now exist, unrelated to each other. Unifying them into one SynthLib "page
+    tab row" component (with pages as a grouping construct in a shared descriptor schema) is still open —
+    arguably easier now that there are two concrete implementations to compare instead of one plus a
+    proposal.
+  - Design one shared descriptor schema (control type, rect+anchor, range/default, string-map ref,
+    colour-map ref) reusable as both a compile-time C table (G2-Edit) and a runtime-parsed file
+    (SynthEdit) — still just an idea, no prototype. Bigger lift than anything else on this list: G2-Edit's
+    module system (200+ types, dynamic instantiation, morphing) and SynthEdit's flat per-device panel are
+    genuinely different shapes, not just different loaders for the same shape.
+  - Anchor-based layout resolver (adjust_rectangle equivalent) alongside the hit-registry — still open,
+    depends on the descriptor-schema work above.
+  - Evaluate generalizing the msgQueue.c + usbComms.c thread/message-queue pattern into SynthLib as a
+    transport-agnostic comms layer (USB vs MIDI as pluggable backends) — still open, and the highest-value
+    remaining item on this list: EmuUtility/SynthEdit talk to CoreMIDI directly with no queue abstraction
+    at all (UI thread and MIDI thread share state via plain globals + a wake callback), where G2-Edit
+    already has the safer enqueue/dequeue pattern for USB. A smaller, currently-scoped first step: just the
+    CoreMIDI globals (gMidiClient/gMidiInPort/gMidiOutPort/gMidiSource/gMidiDest), the wake-callback
+    boilerplate, and the low-level MIDIPacketList send primitive are identical between EmuUtility and
+    SynthEdit (G2-Edit uses USB, not MIDI, so it's a 2-of-3 candidate) and could move to SynthLib on their
+    own without touching either app's actual scan/connect/dispatch logic, which has diverged for good
+    reason (SynthEdit's is a much more developed generic multi-device framework — deferred identity-reply
+    buffering, three destination-matching fallback strategies, per-source running-status parsing for
+    shared MIDI interfaces — vs EmuUtility's simpler single-device E-mu client) and isn't safe to merge
+    mechanically.
+
+  RESOLVED AS MOOT:
+  - "Evaluate extracting menus.c's declarative build/dispatch mechanism into SynthLib" — the underlying
+    mechanism (tMenuItem, open_context_menu, contextMenu.c) is now fully shared via SynthLib. G2-Edit's
+    menus.c is still 2125 lines (EmuUtility/SynthEdit's are 26/95), but what's left is legitimately
+    G2-specific domain action logic (setting parameter values, assigning knobs/CCs/MIDI CCs, module
+    creation, morph labels — all operating on tModule/tParam/tCable, which don't exist in the other two
+    apps), not a duplicated mechanism. Nothing further to extract here.
