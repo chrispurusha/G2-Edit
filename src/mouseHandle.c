@@ -57,6 +57,7 @@ extern "C" {
 #include "fileBrowser.h"
 #include "bankBrowser.h"
 #include "alertDialog.h"
+#include "clickRegion.h"
 
 // Drag-start state for vertical/horizontal dial modes
 static double gDragStartX    = 0.0; // cursor position at press — fixed reference point for Alt-held morph-offset dragging
@@ -388,6 +389,27 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
     return retVal;
 }
 
+// Morph group knobs are drawn as a fixed on-screen overlay (render_morph_groups()
+// runs after render_modules() each frame, at a screen position independent of
+// canvas scroll), so a regular module can scroll to sit visually underneath
+// them. This must be checked — and win — before dispatch_click_region(), which
+// only knows about regular (non-morph) modules' registered regions and would
+// otherwise happily fire for whatever's hidden underneath. See mouse_button().
+static bool handle_morph_press(tCoord coord, tMouseButton mouseButton) {
+    uint32_t slot      = gSlot;
+    uint32_t variation = gPatchDescr[slot].activeVariation;
+
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
+
+        if (module->active && handle_module_press_for_module(module, coord, mouseButton, variation)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool handle_module_press(tCoord coord, tMouseButton mouseButton) {
     uint32_t slot      = gSlot;
     uint32_t location  = gLocation;
@@ -489,6 +511,26 @@ static bool handle_module_release_for_module(tModule * module, tCoord coord, tMo
         }
     }
     return retVal;
+}
+
+// See handle_morph_press() — same reasoning, for the release side.
+static bool handle_morph_release(tCoord coord, tMouseButton mouseButton) {
+    uint32_t slot      = gSlot;
+    uint32_t variation = gPatchDescr[slot].activeVariation;
+
+    if (gParamDragging.active || gModuleDrag.active || gCableDrag.active) {
+        return false;
+    }
+
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
+
+        if (module->active && handle_module_release_for_module(module, coord, mouseButton, slot, variation)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
@@ -820,6 +862,21 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 found = handle_scrollbar_click(coord);
             }
 
+            // Morph group dials are a fixed on-screen overlay that a scrolled regular
+            // module can sit visually underneath, so they must be checked — and win —
+            // before the click-region dispatch below, which doesn't know about morph.
+            if (!found && !gContextMenu.active) {
+                found = handle_morph_press(coord, mouseButton);
+            }
+
+            // Fast path for regular (non-morph) module param/body clicks, registered at
+            // render time (see moduleGraphics.cpp). Falls through to the legacy per-module
+            // loop below for anything not yet migrated: mode toggles, connectors, and the
+            // module drag area (morph is already handled above).
+            if (!found && !gContextMenu.active) {
+                found = dispatch_click_region(coord, eClickPress);
+            }
+
             if (!found && !gContextMenu.active) {
                 found = handle_module_press(coord, mouseButton);
             }
@@ -924,6 +981,15 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                         found = true;
                     }
                 }
+            }
+
+            // See the matching mouseButtonLeftDown case: morph must win before dispatch.
+            if (!found) {
+                found = handle_morph_release(coord, mouseButton);
+            }
+
+            if (!found) {
+                found = dispatch_click_region(coord, eClickRelease);
             }
 
             if (!found) {

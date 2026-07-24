@@ -52,6 +52,7 @@ extern "C" {
 #include "globalVars.h"
 #include "synthSettingsResources.h"
 #include "misc.h"
+#include "clickRegion.h"
 #include "patchParamsResources.h"
 #include "perfSettingsResources.h"
 #include "menus.h"
@@ -1912,6 +1913,7 @@ void do_graphics_loop(void) {
             glClearColor(0.8, 0.8, 0.8, 1.0);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+            clear_click_regions();
             render_modules();
             render_cables();
 
