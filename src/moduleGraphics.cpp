@@ -44,6 +44,162 @@ extern "C" {
 #include "menus.h"
 #include "selection.h"
 #include "mutatorUI.h"
+#include "protocol.h"
+#include "undo.h"
+#include "clickRegion.h"
+
+// ── Click-region registration (dial/module click, proof of concept) ────────
+//
+// Regular (non-morph) module params and the module body itself register a
+// clickable rect each frame right where render_param_common()/render_module()
+// already compute it, instead of mouseHandle.c re-deriving hit-testing over
+// every active module. Morph group dials, mode toggles, connectors, and the
+// module drag area are not yet migrated — those still go through the legacy
+// per-module loops in mouseHandle.c.
+
+typedef struct {
+    tModuleKey key;
+    uint32_t   paramIndex;
+} tParamClickCtx;
+
+static tParamClickCtx  sParamClickCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES][MAX_NUM_PARAMETERS];
+
+typedef struct {
+    tModuleKey key;
+} tModuleClickCtx;
+
+static tModuleClickCtx sModuleClickCtx[MAX_SLOTS][locationMax][MAX_NUM_MODULES];
+
+// Mirrors the params loop previously in mouseHandle.c's
+// handle_module_press_for_module()/handle_module_release_for_module() — see
+// git history for that code. Only reachable for non-morph modules (this
+// handler is only ever registered from render_param_common(), which morph
+// groups don't go through), so the paramType-by-location branch those
+// functions needed is gone here.
+static void param_click_handler(tCoord coord, eClickPhase phase, void * userData) {
+    tParamClickCtx * ctx       = (tParamClickCtx *)userData;
+    tModule *        module    = get_module(ctx->key);
+    uint32_t         slot      = ctx->key.slot;
+    uint32_t         variation = gPatchDescr[slot].activeVariation;
+    tParam *         param     = &module->param[variation][ctx->paramIndex];
+    tParamType       paramType = paramLocationList[param->paramRef].type;
+
+    if (phase == eClickPress) {
+        if (  paramType != paramTypeToggle && paramType != paramTypeMenu
+           && paramType != paramTypeBypass && paramType != paramTypeEnable
+           && paramType != paramTypePush && paramType != paramTypeCustomData) {
+            gParamDragging.moduleKey       = module->key;
+            gParamDragging.type3           = paramType3Param;
+            gParamDragging.param           = ctx->paramIndex;
+            gParamDragging.startValue      = param->value;
+            gParamDragging.active          = true;
+            gParamDragging.startMorphRange = param->morphRange[gMorphGroupFocus];
+
+            if ((gDialMode != eDialModeRotary) || (paramType == paramTypeSlider)) {
+                start_cursor_drag();
+            }
+        } else if (paramType == paramTypePush) {
+            send_param_value(slot, module->key, ctx->paramIndex, variation, 0);
+            param->value = 0;
+        }
+    } else if (phase == eClickRelease) {
+        if ((paramType == paramTypeMenu) || (paramType == paramTypeCustomData)) {
+            open_toggle_menu(coord, module->key, ctx->paramIndex, param->paramRef);
+        } else if ((paramType == paramTypeToggle) || (paramType == paramTypeBypass) || (paramType == paramTypeEnable)) {
+            uint32_t range       = paramLocationList[param->paramRef].range;
+            uint32_t oldParamVal = param->value;
+
+            param->value = (param->value + 1) % range;
+            send_param_value(slot, module->key, ctx->paramIndex, variation, param->value);
+            undo_push_param_change(module->key, ctx->paramIndex, variation, oldParamVal, param->value);
+        } else if (paramType == paramTypePush) {
+            uint32_t listSize = array_size_param_location_list();
+
+            for (uint32_t ref = 0; ref < listSize; ref++) {
+                if ((paramLocationList[ref].moduleType == module->type) && (paramLocationList[ref].type == paramTypeCustomData)) {
+                    send_custom_data_value(slot, module->key);
+                    break;
+                }
+            }
+
+            send_param_value(slot, module->key, ctx->paramIndex, variation, 1);
+            param->value = 0;
+        }
+    }
+}
+
+// Mirrors the final "clicking anywhere else on the module body selects
+// without starting a drag" fallback previously in mouseHandle.c's
+// handle_module_press_for_module() — see git history for that code.
+static void module_body_click_handler(tCoord coord, eClickPhase phase, void * userData) {
+    (void)coord;
+
+    if (phase != eClickPress) {
+        return;
+    }
+    tModuleClickCtx * ctx             = (tModuleClickCtx *)userData;
+    tModule *         module          = get_module(ctx->key);
+    bool              multiSelectHeld = glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
+                                        || glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS
+                                        || glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS
+                                        || glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
+
+    if (multiSelectHeld) {
+        selection_toggle(module->key);
+    } else {
+        selection_set_single(module->key);
+    }
+}
+
+// Mirrors the "module->dragArea" branch previously in mouseHandle.c's
+// handle_module_press_for_module() — see git history for that code. Registered
+// on module->dragArea *after* module_body_click_handler is registered on the
+// (larger, overlapping) module->rectangle, so this wins for clicks landing in
+// the drag-handle strip, exactly like the old first-match-wins loop order.
+static void drag_area_click_handler(tCoord coord, eClickPhase phase, void * userData) {
+    (void)coord;
+
+    if (phase != eClickPress) {
+        return;
+    }
+    tModuleClickCtx * ctx             = (tModuleClickCtx *)userData;
+    tModule *         module          = get_module(ctx->key);
+    bool              multiSelectHeld = glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
+                                        || glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS
+                                        || glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS
+                                        || glfwGetKey((GLFWwindow *)gWindow, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
+
+    if (multiSelectHeld) {
+        selection_toggle(module->key);
+    } else if (!is_selected(module->key)) {
+        selection_set_single(module->key);
+    }
+    gModuleDrag.moduleKey     = module->key;
+    gModuleDrag.isMulti       = is_selected(module->key) && gSelection.count > 1;
+    gModuleDrag.prevColumn    = module->column;
+    gModuleDrag.prevRow       = module->row;
+    gModuleDrag.active        = true;
+    gModuleDrag.snapshotCount = 0;
+
+    if (gModuleDrag.isMulti) {
+        for (uint32_t si = 0; si < gSelection.count && si < MAX_NUM_MODULES; si++) {
+            tModule * sel = get_module(gSelection.keys[si]);
+
+            if (!sel) {
+                continue;
+            }
+            gModuleDrag.snapshotKeys[gModuleDrag.snapshotCount]   = gSelection.keys[si];
+            gModuleDrag.snapshotColumn[gModuleDrag.snapshotCount] = sel->column;
+            gModuleDrag.snapshotRow[gModuleDrag.snapshotCount]    = sel->row;
+            gModuleDrag.snapshotCount++;
+        }
+    } else {
+        gModuleDrag.snapshotKeys[0]   = module->key;
+        gModuleDrag.snapshotColumn[0] = module->column;
+        gModuleDrag.snapshotRow[0]    = module->row;
+        gModuleDrag.snapshotCount     = 1;
+    }
+}
 
 void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) { // TODO: move to utilsgraphics!?
     switch (volumeType) {
@@ -334,6 +490,11 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             break;
         }
     }
+    sParamClickCtx[module->key.slot][module->key.location][module->key.index][paramIndex] = (tParamClickCtx){
+        module->key, paramIndex
+    };
+    register_click_region(gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex],
+                          eClickLayerCanvas, param_click_handler, &sParamClickCtx[module->key.slot][module->key.location][module->key.index][paramIndex]);
     {
         // A param can be assigned to a local (patch) knob, a Global
         // Parameter Page knob, and a MIDI CC all at the same time — they're
@@ -722,9 +883,15 @@ void render_module(tModule * module) {
 
     tRectangle moduleRectangle            = {{xPos, yPos}, {xWidth, yHeight}};
 
-    rgb               = gModuleColourMap[module->colour];
+    rgb                                                                        = gModuleColourMap[module->colour];
     set_rgb_colour(rgb);
-    module->rectangle = render_rectangle_with_border(moduleArea, moduleRectangle);
+    module->rectangle                                                          = render_rectangle_with_border(moduleArea, moduleRectangle);
+
+    sModuleClickCtx[module->key.slot][module->key.location][module->key.index] = (tModuleClickCtx){
+        module->key
+    };
+    register_click_region(module->rectangle, eClickLayerCanvas, module_body_click_handler,
+                          &sModuleClickCtx[module->key.slot][module->key.location][module->key.index]);
 
     if (is_selected(module->key)) {
         double t = 2.0;
@@ -758,6 +925,8 @@ void render_module(tModule * module) {
     rgb              = {rgb.red * 1.05, rgb.green * 1.05, rgb.blue * 1.05};
     set_rgb_colour(rgb);
     module->dragArea = render_rectangle(moduleArea, {{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3}, {moduleRectangle.size.w - 6, STANDARD_TEXT_HEIGHT + 2}});
+    register_click_region(module->dragArea, eClickLayerCanvas, drag_area_click_handler,
+                          &sModuleClickCtx[module->key.slot][module->key.location][module->key.index]);
 
     render_module_common(moduleRectangle, module);
 
