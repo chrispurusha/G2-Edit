@@ -30,6 +30,7 @@ void init_patch(uint32_t slot);
 void get_global_gui_scaled_mouse_coord(tCoord * coord);
 void start_cursor_drag(void);
 void stop_dragging(void);
+void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord);
 
 // True while any drag that hides the cursor (CURSOR_DISABLED) is active —
 // param/tempo/perf-tempo/vibrato-rate/vibrato-amount/glide-time dragging.
