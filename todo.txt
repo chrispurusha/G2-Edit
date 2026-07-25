@@ -134,6 +134,8 @@ none of these exist in G2-Edit at all yet, confirmed by source search, not just 
   show it's dead wire (this is what the existing "delete non-functional input-to-input connections (white
   cables)" cleanup comment elsewhere in menus.c was referring to — G2-Edit already has the CONCEPT of
   these white cables, just no UI action that actually creates them). Not implemented.
+- Scrollbars on the patch selectors (Load/Store/Delete/Restore bank-location pickers, bankBrowser.cpp) —
+  currently no visible scrollbar for long lists.
 
 - rationalise architecture and commonalise components for other projects (status as of 2026-07-24)
 
