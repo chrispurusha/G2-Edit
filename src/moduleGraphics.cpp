@@ -957,21 +957,48 @@ static void render_module_connectors(tRectangle rectangle, tModule * module) {
 // better. Moved here on that basis; still an approximation distilled into
 // simple closed-form functions rather than a byte-exact port, so treat this
 // as a starting point to verify against real hardware, same as before.
+// A single cycle that starts at a rising zero-crossing and runs -1..+1..-1..(back to 0), with
+// "peak" (0..1) setting where the top of the ramp falls: 0.5 is a symmetric triangle, near 1.0 a
+// near-full sawtooth ramp. This is exactly TriSaw's math below, factored out so DblSaw can reuse
+// it rather than duplicate a subtly different version of the same thing - both the phase-shift
+// (landing a rising, not falling, zero-crossing at phase 0) and the sign flip (matching the real
+// editor's orientation) were only worked out and confirmed via TriSaw.
+static double skewed_ramp_zero_start(double phase, double peak) {
+    double p = fmod(((peak + 1.0) * 0.5) + phase, 1.0);
+    double y = (p < peak) ? (((p / peak) * 2.0) - 1.0) : ((((1.0 - p) / (1.0 - peak)) * 2.0) - 1.0);
+
+    return -y;
+}
+
+// Shape is always the raw 0-127 param value normalised to 0..1 - but the dial itself only
+// *displays* 50%..99% of that (render_paramType1Shape), so Shape 0 is the dial's displayed
+// minimum (50%) and Shape 1 its displayed maximum (99%), not "no shaping"/"full shaping" in the
+// usual 0-100% sense. TriSaw (case 4, below) is the one case confirmed against the real original
+// editor across that whole range; the rest follow its two lessons - Shape 0 (displayed 50%)
+// should be the "basic"/symmetric member of the waveform family, Shape 1 (displayed 99%) the
+// most extreme one, and the cycle should start at a rising zero-crossing (or, for the pulses,
+// at the rising edge itself) rather than a trough - but are otherwise unconfirmed guesses, same
+// as TriSaw was before checking it against real hardware.
 static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, double shape) {
     switch (waveformIndex) {
         case 0: // Sine1 - plain sine, Shape mostly cosmetic
         {
             return sin(2.0 * M_PI * phase);
         }
-        case 1: // Sine2 - two sines blended, Shape crossfades a second (2x freq) sine in
+        case 1: // Sine2 - a literal "dual sine": a second copy of the same sine, detuned in phase
+                // by Shape and summed in - mirrors DblSaw's "dual" construction below rather than
+                // blending in a different harmonic
         {
-            double s1 = sin(2.0 * M_PI * phase);
-            double s2 = sin(4.0 * M_PI * phase);
+            double detune = shape * 0.15;
+            double s1     = sin(2.0 * M_PI * phase);
+            double s2     = sin(2.0 * M_PI * (phase + detune));
 
-            return ((1.0 - shape) * s1) + (shape * s2);
+            return (s1 + s2) * 0.5;
         }
         case 2: // Sine3 - Discrete Summation Formula (Moorer "buzz"), N=1: matches
-                // CPnlWaveformGraphABC::DrawDsf's y = sin(theta)/(1-2r*cos(theta)+r^2)
+                // CPnlWaveformGraphABC::DrawDsf's y = sin(theta)/(1-2r*cos(theta)+r^2). Already
+                // starts at a rising zero-crossing (numerator sin(theta) is 0 and rising at
+                // theta=0 for any r<1) with no extra phase-shift needed.
         {
             double theta = 2.0 * M_PI * phase;
             double r     = fmin(shape, 0.97);
@@ -992,42 +1019,39 @@ static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, doub
         }
         case 4: // TriSaw - Shape skews the breakpoint from a symmetric triangle towards a sawtooth.
                 // Confirmed against the real original editor: Shape at its displayed minimum
-                // (50%, i.e. raw value 0 - the dial reads 50%..99%, not 0%..100%, per
-                // render_paramType1Shape) is a single-cycle symmetric triangle, and at its
-                // displayed maximum (99%, raw 127) a single-cycle ramp, both starting at a
-                // rising zero-crossing rather than at the trough. "shape" here is already the
-                // raw value normalised to 0..1, so it's shape 0 (not 0.5) that's the triangle.
+                // (50%) is a single-cycle symmetric triangle, and at its displayed maximum (99%)
+                // a single-cycle ramp, both starting at a rising zero-crossing.
         {
             double peak = 0.5 + (shape * 0.47); // shape 0 (displayed 50%) -> 0.5 (triangle),
                                                 // shape 1 (displayed 99%) -> 0.97 (near-full ramp)
 
-            // p is phase in the "starts at the trough" parametrization that the peak/breakpoint
-            // logic below assumes. Its FALLING zero-crossing is at (peak+1)/2; negating y below
-            // flips a falling crossing into a rising one, so shifting by that point (not the
-            // rising one at peak/2) is what lands a rising zero-crossing at phase 0 post-negation.
-            double p    = fmod(((peak + 1.0) * 0.5) + phase, 1.0);
-            double y    = (p < peak) ? (((p / peak) * 2.0) - 1.0) : ((((1.0 - p) / (1.0 - peak)) * 2.0) - 1.0);
-
-            return -y; // matches the original editor's orientation - confirmed inverted otherwise
+            return skewed_ramp_zero_start(phase, peak);
         }
-        case 5: // DblSaw - two ramps summed with Shape controlling their relative phase offset
+        case 5: // DblSaw - two near-full ramps summed, the second detuned in phase by Shape (a
+                // classic "double saw" richness/detune effect); each ramp individually starts at
+                // a rising zero-crossing like TriSaw, though the detuned sum only does so exactly
+                // at Shape 0.
         {
-            double p1 = phase;
-            double p2 = fmod(phase + (shape * 0.5), 1.0);
+            const double peak   = 0.97; // both ramps are near-full sawtooths, not triangles
+            double       detune = shape * 0.15;
 
-            return ((2.0 * p1) - 1.0 + (2.0 * p2) - 1.0) * 0.5;
+            return (skewed_ramp_zero_start(phase, peak) + skewed_ramp_zero_start(phase + detune, peak)) * 0.5;
         }
-        case 6: // Pulse - pulse width (duty cycle) varies with Shape - confirmed as audible PWM
-                // behaviour on OscB's own squ waveform, and DrawPulse/DrawSquare both carry a
-                // dedicated duty-fraction parameter separate from any phase term.
+        case 6: // Pulse - pulse width (duty cycle) widens with Shape: Shape 0 (displayed 50%) is
+                // a plain symmetric square, Shape 1 (displayed 99%) spends most of the cycle
+                // high (the falling edge moves right, cutting into the LOW time, not the high
+                // time - confirmed against the real original editor). Already starts right at
+                // the rising edge (phase 0 is the first sample of the high part of the cycle).
         {
-            double duty = 0.05 + (shape * 0.9); // 5%..95%, avoiding a degenerate 0/100% pulse
+            double duty = 0.5 + (shape * 0.45); // 50%..95%
 
             return (phase < duty) ? 1.0 : -1.0;
         }
-        case 7: // SymPulse - a duty-symmetric pulse: two Shape-width pulses per cycle, mirrored
+        case 7: // SymPulse - a duty-symmetric pulse: two equal, evenly-spaced Shape-width pulses
+                // per cycle, narrowing with Shape the same way Pulse does (Shape 0 -> two 25%
+                // pulses, i.e. 50% total duty; Shape 1 -> two narrow ones)
         {
-            double halfDuty = 0.025 + (shape * 0.45); // each half-cycle's pulse width, 5%..95% of it
+            double halfDuty = 0.25 - (shape * 0.225); // 25%..2.5%
 
             return ((phase < halfDuty) || ((phase >= 0.5) && (phase < 0.5 + halfDuty))) ? 1.0 : -1.0;
         }
