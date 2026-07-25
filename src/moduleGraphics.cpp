@@ -1377,13 +1377,18 @@ static void render_envadsr_graph(tRectangle rectangle, tModule * module) {
 
 // ── FltClassic response preview ──────────────────────────────────────────────
 //
-// A small live graph of the classic lowpass filter's frequency response: a flat passband, a
-// resonance peak right at the cutoff (taller and narrower as Res increases, per the manual's
-// "narrow resonance peak...similar to...analog ladder filters"), then a rolloff whose steepness
-// reflects the 12/18/24 dB/octave slope selector. The X axis is Freq's raw knob value directly,
-// not literal Hz - Freq spans roughly 14Hz to 21kHz via the same exponential mapping used
-// elsewhere (see render_paramType1OscFreq), far too wide a span to draw to scale in a small
-// box - so this is a relative/perceptual curve, not a calibrated Bode plot.
+// A small live graph of the classic lowpass filter's frequency response, using the real 2-pole
+// resonant lowpass magnitude formula |H(f)|^2 = 1 / [(1-(f/fc)^2)^2 + (f/(fc*Q))^2] rather than
+// stitching together a flat line, a Gaussian "bump" and a separate linear rolloff - passband,
+// resonant peak (taller and narrower as Q increases, per the manual's "narrow resonance
+// peak...similar to...analog ladder filters") and rolloff all fall out of the one formula as a
+// single smooth curve. 18/24 dB/octave are modelled as extra plain one-pole rolloff stages
+// cascaded onto the base 2-pole (12dB) response, which also naturally narrows the peak further
+// at higher slopes, matching real higher-order filter behaviour. Q itself uses the real 0.5..50
+// range from filter_resonanceStrMap (as an exponential approximation, not a table lookup). The
+// X axis is still Freq's raw knob value, treated as ~10 octaves of relative frequency (matching
+// its own real ~14Hz..21kHz exponential range) rather than a literal Hz-calibrated Bode plot -
+// the box is too small to be literal about that regardless of curve shape.
 static void render_fltclassic_response_graph(tRectangle rectangle, tModule * module) {
     // Freq (index 0), Res (index 3), dB/octave slope (index 4) - fixed positions for
     // moduleTypeFltClassic's entries in paramLocationList, see moduleResources.h.
@@ -1396,7 +1401,8 @@ static void render_fltclassic_response_graph(tRectangle rectangle, tModule * mod
     double         resNorm         = (double)module->param[variation][resParamIndex].value / 127.0;
     uint32_t       slopeIndex      = module->param[variation][slopeParamIndex].value; // 0=12dB, 1=18dB, 2=24dB
 
-    double         slopeSteepness  = 4.0 + (slopeIndex * 1.2);                        // steeper decline for higher dB/octave
+    double         q               = 0.5 * pow(100.0, resNorm);                       // 0.5..50, matches filter_resonanceStrMap's real range
+    int            extraPoles      = (int)slopeIndex;                                 // 0/1/2 extra one-pole stages -> 12/18/24 dB/octave
 
     tRectangle     graphRect       = adjust_rectangle(rectangle, (tRectangle){{0, 10}, {30, 10}}, anchorTopMiddle, module);
     double         baseY           = graphRect.coord.y + (graphRect.size.h * 0.6); // 0dB reference, leaving
@@ -1413,23 +1419,26 @@ static void render_fltclassic_response_graph(tRectangle rectangle, tModule * mod
 
     set_rgb_colour(RGB_GREEN_ON);
 
-    double         peakHeight      = resNorm * 0.9;
-    // Narrower for steeper slopes too, not just higher Res - a higher-order (24dB) filter
-    // concentrates its resonant peak more tightly around cutoff than a lower-order (12dB) one
-    // does at the same Q.
-    double         peakWidth       = (0.15 - (resNorm * 0.12)) * (1.0 - (slopeIndex * 0.15));
-
     for (int i = 0; i <= numSamples; i++) {
-        double x       = (double)i / (double)numSamples;
-        double rolloff = (x > cutoffX) ? (-slopeSteepness * (x - cutoffX)) : 0.0;
-        double d       = (x - cutoffX) / peakWidth;
-        double bump    = peakHeight * exp(-(d * d));
-        double level   = fmax(-1.0, fmin(1.0, rolloff + bump));
+        double x         = (double)i / (double)numSamples;
+        double octaves   = (x - cutoffX) * 10.0;   // ~10 octaves span the box, matching Freq's own real range
+        double ratio     = pow(2.0, octaves);      // f/fc
+        double ratioSq   = ratio * ratio;
+
+        double denomSq   = ((1.0 - ratioSq) * (1.0 - ratioSq)) + ((ratio / q) * (ratio / q));
+        double magnitude = 1.0 / sqrt(fmax(denomSq, 1e-6));
+
+        if (extraPoles > 0) {
+            magnitude /= sqrt(1.0 + pow(ratio, 2.0 * extraPoles));
+        }
+        double levelDb   = 20.0 * log10(fmax(magnitude, 1e-4));
+        double level     = fmax(-1.0, fmin(1.0, levelDb / 24.0)); // +-24dB fills the box vertically
+
         // Scale must stay within min(baseY's own fraction, 1-that fraction) - 0.6/0.55 didn't
         // (0.6+0.55 = 1.15), which is exactly why the rolloff (level -> -1) was plotting below
         // the box's bottom edge; 0.38 fits both the 0.6-above and 0.4-below headroom baseY
         // leaves either side of it.
-        tCoord point   = {graphRect.coord.x + (x * graphRect.size.w), baseY - (level * graphRect.size.h * 0.38)};
+        tCoord point     = {graphRect.coord.x + (x * graphRect.size.w), baseY - (level * graphRect.size.h * 0.38)};
 
         if (i > 0) {
             render_line(moduleArea, prev, point, 1.5);
