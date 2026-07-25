@@ -699,12 +699,37 @@ typedef struct {
     const tAnchor     anchor;
 } tVolumeLocation;
 
+typedef enum {
+    volumeMeterStyleMaskLeds,  // Independent per-bit LEDs, stacked vertically (Compress)
+    volumeMeterStyleSingleLed, // Exactly one LED lit, at index == value, stacked horizontally (Sequencer)
+    volumeMeterStyleLevelBar   // Continuous multi-band coloured bar with clip indicator (Mono/Stereo/Quad)
+} tVolumeMeterStyle;
+
+typedef struct {
+    const tVolumeType       volumeType;
+    const tVolumeMeterStyle style;
+    const uint32_t          segments;  // LED count (LED styles) or level-bar step count (level-bar style)
+    const double            space;     // gap between LEDs (LED styles), or between repeated per-channel
+                                       // meters for multi-channel level bars (Stereo/Quad); unused (0) otherwise
+    const tRgb              onColour;  // lit LED colour (LED styles only)
+    const tRgb              offColour; // unlit LED colour (LED styles only)
+} tVolumeMeterConfig;
+
 typedef struct {
     const tModuleType moduleType;
     const tLedType    ledType;
     const tRectangle  rectangle;
     const tAnchor     anchor;
 } tLedLocation;
+
+// Placement for the per-module custom preview graphs (render_oscshpb_waveform_graph(),
+// render_envadsr_graph(), render_fltclassic_response_graph(), moduleGraphics.cpp) - each graph's
+// own drawing/curve logic stays in its dedicated function, only the rect+anchor is table-driven.
+typedef struct {
+    const tModuleType moduleType;
+    const tRectangle  rectangle;
+    const tAnchor     anchor;
+} tGraphLocation;
 
 typedef struct {
     tRectangle rectangle;
