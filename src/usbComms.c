@@ -2966,7 +2966,10 @@ static int push_slot_to_device(uint32_t slot) {
     write_morph_params(slot, buff, &bitPos, NUM_VARIATIONS_USB);
     write_knobs(slot, buff, &bitPos);
     write_controllers(slot, buff, &bitPos);
-    write_param_names(slot, locationMorph, buff, &bitPos);
+    // No param-names section for the Morph/patch-settings location — the reference patch structure
+    // (CPatchFile_11) only ever carries VA+FX param-names sections, and patch-settings pseudo-modules
+    // never have param labels. write_param_names() unconditionally emits a section header even when
+    // empty, so calling it for Morph would add a spurious 3rd 0x5b section (see write_patch_to_file()).
     write_param_names(slot, locationVa, buff, &bitPos);
     write_param_names(slot, locationFx, buff, &bitPos);
     write_module_names(slot, locationVa, buff, &bitPos);

@@ -77,6 +77,17 @@ RESOLVED 2026-07-24 (verified against code, not just assumed from the comment):
 
 NEEDS A SECOND OPINION (hardware/protocol behaviour questions found in code comments — real G2 hardware
 access and/or testing needed before touching; do not guess):
+- TEST the param-names section-count fix (applied 2026-07-25): push_slot_to_device() (usbComms.c) and
+  write_perf_to_file() (graphics.cpp) used to write a spurious empty Morph/patch-settings param-names
+  (0x5b) section, giving 3 sections where the reference patch structure (CPatchFile_11 in the Ghidra
+  decompile) and write_patch_to_file() only have 2 (VA, FX). Removed the locationMorph calls from both.
+  write_param_names() always emits a section header even when empty, so the Morph call was always adding
+  a 3rd 0x5b. VERIFY: (1) USB store-patch and store-perf still round-trip correctly on real hardware
+  (the old 3-section form worked, so the G2 firmware tolerates the extra section — need to confirm the
+  2-section form still stores/reloads cleanly); (2) a .prf2 saved by G2-Edit now loads in the original
+  NMG2 editor / g2ools (the whole point of the fix — the reference file reader is strict-positional and
+  a 3rd 0x5b desyncs it); (3) patches/perfs with actual renamed params on VA/FX modules still preserve
+  those names across a save/load round-trip.
 - graphics.cpp:715-716 — perf-mode write triggers a patch read; currently papered over with a blind 2s
   usleep. Needs real state confirmation from the device instead, or confirmation the sleep is provably long
   enough.

@@ -809,7 +809,8 @@ void write_database_to_file(const char * filepath) {
     write_morph_params(slot, buff, &bitPos, NUM_VARIATIONS);
     write_knobs(slot, buff, &bitPos);
     write_controllers(slot, buff, &bitPos);
-    //write_param_names(slot, locationMorph, buff, &bitPos);
+    // No Morph param-names section — matches the reference structure; see the matching comment in
+    // push_slot_to_device() (usbComms.c).
     write_param_names(slot, locationVa, buff, &bitPos);
     write_param_names(slot, locationFx, buff, &bitPos);
     write_module_names(slot, locationVa, buff, &bitPos);
@@ -893,7 +894,8 @@ void write_perf_to_file(const char * filepath) {
         write_morph_params(slot, buff, &bitPos, NUM_VARIATIONS);
         write_knobs(slot, buff, &bitPos);
         write_controllers(slot, buff, &bitPos);
-        write_param_names(slot, locationMorph, buff, &bitPos);
+        // No Morph param-names section — matches the reference structure and write_patch_to_file();
+        // see the matching comment in push_slot_to_device() (usbComms.c).
         write_param_names(slot, locationVa, buff, &bitPos);
         write_param_names(slot, locationFx, buff, &bitPos);
         write_module_names(slot, locationVa, buff, &bitPos);
