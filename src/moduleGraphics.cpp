@@ -1181,6 +1181,178 @@ static void render_oscshpb_waveform_graph(tRectangle rectangle, tModule * module
     }
 }
 
+// ── EnvADSR envelope preview ─────────────────────────────────────────────────
+//
+// A small live graph of the classic Attack/Decay/Sustain/Release envelope shape, same spirit
+// and roughly the same size as the OscShpB waveform preview above. Segment WIDTHS are drawn
+// from each knob's own raw value independently (not real time - Attack/Decay/Release span
+// 0.5ms to 45s each, per ADRTimeStrMap, far too wide a dynamic range to draw to scale in a
+// small box; and not normalised against each other either, since dividing by the sum of all
+// three made each segment's width depend on the OTHER two as well as its own knob, saturating
+// quickly enough that sweeping one knob only looked like it had two states). The Sustain
+// plateau's HEIGHT reflects its level directly (it's a level, not a timed phase, so it gets a
+// fixed display width just to show the hold clearly).
+//
+// All three phases decelerate (concave - fast then levelling off, like a capacitor charging or
+// discharging), confirmed against the real original editor for Attack specifically. Env Shape's
+// default is "LogExp" (envShapeStrMap): Attack defaults to Log, Decay+Release to Exp - the
+// single curve shape used here is a reasonable stand-in for that pairing, not a rendering of
+// Env Shape's other 3 settings, which aren't reflected yet.
+static double envadsr_exp_decay(double t, double levelStart, double levelEnd) {
+    const double k    = 4.0; // decay sharpness - normalised below so the curve still lands exactly
+                             // on levelStart/levelEnd at t=0/1 despite exp() itself being asymptotic
+    double       raw  = exp(-k * t) - exp(-k);
+    double       norm = 1.0 - exp(-k);
+
+    return levelEnd + ((levelStart - levelEnd) * (raw / norm));
+}
+
+static void render_envadsr_graph(tRectangle rectangle, tModule * module) {
+    // Attack (index 1), Decay (index 2), Sustain (index 3), Release (index 4) - fixed positions
+    // for moduleTypeEnvADSR's entries in paramLocationList, see moduleResources.h.
+    const uint32_t attackParamIndex  = 1;
+    const uint32_t decayParamIndex   = 2;
+    const uint32_t sustainParamIndex = 3;
+    const uint32_t releaseParamIndex = 4;
+    uint32_t       slot              = module->key.slot;
+    uint32_t       variation         = gPatchDescr[slot].activeVariation;
+    double         attackVal         = (double)module->param[variation][attackParamIndex].value / 127.0;
+    double         decayVal          = (double)module->param[variation][decayParamIndex].value / 127.0;
+    double         sustainLevel      = (double)module->param[variation][sustainParamIndex].value / 127.0;
+    double         releaseVal        = (double)module->param[variation][releaseParamIndex].value / 127.0;
+
+    // Centred horizontally, vertically aligned with the KB Active toggle's own y offset (8).
+    tRectangle     graphRect         = adjust_rectangle(rectangle, (tRectangle){{0, 8}, {30, 10}}, anchorTopMiddle, module);
+
+    const double   holdWidth         = 0.24; // fixed width just to show the Sustain plateau clearly
+
+    // Each segment's width comes from its OWN knob only, independent of the other two - 0.04
+    // (raw minimum, still clearly visible rather than a zero-width vertical line) up to 0.24
+    // (raw maximum). Whatever's left of the box after Attack+Decay+Release+the fixed Sustain
+    // width is just background.
+    double         attackW           = 0.04 + (attackVal * 0.20);
+    double         decayW            = 0.04 + (decayVal * 0.20);
+    double         releaseW          = 0.04 + (releaseVal * 0.20);
+    double         x0                = graphRect.coord.x;
+    double         y0                = graphRect.coord.y + graphRect.size.h; // envelope level 0 (bottom)
+    double         yTop              = graphRect.coord.y;                    // envelope level 1 (top)
+
+    set_rgb_colour(RGB_GREY_2);
+    render_rectangle(moduleArea, graphRect);
+
+    set_rgb_colour(RGB_GREY_5);
+    render_line(moduleArea, {x0, y0}, {x0 + graphRect.size.w, y0}, 1.0);
+
+    tCoord         p0                = {x0, y0};
+    tCoord         p1                = {x0 + (attackW * graphRect.size.w), yTop};
+    tCoord         p2                = {p1.x + (decayW * graphRect.size.w), y0 - (sustainLevel * graphRect.size.h)};
+    tCoord         p3                = {p2.x + (holdWidth * graphRect.size.w), p2.y};
+    tCoord         p4                = {p3.x + (releaseW * graphRect.size.w), y0};
+
+    set_rgb_colour(RGB_GREEN_ON);
+
+    const int      numCurveSteps     = 12;
+    tCoord         prev              = p0;
+
+    for (int i = 1; i <= numCurveSteps; i++) {
+        double t     = (double)i / (double)numCurveSteps;
+        double level = envadsr_exp_decay(t, 0.0, 1.0);
+        tCoord point = {p0.x + (t * (p1.x - p0.x)), y0 - (level * graphRect.size.h)};
+
+        render_line(moduleArea, prev, point, 1.5);
+        prev = point;
+    }
+
+    for (int i = 1; i <= numCurveSteps; i++) {
+        double t     = (double)i / (double)numCurveSteps;
+        double level = envadsr_exp_decay(t, 1.0, sustainLevel);
+        tCoord point = {p1.x + (t * (p2.x - p1.x)), y0 - (level * graphRect.size.h)};
+
+        render_line(moduleArea, prev, point, 1.5);
+        prev = point;
+    }
+
+    render_line(moduleArea, p2, p3, 1.5);
+
+    prev = p3;
+
+    for (int i = 1; i <= numCurveSteps; i++) {
+        double t     = (double)i / (double)numCurveSteps;
+        double level = envadsr_exp_decay(t, sustainLevel, 0.0);
+        tCoord point = {p3.x + (t * (p4.x - p3.x)), y0 - (level * graphRect.size.h)};
+
+        render_line(moduleArea, prev, point, 1.5);
+        prev = point;
+    }
+}
+
+// ── FltClassic response preview ──────────────────────────────────────────────
+//
+// A small live graph of the classic lowpass filter's frequency response: a flat passband, a
+// resonance peak right at the cutoff (taller and narrower as Res increases, per the manual's
+// "narrow resonance peak...similar to...analog ladder filters"), then a rolloff whose steepness
+// reflects the 12/18/24 dB/octave slope selector. The X axis is Freq's raw knob value directly,
+// not literal Hz - Freq spans roughly 14Hz to 21kHz via the same exponential mapping used
+// elsewhere (see render_paramType1OscFreq), far too wide a span to draw to scale in a small
+// box - so this is a relative/perceptual curve, not a calibrated Bode plot.
+static void render_fltclassic_response_graph(tRectangle rectangle, tModule * module) {
+    // Freq (index 0), Res (index 3), dB/octave slope (index 4) - fixed positions for
+    // moduleTypeFltClassic's entries in paramLocationList, see moduleResources.h.
+    const uint32_t freqParamIndex  = 0;
+    const uint32_t resParamIndex   = 3;
+    const uint32_t slopeParamIndex = 4;
+    uint32_t       slot            = module->key.slot;
+    uint32_t       variation       = gPatchDescr[slot].activeVariation;
+    double         cutoffX         = (double)module->param[variation][freqParamIndex].value / 127.0;
+    double         resNorm         = (double)module->param[variation][resParamIndex].value / 127.0;
+    uint32_t       slopeIndex      = module->param[variation][slopeParamIndex].value; // 0=12dB, 1=18dB, 2=24dB
+
+    double         slopeSteepness  = 4.0 + (slopeIndex * 1.2);                        // steeper decline for higher dB/octave
+
+    tRectangle     graphRect       = adjust_rectangle(rectangle, (tRectangle){{0, 10}, {30, 10}}, anchorTopMiddle, module);
+    double         baseY           = graphRect.coord.y + (graphRect.size.h * 0.6); // 0dB reference, leaving
+                                                                                   // headroom above for the
+                                                                                   // resonance peak to rise into
+    const int      numSamples      = 100;
+    tCoord         prev            = {0};
+
+    set_rgb_colour(RGB_GREY_2);
+    render_rectangle(moduleArea, graphRect);
+
+    set_rgb_colour(RGB_GREY_5);
+    render_line(moduleArea, {graphRect.coord.x, baseY}, {graphRect.coord.x + graphRect.size.w, baseY}, 1.0);
+
+    set_rgb_colour(RGB_GREEN_ON);
+
+    double         peakHeight      = resNorm * 0.9;
+    // Narrower for steeper slopes too, not just higher Res - a higher-order (24dB) filter
+    // concentrates its resonant peak more tightly around cutoff than a lower-order (12dB) one
+    // does at the same Q.
+    double         peakWidth       = (0.15 - (resNorm * 0.12)) * (1.0 - (slopeIndex * 0.15));
+
+    for (int i = 0; i <= numSamples; i++) {
+        double x       = (double)i / (double)numSamples;
+        double rolloff = (x > cutoffX) ? (-slopeSteepness * (x - cutoffX)) : 0.0;
+        double d       = (x - cutoffX) / peakWidth;
+        double bump    = peakHeight * exp(-(d * d));
+        double level   = fmax(-1.0, fmin(1.0, rolloff + bump));
+        // Scale must stay within min(baseY's own fraction, 1-that fraction) - 0.6/0.55 didn't
+        // (0.6+0.55 = 1.15), which is exactly why the rolloff (level -> -1) was plotting below
+        // the box's bottom edge; 0.38 fits both the 0.6-above and 0.4-below headroom baseY
+        // leaves either side of it.
+        tCoord point   = {graphRect.coord.x + (x * graphRect.size.w), baseY - (level * graphRect.size.h * 0.38)};
+
+        if (i > 0) {
+            render_line(moduleArea, prev, point, 1.5);
+        }
+
+        if (level <= -1.0) {
+            break; // fully rolled off - stop rather than trailing a flat line along the bottom edge
+        }
+        prev = point;
+    }
+}
+
 void render_module_common(tRectangle rectangle, tModule * module) {
     if (module == NULL) {
         return;
@@ -1227,6 +1399,14 @@ void render_module_common(tRectangle rectangle, tModule * module) {
 
     if (module->type == moduleTypeOscShpB) {
         render_oscshpb_waveform_graph(rectangle, module);
+    }
+
+    if (module->type == moduleTypeEnvADSR) {
+        render_envadsr_graph(rectangle, module);
+    }
+
+    if (module->type == moduleTypeFltClassic) {
+        render_fltclassic_response_graph(rectangle, module);
     }
 
     for (uint32_t i = module->volumeIndexCache; i < array_size_volume_location_list(); i++) {

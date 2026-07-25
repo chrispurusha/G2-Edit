@@ -210,7 +210,7 @@ tRectangle render_paramType1Shape(tModule * module, tRectangle rectangle, char *
     int val = 0;
 
     val = (int)(paramValue * 49.0 / 127.0 + 50.0);
-    snprintf(buff, buffSize, "%u", val);
+    snprintf(buff, buffSize, "%u%%", val);
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
