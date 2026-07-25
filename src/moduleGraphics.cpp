@@ -1002,12 +1002,19 @@ static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, doub
         case 0: // Sine1 - "a phase modulated sine wave. At 50% Shape setting, the signal is a
                 // perfect sine wave and at 99% similar to a sawtooth wave" (manual). Classic
                 // Casio CZ-style phase distortion: warp the phase fed into sin() using a single
-                // breakpoint "a" (0.5 = no warp, small = strong warp), rather than warping the
-                // output amplitude - hence a saw-like shape built from smooth sine curves, softer
-                // than a true (linear-ramp) sawtooth.
+                // breakpoint "a" - the SHORT portion compresses the sine's rising lobe into a
+                // quick rise near the start (mimicking a saw's sharp edge), the LONG portion
+                // stretches the falling lobe into a slow, broad fall (mimicking a saw's long
+                // ramp) - confirmed against the real original editor (a fast rise then a long
+                // smooth fall, not the other way round). Built from smooth sine curves
+                // throughout, so "similar to" rather than an exact sawtooth, matching the
+                // manual's wording (contrast TriSaw, which it calls "a perfect Sawtooth" at
+                // 99%). "a" only reaches a moderate minimum (not a hard spike) so it stays a
+                // "softened saw" - Sine2 below is the one that pushes all the way to an actual
+                // narrow spike.
         {
-            double a      = 0.5 - (shape * 0.45); // 0.5 (no distortion) .. 0.05 (strong distortion)
-            double warped = (phase < a) ? (phase / (2.0 * a)) : (0.5 + ((phase - a) / (2.0 * (1.0 - a))));
+            double a      = 0.5 - (shape * 0.35); // 0.5 (no distortion) .. 0.15 (moderate distortion)
+            double warped = (phase < a) ? ((phase / a) * 0.5) : (0.5 + (((phase - a) / (1.0 - a)) * 0.5));
 
             return sin(2.0 * M_PI * warped);
         }
@@ -1015,10 +1022,12 @@ static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, doub
                 // pure sine wave and at 99% Shape setting, the first half of the period almost
                 // covers the entire period length and the second half is a very narrow spike"
                 // (manual). Same phase-warp idea as Sine1, but the breakpoint splits the cycle
-                // into the sine's own positive/negative lobes (each still a full half-sine
-                // shape) rather than splitting where within one continuous curve the warp lands.
+                // into the sine's own positive/negative lobes rather than splitting where within
+                // one continuous curve the warp lands, and is pushed to a much more extreme
+                // ratio - the manual explicitly calls for an actual narrow "spike", not just a
+                // softened asymmetry like Sine1.
         {
-            double lobeWidth = 0.5 + (shape * 0.48); // 0.5 (symmetric) .. 0.98 (heavily skewed)
+            double lobeWidth = 0.5 + (shape * 0.485); // 0.5 (symmetric) .. 0.985 (a narrow spike)
             double warped    = (phase < lobeWidth) ? ((phase / lobeWidth) * 0.5) : (0.5 + (((phase - lobeWidth) / (1.0 - lobeWidth)) * 0.5));
 
             return sin(2.0 * M_PI * warped);
@@ -1052,17 +1061,16 @@ static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, doub
 
             return skewed_ramp_zero_start(phase, peak);
         }
-        case 5: // DblSaw - crossfades from a single near-full ramp (Shape 0) to that same ramp
-                // at double frequency, i.e. two full cycles across the window (Shape 1).
-                // Confirmed against the real original editor: it starts as a single cycle, same
-                // as it already was here, and morphs into two cycles as Shape approaches its max.
+        case 5: // DblSaw - "Double Saw signal. At 50% Shape setting, the signal consists of two
+                // Sawtooth waves in phase with each other, at 75% two Sawtooth waves slightly
+                // phase shifted and at 99% two Sawtooth waves 90 degrees phase shifted" (manual)
+                // - a pure phase detune between two same-frequency ramps, capped at a quarter
+                // cycle, not a frequency change.
         {
-            const double peak    = 0.97; // both saws are near-full sawtooths, not triangles
+            const double peak   = 0.97;         // both saws are near-full sawtooths, not triangles
+            double       detune = shape * 0.25; // 0 (in phase) .. 0.25 (90 degrees)
 
-            double       single  = skewed_ramp_zero_start(phase, peak);
-            double       doubled = skewed_ramp_zero_start(phase * 2.0, peak);
-
-            return ((1.0 - shape) * single) + (shape * doubled);
+            return (skewed_ramp_zero_start(phase, peak) + skewed_ramp_zero_start(phase + detune, peak)) * 0.5;
         }
         case 6: // Pulse - "a Pulse with selectable ASYMMETRIC pulse width...at 50% Shape
                 // setting, the signal is a perfect Square, at 75% a Pulse with 25%/75% pulse
