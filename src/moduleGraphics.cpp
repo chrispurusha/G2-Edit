@@ -328,12 +328,18 @@ static void morph_param_click_handler(tCoord coord, eClickPhase phase, void * us
 }
 
 void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t value) { // TODO: move to utilsgraphics!?
-    switch (volumeType) {
-        case volumeTypeCompress:
+    const tVolumeMeterConfig * config = find_volume_meter_config(volumeType);
+
+    if (config == NULL) {
+        return;
+    }
+
+    switch (config->style) {
+        case volumeMeterStyleMaskLeds:
         {
             tRectangle smallRectangle = rectangle;
-            double     space          = 2.0; // TODO: Possibly make a percentage of width
-            uint32_t   leds           = 10;
+            double     space          = config->space;
+            uint32_t   leds           = config->segments;
 
             smallRectangle.coord.y += space;
             smallRectangle.coord.x += space;
@@ -347,9 +353,9 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
 
             for (int i = 0; i < leds; i++) {
                 if ((value >> i) & 0x01) {
-                    set_rgb_colour(RGB_GREEN_7);
+                    set_rgb_colour(config->onColour);
                 } else {
-                    set_rgb_colour(RGB_GREEN_3);
+                    set_rgb_colour(config->offColour);
                 }
                 render_rectangle(moduleArea, smallRectangle);
                 smallRectangle.coord.y += smallRectangle.size.h + space;
@@ -358,9 +364,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
             break;
         }
 
-        case volumeTypeMono:
-        case volumeTypeStereo:
-        case volumeTypeQuad:
+        case volumeMeterStyleLevelBar:
         {
             uint32_t level             = value & 0x0f;
             //bool     yellowHold        = ((value >> 4) & 0x03) != 0;
@@ -368,7 +372,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
             bool     clip              = ((value >> 6) & 0x01) != 0;
 
             double   fullHeight        = rectangle.size.h;
-            double   stepHeight        = fullHeight / 12.0;
+            double   stepHeight        = fullHeight / (double)config->segments;
             int      valueThresholds[] = {7, 11, 12}; // exclusive upper bounds: green/yellow/red
             tRgb     colours[]         = {RGB_GREEN_7, RGB_YELLOW_7, RGB_RED_7};
 
@@ -385,7 +389,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
 
                 if ((int)level >= segmentBottomVal) {
                     int drawSteps = ((int)level < segmentTopVal) ? (int)level - segmentBottomVal : segmentRange;
-                    segmentDrawHeight = (drawSteps * fullHeight) / 12.0;
+                    segmentDrawHeight = (drawSteps * fullHeight) / (double)config->segments;
 
                     set_rgb_colour(colours[i]);
                     render_rectangle(
@@ -408,11 +412,11 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
             break;
         }
 
-        case volumeTypeSequencer:
+        case volumeMeterStyleSingleLed:
         {
             tRectangle smallRectangle = rectangle;
-            double     space          = 2.0; // TODO: Possibly make a percentage of width
-            uint32_t   leds           = 16;
+            double     space          = config->space;
+            uint32_t   leds           = config->segments;
 
             smallRectangle.coord.y += space;
             smallRectangle.coord.x += space;
@@ -426,9 +430,9 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
 
             for (int i = 0; i < leds; i++) {
                 if (i == value) {
-                    set_rgb_colour(RGB_GREEN_7);
+                    set_rgb_colour(config->onColour);
                 } else {
-                    set_rgb_colour(RGB_GREEN_3);
+                    set_rgb_colour(config->offColour);
                 }
                 render_rectangle(moduleArea, smallRectangle);
                 smallRectangle.coord.x += smallRectangle.size.w + space;
@@ -436,8 +440,6 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
 
             break;
         }
-        default:
-            break;
     }
 }
 
@@ -739,7 +741,7 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
         break;
         case volumeTypeStereo:
         {
-            double space = 2.0;                                                                                // TODO: Possibly make a percentage of width
+            double space = find_volume_meter_config(volumeTypeStereo)->space;
 
             render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[0]); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
             rectangle.coord.x += (rectangle.size.w + space);
@@ -753,7 +755,7 @@ void render_volume_common(tRectangle rectangle, tModule * module, uint32_t volum
         break;
         case volumeTypeQuad:
         {
-            double space = 2.0;                                                                                // TODO: Possibly make a percentage of width
+            double space = find_volume_meter_config(volumeTypeQuad)->space;
 
             render_volume_meter(rectangle, volumeLocationList[volumeRef].volumeType, module->volume.value[0]); // TODO: Should come from volume location list!? Shouldn't be in gModuleProperties
             rectangle.coord.x += (rectangle.size.w + space);
@@ -1145,19 +1147,20 @@ static void render_oscshpb_waveform_graph(tRectangle rectangle, tModule * module
     // Shape (param index 6) - fixed position for moduleTypeOscShpB's entries in
     // paramLocationList. Waveform is a MODE here (not a param, unlike OscB) - OscShpB's only
     // mode entry, "Wave" (modeLocationList, oscShpBStrMap), so index 0.
-    const uint32_t shapeParamIndex   = 6;
-    const uint32_t waveformModeIndex = 0;
-    uint32_t       slot              = module->key.slot;
-    uint32_t       variation         = gPatchDescr[slot].activeVariation;
-    uint32_t       waveformValue     = module->mode[waveformModeIndex].value;
-    double         shape             = (double)module->param[variation][shapeParamIndex].value / 127.0;
-    tRectangle     graphRect         = adjust_rectangle(rectangle, (tRectangle){{-2, 6}, {30, 10}}, anchorTopRight, module);
-    double         midY              = graphRect.coord.y + (graphRect.size.h / 2.0);
-    const int      numSamples        = 200; // fine enough to resolve Pulse/SymPulse's narrow
-                                            // sub-sample-width edge ramps, not just the coarser
-                                            // per-cycle shapes
-    const int      numCycles         = 1;   // one period across the box, matching the original editor
-    tCoord         prev              = {0};
+    const uint32_t         shapeParamIndex   = 6;
+    const uint32_t         waveformModeIndex = 0;
+    uint32_t               slot              = module->key.slot;
+    uint32_t               variation         = gPatchDescr[slot].activeVariation;
+    uint32_t               waveformValue     = module->mode[waveformModeIndex].value;
+    double                 shape             = (double)module->param[variation][shapeParamIndex].value / 127.0;
+    const tGraphLocation * graphLoc          = find_graph_location(module->type);
+    tRectangle             graphRect         = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
+    double                 midY              = graphRect.coord.y + (graphRect.size.h / 2.0);
+    const int              numSamples        = 200; // fine enough to resolve Pulse/SymPulse's narrow
+                                                    // sub-sample-width edge ramps, not just the coarser
+                                                    // per-cycle shapes
+    const int              numCycles         = 1;   // one period across the box, matching the original editor
+    tCoord                 prev              = {0};
 
     set_rgb_colour(RGB_GREY_2);
     render_rectangle(moduleArea, graphRect);
@@ -1253,51 +1256,52 @@ static double envadsr_decay_level(double t, double levelStart, double levelEnd, 
 static void render_envadsr_graph(tRectangle rectangle, tModule * module) {
     // Env Shape (index 0), Attack (1), Decay (2), Sustain (3), Release (4), Output Type (5) -
     // fixed positions for moduleTypeEnvADSR's entries in paramLocationList, see moduleResources.h.
-    const uint32_t envShapeParamIndex   = 0;
-    const uint32_t attackParamIndex     = 1;
-    const uint32_t decayParamIndex      = 2;
-    const uint32_t sustainParamIndex    = 3;
-    const uint32_t releaseParamIndex    = 4;
-    const uint32_t outputTypeParamIndex = 5;
-    uint32_t       slot                 = module->key.slot;
-    uint32_t       variation            = gPatchDescr[slot].activeVariation;
-    uint32_t       envShapeIndex        = module->param[variation][envShapeParamIndex].value;
-    double         attackVal            = (double)module->param[variation][attackParamIndex].value / 127.0;
-    double         decayVal             = (double)module->param[variation][decayParamIndex].value / 127.0;
-    double         sustainLevel         = (double)module->param[variation][sustainParamIndex].value / 127.0;
-    double         releaseVal           = (double)module->param[variation][releaseParamIndex].value / 127.0;
-    uint32_t       outputType           = module->param[variation][outputTypeParamIndex].value; // 0=Pos,
-                                                                                                // 1=PosInv, 2=Neg,
-                                                                                                // 3=NegInv, 4=Bip,
-                                                                                                // 5=BipInv
-    bool           isBip                = (outputType == 4) || (outputType == 5);
-    bool           isNegFamily          = (outputType == 2) || (outputType == 3);
+    const uint32_t         envShapeParamIndex   = 0;
+    const uint32_t         attackParamIndex     = 1;
+    const uint32_t         decayParamIndex      = 2;
+    const uint32_t         sustainParamIndex    = 3;
+    const uint32_t         releaseParamIndex    = 4;
+    const uint32_t         outputTypeParamIndex = 5;
+    uint32_t               slot                 = module->key.slot;
+    uint32_t               variation            = gPatchDescr[slot].activeVariation;
+    uint32_t               envShapeIndex        = module->param[variation][envShapeParamIndex].value;
+    double                 attackVal            = (double)module->param[variation][attackParamIndex].value / 127.0;
+    double                 decayVal             = (double)module->param[variation][decayParamIndex].value / 127.0;
+    double                 sustainLevel         = (double)module->param[variation][sustainParamIndex].value / 127.0;
+    double                 releaseVal           = (double)module->param[variation][releaseParamIndex].value / 127.0;
+    uint32_t               outputType           = module->param[variation][outputTypeParamIndex].value; // 0=Pos,
+                                                                                                        // 1=PosInv, 2=Neg,
+                                                                                                        // 3=NegInv, 4=Bip,
+                                                                                                        // 5=BipInv
+    bool                   isBip                = (outputType == 4) || (outputType == 5);
+    bool                   isNegFamily          = (outputType == 2) || (outputType == 3);
 
     // Bip/BipInv ignore the Sustain knob (fixed at the centre level instead) and Release
     // continues on past that centre to the opposite extreme, rather than stopping there.
-    double         effectiveSustain     = isBip ? 0.0 : sustainLevel;
-    double         releaseTarget        = isBip ? -1.0 : 0.0;
+    double                 effectiveSustain     = isBip ? 0.0 : sustainLevel;
+    double                 releaseTarget        = isBip ? -1.0 : 0.0;
 
     // Centred horizontally, vertically aligned with the KB Active toggle's own y offset (8).
-    tRectangle     graphRect            = adjust_rectangle(rectangle, (tRectangle){{20, 8}, {60, 16}}, anchorTopLeft, module);
+    const tGraphLocation * graphLoc             = find_graph_location(module->type);
+    tRectangle             graphRect            = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
 
-    const double   holdWidth            = 0.24; // fixed width just to show the Sustain plateau clearly
+    const double           holdWidth            = 0.24; // fixed width just to show the Sustain plateau clearly
 
     // Each segment's width comes from its OWN knob only, independent of the other two - 0.04
     // (raw minimum, still clearly visible rather than a zero-width vertical line) up to 0.24
     // (raw maximum). Whatever's left of the box after Attack+Decay+Release+the fixed Sustain
     // width is just background.
-    double         attackW              = 0.04 + (attackVal * 0.20);
-    double         decayW               = 0.04 + (decayVal * 0.20);
-    double         releaseW             = 0.04 + (releaseVal * 0.20);
-    double         x0                   = graphRect.coord.x;
+    double                 attackW              = 0.04 + (attackVal * 0.20);
+    double                 decayW               = 0.04 + (decayVal * 0.20);
+    double                 releaseW             = 0.04 + (releaseVal * 0.20);
+    double                 x0                   = graphRect.coord.x;
 
     // Where "envelope output = 0" sits, and how much of the box height its full swing covers -
     // Pos/PosInv only ever go 0..+1 (manual: "0 units...up to +64"), so zero sits at the
     // bottom; Neg/NegInv only ever go 0..-1, so zero sits at the top; only Bip/BipInv are
     // genuinely bipolar, spanning -1..+1 around a centred zero.
-    double         zeroY                = isBip ? (graphRect.coord.y + (graphRect.size.h * 0.5)) : (isNegFamily ? graphRect.coord.y : (graphRect.coord.y + graphRect.size.h));
-    double         fullSwing            = isBip ? (graphRect.size.h * 0.5) : graphRect.size.h;
+    double                 zeroY                = isBip ? (graphRect.coord.y + (graphRect.size.h * 0.5)) : (isNegFamily ? graphRect.coord.y : (graphRect.coord.y + graphRect.size.h));
+    double                 fullSwing            = isBip ? (graphRect.size.h * 0.5) : graphRect.size.h;
 
     set_rgb_colour(RGB_GREY_2);
     render_rectangle(moduleArea, graphRect);
@@ -1308,7 +1312,7 @@ static void render_envadsr_graph(tRectangle rectangle, tModule * module) {
     // "shape" (0 at the start, 1 at the attack peak, effectiveSustain during hold, releaseTarget
     // at the end) is always expressed in Pos's own convention; convert it to what each Output
     // Type actually outputs (per the manual's six descriptions) before mapping to a y coordinate.
-    auto           levelToY = [&](double shape) {
+    auto                   levelToY = [&](double shape) {
         double actualLevel;
 
         switch (outputType) {
@@ -1392,24 +1396,25 @@ static void render_envadsr_graph(tRectangle rectangle, tModule * module) {
 static void render_fltclassic_response_graph(tRectangle rectangle, tModule * module) {
     // Freq (index 0), Res (index 3), dB/octave slope (index 4) - fixed positions for
     // moduleTypeFltClassic's entries in paramLocationList, see moduleResources.h.
-    const uint32_t freqParamIndex  = 0;
-    const uint32_t resParamIndex   = 3;
-    const uint32_t slopeParamIndex = 4;
-    uint32_t       slot            = module->key.slot;
-    uint32_t       variation       = gPatchDescr[slot].activeVariation;
-    double         cutoffX         = (double)module->param[variation][freqParamIndex].value / 127.0;
-    double         resNorm         = (double)module->param[variation][resParamIndex].value / 127.0;
-    uint32_t       slopeIndex      = module->param[variation][slopeParamIndex].value; // 0=12dB, 1=18dB, 2=24dB
+    const uint32_t         freqParamIndex  = 0;
+    const uint32_t         resParamIndex   = 3;
+    const uint32_t         slopeParamIndex = 4;
+    uint32_t               slot            = module->key.slot;
+    uint32_t               variation       = gPatchDescr[slot].activeVariation;
+    double                 cutoffX         = (double)module->param[variation][freqParamIndex].value / 127.0;
+    double                 resNorm         = (double)module->param[variation][resParamIndex].value / 127.0;
+    uint32_t               slopeIndex      = module->param[variation][slopeParamIndex].value; // 0=12dB, 1=18dB, 2=24dB
 
-    double         q               = 0.5 * pow(100.0, resNorm);                       // 0.5..50, matches filter_resonanceStrMap's real range
-    int            extraPoles      = (int)slopeIndex;                                 // 0/1/2 extra one-pole stages -> 12/18/24 dB/octave
+    double                 q               = 0.5 * pow(100.0, resNorm);                       // 0.5..50, matches filter_resonanceStrMap's real range
+    int                    extraPoles      = (int)slopeIndex;                                 // 0/1/2 extra one-pole stages -> 12/18/24 dB/octave
 
-    tRectangle     graphRect       = adjust_rectangle(rectangle, (tRectangle){{0, 10}, {30, 10}}, anchorTopMiddle, module);
-    double         baseY           = graphRect.coord.y + (graphRect.size.h * 0.6); // 0dB reference, leaving
-                                                                                   // headroom above for the
-                                                                                   // resonance peak to rise into
-    const int      numSamples      = 100;
-    tCoord         prev            = {0};
+    const tGraphLocation * graphLoc        = find_graph_location(module->type);
+    tRectangle             graphRect       = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
+    double                 baseY           = graphRect.coord.y + (graphRect.size.h * 0.6); // 0dB reference, leaving
+                                                                                           // headroom above for the
+                                                                                           // resonance peak to rise into
+    const int              numSamples      = 100;
+    tCoord                 prev            = {0};
 
     set_rgb_colour(RGB_GREY_2);
     render_rectangle(moduleArea, graphRect);

@@ -2642,7 +2642,16 @@ const tVolumeLocation    volumeLocationList[] = {
     {moduleTypeSeqLev,    volumeTypeSequencer, {{ 20, 17}, {64,  5}}, anchorTopLeft },
     {moduleTypeSeqCtr,    volumeTypeSequencer, {{ 20, 17}, {64,  5}}, anchorTopLeft }, };
 
-const tLedLocation       ledLocationList[] = {
+// volumeType, style, segments (LEDs or level-bar steps), space (LED gap, or gap between repeated
+// per-channel meters), on colour, off colour
+const tVolumeMeterConfig volumeMeterConfigList[] = {
+    {volumeTypeCompress,  volumeMeterStyleMaskLeds,  10, 2.0, RGB_GREEN_7, RGB_GREEN_3},
+    {volumeTypeMono,      volumeMeterStyleLevelBar,  12, 0.0, RGB_BLACK,   RGB_BLACK  },
+    {volumeTypeStereo,    volumeMeterStyleLevelBar,  12, 2.0, RGB_BLACK,   RGB_BLACK  },
+    {volumeTypeQuad,      volumeMeterStyleLevelBar,  12, 2.0, RGB_BLACK,   RGB_BLACK  },
+    {volumeTypeSequencer, volumeMeterStyleSingleLed, 16, 2.0, RGB_GREEN_7, RGB_GREEN_3}, };
+
+const tLedLocation       ledLocationList[]       = {
     {moduleTypeInvert,     ledTypeYes,  {{-40, 10}, {3, 3}}, anchorTopRight},
     {moduleTypeInvert,     ledTypeYes,  {{-10, 10}, {3, 3}}, anchorTopRight},
     {moduleTypeEnvADSR,    ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft },
@@ -2734,5 +2743,12 @@ const tLedLocation       ledLocationList[] = {
     {moduleTypeSeqVal,     ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight},
     {moduleTypeSeqLev,     ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight},
     {moduleTypeSeqCtr,     ledTypePark, {{ -2,  7}, {3, 3}}, anchorTopRight}};
+
+// moduleType, rectangle, anchor - placement only; each module's own graph function
+// (moduleGraphics.cpp) still owns its drawing/curve logic.
+const tGraphLocation     graphLocationList[] = {
+    {moduleTypeOscShpB,    {{-2,  6}, {30, 10}}, anchorTopRight },
+    {moduleTypeEnvADSR,    {{20,  8}, {60, 16}}, anchorTopLeft  },
+    {moduleTypeFltClassic, {{ 0, 10}, {30, 10}}, anchorTopMiddle}, };
 
 #endif // __MODULE_RESOURCES_H__
