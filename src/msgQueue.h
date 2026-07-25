@@ -288,8 +288,8 @@ typedef struct _message {
 } tMessage;
 
 typedef struct {
-    pthread_mutex_t mutex;
-    pthread_mutex_t semMutex; // TODO - use this
+    pthread_mutex_t mutex;    // Guards head/tail (msg_send()/msg_receive()) — separate from semMutex below
+    pthread_mutex_t semMutex; // Guards semCount/semCond (msgqueue_sem_wait/trywait/send, msgQueue.c)
     pthread_cond_t  semCond;
     int             semCount; // Tracks your semaphore state
     tMessage *      head;

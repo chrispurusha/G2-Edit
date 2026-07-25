@@ -48,6 +48,13 @@ extern const char *             freq_shift_subStrMap[];
 extern const char *             patch_settings_glideStrMap[];
 
 tCableColour cable_colour_for_connector_type(tConnectorType type);
+// A module running at the higher (audio) bandwidth promotes its Control connectors to Audio and
+// its Logic connectors to TurboLogic (orange) — see render_connector_common()'s own comment
+// (moduleGraphics.cpp) for the manual/decompiled-source references this is confirmed against.
+// Audio connectors are never affected; upRate has no effect when false. Shared by both the
+// connector-hole rendering itself and cable-creation's "inherit the source connector's current
+// colour" logic (mouseHandle.c), so the two can never disagree.
+tConnectorType effective_connector_type(tConnectorType baseType, bool upRate);
 uint32_t array_size_param_location_list(void);
 uint32_t array_size_connector_location_list(void);
 uint32_t array_size_mode_location_list(void);

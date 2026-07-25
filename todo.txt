@@ -1,10 +1,10 @@
 G2-Edit TODO (priority order)
 
-- graphics.cpp:716 — perf-mode write path relies on a blind 2-second usleep instead of real state confirmation
+- graphics.cpp:716 — perf-mode write path relies on a blind 2-second usleep instead of real state confirmation (needs hardware testing — see "NEEDS A SECOND OPINION" section below)
 - usbComms.c — centralize repeated unsolicited send_stop() calls (6 sites, ~3460-4066) instead of scattering them
-- usbComms.c — resolve perf-mode ambiguities: synth vs. perf ownership, voice-count ordering on increase, unconfirmed message case (search parse_perf_header/parse_slot_selection/SUB_RESPONSE_PATCH_VERSION_CHANGE area — exact line numbers have drifted, topic still open)
+- usbComms.c — resolve perf-mode ambiguities: synth vs. perf ownership, voice-count ordering on increase, unconfirmed message case (search parse_perf_header/parse_slot_selection/SUB_RESPONSE_PATCH_VERSION_CHANGE area — exact line numbers have drifted, topic still open; needs hardware testing)
 - graphics.cpp:701 — move parse_patch to a shared file so both USB and file-load paths can use it
-- moduleGraphics.cpp — refactor volume-meter/label rendering into utilsGraphics.cpp; fix upRate flag being applied too broadly (should be audio-connector-only); resolve "can Mode be morphed?" question
+- moduleGraphics.cpp — refactor volume-meter/label rendering into utilsGraphics.cpp; resolve "can Mode be morphed?" question (needs hardware/manual check)
 - OscA(97) — add new UI element for Freq control (param 0) that accounts for param 6 Pitch Type
 - Sw8-1(15), ValSw1-2(17) — need more resources
 - OscShpB(8) — check mode handling
@@ -12,9 +12,128 @@ G2-Edit TODO (priority order)
 - Verify remaining 117 unverified module types (filters, oscillators, delay lines, sequencer/logic, MIDI send/receive, Resonator, Operator, Random* family, etc.) — see "Module dev debug notes.txt"
 - Add performance keyboard split/layer/zone UI (manual's "Layering Patches" section) — currently only the standalone NoteZone module exists
 - Add a dedicated master-clock/tempo panel (currently only basic send/receive clock toggles exist)
-- globalVars.h:60,67,68 — nullify knob/controller arrays on new patch load
-- msgQueue.h:291 — remove unused mutex (semMutex/semCond at 292-293 replaced it; plain mutex now dead)
-- defs.h:179 — confirm whether perf-header sub-response (SUB_RESPONSE_PERF_HEADER, 0x11) is ever actually used
+- defs.h:179 — confirm whether perf-header sub-response (SUB_RESPONSE_PERF_HEADER, 0x11) is ever actually used (needs hardware testing)
+- moduleGraphics.cpp/graphics.cpp — GL_BLEND enable/disable currently sits at each caller (moduleGraphics.cpp:1239/1254, graphics.cpp:590) rather than inside the shared drawing primitive (render_cable_from_to() et al., utilsGraphics.cpp) the way render_text() already manages its own blend state. Not a bug — correct today, just a cosmetic/architectural inconsistency. Low priority; real regression risk if rushed since these primitives are reused everywhere.
+
+RESOLVED 2026-07-24 (verified against code, not just assumed from the comment):
+- globalVars.h gKnobArray/gControllerArray/gControllerCount "nullify on new load" — already fully handled by
+  clear_slot_data() (graphics.cpp), called from both the USB (usbComms.c:2920) and file-load (graphics.cpp:700)
+  entry points. Stale TODO comments removed from globalVars.h.
+- msgQueue.h "remove unused mutex" — was wrong; re-checked msgQueue.c and BOTH mutex and semMutex are genuinely
+  used (mutex guards head/tail, semMutex+semCond+semCount implement the counting semaphore). The "TODO - use
+  this" comment on semMutex was just stale from before semMutex was wired up. Comments updated to explain what
+  each one actually guards instead.
+- moduleGraphics.cpp:849 upRate connector-colour bug — FIXED, full fidelity. First pass confirmed against
+  the manual (g2manual.txt p.135) only; second pass cross-checked the actual decompiled original editor
+  (Original Editor/G2Editor.c) and found the real mechanism: ECableColor has 7 values including a genuine
+  TurboLogic entry (RGB 0xff/0xc0/0x50 ≈ 1.0/0.75/0.31, i.e. orange), and CPnlControlInHole/OutHole::GetColor()
+  / CPnlLogicInHole/OutHole::GetColor() both branch on EModuleBandWidth — confirming Control connectors
+  promote to Audio and Logic connectors promote to their OWN higher-bandwidth variant (TurboLogic/orange),
+  never to plain Audio. Added connectorTypeTurboLogic to tConnectorType (types.h) and its RGB to
+  connectorColourMap (moduleResources.h); added a shared effective_connector_type(baseType, upRate) helper
+  (moduleResourcesAccess.c/.h) used by both the connector-hole rendering (moduleGraphics.cpp) and, for full
+  fidelity, cable-creation's "inherit the source connector's current colour" logic (mouseHandle.c:712, which
+  previously used the connector's raw base type and so never inherited the promoted colour either).
+  gCableColourMap already had an unused cableColourOrange entry ("Logic FG") ready for exactly this — wired
+  cable_colour_for_connector_type() to it. module->connector[i].type itself deliberately still stores only
+  the raw base type, never the promotion — protocol.c's own upRate-propagation walk (search
+  "fromModule->connector" there) depends on it being the permanent declared type.
+- update_module_up_rates() (protocol.c) — checked against the decompiled original's real equivalent,
+  CPatchData::GenerateBandwidthChangeMolecules() (same do-while-until-stable fixed-point shape, same
+  "reset then recompute" pattern so demotion works, not just promotion). Structurally sound — but the
+  comparison surfaced a real gap: the original also walks a just-changed module's OUTPUT connectors and
+  retroactively recolours any already-connected cable (GetRecolorCableMolecules) the moment the module's
+  bandwidth changes; this app only ever set a cable's colour once, at creation time (mouseHandle.c), so an
+  existing cable's colour went stale if its source module up-rated or de-rated afterwards. FIXED: added the
+  same retroactive-recolour walk to update_module_up_rates()'s per-module change branch, reusing the exact
+  cable-matching shape menu_action_set_cable_colour() (menus.c) already uses for the user-driven manual
+  recolour, and sending the same eMsgCmdWriteCable sync every other cable-colour change already sends.
+- protocol.c:355 numVariations sanity check — added: logs an error if the parsed value is neither 9 nor 10
+  (this function has no way to know if it's parsing USB or file data, so it can't check the exact expected
+  value for the actual source, just flag anything outside the known pair). The existing >10 bounds check
+  that prevents an actual overrun was already there and is unchanged.
+
+NEEDS A SECOND OPINION (hardware/protocol behaviour questions found in code comments — real G2 hardware
+access and/or testing needed before touching; do not guess):
+- graphics.cpp:715-716 — perf-mode write triggers a patch read; currently papered over with a blind 2s
+  usleep. Needs real state confirmation from the device instead, or confirmation the sleep is provably long
+  enough.
+- usbComms.c:360 — does PerfMode logging/ownership belong to "synth" or "perf"? Ambiguous in the protocol.
+- usbComms.c:594 — voice-count increase may need the target set lower first before attempting the increase —
+  unconfirmed.
+- usbComms.c:600,925 / defs.h:179 — SUB_RESPONSE_PERF_HEADER (0x11): comment says "don't think we've ever seen
+  one of these" — checked the decompiled reference (Original Editor/G2Editor.c) and the manual, neither
+  confirms or denies actual use on the wire. Only real hardware capture can settle whether it's dead code.
+- usbComms.c:3650-3651 — "consider if this is the right thing to do here" / "not sure we need to do this here"
+  around patch-change-indication handling — behavioural judgement call, needs testing to confirm current
+  behaviour is correct before changing it.
+- usbComms.c:3834 — commented-out eMsgCmdReloadAllPatchData case, with an open question about whether a full
+  reload is doing more than intended. Needs understanding of the currently-active code path's actual scope
+  before touching.
+- protocol.c:1759 — write-side parsing doesn't match the read-side logic in usbComms.c; a real fix needs
+  careful protocol comparison and hardware verification, not a guess.
+- mouseHandle.c:164 — gControllerCount[slot] "seems to default to 2, so might need to set up defaults" — an
+  open question about whether some default controller assignment should be pre-populated on a new patch.
+  Needs product/hardware judgement, not a code fix.
+- moduleGraphics.cpp:685 — "Check if Mode can be morphed" — needs a manual/hardware check, not a code guess.
+- moduleGraphics.cpp:744,751,758 — "Should come from volume location list!? Shouldn't be in gModuleProperties"
+  — a data-modelling question (where per-module volume-type info should live) that needs a design decision,
+  not a mechanical fix.
+- mouseHandle.c:929 — "Close if clicked outside" on a context menu — current behaviour looks reasonable; flag
+  only if it's actually been observed to feel wrong in use.
+- usbComms.c:3980 — "Don't like early returns. Use retVal" — a style preference, not a bug; low priority and
+  arguably a matter of taste rather than something needing a rewrite.
+- usbComms.c:3526 — "send data from the editor" for currently-read-only items — a future write-support idea,
+  not a bug.
+- usbComms.c:4047 — "maybe some more items we need to get here" for perf settings — an open-ended idea, not a
+  known gap.
+- globalVars.c:87 — commented-out gHiddenCableMask with "Send to G2 when changes" — an unimplemented future
+  feature idea (sync cable-hide state to hardware), not a bug.
+- mouseHandle.c:1585 — mouse-move currently calls synthlib_request_redraw() unconditionally on every move; a
+  "only redraw if hover state actually changed" guard (noAction) used to exist and was disabled/removed,
+  commented-out rather than deleted. Re-adding it risks reintroducing whatever bug caused it to be pulled in
+  the first place (no record of why) for a performance win that's likely marginal on modern hardware — leave
+  alone unless it's actually been observed as a real cost.
+
+MISSING FEATURES (parity with the original editor — cross-checked against g2manual.txt 2026-07-25;
+none of these exist in G2-Edit at all yet, confirmed by source search, not just absence of memory):
+- Pop-up overlay views (F5-F8, Ctrl+F8 in the original) — a family of "yellow popup box" overlays drawn
+  over the patch canvas showing a different thing per parameter at a glance, toggled by function key:
+    F5        View Parameter Values     — each parameter's current value
+    F6        View Morph Groups         — which of the 8 morph groups (if any) each parameter belongs to
+    F7        View Knob Assignments     — which panel knob (if any) each parameter is mapped to
+    F8        View MIDI CC# Assignments — the MIDI CC# (if any) mapped to each parameter
+    Ctrl+F8   View Parameter MIDI Values — how each knob is actually being sent/received over MIDI
+  None implemented — no F5-F8 key handling anywhere in the source at all.
+- Parameter Overview window (Ctrl-L) — floating window showing every Parameter Page's knob/button
+  assignments at once in one grid, with drag-and-drop to make/move/reorganize assignments directly from
+  the overview instead of one page at a time. Not implemented.
+- Bulk MIDI CC tools (Tools menu, alongside Parameter Overview) — "Assign MIDI" (auto-assigns the next
+  free CC# to every currently panel-assigned knob/button, in page order), "Clear MIDI" (clears every CC#
+  assignment in the Patch at once, reversible via Undo), "View Buttons" (toggles the popup overlay between
+  a combined dial+button assignment's knob half and button half, e.g. on Sequencer modules). None
+  implemented — G2-Edit's Tools menu currently only has Mutator. Per-parameter right-click "Assign MIDI
+  CC" already exists (the "M key / MIDI CC# Assign Dialog" equivalent) and doesn't need redoing.
+- MIDI Learn (L key) — assign the currently-focused parameter to whichever MIDI CC# was last received,
+  without opening a picker. Not implemented.
+- Patch Window Split Bar — the original shows the Voice Area and FX Area SIMULTANEOUSLY in one window,
+  split by a drag-resizable horizontal bar (with up/down-arrow buttons to show just one area full-height,
+  a double-arrow button to restore the previous split position, and V/F keyboard shortcuts to toggle full-
+  screen on the current area and back). G2-Edit's VA/FX topbar buttons (mouseTopbar.c,
+  set_exclusive_button_highlight(topbarVaId, topbarFxId, ...)) are a hard exclusive toggle instead — only
+  one of VA/FX ever visible, no split view, no drag bar, no V/F shortcuts, no "restore previous split"
+  concept at all.
+- Virtual/On-Screen Keyboard (Ctrl-K) — floating window to play notes with the mouse without a physical
+  synth keyboard attached: click-to-sound keys (sustains while held), horizontal resize to widen the
+  visible note range, octave/note scroll buttons, and Drone (next note plays indefinitely) / Repeat (last
+  note replays continuously) toggles. Not implemented — zero references anywhere in the source.
+- Cable BREAK action — right-click cable popup currently only has Disconnect (menu_action_delete_cable,
+  menus.c — fully removes one cable, auto-rerouting any remaining serial chain to stay functional). The
+  original ALSO has Break: splits a serial chain at one point WITHOUT rerouting — everything before the
+  break point keeps working, everything after becomes "connected but non-functional" and turns white to
+  show it's dead wire (this is what the existing "delete non-functional input-to-input connections (white
+  cables)" cleanup comment elsewhere in menus.c was referring to — G2-Edit already has the CONCEPT of
+  these white cables, just no UI action that actually creates them). Not implemented.
 
 - rationalise architecture and commonalise components for other projects (status as of 2026-07-24)
 

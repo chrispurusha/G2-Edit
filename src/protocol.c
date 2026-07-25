@@ -352,8 +352,15 @@ void parse_param_list(uint32_t slot, uint8_t * buff, uint32_t * subOffset) {
     // SWITCH ON LOC BEING 0..1 or 2 2 = line 4112 in file.pas
     moduleCount   = read_bit_stream(buff, subOffset, 8);
     LOG_MODULE_DATA("Module Count      %u\n", moduleCount);
-    numVariations = read_bit_stream(buff, subOffset, 8);     // Should always be 10 on USB or 9 in a file - TODO: sanity check
+    numVariations = read_bit_stream(buff, subOffset, 8);
     LOG_MODULE_DATA("Variation Count      %u\n", numVariations);
+
+    // Expected to always be 10 (live USB) or 9 (a .pch2/.prf2 file) — this function has no way to
+    // tell which source it's parsing, so this only flags anything outside that pair rather than
+    // enforcing the exact value for the actual source.
+    if ((numVariations != 9) && (numVariations != 10)) {
+        LOG_ERROR("parse_param_list: unexpected Variation Count %u (expected 9 or 10)\n", numVariations);
+    }
 
     if (numVariations > 10) {
         LOG_MODULE_DATA("Variation Count > 10\n");
@@ -1687,6 +1694,51 @@ void update_module_up_rates(void) {
             messageContent.moduleData.moduleKey = module->key;
             messageContent.moduleData.upRate    = module->upRate;
             msg_send(&gCommandQueue, &messageContent);
+
+            // Retroactively recolour any cable already attached to one of this module's OUTPUTS,
+            // matching the decompiled original editor's CPatchData::GenerateBandwidthChangeMolecules()
+            // — it walks a bandwidth-changed module's outputs (GetNoOfOutputs) and recolours any
+            // connected cable (GetRecolorCableMolecules) right when the change happens, not only at
+            // cable-creation time. Without this, a cable drawn before its source module up-rated (or
+            // after it de-rates) keeps showing whatever colour it inherited at creation, going stale.
+            // Audio connectors are skipped — they're always top-rate, upRate never changes their
+            // colour (see effective_connector_type()'s own comment, moduleResourcesAccess.h).
+            uint32_t        connectorCount = module_connector_count(module->type);
+
+            for (uint32_t c = 0; c < connectorCount; c++) {
+                if ((module->connector[c].dir != connectorDirOut) || (module->connector[c].type == connectorTypeAudio)) {
+                    continue;
+                }
+                int          outIndex  = find_io_count_from_index(module, connectorDirOut, (int)c);
+                tCableColour newColour = cable_colour_for_connector_type(effective_connector_type(module->connector[c].type, module->upRate));
+
+                for (uint32_t j = 0; j < MAX_NUM_CABLES; j++) {
+                    tCable * cable = get_cable_slot(slot, location, j);
+
+                    if ((cable == NULL) || !cable->active) {
+                        continue;
+                    }
+
+                    if (  (cable->key.moduleFromIndex == module->key.index)
+                       && (cable->key.linkType == cableLinkTypeFromOutput)
+                       && ((int)cable->key.connectorFromIoCount == outIndex)
+                       && (cable->colour != (uint32_t)newColour)) {
+                        cable->colour                           = (uint32_t)newColour;
+
+                        tMessageContent cableMsg = {0};
+                        cableMsg.cmd                            = eMsgCmdWriteCable;
+                        cableMsg.slot                           = slot;
+                        cableMsg.cableData.location             = location;
+                        cableMsg.cableData.moduleFromIndex      = cable->key.moduleFromIndex;
+                        cableMsg.cableData.connectorFromIoIndex = cable->key.connectorFromIoCount;
+                        cableMsg.cableData.moduleToIndex        = cable->key.moduleToIndex;
+                        cableMsg.cableData.connectorToIoIndex   = cable->key.connectorToIoCount;
+                        cableMsg.cableData.linkType             = cable->key.linkType;
+                        cableMsg.cableData.colour               = (uint32_t)newColour;
+                        msg_send(&gCommandQueue, &cableMsg);
+                    }
+                }
+            }
         }
     }
 }

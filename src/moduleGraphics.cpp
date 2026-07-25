@@ -845,11 +845,18 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
         }
         render_text(moduleArea, textRectangle, (char *)connectorLocationList[connectorListIndex].label);
     }
-
-    if (module->upRate) { // TODO: should only apply to connectors which carry audio
-        type = connectorTypeAudio;
-    }
-    set_rgb_colour(connectorColourMap[type]);  // Note, was using "module->connector[connectorIndex].type", check that this type param is OK
+    // Per the G2 manual ("Control signals, blue connectors" / "Logic or gate signals, yellow and
+    // orange connectors", g2manual.txt p.135) and confirmed against the original decompiled editor
+    // (Original Editor/G2Editor.c — CPnlControlInHole/OutHole::GetColor() and
+    // CPnlLogicInHole/OutHole::GetColor(), both bandwidth-dependent; ECableColor's own
+    // TurboLogic entry, RGB (1.0, 0.75, 0.31), confirms the exact orange): a module running at the
+    // higher (audio) bandwidth promotes its blue (control) connectors to red/Audio, but a yellow
+    // (logic) connector instead becomes orange/TurboLogic — still a logic signal, just the
+    // higher-bandwidth variant, never plain red. NOT stored back into
+    // module->connector[connectorIndex].type above — that field is the connector's permanent
+    // declared type, used by protocol.c's own upRate-propagation walk (see its own comment), and
+    // must never reflect this purely-cosmetic promotion.
+    set_rgb_colour(connectorColourMap[effective_connector_type(type, module->upRate)]);  // Note, was using "module->connector[connectorIndex].type", check that this type param is OK
 
     if (module->connector[connectorIndex].dir == connectorDirIn) {
         module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, {rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)}, rectangle.size.w / 2.0, 10.0, 0.0, 10.0);
@@ -935,6 +942,138 @@ static void render_module_connectors(tRectangle rectangle, tModule * module) {
     }
 }
 
+// ── OscShpB waveform preview ─────────────────────────────────────────────────
+//
+// The manual describes "Waveform Drop-Down Selectors With Graphs" on the G2's
+// Shape Oscillators. This was originally built against OscB, using per-
+// waveform routines recovered from the decompiled binary
+// (CPnlWaveformGraphABC::DrawSine/DrawTri/DrawSaw/DrawSquare/DrawDsf) - but
+// on real hardware, Shape turned out to make no audible difference to OscB's
+// sin/tri/saw at all (only squ and sup). CPnlOscSinShapeGraph, the one
+// decompiled graph-widget class with "Shape" in its name, also never quite
+// matched OscB's 5 waveforms - its Draw() dispatches to DrawDualSine/
+// DrawDsf/DrawTweekTri/DrawPulse, which fits OscShpB's 8-option waveform
+// mode (Sine1-4, TriSaw, DblSaw, Pulse, SymPulse - oscShpBStrMap) far
+// better. Moved here on that basis; still an approximation distilled into
+// simple closed-form functions rather than a byte-exact port, so treat this
+// as a starting point to verify against real hardware, same as before.
+static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, double shape) {
+    switch (waveformIndex) {
+        case 0: // Sine1 - plain sine, Shape mostly cosmetic
+        {
+            return sin(2.0 * M_PI * phase);
+        }
+        case 1: // Sine2 - two sines blended, Shape crossfades a second (2x freq) sine in
+        {
+            double s1 = sin(2.0 * M_PI * phase);
+            double s2 = sin(4.0 * M_PI * phase);
+
+            return ((1.0 - shape) * s1) + (shape * s2);
+        }
+        case 2: // Sine3 - Discrete Summation Formula (Moorer "buzz"), N=1: matches
+                // CPnlWaveformGraphABC::DrawDsf's y = sin(theta)/(1-2r*cos(theta)+r^2)
+        {
+            double theta = 2.0 * M_PI * phase;
+            double r     = fmin(shape, 0.97);
+            double denom = 1.0 - (2.0 * r * cos(theta)) + (r * r);
+            double y     = (denom > 0.0001) ? ((sin(theta) / denom) * (1.0 - r)) : 0.0;
+
+            return fmax(-1.0, fmin(1.0, y));
+        }
+        case 3: // Sine4 - same DSF formula as Sine3, but N=2 (matches DrawDsf's param_2=1 vs 2
+                // dispatch), so it sharpens into twice as many buzz peaks per cycle
+        {
+            double theta = 2.0 * M_PI * phase;
+            double r     = fmin(shape, 0.97);
+            double denom = 1.0 - (2.0 * r * cos(2.0 * theta)) + (r * r);
+            double y     = (denom > 0.0001) ? ((sin(theta) / denom) * (1.0 - r)) : 0.0;
+
+            return fmax(-1.0, fmin(1.0, y));
+        }
+        case 4: // TriSaw - Shape skews the breakpoint from a symmetric triangle towards a sawtooth.
+                // Confirmed against the real original editor: Shape at its displayed minimum
+                // (50%, i.e. raw value 0 - the dial reads 50%..99%, not 0%..100%, per
+                // render_paramType1Shape) is a single-cycle symmetric triangle, and at its
+                // displayed maximum (99%, raw 127) a single-cycle ramp, both starting at a
+                // rising zero-crossing rather than at the trough. "shape" here is already the
+                // raw value normalised to 0..1, so it's shape 0 (not 0.5) that's the triangle.
+        {
+            double peak = 0.5 + (shape * 0.47); // shape 0 (displayed 50%) -> 0.5 (triangle),
+                                                // shape 1 (displayed 99%) -> 0.97 (near-full ramp)
+
+            // p is phase in the "starts at the trough" parametrization that the peak/breakpoint
+            // logic below assumes. Its FALLING zero-crossing is at (peak+1)/2; negating y below
+            // flips a falling crossing into a rising one, so shifting by that point (not the
+            // rising one at peak/2) is what lands a rising zero-crossing at phase 0 post-negation.
+            double p    = fmod(((peak + 1.0) * 0.5) + phase, 1.0);
+            double y    = (p < peak) ? (((p / peak) * 2.0) - 1.0) : ((((1.0 - p) / (1.0 - peak)) * 2.0) - 1.0);
+
+            return -y; // matches the original editor's orientation - confirmed inverted otherwise
+        }
+        case 5: // DblSaw - two ramps summed with Shape controlling their relative phase offset
+        {
+            double p1 = phase;
+            double p2 = fmod(phase + (shape * 0.5), 1.0);
+
+            return ((2.0 * p1) - 1.0 + (2.0 * p2) - 1.0) * 0.5;
+        }
+        case 6: // Pulse - pulse width (duty cycle) varies with Shape - confirmed as audible PWM
+                // behaviour on OscB's own squ waveform, and DrawPulse/DrawSquare both carry a
+                // dedicated duty-fraction parameter separate from any phase term.
+        {
+            double duty = 0.05 + (shape * 0.9); // 5%..95%, avoiding a degenerate 0/100% pulse
+
+            return (phase < duty) ? 1.0 : -1.0;
+        }
+        case 7: // SymPulse - a duty-symmetric pulse: two Shape-width pulses per cycle, mirrored
+        {
+            double halfDuty = 0.025 + (shape * 0.45); // each half-cycle's pulse width, 5%..95% of it
+
+            return ((phase < halfDuty) || ((phase >= 0.5) && (phase < 0.5 + halfDuty))) ? 1.0 : -1.0;
+        }
+        default:
+            return 0.0;
+    }
+}
+
+static void render_oscshpb_waveform_graph(tRectangle rectangle, tModule * module) {
+    // Shape (param index 6) - fixed position for moduleTypeOscShpB's entries in
+    // paramLocationList. Waveform is a MODE here (not a param, unlike OscB) - OscShpB's only
+    // mode entry, "Wave" (modeLocationList, oscShpBStrMap), so index 0.
+    const uint32_t shapeParamIndex   = 6;
+    const uint32_t waveformModeIndex = 0;
+    uint32_t       slot              = module->key.slot;
+    uint32_t       variation         = gPatchDescr[slot].activeVariation;
+    uint32_t       waveformValue     = module->mode[waveformModeIndex].value;
+    double         shape             = (double)module->param[variation][shapeParamIndex].value / 127.0;
+    tRectangle     graphRect         = adjust_rectangle(rectangle, (tRectangle){{-2, 6}, {30, 10}}, anchorTopRight, module);
+    double         midY              = graphRect.coord.y + (graphRect.size.h / 2.0);
+    const int      numSamples        = 48;
+    const int      numCycles         = 1; // one period across the box, matching the original editor
+    tCoord         prev              = {0};
+
+    set_rgb_colour(RGB_GREY_2);
+    render_rectangle(moduleArea, graphRect);
+
+    set_rgb_colour(RGB_GREY_5);
+    render_line(moduleArea, {graphRect.coord.x, midY}, {graphRect.coord.x + graphRect.size.w, midY}, 1.0);
+
+    set_rgb_colour(RGB_GREEN_ON);
+
+    for (int i = 0; i <= numSamples; i++) {
+        double xFraction = (double)i / (double)numSamples;                 // raw position across the box, 0..1
+        double phase     = fmod(xFraction * numCycles, 1.0);               // wrapped per-cycle phase for the sample
+        double sample    = oscshpb_waveform_sample(waveformValue, phase, shape);
+        tCoord point     = {graphRect.coord.x + (xFraction * graphRect.size.w),
+                            graphRect.coord.y + (graphRect.size.h / 2.0) - (sample * graphRect.size.h * 0.45)};
+
+        if (i > 0) {
+            render_line(moduleArea, prev, point, 1.5);
+        }
+        prev = point;
+    }
+}
+
 void render_module_common(tRectangle rectangle, tModule * module) {
     if (module == NULL) {
         return;
@@ -978,6 +1117,10 @@ void render_module_common(tRectangle rectangle, tModule * module) {
     }
 
     render_module_connectors(rectangle, module);
+
+    if (module->type == moduleTypeOscShpB) {
+        render_oscshpb_waveform_graph(rectangle, module);
+    }
 
     for (uint32_t i = module->volumeIndexCache; i < array_size_volume_location_list(); i++) {
         if (volumeLocationList[i].moduleType == module->type) {

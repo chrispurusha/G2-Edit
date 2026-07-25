@@ -26,14 +26,29 @@ extern "C" {
 
 tCableColour cable_colour_for_connector_type(tConnectorType type) {
     switch (type) {
-        case connectorTypeAudio:   return cableColourRed;
+        case connectorTypeAudio:      return cableColourRed;
 
-        case connectorTypeControl: return cableColourBlue;
+        case connectorTypeControl:    return cableColourBlue;
 
-        case connectorTypeLogic:   return cableColourYellow;
+        case connectorTypeLogic:      return cableColourYellow;
 
-        default:                   return cableColourRed;
+        case connectorTypeTurboLogic: return cableColourOrange;
+
+        default:                      return cableColourRed;
     }
+}
+
+tConnectorType effective_connector_type(tConnectorType baseType, bool upRate) {
+    if (upRate) {
+        if (baseType == connectorTypeControl) {
+            return connectorTypeAudio;
+        }
+
+        if (baseType == connectorTypeLogic) {
+            return connectorTypeTurboLogic;
+        }
+    }
+    return baseType;
 }
 
 uint32_t array_size_param_location_list(void) {

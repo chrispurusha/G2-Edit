@@ -691,7 +691,7 @@ bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {
 
         for (i = 0; i < (int32_t)module_connector_count(toModule->type); i++) {
             if (within_rectangle(coord, toModule->connector[i].rectangle) == true) {
-                found                                         = true;
+                found = true;
                 set_up_cable_key(&cableKey, fromModule, toModule, i);
 
                 swap_cable_to_from_if_needed(&cableKey, fromModule, toModule, i);
@@ -709,10 +709,17 @@ bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {
                                               cableKey.connectorToIoCount)) {
                     break;
                 }
-                cable.colour                                  = (uint32_t)cable_colour_for_connector_type(fromModule->connector[gCableDrag.fromConnectorIndex].type);
+                // Inherits the FROM connector's CURRENT (upRate-promoted, if applicable) colour, not
+                // just its declared base type — matches the manual's "cables connected to this
+                // output will inherit this colour" (g2manual.txt p.71); see effective_connector_type()'s
+                // own comment (moduleResourcesAccess.h) for why the promotion itself lives there,
+                // not in the stored connector type.
+                tConnectorType  fromConnectorType = effective_connector_type(
+                    fromModule->connector[gCableDrag.fromConnectorIndex].type, fromModule->upRate);
+                cable.colour                                  = (uint32_t)cable_colour_for_connector_type(fromConnectorType);
                 write_cable(cableKey, &cable);
 
-                tMessageContent messageContent = {0};
+                tMessageContent messageContent    = {0};
 
                 messageContent.cmd                            = eMsgCmdWriteCable;
                 messageContent.slot                           = slot;

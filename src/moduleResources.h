@@ -199,10 +199,16 @@ const tRgb               gModuleColourMap[]                      = {MODULE_STAND
                                                                     MODULE_PURPLE_3,
                                                                     MODULE_PURPLE_4};
 
+// Indices match tConnectorType (types.h): Audio, Control, Logic, TurboLogic. TurboLogic's RGB
+// (1.0, 0.75, 0.31) is the real value recovered from the original decompiled editor
+// (Original Editor/G2Editor.c: kCableRGBColorTurboLogic = CRGBColor(0xff00, 0xc000, 0x5000)) —
+// the only one of the four not otherwise inferable from the manual's colour-name descriptions
+// alone (the manual just says "orange", not an exact hue).
 const tRgb               connectorColourMap[] = {
-    {0.7, 0.2, 0.2},
-    {0.2, 0.2, 0.7},
-    {0.9, 0.9, 0.0}, };
+    {0.7,  0.2,  0.2},
+    {0.2,  0.2,  0.7},
+    {0.9,  0.9,  0.0},
+    {1.0, 0.75, 0.31}, };
 
 
 const tModuleProperties  gModuleProperties[]  = {
@@ -438,22 +444,22 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscB,       paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                         // 7 Pitch M
     {moduleTypeOscB,       paramTypeMenu,        {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          },                         // 7 Pitch Type
     {moduleTypeOscB,       paramTypeCommonDial,  {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          },                         // FM M
-    {moduleTypeOscB,       paramTypeShape,       {{-15,   5}, { 7, 14}}, anchorTopRight,    "Shape",        128,   0, NULL,                                  NULL          },                         // 7 Shape 50% to 99%, not decimals
+    {moduleTypeOscB,       paramTypeShape,       {{-15,   8}, { 7, 14}}, anchorTopRight,    "Shape",        128,   0, NULL,                                  NULL          },                         // 7 Shape 50% to 99%, not decimals
     {moduleTypeOscB,       paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "ShpM",         128,   0, NULL,                                  NULL          },                         // 7 Shape M
-    {moduleTypeOscB,       paramTypeMenu,        {{-30,   5}, { 7,  7}}, anchorTopRight,    NULL,             5,   2, shapeTypeStrMap,                       NULL          },                         // 7 Waveform
+    {moduleTypeOscB,       paramTypeMenu,        {{-30,   8}, { 7,  7}}, anchorTopRight,    NULL,             5,   2, shapeTypeStrMap,                       NULL          },                         // 7 Waveform
     {moduleTypeOscB,       paramTypeBypass,      {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 7 Bypass
     {moduleTypeOscB,       paramTypeMenu,        {{ 60,  15}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,                          NULL          },                         // 7 FM Type
     // 8 OscShpB
     {moduleTypeOscShpB,    paramTypeOscFreq,     {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },                         // 8 Tune
     {moduleTypeOscShpB,    paramTypeFine,        {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                         // 8 Cent
-    {moduleTypeOscShpB,    paramTypeToggle,      {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   1, kbStrMap,                              offOnColourMap},                         // 8 Kbt
+    {moduleTypeOscShpB,    paramTypeToggle,      {{ 12,   25}, { 7,  7}}, anchorTopLeft,     NULL,             2,   1, kbStrMap,                              offOnColourMap},                         // 8 Kbt
     {moduleTypeOscShpB,    paramTypeCommonDial,  {{ 12,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,   0, NULL,                                  NULL          },                         // 8 Pitch M
-    {moduleTypeOscShpB,    paramTypeMenu,        {{ 30,  15}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          },                         // 8 Pitch Type
+    {moduleTypeOscShpB,    paramTypeMenu,        {{ 32,  25}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          },                         // 8 Pitch Type
     {moduleTypeOscShpB,    paramTypeCommonDial,  {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          },                         // FM M
-    {moduleTypeOscShpB,    paramTypeShape,       {{-15,   5}, { 7, 14}}, anchorTopRight,    "Shape",        128,   0, NULL,                                  NULL          },                         // 8 Shape 50% to 99%, not decimals
+    {moduleTypeOscShpB,    paramTypeShape,       {{56,   6}, { 7, 14}}, anchorTopLeft,    "Shape",        128,   0, NULL,                                  NULL          },                         // 8 Shape 50% to 99%, not decimals
     {moduleTypeOscShpB,    paramTypeCommonDial,  {{ 80,  -3}, { 7, 14}}, anchorBottomLeft,  "ShpCtrl",      128,   0, NULL,                                  NULL          },                         // 8 Shape M
     {moduleTypeOscShpB,    paramTypeBypass,      {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 8 Bypass
-    {moduleTypeOscShpB,    paramTypeMenu,        {{ 60,  15}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,                          NULL          },                         // 8 FM Type
+    {moduleTypeOscShpB,    paramTypeMenu,        {{ 62,  25}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,                          NULL          },                         // 8 FM Type
     //  9 OscC
     {moduleTypeOscC,       paramTypeOscFreq,     {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },                         // 9 Coarse
     {moduleTypeOscC,       paramTypeFine,        {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                         // 9 Fine
@@ -2570,7 +2576,7 @@ const tConnectorLocation connectorLocationList[] = {
 
 // moduleType, paramType, offsetX, offsetY, label, range, defaultValue, string map
 const tModeLocation      modeLocationList[] = {
-    {moduleTypeOscShpB,    paramTypeMenu,   {{ 20,   5}, { 7, 7}}, anchorTopLeft,     "Wave",  8, 0, oscShpBStrMap       }, // 8 OscShpB
+    {moduleTypeOscShpB,    paramTypeMenu,   {{ 68,   17}, { 7, 7}}, anchorTopLeft,     "Wave",  8, 0, oscShpBStrMap       }, // 8 OscShpB
     {moduleTypeOscC,       paramTypeMenu,   {{-30,   5}, { 7, 7}}, anchorTopRight,    "Wave",  6, 0, shapeOscATypeStrMap }, // 9 Wave
     {moduleTypeReverb,     paramTypeMenu,   {{  3,  -3}, {14, 7}}, anchorBottomLeft,  "Type",  4, 0, reverbTypeStrMap    }, // 12 Reverb
     {moduleTypeLfoC,       paramTypeMenu,   {{ 64,  -3}, { 7, 7}}, anchorBottomLeft,  "Wave",  6, 0, lfoWaveStrMap       }, // 24 LfoC
