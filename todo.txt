@@ -1,9 +1,7 @@
 G2-Edit TODO (priority order)
 
 - graphics.cpp:716 — perf-mode write path relies on a blind 2-second usleep instead of real state confirmation (needs hardware testing — see "NEEDS A SECOND OPINION" section below)
-- usbComms.c — centralize repeated unsolicited send_stop() calls (6 sites, ~3460-4066) instead of scattering them
 - usbComms.c — resolve perf-mode ambiguities: synth vs. perf ownership, voice-count ordering on increase, unconfirmed message case (search parse_perf_header/parse_slot_selection/SUB_RESPONSE_PATCH_VERSION_CHANGE area — exact line numbers have drifted, topic still open; needs hardware testing)
-- graphics.cpp:701 — move parse_patch to a shared file so both USB and file-load paths can use it
 - moduleGraphics.cpp — refactor volume-meter/label rendering into utilsGraphics.cpp; resolve "can Mode be morphed?" question (needs hardware/manual check)
 - moduleGraphics.cpp/renderParams.c — port custom graph displays from the original editor (none exist today besides render_volume_meter): envelope shapes (AD/AR/D/H/AHD/ADSR/ADBDSR/Multi/DX), filter response curves (Classic/Normal/Small/Static/Comb), oscillator & LFO waveform shapes, EQ curves (2-band/3-band/peak), compressor/expander, distortion/waveshaping (Dist A/B/Wrap/Shape/Saturate), FM operator + DX router, phaser, vocoder, tuned noise, random distribution/trigger — see Original Editor/G2Editor.c, CCustomObjectFactory::CreateCustom (~line 101952) and the CPnl*Graph class family for reference implementations
 - OscA(97) — add new UI element for Freq control (param 0) that accounts for param 6 Pitch Type
@@ -15,6 +13,29 @@ G2-Edit TODO (priority order)
 - Add a dedicated master-clock/tempo panel (currently only basic send/receive clock toggles exist)
 - defs.h:179 — confirm whether perf-header sub-response (SUB_RESPONSE_PERF_HEADER, 0x11) is ever actually used (needs hardware testing)
 - moduleGraphics.cpp/graphics.cpp — GL_BLEND enable/disable currently sits at each caller (moduleGraphics.cpp:1239/1254, graphics.cpp:590) rather than inside the shared drawing primitive (render_cable_from_to() et al., utilsGraphics.cpp) the way render_text() already manages its own blend state. Not a bug — correct today, just a cosmetic/architectural inconsistency. Low priority; real regression risk if rushed since these primitives are reused everywhere.
+
+RESOLVED 2026-07-25 (verified against code, not just assumed from the comment):
+- usbComms.c "centralize repeated unsolicited send_stop() calls" — send_write_data()'s big
+  eMsgCmd... switch had 43 cases each individually bracketing their own device write with
+  send_stop()/send_start() (86 lines total, not the "6 sites" the old TODO estimated — actual
+  count was higher). Replaced with one send_stop()/send_start() pair wrapping the whole switch,
+  gated by a new command_needs_stop_start() predicate (false only for eMsgCmdSetValue/
+  eMsgCmdSetParamMorph — real-time tweaks left unpaused so they stay responsive — and
+  eMsgCmdSetCustomData/eMsgCmdPeekSynthSettingsRestore, which never wrote to the device anyway;
+  true for everything else, including an unrecognised cmd value, which harmlessly gets a
+  pointless bracket around send_write_data()'s own no-op default: case rather than none — that
+  combination should never actually happen). Every case's own internal logic (interleaved
+  send_get_performance_settings() calls, loops, conditional retVal chains, etc.) is untouched;
+  only the per-case send_stop()/send_start() lines were removed. Left the other 4 already-
+  isolated send_stop()/send_start() pairs elsewhere in usbComms.c (send_init_sequence_pull/push,
+  state_handler's two resync branches) alone — each already occurs exactly once in its own
+  function, not repeated boilerplate the way send_write_data()'s switch was.
+- graphics.cpp:701 "parse_patch should really be in a commonly accessible source file" — was already
+  stale: parse_patch lives in protocol.c (declared in protocol.h), which both graphics.cpp (file-load
+  path) and usbComms.c (USB path) already #include and call directly. Checked parse_patch itself for
+  any USB-thread-specific state that might make the file-load-path call unsafe — none; it only reads
+  the passed-in buffer and writes into the per-slot dataBase, same as either caller already does today.
+  Stale TODO comment removed from graphics.cpp.
 
 RESOLVED 2026-07-24 (verified against code, not just assumed from the comment):
 - globalVars.h gKnobArray/gControllerArray/gControllerCount "nullify on new load" — already fully handled by
