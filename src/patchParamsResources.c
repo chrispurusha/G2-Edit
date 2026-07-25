@@ -44,35 +44,35 @@ static const char * arpDirLabels[]  = {"Up", "Down", "Up+Dn", "Random"};
 static const char * arpOctLabels[]  = {"1 oct", "2 oct", "3 oct", "4 oct"};
 
 static const char * get_arp_rate(void) {
-    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_ARPEGGIATOR);
+    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, patchModuleArpeggiator);
     uint8_t   ri  = mod ? mod->param[0][ARP_SPEED].value : 0;
 
     return (ri < 4) ? arpRateLabels[ri] : arpRateLabels[0];
 }
 
 static const char * get_arp_dir(void) {
-    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_ARPEGGIATOR);
+    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, patchModuleArpeggiator);
     uint8_t   di  = mod ? mod->param[0][ARP_DIRECTION].value : 0;
 
     return (di < 4) ? arpDirLabels[di] : arpDirLabels[0];
 }
 
 static const char * get_arp_oct(void) {
-    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_ARPEGGIATOR);
+    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, patchModuleArpeggiator);
     uint8_t   oi  = mod ? mod->param[0][ARP_OCTAVES].value : 0;
 
     return (oi < 4) ? arpOctLabels[oi] : arpOctLabels[0];
 }
 
 static const char * get_arp_en(void) {
-    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_ARPEGGIATOR);
+    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, patchModuleArpeggiator);
     uint8_t   val = mod ? mod->param[0][ARP_ON_OFF].value : 0;
 
     return val ? "On" : "Off";
 }
 
 static tRgb col_arp_en(void) {
-    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_ARPEGGIATOR);
+    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, patchModuleArpeggiator);
     uint8_t   val = mod ? mod->param[0][ARP_ON_OFF].value : 0;
 
     return col_on_off(val);
@@ -90,7 +90,7 @@ const tPatchParamItem kPPArp[kPPArpCount]         = {
 static const char *   srcLabels[]                 = {"Off", "AfTouch", "Wheel"};
 
 static const char * get_vibrato_source(void) {
-    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_VIBRATO);
+    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, patchModuleVibrato);
     uint8_t   si  = mod ? mod->param[0][VIBRATO_MOD].value : 0;
 
     return (si < 3) ? srcLabels[si] : srcLabels[0];
@@ -109,7 +109,7 @@ const char * get_glide_time_str(uint8_t gi) {
 }
 
 static const char * get_glide_mode(void) {
-    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_GLIDE);
+    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, patchModuleGlide);
     uint8_t   mi  = mod ? mod->param[0][GLIDE_TYPE].value : 2;
 
     return (mi < 3) ? modeLabels[mi] : modeLabels[2];
@@ -123,7 +123,7 @@ const tPatchParamItem kPPGlide[kPPGlideCount]     = {
 
 static const char * get_bend_range(void) {
     static char buf[16] = {0};
-    tModule *   mod     = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_BEND);
+    tModule *   mod     = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, patchModuleBend);
     uint8_t     val     = mod ? mod->param[0][BEND_RANGE].value : 0;
 
     snprintf(buf, sizeof(buf), "%u semi", (unsigned)(val + 1));
@@ -131,14 +131,14 @@ static const char * get_bend_range(void) {
 }
 
 static const char * get_bend_en(void) {
-    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_BEND);
+    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, patchModuleBend);
     uint8_t   val = mod ? mod->param[0][BEND_ON_OFF].value : 0;
 
     return val ? "On" : "Off";
 }
 
 static tRgb col_bend_en(void) {
-    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_BEND);
+    tModule * mod = get_module_slot(gPatchParamsEdit.slot, (uint32_t)locationMorph, patchModuleBend);
     uint8_t   val = mod ? mod->param[0][BEND_ON_OFF].value : 0;
 
     return col_on_off(val);

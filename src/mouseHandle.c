@@ -136,17 +136,17 @@ void init_patch(uint32_t slot) {  // Todo - think where this should really go
     gMorphCount[slot]                 = 8; // Check default!?
 
     // database_delete_modules_by_slot() above zeroes every module for this slot, including the
-    // morph-groups pseudo-module (locationMorph/PATCH_MORPH) that every patch structurally has.
+    // morph-groups pseudo-module (locationMorph/patchModuleMorph) that every patch structurally has.
     // render_morph_groups() reads it via get_module(), which returns NULL unless active is set, so
     // without this the morph knobs would silently render nothing for a freshly-initialised patch —
     // reactivate it here with its key set, same as parse_module_list() does when a real patch
     // arrives from the device.
     {
-        tModule * morphModule = get_module_slot(slot, (uint32_t)locationMorph, PATCH_MORPH);
+        tModule * morphModule = get_module_slot(slot, (uint32_t)locationMorph, patchModuleMorph);
 
         morphModule->active = true;
         morphModule->key    = (tModuleKey){
-            slot, (uint32_t)locationMorph, PATCH_MORPH
+            slot, (uint32_t)locationMorph, patchModuleMorph
         };
 
         // Each morph group's "mode" param (index i+NUM_MORPHS) is 0 for plain manual-knob mode,
@@ -1232,7 +1232,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
             send_master_clock_bpm(value);
         }
     } else if (gVibAmountDragging == true) {
-        tModuleKey vibKey    = {(uint32_t)gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_VIBRATO};
+        tModuleKey vibKey    = {(uint32_t)gPatchParamsEdit.slot, (uint32_t)locationMorph, patchModuleVibrato};
         tModule *  vibModule = get_module(vibKey);
         int        newVal    = 0;
 
@@ -1262,7 +1262,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
             }
         }
     } else if (gVibRateDragging == true) {
-        tModuleKey vibKey    = {(uint32_t)gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_VIBRATO};
+        tModuleKey vibKey    = {(uint32_t)gPatchParamsEdit.slot, (uint32_t)locationMorph, patchModuleVibrato};
         tModule *  vibModule = get_module(vibKey);
         int        newVal    = 0;
 
@@ -1292,7 +1292,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
             }
         }
     } else if (gGlideTimeDragging == true) {
-        tModuleKey glideKey    = {(uint32_t)gPatchParamsEdit.slot, (uint32_t)locationMorph, PATCH_GLIDE};
+        tModuleKey glideKey    = {(uint32_t)gPatchParamsEdit.slot, (uint32_t)locationMorph, patchModuleGlide};
         tModule *  glideModule = get_module(glideKey);
         int        newVal      = 0;
 
