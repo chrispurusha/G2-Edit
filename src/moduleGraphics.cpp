@@ -970,18 +970,6 @@ static double skewed_ramp_zero_start(double phase, double peak) {
     return -y;
 }
 
-// Discrete Summation Formula (Moorer "buzz"): y = sin(theta)/(1-2r*cos(N*theta)+r^2). At r=0
-// this is a plain sine; as r approaches 1 it sharpens into an increasingly buzzy pulse train.
-// Shared by Sine3 (N=1) and Sine4 (N=2, matching CPnlWaveformGraphABC::DrawDsf's param_2=1 vs 2
-// dispatch) below - the only difference between them.
-static double dsf_buzz(double theta, double shape, double harmonicMultiplier) {
-    double r     = fmin(shape, 0.97);
-    double denom = 1.0 - (2.0 * r * cos(harmonicMultiplier * theta)) + (r * r);
-    double y     = (denom > 0.0001) ? ((sin(theta) / denom) * (1.0 - r)) : 0.0;
-
-    return fmax(-1.0, fmin(1.0, y));
-}
-
 // Ramp width for the Pulse/SymPulse zero-crossing ramps below: half a sample-to-sample step at
 // the render loop's 200-sample resolution (must stay narrower than that step or the ramp isn't
 // actually sampled at all), capped further so it never eats more than half of whatever room is
@@ -1005,38 +993,54 @@ static double ramp_to_zero(double phaseIntoRamp, double edgeWidth) {
 // Shape is always the raw 0-127 param value normalised to 0..1 - but the dial itself only
 // *displays* 50%..99% of that (render_paramType1Shape), so Shape 0 is the dial's displayed
 // minimum (50%) and Shape 1 its displayed maximum (99%), not "no shaping"/"full shaping" in the
-// usual 0-100% sense. TriSaw (case 4, below) is the one case confirmed against the real original
-// editor across that whole range; the rest follow its two lessons - Shape 0 (displayed 50%)
-// should be the "basic"/symmetric member of the waveform family, Shape 1 (displayed 99%) the
-// most extreme one, and the cycle should start at a rising zero-crossing (or, for the pulses,
-// at the rising edge itself) rather than a trough - but are otherwise unconfirmed guesses, same
-// as TriSaw was before checking it against real hardware.
+// usual 0-100% sense. Sine1-4/TriSaw/Pulse/SymPulse are all taken directly from the manual's
+// "WAVEFORMS AND SHAPES" section for OscShpB (g2manual.txt), which spells out each one's exact
+// Shape 50%/75%/99% appearance - not guesses. DblSaw's manual description hasn't been
+// reconciled with what's actually implemented below yet (see its own comment).
 static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, double shape) {
     switch (waveformIndex) {
-        case 0: // Sine1 - plain sine, Shape mostly cosmetic
+        case 0: // Sine1 - "a phase modulated sine wave. At 50% Shape setting, the signal is a
+                // perfect sine wave and at 99% similar to a sawtooth wave" (manual). Classic
+                // Casio CZ-style phase distortion: warp the phase fed into sin() using a single
+                // breakpoint "a" (0.5 = no warp, small = strong warp), rather than warping the
+                // output amplitude - hence a saw-like shape built from smooth sine curves, softer
+                // than a true (linear-ramp) sawtooth.
         {
-            return sin(2.0 * M_PI * phase);
-        }
-        case 1: // Sine2 - a literal "dual sine": a second copy of the same sine, detuned in phase
-                // by Shape and summed in - mirrors DblSaw's "dual" construction below rather than
-                // blending in a different harmonic
-        {
-            double detune = shape * 0.15;
-            double s1     = sin(2.0 * M_PI * phase);
-            double s2     = sin(2.0 * M_PI * (phase + detune));
+            double a      = 0.5 - (shape * 0.45); // 0.5 (no distortion) .. 0.05 (strong distortion)
+            double warped = (phase < a) ? (phase / (2.0 * a)) : (0.5 + ((phase - a) / (2.0 * (1.0 - a))));
 
-            return (s1 + s2) * 0.5;
+            return sin(2.0 * M_PI * warped);
         }
-        case 2: // Sine3 - Discrete Summation Formula (Moorer "buzz"), N=1. Already starts at a
-                // rising zero-crossing (numerator sin(theta) is 0 and rising at theta=0 for any
-                // r<1) with no extra phase-shift needed.
+        case 1: // Sine2 - "a Sine -> Double Sine signal. At 50% Shape setting, the signal is a
+                // pure sine wave and at 99% Shape setting, the first half of the period almost
+                // covers the entire period length and the second half is a very narrow spike"
+                // (manual). Same phase-warp idea as Sine1, but the breakpoint splits the cycle
+                // into the sine's own positive/negative lobes (each still a full half-sine
+                // shape) rather than splitting where within one continuous curve the warp lands.
         {
-            return dsf_buzz(2.0 * M_PI * phase, shape, 1.0);
+            double lobeWidth = 0.5 + (shape * 0.48); // 0.5 (symmetric) .. 0.98 (heavily skewed)
+            double warped    = (phase < lobeWidth) ? ((phase / lobeWidth) * 0.5) : (0.5 + (((phase - lobeWidth) / (1.0 - lobeWidth)) * 0.5));
+
+            return sin(2.0 * M_PI * warped);
         }
-        case 3: // Sine4 - same DSF formula as Sine3, but N=2, so it sharpens into twice as many
-                // buzz peaks per cycle
+        case 2: // Sine3 - "a Sine -> Even harmonics signal. At 50% Shape setting, the signal is
+                // a perfect sine wave and at 99% a lot of even harmonics have been added"
+                // (manual). A few additive even harmonics (2nd, 4th), growing with Shape.
         {
-            return dsf_buzz(2.0 * M_PI * phase, shape, 2.0);
+            double theta = 2.0 * M_PI * phase;
+            double y     = sin(theta) + (shape * 0.5 * sin(2.0 * theta)) + (shape * 0.25 * sin(4.0 * theta));
+
+            return y / (1.0 + (shape * 0.75));
+        }
+        case 3: // Sine4 - "a Sine -> Odd harmonics signal...at 99% a lot of odd harmonics have
+                // been added" (manual). Same idea as Sine3, but 3rd/5th harmonics instead of
+                // 2nd/4th - odd harmonics preserve half-wave symmetry, so this trends towards a
+                // square-ish richness rather than Sine3's saw-ish one.
+        {
+            double theta = 2.0 * M_PI * phase;
+            double y     = sin(theta) + (shape * 0.5 * sin(3.0 * theta)) + (shape * 0.25 * sin(5.0 * theta));
+
+            return y / (1.0 + (shape * 0.75));
         }
         case 4: // TriSaw - Shape skews the breakpoint from a symmetric triangle towards a sawtooth.
                 // Confirmed against the real original editor: Shape at its displayed minimum
@@ -1060,19 +1064,22 @@ static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, doub
 
             return ((1.0 - shape) * single) + (shape * doubled);
         }
-        case 6: // Pulse - pulse width (duty cycle) widens with Shape: Shape 0 (displayed 50%) is
-                // a plain symmetric square, Shape 1 (displayed 99%) spends most of the cycle
-                // high (the falling edge moves right, cutting into the LOW time, not the high
-                // time - confirmed against the real original editor). The High/Low step itself
-                // is unchanged, but a hard step never actually produces a sample AT zero, so the
-                // rising crossing that belongs at the wrap seam was invisible - phase 0 and 1
-                // ramp to/from 0.0 explicitly so that crossing is a real plotted point at both
-                // ends of the display, instead of starting already at the top. Those two ramps
-                // only span half the vertical distance of the middle (high-to-low) transition
-                // (0->+1 rather than +1->-1), so they're given half its width too, to come out
-                // the same slope rather than looking shallower.
+        case 6: // Pulse - "a Pulse with selectable ASYMMETRIC pulse width...at 50% Shape
+                // setting, the signal is a perfect Square, at 75% a Pulse with 25%/75% pulse
+                // width and at 99% a Pulse with 1%/99% pulse width" (manual) - duty is simply
+                // the Shape dial's own displayed percentage. The falling edge moves right,
+                // cutting into the LOW time, not the high time (confirmed against the real
+                // original editor). The High/Low step itself is a hard step that never actually
+                // produces a sample AT zero, so the rising crossing that belongs at the wrap
+                // seam was invisible - phase 0 and 1 ramp to/from 0.0 explicitly so that
+                // crossing is a real plotted point at both ends of the display, instead of
+                // starting already at the top. Those two ramps only span half the vertical
+                // distance of the middle (high-to-low) transition (0->+1 rather than +1->-1),
+                // so they're given half its width too, to come out the same slope rather than
+                // looking shallower.
         {
-            double duty      = 0.5 + (shape * 0.45); // 50%..95%
+            double duty      = 0.5 + (shape * 0.49); // 50%..99%, matches the Shape dial's own
+                                                     // displayed percentage exactly
             double edgeWidth = pulse_edge_width(fmin(duty, 1.0 - duty));
 
             if (phase < edgeWidth) {
@@ -1086,20 +1093,21 @@ static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, doub
         }
         case 7: // SymPulse - single cycle: 0 (start) -> ramp -> High (hold) -> Low (hold, a
                 // direct step from High, same as Pulse's middle transition) -> ramp -> Zero
-                // (hold for the remainder) -> 0 (end). Confirmed against the real original
-                // editor: raw 63 (Shape ~= 0.5) gives a quarter-cycle high, a quarter-cycle low,
-                // then the remaining half-cycle at zero - both High and Low shrink (and Zero
-                // grows) as Shape increases, from a plain 50% square with no zero segment at
-                // Shape 0 to all zero at Shape 1. Same edge-ramp treatment as Pulse above and
-                // for the same reason: a hard step never produces an actual sample AT zero, and
-                // the half-magnitude ramps (0->+1, -1->0) need half the width of the
-                // full-magnitude High->Low step to come out the same slope.
+                // (hold for the remainder) -> 0 (end). "A Pulse with selectable SYMMETRIC pulse
+                // width. At 50% Shape setting, the signal is a perfect Square, at 75% a Pulse
+                // with 25% symmetric pulse width and at 99% a Pulse with 1% symmetric pulse
+                // width" (manual) - matches this exactly (see the halfSeg rescale below). Same
+                // edge-ramp treatment as Pulse above and for the same reason: a hard step never
+                // produces an actual sample AT zero, and the half-magnitude ramps (0->+1, -1->0)
+                // need half the width of the full-magnitude High->Low step to come out the same
+                // slope.
         {
-            // High/Low segment length each: rescaled (not clamped) to run from 0.5 (Shape 0) to
-            // a floor of 0.03 (Shape 1), staying linear the whole way rather than bending flat
-            // once it hits the floor - like Pulse's duty (bounded to 50%..95%, never fully
-            // degenerate), SymPulse's High/Low shouldn't fully vanish even at Shape's true max.
-            const double floor     = 0.03;
+            // High/Low segment length each: rescaled (not clamped) from 0.5 (Shape 0, a perfect
+            // square) to 0.01 (Shape 1, a 1% pulse - manual's own number), staying linear the
+            // whole way rather than bending flat once it hits the floor. This also reproduces
+            // the manual's 75% figure almost exactly (~0.25 at Shape ~0.51, the displayed-75%
+            // point) without needing a separate calibration constant.
+            const double floor     = 0.01;
             double       halfSeg   = floor + ((0.5 - floor) * (1.0 - shape));
             double       edgeWidth = pulse_edge_width(halfSeg);
 
