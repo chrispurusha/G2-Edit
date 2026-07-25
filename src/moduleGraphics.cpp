@@ -1048,15 +1048,17 @@ static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, doub
 
             return skewed_ramp_zero_start(phase, peak);
         }
-        case 5: // DblSaw - two near-full ramps summed, the second detuned in phase by Shape (a
-                // classic "double saw" richness/detune effect); each ramp individually starts at
-                // a rising zero-crossing like TriSaw, though the detuned sum only does so exactly
-                // at Shape 0.
+        case 5: // DblSaw - crossfades from a single near-full ramp (Shape 0) to that same ramp
+                // at double frequency, i.e. two full cycles across the window (Shape 1).
+                // Confirmed against the real original editor: it starts as a single cycle, same
+                // as it already was here, and morphs into two cycles as Shape approaches its max.
         {
-            const double peak   = 0.97; // both ramps are near-full sawtooths, not triangles
-            double       detune = shape * 0.15;
+            const double peak    = 0.97; // both saws are near-full sawtooths, not triangles
 
-            return (skewed_ramp_zero_start(phase, peak) + skewed_ramp_zero_start(phase + detune, peak)) * 0.5;
+            double       single  = skewed_ramp_zero_start(phase, peak);
+            double       doubled = skewed_ramp_zero_start(phase * 2.0, peak);
+
+            return ((1.0 - shape) * single) + (shape * doubled);
         }
         case 6: // Pulse - pulse width (duty cycle) widens with Shape: Shape 0 (displayed 50%) is
                 // a plain symmetric square, Shape 1 (displayed 99%) spends most of the cycle
