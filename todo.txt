@@ -14,6 +14,41 @@ G2-Edit TODO (priority order)
 - defs.h:179 — confirm whether perf-header sub-response (SUB_RESPONSE_PERF_HEADER, 0x11) is ever actually used (needs hardware testing)
 - moduleGraphics.cpp/graphics.cpp — GL_BLEND enable/disable currently sits at each caller (moduleGraphics.cpp:1239/1254, graphics.cpp:590) rather than inside the shared drawing primitive (render_cable_from_to() et al., utilsGraphics.cpp) the way render_text() already manages its own blend state. Not a bug — correct today, just a cosmetic/architectural inconsistency. Low priority; real regression risk if rushed since these primitives are reused everywhere.
 
+- Cross-platform build — Linux + Windows, with a CMake build derived from the Xcode project
+  as the master (Xcode stays authoritative for day-to-day dev on Mac; CMake is the portable build).
+  Two parts:
+  (A) Build system. The Xcode projects use folder-synchronized groups (PBXFileSystemSynchronizedRootGroup
+      on src/ and SynthLib/src/), i.e. there is NO manual per-file source list in the .xcodeproj — it just
+      globs those two folders. So a CMakeLists can file(GLOB) the same folders and stay in sync
+      automatically; there's little to "derive" beyond the folder set, the frameworks/libs, and the
+      compile flags. Practically: one CMake that compiles src/ + SynthLib/src/, links GLFW + FreeType +
+      libusb (all already cross-platform — Homebrew copies live in ThirdParty/), and swaps the Mac-only
+      bits per-platform (below). Could add a small script to sniff the framework/lib list + build settings
+      out of project.pbxproj so the CMake stays honest against Xcode, but the source list itself needs no
+      syncing. Do the same for EmuUtility/SynthEdit (they share SynthLib), so ideally the CMake logic for
+      the SynthLib half is itself shared.
+  (B) Platform abstraction — what's already portable vs what needs a non-Mac path:
+      PORTABLE ALREADY: core protocol.c / dataBase.c / msgQueue.c / moduleResources (pure C); USB via
+        libusb (~40 calls, cross-platform); GLFW + OpenGL + FreeType rendering; SynthLib fileBrowser.cpp
+        (std::filesystem, already has Windows USERPROFILE/APPDATA + Linux XDG path handling) and
+        prefs.cpp. These should compile as-is off Mac.
+      MAC-ONLY, needs a portable seam:
+        - misc.mm (Obj-C/Cocoa): NSApplication/NSMenu native app menu, NSUserDefaults, and the
+          NSWorkspace sleep/wake notifications (register_sleep_wake_notifications). The app already draws
+          its OWN in-window menu bar (menuBar.c / appMenuBar.c), so the native NSMenu is largely
+          cosmetic on Mac and can be #ifdef'd out elsewhere; sleep/wake needs a Linux/Windows equivalent
+          or a no-op stub.
+        - usbComms.c: 2 IOKit references (the rest is libusb) — likely USB hotplug / sleep-wake device
+          notification; replace with libusb hotplug (libusb_hotplug_*) or stub per-platform.
+        - persistence.c: NSUserDefaults-backed settings — should move onto SynthLib's prefs.cpp
+          (synthlibPersistence), which is already the portable mechanism, rather than porting the Cocoa
+          version. (Overlaps the commonalise work below.)
+      Suggest: get the pure-C + SynthLib core compiling under CMake on Linux first (fastest signal),
+      behind a thin platform shim header (synthlibPlatform.h?) with mac/linux/win implementations of the
+      handful of OS hooks (menu, sleep/wake, prefs, usb-hotplug). Windows after Linux (more toolchain
+      friction). This dovetails with the SynthLib commonalise priorities below — the platform shim is a
+      natural SynthLib citizen shared by all three apps.
+
 RESOLVED 2026-07-25 (verified against code, not just assumed from the comment):
 - usbComms.c "centralize repeated unsolicited send_stop() calls" — send_write_data()'s big
   eMsgCmd... switch had 43 cases each individually bracketing their own device write with
@@ -188,7 +223,71 @@ none of these exist in G2-Edit at all yet, confirmed by source search, not just 
 - Scrollbars on the patch selectors (Load/Store/Delete/Restore bank-location pickers, bankBrowser.cpp) —
   currently no visible scrollbar for long lists.
 
-- rationalise architecture and commonalise components for other projects (status as of 2026-07-24)
+- rationalise architecture and commonalise components for other projects (status as of 2026-07-25)
+
+  ***PRIORITY*** (identified 2026-07-25 by diffing G2-Edit / EmuUtility / SynthEdit directly — these
+  are concrete, mostly-mechanical dedup + decoupling wins at the host<->SynthLib boundary, do these
+  before the bigger open design items below):
+
+  1. [PRIORITY] Shared graphics/window bootstrap. init_graphics() and every window callback
+     (framebuffer_size_callback / content_scale_callback / window_size / window_pos / window_close)
+     are ~90% character-identical across all three apps: same glfwWindowHints, same
+     glfwCreateWindow(TARGET_FRAME_BUFF_WIDTH/4, ...), same context/FreeType/scale init, same callback
+     wiring. Only real differences: dial-mode default, topBarHeight, whether wake-callbacks are
+     registered, and the callback function *names* (key_callback vs key_cb — a non-issue, they go in a
+     struct). There's already a precedent seam (apps pass configure_synthlib_theme((tSynthLibTheme){...})
+     — utilsGraphics.h). Extend it:
+         tGlfwWindow * synthlib_window_create(const tSynthLibWindowConfig * cfg,   // title, size, topBarHeight, dialModeDefault
+                                              const tSynthLibCallbacks   * cbs);   // key/char/cursor/button/scroll/resize fn-ptrs
+     Effort low, risk low, removes ~150 lines x2.
+
+  2. [PRIORITY] Popup lifecycle coordinator — the cleanest DECOUPLING win. SynthLib owns the popup
+     WIDGETS (file/bank/alert browsers, context menu, menu bar) but NOT their orchestration, so each
+     host re-implements it four separate times: (a) render order (every app calls render_context_menu ->
+     render_file_browser -> render_bank_browser -> render_alert_dialog back-to-front, with the same
+     "drawn last - modal" comment copy-pasted verbatim); (b) modal-priority CLICK dispatch cascade
+     (if file_browser_active(){...return;} if bank_browser_active(){...} if alert_dialog_active(){...} —
+     14 routing refs each in G2-Edit and SynthEdit mouseHandle.c); (c) the same cascade again for
+     KEY/CHAR; (d) per-frame hover tick (update_context_menu_hover / update_menu_bar_hover /
+     update_bank_browser_hover — host must remember to call each every frame). That last one has ALREADY
+     shipped real bugs: SynthEdit's own comments document "never actually called anywhere until now"
+     hover reports (2026-07-11, 2026-07-24). An order-dependent contract spread across the host is
+     fragile by construction. Fix = a coordinator façade that internalises the z-order (SynthLib
+     registered the popups, so it knows the stacking):
+         bool synthlib_popups_dispatch_click(tCoord coord, eClickPhase phase); // true if a modal consumed it
+         bool synthlib_popups_dispatch_key(int key, int action);
+         void synthlib_popups_tick(void);     // replaces all the update_*_hover() calls
+         void synthlib_popups_render(void);    // one call, correct back-to-front order
+     Each host's mouse_button / key / loop / render_frame collapses to a single guarded call. Turns a
+     ~20-symbol order-sensitive surface into 4 functions. Effort medium, risk low-medium (mechanical but
+     touches the hot input path in all three apps — sequence carefully). DO THIS FIRST of the priority set.
+
+  3. [PRIORITY] Move mouse-callback plumbing into SynthLib (ties into 1 & 2). The common preamble in
+     every app's mouse handling is boilerplate over SynthLib-owned state:
+       - get_global_gui_scaled_mouse_coord() (window pixels -> logical/GUI-scaled coords) is DUPLICATED
+         per-app: EmuUtility's and SynthEdit's are character-identical (both delegate to
+         window_to_logical()), G2-Edit's is functionally equivalent but inlined. It's pure math over
+         gGlobalGuiScale + get_render_width/height, all already in SynthLib -> clean move
+         (synthlib_window_to_logical() / synthlib_mouse_coord()).
+       - convert_to_mouse_button() (GLFW button/action -> normalized button+phase) is generic decode.
+       - The thin GLFW callback adapter itself (decode -> scale coord -> popup-coordinator dispatch (2) ->
+         app handler(coord, button) -> request_redraw) can be shared, unifying the two conventions that
+         exist today (EmuUtility/SynthEdit's *_cb -> handle_* split vs G2-Edit's callbacks-are-handlers
+         directly). App keeps only its domain hit-testing (modules/cables/dials for G2, panels for the
+         others). NOTE: the app-specific hit-testing can't fully move until the gParamRectangle ->
+         click-region migration below decouples hit-testing from render-time global arrays; after that,
+         even more of the dispatch could move. Do the coord-transform + normalized-callback-adapter part
+         now (independent of that), leave domain hit-testing local for now.
+
+  4. [PRIORITY] CoreMIDI send-primitive extraction (safe first step of the comms-layer item below).
+     EmuUtility and SynthEdit's low-level MIDI send is near-identical (MIDIPacketListInit /
+     MIDIPacketListAdd / MIDISend over the same gMidiOutPort/gMidiDest globals; SynthEdit just has a
+     bigger sysex buffer). Move the packet-send primitive + the CoreMIDI handle globals
+     (gMidiClient/gMidiInPort/gMidiOutPort/gMidiSource/gMidiDest) into SynthLib WITHOUT touching each
+     app's scan/connect/dispatch logic (which has diverged for good reason — see the comms bullet in
+     "PARTIALLY DONE" below). 2-of-3 (G2-Edit is USB, not MIDI). Small, safe, unblocks the bigger queue
+     abstraction. Render-loop skeleton extraction (synthlib_run_frame_loop) is possible but LOW priority
+     — do it last, after 1-3, since the per-frame "flush hooks" are genuinely app-specific.
 
   DONE:
   - Generic hit-rectangle registry — shipped as SynthLib's clickRegion.h/.c (tClickHandler/eClickLayer/
