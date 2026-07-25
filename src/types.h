@@ -433,7 +433,9 @@ typedef struct {
 typedef enum {
     connectorTypeAudio,
     connectorTypeControl,
-    connectorTypeLogic
+    connectorTypeLogic,
+    connectorTypeTurboLogic // Logic connector on an up-rated module — orange, not plain yellow (see
+                            // the upRate promotion in render_connector_common(), moduleGraphics.cpp)
 } tConnectorType;
 
 typedef enum {
