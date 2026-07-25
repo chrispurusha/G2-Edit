@@ -34,7 +34,9 @@ extern const tParamLocation     paramLocationList[];
 extern const tModeLocation      modeLocationList[];
 extern const tConnectorLocation connectorLocationList[];
 extern const tVolumeLocation    volumeLocationList[];
+extern const tVolumeMeterConfig volumeMeterConfigList[];
 extern const tLedLocation       ledLocationList[];
+extern const tGraphLocation     graphLocationList[];
 extern const char *             patchVolumeStrMap[];
 //extern const double             dbLvlMap[];
 //extern const double             ADRTimeMap[];
@@ -55,6 +57,8 @@ tCableColour cable_colour_for_connector_type(tConnectorType type);
 // connector-hole rendering itself and cable-creation's "inherit the source connector's current
 // colour" logic (mouseHandle.c), so the two can never disagree.
 tConnectorType effective_connector_type(tConnectorType baseType, bool upRate);
+const tVolumeMeterConfig * find_volume_meter_config(tVolumeType volumeType);
+const tGraphLocation * find_graph_location(tModuleType moduleType);
 uint32_t array_size_param_location_list(void);
 uint32_t array_size_connector_location_list(void);
 uint32_t array_size_mode_location_list(void);

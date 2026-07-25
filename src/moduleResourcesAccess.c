@@ -67,6 +67,26 @@ uint32_t array_size_volume_location_list(void) {
     return ARRAY_SIZE(volumeLocationList);
 }
 
+const tVolumeMeterConfig * find_volume_meter_config(tVolumeType volumeType) {
+    for (uint32_t i = 0; i < ARRAY_SIZE(volumeMeterConfigList); i++) {
+        if (volumeMeterConfigList[i].volumeType == volumeType) {
+            return &volumeMeterConfigList[i];
+        }
+    }
+
+    return NULL;
+}
+
+const tGraphLocation * find_graph_location(tModuleType moduleType) {
+    for (uint32_t i = 0; i < ARRAY_SIZE(graphLocationList); i++) {
+        if (graphLocationList[i].moduleType == moduleType) {
+            return &graphLocationList[i];
+        }
+    }
+
+    return NULL;
+}
+
 uint32_t array_size_led_location_list(void) {
     return ARRAY_SIZE(ledLocationList);
 }
