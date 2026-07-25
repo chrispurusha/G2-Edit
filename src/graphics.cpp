@@ -698,7 +698,7 @@ void read_file_into_memory_and_process(const char * filepath) {
 
         if (type == 0) {
             clear_slot_data(slot);
-            parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));  // TODO: parse_patch should really be in a commonly accessible source file, for file or USB access
+            parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
             set_patch_name_from_filename(slot, filepath);
 
             if (gCommsState == eCommsOnLine) {
