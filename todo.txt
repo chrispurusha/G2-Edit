@@ -1,10 +1,19 @@
 G2-Edit TODO (priority order)
 
+<<<<<<< Updated upstream
 - graphics.cpp:716 — perf-mode write path relies on a blind 2-second usleep instead of real state confirmation (needs hardware testing — see "NEEDS A SECOND OPINION" section below)
 - usbComms.c — centralize repeated unsolicited send_stop() calls (6 sites, ~3460-4066) instead of scattering them
 - usbComms.c — resolve perf-mode ambiguities: synth vs. perf ownership, voice-count ordering on increase, unconfirmed message case (search parse_perf_header/parse_slot_selection/SUB_RESPONSE_PATCH_VERSION_CHANGE area — exact line numbers have drifted, topic still open; needs hardware testing)
 - graphics.cpp:701 — move parse_patch to a shared file so both USB and file-load paths can use it
 - moduleGraphics.cpp — refactor volume-meter/label rendering into utilsGraphics.cpp; resolve "can Mode be morphed?" question (needs hardware/manual check)
+=======
+- graphics.cpp:752-753 — perf-mode write path relies on a blind 2-second usleep instead of real state confirmation
+- usbComms.c — centralize repeated unsolicited send_stop() calls (lines ~3590-3781) instead of scattering them
+- usbComms.c — resolve perf-mode ambiguities: synth vs. perf ownership (line 342), voice-count ordering on increase (line 576/582), unconfirmed message case (line 903)
+- graphics.cpp:738 — move parse_patch to a shared file so both USB and file-load paths can use it
+- moduleGraphics.cpp — refactor volume-meter/label rendering into utilsGraphics.cpp; fix upRate flag being applied too broadly (should be audio-connector-only, line 540); resolve "can Mode be morphed?" question (line 387)
+- moduleGraphics.cpp/renderParams.c — port custom graph displays from the original editor (none exist today besides render_volume_meter): envelope shapes (AD/AR/D/H/AHD/ADSR/ADBDSR/Multi/DX), filter response curves (Classic/Normal/Small/Static/Comb), oscillator & LFO waveform shapes, EQ curves (2-band/3-band/peak), compressor/expander, distortion/waveshaping (Dist A/B/Wrap/Shape/Saturate), FM operator + DX router, phaser, vocoder, tuned noise, random distribution/trigger — see Original Editor/G2Editor.c, CCustomObjectFactory::CreateCustom (~line 101952) and the CPnl*Graph class family for reference implementations
+>>>>>>> Stashed changes
 - OscA(97) — add new UI element for Freq control (param 0) that accounts for param 6 Pitch Type
 - Sw8-1(15), ValSw1-2(17) — need more resources
 - OscShpB(8) — check mode handling
