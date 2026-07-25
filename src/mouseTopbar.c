@@ -175,7 +175,7 @@ bool handle_topbar_left_down(tCoord coord, uint32_t slot) {
         if (within_rectangle(coord, gTopbarControls[topbarPatchVolumeId].rectangle)) {
             volKey.slot               = slot;
             volKey.location           = (uint32_t)locationMorph;
-            volKey.index              = PATCH_VOLUME;
+            volKey.index              = patchModuleVolume;
 
             tModule * volMod = get_module(volKey);
             gParamDragging.moduleKey  = volKey;

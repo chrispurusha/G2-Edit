@@ -1569,7 +1569,7 @@ void open_arp_rate_dropdown(tCoord coord) {
         };
         initialized = true;
     }
-    gPatchSettingModule = PATCH_ARPEGGIATOR;
+    gPatchSettingModule = patchModuleArpeggiator;
     gPatchSettingParam  = ARP_SPEED;
     open_context_menu(coord, items, 0, 0.0);
 }
@@ -1583,7 +1583,7 @@ void open_arp_direction_dropdown(tCoord coord) {
         {NULL,     RGB_BLACK,  NULL,                    0, NULL},
     };
 
-    gPatchSettingModule = PATCH_ARPEGGIATOR;
+    gPatchSettingModule = patchModuleArpeggiator;
     gPatchSettingParam  = ARP_DIRECTION;
     open_context_menu(coord, items, 0, 0.0);
 }
@@ -1597,7 +1597,7 @@ void open_arp_octave_dropdown(tCoord coord) {
         {NULL,    RGB_BLACK,  NULL,                    0, NULL},
     };
 
-    gPatchSettingModule = PATCH_ARPEGGIATOR;
+    gPatchSettingModule = patchModuleArpeggiator;
     gPatchSettingParam  = ARP_OCTAVES;
     open_context_menu(coord, items, 0, 0.0);
 }
@@ -1610,7 +1610,7 @@ void open_vibrato_source_dropdown(tCoord coord) {
         {NULL,      RGB_BLACK,  NULL,                    0, NULL},
     };
 
-    gPatchSettingModule = PATCH_VIBRATO;
+    gPatchSettingModule = patchModuleVibrato;
     gPatchSettingParam  = VIBRATO_MOD;
     open_context_menu(coord, items, 0, 0.0);
 }
@@ -1633,7 +1633,7 @@ void open_vibrato_amount_dropdown(tCoord coord) {
         };
         initialized = true;
     }
-    gPatchSettingModule = PATCH_VIBRATO;
+    gPatchSettingModule = patchModuleVibrato;
     gPatchSettingParam  = VIBRATO_DEPTH;
     open_context_menu(coord, items, 8, 0.0);
 }
@@ -1646,7 +1646,7 @@ void open_glide_mode_dropdown(tCoord coord) {
         {NULL,     RGB_BLACK,  NULL,                    0, NULL},
     };
 
-    gPatchSettingModule = PATCH_GLIDE;
+    gPatchSettingModule = patchModuleGlide;
     gPatchSettingParam  = GLIDE_TYPE;
     open_context_menu(coord, items, 0, 0.0);
 }
@@ -1667,7 +1667,7 @@ void open_glide_time_dropdown(tCoord coord) {
         };
         initialized = true;
     }
-    gPatchSettingModule = PATCH_GLIDE;
+    gPatchSettingModule = patchModuleGlide;
     gPatchSettingParam  = GLIDE_SPEED;
     open_context_menu(coord, items, 6, 0.0);
 }
@@ -1690,7 +1690,7 @@ void open_bend_range_dropdown(tCoord coord) {
         };
         initialized = true;
     }
-    gPatchSettingModule = PATCH_BEND;
+    gPatchSettingModule = patchModuleBend;
     gPatchSettingParam  = BEND_RANGE;
     open_context_menu(coord, items, 0, 0.0);
 }
@@ -1705,7 +1705,7 @@ void open_patch_octave_shift_dropdown(tCoord coord) {
         {NULL, RGB_BLACK,  NULL,                                        0, NULL},
     };
 
-    gPatchSettingModule = PATCH_SUSTAIN;
+    gPatchSettingModule = patchModuleSustain;
     gPatchSettingParam  = OCTAVE_SHIFT;
     open_context_menu(coord, items, 0, 0.0);
 }
