@@ -1197,6 +1197,13 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         return;
     }
 
+    // Bank/file browser scrollbar-thumb drag - both no-op and return false unless a drag started
+    // on that popup's own scrollbar (list_scrollbar_mouse_down(), called from their respective
+    // mouse-down handlers) is actually in progress.
+    if (handle_bank_browser_mouse_move(coord) || handle_file_browser_mouse_move(coord)) {
+        return;
+    }
+
     if (gDragSkipCount > 0) {
         gDragPrevX = xCoord;
         gDragPrevY = yCoord;
