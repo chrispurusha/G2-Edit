@@ -1066,30 +1066,41 @@ static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, doub
             }
             return (phase < duty) ? 1.0 : -1.0;
         }
-        case 7: // SymPulse - a single cycle: High, then Low, then Zero for the remainder.
-                // Confirmed against the real original editor: raw 63 (Shape ~= 0.5) gives a
-                // quarter-cycle high, a quarter-cycle low, then the remaining half-cycle at
-                // zero - so both the high and low segments shrink (and the zero segment grows)
-                // as Shape increases, from a plain 50% square with no zero segment at Shape 0
-                // down to all zero at Shape 1. The High/Low/Zero step boundaries themselves
-                // render as diagonals for free (adjacent samples straddling a jump just get
-                // connected by a line) - except the Zero->High wrap, which falls exactly on the
-                // seam between the last and first sample and so is never drawn. leadIn moves
-                // that edge a little way into the visible range instead, so the display starts
-                // sitting at 0 and shows it leaving zero, going positive, rather than starting
-                // already at the top of the High plateau.
+        case 7: // SymPulse - single cycle: 0 (start) -> ramp -> High (hold) -> Low (hold, a
+                // direct step from High, same as Pulse's middle transition) -> ramp -> Zero
+                // (hold for the remainder) -> 0 (end). Confirmed against the real original
+                // editor: raw 63 (Shape ~= 0.5) gives a quarter-cycle high, a quarter-cycle low,
+                // then the remaining half-cycle at zero - both High and Low shrink (and Zero
+                // grows) as Shape increases, from a plain 50% square with no zero segment at
+                // Shape 0 to all zero at Shape 1. Same edge-ramp treatment as Pulse above and
+                // for the same reason: a hard step never produces an actual sample AT zero, and
+                // the half-magnitude ramps (0->+1, -1->0) need half the width of the
+                // full-magnitude High->Low step to come out the same slope.
         {
-            const double leadIn  = 0.03;
-            double       halfSeg = 0.5 * (1.0 - shape); // 0.5 (Shape 0) .. 0 (Shape 1)
-            double       p       = fmod(phase + (1.0 - leadIn), 1.0);
+            // High/Low segment length each: rescaled (not clamped) to run from 0.5 (Shape 0) to
+            // a floor of 0.03 (Shape 1), staying linear the whole way rather than bending flat
+            // once it hits the floor - like Pulse's duty (bounded to 50%..95%, never fully
+            // degenerate), SymPulse's High/Low shouldn't fully vanish even at Shape's true max.
+            const double floor     = 0.03;
+            double       halfSeg   = floor + ((0.5 - floor) * (1.0 - shape));
+            double       edgeWidth = fmin(0.0025, halfSeg * 0.5); // see Pulse above for the 0.0025 baseline
 
-            if (p < halfSeg) {
-                return 1.0;
-            } else if (p < (2.0 * halfSeg)) {
-                return -1.0;
-            } else {
-                return 0.0;
+            if (phase < edgeWidth) {
+                return phase / edgeWidth; // 0 -> +1
             }
+
+            if (phase < halfSeg) {
+                return 1.0;
+            }
+
+            if (phase < (2.0 * halfSeg)) {
+                return -1.0;
+            }
+
+            if (phase < ((2.0 * halfSeg) + edgeWidth)) {
+                return -1.0 + ((phase - (2.0 * halfSeg)) / edgeWidth); // -1 -> 0
+            }
+            return 0.0;
         }
         default:
             return 0.0;
