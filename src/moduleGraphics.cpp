@@ -970,6 +970,38 @@ static double skewed_ramp_zero_start(double phase, double peak) {
     return -y;
 }
 
+// Discrete Summation Formula (Moorer "buzz"): y = sin(theta)/(1-2r*cos(N*theta)+r^2). At r=0
+// this is a plain sine; as r approaches 1 it sharpens into an increasingly buzzy pulse train.
+// Shared by Sine3 (N=1) and Sine4 (N=2, matching CPnlWaveformGraphABC::DrawDsf's param_2=1 vs 2
+// dispatch) below - the only difference between them.
+static double dsf_buzz(double theta, double shape, double harmonicMultiplier) {
+    double r     = fmin(shape, 0.97);
+    double denom = 1.0 - (2.0 * r * cos(harmonicMultiplier * theta)) + (r * r);
+    double y     = (denom > 0.0001) ? ((sin(theta) / denom) * (1.0 - r)) : 0.0;
+
+    return fmax(-1.0, fmin(1.0, y));
+}
+
+// Ramp width for the Pulse/SymPulse zero-crossing ramps below: half a sample-to-sample step at
+// the render loop's 200-sample resolution (must stay narrower than that step or the ramp isn't
+// actually sampled at all), capped further so it never eats more than half of whatever room is
+// actually available on either side of it (relevant once High/Low get thin near Shape's
+// extremes - see SymPulse below).
+static double pulse_edge_width(double roomAvailable) {
+    return fmin(0.0025, roomAvailable * 0.5);
+}
+
+// The two ends of a Pulse/SymPulse ramp: a hard step never actually produces a sample AT zero,
+// so both add these explicit narrow ramps at their zero-crossing points instead of relying on
+// the step happening to land on a sample.
+static double ramp_from_zero(double phaseIntoRamp, double edgeWidth) {
+    return phaseIntoRamp / edgeWidth; // 0 -> +1
+}
+
+static double ramp_to_zero(double phaseIntoRamp, double edgeWidth) {
+    return -1.0 + (phaseIntoRamp / edgeWidth); // -1 -> 0
+}
+
 // Shape is always the raw 0-127 param value normalised to 0..1 - but the dial itself only
 // *displays* 50%..99% of that (render_paramType1Shape), so Shape 0 is the dial's displayed
 // minimum (50%) and Shape 1 its displayed maximum (99%), not "no shaping"/"full shaping" in the
@@ -995,27 +1027,16 @@ static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, doub
 
             return (s1 + s2) * 0.5;
         }
-        case 2: // Sine3 - Discrete Summation Formula (Moorer "buzz"), N=1: matches
-                // CPnlWaveformGraphABC::DrawDsf's y = sin(theta)/(1-2r*cos(theta)+r^2). Already
-                // starts at a rising zero-crossing (numerator sin(theta) is 0 and rising at
-                // theta=0 for any r<1) with no extra phase-shift needed.
+        case 2: // Sine3 - Discrete Summation Formula (Moorer "buzz"), N=1. Already starts at a
+                // rising zero-crossing (numerator sin(theta) is 0 and rising at theta=0 for any
+                // r<1) with no extra phase-shift needed.
         {
-            double theta = 2.0 * M_PI * phase;
-            double r     = fmin(shape, 0.97);
-            double denom = 1.0 - (2.0 * r * cos(theta)) + (r * r);
-            double y     = (denom > 0.0001) ? ((sin(theta) / denom) * (1.0 - r)) : 0.0;
-
-            return fmax(-1.0, fmin(1.0, y));
+            return dsf_buzz(2.0 * M_PI * phase, shape, 1.0);
         }
-        case 3: // Sine4 - same DSF formula as Sine3, but N=2 (matches DrawDsf's param_2=1 vs 2
-                // dispatch), so it sharpens into twice as many buzz peaks per cycle
+        case 3: // Sine4 - same DSF formula as Sine3, but N=2, so it sharpens into twice as many
+                // buzz peaks per cycle
         {
-            double theta = 2.0 * M_PI * phase;
-            double r     = fmin(shape, 0.97);
-            double denom = 1.0 - (2.0 * r * cos(2.0 * theta)) + (r * r);
-            double y     = (denom > 0.0001) ? ((sin(theta) / denom) * (1.0 - r)) : 0.0;
-
-            return fmax(-1.0, fmin(1.0, y));
+            return dsf_buzz(2.0 * M_PI * phase, shape, 2.0);
         }
         case 4: // TriSaw - Shape skews the breakpoint from a symmetric triangle towards a sawtooth.
                 // Confirmed against the real original editor: Shape at its displayed minimum
@@ -1050,19 +1071,14 @@ static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, doub
                 // the same slope rather than looking shallower.
         {
             double duty      = 0.5 + (shape * 0.45); // 50%..95%
-            double edgeWidth = 0.0025;               // ~half a sample-to-sample step at the
-                                                     // render loop's 200-sample resolution -
-                                                     // must stay narrower than that step or the
-                                                     // ramp isn't actually sampled at all, and
-                                                     // roughly half of it to keep the slope
-                                                     // matching the middle transition
+            double edgeWidth = pulse_edge_width(fmin(duty, 1.0 - duty));
 
             if (phase < edgeWidth) {
-                return phase / edgeWidth; // 0 -> +1
+                return ramp_from_zero(phase, edgeWidth);
             }
 
             if (phase >= (1.0 - edgeWidth)) {
-                return -1.0 + ((phase - (1.0 - edgeWidth)) / edgeWidth); // -1 -> 0
+                return ramp_to_zero(phase - (1.0 - edgeWidth), edgeWidth);
             }
             return (phase < duty) ? 1.0 : -1.0;
         }
@@ -1083,10 +1099,10 @@ static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, doub
             // degenerate), SymPulse's High/Low shouldn't fully vanish even at Shape's true max.
             const double floor     = 0.03;
             double       halfSeg   = floor + ((0.5 - floor) * (1.0 - shape));
-            double       edgeWidth = fmin(0.0025, halfSeg * 0.5); // see Pulse above for the 0.0025 baseline
+            double       edgeWidth = pulse_edge_width(halfSeg);
 
             if (phase < edgeWidth) {
-                return phase / edgeWidth; // 0 -> +1
+                return ramp_from_zero(phase, edgeWidth);
             }
 
             if (phase < halfSeg) {
@@ -1098,7 +1114,7 @@ static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, doub
             }
 
             if (phase < ((2.0 * halfSeg) + edgeWidth)) {
-                return -1.0 + ((phase - (2.0 * halfSeg)) / edgeWidth); // -1 -> 0
+                return ramp_to_zero(phase - (2.0 * halfSeg), edgeWidth);
             }
             return 0.0;
         }
