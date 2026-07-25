@@ -239,9 +239,9 @@ bool handle_patch_params_mouse(tCoord coord, tMouseButton mouseButton) {
         uint32_t          moduleIndex;
         uint32_t          paramIndex;
     }                 kPatchOnOffTable[] = {
-        {pPSustainPedal, PATCH_SUSTAIN,     SUSTAIN_PEDAL},
-        {pPArpEnabled,   PATCH_ARPEGGIATOR, ARP_ON_OFF   },
-        {pPBendEnabled,  PATCH_BEND,        BEND_ON_OFF  },
+        {pPSustainPedal, patchModuleSustain,     SUSTAIN_PEDAL},
+        {pPArpEnabled,   patchModuleArpeggiator, ARP_ON_OFF   },
+        {pPBendEnabled,  patchModuleBend,        BEND_ON_OFF  },
     };
 
     if (!gPatchParamsEdit.active) {

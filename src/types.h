@@ -385,6 +385,19 @@ typedef enum {
     locationMax
 } tLocation;
 
+// Module indices within the patch settings location (locationMorph, location 2)
+typedef enum {
+    patchModuleMorph = 1,
+    patchModuleVolume,
+    patchModuleGlide,
+    patchModuleBend,
+    patchModuleVibrato,
+    patchModuleArpeggiator,
+    patchModuleSustain,
+    patchModuleMasterClock,
+    patchModuleVoices
+} tPatchModuleIndex;
+
 typedef struct {
     uint32_t paramRef;
     uint8_t  value;

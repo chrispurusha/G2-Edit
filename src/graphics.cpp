@@ -343,7 +343,7 @@ void render_top_bar(void) {
     gTopbarControls[topbarVoiceCountId].rectangle = draw_button(mainArea, {topbar_control_def(topbarVoiceCountId)->coord, {get_text_width("XX", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, buff, buttonBackgroundColour);
 
     {
-        tModuleKey volKey = {slot, (uint32_t)locationMorph, PATCH_VOLUME};
+        tModuleKey volKey = {slot, (uint32_t)locationMorph, patchModuleVolume};
         tModule *  module = get_module(volKey);
 
         if (module != NULL) {
@@ -1416,9 +1416,9 @@ static void render_patch_params_panel(void) {
     double    y             = boxY + titleH + margin;
     double    x             = 0.0;
     double    dialH         = 0.0;
-    tModule * sustMod       = get_module_slot(slot, (uint32_t)locationMorph, PATCH_SUSTAIN);
-    tModule * vibMod        = get_module_slot(slot, (uint32_t)locationMorph, PATCH_VIBRATO);
-    tModule * glideMod      = get_module_slot(slot, (uint32_t)locationMorph, PATCH_GLIDE);
+    tModule * sustMod       = get_module_slot(slot, (uint32_t)locationMorph, patchModuleSustain);
+    tModule * vibMod        = get_module_slot(slot, (uint32_t)locationMorph, patchModuleVibrato);
+    tModule * glideMod      = get_module_slot(slot, (uint32_t)locationMorph, patchModuleGlide);
     uint8_t   sustainPedal  = sustMod ? sustMod->param[0][SUSTAIN_PEDAL].value : 0;
     int8_t    octaveShift   = sustMod ? (int8_t)sustMod->param[0][OCTAVE_SHIFT].value : 0;
     uint8_t   vibratoRate   = vibMod ? vibMod->param[0][VIBRATO_RATE].value : 0;
@@ -1996,7 +1996,6 @@ void clean_up_graphics(void) {
     FT_Done_FreeType(gLibrary);
     free_textures();
 
-    // glfwMakeContextCurrent(NULL); // TODO: Probably not needed, leaving whilst more tests are done
     glfwDestroyWindow((GLFWwindow *)synthlib_window());
     synthlib_set_window(NULL);
     glfwTerminate();
