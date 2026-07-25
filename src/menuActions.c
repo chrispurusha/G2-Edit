@@ -32,6 +32,7 @@
 #include "alertDialog.h"
 #include "fileBrowser.h"
 #include "bankBrowser.h"
+#include "msgQueue.h"
 
 // Bank number (0-indexed) chosen from the "Backup Patch Bank"/"Backup Performance Bank" dropdown
 // dialog, stashed here between that dialog's confirm callback and the folder-choose panel's
@@ -310,7 +311,19 @@ void file_menu_save_patch(void) {
 }
 
 void file_menu_new_patch(void) {
+    if (gCommsState != eCommsOnLine) {
+        show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before creating a new patch.");
+        return;
+    }
     init_patch(gSlot);
+
+    // init_patch() only resets the local database - without pushing it, the G2 hardware keeps
+    // playing whatever patch it had before, silently diverging from what the editor now shows.
+    tMessageContent messageContent = {0};
+    messageContent.cmd  = eMsgCmdWritePatch;
+    messageContent.slot = gSlot;
+    msg_send(&gCommandQueue, &messageContent);
+
     wake_glfw();
 }
 
