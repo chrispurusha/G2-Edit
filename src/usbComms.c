@@ -3544,12 +3544,37 @@ static int send_init_sequence_push(void) {
     return EXIT_SUCCESS;
 }
 
+// Whether a send_write_data() case needs the unsolicited-message stream paused (send_stop()/
+// send_start()) around its own device writes. True for every command except: eMsgCmdSetValue/
+// eMsgCmdSetParamMorph (real-time param/morph tweaks, left unpaused so they stay responsive
+// while dragging) and eMsgCmdSetCustomData/eMsgCmdPeekSynthSettingsRestore (no device write at
+// all). An unrecognised cmd value falls through to send_write_data()'s own default: case (a
+// no-op log), which harmlessly gets a pointless stop/start bracket rather than none — that
+// combination should never actually happen.
+static bool command_needs_stop_start(uint32_t cmd) {
+    switch (cmd) {
+        case eMsgCmdSetValue:
+        case eMsgCmdSetParamMorph:
+        case eMsgCmdSetCustomData:
+        case eMsgCmdPeekSynthSettingsRestore:
+            return false;
+
+        default:
+            return true;
+    }
+}
+
 // ---------------------------------------------------------------------------
 // send_write_data — runtime command dispatch
 // ---------------------------------------------------------------------------
 
 static int send_write_data(tMessageContent * messageContent) {
-    int retVal = EXIT_FAILURE;
+    int  retVal    = EXIT_FAILURE;
+    bool needsStop = command_needs_stop_start(messageContent->cmd);
+
+    if (needsStop) {
+        send_stop();
+    }
 
     switch (messageContent->cmd) {
         case eMsgCmdSetValue:
@@ -3557,46 +3582,32 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdSetMode:
-            send_stop();
             retVal = send_set_mode(messageContent->slot, &messageContent->modeData);
-            send_start();
             break;
 
         case eMsgCmdWriteCable:
-            send_stop();
             retVal = send_write_cable(messageContent->slot, &messageContent->cableData);
-            send_start();
             break;
 
         case eMsgCmdWriteModule:
-            send_stop();
             retVal = send_add_module(messageContent->slot, &messageContent->moduleData);
-            send_start();
             break;
         case eMsgCmdMoveModule:
-            send_stop();
             retVal = send_move_module(messageContent->slot, messageContent->moduleData.moduleKey,
                                       messageContent->moduleData.column, messageContent->moduleData.row);
-            send_start();
             break;
 
         case eMsgCmdDeleteModule:
-            send_stop();
             retVal = send_delete_module(messageContent->slot, messageContent->moduleData.moduleKey);
-            send_start();
             break;
 
         case eMsgCmdSetModuleUpRate:
-            send_stop();
             retVal = send_set_module_uprate(messageContent->slot, messageContent->moduleData.moduleKey,
                                             messageContent->moduleData.upRate);
-            send_start();
             break;
 
         case eMsgCmdDeleteCable:
-            send_stop();
             retVal = send_delete_cable(messageContent->slot, &messageContent->cableData);
-            send_start();
             break;
 
         case eMsgCmdSetParamMorph:
@@ -3604,48 +3615,34 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdSelectVariation:
-            send_stop();
             retVal = send_select_variation(messageContent->slot, messageContent->variationData.variation);
-            send_start();
             break;
 
         case eMsgCmdSelectSlot:
-            send_stop();
             retVal = send_select_slot(messageContent->slotData.slot);
-            send_start();
             break;
 
         case eMsgCmdSetModuleLabel:
-            send_stop();
             retVal = send_set_module_label(messageContent->slot, messageContent->moduleLabelData.moduleKey, messageContent->moduleLabelData.name);
-            send_start();
             break;
 
         case eMsgCmdSetPatchName:
-            send_stop();
             retVal = send_set_patch_name(messageContent->slot, messageContent->patchName.name);
-            send_start();
             break;
 
         case eMsgCmdSetModuleColour:
-            send_stop();
             retVal = send_set_module_colour(messageContent->slot, messageContent->moduleColourData.moduleKey.location, messageContent->moduleColourData.moduleKey.index, messageContent->moduleColourData.colour);
-            send_start();
             break;
 
         // CONFIRMED on real hardware - see SUB_COMMAND_SET_MUTATION_LOCK's comment in defs.h.
         // Enqueued from action_toggle_exclude_from_mutation() (menus.c) for each toggled module.
         case eMsgCmdSetMutationLock:
-            send_stop();
             retVal = send_set_mutation_lock(messageContent->slot, messageContent->moduleMutationLockData.moduleKey.location, messageContent->moduleMutationLockData.moduleKey.index, messageContent->moduleMutationLockData.locked);
-            send_start();
             break;
 
         case eMsgCmdWritePatch:
         {
-            send_stop();
             retVal                                         = push_slot_to_device(messageContent->slot);
-            send_start();
 
             gotPatchChangeIndication[messageContent->slot] = false; // TODO - consider if this is the right thing to do here
             call_full_patch_change_notify();                        // TODO - not sure we need to do this here
@@ -3655,15 +3652,12 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdWritePatchDescr:
         {
-            send_stop();
             retVal = send_set_patch_descr(messageContent->slot);
-            send_start();
             break;
         }
 
         case eMsgCmdAssignKnob:
         {
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             uint32_t kSlot  = messageContent->slot;
             uint32_t kLoc   = messageContent->knobAssignData.moduleKey.location;
             uint32_t kMod   = messageContent->knobAssignData.moduleKey.index;
@@ -3671,21 +3665,17 @@ static int send_write_data(tMessageContent * messageContent) {
             uint32_t kKnob  = messageContent->knobAssignData.knobIndex;
 
             retVal = send_assign_knob(kSlot, kLoc, kMod, kParam, kKnob);
-            send_start();
             break;
         }
 
         case eMsgCmdDeassignKnob:
         {
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_deassign_knob(messageContent->slot, messageContent->knobDeassignData.knobIndex);
-            send_start();
             break;
         }
 
         case eMsgCmdAssignGlobalKnob:
         {
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             uint32_t gkSlot  = messageContent->globalKnobAssignData.slotIndex;
             uint32_t gkLoc   = messageContent->globalKnobAssignData.location;
             uint32_t gkMod   = messageContent->globalKnobAssignData.moduleIndex;
@@ -3693,86 +3683,66 @@ static int send_write_data(tMessageContent * messageContent) {
             uint32_t gkKnob  = messageContent->globalKnobAssignData.knobIndex;
 
             retVal = send_assign_global_knob(gkSlot, gkLoc, gkMod, gkParam, gkKnob);
-            send_start();
             break;
         }
 
         case eMsgCmdDeassignGlobalKnob:
         {
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_deassign_global_knob(messageContent->globalKnobDeassignData.knobIndex);
-            send_start();
             break;
         }
 
         case eMsgCmdAssignMidiCC:
         {
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             uint32_t mLoc   = messageContent->midiCCAssignData.moduleKey.location;
             uint32_t mMod   = messageContent->midiCCAssignData.moduleKey.index;
             uint32_t mParam = messageContent->midiCCAssignData.paramIndex;
             uint32_t mCC    = messageContent->midiCCAssignData.midiCC;
 
             retVal = send_assign_midi_cc(messageContent->slot, mLoc, mMod, mParam, mCC);
-            send_start();
             break;
         }
 
         case eMsgCmdDeassignMidiCC:
         {
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_deassign_midi_cc(messageContent->slot, messageContent->midiCCDeassignData.midiCC);
-            send_start();
             break;
         }
 
         case eMsgCmdCopyVariation:
         {
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_copy_variation(messageContent->slot,
                                          messageContent->copyVariationData.fromVariation,
                                          messageContent->copyVariationData.toVariation);
-            send_start();
             break;
         }
 
         case eMsgCmdSetMasterClockBPM:
         {
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_set_master_clock_bpm(messageContent->masterClockBPMData.bpm);
-            send_start();
             break;
         }
 
         case eMsgCmdSetMasterClockRun:
         {
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_set_master_clock_run(messageContent->masterClockRunData.running);
-            send_start();
             break;
         }
 
         case eMsgCmdSetParamLabel:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_set_param_label(messageContent->slot, messageContent->paramLabelData.moduleKey, messageContent->paramLabelData.paramIndex, messageContent->paramLabelData.name);
-            send_start();
             break;
 
         case eMsgCmdWriteSynthSettings:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_synth_settings();
-            send_start();
             break;
 
         case eMsgCmdWriteModePerf:
-            send_stop();                     // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_perf_mode_change(1);
             send_get_performance_settings(); // At least need the perf settings, otherwise name etc. don't come in after change. Might need other data too
-            send_start();
             break;
 
         case eMsgCmdWriteModePatch:
-            send_stop();                     // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_perf_mode_change(0);
             send_get_performance_settings(); // Same reasoning as the Perf-mode case above: masterClock (and
                                              // the rest of parse_performance_settings()'s data) is shared
@@ -3780,13 +3750,10 @@ static int send_write_data(tMessageContent * messageContent) {
                                              // own comment on gGlobalSettings.masterClock. Without this,
                                              // switching to patch mode left the clock display showing
                                              // whatever was last fetched until the app was restarted.
-            send_start();
             break;
 
         case eMsgCmdWritePerf:
         {
-            send_stop();
-
             for (uint32_t s = 0; s < MAX_SLOTS; s++) {
                 retVal = push_slot_to_device(s);
             }
@@ -3815,20 +3782,15 @@ static int send_write_data(tMessageContent * messageContent) {
                 call_full_patch_change_notify();
                 call_wake_glfw();
             }
-            send_start();
             break;
         }
 
         case eMsgCmdWritePerfSettings:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_perf_header();
-            send_start();
             break;
 
         case eMsgCmdWritePerfName:
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = send_perf_name();
-            send_start();
             break;
 
         //case eMsgCmdReloadAllPatchData:  // TODO - do we really want to reload all patch data, and is it just patch data - this is currently doing a lot more
@@ -3860,89 +3822,69 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdBackupBank:
         {
-            send_stop(); // Should stop any unsolicited messages TODO: might want to do this elsewhere
             retVal = backup_bank(messageContent->bankBackupData.bank, messageContent->bankBackupData.destFolder,
                                  messageContent->bankBackupData.isPerf, false);
-            send_start();
             break;
         }
 
         case eMsgCmdBackupSynthSettings:
         {
-            send_stop();
             retVal = backup_synth_settings(messageContent->settingsBackupData.destFolder, false);
-            send_start();
             break;
         }
 
         case eMsgCmdBackupEverything:
         {
-            send_stop();
             retVal = backup_everything(messageContent->settingsBackupData.destFolder);
-            send_start();
             break;
         }
 
         case eMsgCmdRestoreBank:
         {
-            send_stop();
             retVal = restore_bank(messageContent->bankRestoreData.sourceBank, messageContent->bankRestoreData.destBank,
                                   messageContent->bankRestoreData.srcFolder, messageContent->bankRestoreData.isPerf, false);
-            send_start();
             break;
         }
 
         case eMsgCmdPeekBankLocation:
         {
-            send_stop();
             retVal = peek_store_target(messageContent->bankLocationPerfData.bank, messageContent->bankLocationPerfData.location,
                                        messageContent->bankLocationPerfData.isPerf);
-            send_start();
             break;
         }
 
         case eMsgCmdStorePatch:
         {
-            send_stop();
             retVal = store_patch_to_bank(messageContent->bankLocationPerfData.bank, messageContent->bankLocationPerfData.location,
                                          messageContent->bankLocationPerfData.isPerf);
-            send_start();
             break;
         }
 
         case eMsgCmdPeekDeleteTarget:
         {
-            send_stop();
             retVal = peek_delete_target(messageContent->bankLocationPerfData.bank, messageContent->bankLocationPerfData.location,
                                         messageContent->bankLocationPerfData.isPerf);
-            send_start();
             break;
         }
 
         case eMsgCmdDeleteBankLocation:
         {
-            send_stop();
             retVal = delete_bank_location(messageContent->bankLocationPerfData.bank, messageContent->bankLocationPerfData.location,
                                           messageContent->bankLocationPerfData.isPerf);
-            send_start();
             break;
         }
 
         case eMsgCmdPeekLoadTarget:
         {
-            send_stop();
             retVal = peek_load_target(messageContent->bankLocationPerfData.bank, messageContent->bankLocationPerfData.location,
                                       messageContent->bankLocationPerfData.isPerf);
-            send_start();
             break;
         }
 
         case eMsgCmdLoadPatch:
         {
-            send_stop();
             retVal = load_patch_from_bank(messageContent->bankLocationPerfData.bank, messageContent->bankLocationPerfData.location,
                                           messageContent->bankLocationPerfData.isPerf);
-            send_start();
             break;
         }
 
@@ -3951,20 +3893,20 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdApplySynthSettingsRestore:
-            send_stop();
             retVal = apply_synth_settings_restore();
-            send_start();
             break;
 
         case eMsgCmdRestoreEverything:
-            send_stop();
             retVal = restore_everything(messageContent->synthSettingsRestoreData.srcFolder);
-            send_start();
             break;
 
         default:
             LOG_DEBUG("Unknown command %d\n", messageContent->cmd);
             break;
+    }
+
+    if (needsStop) {
+        send_start();
     }
     return retVal;
 }
