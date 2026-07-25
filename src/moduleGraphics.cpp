@@ -1040,20 +1040,56 @@ static double oscshpb_waveform_sample(uint32_t waveformIndex, double phase, doub
         case 6: // Pulse - pulse width (duty cycle) widens with Shape: Shape 0 (displayed 50%) is
                 // a plain symmetric square, Shape 1 (displayed 99%) spends most of the cycle
                 // high (the falling edge moves right, cutting into the LOW time, not the high
-                // time - confirmed against the real original editor). Already starts right at
-                // the rising edge (phase 0 is the first sample of the high part of the cycle).
+                // time - confirmed against the real original editor). The High/Low step itself
+                // is unchanged, but a hard step never actually produces a sample AT zero, so the
+                // rising crossing that belongs at the wrap seam was invisible - phase 0 and 1
+                // ramp to/from 0.0 explicitly so that crossing is a real plotted point at both
+                // ends of the display, instead of starting already at the top. Those two ramps
+                // only span half the vertical distance of the middle (high-to-low) transition
+                // (0->+1 rather than +1->-1), so they're given half its width too, to come out
+                // the same slope rather than looking shallower.
         {
-            double duty = 0.5 + (shape * 0.45); // 50%..95%
+            double duty      = 0.5 + (shape * 0.45); // 50%..95%
+            double edgeWidth = 0.0025;               // ~half a sample-to-sample step at the
+                                                     // render loop's 200-sample resolution -
+                                                     // must stay narrower than that step or the
+                                                     // ramp isn't actually sampled at all, and
+                                                     // roughly half of it to keep the slope
+                                                     // matching the middle transition
 
+            if (phase < edgeWidth) {
+                return phase / edgeWidth; // 0 -> +1
+            }
+
+            if (phase >= (1.0 - edgeWidth)) {
+                return -1.0 + ((phase - (1.0 - edgeWidth)) / edgeWidth); // -1 -> 0
+            }
             return (phase < duty) ? 1.0 : -1.0;
         }
-        case 7: // SymPulse - a duty-symmetric pulse: two equal, evenly-spaced Shape-width pulses
-                // per cycle, narrowing with Shape the same way Pulse does (Shape 0 -> two 25%
-                // pulses, i.e. 50% total duty; Shape 1 -> two narrow ones)
+        case 7: // SymPulse - a single cycle: High, then Low, then Zero for the remainder.
+                // Confirmed against the real original editor: raw 63 (Shape ~= 0.5) gives a
+                // quarter-cycle high, a quarter-cycle low, then the remaining half-cycle at
+                // zero - so both the high and low segments shrink (and the zero segment grows)
+                // as Shape increases, from a plain 50% square with no zero segment at Shape 0
+                // down to all zero at Shape 1. The High/Low/Zero step boundaries themselves
+                // render as diagonals for free (adjacent samples straddling a jump just get
+                // connected by a line) - except the Zero->High wrap, which falls exactly on the
+                // seam between the last and first sample and so is never drawn. leadIn moves
+                // that edge a little way into the visible range instead, so the display starts
+                // sitting at 0 and shows it leaving zero, going positive, rather than starting
+                // already at the top of the High plateau.
         {
-            double halfDuty = 0.25 - (shape * 0.225); // 25%..2.5%
+            const double leadIn  = 0.03;
+            double       halfSeg = 0.5 * (1.0 - shape); // 0.5 (Shape 0) .. 0 (Shape 1)
+            double       p       = fmod(phase + (1.0 - leadIn), 1.0);
 
-            return ((phase < halfDuty) || ((phase >= 0.5) && (phase < 0.5 + halfDuty))) ? 1.0 : -1.0;
+            if (p < halfSeg) {
+                return 1.0;
+            } else if (p < (2.0 * halfSeg)) {
+                return -1.0;
+            } else {
+                return 0.0;
+            }
         }
         default:
             return 0.0;
@@ -1072,8 +1108,10 @@ static void render_oscshpb_waveform_graph(tRectangle rectangle, tModule * module
     double         shape             = (double)module->param[variation][shapeParamIndex].value / 127.0;
     tRectangle     graphRect         = adjust_rectangle(rectangle, (tRectangle){{-2, 6}, {30, 10}}, anchorTopRight, module);
     double         midY              = graphRect.coord.y + (graphRect.size.h / 2.0);
-    const int      numSamples        = 48;
-    const int      numCycles         = 1; // one period across the box, matching the original editor
+    const int      numSamples        = 200; // fine enough to resolve Pulse/SymPulse's narrow
+                                            // sub-sample-width edge ramps, not just the coarser
+                                            // per-cycle shapes
+    const int      numCycles         = 1;   // one period across the box, matching the original editor
     tCoord         prev              = {0};
 
     set_rgb_colour(RGB_GREY_2);
