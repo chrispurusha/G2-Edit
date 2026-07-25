@@ -1193,11 +1193,24 @@ static void render_oscshpb_waveform_graph(tRectangle rectangle, tModule * module
 // plateau's HEIGHT reflects its level directly (it's a level, not a timed phase, so it gets a
 // fixed display width just to show the hold clearly).
 //
-// All three phases decelerate (concave - fast then levelling off, like a capacitor charging or
-// discharging), confirmed against the real original editor for Attack specifically. Env Shape's
-// default is "LogExp" (envShapeStrMap): Attack defaults to Log, Decay+Release to Exp - the
-// single curve shape used here is a reasonable stand-in for that pairing, not a rendering of
-// Env Shape's other 3 settings, which aren't reflected yet.
+// Both Env Shape and Output Type are taken from the manual's "COMMON ENVELOPE GENERATOR
+// PARAMETERS" section (g2manual.txt), not guesses:
+//
+// - SHAPE SCROLL BUTTON (envShapeStrMap - "there are four alternatives: Logarithmic Attack &
+//   Exponential Decay/Release, Linear Attack & Exponential Decay/Release, Exponential Attack &
+//   Decay/Release and Linear Attack & Decay/Release") - so the first word of each is Attack's
+//   curve, the second is Decay+Release's. Log (the default) is concave (fast then levelling -
+//   confirmed against the real original editor); Exp attack is its mirror, convex (slow then a
+//   fast final approach); Decay/Release's Exp is concave, matching a capacitor discharging.
+// - OUTPUT TYPE SCROLL BUTTON ("Pos: 0 up to +64 then down to 0. PosInv: +64 down to 0 then up
+//   to +64, i.e. inverted. Neg/NegInv mirror Pos/PosInv into negative range. Bip/BipInv: bipolar,
+//   sustain level fixed at 0 (ignoring the Sustain knob)"). Implemented as one shape computed in
+//   Pos's own convention, then optionally reflected (1-x, for PosInv/Neg) and/or negated (for
+//   Neg/NegInv/BipInv) - Bip/BipInv additionally swap in a fixed 0 sustain and let Release run
+//   on to -1 instead of stopping at 0.
+// - GRAPHS ("Any sustain level is indicated with an orange line; the rest...are green. There is
+//   also a yellow horizontal line which indicates the zero level") - colours below match this
+//   directly.
 static double envadsr_exp_decay(double t, double levelStart, double levelEnd) {
     const double k    = 4.0; // decay sharpness - normalised below so the curve still lands exactly
                              // on levelStart/levelEnd at t=0/1 despite exp() itself being asymptotic
@@ -1207,57 +1220,131 @@ static double envadsr_exp_decay(double t, double levelStart, double levelEnd) {
     return levelEnd + ((levelStart - levelEnd) * (raw / norm));
 }
 
+static double envadsr_exp_accel(double t, double levelStart, double levelEnd) {
+    const double k    = 4.0; // mirror of envadsr_exp_decay's normalisation - grows slowly at
+                             // first, then accelerates near the end (Exp attack, not the Log
+                             // default)
+    double       raw  = exp(k * t) - 1.0;
+    double       norm = exp(k) - 1.0;
+
+    return levelStart + ((levelEnd - levelStart) * (raw / norm));
+}
+
+// Attack curve types (envShapeStrMap's first word): 0=Log (default), 1=Lin, 2=Exp, 3=Lin.
+static double envadsr_attack_level(double t, uint32_t envShapeIndex) {
+    switch (envShapeIndex) {
+        case 1:
+        case 3: return t;                               // Lin
+
+        case 2: return envadsr_exp_accel(t, 0.0, 1.0);  // Exp - convex
+
+        default: return envadsr_exp_decay(t, 0.0, 1.0); // Log - concave
+    }
+}
+
+// Decay/Release curve types (envShapeStrMap's second word): 0-2=Exp, 3=Lin.
+static double envadsr_decay_level(double t, double levelStart, double levelEnd, uint32_t envShapeIndex) {
+    if (envShapeIndex == 3) {
+        return levelStart + ((levelEnd - levelStart) * t); // Lin
+    }
+    return envadsr_exp_decay(t, levelStart, levelEnd); // Exp - concave
+}
+
 static void render_envadsr_graph(tRectangle rectangle, tModule * module) {
-    // Attack (index 1), Decay (index 2), Sustain (index 3), Release (index 4) - fixed positions
-    // for moduleTypeEnvADSR's entries in paramLocationList, see moduleResources.h.
-    const uint32_t attackParamIndex  = 1;
-    const uint32_t decayParamIndex   = 2;
-    const uint32_t sustainParamIndex = 3;
-    const uint32_t releaseParamIndex = 4;
-    uint32_t       slot              = module->key.slot;
-    uint32_t       variation         = gPatchDescr[slot].activeVariation;
-    double         attackVal         = (double)module->param[variation][attackParamIndex].value / 127.0;
-    double         decayVal          = (double)module->param[variation][decayParamIndex].value / 127.0;
-    double         sustainLevel      = (double)module->param[variation][sustainParamIndex].value / 127.0;
-    double         releaseVal        = (double)module->param[variation][releaseParamIndex].value / 127.0;
+    // Env Shape (index 0), Attack (1), Decay (2), Sustain (3), Release (4), Output Type (5) -
+    // fixed positions for moduleTypeEnvADSR's entries in paramLocationList, see moduleResources.h.
+    const uint32_t envShapeParamIndex   = 0;
+    const uint32_t attackParamIndex     = 1;
+    const uint32_t decayParamIndex      = 2;
+    const uint32_t sustainParamIndex    = 3;
+    const uint32_t releaseParamIndex    = 4;
+    const uint32_t outputTypeParamIndex = 5;
+    uint32_t       slot                 = module->key.slot;
+    uint32_t       variation            = gPatchDescr[slot].activeVariation;
+    uint32_t       envShapeIndex        = module->param[variation][envShapeParamIndex].value;
+    double         attackVal            = (double)module->param[variation][attackParamIndex].value / 127.0;
+    double         decayVal             = (double)module->param[variation][decayParamIndex].value / 127.0;
+    double         sustainLevel         = (double)module->param[variation][sustainParamIndex].value / 127.0;
+    double         releaseVal           = (double)module->param[variation][releaseParamIndex].value / 127.0;
+    uint32_t       outputType           = module->param[variation][outputTypeParamIndex].value; // 0=Pos,
+                                                                                                // 1=PosInv, 2=Neg,
+                                                                                                // 3=NegInv, 4=Bip,
+                                                                                                // 5=BipInv
+    bool           isBip                = (outputType == 4) || (outputType == 5);
+    bool           isNegFamily          = (outputType == 2) || (outputType == 3);
+
+    // Bip/BipInv ignore the Sustain knob (fixed at the centre level instead) and Release
+    // continues on past that centre to the opposite extreme, rather than stopping there.
+    double         effectiveSustain     = isBip ? 0.0 : sustainLevel;
+    double         releaseTarget        = isBip ? -1.0 : 0.0;
 
     // Centred horizontally, vertically aligned with the KB Active toggle's own y offset (8).
-    tRectangle     graphRect         = adjust_rectangle(rectangle, (tRectangle){{0, 8}, {30, 10}}, anchorTopMiddle, module);
+    tRectangle     graphRect            = adjust_rectangle(rectangle, (tRectangle){{20, 8}, {60, 16}}, anchorTopLeft, module);
 
-    const double   holdWidth         = 0.24; // fixed width just to show the Sustain plateau clearly
+    const double   holdWidth            = 0.24; // fixed width just to show the Sustain plateau clearly
 
     // Each segment's width comes from its OWN knob only, independent of the other two - 0.04
     // (raw minimum, still clearly visible rather than a zero-width vertical line) up to 0.24
     // (raw maximum). Whatever's left of the box after Attack+Decay+Release+the fixed Sustain
     // width is just background.
-    double         attackW           = 0.04 + (attackVal * 0.20);
-    double         decayW            = 0.04 + (decayVal * 0.20);
-    double         releaseW          = 0.04 + (releaseVal * 0.20);
-    double         x0                = graphRect.coord.x;
-    double         y0                = graphRect.coord.y + graphRect.size.h; // envelope level 0 (bottom)
-    double         yTop              = graphRect.coord.y;                    // envelope level 1 (top)
+    double         attackW              = 0.04 + (attackVal * 0.20);
+    double         decayW               = 0.04 + (decayVal * 0.20);
+    double         releaseW             = 0.04 + (releaseVal * 0.20);
+    double         x0                   = graphRect.coord.x;
+
+    // Where "envelope output = 0" sits, and how much of the box height its full swing covers -
+    // Pos/PosInv only ever go 0..+1 (manual: "0 units...up to +64"), so zero sits at the
+    // bottom; Neg/NegInv only ever go 0..-1, so zero sits at the top; only Bip/BipInv are
+    // genuinely bipolar, spanning -1..+1 around a centred zero.
+    double         zeroY                = isBip ? (graphRect.coord.y + (graphRect.size.h * 0.5)) : (isNegFamily ? graphRect.coord.y : (graphRect.coord.y + graphRect.size.h));
+    double         fullSwing            = isBip ? (graphRect.size.h * 0.5) : graphRect.size.h;
 
     set_rgb_colour(RGB_GREY_2);
     render_rectangle(moduleArea, graphRect);
 
-    set_rgb_colour(RGB_GREY_5);
-    render_line(moduleArea, {x0, y0}, {x0 + graphRect.size.w, y0}, 1.0);
+    set_rgb_colour(RGB_YELLOW_7);
+    render_line(moduleArea, {x0, zeroY}, {x0 + graphRect.size.w, zeroY}, 1.0);
 
-    tCoord         p0                = {x0, y0};
-    tCoord         p1                = {x0 + (attackW * graphRect.size.w), yTop};
-    tCoord         p2                = {p1.x + (decayW * graphRect.size.w), y0 - (sustainLevel * graphRect.size.h)};
-    tCoord         p3                = {p2.x + (holdWidth * graphRect.size.w), p2.y};
-    tCoord         p4                = {p3.x + (releaseW * graphRect.size.w), y0};
+    // "shape" (0 at the start, 1 at the attack peak, effectiveSustain during hold, releaseTarget
+    // at the end) is always expressed in Pos's own convention; convert it to what each Output
+    // Type actually outputs (per the manual's six descriptions) before mapping to a y coordinate.
+    auto           levelToY = [&](double shape) {
+        double actualLevel;
+
+        switch (outputType) {
+            case 1: actualLevel  = 1.0 - shape;
+                break;                                   // PosInv
+
+            case 2: actualLevel  = shape - 1.0;
+                break;                                   // Neg
+
+            case 3: actualLevel  = -shape;
+                break;                                   // NegInv
+
+            case 5: actualLevel  = -shape;
+                break;                                   // BipInv
+
+            default: actualLevel = shape;
+                break;                                   // Pos, Bip
+        }
+        return zeroY - (actualLevel * fullSwing);
+    };
+
+    tCoord    p0            = {x0, levelToY(0.0)};
+    tCoord    p1            = {x0 + (attackW * graphRect.size.w), levelToY(1.0)};
+    tCoord    p2            = {p1.x + (decayW * graphRect.size.w), levelToY(effectiveSustain)};
+    tCoord    p3            = {p2.x + (holdWidth * graphRect.size.w), p2.y};
+    tCoord    p4            = {p3.x + (releaseW * graphRect.size.w), levelToY(releaseTarget)};
+
+    const int numCurveSteps = 12;
+    tCoord    prev          = p0;
 
     set_rgb_colour(RGB_GREEN_ON);
 
-    const int      numCurveSteps     = 12;
-    tCoord         prev              = p0;
-
     for (int i = 1; i <= numCurveSteps; i++) {
         double t     = (double)i / (double)numCurveSteps;
-        double level = envadsr_exp_decay(t, 0.0, 1.0);
-        tCoord point = {p0.x + (t * (p1.x - p0.x)), y0 - (level * graphRect.size.h)};
+        double level = envadsr_attack_level(t, envShapeIndex);
+        tCoord point = {p0.x + (t * (p1.x - p0.x)), levelToY(level)};
 
         render_line(moduleArea, prev, point, 1.5);
         prev = point;
@@ -1265,21 +1352,23 @@ static void render_envadsr_graph(tRectangle rectangle, tModule * module) {
 
     for (int i = 1; i <= numCurveSteps; i++) {
         double t     = (double)i / (double)numCurveSteps;
-        double level = envadsr_exp_decay(t, 1.0, sustainLevel);
-        tCoord point = {p1.x + (t * (p2.x - p1.x)), y0 - (level * graphRect.size.h)};
+        double level = envadsr_decay_level(t, 1.0, effectiveSustain, envShapeIndex);
+        tCoord point = {p1.x + (t * (p2.x - p1.x)), levelToY(level)};
 
         render_line(moduleArea, prev, point, 1.5);
         prev = point;
     }
 
+    set_rgb_colour(RGB_ORANGE_1); // sustain segment - matches the original editor's own colouring
     render_line(moduleArea, p2, p3, 1.5);
 
+    set_rgb_colour(RGB_GREEN_ON);
     prev = p3;
 
     for (int i = 1; i <= numCurveSteps; i++) {
         double t     = (double)i / (double)numCurveSteps;
-        double level = envadsr_exp_decay(t, sustainLevel, 0.0);
-        tCoord point = {p3.x + (t * (p4.x - p3.x)), y0 - (level * graphRect.size.h)};
+        double level = envadsr_decay_level(t, effectiveSustain, releaseTarget, envShapeIndex);
+        tCoord point = {p3.x + (t * (p4.x - p3.x)), levelToY(level)};
 
         render_line(moduleArea, prev, point, 1.5);
         prev = point;
