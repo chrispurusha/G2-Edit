@@ -1673,7 +1673,18 @@ void update_module_up_rates(void) {
                 int           toConnIndex   = find_index_from_io_count(toModule, connectorDirIn, cable->key.connectorToIoCount);
 
                 if ((fromConnIndex != -1) && (toConnIndex != -1) && (toModule->newUpRate == 0)) {
-                    if (fromModule->newUpRate == 1 || ((fromModule->connector[fromConnIndex].type == connectorTypeAudio) && (toModule->connector[toConnIndex].type != connectorTypeAudio))) {
+                    // Match the original editor's CPatchData::GenerateBandwidthChangeMolecules(): up-rate
+                    // only propagates through a MULTI-BANDWIDTH destination connector — one that can
+                    // actually switch rate (Control/Logic), never a fixed-rate Audio input. The original
+                    // gates its whole per-cable decision on IsMultiBandWidth(destConnector) (≈ dest type
+                    // != Audio) before even looking at the source. A source is "audio rate" if its module
+                    // is already up-rated OR its connector is natively Audio (≈ the original's
+                    // GetBandWidth(sourceConnector) == 1). Previously the dest-type guard was only applied
+                    // to the native-Audio-source branch, so an up-rated module feeding another module's
+                    // Audio input would wrongly up-rate the destination.
+                    if (  (toModule->connector[toConnIndex].type != connectorTypeAudio)
+                       && (  (fromModule->newUpRate == 1)
+                          || (fromModule->connector[fromConnIndex].type == connectorTypeAudio))) {
                         toModule->newUpRate = 1;
                         changesMade         = true;
                     }

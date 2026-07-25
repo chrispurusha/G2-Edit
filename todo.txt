@@ -88,6 +88,24 @@ access and/or testing needed before touching; do not guess):
   NMG2 editor / g2ools (the whole point of the fix — the reference file reader is strict-positional and
   a 3rd 0x5b desyncs it); (3) patches/perfs with actual renamed params on VA/FX modules still preserve
   those names across a save/load round-trip.
+- TEST the module up-rate propagation fix (applied 2026-07-25): update_module_up_rates() (protocol.c)
+  computes each module's bandwidth (upRate) bit by fixed-point propagation over the cables. The old
+  condition applied the "destination connector must be multi-bandwidth" guard (dest type != Audio) ONLY
+  to the native-Audio-source branch, not to the "source module is already up-rated" branch — so an
+  up-rated module with an Audio output feeding another module's Audio input would wrongly up-rate the
+  destination. The original editor (CPatchData::GenerateBandwidthChangeMolecules) gates the WHOLE
+  per-cable decision on IsMultiBandWidth(destConnector) first. Fix factors the dest-type guard out to
+  cover both source conditions. VERIFY on real hardware / against the original editor: build a patch
+  with an up-rated module (one that received audio on a Control input) whose Audio output feeds another
+  module's Audio input, and confirm G2-Edit's cable colours + the module's audio/control (red/blue)
+  bandwidth indication now match the original editor's for that topology (and that normal audio chains,
+  e.g. Osc->Filter->Out, are unchanged). upRate also gets written to the patch / sent to the G2, so
+  confirm the hardware doesn't behave differently after a store.
+- draw_slider() morph-indicator sign fix (applied 2026-07-25, utilsGraphics.cpp): threshold was
+  (morphRange < 127), making a morph range of exactly +127 render as -129 (indicator at the wrong end);
+  changed to < 128 to match render_dial()'s correct 8-bit two's-complement reconstruction. Low risk /
+  visual only, but worth an eyeball on a slider-based module (e.g. a mixer/SeqLev) with a max-positive
+  morph assigned, to confirm the indicator now sits at the top.
 - graphics.cpp:715-716 — perf-mode write triggers a patch read; currently papered over with a blind 2s
   usleep. Needs real state confirmation from the device instead, or confirmation the sleep is provably long
   enough.
