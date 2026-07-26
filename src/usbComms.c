@@ -1587,13 +1587,17 @@ static int send_store_patch(uint8_t domain, uint32_t bank, uint32_t location) {
     uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
     int      result;
 
-    // Slot-addressed to gSlot (0x28|slot), NOT system-addressed. The original comment above claimed
-    // Store follows the device's SUB_COMMAND_SELECT_SLOT (0x09) focus — that's WRONG (confirmed on
-    // hardware 2026-07-26: with slot B focused via 0x09, Store/Retrieve still hit slot A). The
-    // system-addressed form (usb_cmd_sys, 0x2c) the reverse-engineering used always targets slot A;
-    // addressing the command to the slot itself is how a non-A slot is actually reached.
-    usb_cmd_slot(buff, &bitPos, gSlot, COMMAND_REQ, SUB_COMMAND_STORE);
-    write_bit_stream(buff, &bitPos, 8, domain);
+    // First payload byte is the target SLOT, not the bank-upload "domain" the original code sent
+    // there — that value is 0 for patches (== slot A), which is exactly why Store/Load always hit
+    // slot A regardless of selection. Confirmed via a stock-editor RETRIEVE (load) capture:
+    // "01 2c 41 0a 01 00 00" loads bank1/loc1 into slot B; STORE (0x0b) is the mirror operation in
+    // the same command family and uses the same framing (inferred by symmetry — not yet confirmed
+    // with a stock-editor store capture, since store is a flash write). The patch/perf distinction
+    // isn't in this message; perf domain path is left as-was (unverified).
+    uint8_t  slotOrDomain            = (domain == BANK_UPLOAD_DOMAIN_PATCH) ? (uint8_t)gSlot : domain;
+
+    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_STORE);
+    write_bit_stream(buff, &bitPos, 8, slotOrDomain);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)bank);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)location);
     sSuppressNameTableUpdate = true;
@@ -1602,25 +1606,23 @@ static int send_store_patch(uint8_t domain, uint32_t bank, uint32_t location) {
     return result;
 }
 
-// Loads bank/location into the active edit-buffer slot (SUB_COMMAND_RETRIEVE, 0x0a) —
-// reverse-engineered from a real capture (LoadFromBankLocationToCurrentSlot.pcapng): same 3-byte
-// domain/bank/location framing as send_store_patch, no content either direction. Which edit-buffer
-// slot receives it is implicit (device's own current focus), same as Store. Acked with
-// SUB_RESPONSE_PATCH_VERSION_CHANGE (0x38) — already fully handled by existing code:
-// parse_patch_version_change() sets gotPatchChangeIndication[slot], and state_handler()'s existing
-// per-cycle loop already reacts to that by calling send_get_patch_data() and
-// call_full_patch_change_notify() to pull the new patch in and refresh the UI (this is the same
-// path the app already uses when a patch changes from the front panel while connected) — no new
-// response parsing needed here at all.
+// Loads bank/location into a specific edit-buffer slot (SUB_COMMAND_RETRIEVE, 0x0a). The target
+// slot is the FIRST payload byte — confirmed against a real stock-editor capture of loading a patch
+// into slot B: "01 2c 41 0a 01 00 00" (system-addressed, RETRIEVE, then slot=01 bank=00 loc=00).
+// The original code sent the bank-upload "domain" there (0 for patches == slot A), which is why it
+// always loaded into slot A. Acked with SUB_RESPONSE_PATCH_VERSION_CHANGE (0x38) — already fully
+// handled: parse_patch_version_change() sets gotPatchChangeIndication[slot] and state_handler()'s
+// loop pulls the new patch in and refreshes the UI (same path as a front-panel patch change).
 static int send_retrieve_patch(uint8_t domain, uint32_t bank, uint32_t location) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    // Slot-addressed to gSlot — see send_store_patch()'s comment: the "follows SELECT_SLOT focus"
-    // assumption was wrong; system-addressing always hit slot A. This is what makes Load-from-Bank
-    // land in the actually-selected slot.
-    usb_cmd_slot(buff, &bitPos, gSlot, COMMAND_REQ, SUB_COMMAND_RETRIEVE);
-    write_bit_stream(buff, &bitPos, 8, domain);
+    // See send_store_patch(): first payload byte is the target slot for patch loads (perf domain
+    // left unchanged/unverified).
+    uint8_t  slotOrDomain            = (domain == BANK_UPLOAD_DOMAIN_PATCH) ? (uint8_t)gSlot : domain;
+
+    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_RETRIEVE);
+    write_bit_stream(buff, &bitPos, 8, slotOrDomain);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)bank);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)location);
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_PATCH_VERSION_CHANGE, USB_RECV_DATA_MS);
