@@ -83,8 +83,26 @@ and swallows canvas input while set.
    them) — the everything-sweep functions now reset `IsEverything` themselves, since the
    drain block that used to do it is gone.
 4. **[DONE 2026-07-26]** `gDeviceOpInProgress` busy state + dim overlay + input swallow.
-5. Lift the generic queue to SynthLib.
+5. **[DONE 2026-07-26]** Lift the generic queue to SynthLib. Moved the mechanism to
+   `SynthLib/src/synthlibQueue.{h,c}` (tMessageQueue / tMessage / eRcv / msg_init / msg_send /
+   msg_receive / msg_count) — payload-agnostic, depends only on pthreads + synthlibDefs.h's LOG_*.
+   G2-Edit's `msgQueue.h` now `#include`s it and keeps only the app payload (tMessageContent + enums);
+   `msgQueue.c` deleted (auto-dropped by the Xcode-16 synced folder; `synthlibQueue.c` auto-added).
 6. Adopt in Z1/EmuUtility.
+
+## Progress log addendum
+- 2026-07-26 — Step 1 DONE (built, Debug xcodebuild). `msgQueue.{c,h}` made payload-agnostic
+  (flexible-array node + `payloadSize`), `msg_send`/`msg_receive` now `void*`; queues renamed
+  `gToUsbThread` / `gToGuiThread`. No behaviour change — pure mechanism/naming. Next: Step 5
+  (lift the generic queue into SynthLib), then Step 6 (adopt in Z1/EmuUtility).
+
+## Progress log addendum 2
+- 2026-07-26 — Step 5 DONE (built, Debug xcodebuild). Queue mechanism lifted to
+  `SynthLib/src/synthlibQueue.{h,c}`; G2-Edit `msgQueue.h` slimmed to app payload only + includes it;
+  `src/msgQueue.c` deleted. NB: this is a SynthLib submodule change — commit it in SynthLib and advance
+  the pin in G2-Edit (and later Z1/EmuUtility). synthlibQueue.c will also compile into Z1/EmuUtility once
+  their pins advance; they have no msg_* today so no symbol clash (verify at pin-advance time). Only
+  Step 6 (actually USING it in Z1/EmuUtility) remains for the commonalisation payoff.
 
 ## Drain refinement (2026-07-26)
 The render-loop drain processes **one** response per frame (not a `while` loop): a `while`
