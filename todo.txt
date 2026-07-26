@@ -1,7 +1,16 @@
 G2-Edit TODO (priority order)
 
-- graphics.cpp:716 — perf-mode write path relies on a blind 2-second usleep instead of real state confirmation (needs hardware testing — see "NEEDS A SECOND OPINION" section below)
-- usbComms.c — resolve perf-mode ambiguities: synth vs. perf ownership, voice-count ordering on increase, unconfirmed message case (search parse_perf_header/parse_slot_selection/SUB_RESPONSE_PATCH_VERSION_CHANGE area — exact line numbers have drifted, topic still open; needs hardware testing)
+- graphics.cpp:716 — perf-mode write path's blind 2-second usleep. ROOT CAUSE NOW DIAGNOSED ON HARDWARE
+  2026-07-26 (see "PERF-MODE HARDWARE FINDINGS" section below) — it's a cross-thread database race, not
+  just a timing guess. Real fix (move the load's clear_slot_data()+parse_perf()+write onto the USB thread as
+  one ordered op, OR a proper mode-settled+indications-drained handshake) still TO DO; needs careful retest
+  across empty/full perfs and the already-in-perf-mode path.
+- usbComms.c — resolve perf-mode ambiguities: synth vs. perf ownership, voice-count ordering on increase,
+  unconfirmed message case (search parse_perf_header/parse_slot_selection/SUB_RESPONSE_PATCH_VERSION_CHANGE
+  area; needs hardware testing). PARTIAL 2026-07-26: SUB_RESPONSE_PERF_HEADER (0x11) confirmed NOT used on the
+  file-load perf-switch path (device replies with SUB_RESPONSE_PERFORMANCE_SETTINGS 0x29 instead) — see
+  findings below. Panel-toggle and voice-count sub-questions still need their own captures (need a human at
+  the hardware to flip perf mode on the panel / bump voice count).
 - moduleGraphics.cpp — refactor volume-meter/label rendering into utilsGraphics.cpp; resolve "can Mode be morphed?" question (needs hardware/manual check)
 - moduleGraphics.cpp/renderParams.c — port custom graph displays from the original editor (none exist today besides render_volume_meter): envelope shapes (AD/AR/D/H/AHD/ADSR/ADBDSR/Multi/DX), filter response curves (Classic/Normal/Small/Static/Comb), oscillator & LFO waveform shapes, EQ curves (2-band/3-band/peak), compressor/expander, distortion/waveshaping (Dist A/B/Wrap/Shape/Saturate), FM operator + DX router, phaser, vocoder, tuned noise, random distribution/trigger — see Original Editor/G2Editor.c, CCustomObjectFactory::CreateCustom (~line 101952) and the CPnl*Graph class family for reference implementations
 - OscA(97) — add new UI element for Freq control (param 0) that accounts for param 6 Pitch Type
@@ -13,6 +22,7 @@ G2-Edit TODO (priority order)
 - Add a dedicated master-clock/tempo panel (currently only basic send/receive clock toggles exist)
 - defs.h:179 — confirm whether perf-header sub-response (SUB_RESPONSE_PERF_HEADER, 0x11) is ever actually used (needs hardware testing)
 - moduleGraphics.cpp/graphics.cpp — GL_BLEND enable/disable currently sits at each caller (moduleGraphics.cpp:1239/1254, graphics.cpp:590) rather than inside the shared drawing primitive (render_cable_from_to() et al., utilsGraphics.cpp) the way render_text() already manages its own blend state. Not a bug — correct today, just a cosmetic/architectural inconsistency. Low priority; real regression risk if rushed since these primitives are reused everywhere.
+- Compress(150) — module height may be 1 row too many (currently 5 rows, moduleResources.h). Original editor's module-info structs are opaque in the decompile (SModuleInfo/CBuildModule are placeholder structs, heights not recoverable as readable data); needs validation by running the original editor and comparing.
 
 - Cross-platform build — Linux + Windows, with a CMake build derived from the Xcode project
   as the master (Xcode stays authoritative for day-to-day dev on Mac; CMake is the portable build).
@@ -48,6 +58,45 @@ G2-Edit TODO (priority order)
       handful of OS hooks (menu, sleep/wake, prefs, usb-hotplug). Windows after Linux (more toolchain
       friction). This dovetails with the SynthLib commonalise priorities below — the platform shim is a
       natural SynthLib citizen shared by all three apps.
+
+PERF-MODE HARDWARE FINDINGS (2026-07-26 — captured on real G2 via ENABLE_USB_LOG + Debug LOG_DEBUG;
+experiment: load an empty .prf2 from a starting state of Patch Mode + Online. Raw capture archived in the
+session scratchpad as perfload_capture.log):
+
+  What actually happens when load_file_into_database() loads a perf while perfMode==0 (graphics.cpp:711):
+    1. UI thread enqueues eMsgCmdWriteModePerf, then usleep(2s), then clear_slot_data() x4 + parse_perf()
+       (populating the in-memory database with the NEW perf), then enqueues eMsgCmdWritePerf.
+    2. USB thread dequeues eMsgCmdWriteModePerf -> send_perf_mode_change(1) (round-trips, gets
+       SUB_RESPONSE_PERF_PATCH_VERSIONS 0x1f) + send_get_performance_settings() (gets 0x29).
+    3. The mode switch makes the G2 asynchronously raise patch-change indications for ALL FOUR slots.
+       state_handler() services these at the TOP of its loop (before the next msg_receive), calling
+       send_get_patch_data() per slot — a full 4-slot read cascade that writes the device's OLD patches
+       into the SAME in-memory database. In the capture this cascade ran ~40.78-41.05s.
+    4. ~2s after step 1, the UI thread's sleep ends; its clear+parse (which overwrites the database with the
+       NEW perf) therefore runs AFTER the cascade, then eMsgCmdWritePerf is dequeued and the 4 CMD_SET_PATCH
+       (0x37) writes go out (~41.94s). No patch re-reads happen after the write (verified: only 0x29/0x11-
+       keysplit/master-clock writes follow) — so nothing clobbers the write afterwards.
+
+  => The sleep is LOAD-BEARING, and its real job is NOT "wait for perf mode to be stable" — it's to ensure
+     the device's async patch-change-indication cascade (step 3) is fully serviced BEFORE the UI thread does
+     clear_slot_data()+parse_perf() (step 4). Without it, the cascade's send_get_patch_data() reads would
+     overwrite the freshly-parsed perf in the shared database before eMsgCmdWritePerf sends it, and the load
+     would write the device's OLD patches straight back. It's a genuine UI-thread-vs-USB-thread database race,
+     papered over with a fixed delay.
+  => Confirmed the load is CORRECT with the sleep: after loading the empty perf, all 4 slots (A-D) showed
+     empty/"No name", i.e. the device's previous perf (BCHydro_DZ / Control_DZ / Drums_DZ / Synth_DZ /
+     Extra_DZ) was fully replaced, no clobber. (The OLD names DO appear transiently in the debug log — those
+     are step 3's cascade reading pre-write state, later wiped by step 4's clear+parse.)
+  => Proper fix direction: eliminate the cross-thread race rather than time it. Cleanest is to move the whole
+     load (clear+parse+write) onto the USB thread as a single ordered message so it can't interleave with
+     indication servicing; alternatively a handshake where the UI thread waits until the USB thread signals
+     "perf mode confirmed AND no patch-change indication seen for N ms". Either removes the blind 2s.
+
+  Bonus data point for the SUB_RESPONSE_PERF_HEADER (0x11) question (defs.h:179 / usbComms.c:600,925):
+  across the entire perf-switch capture the device NEVER sent a 0x11 header response — it used
+  SUB_RESPONSE_PERFORMANCE_SETTINGS (0x29), exactly as the code comment suspected. parse_perf_header() went
+  uncalled. Not yet proof it's dead on ALL paths (panel-initiated perf-mode toggle not yet captured), but it
+  is confirmed unused on the file-load perf-switch path.
 
 RESOLVED 2026-07-25 (verified against code, not just assumed from the comment):
 - usbComms.c "centralize repeated unsolicited send_stop() calls" — send_write_data()'s big
