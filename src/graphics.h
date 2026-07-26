@@ -36,8 +36,13 @@ void wake_glfw(void);
 // online these run on the USB thread (via eMsgCmdSavePatchFile / eMsgCmdSavePerfFile / eMsgCmdLoadFile)
 // to stay atomic against the USB thread's own DB writes — see their handlers in usbComms.c.
 void set_patch_name_from_filename(uint32_t slot, const char * filepath);
-void write_database_to_file(const char * filepath, uint32_t slot);
-void write_perf_to_file(const char * filepath);
+int write_database_to_file(const char * filepath, uint32_t slot);  // EXIT_SUCCESS / EXIT_FAILURE
+int write_perf_to_file(const char * filepath);                     // EXIT_SUCCESS / EXIT_FAILURE
+
+// Busy state for in-flight whole-slot device ops. device_op_begin() is called when the op is enqueued
+// (label e.g. "Loading…"/"Saving…"); device_op_end() when its completion response is drained.
+void device_op_begin(const char * label);
+void device_op_end(void);
 void resize_window(int w, int h);
 void reposition_window(int x, int y);
 

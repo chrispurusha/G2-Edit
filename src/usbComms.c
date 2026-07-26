@@ -3704,6 +3704,21 @@ static int load_file_to_device(const char * filePath, uint32_t slot) {
     return load_perf_from_payload(buff, byteOffset, payloadLen, filePath);
 }
 
+// Post an op result back to the UI thread on the reverse queue, then wake the render loop to drain it.
+// First user of the reverse (USB->UI) message channel — see reverse-queue-design.md.
+static void post_file_result_response(uint32_t responseType, int32_t result, const char * path) {
+    tMessageContent rsp = {0};
+
+    rsp.cmd                   = responseType; // eResponseType on the response queue (not eMsgCmd)
+    rsp.fileResultData.result = result;
+
+    if (path != NULL) {
+        COPY_STRING(rsp.fileResultData.path, path);
+    }
+    msg_send(&gResponseQueue, &rsp);
+    call_wake_glfw();
+}
+
 // Whether a send_write_data() case needs the unsolicited-message stream paused (send_stop()/
 // send_start()) around its own device writes. True for every command except: eMsgCmdSetValue/
 // eMsgCmdSetParamMorph (real-time param/morph tweaks, left unpaused so they stay responsive
@@ -3919,20 +3934,21 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdLoadFile:
             retVal = load_file_to_device(messageContent->patchFileData.filePath,
                                          messageContent->patchFileData.slot);
+            post_file_result_response(eRspFileLoad, retVal, messageContent->patchFileData.filePath);
             break;
 
         case eMsgCmdSavePatchFile:
             // Serialise the slot's DB to file here (not on the UI thread) so the read is atomic
             // against this thread's own DB writes. No device traffic — pure DB->file.
-            write_database_to_file(messageContent->patchFileData.filePath, messageContent->patchFileData.slot);
-            retVal = EXIT_SUCCESS;
+            retVal = write_database_to_file(messageContent->patchFileData.filePath, messageContent->patchFileData.slot);
+            post_file_result_response(eRspFileSave, retVal, messageContent->patchFileData.filePath);
             break;
 
         case eMsgCmdSavePerfFile:
             // Same as the patch save, but a whole-DB (all 4 slots) serialise for a .prf2. Runs here so
             // the read can't tear against this thread's async patch-change reparse. No device traffic.
-            write_perf_to_file(messageContent->patchFileData.filePath);
-            retVal = EXIT_SUCCESS;
+            retVal = write_perf_to_file(messageContent->patchFileData.filePath);
+            post_file_result_response(eRspFileSave, retVal, messageContent->patchFileData.filePath);
             break;
 
         case eMsgCmdNewPatch:
@@ -3945,6 +3961,7 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal = push_slot_to_device(slot);
             call_full_patch_change_notify();
             call_wake_glfw();
+            post_file_result_response(eRspNewPatch, retVal, "");
             break;
         }
 
@@ -4226,6 +4243,7 @@ static int usb_comms_init_signals(void) {
 static void * usb_thread_loop(void * arg) {
     usb_comms_init_signals();
     msg_init(&gCommandQueue, "command");
+    msg_init(&gResponseQueue, "response"); // reverse: USB thread -> UI thread (drained in the render loop)
     usb_log_open();
 
     if (libusb_init(&libUsbCtx) != LIBUSB_SUCCESS) {
