@@ -40,7 +40,8 @@ typedef enum {
 typedef enum {
     eRspFileLoad,   // fileResultData: result of a file load (eMsgCmdLoadFile)
     eRspFileSave,   // fileResultData: result of a file save (eMsgCmdSavePatchFile / eMsgCmdSavePerfFile)
-    eRspNewPatch    // fileResultData: result of New Patch (eMsgCmdNewPatch); path unused
+    eRspNewPatch,   // fileResultData: result of New Patch (eMsgCmdNewPatch); path unused
+    eRspAlert       // alertData: a plain "op finished" message to show_alert (bank backup/restore, store, etc.)
 } eResponseType;
 
 typedef enum {
@@ -277,6 +278,12 @@ typedef struct {
     char    path[1024];  // the file involved (for the user-facing message)
 } tFileResultData;
 
+// Reverse-queue payload: a plain completion alert (title + message) built on the USB thread.
+typedef struct {
+    char title[64];
+    char message[256];
+} tAlertData;
+
 typedef struct {
     uint32_t cmd;
     uint32_t slot;
@@ -310,6 +317,7 @@ typedef struct {
         tBankLocationPerfData     bankLocationPerfData;
         tPatchFileData            patchFileData;
         tFileResultData           fileResultData;   // reverse queue (gResponseQueue) only
+        tAlertData                alertData;         // reverse queue (gResponseQueue) only
     };
 } tMessageContent;
 

@@ -1071,12 +1071,14 @@ static void check_action_flags(void) {
     char     patchName[CLAVIA_NAME_SIZE + 1]   = {0};
     char     defaultName[CLAVIA_NAME_SIZE + 6] = {0}; // name (16) + extension (5) + null
 
-    // Drain the reverse (USB->UI) response queue. First slice: surface file-load failures, which now
-    // happen on the USB thread and were otherwise silent (log only). See reverse-queue-design.md.
-    {
+    // Drain the reverse (USB->UI) response queue — see reverse-queue-design.md. One response per frame:
+    // if a modal alert is already up, leave the queue untouched so it isn't clobbered (we'll drain the
+    // next once it's dismissed); if more remain after handling one, self-wake so the next frame
+    // continues rather than blocking in glfwWaitEvents.
+    if (!alert_dialog_active()) {
         tMessageContent resp = {0};
 
-        while (msg_receive(&gResponseQueue, eRcvPoll, &resp) == EXIT_SUCCESS) {
+        if (msg_receive(&gResponseQueue, eRcvPoll, &resp) == EXIT_SUCCESS) {
             const char * slash          = strrchr(resp.fileResultData.path, '/');
             const char * baseName       = (slash != NULL) ? slash + 1 : resp.fileResultData.path;
             char         alertMsg[1100] = {0};
@@ -1112,8 +1114,16 @@ static void check_action_flags(void) {
                     }
                     break;
 
+                case eRspAlert:
+                    show_alert(resp.alertData.title, resp.alertData.message);
+                    break;
+
                 default:
                     break;
+            }
+
+            if (msg_count(&gResponseQueue) > 0) {
+                wake_glfw(); // more queued — come back next frame rather than blocking in glfwWaitEvents
             }
         }
     }
