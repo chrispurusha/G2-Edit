@@ -662,6 +662,7 @@ void read_file_into_memory_and_process(const char * filepath) {
         msg.patchFileData.slot = slot;
         COPY_STRING(msg.patchFileData.filePath, filepath);
         msg_send(&gCommandQueue, &msg);
+        device_op_begin("Loading...");
         return;
     }
     file     = fopen(filepath, "rb");
@@ -740,7 +741,7 @@ void read_file_into_memory_and_process(const char * filepath) {
     fclose(file);
 }
 
-void write_database_to_file(const char * filepath, uint32_t slot) {
+int write_database_to_file(const char * filepath, uint32_t slot) {
     FILE *    file           = NULL;
     //uint8_t ch          = 0;
     size_t    writtenSize    = 0;
@@ -754,7 +755,7 @@ void write_database_to_file(const char * filepath, uint32_t slot) {
 
     if (!file) {
         LOG_ERROR("Error opening file\n");
-        return;
+        return EXIT_FAILURE;
     }
     // Couldn't really find a nice way to construct the write buffer, so allocating on the heap
     buff = (uint8_t *)malloc(PATCH_FILE_SIZE);
@@ -762,7 +763,7 @@ void write_database_to_file(const char * filepath, uint32_t slot) {
     if (buff == NULL) {
         LOG_ERROR("Failed to allocate buffer\n");
         fclose(file);
-        return;
+        return EXIT_FAILURE;
     }
     memset(buff, 0, PATCH_FILE_SIZE);
 
@@ -822,9 +823,10 @@ void write_database_to_file(const char * filepath, uint32_t slot) {
     }
     free(buff);
     fclose(file);
+    return EXIT_SUCCESS;
 }
 
-void write_perf_to_file(const char * filepath) {
+int write_perf_to_file(const char * filepath) {
     FILE *    file        = NULL;
     size_t    writtenSize = 0;
     char      eol[]       = {0x0d, 0x0a, 0x00};
@@ -837,14 +839,14 @@ void write_perf_to_file(const char * filepath) {
 
     if (!file) {
         LOG_ERROR("Error opening file\n");
-        return;
+        return EXIT_FAILURE;
     }
     buff = (uint8_t *)malloc(PERF_FILE_SIZE);
 
     if (buff == NULL) {
         LOG_ERROR("Memory allocation failed\n");
         fclose(file);
-        return;
+        return EXIT_FAILURE;
     }
     memset(buff, 0, PERF_FILE_SIZE);
 
@@ -908,6 +910,7 @@ void write_perf_to_file(const char * filepath) {
     }
     free(buff);
     fclose(file);
+    return EXIT_SUCCESS;
 }
 
 static void on_file_opened(const char * path) {
@@ -934,6 +937,7 @@ static void on_file_saved(const char * path) {
                 msg.cmd = eMsgCmdSavePerfFile;
                 COPY_STRING(msg.patchFileData.filePath, path);
                 msg_send(&gCommandQueue, &msg);
+                device_op_begin("Saving...");
             } else {
                 write_perf_to_file(path);
             }
@@ -946,6 +950,7 @@ static void on_file_saved(const char * path) {
             msg.patchFileData.slot = slot;
             COPY_STRING(msg.patchFileData.filePath, path);
             msg_send(&gCommandQueue, &msg);
+            device_op_begin("Saving...");
             set_patch_name_from_filename(slot, path);
         } else {
             write_database_to_file(path, slot);
@@ -1018,11 +1023,109 @@ static void on_synth_restore_confirmed(bool confirmed) {
     msg_send(&gCommandQueue, &msg);
 }
 
+// Busy state for in-flight whole-slot device ops (load/save/new patch). Set when the op is enqueued,
+// cleared when its completion response is drained off gResponseQueue. See reverse-queue-design.md.
+static double sDeviceOpStartTime = 0.0; // glfwGetTime() of the oldest in-flight op — for the safety timeout
+
+void device_op_begin(const char * label) {
+    if (gDeviceOpInProgress == 0) {
+        sDeviceOpStartTime = glfwGetTime();
+    }
+    gDeviceOpInProgress++;
+
+    if (label != NULL) {
+        COPY_STRING(gDeviceOpLabel, label);
+    }
+    synthlib_request_redraw();
+}
+
+void device_op_end(void) {
+    if (gDeviceOpInProgress > 0) {
+        gDeviceOpInProgress--;
+    }
+    synthlib_request_redraw();
+}
+
+// Dim the canvas + a small centred panel while a whole-slot device op is in flight. Drawn on top of
+// the normal canvas (below the alert dialog, which only appears once the op has completed).
+static void render_device_busy_overlay(void) {
+    if (gDeviceOpInProgress <= 0) {
+        return;
+    }
+    double renderW = get_render_width() / gGlobalGuiScale;
+    double renderH = get_render_height() / gGlobalGuiScale;
+    double boxW    = 240.0;
+    double boxH    = 56.0;
+    double boxX    = (renderW - boxW) / 2.0;
+    double boxY    = (renderH - boxH) / 2.0;
+    double titleH  = 24.0;
+
+    draw_dialog_background_overlay();
+    draw_panel_chrome({{boxX, boxY}, {boxW, boxH}}, titleH, "Please wait");
+    render_text(mainArea, {{boxX + 10.0, boxY + titleH + 10.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, gDeviceOpLabel);
+}
+
 static void check_action_flags(void) {
     uint32_t slot                              = gSlot;
     //bool     perfMode                          = gPerfMode != 0;
     char     patchName[CLAVIA_NAME_SIZE + 1]   = {0};
     char     defaultName[CLAVIA_NAME_SIZE + 6] = {0}; // name (16) + extension (5) + null
+
+    // Drain the reverse (USB->UI) response queue. First slice: surface file-load failures, which now
+    // happen on the USB thread and were otherwise silent (log only). See reverse-queue-design.md.
+    {
+        tMessageContent resp = {0};
+
+        while (msg_receive(&gResponseQueue, eRcvPoll, &resp) == EXIT_SUCCESS) {
+            const char * slash          = strrchr(resp.fileResultData.path, '/');
+            const char * baseName       = (slash != NULL) ? slash + 1 : resp.fileResultData.path;
+            char         alertMsg[1100] = {0};
+
+            switch (resp.cmd) {
+                case eRspFileLoad:
+                    device_op_end();
+
+                    if (resp.fileResultData.result != EXIT_SUCCESS) {
+                        snprintf(alertMsg, sizeof(alertMsg),
+                                 "Could not load \"%s\".\nThe file may be corrupt or not a valid G2 patch/performance.",
+                                 baseName);
+                        show_alert("Load Failed", alertMsg);
+                    }
+                    break;
+
+                case eRspFileSave:
+                    device_op_end();
+
+                    if (resp.fileResultData.result != EXIT_SUCCESS) {
+                        snprintf(alertMsg, sizeof(alertMsg),
+                                 "Could not save \"%s\".\nCheck the location is writable and has free space.",
+                                 baseName);
+                        show_alert("Save Failed", alertMsg);
+                    }
+                    break;
+
+                case eRspNewPatch:
+                    device_op_end();
+
+                    if (resp.fileResultData.result != EXIT_SUCCESS) {
+                        show_alert("New Patch Failed", "The G2 did not accept the new patch. It may have gone offline.");
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+        }
+    }
+
+    // Safety net: if a device op's completion response never arrives (e.g. the G2 disconnected in the
+    // gap between enqueue and processing), don't leave the GUI locked forever — force-clear after a
+    // generous timeout. Whole-slot ops complete in well under 1s in practice.
+    if ((gDeviceOpInProgress > 0) && ((glfwGetTime() - sDeviceOpStartTime) > 5.0)) {
+        LOG_ERROR("Device op busy-state timed out — force-clearing\n");
+        gDeviceOpInProgress = 0;
+        synthlib_request_redraw();
+    }
 
     if (gShowOpenFileReadDialogue) {
         gShowOpenFileReadDialogue = false;
@@ -1963,7 +2066,8 @@ void do_graphics_loop(void) {
             render_knob_assignment_overlay();
             render_file_browser();
             render_bank_browser();
-            render_alert_dialog(); // drawn last of all — modal, must paint over everything else
+            render_device_busy_overlay(); // dim + "please wait" while a whole-slot device op is in flight
+            render_alert_dialog();        // drawn last of all — modal, must paint over everything else
             //Debug only
             //{
             //    double x        = 0.0;
@@ -1993,6 +2097,8 @@ void do_graphics_loop(void) {
             glfwGetCursorPos((GLFWwindow *)synthlib_window(), &x, &y);
             cursor_pos((GLFWwindow *)synthlib_window(), x, y);  // Artificially do cursor_pos call for drag scrolling when cursor not moving
             glfwWaitEventsTimeout(0.016);
+        } else if (gDeviceOpInProgress > 0) {
+            glfwWaitEventsTimeout(0.05); // tick while busy so the device-op safety timeout can fire even with no events
         } else {
             glfwWaitEvents();
         }

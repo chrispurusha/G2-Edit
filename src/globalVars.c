@@ -47,6 +47,9 @@ tSelection              gSelection                                              
 tRubberBand             gRubberBand                                                                  = {0};
 tClipboard              gClipboard                                                                   = {0};
 tMessageQueue           gCommandQueue                                                                = {0};
+tMessageQueue           gResponseQueue                                                               = {0};
+int                     gDeviceOpInProgress                                                          = 0;
+char                    gDeviceOpLabel[32]                                                           = {0};
 uint32_t                gMorphGroupFocus                                                             = 0;
 _Atomic uint32_t        gSlot                                                                        = 0;
 tPatchDescr             gPatchDescr[MAX_SLOTS]                                                       = {0};

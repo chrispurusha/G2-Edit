@@ -26,19 +26,26 @@ G2-Edit TODO (priority order)
   NOT race-prone (self-describing commands) but could be folded into composite USB-thread commands for
   atomicity/less chatter — low priority.
 
-- Reverse (USB->UI) message queue + GUI busy state — DESIGN NOTE / future (2026-07-26). Currently the
-  USB thread signals the UI via ad-hoc _Atomic flags (gReDraw, gotPatchChangeIndication[],
-  gStorePeekComplete, ...) + wake_glfw(); UI-affecting file/device ops report success only implicitly
-  (DB updates -> redraw) and FAILURE only via log (silent to the user, same pre/post the load-thread
-  move — no regression). Proper fix: a structured response queue back to the UI carrying
-  {command, result, detail}, drained at the top of the render loop. The wake mechanism is the EXISTING
-  GLFW wake callback (register_glfw_wake_cb / wake_glfw()) — the USB thread already uses it to wake the
-  render loop on incoming data; the reverse queue's producer just enqueues then calls wake_glfw(),
-  confirmed correct. This belongs with the todo item about generalising msgQueue.c into a
-  transport-agnostic SynthLib comms layer. Pairs with a GUI BUSY state: a lightweight atomic
-  gDeviceOpInProgress (set on enqueue, cleared on the completion response) so the render loop can dim
-  the canvas + show "Loading…/Saving…" and swallow canvas input during the ~0.5s op (prevents confusing
-  interleaving; not a hard modal). Do busy-state + result-alert together once the reverse queue lands.
+- Reverse (USB->UI) message queue + GUI busy state — IN PROGRESS. Full design + migration plan in
+  reverse-queue-design.md (repo root); update that doc as steps land. Replaces the ad-hoc _Atomic
+  "op done" flags + result-string globals drained in check_action_flags() with a structured response
+  queue (gResponseQueue), poll-drained at the top of the render loop, woken by the existing wake_glfw().
+  Coalescing dirty-bits (gotPatchChangeIndication[]/gotPerfSettingsChangeIndication/gReDraw) stay flags.
+    * Step 2 DONE 2026-07-26 (thin vertical slice, built, needs hardware test): gResponseQueue added
+      (reuses the existing queue machinery, no generalization yet); USB thread posts a file-LOAD result
+      via post_file_result_response() after eMsgCmdLoadFile; UI drains it and show_alert()s on failure —
+      closes the silent-failure gap for a corrupt/invalid file load.
+    * Steps 3(partial)+4 DONE 2026-07-26 (built, needs hardware test): save writers now return status
+      (write_database_to_file/write_perf_to_file -> int); save posts eRspFileSave, New Patch posts
+      eRspNewPatch, with "Save Failed"/"New Patch Failed" alerts. GUI BUSY state added:
+      gDeviceOpInProgress + gDeviceOpLabel, device_op_begin() on each online enqueue (Loading…/Saving…/
+      New Patch…) and device_op_end() on the matching response; render_device_busy_overlay() dims the
+      canvas + "Please wait" panel and mouse_button swallows canvas clicks while busy. Safety net: loop
+      ticks while busy + check_action_flags force-clears after 5s so a lost completion can't lock the GUI.
+    * STILL OPEN: Step 1 (generalize msgQueue to a size-agnostic queue), Step 3 REMAINDER (migrate the
+      backup/restore/store-peek result-blocks off their bespoke globals onto the queue), Step 5 (lift
+      the generic queue into SynthLib), Step 6 (adopt in Z1/EmuUtility — they have no queue today).
+      Steps 5-6 are the commonalisation payoff.
 - usbComms.c — perf-mode ambiguities: ALL RESOLVED ON HARDWARE 2026-07-26 (see the perf-mode findings
   section below for the captures). Cleanup status:
     * DONE 2026-07-26: removed parse_perf_mode_change() (incoming SUB_COMMAND_SET_PARAM_MODE 0x3e) and

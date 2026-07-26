@@ -54,6 +54,13 @@ extern tSelection              gSelection;
 extern tRubberBand             gRubberBand;
 extern tClipboard              gClipboard;
 extern tMessageQueue           gCommandQueue;
+extern tMessageQueue           gResponseQueue; // reverse: USB thread -> UI thread (poll-drained in the render loop)
+
+// Busy state for in-flight whole-slot device ops (load/save/new patch). UI-thread only: set when the
+// op is enqueued (device_op_begin), cleared when its completion response is drained (device_op_end).
+// While > 0 the render loop dims the canvas + shows gDeviceOpLabel and mouse_button swallows clicks.
+extern int                     gDeviceOpInProgress;
+extern char                    gDeviceOpLabel[32];
 extern uint32_t                gMorphGroupFocus;
 extern _Atomic uint32_t        gSlot;
 extern tPatchDescr             gPatchDescr[MAX_SLOTS];
