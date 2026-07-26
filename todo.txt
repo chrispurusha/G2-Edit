@@ -40,12 +40,19 @@ G2-Edit TODO (priority order)
   the canvas + show "Loading…/Saving…" and swallow canvas input during the ~0.5s op (prevents confusing
   interleaving; not a hard modal). Do busy-state + result-alert together once the reverse queue lands.
 - usbComms.c — perf-mode ambiguities: ALL RESOLVED ON HARDWARE 2026-07-26 (see the perf-mode findings
-  section below for the captures). Remaining ACTIONABLE cleanup from those findings:
-    * parse_perf_mode_change() (dispatched only from an incoming SUB_COMMAND_SET_PARAM_MODE 0x3e) is never
-      reached on any tested path — candidate for removal alongside parse_perf_header (0x11), also never seen.
-    * parse_synth_settings() (protocol.c:1139) stores gGlobalSettings.perfMode from synth settings, but that
-      copy is STALE on a panel mode flip (read PerfMode=0 right after flipping TO perf). Consider not
-      trusting/overwriting perfMode from synth settings — the authoritative signal is the 0x1f perf path.
+  section below for the captures). Cleanup status:
+    * DONE 2026-07-26: removed parse_perf_mode_change() (incoming SUB_COMMAND_SET_PARAM_MODE 0x3e) and
+      parse_perf_header() (SUB_RESPONSE_PERF_HEADER 0x11) plus their dispatch cases — hardware capture
+      confirmed the device never sends either. Behaviour-preserving (never-executed code; parse_perf_header
+      even had a landmine `exit(1)` that would have killed the app if it ever ran). The 0x3e/0x11 #defines
+      stay — they're still used on the SEND side (send_perf_mode_change / send_perf_header). Those sub-codes
+      now fall through to the default unhandled-message log if the device ever did send one. Build verified.
+    * NOT DONE (deferred, needs design + hardware): parse_synth_settings() (protocol.c:1139) is the STALE
+      perfMode source on a panel flip — BUT it is also the ONLY device->perfMode read on sync, and the 0x1f
+      handler (parse_perf_patch_versions) does NOT set perfMode (only versions + gotPerfSettingsChangeIndication).
+      So "treat 0x1f as authoritative" is not a one-liner: 0x1f carries no perfMode bit. Removing the
+      synth-settings write would regress startup/connect perfMode detection. A proper fix needs the resync
+      path to re-derive perfMode from a reliable source after 0x1f, verified on hardware.
     * send_perf_mode_change() takes ~3 sends (500ms retries) before the 0x1f response arrives — minor, but
       could tighten the wait if it matters.
 - moduleGraphics.cpp — refactor volume-meter/label rendering into utilsGraphics.cpp; resolve "can Mode be morphed?" question (needs hardware/manual check)
