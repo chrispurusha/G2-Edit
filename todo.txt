@@ -1,16 +1,33 @@
 G2-Edit TODO (priority order)
 
-- graphics.cpp:716 — perf-mode write path's blind 2-second usleep. ROOT CAUSE NOW DIAGNOSED ON HARDWARE
-  2026-07-26 (see "PERF-MODE HARDWARE FINDINGS" section below) — it's a cross-thread database race, not
-  just a timing guess. Real fix (move the load's clear_slot_data()+parse_perf()+write onto the USB thread as
-  one ordered op, OR a proper mode-settled+indications-drained handshake) still TO DO; needs careful retest
-  across empty/full perfs and the already-in-perf-mode path.
-- usbComms.c — resolve perf-mode ambiguities: synth vs. perf ownership, voice-count ordering on increase,
-  unconfirmed message case (search parse_perf_header/parse_slot_selection/SUB_RESPONSE_PATCH_VERSION_CHANGE
-  area; needs hardware testing). PARTIAL 2026-07-26: SUB_RESPONSE_PERF_HEADER (0x11) confirmed NOT used on the
-  file-load perf-switch path (device replies with SUB_RESPONSE_PERFORMANCE_SETTINGS 0x29 instead) — see
-  findings below. Panel-toggle and voice-count sub-questions still need their own captures (need a human at
-  the hardware to flip perf mode on the panel / bump voice count).
+- IN PROGRESS 2026-07-26 — Store/Load-to-Bank hit the wrong slot (always slot A). ROOT CAUSE
+  confirmed on hardware: send_store_patch (0x0b) / send_retrieve_patch (0x0a) were system-addressed
+  (usb_cmd_sys -> byte 0x2c), which the G2 always applies to slot A — the old "follows SELECT_SLOT
+  (0x09) focus" comment was wrong (verified: focus B via 0x09, load still went to A). FIX APPLIED:
+  both now slot-address via usb_cmd_slot(gSlot, COMMAND_REQ, ...). Confirmed the RETRIEVE now goes
+  out correctly slot-addressed (01 29 ... = slot B). VERIFICATION INCOMPLETE: last live load test
+  was inconclusive — the slot-B-addressed RETRIEVE's bytes are right, but the loaded patch didn't
+  visibly appear in slot B and no "Patch change on slot" reload fired (may be a refresh gap, or the
+  device wants a different version byte than usb_cmd_slot's per-slot patchVersion). NEXT: re-run the
+  load-from-bank-into-B test (non-destructive), confirm the device loads into B and the UI refreshes;
+  then the symmetric store fix can be trusted / spot-checked. File->slot patch load already works
+  fine (separate path, per owner). NOTE: ENABLE_USB_LOG is currently left ON in defs.h for this
+  testing — turn back off before committing.
+- Consolidate file-load paths onto the USB thread — the perf load now goes through one ordered
+  eMsgCmdLoadPerf handler in usbComms.c (see RESOLVED 2026-07-26 below). Do the same for PATCH load
+  (read_file_into_memory_and_process's type==0 branch still parses on the UI thread + enqueues
+  eMsgCmdWritePatch — same cross-thread-database shape as the perf bug had, just less exposed), and
+  review what else in graphics.cpp/menuActions.c does device-affecting work on the UI thread that
+  belongs behind the message queue.
+- usbComms.c — perf-mode ambiguities: ALL RESOLVED ON HARDWARE 2026-07-26 (see the perf-mode findings
+  section below for the captures). Remaining ACTIONABLE cleanup from those findings:
+    * parse_perf_mode_change() (dispatched only from an incoming SUB_COMMAND_SET_PARAM_MODE 0x3e) is never
+      reached on any tested path — candidate for removal alongside parse_perf_header (0x11), also never seen.
+    * parse_synth_settings() (protocol.c:1139) stores gGlobalSettings.perfMode from synth settings, but that
+      copy is STALE on a panel mode flip (read PerfMode=0 right after flipping TO perf). Consider not
+      trusting/overwriting perfMode from synth settings — the authoritative signal is the 0x1f perf path.
+    * send_perf_mode_change() takes ~3 sends (500ms retries) before the 0x1f response arrives — minor, but
+      could tighten the wait if it matters.
 - moduleGraphics.cpp — refactor volume-meter/label rendering into utilsGraphics.cpp; resolve "can Mode be morphed?" question (needs hardware/manual check)
 - moduleGraphics.cpp/renderParams.c — port custom graph displays from the original editor (none exist today besides render_volume_meter): envelope shapes (AD/AR/D/H/AHD/ADSR/ADBDSR/Multi/DX), filter response curves (Classic/Normal/Small/Static/Comb), oscillator & LFO waveform shapes, EQ curves (2-band/3-band/peak), compressor/expander, distortion/waveshaping (Dist A/B/Wrap/Shape/Saturate), FM operator + DX router, phaser, vocoder, tuned noise, random distribution/trigger — see Original Editor/G2Editor.c, CCustomObjectFactory::CreateCustom (~line 101952) and the CPnl*Graph class family for reference implementations
 - OscA(97) — add new UI element for Freq control (param 0) that accounts for param 6 Pitch Type
@@ -58,6 +75,45 @@ G2-Edit TODO (priority order)
       handful of OS hooks (menu, sleep/wake, prefs, usb-hotplug). Windows after Linux (more toolchain
       friction). This dovetails with the SynthLib commonalise priorities below — the platform shim is a
       natural SynthLib citizen shared by all three apps.
+
+RESOLVED 2026-07-26 (the perf-mode blind-usleep race — implemented + hardware-verified):
+- graphics.cpp's read_file_into_memory_and_process() perf branch no longer parses on the UI thread with a
+  2-second usleep barrier. When online it now sends a single new eMsgCmdLoadPerf command carrying just the
+  file PATH (fixed char[1024], like the backup/restore messages — no cross-thread heap hand-off). The USB
+  thread's new load_perf_file_to_device() (usbComms.c) re-reads the file and does the whole load — perf-mode
+  switch, clear_slot_data x4, parse_perf, then push to device (via the extracted push_perf_to_device() helper,
+  shared with the now-unused-but-kept eMsgCmdWritePerf) — all in ONE handler. Because state_handler() only
+  services patch-change indications BETWEEN queued commands, never mid-handler, the async cascade the mode
+  switch triggers can no longer overwrite the freshly-parsed perf. Offline still parses locally on the UI
+  thread (no device, no cascade, no race). Deliberately skips the WriteModePerf handler's
+  send_get_performance_settings() on the load path (parse sets all that from the file). After the write it
+  re-raises gotPerfSettingsChangeIndication so state_handler's existing "perf changed" view-refresh runs
+  (reset to slot A/var 1, redraw) — without that the current slot's name+canvas didn't repaint until a manual
+  slot re-select (found and fixed during hardware test).
+  VERIFIED ON HARDWARE via wire capture: load now completes in ~0.46s (was ~2.5s), with NO pre-write
+  GET_PATCH_SLOT/NAME cascade (old path had a full 4-slot one). Tested: empty perf from patch mode (full
+  mode-switch path), real 2-slot perf (Laika) already-in-perf-mode, and real perf from patch mode — all load
+  correctly and auto-refresh the view.
+
+PERF-MODE PANEL-TOGGLE + VOICE-COUNT FINDINGS (2026-07-26, on real G2 via ENABLE_USB_LOG):
+- PANEL perf<->patch toggle (both directions): device sends an unsolicited SUB_RESPONSE_PERF_PATCH_VERSIONS
+  (0x1f); the editor handles it via its existing "Perf settings change — reloading all slots" path. The
+  editor UI followed the panel correctly both ways (verified on screen). No 0x11 perf-header, no 0x3e.
+- EDITOR's own topbar perf-mode toggle: editor SENDS SUB_COMMAND_SET_PARAM_MODE (0x3e) and the device
+  replies with 0x1f (+0x29). The device never sends 0x3e back. So parse_perf_mode_change() — dispatched
+  ONLY from an incoming 0x3e — is never reached on any path (editor toggle, panel toggle, or perf load).
+  "Got perf mode change" never logged. => effectively dead; safe-to-remove candidate (like parse_perf_header).
+- PerfMode ownership (:360): parse_synth_settings() DOES write gGlobalSettings.perfMode, and it read STALE
+  on a panel flip (PerfMode=0 immediately after flipping TO perf; UI self-corrected via the 0x1f path). So
+  the synth-settings copy lags — treat the 0x1f/perf path as authoritative, not synth settings.
+- SUB_RESPONSE_PERF_HEADER (0x11) / parse_perf_header: never sent on ANY path tested (file load, panel
+  toggle, editor toggle). Strongly supports defs.h:179's "might want to remove".
+- Voice count / assigned voices (:594): the editor only ever GETs assigned voices (send_get_assigned_voices,
+  0x04) during init/resync — there is NO set-assigned-voices path. Changing voice count in the UI (Poly
+  menu, 2->8) sends a single patch-descriptor write (0x21) which the device accepts directly (no "lower
+  first"), replying with RESOURCES_USED (0x72), NOT assigned-voices (0x05). So the ":594 might have to set
+  target lower before increase" concern is about a write path that doesn't exist — MOOT for current code
+  (would only matter if a direct assigned-voices-set feature is ever added).
 
 PERF-MODE HARDWARE FINDINGS (2026-07-26 — captured on real G2 via ENABLE_USB_LOG + Debug LOG_DEBUG;
 experiment: load an empty .prf2 from a starting state of Patch Mode + Online. Raw capture archived in the

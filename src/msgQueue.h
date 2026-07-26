@@ -65,6 +65,7 @@ typedef enum {
     eMsgCmdWriteModePerf,
     eMsgCmdWriteModePatch,
     eMsgCmdWritePerf,
+    eMsgCmdLoadPerf,
     eMsgCmdWritePerfName,
     eMsgCmdWritePerfSettings,
     eMsgCmdSetCustomData,
@@ -249,6 +250,12 @@ typedef struct {
 } tBankLocationPerfData;
 
 typedef struct {
+    char srcFile[1024]; // full path to the .prf2 to load; the USB thread re-reads it itself so the
+                        // whole load (mode switch + parse + write) runs on one thread with no
+                        // cross-thread buffer hand-off — see eMsgCmdLoadPerf handler.
+} tLoadPerfData;
+
+typedef struct {
     uint32_t cmd;
     uint32_t slot;
     union {
@@ -279,6 +286,7 @@ typedef struct {
         tSynthSettingsRestoreData synthSettingsRestoreData;
         tBankRestoreData          bankRestoreData;
         tBankLocationPerfData     bankLocationPerfData;
+        tLoadPerfData             loadPerfData;
     };
 } tMessageContent;
 

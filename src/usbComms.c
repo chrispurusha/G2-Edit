@@ -1587,7 +1587,12 @@ static int send_store_patch(uint8_t domain, uint32_t bank, uint32_t location) {
     uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
     int      result;
 
-    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_STORE);
+    // Slot-addressed to gSlot (0x28|slot), NOT system-addressed. The original comment above claimed
+    // Store follows the device's SUB_COMMAND_SELECT_SLOT (0x09) focus — that's WRONG (confirmed on
+    // hardware 2026-07-26: with slot B focused via 0x09, Store/Retrieve still hit slot A). The
+    // system-addressed form (usb_cmd_sys, 0x2c) the reverse-engineering used always targets slot A;
+    // addressing the command to the slot itself is how a non-A slot is actually reached.
+    usb_cmd_slot(buff, &bitPos, gSlot, COMMAND_REQ, SUB_COMMAND_STORE);
     write_bit_stream(buff, &bitPos, 8, domain);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)bank);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)location);
@@ -1611,7 +1616,10 @@ static int send_retrieve_patch(uint8_t domain, uint32_t bank, uint32_t location)
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_RETRIEVE);
+    // Slot-addressed to gSlot — see send_store_patch()'s comment: the "follows SELECT_SLOT focus"
+    // assumption was wrong; system-addressing always hit slot A. This is what makes Load-from-Bank
+    // land in the actually-selected slot.
+    usb_cmd_slot(buff, &bitPos, gSlot, COMMAND_REQ, SUB_COMMAND_RETRIEVE);
     write_bit_stream(buff, &bitPos, 8, domain);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)bank);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)location);
@@ -3547,6 +3555,155 @@ static int send_init_sequence_push(void) {
     return EXIT_SUCCESS;
 }
 
+// Pushes the current in-memory performance (all 4 slots + perf name/header/master clock) to the
+// device. Shared by eMsgCmdWritePerf and eMsgCmdLoadPerf. Clears the patch-change-indication flags
+// on success so the writes we just made don't immediately trigger redundant read-backs.
+static int push_perf_to_device(void) {
+    int retVal = EXIT_FAILURE;
+
+    for (uint32_t s = 0; s < MAX_SLOTS; s++) {
+        retVal = push_slot_to_device(s);
+    }
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = send_perf_name();
+    }
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = send_perf_header();
+    }
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = send_set_master_clock_bpm(gGlobalSettings.masterClock);
+    }
+
+    if (retVal == EXIT_SUCCESS) {
+        retVal = send_set_master_clock_run(gGlobalSettings.masterClockRunning);
+    }
+
+    if (retVal == EXIT_SUCCESS) {
+        for (int i = 0; i < MAX_SLOTS; i++) {
+            gotPatchChangeIndication[i] = false;
+        }
+
+        call_full_patch_change_notify();
+        call_wake_glfw();
+    }
+    return retVal;
+}
+
+// Loads a .prf2 performance file straight into the device, entirely on the USB thread. This runs as
+// one command (eMsgCmdLoadPerf) so the whole sequence — switch to perf mode, clear the database,
+// parse the file into it, then push it to the device — happens without interruption. That matters
+// because switching to perf mode makes the G2 raise patch-change indications for the OLD perf;
+// state_handler() only services those (re-reading device patches into the database) BETWEEN queued
+// commands, never mid-handler, so doing the parse here rather than on the UI thread means the
+// cascade can't overwrite the freshly-parsed perf before it's written. Replaces the old UI-thread
+// path that used a blind 2-second sleep as a crude barrier against exactly that race (see
+// read_file_into_memory_and_process(), graphics.cpp). Returns EXIT_SUCCESS only if the file parsed
+// and the device write succeeded.
+static int load_perf_file_to_device(const char * filePath) {
+    FILE *    file       = fopen(filePath, "rb");
+
+    if (file == NULL) {
+        LOG_ERROR("load_perf_file_to_device: cannot open %s\n", filePath);
+        return EXIT_FAILURE;
+    }
+    fseek(file, 0, SEEK_END);
+    long      fileSize   = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    if ((fileSize <= 4) || (fileSize > PERF_FILE_SIZE)) {
+        LOG_ERROR("load_perf_file_to_device: bad file size %ld\n", fileSize);
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+    uint8_t * buff       = (uint8_t *)malloc((size_t)fileSize);
+
+    if (buff == NULL) {
+        LOG_ERROR("load_perf_file_to_device: alloc failed\n");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+    size_t    readSize   = fread(buff, 1, (size_t)fileSize, file);
+    fclose(file);
+
+    if (readSize != (size_t)fileSize) {
+        LOG_ERROR("load_perf_file_to_device: short read\n");
+        free(buff);
+        return EXIT_FAILURE;
+    }
+    // Skip the ASCII header line (up to the first 0x00), then version + type bytes, matching
+    // read_file_into_memory_and_process()'s framing.
+    int64_t   byteOffset = 0;
+
+    for (int64_t i = 0; i < fileSize; i++) {
+        if (buff[i] == 0x00) {
+            byteOffset = i + 1;
+            break;
+        }
+    }
+
+    uint16_t  readCrc    = (uint16_t)((buff[fileSize - 2] << 8) | buff[fileSize - 1]);
+    uint16_t  calcCrc    = calc_crc16(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
+
+    if (readCrc != calcCrc) {
+        LOG_WARNING("load_perf_file_to_device: CRC check failed\n");
+        free(buff);
+        return EXIT_FAILURE;
+    }
+    byteOffset                     += 2; // skip version + type (caller already knows this is a performance)
+
+    // Switch the device to perf mode first if needed. Unlike eMsgCmdWriteModePerf we deliberately
+    // do NOT follow it with send_get_performance_settings() here: that would read the OLD perf's
+    // slot names into gGlobalSettings, and we're about to overwrite all of that from the file.
+    if (gGlobalSettings.perfMode == 0) {
+        send_perf_mode_change(1);
+    }
+
+    // The mode switch (and its ensuing device activity) may have raised patch-change / perf-settings
+    // indications for the perf we're replacing. Drop them so a later state_handler() pass doesn't
+    // read the old device state back over what we're about to parse and write. (Note we do NOT
+    // suppress gotPerfSettingsChangeIndication the same way — after the write we deliberately
+    // re-raise it, below, to drive the view refresh.)
+    for (int i = 0; i < MAX_SLOTS; i++) {
+        gotPatchChangeIndication[i] = false;
+    }
+
+    gotPerfSettingsChangeIndication = false;
+
+    for (int i = 0; i < MAX_SLOTS; i++) {
+        clear_slot_data(i);
+    }
+
+    // Derive performance name from the filename (strip directory and .prf2 extension).
+    {
+        const char * slash    = strrchr(filePath, '/');
+        const char * baseName = slash ? slash + 1 : filePath;
+        COPY_STRING(gGlobalSettings.perfName, baseName);
+        char *       dot      = strrchr(gGlobalSettings.perfName, '.');
+
+        if (dot) {
+            *dot = '\0';
+        }
+    }
+
+    gGlobalSettings.perfMode        = 1;
+    parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
+    free(buff);
+
+    int retVal = push_perf_to_device();
+
+    // Drive the standard "performance changed" view refresh (state_handler's
+    // gotPerfSettingsChangeIndication branch: reset to slot A / variation 1, re-read perf settings,
+    // full redraw). Without this the freshly-loaded current slot's patch name and module canvas
+    // don't repaint until the user manually re-selects a slot. That branch only re-reads perf
+    // SETTINGS (names etc.), not module data, so it can't clobber the perf we just parsed and wrote.
+    gotPerfSettingsChangeIndication = true;
+
+    return retVal;
+}
+
 // Whether a send_write_data() case needs the unsolicited-message stream paused (send_stop()/
 // send_start()) around its own device writes. True for every command except: eMsgCmdSetValue/
 // eMsgCmdSetParamMorph (real-time param/morph tweaks, left unpaused so they stay responsive
@@ -3756,37 +3913,12 @@ static int send_write_data(tMessageContent * messageContent) {
             break;
 
         case eMsgCmdWritePerf:
-        {
-            for (uint32_t s = 0; s < MAX_SLOTS; s++) {
-                retVal = push_slot_to_device(s);
-            }
-
-            if (retVal == EXIT_SUCCESS) {
-                retVal = send_perf_name();
-            }
-
-            if (retVal == EXIT_SUCCESS) {
-                retVal = send_perf_header();
-            }
-
-            if (retVal == EXIT_SUCCESS) {
-                retVal = send_set_master_clock_bpm(gGlobalSettings.masterClock);
-            }
-
-            if (retVal == EXIT_SUCCESS) {
-                retVal = send_set_master_clock_run(gGlobalSettings.masterClockRunning);
-            }
-
-            if (retVal == EXIT_SUCCESS) {
-                for (int i = 0; i < MAX_SLOTS; i++) {
-                    gotPatchChangeIndication[i] = false;
-                }
-
-                call_full_patch_change_notify();
-                call_wake_glfw();
-            }
+            retVal = push_perf_to_device();
             break;
-        }
+
+        case eMsgCmdLoadPerf:
+            retVal = load_perf_file_to_device(messageContent->loadPerfData.srcFile);
+            break;
 
         case eMsgCmdWritePerfSettings:
             retVal = send_perf_header();
