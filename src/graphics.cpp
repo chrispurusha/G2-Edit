@@ -1167,33 +1167,9 @@ static void check_action_flags(void) {
         gNeedFocus = false;
         glfwFocusWindow((GLFWwindow *)synthlib_window());
     }
-
-    if (gBankBackupComplete) {
-        gBankBackupComplete = false;
-
-        if (gBankBackupIsEverything) {
-            gBankBackupIsEverything = false;
-            show_alert("Backup Everything", gBankBackupResultMessage);
-        } else {
-            show_alert(gBankBackupIsPerf ? "Performance Bank Backup" : "Patch Bank Backup", gBankBackupResultMessage);
-        }
-    }
-
-    if (gSynthSettingsBackupComplete) {
-        gSynthSettingsBackupComplete = false;
-        show_alert("Synth Settings Backup", gSynthSettingsBackupResultMessage);
-    }
-
-    if (gBankRestoreComplete) {
-        gBankRestoreComplete = false;
-
-        if (gBankRestoreIsEverything) {
-            gBankRestoreIsEverything = false;
-            show_alert("Restore Everything", gBankRestoreResultMessage);
-        } else {
-            show_alert(gBankRestoreIsPerf ? "Performance Bank Restore" : "Patch Bank Restore", gBankRestoreResultMessage);
-        }
-    }
+    // Bank backup / synth-settings backup / bank restore completion alerts now arrive on the reverse
+    // queue as eRspAlert (see the drain above) — their gBank*Complete / *ResultMessage globals were
+    // retired. The gBank*IsPerf / gBank*IsEverything flags stay (the progress overlays read them).
 
     if (gStorePeekComplete) {
         gStorePeekComplete = false;
@@ -1219,11 +1195,6 @@ static void check_action_flags(void) {
         }
     }
 
-    if (gStorePatchComplete) {
-        gStorePatchComplete = false;
-        show_alert("Store to Bank", gStorePatchResultMessage);
-    }
-
     if (gDeletePeekComplete) {
         gDeletePeekComplete = false;
         char title[64]    = {0};
@@ -1244,11 +1215,6 @@ static void check_action_flags(void) {
             }
             show_confirm(title, message, "Delete...", on_delete_confirmed);
         }
-    }
-
-    if (gDeleteComplete) {
-        gDeleteComplete = false;
-        show_alert("Delete", gDeleteResultMessage);
     }
 
     if (gLoadPeekComplete) {
@@ -1272,16 +1238,6 @@ static void check_action_flags(void) {
         }
     }
 
-    if (gLoadComplete) {
-        gLoadComplete = false;
-
-        // Success is shown by the redrawn canvas itself — an alert here would just be a modal
-        // the user has to dismiss before they can see the patch that already loaded underneath it.
-        if (gLoadFailed) {
-            show_alert("Load", gLoadResultMessage);
-        }
-    }
-
     if (gSynthRestorePeekComplete) {
         gSynthRestorePeekComplete = false;
         char message[400] = {0};
@@ -1294,11 +1250,6 @@ static void check_action_flags(void) {
                      "This cannot be undone.", gSynthRestorePeekFileName, gSynthRestorePeekName);
             show_confirm("Restore Synth Settings", message, "Restore...", on_synth_restore_confirmed);
         }
-    }
-
-    if (gSynthRestoreComplete) {
-        gSynthRestoreComplete = false;
-        show_alert("Restore Synth Settings", gSynthRestoreResultMessage);
     }
 }
 

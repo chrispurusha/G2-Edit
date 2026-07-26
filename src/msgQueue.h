@@ -317,7 +317,7 @@ typedef struct {
         tBankLocationPerfData     bankLocationPerfData;
         tPatchFileData            patchFileData;
         tFileResultData           fileResultData;   // reverse queue (gResponseQueue) only
-        tAlertData                alertData;         // reverse queue (gResponseQueue) only
+        tAlertData                alertData;        // reverse queue (gResponseQueue) only
     };
 } tMessageContent;
 
