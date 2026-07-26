@@ -653,6 +653,17 @@ void read_file_into_memory_and_process(const char * filepath) {
     uint32_t  calcCrc    = 0;
     uint32_t  slot       = gSlot;
 
+    if (gCommsState == eCommsOnLine) {
+        // Online: hand the entire load to the USB thread as one ordered command. It opens the file,
+        // validates the CRC, sniffs the type byte (patch vs perf) and does the clear/parse/push
+        // itself, so the UI thread touches neither the file nor the shared DB. See load_file_to_device().
+        tMessageContent msg = {0};
+        msg.cmd                = eMsgCmdLoadFile;
+        msg.patchFileData.slot = slot;
+        COPY_STRING(msg.patchFileData.filePath, filepath);
+        msg_send(&gCommandQueue, &msg);
+        return;
+    }
     file     = fopen(filepath, "rb");
 
     if (!file) {
@@ -696,55 +707,31 @@ void read_file_into_memory_and_process(const char * filepath) {
         LOG_DEBUG("Version %u\n", version);
         LOG_DEBUG("Type %u\n", type);
 
+        // Offline only: the online case returned early above (handled on the USB thread). With no
+        // device there's no mode switch and no patch-change cascade to race, so we parse straight
+        // into the database on this thread.
         if (type == 0) {
-            if (gCommsState == eCommsOnLine) {
-                // Online: hand the whole load to the USB thread (re-reads the file, then
-                // clear+parse+name+push in one ordered command) so the parse can't be clobbered by
-                // the USB thread's own async patch-change re-reads — same reasoning as the perf
-                // branch below. Offline parses locally (no device, no race).
-                tMessageContent msg = {0};
-                msg.cmd                = eMsgCmdLoadPatchFile;
-                msg.patchFileData.slot = slot;
-                COPY_STRING(msg.patchFileData.filePath, filepath);
-                msg_send(&gCommandQueue, &msg);
-            } else {
-                clear_slot_data(slot);
-                parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
-                set_patch_name_from_filename(slot, filepath);
-            }
+            clear_slot_data(slot);
+            parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
+            set_patch_name_from_filename(slot, filepath);
         } else if (type == 1) {
-            if (gCommsState == eCommsOnLine) {
-                // Online: hand the whole load to the USB thread as a single ordered command. It
-                // re-reads the file and does the mode switch + clear + parse_perf + device write all
-                // on its own thread, so the parse can't be clobbered by the patch-change-indication
-                // cascade the mode switch triggers (which state_handler only services BETWEEN
-                // messages, never mid-handler). Replaces the old "enqueue WriteModePerf, blind
-                // usleep(2s), parse on this thread, enqueue WritePerf" sequence, whose sleep was a
-                // crude barrier against exactly that cross-thread database race.
-                tMessageContent msg = {0};
-                msg.cmd = eMsgCmdLoadPerf;
-                COPY_STRING(msg.loadPerfData.srcFile, filepath);
-                msg_send(&gCommandQueue, &msg);
-            } else {
-                // Offline: no device, so no mode switch and no cascade to race — parse straight into
-                // the database on this thread. Performance file — parse_perf clears all 4 slots and
-                // populates them; slot names come from the file itself so set_patch_name_from_filename
-                // is not called. Derive performance name from the filename (strip dir + .prf2).
-                for (int i = 0; i < MAX_SLOTS; i++) {
-                    clear_slot_data(i);
-                }
-
-                const char * slash    = strrchr(filepath, '/');
-                const char * baseName = slash ? slash + 1 : filepath;
-                COPY_STRING(gGlobalSettings.perfName, baseName);
-                char *       dot      = strrchr(gGlobalSettings.perfName, '.');
-
-                if (dot) {
-                    *dot = '\0';
-                }
-                gGlobalSettings.perfMode = 1;
-                parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
+            // Performance file — parse_perf clears all 4 slots and populates them; slot names come
+            // from the file itself so set_patch_name_from_filename is not called. Derive the
+            // performance name from the filename (strip dir + .prf2).
+            for (int i = 0; i < MAX_SLOTS; i++) {
+                clear_slot_data(i);
             }
+
+            const char * slash    = strrchr(filepath, '/');
+            const char * baseName = slash ? slash + 1 : filepath;
+            COPY_STRING(gGlobalSettings.perfName, baseName);
+            char *       dot      = strrchr(gGlobalSettings.perfName, '.');
+
+            if (dot) {
+                *dot = '\0';
+            }
+            gGlobalSettings.perfMode = 1;
+            parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
         }
     } else {
         LOG_WARNING("CRC check failed\n");
@@ -940,7 +927,16 @@ static void on_file_saved(const char * path) {
         LOG_INFO("Saving file: %s", path);
 
         if (gGlobalSettings.perfMode == 1) {
-            write_perf_to_file(path); // perf save still UI-thread — separate candidate for the same move
+            if (gCommsState == eCommsOnLine) {
+                // Online: serialise the whole DB (all 4 slots) on the USB thread — same reason as the
+                // patch save below: the DB read must be atomic against this thread's async reparses.
+                tMessageContent msg = {0};
+                msg.cmd = eMsgCmdSavePerfFile;
+                COPY_STRING(msg.patchFileData.filePath, path);
+                msg_send(&gCommandQueue, &msg);
+            } else {
+                write_perf_to_file(path);
+            }
         } else if (gCommsState == eCommsOnLine) {
             // Online: serialise the slot on the USB thread so the DB read can't tear against the USB
             // thread's own DB writes (e.g. an async patch-change reparse). Name update (a single

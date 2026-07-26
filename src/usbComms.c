@@ -3560,7 +3560,7 @@ static int send_init_sequence_push(void) {
 }
 
 // Pushes the current in-memory performance (all 4 slots + perf name/header/master clock) to the
-// device. Shared by eMsgCmdWritePerf and eMsgCmdLoadPerf. Clears the patch-change-indication flags
+// device. Shared by eMsgCmdWritePerf and the perf load path. Clears the patch-change-indication flags
 // on success so the writes we just made don't immediately trigger redundant read-backs.
 static int push_perf_to_device(void) {
     int retVal = EXIT_FAILURE;
@@ -3597,7 +3597,7 @@ static int push_perf_to_device(void) {
 }
 
 // Loads a .prf2 performance file straight into the device, entirely on the USB thread. This runs as
-// one command (eMsgCmdLoadPerf) so the whole sequence — switch to perf mode, clear the database,
+// part of one command (eMsgCmdLoadFile) so the whole sequence — switch to perf mode, clear the database,
 // parse the file into it, then push it to the device — happens without interruption. That matters
 // because switching to perf mode makes the G2 raise patch-change indications for the OLD perf;
 // state_handler() only services those (re-reading device patches into the database) BETWEEN queued
@@ -3610,7 +3610,7 @@ static int push_perf_to_device(void) {
 // returns the PAYLOAD offset/length — past the ASCII header line (to the first 0x00) plus the
 // version + type bytes. Framing matches read_file_into_memory_and_process() (graphics.cpp); shared by
 // the perf- and patch-load handlers so it lives in one place.
-static int read_g2_file_payload(const char * filePath, uint8_t ** outBuf, int64_t * outOffset, int64_t * outLen) {
+static int read_g2_file_payload(const char * filePath, uint8_t ** outBuf, int64_t * outOffset, int64_t * outLen, uint8_t * outType) {
     FILE *    file       = fopen(filePath, "rb");
 
     if (file == NULL) {
@@ -3658,6 +3658,10 @@ static int read_g2_file_payload(const char * filePath, uint8_t ** outBuf, int64_
         free(buff);
         return EXIT_FAILURE;
     }
+
+    if (outType != NULL) {
+        *outType = buff[byteOffset + 1]; // type byte follows the version byte (0 = patch, 1 = perf)
+    }
     byteOffset += 2; // skip version + type bytes
 
     *outBuf     = buff;
@@ -3666,15 +3670,7 @@ static int read_g2_file_payload(const char * filePath, uint8_t ** outBuf, int64_
     return EXIT_SUCCESS;
 }
 
-static int load_perf_file_to_device(const char * filePath) {
-    uint8_t * buff       = NULL;
-    int64_t   byteOffset = 0;
-    int64_t   payloadLen = 0;
-
-    if (read_g2_file_payload(filePath, &buff, &byteOffset, &payloadLen) != EXIT_SUCCESS) {
-        return EXIT_FAILURE;
-    }
-
+static int load_perf_from_payload(uint8_t * buff, int64_t byteOffset, int64_t payloadLen, const char * filePath) {
     // Switch the device to perf mode first if needed. Unlike eMsgCmdWriteModePerf we deliberately
     // do NOT follow it with send_get_performance_settings() here: that would read the OLD perf's
     // slot names into gGlobalSettings, and we're about to overwrite all of that from the file.
@@ -3725,19 +3721,12 @@ static int load_perf_file_to_device(const char * filePath) {
     return retVal;
 }
 
-// Loads a .pch2 patch file into one edit-buffer slot, entirely on the USB thread (eMsgCmdLoadPatchFile).
-// Single-slot analogue of load_perf_file_to_device: doing clear+parse+push in one ordered command
-// keeps the parse from being clobbered by the USB thread's own async patch-change re-reads (which
-// state_handler only services BETWEEN commands). Mirrors read_file_into_memory_and_process()'s
-// online patch branch, just moved off the UI thread.
-static int load_patch_file_to_device(const char * filePath, uint32_t slot) {
-    uint8_t * buff       = NULL;
-    int64_t   byteOffset = 0;
-    int64_t   payloadLen = 0;
-
-    if (read_g2_file_payload(filePath, &buff, &byteOffset, &payloadLen) != EXIT_SUCCESS) {
-        return EXIT_FAILURE;
-    }
+// Loads a .pch2 patch file into one edit-buffer slot, entirely on the USB thread. Single-slot
+// analogue of load_perf_from_payload: doing clear+parse+push in one ordered command keeps the parse
+// from being clobbered by the USB thread's own async patch-change re-reads (which state_handler only
+// services BETWEEN commands). Mirrors read_file_into_memory_and_process()'s old patch branch, moved
+// off the UI thread. Takes the already-read payload; frees it.
+static int load_patch_from_payload(uint8_t * buff, int64_t byteOffset, int64_t payloadLen, const char * filePath, uint32_t slot) {
     // Drop any pending patch-change indication for this slot so a later state_handler() pass doesn't
     // read the old device patch back over what we're about to parse and write.
     gotPatchChangeIndication[slot] = false;
@@ -3747,11 +3736,30 @@ static int load_patch_file_to_device(const char * filePath, uint32_t slot) {
     set_patch_name_from_filename(slot, filePath);
     free(buff);
 
-    int       retVal     = push_slot_to_device(slot);
+    int retVal = push_slot_to_device(slot);
 
     call_full_patch_change_notify();
     call_wake_glfw();
     return retVal;
+}
+
+// Reads a .pch2/.prf2, checks its CRC, sniffs the type byte (0 = patch, 1 = perf) and dispatches to
+// the right loader — all on the USB thread (eMsgCmdLoadFile). The UI thread only passes the path, so
+// it touches neither the file nor the shared DB on load. The payload loaders free the buffer.
+static int load_file_to_device(const char * filePath, uint32_t slot) {
+    uint8_t * buff       = NULL;
+    int64_t   byteOffset = 0;
+    int64_t   payloadLen = 0;
+    uint8_t   type       = 0;
+
+    if (read_g2_file_payload(filePath, &buff, &byteOffset, &payloadLen, &type) != EXIT_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+
+    if (type == 0) {
+        return load_patch_from_payload(buff, byteOffset, payloadLen, filePath, slot);
+    }
+    return load_perf_from_payload(buff, byteOffset, payloadLen, filePath);
 }
 
 // Whether a send_write_data() case needs the unsolicited-message stream paused (send_stop()/
@@ -3966,19 +3974,22 @@ static int send_write_data(tMessageContent * messageContent) {
             retVal = push_perf_to_device();
             break;
 
-        case eMsgCmdLoadPerf:
-            retVal = load_perf_file_to_device(messageContent->loadPerfData.srcFile);
-            break;
-
-        case eMsgCmdLoadPatchFile:
-            retVal = load_patch_file_to_device(messageContent->patchFileData.filePath,
-                                               messageContent->patchFileData.slot);
+        case eMsgCmdLoadFile:
+            retVal = load_file_to_device(messageContent->patchFileData.filePath,
+                                         messageContent->patchFileData.slot);
             break;
 
         case eMsgCmdSavePatchFile:
             // Serialise the slot's DB to file here (not on the UI thread) so the read is atomic
             // against this thread's own DB writes. No device traffic — pure DB->file.
             write_database_to_file(messageContent->patchFileData.filePath, messageContent->patchFileData.slot);
+            retVal = EXIT_SUCCESS;
+            break;
+
+        case eMsgCmdSavePerfFile:
+            // Same as the patch save, but a whole-DB (all 4 slots) serialise for a .prf2. Runs here so
+            // the read can't tear against this thread's async patch-change reparse. No device traffic.
+            write_perf_to_file(messageContent->patchFileData.filePath);
             retVal = EXIT_SUCCESS;
             break;
 

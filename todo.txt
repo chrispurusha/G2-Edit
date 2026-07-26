@@ -10,17 +10,35 @@ G2-Edit TODO (priority order)
   Load AND Store confirmed working on hardware (owner, 2026-07-26). Perf-domain path left
   unchanged/unverified (no perf capture). NOTE: ENABLE_USB_LOG left ON in defs.h for testing — turn
   off before committing.
-- Consolidate device-affecting file/DB ops onto the USB thread — DONE 2026-07-26 for the whole-slot
-  cases (built, needs owner hardware test): perf load (eMsgCmdLoadPerf), patch load from file
-  (eMsgCmdLoadPatchFile), New Patch (eMsgCmdNewPatch), and Save Patch to File (eMsgCmdSavePatchFile)
-  all now run as one ordered command on the USB thread when online (clear/parse/init + push, or
-  DB->file serialise), so the shared patch DB can't be clobbered/torn by the USB thread's async
-  re-reads mid-sequence. Offline paths still run locally on the UI thread (no device, no race; USB
-  thread doesn't process the queue when offline anyway). Shared read_g2_file_payload() helper factors
-  the file framing. STILL OPEN: (a) perf SAVE to file (write_perf_to_file) is the one whole-slot op
-  left on the UI thread — same treatment applies; (b) the bulk targeted-command loops (delete-module
-  +cables, create-module, undo-recreate) are NOT race-prone (self-describing commands) but could be
-  folded into composite USB-thread commands for atomicity/less chatter — low priority.
+- Consolidate device-affecting file/DB ops onto the USB thread — DONE 2026-07-26 for ALL whole-slot
+  cases (built, needs owner hardware test). LOAD is now a SINGLE eMsgCmdLoadFile: the UI thread does
+  ZERO file I/O on load — it just passes the path; the USB thread's load_file_to_device() opens the
+  file, checks the CRC, sniffs the type byte (0=patch/1=perf) and dispatches to load_patch_from_payload
+  / load_perf_from_payload (read_g2_file_payload now also returns the type). Replaced the earlier
+  eMsgCmdLoadPerf + eMsgCmdLoadPatchFile pair (and their double-read: UI sniffed type, USB re-read).
+  SAVE: patch -> eMsgCmdSavePatchFile (write_database_to_file), perf -> eMsgCmdSavePerfFile
+  (write_perf_to_file, whole-DB serialise). New Patch -> eMsgCmdNewPatch. All run as one ordered
+  command on the USB thread when online, so the shared patch DB can't be clobbered/torn by the USB
+  thread's async re-reads mid-sequence. Offline paths still run locally on the UI thread (no device,
+  no race; USB thread doesn't process the queue when offline anyway). eMsgCmdSavePerfFile/eMsgCmdLoadFile
+  reuse tPatchFileData (slot unused for perf); tLoadPerfData removed. Build verified (Debug, xcodebuild).
+  STILL OPEN: the bulk targeted-command loops (delete-module+cables, create-module, undo-recreate) are
+  NOT race-prone (self-describing commands) but could be folded into composite USB-thread commands for
+  atomicity/less chatter — low priority.
+
+- Reverse (USB->UI) message queue + GUI busy state — DESIGN NOTE / future (2026-07-26). Currently the
+  USB thread signals the UI via ad-hoc _Atomic flags (gReDraw, gotPatchChangeIndication[],
+  gStorePeekComplete, ...) + wake_glfw(); UI-affecting file/device ops report success only implicitly
+  (DB updates -> redraw) and FAILURE only via log (silent to the user, same pre/post the load-thread
+  move — no regression). Proper fix: a structured response queue back to the UI carrying
+  {command, result, detail}, drained at the top of the render loop. The wake mechanism is the EXISTING
+  GLFW wake callback (register_glfw_wake_cb / wake_glfw()) — the USB thread already uses it to wake the
+  render loop on incoming data; the reverse queue's producer just enqueues then calls wake_glfw(),
+  confirmed correct. This belongs with the todo item about generalising msgQueue.c into a
+  transport-agnostic SynthLib comms layer. Pairs with a GUI BUSY state: a lightweight atomic
+  gDeviceOpInProgress (set on enqueue, cleared on the completion response) so the render loop can dim
+  the canvas + show "Loading…/Saving…" and swallow canvas input during the ~0.5s op (prevents confusing
+  interleaving; not a hard modal). Do busy-state + result-alert together once the reverse queue lands.
 - usbComms.c — perf-mode ambiguities: ALL RESOLVED ON HARDWARE 2026-07-26 (see the perf-mode findings
   section below for the captures). Remaining ACTIONABLE cleanup from those findings:
     * parse_perf_mode_change() (dispatched only from an incoming SUB_COMMAND_SET_PARAM_MODE 0x3e) is never

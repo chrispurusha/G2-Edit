@@ -65,9 +65,9 @@ typedef enum {
     eMsgCmdWriteModePerf,
     eMsgCmdWriteModePatch,
     eMsgCmdWritePerf,
-    eMsgCmdLoadPerf,
-    eMsgCmdLoadPatchFile,
+    eMsgCmdLoadFile,
     eMsgCmdSavePatchFile,
+    eMsgCmdSavePerfFile,
     eMsgCmdNewPatch,
     eMsgCmdWritePerfName,
     eMsgCmdWritePerfSettings,
@@ -253,16 +253,12 @@ typedef struct {
 } tBankLocationPerfData;
 
 typedef struct {
-    char srcFile[1024]; // full path to the .prf2 to load; the USB thread re-reads it itself so the
-                        // whole load (mode switch + parse + write) runs on one thread with no
-                        // cross-thread buffer hand-off — see eMsgCmdLoadPerf handler.
-} tLoadPerfData;
-
-typedef struct {
-    char filePath[1024];     // .pch2 path; USB thread re-reads (load) or writes (save) it directly so
-                             // the whole clear+parse+push (load) / DB-read+serialise (save) runs on
-                             // the one thread — no cross-thread DB race. See eMsgCmdLoadPatchFile /
-                             // eMsgCmdSavePatchFile handlers. filePath is unused for eMsgCmdNewPatch.
+    char filePath[1024];     // .pch2/.prf2 path; the USB thread opens/reads (load) or writes (save) it
+                             // directly so the whole CRC+sniff+clear+parse+push (load) / DB-read+
+                             // serialise (save) runs on the one thread — no cross-thread DB race. See
+                             // eMsgCmdLoadFile / eMsgCmdSavePatchFile / eMsgCmdSavePerfFile handlers.
+                             // filePath is unused for eMsgCmdNewPatch; slot is unused for the perf
+                             // save and for perf loads (whole-DB, all 4 slots).
     uint32_t slot;
 } tPatchFileData;
 
@@ -297,7 +293,6 @@ typedef struct {
         tSynthSettingsRestoreData synthSettingsRestoreData;
         tBankRestoreData          bankRestoreData;
         tBankLocationPerfData     bankLocationPerfData;
-        tLoadPerfData             loadPerfData;
         tPatchFileData            patchFileData;
     };
 } tMessageContent;
