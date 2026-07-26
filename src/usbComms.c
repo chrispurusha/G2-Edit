@@ -338,56 +338,6 @@ static int usb_bulk_transfer_sync(libusb_device_handle * handle, uint8_t endpoin
 // Parsers
 // ---------------------------------------------------------------------------
 
-// CMPerformanceHeaderDump (USB sub-command 0x11): G2 broadcasts this unsolicited when perf
-// settings change. Uses CPerformanceHeader_11::ReadStream — the same struct as the .prf2 file
-// header section, but on USB it carries a 2-byte CStreamSizer size word and fixed-width 16-byte
-// names (not null-terminated-variable-length as in the 0x29 settings dump).
-static void parse_perf_header(uint8_t * buff, uint32_t * bitPos) {
-    int i = 0;
-
-    // CStreamSizer size word (2 bytes) — read to advance past it; content size not needed
-    read_bit_stream(buff, bitPos, 8);
-    read_bit_stream(buff, bitPos, 8);
-
-    // 8 global setting bytes — store for echo-back when sending perf header to G2
-    gPerfSettings.globalMode    = (uint8_t)read_bit_stream(buff, bitPos, 8);
-    gPerfSettings.rangeAndFlags = (uint8_t)read_bit_stream(buff, bitPos, 8);
-    gPerfSettings.keyboardRange = (uint8_t)read_bit_stream(buff, bitPos, 8);
-    read_bit_stream(buff, bitPos, 8);
-    read_bit_stream(buff, bitPos, 8);
-    gGlobalSettings.perfMode    = read_bit_stream(buff, bitPos, 8);
-    LOG_DEBUG("  GlobalMode        = %u\n", gPerfSettings.globalMode);
-    LOG_DEBUG("  RangeAndFlags     = %u\n", gPerfSettings.rangeAndFlags);
-    LOG_DEBUG("  KeyboardRange     = %u\n", gPerfSettings.keyboardRange);
-    LOG_DEBUG("  PerfMode          = %u\n", gGlobalSettings.perfMode); // TODO - Does this belong in synth or perf?
-    read_bit_stream(buff, bitPos, 8);                                  // fixed 0x00
-    read_bit_stream(buff, bitPos, 8);                                  // fixed 0x00
-
-    for (i = 0; i < MAX_SLOTS; i++) {
-        read_clavia_string(buff, bitPos, gGlobalSettings.slot[i].patchName, sizeof(gGlobalSettings.slot[i].patchName));
-        uint8_t enabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
-        gGlobalSettings.slot[i].enabled       = enabled;
-        gPerfSettings.slot[i].keyboardEnabled = (uint8_t)read_bit_stream(buff, bitPos, 8);
-        gPerfSettings.slot[i].holdEnabled     = (uint8_t)read_bit_stream(buff, bitPos, 8);
-        gPerfSettings.slot[i].rangeLower      = (uint8_t)read_bit_stream(buff, bitPos, 8);
-        gPerfSettings.slot[i].rangeUpper      = (uint8_t)read_bit_stream(buff, bitPos, 8);
-        read_bit_stream(buff, bitPos, 8);
-        read_bit_stream(buff, bitPos, 8);
-        read_bit_stream(buff, bitPos, 8);
-        read_bit_stream(buff, bitPos, 8);  // 0x00
-        read_bit_stream(buff, bitPos, 8);  // 0x00
-        LOG_DEBUG("Slot %d:\n", i);
-        LOG_DEBUG("  Name              = '%s'\n", gGlobalSettings.slot[i].patchName);
-        LOG_DEBUG("  SlotEnabled       = %u\n", enabled);
-        LOG_DEBUG("  KeyboardEnabled   = %u\n", gPerfSettings.slot[i].keyboardEnabled);
-        LOG_DEBUG("  HoldEnabled       = %u\n", gPerfSettings.slot[i].holdEnabled);
-        LOG_DEBUG("  RangeLower        = %u\n", gPerfSettings.slot[i].rangeLower);
-        LOG_DEBUG("  RangeUpper        = %u\n", gPerfSettings.slot[i].rangeUpper);
-    }
-
-    exit(1); // TEMPORARY!!!!! Not sure we've ever actually seen one of these messages
-}
-
 static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
     uint32_t   bitPos    = 0;
     tModuleKey key       = {0};
@@ -595,11 +545,6 @@ static void parse_assigned_voices(uint8_t * buff, uint32_t * bitPos) {
     for (int i = 0; i < MAX_SLOTS; i++) {
         gAssignedVoices[i] = read_bit_stream(buff, bitPos, 8);  // TODO - might have to set target assigned voices to lower number, before attempting increase?
     }
-}
-
-static void parse_perf_mode_change(uint8_t * buff, uint32_t * bitPos) {
-    gGlobalSettings.perfMode = read_bit_stream(buff, bitPos, 8);
-    LOG_DEBUG("Got perf mode change: %u\n", gGlobalSettings.perfMode);  // TODO - check this one
 }
 
 static void parse_master_clock(uint8_t * buff, uint32_t * bitPos) {
@@ -918,14 +863,11 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
             LOG_DEBUG("Got assigned voices command — unexpected\n");
             return EXIT_SUCCESS;
 
-        case SUB_COMMAND_SET_PARAM_MODE:
-            parse_perf_mode_change(buff, bitPos);
-            return EXIT_SUCCESS;
-
-        case SUB_RESPONSE_PERF_HEADER:
-            LOG_DEBUG("Got perf header dump\n");
-            parse_perf_header(buff, bitPos);  // TODO - I don't think we've ever seen one of these. Seems to always be SUB_RESPONSE_PERFORMANCE_SETTINGS. Might want to remove
-            return EXIT_SUCCESS;
+        // SUB_COMMAND_SET_PARAM_MODE (0x3e, incoming) and SUB_RESPONSE_PERF_HEADER (0x11) parsers were
+        // removed 2026-07-26: hardware capture confirmed the device never sends either (perf-mode
+        // changes arrive via SUB_RESPONSE_PERF_PATCH_VERSIONS 0x1f, perf state via 0x29). Both sub-codes
+        // are still used on the SEND side (send_perf_mode_change / send_perf_header). If the device ever
+        // did send one it now falls through to the default unhandled-message log below.
 
         case SUB_RESPONSE_PERFORMANCE_SETTINGS:
             LOG_DEBUG("Got performance settings\n");
