@@ -60,7 +60,7 @@ static void on_bank_backup_folder_chosen(const char * path) {
     msg.bankBackupData.bank   = sPendingBackupBank;
     msg.bankBackupData.isPerf = sPendingBackupIsPerf;
     strncpy(msg.bankBackupData.destFolder, path, sizeof(msg.bankBackupData.destFolder) - 1);
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 // Confirm callback for the "which bank to back up" dropdown dialog opened by
@@ -87,7 +87,7 @@ static void on_synth_settings_backup_folder_chosen(const char * path) {
 
     msg.cmd = eMsgCmdBackupSynthSettings;
     strncpy(msg.settingsBackupData.destFolder, path, sizeof(msg.settingsBackupData.destFolder) - 1);
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 // Kicks off the find+parse of the latest backup file in the chosen folder — the actual confirm
@@ -101,7 +101,7 @@ static void on_synth_settings_restore_folder_chosen(const char * path) {
 
     msg.cmd = eMsgCmdPeekSynthSettingsRestore;
     strncpy(msg.synthSettingsRestoreData.srcFolder, path, sizeof(msg.synthSettingsRestoreData.srcFolder) - 1);
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 static void on_everything_backup_folder_chosen(const char * path) {
@@ -112,7 +112,7 @@ static void on_everything_backup_folder_chosen(const char * path) {
 
     msg.cmd = eMsgCmdBackupEverything;
     strncpy(msg.settingsBackupData.destFolder, path, sizeof(msg.settingsBackupData.destFolder) - 1);
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 static void on_everything_restore_folder_chosen(const char * path) {
@@ -123,7 +123,7 @@ static void on_everything_restore_folder_chosen(const char * path) {
 
     msg.cmd = eMsgCmdRestoreEverything;
     strncpy(msg.synthSettingsRestoreData.srcFolder, path, sizeof(msg.synthSettingsRestoreData.srcFolder) - 1);
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 static void on_restore_everything_confirmed(bool confirmed) {
@@ -144,7 +144,7 @@ static void on_bank_restore_folder_chosen(const char * path) {
     msg.bankRestoreData.destBank   = sPendingRestoreTargetBank;
     msg.bankRestoreData.isPerf     = sPendingRestoreIsPerf;
     strncpy(msg.bankRestoreData.srcFolder, path, sizeof(msg.bankRestoreData.srcFolder) - 1);
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 static void on_bank_restore_confirmed(bool confirmed, uint32_t targetBank1Indexed) {
@@ -202,7 +202,7 @@ static void on_store_bank_location_chosen(bool confirmed, uint32_t bank1Indexed,
     msg.bankLocationPerfData.bank     = bank1Indexed - 1;
     msg.bankLocationPerfData.location = location1Indexed - 1;
     msg.bankLocationPerfData.isPerf   = sPendingStoreIsPerf;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 // Domain for the pending Delete flow, set by file_menu_delete_patch_location()/
@@ -223,7 +223,7 @@ static void on_delete_bank_location_chosen(bool confirmed, uint32_t bank1Indexed
     msg.bankLocationPerfData.bank     = bank1Indexed - 1;
     msg.bankLocationPerfData.location = location1Indexed - 1;
     msg.bankLocationPerfData.isPerf   = sPendingDeleteIsPerf;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 // Domain for the pending Load flow, set by file_menu_load_patch_location()/
@@ -243,7 +243,7 @@ static void on_load_bank_location_chosen(bool confirmed, uint32_t bank1Indexed, 
     msg.bankLocationPerfData.bank     = bank1Indexed - 1;
     msg.bankLocationPerfData.location = location1Indexed - 1;
     msg.bankLocationPerfData.isPerf   = sPendingLoadIsPerf;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 // Builds the tBankBrowserItem array feeding open_bank_browser(), from the cached name tables (see
@@ -322,7 +322,7 @@ void file_menu_new_patch(void) {
     tMessageContent messageContent = {0};
     messageContent.cmd                = eMsgCmdNewPatch;
     messageContent.patchFileData.slot = gSlot;
-    msg_send(&gCommandQueue, &messageContent);
+    msg_send(&gToUsbThread, &messageContent);
     device_op_begin("New Patch...");
 
     wake_glfw();
