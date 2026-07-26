@@ -708,23 +708,27 @@ void read_file_into_memory_and_process(const char * filepath) {
                 msg_send(&gCommandQueue, &msg);
             }
         } else if (type == 1) {
-            if (gGlobalSettings.perfMode == 0) {
+            if (gCommsState == eCommsOnLine) {
+                // Online: hand the whole load to the USB thread as a single ordered command. It
+                // re-reads the file and does the mode switch + clear + parse_perf + device write all
+                // on its own thread, so the parse can't be clobbered by the patch-change-indication
+                // cascade the mode switch triggers (which state_handler only services BETWEEN
+                // messages, never mid-handler). Replaces the old "enqueue WriteModePerf, blind
+                // usleep(2s), parse on this thread, enqueue WritePerf" sequence, whose sleep was a
+                // crude barrier against exactly that cross-thread database race.
                 tMessageContent msg = {0};
-                msg.cmd                  = eMsgCmdWriteModePerf; // Really need to be in perf mode before loading a performance
+                msg.cmd = eMsgCmdLoadPerf;
+                COPY_STRING(msg.loadPerfData.srcFile, filepath);
                 msg_send(&gCommandQueue, &msg);
-                gGlobalSettings.perfMode = 1;                    // TODO - Ideally, we'd get an indication back or request state until perf mode = 1, so we could remove the big sleep below
-                usleep(2000000);                                 // TODO - currently, when we write new patches as part of a perf, it triggers a read of the patches. We need to be stable in perf mode in that case.
-            }
-            int i = 0;
+            } else {
+                // Offline: no device, so no mode switch and no cascade to race — parse straight into
+                // the database on this thread. Performance file — parse_perf clears all 4 slots and
+                // populates them; slot names come from the file itself so set_patch_name_from_filename
+                // is not called. Derive performance name from the filename (strip dir + .prf2).
+                for (int i = 0; i < MAX_SLOTS; i++) {
+                    clear_slot_data(i);
+                }
 
-            for (i = 0; i < MAX_SLOTS; i++) {
-                clear_slot_data(i);
-            }
-
-            // Performance file — parse_perf clears all 4 slots and populates them;
-            // slot names come from the file itself so set_patch_name_from_filename is not called.
-            // Derive performance name from the filename (strip directory and .prf2 extension).
-            {
                 const char * slash    = strrchr(filepath, '/');
                 const char * baseName = slash ? slash + 1 : filepath;
                 COPY_STRING(gGlobalSettings.perfName, baseName);
@@ -733,15 +737,8 @@ void read_file_into_memory_and_process(const char * filepath) {
                 if (dot) {
                     *dot = '\0';
                 }
-            }
-
-            gGlobalSettings.perfMode = 1;
-            parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
-
-            if (gCommsState == eCommsOnLine) {
-                tMessageContent msg = {0};
-                msg.cmd = eMsgCmdWritePerf;
-                msg_send(&gCommandQueue, &msg);
+                gGlobalSettings.perfMode = 1;
+                parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
             }
         }
     } else {
