@@ -1390,9 +1390,11 @@ static void render_envadsr_graph(tRectangle rectangle, tModule * module) {
 // cascaded onto the base 2-pole (12dB) response, which also naturally narrows the peak further
 // at higher slopes, matching real higher-order filter behaviour. Q itself uses the real 0.5..50
 // range from filter_resonanceStrMap (as an exponential approximation, not a table lookup). The
-// X axis is still Freq's raw knob value, treated as ~10 octaves of relative frequency (matching
-// its own real ~14Hz..21kHz exponential range) rather than a literal Hz-calibrated Bode plot -
-// the box is too small to be literal about that regardless of curve shape.
+// X axis is ~10 octaves of relative frequency (roughly matching Freq's own real ~14Hz..21kHz
+// exponential range) rather than a literal Hz-calibrated Bode plot - the box is too small to be
+// literal about that regardless of curve shape. The cutoff is inset into a band across the box
+// (not mapped edge-to-edge) so the resonance peak always keeps headroom either side - see the
+// cutoff calc below.
 static void render_fltclassic_response_graph(tRectangle rectangle, tModule * module) {
     // Freq (index 0), Res (index 3), dB/octave slope (index 4) - fixed positions for
     // moduleTypeFltClassic's entries in paramLocationList, see moduleResources.h.
@@ -1401,7 +1403,16 @@ static void render_fltclassic_response_graph(tRectangle rectangle, tModule * mod
     const uint32_t         slopeParamIndex = 4;
     uint32_t               slot            = module->key.slot;
     uint32_t               variation       = gPatchDescr[slot].activeVariation;
-    double                 cutoffX         = (double)module->param[variation][freqParamIndex].value / 127.0;
+    double                 cutoffKnob      = (double)module->param[variation][freqParamIndex].value / 127.0;
+
+    // Inset the cutoff's on-screen position into a band rather than mapping the knob edge-to-edge, so
+    // the resonance peak (and the passband/left flank below it) always keeps horizontal headroom. At
+    // min Freq the peak used to sit hard against the left edge with its lower half off-screen. This is
+    // a small horizontal zoom-out: the box now shows a slightly wider window than the knob's own
+    // ~14Hz..21kHz range so the curve never runs off either edge.
+    const double           kCutoffMinX     = 0.15; // min-Freq cutoff sits 15% in from the left edge
+    const double           kCutoffMaxX     = 0.90; // max-Freq cutoff sits 10% in from the right edge
+    double                 cutoffX         = kCutoffMinX + (cutoffKnob * (kCutoffMaxX - kCutoffMinX));
     double                 resNorm         = (double)module->param[variation][resParamIndex].value / 127.0;
     uint32_t               slopeIndex      = module->param[variation][slopeParamIndex].value; // 0=12dB, 1=18dB, 2=24dB
 
