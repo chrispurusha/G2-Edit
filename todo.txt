@@ -49,7 +49,16 @@ G2-Edit TODO (priority order)
       *ResultMessage + gLoadFailed) from globalVars.{c,h}. gBank*IsPerf/IsEverything stay (progress
       overlays); the everything-sweeps now reset IsEverything themselves. Drain refined: one response per
       frame, skipped while alert_dialog_active() (so alerts don't clobber), self-wakes if more queued.
-    * STILL OPEN: Step 1 (generalize msgQueue to a size-agnostic queue), Step 3 REMAINDER (the 4
+    * Step 1 DONE 2026-07-26 (built): msgQueue made payload-agnostic (flexible-array node + payloadSize
+      set at msg_init; msg_send/msg_receive take void*; no dependence on tMessageContent, so the
+      mechanism is SynthLib-liftable). Queues renamed to direction-based gToUsbThread / gToGuiThread.
+      Pure mechanism/naming change, no behaviour change.
+    * Step 5 DONE 2026-07-26 (built): queue mechanism moved to SynthLib/src/synthlibQueue.{h,c}; G2-Edit
+      msgQueue.h slimmed to app payload (tMessageContent + enums) + includes it; src/msgQueue.c deleted.
+      SUBMODULE CHANGE — commit in SynthLib + advance the pin (G2-Edit now, Z1/EmuUtility later). Xcode-16
+      synced folder auto-added synthlibQueue.c / auto-dropped msgQueue.c (no .pbxproj edit needed).
+    * STILL OPEN: Step 6 (adopt the queue in Z1/EmuUtility — they have no queue today; the commonalisation
+      payoff), Step 3 REMAINDER (the 4
       peek->confirm flows — store/delete/load/synth-restore peek — left on flags; they open bespoke
       confirm dialogs, low cleanup-to-risk), Step 5 (lift the generic queue into SynthLib), Step 6 (adopt
       in Z1/EmuUtility). Steps 5-6 are the commonalisation payoff. Also noted: the GUI thread could post

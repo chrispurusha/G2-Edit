@@ -21,6 +21,7 @@
 #define __MSG_QUEUE_H__
 
 #include "sysIncludes.h"
+#include "synthlibQueue.h" // generic queue mechanism: tMessageQueue / eRcv / msg_init / msg_send / ...
 
 typedef enum {
     eCommandInit,
@@ -28,11 +29,6 @@ typedef enum {
     eCommandStop,
     eCommandGetPatch
 } eCommand;
-
-typedef enum {
-    eRcvPoll,
-    eRcvWait
-} eRcv;
 
 // On the USB->UI queue (gToGuiThread) tMessageContent.cmd holds an eResponseType, NOT an eMsgCmd —
 // the gToUsbThread and gToGuiThread queues never cross, so their value spaces are independent.
@@ -321,39 +317,9 @@ typedef struct {
     };
 } tMessageContent;
 
-// Generic, payload-agnostic queue node/queue: the mechanism copies payloadSize opaque bytes and never
-// interprets them, so it doesn't depend on tMessageContent (or any app type) and can move to SynthLib
-// as-is. Each queue is fixed to one payload size, set at msg_init() — G2-Edit uses sizeof(tMessageContent)
-// for both the command (UI->USB) and response (USB->UI) queues. The payload is only ever byte-copied
-// in/out (msg_send/msg_receive), so alignment/aliasing is a non-issue.
-typedef struct _message {
-    struct _message * nextMessage;
-    uint8_t           payload[]; // flexible array member — payloadSize bytes follow the node
-} tMessage;
-
-typedef struct {
-    pthread_mutex_t mutex;       // Guards head/tail (msg_send()/msg_receive()) — separate from semMutex below
-    pthread_mutex_t semMutex;    // Guards semCount/semCond (msgqueue_sem_wait/trywait/send, msgQueue.c)
-    pthread_cond_t  semCond;
-    int             semCount;    // Tracks your semaphore state
-    size_t          payloadSize; // bytes copied per message, fixed at msg_init()
-    tMessage *      head;
-    tMessage *      tail;
-} tMessageQueue;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-// content buffers passed to msg_send/msg_receive must be at least payloadSize bytes (the size given
-// to msg_init). G2-Edit passes a tMessageContent for both queues.
-void msg_init(tMessageQueue * msgQueue, char * semName, size_t payloadSize);
-int msg_receive(tMessageQueue * msgQueue, eRcv rcv, void * content);
-void msg_send(tMessageQueue * msgQueue, const void * content);
-int msg_count(tMessageQueue * msgQueue);
-
-#ifdef __cplusplus
-}
-#endif
+// The generic queue mechanism (tMessageQueue / tMessage / eRcv / msg_init / msg_send / msg_receive /
+// msg_count) now lives in SynthLib (synthlibQueue.h) — it's payload-agnostic, so it carries this
+// app's tMessageContent for both queues (gToUsbThread / gToGuiThread) without depending on it. This
+// header defines only the app-specific message content above.
 
 #endif // __MSG_QUEUE_H__
