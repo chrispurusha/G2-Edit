@@ -53,8 +53,8 @@ extern tModuleDragging         gModuleDrag;
 extern tSelection              gSelection;
 extern tRubberBand             gRubberBand;
 extern tClipboard              gClipboard;
-extern tMessageQueue           gCommandQueue;
-extern tMessageQueue           gResponseQueue; // reverse: USB thread -> UI thread (poll-drained in the render loop)
+extern tMessageQueue           gToUsbThread; // GUI thread -> USB thread (commands); USB thread blocks on it
+extern tMessageQueue           gToGuiThread; // USB thread -> GUI thread (results); poll-drained in the render loop
 
 // Busy state for in-flight whole-slot device ops (load/save/new patch). UI-thread only: set when the
 // op is enqueued (device_op_begin), cleared when its completion response is drained (device_op_end).

@@ -457,7 +457,7 @@ static void recreate_module(tUndoDeletePayload * p, tClipboardModule * cm) {
     }
 
     COPY_STRING(msg.moduleData.name, cm->name);
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 
     write_module(key, &module);
 
@@ -495,7 +495,7 @@ static void recreate_module(tUndoDeletePayload * p, tClipboardModule * cm) {
                 nmsg.paramLabelData.moduleKey  = key;
                 nmsg.paramLabelData.paramIndex = pi;
                 COPY_STRING(nmsg.paramLabelData.name, cm->paramName[pi][l]);
-                msg_send(&gCommandQueue, &nmsg);
+                msg_send(&gToUsbThread, &nmsg);
             }
         }
     }
@@ -536,7 +536,7 @@ static void apply_delete_undo(tUndoDeletePayload * p) {
         msg.cableData.linkType             = ce->linkType;
         msg.cableData.moduleToIndex        = ce->toIndex;
         msg.cableData.connectorToIoIndex   = ce->toIoCount;
-        msg_send(&gCommandQueue, &msg);
+        msg_send(&gToUsbThread, &msg);
     }
 
     update_module_up_rates();
@@ -659,12 +659,12 @@ static void apply_knob_entry(uint32_t slot, uint32_t idx, const tKnob * k) {
         };
         msg.knobAssignData.paramIndex = k->paramIndex;
         msg.knobAssignData.knobIndex  = idx;
-        msg_send(&gCommandQueue, &msg);
+        msg_send(&gToUsbThread, &msg);
     } else {
         msg.cmd                        = eMsgCmdDeassignKnob;
         msg.slot                       = slot;
         msg.knobDeassignData.knobIndex = idx;
-        msg_send(&gCommandQueue, &msg);
+        msg_send(&gToUsbThread, &msg);
     }
 }
 
@@ -713,7 +713,7 @@ static void apply_module_name(tUndoModuleNamePayload * p, bool isUndo) {
     msg.slot                      = p->key.slot;
     msg.moduleLabelData.moduleKey = p->key;
     COPY_STRING(msg.moduleLabelData.name, name);
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
     synthlib_request_redraw();
 }
 
@@ -753,7 +753,7 @@ static void apply_param_name(tUndoParamNamePayload * p, bool isUndo) {
     msg.paramLabelData.moduleKey  = p->key;
     msg.paramLabelData.paramIndex = pi;
     COPY_STRING(msg.paramLabelData.name, set ? name : "");
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
     synthlib_request_redraw();
 }
 
@@ -791,7 +791,7 @@ static void apply_patch_descr(tUndoPatchDescrPayload * p, bool isUndo) {
     tMessageContent msg   = {0};
     msg.cmd  = eMsgCmdWritePatchDescr;
     msg.slot = p->slot;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
     synthlib_request_redraw();
 }
 
@@ -845,7 +845,7 @@ static void apply_patch_name(tUndoPatchNamePayload * p, bool isUndo) {
     msg.cmd  = eMsgCmdSetPatchName;
     msg.slot = p->slot;
     COPY_STRING(msg.patchName.name, name);
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
     synthlib_request_redraw();
 }
 
@@ -870,7 +870,7 @@ static void apply_perf_name(tUndoPerfNamePayload * p, bool isUndo) {
 
     COPY_STRING(gGlobalSettings.perfName, name);
     msg.cmd = eMsgCmdWritePerfName;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
     synthlib_request_redraw();
 }
 

@@ -137,7 +137,7 @@ void delete_module_and_cables(tModuleKey key) {
         msg.cableData.moduleToIndex        = cable->key.moduleToIndex;
         msg.cableData.connectorToIoIndex   = cable->key.connectorToIoCount;
         msg.cableData.linkType             = cable->key.linkType;
-        msg_send(&gCommandQueue, &msg);
+        msg_send(&gToUsbThread, &msg);
         delete_cable(cable->key);
     }
 
@@ -147,7 +147,7 @@ void delete_module_and_cables(tModuleKey key) {
     msg.cmd                  = eMsgCmdDeleteModule;
     msg.slot                 = slot;
     msg.moduleData.moduleKey = key;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
     delete_module(key);
 }
 
@@ -390,7 +390,7 @@ void paste_snapshot(uint32_t slot, uint32_t location,
         }
 
         COPY_STRING(msg.moduleData.name, cm->name);
-        msg_send(&gCommandQueue, &msg);
+        msg_send(&gToUsbThread, &msg);
 
         write_module(module.key, &module);
 
@@ -423,7 +423,7 @@ void paste_snapshot(uint32_t slot, uint32_t location,
                         nmsg.paramLabelData.moduleKey  = module.key;
                         nmsg.paramLabelData.paramIndex = p;
                         COPY_STRING(nmsg.paramLabelData.name, cm->paramName[p][l]);
-                        msg_send(&gCommandQueue, &nmsg);
+                        msg_send(&gToUsbThread, &nmsg);
                     }
                 }
             }
@@ -466,7 +466,7 @@ void paste_snapshot(uint32_t slot, uint32_t location,
         msg.cableData.linkType             = cc->linkType;
         msg.cableData.moduleToIndex        = newTo;
         msg.cableData.connectorToIoIndex   = cc->toIoCount;
-        msg_send(&gCommandQueue, &msg);
+        msg_send(&gToUsbThread, &msg);
     }
 
     update_module_up_rates();

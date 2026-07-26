@@ -137,7 +137,7 @@ bool handle_patch_notes_mouse(tCoord coord, tMouseButton mouseButton) {
 
             msg.cmd                                    = eMsgCmdWritePatch;
             msg.slot                                   = gPatchNotesEdit.slot;
-            msg_send(&gCommandQueue, &msg);
+            msg_send(&gToUsbThread, &msg);
         } else if (wasDiscardPressed && within_rectangle(coord, gPatchNotesDiscardRect)) {
             origLen                   = strlen(gPatchNotesEdit.original);
             memset(gPatchNotesEdit.buffer, 0, sizeof(gPatchNotesEdit.buffer));

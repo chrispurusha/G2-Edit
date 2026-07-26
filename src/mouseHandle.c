@@ -222,7 +222,7 @@ static void send_master_clock_bpm(uint32_t bpm) {
 
     messageContent.cmd                    = eMsgCmdSetMasterClockBPM;
     messageContent.masterClockBPMData.bpm = bpm;
-    msg_send(&gCommandQueue, &messageContent);
+    msg_send(&gToUsbThread, &messageContent);
 }
 
 void start_cursor_drag(void) {
@@ -730,7 +730,7 @@ bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {
                 messageContent.cableData.connectorToIoIndex   = cableKey.connectorToIoCount;
                 messageContent.cableData.linkType             = cableKey.linkType;
                 messageContent.cableData.colour               = cable.colour;
-                msg_send(&gCommandQueue, &messageContent);
+                msg_send(&gToUsbThread, &messageContent);
 
                 break;
             }
@@ -1227,7 +1227,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         //gPatchDescr[slot].voiceCount = value + 1; // Note G2 won't let me set less than a value of 1, can't set to zero for zero based
         //messageContent.cmd           = eMsgCmdWritePatchDescr;
         // messageContent.slot          = slot;
-        // msg_send(&gCommandQueue, &messageContent);
+        // msg_send(&gToUsbThread, &messageContent);
     } else if (gTempoDragging == true) {
         value = calc_tempo_drag_value(xCoord, yCoord, x, y, gTopbarControls[topbarTempoDialId].rectangle);
 
@@ -1449,7 +1449,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                                 messageContent.paramMorphData.value                                         = module->param[variation][gParamDragging.param].morphRange[gMorphGroupFocus];
                                 messageContent.paramMorphData.negative                                      = 0;
                                 messageContent.paramMorphData.variation                                     = variation;
-                                msg_send(&gCommandQueue, &messageContent);
+                                msg_send(&gToUsbThread, &messageContent);
                             }
                         }
                     }
@@ -1794,7 +1794,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 tMessageContent msg     = {0};
                 msg.cmd                                    = eMsgCmdWritePatch;
                 msg.slot                                   = gPatchNotesEdit.slot;
-                msg_send(&gCommandQueue, &msg);
+                msg_send(&gToUsbThread, &msg);
             } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
                 if (len < PATCH_NOTES_SIZE) {
                     memmove(&gPatchNotesEdit.buffer[cursorPos + 1],
@@ -1866,7 +1866,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 messageContent.cmd    = eMsgCmdSetPatchName;
                 messageContent.slot   = pnSlot;
                 COPY_STRING(messageContent.patchName.name, gGlobalSettings.slot[pnSlot].patchName);
-                msg_send(&gCommandQueue, &messageContent);
+                msg_send(&gToUsbThread, &messageContent);
                 undo_push_patch_name(pnSlot, oldPatchName, gPatchNameEdit.buffer);
             } else if (key == GLFW_KEY_ESCAPE) {
                 // Cancel — discard edits
@@ -1917,7 +1917,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                     msg.slot                      = gModuleNameEdit.moduleKey.slot;
                     msg.moduleLabelData.moduleKey = gModuleNameEdit.moduleKey;
                     COPY_STRING(msg.moduleLabelData.name, gModuleNameEdit.buffer);
-                    msg_send(&gCommandQueue, &msg);
+                    msg_send(&gToUsbThread, &msg);
                     undo_push_module_name(gModuleNameEdit.moduleKey, oldName, gModuleNameEdit.buffer);
                 }
             } else if (key == GLFW_KEY_ESCAPE) {
@@ -1975,7 +1975,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                     msg.paramLabelData.moduleKey  = gParamNameEdit.moduleKey;
                     msg.paramLabelData.paramIndex = pi;
                     COPY_STRING(msg.paramLabelData.name, gParamNameEdit.buffer);
-                    msg_send(&gCommandQueue, &msg);
+                    msg_send(&gToUsbThread, &msg);
                     undo_push_param_name(gParamNameEdit.moduleKey, pi,
                                          oldName, oldSet,
                                          gParamNameEdit.buffer, true);
@@ -2059,7 +2059,7 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
                 COPY_STRING(gGlobalSettings.perfName, gPerfNameEdit.buffer);
                 tMessageContent messageContent = {0};
                 messageContent.cmd   = eMsgCmdWritePerfName;
-                msg_send(&gCommandQueue, &messageContent);
+                msg_send(&gToUsbThread, &messageContent);
                 undo_push_perf_name(oldPerfName, gPerfNameEdit.buffer);
             } else if (key == GLFW_KEY_ESCAPE) {
                 gPerfNameEdit.active = false;
