@@ -661,7 +661,7 @@ void read_file_into_memory_and_process(const char * filepath) {
         msg.cmd                = eMsgCmdLoadFile;
         msg.patchFileData.slot = slot;
         COPY_STRING(msg.patchFileData.filePath, filepath);
-        msg_send(&gCommandQueue, &msg);
+        msg_send(&gToUsbThread, &msg);
         device_op_begin("Loading...");
         return;
     }
@@ -936,7 +936,7 @@ static void on_file_saved(const char * path) {
                 tMessageContent msg = {0};
                 msg.cmd = eMsgCmdSavePerfFile;
                 COPY_STRING(msg.patchFileData.filePath, path);
-                msg_send(&gCommandQueue, &msg);
+                msg_send(&gToUsbThread, &msg);
                 device_op_begin("Saving...");
             } else {
                 write_perf_to_file(path);
@@ -949,7 +949,7 @@ static void on_file_saved(const char * path) {
             msg.cmd                = eMsgCmdSavePatchFile;
             msg.patchFileData.slot = slot;
             COPY_STRING(msg.patchFileData.filePath, path);
-            msg_send(&gCommandQueue, &msg);
+            msg_send(&gToUsbThread, &msg);
             device_op_begin("Saving...");
             set_patch_name_from_filename(slot, path);
         } else {
@@ -976,7 +976,7 @@ static void on_store_confirmed(bool confirmed) {
     msg.bankLocationPerfData.bank     = gStorePeekBank;
     msg.bankLocationPerfData.location = gStorePeekLocation;
     msg.bankLocationPerfData.isPerf   = gStorePeekIsPerf;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 // Same shape as on_store_confirmed above, but for Delete — target comes from
@@ -991,7 +991,7 @@ static void on_delete_confirmed(bool confirmed) {
     msg.bankLocationPerfData.bank     = gDeletePeekBank;
     msg.bankLocationPerfData.location = gDeletePeekLocation;
     msg.bankLocationPerfData.isPerf   = gDeletePeekIsPerf;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 // Same shape as on_store_confirmed/on_delete_confirmed above, but for Load — target comes from
@@ -1006,7 +1006,7 @@ static void on_load_confirmed(bool confirmed) {
     msg.bankLocationPerfData.bank     = gLoadPeekBank;
     msg.bankLocationPerfData.location = gLoadPeekLocation;
     msg.bankLocationPerfData.isPerf   = gLoadPeekIsPerf;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 // Fires once the user has confirmed past the file-found warning built from a
@@ -1020,11 +1020,11 @@ static void on_synth_restore_confirmed(bool confirmed) {
         return;
     }
     msg.cmd = eMsgCmdApplySynthSettingsRestore;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 // Busy state for in-flight whole-slot device ops (load/save/new patch). Set when the op is enqueued,
-// cleared when its completion response is drained off gResponseQueue. See reverse-queue-design.md.
+// cleared when its completion response is drained off gToGuiThread. See reverse-queue-design.md.
 static double sDeviceOpStartTime = 0.0; // glfwGetTime() of the oldest in-flight op — for the safety timeout
 
 void device_op_begin(const char * label) {
@@ -1078,7 +1078,7 @@ static void check_action_flags(void) {
     if (!alert_dialog_active()) {
         tMessageContent resp = {0};
 
-        if (msg_receive(&gResponseQueue, eRcvPoll, &resp) == EXIT_SUCCESS) {
+        if (msg_receive(&gToGuiThread, eRcvPoll, &resp) == EXIT_SUCCESS) {
             const char * slash          = strrchr(resp.fileResultData.path, '/');
             const char * baseName       = (slash != NULL) ? slash + 1 : resp.fileResultData.path;
             char         alertMsg[1100] = {0};
@@ -1122,7 +1122,7 @@ static void check_action_flags(void) {
                     break;
             }
 
-            if (msg_count(&gResponseQueue) > 0) {
+            if (msg_count(&gToGuiThread) > 0) {
                 wake_glfw(); // more queued — come back next frame rather than blocking in glfwWaitEvents
             }
         }

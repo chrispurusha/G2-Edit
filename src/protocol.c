@@ -1571,7 +1571,7 @@ void send_module_move_msg(tModule * module) {
     messageContent.moduleData.moduleKey = module->key;
     messageContent.moduleData.row       = module->row;
     messageContent.moduleData.column    = module->column;
-    msg_send(&gCommandQueue, &messageContent);
+    msg_send(&gToUsbThread, &messageContent);
 }
 
 void send_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, uint32_t variation, uint32_t value) {
@@ -1583,7 +1583,7 @@ void send_param_value(uint32_t slot, tModuleKey moduleKey, uint32_t paramIdx, ui
     msg.paramData.param     = paramIdx;
     msg.paramData.variation = variation;
     msg.paramData.value     = value;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 void send_mode_value(uint32_t slot, tModuleKey moduleKey, uint32_t modeIdx, uint32_t value) {
@@ -1594,7 +1594,7 @@ void send_mode_value(uint32_t slot, tModuleKey moduleKey, uint32_t modeIdx, uint
     msg.modeData.moduleKey = moduleKey;
     msg.modeData.mode      = modeIdx;
     msg.modeData.value     = value;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 // SUB_COMMAND_SET_MUTATION_LOCK (0x90) - see its comment in defs.h. Confirmed on real hardware.
@@ -1605,7 +1605,7 @@ void send_mutation_lock_value(uint32_t slot, tModuleKey moduleKey, uint32_t lock
     msg.slot                             = slot;
     msg.moduleMutationLockData.moduleKey = moduleKey;
     msg.moduleMutationLockData.locked    = locked;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 void send_custom_data_value(uint32_t slot, tModuleKey moduleKey) {
@@ -1636,7 +1636,7 @@ void send_custom_data_value(uint32_t slot, tModuleKey moduleKey) {
         paramIdx++;
     }
 
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 void update_module_up_rates(void) {
@@ -1704,7 +1704,7 @@ void update_module_up_rates(void) {
             messageContent.slot                 = slot;
             messageContent.moduleData.moduleKey = module->key;
             messageContent.moduleData.upRate    = module->upRate;
-            msg_send(&gCommandQueue, &messageContent);
+            msg_send(&gToUsbThread, &messageContent);
 
             // Retroactively recolour any cable already attached to one of this module's OUTPUTS,
             // matching the decompiled original editor's CPatchData::GenerateBandwidthChangeMolecules()
@@ -1746,7 +1746,7 @@ void update_module_up_rates(void) {
                         cableMsg.cableData.connectorToIoIndex   = cable->key.connectorToIoCount;
                         cableMsg.cableData.linkType             = cable->key.linkType;
                         cableMsg.cableData.colour               = (uint32_t)newColour;
-                        msg_send(&gCommandQueue, &cableMsg);
+                        msg_send(&gToUsbThread, &cableMsg);
                     }
                 }
             }

@@ -3684,7 +3684,7 @@ static void post_file_result_response(uint32_t responseType, int32_t result, con
     if (path != NULL) {
         COPY_STRING(rsp.fileResultData.path, path);
     }
-    msg_send(&gResponseQueue, &rsp);
+    msg_send(&gToGuiThread, &rsp);
     call_wake_glfw();
 }
 
@@ -3702,7 +3702,7 @@ static void post_alert_response(const char * title, const char * message) {
     if (message != NULL) {
         COPY_STRING(rsp.alertData.message, message);
     }
-    msg_send(&gResponseQueue, &rsp);
+    msg_send(&gToGuiThread, &rsp);
     call_wake_glfw();
 }
 
@@ -4186,7 +4186,7 @@ static void state_handler(void) {
     }
 
     // Command from UI thread
-    if (msg_receive(&gCommandQueue, eRcvPoll, &messageContent) == EXIT_SUCCESS) {
+    if (msg_receive(&gToUsbThread, eRcvPoll, &messageContent) == EXIT_SUCCESS) {
         send_write_data(&messageContent);
 
         return;
@@ -4229,8 +4229,8 @@ static int usb_comms_init_signals(void) {
 
 static void * usb_thread_loop(void * arg) {
     usb_comms_init_signals();
-    msg_init(&gCommandQueue, "command");
-    msg_init(&gResponseQueue, "response"); // reverse: USB thread -> UI thread (drained in the render loop)
+    msg_init(&gToUsbThread, "toUsbThread", sizeof(tMessageContent));
+    msg_init(&gToGuiThread, "toGuiThread", sizeof(tMessageContent)); // reverse: USB thread -> UI thread (drained in the render loop)
     usb_log_open();
 
     if (libusb_init(&libUsbCtx) != LIBUSB_SUCCESS) {

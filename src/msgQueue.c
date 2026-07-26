@@ -60,7 +60,7 @@ void msgqueue_sem_send(tMessageQueue * queue) {
     pthread_mutex_unlock(&queue->semMutex);
 }
 
-void msg_init(tMessageQueue * msgQueue, char * semName) {
+void msg_init(tMessageQueue * msgQueue, char * semName, size_t payloadSize) {
     pthread_mutexattr_t attr = {0};
 
     pthread_mutexattr_init(&attr);
@@ -68,14 +68,15 @@ void msg_init(tMessageQueue * msgQueue, char * semName) {
     pthread_mutex_init(&msgQueue->mutex, &attr);
     pthread_mutex_init(&msgQueue->semMutex, &attr);
     pthread_cond_init(&msgQueue->semCond, NULL);
-    msgQueue->semCount = 0;
+    msgQueue->semCount    = 0;
     pthread_mutexattr_destroy(&attr);
 
-    msgQueue->head     = NULL;
-    msgQueue->tail     = NULL;
+    msgQueue->payloadSize = payloadSize;
+    msgQueue->head        = NULL;
+    msgQueue->tail        = NULL;
 }
 
-int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageContent) {
+int msg_receive(tMessageQueue * msgQueue, eRcv rcv, void * content) {
     int        retVal      = EXIT_FAILURE;
     tMessage * oldMsgQueue = NULL;
     bool       proceed     = true;
@@ -85,8 +86,8 @@ int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageCon
         return retVal;
     }
 
-    if (messageContent == NULL) {
-        LOG_DEBUG("messageContent==NULL\n");
+    if (content == NULL) {
+        LOG_DEBUG("content==NULL\n");
         return retVal;
     }
 
@@ -110,7 +111,7 @@ int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageCon
         pthread_mutex_lock(&msgQueue->mutex);
 
         if (msgQueue->head != NULL) {
-            memcpy(messageContent, &(msgQueue->head->messageContent), sizeof(*messageContent));
+            memcpy(content, msgQueue->head->payload, msgQueue->payloadSize);
             oldMsgQueue    = msgQueue->head;
             msgQueue->head = msgQueue->head->nextMessage;
 
@@ -122,25 +123,25 @@ int msg_receive(tMessageQueue * msgQueue, eRcv rcv, tMessageContent * messageCon
         pthread_mutex_unlock(&msgQueue->mutex);
 
         if (oldMsgQueue != NULL) {
-            memset(oldMsgQueue, 0, sizeof(*oldMsgQueue));
+            memset(oldMsgQueue, 0, sizeof(tMessage) + msgQueue->payloadSize);
             free(oldMsgQueue);
         }
     }
     return retVal;
 }
 
-void msg_send(tMessageQueue * msgQueue, tMessageContent * messageContent) {
+void msg_send(tMessageQueue * msgQueue, const void * content) {
     tMessage * message = NULL;
 
     if (msgQueue == NULL) {
         LOG_DEBUG("msgQueue==NULL\n");
         return;
     }
-    message = malloc(sizeof(tMessage));
+    message = malloc(sizeof(tMessage) + msgQueue->payloadSize);
 
     if (message != NULL) {
-        memset(message, 0, sizeof(tMessage));
-        memcpy(&(message->messageContent), messageContent, sizeof(message->messageContent));
+        memset(message, 0, sizeof(tMessage) + msgQueue->payloadSize);
+        memcpy(message->payload, content, msgQueue->payloadSize);
 
         pthread_mutex_lock(&msgQueue->mutex);
 

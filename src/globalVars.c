@@ -46,8 +46,8 @@ tModuleDragging         gModuleDrag                                             
 tSelection              gSelection                                                                   = {0};
 tRubberBand             gRubberBand                                                                  = {0};
 tClipboard              gClipboard                                                                   = {0};
-tMessageQueue           gCommandQueue                                                                = {0};
-tMessageQueue           gResponseQueue                                                               = {0};
+tMessageQueue           gToUsbThread                                                                 = {0};
+tMessageQueue           gToGuiThread                                                                 = {0};
 int                     gDeviceOpInProgress                                                          = 0;
 char                    gDeviceOpLabel[32]                                                           = {0};
 uint32_t                gMorphGroupFocus                                                             = 0;

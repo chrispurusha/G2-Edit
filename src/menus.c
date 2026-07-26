@@ -57,7 +57,7 @@ void send_synth_settings_msg(void) {
     tMessageContent msg = {0};
 
     msg.cmd = eMsgCmdWriteSynthSettings;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 static void action_setting_u8(int index) {
@@ -74,7 +74,7 @@ void send_perf_settings_msg(void) {
     tMessageContent msg = {0};
 
     msg.cmd = eMsgCmdWritePerfSettings;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 void send_master_clock_run(uint32_t running) {
@@ -82,7 +82,7 @@ void send_master_clock_run(uint32_t running) {
 
     msg.cmd                        = eMsgCmdSetMasterClockRun;
     msg.masterClockRunData.running = running;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 static void action_perf_setting_u8(int index) {
@@ -101,7 +101,7 @@ static void send_patch_setting_param(uint32_t slot, uint32_t moduleIndex, uint32
     msg.paramData.param     = paramIndex;
     msg.paramData.value     = value;
     msg.paramData.variation = 0;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 }
 
 static void action_patch_setting_u8(int index) {
@@ -139,7 +139,7 @@ static void send_patch_descr_update(uint32_t slot) {
 
     messageContent.cmd  = eMsgCmdWritePatchDescr;
     messageContent.slot = slot;
-    msg_send(&gCommandQueue, &messageContent);
+    msg_send(&gToUsbThread, &messageContent);
 }
 
 static void action_set_patch_type(int index) {
@@ -209,7 +209,7 @@ static void action_copy_variation(int index) {
     msg.slot                            = slot;
     msg.copyVariationData.fromVariation = sourceVariation;
     msg.copyVariationData.toVariation   = targetVariation;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 
     gContextMenu.active                 = false;
     synthlib_request_redraw();
@@ -283,7 +283,7 @@ static void menu_action_set_cable_colour(int index) {
             messageContent.cableData.connectorToIoIndex   = cable->key.connectorToIoCount;
             messageContent.cableData.linkType             = cable->key.linkType;
             messageContent.cableData.colour               = newColour;
-            msg_send(&gCommandQueue, &messageContent);
+            msg_send(&gToUsbThread, &messageContent);
         }
     }
 
@@ -350,7 +350,7 @@ static void menu_action_delete_cable(int index) {
                 messageContent.cableData.connectorToIoIndex   = cable->key.connectorToIoCount;
                 messageContent.cableData.linkType             = cable->key.linkType;
 
-                msg_send(&gCommandQueue, &messageContent);
+                msg_send(&gToUsbThread, &messageContent);
 
                 delete_cable(cable->key);
             }
@@ -463,7 +463,7 @@ static void action_set_module_colour(int index) {
     messageContent.moduleColourData.moduleKey = module->key;
     messageContent.moduleColourData.colour    = module->colour;
 
-    msg_send(&gCommandQueue, &messageContent);
+    msg_send(&gToUsbThread, &messageContent);
 }
 
 static void action_rename_morph_label(int index) {
@@ -671,7 +671,7 @@ static void menu_action_create(int index) {
 
             COPY_STRING(messageContent.moduleData.name, module.name);
 
-            msg_send(&gCommandQueue, &messageContent);
+            msg_send(&gToUsbThread, &messageContent);
 
             write_module(module.key, &module);
 
@@ -734,7 +734,7 @@ static void action_assign_knob(int index) {
         msg.cmd                                    = eMsgCmdDeassignKnob;
         msg.slot                                   = slot;
         msg.knobDeassignData.knobIndex             = targetKnob;
-        msg_send(&gCommandQueue, &msg);
+        msg_send(&gToUsbThread, &msg);
         memset(&msg, 0, sizeof(msg));
     }
 
@@ -743,7 +743,7 @@ static void action_assign_knob(int index) {
         msg.cmd                                      = eMsgCmdDeassignKnob;
         msg.slot                                     = slot;
         msg.knobDeassignData.knobIndex               = (uint32_t)existingKnob;
-        msg_send(&gCommandQueue, &msg);
+        msg_send(&gToUsbThread, &msg);
         memset(&msg, 0, sizeof(msg));
     }
     gKnobArray[slot].knob[targetKnob].assigned    = true;
@@ -757,7 +757,7 @@ static void action_assign_knob(int index) {
     msg.knobAssignData.moduleKey                  = gMenuContext.moduleKey;
     msg.knobAssignData.paramIndex                 = paramIndex;
     msg.knobAssignData.knobIndex                  = targetKnob;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 
     tKnob targetAfter   = gKnobArray[slot].knob[targetKnob];
     tKnob existingAfter = hasSecond ? gKnobArray[slot].knob[existingKnob] : (tKnob){
@@ -787,7 +787,7 @@ static void action_deassign_knob(int index) {
         msg.cmd                                   = eMsgCmdDeassignKnob;
         msg.slot                                  = slot;
         msg.knobDeassignData.knobIndex            = (uint32_t)knobIndex;
-        msg_send(&gCommandQueue, &msg);
+        msg_send(&gToUsbThread, &msg);
         tKnob after  = gKnobArray[slot].knob[knobIndex];
         undo_push_knob(slot, (uint32_t)knobIndex, &before, &after, -1, NULL, NULL);
     }
@@ -813,7 +813,7 @@ static void action_assign_global_knob(int index) {
         gGlobalKnobArray[targetKnob].assigned = false;
         msg.cmd                               = eMsgCmdDeassignGlobalKnob;
         msg.globalKnobDeassignData.knobIndex  = targetKnob;
-        msg_send(&gCommandQueue, &msg);
+        msg_send(&gToUsbThread, &msg);
         memset(&msg, 0, sizeof(msg));
     }
 
@@ -821,7 +821,7 @@ static void action_assign_global_knob(int index) {
         gGlobalKnobArray[existingKnob].assigned = false;
         msg.cmd                                 = eMsgCmdDeassignGlobalKnob;
         msg.globalKnobDeassignData.knobIndex    = (uint32_t)existingKnob;
-        msg_send(&gCommandQueue, &msg);
+        msg_send(&gToUsbThread, &msg);
         memset(&msg, 0, sizeof(msg));
     }
     gGlobalKnobArray[targetKnob].assigned    = true;
@@ -837,7 +837,7 @@ static void action_assign_global_knob(int index) {
     msg.globalKnobAssignData.moduleIndex     = moduleIndex;
     msg.globalKnobAssignData.paramIndex      = paramIndex;
     msg.globalKnobAssignData.knobIndex       = targetKnob;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 
     gContextMenu.active                      = false;
     synthlib_request_redraw();
@@ -855,7 +855,7 @@ static void action_deassign_global_knob(int index) {
         gGlobalKnobArray[knobIndex].assigned = false;
         msg.cmd                              = eMsgCmdDeassignGlobalKnob;
         msg.globalKnobDeassignData.knobIndex = (uint32_t)knobIndex;
-        msg_send(&gCommandQueue, &msg);
+        msg_send(&gToUsbThread, &msg);
     }
     gContextMenu.active = false;
     synthlib_request_redraw();
@@ -924,7 +924,7 @@ static void action_assign_midi_cc(int index) {
         msg.cmd                       = eMsgCmdDeassignMidiCC;
         msg.slot                      = slot;
         msg.midiCCDeassignData.midiCC = targetCC;
-        msg_send(&gCommandQueue, &msg);
+        msg_send(&gToUsbThread, &msg);
         memset(&msg, 0, sizeof(msg));
     }
     paramEntry                      = find_controller_for_param(slot, location, moduleIndex, paramIndex);
@@ -948,7 +948,7 @@ static void action_assign_midi_cc(int index) {
     msg.midiCCAssignData.moduleKey  = gMenuContext.moduleKey;
     msg.midiCCAssignData.paramIndex = paramIndex;
     msg.midiCCAssignData.midiCC     = targetCC;
-    msg_send(&gCommandQueue, &msg);
+    msg_send(&gToUsbThread, &msg);
 
     gContextMenu.active             = false;
     synthlib_request_redraw();
@@ -968,7 +968,7 @@ static void action_deassign_midi_cc(int index) {
         msg.cmd                       = eMsgCmdDeassignMidiCC;
         msg.slot                      = slot;
         msg.midiCCDeassignData.midiCC = cc;
-        msg_send(&gCommandQueue, &msg);
+        msg_send(&gToUsbThread, &msg);
     }
     gContextMenu.active = false;
     synthlib_request_redraw();

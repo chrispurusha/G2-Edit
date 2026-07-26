@@ -89,7 +89,7 @@ static void handle_button(tTopbarControlId controlId) {
             messageContent.cmd                     = eMsgCmdSelectVariation;
             messageContent.slot                    = slot;
             messageContent.variationData.variation = variation;
-            msg_send(&gCommandQueue, &messageContent);
+            msg_send(&gToUsbThread, &messageContent);
 
             break;
         }
@@ -106,7 +106,7 @@ static void handle_button(tTopbarControlId controlId) {
             messageContent.cmd           = eMsgCmdSelectSlot;
             messageContent.slot          = slot;
             messageContent.slotData.slot = slot;
-            msg_send(&gCommandQueue, &messageContent);
+            msg_send(&gToUsbThread, &messageContent);
 
             set_exclusive_button_highlight(topbarSlotAId, topbarSlotDId, controlId);
             set_exclusive_button_highlight(topbarVariation1Id, topbarVariationInitId,
@@ -228,7 +228,7 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
                 synthlib_request_redraw();
                 messageContent.cmd  = eMsgCmdWritePatchDescr;
                 messageContent.slot = slot;
-                msg_send(&gCommandQueue, &messageContent);
+                msg_send(&gToUsbThread, &messageContent);
                 found               = true;
                 break;
             }
@@ -272,7 +272,7 @@ bool handle_topbar_left_up(tCoord coord, uint32_t slot) {
                 messageContent.cmd       = eMsgCmdWriteModePatch;
                 gGlobalSettings.perfMode = 0;
             }
-            msg_send(&gCommandQueue, &messageContent);
+            msg_send(&gToUsbThread, &messageContent);
             found = true;
         }
     }

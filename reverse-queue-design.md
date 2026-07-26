@@ -62,7 +62,13 @@ and swallows canvas input while set.
   identical. App-specific payload types stay per-app; only the mechanism is shared.
 
 ## Migration plan (each step builds & ships)
-1. Generalize `msgQueue` to a size-agnostic queue in place (forward queue keeps working).
+1. **[DONE 2026-07-26]** Generalize `msgQueue` to a size-agnostic queue in place (both queues
+   keep working). The node is now a flexible-array payload (`tMessage { next; uint8_t payload[] }`);
+   `tMessageQueue` carries a `payloadSize` set at `msg_init(q, name, size)`; `msg_send`/`msg_receive`
+   take `void*`/`const void*` and byte-copy `payloadSize` bytes (no dependence on `tMessageContent`,
+   so the mechanism is SynthLib-liftable as-is). Callers pass a `tMessageContent` (implicit `→ void*`).
+   Also renamed the queues to direction-based names: `gCommandQueue → gToUsbThread`,
+   `gResponseQueue → gToGuiThread` (owner's suggestion — transport-agnostic, ready for SynthLib).
 2. **[DONE 2026-07-26]** Add `gResponseQueue` + poll-drain; migrate ONE op as proof — file
    **load** result → surface failure via `show_alert` (closes the silent-failure gap).
 3. **[DONE 2026-07-26]** Migrate the "op finished → alert" result-blocks onto the queue
