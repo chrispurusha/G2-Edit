@@ -34,6 +34,15 @@ typedef enum {
     eRcvWait
 } eRcv;
 
+// Reverse queue (USB thread -> UI thread, gResponseQueue). On that queue tMessageContent.cmd holds
+// an eResponseType, NOT an eMsgCmd — the command and response queues never cross, so their value
+// spaces are independent. See reverse-queue-design.md.
+typedef enum {
+    eRspFileLoad,   // fileResultData: result of a file load (eMsgCmdLoadFile)
+    eRspFileSave,   // fileResultData: result of a file save (eMsgCmdSavePatchFile / eMsgCmdSavePerfFile)
+    eRspNewPatch    // fileResultData: result of New Patch (eMsgCmdNewPatch); path unused
+} eResponseType;
+
 typedef enum {
     eMsgCmdSetValue,
     eMsgCmdSetMode,
@@ -262,6 +271,12 @@ typedef struct {
     uint32_t slot;
 } tPatchFileData;
 
+// Reverse-queue payload: outcome of a USB-thread file op, for the UI to surface (e.g. show_alert).
+typedef struct {
+    int32_t result;      // EXIT_SUCCESS / EXIT_FAILURE
+    char    path[1024];  // the file involved (for the user-facing message)
+} tFileResultData;
+
 typedef struct {
     uint32_t cmd;
     uint32_t slot;
@@ -294,6 +309,7 @@ typedef struct {
         tBankRestoreData          bankRestoreData;
         tBankLocationPerfData     bankLocationPerfData;
         tPatchFileData            patchFileData;
+        tFileResultData           fileResultData;   // reverse queue (gResponseQueue) only
     };
 } tMessageContent;
 

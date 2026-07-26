@@ -323,6 +323,7 @@ void file_menu_new_patch(void) {
     messageContent.cmd                = eMsgCmdNewPatch;
     messageContent.patchFileData.slot = gSlot;
     msg_send(&gCommandQueue, &messageContent);
+    device_op_begin("New Patch...");
 
     wake_glfw();
 }

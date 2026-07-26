@@ -773,6 +773,10 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
     get_global_gui_scaled_mouse_coord(&coord);
 
+    if (gDeviceOpInProgress > 0) {
+        return; // a whole-slot device op is in flight — swallow canvas interaction until it completes
+    }
+
     if (file_browser_active()) {
         // Modal: swallow mouse-down entirely so nothing underneath (module press, scrollbar
         // drag, rubber-band select) starts while it's open — handle_file_browser_click() only
