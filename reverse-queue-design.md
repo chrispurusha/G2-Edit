@@ -89,7 +89,39 @@ and swallows canvas input while set.
    msg_receive / msg_count) — payload-agnostic, depends only on pthreads + synthlibDefs.h's LOG_*.
    G2-Edit's `msgQueue.h` now `#include`s it and keeps only the app payload (tMessageContent + enums);
    `msgQueue.c` deleted (auto-dropped by the Xcode-16 synced folder; `synthlibQueue.c` auto-added).
-6. Adopt in Z1/EmuUtility.
+6. **[DONE 2026-07-26]** Adopt in Z1(SynthEdit)/EmuUtility. Both built (Debug, xcodebuild); neither
+   hardware-tested. Each got its own `src/msgQueue.h` (app payload + `#include "synthlibQueue.h"`) and a
+   `gToMidiThread` `msg_init`'d in `start_midi_thread()` before `pthread_create`. Two deviations from the
+   sketch above, both forced by these apps' shape rather than preference:
+   - **Poll, don't block.** Their MIDI threads use `eRcvPoll`, not `eRcvWait`. Both are CFRunLoop-driven
+     (`CFRunLoopRunInMode`) because CoreMIDI's notify callback is tied to that run loop, and both have
+     time-based cadences of their own (EmuUtility's LCD-delta throttle and idle tick; SynthEdit's connect
+     waits and state-dump debounce). Blocking in `msg_receive` would stall both. EmuUtility publishes its
+     thread's `CFRunLoopRef` and `CFRunLoopWakeUp`s on post so a command isn't stuck behind a 33ms tick.
+   - **No reverse queue yet.** Neither app has a `gToGuiThread`. Everything they report upward today is a
+     coalescing dirty-bit (`gNeedLcdFull`/`gLcd.refresh`/`gLeds`), which the rule above says stays a flag.
+     There is no discrete result to carry, so building the queue would be speculative. Add it with the
+     first real one.
+
+   Commands must obey the same coalescing rule as responses: EmuUtility's `eMsgCmdScanDevices` is collapsed
+   to at most one scan per drain (one hub plug can fire several `kMIDIMsgSetupChanged`; each scan walks
+   every destination at a 15ms stagger). A rescan is a *wanted state*, not an event — the flag it replaced
+   got that for free, and the queue has to be told.
+
+   The real payoff was per-app, and not the same in each:
+   - **EmuUtility** had the ownership bug SynthEdit already fixed in July and EmuUtility never got:
+     `midi_scan_devices()` called from the UI thread (Scan Devices menu, sleep/wake block) and
+     `handle_identity_reply()` writing `gDevice`/`gMidiSource`/`gMidiDest` from the CoreMIDI *callback*
+     thread, both racing the MIDI thread. Scan is now file-local behind `midi_request_reconnect()`; the
+     callback only unpacks and posts; button/rotary sends post too (they read `gMidiDest`).
+   - **SynthEdit** already had the discipline but had hand-rolled the queue: `gIdReplies[16]` +
+     `_Atomic gIdReplyCount`, where the callback bumped the count unconditionally and only stored when the
+     index was in range — so a 17th reply left the count past the array bound and
+     `process_identity_replies()`'s `for (i = 0; i < count; i++)` **read off the end of the array**.
+     Migrating to `gToMidiThread` removes the cap and the skew. Its `gRescanNeeded` /
+     `gReconnectRequested` / `gStateDumpDebounceTicks` were deliberately **left as flags** — coalescing
+     state and a debounce respectively, and `gRescanNeeded` doubles as a wait-break inside the connect
+     loops' 100ms slices.
 
 ## Progress log addendum
 - 2026-07-26 — Step 1 DONE (built, Debug xcodebuild). `msgQueue.{c,h}` made payload-agnostic
