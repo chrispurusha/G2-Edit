@@ -315,13 +315,13 @@ void file_menu_new_patch(void) {
         show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before creating a new patch.");
         return;
     }
-    init_patch(gSlot);
-
-    // init_patch() only resets the local database - without pushing it, the G2 hardware keeps
-    // playing whatever patch it had before, silently diverging from what the editor now shows.
+    // Do the init (local DB reset) AND the device push together on the USB thread as one ordered
+    // command, so the reset can't be clobbered by the USB thread's async patch-change re-reads
+    // between the two — same reasoning as the file-load path. (Without a push the G2 would keep
+    // playing its old patch, diverging from what the editor shows.)
     tMessageContent messageContent = {0};
-    messageContent.cmd  = eMsgCmdWritePatch;
-    messageContent.slot = gSlot;
+    messageContent.cmd                = eMsgCmdNewPatch;
+    messageContent.patchFileData.slot = gSlot;
     msg_send(&gCommandQueue, &messageContent);
 
     wake_glfw();

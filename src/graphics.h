@@ -31,6 +31,12 @@ void init_graphics(void);
 void do_graphics_loop(void);
 void clean_up_graphics(void);
 void wake_glfw(void);
+
+// Patch DB <-> file helpers. Serialising/naming a slot touches the shared patch database, so when
+// online these run on the USB thread (via eMsgCmdSavePatchFile / eMsgCmdLoadPatchFile) to stay
+// atomic against the USB thread's own DB writes — see their handlers in usbComms.c.
+void set_patch_name_from_filename(uint32_t slot, const char * filepath);
+void write_database_to_file(const char * filepath, uint32_t slot);
 void resize_window(int w, int h);
 void reposition_window(int x, int y);
 

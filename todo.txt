@@ -10,12 +10,17 @@ G2-Edit TODO (priority order)
   Load AND Store confirmed working on hardware (owner, 2026-07-26). Perf-domain path left
   unchanged/unverified (no perf capture). NOTE: ENABLE_USB_LOG left ON in defs.h for testing — turn
   off before committing.
-- Consolidate file-load paths onto the USB thread — the perf load now goes through one ordered
-  eMsgCmdLoadPerf handler in usbComms.c (see RESOLVED 2026-07-26 below). Do the same for PATCH load
-  (read_file_into_memory_and_process's type==0 branch still parses on the UI thread + enqueues
-  eMsgCmdWritePatch — same cross-thread-database shape as the perf bug had, just less exposed), and
-  review what else in graphics.cpp/menuActions.c does device-affecting work on the UI thread that
-  belongs behind the message queue.
+- Consolidate device-affecting file/DB ops onto the USB thread — DONE 2026-07-26 for the whole-slot
+  cases (built, needs owner hardware test): perf load (eMsgCmdLoadPerf), patch load from file
+  (eMsgCmdLoadPatchFile), New Patch (eMsgCmdNewPatch), and Save Patch to File (eMsgCmdSavePatchFile)
+  all now run as one ordered command on the USB thread when online (clear/parse/init + push, or
+  DB->file serialise), so the shared patch DB can't be clobbered/torn by the USB thread's async
+  re-reads mid-sequence. Offline paths still run locally on the UI thread (no device, no race; USB
+  thread doesn't process the queue when offline anyway). Shared read_g2_file_payload() helper factors
+  the file framing. STILL OPEN: (a) perf SAVE to file (write_perf_to_file) is the one whole-slot op
+  left on the UI thread — same treatment applies; (b) the bulk targeted-command loops (delete-module
+  +cables, create-module, undo-recreate) are NOT race-prone (self-describing commands) but could be
+  folded into composite USB-thread commands for atomicity/less chatter — low priority.
 - usbComms.c — perf-mode ambiguities: ALL RESOLVED ON HARDWARE 2026-07-26 (see the perf-mode findings
   section below for the captures). Remaining ACTIONABLE cleanup from those findings:
     * parse_perf_mode_change() (dispatched only from an incoming SUB_COMMAND_SET_PARAM_MODE 0x3e) is never
@@ -42,6 +47,16 @@ G2-Edit TODO (priority order)
 - defs.h:179 — confirm whether perf-header sub-response (SUB_RESPONSE_PERF_HEADER, 0x11) is ever actually used (needs hardware testing)
 - moduleGraphics.cpp/graphics.cpp — GL_BLEND enable/disable currently sits at each caller (moduleGraphics.cpp:1239/1254, graphics.cpp:590) rather than inside the shared drawing primitive (render_cable_from_to() et al., utilsGraphics.cpp) the way render_text() already manages its own blend state. Not a bug — correct today, just a cosmetic/architectural inconsistency. Low priority; real regression risk if rushed since these primitives are reused everywhere.
 - Compress(150) — module height may be 1 row too many (currently 5 rows, moduleResources.h). Original editor's module-info structs are opaque in the decompile (SModuleInfo/CBuildModule are placeholder structs, heights not recoverable as readable data); needs validation by running the original editor and comparing.
+
+- BIG / long-term idea — add a built-in sound-generation (DSP) engine so the editor can produce audio
+  itself, not just edit/drive the hardware G2. Reference: the decompiled DEMO editor (the standalone/demo
+  Nord Modular G2 editor, which ran patches without hardware) — its DSP/voice code is the model to work
+  from. (Claude may not currently have that decompile on hand; the main Original Editor/G2Editor.c
+  reference here is the hardware editor, whose module-info/DSP internals come through as opaque placeholder
+  structs — see CVoice/CVoiceMap/CPatchData symbols, names survive but bodies don't.) Would let module
+  waveform/response graphics (OscShpB, EnvADSR, FltClassic, etc.) be driven by real DSP instead of the
+  hand-derived approximations, and enable offline/no-hardware auditioning. Very large effort; capture the
+  demo-editor decompile alongside this note when starting.
 
 - Cross-platform build — Linux + Windows, with a CMake build derived from the Xcode project
   as the master (Xcode stays authoritative for day-to-day dev on Mac; CMake is the portable build).

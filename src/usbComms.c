@@ -46,6 +46,8 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "globalVars.h"
+#include "graphics.h"      // set_patch_name_from_filename / write_database_to_file (extern "C")
+#include "mouseHandle.h"   // init_patch (extern "C")
 #include <stdatomic.h>
 #include <pthread.h>
 
@@ -3604,11 +3606,15 @@ static int push_perf_to_device(void) {
 // path that used a blind 2-second sleep as a crude barrier against exactly that race (see
 // read_file_into_memory_and_process(), graphics.cpp). Returns EXIT_SUCCESS only if the file parsed
 // and the device write succeeded.
-static int load_perf_file_to_device(const char * filePath) {
+// Reads a .pch2/.prf2 into a freshly malloc'd buffer (*outBuf, caller frees), validates its CRC, and
+// returns the PAYLOAD offset/length — past the ASCII header line (to the first 0x00) plus the
+// version + type bytes. Framing matches read_file_into_memory_and_process() (graphics.cpp); shared by
+// the perf- and patch-load handlers so it lives in one place.
+static int read_g2_file_payload(const char * filePath, uint8_t ** outBuf, int64_t * outOffset, int64_t * outLen) {
     FILE *    file       = fopen(filePath, "rb");
 
     if (file == NULL) {
-        LOG_ERROR("load_perf_file_to_device: cannot open %s\n", filePath);
+        LOG_ERROR("read_g2_file_payload: cannot open %s\n", filePath);
         return EXIT_FAILURE;
     }
     fseek(file, 0, SEEK_END);
@@ -3616,14 +3622,14 @@ static int load_perf_file_to_device(const char * filePath) {
     fseek(file, 0, SEEK_SET);
 
     if ((fileSize <= 4) || (fileSize > PERF_FILE_SIZE)) {
-        LOG_ERROR("load_perf_file_to_device: bad file size %ld\n", fileSize);
+        LOG_ERROR("read_g2_file_payload: bad file size %ld\n", fileSize);
         fclose(file);
         return EXIT_FAILURE;
     }
     uint8_t * buff       = (uint8_t *)malloc((size_t)fileSize);
 
     if (buff == NULL) {
-        LOG_ERROR("load_perf_file_to_device: alloc failed\n");
+        LOG_ERROR("read_g2_file_payload: alloc failed\n");
         fclose(file);
         return EXIT_FAILURE;
     }
@@ -3631,12 +3637,10 @@ static int load_perf_file_to_device(const char * filePath) {
     fclose(file);
 
     if (readSize != (size_t)fileSize) {
-        LOG_ERROR("load_perf_file_to_device: short read\n");
+        LOG_ERROR("read_g2_file_payload: short read\n");
         free(buff);
         return EXIT_FAILURE;
     }
-    // Skip the ASCII header line (up to the first 0x00), then version + type bytes, matching
-    // read_file_into_memory_and_process()'s framing.
     int64_t   byteOffset = 0;
 
     for (int64_t i = 0; i < fileSize; i++) {
@@ -3650,11 +3654,26 @@ static int load_perf_file_to_device(const char * filePath) {
     uint16_t  calcCrc    = calc_crc16(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
 
     if (readCrc != calcCrc) {
-        LOG_WARNING("load_perf_file_to_device: CRC check failed\n");
+        LOG_WARNING("read_g2_file_payload: CRC check failed for %s\n", filePath);
         free(buff);
         return EXIT_FAILURE;
     }
-    byteOffset                     += 2; // skip version + type (caller already knows this is a performance)
+    byteOffset += 2; // skip version + type bytes
+
+    *outBuf     = buff;
+    *outOffset  = byteOffset;
+    *outLen     = (fileSize - byteOffset) - 2; // minus the trailing 2-byte CRC
+    return EXIT_SUCCESS;
+}
+
+static int load_perf_file_to_device(const char * filePath) {
+    uint8_t * buff       = NULL;
+    int64_t   byteOffset = 0;
+    int64_t   payloadLen = 0;
+
+    if (read_g2_file_payload(filePath, &buff, &byteOffset, &payloadLen) != EXIT_SUCCESS) {
+        return EXIT_FAILURE;
+    }
 
     // Switch the device to perf mode first if needed. Unlike eMsgCmdWriteModePerf we deliberately
     // do NOT follow it with send_get_performance_settings() here: that would read the OLD perf's
@@ -3691,7 +3710,7 @@ static int load_perf_file_to_device(const char * filePath) {
     }
 
     gGlobalSettings.perfMode        = 1;
-    parse_perf(buff + byteOffset, (int)((fileSize - byteOffset) - 2));
+    parse_perf(buff + byteOffset, (int)payloadLen);
     free(buff);
 
     int retVal = push_perf_to_device();
@@ -3703,6 +3722,35 @@ static int load_perf_file_to_device(const char * filePath) {
     // SETTINGS (names etc.), not module data, so it can't clobber the perf we just parsed and wrote.
     gotPerfSettingsChangeIndication = true;
 
+    return retVal;
+}
+
+// Loads a .pch2 patch file into one edit-buffer slot, entirely on the USB thread (eMsgCmdLoadPatchFile).
+// Single-slot analogue of load_perf_file_to_device: doing clear+parse+push in one ordered command
+// keeps the parse from being clobbered by the USB thread's own async patch-change re-reads (which
+// state_handler only services BETWEEN commands). Mirrors read_file_into_memory_and_process()'s
+// online patch branch, just moved off the UI thread.
+static int load_patch_file_to_device(const char * filePath, uint32_t slot) {
+    uint8_t * buff       = NULL;
+    int64_t   byteOffset = 0;
+    int64_t   payloadLen = 0;
+
+    if (read_g2_file_payload(filePath, &buff, &byteOffset, &payloadLen) != EXIT_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+    // Drop any pending patch-change indication for this slot so a later state_handler() pass doesn't
+    // read the old device patch back over what we're about to parse and write.
+    gotPatchChangeIndication[slot] = false;
+
+    clear_slot_data(slot);
+    parse_patch(slot, buff + byteOffset, (uint32_t)payloadLen);
+    set_patch_name_from_filename(slot, filePath);
+    free(buff);
+
+    int       retVal     = push_slot_to_device(slot);
+
+    call_full_patch_change_notify();
+    call_wake_glfw();
     return retVal;
 }
 
@@ -3921,6 +3969,31 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdLoadPerf:
             retVal = load_perf_file_to_device(messageContent->loadPerfData.srcFile);
             break;
+
+        case eMsgCmdLoadPatchFile:
+            retVal = load_patch_file_to_device(messageContent->patchFileData.filePath,
+                                               messageContent->patchFileData.slot);
+            break;
+
+        case eMsgCmdSavePatchFile:
+            // Serialise the slot's DB to file here (not on the UI thread) so the read is atomic
+            // against this thread's own DB writes. No device traffic — pure DB->file.
+            write_database_to_file(messageContent->patchFileData.filePath, messageContent->patchFileData.slot);
+            retVal = EXIT_SUCCESS;
+            break;
+
+        case eMsgCmdNewPatch:
+        {
+            // init_patch (local DB reset) + push to device as one ordered command — same reason as
+            // the file-load path: nothing can re-read the device over the reset mid-sequence.
+            uint32_t slot = messageContent->patchFileData.slot;
+
+            init_patch(slot);
+            retVal = push_slot_to_device(slot);
+            call_full_patch_change_notify();
+            call_wake_glfw();
+            break;
+        }
 
         case eMsgCmdWritePerfSettings:
             retVal = send_perf_header();

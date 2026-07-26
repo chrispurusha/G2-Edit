@@ -66,6 +66,9 @@ typedef enum {
     eMsgCmdWriteModePatch,
     eMsgCmdWritePerf,
     eMsgCmdLoadPerf,
+    eMsgCmdLoadPatchFile,
+    eMsgCmdSavePatchFile,
+    eMsgCmdNewPatch,
     eMsgCmdWritePerfName,
     eMsgCmdWritePerfSettings,
     eMsgCmdSetCustomData,
@@ -256,6 +259,14 @@ typedef struct {
 } tLoadPerfData;
 
 typedef struct {
+    char filePath[1024];     // .pch2 path; USB thread re-reads (load) or writes (save) it directly so
+                             // the whole clear+parse+push (load) / DB-read+serialise (save) runs on
+                             // the one thread — no cross-thread DB race. See eMsgCmdLoadPatchFile /
+                             // eMsgCmdSavePatchFile handlers. filePath is unused for eMsgCmdNewPatch.
+    uint32_t slot;
+} tPatchFileData;
+
+typedef struct {
     uint32_t cmd;
     uint32_t slot;
     union {
@@ -287,6 +298,7 @@ typedef struct {
         tBankRestoreData          bankRestoreData;
         tBankLocationPerfData     bankLocationPerfData;
         tLoadPerfData             loadPerfData;
+        tPatchFileData            patchFileData;
     };
 } tMessageContent;
 

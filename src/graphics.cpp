@@ -697,15 +697,20 @@ void read_file_into_memory_and_process(const char * filepath) {
         LOG_DEBUG("Type %u\n", type);
 
         if (type == 0) {
-            clear_slot_data(slot);
-            parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
-            set_patch_name_from_filename(slot, filepath);
-
             if (gCommsState == eCommsOnLine) {
+                // Online: hand the whole load to the USB thread (re-reads the file, then
+                // clear+parse+name+push in one ordered command) so the parse can't be clobbered by
+                // the USB thread's own async patch-change re-reads — same reasoning as the perf
+                // branch below. Offline parses locally (no device, no race).
                 tMessageContent msg = {0};
-                msg.cmd  = eMsgCmdWritePatch;
-                msg.slot = slot;
+                msg.cmd                = eMsgCmdLoadPatchFile;
+                msg.patchFileData.slot = slot;
+                COPY_STRING(msg.patchFileData.filePath, filepath);
                 msg_send(&gCommandQueue, &msg);
+            } else {
+                clear_slot_data(slot);
+                parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
+                set_patch_name_from_filename(slot, filepath);
             }
         } else if (type == 1) {
             if (gCommsState == eCommsOnLine) {
@@ -748,7 +753,7 @@ void read_file_into_memory_and_process(const char * filepath) {
     fclose(file);
 }
 
-void write_database_to_file(const char * filepath) {
+void write_database_to_file(const char * filepath, uint32_t slot) {
     FILE *    file           = NULL;
     //uint8_t ch          = 0;
     size_t    writtenSize    = 0;
@@ -757,7 +762,6 @@ void write_database_to_file(const char * filepath) {
     uint8_t * buff           = NULL;
     uint32_t  bitPos         = 0;
     uint32_t  calcCrc        = 0;
-    uint32_t  slot           = gSlot;
 
     file = fopen(filepath, "wb");
 
@@ -936,9 +940,19 @@ static void on_file_saved(const char * path) {
         LOG_INFO("Saving file: %s", path);
 
         if (gGlobalSettings.perfMode == 1) {
-            write_perf_to_file(path);
+            write_perf_to_file(path); // perf save still UI-thread — separate candidate for the same move
+        } else if (gCommsState == eCommsOnLine) {
+            // Online: serialise the slot on the USB thread so the DB read can't tear against the USB
+            // thread's own DB writes (e.g. an async patch-change reparse). Name update (a single
+            // field, harmless) stays here so the title bar reflects the saved filename immediately.
+            tMessageContent msg = {0};
+            msg.cmd                = eMsgCmdSavePatchFile;
+            msg.patchFileData.slot = slot;
+            COPY_STRING(msg.patchFileData.filePath, path);
+            msg_send(&gCommandQueue, &msg);
+            set_patch_name_from_filename(slot, path);
         } else {
-            write_database_to_file(path);
+            write_database_to_file(path, slot);
             set_patch_name_from_filename(slot, path);
         }
     }
