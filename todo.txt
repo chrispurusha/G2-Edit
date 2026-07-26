@@ -50,12 +50,13 @@ G2-Edit TODO (priority order)
       could tighten the wait if it matters.
 - moduleGraphics.cpp — refactor volume-meter/label rendering into utilsGraphics.cpp; resolve "can Mode be morphed?" question (needs hardware/manual check)
 - moduleGraphics.cpp/renderParams.c — port custom graph displays from the original editor (none exist today besides render_volume_meter): envelope shapes (AD/AR/D/H/AHD/ADSR/ADBDSR/Multi/DX), filter response curves (Classic/Normal/Small/Static/Comb), oscillator & LFO waveform shapes, EQ curves (2-band/3-band/peak), compressor/expander, distortion/waveshaping (Dist A/B/Wrap/Shape/Saturate), FM operator + DX router, phaser, vocoder, tuned noise, random distribution/trigger — see Original Editor/G2Editor.c, CCustomObjectFactory::CreateCustom (~line 101952) and the CPnl*Graph class family for reference implementations
-- FltClassic response graph (render_fltclassic_response_graph, moduleGraphics.cpp) — at minimum Freq
-  the resonance bump runs off the LEFT edge: the peak shows but nothing to its left. The X axis maps
-  Freq's raw range (~13.75Hz min .. 21.1kHz max) across the box, so at min-Freq the cutoff/peak sits
-  at x=0. Fix: widen the displayed frequency window beyond the knob's own range so the peak always has
-  headroom either side — e.g. display from ~0Hz on the left up to ~26kHz on the right (owner's
-  suggestion) so the min-Freq bump sits inboard of the left edge rather than clipped against it.
+- FltClassic response graph (render_fltclassic_response_graph, moduleGraphics.cpp) — DONE 2026-07-26.
+  At minimum Freq the resonance bump ran off the LEFT edge (peak against x=0, lower half off-screen)
+  because the cutoff was mapped edge-to-edge across the box. FIX: inset the cutoff's on-screen
+  position into a band (kCutoffMinX 0.15 .. kCutoffMaxX 0.90) instead of 0..1 — a small horizontal
+  zoom-out so the box shows a slightly wider window than the knob's own ~14Hz..21kHz range and the
+  peak always keeps headroom either side. 10-octave relative-frequency curve model unchanged. Build
+  verified (Debug, xcodebuild). Not yet eyeballed on-screen by owner.
 - Sw8-1(15), ValSw1-2(17) — need more resources
 - OscShpB(8) — check mode handling
 - Fix known caveats on otherwise-OK modules: Oscar(9) mode, EnvADSR(20) values, PartQuant(22) dial range (0 to +/-63), LfoC(24) Range Sub param, SeqNote/SeqEvent/SeqVal/SeqLev park LED handling, MixFader(161) value scale (match Mix4-1C's 0-100/xx.x mapping)
