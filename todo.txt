@@ -1,5 +1,46 @@
 G2-Edit TODO (priority order)
 
+- SynthLib clickRegion press-capture — PENDING COMMIT + PIN ADVANCE (2026-07-26). Made in the SynthLib
+  checkout under **EmuUtility** (not G2-Edit — that's where the bug was reported and build-tested).
+  BUG (owner report): in EmuUtility, press and hold an on-screen button, drag the cursor off it, release
+  — the orange pressed indication never clears. Root cause is in the SHARED registry, not the app:
+  dispatch_click_region() looked the RELEASE up by coordinate, like any other event, so the button that
+  took the press never saw its release. Worse than cosmetic — button_click_handler() also never sent
+  midi_post_button_event(key, false), so the E-mu got a key-down with no key-up (releasing over a
+  DIFFERENT button sent that one a spurious key-up instead).
+  FIX: eClickPress now CAPTURES. clickRegion.c keeps a COPY of the capturing region (not an index —
+  regions are rebuilt every frame by clear_click_regions(), so an index would dangle or silently point
+  at a different widget); the release goes to the capturing handler regardless of cursor position, with
+  a new eClickReleaseOutside phase when it landed off the rect. Capture is cleared BEFORE the handler
+  call so a handler that opens a modal can't find a stale capture armed. New
+  cancel_click_region_capture() for paths that consume a release without reaching dispatch — EmuUtility's
+  dial-drag and open-context-menu early returns now call it.
+  KNOCK-ON, unverified: G2-Edit dispatches releases through the registry too (mouseHandle.c:1001), into
+  the toggle/menu/push handlers in moduleGraphics.cpp. It has no latched press visual so there was no
+  stuck-orange symptom, but it had the sibling bug — press a toggle, drag onto a DIFFERENT toggle,
+  release, and the wrong one flipped. Those handlers test `phase == eClickRelease`, so capture gives them
+  press-and-drag-off-cancels for free. NEEDS AN EYEBALL: confirm normal toggle/menu/push clicks still
+  fire, and that drag-off now cancels rather than mis-firing. SynthEdit is unaffected either way — it
+  only ever calls dispatch_click_region(coord, eClickPress) and handles releases itself in
+  handle_mouse_button() (mouseHandle.c:406-425), which is the pattern this change generalises.
+  WORKFLOW: commit + push in SynthLib from the EmuUtility checkout, then advance the pin in G2-Edit and
+  SynthEdit and build-test each. Only EmuUtility is build-verified so far (Debug, xcodebuild).
+
+- SynthEdit "no device connected" was silent on every File/Backup menu action — FIXED 2026-07-26 (built,
+  not hardware-tested). Owner report: "Open File..." did nothing with no synth attached — no browser, no
+  message. Confirmed: synth_backup_restore_edit_buffer() (synthBackup.c) bailed on !gDevice.connected
+  with a LOG_ERROR before ever reaching open_file_browser_read(), so the menu item looked broken rather
+  than unavailable. 19 guards of that shape existed; added a shared warn_if_not_connected(title) helper
+  (LOG_ERROR + show_alert, returns true when there is NO device so call sites stay `if (...) return;`)
+  and applied it to the 11 MENU-REACHABLE entry points: Save Patch, Save Patch by Number (both the
+  generic and Korg variants), Backup Bank, Backup Bank to Folder, the Load/Store-from-Bank name sweep,
+  Open File, Load Patch by Number, Load Patch File to Bank Slot, Restore Bank, Restore Folder.
+  Deliberately LEFT log-only: the *_from_path variants (scripted, run unattended from graphics.cpp's
+  command-file harness — a modal there would hang the run), synth_backup_flush_background_prefetch() (a
+  background tick; one alert per tick would be unusable), and the synthComms.c helpers reached only from
+  the bank browser after a successful sweep (they had a device moments earlier and would double-report).
+  Same silent-failure class the G2-Edit reverse-queue work closed with alerts.
+
 - SynthLib submodule — PENDING COMMIT + PIN ADVANCE (cross-machine handoff, 2026-07-26). Changes made to
   the SynthLib checkout under G2-Edit that are NOT yet committed to the SynthLib repo or picked up by the
   other projects:
@@ -89,21 +130,66 @@ G2-Edit TODO (priority order)
       the confirm/alert. File>Open / File>Save now post eRspShowOpenRead/eRspShowOpenWrite from
       menuActions (gShowOpenFileReadDialogue/WriteDialogue retired). check_action_flags() is now just
       drain + busy-timeout + gNeedFocus (a graphics.cpp-local static, deliberately left as a flag).
-    * STILL OPEN: Step 6 — adopt the queue in SynthEdit(Z1) / EmuUtility (the commonalisation payoff;
-      work in those other repos, on the other dev machine). What "adopt" means there: those apps today
-      have NO queue — their MIDI-comms thread and the UI thread share plain globals + a wake callback.
-      The generic mechanism now lives in SynthLib (synthlibQueue.h: tMessageQueue / eRcv / msg_init /
-      msg_send / msg_receive / msg_count) once their SynthLib pin is advanced. Mirror G2-Edit's pattern:
-      (1) define each app's own message-content struct(s) in an app header (like G2-Edit's msgQueue.h's
-      tMessageContent) — the queue is payload-agnostic, pass sizeof(that) to msg_init; (2) create two
-      queues, e.g. gToMidiThread (UI->MIDI commands) + gToGuiThread (MIDI->UI results); (3) MIDI worker
-      blocks on msg_receive(eRcvWait); the render loop poll-drains gToGuiThread (eRcvPoll) woken by the
-      existing wake callback, exactly like G2-Edit's check_action_flags drain (one-per-frame, self-wake).
-      This is the whole point of the commonalisation — do it once the pattern is proven on G2-Edit hw.
-      NOTE: synthlibQueue.c compiles into all three apps via the shared SynthLib; SynthEdit/EmuUtility
-      have no msg_* symbols today so there's no clash, but build-check each when its pin advances.
-      That's the only reverse-queue item left. Everything else (Steps 1-5, peek flows, UI work queue) is
-      done in G2-Edit and needs a full hardware pass.
+    * Step 6 — adopt the queue in SynthEdit(Z1) / EmuUtility — DONE 2026-07-26 (both built Debug via
+      xcodebuild; NEITHER hardware-tested). All three SynthLib pins were already at bf96877 with
+      synthlibQueue.{h,c} present, so no pin work was needed. Each app got its own src/msgQueue.h
+      (app payload only + #include "synthlibQueue.h", same split as G2-Edit) and a gToMidiThread in
+      globalVars, msg_init'd in start_midi_thread() BEFORE pthread_create.
+      DESIGN DEVIATION from the plan sketched above — both MIDI threads poll-drain with eRcvPoll,
+      they do NOT block on eRcvWait like G2-Edit's USB thread. They are CFRunLoop-driven
+      (CFRunLoopRunInMode) because CoreMIDI's notify callback is tied to that run loop, and they have
+      their own time-based cadences (EmuUtility's LCD-delta throttle + idle tick, SynthEdit's connect
+      waits + state-dump debounce). Blocking in msg_receive would stall both. EmuUtility instead
+      publishes the thread's CFRunLoopRef and CFRunLoopWakeUp()s it on post, so a queued command is
+      serviced immediately rather than up to one 33ms idle tick later.
+      NEITHER app got a gToGuiThread (MIDI->UI). Everything they report upward today is a coalescing
+      dirty-bit (gNeedLcdFull/gNeedLcdDelta/gLcd.refresh/gLeds), which per this design must stay a
+      flag — there is no discrete result to carry yet, so an empty reverse queue would be speculative.
+      EmuUtility (the bigger win — it had a real latent bug):
+        - midi_scan_devices() is now file-local. The Scan Devices menu item (appMenuBar.c) and the
+          NSWorkspace wake block (misc.mm) used to call it straight from the UI/main thread, racing
+          the MIDI thread's own ownership of gDevice/gMidiSource/gMidiDest and MIDIPortConnectSource.
+          This is the SAME bug SynthEdit found and fixed on 2026-07-14 (see gReconnectRequested's
+          comment there); EmuUtility never got the port. Both now post eMsgCmdScanDevices via a
+          midi_request_reconnect() named to match SynthEdit's.
+        - handle_identity_reply() ran on the CoreMIDI CALLBACK thread and wrote all three of
+          gDevice/gMidiSource/gMidiDest. Split: the callback now only validates + unpacks
+          (parse_identity_reply) and posts eMsgCmdIdentityReply; the MIDI thread does the
+          entity/destination lookup and the state writes.
+        - Button/rotary PEPTALK events (mouseHandle.c, emuGraphics.cpp) now post instead of calling
+          peptalk_send_* on the UI thread — those read gMidiDest, also MIDI-thread-owned.
+        - eMsgCmdScanDevices is COALESCED in the drain (a local bool, scan runs once after the batch),
+          because a rescan is a wanted-state not an event: one hub plug can fire several
+          kMIDIMsgSetupChanged notifications and each scan walks every destination at 15ms stagger.
+      SynthEdit (already had the ownership discipline; this replaced its hand-rolled queue):
+        - gIdReplies[16] + _Atomic gIdReplyCount -> gToMidiThread. That array had a latent
+          OUT-OF-BOUNDS READ: the callback did atomic_fetch_add(&gIdReplyCount, 1) unconditionally but
+          only stored when idx < 16, so a 17th reply left the count past the array bound and
+          process_identity_replies()'s `for (i = 0; i < count; i++)` read off the end. Needs enough
+          devices answering one interface to hit — owner already runs 4 synths on a shared TM-1.
+          Queue has no cap and no count/array skew. process_identity_replies() is now a drain (drains
+          to empty even after a match, so leftovers can't cross into the next scan); the old
+          `gIdReplyCount = 0` reset became discard_queued_identity_replies().
+        - DELIBERATELY NOT migrated: gRescanNeeded and gReconnectRequested stay atomic flags. Both are
+          coalescing ("a rescan is wanted"), and gRescanNeeded is additionally a wait-break condition
+          inside the connect loops' 100ms slices — a flag's job, not a message's. gStateDumpDebounceTicks
+          stays a counter (it's a debounce). The three synth_flush_pending_*() render-loop hooks were
+          left alone too — they are UI-thread-local deferred sends, not cross-thread handoffs.
+      TO VERIFY ON HARDWARE:
+        - EmuUtility: device still detected at startup; Scan Devices menu item still connects; LCD and
+          LEDs still update; on-screen buttons + keyboard shortcuts still reach the device with no
+          perceptible lag (the CFRunLoopWakeUp path is what keeps that honest); dial drag + scroll
+          wheel still track; sleep/wake still reconnects.
+        - SynthEdit: normal connect on a single-cable setup; connect with several synths sharing one
+          interface (the TM-1 case — that is the path the reply queue actually changes); Device-switch
+          menu; sleep/wake; a no-identity device (Minitaur) still connects via connect_without_identity.
+    * STILL OPEN (found during Step 6, NOT a queue problem — do not paper over it with the queue):
+      EmuUtility's gLcd.pixels (1920 bytes) is written by the CoreMIDI callback thread in
+      peptalk_handle_message()/peptalk_apply_lcd_delta() while the UI thread reads it to upload the GL
+      texture (emuGraphics.cpp). Plain memcpy/XOR either side, no lock — a genuine data race that can
+      tear a frame. The queue does not fix this and shouldn't: LCD updates are coalescing, so the right
+      fix is a mutex around the buffer or a double-buffer + atomic swap on gLcd.refresh. Low visible
+      impact (worst case a torn LCD frame that the next update repairs), but it is real.
 - usbComms.c — perf-mode ambiguities: ALL RESOLVED ON HARDWARE 2026-07-26 (see the perf-mode findings
   section below for the captures). Cleanup status:
     * DONE 2026-07-26: removed parse_perf_mode_change() (incoming SUB_COMMAND_SET_PARAM_MODE 0x3e) and
