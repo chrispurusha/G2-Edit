@@ -1,5 +1,20 @@
 G2-Edit TODO (priority order)
 
+- SynthLib submodule — PENDING COMMIT + PIN ADVANCE (cross-machine handoff, 2026-07-26). Changes made to
+  the SynthLib checkout under G2-Edit that are NOT yet committed to the SynthLib repo or picked up by the
+  other projects:
+    1. synthlibQueue.{h,c} — NEW. The generic payload-agnostic thread queue (tMessageQueue / eRcv /
+       msg_init / msg_send / msg_receive / msg_count), lifted out of G2-Edit's old msgQueue.c (Step 5 of
+       the reverse-queue work). No app dependencies (pthreads + synthlibDefs.h LOG_* only).
+    2. bankBrowser.cpp — sort mode (Bank/Loc / Category / A-Z) is now persisted across sessions via
+       prefs.h (key "bankBrowserSortMode"), instead of resetting to Bank/Loc every open. Benefits all
+       three apps for free once their pin advances.
+  WORKFLOW: from here, commit + push these in the SynthLib repo. Then on the other machine, in each of
+  SynthEdit(Z1) and EmuUtility: `git submodule update --remote SynthLib` -> `git add SynthLib` -> commit,
+  then build-test. synthlibQueue.c will start compiling into both (harmless — they have no msg_* yet).
+  G2-Edit's own SynthLib pin also needs advancing here once SynthLib is pushed. (Also: G2-Edit deleted
+  src/msgQueue.c and slimmed msgQueue.h to app payload only — that's a G2-Edit-side change, not SynthLib.)
+
 - SynthLib file-naming consistency — DEFERRED (cross-repo, coordinate carefully). SynthLib/src mixes
   two camps: bare (alertDialog, bankBrowser, clickRegion, contextMenu, fileBrowser, geometry, menuBar,
   prefs, utils, utilsGraphics) and synthlib-prefixed (synthlibDefs/Globals/Host/Persistence/Queue/
@@ -74,9 +89,21 @@ G2-Edit TODO (priority order)
       the confirm/alert. File>Open / File>Save now post eRspShowOpenRead/eRspShowOpenWrite from
       menuActions (gShowOpenFileReadDialogue/WriteDialogue retired). check_action_flags() is now just
       drain + busy-timeout + gNeedFocus (a graphics.cpp-local static, deliberately left as a flag).
-    * STILL OPEN: Step 6 (adopt the queue in Z1/EmuUtility — they have no queue today; the commonalisation
-      payoff, and it's work in those other repos). That's the only reverse-queue item left. Everything
-      else (Steps 1-5, peek flows, UI work queue) is done in G2-Edit and needs a full hardware pass.
+    * STILL OPEN: Step 6 — adopt the queue in SynthEdit(Z1) / EmuUtility (the commonalisation payoff;
+      work in those other repos, on the other dev machine). What "adopt" means there: those apps today
+      have NO queue — their MIDI-comms thread and the UI thread share plain globals + a wake callback.
+      The generic mechanism now lives in SynthLib (synthlibQueue.h: tMessageQueue / eRcv / msg_init /
+      msg_send / msg_receive / msg_count) once their SynthLib pin is advanced. Mirror G2-Edit's pattern:
+      (1) define each app's own message-content struct(s) in an app header (like G2-Edit's msgQueue.h's
+      tMessageContent) — the queue is payload-agnostic, pass sizeof(that) to msg_init; (2) create two
+      queues, e.g. gToMidiThread (UI->MIDI commands) + gToGuiThread (MIDI->UI results); (3) MIDI worker
+      blocks on msg_receive(eRcvWait); the render loop poll-drains gToGuiThread (eRcvPoll) woken by the
+      existing wake callback, exactly like G2-Edit's check_action_flags drain (one-per-frame, self-wake).
+      This is the whole point of the commonalisation — do it once the pattern is proven on G2-Edit hw.
+      NOTE: synthlibQueue.c compiles into all three apps via the shared SynthLib; SynthEdit/EmuUtility
+      have no msg_* symbols today so there's no clash, but build-check each when its pin advances.
+      That's the only reverse-queue item left. Everything else (Steps 1-5, peek flows, UI work queue) is
+      done in G2-Edit and needs a full hardware pass.
 - usbComms.c — perf-mode ambiguities: ALL RESOLVED ON HARDWARE 2026-07-26 (see the perf-mode findings
   section below for the captures). Cleanup status:
     * DONE 2026-07-26: removed parse_perf_mode_change() (incoming SUB_COMMAND_SET_PARAM_MODE 0x3e) and
