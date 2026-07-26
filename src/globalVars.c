@@ -35,8 +35,6 @@ tTopbarControl          gTopbarControls[topbarControlMax]                       
 const char *            patchTypeStrMap[patchTypeUserMax]                                            = {"No Cat", "Acoustic", "Sequencer", "Bass", "Classic", "Drum", "Fantasy", "Fx", "Lead", "Organ", "Pad", "Piano", "Synth", "Audio In", "User 1", "User 2"};
 const char *            monoPolyStrMap[monoPolyMax]                                                  = {"Poly", "Mono", "Legato"};
 
-bool                    gShowOpenFileReadDialogue                                                    = false;
-bool                    gShowOpenFileWriteDialogue                                                   = false;
 
 //tScrollState            gScrollState                                                                 = {(SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, 0.0, NULL_RECTANGLE, (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN, false, 0.0, NULL_RECTANGLE};
 tCableDragging          gCableDrag                                                                   = {0};
@@ -117,28 +115,24 @@ _Atomic bool            gBankRestoreIsPerf                                      
 _Atomic uint32_t        gBankRestoreBank                                                             = 0;
 _Atomic uint32_t        gBankRestoreLocation                                                         = 0;
 _Atomic uint32_t        gBankRestoreWritten                                                          = 0;
-_Atomic bool            gStorePeekComplete                                                           = false;
 _Atomic bool            gStorePeekFailed                                                             = false;
 _Atomic bool            gStorePeekPopulated                                                          = false;
 _Atomic bool            gStorePeekIsPerf                                                             = false;
 _Atomic uint32_t        gStorePeekBank                                                               = 0;
 _Atomic uint32_t        gStorePeekLocation                                                           = 0;
 char                    gStorePeekName[CLAVIA_NAME_SIZE + 1]                                         = {0};
-_Atomic bool            gDeletePeekComplete                                                          = false;
 _Atomic bool            gDeletePeekFailed                                                            = false;
 _Atomic bool            gDeletePeekPopulated                                                         = false;
 _Atomic bool            gDeletePeekIsPerf                                                            = false;
 _Atomic uint32_t        gDeletePeekBank                                                              = 0;
 _Atomic uint32_t        gDeletePeekLocation                                                          = 0;
 char                    gDeletePeekName[CLAVIA_NAME_SIZE + 1]                                        = {0};
-_Atomic bool            gLoadPeekComplete                                                            = false;
 _Atomic bool            gLoadPeekFailed                                                              = false;
 _Atomic bool            gLoadPeekPopulated                                                           = false;
 _Atomic bool            gLoadPeekIsPerf                                                              = false;
 _Atomic uint32_t        gLoadPeekBank                                                                = 0;
 _Atomic uint32_t        gLoadPeekLocation                                                            = 0;
 char                    gLoadPeekName[CLAVIA_NAME_SIZE + 1]                                          = {0};
-_Atomic bool            gSynthRestorePeekComplete                                                    = false;
 _Atomic bool            gSynthRestorePeekFailed                                                      = false;
 char                    gSynthRestorePeekErrorMessage[256]                                           = {0};
 char                    gSynthRestorePeekFileName[64]                                                = {0};

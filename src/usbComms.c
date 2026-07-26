@@ -182,9 +182,10 @@ static void call_full_patch_change_notify(void) {
     func_ptr();
 }
 
-// Reverse-queue (USB->UI) result helper, defined later; used by the bank/store/delete/load/synth ops
-// above their definition, so forward-declared here.
+// Reverse-queue (USB->UI) result helpers, defined later; used by the bank/store/delete/load/synth ops
+// above their definitions, so forward-declared here.
 static void post_alert_response(const char * title, const char * message);
+static void post_response(uint32_t responseType); // bare signal (payload-less); peek data stays in globals
 
 // ---------------------------------------------------------------------------
 // libusb helpers
@@ -1944,9 +1945,8 @@ static int peek_store_target(uint32_t bank, uint32_t location, bool isPerf) {
 
     if (gCommsState != eCommsOnLine) {
         LOG_ERROR("peek_store_target: G2 is not connected\n");
-        gStorePeekFailed   = true;
-        gStorePeekComplete = true;
-        call_wake_glfw();
+        gStorePeekFailed = true;
+        post_response(eRspStorePeek);
         return EXIT_FAILURE;
     }
     result              = peek_bank_location(domain, bank, location, name, sizeof(name), &populated);
@@ -1954,8 +1954,7 @@ static int peek_store_target(uint32_t bank, uint32_t location, bool isPerf) {
     gStorePeekFailed    = (result != EXIT_SUCCESS);
     gStorePeekPopulated = populated;
     strncpy(gStorePeekName, name, sizeof(gStorePeekName) - 1);
-    gStorePeekComplete  = true;
-    call_wake_glfw();
+    post_response(eRspStorePeek);
     return result;
 }
 
@@ -2016,9 +2015,8 @@ static int peek_delete_target(uint32_t bank, uint32_t location, bool isPerf) {
 
     if (gCommsState != eCommsOnLine) {
         LOG_ERROR("peek_delete_target: G2 is not connected\n");
-        gDeletePeekFailed   = true;
-        gDeletePeekComplete = true;
-        call_wake_glfw();
+        gDeletePeekFailed = true;
+        post_response(eRspDeletePeek);
         return EXIT_FAILURE;
     }
     result               = peek_bank_location(domain, bank, location, name, sizeof(name), &populated);
@@ -2026,8 +2024,7 @@ static int peek_delete_target(uint32_t bank, uint32_t location, bool isPerf) {
     gDeletePeekFailed    = (result != EXIT_SUCCESS);
     gDeletePeekPopulated = populated;
     strncpy(gDeletePeekName, name, sizeof(gDeletePeekName) - 1);
-    gDeletePeekComplete  = true;
-    call_wake_glfw();
+    post_response(eRspDeletePeek);
     return result;
 }
 
@@ -2091,9 +2088,8 @@ static int peek_load_target(uint32_t bank, uint32_t location, bool isPerf) {
 
     if (gCommsState != eCommsOnLine) {
         LOG_ERROR("peek_load_target: G2 is not connected\n");
-        gLoadPeekFailed   = true;
-        gLoadPeekComplete = true;
-        call_wake_glfw();
+        gLoadPeekFailed = true;
+        post_response(eRspLoadPeek);
         return EXIT_FAILURE;
     }
     result             = peek_bank_location(domain, bank, location, name, sizeof(name), &populated);
@@ -2101,8 +2097,7 @@ static int peek_load_target(uint32_t bank, uint32_t location, bool isPerf) {
     gLoadPeekFailed    = (result != EXIT_SUCCESS);
     gLoadPeekPopulated = populated;
     strncpy(gLoadPeekName, name, sizeof(gLoadPeekName) - 1);
-    gLoadPeekComplete  = true;
-    call_wake_glfw();
+    post_response(eRspLoadPeek);
     return result;
 }
 
@@ -2430,28 +2425,25 @@ static int peek_synth_settings_restore(const char * folder) {
     if (!find_latest_synth_settings_backup(folder, filePath, sizeof(filePath))) {
         snprintf(gSynthRestorePeekErrorMessage, sizeof(gSynthRestorePeekErrorMessage),
                  "No Synth Settings Backup file found in %s", folder);
-        gSynthRestorePeekFailed   = true;
-        gSynthRestorePeekComplete = true;
-        call_wake_glfw();
+        gSynthRestorePeekFailed = true;
+        post_response(eRspSynthRestorePeek);
         return EXIT_FAILURE;
     }
 
     if (!parse_synth_settings_backup_file(filePath, &sSynthSettingsRestoreStaged)) {
         snprintf(gSynthRestorePeekErrorMessage, sizeof(gSynthRestorePeekErrorMessage),
                  "Could not parse %s — it may not be a valid Synth Settings Backup", filePath);
-        gSynthRestorePeekFailed   = true;
-        gSynthRestorePeekComplete = true;
-        call_wake_glfw();
+        gSynthRestorePeekFailed = true;
+        post_response(eRspSynthRestorePeek);
         return EXIT_FAILURE;
     }
-    baseName                  = strrchr(filePath, '/');
-    baseName                  = (baseName != NULL) ? baseName + 1 : filePath;
+    baseName                = strrchr(filePath, '/');
+    baseName                = (baseName != NULL) ? baseName + 1 : filePath;
 
-    gSynthRestorePeekFailed   = false;
+    gSynthRestorePeekFailed = false;
     strncpy(gSynthRestorePeekFileName, baseName, sizeof(gSynthRestorePeekFileName) - 1);
     strncpy(gSynthRestorePeekName, sSynthSettingsRestoreStaged.name, sizeof(gSynthRestorePeekName) - 1);
-    gSynthRestorePeekComplete = true;
-    call_wake_glfw();
+    post_response(eRspSynthRestorePeek);
     return EXIT_SUCCESS;
 }
 
@@ -3684,6 +3676,17 @@ static void post_file_result_response(uint32_t responseType, int32_t result, con
     if (path != NULL) {
         COPY_STRING(rsp.fileResultData.path, path);
     }
+    msg_send(&gToGuiThread, &rsp);
+    call_wake_glfw();
+}
+
+// Post a bare (payload-less) response — just a signal of the given eResponseType. Used by the peek
+// flows: the peek data itself is already in the gStore/Delete/Load/SynthRestorePeek* globals, so the
+// UI drain only needs the "ready" nudge to read them and open the confirm dialog.
+static void post_response(uint32_t responseType) {
+    tMessageContent rsp = {0};
+
+    rsp.cmd = responseType;
     msg_send(&gToGuiThread, &rsp);
     call_wake_glfw();
 }

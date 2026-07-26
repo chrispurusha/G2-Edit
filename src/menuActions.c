@@ -300,13 +300,22 @@ static void build_bank_browser_items(bool isPerf, bool populatedOnly,
     *outCount = count;
 }
 
+// Defer the actual browser open to the render loop (it must not open mid-menu-callback) by posting
+// onto the GUI-thread work queue — the drain in check_action_flags() opens it. wake_glfw() nudges the
+// loop to drain promptly.
 void file_menu_open_patch(void) {
-    gShowOpenFileReadDialogue = true;
+    tMessageContent msg = {0};
+
+    msg.cmd = eRspShowOpenRead;
+    msg_send(&gToGuiThread, &msg);
     wake_glfw();
 }
 
 void file_menu_save_patch(void) {
-    gShowOpenFileWriteDialogue = true;
+    tMessageContent msg = {0};
+
+    msg.cmd = eRspShowOpenWrite;
+    msg_send(&gToGuiThread, &msg);
     wake_glfw();
 }
 
