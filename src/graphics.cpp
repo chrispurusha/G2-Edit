@@ -390,10 +390,24 @@ void render_top_bar(void) {
             break;
     }
     set_rgb_colour(commsStateColour);
-    rectangle        = {{790, 8 + MENU_BAR_HEIGHT}, {get_text_width("Offline", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}};
-    commsStateRect   = draw_button(mainArea, rectangle, commsStateText, commsStateColour);
-    draw_button(mainArea, {{790, 25 + MENU_BAR_HEIGHT}, {get_text_width("Tx", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6, eCache), (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6}}, "Tx", txActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
-    draw_button(mainArea, {{803, 25 + MENU_BAR_HEIGHT}, {get_text_width("Tx", (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6, eCache), (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.6}}, "Rx", rxActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
+
+    // Online/Offline indicator: top-left now there's room — same x as "Patch Mode" (20), same row as
+    // "Undo" (y = 8). Tx/Rx sit just to its right, stacked vertically.
+    double onlineX = 20.0;
+    double onlineY = 8.0 + MENU_BAR_HEIGHT;
+    double onlineW = get_text_width("Offline", STANDARD_BUTTON_TEXT_HEIGHT, eCache);
+
+    // Tx (top) / Rx (bottom) activity as two blank boxes stacked to the right of Online, each roughly
+    // half its height with a gap between, so Rx's bottom lines up with Online's bottom.
+    double txrxGap = 3.0;
+    double boxH    = (STANDARD_BUTTON_TEXT_HEIGHT - txrxGap) / 2.0;
+    double boxW    = boxH; // square
+    double txrxX   = onlineX + onlineW + 6.0;
+
+    rectangle      = {{onlineX, onlineY}, {onlineW, STANDARD_BUTTON_TEXT_HEIGHT}};
+    commsStateRect = draw_button(mainArea, rectangle, commsStateText, commsStateColour);
+    draw_button(mainArea, {{txrxX, onlineY}, {boxW, boxH}}, "", txActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
+    draw_button(mainArea, {{txrxX, onlineY + boxH + txrxGap}, {boxW, boxH}}, "", rxActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
 
     if (txActive || rxActive) {
         wake_glfw();
@@ -1066,11 +1080,6 @@ static void render_device_busy_overlay(void) {
 }
 
 static void check_action_flags(void) {
-    uint32_t slot                              = gSlot;
-    //bool     perfMode                          = gPerfMode != 0;
-    char     patchName[CLAVIA_NAME_SIZE + 1]   = {0};
-    char     defaultName[CLAVIA_NAME_SIZE + 6] = {0}; // name (16) + extension (5) + null
-
     // Drain the reverse (USB->UI) response queue — see reverse-queue-design.md. One response per frame:
     // if a modal alert is already up, leave the queue untouched so it isn't clobbered (we'll drain the
     // next once it's dismissed); if more remain after handling one, self-wake so the next frame
@@ -1118,6 +1127,120 @@ static void check_action_flags(void) {
                     show_alert(resp.alertData.title, resp.alertData.message);
                     break;
 
+                case eRspStorePeek:
+                {
+                    // Peek data is in the gStorePeek* globals (set by the USB thread before it posted
+                    // this); this response is just the "ready" nudge to open the overwrite confirm.
+                    char title[64]    = {0};
+                    char message[320] = {0};
+                    bool isPerf       = gStorePeekIsPerf;
+
+                    snprintf(title, sizeof(title), "Store %s to Bank %u, Location %u",
+                             isPerf ? "Performance" : "Patch", gStorePeekBank + 1, gStorePeekLocation + 1);
+
+                    if (gStorePeekFailed) {
+                        show_alert(title, "Could not check what's currently at this location — the G2 may have gone offline. Try again.");
+                    } else {
+                        if (gStorePeekPopulated) {
+                            snprintf(message, sizeof(message),
+                                     "This location currently contains \"%s\". Storing will overwrite it with the current edit buffer %s. "
+                                     "This cannot be undone.", gStorePeekName, isPerf ? "performance" : "patch");
+                        } else {
+                            snprintf(message, sizeof(message),
+                                     "This location is currently empty. Store the current edit buffer %s there?", isPerf ? "performance" : "patch");
+                        }
+                        show_confirm(title, message, "Store...", on_store_confirmed);
+                    }
+                    break;
+                }
+
+                case eRspDeletePeek:
+                {
+                    char title[64]    = {0};
+                    char message[320] = {0};
+                    bool isPerf       = gDeletePeekIsPerf;
+
+                    snprintf(title, sizeof(title), "Delete %s Bank %u, Location %u",
+                             isPerf ? "Performance" : "Patch", gDeletePeekBank + 1, gDeletePeekLocation + 1);
+
+                    if (gDeletePeekFailed) {
+                        show_alert(title, "Could not check what's currently at this location — the G2 may have gone offline. Try again.");
+                    } else {
+                        if (gDeletePeekPopulated) {
+                            snprintf(message, sizeof(message),
+                                     "This location currently contains \"%s\". Deleting will erase it. This cannot be undone.", gDeletePeekName);
+                        } else {
+                            snprintf(message, sizeof(message), "This location is already empty. Nothing to delete — continue anyway?");
+                        }
+                        show_confirm(title, message, "Delete...", on_delete_confirmed);
+                    }
+                    break;
+                }
+
+                case eRspLoadPeek:
+                {
+                    char title[64] = {0};
+                    bool isPerf    = gLoadPeekIsPerf;
+
+                    snprintf(title, sizeof(title), "Load %s from Bank %u, Location %u",
+                             isPerf ? "Performance" : "Patch", gLoadPeekBank + 1, gLoadPeekLocation + 1);
+
+                    if (gLoadPeekFailed) {
+                        show_alert(title, "Could not check what's at this location — the G2 may have gone offline. Try again.");
+                    } else if (!gLoadPeekPopulated) {
+                        show_alert(title, "This location is empty. There's nothing to load.");
+                    } else {
+                        // No confirm — loading from a file doesn't ask "replace the current edit buffer?" either.
+                        on_load_confirmed(true);
+                    }
+                    break;
+                }
+
+                case eRspSynthRestorePeek:
+                {
+                    char message[400] = {0};
+
+                    if (gSynthRestorePeekFailed) {
+                        show_alert("Restore Synth Settings", gSynthRestorePeekErrorMessage);
+                    } else {
+                        snprintf(message, sizeof(message),
+                                 "This will overwrite the current synth settings on the G2 with the contents of \"%s\" (Name: %s). "
+                                 "This cannot be undone.", gSynthRestorePeekFileName, gSynthRestorePeekName);
+                        show_confirm("Restore Synth Settings", message, "Restore...", on_synth_restore_confirmed);
+                    }
+                    break;
+                }
+
+                case eRspShowOpenRead:
+                    // Deferred from a menu click so the browser opens from the render loop, not mid-callback.
+                    open_file_browser_read(on_file_opened);
+                    break;
+
+                case eRspShowOpenWrite:
+                {
+                    uint32_t slot                              = gSlot;
+                    char     patchName[CLAVIA_NAME_SIZE + 1]   = {0};
+                    char     defaultName[CLAVIA_NAME_SIZE + 6] = {0}; // name (16) + extension (5) + null
+
+                    if (gGlobalSettings.perfMode == 1) {
+                        if (gGlobalSettings.perfName[0] != '\0') {
+                            snprintf(defaultName, sizeof(defaultName), "%s.prf2", gGlobalSettings.perfName);
+                        } else {
+                            COPY_STRING(defaultName, "performance.prf2");
+                        }
+                    } else {
+                        COPY_STRING(patchName, gGlobalSettings.slot[slot].patchName);
+
+                        if (patchName[0] != '\0') {
+                            snprintf(defaultName, sizeof(defaultName), "%s.pch2", patchName);
+                        } else {
+                            snprintf(defaultName, sizeof(defaultName), "patch.pch2");
+                        }
+                    }
+                    open_file_browser_write(on_file_saved, defaultName);
+                    break;
+                }
+
                 default:
                     break;
             }
@@ -1137,120 +1260,14 @@ static void check_action_flags(void) {
         synthlib_request_redraw();
     }
 
-    if (gShowOpenFileReadDialogue) {
-        gShowOpenFileReadDialogue = false;
-        open_file_browser_read(on_file_opened);
-    }
-
-    if (gShowOpenFileWriteDialogue) {
-        gShowOpenFileWriteDialogue = false;
-
-        if (gGlobalSettings.perfMode == 1) {
-            if (gGlobalSettings.perfName[0] != '\0') {
-                snprintf(defaultName, sizeof(defaultName), "%s.prf2", gGlobalSettings.perfName);
-            } else {
-                COPY_STRING(defaultName, "performance.prf2");
-            }
-        } else {
-            COPY_STRING(patchName, gGlobalSettings.slot[slot].patchName);
-
-            if (patchName[0] != '\0') {
-                snprintf(defaultName, sizeof(defaultName), "%s.pch2", patchName);
-            } else {
-                snprintf(defaultName, sizeof(defaultName), "patch.pch2");
-            }
-        }
-        open_file_browser_write(on_file_saved, defaultName);
-    }
-
     if (gNeedFocus == true) {
         gNeedFocus = false;
         glfwFocusWindow((GLFWwindow *)synthlib_window());
     }
-    // Bank backup / synth-settings backup / bank restore completion alerts now arrive on the reverse
-    // queue as eRspAlert (see the drain above) — their gBank*Complete / *ResultMessage globals were
-    // retired. The gBank*IsPerf / gBank*IsEverything flags stay (the progress overlays read them).
-
-    if (gStorePeekComplete) {
-        gStorePeekComplete = false;
-        char title[64]    = {0};
-        char message[320] = {0};
-        bool isPerf       = gStorePeekIsPerf;
-
-        snprintf(title, sizeof(title), "Store %s to Bank %u, Location %u",
-                 isPerf ? "Performance" : "Patch", gStorePeekBank + 1, gStorePeekLocation + 1);
-
-        if (gStorePeekFailed) {
-            show_alert(title, "Could not check what's currently at this location — the G2 may have gone offline. Try again.");
-        } else {
-            if (gStorePeekPopulated) {
-                snprintf(message, sizeof(message),
-                         "This location currently contains \"%s\". Storing will overwrite it with the current edit buffer %s. "
-                         "This cannot be undone.", gStorePeekName, isPerf ? "performance" : "patch");
-            } else {
-                snprintf(message, sizeof(message),
-                         "This location is currently empty. Store the current edit buffer %s there?", isPerf ? "performance" : "patch");
-            }
-            show_confirm(title, message, "Store...", on_store_confirmed);
-        }
-    }
-
-    if (gDeletePeekComplete) {
-        gDeletePeekComplete = false;
-        char title[64]    = {0};
-        char message[320] = {0};
-        bool isPerf       = gDeletePeekIsPerf;
-
-        snprintf(title, sizeof(title), "Delete %s Bank %u, Location %u",
-                 isPerf ? "Performance" : "Patch", gDeletePeekBank + 1, gDeletePeekLocation + 1);
-
-        if (gDeletePeekFailed) {
-            show_alert(title, "Could not check what's currently at this location — the G2 may have gone offline. Try again.");
-        } else {
-            if (gDeletePeekPopulated) {
-                snprintf(message, sizeof(message),
-                         "This location currently contains \"%s\". Deleting will erase it. This cannot be undone.", gDeletePeekName);
-            } else {
-                snprintf(message, sizeof(message), "This location is already empty. Nothing to delete — continue anyway?");
-            }
-            show_confirm(title, message, "Delete...", on_delete_confirmed);
-        }
-    }
-
-    if (gLoadPeekComplete) {
-        gLoadPeekComplete = false;
-        char title[64] = {0};
-        bool isPerf    = gLoadPeekIsPerf;
-
-        snprintf(title, sizeof(title), "Load %s from Bank %u, Location %u",
-                 isPerf ? "Performance" : "Patch", gLoadPeekBank + 1, gLoadPeekLocation + 1);
-
-        if (gLoadPeekFailed) {
-            show_alert(title, "Could not check what's at this location — the G2 may have gone offline. Try again.");
-        } else if (!gLoadPeekPopulated) {
-            // Nothing captured confirms what RETRIEVE does against an empty location, and there's
-            // nothing useful to load anyway — inform rather than offering to proceed.
-            show_alert(title, "This location is empty. There's nothing to load.");
-        } else {
-            // No confirm prompt here — loading from a file doesn't ask "replace the current edit
-            // buffer?" either, so loading from a bank/location shouldn't behave differently.
-            on_load_confirmed(true);
-        }
-    }
-
-    if (gSynthRestorePeekComplete) {
-        gSynthRestorePeekComplete = false;
-        char message[400] = {0};
-
-        if (gSynthRestorePeekFailed) {
-            show_alert("Restore Synth Settings", gSynthRestorePeekErrorMessage);
-        } else {
-            snprintf(message, sizeof(message),
-                     "This will overwrite the current synth settings on the G2 with the contents of \"%s\" (Name: %s). "
-                     "This cannot be undone.", gSynthRestorePeekFileName, gSynthRestorePeekName);
-            show_confirm("Restore Synth Settings", message, "Restore...", on_synth_restore_confirmed);
-        }
-    }
+    // Completion alerts (bank backup/restore/store/delete/load/synth) and peek→confirm prompts now all
+    // arrive on the reverse queue (see the drain switch above) — their poll flags were retired. The
+    // gBank*IsPerf / gBank*IsEverything flags stay (the progress overlays read them); the gStore/Delete/
+    // Load/SynthRestorePeek* data globals stay too (the drain reads them to build the confirm dialog).
 }
 
 // Helper: draw a fixed-width dropdown trigger button, return updated x.

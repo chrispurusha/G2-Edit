@@ -30,14 +30,24 @@ typedef enum {
     eCommandGetPatch
 } eCommand;
 
-// On the USB->UI queue (gToGuiThread) tMessageContent.cmd holds an eResponseType, NOT an eMsgCmd —
-// the gToUsbThread and gToGuiThread queues never cross, so their value spaces are independent.
-// See reverse-queue-design.md.
+// gToGuiThread is the render loop's work queue: tMessageContent.cmd holds an eResponseType, NOT an
+// eMsgCmd (the gToUsbThread and gToGuiThread queues never cross, so their value spaces are independent).
+// Most entries are USB-thread results, but the UI thread also posts to it for its own deferred work
+// (e.g. "open the file browser" from a menu click, handled in the render loop). See reverse-queue-design.md.
 typedef enum {
     eRspFileLoad,   // fileResultData: result of a file load (eMsgCmdLoadFile)
     eRspFileSave,   // fileResultData: result of a file save (eMsgCmdSavePatchFile / eMsgCmdSavePerfFile)
     eRspNewPatch,   // fileResultData: result of New Patch (eMsgCmdNewPatch); path unused
-    eRspAlert       // alertData: a plain "op finished" message to show_alert (bank backup/restore, store, etc.)
+    eRspAlert,      // alertData: a plain "op finished" message to show_alert (bank backup/restore, store, etc.)
+    // Peek results — the peek data itself stays in the gStore/Delete/Load/SynthRestorePeek* globals
+    // (set by the USB thread, read by the drain to build the confirm dialog); these just signal "ready".
+    eRspStorePeek,
+    eRspDeletePeek,
+    eRspLoadPeek,
+    eRspSynthRestorePeek,
+    // UI-thread-originated deferred work (posted from menu actions, run in the render loop).
+    eRspShowOpenRead,  // open the "load file" browser
+    eRspShowOpenWrite  // open the "save file" browser (drain builds the default name)
 } eResponseType;
 
 typedef enum {
