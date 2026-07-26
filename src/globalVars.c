@@ -111,18 +111,12 @@ _Atomic bool            gBankBackupIsEverything                                 
 _Atomic uint32_t        gBankBackupBank                                                              = 0;
 _Atomic uint32_t        gBankBackupLocation                                                          = 0;
 _Atomic uint32_t        gBankBackupWritten                                                           = 0;
-_Atomic bool            gBankBackupComplete                                                          = false;
-char                    gBankBackupResultMessage[256]                                                = {0};
-_Atomic bool            gSynthSettingsBackupComplete                                                 = false;
-char                    gSynthSettingsBackupResultMessage[256]                                       = {0};
 _Atomic bool            gBankRestoreActive                                                           = false;
 _Atomic bool            gBankRestoreIsEverything                                                     = false;
 _Atomic bool            gBankRestoreIsPerf                                                           = false;
 _Atomic uint32_t        gBankRestoreBank                                                             = 0;
 _Atomic uint32_t        gBankRestoreLocation                                                         = 0;
 _Atomic uint32_t        gBankRestoreWritten                                                          = 0;
-_Atomic bool            gBankRestoreComplete                                                         = false;
-char                    gBankRestoreResultMessage[256]                                               = {0};
 _Atomic bool            gStorePeekComplete                                                           = false;
 _Atomic bool            gStorePeekFailed                                                             = false;
 _Atomic bool            gStorePeekPopulated                                                          = false;
@@ -130,8 +124,6 @@ _Atomic bool            gStorePeekIsPerf                                        
 _Atomic uint32_t        gStorePeekBank                                                               = 0;
 _Atomic uint32_t        gStorePeekLocation                                                           = 0;
 char                    gStorePeekName[CLAVIA_NAME_SIZE + 1]                                         = {0};
-_Atomic bool            gStorePatchComplete                                                          = false;
-char                    gStorePatchResultMessage[256]                                                = {0};
 _Atomic bool            gDeletePeekComplete                                                          = false;
 _Atomic bool            gDeletePeekFailed                                                            = false;
 _Atomic bool            gDeletePeekPopulated                                                         = false;
@@ -139,8 +131,6 @@ _Atomic bool            gDeletePeekIsPerf                                       
 _Atomic uint32_t        gDeletePeekBank                                                              = 0;
 _Atomic uint32_t        gDeletePeekLocation                                                          = 0;
 char                    gDeletePeekName[CLAVIA_NAME_SIZE + 1]                                        = {0};
-_Atomic bool            gDeleteComplete                                                              = false;
-char                    gDeleteResultMessage[256]                                                    = {0};
 _Atomic bool            gLoadPeekComplete                                                            = false;
 _Atomic bool            gLoadPeekFailed                                                              = false;
 _Atomic bool            gLoadPeekPopulated                                                           = false;
@@ -148,16 +138,11 @@ _Atomic bool            gLoadPeekIsPerf                                         
 _Atomic uint32_t        gLoadPeekBank                                                                = 0;
 _Atomic uint32_t        gLoadPeekLocation                                                            = 0;
 char                    gLoadPeekName[CLAVIA_NAME_SIZE + 1]                                          = {0};
-_Atomic bool            gLoadComplete                                                                = false;
-_Atomic bool            gLoadFailed                                                                  = false;
-char                    gLoadResultMessage[256]                                                      = {0};
 _Atomic bool            gSynthRestorePeekComplete                                                    = false;
 _Atomic bool            gSynthRestorePeekFailed                                                      = false;
 char                    gSynthRestorePeekErrorMessage[256]                                           = {0};
 char                    gSynthRestorePeekFileName[64]                                                = {0};
 char                    gSynthRestorePeekName[CLAVIA_NAME_SIZE + 1]                                  = {0};
-_Atomic bool            gSynthRestoreComplete                                                        = false;
-char                    gSynthRestoreResultMessage[256]                                              = {0};
 tNameTableEntry         gPatchNameTable[NUM_PATCH_BANKS][NUM_LOCATIONS_PER_BANK]                     = {0};
 tNameTableEntry         gPerfNameTable[NUM_PERF_BANKS][NUM_LOCATIONS_PER_BANK]                       = {0};
 

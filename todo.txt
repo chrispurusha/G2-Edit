@@ -42,10 +42,19 @@ G2-Edit TODO (priority order)
       New Patch…) and device_op_end() on the matching response; render_device_busy_overlay() dims the
       canvas + "Please wait" panel and mouse_button swallows canvas clicks while busy. Safety net: loop
       ticks while busy + check_action_flags force-clears after 5s so a lost completion can't lock the GUI.
-    * STILL OPEN: Step 1 (generalize msgQueue to a size-agnostic queue), Step 3 REMAINDER (migrate the
-      backup/restore/store-peek result-blocks off their bespoke globals onto the queue), Step 5 (lift
-      the generic queue into SynthLib), Step 6 (adopt in Z1/EmuUtility — they have no queue today).
-      Steps 5-6 are the commonalisation payoff.
+    * Step 3 (simple-alert families) DONE 2026-07-26 (built, needs hardware test): generic eRspAlert +
+      post_alert_response(); migrated store/delete/load/synth-restore results AND bank backup / restore /
+      backup-everything / restore-everything / synth-settings-backup completions onto the queue; retired
+      15 globals (gBankBackup/Restore/SynthSettingsBackup/StorePatch/Delete/Load/SynthRestore *Complete +
+      *ResultMessage + gLoadFailed) from globalVars.{c,h}. gBank*IsPerf/IsEverything stay (progress
+      overlays); the everything-sweeps now reset IsEverything themselves. Drain refined: one response per
+      frame, skipped while alert_dialog_active() (so alerts don't clobber), self-wakes if more queued.
+    * STILL OPEN: Step 1 (generalize msgQueue to a size-agnostic queue), Step 3 REMAINDER (the 4
+      peek->confirm flows — store/delete/load/synth-restore peek — left on flags; they open bespoke
+      confirm dialogs, low cleanup-to-risk), Step 5 (lift the generic queue into SynthLib), Step 6 (adopt
+      in Z1/EmuUtility). Steps 5-6 are the commonalisation payoff. Also noted: the GUI thread could post
+      to the response queue for its OWN UI-only flags (gShowOpenFile*, gNeedFocus, the peek flags) — turns
+      it into a general "UI work queue" and collapses most check_action_flags tests (see design doc).
 - usbComms.c — perf-mode ambiguities: ALL RESOLVED ON HARDWARE 2026-07-26 (see the perf-mode findings
   section below for the captures). Cleanup status:
     * DONE 2026-07-26: removed parse_perf_mode_change() (incoming SUB_COMMAND_SET_PARAM_MODE 0x3e) and
