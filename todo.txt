@@ -1,5 +1,16 @@
 G2-Edit TODO (priority order)
 
+- SynthLib file-naming consistency — DEFERRED (cross-repo, coordinate carefully). SynthLib/src mixes
+  two camps: bare (alertDialog, bankBrowser, clickRegion, contextMenu, fileBrowser, geometry, menuBar,
+  prefs, utils, utilsGraphics) and synthlib-prefixed (synthlibDefs/Globals/Host/Persistence/Queue/
+  Scale/Types). Proposal (owner): unify on a short prefix, e.g. "sl" -> slUtils.c, slDefs.h, slQueue.c,
+  etc. Do NOT drop the prefix entirely — synthlibDefs/Types/Globals would collide with each app's own
+  defs.h/types.h/globalVars. Blast radius: ~130 #include lines across G2-Edit + EmuUtility + SynthEdit
+  (all embed SynthLib as a submodule), plus the file renames + internal cross-includes. Must be one
+  coordinated pass: rename in SynthLib, update every consumer's includes, advance all three pins
+  together, build-test each (only G2-Edit is build-testable from here). Mechanical but wide; schedule
+  when all three projects can be built/committed together.
+
 - Store/Load-to-Bank hit the wrong slot (always slot A) — FIXED 2026-07-26 (load verified on hardware).
   ROOT CAUSE: send_store_patch (0x0b) / send_retrieve_patch (0x0a) put the bank-upload "domain" byte
   as the first payload byte, but that byte is actually the TARGET SLOT. domain==PATCH is 0x00 == slot
@@ -57,13 +68,15 @@ G2-Edit TODO (priority order)
       msgQueue.h slimmed to app payload (tMessageContent + enums) + includes it; src/msgQueue.c deleted.
       SUBMODULE CHANGE — commit in SynthLib + advance the pin (G2-Edit now, Z1/EmuUtility later). Xcode-16
       synced folder auto-added synthlibQueue.c / auto-dropped msgQueue.c (no .pbxproj edit needed).
+    * Step 3 REMAINDER + UI work queue DONE 2026-07-26 (built): the 4 peek->confirm flows now post
+      eRspStorePeek/eRspDeletePeek/eRspLoadPeek/eRspSynthRestorePeek (peek data globals kept untouched
+      for destructive-op targeting safety; only the 4 *PeekComplete poll flags retired); the drain opens
+      the confirm/alert. File>Open / File>Save now post eRspShowOpenRead/eRspShowOpenWrite from
+      menuActions (gShowOpenFileReadDialogue/WriteDialogue retired). check_action_flags() is now just
+      drain + busy-timeout + gNeedFocus (a graphics.cpp-local static, deliberately left as a flag).
     * STILL OPEN: Step 6 (adopt the queue in Z1/EmuUtility — they have no queue today; the commonalisation
-      payoff), Step 3 REMAINDER (the 4
-      peek->confirm flows — store/delete/load/synth-restore peek — left on flags; they open bespoke
-      confirm dialogs, low cleanup-to-risk), Step 5 (lift the generic queue into SynthLib), Step 6 (adopt
-      in Z1/EmuUtility). Steps 5-6 are the commonalisation payoff. Also noted: the GUI thread could post
-      to the response queue for its OWN UI-only flags (gShowOpenFile*, gNeedFocus, the peek flags) — turns
-      it into a general "UI work queue" and collapses most check_action_flags tests (see design doc).
+      payoff, and it's work in those other repos). That's the only reverse-queue item left. Everything
+      else (Steps 1-5, peek flows, UI work queue) is done in G2-Edit and needs a full hardware pass.
 - usbComms.c — perf-mode ambiguities: ALL RESOLVED ON HARDWARE 2026-07-26 (see the perf-mode findings
   section below for the captures). Cleanup status:
     * DONE 2026-07-26: removed parse_perf_mode_change() (incoming SUB_COMMAND_SET_PARAM_MODE 0x3e) and

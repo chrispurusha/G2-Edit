@@ -76,12 +76,13 @@ and swallows canvas input while set.
    `*Complete`/`*ResultMessage`/`gLoadFailed` globals: file save, New Patch, bank backup,
    backup-everything, synth-settings backup, bank restore, restore-everything, store,
    delete, load-failure, synth-settings restore. The 4 **peek→confirm** flows
-   (store/delete/load/synth-restore peek) are deliberately **left on their flags** — they
-   open bespoke confirm dialogs / auto-proceed rather than showing a plain alert, so
-   migrating them just relocates that logic at higher risk for little cleanup. The
-   `gBank*IsPerf`/`gBank*IsEverything` progress flags stay (the progress overlays read
-   them) — the everything-sweep functions now reset `IsEverything` themselves, since the
-   drain block that used to do it is gone.
+   (store/delete/load/synth-restore peek) are **now migrated too [DONE 2026-07-26]**: each posts a
+   bare signal (eRspStorePeek / eRspDeletePeek / eRspLoadPeek / eRspSynthRestorePeek) and the drain
+   opens the confirm/alert. The peek *data* stays in the gStore/Delete/Load/SynthRestorePeek* globals,
+   untouched, so destructive-op targeting is byte-identical — only the 4 *PeekComplete poll flags were
+   retired. The `gBank*IsPerf`/`gBank*IsEverything` progress flags stay (the progress overlays read
+   them) — the everything-sweep functions now reset `IsEverything` themselves, since the drain block
+   that used to do it is gone.
 4. **[DONE 2026-07-26]** `gDeviceOpInProgress` busy state + dim overlay + input swallow.
 5. **[DONE 2026-07-26]** Lift the generic queue to SynthLib. Moved the mechanism to
    `SynthLib/src/synthlibQueue.{h,c}` (tMessageQueue / tMessage / eRcv / msg_init / msg_send /
@@ -104,6 +105,14 @@ and swallows canvas input while set.
   their pins advance; they have no msg_* today so no symbol clash (verify at pin-advance time). Only
   Step 6 (actually USING it in Z1/EmuUtility) remains for the commonalisation payoff.
 
+## Progress log addendum 3
+- 2026-07-26 — Peek→confirm flows + UI work queue DONE (built, Debug xcodebuild). 4 *PeekComplete poll
+  flags → eRsp*Peek signals (peek data globals kept, targeting untouched); 2 file-dialog flags →
+  eRspShowOpenRead/Write posted from menuActions. Retired gShowOpenFileReadDialogue/WriteDialogue +
+  the 4 *PeekComplete globals. check_action_flags() is now drain + safety-timeout + gNeedFocus only.
+  Verify on hardware: Store/Delete/Load/Restore-synth confirm dialogs still appear with correct
+  contents; File > Open / File > Save still open the browser.
+
 ## Drain refinement (2026-07-26)
 The render-loop drain processes **one** response per frame (not a `while` loop): a `while`
 could fire two `show_alert`s in one frame and the modal alert is singular, so the second
@@ -112,12 +121,15 @@ alert isn't replaced before it's dismissed, and **self-wakes** (`wake_glfw()` wh
 `msg_count() > 0`) so the next queued response is handled next frame rather than blocking
 in `glfwWaitEvents`.
 
-## Future idea (owner, 2026-07-26)
-The GUI thread could post to the response queue **for its own consumption**, replacing the
-UI-only deferred-action flags (`gShowOpenFileReadDialogue`, `gShowOpenFileWriteDialogue`,
-`gNeedFocus`, the 4 peek `*Complete` flags, …) — the response queue becomes a general "UI
-work queue" both threads feed, collapsing most of `check_action_flags`'s flag tests into
-one drain switch. Fits naturally once the queue is generic (Step 1) / in SynthLib (Step 5).
+## UI work queue (owner idea) — DONE 2026-07-26
+The GUI thread now also posts to gToGuiThread for its own deferred work: `file_menu_open_patch` /
+`file_menu_save_patch` post `eRspShowOpenRead` / `eRspShowOpenWrite` instead of setting the
+`gShowOpenFileReadDialogue` / `gShowOpenFileWriteDialogue` globals (both retired); the drain opens the
+browser (the save case builds the default name). So the queue is a general render-loop work queue that
+both threads feed. `check_action_flags()` is now essentially just the drain + the busy-state safety
+timeout + `gNeedFocus`. `gNeedFocus` is deliberately **left as a flag** — it's a graphics.cpp-local
+`static` (set and consumed in the same file, same thread), so routing it through the cross-thread queue
+would add indirection for no gain.
 
 ## Progress log
 - 2026-07-26 — design captured. Starting Step 2 (thin vertical slice: file-load result).
