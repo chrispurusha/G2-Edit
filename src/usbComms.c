@@ -182,6 +182,10 @@ static void call_full_patch_change_notify(void) {
     func_ptr();
 }
 
+// Reverse-queue (USB->UI) result helper, defined later; used by the bank/store/delete/load/synth ops
+// above their definition, so forward-declared here.
+static void post_alert_response(const char * title, const char * message);
+
 // ---------------------------------------------------------------------------
 // libusb helpers
 // ---------------------------------------------------------------------------
@@ -1636,6 +1640,8 @@ static int backup_bank(uint32_t bank, const char * destFolder, bool isPerf, bool
     const char * ext                = isPerf ? "prf2" : "pch2";
     const char * typeLabel          = isPerf ? "Performance" : "Patch";
     const char * manifestPrefix     = isPerf ? "PerfBank" : "PatchBank";
+    const char * alertTitle         = isPerf ? "Performance Bank Backup" : "Patch Bank Backup";
+    char         msg[256]           = {0};
 
     if (gCommsState != eCommsOnLine) {
         // Fail fast rather than looping NUM_LOCATIONS_PER_BANK times at USB_RECV_DATA_MS each
@@ -1643,11 +1649,8 @@ static int backup_bank(uint32_t bank, const char * destFolder, bool isPerf, bool
         LOG_ERROR("backup_bank: G2 is not connected\n");
 
         if (!silent) {
-            gBankBackupIsPerf   = isPerf;
-            snprintf(gBankBackupResultMessage, sizeof(gBankBackupResultMessage),
-                     "Backup of %s Bank %u failed: the G2 is not connected", typeLabel, bank + 1);
-            gBankBackupComplete = true;
-            call_wake_glfw();
+            snprintf(msg, sizeof(msg), "Backup of %s Bank %u failed: the G2 is not connected", typeLabel, bank + 1);
+            post_alert_response(alertTitle, msg);
         }
         return EXIT_FAILURE;
     }
@@ -1656,7 +1659,6 @@ static int backup_bank(uint32_t bank, const char * destFolder, bool isPerf, bool
     gBankBackupBank     = bank;
     gBankBackupLocation = 0;
     gBankBackupWritten  = 0;
-    gBankBackupComplete = false;
     call_wake_glfw();
 
     snprintf(manifestPath, sizeof(manifestPath), "%s/%s%u.pchList", destFolder, manifestPrefix, bank + 1);
@@ -1714,12 +1716,11 @@ static int backup_bank(uint32_t bank, const char * destFolder, bool isPerf, bool
     }
 
     if (!silent) {
-        snprintf(gBankBackupResultMessage, sizeof(gBankBackupResultMessage),
+        snprintf(msg, sizeof(msg),
                  "Backup of %s Bank %u complete: %u %s%s written to %s",
                  typeLabel, bank + 1, written, typeLabel, written == 1 ? "" : (isPerf ? "s" : "es"), destFolder);
-        gBankBackupActive   = false;
-        gBankBackupComplete = true;
-        call_wake_glfw();
+        gBankBackupActive = false;
+        post_alert_response(alertTitle, msg);
     }
     return EXIT_SUCCESS;
 }
@@ -1788,6 +1789,8 @@ static int restore_bank(uint32_t sourceBank, uint32_t destBank, const char * src
     uint32_t     written            = 0;
     uint32_t     cleared            = 0;
     bool         aborted            = false;
+    const char * alertTitle         = isPerf ? "Performance Bank Restore" : "Patch Bank Restore";
+    char         msg[256]           = {0};
 
     memset(fileNames, 0, sizeof(fileNames));
 
@@ -1795,11 +1798,8 @@ static int restore_bank(uint32_t sourceBank, uint32_t destBank, const char * src
         LOG_ERROR("restore_bank: G2 is not connected\n");
 
         if (!silent) {
-            gBankRestoreIsPerf   = isPerf;
-            snprintf(gBankRestoreResultMessage, sizeof(gBankRestoreResultMessage),
-                     "Restore of %s Bank %u failed: the G2 is not connected", typeLabel, destBank + 1);
-            gBankRestoreComplete = true;
-            call_wake_glfw();
+            snprintf(msg, sizeof(msg), "Restore of %s Bank %u failed: the G2 is not connected", typeLabel, destBank + 1);
+            post_alert_response(alertTitle, msg);
         }
         return EXIT_FAILURE;
     }
@@ -1809,12 +1809,10 @@ static int restore_bank(uint32_t sourceBank, uint32_t destBank, const char * src
         LOG_ERROR("restore_bank: no manifest at %s — refusing to touch destination bank %u\n", manifestPath, destBank + 1);
 
         if (!silent) {
-            gBankRestoreIsPerf   = isPerf;
-            snprintf(gBankRestoreResultMessage, sizeof(gBankRestoreResultMessage),
+            snprintf(msg, sizeof(msg),
                      "Restore of %s Bank %u failed: no %s found in the chosen folder — nothing was written or cleared",
                      typeLabel, destBank + 1, manifestPath + strlen(srcFolder) + 1);
-            gBankRestoreComplete = true;
-            call_wake_glfw();
+            post_alert_response(alertTitle, msg);
         }
         return EXIT_FAILURE;
     }
@@ -1823,7 +1821,6 @@ static int restore_bank(uint32_t sourceBank, uint32_t destBank, const char * src
     gBankRestoreBank     = destBank;
     gBankRestoreLocation = 0;
     gBankRestoreWritten  = 0;
-    gBankRestoreComplete = false;
     call_wake_glfw();
 
     for (uint32_t location = 0; location < NUM_LOCATIONS_PER_BANK; location++) {
@@ -1972,17 +1969,17 @@ static int store_patch_to_bank(uint32_t bank, uint32_t location, bool isPerf) {
     const char * typeLabel = isPerf ? "Performance" : "Patch";
     int          result    = EXIT_FAILURE;
 
+    char         msg[256]  = {0};
+
     if (gCommsState != eCommsOnLine) {
         LOG_ERROR("store_patch_to_bank: G2 is not connected\n");
-        snprintf(gStorePatchResultMessage, sizeof(gStorePatchResultMessage), "Store failed: the G2 is not connected");
-        gStorePatchComplete = true;
-        call_wake_glfw();
+        post_alert_response("Store to Bank", "Store failed: the G2 is not connected");
         return EXIT_FAILURE;
     }
     result = send_store_patch(domain, bank, location);
 
     if (result == EXIT_SUCCESS) {
-        snprintf(gStorePatchResultMessage, sizeof(gStorePatchResultMessage), "Stored %s to Bank %u, Location %u", typeLabel, bank + 1, location + 1);
+        snprintf(msg, sizeof(msg), "Stored %s to Bank %u, Location %u", typeLabel, bank + 1, location + 1);
 
         // Keep the name-table cache in sync immediately — otherwise a picker built from it (Load/
         // Store/Delete) would keep showing the old contents of this location until the next full
@@ -1998,10 +1995,9 @@ static int store_patch_to_bank(uint32_t bank, uint32_t location, bool isPerf) {
             gPatchNameTable[bank][location].category  = gPatchDescr[gSlot].category;
         }
     } else {
-        snprintf(gStorePatchResultMessage, sizeof(gStorePatchResultMessage), "Store of %s to Bank %u, Location %u failed", typeLabel, bank + 1, location + 1);
+        snprintf(msg, sizeof(msg), "Store of %s to Bank %u, Location %u failed", typeLabel, bank + 1, location + 1);
     }
-    gStorePatchComplete = true;
-    call_wake_glfw();
+    post_alert_response("Store to Bank", msg);
     return result;
 }
 
@@ -2047,17 +2043,17 @@ static int delete_bank_location(uint32_t bank, uint32_t location, bool isPerf) {
     const char * typeLabel = isPerf ? "Performance" : "Patch";
     int          result    = EXIT_FAILURE;
 
+    char         msg[256]  = {0};
+
     if (gCommsState != eCommsOnLine) {
         LOG_ERROR("delete_bank_location: G2 is not connected\n");
-        snprintf(gDeleteResultMessage, sizeof(gDeleteResultMessage), "Delete failed: the G2 is not connected");
-        gDeleteComplete = true;
-        call_wake_glfw();
+        post_alert_response("Delete", "Delete failed: the G2 is not connected");
         return EXIT_FAILURE;
     }
     result          = send_bank_clear(domain, bank, location);
 
     if (result == EXIT_SUCCESS) {
-        snprintf(gDeleteResultMessage, sizeof(gDeleteResultMessage), "Deleted %s Bank %u, Location %u", typeLabel, bank + 1, location + 1);
+        snprintf(msg, sizeof(msg), "Deleted %s Bank %u, Location %u", typeLabel, bank + 1, location + 1);
 
         // Keep the name-table cache in sync immediately — same reasoning as store_patch_to_bank()
         // above, otherwise the deleted location keeps showing (with its old name) in Load/Store/
@@ -2072,10 +2068,9 @@ static int delete_bank_location(uint32_t bank, uint32_t location, bool isPerf) {
             gPatchNameTable[bank][location].category  = 0;
         }
     } else {
-        snprintf(gDeleteResultMessage, sizeof(gDeleteResultMessage), "Delete of %s Bank %u, Location %u failed", typeLabel, bank + 1, location + 1);
+        snprintf(msg, sizeof(msg), "Delete of %s Bank %u, Location %u failed", typeLabel, bank + 1, location + 1);
     }
-    gDeleteComplete = true;
-    call_wake_glfw();
+    post_alert_response("Delete", msg);
     return result;
 }
 
@@ -2124,22 +2119,17 @@ static int load_patch_from_bank(uint32_t bank, uint32_t location, bool isPerf) {
 
     if (gCommsState != eCommsOnLine) {
         LOG_ERROR("load_patch_from_bank: G2 is not connected\n");
-        snprintf(gLoadResultMessage, sizeof(gLoadResultMessage), "Load failed: the G2 is not connected");
-        gLoadFailed   = true;
-        gLoadComplete = true;
-        call_wake_glfw();
+        post_alert_response("Load", "Load failed: the G2 is not connected");
         return EXIT_FAILURE;
     }
     result        = send_retrieve_patch(domain, bank, location);
 
-    if (result == EXIT_SUCCESS) {
-        snprintf(gLoadResultMessage, sizeof(gLoadResultMessage), "Loaded %s from Bank %u, Location %u", typeLabel, bank + 1, location + 1);
-    } else {
-        snprintf(gLoadResultMessage, sizeof(gLoadResultMessage), "Load of %s from Bank %u, Location %u failed", typeLabel, bank + 1, location + 1);
+    // Success needs no alert — the loaded patch shows on the redrawn canvas. Only report failure.
+    if (result != EXIT_SUCCESS) {
+        char msg[256] = {0};
+        snprintf(msg, sizeof(msg), "Load of %s from Bank %u, Location %u failed", typeLabel, bank + 1, location + 1);
+        post_alert_response("Load", msg);
     }
-    gLoadFailed   = (result != EXIT_SUCCESS);
-    gLoadComplete = true;
-    call_wake_glfw();
     return result;
 }
 
@@ -2188,26 +2178,21 @@ static int backup_synth_settings(const char * destFolder, bool silent) {
     char   chanBuf[4][8]    = {{0}};
     char   globalChanBuf[8] = {0};
     char   sysexBuf[8]      = {0};
+    char   msg[256]         = {0};
     FILE * file             = NULL;
 
     if (gCommsState != eCommsOnLine) {
         LOG_ERROR("backup_synth_settings: G2 is not connected\n");
 
         if (!silent) {
-            snprintf(gSynthSettingsBackupResultMessage, sizeof(gSynthSettingsBackupResultMessage),
-                     "Synth Settings Backup failed: the G2 is not connected");
-            gSynthSettingsBackupComplete = true;
-            call_wake_glfw();
+            post_alert_response("Synth Settings Backup", "Synth Settings Backup failed: the G2 is not connected");
         }
         return EXIT_FAILURE;
     }
 
     if (send_get_synth_settings() != EXIT_SUCCESS) {
         if (!silent) {
-            snprintf(gSynthSettingsBackupResultMessage, sizeof(gSynthSettingsBackupResultMessage),
-                     "Synth Settings Backup failed: could not read settings from device");
-            gSynthSettingsBackupComplete = true;
-            call_wake_glfw();
+            post_alert_response("Synth Settings Backup", "Synth Settings Backup failed: could not read settings from device");
         }
         return EXIT_FAILURE;
     }
@@ -2220,10 +2205,8 @@ static int backup_synth_settings(const char * destFolder, bool silent) {
         LOG_ERROR("backup_synth_settings: could not create %s\n", filePath);
 
         if (!silent) {
-            snprintf(gSynthSettingsBackupResultMessage, sizeof(gSynthSettingsBackupResultMessage),
-                     "Synth Settings Backup failed: could not write to %s", destFolder);
-            gSynthSettingsBackupComplete = true;
-            call_wake_glfw();
+            snprintf(msg, sizeof(msg), "Synth Settings Backup failed: could not write to %s", destFolder);
+            post_alert_response("Synth Settings Backup", msg);
         }
         return EXIT_FAILURE;
     }
@@ -2262,10 +2245,8 @@ static int backup_synth_settings(const char * destFolder, bool silent) {
     fclose(file);
 
     if (!silent) {
-        snprintf(gSynthSettingsBackupResultMessage, sizeof(gSynthSettingsBackupResultMessage),
-                 "Synth Settings Backup complete: %s written to %s", fileName, destFolder);
-        gSynthSettingsBackupComplete = true;
-        call_wake_glfw();
+        snprintf(msg, sizeof(msg), "Synth Settings Backup complete: %s written to %s", fileName, destFolder);
+        post_alert_response("Synth Settings Backup", msg);
     }
     return EXIT_SUCCESS;
 }
@@ -2485,14 +2466,11 @@ static int backup_everything(const char * destFolder) {
     uint32_t totalPerfs   = 0;
     bool     settingsOk   = false;
     bool     aborted      = false;
+    char     msg[256]     = {0};
 
     if (gCommsState != eCommsOnLine) {
         LOG_ERROR("backup_everything: G2 is not connected\n");
-        gBankBackupIsEverything = true;
-        snprintf(gBankBackupResultMessage, sizeof(gBankBackupResultMessage),
-                 "Backup Everything failed: the G2 is not connected");
-        gBankBackupComplete     = true;
-        call_wake_glfw();
+        post_alert_response("Backup Everything", "Backup Everything failed: the G2 is not connected");
         return EXIT_FAILURE;
     }
     gBankBackupIsEverything = true;
@@ -2532,23 +2510,21 @@ static int backup_everything(const char * destFolder) {
     if (!aborted) {
         settingsOk = backup_synth_settings(destFolder, true) == EXIT_SUCCESS;
     }
-    gBankBackupActive   = false;
-    // gBankBackupIsEverything stays true until check_action_flags() has shown the alert below,
-    // so it can still pick the right title — it resets that flag itself, same as gBankBackupComplete.
+    gBankBackupActive       = false;
+    gBankBackupIsEverything = false; // done — reset now the drain no longer does it, so a later single-bank backup's title is right
 
     if (aborted) {
-        snprintf(gBankBackupResultMessage, sizeof(gBankBackupResultMessage),
+        snprintf(msg, sizeof(msg),
                  "Backup Everything aborted: lost connection to the G2 after %u patch%s and %u performance%s written to %s",
                  totalPatches, totalPatches == 1 ? "" : "es", totalPerfs, totalPerfs == 1 ? "" : "s", destFolder);
     } else {
-        snprintf(gBankBackupResultMessage, sizeof(gBankBackupResultMessage),
+        snprintf(msg, sizeof(msg),
                  "Backup Everything complete: %u patch%s across %u bank%s, %u performance%s across %u bank%s, and synth settings%s written to %s",
                  totalPatches, totalPatches == 1 ? "" : "es", NUM_PATCH_BANKS, NUM_PATCH_BANKS == 1 ? "" : "s",
                  totalPerfs, totalPerfs == 1 ? "" : "s", NUM_PERF_BANKS, NUM_PERF_BANKS == 1 ? "" : "s",
                  settingsOk ? "" : " (settings failed)", destFolder);
     }
-    gBankBackupComplete = true;
-    call_wake_glfw();
+    post_alert_response("Backup Everything", msg);
     return aborted ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
@@ -3108,23 +3084,22 @@ static int send_synth_settings(void) {
 static int apply_synth_settings_restore(void) {
     int result = EXIT_FAILURE;
 
+    char msg[256] = {0};
+
     if (gCommsState != eCommsOnLine) {
         LOG_ERROR("apply_synth_settings_restore: G2 is not connected\n");
-        snprintf(gSynthRestoreResultMessage, sizeof(gSynthRestoreResultMessage), "Restore failed: the G2 is not connected");
-        gSynthRestoreComplete = true;
-        call_wake_glfw();
+        post_alert_response("Restore Synth Settings", "Restore failed: the G2 is not connected");
         return EXIT_FAILURE;
     }
     gSynthSettings        = sSynthSettingsRestoreStaged;
     result                = send_synth_settings();
 
     if (result == EXIT_SUCCESS) {
-        snprintf(gSynthRestoreResultMessage, sizeof(gSynthRestoreResultMessage), "Synth Settings restored from %s", gSynthRestorePeekFileName);
+        snprintf(msg, sizeof(msg), "Synth Settings restored from %s", gSynthRestorePeekFileName);
     } else {
-        snprintf(gSynthRestoreResultMessage, sizeof(gSynthRestoreResultMessage), "Synth Settings restore failed");
+        snprintf(msg, sizeof(msg), "Synth Settings restore failed");
     }
-    gSynthRestoreComplete = true;
-    call_wake_glfw();
+    post_alert_response("Restore Synth Settings", msg);
     return result;
 }
 
@@ -3714,6 +3689,24 @@ static void post_file_result_response(uint32_t responseType, int32_t result, con
 
     if (path != NULL) {
         COPY_STRING(rsp.fileResultData.path, path);
+    }
+    msg_send(&gResponseQueue, &rsp);
+    call_wake_glfw();
+}
+
+// Post a plain completion alert (title + message) to the UI thread, then wake the render loop. Used
+// by the whole-bank / store / delete / load / synth-settings ops that just want to show a result.
+static void post_alert_response(const char * title, const char * message) {
+    tMessageContent rsp = {0};
+
+    rsp.cmd = eRspAlert;
+
+    if (title != NULL) {
+        COPY_STRING(rsp.alertData.title, title);
+    }
+
+    if (message != NULL) {
+        COPY_STRING(rsp.alertData.message, message);
     }
     msg_send(&gResponseQueue, &rsp);
     call_wake_glfw();
