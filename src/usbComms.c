@@ -1911,17 +1911,16 @@ static int restore_bank(uint32_t sourceBank, uint32_t destBank, const char * src
 
     if (!silent) {
         if (aborted) {
-            snprintf(gBankRestoreResultMessage, sizeof(gBankRestoreResultMessage),
+            snprintf(msg, sizeof(msg),
                      "Restore of %s Bank %u stopped at location %u: %u written, %u cleared before the failure",
                      typeLabel, destBank + 1, gBankRestoreLocation + 1, written, cleared);
         } else {
-            snprintf(gBankRestoreResultMessage, sizeof(gBankRestoreResultMessage),
+            snprintf(msg, sizeof(msg),
                      "Restore of %s Bank %u complete: %u written, %u location%s cleared",
                      typeLabel, destBank + 1, written, cleared, cleared == 1 ? "" : "s");
         }
-        gBankRestoreActive   = false;
-        gBankRestoreComplete = true;
-        call_wake_glfw();
+        gBankRestoreActive = false;
+        post_alert_response(alertTitle, msg);
     }
     return aborted ? EXIT_FAILURE : EXIT_SUCCESS;
 }
@@ -1962,7 +1961,7 @@ static int peek_store_target(uint32_t bank, uint32_t location, bool isPerf) {
 
 // Commits the current edit-buffer patch/performance to bank/location on the device via
 // send_store_patch(), once the user has confirmed past the overwrite warning peek_store_target()
-// set up. Result lands in gStorePatchComplete/gStorePatchResultMessage, polled by
+// set up. Result is posted to the UI via post_alert_response() (reverse queue), drained by
 // check_action_flags() in graphics.cpp.
 static int store_patch_to_bank(uint32_t bank, uint32_t location, bool isPerf) {
     uint8_t      domain    = isPerf ? BANK_UPLOAD_DOMAIN_PERFORMANCE : BANK_UPLOAD_DOMAIN_PATCH;
@@ -2037,7 +2036,7 @@ static int peek_delete_target(uint32_t bank, uint32_t location, bool isPerf) {
 // here exposed directly as a standalone user-facing delete. The Patch-domain framing was confirmed
 // from a real capture (see [[bank-backup-protocol]]); Performance-domain CLEAR is assumed by the
 // same domain-byte symmetry already relied on for Performance Bank Restore, not independently
-// captured. Result lands in gDeleteComplete/gDeleteResultMessage.
+// captured. Result is posted to the UI via post_alert_response() (reverse queue).
 static int delete_bank_location(uint32_t bank, uint32_t location, bool isPerf) {
     uint8_t      domain    = isPerf ? BANK_UPLOAD_DOMAIN_PERFORMANCE : BANK_UPLOAD_DOMAIN_PATCH;
     const char * typeLabel = isPerf ? "Performance" : "Patch";
@@ -2050,7 +2049,7 @@ static int delete_bank_location(uint32_t bank, uint32_t location, bool isPerf) {
         post_alert_response("Delete", "Delete failed: the G2 is not connected");
         return EXIT_FAILURE;
     }
-    result          = send_bank_clear(domain, bank, location);
+    result = send_bank_clear(domain, bank, location);
 
     if (result == EXIT_SUCCESS) {
         snprintf(msg, sizeof(msg), "Deleted %s Bank %u, Location %u", typeLabel, bank + 1, location + 1);
@@ -2108,7 +2107,7 @@ static int peek_load_target(uint32_t bank, uint32_t location, bool isPerf) {
 }
 
 // Loads bank/location into the edit buffer via send_retrieve_patch(), once the user has confirmed
-// past the peek_load_target() warning. Result lands in gLoadComplete/gLoadResultMessage — the
+// past the peek_load_target() warning. Failure is posted to the UI via post_alert_response() — the
 // actual patch content arriving into the editor happens separately/automatically via the existing
 // patch-change-notification path (see send_retrieve_patch's comment), not something this function
 // needs to wait for.
@@ -2122,7 +2121,7 @@ static int load_patch_from_bank(uint32_t bank, uint32_t location, bool isPerf) {
         post_alert_response("Load", "Load failed: the G2 is not connected");
         return EXIT_FAILURE;
     }
-    result        = send_retrieve_patch(domain, bank, location);
+    result = send_retrieve_patch(domain, bank, location);
 
     // Success needs no alert — the loaded patch shows on the redrawn canvas. Only report failure.
     if (result != EXIT_SUCCESS) {
@@ -3082,7 +3081,7 @@ static int send_synth_settings(void) {
 // just above — the same wire path the Settings panel's own "apply" already uses, so no new wire
 // protocol was needed for this feature at all.
 static int apply_synth_settings_restore(void) {
-    int result = EXIT_FAILURE;
+    int  result   = EXIT_FAILURE;
 
     char msg[256] = {0};
 
@@ -3091,8 +3090,8 @@ static int apply_synth_settings_restore(void) {
         post_alert_response("Restore Synth Settings", "Restore failed: the G2 is not connected");
         return EXIT_FAILURE;
     }
-    gSynthSettings        = sSynthSettingsRestoreStaged;
-    result                = send_synth_settings();
+    gSynthSettings = sSynthSettingsRestoreStaged;
+    result         = send_synth_settings();
 
     if (result == EXIT_SUCCESS) {
         snprintf(msg, sizeof(msg), "Synth Settings restored from %s", gSynthRestorePeekFileName);
@@ -3121,14 +3120,11 @@ static int restore_everything(const char * srcFolder) {
     const char * settingsStatus     = "failed";
     bool         aborted            = false;
     char         manifestPath[1280] = {0};
+    char         msg[256]           = {0};
 
     if (gCommsState != eCommsOnLine) {
         LOG_ERROR("restore_everything: G2 is not connected\n");
-        gBankRestoreIsEverything = true;
-        snprintf(gBankRestoreResultMessage, sizeof(gBankRestoreResultMessage),
-                 "Restore Everything failed: the G2 is not connected");
-        gBankRestoreComplete     = true;
-        call_wake_glfw();
+        post_alert_response("Restore Everything", "Restore Everything failed: the G2 is not connected");
         return EXIT_FAILURE;
     }
     gBankRestoreIsEverything = true;
@@ -3191,25 +3187,23 @@ static int restore_everything(const char * srcFolder) {
             settingsStatus = (send_synth_settings() == EXIT_SUCCESS) ? "restored" : "failed";
         }
     }
-    gBankRestoreActive   = false;
-    // gBankRestoreIsEverything stays true until check_action_flags() has shown the alert below,
-    // same reasoning as gBankBackupIsEverything in backup_everything() above.
+    gBankRestoreActive       = false;
+    gBankRestoreIsEverything = false; // done — reset now the drain no longer does it
 
     if (aborted) {
-        snprintf(gBankRestoreResultMessage, sizeof(gBankRestoreResultMessage),
+        snprintf(msg, sizeof(msg),
                  "Restore Everything stopped: %u patch%s across %u bank%s and %u performance%s across %u bank%s written before the failure",
                  totalPatches, totalPatches == 1 ? "" : "es", patchBanksRestored, patchBanksRestored == 1 ? "" : "s",
                  totalPerfs, totalPerfs == 1 ? "" : "s", perfBanksRestored, perfBanksRestored == 1 ? "" : "s");
     } else {
-        snprintf(gBankRestoreResultMessage, sizeof(gBankRestoreResultMessage),
+        snprintf(msg, sizeof(msg),
                  "Restore Everything complete: %u patch%s across %u bank%s (%u skipped, no manifest), "
                  "%u performance%s across %u bank%s (%u skipped, no manifest), synth settings %s",
                  totalPatches, totalPatches == 1 ? "" : "es", patchBanksRestored, patchBanksRestored == 1 ? "" : "s", patchBanksSkipped,
                  totalPerfs, totalPerfs == 1 ? "" : "s", perfBanksRestored, perfBanksRestored == 1 ? "" : "s", perfBanksSkipped,
                  settingsStatus);
     }
-    gBankRestoreComplete = true;
-    call_wake_glfw();
+    post_alert_response("Restore Everything", msg);
     return aborted ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 

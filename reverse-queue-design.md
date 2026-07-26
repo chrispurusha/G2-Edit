@@ -65,13 +65,35 @@ and swallows canvas input while set.
 1. Generalize `msgQueue` to a size-agnostic queue in place (forward queue keeps working).
 2. **[DONE 2026-07-26]** Add `gResponseQueue` + poll-drain; migrate ONE op as proof — file
    **load** result → surface failure via `show_alert` (closes the silent-failure gap).
-3. **[PARTIAL 2026-07-26]** Migrate remaining `check_action_flags` result-blocks onto
-   the queue. Done: file **save** (`eRspFileSave`) and **New Patch** (`eRspNewPatch`)
-   now post results (writers return status). Still open: the backup/restore/store-peek
-   blocks (working code with their own progress UI — retire their bespoke globals later).
+3. **[DONE 2026-07-26]** Migrate the "op finished → alert" result-blocks onto the queue
+   as a generic `eRspAlert {title, message}` (via `post_alert_response()`), retiring 15
+   `*Complete`/`*ResultMessage`/`gLoadFailed` globals: file save, New Patch, bank backup,
+   backup-everything, synth-settings backup, bank restore, restore-everything, store,
+   delete, load-failure, synth-settings restore. The 4 **peek→confirm** flows
+   (store/delete/load/synth-restore peek) are deliberately **left on their flags** — they
+   open bespoke confirm dialogs / auto-proceed rather than showing a plain alert, so
+   migrating them just relocates that logic at higher risk for little cleanup. The
+   `gBank*IsPerf`/`gBank*IsEverything` progress flags stay (the progress overlays read
+   them) — the everything-sweep functions now reset `IsEverything` themselves, since the
+   drain block that used to do it is gone.
 4. **[DONE 2026-07-26]** `gDeviceOpInProgress` busy state + dim overlay + input swallow.
 5. Lift the generic queue to SynthLib.
 6. Adopt in Z1/EmuUtility.
+
+## Drain refinement (2026-07-26)
+The render-loop drain processes **one** response per frame (not a `while` loop): a `while`
+could fire two `show_alert`s in one frame and the modal alert is singular, so the second
+would clobber the first. It also **skips draining while `alert_dialog_active()`** so an
+alert isn't replaced before it's dismissed, and **self-wakes** (`wake_glfw()` when
+`msg_count() > 0`) so the next queued response is handled next frame rather than blocking
+in `glfwWaitEvents`.
+
+## Future idea (owner, 2026-07-26)
+The GUI thread could post to the response queue **for its own consumption**, replacing the
+UI-only deferred-action flags (`gShowOpenFileReadDialogue`, `gShowOpenFileWriteDialogue`,
+`gNeedFocus`, the 4 peek `*Complete` flags, …) — the response queue becomes a general "UI
+work queue" both threads feed, collapsing most of `check_action_flags`'s flag tests into
+one drain switch. Fits naturally once the queue is generic (Step 1) / in SynthLib (Step 5).
 
 ## Progress log
 - 2026-07-26 — design captured. Starting Step 2 (thin vertical slice: file-load result).
@@ -106,3 +128,10 @@ and swallows canvas input while set.
     "Please wait" panel and reject clicks for the ~0.5s op; a bad save path → "Save Failed".
   - STILL DEFERRED: backup/restore/store-peek result-block migration (Step 3 remainder);
     Steps 1, 5, 6.
+- 2026-07-26 — Step 3 DONE (built, Debug xcodebuild; needs hardware test). Generic `eRspAlert`
+  + `post_alert_response()`; migrated store/delete/load/synth-restore results and the bank
+  backup/restore/backup-everything/restore-everything/synth-settings-backup completions; 15
+  globals retired from globalVars.{c,h}. Peek→confirm flows left on flags (see plan step 3).
+  Drain refined to one-per-frame + alert-gated + self-wake (see above). Verify on hardware:
+  every backup/restore/store/delete/load/synth op still shows its correct completion alert,
+  the everything-sweep progress titles are right, and no alert is skipped or doubled.
