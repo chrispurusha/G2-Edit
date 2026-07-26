@@ -6,11 +6,10 @@ G2-Edit TODO (priority order)
   A, so patch Store/Load always hit slot A regardless of selection. (An earlier slot-ADDRESSING
   attempt, usb_cmd_slot 0x29, was wrong and reverted.) FIX: keep system addressing (usb_cmd_sys 0x41
   -> 01 2c 41), send gSlot as the first payload byte for the patch case. Matches the owner's
-  stock-editor RETRIEVE capture exactly: "01 2c 41 0a 01 00 00" = load bank1/loc1 into slot B. Load
-  confirmed working on hardware (owner). STORE has the identical (symmetric) fix — high confidence but
-  not yet hardware-verified (store is a flash write); a stock-editor STORE-slot-B capture would
-  confirm byte5=slot there too with zero risk. Perf-domain path left unchanged/unverified (no perf
-  capture). NOTE: ENABLE_USB_LOG left ON in defs.h for testing — turn off before committing.
+  stock-editor RETRIEVE capture exactly: "01 2c 41 0a 01 00 00" = load bank1/loc1 into slot B. BOTH
+  Load AND Store confirmed working on hardware (owner, 2026-07-26). Perf-domain path left
+  unchanged/unverified (no perf capture). NOTE: ENABLE_USB_LOG left ON in defs.h for testing — turn
+  off before committing.
 - Consolidate file-load paths onto the USB thread — the perf load now goes through one ordered
   eMsgCmdLoadPerf handler in usbComms.c (see RESOLVED 2026-07-26 below). Do the same for PATCH load
   (read_file_into_memory_and_process's type==0 branch still parses on the UI thread + enqueues
@@ -28,7 +27,12 @@ G2-Edit TODO (priority order)
       could tighten the wait if it matters.
 - moduleGraphics.cpp — refactor volume-meter/label rendering into utilsGraphics.cpp; resolve "can Mode be morphed?" question (needs hardware/manual check)
 - moduleGraphics.cpp/renderParams.c — port custom graph displays from the original editor (none exist today besides render_volume_meter): envelope shapes (AD/AR/D/H/AHD/ADSR/ADBDSR/Multi/DX), filter response curves (Classic/Normal/Small/Static/Comb), oscillator & LFO waveform shapes, EQ curves (2-band/3-band/peak), compressor/expander, distortion/waveshaping (Dist A/B/Wrap/Shape/Saturate), FM operator + DX router, phaser, vocoder, tuned noise, random distribution/trigger — see Original Editor/G2Editor.c, CCustomObjectFactory::CreateCustom (~line 101952) and the CPnl*Graph class family for reference implementations
-- OscA(97) — add new UI element for Freq control (param 0) that accounts for param 6 Pitch Type
+- FltClassic response graph (render_fltclassic_response_graph, moduleGraphics.cpp) — at minimum Freq
+  the resonance bump runs off the LEFT edge: the peak shows but nothing to its left. The X axis maps
+  Freq's raw range (~13.75Hz min .. 21.1kHz max) across the box, so at min-Freq the cutoff/peak sits
+  at x=0. Fix: widen the displayed frequency window beyond the knob's own range so the peak always has
+  headroom either side — e.g. display from ~0Hz on the left up to ~26kHz on the right (owner's
+  suggestion) so the min-Freq bump sits inboard of the left edge rather than clipped against it.
 - Sw8-1(15), ValSw1-2(17) — need more resources
 - OscShpB(8) — check mode handling
 - Fix known caveats on otherwise-OK modules: Oscar(9) mode, EnvADSR(20) values, PartQuant(22) dial range (0 to +/-63), LfoC(24) Range Sub param, SeqNote/SeqEvent/SeqVal/SeqLev park LED handling, MixFader(161) value scale (match Mix4-1C's 0-100/xx.x mapping)
