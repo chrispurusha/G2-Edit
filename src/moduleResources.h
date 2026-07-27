@@ -64,10 +64,11 @@ const char *             shapeTypeStrMap[]                       = {"sin", "tri"
 const char *             shapeOscATypeStrMap[]                   = {"sin", "tri", "saw", "squ", "p25", "p10", NULL};
 const char *             reverbTypeStrMap[]                      = {"Small", "Medium", "Large", "Hall", NULL};
 const char *             polyMonoStrMap[]                        = {"Poly", "Mono", NULL};
-const char *             rangeStrMap[]                           = {"Rate Lo", "Rate Hi", "BPM", "Rate Sub", "Clk", NULL};
+const char *             rangeStrMap[]                           = {"Rate Lo", "Rate Hi", "BPM", "Rate Sub", "Clk", NULL};   // TODO: RandomA/B only — wire order UNVERIFIED (no ParamText::RandomRange in decompile); LFOs moved to rangeLfoStrMap below
+const char *             rangeLfoStrMap[]                        = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM", "Clk", NULL};   // wire order per original editor ParamText::LFORange: 0=Sub 1=Lo 2=Hi 3=BPM 4=Clk (LfoShpA/LfoB have Clk)
 const char *             lfoWaveStrMap[]                         = {"Sin", "Tri", "Saw", "Squ", "RndSt", "Rnd", NULL};
 const char *             lfoShpAWaveStrMap[]                     = {"Sine", "CosBell", "TriBell", "Saw>Tri", "Tri>Squ", "Pulse", NULL};
-const char *             rangeLfoCStrMap[]                       = {"Rate Lo", "Rate Hi", "BPM", "Rate Sub", NULL};
+const char *             rangeLfoCStrMap[]                       = {"Rate Sub", "Rate Lo", "Rate Hi", "BPM", NULL};   // wire order per ParamText::LFORange (LfoC/LfoA have no Clk); was mis-ordered {Lo,Hi,BPM,Sub}
 const char *             saturateCurveStrMap[]                   = {"1", "2", "3", "4", NULL};
 const char *             shpExpCurveStrMap[]                     = {"x2", "x3", "x4", "x5", NULL};
 const char *             pulseRangeStrMap[]                      = {"Sub", "Lo", "Hi", NULL};
@@ -528,11 +529,11 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeLfoC,       paramTypeLFORate,     {{ 50,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                         // 24 Rate  *** Could have Freq but tied to Range
     {moduleTypeLfoC,       paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          },                         // 24 Mode
     {moduleTypeLfoC,       paramTypeMenu,        {{ 76,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, posStrMap,                             NULL          },                         // 24 OutType
-    {moduleTypeLfoC,       paramTypeMenu,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, rangeLfoCStrMap,                       NULL          },                         // 24 Range
+    {moduleTypeLfoC,       paramTypeMenu,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   1, rangeLfoCStrMap,                       NULL          },                         // 24 Range  (default 1 = Rate Lo; was 0 which is now Sub after strMap re-order)
     {moduleTypeLfoC,       paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 24 Bypass
     // 25 LfoShpA
     {moduleTypeLfoShpA,    paramTypeLFORate,     {{ 36,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                         // 25 Rate
-    {moduleTypeLfoShpA,    paramTypeMenu,        {{ 36, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,                           NULL          },                         // 25 Range
+    {moduleTypeLfoShpA,    paramTypeMenu,        {{ 36, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   1, rangeLfoStrMap,                        NULL          },                         // 25 Range  (default 1 = Rate Lo)
     {moduleTypeLfoShpA,    paramTypeMenu,        {{ 25, -28}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          },                         // 25 Kbt
     {moduleTypeLfoShpA,    paramTypeCommonDial,  {{ 25,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                         // 25 Rate M
     {moduleTypeLfoShpA,    paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 25 Bypass
@@ -551,7 +552,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeLfoA,       paramTypeMenu,        {{ 65, -10}, { 7,  7}}, anchorBottomLeft,  NULL,             6,   0, lfoWaveStrMap,                         NULL          },                         // 26 Wave
     {moduleTypeLfoA,       paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                         // 26 Bypass
     {moduleTypeLfoA,       paramTypeMenu,        {{-10, -10}, { 7,  7}}, anchorBottomRight, NULL,             6,   0, posStrMap,                             NULL          },                         // 26 OutType
-    {moduleTypeLfoA,       paramTypeMenu,        {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, rangeStrMap,                           NULL          },                         // 26 Range
+    {moduleTypeLfoA,       paramTypeMenu,        {{ 25,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   1, rangeLfoCStrMap,                       NULL          },                         // 26 Range  (LfoA has no Clk; default 1 = Rate Lo)
     // 27 OscMaster
     {moduleTypeOscMaster,  paramTypeOscFreq,     {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,  64, NULL,                                  NULL          },                         // 27 Pitch
     {moduleTypeOscMaster,  paramTypeFine,        {{ 60,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                         // 27 Fine
@@ -1503,7 +1504,7 @@ const tParamLocation     paramLocationList[] = {
     // 190 LfoB
     {moduleTypeLfoB,       paramTypeCommonDial,  {{ 40,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                     // 26 Rate  *** Could have Freq but tied to Range
     {moduleTypeLfoB,       paramTypeCommonDial,  {{ 30,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                     // 26 Rate M
-    {moduleTypeLfoB,       paramTypeMenu,        {{ 40, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   0, rangeStrMap,                           NULL          },                     // 26 Range
+    {moduleTypeLfoB,       paramTypeMenu,        {{ 40, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             5,   1, rangeLfoStrMap,                        NULL          },                     // 26 Range  (default 1 = Rate Lo)
     {moduleTypeLfoB,       paramTypeMenu,        {{ 50, -13}, { 7,  7}}, anchorBottomLeft,  "Kbt",            5,   0, offTo100KbStrMap,                      NULL          },                     // 26 Kbt
     {moduleTypeLfoB,       paramTypeMenu,        {{ 60, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             4,   0, lfoWaveStrMap,                         NULL          },                     // 26 Wave
     {moduleTypeLfoB,       paramTypeMenu,        {{ 30, -20}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, polyMonoStrMap,                        NULL          },                     // 26 Mode

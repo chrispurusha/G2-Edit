@@ -164,7 +164,12 @@ G2-Edit TODO (priority order)
       path to re-derive perfMode from a reliable source after 0x1f, verified on hardware.
     * send_perf_mode_change() takes ~3 sends (500ms retries) before the 0x1f response arrives — minor, but
       could tighten the wait if it matters.
-- moduleGraphics.cpp — refactor volume-meter/label rendering into utilsGraphics.cpp; resolve "can Mode be morphed?" question (needs hardware/manual check)
+- moduleGraphics.cpp — resolve "can Mode be morphed?" question (needs hardware/manual check).
+  [The paired "move render_volume_meter/label rendering into utilsGraphics.cpp" idea was DROPPED
+  2026-07-27: utilsGraphics.cpp now lives in SynthLib, and render_volume_meter is pure G2 domain
+  (tVolumeType / tVolumeMeterConfig / volumeMeterStyle* enum + G2 value-bit decode) built entirely on
+  primitives that are ALREADY shared (render_rectangle / set_rgb_colour). Moving it would couple SynthLib
+  to G2 module semantics — the opposite of the commonalise goal. It stays G2-local in moduleGraphics.cpp.]
 - moduleGraphics.cpp/renderParams.c — port custom graph displays from the original editor (none exist today besides render_volume_meter): envelope shapes (AD/AR/D/H/AHD/ADSR/ADBDSR/Multi/DX), filter response curves (Classic/Normal/Small/Static/Comb), oscillator & LFO waveform shapes, EQ curves (2-band/3-band/peak), compressor/expander, distortion/waveshaping (Dist A/B/Wrap/Shape/Saturate), FM operator + DX router, phaser, vocoder, tuned noise, random distribution/trigger — see Original Editor/G2Editor.c, CCustomObjectFactory::CreateCustom (~line 101952) and the CPnl*Graph class family for reference implementations
 - FltClassic response graph (render_fltclassic_response_graph, moduleGraphics.cpp) — DONE 2026-07-26.
   At minimum Freq the resonance bump ran off the LEFT edge (peak against x=0, lower half off-screen)
@@ -175,7 +180,24 @@ G2-Edit TODO (priority order)
   verified (Debug, xcodebuild). Not yet eyeballed on-screen by owner.
 - Sw8-1(15), ValSw1-2(17) — need more resources
 - OscShpB(8) — check mode handling
-- Fix known caveats on otherwise-OK modules: Oscar(9) mode, EnvADSR(20) values, PartQuant(22) dial range (0 to +/-63), LfoC(24) Range Sub param, SeqNote/SeqEvent/SeqVal/SeqLev park LED handling, MixFader(161) value scale (match Mix4-1C's 0-100/xx.x mapping)
+- Fix known caveats on otherwise-OK modules. STILL OPEN: Oscar(9) mode, EnvADSR(20) values, PartQuant(22)
+  dial range (0 to +/-63), SeqNote/SeqEvent/SeqVal/SeqLev park LED handling.
+    * MixFader(161) value scale — DONE (was already fixed; verified 2026-07-27): render_paramType1Slider's
+      MixFader branch (renderParams.c) shows round(paramValue*100*10/128)/10 as %.1f, byte-identical to the
+      CommonDial mix dials (render_paramType1Resonance, used by Mix4-1C). 0-100/xx.x mapping matches.
+    * LfoC(24) Range Sub param — FIXED 2026-07-27 (built, needs owner hardware eyeball). ROOT CAUSE: the
+      range selector strMaps were mis-ordered vs the wire value. render_paramType1LFORate computes range by
+      value {0:Sub,1:Lo,2:Hi,3:BPM,4:Clk} — which exactly matches the original editor's ParamText::LFORange
+      (G2Editor.c:44594, authoritative) — but rangeStrMap/rangeLfoCStrMap listed {Lo,Hi,BPM,Sub,Clk}. So the
+      rate NUMBER was always right, the range NAME was wrong (pick "Rate Lo" -> actually Sub). Same bug hit
+      the whole LFO family (LfoA/LfoShpA/LfoB), not just LfoC. FIX: reordered rangeLfoCStrMap to {Sub,Lo,Hi,
+      BPM} and added rangeLfoStrMap {Sub,Lo,Hi,BPM,Clk}; repointed LfoC/LfoA -> rangeLfoCStrMap (no Clk),
+      LfoShpA/LfoB -> rangeLfoStrMap (Clk). Also bumped all four Range defaults 0->1 (Rate Lo, "normal" per
+      manual) — value 0 is now Sub, so leaving default 0 would make a new LFO default to a 60-700s cycle.
+      Display-only + creation-default change; stored patch values untouched (raw index). NEEDS HARDWARE: (1)
+      confirm a fresh LFO really defaults to Rate Lo; (2) RandomA(200)/RandomB(202) STILL use the old-order
+      rangeStrMap — no ParamText::RandomRange in the decompile to confirm their wire order, left unchanged;
+      verify on hardware whether Random shares {Sub,Lo,Hi,BPM,Clk} and reorder if so.
 - Verify remaining 117 unverified module types (filters, oscillators, delay lines, sequencer/logic, MIDI send/receive, Resonator, Operator, Random* family, etc.) — see "Module dev debug notes.txt"
 - Add performance keyboard split/layer/zone UI (manual's "Layering Patches" section) — currently only the standalone NoteZone module exists
 - Add a dedicated master-clock/tempo panel (currently only basic send/receive clock toggles exist)
