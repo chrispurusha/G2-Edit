@@ -3,8 +3,8 @@
   4 2-Out OK (CT)
   5 Invert OK
   7 OscB OK
-  8 OscShpB OK *** CHECKED 2026-07-27 (Claude): Tune-mode handling VERIFIED CORRECT via backdoor — Pitch Type param (index 4) correctly drives render_paramType1OscFreq; all 4 modes (Semi/Freq/Factor/Partial) render right values (Semi 32.0, Freq 2.09kHz at raw 96). Layout clean, no overlap. (The original editor's OscTuneMode has a 5th "Sub" mode, but the manual confirms these oscillators use 4 — "the SEMI (OR FREQ/PART/FAC) knob" — so range=4 is correct.)
-  9 Oscar (OscC) OK *** FIXED 2026-07-27 (Claude): Tune-mode handling VERIFIED CORRECT (Tune Mode param index 3; all 4 modes render right values Semi 32.0 / Freq 2.09kHz / Factor 6.3516x / Partial 33:1 at raw 96). Also FIXED a layout overlap — the Tune Mode selector menu sat at y=15, overlapping the Tune dial's label; moved to y=5 (top row), matching OscShpB's clean separation. Verified via backdoor.
+  8 OscShpB OK *** CHECKED 2026-07-27 (Claude): Tune-mode handling VERIFIED CORRECT via backdoor — Pitch Type param (index 4) correctly drives render_paramType1OscFreq; all 4 modes (Semi/Freq/Factor/Partial) render right values (Semi 32.0, Freq 2.09kHz at raw 96). Layout clean, no overlap. (The original editor's OscTuneMode has a 5th "Sub" mode, but the manual confirms these oscillators use 4 — "the SEMI (OR FREQ/PART/FAC) knob" — so range=4 is correct.) ALSO FIXED a layout overlap (owner-reported): in Freq/Factor mode the wide Tune value (e.g. 12.5kHz) overran the Cent dial — nudged the Tune dial + its mode menu left (x32->29). Verified clear at max value.
+  9 Oscar (OscC) OK *** FIXED 2026-07-27 (Claude): Tune-mode handling VERIFIED CORRECT (Tune Mode param index 3; all 4 modes render right values Semi 32.0 / Freq 2.09kHz / Factor 6.3516x / Partial 33:1 at raw 96). Also FIXED a layout overlap — the Tune Mode selector menu sat at y=15, overlapping the Tune dial's label; moved to y=5 (top row). AND (same as OscShpB) nudged the Tune dial + mode menu left (x32->29) so the wide Freq/Factor Tune value clears the Cent dial. Verified clear at max value via backdoor.
  12 Reverb OK
  13 OscString OK
  15 Sw8-1 Needs more resources
@@ -75,14 +75,14 @@
  89 Flanger OK
  90 Sw1-2
  91 FlipFlop
- 92 FltClassic
+ 92 FltClassic OK — REVIEWED 2026-07-27 (Claude): overlaps clean; values OK (Freq Hz, Res via strMap, Env %, dB menu)
  94 StChorus OK (CT)
  96 OscD
  97 OscA Works. Needs new UI element for the Freq control (param 0) which takes into account the value of param 6 Pitch Type.
  98 FreqShift
 100 Sw2-1
-102 FltPhase
-103 EqPeak
+102 FltPhase — REVIEWED 2026-07-27 (Claude): overlaps clean (Level just clears meter). VALUE FLAG (needs CT/manual confirm): FB & Spread default to 64 (dial centre) but render 0-100 ("50.0") via paramTypeCommonDial — almost certainly BIPOLAR (cf EqPeak Gain uses paramTypeBipLevel, shows 0.0 at centre). If confirmed, switch to a bipolar renderer.
+103 EqPeak — REVIEWED 2026-07-27 (Claude): OVERLAP FIXED — "Level" overlapped the volume-meter bar; moved Level dial left (x83->74). Verified clean. Values: Freq Hz OK, Gain (paramTypeBipLevel) correct 0.0 at centre. BW still needs a proper UI element (known, deferred).
 105 ValSw2-1
 106 OscNoise
 108 Vocoder
@@ -97,14 +97,14 @@
 121 SeqNote OK(CT) possibly need to consider park LED
 123 Mix4-1C OK (CT)
 124 Mux8-1
-125 WahWah
+125 WahWah — REVIEWED 2026-07-27 (Claude): overlaps clean. VALUE FLAG: "Sweep M" uses paramTypeFreq (shows a Hz value, e.g. 554.4Hz) for what looks like a mod amount — suspicious, verify vs manual/hardware.
 126 Name OK (CT)
 127 Fx-In OK (CT)
 128 MinMax
 130 BinCounter
 131 ADConv
 132 DAConv
-134 FltHP
+134 FltHP — REVIEWED 2026-07-27 (Claude): overlaps clean. Values: Freq Hz OK, Slope menu OK. VALUE FLAG: FreqMod default 64 (centre) renders 0-100 ("50.0") — likely bipolar (same class as FltPhase FB/Spread); confirm.
 139 T&H
 140 Mix4-1S OK (CT)
 141 CtrlSend
@@ -125,7 +125,7 @@
 159 CompSig
 160 ZeroCnt
 161 MixFader OK (CT) except value needs to be 0 to 100 xx.x. 127=100 166=98.4 62=48.4, 63=49.2, 64=50, 65=50.8 as per Mix4-1C
-162 FltComb
+162 FltComb — REVIEWED 2026-07-27 (Claude): OVERLAP FIXED — "Level" overlapped the meter; raised the meter to top-right (y20->6) so it clears the bottom-row Level dial (Level's slot was too tight to move it — Type box is beside it). Verified clean. VALUE FLAG (deferred): FB default 64 renders "50.0" — likely bipolar (same class as FltPhase).
 163 OscShpA
 164 OscDual
 165 DXRouter
