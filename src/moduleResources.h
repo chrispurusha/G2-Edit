@@ -462,10 +462,10 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeOscShpB,    paramTypeBypass,      {{ -3,   0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                       // 8 Bypass
     {moduleTypeOscShpB,    paramTypeMenu,        {{ 62,  25}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,                          NULL          },                       // 8 FM Type
     //  9 OscC
-    {moduleTypeOscC,       paramTypeOscFreq,     {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },                       // 9 Coarse
+    {moduleTypeOscC,       paramTypeOscFreq,     {{ 29,  -3}, { 7, 14}}, anchorBottomLeft,  "Tune",         128,  64, NULL,                                  NULL          },                       // 9 Coarse  (nudged left so wide Freq/Factor value clears Cent)
     {moduleTypeOscC,       paramTypeFine,        {{ 45,  -3}, { 7, 14}}, anchorBottomLeft,  "Cent",         128,  64, NULL,                                  NULL          },                       // 9 Fine
     {moduleTypeOscC,       paramTypeToggle,      {{ 10,   8}, { 7,  7}}, anchorTopLeft,     NULL,             2,   1, kbStrMap,                              offOnColourMap},                       // 9 Kbt
-    {moduleTypeOscC,       paramTypeMenu,        {{ 30,   5}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          },                       // 9 Tune Mode  (was y15, overlapped the Tune dial label)
+    {moduleTypeOscC,       paramTypeMenu,        {{ 29,   5}, { 7,  7}}, anchorTopLeft,     NULL,             4,   0, pitchTypeStrMap,                       NULL          },                       // 9 Tune Mode  (was y15 over the Tune label; moved up + left to sit above the Tune dial)
     {moduleTypeOscC,       paramTypeCommonDial,  {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  "FM",           128,   0, NULL,                                  NULL          },                       // FM
     {moduleTypeOscC,       paramTypeBypass,      {{-10,  -3}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                       // 9 Bypass
     {moduleTypeOscC,       paramTypeMenu,        {{ 70,  15}, { 7,  7}}, anchorTopLeft,     NULL,             2,   0, fmTypeStrMap,                          NULL          },                       // 9 FM Type
