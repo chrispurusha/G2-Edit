@@ -912,7 +912,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeEqPeak,     paramTypeBipLevel,    {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  "Gain",         128,  64, NULL,                                  NULL          },                         // 103 Gain
     {moduleTypeEqPeak,     paramTypeCommonDial,  {{ 62, -10}, { 7, 14}}, anchorBottomLeft,  "BW",           128,  64, NULL,                                  NULL          },                         // 103 BW *** needs UI element
     {moduleTypeEqPeak,     paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          },                         // 103 Bypass
-    {moduleTypeEqPeak,     paramTypeCommonDial,  {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128, 127, NULL,                                  NULL          },                         // 102 Level
+    {moduleTypeEqPeak,     paramTypeCommonDial,  {{ 74,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128, 127, NULL,                                  NULL          },                         // 103 Level  (was x83, overlapped the volume meter)
 
     // 104 Unknown
     // 105 ValSw2-1
@@ -1335,7 +1335,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeFltComb,    paramTypeCommonDial,  {{ 57, -17}, { 7, 14}}, anchorBottomLeft,  "FB",           128,  64, NULL,                                  NULL          },                   // 102 FB
     {moduleTypeFltComb,    paramTypeCommonDial,  {{ 62,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                   // 102 FB Mod
     {moduleTypeFltComb,    paramTypeMenu,        {{ 68, -12}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, fltPhaseTypeStrMap,                    NULL          },                   // 102 Type
-    {moduleTypeFltComb,    paramTypeCommonDial,  {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128,   0, NULL,                                  NULL          },                   // 102 Level
+    {moduleTypeFltComb,    paramTypeCommonDial,  {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  "Level",        128,   0, NULL,                                  NULL          },                   // 162 Level
     {moduleTypeFltComb,    paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, NULL,             2,   1, NULL,                                  NULL          },                   // 102 Bypass
     // 163 OscShpA
     {moduleTypeOscShpA,    paramTypeOscFreq,     {{ 32,  -3}, { 7, 14}}, anchorBottomLeft,  "Pitch",        128,  64, NULL,                                  NULL          },                   // 163 Coarse
@@ -2634,7 +2634,7 @@ const tVolumeLocation    volumeLocationList[] = {
     {moduleTypeEqPeak,    volumeTypeMono,      {{-11, 20}, { 3, 22}}, anchorTopRight}, // XPos:227 YPos:40 H:4
     {moduleTypeFltVoice,  volumeTypeMono,      {{-10, 20}, { 3, 22}}, anchorTopRight}, // XPos:230 YPos:40 H:4
     {moduleTypeFltPhase,  volumeTypeMono,      {{-11, 22}, { 3, 18}}, anchorTopRight}, // XPos:227 YPos:55 H:5
-    {moduleTypeFltComb,   volumeTypeMono,      {{-11, 20}, { 3, 22}}, anchorTopRight}, // XPos:227 YPos:40 H:4
+    {moduleTypeFltComb,   volumeTypeMono,      {{-11,  6}, { 3, 20}}, anchorTopRight}, // XPos:227 YPos:40 H:4  (raised to top-right so it clears the bottom-row Level dial)
     {moduleType2toIn,     volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight}, // XPos:205+231 YPos:10 H:2
     {moduleType4toIn,     volumeTypeQuad,      {{-50,  7}, { 3, 14}}, anchorTopRight}, // XPos:153..231 YPos:10 H:2
     {moduleTypeSeqEvent,  volumeTypeSequencer, {{ 20, 24}, {64,  5}}, anchorTopLeft },
