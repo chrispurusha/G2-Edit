@@ -33,6 +33,15 @@ extern "C" {
 #pragma clang diagnostic pop
 
 #include <math.h>
+#include <unistd.h>
+
+// stb_image_write is already bundled as a GLFW build dependency — reused here
+// (rather than a second PNG library) purely for the backdoor SCREENSHOT command.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "../SynthLib/ThirdParty/glfw/deps/stb_image_write.h"
+#pragma clang diagnostic pop
 
 #include "defs.h"
 #include "synthlibDefs.h"
@@ -2002,6 +2011,231 @@ int note_editor_cursor_from_click(double logicalX, double logicalY) {
     return start + (end - start);
 }
 
+// Renders one full frame and swaps buffers. Extracted from do_graphics_loop's
+// inlined render block so the backdoor SCREENSHOT command can force a
+// synchronous frame (see backdoor_screenshot()).
+static void render_frame(void) {
+    glClearColor(0.8, 0.8, 0.8, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    clear_click_regions();
+    render_modules();
+    render_cables();
+
+    if (gCableDrag.active == true) {
+        tModule * module = get_module(gCableDrag.fromModuleKey);
+
+        if (module != NULL) {
+            tCableColour dragColour = cable_colour_for_connector_type(module->connector[gCableDrag.fromConnectorIndex].type);
+            set_rgb_colour(gCableColourMap[dragColour]);
+            render_cable_from_to(module->connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector, 4.0);
+        }
+    }
+    render_top_bar();
+    render_menu_bar(gAppMenuBar, app_menu_bar_rect());
+    render_morph_groups();
+    render_scrollbars((GLFWwindow *)synthlib_window());
+    render_patch_settings_panel();
+    render_perf_settings_panel();
+    render_patch_params_panel();
+    render_context_menu();
+    render_patch_notes_edit();
+    render_bank_backup_progress();
+    render_bank_restore_progress();
+    render_mutator_panel();
+    render_knob_assignment_overlay();
+    render_file_browser();
+    render_bank_browser();
+    render_device_busy_overlay(); // dim + "please wait" while a whole-slot device op is in flight
+    render_alert_dialog();        // drawn last of all — modal, must paint over everything else
+
+    glfwSwapBuffers((GLFWwindow *)synthlib_window());
+}
+
+// ── Backdoor test-control channel ───────────────────────────────────────────
+// A way to drive AND independently verify the running app — load a patch,
+// select a slot, dump the module list, or capture a screenshot — without a
+// real mouse click or a reliable headless paint event. Ported from SynthEdit's
+// proven mechanism (SynthEdit/src/graphics.cpp), adapted to G2's domain.
+//
+// GATED behind the G2_EDIT_BACKDOOR environment variable: unset (the owner's
+// normal double-click launch) => backdoor completely inert AND the idle loop
+// keeps glfwWaitEvents()'s full sleep. Set (a test launch from a shell) =>
+// the idle loop polls at 10 Hz and a command file is honoured each tick. Unlike
+// SynthEdit (sandboxed, needs its container tmp dir) G2-Edit has no App Sandbox,
+// so plain /tmp works. Command surface is deliberately narrow and does nothing a
+// real mouse click couldn't already do.
+//
+// Command file (/tmp/g2edit_cmd.txt): one command per file, first line only,
+// "<COMMAND> <arg>". Result ("OK\n"/"ERROR: ...\n", or DUMP's own text) is
+// written to /tmp/g2edit_result.txt and the command file is deleted, so a
+// caller polls for the command file's disappearance to know it's done.
+//   LOADFILE <path>   — read_file_into_memory_and_process() (works offline)
+//   SLOT <0-3|A-D>    — select the slot the canvas renders
+//   DUMP              — current slot + every module: type, name, location, col/row
+//   SCREENSHOT <path> — synchronous render_frame() then glReadPixels + PNG
+static bool backdoor_enabled(void) {
+    static int cached = -1;
+
+    if (cached < 0) {
+        const char * v = getenv("G2_EDIT_BACKDOOR");
+        cached = (v != NULL && v[0] != '\0') ? 1 : 0;
+    }
+    return cached == 1;
+}
+
+static const char * backdoor_cmd_path(void) {
+    return "/tmp/g2edit_cmd.txt";
+}
+
+static const char * backdoor_result_path(void) {
+    return "/tmp/g2edit_result.txt";
+}
+
+static void backdoor_write_result(const char * text) {
+    FILE * f = fopen(backdoor_result_path(), "w");
+
+    if (f) {
+        fputs(text, f);
+        fclose(f);
+    }
+}
+
+static void backdoor_screenshot(const char * path) {
+    render_frame(); // synchronous, so the capture always reflects the most recent LOADFILE/SLOT command, not a stale frame
+
+    int       w      = get_render_width();
+    int       h      = get_render_height();
+
+    if ((w <= 0) || (h <= 0)) {
+        backdoor_write_result("ERROR: zero-size framebuffer\n");
+        return;
+    }
+    uint8_t * pixels = (uint8_t *)malloc((size_t)w * (size_t)h * 3);
+
+    if (!pixels) {
+        backdoor_write_result("ERROR: out of memory\n");
+        return;
+    }
+    glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+    stbi_flip_vertically_on_write(1); // GL origin is bottom-left; PNGs are top-down
+
+    int       ok     = stbi_write_png(path, w, h, 3, pixels, w * 3);
+
+    free(pixels);
+    backdoor_write_result(ok ? "OK\n" : "ERROR: stbi_write_png failed\n");
+}
+
+static void backdoor_dump_state(char * out, size_t outMax) {
+    size_t         used       = 0;
+    const uint32_t locs[]     = {(uint32_t)locationVa, (uint32_t)locationFx};
+    const char *   locNames[] = {"VA", "FX"};
+
+    used += (size_t)snprintf(out + used, outMax - used, "OK\nslot=%u\n", (unsigned)gSlot);
+
+    for (uint32_t l = 0; (l < 2) && (used < outMax); l++) {
+        for (uint32_t index = 0; (index < MAX_NUM_MODULES) && (used < outMax); index++) {
+            tModule * module = get_module_slot(gSlot, locs[l], index);
+
+            if (module == NULL || module->type == 0) {
+                continue; // type 0 == empty slot in the sparse per-index store
+            }
+            used += (size_t)snprintf(out + used, outMax - used,
+                                     "loc=%s index=%u type=%u name=\"%s\" col=%u row=%u\n",
+                                     locNames[l], (unsigned)index, (unsigned)module->type,
+                                     module->name, (unsigned)module->column, (unsigned)module->row);
+        }
+    }
+}
+
+static void backdoor_dispatch(const char * cmd, const char * arg) {
+    if (strcmp(cmd, "LOADFILE") == 0) {
+        if (arg[0] == '\0') {
+            backdoor_write_result("ERROR: expected 'LOADFILE <path>'\n");
+            return;
+        }
+        read_file_into_memory_and_process(arg);
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "SLOT") == 0) {
+        uint32_t slot = 0;
+
+        if (arg[0] >= 'A' && arg[0] <= 'D') {
+            slot = (uint32_t)(arg[0] - 'A');
+        } else if (arg[0] >= 'a' && arg[0] <= 'd') {
+            slot = (uint32_t)(arg[0] - 'a');
+        } else if (sscanf(arg, "%u", &slot) != 1 || slot > 3) {
+            backdoor_write_result("ERROR: expected 'SLOT <0-3|A-D>'\n");
+            return;
+        }
+        gSlot                 = slot;
+        gPatchParamsEdit.slot = slot; // patch-params panel tracks its own slot copy — keep both in step
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "DUMP") == 0) {
+        char dump[16384];
+
+        backdoor_dump_state(dump, sizeof(dump));
+        backdoor_write_result(dump);
+    } else if (strcmp(cmd, "SCREENSHOT") == 0) {
+        if (arg[0] == '\0') {
+            backdoor_write_result("ERROR: expected 'SCREENSHOT <path>'\n");
+            return;
+        }
+        backdoor_screenshot(arg);
+    } else {
+        char msg[128];
+
+        snprintf(msg, sizeof(msg), "ERROR: unknown command '%s'\n", cmd);
+        backdoor_write_result(msg);
+    }
+}
+
+static void backdoor_poll(void) {
+    if (!backdoor_enabled()) {
+        return;
+    }
+    const char * cmdPath   = backdoor_cmd_path();
+
+    if (access(cmdPath, F_OK) != 0) {
+        return;
+    }
+    FILE *       f         = fopen(cmdPath, "r");
+
+    if (!f) {
+        return;
+    }
+    char         line[512] = {0};
+
+    if (!fgets(line, sizeof(line), f)) {
+        line[0] = '\0';
+    }
+    fclose(f);
+    remove(cmdPath);
+
+    size_t       len       = strlen(line);
+
+    while ((len > 0) && ((line[len - 1] == '\n') || (line[len - 1] == '\r'))) {
+        line[--len] = '\0';
+    }
+    char         cmd[32]   = {0};
+    char *       space     = strchr(line, ' ');
+
+    if (space) {
+        size_t cmdLen = (size_t)(space - line);
+
+        if (cmdLen >= sizeof(cmd)) {
+            cmdLen = sizeof(cmd) - 1;
+        }
+        memcpy(cmd, line, cmdLen);
+        cmd[cmdLen] = '\0';
+        backdoor_dispatch(cmd, space + 1);
+    } else {
+        strncpy(cmd, line, sizeof(cmd) - 1);
+        backdoor_dispatch(cmd, "");
+    }
+}
+
 void do_graphics_loop(void) {
     bool reDraw = false;
 
@@ -2013,61 +2247,12 @@ void do_graphics_loop(void) {
         reDraw = synthlib_consume_redraw();
 
         if (reDraw == true) {
-            glClearColor(0.8, 0.8, 0.8, 1.0);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-            clear_click_regions();
-            render_modules();
-            render_cables();
-
-            if (gCableDrag.active == true) {
-                tModule * module = get_module(gCableDrag.fromModuleKey);
-
-                if (module != NULL) {
-                    tCableColour dragColour = cable_colour_for_connector_type(module->connector[gCableDrag.fromConnectorIndex].type);
-                    set_rgb_colour(gCableColourMap[dragColour]);
-                    render_cable_from_to(module->connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector, 4.0);
-                }
-            }
-            render_top_bar();
-            render_menu_bar(gAppMenuBar, app_menu_bar_rect());
-            render_morph_groups();
-            render_scrollbars((GLFWwindow *)synthlib_window());
-            render_patch_settings_panel();
-            render_perf_settings_panel();
-            render_patch_params_panel();
-            render_context_menu();
-            render_patch_notes_edit();
-            render_bank_backup_progress();
-            render_bank_restore_progress();
-            render_mutator_panel();
-            render_knob_assignment_overlay();
-            render_file_browser();
-            render_bank_browser();
-            render_device_busy_overlay(); // dim + "please wait" while a whole-slot device op is in flight
-            render_alert_dialog();        // drawn last of all — modal, must paint over everything else
-            //Debug only
-            //{
-            //    double x        = 0.0;
-            //    double y        = 0.0;
-            //    int    fbWidth  = 0;
-            //    int    fbHeight = 0;
-            //    glfwGetCursorPos(synthlib_window(), &x, &y);
-            //    glfwGetFramebufferSize(synthlib_window(), &fbWidth, &fbHeight);
-            //
-            //    x /= fbWidth;
-            //    y /= fbHeight;
-            //    x *= TARGET_FRAME_BUFF_WIDTH;
-            //    y *= TARGET_FRAME_BUFF_HEIGHT;
-            //
-            //    set_rgb_colour(RGB_BLACK);
-            //    render_line(mainArea, {x, y - 10}, {x, y + 10}, 3);
-            //    render_line(mainArea, {x - 10, y}, {x + 10, y}, 3);
-            //}
-
-            // Swap buffers and look for events
-            glfwSwapBuffers((GLFWwindow *)synthlib_window());
+            render_frame();
         }
+        // See the backdoor block's own header comment — a cheap no-op access()
+        // check every iteration when idle, and completely skipped (returns
+        // immediately) unless the G2_EDIT_BACKDOOR env var is set.
+        backdoor_poll();
 
         if ((gModuleDrag.active == true) || (gCableDrag.active == true) || (gContextMenu.active == true)) {
             double x = 0.0;
@@ -2077,6 +2262,8 @@ void do_graphics_loop(void) {
             glfwWaitEventsTimeout(0.016);
         } else if (gDeviceOpInProgress > 0) {
             glfwWaitEventsTimeout(0.05); // tick while busy so the device-op safety timeout can fire even with no events
+        } else if (backdoor_enabled()) {
+            glfwWaitEventsTimeout(0.1);  // poll cadence for the backdoor command file — only when enabled (owner's normal launch keeps full idle-sleep below)
         } else {
             glfwWaitEvents();
         }
