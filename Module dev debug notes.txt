@@ -44,7 +44,7 @@
  52 EnvMulti OK - fixed L1-L4 dial labels (were all L1)
  53 SandH OK
  54 FltStatic OK
- 55 EnvD OK
+ 55 EnvD - Overlapping components
  56 Resonator OK
  57 Automate OK - fixed Ch (channel) param missing strMap, was showing raw number instead of "1".."16"/"This" (17 options, matching manual's MIDI automation channel description)
  58 DrumSynth OK - fixed Pitch M connector overlap + comment typos
@@ -156,7 +156,7 @@
 193 Mix4-1A OK (CT)
 194 Mix2-1A OK (CT)
 195 ModAmt
-196 OscPerc
+196 OscPerc - Overlapping components
 197 Status
 198 PitchTrack
 199 MonoKey
