@@ -2117,6 +2117,12 @@ static void backdoor_screenshot(const char * path) {
         backdoor_write_result("ERROR: out of memory\n");
         return;
     }
+    // Tightly-packed rows (w*3 bytes). Without this, glReadPixels' default
+    // GL_PACK_ALIGNMENT of 4 pads each row up to a 4-byte multiple whenever w*3
+    // isn't already one (i.e. any width not a multiple of 4) — which both shears
+    // the saved PNG (row stride mismatch vs stbi's w*3) AND overruns the w*h*3
+    // buffer. Only bit us at odd window sizes; Retina captures were multiples of 4.
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, pixels);
     stbi_flip_vertically_on_write(1); // GL origin is bottom-left; PNGs are top-down
 
