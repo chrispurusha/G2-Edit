@@ -1,31 +1,5 @@
 G2-Edit TODO (priority order)
 
-- SynthLib clickRegion press-capture — PENDING COMMIT + PIN ADVANCE (2026-07-26). Made in the SynthLib
-  checkout under **EmuUtility** (not G2-Edit — that's where the bug was reported and build-tested).
-  BUG (owner report): in EmuUtility, press and hold an on-screen button, drag the cursor off it, release
-  — the orange pressed indication never clears. Root cause is in the SHARED registry, not the app:
-  dispatch_click_region() looked the RELEASE up by coordinate, like any other event, so the button that
-  took the press never saw its release. Worse than cosmetic — button_click_handler() also never sent
-  midi_post_button_event(key, false), so the E-mu got a key-down with no key-up (releasing over a
-  DIFFERENT button sent that one a spurious key-up instead).
-  FIX: eClickPress now CAPTURES. clickRegion.c keeps a COPY of the capturing region (not an index —
-  regions are rebuilt every frame by clear_click_regions(), so an index would dangle or silently point
-  at a different widget); the release goes to the capturing handler regardless of cursor position, with
-  a new eClickReleaseOutside phase when it landed off the rect. Capture is cleared BEFORE the handler
-  call so a handler that opens a modal can't find a stale capture armed. New
-  cancel_click_region_capture() for paths that consume a release without reaching dispatch — EmuUtility's
-  dial-drag and open-context-menu early returns now call it.
-  KNOCK-ON, unverified: G2-Edit dispatches releases through the registry too (mouseHandle.c:1001), into
-  the toggle/menu/push handlers in moduleGraphics.cpp. It has no latched press visual so there was no
-  stuck-orange symptom, but it had the sibling bug — press a toggle, drag onto a DIFFERENT toggle,
-  release, and the wrong one flipped. Those handlers test `phase == eClickRelease`, so capture gives them
-  press-and-drag-off-cancels for free. NEEDS AN EYEBALL: confirm normal toggle/menu/push clicks still
-  fire, and that drag-off now cancels rather than mis-firing. SynthEdit is unaffected either way — it
-  only ever calls dispatch_click_region(coord, eClickPress) and handles releases itself in
-  handle_mouse_button() (mouseHandle.c:406-425), which is the pattern this change generalises.
-  WORKFLOW: commit + push in SynthLib from the EmuUtility checkout, then advance the pin in G2-Edit and
-  SynthEdit and build-test each. Only EmuUtility is build-verified so far (Debug, xcodebuild).
-
 - SynthEdit "no device connected" was silent on every File/Backup menu action — FIXED 2026-07-26 (built,
   not hardware-tested). Owner report: "Open File..." did nothing with no synth attached — no browser, no
   message. Confirmed: synth_backup_restore_edit_buffer() (synthBackup.c) bailed on !gDevice.connected
@@ -41,21 +15,6 @@ G2-Edit TODO (priority order)
   the bank browser after a successful sweep (they had a device moments earlier and would double-report).
   Same silent-failure class the G2-Edit reverse-queue work closed with alerts.
 
-- SynthLib submodule — PENDING COMMIT + PIN ADVANCE (cross-machine handoff, 2026-07-26). Changes made to
-  the SynthLib checkout under G2-Edit that are NOT yet committed to the SynthLib repo or picked up by the
-  other projects:
-    1. synthlibQueue.{h,c} — NEW. The generic payload-agnostic thread queue (tMessageQueue / eRcv /
-       msg_init / msg_send / msg_receive / msg_count), lifted out of G2-Edit's old msgQueue.c (Step 5 of
-       the reverse-queue work). No app dependencies (pthreads + synthlibDefs.h LOG_* only).
-    2. bankBrowser.cpp — sort mode (Bank/Loc / Category / A-Z) is now persisted across sessions via
-       prefs.h (key "bankBrowserSortMode"), instead of resetting to Bank/Loc every open. Benefits all
-       three apps for free once their pin advances.
-  WORKFLOW: from here, commit + push these in the SynthLib repo. Then on the other machine, in each of
-  SynthEdit(Z1) and EmuUtility: `git submodule update --remote SynthLib` -> `git add SynthLib` -> commit,
-  then build-test. synthlibQueue.c will start compiling into both (harmless — they have no msg_* yet).
-  G2-Edit's own SynthLib pin also needs advancing here once SynthLib is pushed. (Also: G2-Edit deleted
-  src/msgQueue.c and slimmed msgQueue.h to app payload only — that's a G2-Edit-side change, not SynthLib.)
-
 - SynthLib file-naming consistency — DEFERRED (cross-repo, coordinate carefully). SynthLib/src mixes
   two camps: bare (alertDialog, bankBrowser, clickRegion, contextMenu, fileBrowser, geometry, menuBar,
   prefs, utils, utilsGraphics) and synthlib-prefixed (synthlibDefs/Globals/Host/Persistence/Queue/
@@ -67,16 +26,10 @@ G2-Edit TODO (priority order)
   together, build-test each (only G2-Edit is build-testable from here). Mechanical but wide; schedule
   when all three projects can be built/committed together.
 
-- Store/Load-to-Bank hit the wrong slot (always slot A) — FIXED 2026-07-26 (load verified on hardware).
-  ROOT CAUSE: send_store_patch (0x0b) / send_retrieve_patch (0x0a) put the bank-upload "domain" byte
-  as the first payload byte, but that byte is actually the TARGET SLOT. domain==PATCH is 0x00 == slot
-  A, so patch Store/Load always hit slot A regardless of selection. (An earlier slot-ADDRESSING
-  attempt, usb_cmd_slot 0x29, was wrong and reverted.) FIX: keep system addressing (usb_cmd_sys 0x41
-  -> 01 2c 41), send gSlot as the first payload byte for the patch case. Matches the owner's
-  stock-editor RETRIEVE capture exactly: "01 2c 41 0a 01 00 00" = load bank1/loc1 into slot B. BOTH
-  Load AND Store confirmed working on hardware (owner, 2026-07-26). Perf-domain path left
-  unchanged/unverified (no perf capture). NOTE: ENABLE_USB_LOG left ON in defs.h for testing — turn
-  off before committing.
+- Store/Load-to-Bank perf-domain path — the patch case is FIXED + hardware-confirmed (2026-07-26,
+  removed from this list); the PERF domain path of send_store_patch/send_retrieve_patch was left
+  unchanged and is still UNVERIFIED (no perf capture available at the time). Confirm perf Store/Load
+  hits the selected slot when a perf capture can be taken.
 - Consolidate device-affecting file/DB ops onto the USB thread — DONE 2026-07-26 for ALL whole-slot
   cases (built, needs owner hardware test). LOAD is now a SINGLE eMsgCmdLoadFile: the UI thread does
   ZERO file I/O on load — it just passes the path; the USB thread's load_file_to_device() opens the
@@ -183,13 +136,18 @@ G2-Edit TODO (priority order)
         - SynthEdit: normal connect on a single-cable setup; connect with several synths sharing one
           interface (the TM-1 case — that is the path the reply queue actually changes); Device-switch
           menu; sleep/wake; a no-identity device (Minitaur) still connects via connect_without_identity.
-    * STILL OPEN (found during Step 6, NOT a queue problem — do not paper over it with the queue):
-      EmuUtility's gLcd.pixels (1920 bytes) is written by the CoreMIDI callback thread in
-      peptalk_handle_message()/peptalk_apply_lcd_delta() while the UI thread reads it to upload the GL
-      texture (emuGraphics.cpp). Plain memcpy/XOR either side, no lock — a genuine data race that can
-      tear a frame. The queue does not fix this and shouldn't: LCD updates are coalescing, so the right
-      fix is a mutex around the buffer or a double-buffer + atomic swap on gLcd.refresh. Low visible
-      impact (worst case a torn LCD frame that the next update repairs), but it is real.
+    * gLcd.pixels data race (found during Step 6, NOT a queue problem) — FIXED 2026-07-27 (built,
+      needs owner hardware eyeball). EmuUtility's gLcd.pixels (1920 bytes) was written by the CoreMIDI
+      callback thread (peptalk.c: full memcpy or in-place XOR delta) while the UI thread read it to
+      expand+upload the GL texture (emuGraphics.cpp), no lock — a real data race that could tear a frame.
+      FIX: new gLcdMutex (globalVars, PTHREAD_MUTEX_INITIALIZER). Writer holds it around the memcpy /
+      peptalk_apply_lcd_delta + refresh++; reader snapshots pixels+refresh into locals under the lock,
+      then does the RGBA expansion + glTexSubImage2D upload with the lock released (never held over a GL
+      call). gLastRefresh is now set from the snapshot, so it always matches the pixels actually uploaded.
+      render_lcd()'s per-frame `gLcd.refresh != gLastRefresh` pre-check stays an unlocked relaxed read
+      (aligned 32-bit; a benign hint that only decides whether to bother — every real access is locked).
+      Chose a mutex over double-buffer because deltas mutate the accumulated frame in place, so there's
+      no clean front/back to swap. Build verified (Debug, xcodebuild).
 - usbComms.c — perf-mode ambiguities: ALL RESOLVED ON HARDWARE 2026-07-26 (see the perf-mode findings
   section below for the captures). Cleanup status:
     * DONE 2026-07-26: removed parse_perf_mode_change() (incoming SUB_COMMAND_SET_PARAM_MODE 0x3e) and
