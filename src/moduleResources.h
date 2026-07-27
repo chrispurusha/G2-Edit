@@ -607,14 +607,14 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypePulse,      paramTypeMenu,        {{ 52,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, pulseRangeStrMap,                      NULL          },                         // 38 Range
     // 39 Unknown
     // 40 Mix8-1B
-    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 40 In1
-    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 29,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 40 In2
-    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 38,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 40 In3
-    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 47,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 40 In4
-    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 56,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 40 In5
-    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 65,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 40 In6
-    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 74,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 40 In7
-    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 83,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 40 In8
+    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 16,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 40 In1
+    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 25,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 40 In2
+    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 34,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 40 In3
+    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 43,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 40 In4
+    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 52,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 40 In5
+    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 61,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 40 In6
+    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 70,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 40 In7
+    {moduleTypeMix8to1B,   paramTypeMixLevel,    {{ 79,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  80, NULL,                                  NULL          },                         // 40 In8
     {moduleTypeMix8to1B,   paramTypeMenu,        {{  3, -17}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          },                         // 40 ExpLinDB
     {moduleTypeMix8to1B,   paramTypeMenu,        {{  3, -10}, { 7,  7}}, anchorBottomLeft,  "Pad",            3,   0, db12BPadStrMap,                        NULL          },                         // 40 Pad
     // 41 EnvH
@@ -1774,15 +1774,15 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypePulse,       connectorDirOut, connectorTypeLogic,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 38 Out
     // 39 Unknown
     // 40 Mix8-1B
-    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ 21, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },          // 40 In1
-    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ 30, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },          // 40 In2
-    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ 39, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   },          // 40 In3
-    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ 48, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   },          // 40 In4
-    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ 57, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",            labelLocUp   },          // 40 In5
-    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ 66, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",            labelLocUp   },          // 40 In6
-    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ 75, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",            labelLocUp   },          // 40 In7
-    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ 84, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",            labelLocUp   },          // 40 In8
-    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ -3, -28}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, "Chain",        labelLocLeft },          // 40 Chain
+    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ 17, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },          // 40 In1
+    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ 26, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },          // 40 In2
+    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ 35, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   },          // 40 In3
+    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ 44, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   },          // 40 In4
+    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ 53, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "5",            labelLocUp   },          // 40 In5
+    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ 62, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "6",            labelLocUp   },          // 40 In6
+    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ 71, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "7",            labelLocUp   },          // 40 In7
+    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ 80, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "8",            labelLocUp   },          // 40 In8
+    {moduleTypeMix8to1B,    connectorDirIn,  connectorTypeControl, {{ -3,   6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "Chain",        labelLocLeft },          // 40 Chain  (top-right corner, above meter)
     {moduleTypeMix8to1B,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 40 Out
     // 41 EnvH
     {moduleTypeEnvH,        connectorDirIn,  connectorTypeLogic,   {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Trig",         labelLocRight},          // 41 Trig
@@ -2626,7 +2626,7 @@ const tVolumeLocation    volumeLocationList[] = {
     {moduleTypeMix4to1S,  volumeTypeStereo,    {{ -9, 13}, { 3, 24}}, anchorTopRight},
     {moduleTypeMix4to1B,  volumeTypeMono,      {{-11,  7}, { 3, 14}}, anchorTopRight}, // XPos:231 YPos:10 H:2  (moved left + extended down, symmetric top/bottom gap)
     {moduleTypeMix8to1A,  volumeTypeMono,      {{-10,  6}, { 3, 10}}, anchorTopRight}, // XPos:231 YPos:10 H:2
-    {moduleTypeMix8to1B,  volumeTypeMono,      {{-15,  6}, { 3, 25}}, anchorTopRight}, // XPos:242 YPos:27 H:4
+    {moduleTypeMix8to1B,  volumeTypeMono,      {{ -4, 13}, { 3, 24}}, anchorTopRight}, // XPos:242 YPos:27 H:4  (far-right column, below Chain / above Out)
     {moduleTypeMixStereo, volumeTypeStereo,    {{-17, 22}, { 3, 15}}, anchorTopRight}, // XPos:207+231 YPos:55 H:5
     {moduleTypeMixFader,  volumeTypeMono,      {{ -4, 16}, { 3, 80}}, anchorTopRight}, // XPos:242 YPos:102 H:9
     {moduleTypeEq2Band,   volumeTypeMono,      {{-11,  6}, { 3, 28}}, anchorTopRight}, // XPos:227 YPos:25 H:3
