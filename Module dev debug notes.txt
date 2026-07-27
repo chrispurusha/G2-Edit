@@ -37,7 +37,7 @@
  45 FltVowel OK
  46 EnvAHD OK
  47 Pan OK
- 48 MixStereo OK
+ 48 MixStereo OK *** MODIFIED 2026-07-27 (Claude) — NEEDS (CT) VERIFY: aligned Lvl4-6 dials to their Pan/In columns (were 2% right, breaking vertical alignment + pitch); moved master level dial right so its value label clears the stereo meter
  49 FltMulti OK
  50 ConstSwT check paramTypeBipLevel dispatch
  51 FltNord OK
