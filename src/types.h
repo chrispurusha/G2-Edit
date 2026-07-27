@@ -341,6 +341,8 @@ typedef enum {
     paramTypePitch,
     paramTypeBypass,
     paramTypeBipLevel,
+    paramTypePartials,   // PartQuant Range: bipolar partial count -64..+63 (0 centre), '*' when |v| > 32
+    paramTypeUniPol,     // 0 to 64 'units' level (raw/2 as N.0/N.5, 127 = 64.0) — e.g. EnvADSR Sustain
     paramTypeMixLevel,
     paramTypeLevAmpDial,
     paramTypeNoteDial,
