@@ -682,6 +682,39 @@ tRectangle render_paramType1BipLevel(tModule * module, tRectangle rectangle, cha
     return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
+tRectangle render_paramType1Partials(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    // PartQuant Range — bipolar partial count. Per the original editor's
+    // ParamText::Sym: value = raw - 64 (raw 64 = 0 centre, 127 = +63, 0 = -64),
+    // with a leading '+' on positives. The manual (PARTQUANT / RANGE KNOB) adds a
+    // '*' once the magnitude exceeds +/-32, flagging that the practical output
+    // limit (the 32nd harmonic) has been passed.
+    int          v    = (int)paramValue - 64;
+    const char * star = ((v > 32) || (v < -32)) ? "*" : "";
+
+    if (v > 0) {
+        snprintf(buff, buffSize, "+%d%s", v, star);
+    } else {
+        snprintf(buff, buffSize, "%d%s", v, star);
+    }
+    return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
+tRectangle render_paramType1UniPol(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    // 0 to 64 'units' level, per the original editor's ParamText::UniPol: raw/2
+    // shown as N.0 (even raw) or N.5 (odd raw), with raw 127 special-cased to
+    // "64.0". Used for EnvADSR Sustain etc. (manual: "Range: 0 to 64 units").
+    int raw = (int)paramValue;
+
+    if (raw >= 127) {
+        snprintf(buff, buffSize, "64.0");
+    } else if ((raw & 1) == 0) {
+        snprintf(buff, buffSize, "%d.0", raw >> 1);
+    } else {
+        snprintf(buff, buffSize, "%d.5", raw >> 1);
+    }
+    return render_dial_with_text(moduleArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
+}
+
 tRectangle render_paramType1LevAmpDial(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     // 0.25 to 4.0
     double lev = 1.0;

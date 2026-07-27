@@ -3,17 +3,17 @@
   4 2-Out OK (CT)
   5 Invert OK
   7 OscB OK
-  8 OscShpB check mode
-  9 Oscar OK check Mode
+  8 OscShpB OK *** CHECKED 2026-07-27 (Claude): Tune-mode handling VERIFIED CORRECT via backdoor — Pitch Type param (index 4) correctly drives render_paramType1OscFreq; all 4 modes (Semi/Freq/Factor/Partial) render right values (Semi 32.0, Freq 2.09kHz at raw 96). Layout clean, no overlap. (The original editor's OscTuneMode has a 5th "Sub" mode, but the manual confirms these oscillators use 4 — "the SEMI (OR FREQ/PART/FAC) knob" — so range=4 is correct.)
+  9 Oscar (OscC) OK *** FIXED 2026-07-27 (Claude): Tune-mode handling VERIFIED CORRECT (Tune Mode param index 3; all 4 modes render right values Semi 32.0 / Freq 2.09kHz / Factor 6.3516x / Partial 33:1 at raw 96). Also FIXED a layout overlap — the Tune Mode selector menu sat at y=15, overlapping the Tune dial's label; moved to y=5 (top row), matching OscShpB's clean separation. Verified via backdoor.
  12 Reverb OK
  13 OscString OK
  15 Sw8-1 Needs more resources
  17 ValSw1-2 Needs more resources
  18 X-fade OK
  19 Mix4-1B OK *** MODIFIED 2026-07-27 (Claude + CT tweaks) — NEEDS (CT) VERIFY: layout reworked — fixed vol-meter overlapping ch4 dial, Exp moved to top-left, connectors/dials respaced (grouped jack+dial), meter repositioned/symmetric
- 20 EnvADSR OK (CT) check values though
+ 20 EnvADSR OK *** FIXED 2026-07-27 (Claude): (1) 'D' param was mislabelled "Delay" -> "Decay" (manual + ADSR convention); (2) Sustain showed 0-100% -> now 0-64 'units' via new paramTypeUniPol renderer (raw/2 as N.0/N.5, 127=64.0), per manual "Range: 0 to 64 units" + original editor ParamText::UniPol. A/D/R time table (ADRTimeStrMap) confirmed CORRECT (0.5ms..45s matches manual). Display VERIFIED via backdoor (Sus 64.0/50.0/50.5). NEEDS (CT) VERIFY: nothing critical, but eyeball on hardware
  21 Mux1-8 OK
- 22 PartQuant OK *** Needs better dial values from 0 to plus minus 63
+ 22 PartQuant OK *** FIXED 2026-07-27 (Claude): Range now shows bipolar partials 0..+/-63 (was 0-100%). New paramTypePartials renderer: value = raw-64, '+' sign on positives, '*' when |v|>32, per manual + original editor ParamText::Sym. Display VERIFIED via backdoor SET across the range (0 / +2 / +32 / +63* / -5 / -32 all correct; asterisk boundary confirmed both ways). NEEDS (CT) VERIFY only: default changed 100->64 (=0 centre) — confirm hardware's real creation default
  23 ModADSR OK
  24 LfoC OK *** MODIFIED 2026-07-27 (Claude) — NEEDS (CT) HARDWARE VERIFY: range selector strMap was mis-ordered vs the wire value; reordered to {Sub,Lo,Hi,BPM} + default 0→1 (Rate Lo), per original editor ParamText::LFORange (G2Editor.c:44594). Resolves the old "Range Sub parameter values" issue. Also confirm a fresh LFO defaults to Rate Lo
  25 LfoShpA OK *** MODIFIED 2026-07-27 (Claude) — NEEDS (CT) VERIFY: range strMap reordered to {Sub,Lo,Hi,BPM,Clk} + default 0→1 (Rate Lo), same fix as LfoC (24)

@@ -2213,6 +2213,34 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
 
         synthlib_request_redraw();
         backdoor_write_result((idx < 0) ? "ERROR: location full\n" : "OK\n");
+    } else if (strcmp(cmd, "SET") == 0) {
+        // SET <VA|FX> <index> <param> <value> — set a param's value in the
+        // current slot, LOCAL-ONLY (no device write); for inspecting how a
+        // param renders across its range.
+        char      loc[8]   = {0};
+        uint32_t  index    = 0;
+        uint32_t  param    = 0;
+        uint32_t  value    = 0;
+
+        if (sscanf(arg, "%7s %u %u %u", loc, &index, &param, &value) != 4) {
+            backdoor_write_result("ERROR: expected 'SET <VA|FX> <index> <param> <value>'\n");
+            return;
+        }
+        uint32_t  location = ((loc[0] == 'F') || (loc[0] == 'f')) ? (uint32_t)locationFx : (uint32_t)locationVa;
+        tModule * module   = get_module_slot(gSlot, location, index);
+
+        if ((module == NULL) || (module->type == 0)) {
+            backdoor_write_result("ERROR: no module at that loc/index\n");
+            return;
+        }
+
+        if (param >= MAX_NUM_PARAMETERS) {
+            backdoor_write_result("ERROR: param index out of range\n");
+            return;
+        }
+        module->param[gPatchDescr[gSlot].activeVariation][param].value = value;
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "DUMP") == 0) {
         char dump[16384];
 
