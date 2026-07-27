@@ -11,12 +11,16 @@ G2-Edit TODO (priority order)
   synchronous render_frame()). Proven offline. Possible follow-ons if wanted: SET (param poke), VIEW
   (VA/FX), SYNC (drive real hardware). No SynthLib change (all in G2-Edit; reuses bundled stb_image_write.h).
 
-- Mixer module layout cleanup (2026-07-27, built, NEEDS (CT) HARDWARE VERIFY — flagged in Module dev debug
-  notes.txt). Audited all 12 mix modules via the backdoor (NEWPATCH/ADDMODULE/SCREENSHOT). Found + fixed
-  overlapping components on Mix4-1B(19) and Mix8-1B(40): the mono volume meter sat on top of the last
-  channel's dial (and, on Mix8-1B, the Chain label). Fixes in moduleResources.h only. Layout principles
-  captured in module-layout-rules.md (repo root). STILL OPEN: MixStereo(48) has minor label-crowding on its
-  master dial (meter band). Mix4-1A/1C/1S, Mix8-1A, Mix1-1A/1S, Mix2-1A/1B, MixFader were all clean.
+- Module layout cleanup (2026-07-27, built, NEEDS (CT) VERIFY — flagged in Module dev debug notes.txt).
+  Audited all 12 mix modules via the backdoor (NEWPATCH/ADDMODULE/SCREENSHOT). Fixed overlapping components
+  on Mix4-1B(19), Mix8-1B(40) (mono meter on top of last dial / Chain label) and MixStereo(48) (master-dial
+  label crowding the stereo meter + Lvl4-6 dials misaligned from their Pan/In columns). Fixes in
+  moduleResources.h only; principles captured in module-layout-rules.md (repo root). All 12 mixers now
+  clean. Then a QUICK cross-family sweep of 9 dense/metered modules (Compress/Delay/Operator/DrumSynth/
+  SeqNote/SeqVal/EnvMulti/Pulse/PitchTrack) — NO overlaps; the mixer family was the outlier (tall meter bars
+  crammed into dense channel rows). Most modules have no meter or a small corner mono-meter mark that
+  doesn't collide. STILL OPEN (optional): a fuller systematic sweep of the remaining ~190 module types
+  (cheap now via the backdoor, just not yet done).
 
 - SynthEdit "no device connected" was silent on every File/Backup menu action — FIXED 2026-07-26 (built,
   not hardware-tested). Owner report: "Open File..." did nothing with no synth attached — no browser, no
