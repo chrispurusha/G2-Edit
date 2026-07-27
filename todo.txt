@@ -1,5 +1,14 @@
 G2-Edit TODO (priority order)
 
+- TOOLING (added 2026-07-27, built + proven): backdoor test-control channel in graphics.cpp, ported from
+  SynthEdit. ENV-GATED — only active when launched with G2_EDIT_BACKDOOR=1; a normal double-click launch
+  leaves it completely inert and keeps the idle loop's full glfwWaitEvents() sleep. Lets Claude drive +
+  verify the app headless/offline via /tmp/g2edit_cmd.txt -> /tmp/g2edit_result.txt: LOADFILE <path> (loads
+  a .pch2/.prf2 with no G2 attached), SLOT <0-3|A-D>, DUMP (slot + every non-empty module), SCREENSHOT
+  <path> (full-res PNG via a synchronous render_frame()). Proven offline (loaded RndFilter.pch2, DUMP +
+  correct 2808x1578 screenshot). Possible follow-ons if wanted: SET (param poke), VIEW (VA/FX), SYNC (drive
+  real hardware). No SynthLib change (all in G2-Edit graphics.cpp; reuses the bundled stb_image_write.h).
+
 - SynthEdit "no device connected" was silent on every File/Backup menu action — FIXED 2026-07-26 (built,
   not hardware-tested). Owner report: "Open File..." did nothing with no synth attached — no browser, no
   message. Confirmed: synth_backup_restore_edit_buffer() (synthBackup.c) bailed on !gDevice.connected
