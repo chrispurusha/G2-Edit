@@ -1,5 +1,16 @@
 G2-Edit TODO (priority order)
 
+- SynthLib HiDPI scale fix — PENDING COMMIT + PIN ADVANCE (2026-07-27). Fixed in SynthLib/src/synthlibScale.c
+  (synthlib_scale_update): removed the gContentScale multiply from gGlobalGuiScale — the framebuffer size
+  from glfwGetFramebufferSize already carries the display's backing scale, so multiplying by gContentScale
+  DOUBLE-COUNTED it and made the whole UI render quarter-size in a corner on non-Retina / "Low Resolution"
+  displays (content scale 1.0). Now gGlobalGuiScale = 2*width/gTargetFrameBuffWidth. NO-OP on 2x/Retina
+  (gContentScale was 2.0 there) so zero regression; only 1x is fixed. This was exposed by the earlier
+  "secondary monitor" fix that made gContentScale dynamic (was hardcoded 2.0, which accidentally worked on
+  1x). SynthLib change — affects EmuUtility + SynthEdit identically (same bug, same fix). WORKFLOW: commit +
+  push SynthLib, advance pins in all 3 projects. Built OK in G2-Edit (Retina). NEEDS owner verify on a real
+  non-Retina/Low-Res display. G2-Edit build verified.
+
 - TOOLING (added 2026-07-27, built + proven): backdoor test-control channel in graphics.cpp, ported from
   SynthEdit. ENV-GATED — only active when launched with G2_EDIT_BACKDOOR=1; a normal double-click launch
   leaves it completely inert and keeps the idle loop's full glfwWaitEvents() sleep. LOCAL-ONLY by design —
