@@ -2172,6 +2172,47 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         gPatchParamsEdit.slot = slot; // patch-params panel tracks its own slot copy — keep both in step
         synthlib_request_redraw();
         backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "NEWPATCH") == 0) {
+        // Clears the current slot's canvas (modules + cables). Offline layout
+        // scratchpad — a real device New Patch would go through eMsgCmdNewPatch.
+        database_delete_modules_by_slot(gSlot);
+        database_delete_cables_by_slot(gSlot);
+        gLocation = (uint32_t)locationVa;
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "ADDMODULE") == 0) {
+        // ADDMODULE <name> [col] [row] — name matches gModuleProperties[].name
+        // (e.g. "Mix4-1C"). Added to the Voice area at col/row (default 0,0).
+        char        name[64] = {0};
+        uint32_t    col      = 0;
+        uint32_t    row      = 0;
+
+        if (sscanf(arg, "%63s %u %u", name, &col, &row) < 1) {
+            backdoor_write_result("ERROR: expected 'ADDMODULE <name> [col] [row]'\n");
+            return;
+        }
+        tModuleType found    = (tModuleType)0;
+
+        for (uint32_t t = 1; t < (uint32_t)moduleTypeMax; t++) {
+            if (strcmp(gModuleProperties[t].name, name) == 0) {
+                found = (tModuleType)t;
+                break;
+            }
+        }
+
+        if (found == (tModuleType)0) {
+            char msg[128];
+
+            snprintf(msg, sizeof(msg), "ERROR: no module named '%s'\n", name);
+            backdoor_write_result(msg);
+            return;
+        }
+        gLocation = (uint32_t)locationVa;
+
+        int32_t     idx      = create_module_at(found, col, row, false); // false = local-only; the backdoor never writes to the device
+
+        synthlib_request_redraw();
+        backdoor_write_result((idx < 0) ? "ERROR: location full\n" : "OK\n");
     } else if (strcmp(cmd, "DUMP") == 0) {
         char dump[16384];
 

@@ -632,53 +632,69 @@ void shift_modules_down(tModuleKey key) {
     }
 }
 
+// Creates a module of `type` at column/row in the current slot's current
+// location (gLocation): assigns the next free index, inits its params, syncs it
+// to the device, and shifts existing modules down to make room. The shared core
+// of the right-click "add module" menu (menu_action_create) and the backdoor
+// ADDMODULE test command. Returns the new module's index, or -1 if the location
+// is full.
+int32_t create_module_at(tModuleType type, uint32_t column, uint32_t row, bool syncToDevice) {
+    uint32_t        slot           = gSlot;
+    uint32_t        location       = gLocation;
+    tModule         module         = {0};
+    tMessageContent messageContent = {0};
+    int32_t         uniqueIndex    = find_unique_module_id(location);
+
+    if (uniqueIndex < 0) {
+        return -1;
+    }
+    module.key.slot                               = slot;
+    module.key.location                           = location;
+    module.key.index                              = (uint32_t)uniqueIndex;
+    module.type                                   = type;
+    module.column                                 = column;
+    module.row                                    = row;
+    module.excludeFromMutation                    = default_mutation_lock(module.type) ? 1 : 0;
+
+    COPY_STRING(module.name, gModuleProperties[module.type].name);
+
+    messageContent.cmd                            = eMsgCmdWriteModule;
+    messageContent.slot                           = slot;
+    messageContent.moduleData.moduleKey           = module.key;
+    messageContent.moduleData.type                = module.type;
+    messageContent.moduleData.row                 = module.row;
+    messageContent.moduleData.column              = module.column;
+    messageContent.moduleData.colour              = module.colour;
+    messageContent.moduleData.upRate              = module.upRate;
+    messageContent.moduleData.excludeFromMutation = module.excludeFromMutation;
+    messageContent.moduleData.unknown1            = module.unknown1;
+    messageContent.moduleData.modeCount           = module_mode_count(module.type);
+
+    for (int i = 0; i < module_mode_count(module.type); i++) {
+        messageContent.moduleData.mode[i] = module.mode[i].value;
+    }
+
+    COPY_STRING(messageContent.moduleData.name, module.name);
+
+    if (syncToDevice) {
+        msg_send(&gToUsbThread, &messageContent); // push to the G2; backdoor/test callers pass false to stay local-only
+    }
+    write_module(module.key, &module);
+
+    init_params_on_module_all_variations(get_module(module.key), location);
+
+    shift_modules_down(module.key);
+
+    return uniqueIndex;
+}
+
 static void menu_action_create(int index) {
-    uint32_t slot     = gSlot;
-    uint32_t location = gLocation;
-
     if (gContextMenu.items[index].param != 0) {
-        tModule         module         = {0};
-        tMessageContent messageContent = {0};
-        int32_t         uniqueIndex    = 0;
+        uint32_t column = 0;
+        uint32_t row    = 0;
 
-        module.key.slot     = slot;
-        module.key.location = location;
-        uniqueIndex         = find_unique_module_id(module.key.location);
-
-        if (uniqueIndex >= 0) {
-            module.key.index                              = (uint32_t)uniqueIndex;
-            module.type                                   = (tModuleType)gContextMenu.items[index].param;
-            convert_mouse_coord_to_module_column_row(&module.column, &module.row, gContextMenu.originCoord);
-            module.excludeFromMutation                    = default_mutation_lock(module.type) ? 1 : 0;
-
-            COPY_STRING(module.name, gModuleProperties[module.type].name);
-
-            messageContent.cmd                            = eMsgCmdWriteModule;
-            messageContent.slot                           = slot;
-            messageContent.moduleData.moduleKey           = module.key;
-            messageContent.moduleData.type                = module.type;
-            messageContent.moduleData.row                 = module.row;
-            messageContent.moduleData.column              = module.column;
-            messageContent.moduleData.colour              = module.colour;
-            messageContent.moduleData.upRate              = module.upRate;
-            messageContent.moduleData.excludeFromMutation = module.excludeFromMutation;
-            messageContent.moduleData.unknown1            = module.unknown1;
-            messageContent.moduleData.modeCount           = module_mode_count(module.type);
-
-            for (int i = 0; i < module_mode_count(module.type); i++) {
-                messageContent.moduleData.mode[i] = module.mode[i].value;
-            }
-
-            COPY_STRING(messageContent.moduleData.name, module.name);
-
-            msg_send(&gToUsbThread, &messageContent);
-
-            write_module(module.key, &module);
-
-            init_params_on_module_all_variations(get_module(module.key), location);
-
-            shift_modules_down(module.key);
-        }
+        convert_mouse_coord_to_module_column_row(&column, &row, gContextMenu.originCoord);
+        create_module_at((tModuleType)gContextMenu.items[index].param, column, row, true);
     }
 }
 

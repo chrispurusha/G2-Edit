@@ -497,11 +497,11 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeXtoFade,    paramTypePan,         {{ 55,   4}, { 7, 14}}, anchorBottomLeft,  NULL,           128,  64, NULL,                                  NULL          },                         // 18 X-fade
     {moduleTypeXtoFade,    paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, logStrMap,                             NULL          },
     // 19 Mix4-1B
-    {moduleTypeMix4to1B,   paramTypeCommonDial,  {{ 37,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 19 Lev1
-    {moduleTypeMix4to1B,   paramTypeCommonDial,  {{ 52,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 19 Lev2
-    {moduleTypeMix4to1B,   paramTypeCommonDial,  {{ 67,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 19 Lev3
-    {moduleTypeMix4to1B,   paramTypeCommonDial,  {{ 82,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 19 Lev4
-    {moduleTypeMix4to1B,   paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             3,   0, expStrMap,                             NULL          },                         // 19 ExpLinDB
+    {moduleTypeMix4to1B,   paramTypeCommonDial,  {{ 26,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 19 Lev1
+    {moduleTypeMix4to1B,   paramTypeCommonDial,  {{ 42,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 19 Lev2
+    {moduleTypeMix4to1B,   paramTypeCommonDial,  {{ 58,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 19 Lev3
+    {moduleTypeMix4to1B,   paramTypeCommonDial,  {{ 74,  -3}, { 7, 14}}, anchorBottomLeft,  NULL,           128, 100, NULL,                                  NULL          },                         // 19 Lev4
+    {moduleTypeMix4to1B,   paramTypeMenu,        {{  3,   6}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, expStrMap,                             NULL          },                         // 19 ExpLinDB  (top-left, above Chain)
     // 20 EnvvADSR
     {moduleTypeEnvADSR,    paramTypeMenu,        {{-26,  -3}, { 7,  7}}, anchorBottomRight, NULL,             4,   0, envShapeStrMap,                        NULL          },                         // 20 Env Shape
     {moduleTypeEnvADSR,    paramTypeADRTime,     {{ 20,  -3}, { 7, 14}}, anchorBottomLeft,  "Attack",       128,   0, NULL,                                  NULL          },                         // 20 A
@@ -1675,10 +1675,10 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeXtoFade,     connectorDirIn,  connectorTypeControl, {{ 33,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 18 Mod
     {moduleTypeXtoFade,     connectorDirOut, connectorTypeControl, {{ 92,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocUp   },          // 18 Out
     // 19 Mix4-1B
-    {moduleTypeMix4to1B,    connectorDirIn,  connectorTypeControl, {{ 30,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },          // 19 In 1
-    {moduleTypeMix4to1B,    connectorDirIn,  connectorTypeControl, {{ 45,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },          // 19 In 2
-    {moduleTypeMix4to1B,    connectorDirIn,  connectorTypeControl, {{ 60,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   },          // 19 In 3
-    {moduleTypeMix4to1B,    connectorDirIn,  connectorTypeControl, {{ 75,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   },          // 19 In 4
+    {moduleTypeMix4to1B,    connectorDirIn,  connectorTypeControl, {{ 20,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "1",            labelLocUp   },          // 19 In 1
+    {moduleTypeMix4to1B,    connectorDirIn,  connectorTypeControl, {{ 36,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "2",            labelLocUp   },          // 19 In 2
+    {moduleTypeMix4to1B,    connectorDirIn,  connectorTypeControl, {{ 52,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "3",            labelLocUp   },          // 19 In 3
+    {moduleTypeMix4to1B,    connectorDirIn,  connectorTypeControl, {{ 68,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "4",            labelLocUp   },          // 19 In 4
     {moduleTypeMix4to1B,    connectorDirIn,  connectorTypeControl, {{  3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  "Chain",        labelLocRight},          // 19 Chain
     {moduleTypeMix4to1B,    connectorDirOut, connectorTypeControl, {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft },          // 19 Out
     // 20 EnvADSR
@@ -2624,7 +2624,7 @@ const tVolumeLocation    volumeLocationList[] = {
     {moduleType4toOut,    volumeTypeQuad,      {{-50,  7}, { 3, 14}}, anchorTopRight},
     {moduleTypeFxtoIn,    volumeTypeStereo,    {{-25,  7}, { 3, 14}}, anchorTopRight},
     {moduleTypeMix4to1S,  volumeTypeStereo,    {{ -9, 13}, { 3, 24}}, anchorTopRight},
-    {moduleTypeMix4to1B,  volumeTypeMono,      {{-10,  6}, { 3, 10}}, anchorTopRight}, // XPos:231 YPos:10 H:2
+    {moduleTypeMix4to1B,  volumeTypeMono,      {{-11,  7}, { 3, 14}}, anchorTopRight}, // XPos:231 YPos:10 H:2  (moved left + extended down, symmetric top/bottom gap)
     {moduleTypeMix8to1A,  volumeTypeMono,      {{-10,  6}, { 3, 10}}, anchorTopRight}, // XPos:231 YPos:10 H:2
     {moduleTypeMix8to1B,  volumeTypeMono,      {{-15,  6}, { 3, 25}}, anchorTopRight}, // XPos:242 YPos:27 H:4
     {moduleTypeMixStereo, volumeTypeStereo,    {{-17, 22}, { 3, 15}}, anchorTopRight}, // XPos:207+231 YPos:55 H:5

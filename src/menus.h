@@ -28,6 +28,7 @@ extern "C" {
 #endif
 
 // Module creation utilities
+int32_t create_module_at(tModuleType type, uint32_t column, uint32_t row, bool syncToDevice);
 void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row, tCoord coord);
 void shift_modules_down(tModuleKey key);
 int32_t find_unique_module_id(uint32_t location);
