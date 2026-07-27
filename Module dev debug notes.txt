@@ -10,14 +10,14 @@
  15 Sw8-1 Needs more resources
  17 ValSw1-2 Needs more resources
  18 X-fade OK
- 19 Mix4-1B OK
+ 19 Mix4-1B OK *** MODIFIED 2026-07-27 (Claude + CT tweaks) — NEEDS (CT) VERIFY: layout reworked — fixed vol-meter overlapping ch4 dial, Exp moved to top-left, connectors/dials respaced (grouped jack+dial), meter repositioned/symmetric
  20 EnvADSR OK (CT) check values though
  21 Mux1-8 OK
  22 PartQuant OK *** Needs better dial values from 0 to plus minus 63
  23 ModADSR OK
- 24 LfoC OK *** Needs to check Range Sub parameter values
- 25 LfoShpA OK
- 26 LfoA OK
+ 24 LfoC OK *** MODIFIED 2026-07-27 (Claude) — NEEDS (CT) HARDWARE VERIFY: range selector strMap was mis-ordered vs the wire value; reordered to {Sub,Lo,Hi,BPM} + default 0→1 (Rate Lo), per original editor ParamText::LFORange (G2Editor.c:44594). Resolves the old "Range Sub parameter values" issue. Also confirm a fresh LFO defaults to Rate Lo
+ 25 LfoShpA OK *** MODIFIED 2026-07-27 (Claude) — NEEDS (CT) VERIFY: range strMap reordered to {Sub,Lo,Hi,BPM,Clk} + default 0→1 (Rate Lo), same fix as LfoC (24)
+ 26 LfoA OK *** MODIFIED 2026-07-27 (Claude) — NEEDS (CT) VERIFY: range strMap reordered to {Sub,Lo,Hi,BPM} (no Clk) + default 0→1 (Rate Lo), same fix as LfoC (24)
  27 OscMaster OK
  28 Saturate OK
  29 MetNoise OK
@@ -29,7 +29,7 @@
  35 Driver OK - fixed In1 connector labelLoc
  36 SwOnOffM OK - fixed Ctrl connector labelLoc
  38 Pulse OK
- 40 Mix8-1B OK
+ 40 Mix8-1B OK *** MODIFIED 2026-07-27 (Claude) — NEEDS (CT) VERIFY: fixed vol-meter overlapping Chain label + ch8; Chain→top-right, meter→far-right column (below Chain/above Out), 8 channels shifted left to balance margins
  41 EnvH OK
  42 Delay OK
  43 Constant OK
@@ -151,7 +151,7 @@
 187 Sw2-1M
 188 ConstSwM
 189 NoiseGate
-190 LfoB
+190 LfoB *** MODIFIED 2026-07-27 (Claude) — NEEDS (CT) VERIFY: range strMap reordered to {Sub,Lo,Hi,BPM,Clk} + default 0→1 (Rate Lo), same fix as LfoC (24)
 192 Phaser
 193 Mix4-1A OK (CT)
 194 Mix2-1A OK (CT)

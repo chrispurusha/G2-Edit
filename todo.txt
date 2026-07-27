@@ -2,12 +2,21 @@ G2-Edit TODO (priority order)
 
 - TOOLING (added 2026-07-27, built + proven): backdoor test-control channel in graphics.cpp, ported from
   SynthEdit. ENV-GATED — only active when launched with G2_EDIT_BACKDOOR=1; a normal double-click launch
-  leaves it completely inert and keeps the idle loop's full glfwWaitEvents() sleep. Lets Claude drive +
-  verify the app headless/offline via /tmp/g2edit_cmd.txt -> /tmp/g2edit_result.txt: LOADFILE <path> (loads
-  a .pch2/.prf2 with no G2 attached), SLOT <0-3|A-D>, DUMP (slot + every non-empty module), SCREENSHOT
-  <path> (full-res PNG via a synchronous render_frame()). Proven offline (loaded RndFilter.pch2, DUMP +
-  correct 2808x1578 screenshot). Possible follow-ons if wanted: SET (param poke), VIEW (VA/FX), SYNC (drive
-  real hardware). No SynthLib change (all in G2-Edit graphics.cpp; reuses the bundled stb_image_write.h).
+  leaves it completely inert and keeps the idle loop's full glfwWaitEvents() sleep. LOCAL-ONLY by design —
+  it never writes to a connected G2 (create_module_at gained a syncToDevice flag; menu passes true, backdoor
+  false). Drives + verifies the app headless/offline via /tmp/g2edit_cmd.txt -> /tmp/g2edit_result.txt:
+  LOADFILE <path> (loads a .pch2/.prf2 with no G2 attached), SLOT <0-3|A-D>, DUMP (slot + every non-empty
+  module), NEWPATCH (clears the current slot locally — NOT the device), ADDMODULE <name> [col] [row] (adds
+  a module locally by its properties name, e.g. "Mix4-1B"), SCREENSHOT <path> (full-res PNG via a
+  synchronous render_frame()). Proven offline. Possible follow-ons if wanted: SET (param poke), VIEW
+  (VA/FX), SYNC (drive real hardware). No SynthLib change (all in G2-Edit; reuses bundled stb_image_write.h).
+
+- Mixer module layout cleanup (2026-07-27, built, NEEDS (CT) HARDWARE VERIFY — flagged in Module dev debug
+  notes.txt). Audited all 12 mix modules via the backdoor (NEWPATCH/ADDMODULE/SCREENSHOT). Found + fixed
+  overlapping components on Mix4-1B(19) and Mix8-1B(40): the mono volume meter sat on top of the last
+  channel's dial (and, on Mix8-1B, the Chain label). Fixes in moduleResources.h only. Layout principles
+  captured in module-layout-rules.md (repo root). STILL OPEN: MixStereo(48) has minor label-crowding on its
+  master dial (meter band). Mix4-1A/1C/1S, Mix8-1A, Mix1-1A/1S, Mix2-1A/1B, MixFader were all clean.
 
 - SynthEdit "no device connected" was silent on every File/Backup menu action — FIXED 2026-07-26 (built,
   not hardware-tested). Owner report: "Open File..." did nothing with no synth attached — no browser, no
