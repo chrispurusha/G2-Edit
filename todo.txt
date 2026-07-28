@@ -11,8 +11,67 @@ G2-Edit TODO (priority order)
   push SynthLib, advance pins in all 3 projects. Built OK in G2-Edit (Retina). NEEDS owner verify on a real
   non-Retina/Low-Res display. G2-Edit build verified.
 
-- Text rendering quality at low resolution / small windows — DONE 2026-07-28 via scale-aware
-  re-rasterization (approach (b)); mipmapping (a) NOT needed and NOT done. Separate from the HiDPI scale
+- Minimum window size raised to 640x360 — DONE 2026-07-28, UNCOMMITTED (graphics.cpp, TARGET/8 -> TARGET/4;
+  still exactly the locked 16:9). The old 320pt minimum on a 1x display gave a 320px framebuffer,
+  gGlobalGuiScale 0.25, body text ~3px and small top-bar labels ~2px — unreadable however well rendered.
+  640pt bottoms out at ~6px body text on 1x, which the pixel-exact work below makes legible.
+  KNOWN AND ACCEPTED (owner call: don't over-complicate): this limits INTERACTIVE resizing only. On macOS,
+  Cocoa applies setContentMinSize:/setContentAspectRatio: to user drags but not to programmatic setFrame:,
+  so glfwSetWindowSize() bypasses it — a windowWidth pref saved below 640 is restored at its saved size
+  (confirmed: pref 414 -> a 414pt window). Self-heals as soon as the window is resized by hand. Only
+  G2-Edit changed; EmuUtility and SynthEdit still use TARGET/8.
+
+- Text rendering quality, PART 2: pixel-exact glyph rendering — DONE 2026-07-28, UNCOMMITTED, verified on
+  a REAL 1600x900 1x display (the case part 1 could not test). Part 1 below made large windows good but
+  small windows on a 1x display were still mush ("25%", "0%", "BiPol" unreadable at a 700px window).
+  ROOT CAUSE (and it was NOT the atlas size — proved by forcing exact 1:1 rasterization, which made it
+  WORSE): the draw path resampled every glyph. scaleFactor = rectangle.size.h / em is always fractional,
+  and glyph quads landed on fractional framebuffer pixels, so the final bilinear resample at an arbitrary
+  sub-pixel phase smeared away exactly the stem alignment FreeType's hinter had just produced. At 2x there
+  are enough pixels to hide it; at 1x, where the UI scales text down to ~6px, it destroys it.
+  MEASURED FIRST (this is what made the fix cheap): a running G2-Edit only ever draws 2-3 distinct text
+  heights — at a 700px window on 1x it is just 6.6px and 4.6px (plus a 2.5px draw that turns out to be an
+  EMPTY string). So per-size atlases cost almost nothing.
+  FIX: atlases are now keyed by INTEGER drawn pixel height and cached (GLYPH_ATLAS_CACHE_SIZE = 6, LRU).
+  Glyphs are rasterized at that exact size and blitted 1:1 — no glScalef, origin snapped to whole pixels,
+  GL_NEAREST filtering (with 1:1 texel mapping, filtering could only blur a sample already dead centre).
+    * Layout is deliberately NOT driven by these atlases. get_text_width() and everything built on it stay
+      on ONE canonical metrics set (gCanonInfo, measured once at GLYPH_REFERENCE_PX), so text widths stay
+      continuous and proportional and boxes fit exactly as before. The pen advances by the canonical
+      advance; only each glyph's final position is rounded. That costs sub-pixel letter spacing and buys
+      pixel alignment — the right trade at 6px.
+    * FT_LOAD_TARGET_LIGHT (light hinting): snaps stems vertically while leaving horizontal metrics
+      linear. FT_LOAD_FORCE_AUTOHINT was tried and REJECTED — crisper, but it changes glyph advances, so
+      with canonical-advance positioning it rendered "R andomA 1" / "554.4H z". Do not re-try it without
+      also making get_text_width use the same hinted advances (which it cannot, as it does not know the
+      device size — it never sees gZoomFactor).
+    * preload_glyph_textures()'s fontSize argument is now only the size the canonical metrics are
+      measured at; it no longer fixes how text is rasterized. API unchanged, so EmuUtility/SynthEdit's
+      "try each font path until one loads" still works.
+  RESULT on the 1x display at a 700px window: "Rate Hi", "554.4Hz", "25%", "BiPol", "Poly", "Edge", "0%"
+  all readable (were mush). Stable — 4 consecutive frames byte-identical at small window, large window and
+  zoomFactor 2.0, so no per-frame atlas churn.
+  ALSO FIXES "text sometimes renders slightly low" (owner report 2026-07-28, seen in the PART 1 build).
+  That was a real defect in part 1, not a display artifact: gMaxAscent/gMaxDescent were taken from
+  whatever size the single atlas happened to be rasterized at, and the ascent-to-em ratio is NOT constant
+  across rasterization sizes (the hinter rounds differently at each), so the baseline moved whenever the
+  atlas rebuilt. Intermittent because it depended on which atlas was live, i.e. on window size and zoom.
+  PROVED by measuring the same module title across an atlas rebuild in the part 1 build: ink starts at row
+  125 with the 72px atlas and row 126 after it rebuilds to 16px, with nothing else changed.
+  In the pixel-exact code gMaxAscent/gMaxDescent are canonical — measured once at GLYPH_REFERENCE_PX and
+  never touched again — so the baseline cannot drift with atlas size. NOTE the baseline must be derived
+  from that CANONICAL ascent (round(coord.y + gMaxAscent * scaleFactor), rounded once). An earlier version
+  of this code used each atlas's OWN rounded ascent, which rounds a second time against a rasterization
+  whose em height only approximates the requested one, reintroducing the same class of drop — don't.
+  Verified against the part 1 build at the same 700px window: module titles land on identical rows, menu
+  bar sits 1px higher, which is where the original fixed-72px code put it.
+  NOT RE-VERIFIED ON RETINA since this rewrite (the display was 1x for the whole session). Same code path,
+  and it should be equal or better there, but worth an eyeball on a 2x display.
+
+- Text rendering quality, PART 1 — DONE 2026-07-28 via scale-aware
+  re-rasterization (approach (b)); mipmapping (a) NOT needed and NOT done. SUPERSEDED IN PART by the
+  pixel-exact work above, which replaced the single adaptive atlas with per-size atlases (so
+  GLYPH_ATLAS_SUPERSAMPLE / track_text_size / the grow-shrink hysteresis described below are GONE). Separate from the HiDPI scale
   fix above: that one fixed the quarter-size COLLAPSE, this is the softness/blockiness of the text itself.
   ROOT CAUSE (SynthLib/src/utilsGraphics.cpp, preload_glyph_textures): the glyph atlas was rasterized ONCE
   at a fixed 72px (call site: G2-Edit src/graphics.cpp:621, same 72.0 in EmuUtility + SynthEdit) with
