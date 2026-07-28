@@ -32,6 +32,10 @@ void do_graphics_loop(void);
 void clean_up_graphics(void);
 void wake_glfw(void);
 
+#ifdef ENABLE_MOUSE_CROSSHAIR
+void toggle_mouse_crosshair(void); // TEMPORARY debug aid — F9, Debug builds only
+#endif
+
 // Patch DB <-> file helpers. Serialising/naming a slot touches the shared patch database, so when
 // online these run on the USB thread (via eMsgCmdSavePatchFile / eMsgCmdSavePerfFile / eMsgCmdLoadFile)
 // to stay atomic against the USB thread's own DB writes — see their handlers in usbComms.c.

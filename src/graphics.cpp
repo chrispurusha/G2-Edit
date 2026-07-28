@@ -2018,6 +2018,72 @@ int note_editor_cursor_from_click(double logicalX, double logicalY) {
 // Renders one full frame and swaps buffers. Extracted from do_graphics_loop's
 // inlined render block so the backdoor SCREENSHOT command can force a
 // synchronous frame (see backdoor_screenshot()).
+// ── TEMPORARY DEBUG AID — mouse crosshair ───────────────────────────────────
+// Draws full-width/full-height lines through the cursor plus a numeric readout,
+// for validating button hit points against their registered rectangles.
+//
+// Deliberately uses get_global_gui_scaled_mouse_coord() — the SAME call the
+// click handlers use — so the number shown is literally the coordinate that
+// gets compared against each rectangle, not an independently-derived one that
+// could agree by luck while the real dispatch path disagrees.
+//
+// NOTE: this is mainArea (unscrolled) space. Top bar, menu bar and panel
+// buttons live here, so their hit rects can be read off directly. Module-area
+// elements are scroll/zoom-adjusted afterwards, so for those the crosshair
+// shows the pre-adjustment cursor position, not the module-local one.
+//
+// Debug builds only (ENABLE_MOUSE_CROSSHAIR lives in defs.h), and OFF until F9
+// is pressed — the lines sit above even the modal alert, so leaving it on by
+// default would be intrusive.
+#ifdef ENABLE_MOUSE_CROSSHAIR
+
+static bool gShowMouseCrosshair = false;
+
+void toggle_mouse_crosshair(void) {
+    gShowMouseCrosshair = !gShowMouseCrosshair;
+    LOG_DEBUG("Mouse crosshair %s\n", gShowMouseCrosshair ? "ON" : "OFF");
+}
+
+static void render_mouse_crosshair(void) {
+    tCoord coord      = {0};
+    char   buff[64]   = {0};
+    double logicalW   = 0.0;
+    double logicalH   = 0.0;
+    double thickness  = 0.0;
+    double textHeight = STANDARD_TEXT_HEIGHT;
+    double textX      = 0.0;
+    double textY      = 0.0;
+
+    if (gShowMouseCrosshair == false) {
+        return;
+    }
+    logicalW  = get_render_width() / gGlobalGuiScale;
+    logicalH  = get_render_height() / gGlobalGuiScale;
+    thickness = 1.0 / gGlobalGuiScale; // exactly one device pixel at any scale
+
+    get_global_gui_scaled_mouse_coord(&coord);
+
+    set_rgb_colour(RGB_RED_7);
+    render_rectangle(mainArea, {{0.0, coord.y}, {logicalW, thickness}});
+    render_rectangle(mainArea, {{coord.x, 0.0}, {thickness, logicalH}});
+
+    // Keep the readout on-screen when the cursor is near the right/top edge,
+    // otherwise the one value you actually want to read is the one clipped away.
+    snprintf(buff, sizeof(buff), "%.1f, %.1f", coord.x, coord.y);
+    textX     = coord.x + 5.0;
+    textY     = coord.y - 5.0;
+
+    if (textX > logicalW - 90.0) {
+        textX = coord.x - 90.0;
+    }
+
+    if (textY < textHeight) {
+        textY = coord.y + textHeight + 5.0;
+    }
+    render_text(mainArea, {{textX, textY}, {BLANK_SIZE, textHeight}}, buff);
+}
+#endif
+
 static void render_frame(void) {
     glClearColor(0.8, 0.8, 0.8, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -2052,6 +2118,10 @@ static void render_frame(void) {
     render_bank_browser();
     render_device_busy_overlay(); // dim + "please wait" while a whole-slot device op is in flight
     render_alert_dialog();        // drawn last of all — modal, must paint over everything else
+
+#ifdef ENABLE_MOUSE_CROSSHAIR
+    render_mouse_crosshair();     // TEMPORARY debug aid (F9) — above even the modal, so it is never hidden
+#endif
 
     glfwSwapBuffers((GLFWwindow *)synthlib_window());
 }

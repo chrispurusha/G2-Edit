@@ -29,6 +29,16 @@
 //#define ENABLE_LOG_MODULE_DATA    // Uncomment for module-data logging in any configuration
 //#define ENABLE_USB_LOG    // Uncomment to enable USB message logging to ~/G2_usb.log
 
+// TEMPORARY debug aid — mouse crosshair for validating button hit points.
+// Compiled in for Debug builds only, so it can never reach a release .dmg, and
+// even then it stays OFF until toggled with F9 at runtime.
+// To remove entirely: delete this block, render_mouse_crosshair() and its call
+// in graphics.cpp, toggle_mouse_crosshair() in graphics.h, and the F9 branch in
+// mouseHandle.c.
+#ifdef MOUSE_DEBUG
+#define ENABLE_MOUSE_CROSSHAIR
+#endif
+
 #define PATCH_FILE_SIZE                      (10 * 1024 * 1024)
 #define PERF_FILE_SIZE                       (40 * 1024 * 1024)
 #define TARGET_FRAME_BUFF_WIDTH              (2560)
