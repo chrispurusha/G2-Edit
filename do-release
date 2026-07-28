@@ -1,0 +1,196 @@
+#!/bin/zsh
+
+# Builds a universal (arm64 + x86_64) Release binary and packages it as a .dmg
+# ready to attach to a GitHub release.
+#
+#   ./do-release                    version from the latest git tag
+#   ./do-release 0.5.0-beta.6       explicit version
+#   ./do-release 0.5.0-beta.6 ~/tmp explicit version, custom output directory
+#
+# The .dmg lands on the Desktop by default - outside the repo, so it is easy to
+# drag onto a GitHub release and can never be committed by accident.
+#
+# The app is ad-hoc signed only. There is no paid Apple Developer membership
+# behind this project, so the .dmg is NOT notarized and macOS will refuse to
+# open it until the user clears the quarantine flag. Instructions for that are
+# written into the .dmg as "Read Me First.txt" so they travel with the download.
+
+set -e
+
+ARG_VERSION="$1"
+
+# Resolve a relative output path against the caller's directory, not the
+# project directory we are about to switch to.
+DIST="${2:-$HOME/Desktop}"
+DIST="${DIST:a}"
+
+cd ${0:a:h}
+
+PROJECT="G2 Editor.xcodeproj"
+SCHEME="G2 Editor"
+APP_NAME="G2 Editor.app"
+VOL_NAME="G2-Edit"
+DERIVED="build/release-tmp"
+
+# --- version -------------------------------------------------------------
+
+# Releases are tagged in git, so the tag is the source of truth. MARKETING_VERSION
+# in the project file is not maintained per-release and is only a last resort.
+if [[ -n $ARG_VERSION ]]; then
+    VERSION="$ARG_VERSION"
+    echo "==> version $VERSION (specified)"
+else
+    VERSION=$(git describe --tags --abbrev=0 2>/dev/null || true)
+
+    if [[ -z $VERSION ]]; then
+        echo "error: no git tag found and no version given." >&2
+        echo "       tag the release, or run: ./do-release <version>" >&2
+        exit 1
+    fi
+
+    echo "==> version $VERSION (from git tag)"
+
+    # Warn if HEAD has moved past the tag - otherwise the .dmg is named after a
+    # tag but contains code that was never in it.
+    DESCRIBE=$(git describe --tags 2>/dev/null || true)
+    if [[ $DESCRIBE != $VERSION ]]; then
+        echo "    WARNING: HEAD is ahead of $VERSION ($DESCRIBE)" >&2
+    fi
+fi
+
+if [[ -n $(git status --porcelain 2>/dev/null) ]]; then
+    echo "    WARNING: working tree has uncommitted changes" >&2
+fi
+
+# Strip a leading V/v for filenames and the volume title: tags read "V0.5.0",
+# but "G2-Edit-0.5.0.dmg" is the conventional artifact name.
+VERSION_CLEAN="${VERSION#[Vv]}"
+
+# --- build ---------------------------------------------------------------
+
+echo "==> building universal Release"
+
+rm -rf $DERIVED
+xcodebuild \
+    -project $PROJECT \
+    -scheme $SCHEME \
+    -configuration Release \
+    -derivedDataPath $DERIVED \
+    ARCHS="arm64 x86_64" \
+    ONLY_ACTIVE_ARCH=NO \
+    CODE_SIGN_IDENTITY="-" \
+    CODE_SIGN_STYLE=Manual \
+    DEVELOPMENT_TEAM="" \
+    MARKETING_VERSION="$VERSION_CLEAN" \
+    build
+
+APP="$DERIVED/Build/Products/Release/$APP_NAME"
+
+if [[ ! -d $APP ]]; then
+    echo "error: build succeeded but $APP is missing" >&2
+    exit 1
+fi
+
+# --- verify --------------------------------------------------------------
+
+BINARY="$APP/Contents/MacOS/${APP_NAME:r}"
+ARCHS=$(lipo -archs "$BINARY")
+
+echo "==> built $ARCHS"
+
+if [[ $ARCHS != *arm64* || $ARCHS != *x86_64* ]]; then
+    echo "error: expected a universal binary, got '$ARCHS'" >&2
+    exit 1
+fi
+
+# Confirm the version actually reached the bundle, so the .dmg name and the
+# app's Get Info panel can never disagree.
+PLIST_VERSION=$(defaults read "${APP:a}/Contents/Info" CFBundleShortVersionString 2>/dev/null || echo "")
+
+if [[ $PLIST_VERSION != $VERSION_CLEAN ]]; then
+    echo "error: Info.plist says '$PLIST_VERSION', expected '$VERSION_CLEAN'" >&2
+    exit 1
+fi
+
+echo "==> bundle version $PLIST_VERSION"
+
+# --- sign ----------------------------------------------------------------
+
+# Ad-hoc signature. Not a substitute for notarization, but it keeps the bundle
+# internally consistent so it launches once quarantine is cleared.
+echo "==> ad-hoc signing"
+xattr -cr "$APP"
+codesign --force --options runtime --sign - "$APP"
+codesign --verify --strict "$APP"
+
+# --- stage ---------------------------------------------------------------
+
+echo "==> staging disk image contents"
+
+STAGE=$(mktemp -d)
+trap "rm -rf $STAGE" EXIT
+
+cp -R "$APP" "$STAGE/"
+ln -s /Applications "$STAGE/Applications"
+
+cat > "$STAGE/Read Me First.txt" <<EOF
+$VOL_NAME $VERSION_CLEAN
+========================
+
+STEP 1 - INSTALL
+
+Drag "$APP_NAME" onto the Applications folder shown in this window.
+
+Do this before step 2. The command below refers to the app in your
+Applications folder, so it only works once the app is actually there. Do not
+run the app from this disk image.
+
+STEP 2 - UNLOCK
+
+This app is not notarized by Apple, so macOS blocks the first launch and may
+claim the app is damaged. It isn't - macOS says that about any app it cannot
+check with Apple.
+
+Open Terminal (Applications > Utilities > Terminal), then copy and paste this
+line exactly, including the quotes, and press Return:
+
+    xattr -dr com.apple.quarantine "/Applications/$APP_NAME"
+
+It prints nothing if it worked. You can now launch $APP_NAME from your
+Applications folder as normal.
+
+You only need to do this once, and again after each update.
+
+If you installed somewhere other than Applications, change the path in the
+command to match where you put the app.
+
+Alternative, if you would rather not use Terminal: double-click the app in
+Applications, dismiss the warning, then open System Settings > Privacy &
+Security, scroll down, and click "Open Anyway".
+
+REQUIREMENTS
+
+macOS 11.5 or later, Apple Silicon or Intel.
+EOF
+
+# --- package -------------------------------------------------------------
+
+mkdir -p $DIST
+DMG="$DIST/$VOL_NAME-$VERSION_CLEAN.dmg"
+rm -f "$DMG"
+
+echo "==> creating $DMG"
+
+# Volume names are capped at 27 characters on HFS+.
+hdiutil create \
+    -volname "${${VOL_NAME}[1,15]} $VERSION_CLEAN" \
+    -srcfolder "$STAGE" \
+    -fs HFS+ \
+    -format UDZO \
+    -ov \
+    "$DMG" >/dev/null
+
+echo
+echo "done: $DMG ($(du -h "$DMG" | cut -f1))"
+echo "architectures: $ARCHS"
+echo "signature: ad-hoc, NOT notarized - users must clear quarantine"
