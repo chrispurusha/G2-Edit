@@ -3,9 +3,22 @@
 # Builds a universal (arm64 + x86_64) Release binary and packages it as a .dmg
 # ready to attach to a GitHub release.
 #
-#   ./do-release                    version from the latest git tag
-#   ./do-release 0.5.0-beta.6       explicit version
-#   ./do-release 0.5.0-beta.6 ~/tmp explicit version, custom output directory
+# Versions are tagged V<super-major>.<major>.<minor>-beta.<n>, and the .dmg is
+# normally built BEFORE the tag exists. So name the part you are bumping and the
+# next version is worked out from the newest existing tag:
+#
+#   ./do-release beta          V0.5.0-beta.6 -> V0.5.0-beta.7   (the usual one)
+#   ./do-release minor         V0.5.0-beta.6 -> V0.5.1-beta.1
+#   ./do-release major         V0.5.0-beta.6 -> V0.6.0-beta.1
+#   ./do-release super-major   V0.5.0-beta.6 -> V1.0.0-beta.1
+#   ./do-release final         V0.5.0-beta.6 -> V0.5.0          (drops -beta.n)
+#
+#   ./do-release 0.9.0-rc1     an explicit version, used as given
+#   ./do-release               reuse the newest tag as-is (rebuild an old release)
+#   ./do-release beta ~/tmp    any of the above, into a different directory
+#
+# This script never creates or pushes the tag - it prints the git command for you
+# to run once you are happy with the .dmg.
 #
 # The .dmg lands on the Desktop by default - outside the repo, so it is easy to
 # drag onto a GitHub release and can never be committed by accident.
@@ -17,7 +30,7 @@
 
 set -e
 
-ARG_VERSION="$1"
+ARG_BUMP="$1"
 
 # Resolve a relative output path against the caller's directory, not the
 # project directory we are about to switch to.
@@ -34,29 +47,88 @@ DERIVED="build/release-tmp"
 
 # --- version -------------------------------------------------------------
 
-# Releases are tagged in git, so the tag is the source of truth. MARKETING_VERSION
-# in the project file is not maintained per-release and is only a last resort.
-if [[ -n $ARG_VERSION ]]; then
-    VERSION="$ARG_VERSION"
-    echo "==> version $VERSION (specified)"
-else
-    VERSION=$(git describe --tags --abbrev=0 2>/dev/null || true)
+# Git tags are the source of truth. MARKETING_VERSION in the project file is not
+# maintained per-release and is deliberately ignored.
+#
+# --sort=-v:refname orders by version rather than alphabetically, so beta.10 is
+# correctly newer than beta.9. --abbrev=0 on describe would give the tag nearest
+# HEAD, which is not the same thing once branches are involved.
+LATEST=$(git tag --list --sort=-v:refname 'V*' 2>/dev/null | head -1)
+NEW_TAG=""
 
-    if [[ -z $VERSION ]]; then
-        echo "error: no git tag found and no version given." >&2
-        echo "       tag the release, or run: ./do-release <version>" >&2
-        exit 1
-    fi
+case "$ARG_BUMP" in
+    super-major|major|minor|beta|final)
+        if [[ -z $LATEST ]]; then
+            echo "error: no existing V* tag to bump from." >&2
+            echo "       give an explicit version instead: ./do-release 0.1.0-beta.1" >&2
+            exit 1
+        fi
 
-    echo "==> version $VERSION (from git tag)"
+        # V<super-major>.<major>.<minor>[-beta.<n>]
+        if [[ ! $LATEST =~ '^[Vv]([0-9]+)\.([0-9]+)\.([0-9]+)(-beta\.([0-9]+))?$' ]]; then
+            echo "error: newest tag '$LATEST' is not V<n>.<n>.<n>[-beta.<n>]," >&2
+            echo "       so it cannot be bumped. Give an explicit version instead." >&2
+            exit 1
+        fi
 
-    # Warn if HEAD has moved past the tag - otherwise the .dmg is named after a
-    # tag but contains code that was never in it.
-    DESCRIBE=$(git describe --tags 2>/dev/null || true)
-    if [[ $DESCRIBE != $VERSION ]]; then
-        echo "    WARNING: HEAD is ahead of $VERSION ($DESCRIBE)" >&2
-    fi
-fi
+        SUPER=$match[1]
+        MAJOR=$match[2]
+        MINOR=$match[3]
+        BETA=$match[5]
+
+        case "$ARG_BUMP" in
+            super-major) (( SUPER++ )); MAJOR=0; MINOR=0; BETA=1 ;;
+            major)       (( MAJOR++ ));          MINOR=0; BETA=1 ;;
+            minor)       (( MINOR++ ));                   BETA=1 ;;
+            beta)
+                if [[ -z $BETA ]]; then
+                    echo "error: '$LATEST' has no -beta.n to bump." >&2
+                    echo "       use 'minor' to start a new beta series." >&2
+                    exit 1
+                fi
+                (( BETA++ ))
+                ;;
+            final)       BETA="" ;;
+        esac
+
+        if [[ -n $BETA ]]; then
+            NEW_TAG="V$SUPER.$MAJOR.$MINOR-beta.$BETA"
+        else
+            NEW_TAG="V$SUPER.$MAJOR.$MINOR"
+        fi
+
+        if git rev-parse -q --verify "refs/tags/$NEW_TAG" >/dev/null; then
+            echo "error: tag $NEW_TAG already exists." >&2
+            exit 1
+        fi
+
+        VERSION="$NEW_TAG"
+        echo "==> version $VERSION ($ARG_BUMP bump from $LATEST)"
+        ;;
+
+    "")
+        if [[ -z $LATEST ]]; then
+            echo "error: no git tag found and no version given." >&2
+            echo "       try: ./do-release beta" >&2
+            exit 1
+        fi
+
+        VERSION="$LATEST"
+        echo "==> version $VERSION (reusing newest tag)"
+
+        # Only meaningful when reusing an existing tag. When bumping, HEAD being
+        # ahead of the previous tag is the whole point.
+        if [[ -n $(git rev-list "$LATEST"..HEAD 2>/dev/null) ]]; then
+            echo "    WARNING: HEAD is ahead of $LATEST - this .dmg contains code" >&2
+            echo "             that is not in that tag. Did you mean ./do-release beta?" >&2
+        fi
+        ;;
+
+    *)
+        VERSION="$ARG_BUMP"
+        echo "==> version $VERSION (specified)"
+        ;;
+esac
 
 if [[ -n $(git status --porcelain 2>/dev/null) ]]; then
     echo "    WARNING: working tree has uncommitted changes" >&2
@@ -194,3 +266,11 @@ echo
 echo "done: $DMG ($(du -h "$DMG" | cut -f1))"
 echo "architectures: $ARCHS"
 echo "signature: ad-hoc, NOT notarized - users must clear quarantine"
+
+if [[ -n $NEW_TAG ]]; then
+    echo
+    echo "$NEW_TAG does not exist yet. Once you are happy with the .dmg:"
+    echo
+    echo "    git tag -a $NEW_TAG -m \"$NEW_TAG\""
+    echo "    git push origin $NEW_TAG"
+fi
