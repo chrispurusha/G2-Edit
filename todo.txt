@@ -1,788 +1,435 @@
 G2-Edit TODO (priority order)
 
-- SynthLib HiDPI scale fix — PENDING COMMIT + PIN ADVANCE (2026-07-27). Fixed in SynthLib/src/synthlibScale.c
-  (synthlib_scale_update): removed the gContentScale multiply from gGlobalGuiScale — the framebuffer size
-  from glfwGetFramebufferSize already carries the display's backing scale, so multiplying by gContentScale
-  DOUBLE-COUNTED it and made the whole UI render quarter-size in a corner on non-Retina / "Low Resolution"
-  displays (content scale 1.0). Now gGlobalGuiScale = 2*width/gTargetFrameBuffWidth. NO-OP on 2x/Retina
-  (gContentScale was 2.0 there) so zero regression; only 1x is fixed. This was exposed by the earlier
-  "secondary monitor" fix that made gContentScale dynamic (was hardcoded 2.0, which accidentally worked on
-  1x). SynthLib change — affects EmuUtility + SynthEdit identically (same bug, same fix). WORKFLOW: commit +
-  push SynthLib, advance pins in all 3 projects. Built OK in G2-Edit (Retina). NEEDS owner verify on a real
-  non-Retina/Low-Res display. G2-Edit build verified.
+Purged 2026-07-28: fully-closed items removed. Anything still listed is either open work or
+finished code awaiting a real-world check. Lessons from removed work that must not be re-litigated
+are collected under "DO NOT RE-TRY" at the end of this file.
 
-- Minimum window size raised to 640x360 — DONE 2026-07-28, UNCOMMITTED (graphics.cpp, TARGET/8 -> TARGET/4;
-  still exactly the locked 16:9). The old 320pt minimum on a 1x display gave a 320px framebuffer,
-  gGlobalGuiScale 0.25, body text ~3px and small top-bar labels ~2px — unreadable however well rendered.
-  640pt bottoms out at ~6px body text on 1x, which the pixel-exact work below makes legible.
-  KNOWN AND ACCEPTED (owner call: don't over-complicate): this limits INTERACTIVE resizing only. On macOS,
-  Cocoa applies setContentMinSize:/setContentAspectRatio: to user drags but not to programmatic setFrame:,
-  so glfwSetWindowSize() bypasses it — a windowWidth pref saved below 640 is restored at its saved size
-  (confirmed: pref 414 -> a 414pt window). Self-heals as soon as the window is resized by hand.
-  APPLIED TO ALL THREE PROJECTS (2026-07-28): G2-Edit and SynthEdit are 2560x1440 so both get 640x360.
-  EmuUtility was 2560x1200 (32:15) and its TARGET_FRAME_BUFF_HEIGHT was changed to 1440 so it matches the
-  other two at 16:9, also 640x360. Safe because nothing lays out against that constant — it only drives
-  window creation size, the size limit, the aspect lock and the saved-height derivation, while the UI
-  scale comes from synthlib_scale_init(TARGET_FRAME_BUFF_WIDTH), i.e. WIDTH only. EmuUtility's content
-  (LCD, button panel, dial, keypad) is all top-anchored, so 16:9 just leaves more empty grey below it —
-  verified by running it. Owner accepted that ("can probably stay at 16:9 for now").
 
-- Text rendering quality, PART 2: pixel-exact glyph rendering — DONE 2026-07-28, UNCOMMITTED, verified on
-  a REAL 1600x900 1x display (the case part 1 could not test). Part 1 below made large windows good but
-  small windows on a 1x display were still mush ("25%", "0%", "BiPol" unreadable at a 700px window).
-  ROOT CAUSE (and it was NOT the atlas size — proved by forcing exact 1:1 rasterization, which made it
-  WORSE): the draw path resampled every glyph. scaleFactor = rectangle.size.h / em is always fractional,
-  and glyph quads landed on fractional framebuffer pixels, so the final bilinear resample at an arbitrary
-  sub-pixel phase smeared away exactly the stem alignment FreeType's hinter had just produced. At 2x there
-  are enough pixels to hide it; at 1x, where the UI scales text down to ~6px, it destroys it.
-  MEASURED FIRST (this is what made the fix cheap): a running G2-Edit only ever draws 2-3 distinct text
-  heights — at a 700px window on 1x it is just 6.6px and 4.6px (plus a 2.5px draw that turns out to be an
-  EMPTY string). So per-size atlases cost almost nothing.
-  FIX: atlases are now keyed by INTEGER drawn pixel height and cached (GLYPH_ATLAS_CACHE_SIZE = 6, LRU).
-  Glyphs are rasterized at that exact size and blitted 1:1 — no glScalef, origin snapped to whole pixels,
-  GL_NEAREST filtering (with 1:1 texel mapping, filtering could only blur a sample already dead centre).
-    * Layout is deliberately NOT driven by these atlases. get_text_width() and everything built on it stay
-      on ONE canonical metrics set (gCanonInfo, measured once at GLYPH_REFERENCE_PX), so text widths stay
-      continuous and proportional and boxes fit exactly as before. The pen advances by the canonical
-      advance; only each glyph's final position is rounded. That costs sub-pixel letter spacing and buys
-      pixel alignment — the right trade at 6px.
-    * FT_LOAD_TARGET_LIGHT (light hinting): snaps stems vertically while leaving horizontal metrics
-      linear. FT_LOAD_FORCE_AUTOHINT was tried and REJECTED — crisper, but it changes glyph advances, so
-      with canonical-advance positioning it rendered "R andomA 1" / "554.4H z". Do not re-try it without
-      also making get_text_width use the same hinted advances (which it cannot, as it does not know the
-      device size — it never sees gZoomFactor).
-    * preload_glyph_textures()'s fontSize argument is now only the size the canonical metrics are
-      measured at; it no longer fixes how text is rasterized. API unchanged, so EmuUtility/SynthEdit's
-      "try each font path until one loads" still works.
-  RESULT on the 1x display at a 700px window: "Rate Hi", "554.4Hz", "25%", "BiPol", "Poly", "Edge", "0%"
-  all readable (were mush). Stable — 4 consecutive frames byte-identical at small window, large window and
-  zoomFactor 2.0, so no per-frame atlas churn.
-  ALSO FIXES "text sometimes renders slightly low" (owner report 2026-07-28, seen in the PART 1 build).
-  That was a real defect in part 1, not a display artifact: gMaxAscent/gMaxDescent were taken from
-  whatever size the single atlas happened to be rasterized at, and the ascent-to-em ratio is NOT constant
-  across rasterization sizes (the hinter rounds differently at each), so the baseline moved whenever the
-  atlas rebuilt. Intermittent because it depended on which atlas was live, i.e. on window size and zoom.
-  PROVED by measuring the same module title across an atlas rebuild in the part 1 build: ink starts at row
-  125 with the 72px atlas and row 126 after it rebuilds to 16px, with nothing else changed.
-  In the pixel-exact code gMaxAscent/gMaxDescent are canonical — measured once at GLYPH_REFERENCE_PX and
-  never touched again — so the baseline cannot drift with atlas size. NOTE the baseline must be derived
-  from that CANONICAL ascent (round(coord.y + gMaxAscent * scaleFactor), rounded once). An earlier version
-  of this code used each atlas's OWN rounded ascent, which rounds a second time against a rasterization
-  whose em height only approximates the requested one, reintroducing the same class of drop — don't.
-  Verified against the part 1 build at the same 700px window: module titles land on identical rows, menu
-  bar sits 1px higher, which is where the original fixed-72px code put it.
-  NOT RE-VERIFIED ON RETINA since this rewrite (the display was 1x for the whole session). Same code path,
-  and it should be equal or better there, but worth an eyeball on a 2x display.
+AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless the check fails)
 
-- Text rendering quality, PART 1 — DONE 2026-07-28 via scale-aware
-  re-rasterization (approach (b)); mipmapping (a) NOT needed and NOT done. SUPERSEDED IN PART by the
-  pixel-exact work above, which replaced the single adaptive atlas with per-size atlases (so
-  GLYPH_ATLAS_SUPERSAMPLE / track_text_size / the grow-shrink hysteresis described below are GONE). Separate from the HiDPI scale
-  fix above: that one fixed the quarter-size COLLAPSE, this is the softness/blockiness of the text itself.
-  ROOT CAUSE (SynthLib/src/utilsGraphics.cpp, preload_glyph_textures): the glyph atlas was rasterized ONCE
-  at a fixed 72px (call site: G2-Edit src/graphics.cpp:621, same 72.0 in EmuUtility + SynthEdit) with
-  GL_LINEAR and never rebuilt. Wrong in BOTH directions: in a small window / on a 1x display those 72px
-  glyphs are minified to ~7-12px through plain bilinear (undersampled -> blocky), and in a large or
-  zoomed window text is drawn LARGER than 72px so the glyphs are magnified (blurry).
-  FIX: the atlas now re-rasterizes at the size text is actually drawn at.
-    * Trigger is the drawn text height in framebuffer pixels (track_text_size, called from
-      internal_render_text) — NOT gGlobalGuiScale, because module text is additionally scaled by
-      gZoomFactor and only the final drawn height sees both. Grows immediately when text stops fitting;
-      shrinks only after a 512-draw window stays small (hysteresis, so it can't oscillate). Sizes are
-      quantised to 8px steps so a live resize drag causes a few rebuilds, not one per frame.
-    * GLYPH_ATLAS_SUPERSAMPLE = 2.0 — rasterize 2x the largest drawn text, NOT 1:1. Measured: at 1:1 a
-      single atlas still minifies every text size below the largest, and that washes hairline features
-      (the dot of a decimal point in "1.05kHz"/"0.50") out to pale grey. 2.0 keeps old stroke weight AND
-      gains the smooth edges. Verified by exact same-pixel crops of before/after screenshots.
-    * Atlas is now sized to its content with row-wrapping (was a SINGLE unwrapped row with no bounds
-      guard, in a fixed 8192x8192 = 256MB RGBA texture for ~95 glyphs). Typical atlas is now 512x64 to
-      512x2048 — ~1-4MB. Composed CPU-side and uploaded in one glTexImage2D; every texel initialised to
-      transparent white (it was created with NULL data, i.e. UNDEFINED padding, which bilinear filtering
-      at glyph edges could sample).
-    * Also fixed in passing: the extra letter-spacing fudge was a hardcoded +1.0 atlas pixel, which would
-      change spacing on every rebuild — now proportional to the rasterization size; the get_text_width
-      cache is cleared on rebuild (cached widths came from the old metrics); and render_text indexed the
-      glyph table with a SIGNED char, so any byte >127 read out of bounds.
-  MEASURED on Retina at a 700pt window (mildest case; ratio ~7x): menu-bar text goes from ragged
-  stair-stepped strokes to evenly weighted antialiased ones; small module readouts keep their old weight.
-  Grow path verified at zoomFactor 2.0 (atlas 72->128px, one rebuild, 4 byte-identical frames = stable).
-  SHARED SynthLib CODE — EmuUtility + SynthEdit get it too (API unchanged, they still pass 72.0 as the
-  starting size). Needs commit + push SynthLib, advance pins in all 3 projects.
-  STILL NEEDS owner verify on a real non-Retina/Low-Res display — this machine is Retina, so the case you
-  actually complained about (1600x900, 1x) has NOT been seen with this fix.
+- Text rendering, pixel-exact glyph rendering — NOT RE-VERIFIED ON RETINA since the rewrite (the
+  display was 1x for that whole session). Same code path and it should be equal or better on 2x,
+  but worth an eyeball. Verified good on a real 1600x900 1x display: "Rate Hi", "554.4Hz", "25%",
+  "BiPol", "Poly", "Edge", "0%" all readable at a 700px window (were mush), 4 consecutive frames
+  byte-identical so no per-frame atlas churn. See DO NOT RE-TRY for the constraints this relies on.
 
-- TOOLING (added 2026-07-27, built + proven): backdoor test-control channel in graphics.cpp, ported from
-  SynthEdit. ENV-GATED — only active when launched with G2_EDIT_BACKDOOR=1; a normal double-click launch
-  leaves it completely inert and keeps the idle loop's full glfwWaitEvents() sleep. LOCAL-ONLY by design —
-  it never writes to a connected G2 (create_module_at gained a syncToDevice flag; menu passes true, backdoor
-  false). Drives + verifies the app headless/offline via /tmp/g2edit_cmd.txt -> /tmp/g2edit_result.txt:
-  LOADFILE <path> (loads a .pch2/.prf2 with no G2 attached), SLOT <0-3|A-D>, DUMP (slot + every non-empty
-  module), NEWPATCH (clears the current slot locally — NOT the device), ADDMODULE <name> [col] [row] (adds
-  a module locally by its properties name, e.g. "Mix4-1B"), SET <VA|FX> <index> <param> <value> (sets a
-  param value locally — used to verify how a param renders across its range, e.g. PartQuant), SCREENSHOT
-  <path> (full-res PNG via a synchronous render_frame()). Proven offline. Possible follow-ons if wanted:
-  VIEW (VA/FX), SYNC (drive real hardware). No SynthLib change (all in G2-Edit; reuses stb_image_write.h).
+- SynthLib HiDPI scale fix (synthlibScale.c, synthlib_scale_update) — committed + all three pins
+  advanced 2026-07-28. Still wants an owner eyeball on a real non-Retina / "Low Resolution" display.
+  NO-OP on 2x/Retina by construction, so only the 1x case can tell you anything.
 
-- Module layout cleanup (2026-07-27, built, NEEDS (CT) VERIFY — flagged in Module dev debug notes.txt).
-  Audited all 12 mix modules via the backdoor (NEWPATCH/ADDMODULE/SCREENSHOT). Fixed overlapping components
-  on Mix4-1B(19), Mix8-1B(40) (mono meter on top of last dial / Chain label) and MixStereo(48) (master-dial
-  label crowding the stereo meter + Lvl4-6 dials misaligned from their Pan/In columns). Fixes in
-  moduleResources.h only; principles captured in module-layout-rules.md (repo root). All 12 mixers now
-  clean. Then a QUICK cross-family sweep of 9 dense/metered modules (Compress/Delay/Operator/DrumSynth/
-  SeqNote/SeqVal/EnvMulti/Pulse/PitchTrack) — NO overlaps; the mixer family was the outlier (tall meter bars
-  crammed into dense channel rows). Most modules have no meter or a small corner mono-meter mark that
-  doesn't collide. STILL OPEN (optional): a fuller systematic sweep of the remaining ~190 module types
-  (cheap now via the backdoor, just not yet done).
+- Module layout cleanup — NEEDS (CT) VERIFY, flagged in Module dev debug notes.txt. All 12 mix
+  modules audited and fixed (Mix4-1B/19, Mix8-1B/40, MixStereo/48); principles in
+  module-layout-rules.md. Cross-family sweep of 9 dense/metered modules found no overlaps.
+  STILL OPEN (optional): a fuller systematic sweep of the remaining ~190 module types — cheap now
+  via the backdoor, just not yet done.
 
-- SynthEdit "no device connected" was silent on every File/Backup menu action — FIXED 2026-07-26 (built,
-  not hardware-tested). Owner report: "Open File..." did nothing with no synth attached — no browser, no
-  message. Confirmed: synth_backup_restore_edit_buffer() (synthBackup.c) bailed on !gDevice.connected
-  with a LOG_ERROR before ever reaching open_file_browser_read(), so the menu item looked broken rather
-  than unavailable. 19 guards of that shape existed; added a shared warn_if_not_connected(title) helper
-  (LOG_ERROR + show_alert, returns true when there is NO device so call sites stay `if (...) return;`)
-  and applied it to the 11 MENU-REACHABLE entry points: Save Patch, Save Patch by Number (both the
-  generic and Korg variants), Backup Bank, Backup Bank to Folder, the Load/Store-from-Bank name sweep,
-  Open File, Load Patch by Number, Load Patch File to Bank Slot, Restore Bank, Restore Folder.
-  Deliberately LEFT log-only: the *_from_path variants (scripted, run unattended from graphics.cpp's
-  command-file harness — a modal there would hang the run), synth_backup_flush_background_prefetch() (a
-  background tick; one alert per tick would be unusable), and the synthComms.c helpers reached only from
-  the bank browser after a successful sweep (they had a device moments earlier and would double-report).
-  Same silent-failure class the G2-Edit reverse-queue work closed with alerts.
+- FltClassic response graph (render_fltclassic_response_graph) — cutoff now inset into a
+  kCutoffMinX 0.15..kCutoffMaxX 0.90 band so the resonance bump keeps headroom at minimum Freq.
+  Build verified; not yet eyeballed on-screen.
+
+- PartQuant(22) dial range — display verified via backdoor; the changed creation default
+  (100 -> 64) still needs a (CT) hardware confirm.
+
+- EnvADSR(20) values — "Delay"->"Decay", Sustain now 0-64 via paramTypeUniPol. Display verified
+  via backdoor; NEEDS (CT) VERIFY on hardware.
+
+- LfoC(24) Range Sub param — range strMaps were mis-ordered vs the wire value, so the rate NUMBER
+  was right but the range NAME was wrong across the whole LFO family (LfoA/LfoShpA/LfoB/LfoC).
+  Reordered; Range defaults bumped 0->1 (Rate Lo). NEEDS HARDWARE:
+    (1) confirm a fresh LFO really defaults to Rate Lo;
+    (2) RandomA(200)/RandomB(202) STILL use the old-order rangeStrMap — there is no
+        ParamText::RandomRange in the decompile to confirm their wire order, so they were left
+        unchanged. Verify whether Random shares {Sub,Lo,Hi,BPM,Clk} and reorder if so.
+
+- param-names section-count fix — push_slot_to_device() and write_perf_to_file() no longer write a
+  spurious empty Morph param-names (0x5b) section (3 sections -> 2, matching CPatchFile_11 and
+  write_patch_to_file). VERIFY: (1) USB store-patch and store-perf still round-trip on real
+  hardware; (2) a .prf2 saved by G2-Edit now loads in the original NMG2 editor / g2ools (the whole
+  point — the reference reader is strict-positional and a 3rd 0x5b desyncs it); (3) patches/perfs
+  with renamed params on VA/FX modules still preserve those names across save/load.
+
+- module up-rate propagation fix — the "destination connector must be multi-bandwidth" guard now
+  covers both source conditions, matching CPatchData::GenerateBandwidthChangeMolecules. VERIFY on
+  real hardware / against the original editor: build a patch with an up-rated module (one that
+  received audio on a Control input) whose Audio output feeds another module's Audio input, and
+  confirm cable colours + the red/blue bandwidth indication match the original for that topology,
+  and that normal chains (Osc->Filter->Out) are unchanged. upRate is written to the patch and sent
+  to the G2, so confirm the hardware doesn't behave differently after a store.
+
+- draw_slider() morph-indicator sign fix (utilsGraphics.cpp) — threshold (morphRange < 127) made a
+  range of exactly +127 render as -129; now < 128 to match render_dial(). Visual only, but worth an
+  eyeball on a slider-based module (mixer/SeqLev) with a max-positive morph assigned.
+
+- SynthEdit "no device connected" was silent on every File/Backup menu action — shared
+  warn_if_not_connected() helper applied to the 11 menu-reachable entry points. Built, NOT
+  hardware-tested. Deliberately left log-only: the *_from_path scripted variants (a modal would hang
+  an unattended run), synth_backup_flush_background_prefetch() (a background tick), and the
+  synthComms.c helpers reached only after a successful sweep (they would double-report).
+
+- Consolidate device-affecting file/DB ops onto the USB thread — done for ALL whole-slot cases;
+  needs owner hardware test. STILL OPEN: the bulk targeted-command loops (delete-module+cables,
+  create-module, undo-recreate) are NOT race-prone (self-describing commands) but could be folded
+  into composite USB-thread commands for atomicity / less chatter — low priority.
+
+- Reverse (USB->UI) message queue + GUI busy state — all steps built, NONE hardware-tested. Design
+  in reverse-queue-design.md (repo root); keep that doc updated. TO VERIFY ON HARDWARE:
+    - G2-Edit: load/save/new-patch alerts fire on failure; the busy overlay appears and clears (a
+      5s force-clear safety net exists so a lost completion cannot lock the GUI).
+    - EmuUtility: device still detected at startup; Scan Devices still connects; LCD and LEDs still
+      update; on-screen buttons + keyboard shortcuts still reach the device with no perceptible lag
+      (the CFRunLoopWakeUp path is what keeps that honest); dial drag + scroll wheel still track;
+      sleep/wake still reconnects.
+    - SynthEdit: normal connect on a single-cable setup; connect with several synths sharing one
+      interface (the TM-1 case — the path the reply queue actually changes); Device-switch menu;
+      sleep/wake; a no-identity device (Minitaur) still connects via connect_without_identity.
+
+- gLcd.pixels data race (EmuUtility) — gLcdMutex added; writer holds it around the memcpy /
+  peptalk_apply_lcd_delta + refresh++, reader snapshots under the lock then does the RGBA expansion
+  and glTexSubImage2D with the lock released (never held over a GL call). Built; needs an owner
+  hardware eyeball that the LCD still updates cleanly.
+
+
+OPEN WORK
+
+- Store/Load-to-Bank perf-domain path — the patch case is fixed + hardware-confirmed; the PERF
+  domain path of send_store_patch/send_retrieve_patch was left unchanged and is still UNVERIFIED
+  (no perf capture available at the time). Confirm perf Store/Load hits the selected slot.
+
+- usbComms.c:360 perf-mode ownership ("synth" or "perf"? ambiguous in the protocol) —
+  parse_synth_settings() (protocol.c:1139) is the STALE perfMode
+  source on a panel flip, BUT it is also the ONLY device->perfMode read on sync, and the 0x1f
+  handler (parse_perf_patch_versions) does NOT set perfMode (only versions +
+  gotPerfSettingsChangeIndication). So "treat 0x1f as authoritative" is not a one-liner: 0x1f
+  carries no perfMode bit, and removing the synth-settings write would regress startup/connect
+  perfMode detection. A proper fix needs the resync path to re-derive perfMode from a reliable
+  source after 0x1f, verified on hardware. (Hardware capture 2026-07-26 confirmed the staleness:
+  PerfMode read 0 immediately after flipping TO perf; the UI self-corrected via the 0x1f path.)
+
+- send_perf_mode_change() takes ~3 sends (500ms retries) before the 0x1f response arrives — minor,
+  but the wait could be tightened if it matters.
+
+- moduleGraphics.cpp:685 — "can Mode be morphed?" Needs a manual/hardware check, not a code guess.
+
+- moduleGraphics.cpp/renderParams.c — port custom graph displays from the original editor (none
+  exist today besides render_volume_meter): envelope shapes (AD/AR/D/H/AHD/ADSR/ADBDSR/Multi/DX),
+  filter response curves (Classic/Normal/Small/Static/Comb), oscillator & LFO waveform shapes, EQ
+  curves (2-band/3-band/peak), compressor/expander, distortion/waveshaping (Dist A/B/Wrap/Shape/
+  Saturate), FM operator + DX router, phaser, vocoder, tuned noise, random distribution/trigger —
+  see Original Editor/G2Editor.c, CCustomObjectFactory::CreateCustom (~line 101952) and the
+  CPnl*Graph class family for reference implementations.
+
+- Sw8-1(15), ValSw1-2(17) — need more resources.
+
+- Seq* park-LED (SeqNote/SeqEvent/SeqVal/SeqLev/SeqCtr) — DEFERRED pending a look at the REAL
+  original editor. Confirmed from the decompile that the park LED is NOT in the hardware LED stream
+  (CLedDataList::PopulateList, G2Editor.c:103614, only enrols LEDs with GroupId/CodeRef >= 0; the
+  park LED is GroupId=-1, rendered but stream-excluded), so G2-Edit's exclusion is CORRECT and must
+  STAY. Its lit state is editor-computed. Owner observed the real editor lights it when the Park
+  input is patched, but the exact trigger isn't provable from the opaque decompile. G2-Edit paints a
+  permanent dim green (RGB_GREEN_3, render_led_common ledTypePark) — likely wrong. Once we can watch
+  the real editor, confirm the rule (probably "green when Park input has a cable, else off") and
+  implement it. NOTE: the live sequencer step-position indicator is a SEPARATE, bigger feature — it
+  needs the Blink stream (kMesBlinkDualBit/MultiBit, CPanel::Blink), which G2-Edit does not
+  implement at all (the step bar is currently static).
+
+- Verify remaining 117 unverified module types (filters, oscillators, delay lines, sequencer/logic,
+  MIDI send/receive, Resonator, Operator, Random* family, etc.) — see Module dev debug notes.txt.
+
+- Add performance keyboard split/layer/zone UI (manual's "Layering Patches" section) — currently
+  only the standalone NoteZone module exists.
+
+- Add a dedicated master-clock/tempo panel (currently only basic send/receive clock toggles exist).
+
+- moduleGraphics.cpp/graphics.cpp — GL_BLEND enable/disable sits at each caller
+  (moduleGraphics.cpp:1239/1254, graphics.cpp:590) rather than inside the shared drawing primitive
+  (render_cable_from_to() et al., utilsGraphics.cpp) the way render_text() already manages its own
+  blend state. Not a bug — correct today, just a cosmetic/architectural inconsistency. Low priority;
+  real regression risk if rushed, since these primitives are reused everywhere.
+
+- Compress(150) — module height may be 1 row too many (currently 5 rows, moduleResources.h). The
+  original editor's module-info structs are opaque in the decompile (SModuleInfo/CBuildModule are
+  placeholder structs, heights not recoverable as readable data); needs validation by running the
+  original editor and comparing.
 
 - SynthLib file-naming consistency — DEFERRED (cross-repo, coordinate carefully). SynthLib/src mixes
-  two camps: bare (alertDialog, bankBrowser, clickRegion, contextMenu, fileBrowser, geometry, menuBar,
-  prefs, utils, utilsGraphics) and synthlib-prefixed (synthlibDefs/Globals/Host/Persistence/Queue/
-  Scale/Types). Proposal (owner): unify on a short prefix, e.g. "sl" -> slUtils.c, slDefs.h, slQueue.c,
-  etc. Do NOT drop the prefix entirely — synthlibDefs/Types/Globals would collide with each app's own
-  defs.h/types.h/globalVars. Blast radius: ~130 #include lines across G2-Edit + EmuUtility + SynthEdit
-  (all embed SynthLib as a submodule), plus the file renames + internal cross-includes. Must be one
-  coordinated pass: rename in SynthLib, update every consumer's includes, advance all three pins
-  together, build-test each (only G2-Edit is build-testable from here). Mechanical but wide; schedule
+  two camps: bare (alertDialog, bankBrowser, clickRegion, contextMenu, fileBrowser, geometry,
+  menuBar, prefs, utils, utilsGraphics) and synthlib-prefixed (synthlibDefs/Globals/Host/Persistence/
+  Queue/Scale/Types). Proposal (owner): unify on a short prefix, e.g. "sl" -> slUtils.c, slDefs.h,
+  slQueue.c. Do NOT drop the prefix entirely — synthlibDefs/Types/Globals would collide with each
+  app's own defs.h/types.h/globalVars. Blast radius: ~130 #include lines across all three apps, plus
+  the renames + internal cross-includes. Must be one coordinated pass: rename in SynthLib, update
+  every consumer, advance all three pins together, build-test each. Mechanical but wide; schedule
   when all three projects can be built/committed together.
 
-- Store/Load-to-Bank perf-domain path — the patch case is FIXED + hardware-confirmed (2026-07-26,
-  removed from this list); the PERF domain path of send_store_patch/send_retrieve_patch was left
-  unchanged and is still UNVERIFIED (no perf capture available at the time). Confirm perf Store/Load
-  hits the selected slot when a perf capture can be taken.
-- Consolidate device-affecting file/DB ops onto the USB thread — DONE 2026-07-26 for ALL whole-slot
-  cases (built, needs owner hardware test). LOAD is now a SINGLE eMsgCmdLoadFile: the UI thread does
-  ZERO file I/O on load — it just passes the path; the USB thread's load_file_to_device() opens the
-  file, checks the CRC, sniffs the type byte (0=patch/1=perf) and dispatches to load_patch_from_payload
-  / load_perf_from_payload (read_g2_file_payload now also returns the type). Replaced the earlier
-  eMsgCmdLoadPerf + eMsgCmdLoadPatchFile pair (and their double-read: UI sniffed type, USB re-read).
-  SAVE: patch -> eMsgCmdSavePatchFile (write_database_to_file), perf -> eMsgCmdSavePerfFile
-  (write_perf_to_file, whole-DB serialise). New Patch -> eMsgCmdNewPatch. All run as one ordered
-  command on the USB thread when online, so the shared patch DB can't be clobbered/torn by the USB
-  thread's async re-reads mid-sequence. Offline paths still run locally on the UI thread (no device,
-  no race; USB thread doesn't process the queue when offline anyway). eMsgCmdSavePerfFile/eMsgCmdLoadFile
-  reuse tPatchFileData (slot unused for perf); tLoadPerfData removed. Build verified (Debug, xcodebuild).
-  STILL OPEN: the bulk targeted-command loops (delete-module+cables, create-module, undo-recreate) are
-  NOT race-prone (self-describing commands) but could be folded into composite USB-thread commands for
-  atomicity/less chatter — low priority.
+- BIG / long-term idea — add a built-in sound-generation (DSP) engine so the editor can produce
+  audio itself, not just edit/drive the hardware G2. Reference: the decompiled DEMO editor (the
+  standalone editor that ran patches without hardware) — its DSP/voice code is the model. (That
+  decompile may not be on hand; the Original Editor/G2Editor.c reference here is the HARDWARE
+  editor, whose module-info/DSP internals come through as opaque placeholder structs — CVoice/
+  CVoiceMap/CPatchData symbols survive but bodies don't.) Would let module waveform/response
+  graphics be driven by real DSP instead of hand-derived approximations, and enable offline
+  auditioning. Very large effort; capture the demo-editor decompile alongside this note when
+  starting.
 
-- Reverse (USB->UI) message queue + GUI busy state — IN PROGRESS. Full design + migration plan in
-  reverse-queue-design.md (repo root); update that doc as steps land. Replaces the ad-hoc _Atomic
-  "op done" flags + result-string globals drained in check_action_flags() with a structured response
-  queue (gResponseQueue), poll-drained at the top of the render loop, woken by the existing wake_glfw().
-  Coalescing dirty-bits (gotPatchChangeIndication[]/gotPerfSettingsChangeIndication/gReDraw) stay flags.
-    * Step 2 DONE 2026-07-26 (thin vertical slice, built, needs hardware test): gResponseQueue added
-      (reuses the existing queue machinery, no generalization yet); USB thread posts a file-LOAD result
-      via post_file_result_response() after eMsgCmdLoadFile; UI drains it and show_alert()s on failure —
-      closes the silent-failure gap for a corrupt/invalid file load.
-    * Steps 3(partial)+4 DONE 2026-07-26 (built, needs hardware test): save writers now return status
-      (write_database_to_file/write_perf_to_file -> int); save posts eRspFileSave, New Patch posts
-      eRspNewPatch, with "Save Failed"/"New Patch Failed" alerts. GUI BUSY state added:
-      gDeviceOpInProgress + gDeviceOpLabel, device_op_begin() on each online enqueue (Loading…/Saving…/
-      New Patch…) and device_op_end() on the matching response; render_device_busy_overlay() dims the
-      canvas + "Please wait" panel and mouse_button swallows canvas clicks while busy. Safety net: loop
-      ticks while busy + check_action_flags force-clears after 5s so a lost completion can't lock the GUI.
-    * Step 3 (simple-alert families) DONE 2026-07-26 (built, needs hardware test): generic eRspAlert +
-      post_alert_response(); migrated store/delete/load/synth-restore results AND bank backup / restore /
-      backup-everything / restore-everything / synth-settings-backup completions onto the queue; retired
-      15 globals (gBankBackup/Restore/SynthSettingsBackup/StorePatch/Delete/Load/SynthRestore *Complete +
-      *ResultMessage + gLoadFailed) from globalVars.{c,h}. gBank*IsPerf/IsEverything stay (progress
-      overlays); the everything-sweeps now reset IsEverything themselves. Drain refined: one response per
-      frame, skipped while alert_dialog_active() (so alerts don't clobber), self-wakes if more queued.
-    * Step 1 DONE 2026-07-26 (built): msgQueue made payload-agnostic (flexible-array node + payloadSize
-      set at msg_init; msg_send/msg_receive take void*; no dependence on tMessageContent, so the
-      mechanism is SynthLib-liftable). Queues renamed to direction-based gToUsbThread / gToGuiThread.
-      Pure mechanism/naming change, no behaviour change.
-    * Step 5 DONE 2026-07-26 (built): queue mechanism moved to SynthLib/src/synthlibQueue.{h,c}; G2-Edit
-      msgQueue.h slimmed to app payload (tMessageContent + enums) + includes it; src/msgQueue.c deleted.
-      SUBMODULE CHANGE — commit in SynthLib + advance the pin (G2-Edit now, Z1/EmuUtility later). Xcode-16
-      synced folder auto-added synthlibQueue.c / auto-dropped msgQueue.c (no .pbxproj edit needed).
-    * Step 3 REMAINDER + UI work queue DONE 2026-07-26 (built): the 4 peek->confirm flows now post
-      eRspStorePeek/eRspDeletePeek/eRspLoadPeek/eRspSynthRestorePeek (peek data globals kept untouched
-      for destructive-op targeting safety; only the 4 *PeekComplete poll flags retired); the drain opens
-      the confirm/alert. File>Open / File>Save now post eRspShowOpenRead/eRspShowOpenWrite from
-      menuActions (gShowOpenFileReadDialogue/WriteDialogue retired). check_action_flags() is now just
-      drain + busy-timeout + gNeedFocus (a graphics.cpp-local static, deliberately left as a flag).
-    * Step 6 — adopt the queue in SynthEdit(Z1) / EmuUtility — DONE 2026-07-26 (both built Debug via
-      xcodebuild; NEITHER hardware-tested). All three SynthLib pins were already at bf96877 with
-      synthlibQueue.{h,c} present, so no pin work was needed. Each app got its own src/msgQueue.h
-      (app payload only + #include "synthlibQueue.h", same split as G2-Edit) and a gToMidiThread in
-      globalVars, msg_init'd in start_midi_thread() BEFORE pthread_create.
-      DESIGN DEVIATION from the plan sketched above — both MIDI threads poll-drain with eRcvPoll,
-      they do NOT block on eRcvWait like G2-Edit's USB thread. They are CFRunLoop-driven
-      (CFRunLoopRunInMode) because CoreMIDI's notify callback is tied to that run loop, and they have
-      their own time-based cadences (EmuUtility's LCD-delta throttle + idle tick, SynthEdit's connect
-      waits + state-dump debounce). Blocking in msg_receive would stall both. EmuUtility instead
-      publishes the thread's CFRunLoopRef and CFRunLoopWakeUp()s it on post, so a queued command is
-      serviced immediately rather than up to one 33ms idle tick later.
-      NEITHER app got a gToGuiThread (MIDI->UI). Everything they report upward today is a coalescing
-      dirty-bit (gNeedLcdFull/gNeedLcdDelta/gLcd.refresh/gLeds), which per this design must stay a
-      flag — there is no discrete result to carry yet, so an empty reverse queue would be speculative.
-      EmuUtility (the bigger win — it had a real latent bug):
-        - midi_scan_devices() is now file-local. The Scan Devices menu item (appMenuBar.c) and the
-          NSWorkspace wake block (misc.mm) used to call it straight from the UI/main thread, racing
-          the MIDI thread's own ownership of gDevice/gMidiSource/gMidiDest and MIDIPortConnectSource.
-          This is the SAME bug SynthEdit found and fixed on 2026-07-14 (see gReconnectRequested's
-          comment there); EmuUtility never got the port. Both now post eMsgCmdScanDevices via a
-          midi_request_reconnect() named to match SynthEdit's.
-        - handle_identity_reply() ran on the CoreMIDI CALLBACK thread and wrote all three of
-          gDevice/gMidiSource/gMidiDest. Split: the callback now only validates + unpacks
-          (parse_identity_reply) and posts eMsgCmdIdentityReply; the MIDI thread does the
-          entity/destination lookup and the state writes.
-        - Button/rotary PEPTALK events (mouseHandle.c, emuGraphics.cpp) now post instead of calling
-          peptalk_send_* on the UI thread — those read gMidiDest, also MIDI-thread-owned.
-        - eMsgCmdScanDevices is COALESCED in the drain (a local bool, scan runs once after the batch),
-          because a rescan is a wanted-state not an event: one hub plug can fire several
-          kMIDIMsgSetupChanged notifications and each scan walks every destination at 15ms stagger.
-      SynthEdit (already had the ownership discipline; this replaced its hand-rolled queue):
-        - gIdReplies[16] + _Atomic gIdReplyCount -> gToMidiThread. That array had a latent
-          OUT-OF-BOUNDS READ: the callback did atomic_fetch_add(&gIdReplyCount, 1) unconditionally but
-          only stored when idx < 16, so a 17th reply left the count past the array bound and
-          process_identity_replies()'s `for (i = 0; i < count; i++)` read off the end. Needs enough
-          devices answering one interface to hit — owner already runs 4 synths on a shared TM-1.
-          Queue has no cap and no count/array skew. process_identity_replies() is now a drain (drains
-          to empty even after a match, so leftovers can't cross into the next scan); the old
-          `gIdReplyCount = 0` reset became discard_queued_identity_replies().
-        - DELIBERATELY NOT migrated: gRescanNeeded and gReconnectRequested stay atomic flags. Both are
-          coalescing ("a rescan is wanted"), and gRescanNeeded is additionally a wait-break condition
-          inside the connect loops' 100ms slices — a flag's job, not a message's. gStateDumpDebounceTicks
-          stays a counter (it's a debounce). The three synth_flush_pending_*() render-loop hooks were
-          left alone too — they are UI-thread-local deferred sends, not cross-thread handoffs.
-      TO VERIFY ON HARDWARE:
-        - EmuUtility: device still detected at startup; Scan Devices menu item still connects; LCD and
-          LEDs still update; on-screen buttons + keyboard shortcuts still reach the device with no
-          perceptible lag (the CFRunLoopWakeUp path is what keeps that honest); dial drag + scroll
-          wheel still track; sleep/wake still reconnects.
-        - SynthEdit: normal connect on a single-cable setup; connect with several synths sharing one
-          interface (the TM-1 case — that is the path the reply queue actually changes); Device-switch
-          menu; sleep/wake; a no-identity device (Minitaur) still connects via connect_without_identity.
-    * gLcd.pixels data race (found during Step 6, NOT a queue problem) — FIXED 2026-07-27 (built,
-      needs owner hardware eyeball). EmuUtility's gLcd.pixels (1920 bytes) was written by the CoreMIDI
-      callback thread (peptalk.c: full memcpy or in-place XOR delta) while the UI thread read it to
-      expand+upload the GL texture (emuGraphics.cpp), no lock — a real data race that could tear a frame.
-      FIX: new gLcdMutex (globalVars, PTHREAD_MUTEX_INITIALIZER). Writer holds it around the memcpy /
-      peptalk_apply_lcd_delta + refresh++; reader snapshots pixels+refresh into locals under the lock,
-      then does the RGBA expansion + glTexSubImage2D upload with the lock released (never held over a GL
-      call). gLastRefresh is now set from the snapshot, so it always matches the pixels actually uploaded.
-      render_lcd()'s per-frame `gLcd.refresh != gLastRefresh` pre-check stays an unlocked relaxed read
-      (aligned 32-bit; a benign hint that only decides whether to bother — every real access is locked).
-      Chose a mutex over double-buffer because deltas mutate the accumulated frame in place, so there's
-      no clean front/back to swap. Build verified (Debug, xcodebuild).
-- usbComms.c — perf-mode ambiguities: ALL RESOLVED ON HARDWARE 2026-07-26 (see the perf-mode findings
-  section below for the captures). Cleanup status:
-    * DONE 2026-07-26: removed parse_perf_mode_change() (incoming SUB_COMMAND_SET_PARAM_MODE 0x3e) and
-      parse_perf_header() (SUB_RESPONSE_PERF_HEADER 0x11) plus their dispatch cases — hardware capture
-      confirmed the device never sends either. Behaviour-preserving (never-executed code; parse_perf_header
-      even had a landmine `exit(1)` that would have killed the app if it ever ran). The 0x3e/0x11 #defines
-      stay — they're still used on the SEND side (send_perf_mode_change / send_perf_header). Those sub-codes
-      now fall through to the default unhandled-message log if the device ever did send one. Build verified.
-    * NOT DONE (deferred, needs design + hardware): parse_synth_settings() (protocol.c:1139) is the STALE
-      perfMode source on a panel flip — BUT it is also the ONLY device->perfMode read on sync, and the 0x1f
-      handler (parse_perf_patch_versions) does NOT set perfMode (only versions + gotPerfSettingsChangeIndication).
-      So "treat 0x1f as authoritative" is not a one-liner: 0x1f carries no perfMode bit. Removing the
-      synth-settings write would regress startup/connect perfMode detection. A proper fix needs the resync
-      path to re-derive perfMode from a reliable source after 0x1f, verified on hardware.
-    * send_perf_mode_change() takes ~3 sends (500ms retries) before the 0x1f response arrives — minor, but
-      could tighten the wait if it matters.
-- moduleGraphics.cpp — resolve "can Mode be morphed?" question (needs hardware/manual check).
-  [The paired "move render_volume_meter/label rendering into utilsGraphics.cpp" idea was DROPPED
-  2026-07-27: utilsGraphics.cpp now lives in SynthLib, and render_volume_meter is pure G2 domain
-  (tVolumeType / tVolumeMeterConfig / volumeMeterStyle* enum + G2 value-bit decode) built entirely on
-  primitives that are ALREADY shared (render_rectangle / set_rgb_colour). Moving it would couple SynthLib
-  to G2 module semantics — the opposite of the commonalise goal. It stays G2-local in moduleGraphics.cpp.]
-- moduleGraphics.cpp/renderParams.c — port custom graph displays from the original editor (none exist today besides render_volume_meter): envelope shapes (AD/AR/D/H/AHD/ADSR/ADBDSR/Multi/DX), filter response curves (Classic/Normal/Small/Static/Comb), oscillator & LFO waveform shapes, EQ curves (2-band/3-band/peak), compressor/expander, distortion/waveshaping (Dist A/B/Wrap/Shape/Saturate), FM operator + DX router, phaser, vocoder, tuned noise, random distribution/trigger — see Original Editor/G2Editor.c, CCustomObjectFactory::CreateCustom (~line 101952) and the CPnl*Graph class family for reference implementations
-- FltClassic response graph (render_fltclassic_response_graph, moduleGraphics.cpp) — DONE 2026-07-26.
-  At minimum Freq the resonance bump ran off the LEFT edge (peak against x=0, lower half off-screen)
-  because the cutoff was mapped edge-to-edge across the box. FIX: inset the cutoff's on-screen
-  position into a band (kCutoffMinX 0.15 .. kCutoffMaxX 0.90) instead of 0..1 — a small horizontal
-  zoom-out so the box shows a slightly wider window than the knob's own ~14Hz..21kHz range and the
-  peak always keeps headroom either side. 10-octave relative-frequency curve model unchanged. Build
-  verified (Debug, xcodebuild). Not yet eyeballed on-screen by owner.
-- Sw8-1(15), ValSw1-2(17) — need more resources
-- OscShpB(8) — check mode handling
-- Fix known caveats on otherwise-OK modules — CLUSTER ESSENTIALLY COMPLETE (only the deferred Seq park-LED
-  below remains). All fixes NEEDS (CT) VERIFY, flagged in Module dev debug notes.txt.
-    * Oscar(OscC,9) / OscShpB(8) mode handling — CHECKED 2026-07-27: tune-mode handling VERIFIED CORRECT on
-      both (all 4 modes Semi/Freq/Factor/Partial render right values; correct mode-param index). Fixed an
-      OscC layout overlap (Tune Mode menu was over the Tune label; moved y15->y5). OscShpB was already clean.
-    * Seq* park-LED (SeqNote/SeqEvent/SeqVal/SeqLev/SeqCtr) — INVESTIGATED 2026-07-27, DEFERRED pending a
-      look at the REAL original editor. CONFIRMED from decompile: the park LED is NOT in the hardware LED
-      stream — CLedDataList::PopulateList (G2Editor.c:103614) only enrols LEDs whose GroupId (and CodeRef)
-      are >= 0; the park LED is a GroupId=-1 panel LED, rendered but stream-excluded. So G2-Edit's current
-      "not in LED stream" exclusion is CORRECT and must STAY (it's what keeps the module's other real stream
-      LEDs aligned). Its lit state is editor-computed: owner observed the real editor lights it when the Park
-      input is patched, but the exact trigger isn't provable from the opaque (placeholder-struct) decompile.
-      G2-Edit currently paints it a permanent dim green (RGB_GREEN_3, render_led_common ledTypePark case) —
-      likely wrong. TODO once we can watch the real editor: confirm the rule (probably "green when Park input
-      has a cable, else off") then implement it in render_led_common. NOTE: the live sequencer step-position
-      indicator is a SEPARATE, bigger feature — it needs the Blink stream (kMesBlinkDualBit/MultiBit,
-      CPanel::Blink) which G2-Edit doesn't implement at all (step bar is currently static).
-    * PartQuant(22) dial range — FIXED 2026-07-27 (built, display verified via backdoor; only the changed
-      creation default 100->64 needs a (CT) hardware confirm). New paramTypePartials renderer shows bipolar
-      partials 0..+/-63 with '*' beyond +/-32, per manual + original editor ParamText::Sym.
-    * EnvADSR(20) values — FIXED 2026-07-27 (built, display verified via backdoor). "Delay"->"Decay" label;
-      Sustain 0-100% -> 0-64 units via new paramTypeUniPol (raw/2 as N.0/N.5, 127=64.0), per manual +
-      ParamText::UniPol. A/D/R time table already correct. paramTypeUniPol is reusable for other 0-64 levels.
-    * MixFader(161) value scale — DONE (was already fixed; verified 2026-07-27): render_paramType1Slider's
-      MixFader branch (renderParams.c) shows round(paramValue*100*10/128)/10 as %.1f, byte-identical to the
-      CommonDial mix dials (render_paramType1Resonance, used by Mix4-1C). 0-100/xx.x mapping matches.
-    * LfoC(24) Range Sub param — FIXED 2026-07-27 (built, needs owner hardware eyeball). ROOT CAUSE: the
-      range selector strMaps were mis-ordered vs the wire value. render_paramType1LFORate computes range by
-      value {0:Sub,1:Lo,2:Hi,3:BPM,4:Clk} — which exactly matches the original editor's ParamText::LFORange
-      (G2Editor.c:44594, authoritative) — but rangeStrMap/rangeLfoCStrMap listed {Lo,Hi,BPM,Sub,Clk}. So the
-      rate NUMBER was always right, the range NAME was wrong (pick "Rate Lo" -> actually Sub). Same bug hit
-      the whole LFO family (LfoA/LfoShpA/LfoB), not just LfoC. FIX: reordered rangeLfoCStrMap to {Sub,Lo,Hi,
-      BPM} and added rangeLfoStrMap {Sub,Lo,Hi,BPM,Clk}; repointed LfoC/LfoA -> rangeLfoCStrMap (no Clk),
-      LfoShpA/LfoB -> rangeLfoStrMap (Clk). Also bumped all four Range defaults 0->1 (Rate Lo, "normal" per
-      manual) — value 0 is now Sub, so leaving default 0 would make a new LFO default to a 60-700s cycle.
-      Display-only + creation-default change; stored patch values untouched (raw index). NEEDS HARDWARE: (1)
-      confirm a fresh LFO really defaults to Rate Lo; (2) RandomA(200)/RandomB(202) STILL use the old-order
-      rangeStrMap — no ParamText::RandomRange in the decompile to confirm their wire order, left unchanged;
-      verify on hardware whether Random shares {Sub,Lo,Hi,BPM,Clk} and reorder if so.
-- Verify remaining 117 unverified module types (filters, oscillators, delay lines, sequencer/logic, MIDI send/receive, Resonator, Operator, Random* family, etc.) — see "Module dev debug notes.txt"
-- Add performance keyboard split/layer/zone UI (manual's "Layering Patches" section) — currently only the standalone NoteZone module exists
-- Add a dedicated master-clock/tempo panel (currently only basic send/receive clock toggles exist)
-- defs.h:179 — confirm whether perf-header sub-response (SUB_RESPONSE_PERF_HEADER, 0x11) is ever actually used (needs hardware testing)
-- moduleGraphics.cpp/graphics.cpp — GL_BLEND enable/disable currently sits at each caller (moduleGraphics.cpp:1239/1254, graphics.cpp:590) rather than inside the shared drawing primitive (render_cable_from_to() et al., utilsGraphics.cpp) the way render_text() already manages its own blend state. Not a bug — correct today, just a cosmetic/architectural inconsistency. Low priority; real regression risk if rushed since these primitives are reused everywhere.
-- Compress(150) — module height may be 1 row too many (currently 5 rows, moduleResources.h). Original editor's module-info structs are opaque in the decompile (SModuleInfo/CBuildModule are placeholder structs, heights not recoverable as readable data); needs validation by running the original editor and comparing.
-
-- BIG / long-term idea — add a built-in sound-generation (DSP) engine so the editor can produce audio
-  itself, not just edit/drive the hardware G2. Reference: the decompiled DEMO editor (the standalone/demo
-  Nord Modular G2 editor, which ran patches without hardware) — its DSP/voice code is the model to work
-  from. (Claude may not currently have that decompile on hand; the main Original Editor/G2Editor.c
-  reference here is the hardware editor, whose module-info/DSP internals come through as opaque placeholder
-  structs — see CVoice/CVoiceMap/CPatchData symbols, names survive but bodies don't.) Would let module
-  waveform/response graphics (OscShpB, EnvADSR, FltClassic, etc.) be driven by real DSP instead of the
-  hand-derived approximations, and enable offline/no-hardware auditioning. Very large effort; capture the
-  demo-editor decompile alongside this note when starting.
-
-- Cross-platform build — Linux + Windows, with a CMake build derived from the Xcode project
-  as the master (Xcode stays authoritative for day-to-day dev on Mac; CMake is the portable build).
-  Two parts:
-  (A) Build system. The Xcode projects use folder-synchronized groups (PBXFileSystemSynchronizedRootGroup
-      on src/ and SynthLib/src/), i.e. there is NO manual per-file source list in the .xcodeproj — it just
-      globs those two folders. So a CMakeLists can file(GLOB) the same folders and stay in sync
-      automatically; there's little to "derive" beyond the folder set, the frameworks/libs, and the
-      compile flags. Practically: one CMake that compiles src/ + SynthLib/src/, links GLFW + FreeType +
-      libusb (all already cross-platform — Homebrew copies live in ThirdParty/), and swaps the Mac-only
-      bits per-platform (below). Could add a small script to sniff the framework/lib list + build settings
-      out of project.pbxproj so the CMake stays honest against Xcode, but the source list itself needs no
-      syncing. Do the same for EmuUtility/SynthEdit (they share SynthLib), so ideally the CMake logic for
-      the SynthLib half is itself shared.
-  (B) Platform abstraction — what's already portable vs what needs a non-Mac path:
+- Cross-platform build — Linux + Windows, with a CMake build derived from the Xcode project as the
+  master (Xcode stays authoritative for day-to-day Mac dev; CMake is the portable build).
+  (A) Build system. The Xcode projects use folder-synchronized groups
+      (PBXFileSystemSynchronizedRootGroup on src/ and SynthLib/src/), i.e. there is NO manual
+      per-file source list — it just globs those two folders. So a CMakeLists can file(GLOB) the same
+      folders and stay in sync automatically; there is little to "derive" beyond the folder set, the
+      frameworks/libs and the compile flags. Practically: one CMake that compiles src/ +
+      SynthLib/src/, links GLFW + FreeType + libusb (all cross-platform; copies in ThirdParty/), and
+      swaps the Mac-only bits per-platform. Could add a script to sniff the framework/lib list out of
+      project.pbxproj so the CMake stays honest. Do the same for EmuUtility/SynthEdit, ideally with
+      the SynthLib half shared.
+  (B) Platform abstraction.
       PORTABLE ALREADY: core protocol.c / dataBase.c / msgQueue.c / moduleResources (pure C); USB via
-        libusb (~40 calls, cross-platform); GLFW + OpenGL + FreeType rendering; SynthLib fileBrowser.cpp
-        (std::filesystem, already has Windows USERPROFILE/APPDATA + Linux XDG path handling) and
-        prefs.cpp. These should compile as-is off Mac.
+        libusb (~40 calls); GLFW + OpenGL + FreeType rendering; SynthLib fileBrowser.cpp
+        (std::filesystem, already handles Windows USERPROFILE/APPDATA + Linux XDG) and prefs.cpp.
       MAC-ONLY, needs a portable seam:
-        - misc.mm (Obj-C/Cocoa): NSApplication/NSMenu native app menu, NSUserDefaults, and the
-          NSWorkspace sleep/wake notifications (register_sleep_wake_notifications). The app already draws
-          its OWN in-window menu bar (menuBar.c / appMenuBar.c), so the native NSMenu is largely
-          cosmetic on Mac and can be #ifdef'd out elsewhere; sleep/wake needs a Linux/Windows equivalent
-          or a no-op stub.
+        - misc.mm (Obj-C/Cocoa): NSUserDefaults and the NSWorkspace sleep/wake notifications
+          (register_sleep_wake_notifications). The native NSMenu is now largely gone — the app draws
+          its own in-window menu bar (menuBar.c / appMenuBar.c) — so what remains can be #ifdef'd out
+          elsewhere; sleep/wake needs a Linux/Windows equivalent or a no-op stub.
         - usbComms.c: 2 IOKit references (the rest is libusb) — likely USB hotplug / sleep-wake device
-          notification; replace with libusb hotplug (libusb_hotplug_*) or stub per-platform.
+          notification; replace with libusb_hotplug_* or stub per-platform.
         - persistence.c: NSUserDefaults-backed settings — should move onto SynthLib's prefs.cpp
-          (synthlibPersistence), which is already the portable mechanism, rather than porting the Cocoa
-          version. (Overlaps the commonalise work below.)
+          (synthlibPersistence), which is already the portable mechanism, rather than porting the
+          Cocoa version. (Overlaps the commonalise work below.)
       Suggest: get the pure-C + SynthLib core compiling under CMake on Linux first (fastest signal),
-      behind a thin platform shim header (synthlibPlatform.h?) with mac/linux/win implementations of the
-      handful of OS hooks (menu, sleep/wake, prefs, usb-hotplug). Windows after Linux (more toolchain
-      friction). This dovetails with the SynthLib commonalise priorities below — the platform shim is a
-      natural SynthLib citizen shared by all three apps.
+      behind a thin platform shim header (synthlibPlatform.h?) with mac/linux/win implementations of
+      the handful of OS hooks. Windows after Linux. Dovetails with the commonalise priorities below —
+      the platform shim is a natural SynthLib citizen shared by all three apps.
 
-RESOLVED 2026-07-26 (the perf-mode blind-usleep race — implemented + hardware-verified):
-- graphics.cpp's read_file_into_memory_and_process() perf branch no longer parses on the UI thread with a
-  2-second usleep barrier. When online it now sends a single new eMsgCmdLoadPerf command carrying just the
-  file PATH (fixed char[1024], like the backup/restore messages — no cross-thread heap hand-off). The USB
-  thread's new load_perf_file_to_device() (usbComms.c) re-reads the file and does the whole load — perf-mode
-  switch, clear_slot_data x4, parse_perf, then push to device (via the extracted push_perf_to_device() helper,
-  shared with the now-unused-but-kept eMsgCmdWritePerf) — all in ONE handler. Because state_handler() only
-  services patch-change indications BETWEEN queued commands, never mid-handler, the async cascade the mode
-  switch triggers can no longer overwrite the freshly-parsed perf. Offline still parses locally on the UI
-  thread (no device, no cascade, no race). Deliberately skips the WriteModePerf handler's
-  send_get_performance_settings() on the load path (parse sets all that from the file). After the write it
-  re-raises gotPerfSettingsChangeIndication so state_handler's existing "perf changed" view-refresh runs
-  (reset to slot A/var 1, redraw) — without that the current slot's name+canvas didn't repaint until a manual
-  slot re-select (found and fixed during hardware test).
-  VERIFIED ON HARDWARE via wire capture: load now completes in ~0.46s (was ~2.5s), with NO pre-write
-  GET_PATCH_SLOT/NAME cascade (old path had a full 4-slot one). Tested: empty perf from patch mode (full
-  mode-switch path), real 2-slot perf (Laika) already-in-perf-mode, and real perf from patch mode — all load
-  correctly and auto-refresh the view.
 
-PERF-MODE PANEL-TOGGLE + VOICE-COUNT FINDINGS (2026-07-26, on real G2 via ENABLE_USB_LOG):
-- PANEL perf<->patch toggle (both directions): device sends an unsolicited SUB_RESPONSE_PERF_PATCH_VERSIONS
-  (0x1f); the editor handles it via its existing "Perf settings change — reloading all slots" path. The
-  editor UI followed the panel correctly both ways (verified on screen). No 0x11 perf-header, no 0x3e.
-- EDITOR's own topbar perf-mode toggle: editor SENDS SUB_COMMAND_SET_PARAM_MODE (0x3e) and the device
-  replies with 0x1f (+0x29). The device never sends 0x3e back. So parse_perf_mode_change() — dispatched
-  ONLY from an incoming 0x3e — is never reached on any path (editor toggle, panel toggle, or perf load).
-  "Got perf mode change" never logged. => effectively dead; safe-to-remove candidate (like parse_perf_header).
-- PerfMode ownership (:360): parse_synth_settings() DOES write gGlobalSettings.perfMode, and it read STALE
-  on a panel flip (PerfMode=0 immediately after flipping TO perf; UI self-corrected via the 0x1f path). So
-  the synth-settings copy lags — treat the 0x1f/perf path as authoritative, not synth settings.
-- SUB_RESPONSE_PERF_HEADER (0x11) / parse_perf_header: never sent on ANY path tested (file load, panel
-  toggle, editor toggle). Strongly supports defs.h:179's "might want to remove".
-- Voice count / assigned voices (:594): the editor only ever GETs assigned voices (send_get_assigned_voices,
-  0x04) during init/resync — there is NO set-assigned-voices path. Changing voice count in the UI (Poly
-  menu, 2->8) sends a single patch-descriptor write (0x21) which the device accepts directly (no "lower
-  first"), replying with RESOURCES_USED (0x72), NOT assigned-voices (0x05). So the ":594 might have to set
-  target lower before increase" concern is about a write path that doesn't exist — MOOT for current code
-  (would only matter if a direct assigned-voices-set feature is ever added).
+NEEDS A SECOND OPINION (hardware/protocol questions found in code comments — real G2 access and/or
+testing needed before touching; do not guess)
 
-PERF-MODE HARDWARE FINDINGS (2026-07-26 — captured on real G2 via ENABLE_USB_LOG + Debug LOG_DEBUG;
-experiment: load an empty .prf2 from a starting state of Patch Mode + Online. Raw capture archived in the
-session scratchpad as perfload_capture.log):
-
-  What actually happens when load_file_into_database() loads a perf while perfMode==0 (graphics.cpp:711):
-    1. UI thread enqueues eMsgCmdWriteModePerf, then usleep(2s), then clear_slot_data() x4 + parse_perf()
-       (populating the in-memory database with the NEW perf), then enqueues eMsgCmdWritePerf.
-    2. USB thread dequeues eMsgCmdWriteModePerf -> send_perf_mode_change(1) (round-trips, gets
-       SUB_RESPONSE_PERF_PATCH_VERSIONS 0x1f) + send_get_performance_settings() (gets 0x29).
-    3. The mode switch makes the G2 asynchronously raise patch-change indications for ALL FOUR slots.
-       state_handler() services these at the TOP of its loop (before the next msg_receive), calling
-       send_get_patch_data() per slot — a full 4-slot read cascade that writes the device's OLD patches
-       into the SAME in-memory database. In the capture this cascade ran ~40.78-41.05s.
-    4. ~2s after step 1, the UI thread's sleep ends; its clear+parse (which overwrites the database with the
-       NEW perf) therefore runs AFTER the cascade, then eMsgCmdWritePerf is dequeued and the 4 CMD_SET_PATCH
-       (0x37) writes go out (~41.94s). No patch re-reads happen after the write (verified: only 0x29/0x11-
-       keysplit/master-clock writes follow) — so nothing clobbers the write afterwards.
-
-  => The sleep is LOAD-BEARING, and its real job is NOT "wait for perf mode to be stable" — it's to ensure
-     the device's async patch-change-indication cascade (step 3) is fully serviced BEFORE the UI thread does
-     clear_slot_data()+parse_perf() (step 4). Without it, the cascade's send_get_patch_data() reads would
-     overwrite the freshly-parsed perf in the shared database before eMsgCmdWritePerf sends it, and the load
-     would write the device's OLD patches straight back. It's a genuine UI-thread-vs-USB-thread database race,
-     papered over with a fixed delay.
-  => Confirmed the load is CORRECT with the sleep: after loading the empty perf, all 4 slots (A-D) showed
-     empty/"No name", i.e. the device's previous perf (BCHydro_DZ / Control_DZ / Drums_DZ / Synth_DZ /
-     Extra_DZ) was fully replaced, no clobber. (The OLD names DO appear transiently in the debug log — those
-     are step 3's cascade reading pre-write state, later wiped by step 4's clear+parse.)
-  => Proper fix direction: eliminate the cross-thread race rather than time it. Cleanest is to move the whole
-     load (clear+parse+write) onto the USB thread as a single ordered message so it can't interleave with
-     indication servicing; alternatively a handshake where the UI thread waits until the USB thread signals
-     "perf mode confirmed AND no patch-change indication seen for N ms". Either removes the blind 2s.
-
-  Bonus data point for the SUB_RESPONSE_PERF_HEADER (0x11) question (defs.h:179 / usbComms.c:600,925):
-  across the entire perf-switch capture the device NEVER sent a 0x11 header response — it used
-  SUB_RESPONSE_PERFORMANCE_SETTINGS (0x29), exactly as the code comment suspected. parse_perf_header() went
-  uncalled. Not yet proof it's dead on ALL paths (panel-initiated perf-mode toggle not yet captured), but it
-  is confirmed unused on the file-load perf-switch path.
-
-RESOLVED 2026-07-25 (verified against code, not just assumed from the comment):
-- usbComms.c "centralize repeated unsolicited send_stop() calls" — send_write_data()'s big
-  eMsgCmd... switch had 43 cases each individually bracketing their own device write with
-  send_stop()/send_start() (86 lines total, not the "6 sites" the old TODO estimated — actual
-  count was higher). Replaced with one send_stop()/send_start() pair wrapping the whole switch,
-  gated by a new command_needs_stop_start() predicate (false only for eMsgCmdSetValue/
-  eMsgCmdSetParamMorph — real-time tweaks left unpaused so they stay responsive — and
-  eMsgCmdSetCustomData/eMsgCmdPeekSynthSettingsRestore, which never wrote to the device anyway;
-  true for everything else, including an unrecognised cmd value, which harmlessly gets a
-  pointless bracket around send_write_data()'s own no-op default: case rather than none — that
-  combination should never actually happen). Every case's own internal logic (interleaved
-  send_get_performance_settings() calls, loops, conditional retVal chains, etc.) is untouched;
-  only the per-case send_stop()/send_start() lines were removed. Left the other 4 already-
-  isolated send_stop()/send_start() pairs elsewhere in usbComms.c (send_init_sequence_pull/push,
-  state_handler's two resync branches) alone — each already occurs exactly once in its own
-  function, not repeated boilerplate the way send_write_data()'s switch was.
-- graphics.cpp:701 "parse_patch should really be in a commonly accessible source file" — was already
-  stale: parse_patch lives in protocol.c (declared in protocol.h), which both graphics.cpp (file-load
-  path) and usbComms.c (USB path) already #include and call directly. Checked parse_patch itself for
-  any USB-thread-specific state that might make the file-load-path call unsafe — none; it only reads
-  the passed-in buffer and writes into the per-slot dataBase, same as either caller already does today.
-  Stale TODO comment removed from graphics.cpp.
-
-RESOLVED 2026-07-24 (verified against code, not just assumed from the comment):
-- globalVars.h gKnobArray/gControllerArray/gControllerCount "nullify on new load" — already fully handled by
-  clear_slot_data() (graphics.cpp), called from both the USB (usbComms.c:2920) and file-load (graphics.cpp:700)
-  entry points. Stale TODO comments removed from globalVars.h.
-- msgQueue.h "remove unused mutex" — was wrong; re-checked msgQueue.c and BOTH mutex and semMutex are genuinely
-  used (mutex guards head/tail, semMutex+semCond+semCount implement the counting semaphore). The "TODO - use
-  this" comment on semMutex was just stale from before semMutex was wired up. Comments updated to explain what
-  each one actually guards instead.
-- moduleGraphics.cpp:849 upRate connector-colour bug — FIXED, full fidelity. First pass confirmed against
-  the manual (g2manual.txt p.135) only; second pass cross-checked the actual decompiled original editor
-  (Original Editor/G2Editor.c) and found the real mechanism: ECableColor has 7 values including a genuine
-  TurboLogic entry (RGB 0xff/0xc0/0x50 ≈ 1.0/0.75/0.31, i.e. orange), and CPnlControlInHole/OutHole::GetColor()
-  / CPnlLogicInHole/OutHole::GetColor() both branch on EModuleBandWidth — confirming Control connectors
-  promote to Audio and Logic connectors promote to their OWN higher-bandwidth variant (TurboLogic/orange),
-  never to plain Audio. Added connectorTypeTurboLogic to tConnectorType (types.h) and its RGB to
-  connectorColourMap (moduleResources.h); added a shared effective_connector_type(baseType, upRate) helper
-  (moduleResourcesAccess.c/.h) used by both the connector-hole rendering (moduleGraphics.cpp) and, for full
-  fidelity, cable-creation's "inherit the source connector's current colour" logic (mouseHandle.c:712, which
-  previously used the connector's raw base type and so never inherited the promoted colour either).
-  gCableColourMap already had an unused cableColourOrange entry ("Logic FG") ready for exactly this — wired
-  cable_colour_for_connector_type() to it. module->connector[i].type itself deliberately still stores only
-  the raw base type, never the promotion — protocol.c's own upRate-propagation walk (search
-  "fromModule->connector" there) depends on it being the permanent declared type.
-- update_module_up_rates() (protocol.c) — checked against the decompiled original's real equivalent,
-  CPatchData::GenerateBandwidthChangeMolecules() (same do-while-until-stable fixed-point shape, same
-  "reset then recompute" pattern so demotion works, not just promotion). Structurally sound — but the
-  comparison surfaced a real gap: the original also walks a just-changed module's OUTPUT connectors and
-  retroactively recolours any already-connected cable (GetRecolorCableMolecules) the moment the module's
-  bandwidth changes; this app only ever set a cable's colour once, at creation time (mouseHandle.c), so an
-  existing cable's colour went stale if its source module up-rated or de-rated afterwards. FIXED: added the
-  same retroactive-recolour walk to update_module_up_rates()'s per-module change branch, reusing the exact
-  cable-matching shape menu_action_set_cable_colour() (menus.c) already uses for the user-driven manual
-  recolour, and sending the same eMsgCmdWriteCable sync every other cable-colour change already sends.
-- protocol.c:355 numVariations sanity check — added: logs an error if the parsed value is neither 9 nor 10
-  (this function has no way to know if it's parsing USB or file data, so it can't check the exact expected
-  value for the actual source, just flag anything outside the known pair). The existing >10 bounds check
-  that prevents an actual overrun was already there and is unchanged.
-
-NEEDS A SECOND OPINION (hardware/protocol behaviour questions found in code comments — real G2 hardware
-access and/or testing needed before touching; do not guess):
-- TEST the param-names section-count fix (applied 2026-07-25): push_slot_to_device() (usbComms.c) and
-  write_perf_to_file() (graphics.cpp) used to write a spurious empty Morph/patch-settings param-names
-  (0x5b) section, giving 3 sections where the reference patch structure (CPatchFile_11 in the Ghidra
-  decompile) and write_patch_to_file() only have 2 (VA, FX). Removed the locationMorph calls from both.
-  write_param_names() always emits a section header even when empty, so the Morph call was always adding
-  a 3rd 0x5b. VERIFY: (1) USB store-patch and store-perf still round-trip correctly on real hardware
-  (the old 3-section form worked, so the G2 firmware tolerates the extra section — need to confirm the
-  2-section form still stores/reloads cleanly); (2) a .prf2 saved by G2-Edit now loads in the original
-  NMG2 editor / g2ools (the whole point of the fix — the reference file reader is strict-positional and
-  a 3rd 0x5b desyncs it); (3) patches/perfs with actual renamed params on VA/FX modules still preserve
-  those names across a save/load round-trip.
-- TEST the module up-rate propagation fix (applied 2026-07-25): update_module_up_rates() (protocol.c)
-  computes each module's bandwidth (upRate) bit by fixed-point propagation over the cables. The old
-  condition applied the "destination connector must be multi-bandwidth" guard (dest type != Audio) ONLY
-  to the native-Audio-source branch, not to the "source module is already up-rated" branch — so an
-  up-rated module with an Audio output feeding another module's Audio input would wrongly up-rate the
-  destination. The original editor (CPatchData::GenerateBandwidthChangeMolecules) gates the WHOLE
-  per-cable decision on IsMultiBandWidth(destConnector) first. Fix factors the dest-type guard out to
-  cover both source conditions. VERIFY on real hardware / against the original editor: build a patch
-  with an up-rated module (one that received audio on a Control input) whose Audio output feeds another
-  module's Audio input, and confirm G2-Edit's cable colours + the module's audio/control (red/blue)
-  bandwidth indication now match the original editor's for that topology (and that normal audio chains,
-  e.g. Osc->Filter->Out, are unchanged). upRate also gets written to the patch / sent to the G2, so
-  confirm the hardware doesn't behave differently after a store.
-- draw_slider() morph-indicator sign fix (applied 2026-07-25, utilsGraphics.cpp): threshold was
-  (morphRange < 127), making a morph range of exactly +127 render as -129 (indicator at the wrong end);
-  changed to < 128 to match render_dial()'s correct 8-bit two's-complement reconstruction. Low risk /
-  visual only, but worth an eyeball on a slider-based module (e.g. a mixer/SeqLev) with a max-positive
-  morph assigned, to confirm the indicator now sits at the top.
-- graphics.cpp:715-716 — perf-mode write triggers a patch read; currently papered over with a blind 2s
-  usleep. Needs real state confirmation from the device instead, or confirmation the sleep is provably long
-  enough.
-- usbComms.c:360 — does PerfMode logging/ownership belong to "synth" or "perf"? Ambiguous in the protocol.
-- usbComms.c:594 — voice-count increase may need the target set lower first before attempting the increase —
-  unconfirmed.
-- usbComms.c:600,925 / defs.h:179 — SUB_RESPONSE_PERF_HEADER (0x11): comment says "don't think we've ever seen
-  one of these" — checked the decompiled reference (Original Editor/G2Editor.c) and the manual, neither
-  confirms or denies actual use on the wire. Only real hardware capture can settle whether it's dead code.
-- usbComms.c:3650-3651 — "consider if this is the right thing to do here" / "not sure we need to do this here"
-  around patch-change-indication handling — behavioural judgement call, needs testing to confirm current
+- usbComms.c:3650-3651 — "consider if this is the right thing to do here" / "not sure we need to do
+  this here" around patch-change-indication handling — a behavioural judgement call; confirm current
   behaviour is correct before changing it.
-- usbComms.c:3834 — commented-out eMsgCmdReloadAllPatchData case, with an open question about whether a full
-  reload is doing more than intended. Needs understanding of the currently-active code path's actual scope
-  before touching.
-- protocol.c:1759 — write-side parsing doesn't match the read-side logic in usbComms.c; a real fix needs
-  careful protocol comparison and hardware verification, not a guess.
-- mouseHandle.c:164 — gControllerCount[slot] "seems to default to 2, so might need to set up defaults" — an
-  open question about whether some default controller assignment should be pre-populated on a new patch.
+- usbComms.c:3834 — commented-out eMsgCmdReloadAllPatchData case, with an open question about
+  whether a full reload does more than intended. Needs understanding of the active path's scope.
+- protocol.c:1759 — write-side parsing doesn't match the read-side logic in usbComms.c; a real fix
+  needs careful protocol comparison and hardware verification, not a guess.
+- mouseHandle.c:164 — gControllerCount[slot] "seems to default to 2, so might need to set up
+  defaults" — whether some default controller assignment should be pre-populated on a new patch.
   Needs product/hardware judgement, not a code fix.
-- moduleGraphics.cpp:685 — "Check if Mode can be morphed" — needs a manual/hardware check, not a code guess.
-- moduleGraphics.cpp:744,751,758 — "Should come from volume location list!? Shouldn't be in gModuleProperties"
-  — a data-modelling question (where per-module volume-type info should live) that needs a design decision,
-  not a mechanical fix.
-- mouseHandle.c:929 — "Close if clicked outside" on a context menu — current behaviour looks reasonable; flag
-  only if it's actually been observed to feel wrong in use.
-- usbComms.c:3980 — "Don't like early returns. Use retVal" — a style preference, not a bug; low priority and
-  arguably a matter of taste rather than something needing a rewrite.
-- usbComms.c:3526 — "send data from the editor" for currently-read-only items — a future write-support idea,
-  not a bug.
-- usbComms.c:4047 — "maybe some more items we need to get here" for perf settings — an open-ended idea, not a
-  known gap.
-- globalVars.c:87 — commented-out gHiddenCableMask with "Send to G2 when changes" — an unimplemented future
-  feature idea (sync cable-hide state to hardware), not a bug.
-- mouseHandle.c:1585 — mouse-move currently calls synthlib_request_redraw() unconditionally on every move; a
-  "only redraw if hover state actually changed" guard (noAction) used to exist and was disabled/removed,
-  commented-out rather than deleted. Re-adding it risks reintroducing whatever bug caused it to be pulled in
-  the first place (no record of why) for a performance win that's likely marginal on modern hardware — leave
-  alone unless it's actually been observed as a real cost.
+- moduleGraphics.cpp:744,751,758 — "Should come from volume location list!? Shouldn't be in
+  gModuleProperties" — a data-modelling question (where per-module volume-type info should live)
+  needing a design decision, not a mechanical fix.
+- mouseHandle.c:929 — "Close if clicked outside" on a context menu — current behaviour looks
+  reasonable; flag only if it has actually been observed to feel wrong in use.
+- usbComms.c:3980 — "Don't like early returns. Use retVal" — style preference, not a bug.
+- usbComms.c:3526 — "send data from the editor" for currently-read-only items — a future
+  write-support idea, not a bug.
+- usbComms.c:4047 — "maybe some more items we need to get here" for perf settings — open-ended idea,
+  not a known gap.
+- globalVars.c:87 — commented-out gHiddenCableMask with "Send to G2 when changes" — an unimplemented
+  future feature (sync cable-hide state to hardware), not a bug.
+
 
 MISSING FEATURES (parity with the original editor — cross-checked against g2manual.txt 2026-07-25;
-none of these exist in G2-Edit at all yet, confirmed by source search, not just absence of memory):
-- Pop-up overlay views (F5-F8, Ctrl+F8 in the original) — a family of "yellow popup box" overlays drawn
-  over the patch canvas showing a different thing per parameter at a glance, toggled by function key:
+none of these exist in G2-Edit at all, confirmed by source search)
+
+- Pop-up overlay views (F5-F8, Ctrl+F8) — a family of "yellow popup box" overlays drawn over the
+  patch canvas, each showing a different thing per parameter at a glance:
     F5        View Parameter Values     — each parameter's current value
-    F6        View Morph Groups         — which of the 8 morph groups (if any) each parameter belongs to
+    F6        View Morph Groups         — which of the 8 morph groups each parameter belongs to
     F7        View Knob Assignments     — which panel knob (if any) each parameter is mapped to
     F8        View MIDI CC# Assignments — the MIDI CC# (if any) mapped to each parameter
-    Ctrl+F8   View Parameter MIDI Values — how each knob is actually being sent/received over MIDI
-  None implemented — no F5-F8 key handling anywhere in the source at all.
+    Ctrl+F8   View Parameter MIDI Values — how each knob is actually sent/received over MIDI
+  None implemented — no F5-F8 key handling anywhere in the source.
 - Parameter Overview window (Ctrl-L) — floating window showing every Parameter Page's knob/button
-  assignments at once in one grid, with drag-and-drop to make/move/reorganize assignments directly from
-  the overview instead of one page at a time. Not implemented.
-- Bulk MIDI CC tools (Tools menu, alongside Parameter Overview) — "Assign MIDI" (auto-assigns the next
-  free CC# to every currently panel-assigned knob/button, in page order), "Clear MIDI" (clears every CC#
-  assignment in the Patch at once, reversible via Undo), "View Buttons" (toggles the popup overlay between
-  a combined dial+button assignment's knob half and button half, e.g. on Sequencer modules). None
-  implemented — G2-Edit's Tools menu currently only has Mutator. Per-parameter right-click "Assign MIDI
-  CC" already exists (the "M key / MIDI CC# Assign Dialog" equivalent) and doesn't need redoing.
-- MIDI Learn (L key) — assign the currently-focused parameter to whichever MIDI CC# was last received,
-  without opening a picker. Not implemented.
-- Patch Window Split Bar — the original shows the Voice Area and FX Area SIMULTANEOUSLY in one window,
-  split by a drag-resizable horizontal bar (with up/down-arrow buttons to show just one area full-height,
-  a double-arrow button to restore the previous split position, and V/F keyboard shortcuts to toggle full-
-  screen on the current area and back). G2-Edit's VA/FX topbar buttons (mouseTopbar.c,
-  set_exclusive_button_highlight(topbarVaId, topbarFxId, ...)) are a hard exclusive toggle instead — only
-  one of VA/FX ever visible, no split view, no drag bar, no V/F shortcuts, no "restore previous split"
-  concept at all.
-- Virtual/On-Screen Keyboard (Ctrl-K) — floating window to play notes with the mouse without a physical
-  synth keyboard attached: click-to-sound keys (sustains while held), horizontal resize to widen the
-  visible note range, octave/note scroll buttons, and Drone (next note plays indefinitely) / Repeat (last
-  note replays continuously) toggles. Not implemented — zero references anywhere in the source.
-- Cable BREAK action — right-click cable popup currently only has Disconnect (menu_action_delete_cable,
-  menus.c — fully removes one cable, auto-rerouting any remaining serial chain to stay functional). The
-  original ALSO has Break: splits a serial chain at one point WITHOUT rerouting — everything before the
-  break point keeps working, everything after becomes "connected but non-functional" and turns white to
-  show it's dead wire (this is what the existing "delete non-functional input-to-input connections (white
-  cables)" cleanup comment elsewhere in menus.c was referring to — G2-Edit already has the CONCEPT of
-  these white cables, just no UI action that actually creates them). Not implemented.
-- Scrollbars on the patch selectors (Load/Store/Delete/Restore bank-location pickers, bankBrowser.cpp) —
-  currently no visible scrollbar for long lists.
+  assignments at once in one grid, with drag-and-drop to make/move/reorganize assignments directly
+  from the overview instead of one page at a time.
+- Bulk MIDI CC tools (Tools menu) — "Assign MIDI" (auto-assign the next free CC# to every
+  panel-assigned knob/button, in page order), "Clear MIDI" (clear every CC# in the Patch at once,
+  undoable), "View Buttons" (toggle the popup overlay between a combined dial+button assignment's
+  knob half and button half, e.g. on Sequencer modules). G2-Edit's Tools menu currently only has
+  Mutator. Per-parameter right-click "Assign MIDI CC" already exists and does not need redoing.
+- MIDI Learn (L key) — assign the focused parameter to whichever MIDI CC# was last received, without
+  opening a picker.
+- Patch Window Split Bar — the original shows Voice Area and FX Area SIMULTANEOUSLY in one window,
+  split by a drag-resizable horizontal bar (up/down-arrow buttons to show one area full-height, a
+  double-arrow to restore the previous split, V/F shortcuts to toggle full-screen on the current
+  area). G2-Edit's VA/FX topbar buttons (mouseTopbar.c, set_exclusive_button_highlight) are a hard
+  exclusive toggle instead — only one ever visible, no split view, no drag bar, no V/F shortcuts, no
+  "restore previous split" concept.
+- Virtual/On-Screen Keyboard (Ctrl-K) — floating window to play notes with the mouse: click-to-sound
+  keys (sustains while held), horizontal resize to widen the visible note range, octave/note scroll
+  buttons, and Drone / Repeat toggles. Zero references anywhere in the source.
+- Cable BREAK action — the right-click cable popup currently only has Disconnect
+  (menu_action_delete_cable, menus.c — removes one cable, auto-rerouting any remaining serial chain
+  to stay functional). The original ALSO has Break: splits a serial chain at one point WITHOUT
+  rerouting — everything before the break keeps working, everything after becomes "connected but
+  non-functional" and turns white to show it is dead wire. G2-Edit already has the CONCEPT of these
+  white cables (see the "delete non-functional input-to-input connections" cleanup in menus.c), just
+  no UI action that creates them.
+- Scrollbars on the patch selectors (Load/Store/Delete/Restore bank-location pickers,
+  bankBrowser.cpp) — currently no visible scrollbar for long lists.
 
-- rationalise architecture and commonalise components for other projects (status as of 2026-07-25)
 
-  ***PRIORITY*** (identified 2026-07-25 by diffing G2-Edit / EmuUtility / SynthEdit directly — these
-  are concrete, mostly-mechanical dedup + decoupling wins at the host<->SynthLib boundary, do these
-  before the bigger open design items below):
+ARCHITECTURE — RATIONALISE AND COMMONALISE FOR THE OTHER PROJECTS
 
-  1. [PRIORITY] Shared graphics/window bootstrap. init_graphics() and every window callback
-     (framebuffer_size_callback / content_scale_callback / window_size / window_pos / window_close)
-     are ~90% character-identical across all three apps: same glfwWindowHints, same
-     glfwCreateWindow(TARGET_FRAME_BUFF_WIDTH/4, ...), same context/FreeType/scale init, same callback
-     wiring. Only real differences: dial-mode default, topBarHeight, whether wake-callbacks are
-     registered, and the callback function *names* (key_callback vs key_cb — a non-issue, they go in a
-     struct). There's already a precedent seam (apps pass configure_synthlib_theme((tSynthLibTheme){...})
-     — utilsGraphics.h). Extend it:
-         tGlfwWindow * synthlib_window_create(const tSynthLibWindowConfig * cfg,   // title, size, topBarHeight, dialModeDefault
-                                              const tSynthLibCallbacks   * cbs);   // key/char/cursor/button/scroll/resize fn-ptrs
-     Effort low, risk low, removes ~150 lines x2.
+***PRIORITY*** (identified 2026-07-25 by diffing G2-Edit / EmuUtility / SynthEdit directly — concrete,
+mostly-mechanical dedup + decoupling wins at the host<->SynthLib boundary; do these before the bigger
+open design items below):
 
-  2. [PRIORITY] Popup lifecycle coordinator — the cleanest DECOUPLING win. SynthLib owns the popup
-     WIDGETS (file/bank/alert browsers, context menu, menu bar) but NOT their orchestration, so each
-     host re-implements it four separate times: (a) render order (every app calls render_context_menu ->
-     render_file_browser -> render_bank_browser -> render_alert_dialog back-to-front, with the same
-     "drawn last - modal" comment copy-pasted verbatim); (b) modal-priority CLICK dispatch cascade
-     (if file_browser_active(){...return;} if bank_browser_active(){...} if alert_dialog_active(){...} —
-     14 routing refs each in G2-Edit and SynthEdit mouseHandle.c); (c) the same cascade again for
-     KEY/CHAR; (d) per-frame hover tick (update_context_menu_hover / update_menu_bar_hover /
-     update_bank_browser_hover — host must remember to call each every frame). That last one has ALREADY
-     shipped real bugs: SynthEdit's own comments document "never actually called anywhere until now"
-     hover reports (2026-07-11, 2026-07-24). An order-dependent contract spread across the host is
-     fragile by construction. Fix = a coordinator façade that internalises the z-order (SynthLib
-     registered the popups, so it knows the stacking):
-         bool synthlib_popups_dispatch_click(tCoord coord, eClickPhase phase); // true if a modal consumed it
-         bool synthlib_popups_dispatch_key(int key, int action);
-         void synthlib_popups_tick(void);     // replaces all the update_*_hover() calls
-         void synthlib_popups_render(void);    // one call, correct back-to-front order
-     Each host's mouse_button / key / loop / render_frame collapses to a single guarded call. Turns a
-     ~20-symbol order-sensitive surface into 4 functions. Effort medium, risk low-medium (mechanical but
-     touches the hot input path in all three apps — sequence carefully). DO THIS FIRST of the priority set.
+1. [PRIORITY] Shared graphics/window bootstrap. init_graphics() and every window callback
+   (framebuffer_size_callback / content_scale_callback / window_size / window_pos / window_close) are
+   ~90% character-identical across all three apps: same glfwWindowHints, same glfwCreateWindow, same
+   context/FreeType/scale init, same callback wiring. Only real differences: dial-mode default,
+   topBarHeight, whether wake-callbacks are registered, and the callback function *names* (key_callback
+   vs key_cb — a non-issue, they go in a struct). There is already a precedent seam (apps pass
+   configure_synthlib_theme((tSynthLibTheme){...}) — utilsGraphics.h). Extend it:
+       tGlfwWindow * synthlib_window_create(const tSynthLibWindowConfig * cfg,  // title, size, topBarHeight, dialModeDefault
+                                            const tSynthLibCallbacks   * cbs);  // key/char/cursor/button/scroll/resize fn-ptrs
+   Effort low, risk low, removes ~150 lines x2.
 
-  3. [PRIORITY] Move mouse-callback plumbing into SynthLib (ties into 1 & 2). The common preamble in
-     every app's mouse handling is boilerplate over SynthLib-owned state:
-       - get_global_gui_scaled_mouse_coord() (window pixels -> logical/GUI-scaled coords) is DUPLICATED
-         per-app: EmuUtility's and SynthEdit's are character-identical (both delegate to
-         window_to_logical()), G2-Edit's is functionally equivalent but inlined. It's pure math over
-         gGlobalGuiScale + get_render_width/height, all already in SynthLib -> clean move
-         (synthlib_window_to_logical() / synthlib_mouse_coord()).
-       - convert_to_mouse_button() (GLFW button/action -> normalized button+phase) is generic decode.
-       - The thin GLFW callback adapter itself (decode -> scale coord -> popup-coordinator dispatch (2) ->
-         app handler(coord, button) -> request_redraw) can be shared, unifying the two conventions that
-         exist today (EmuUtility/SynthEdit's *_cb -> handle_* split vs G2-Edit's callbacks-are-handlers
-         directly). App keeps only its domain hit-testing (modules/cables/dials for G2, panels for the
-         others). NOTE: the app-specific hit-testing can't fully move until the gParamRectangle ->
-         click-region migration below decouples hit-testing from render-time global arrays; after that,
-         even more of the dispatch could move. Do the coord-transform + normalized-callback-adapter part
-         now (independent of that), leave domain hit-testing local for now.
+2. [PRIORITY] Popup lifecycle coordinator — the cleanest DECOUPLING win. SynthLib owns the popup
+   WIDGETS (file/bank/alert browsers, context menu, menu bar) but NOT their orchestration, so each host
+   re-implements it four separate times: (a) render order (every app calls render_context_menu ->
+   render_file_browser -> render_bank_browser -> render_alert_dialog back-to-front, with the same
+   "drawn last - modal" comment copy-pasted verbatim); (b) modal-priority CLICK dispatch cascade
+   (if file_browser_active(){...return;} if bank_browser_active(){...} if alert_dialog_active(){...} —
+   14 routing refs each in G2-Edit and SynthEdit mouseHandle.c); (c) the same cascade again for
+   KEY/CHAR; (d) per-frame hover tick (update_context_menu_hover / update_menu_bar_hover /
+   update_bank_browser_hover — the host must remember to call each every frame). That last one has
+   ALREADY shipped real bugs: SynthEdit's own comments document "never actually called anywhere until
+   now" hover reports (2026-07-11, 2026-07-24). An order-dependent contract spread across the host is
+   fragile by construction. Fix = a coordinator façade that internalises the z-order (SynthLib
+   registered the popups, so it knows the stacking):
+       bool synthlib_popups_dispatch_click(tCoord coord, eClickPhase phase); // true if a modal consumed it
+       bool synthlib_popups_dispatch_key(int key, int action);
+       void synthlib_popups_tick(void);    // replaces all the update_*_hover() calls
+       void synthlib_popups_render(void);  // one call, correct back-to-front order
+   Each host's mouse_button / key / loop / render_frame collapses to a single guarded call. Turns a
+   ~20-symbol order-sensitive surface into 4 functions. Effort medium, risk low-medium (mechanical but
+   touches the hot input path in all three apps — sequence carefully). DO THIS FIRST of the priority set.
 
-  4. [PRIORITY] CoreMIDI send-primitive extraction (safe first step of the comms-layer item below).
-     EmuUtility and SynthEdit's low-level MIDI send is near-identical (MIDIPacketListInit /
-     MIDIPacketListAdd / MIDISend over the same gMidiOutPort/gMidiDest globals; SynthEdit just has a
-     bigger sysex buffer). Move the packet-send primitive + the CoreMIDI handle globals
-     (gMidiClient/gMidiInPort/gMidiOutPort/gMidiSource/gMidiDest) into SynthLib WITHOUT touching each
-     app's scan/connect/dispatch logic (which has diverged for good reason — see the comms bullet in
-     "PARTIALLY DONE" below). 2-of-3 (G2-Edit is USB, not MIDI). Small, safe, unblocks the bigger queue
-     abstraction. Render-loop skeleton extraction (synthlib_run_frame_loop) is possible but LOW priority
-     — do it last, after 1-3, since the per-frame "flush hooks" are genuinely app-specific.
+3. [PRIORITY] Move mouse-callback plumbing into SynthLib (ties into 1 & 2). The common preamble in
+   every app's mouse handling is boilerplate over SynthLib-owned state:
+     - get_global_gui_scaled_mouse_coord() (window pixels -> logical/GUI-scaled coords) is DUPLICATED
+       per-app: EmuUtility's and SynthEdit's are character-identical (both delegate to
+       window_to_logical()), G2-Edit's is functionally equivalent but inlined. Pure math over
+       gGlobalGuiScale + get_render_width/height, all already in SynthLib -> clean move
+       (synthlib_window_to_logical() / synthlib_mouse_coord()).
+     - convert_to_mouse_button() (GLFW button/action -> normalized button+phase) is generic decode.
+     - The thin GLFW callback adapter itself (decode -> scale coord -> popup-coordinator dispatch (2)
+       -> app handler(coord, button) -> request_redraw) can be shared, unifying the two conventions
+       that exist today (EmuUtility/SynthEdit's *_cb -> handle_* split vs G2-Edit's
+       callbacks-are-handlers directly). App keeps only its domain hit-testing. NOTE: the app-specific
+       hit-testing cannot fully move until the gParamRectangle -> click-region migration below
+       decouples hit-testing from render-time global arrays; after that, even more of the dispatch
+       could move. Do the coord-transform + normalized-callback-adapter part now (independent of that),
+       leave domain hit-testing local.
 
-  DONE:
-  - Generic hit-rectangle registry — shipped as SynthLib's clickRegion.h/.c (tClickHandler/eClickLayer/
-    register_click_region/dispatch_click_region), rolled out to all three apps' render/mouse code.
-  - Runtime-parsed panel description, prototyped on Z1-Edit — Z1-Edit was carried further than planned and
-    is now SynthEdit, a fully generic multi-synth editor driven entirely by layouts/*.txt (no per-device C
-    code at all). Supersedes the original narrower "single fixed panel" pilot scope.
-  - Shared host injection point (tSynthLibHost, synthlibHost.h/.c) — replaced the old convention of every
-    SynthLib popup file (contextMenu.c, menuBar.c, alertDialog.cpp, bankBrowser.cpp, fileBrowser.cpp)
-    redeclaring its own `extern gReDraw`/`get_global_gui_scaled_mouse_coord` externs. Not in the original
-    list below but the same spirit — done alongside it.
-  - gWindow/gQuitAll/gReDraw/gDialMode + tDialMode — moved into SynthLib (synthlibGlobals.h/.c,
-    synthlibTypes.h) as accessor functions, not raw externs, across all three apps.
-  - HiDPI content-scale mechanism (synthlibScale.h/.c) — the gContentScale/gGlobalGuiScale recompute
-    G2-Edit fixed first (issue #9) is now shared; EmuUtility and SynthEdit picked up the same fix for free.
-  - Window-position/size + dial-mode persistence (synthlibPersistence.h/.c) — shared core, each app keeps
-    its own extra settings (zoom, last-browsed folder, device config) local.
+4. [PRIORITY] CoreMIDI send-primitive extraction (safe first step of the comms-layer item below).
+   EmuUtility and SynthEdit's low-level MIDI send is near-identical (MIDIPacketListInit /
+   MIDIPacketListAdd / MIDISend over the same gMidiOutPort/gMidiDest globals; SynthEdit just has a
+   bigger sysex buffer). Move the packet-send primitive + the CoreMIDI handle globals
+   (gMidiClient/gMidiInPort/gMidiOutPort/gMidiSource/gMidiDest) into SynthLib WITHOUT touching each
+   app's scan/connect/dispatch logic (which has diverged for good reason — see the comms bullet below).
+   2-of-3 (G2-Edit is USB, not MIDI). Small, safe, unblocks the bigger queue abstraction. Render-loop
+   skeleton extraction (synthlib_run_frame_loop) is possible but LOW priority — do it last, after 1-3,
+   since the per-frame "flush hooks" are genuinely app-specific.
 
-  PARTIALLY DONE / STILL OPEN:
-  - Migrate G2-Edit's gParamRectangle[slot][location][index][param] onto the click-region registry —
-    NOT finished. It's a 6MB static array (globalVars.c's own comment says so) still doing double duty:
-    feeds register_click_region() at render time (moduleGraphics.cpp) AND is read directly via
-    within_rectangle() in a few mouseHandle.c spots (~258, 458, 1078) that look like they may predate the
-    click-region migration — worth checking whether those are dead code now shadowed by
-    dispatch_click_region(), or still load-bearing (e.g. mid-drag angle calculation genuinely needs the
-    rect, not just a hit test). Other named hit rects (gPatchParamClose, gTopbarControls[].rectangle) are
-    still direct array indexing too.
-  - Generalize mousePanels.c/mouseTopbar.c/selection.c into shared SynthLib components — blocked on the
-    above: hit-testing needs to be fully decoupled from render-time global arrays first, same ordering
-    the original note had.
-  - Page-selection tabs — SynthEdit built its own render_page_tabs()/page-tab mechanism independently
-    rather than as a generalization of G2-Edit's topbarControls.def X-macro + set_exclusive_button_
-    highlight() pattern. Both now exist, unrelated to each other. Unifying them into one SynthLib "page
-    tab row" component (with pages as a grouping construct in a shared descriptor schema) is still open —
-    arguably easier now that there are two concrete implementations to compare instead of one plus a
-    proposal.
-  - Design one shared descriptor schema (control type, rect+anchor, range/default, string-map ref,
-    colour-map ref) reusable as both a compile-time C table (G2-Edit) and a runtime-parsed file
-    (SynthEdit) — still just an idea, no prototype. Bigger lift than anything else on this list: G2-Edit's
-    module system (200+ types, dynamic instantiation, morphing) and SynthEdit's flat per-device panel are
-    genuinely different shapes, not just different loaders for the same shape.
-  - Anchor-based layout resolver (adjust_rectangle equivalent) alongside the hit-registry — still open,
-    depends on the descriptor-schema work above.
-  - Evaluate generalizing the msgQueue.c + usbComms.c thread/message-queue pattern into SynthLib as a
-    transport-agnostic comms layer (USB vs MIDI as pluggable backends) — still open, and the highest-value
-    remaining item on this list: EmuUtility/SynthEdit talk to CoreMIDI directly with no queue abstraction
-    at all (UI thread and MIDI thread share state via plain globals + a wake callback), where G2-Edit
-    already has the safer enqueue/dequeue pattern for USB. A smaller, currently-scoped first step: just the
-    CoreMIDI globals (gMidiClient/gMidiInPort/gMidiOutPort/gMidiSource/gMidiDest), the wake-callback
-    boilerplate, and the low-level MIDIPacketList send primitive are identical between EmuUtility and
-    SynthEdit (G2-Edit uses USB, not MIDI, so it's a 2-of-3 candidate) and could move to SynthLib on their
-    own without touching either app's actual scan/connect/dispatch logic, which has diverged for good
-    reason (SynthEdit's is a much more developed generic multi-device framework — deferred identity-reply
-    buffering, three destination-matching fallback strategies, per-source running-status parsing for
-    shared MIDI interfaces — vs EmuUtility's simpler single-device E-mu client) and isn't safe to merge
-    mechanically.
+PARTIALLY DONE / STILL OPEN:
+- Migrate G2-Edit's gParamRectangle[slot][location][index][param] onto the click-region registry —
+  NOT finished. It is a 6MB static array (globalVars.c's own comment says so) still doing double duty:
+  feeds register_click_region() at render time (moduleGraphics.cpp) AND is read directly via
+  within_rectangle() in a few mouseHandle.c spots (~258, 458, 1078) that look like they may predate the
+  click-region migration — worth checking whether those are dead code now shadowed by
+  dispatch_click_region(), or still load-bearing (e.g. mid-drag angle calculation genuinely needs the
+  rect, not just a hit test). Other named hit rects (gPatchParamClose, gTopbarControls[].rectangle) are
+  still direct array indexing too.
+- Generalize mousePanels.c/mouseTopbar.c/selection.c into shared SynthLib components — blocked on the
+  above: hit-testing must be fully decoupled from render-time global arrays first.
+- Page-selection tabs — SynthEdit built its own render_page_tabs()/page-tab mechanism independently
+  rather than as a generalization of G2-Edit's topbarControls.def X-macro + set_exclusive_button_
+  highlight() pattern. Both now exist, unrelated to each other. Unifying them into one SynthLib "page
+  tab row" component (with pages as a grouping construct in a shared descriptor schema) is still open —
+  arguably easier now that there are two concrete implementations to compare instead of one plus a
+  proposal.
+- Design one shared descriptor schema (control type, rect+anchor, range/default, string-map ref,
+  colour-map ref) reusable as both a compile-time C table (G2-Edit) and a runtime-parsed file
+  (SynthEdit) — still just an idea, no prototype. Bigger lift than anything else here: G2-Edit's module
+  system (200+ types, dynamic instantiation, morphing) and SynthEdit's flat per-device panel are
+  genuinely different shapes, not just different loaders for the same shape.
+- Anchor-based layout resolver (adjust_rectangle equivalent) alongside the hit-registry — still open,
+  depends on the descriptor-schema work above.
+- Evaluate generalizing the msgQueue.c + usbComms.c thread/message-queue pattern into SynthLib as a
+  transport-agnostic comms layer (USB vs MIDI as pluggable backends) — still open, and the
+  highest-value remaining item here. EmuUtility/SynthEdit talk to CoreMIDI directly with no queue
+  abstraction (UI thread and MIDI thread share state via plain globals + a wake callback), where
+  G2-Edit already has the safer enqueue/dequeue pattern for USB. Smaller first step is item 4 above.
+  Their scan/connect/dispatch logic has diverged for good reason (SynthEdit's is a much more developed
+  generic multi-device framework — deferred identity-reply buffering, three destination-matching
+  fallback strategies, per-source running-status parsing for shared MIDI interfaces — vs EmuUtility's
+  simpler single-device E-mu client) and is NOT safe to merge mechanically.
 
-  RESOLVED AS MOOT:
-  - "Evaluate extracting menus.c's declarative build/dispatch mechanism into SynthLib" — the underlying
-    mechanism (tMenuItem, open_context_menu, contextMenu.c) is now fully shared via SynthLib. G2-Edit's
-    menus.c is still 2125 lines (EmuUtility/SynthEdit's are 26/95), but what's left is legitimately
-    G2-specific domain action logic (setting parameter values, assigning knobs/CCs/MIDI CCs, module
-    creation, morph labels — all operating on tModule/tParam/tCable, which don't exist in the other two
-    apps), not a duplicated mechanism. Nothing further to extract here.
+
+DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from this file, the constraint is not)
+
+- FT_LOAD_FORCE_AUTOHINT in the glyph rasteriser: tried and REJECTED. Crisper, but it changes glyph
+  advances, and with canonical-advance positioning it renders "R andomA 1" / "554.4H z". Do not re-try
+  without also making get_text_width() use the same hinted advances — which it cannot, as it never sees
+  the device size (gZoomFactor). FT_LOAD_TARGET_LIGHT is the deliberate choice: snaps stems vertically
+  while leaving horizontal metrics linear.
+- Text layout is deliberately NOT driven by the per-size atlases. get_text_width() and everything built
+  on it stay on ONE canonical metrics set (gCanonInfo, measured once at GLYPH_REFERENCE_PX) so widths
+  stay continuous and boxes fit. The pen advances by the canonical advance; only each glyph's final
+  position is rounded. That costs sub-pixel letter spacing and buys pixel alignment — the right trade
+  at 6px.
+- gMaxAscent/gMaxDescent must stay canonical, and the baseline must be derived from that canonical
+  ascent (round(coord.y + gMaxAscent * scaleFactor), rounded ONCE). An earlier version used each
+  atlas's OWN rounded ascent, which rounds a second time against a rasterization whose em height only
+  approximates the requested one — that is what caused the intermittent "text renders slightly low"
+  drop, since the ascent-to-em ratio is not constant across rasterization sizes.
+- Rasterizing 1:1 was tried as a fix for small-text mush and made it WORSE. The root cause was the draw
+  path resampling every glyph at an arbitrary sub-pixel phase, not the atlas size.
+- The 640x360 minimum window size limits INTERACTIVE resizing only, and that is accepted (owner call:
+  do not over-complicate). On macOS, Cocoa applies setContentMinSize:/setContentAspectRatio: to user
+  drags but not to programmatic setFrame:, so glfwSetWindowSize() bypasses it and a windowWidth pref
+  saved below 640 is restored at its saved size. Self-heals as soon as the window is resized by hand.
+- EmuUtility's TARGET_FRAME_BUFF_HEIGHT was changed to 1440 (from 1200) to match the other two at 16:9.
+  Safe because nothing lays out against that constant — it only drives window creation size, the size
+  limit, the aspect lock and the saved-height derivation, while UI scale comes from
+  synthlib_scale_init(TARGET_FRAME_BUFF_WIDTH), i.e. WIDTH only. EmuUtility's content is all
+  top-anchored, so 16:9 just leaves more empty grey below it.
+- The Seq park LED's exclusion from the LED stream is CORRECT and must STAY — it is what keeps the
+  module's other real stream LEDs aligned. (See the open Seq park-LED item above for what is still
+  unknown.)
+- render_volume_meter stays G2-local in moduleGraphics.cpp. Moving it to SynthLib alongside
+  utilsGraphics.cpp was considered and DROPPED: it is pure G2 domain (tVolumeType /
+  tVolumeMeterConfig / volumeMeterStyle* enum + G2 value-bit decode) built entirely on primitives that
+  are ALREADY shared. Moving it would couple SynthLib to G2 module semantics — the opposite of the
+  commonalise goal.
+- mouseHandle.c:1585 — mouse-move calls synthlib_request_redraw() unconditionally on every move. A
+  "only redraw if hover state actually changed" guard (noAction) used to exist and was disabled,
+  commented out rather than deleted. Re-adding it risks reintroducing whatever bug caused it to be
+  pulled (no record of why) for a performance win that is likely marginal on modern hardware. Leave
+  alone unless it is actually observed as a real cost.
+- The reverse-queue design deliberately keeps coalescing dirty-bits as flags, not messages
+  (gotPatchChangeIndication[], gotPerfSettingsChangeIndication, gReDraw, EmuUtility's gNeedLcdFull/
+  gNeedLcdDelta/gLcd.refresh/gLeds, SynthEdit's gRescanNeeded/gReconnectRequested, and
+  gStateDumpDebounceTicks which is a debounce counter). gRescanNeeded is additionally a wait-break
+  condition inside the connect loops' 100ms slices — a flag's job, not a message's.
+- EmuUtility's and SynthEdit's MIDI threads poll-drain with eRcvPoll and do NOT block on eRcvWait like
+  G2-Edit's USB thread. They are CFRunLoop-driven (CoreMIDI's notify callback is tied to that run loop)
+  and have their own time-based cadences; blocking in msg_receive would stall both. Neither app has a
+  gToGuiThread (MIDI->UI) — everything they report upward today is a coalescing dirty-bit, so an empty
+  reverse queue would be speculative.
+- gLcd uses a mutex, not a double-buffer, because deltas mutate the accumulated frame in place so there
+  is no clean front/back to swap. The lock is never held over a GL call.
+- eMsgCmdScanDevices is COALESCED in EmuUtility's drain (a local bool; the scan runs once after the
+  batch) because a rescan is a wanted-state, not an event: one hub plug can fire several
+  kMIDIMsgSetupChanged notifications and each scan walks every destination at 15ms stagger.
+- module->connector[i].type deliberately stores only the raw base type, never the upRate promotion —
+  protocol.c's own upRate-propagation walk depends on it being the permanent declared type. Use
+  effective_connector_type(baseType, upRate) at the point of use instead.
+- menus.c is NOT a commonalise candidate. The underlying mechanism (tMenuItem, open_context_menu,
+  contextMenu.c) is already fully shared via SynthLib. G2-Edit's menus.c is still 2125 lines
+  (EmuUtility/SynthEdit's are 26/95), but what remains is legitimately G2-specific domain action logic
+  operating on tModule/tParam/tCable, which do not exist in the other two apps.
