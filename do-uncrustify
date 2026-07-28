@@ -1,8 +1,26 @@
 #!/bin/zsh
 
 # To run: ./do-uncrustify
+#
+# Formats this project's sources and the shared SynthLib submodule.
+# SynthLib changes land in that submodule's own working tree, so they are
+# reviewed and committed in the SynthLib repo, not this one.
 
-uncrustify -c uncrustify.cfg --no-backup src/*.h
-uncrustify -c uncrustify.cfg --no-backup src/*.c
-uncrustify -c uncrustify.cfg --no-backup src/*.cpp
-uncrustify -c uncrustify.cfg --no-backup src/*.mm
+setopt null_glob
+
+for dir in src SynthLib/src; do
+    if [[ ! -d $dir ]]; then
+        echo "skipping $dir - not found"
+        continue
+    fi
+
+    files=($dir/*.h $dir/*.c $dir/*.cpp $dir/*.mm)
+
+    if (( ${#files} == 0 )); then
+        echo "skipping $dir - no sources"
+        continue
+    fi
+
+    echo "uncrustify: $dir (${#files} files)"
+    uncrustify -c uncrustify.cfg --no-backup $files
+done

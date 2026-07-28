@@ -19,7 +19,7 @@ cd ThirdParty/freetype
 cmake -B build \
       -DBUILD_SHARED_LIBS=OFF \
       -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
-      -DCMAKE_OSX_DEPLOYMENT_TARGET=15.1 \
+      -DCMAKE_OSX_DEPLOYMENT_TARGET=11.5 \
       -DFT_DISABLE_PNG=ON \
       -DFT_DISABLE_ZLIB=ON \
       -DFT_DISABLE_BZIP2=ON \
@@ -37,7 +37,7 @@ cmake -B build \
     -DGLFW_BUILD_TESTS=OFF \
     -DGLFW_BUILD_DOCS=OFF \
     -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
-    -DCMAKE_OSX_DEPLOYMENT_TARGET=15.1
+    -DCMAKE_OSX_DEPLOYMENT_TARGET=11.5
 
 cmake --build build --config Release
 
