@@ -70,7 +70,7 @@ cmake -S SynthLib/ThirdParty/glfw -B SynthLib/ThirdParty/glfw/build \
   -DGLFW_BUILD_EXAMPLES=OFF \
   -DGLFW_BUILD_TESTS=OFF \
   -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
-  -DCMAKE_OSX_DEPLOYMENT_TARGET=15.1
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=11.5
 cmake --build SynthLib/ThirdParty/glfw/build
 ```
 
@@ -80,7 +80,7 @@ cmake --build SynthLib/ThirdParty/glfw/build
 cmake -S SynthLib/ThirdParty/freetype -B SynthLib/ThirdParty/freetype/build \
   -DBUILD_SHARED_LIBS=OFF \
   -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
-  -DCMAKE_OSX_DEPLOYMENT_TARGET=15.1 \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=11.5 \
   -DFT_DISABLE_BROTLI=ON \
   -DFT_DISABLE_BZIP2=ON \
   -DFT_DISABLE_HVF=ON \

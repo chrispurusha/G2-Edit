@@ -18,8 +18,14 @@ G2-Edit TODO (priority order)
   KNOWN AND ACCEPTED (owner call: don't over-complicate): this limits INTERACTIVE resizing only. On macOS,
   Cocoa applies setContentMinSize:/setContentAspectRatio: to user drags but not to programmatic setFrame:,
   so glfwSetWindowSize() bypasses it — a windowWidth pref saved below 640 is restored at its saved size
-  (confirmed: pref 414 -> a 414pt window). Self-heals as soon as the window is resized by hand. Only
-  G2-Edit changed; EmuUtility and SynthEdit still use TARGET/8.
+  (confirmed: pref 414 -> a 414pt window). Self-heals as soon as the window is resized by hand.
+  APPLIED TO ALL THREE PROJECTS (2026-07-28): G2-Edit and SynthEdit are 2560x1440 so both get 640x360.
+  EmuUtility was 2560x1200 (32:15) and its TARGET_FRAME_BUFF_HEIGHT was changed to 1440 so it matches the
+  other two at 16:9, also 640x360. Safe because nothing lays out against that constant — it only drives
+  window creation size, the size limit, the aspect lock and the saved-height derivation, while the UI
+  scale comes from synthlib_scale_init(TARGET_FRAME_BUFF_WIDTH), i.e. WIDTH only. EmuUtility's content
+  (LCD, button panel, dial, keypad) is all top-anchored, so 16:9 just leaves more empty grey below it —
+  verified by running it. Owner accepted that ("can probably stay at 16:9 for now").
 
 - Text rendering quality, PART 2: pixel-exact glyph rendering — DONE 2026-07-28, UNCOMMITTED, verified on
   a REAL 1600x900 1x display (the case part 1 could not test). Part 1 below made large windows good but
