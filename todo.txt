@@ -11,6 +11,41 @@ G2-Edit TODO (priority order)
   push SynthLib, advance pins in all 3 projects. Built OK in G2-Edit (Retina). NEEDS owner verify on a real
   non-Retina/Low-Res display. G2-Edit build verified.
 
+- Text rendering quality at low resolution / small windows — DONE 2026-07-28 via scale-aware
+  re-rasterization (approach (b)); mipmapping (a) NOT needed and NOT done. Separate from the HiDPI scale
+  fix above: that one fixed the quarter-size COLLAPSE, this is the softness/blockiness of the text itself.
+  ROOT CAUSE (SynthLib/src/utilsGraphics.cpp, preload_glyph_textures): the glyph atlas was rasterized ONCE
+  at a fixed 72px (call site: G2-Edit src/graphics.cpp:621, same 72.0 in EmuUtility + SynthEdit) with
+  GL_LINEAR and never rebuilt. Wrong in BOTH directions: in a small window / on a 1x display those 72px
+  glyphs are minified to ~7-12px through plain bilinear (undersampled -> blocky), and in a large or
+  zoomed window text is drawn LARGER than 72px so the glyphs are magnified (blurry).
+  FIX: the atlas now re-rasterizes at the size text is actually drawn at.
+    * Trigger is the drawn text height in framebuffer pixels (track_text_size, called from
+      internal_render_text) — NOT gGlobalGuiScale, because module text is additionally scaled by
+      gZoomFactor and only the final drawn height sees both. Grows immediately when text stops fitting;
+      shrinks only after a 512-draw window stays small (hysteresis, so it can't oscillate). Sizes are
+      quantised to 8px steps so a live resize drag causes a few rebuilds, not one per frame.
+    * GLYPH_ATLAS_SUPERSAMPLE = 2.0 — rasterize 2x the largest drawn text, NOT 1:1. Measured: at 1:1 a
+      single atlas still minifies every text size below the largest, and that washes hairline features
+      (the dot of a decimal point in "1.05kHz"/"0.50") out to pale grey. 2.0 keeps old stroke weight AND
+      gains the smooth edges. Verified by exact same-pixel crops of before/after screenshots.
+    * Atlas is now sized to its content with row-wrapping (was a SINGLE unwrapped row with no bounds
+      guard, in a fixed 8192x8192 = 256MB RGBA texture for ~95 glyphs). Typical atlas is now 512x64 to
+      512x2048 — ~1-4MB. Composed CPU-side and uploaded in one glTexImage2D; every texel initialised to
+      transparent white (it was created with NULL data, i.e. UNDEFINED padding, which bilinear filtering
+      at glyph edges could sample).
+    * Also fixed in passing: the extra letter-spacing fudge was a hardcoded +1.0 atlas pixel, which would
+      change spacing on every rebuild — now proportional to the rasterization size; the get_text_width
+      cache is cleared on rebuild (cached widths came from the old metrics); and render_text indexed the
+      glyph table with a SIGNED char, so any byte >127 read out of bounds.
+  MEASURED on Retina at a 700pt window (mildest case; ratio ~7x): menu-bar text goes from ragged
+  stair-stepped strokes to evenly weighted antialiased ones; small module readouts keep their old weight.
+  Grow path verified at zoomFactor 2.0 (atlas 72->128px, one rebuild, 4 byte-identical frames = stable).
+  SHARED SynthLib CODE — EmuUtility + SynthEdit get it too (API unchanged, they still pass 72.0 as the
+  starting size). Needs commit + push SynthLib, advance pins in all 3 projects.
+  STILL NEEDS owner verify on a real non-Retina/Low-Res display — this machine is Retina, so the case you
+  actually complained about (1600x900, 1x) has NOT been seen with this fix.
+
 - TOOLING (added 2026-07-27, built + proven): backdoor test-control channel in graphics.cpp, ported from
   SynthEdit. ENV-GATED — only active when launched with G2_EDIT_BACKDOOR=1; a normal double-click launch
   leaves it completely inert and keeps the idle loop's full glfwWaitEvents() sleep. LOCAL-ONLY by design —
