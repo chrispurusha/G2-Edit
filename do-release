@@ -3,19 +3,22 @@
 # Builds a universal (arm64 + x86_64) Release binary and packages it as a .dmg
 # ready to attach to a GitHub release.
 #
-# Versions are tagged V<super-major>.<major>.<minor>-beta.<n>, and the .dmg is
-# normally built BEFORE the tag exists. So name the part you are bumping and the
-# next version is worked out from the newest existing tag:
+# Versions are semver: V<major>.<minor>.<patch>-beta.<n>. The .dmg is normally
+# built BEFORE the tag exists, so name the part you are bumping and the next
+# version is worked out from the newest existing tag:
 #
-#   ./do-release beta          V0.5.0-beta.6 -> V0.5.0-beta.7   (the usual one)
-#   ./do-release minor         V0.5.0-beta.6 -> V0.5.1-beta.1
-#   ./do-release major         V0.5.0-beta.6 -> V0.6.0-beta.1
-#   ./do-release super-major   V0.5.0-beta.6 -> V1.0.0-beta.1
-#   ./do-release final         V0.5.0-beta.6 -> V0.5.0          (drops -beta.n)
+#   ./do-release beta      V0.5.0-beta.6 -> V0.5.0-beta.7   (the usual one)
+#   ./do-release patch     V0.5.0-beta.6 -> V0.5.1-beta.1
+#   ./do-release minor     V0.5.0-beta.6 -> V0.6.0-beta.1
+#   ./do-release major     V0.5.0-beta.6 -> V1.0.0-beta.1
+#   ./do-release final     V0.5.0-beta.6 -> V0.5.0           (drops -beta.n)
 #
-#   ./do-release 0.9.0-rc1     an explicit version, used as given
-#   ./do-release               reuse the newest tag as-is (rebuild an old release)
-#   ./do-release beta ~/tmp    any of the above, into a different directory
+#   ./do-release 0.9.0-rc1 an explicit version, used as given
+#   ./do-release           reuse the newest tag as-is (rebuild an old release)
+#   ./do-release beta ~/tmp any of the above, into a different directory
+#
+# Under semver, 0.x.y means the interface is still unstable - so bumping to 1.0.0
+# is a deliberate statement that it has settled, not just "the next big one".
 #
 # This script never creates or pushes the tag - it prints the git command for you
 # to run once you are happy with the .dmg.
@@ -57,44 +60,54 @@ LATEST=$(git tag --list --sort=-v:refname 'V*' 2>/dev/null | head -1)
 NEW_TAG=""
 
 case "$ARG_BUMP" in
-    super-major|major|minor|beta|final)
+    super-major)
+        # Retired name from the pre-semver scheme. Rejected rather than silently
+        # treated as a literal version string, which would build "G2-Edit-super-major.dmg".
+        echo "error: 'super-major' is the old name for what semver calls 'major'." >&2
+        echo "       The names shifted by one when this switched to semver:" >&2
+        echo "           super-major -> major     minor -> patch" >&2
+        echo "           major       -> minor     beta  -> beta" >&2
+        exit 1
+        ;;
+
+    major|minor|patch|beta|final)
         if [[ -z $LATEST ]]; then
             echo "error: no existing V* tag to bump from." >&2
             echo "       give an explicit version instead: ./do-release 0.1.0-beta.1" >&2
             exit 1
         fi
 
-        # V<super-major>.<major>.<minor>[-beta.<n>]
+        # V<major>.<minor>.<patch>[-beta.<n>]
         if [[ ! $LATEST =~ '^[Vv]([0-9]+)\.([0-9]+)\.([0-9]+)(-beta\.([0-9]+))?$' ]]; then
             echo "error: newest tag '$LATEST' is not V<n>.<n>.<n>[-beta.<n>]," >&2
             echo "       so it cannot be bumped. Give an explicit version instead." >&2
             exit 1
         fi
 
-        SUPER=$match[1]
-        MAJOR=$match[2]
-        MINOR=$match[3]
+        MAJOR=$match[1]
+        MINOR=$match[2]
+        PATCH=$match[3]
         BETA=$match[5]
 
         case "$ARG_BUMP" in
-            super-major) (( SUPER++ )); MAJOR=0; MINOR=0; BETA=1 ;;
-            major)       (( MAJOR++ ));          MINOR=0; BETA=1 ;;
-            minor)       (( MINOR++ ));                   BETA=1 ;;
+            major) (( MAJOR++ )); MINOR=0; PATCH=0; BETA=1 ;;
+            minor) (( MINOR++ ));          PATCH=0; BETA=1 ;;
+            patch) (( PATCH++ ));                   BETA=1 ;;
             beta)
                 if [[ -z $BETA ]]; then
                     echo "error: '$LATEST' has no -beta.n to bump." >&2
-                    echo "       use 'minor' to start a new beta series." >&2
+                    echo "       use 'patch' to start a new beta series." >&2
                     exit 1
                 fi
                 (( BETA++ ))
                 ;;
-            final)       BETA="" ;;
+            final) BETA="" ;;
         esac
 
         if [[ -n $BETA ]]; then
-            NEW_TAG="V$SUPER.$MAJOR.$MINOR-beta.$BETA"
+            NEW_TAG="V$MAJOR.$MINOR.$PATCH-beta.$BETA"
         else
-            NEW_TAG="V$SUPER.$MAJOR.$MINOR"
+            NEW_TAG="V$MAJOR.$MINOR.$PATCH"
         fi
 
         if git rev-parse -q --verify "refs/tags/$NEW_TAG" >/dev/null; then
@@ -125,6 +138,15 @@ case "$ARG_BUMP" in
         ;;
 
     *)
+        # An explicit version. Require it to start like one, so a mistyped keyword
+        # ("bета", "pacth") is caught here instead of producing G2-Edit-pacth.dmg.
+        if [[ ! $ARG_BUMP =~ '^[Vv]?[0-9]+\.' ]]; then
+            echo "error: '$ARG_BUMP' is not a bump keyword or a version number." >&2
+            echo "       keywords: major minor patch beta final" >&2
+            echo "       or give a version: ./do-release 0.9.0-rc1" >&2
+            exit 1
+        fi
+
         VERSION="$ARG_BUMP"
         echo "==> version $VERSION (specified)"
         ;;
@@ -140,9 +162,15 @@ VERSION_CLEAN="${VERSION#[Vv]}"
 
 # --- build ---------------------------------------------------------------
 
-echo "==> building universal Release"
+echo "==> clean build, universal Release"
 
+# Always build from scratch. Deleting the derived data is stronger than
+# "xcodebuild clean": it also discards the module cache and any stale headers, so
+# a release can never pick up something left behind by an earlier Debug build.
+# Using a private -derivedDataPath keeps this away from Xcode's own build dir, so
+# running this does not force a full rebuild next time you open the IDE.
 rm -rf $DERIVED
+
 xcodebuild \
     -project $PROJECT \
     -scheme $SCHEME \
@@ -154,7 +182,7 @@ xcodebuild \
     CODE_SIGN_STYLE=Manual \
     DEVELOPMENT_TEAM="" \
     MARKETING_VERSION="$VERSION_CLEAN" \
-    build
+    clean build
 
 APP="$DERIVED/Build/Products/Release/$APP_NAME"
 
