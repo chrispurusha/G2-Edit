@@ -2068,6 +2068,11 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
     } else if (gContextMenu.active && key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         close_context_menu();
         synthlib_request_redraw();
+#ifdef ENABLE_MOUSE_CROSSHAIR
+    } else if (key == GLFW_KEY_F9 && action == GLFW_PRESS) {
+        toggle_mouse_crosshair(); // TEMPORARY debug aid — Debug builds only
+        synthlib_request_redraw();
+#endif
     } else if ((key == GLFW_KEY_DELETE || key == GLFW_KEY_BACKSPACE) && action == GLFW_PRESS) {
         if (gSelection.count > 0) {
             undo_push_delete_selection();
