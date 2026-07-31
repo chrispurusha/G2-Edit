@@ -2678,7 +2678,7 @@ const tLedLocation       ledLocationList[]       = {
     {moduleTypeDelay,      ledTypeYes,  {{ -6,  4}, {3, 3}}, anchorTopRight}, // XPos:242 YPos:4  H:2
     {moduleTypeDrumSynth,  ledTypeYes,  {{  9, 10}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:39 H:8
     {moduleTypeWindSw,     ledTypeYes,  {{3, 7}, {3, 3}}, anchorTopLeft}, // XPos:198 YPos:15 H:2
-    {moduleTypeNoteDet,    ledTypeYes,  {{-24, 15}, {3, 3}}, anchorTopRight}, // XPos:186 YPos:15 H:2
+    {moduleTypeNoteDet,    ledTypeYes,  {{3, 7}, {3, 3}}, anchorTopLeft}, // XPos:186 YPos:15 H:2
     {moduleTypeNoiseGate,  ledTypeYes,  {{-15, 21}, {3, 3}}, anchorTopRight}, // XPos:213 YPos:32 H:3
     {moduleTypePitchTrack, ledTypeYes,  {{3, 7}, {3, 3}}, anchorTopLeft}, // XPos:212 YPos:15 H:2
     {moduleTypeRandomA,    ledTypeYes,  {{-11,  4}, {3, 3}}, anchorTopRight}, // XPos:226 YPos:4  H:2
