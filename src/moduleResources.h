@@ -2677,10 +2677,10 @@ const tLedLocation       ledLocationList[]       = {
     {moduleTypePulse,      ledTypeYes,  {{ -6,  4}, {3, 3}}, anchorTopRight}, // XPos:242 YPos:4  H:2
     {moduleTypeDelay,      ledTypeYes,  {{ -6,  4}, {3, 3}}, anchorTopRight}, // XPos:242 YPos:4  H:2
     {moduleTypeDrumSynth,  ledTypeYes,  {{  9, 10}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:39 H:8
-    {moduleTypeWindSw,     ledTypeYes,  {{-20, 15}, {3, 3}}, anchorTopRight}, // XPos:198 YPos:15 H:2
+    {moduleTypeWindSw,     ledTypeYes,  {{3, 7}, {3, 3}}, anchorTopLeft}, // XPos:198 YPos:15 H:2
     {moduleTypeNoteDet,    ledTypeYes,  {{-24, 15}, {3, 3}}, anchorTopRight}, // XPos:186 YPos:15 H:2
     {moduleTypeNoiseGate,  ledTypeYes,  {{-15, 21}, {3, 3}}, anchorTopRight}, // XPos:213 YPos:32 H:3
-    {moduleTypePitchTrack, ledTypeYes,  {{-16, 15}, {3, 3}}, anchorTopRight}, // XPos:212 YPos:15 H:2
+    {moduleTypePitchTrack, ledTypeYes,  {{3, 7}, {3, 3}}, anchorTopLeft}, // XPos:212 YPos:15 H:2
     {moduleTypeRandomA,    ledTypeYes,  {{-11,  4}, {3, 3}}, anchorTopRight}, // XPos:226 YPos:4  H:2
     {moduleTypeRandomB,    ledTypeYes,  {{ -6, 14}, {3, 3}}, anchorTopRight}, // XPos:242 YPos:21 H:3
     {moduleTypeOperator,   ledTypeYes,  {{  8, 13}, {3, 3}}, anchorTopLeft }, // XPos:17  YPos:77 H:12
