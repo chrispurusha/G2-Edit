@@ -217,6 +217,24 @@ static void action_copy_variation(int index) {
 
 // ── Module / cable / morph actions ─────────────────────────────────────────
 
+// Every cable command carries the same key fields; only the command itself and the
+// colour differ (send_delete_cable() ignores the colour).
+static void send_cable_message(uint32_t cmd, uint32_t slot, uint32_t location, tCableKey * key, uint32_t colour) {
+    tMessageContent messageContent = {0};
+
+    messageContent.cmd                            = cmd;
+    messageContent.slot                           = slot;
+    messageContent.cableData.location             = location;
+    messageContent.cableData.moduleFromIndex      = key->moduleFromIndex;
+    messageContent.cableData.connectorFromIoIndex = key->connectorFromIoCount;
+    messageContent.cableData.moduleToIndex        = key->moduleToIndex;
+    messageContent.cableData.connectorToIoIndex   = key->connectorToIoCount;
+    messageContent.cableData.linkType             = key->linkType;
+    messageContent.cableData.colour               = colour;
+
+    msg_send(&gToUsbThread, &messageContent);
+}
+
 static void menu_action_set_cable_colour(int index) {
     uint32_t  newColour = gContextMenu.items[index].param;
     uint32_t  slot      = gSlot;
@@ -271,19 +289,8 @@ static void menu_action_set_cable_colour(int index) {
         }
 
         if (doUpdate) {
-            cable->colour                                 = newColour;
-
-            tMessageContent messageContent = {0};
-            messageContent.cmd                            = eMsgCmdWriteCable;
-            messageContent.slot                           = slot;
-            messageContent.cableData.location             = location;
-            messageContent.cableData.moduleFromIndex      = cable->key.moduleFromIndex;
-            messageContent.cableData.connectorFromIoIndex = cable->key.connectorFromIoCount;
-            messageContent.cableData.moduleToIndex        = cable->key.moduleToIndex;
-            messageContent.cableData.connectorToIoIndex   = cable->key.connectorToIoCount;
-            messageContent.cableData.linkType             = cable->key.linkType;
-            messageContent.cableData.colour               = newColour;
-            msg_send(&gToUsbThread, &messageContent);
+            cable->colour = newColour;
+            send_cable_message(eMsgCmdWriteCable, slot, location, &cable->key, newColour);
         }
     }
 
@@ -339,25 +346,205 @@ static void menu_action_delete_cable(int index) {
             }
 
             if (doDelete) {
-                tMessageContent messageContent = {0};
-
-                messageContent.cmd                            = eMsgCmdDeleteCable;
-                messageContent.slot                           = slot;
-                messageContent.cableData.location             = location;
-                messageContent.cableData.moduleFromIndex      = cable->key.moduleFromIndex;
-                messageContent.cableData.connectorFromIoIndex = cable->key.connectorFromIoCount;
-                messageContent.cableData.moduleToIndex        = cable->key.moduleToIndex;
-                messageContent.cableData.connectorToIoIndex   = cable->key.connectorToIoCount;
-                messageContent.cableData.linkType             = cable->key.linkType;
-
-                msg_send(&gToUsbThread, &messageContent);
-
+                send_cable_message(eMsgCmdDeleteCable, slot, location, &cable->key, cable->colour);
                 delete_cable(cable->key);
             }
         }
 
         update_module_up_rates();
     }
+}
+
+// A break point is one input that has just lost whatever fed it. Both flavours of BREAK
+// produce a list of these.
+typedef struct {
+    uint32_t moduleIndex;
+    uint32_t ioCount;
+} tOrphanedInput;
+
+// Walks FORWARD from an input that no longer has a feed, following input-to-input links
+// only, and recolours everything it reaches white — the manual's indication for cables
+// that are still connected but carry no signal.
+//
+// Each input can have at most one incoming cable (input_connector_has_cable() enforces
+// that at connect time), so the reachable set is a tree and the walk cannot loop; the
+// visited counter is belt-and-braces in case a loaded patch has a malformed cable list.
+static void whiten_orphaned_chain(uint32_t slot, uint32_t location, tOrphanedInput start) {
+    tOrphanedInput pending[MAX_NUM_CABLES];
+    uint32_t       pendingCount = 0;
+    uint32_t       visited      = 0;
+
+    pending[pendingCount++] = start;
+
+    while ((pendingCount > 0) && (visited < MAX_NUM_CABLES)) {
+        tOrphanedInput from = pending[--pendingCount];
+
+        visited++;
+
+        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+            tCable * cable = get_cable_slot(slot, location, i);
+
+            if (cable == NULL || !cable->active) {
+                continue;
+            }
+
+            if (  (cable->key.linkType != cableLinkTypeFromInput)
+               || (cable->key.moduleFromIndex != from.moduleIndex)
+               || (cable->key.connectorFromIoCount != from.ioCount)) {
+                continue;
+            }
+
+            if (cable->colour != cableColourWhite) {
+                cable->colour = cableColourWhite;
+                send_cable_message(eMsgCmdWriteCable, slot, location, &cable->key, cable->colour);
+            }
+
+            if (pendingCount < MAX_NUM_CABLES) {
+                pending[pendingCount++] = (tOrphanedInput){
+                    cable->key.moduleToIndex, cable->key.connectorToIoCount
+                };
+            }
+        }
+    }
+}
+
+// Traces back up a serial chain from an input, following the one cable that feeds each
+// input in turn, and reports whether the chain ultimately reaches an output.
+//
+// The original refuses to break a chain that has no source: GetBreakCableNodeMolecules()
+// wraps its entire body — the delete included — in a GetCableChainID() guard, and a chain
+// with no output feeding it has no chain ID. Such a chain is already dead, so there is
+// nothing left to break. Confirmed against the real editor 2026-07-31: breaking mid-chain
+// with the oscillator disconnected does nothing at all.
+static bool input_chain_has_source(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t ioCount) {
+    for (uint32_t step = 0; step < MAX_NUM_CABLES; step++) {
+        tCable * feed = NULL;
+
+        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+            tCable * cable = get_cable_slot(slot, location, i);
+
+            if (cable == NULL || !cable->active) {
+                continue;
+            }
+
+            if (  (cable->key.moduleToIndex == moduleIndex)
+               && (cable->key.connectorToIoCount == ioCount)) {
+                feed = cable;
+                break;
+            }
+        }
+
+        if (feed == NULL) {
+            return false;  // Ran out of chain without ever reaching an output
+        }
+
+        if (feed->key.linkType == cableLinkTypeFromOutput) {
+            return true;
+        }
+        moduleIndex = feed->key.moduleFromIndex;
+        ioCount     = feed->key.connectorFromIoCount;
+    }
+
+    return false;
+}
+
+// BREAK, per the original editor's cable popup (see "BREAK" in Original Editor/g2manual.txt).
+// Splits a serial cable chain WITHOUT rerouting it, which is what separates it from
+// Disconnect: the part of the chain that still reaches an output keeps working, and
+// everything past the break stays connected but dead, shown white.
+//
+// At an input, the cable feeding that input goes and the input's own onward chain is the
+// dead tail. At an output, every cable leaving that output goes, and each input it was
+// feeding heads a dead tail of its own.
+static void menu_action_break_cable(int index) {
+    uint32_t       slot          = gSlot;
+    uint32_t       location      = gLocation;
+    tOrphanedInput orphaned[MAX_NUM_CABLES];
+    uint32_t       orphanedCount = 0;
+    bool           deletedAny    = false;
+
+    (void)index;
+
+    if ((gMenuContext.moduleKey.slot != slot) || (gMenuContext.moduleKey.location != location)) {
+        return;
+    }
+    tModule *      module        = get_module(gMenuContext.moduleKey);
+
+    if (module == NULL) {
+        return;
+    }
+
+    if (module->connector[gMenuContext.connectorIndex].dir == connectorDirIn) {
+        int inIndex = find_io_count_from_index(module, connectorDirIn, gMenuContext.connectorIndex);
+
+        if (inIndex < 0) {
+            return;
+        }
+
+        // An already-sourceless chain is already broken - leave it entirely alone
+        if (!input_chain_has_source(slot, location, gMenuContext.moduleKey.index, (uint32_t)inIndex)) {
+            return;
+        }
+
+        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+            tCable * cable = get_cable_slot(slot, location, i);
+
+            if (cable == NULL || !cable->active) {
+                continue;
+            }
+
+            if (  (cable->key.moduleToIndex == gMenuContext.moduleKey.index)
+               && ((int)cable->key.connectorToIoCount == inIndex)) {
+                send_cable_message(eMsgCmdDeleteCable, slot, location, &cable->key, cable->colour);
+                delete_cable(cable->key);
+                deletedAny = true;
+            }
+        }
+
+        orphaned[orphanedCount++] = (tOrphanedInput){
+            gMenuContext.moduleKey.index, (uint32_t)inIndex
+        };
+    } else {
+        int outIndex = find_io_count_from_index(module, connectorDirOut, gMenuContext.connectorIndex);
+
+        if (outIndex < 0) {
+            return;
+        }
+
+        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+            tCable * cable = get_cable_slot(slot, location, i);
+
+            if (cable == NULL || !cable->active) {
+                continue;
+            }
+
+            if (  (cable->key.linkType != cableLinkTypeFromOutput)
+               || (cable->key.moduleFromIndex != gMenuContext.moduleKey.index)
+               || ((int)cable->key.connectorFromIoCount != outIndex)) {
+                continue;
+            }
+
+            if (orphanedCount < MAX_NUM_CABLES) {
+                orphaned[orphanedCount++] = (tOrphanedInput){
+                    cable->key.moduleToIndex, cable->key.connectorToIoCount
+                };
+            }
+            send_cable_message(eMsgCmdDeleteCable, slot, location, &cable->key, cable->colour);
+            delete_cable(cable->key);
+            deletedAny = true;
+        }
+    }
+
+    if (!deletedAny) {
+        return;  // Nothing was connected here, so there is nothing to break
+    }
+
+    for (uint32_t i = 0; i < orphanedCount; i++) {
+        whiten_orphaned_chain(slot, location, orphaned[i]);
+    }
+
+    update_module_up_rates();
+    synthlib_request_redraw();
 }
 
 static void ensure_module_selected(void) {
@@ -1741,6 +1928,7 @@ void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t co
 
     static tMenuItem menuItems[]        = {
         {"Delete cable", RGB_GREY_3, menu_action_delete_cable, 0, NULL            },
+        {"Break",        RGB_GREY_3, menu_action_break_cable,  0, NULL            },
         {"Cable colour", RGB_GREY_3, NULL,                     0, cableColourItems},
         {NULL,           RGB_BLACK,  NULL,                     0, NULL            }
     };

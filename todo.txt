@@ -259,13 +259,233 @@ none of these exist in G2-Edit at all, confirmed by source search)
 - Virtual/On-Screen Keyboard (Ctrl-K) — floating window to play notes with the mouse: click-to-sound
   keys (sustains while held), horizontal resize to widen the visible note range, octave/note scroll
   buttons, and Drone / Repeat toggles. Zero references anywhere in the source.
-- Cable BREAK action — the right-click cable popup currently only has Disconnect
-  (menu_action_delete_cable, menus.c — removes one cable, auto-rerouting any remaining serial chain
-  to stay functional). The original ALSO has Break: splits a serial chain at one point WITHOUT
-  rerouting — everything before the break keeps working, everything after becomes "connected but
-  non-functional" and turns white to show it is dead wire. G2-Edit already has the CONCEPT of these
-  white cables (see the "delete non-functional input-to-input connections" cleanup in menus.c), just
-  no UI action that creates them.
+- Cable popup — two of the original's five items are still missing. DONE 2026-07-30: Break
+  (menu_action_break_cable + whiten_orphaned_chain, menus.c) splits a serial chain at one point
+  WITHOUT rerouting; everything past the break stays connected but dead and is recoloured white,
+  per the manual. Break at an input drops the cable feeding that input; break at an output drops
+  every cable leaving it. Untested on G2 hardware.
+  Behaviour checked against the REAL original editor 2026-07-31, which found one bug, now fixed:
+  Break is a NO-OP on a chain that has no signal source. GetBreakCableNodeMolecules() wraps its
+  whole body — the delete included — in a GetCableChainID() guard, and a chain with no output
+  feeding it has no chain ID, so it is already dead and there is nothing left to break. We were
+  deleting the parent link regardless; input_chain_has_source() now gates it.
+  Also confirmed there: with nothing chained below the break point Break is visually identical to
+  Disconnect, which is why it looks inert in most simple patches. It only becomes distinguishable
+  when the input broken at feeds further inputs.
+
+  THE FOUR COMMANDS, as established from the decompile (all colour effects follow the one invariant
+  described in the "White cables" entry below — chain shares the source's colour, white if no source):
+   * DISCONNECT (GetDisconnectCableNodeMolecules, 163473) — splices the clicked connector OUT of the
+     chain and joins the chain back together around it. Deletes the clicked node's link to its
+     parent, then for EACH CHILD deletes child->node and reconnects child->parent. Everything stays
+     functional, so the chain keeps its colour. This is the "and reroute" the manual mentions.
+   * BREAK (GetBreakCableNodeMolecules, 163878) — same cut, NO splice. At an input: recolour the
+     subtree white, delete the link to the parent. At the chain root: recolour the whole chain
+     white, delete every cable leaving the output. Whole thing is a no-op if the chain has no
+     source. The tail stays connected but dead, which is what white means.
+   * DELETE (GetDeleteCableChainMolecules, 158869) — deletes the ENTIRE serial chain the connection
+     belongs to. Owner confirmed this behaviour in the real editor 2026-07-31. Per the manual, a
+     branch must be deleted from its origin. NOT read in the decompile yet.
+   * DELETE UNUSED CABLES — patch-wide sweep removing every white cable. Given the invariant, white
+     is exactly "chain has no source", so this is well defined and needs no hit-testing. Manual
+     only; not located in the decompile yet.
+   * (COLOR is the fifth popup item — a colour submenu that applies to the WHOLE chain, not one
+     cable. G2-Edit's is per-connector; see gap 3 below.)
+
+  MODEL MISMATCH (the reason the remaining items are awkward): the original's popup is per-CABLE
+  — you right-click a cable — so Disconnect ("this cable") and Delete ("the chain this cable is
+  in") have an unambiguous referent. G2-Edit's popup is per-CONNECTOR, where an output feeding
+  three modules has three cables and "this cable" means nothing. Break ports cleanly only because
+  it is connector-keyed in the original too (GetBreakCableNodeMolecules takes a CConnector, not a
+  cable). Our "Delete cable" matches NONE of the original's four — it deletes every cable touching
+  the clicked connector, which on a mid-chain input is the feeding cable plus all onward links.
+  STILL MISSING — *** NO DECISION TAKEN ON ANY OF THESE ***. Listed as options with their costs,
+  not as agreed work. Whether G2-Edit should converge on the original's per-cable model at all is
+  itself undecided; staying per-connector and simply not having Disconnect is a legitimate answer.
+   * Delete (whole chain). Reachable from a connector: walk to the chain root, delete the tree.
+     Would also let "Delete cable" be renamed to something honest.
+   * Delete Unused Cables (patch-wide sweep removing every white/non-functional input-to-input
+     connection). Natural companion to Break, which is currently the only thing that creates them —
+     without it white cables can only be cleared one connector at a time.
+   * Disconnect (delete ONE cable and REROUTE the remaining chain so it keeps working). This is
+     the ONLY one that genuinely needs cable hit-testing — sample points along the sag curve in
+     render_cable_from_to() and take nearest-distance. Doing that would also give us the
+     original's actual cable popup if we ever want to converge on its model properly.
+  Note neither Break nor the existing cable actions are undoable; no cable op in menus.c is.
+  Also unused: SUB_COMMAND_WRITE_CABLE_COLOUR (0x54, defs.h) is defined but never sent — recolour
+  currently goes out as a full SUB_COMMAND_WRITE_CABLE (0x50) against an already-existing cable.
+  The original has a distinct CMCableRecolor molecule, so 0x54 is probably the right command; if
+  Break's white cables do not stick on hardware, change that first.
+
+- White cables are not just a Break side-effect — observed 2026-07-31 in the original editor.
+  MINIMAL CASE: on a new patch, link TWO mixer inputs to each other. That single input-to-input
+  cable comes up WHITE immediately. No Break involved, no chain, nothing ever connected to a
+  source. (Assumed to be the original editor rather than G2-Edit, since G2-Edit cannot currently
+  produce a white cable except via Break — cable_colour_for_connector_type() never returns white.)
+  So the manual's line "Any non-functional input-to-input connections are indicated by white cable
+  color" is a standing INVARIANT the editor maintains, not a one-off thing Break does:
+      chain traces back to an output  -> cables carry the chain's colour
+      chain has no source             -> cables are white
+  This retro-explains the Break chain-ID guard perfectly: a sourceless chain's cables are ALREADY
+  white, so there is nothing to recolour and nothing to break, hence the whole-body no-op.
+  G2-Edit does NOT maintain this. handle_cable_connect() (mouseHandle.c) assigns
+  cable_colour_for_connector_type() at creation, which never returns white, so we show a coloured
+  cable everywhere the original shows a dead white one.
+  RULE SETTLED from the decompile 2026-07-31 — no hardware test needed. THE INVARIANT IS:
+      every cable in a chain shares ONE colour = the source output's signal-type colour,
+      or WHITE (6) if the chain has no source output at all.
+
+  REFINEMENT — colour is NOT purely derived, and this is the constraint that decides the design:
+  the COLOR menu can set green or purple, which no signal type ever produces, so chain colour is
+  STORED and USER-OVERRIDABLE. White is not a user colour at all; it is a STATE meaning "this chain
+  has no source". The two coexist because the original only overwrites a user's choice on a
+  TOPOLOGY change — GetConnectRecolorMolecules recolours the whole tree to the signal colour when a
+  source is attached, discarding any override. So:
+      RECOMPUTE A CHAIN'S COLOUR ONLY WHEN ITS SOURCE-REACHABILITY CHANGES, NEVER UNCONDITIONALLY.
+  A chain that keeps its source across some unrelated edit must be left alone, or we destroy the
+  user's colour choice for no reason. A blind "recompute everything after every edit" would do
+  exactly that and is wrong, however tempting its simplicity.
+  DESIGN CONSEQUENCE: get that condition right and ONE central conditional recompute, called after
+  every database mutation, is MORE robust than mirroring the original's per-operation recolours —
+  the failure mode becomes "called too often", which is harmless because it is idempotent, instead
+  of "missed a trigger", which strands a coloured sourceless chain the original cannot represent.
+  It also means the trigger enumeration in NEXT SESSION item (c) stops being load-bearing: useful
+  as a cross-check, no longer something we must get exhaustively right.
+  ON CREATION the rule is INHERITANCE, not computation: a new cable whose source end is an output
+  takes the signal colour; one whose source end is an input takes whatever colour that input's
+  chain already has. White therefore propagates rather than being calculated. STILL OPEN: where the
+  FIRST white comes from — if white is only ever inherited, an untouched connector node must
+  already be 6 before any cable exists. Either unconnected nodes default to 6, or there is a
+  chain-ID-zero substitution at the CTree::find in the connect path. That pattern is confirmed in
+  Disconnect and Break but NOT in the connect path. One targeted read closes it, and it decides
+  whether G2-Edit needs an explicit "no source -> white" computation at connect time or merely an
+  inheritance rule.
+  It is re-established at every cable topology change, by each operation doing its own recolour —
+  there is no single central maintainer:
+   * CONNECT — CPatchData::GetConnectRecolorMolecules (G2Editor.c:159558). Picks the colour, then
+     recolours the ENTIRE tree with a CCompleteTreeIterator (note: COMPLETE, where Break uses a
+     PARTIAL iterator for just the subtree). Colour is MapConnectorColorToCableColor() when the
+     newly attached end is an output, otherwise it INHERITS the colour of the existing node it
+     joins. (The output-vs-input attribution is inferred from the param_2[1] test; the whole-tree
+     recolour and the inherit-vs-derive split are not.)
+   * DISCONNECT — GetDisconnectCableNodeMolecules (163473). Recomputes, and uses literal 6 on the
+     chain-ID-is-zero branches.
+   * BREAK — GetBreakCableNodeMolecules (163878). Subtree to 6, delete parent link, no-op if the
+     chain ID is zero.
+  MapConnectorColorToCableColor (158224) maps connector type -> 0 red / 1 blue / 2 yellow /
+  3 orange and CAN NEVER RETURN 6. White is only ever the literal 6 in the no-chain-ID branches.
+  That is what makes white unambiguously mean "this chain has no source".
+  This explains the two-mixer observation exactly: linking Mix1.In -> Mix2.In attaches an INPUT, so
+  the new cable inherits Mix1.In's chain colour, and Mix1.In has no source, so that colour is 6.
+  Hypotheses B ("always white") and C ("set once at creation") are both dead: colour is recomputed
+  across the whole tree on every connect, and it tracks the source rather than being fixed.
+  WHAT G2-EDIT WOULD NEED (four gaps, all in the same invariant — NO DECISION TAKEN):
+   1. handle_cable_connect() (mouseHandle.c) colours only the NEW cable, from the from-connector's
+      declared signal type. Should compute the chain colour — white when there is no source — and
+      recolour the WHOLE chain. This is the one that makes the two-mixer case come out red today.
+   2. Deleting a cable never recolours anything, so G2-Edit can leave a chain coloured but
+      sourceless — a state the original cannot represent.
+   3. menu_action_set_cable_colour() applies to cables touching the clicked connector; the original
+      applies to the whole chain, and the manual says so outright ("Cables in a serial cable chain
+      will always have the same color").
+   4. Break's whitening is already correct and should STAY per-operation — the original does not
+      centralise this, so copying its per-event structure is the faithful route.
+
+  *** NEXT SESSION — agreed 2026-07-31: finish understanding MapConnectorColorToCableColor, then
+  implement as close to the original as we can. Start here, the first half is already done: ***
+  There are TWO overloads. Only the first has been read.
+   a. DONE — MapConnectorColorToCableColor(EConnectorColor const&) at G2Editor.c:158224, __cdecl.
+      Decoded in full; the branch is obfuscated by a comma-expression, so the table is:
+          EConnectorColor 2  -> cable 1 (blue)      = Control
+          EConnectorColor 3  -> cable 3 (orange)    = Logic at full bandwidth
+          EConnectorColor 0  -> cable 2 (yellow)    = Logic
+          anything else      -> cable 0 (red)       = Audio  (catch-all, incl. 1)
+      IMPORTANT CONCLUSION: this is semantically IDENTICAL to G2-Edit's existing
+      cable_colour_for_connector_type() (moduleResourcesAccess.c), catch-all-to-red included.
+      So the colour MAPPING needs no work at all. The gap is purely WHEN and OVER WHAT SCOPE it is
+      applied — we colour only the new cable at creation; the original colours the whole chain on
+      every topology change and substitutes white when there is no source. That narrows the job a
+      lot: gaps 1-3 above are the whole of it.
+   b. TODO — MapConnectorColorToCableColor(NSFile_V7::CConnector const&) at G2Editor.c:159536,
+      __thiscall. THIS is the one the connect path actually calls. It presumably resolves a
+      connector to an EConnectorColor and then defers to (a). Expect it to be bandwidth-dependent
+      (cf. the CPnlLogicInHole/OutHole::GetColor() note in moduleGraphics.cpp), in which case it
+      corresponds to the upRate promotion handle_cable_connect() already does when it picks
+      fromConnectorType. Confirm that correspondence before changing anything.
+   c. TODO — ENUMERATE EVERY TRIGGER that makes the original recolour, and which of them use white.
+      We know connect / disconnect / break do it, but those are just the ones we happened to read;
+      any operation that can orphan a chain must also recolour, and we have NOT checked module
+      delete, delete-selection, cable move (drag an end elsewhere), delete-chain, replace-module or
+      paste. Getting this list wrong means G2-Edit leaves coloured-but-sourceless chains behind on
+      whichever path we miss — exactly the state the original cannot represent.
+      This is mechanical, not exploratory: the call sites are already enumerated, they just need
+      attributing to their enclosing function. Grep both, then walk backwards to the function each
+      sits inside:
+          GetRecolorCableMolecules calls: 151152, 159914, 162378, 163527, 163766, 163774,
+                                          163785, 163989
+          CMCableRecolor constructions:   159074, 159100, 159654, 159680, 164035, 164061,
+                                          164616, 164642
+      Already attributed: 163989 + 164035/164061 = Break (all colour 6); 163527/163766/163774/163785
+      = Disconnect (163774 is the 6 one); 159654/159680 = GetConnectRecolorMolecules;
+      164616/164642 = GetReplaceModuleMolecules (164318) — note module REPLACE recolours, which is
+      a trigger we would not have guessed; 159074/159100 are inside GetRecolorCableMolecules itself
+      (158993), i.e. the shared helper, not triggers.
+      STILL UNATTRIBUTED — these are the answer to "what else": 159914, 162378, and 151152 (this
+      last is a CPatch::Internal* wrapper near InternalCableBreak at 151311, so probably the COLOR
+      menu command's entry point — worth confirming, since it would show the colour submenu going
+      through the same whole-chain recolour path, which is gap 3 above).
+  Also note the topbar has a white visibility toggle (gPatchDescr[slot].visible[6]), so if far more
+  cables start coming out white, hiding white becomes a much more destructive-looking action.
+  NO DECISION TAKEN.
+
+- Sweep up the missing undos — undo coverage grew per-feature and is now patchy, so Ctrl-Z does
+  something for some edits and silently nothing for others, which is worse than uniformly absent.
+  There is no undo_push_cable* of ANY kind, so every cable edit is unundoable: connect (cable drag,
+  handle_cable_connect in mouseHandle.c), Delete cable, Cable colour, and the new Break. Break is
+  the worst of them — one click can delete a cable AND recolour a whole subtree, with no way back.
+  A cable undo payload would cover all four; the tCable key + colour is all that needs storing, and
+  undo.c already has a tUndoCableEntry for the delete-selection snapshot to model it on.
+  Other menus.c actions that appear to push nothing (grep for undo_push against each action_* —
+  VERIFY each, some may push indirectly via the selection/clipboard helpers rather than inline):
+  action_set_module_colour, menu_action_create (add module), action_copy_variation,
+  action_assign_global_knob / action_deassign_global_knob (the non-global knob pair DOES push),
+  action_assign_midi_cc / action_deassign_midi_cc, action_rename_morph_label, action_setting_u8 /
+  action_setting_i8 / action_perf_setting_u8.
+  Worth deciding the PRINCIPLE first — is everything undoable, or is there a defensible line (e.g.
+  patch content yes, view/UI state no)? — because that determines whether this is a bounded sweep
+  or an open-ended one. No decision taken.
+
+- Reconnect clobbers offline edits — SILENT DATA LOSS, raised 2026-07-31. Edit a patch with the G2
+  unplugged (entirely normal, and the backdoor test channel exists precisely to drive the app
+  offline), then plug the G2 in: the app fetches the synth's patch and overwrites the in-memory
+  database, and the offline work is gone with no warning and no way back.
+  PREREQUISITE, and probably most of the work: G2-Edit HAS NO DIRTY TRACKING. Nothing matching
+  gDirty/isDirty/modified/unsaved exists anywhere in src/. Without a notion of "the editor's copy
+  has diverged from the synth's" there is nothing to base any prompt on, and a prompt that fires on
+  EVERY reconnect regardless would just be a nag people learn to dismiss — which is worse than
+  useless, because they will dismiss the one that mattered.
+  THREE CANDIDATE BEHAVIOURS (owner raised A and B; C is a suggestion):
+   A. ASK WHICH WINS — "keep the synth's patch" vs "push the editor's patch to the synth". Best
+      ergonomics, but the second branch is a destructive write to the synth's edit buffer, so it
+      needs the same care as the Bank Restore work.
+   B. OFFER TO SAVE FIRST — save the editor's patch to a file, then load the synth's. Strictly
+      safer, and maintains both, but it is a save dialogue at an awkward moment and it does not let
+      you carry on working on the editor's version, only archive it.
+   C. AUTO-PRESERVE, DO NOT ASK — always write the editor's patch to a recovery file, load the
+      synth's, and just report "your edits were saved to <path>". No modal decision at the moment
+      someone has plugged in a cable, and nothing is ever lost. Cheapest to build once dirty
+      tracking exists, and it degrades gracefully: if the divergence did not matter, the user
+      ignores the message.
+      A and C combine well — auto-preserve ALWAYS, and additionally offer the choice only when the
+      editor's copy is actually dirty.
+  OPEN QUESTIONS: is dirty tracked per SLOT (there are 4 plus the performance) or per patch, since
+  a reconnect reloads everything and the conflict may only affect one slot? And discarding the
+  editor's patch must clear the undo history, which would otherwise let Ctrl-Z "undo" into a state
+  that never existed on the synth — ties into the undo sweep entry above.
+  SCOPE NOTE: this is not really about reconnect. It is the general "editor copy has diverged from
+  the synth copy" problem, and the same conflict exists on slot change and on any other reload from
+  the device. Worth solving once, generally, rather than special-casing the reconnect path.
+  NO DECISION TAKEN.
 - Scrollbars on the patch selectors (Load/Store/Delete/Restore bank-location pickers,
   bankBrowser.cpp) — currently no visible scrollbar for long lists.
 
