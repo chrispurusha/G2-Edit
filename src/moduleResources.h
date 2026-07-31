@@ -730,8 +730,8 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeAutomate,   paramTypeMenu,        {{ 20,  -3}, { 7,  7}}, anchorBottomLeft,  "Ch",            17,   0, midiChanAutomateStrMap,                NULL          },                        // 57 Channel
     {moduleTypeAutomate,   paramTypeMenu,        {{ 33,  -3}, { 7,  7}}, anchorBottomLeft,  "Echo",           2,   0, offOnStrMap,                           NULL          },                        // 57 Echo
     // 58 Drumsynth — 4 rows: MasterOsc(y=17) | NoiseFilter(y=33) | SlaveOsc(y=49) | Bend/Click/Noise(y=65)
-    {moduleTypeDrumSynth,  paramTypeFreqDrum,    {{ 10,  17}, { 7, 14}}, anchorTopLeft,     NULL,           128, 100, NULL,                                  NULL          },                        // 58 Master Freq
-    {moduleTypeDrumSynth,  paramTypeCommonDial,  {{ 10,  49}, { 7, 14}}, anchorTopLeft,     NULL,           128,   0, NULL,                                  NULL          },                        // 58 Slave Ratio
+    {moduleTypeDrumSynth,  paramTypeFreqDrum,    {{ 10,  17}, { 7, 14}}, anchorTopLeft,     "",           128, 100, NULL,                                  NULL          },                        // 58 Master Freq
+    {moduleTypeDrumSynth,  paramTypeCommonDial,  {{ 10,  49}, { 7, 14}}, anchorTopLeft,     "",           128,   0, NULL,                                  NULL          },                        // 58 Slave Ratio
     {moduleTypeDrumSynth,  paramTypeADRTime,     {{ 28,  17}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          },                        // 58 MasterDecay
     {moduleTypeDrumSynth,  paramTypeADRTime,     {{ 28,  49}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          },                        // 58 Slave Decay
     {moduleTypeDrumSynth,  paramTypeCommonDial,  {{ 46,  17}, { 7, 14}}, anchorTopLeft,     "Lev",          128, 100, NULL,                                  NULL          },                        // 58 Master Level
@@ -740,7 +740,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeDrumSynth,  paramTypeResonance,   {{ 28,  33}, { 7, 14}}, anchorTopLeft,     "Res",          128,   0, NULL,                                  NULL          },                        // 58 Noise Filter Res
     {moduleTypeDrumSynth,  paramTypeCommonDial,  {{ 46,  33}, { 7, 14}}, anchorTopLeft,     "Swp",          128,   0, NULL,                                  NULL          },                        // 58 Noise Filter Sweep
     {moduleTypeDrumSynth,  paramTypeADRTime,     {{ 64,  33}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          },                        // 58 Noise Filter Decay
-    {moduleTypeDrumSynth,  paramTypeMenu,        {{ 90,  37}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, staticFilterTypeStrMap,                NULL          },                        // 58 Noise FilterType
+    {moduleTypeDrumSynth,  paramTypeMenu,        {{ 90,  33}, { 7,  7}}, anchorTopLeft,     NULL,             3,   0, staticFilterTypeStrMap,                NULL          },                        // 58 Noise FilterType
     {moduleTypeDrumSynth,  paramTypeCommonDial,  {{ 10,  65}, { 7, 14}}, anchorTopLeft,     "Amt",          128,   0, NULL,                                  NULL          },                        // 58 Bend Amount
     {moduleTypeDrumSynth,  paramTypeADRTime,     {{ 28,  65}, { 7, 14}}, anchorTopLeft,     "Dcy",          128,   0, NULL,                                  NULL          },                        // 58 BendDecay
     {moduleTypeDrumSynth,  paramTypeCommonDial,  {{ 46,  65}, { 7, 14}}, anchorTopLeft,     "Click",        128,   0, NULL,                                  NULL          },                        // 58 Click Amount
