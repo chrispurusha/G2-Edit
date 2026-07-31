@@ -38,6 +38,7 @@ extern "C" {
 #include "menus.h"
 #include "selection.h"
 #include "undo.h"
+#include "cableChain.h"
 
 // ── Synth settings action targets ──────────────────────────────────────────
 
@@ -217,332 +218,171 @@ static void action_copy_variation(int index) {
 
 // ── Module / cable / morph actions ─────────────────────────────────────────
 
-// Every cable command carries the same key fields; only the command itself and the
-// colour differ (send_delete_cable() ignores the colour).
-static void send_cable_message(uint32_t cmd, uint32_t slot, uint32_t location, tCableKey * key, uint32_t colour) {
-    tMessageContent messageContent = {0};
+// The original editor's cable popup has five items — DISCONNECT, BREAK, COLOR, DELETE and
+// DELETE UNUSED CABLES — and every one of them is keyed on a CONNECTOR rather than on a cable:
+// GetDisconnectCableNodeMolecules (Original Editor/G2Editor.c:163473), GetBreakCableNodeMolecules
+// (163878), GetRecolorCableMolecules (158993) and GetDeleteCableChainMolecules (158869) all take
+// an NSFile_V7::CConnector const&. That is why they port onto G2-Edit's per-connector popup even
+// though the original's popup is opened by right-clicking a cable.
+//
+// What differs between them is the SCOPE they walk, and that is set by the tree iterator each
+// one builds (CCableTree, G2Editor.c:29937-30820):
+//
+//   CCompleteTreeIterator   - calls CTree::CIterator::base() first, so it walks UP to the chain
+//                             root and then covers the WHOLE tree. Used by CONNECT.
+//   CCompleteBranchIterator - no base() call, so it stays at the clicked connector and covers
+//                             that BRANCH only. Used by COLOR and DELETE.
+//   partial / find_partial  - chain-ID-matched subtree. Used inside BREAK.
+//
+// The chain walking itself lives in cableChain.c so the connect path can share it.
 
-    messageContent.cmd                            = cmd;
-    messageContent.slot                           = slot;
-    messageContent.cableData.location             = location;
-    messageContent.cableData.moduleFromIndex      = key->moduleFromIndex;
-    messageContent.cableData.connectorFromIoIndex = key->connectorFromIoCount;
-    messageContent.cableData.moduleToIndex        = key->moduleToIndex;
-    messageContent.cableData.connectorToIoIndex   = key->connectorToIoCount;
-    messageContent.cableData.linkType             = key->linkType;
-    messageContent.cableData.colour               = colour;
-
-    msg_send(&gToUsbThread, &messageContent);
+// Resolves the right-clicked connector to a chain node, confirming it belongs to the slot and
+// location currently on screen. Every cable command starts here.
+static bool cable_menu_node(tCableNode * node) {
+    if ((gMenuContext.moduleKey.slot != gSlot) || (gMenuContext.moduleKey.location != gLocation)) {
+        return false;
+    }
+    return cable_chain_node_from_connector(get_module(gMenuContext.moduleKey),
+                                           gMenuContext.connectorIndex, node);
 }
 
+// COLOR. The manual is explicit that this is branch-scoped, not per-cable and not whole-tree:
+// "Cables in a serial cable chain will always have the same color", but "Cables in a branch
+// connection may have different colors" — which is exactly what GetRecolorCableMolecules'
+// CCompleteBranchIterator gives.
+//
+// White is NOT one of the six user colours; it is the STATE "this chain has no source".
+// MapConnectorColorToCableColor can never return it — only the literal 6 on the no-chain-ID
+// branches of Disconnect and Break can. Painting a dead chain would therefore break the
+// invariant, so it is refused rather than allowed to produce a colour the original cannot mean.
 static void menu_action_set_cable_colour(int index) {
-    uint32_t  newColour = gContextMenu.items[index].param;
-    uint32_t  slot      = gSlot;
-    uint32_t  location  = gLocation;
-    int       outIndex  = -1;
-    int       inIndex   = -1;
+    uint32_t   newColour = gContextMenu.items[index].param;
+    tCableNode node;
+    tCableKey  keys[MAX_NUM_CABLES];
 
     gContextMenu.active = false;
 
-    if ((gMenuContext.moduleKey.slot != slot) || (gMenuContext.moduleKey.location != location)) {
-        return;
-    }
-    tModule * module    = get_module(gMenuContext.moduleKey);
-
-    if (module == NULL) {
+    if (!cable_menu_node(&node)) {
         return;
     }
 
-    switch (module->connector[gMenuContext.connectorIndex].dir) {
-        case connectorDirOut:
-            outIndex = find_io_count_from_index(module, connectorDirOut, gMenuContext.connectorIndex);
-            break;
-        case connectorDirIn:
-            inIndex  = find_io_count_from_index(module, connectorDirIn, gMenuContext.connectorIndex);
-            break;
+    if (cable_chain_colour(gSlot, gLocation, node) == cableColourWhite) {
+        return;
     }
+    uint32_t   count     = cable_chain_collect_branch(gSlot, gLocation, node, keys, MAX_NUM_CABLES);
 
-    for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
-        tCable * cable    = get_cable_slot(slot, location, i);
-        bool     doUpdate = false;
-
-        if (cable == NULL || !cable->active) {
-            continue;
-        }
-
-        if (cable->key.moduleFromIndex == gMenuContext.moduleKey.index) {
-            if (cable->key.linkType == cableLinkTypeFromInput) {
-                if ((int)cable->key.connectorFromIoCount == inIndex) {
-                    doUpdate = true;
-                }
-            } else if (cable->key.linkType == cableLinkTypeFromOutput) {
-                if ((int)cable->key.connectorFromIoCount == outIndex) {
-                    doUpdate = true;
-                }
-            }
-        }
-
-        if (cable->key.moduleToIndex == gMenuContext.moduleKey.index) {
-            if ((int)cable->key.connectorToIoCount == inIndex) {
-                doUpdate = true;
-            }
-        }
-
-        if (doUpdate) {
-            cable->colour = newColour;
-            send_cable_message(eMsgCmdWriteCable, slot, location, &cable->key, newColour);
-        }
-    }
-
+    cable_chain_apply_colour(gSlot, gLocation, keys, count, (tCableColour)newColour);
     synthlib_request_redraw();
 }
 
-static void menu_action_delete_cable(int index) {
-    int      outIndex = -1;
-    int      inIndex  = -1;
-    uint32_t slot     = gSlot;
-    uint32_t location = gLocation;
-
-    if ((gMenuContext.moduleKey.slot == slot) && (gMenuContext.moduleKey.location == location)) {
-        tModule * module = get_module(gMenuContext.moduleKey);
-
-        if (module == NULL) {
-            return;
-        }
-
-        switch (module->connector[gMenuContext.connectorIndex].dir) {
-            case connectorDirOut:
-                outIndex = find_io_count_from_index(module, connectorDirOut, gMenuContext.connectorIndex);
-                break;
-            case connectorDirIn:
-                inIndex  = find_io_count_from_index(module, connectorDirIn, gMenuContext.connectorIndex);
-                break;
-        }
-
-        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
-            tCable * cable    = get_cable_slot(slot, location, i);
-            bool     doDelete = false;
-
-            if (cable == NULL || !cable->active) {
-                continue;
-            }
-
-            if (cable->key.moduleFromIndex == gMenuContext.moduleKey.index) {
-                if (cable->key.linkType == cableLinkTypeFromInput) {
-                    if ((int)cable->key.connectorFromIoCount == inIndex) {
-                        doDelete = true;
-                    }
-                } else if (cable->key.linkType == cableLinkTypeFromOutput) {
-                    if ((int)cable->key.connectorFromIoCount == outIndex) {
-                        doDelete = true;
-                    }
-                }
-            }
-
-            if (cable->key.moduleToIndex == gMenuContext.moduleKey.index) {
-                if ((int)cable->key.connectorToIoCount == inIndex) {
-                    doDelete = true;
-                }
-            }
-
-            if (doDelete) {
-                send_cable_message(eMsgCmdDeleteCable, slot, location, &cable->key, cable->colour);
-                delete_cable(cable->key);
-            }
-        }
-
-        update_module_up_rates();
-    }
-}
-
-// A break point is one input that has just lost whatever fed it. Both flavours of BREAK
-// produce a list of these.
-typedef struct {
-    uint32_t moduleIndex;
-    uint32_t ioCount;
-} tOrphanedInput;
-
-// Walks FORWARD from an input that no longer has a feed, following input-to-input links
-// only, and recolours everything it reaches white — the manual's indication for cables
-// that are still connected but carry no signal.
+// DISCONNECT, per GetDisconnectCableNodeMolecules (163473). Splices the clicked connector out of
+// the chain and joins the chain back up around it, so what remains keeps working — this is the
+// "any remaining cable chains will be rerouted" of the manual, and the whole difference from
+// Break, which cuts without splicing.
 //
-// Each input can have at most one incoming cable (input_connector_has_cable() enforces
-// that at connect time), so the reachable set is a tree and the walk cannot loop; the
-// visited counter is belt-and-braces in case a loaded patch has a malformed cable list.
-static void whiten_orphaned_chain(uint32_t slot, uint32_t location, tOrphanedInput start) {
-    tOrphanedInput pending[MAX_NUM_CABLES];
-    uint32_t       pendingCount = 0;
-    uint32_t       visited      = 0;
-
-    pending[pendingCount++] = start;
-
-    while ((pendingCount > 0) && (visited < MAX_NUM_CABLES)) {
-        tOrphanedInput from = pending[--pendingCount];
-
-        visited++;
-
-        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
-            tCable * cable = get_cable_slot(slot, location, i);
-
-            if (cable == NULL || !cable->active) {
-                continue;
-            }
-
-            if (  (cable->key.linkType != cableLinkTypeFromInput)
-               || (cable->key.moduleFromIndex != from.moduleIndex)
-               || (cable->key.connectorFromIoCount != from.ioCount)) {
-                continue;
-            }
-
-            if (cable->colour != cableColourWhite) {
-                cable->colour = cableColourWhite;
-                send_cable_message(eMsgCmdWriteCable, slot, location, &cable->key, cable->colour);
-            }
-
-            if (pendingCount < MAX_NUM_CABLES) {
-                pending[pendingCount++] = (tOrphanedInput){
-                    cable->key.moduleToIndex, cable->key.connectorToIoCount
-                };
-            }
-        }
-    }
-}
-
-// Traces back up a serial chain from an input, following the one cable that feeds each
-// input in turn, and reports whether the chain ultimately reaches an output.
+// The original picks ONE surviving neighbour to become the new parent — normally the connector's
+// own parent, or the first child when the connector is the chain root (an output, which has no
+// parent) — then reconnects every other neighbour to it.
 //
-// The original refuses to break a chain that has no source: GetBreakCableNodeMolecules()
-// wraps its entire body — the delete included — in a GetCableChainID() guard, and a chain
-// with no output feeding it has no chain ID. Such a chain is already dead, so there is
-// nothing left to break. Confirmed against the real editor 2026-07-31: breaking mid-chain
-// with the oscillator disconnected does nothing at all.
-static bool input_chain_has_source(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t ioCount) {
-    for (uint32_t step = 0; step < MAX_NUM_CABLES; step++) {
-        tCable * feed = NULL;
-
-        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
-            tCable * cable = get_cable_slot(slot, location, i);
-
-            if (cable == NULL || !cable->active) {
-                continue;
-            }
-
-            if (  (cable->key.moduleToIndex == moduleIndex)
-               && (cable->key.connectorToIoCount == ioCount)) {
-                feed = cable;
-                break;
-            }
-        }
-
-        if (feed == NULL) {
-            return false;  // Ran out of chain without ever reaching an output
-        }
-
-        if (feed->key.linkType == cableLinkTypeFromOutput) {
-            return true;
-        }
-        moduleIndex = feed->key.moduleFromIndex;
-        ioCount     = feed->key.connectorFromIoCount;
-    }
-
-    return false;
-}
-
-// BREAK, per the original editor's cable popup (see "BREAK" in Original Editor/g2manual.txt).
-// Splits a serial cable chain WITHOUT rerouting it, which is what separates it from
-// Disconnect: the part of the chain that still reaches an output keeps working, and
-// everything past the break stays connected but dead, shown white.
-//
-// At an input, the cable feeding that input goes and the input's own onward chain is the
-// dead tail. At an output, every cable leaving that output goes, and each input it was
-// feeding heads a dead tail of its own.
-static void menu_action_break_cable(int index) {
-    uint32_t       slot          = gSlot;
-    uint32_t       location      = gLocation;
-    tOrphanedInput orphaned[MAX_NUM_CABLES];
-    uint32_t       orphanedCount = 0;
-    bool           deletedAny    = false;
+// It recolours using a flag computed before the edit; we recompute from source-reachability
+// afterwards instead. The result is the same where it matters and it cannot strand a coloured
+// sourceless chain, which is a state the original has no way to represent.
+static void menu_action_disconnect_cable(int index) {
+    tCableNode node;
 
     (void)index;
 
-    if ((gMenuContext.moduleKey.slot != slot) || (gMenuContext.moduleKey.location != location)) {
-        return;
-    }
-    tModule *      module        = get_module(gMenuContext.moduleKey);
-
-    if (module == NULL) {
+    if (!cable_menu_node(&node)) {
         return;
     }
 
-    if (module->connector[gMenuContext.connectorIndex].dir == connectorDirIn) {
-        int inIndex = find_io_count_from_index(module, connectorDirIn, gMenuContext.connectorIndex);
+    if (!cable_chain_disconnect(gSlot, gLocation, node)) {
+        return;
+    }
+    update_module_up_rates();
+    synthlib_request_redraw();
+}
 
-        if (inIndex < 0) {
-            return;
+// BREAK, per the original editor's cable popup (see "BREAK" in Original Editor/g2manual.txt) and
+// GetBreakCableNodeMolecules (163878). Splits a serial cable chain WITHOUT rerouting it, which is
+// what separates it from Disconnect: the part that still reaches an output keeps working, and
+// everything past the break stays connected but dead, shown white.
+//
+// At an input, the cable feeding that input goes and the input's own onward chain is the dead
+// tail. At an output, every cable leaving that output goes, and each input it was feeding heads a
+// dead tail of its own.
+static void menu_action_break_cable(int index) {
+    tCableNode node;
+
+    (void)index;
+
+    if (!cable_menu_node(&node)) {
+        return;
+    }
+
+    if (!cable_chain_break(gSlot, gLocation, node)) {
+        return;
+    }
+    update_module_up_rates();
+    synthlib_request_redraw();
+}
+
+// DELETE — "Deletes the entire serial cable chain that the connection is part of. If you want to
+// delete a complete branch connection, this must be done from the cable origin of the branch."
+// That second sentence is the branch scope showing through: GetDeleteCableChainMolecules is
+// structurally identical to GetRecolorCableMolecules, differing only in emitting CMCableDelete
+// instead of CMCableRecolor, so seeding it lower down deletes only what hangs off that point.
+static void menu_action_delete_chain(int index) {
+    tCableNode node;
+    tCableKey  keys[MAX_NUM_CABLES];
+
+    (void)index;
+
+    if (!cable_menu_node(&node)) {
+        return;
+    }
+    uint32_t   count = cable_chain_collect_branch(gSlot, gLocation, node, keys, MAX_NUM_CABLES);
+
+    if (count == 0) {
+        return;
+    }
+    cable_chain_delete_keys(gSlot, gLocation, keys, count);
+    update_module_up_rates();
+    synthlib_request_redraw();
+}
+
+// DELETE UNUSED CABLES — "Deletes all non-functional input-to-input connections (white cables) in
+// the Patch."
+//
+// White means exactly "this chain has no source", so the sweep is computed from live
+// source-reachability rather than from the stored colour. A patch loaded from a file, or from a
+// G2 that an older build wrote, can carry a colour that predates the invariant, and deleting
+// cables is not undoable — the topology is the only thing worth trusting here.
+static void menu_action_delete_unused_cables(int index) {
+    uint32_t  slot     = gSlot;
+    uint32_t  location = gLocation;
+    tCableKey keys[MAX_NUM_CABLES];
+    uint32_t  count    = 0;
+
+    (void)index;
+
+    for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+        tCable * cable = get_cable_slot(slot, location, i);
+
+        if ((cable == NULL) || !cable->active) {
+            continue;
         }
 
-        // An already-sourceless chain is already broken - leave it entirely alone
-        if (!input_chain_has_source(slot, location, gMenuContext.moduleKey.index, (uint32_t)inIndex)) {
-            return;
-        }
-
-        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
-            tCable * cable = get_cable_slot(slot, location, i);
-
-            if (cable == NULL || !cable->active) {
-                continue;
-            }
-
-            if (  (cable->key.moduleToIndex == gMenuContext.moduleKey.index)
-               && ((int)cable->key.connectorToIoCount == inIndex)) {
-                send_cable_message(eMsgCmdDeleteCable, slot, location, &cable->key, cable->colour);
-                delete_cable(cable->key);
-                deletedAny = true;
-            }
-        }
-
-        orphaned[orphanedCount++] = (tOrphanedInput){
-            gMenuContext.moduleKey.index, (uint32_t)inIndex
-        };
-    } else {
-        int outIndex = find_io_count_from_index(module, connectorDirOut, gMenuContext.connectorIndex);
-
-        if (outIndex < 0) {
-            return;
-        }
-
-        for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
-            tCable * cable = get_cable_slot(slot, location, i);
-
-            if (cable == NULL || !cable->active) {
-                continue;
-            }
-
-            if (  (cable->key.linkType != cableLinkTypeFromOutput)
-               || (cable->key.moduleFromIndex != gMenuContext.moduleKey.index)
-               || ((int)cable->key.connectorFromIoCount != outIndex)) {
-                continue;
-            }
-
-            if (orphanedCount < MAX_NUM_CABLES) {
-                orphaned[orphanedCount++] = (tOrphanedInput){
-                    cable->key.moduleToIndex, cable->key.connectorToIoCount
-                };
-            }
-            send_cable_message(eMsgCmdDeleteCable, slot, location, &cable->key, cable->colour);
-            delete_cable(cable->key);
-            deletedAny = true;
+        // Walking back from the to-end covers this cable itself, since it is the one feeding it
+        if (!cable_chain_find_root(slot, location, cable_chain_to_node(cable), NULL)) {
+            keys[count++] = cable->key;
         }
     }
 
-    if (!deletedAny) {
-        return;  // Nothing was connected here, so there is nothing to break
+    if (count == 0) {
+        return;
     }
-
-    for (uint32_t i = 0; i < orphanedCount; i++) {
-        whiten_orphaned_chain(slot, location, orphaned[i]);
-    }
-
+    cable_chain_delete_keys(slot, location, keys, count);
     update_module_up_rates();
     synthlib_request_redraw();
 }
@@ -1926,11 +1766,14 @@ void open_connector_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t co
         {NULL, RGB_BLACK, NULL, 0, NULL}
     };
 
+    // Order follows the original editor's cable popup (g2manual.txt, "CABLE POPUP").
     static tMenuItem menuItems[]        = {
-        {"Delete cable", RGB_GREY_3, menu_action_delete_cable, 0, NULL            },
-        {"Break",        RGB_GREY_3, menu_action_break_cable,  0, NULL            },
-        {"Cable colour", RGB_GREY_3, NULL,                     0, cableColourItems},
-        {NULL,           RGB_BLACK,  NULL,                     0, NULL            }
+        {"Disconnect",           RGB_GREY_3, menu_action_disconnect_cable,     0, NULL            },
+        {"Break",                RGB_GREY_3, menu_action_break_cable,          0, NULL            },
+        {"Cable colour",         RGB_GREY_3, NULL,                             0, cableColourItems},
+        {"Delete",               RGB_GREY_3, menu_action_delete_chain,         0, NULL            },
+        {"Delete unused cables", RGB_GREY_3, menu_action_delete_unused_cables, 0, NULL            },
+        {NULL,                   RGB_BLACK,  NULL,                             0, NULL            }
     };
 
     gMenuContext.moduleKey      = moduleKey;

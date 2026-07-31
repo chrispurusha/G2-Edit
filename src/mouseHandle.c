@@ -58,6 +58,7 @@ extern "C" {
 #include "bankBrowser.h"
 #include "alertDialog.h"
 #include "clickRegion.h"
+#include "cableChain.h"
 
 // Drag-start state for vertical/horizontal dial modes
 static double gDragStartX    = 0.0; // cursor position at press — fixed reference point for Alt-held morph-offset dragging
@@ -671,12 +672,14 @@ static bool input_connector_has_cable(uint32_t slot, uint32_t location,
 }
 
 bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {
-    bool      found      = false;
-    int32_t   i          = 0;
-    tCableKey cableKey   = {0};
-    tCable    cable      = {0};
+    bool       found         = false;
+    int32_t    i             = 0;
+    tCableKey  cableKey      = {0};
+    tCable     cable         = {0};
+    bool       connected     = false;
+    tCableNode connectedNode = {0};
 
-    tModule * fromModule = get_module(gCableDrag.fromModuleKey);
+    tModule *  fromModule    = get_module(gCableDrag.fromModuleKey);
 
     if (fromModule == NULL) {
         return false;
@@ -732,11 +735,31 @@ bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {
                 messageContent.cableData.colour               = cable.colour;
                 msg_send(&gToUsbThread, &messageContent);
 
+                // The to-end is always an input, so this needs no database lookup — which also
+                // keeps it safe if write_cable() found no free slot
+                connected                                     = true;
+                connectedNode                                 = (tCableNode){
+                    cableKey.moduleToIndex, cableKey.connectorToIoCount, false
+                };
+
                 break;
             }
         }
     }
 
+    // A connect is a topology change, so the chain's colour is re-derived across the WHOLE tree,
+    // exactly as GetConnectRecolorMolecules (G2Editor.c:159558) does with a CCompleteTreeIterator
+    // — note COMPLETE, where the branch-scoped commands use CCompleteBranchIterator.
+    //
+    // This is what maintains the invariant that the colour above only guesses at: every cable in
+    // a chain carries ONE colour, the source output's signal colour, or WHITE when the chain has
+    // no source at all. Joining two inputs together produces a sourceless chain and so comes out
+    // white, which is the manual's "non-functional input-to-input connections". Attaching a
+    // source later repaints the whole tree, discarding any colour the user had chosen — which is
+    // the original's behaviour, and the reason recolouring is tied to topology changes only.
+    if (connected) {
+        cable_chain_recolour(slot, location, connectedNode);
+    }
     update_module_up_rates();
 
     return found;

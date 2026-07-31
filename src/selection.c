@@ -31,6 +31,7 @@
 #include "menus.h"
 #include "selection.h"
 #include "undo.h"
+#include "cableChain.h"
 
 bool is_selected(tModuleKey key) {
     for (uint32_t i = 0; i < gSelection.count; i++) {
@@ -112,9 +113,11 @@ void selection_add_rect(tRectangle rect, uint32_t slot, uint32_t location) {
 
 // Send cables-then-module delete to the G2 and remove from local DB.
 void delete_module_and_cables(tModuleKey key) {
-    uint32_t        slot     = key.slot;
-    uint32_t        location = key.location;
-    tMessageContent msg      = {0};
+    uint32_t        slot          = key.slot;
+    uint32_t        location      = key.location;
+    tMessageContent msg           = {0};
+    tCableNode      orphaned[MAX_NUM_CABLES];
+    uint32_t        orphanedCount = 0;
 
     for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
         tCable * cable = get_cable_slot(slot, location, i);
@@ -137,8 +140,21 @@ void delete_module_and_cables(tModuleKey key) {
         msg.cableData.moduleToIndex        = cable->key.moduleToIndex;
         msg.cableData.connectorToIoIndex   = cable->key.connectorToIoCount;
         msg.cableData.linkType             = cable->key.linkType;
+
+        // Anything this module was FEEDING may be left without a source. Its own inputs go with
+        // it, so only the far ends matter. Recoloured below, once the cables are actually gone.
+        if ((cable->key.moduleToIndex != key.index) && (orphanedCount < MAX_NUM_CABLES)) {
+            orphaned[orphanedCount++] = cable_chain_to_node(cable);
+        }
         msg_send(&gToUsbThread, &msg);
         delete_cable(cable->key);
+    }
+
+    // Deleting a module is a topology change, so the chains it fed have to be re-derived or we
+    // leave them coloured but sourceless — a state the original editor cannot represent (see
+    // cable_chain_recolour()). Cheap and idempotent, so over-calling it is harmless.
+    for (uint32_t i = 0; i < orphanedCount; i++) {
+        cable_chain_recolour(slot, location, orphaned[i]);
     }
 
     msg                      = (tMessageContent){
