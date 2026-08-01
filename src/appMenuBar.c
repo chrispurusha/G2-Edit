@@ -49,6 +49,11 @@ static void action_save_patch(int index) {
     file_menu_save_patch();
 }
 
+static void action_save_patch_current(int index) {
+    (void)index;
+    file_menu_save_patch_to_current_path();
+}
+
 static void action_new_patch(int index) {
     (void)index;
     file_menu_new_patch();
@@ -80,10 +85,10 @@ static void action_store_to_bank(int index) {
 }
 
 static void open_file_menu(tCoord anchor) {
-    static tMenuItem items[9];
-    bool             online = gCommsState == eCommsOnLine;
-    bool             isPerf = gGlobalSettings.perfMode == 1;
-    int              i      = 0;
+    static tMenuItem items[10];  // 9 entries + the NULL terminator
+    bool             online       = gCommsState == eCommsOnLine;
+    bool             isPerf       = gGlobalSettings.perfMode == 1;
+    int              i            = 0;
 
     items[i++] = (tMenuItem){
         "Open Patch/Perf File...", (tRgb)RGB_GREY_3, action_open_patch, 0, NULL, 0, 0.0
@@ -94,8 +99,17 @@ static void open_file_menu(tCoord anchor) {
     items[i++] = (tMenuItem){
         "Load Performance from Bank...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_load_perf_location : NULL, 0, NULL, 0, 0.0
     };
+    // Save writes back to wherever this patch/perf came from; it only appears live once there IS
+    // such a place, which is why Save As sits below it rather than being the only option.
+    bool             haveSavePath = file_menu_have_saved_path();
+
     items[i++] = (tMenuItem){
-        isPerf ? "Save Perf to File..." : "Save Patch to File...", (tRgb)RGB_GREY_3, action_save_patch, 0, NULL, 0, 0.0
+        isPerf ? "Save Perf" : "Save Patch",
+        haveSavePath ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+        haveSavePath ? action_save_patch_current : NULL, 0, NULL, 0, 0.0
+    };
+    items[i++] = (tMenuItem){
+        isPerf ? "Save Perf As..." : "Save Patch As...", (tRgb)RGB_GREY_3, action_save_patch, 0, NULL, 0, 0.0
     };
     items[i++] = (tMenuItem){
         isPerf ? "Store Perf to Bank..." : "Store Patch to Bank...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_store_to_bank : NULL, 0, NULL, 0, 0.0

@@ -46,8 +46,9 @@ typedef enum {
     eRspLoadPeek,
     eRspSynthRestorePeek,
     // UI-thread-originated deferred work (posted from menu actions, run in the render loop).
-    eRspShowOpenRead,  // open the "load file" browser
-    eRspShowOpenWrite  // open the "save file" browser (drain builds the default name)
+    eRspShowOpenRead,     // open the "load file" browser
+    eRspShowOpenWrite,    // open the "save file" browser (drain builds the default name)
+    eRspSaveToCurrentPath // save straight back to the remembered path, no browser
 } eResponseType;
 
 typedef enum {

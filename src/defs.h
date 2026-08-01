@@ -245,6 +245,7 @@
 //#define PARAM_NAME_SIZE                (16)
 #define PROTOCOL_PARAM_NAME_SIZE       (7)
 #define PATCH_NOTES_SIZE               (1024)       // OG editor gets to about 1084 before crashing
+#define FILE_PATH_SIZE                 (1024)       // Matches tPatchFileData.filePath (msgQueue.h)
 
 #define MAX_GLYPH_CHAR                 (127)
 
