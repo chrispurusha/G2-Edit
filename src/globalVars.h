@@ -73,6 +73,8 @@ extern tControllerArray        gControllerArray[MAX_SLOTS];
 extern uint32_t                gControllerCount[MAX_SLOTS]; // nullified alongside gKnobArray/gControllerArray by clear_slot_data() (graphics.cpp) on every new patch load
 extern uint32_t                gPatchNotesSize[MAX_SLOTS];
 extern uint8_t                 gPatchNotes[MAX_SLOTS][PATCH_NOTES_SIZE + 1];
+extern char                    gSavedPatchPath[MAX_SLOTS][FILE_PATH_SIZE];
+extern char                    gSavedPerfPath[FILE_PATH_SIZE];
 //extern _Atomic uint8_t     gPatchVersion[MAX_SLOTS];
 //extern _Atomic uint8_t     gSlotEnabled[MAX_SLOTS];
 //extern _Atomic uint8_t     gPerfVersion;

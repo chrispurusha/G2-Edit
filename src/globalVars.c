@@ -62,6 +62,10 @@ tControllerArray        gControllerArray[MAX_SLOTS]                             
 uint32_t                gControllerCount[MAX_SLOTS]                                                  = {0};
 uint32_t                gPatchNotesSize[MAX_SLOTS]                                                   = {0};
 uint8_t                 gPatchNotes[MAX_SLOTS][PATCH_NOTES_SIZE + 1]                                 = {0};
+// Where each slot's patch (and the performance) was last opened from or saved to, so "Save" can
+// write straight back without a dialogue. Empty until a file has been opened or saved this session.
+char                    gSavedPatchPath[MAX_SLOTS][FILE_PATH_SIZE]                                   = {0};
+char                    gSavedPerfPath[FILE_PATH_SIZE]                                               = {0};
 //_Atomic uint8_t     gPatchVersion[MAX_SLOTS]                                                     = {0};
 tGlobalSettings         gGlobalSettings                                                              = {0};  // Note - should reflect settings in the G2
 _Atomic tCommsState     gCommsState                                                                  = eCommsNeverConnected;

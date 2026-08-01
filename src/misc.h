@@ -24,6 +24,8 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+
 // register_sleep_wake_notifications() and setup_main_menu() are implemented in misc.mm — the only
 // two things left in this codebase that genuinely need Objective-C/Cocoa. Everything else
 // declared below is plain C: menu actions live in menuActions.c, settings persistence (backed by
@@ -44,6 +46,8 @@ void save_zoom_factor(double zoom);
 // logic (which browser mode to open, with what pre-filled state) lives here.
 void file_menu_open_patch(void);
 void file_menu_save_patch(void);
+void file_menu_save_patch_to_current_path(void);
+bool file_menu_have_saved_path(void);
 void file_menu_new_patch(void);
 void file_menu_load_patch_location(void);
 void file_menu_load_perf_location(void);

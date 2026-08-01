@@ -940,10 +940,28 @@ int write_perf_to_file(const char * filepath) {
     return EXIT_SUCCESS;
 }
 
+// Remembers where the patch (or performance) currently on screen came from, so File > Save can
+// write straight back to it. Called after an open and after a save — the same rule every editor
+// uses: the last file you opened or saved to is the one Save overwrites. Recorded per slot,
+// because each of the four can have come from a different file; perf files own all four at once
+// and so get a single path of their own.
+static void remember_file_path(const char * path) {
+    if ((path == NULL) || (path[0] == '\0')) {
+        return;
+    }
+
+    if (gGlobalSettings.perfMode == 1) {
+        COPY_STRING(gSavedPerfPath, path);
+    } else {
+        COPY_STRING(gSavedPatchPath[gSlot], path);
+    }
+}
+
 static void on_file_opened(const char * path) {
     if (path) {
         LOG_INFO("Selected file: %s", path);
         read_file_into_memory_and_process(path);
+        remember_file_path(path);  // Read AFTER the load: it is the load that settles perf vs patch
         //set_window_title(path);
     }
     gNeedFocus = true;
@@ -983,6 +1001,7 @@ static void on_file_saved(const char * path) {
             write_database_to_file(path, slot);
             set_patch_name_from_filename(slot, path);
         }
+        remember_file_path(path);
     }
     gNeedFocus = true;
     wake_glfw();
@@ -1251,6 +1270,21 @@ static void check_action_flags(void) {
                         }
                     }
                     open_file_browser_write(on_file_saved, defaultName);
+                    break;
+                }
+
+                case eRspSaveToCurrentPath:
+                {
+                    // File > Save: straight back to the remembered path, no browser. The menu only
+                    // offers this once there IS one, but re-check here — the drain runs a frame or
+                    // more after the click, and a slot change in between would move the goalposts.
+                    const char * path = (gGlobalSettings.perfMode == 1) ? gSavedPerfPath : gSavedPatchPath[gSlot];
+
+                    if (path[0] == '\0') {
+                        open_file_browser_write(on_file_saved, "patch.pch2");  // Nothing to save back to
+                    } else {
+                        on_file_saved(path);
+                    }
                     break;
                 }
 

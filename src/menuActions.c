@@ -319,6 +319,20 @@ void file_menu_save_patch(void) {
     wake_glfw();
 }
 
+// File > Save — overwrite the file this patch/perf was last opened from or saved to. Offered by
+// the menu only when file_menu_have_saved_path() says there is one.
+void file_menu_save_patch_to_current_path(void) {
+    tMessageContent msg = {0};
+
+    msg.cmd = eRspSaveToCurrentPath;
+    msg_send(&gToGuiThread, &msg);
+    wake_glfw();
+}
+
+bool file_menu_have_saved_path(void) {
+    return (gGlobalSettings.perfMode == 1) ? (gSavedPerfPath[0] != '\0') : (gSavedPatchPath[gSlot][0] != '\0');
+}
+
 void file_menu_new_patch(void) {
     if (gCommsState != eCommsOnLine) {
         show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before creating a new patch.");
