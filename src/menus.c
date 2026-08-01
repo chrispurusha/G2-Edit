@@ -271,7 +271,9 @@ static void menu_action_set_cable_colour(int index) {
     }
     uint32_t   count     = cable_chain_collect_branch(gSlot, gLocation, node, keys, MAX_NUM_CABLES);
 
+    undo_begin_cable_edit(gSlot, gLocation);
     cable_chain_apply_colour(gSlot, gLocation, keys, count, (tCableColour)newColour);
+    undo_commit_cable_edit();
     synthlib_request_redraw();
 }
 
@@ -295,8 +297,12 @@ static void menu_action_disconnect_cable(int index) {
     if (!cable_menu_node(&node)) {
         return;
     }
+    undo_begin_cable_edit(gSlot, gLocation);
+    bool       edited = cable_chain_disconnect(gSlot, gLocation, node);
 
-    if (!cable_chain_disconnect(gSlot, gLocation, node)) {
+    undo_commit_cable_edit();  // Pushes nothing when the command was a no-op
+
+    if (!edited) {
         return;
     }
     update_module_up_rates();
@@ -319,8 +325,12 @@ static void menu_action_break_cable(int index) {
     if (!cable_menu_node(&node)) {
         return;
     }
+    undo_begin_cable_edit(gSlot, gLocation);
+    bool       edited = cable_chain_break(gSlot, gLocation, node);
 
-    if (!cable_chain_break(gSlot, gLocation, node)) {
+    undo_commit_cable_edit();
+
+    if (!edited) {
         return;
     }
     update_module_up_rates();
@@ -346,7 +356,9 @@ static void menu_action_delete_chain(int index) {
     if (count == 0) {
         return;
     }
+    undo_begin_cable_edit(gSlot, gLocation);
     cable_chain_delete_keys(gSlot, gLocation, keys, count);
+    undo_commit_cable_edit();
     update_module_up_rates();
     synthlib_request_redraw();
 }
@@ -356,8 +368,8 @@ static void menu_action_delete_chain(int index) {
 //
 // White means exactly "this chain has no source", so the sweep is computed from live
 // source-reachability rather than from the stored colour. A patch loaded from a file, or from a
-// G2 that an older build wrote, can carry a colour that predates the invariant, and deleting
-// cables is not undoable — the topology is the only thing worth trusting here.
+// G2 that an older build wrote, can carry a colour that predates the invariant, so the topology
+// is the only thing worth trusting here.
 static void menu_action_delete_unused_cables(int index) {
     uint32_t  slot     = gSlot;
     uint32_t  location = gLocation;
@@ -382,7 +394,9 @@ static void menu_action_delete_unused_cables(int index) {
     if (count == 0) {
         return;
     }
+    undo_begin_cable_edit(slot, location);
     cable_chain_delete_keys(slot, location, keys, count);
+    undo_commit_cable_edit();
     update_module_up_rates();
     synthlib_request_redraw();
 }

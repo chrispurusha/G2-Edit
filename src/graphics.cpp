@@ -2226,6 +2226,26 @@ static void backdoor_dump_state(char * out, size_t outMax) {
                                      module->name, (unsigned)module->column, (unsigned)module->row);
         }
     }
+
+    // Cables too, so a caller can verify a cable edit — and its undo — without a screenshot.
+    // Emitted sorted-by-nothing, i.e. in database order, which a delete-and-recreate reshuffles;
+    // compare these as a SET rather than line-by-line.
+    for (uint32_t l = 0; (l < 2) && (used < outMax); l++) {
+        for (uint32_t index = 0; (index < MAX_NUM_CABLES) && (used < outMax); index++) {
+            tCable * cable = get_cable_slot(gSlot, locs[l], index);
+
+            if ((cable == NULL) || !cable->active) {
+                continue;
+            }
+            used += (size_t)snprintf(out + used, outMax - used,
+                                     "cable loc=%s from=%u:%u link=%u to=%u:%u colour=%u\n",
+                                     locNames[l],
+                                     (unsigned)cable->key.moduleFromIndex, (unsigned)cable->key.connectorFromIoCount,
+                                     (unsigned)cable->key.linkType,
+                                     (unsigned)cable->key.moduleToIndex, (unsigned)cable->key.connectorToIoCount,
+                                     (unsigned)cable->colour);
+        }
+    }
 }
 
 static void backdoor_dispatch(const char * cmd, const char * arg) {

@@ -41,6 +41,19 @@ void undo_push_move(uint32_t slot, uint32_t location, tUndoMoveEntry * entries, 
 // Record a paste operation so it can be undone and redone.
 void undo_push_paste(uint32_t slot, uint32_t location, uint32_t anchorCol, uint32_t anchorRow, tModuleKey * pastedKeys, uint32_t pastedCount, tClipboardModule * clipModules, uint32_t clipModuleCount, tClipboardCable * clipCables, uint32_t clipCableCount);
 
+// Cable-chain edits are recorded as a before/after snapshot of every cable in one location
+// rather than as a list of individual changes: a single command (Disconnect especially) can
+// delete, re-create AND recolour cables at once, and the set it touches is only known by
+// walking the chain. Snapshotting the location sidesteps all of that, and a patch's cable
+// count is small enough that it costs nothing worth counting.
+//
+// Bracket the edit with begin/commit. Commit pushes nothing if the cables came out unchanged,
+// so a command that turns out to be a no-op leaves no undo entry behind. Nesting is not
+// supported — a begin while one is already open is ignored, which keeps the outermost
+// bracket authoritative when one cable operation is built from others.
+void undo_begin_cable_edit(uint32_t slot, uint32_t location);
+void undo_commit_cable_edit(void);
+
 // Record a single param value change (old → new). variation ignored for modes.
 void undo_push_param_change(tModuleKey key, uint32_t paramIndex, uint32_t variation, uint32_t oldValue, uint32_t newValue);
 void undo_push_mode_change(tModuleKey key, uint32_t modeIndex, uint32_t oldValue, uint32_t newValue);

@@ -2662,6 +2662,28 @@ static int send_write_cable(uint32_t slot, tCableData * cableData) {
     return send_and_receive_once(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
+// Recolours an EXISTING cable in place (CMCableRecolor, G2Editor.c:18192). This is NOT
+// interchangeable with re-sending send_write_cable() at the new colour: the G2 treats a write as
+// an ADD, so a rewrite leaves the patch holding the same cable twice, once per colour. The
+// editor's own write_cable() coalesces the two, so nothing looks wrong until the patch is read
+// back — and a later delete then removes only one of the copies. Confirmed from a real capture:
+// a patch built by two drag-connects came back from the device with four cables (2026-08-01).
+//
+// Header byte is (location << 3) | colour: same field positions as send_write_cable()'s, minus
+// its 0x10 flag, which is the EPartOfDump bit that recolour has no equivalent of.
+static int send_write_cable_colour(uint32_t slot, tCableData * cableData) {
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_WRITE_CABLE_COLOUR);
+    write_bit_stream(buff, &bitPos, 8, ((uint8_t)cableData->location << 3) | (uint8_t)cableData->colour);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)cableData->moduleFromIndex);
+    write_bit_stream(buff, &bitPos, 8, ((uint8_t)cableData->linkType << 6) | (uint8_t)cableData->connectorFromIoIndex);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)cableData->moduleToIndex);
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)cableData->connectorToIoIndex);
+    return send_and_receive_once(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+}
+
 static int send_delete_cable(uint32_t slot, tCableData * cableData) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
@@ -3752,6 +3774,10 @@ static int send_write_data(tMessageContent * messageContent) {
 
         case eMsgCmdWriteCable:
             retVal = send_write_cable(messageContent->slot, &messageContent->cableData);
+            break;
+
+        case eMsgCmdSetCableColour:
+            retVal = send_write_cable_colour(messageContent->slot, &messageContent->cableData);
             break;
 
         case eMsgCmdWriteModule:

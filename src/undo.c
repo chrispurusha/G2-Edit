@@ -30,6 +30,7 @@
 #include "protocol.h"
 #include "menus.h"
 #include "selection.h"
+#include "cableChain.h"
 #include "undo.h"
 
 #define UNDO_STACK_SIZE    32
@@ -53,6 +54,16 @@ typedef struct {
     uint32_t           cableCount;
     tUndoCableEntry *  cables;    // malloc'd
 } tUndoDeletePayload;
+
+// Before/after images of every cable in one location — see undo_begin_cable_edit().
+typedef struct {
+    uint32_t          slot;
+    uint32_t          location;
+    uint32_t          beforeCount;
+    tUndoCableEntry * before;    // malloc'd
+    uint32_t          afterCount;
+    tUndoCableEntry * after;     // malloc'd
+} tUndoCableEditPayload;
 
 typedef struct {
     uint32_t       slot;
@@ -150,6 +161,7 @@ typedef enum {
     eUndoCmdPerfName,
     eUndoCmdPerfSetting,
     eUndoCmdModuleExclude,
+    eUndoCmdCableEdit,
 } tUndoCmdType;
 
 typedef struct {
@@ -189,6 +201,15 @@ static void free_command(tUndoCommand * cmd) {
             tUndoPastePayload * p = cmd->payload;
             free(p->clipModules);
             free(p->clipCables);
+            free(p);
+            break;
+        }
+
+        case eUndoCmdCableEdit:
+        {
+            tUndoCableEditPayload * p = cmd->payload;
+            free(p->before);
+            free(p->after);
             free(p);
             break;
         }
@@ -580,6 +601,202 @@ static void apply_paste_redo(tUndoPastePayload * p) {
                    p->anchorCol, p->anchorRow,
                    p->clipModules, p->clipModuleCount,
                    p->clipCables, p->clipCableCount);
+}
+
+// ─── Cable edits ───────────────────────────────────────────────────────────
+
+// The bracket opened by undo_begin_cable_edit(). Only one can be open at a time; the cable
+// commands are driven from the UI thread one user action at a time, so that is not a race,
+// just a guard against a nested bracket stealing the outer one's before-image.
+static bool              gCableEditOpen        = false;
+static uint32_t          gCableEditSlot        = 0;
+static uint32_t          gCableEditLocation    = 0;
+static tUndoCableEntry * gCableEditBefore      = NULL;
+static uint32_t          gCableEditBeforeCount = 0;
+
+static tCableKey cable_key_from_entry(uint32_t slot, uint32_t location, const tUndoCableEntry * ce) {
+    tCableKey key = {0};  // Zeroed whole: get_cable() compares keys with memcmp, so padding counts
+
+    key.slot                 = slot;
+    key.location             = location;
+    key.moduleFromIndex      = ce->fromIndex;
+    key.connectorFromIoCount = ce->fromIoCount;
+    key.linkType             = ce->linkType;
+    key.moduleToIndex        = ce->toIndex;
+    key.connectorToIoCount   = ce->toIoCount;
+
+    return key;
+}
+
+// Every live cable in one location. Returns the count and points *out at a malloc'd array, or
+// NULL when there are none (or on allocation failure, which then reads as an empty location —
+// see the guard in undo_commit_cable_edit()).
+static uint32_t snapshot_cables(uint32_t slot, uint32_t location, tUndoCableEntry ** out) {
+    uint32_t          count   = 0;
+    tUndoCableEntry * entries = malloc(MAX_NUM_CABLES * sizeof(tUndoCableEntry));
+
+    *out = NULL;
+
+    if (entries == NULL) {
+        return 0;
+    }
+
+    for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+        tCable * cable = get_cable_slot(slot, location, i);
+
+        if ((cable == NULL) || !cable->active) {
+            continue;
+        }
+        entries[count].fromIndex   = cable->key.moduleFromIndex;
+        entries[count].fromIoCount = cable->key.connectorFromIoCount;
+        entries[count].toIndex     = cable->key.moduleToIndex;
+        entries[count].toIoCount   = cable->key.connectorToIoCount;
+        entries[count].linkType    = cable->key.linkType;
+        entries[count].colour      = cable->colour;
+        count++;
+    }
+
+    if (count == 0) {
+        free(entries);
+        return 0;
+    }
+    tUndoCableEntry * shrunk = realloc(entries, count * sizeof(tUndoCableEntry));
+
+    *out = (shrunk != NULL) ? shrunk : entries;
+
+    return count;
+}
+
+static bool cable_entry_same_key(const tUndoCableEntry * a, const tUndoCableEntry * b) {
+    return (a->fromIndex == b->fromIndex) && (a->fromIoCount == b->fromIoCount)
+           && (a->toIndex == b->toIndex) && (a->toIoCount == b->toIoCount)
+           && (a->linkType == b->linkType);
+}
+
+static const tUndoCableEntry * find_cable_entry(const tUndoCableEntry * list, uint32_t count,
+                                                const tUndoCableEntry * want) {
+    for (uint32_t i = 0; i < count; i++) {
+        if (cable_entry_same_key(&list[i], want)) {
+            return &list[i];
+        }
+    }
+
+    return NULL;
+}
+
+// Cables are compared as a SET, not as two ordered lists: deleting and re-creating a cable
+// moves it to a different index in the database array, so an identical patch can snapshot in a
+// different order. Keys are unique within a location, so with equal counts a one-way lookup is
+// a full set comparison.
+static bool cable_sets_differ(const tUndoCableEntry * a, uint32_t aCount,
+                              const tUndoCableEntry * b, uint32_t bCount) {
+    if (aCount != bCount) {
+        return true;
+    }
+
+    for (uint32_t i = 0; i < aCount; i++) {
+        const tUndoCableEntry * match = find_cable_entry(b, bCount, &a[i]);
+
+        if ((match == NULL) || (match->colour != a[i].colour)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void undo_begin_cable_edit(uint32_t slot, uint32_t location) {
+    if (gCableEditOpen) {
+        return;  // Already bracketed by an outer edit, which owns the before-image
+    }
+    gCableEditOpen        = true;
+    gCableEditSlot        = slot;
+    gCableEditLocation    = location;
+    gCableEditBeforeCount = snapshot_cables(slot, location, &gCableEditBefore);
+}
+
+void undo_commit_cable_edit(void) {
+    if (!gCableEditOpen) {
+        return;
+    }
+    gCableEditOpen = false;
+
+    tUndoCableEntry *       after      = NULL;
+    uint32_t                afterCount = snapshot_cables(gCableEditSlot, gCableEditLocation, &after);
+
+    // A snapshot that failed to allocate looks empty, and restoring from it would delete every
+    // cable in the location. Dropping the command instead costs an undo step and nothing else.
+    bool                    usable     = ((gCableEditBeforeCount == 0) || (gCableEditBefore != NULL))
+                                         && ((afterCount == 0) || (after != NULL));
+
+    tUndoCableEditPayload * p          = NULL;
+
+    if (usable && cable_sets_differ(gCableEditBefore, gCableEditBeforeCount, after, afterCount)) {
+        p = malloc(sizeof(tUndoCableEditPayload));
+    }
+
+    if (p == NULL) {
+        free(gCableEditBefore);
+        free(after);
+        gCableEditBefore      = NULL;
+        gCableEditBeforeCount = 0;
+        return;
+    }
+    p->slot               = gCableEditSlot;
+    p->location           = gCableEditLocation;
+    p->before             = gCableEditBefore;
+    p->beforeCount        = gCableEditBeforeCount;
+    p->after              = after;
+    p->afterCount         = afterCount;
+
+    gCableEditBefore      = NULL;
+    gCableEditBeforeCount = 0;
+    stack_push(eUndoCmdCableEdit, p);
+}
+
+// Drives the location's cables to the chosen snapshot: delete what the snapshot does not have,
+// then write what it does. Colour is carried in the snapshot rather than re-derived, so a
+// user's colour override survives undo just as the topology does.
+static void apply_cable_edit(tUndoCableEditPayload * p, bool isUndo) {
+    const tUndoCableEntry * target      = isUndo ? p->before : p->after;
+    uint32_t                targetCount = isUndo ? p->beforeCount : p->afterCount;
+    tUndoCableEntry *       live        = NULL;
+    uint32_t                liveCount   = snapshot_cables(p->slot, p->location, &live);
+
+    for (uint32_t i = 0; i < liveCount; i++) {
+        if (find_cable_entry(target, targetCount, &live[i]) != NULL) {
+            continue;
+        }
+        tCableKey key = cable_key_from_entry(p->slot, p->location, &live[i]);
+
+        cable_send_message(eMsgCmdDeleteCable, p->slot, p->location, &key, live[i].colour);
+        delete_cable(key);
+    }
+
+    free(live);
+
+    for (uint32_t i = 0; i < targetCount; i++) {
+        tCableKey key      = cable_key_from_entry(p->slot, p->location, &target[i]);
+        tCable *  existing = get_cable(key);
+
+        if ((existing != NULL) && (existing->colour == target[i].colour)) {
+            continue;
+        }
+        // A cable that is merely the wrong colour must be RECOLOURED, not rewritten: the G2
+        // treats a write as an add and would end up holding it twice. See
+        // send_write_cable_colour() in usbComms.c.
+        uint32_t  cmd      = (existing != NULL) ? eMsgCmdSetCableColour : eMsgCmdWriteCable;
+
+        tCable    cable    = {0};
+        cable.key    = key;
+        cable.colour = target[i].colour;
+        cable.active = true;
+        write_cable(key, &cable);  // Updates the colour in place if the cable already exists
+        cable_send_message(cmd, p->slot, p->location, &key, cable.colour);
+    }
+
+    update_module_up_rates();
+    synthlib_request_redraw();
 }
 
 void undo_push_param_change(tModuleKey key, uint32_t paramIndex, uint32_t variation,
@@ -993,6 +1210,10 @@ void undo_undo(void) {
         case eUndoCmdModuleExclude:
             apply_module_exclude(cmd->payload, true);
             break;
+
+        case eUndoCmdCableEdit:
+            apply_cable_edit(cmd->payload, true);
+            break;
     }
 }
 
@@ -1051,6 +1272,10 @@ void undo_redo(void) {
         case eUndoCmdModuleExclude:
             apply_module_exclude(cmd->payload, false);
             break;
+
+        case eUndoCmdCableEdit:
+            apply_cable_edit(cmd->payload, false);
+            break;
     }
 }
 
@@ -1059,6 +1284,14 @@ void undo_clear(void) {
         free_command(&gUndoHistory[i]);
     }
 
-    gUndoCount  = 0;
-    gUndoCursor = 0;
+    gUndoCount            = 0;
+    gUndoCursor           = 0;
+
+    // A cable bracket never spans a clear in practice, but a stale before-image would describe
+    // a patch that is no longer loaded, so drop it rather than let it be committed against the
+    // new one.
+    gCableEditOpen        = false;
+    free(gCableEditBefore);
+    gCableEditBefore      = NULL;
+    gCableEditBeforeCount = 0;
 }
