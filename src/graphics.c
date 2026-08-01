@@ -150,13 +150,17 @@ static void build_note_visual_lines(const char * buf, double textW, double textH
 
             if (remaining <= 0) {
                 if (segStart == pos) {
-                    gNoteLines[gNoteLineCount++] = {segStart, segStart, true};
+                    gNoteLines[gNoteLineCount++] = (tNoteVisualLine){
+                        segStart, segStart, true
+                    };
                 }
                 break;
             }
             int  wrapAt    = find_wrap_point(buf + segStart, remaining, textW, textH);
             bool softWrap  = (wrapAt < remaining);
-            gNoteLines[gNoteLineCount++] = {segStart, segStart + wrapAt, !softWrap};
+            gNoteLines[gNoteLineCount++] = (tNoteVisualLine){
+                segStart, segStart + wrapAt, !softWrap
+            };
             segStart                    += wrapAt;
 
             if (!softWrap) {
@@ -170,13 +174,17 @@ static void build_note_visual_lines(const char * buf, double textW, double textH
         pos = logicalEnd + 1;
 
         if (pos >= len && gNoteLineCount < MAX_NOTE_VISUAL_LINES) {
-            gNoteLines[gNoteLineCount++] = {len, len, true};
+            gNoteLines[gNoteLineCount++] = (tNoteVisualLine){
+                len, len, true
+            };
             break;
         }
     }
 
     if (gNoteLineCount == 0) {
-        gNoteLines[gNoteLineCount++] = {0, 0, true};
+        gNoteLines[gNoteLineCount++] = (tNoteVisualLine){
+            0, 0, true
+        };
     }
 }
 
@@ -264,18 +272,18 @@ void render_scrollbars(GLFWwindow * window) {
     double renderHeight = get_render_height() / gGlobalGuiScale;
 
     // Scrollbar background
-    set_rgb_colour(RGB_GREY_7);
-    render_rectangle(mainArea, {{0.0, renderHeight - SCROLLBAR_WIDTH}, {renderWidth - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH}});
-    render_rectangle(mainArea, {{renderWidth - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, renderHeight - SCROLLBAR_MARGIN}});
+    set_rgb_colour((tRgb)RGB_GREY_7);
+    render_rectangle(mainArea, (tRectangle){{0.0, renderHeight - SCROLLBAR_WIDTH}, {renderWidth - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH}});
+    render_rectangle(mainArea, (tRectangle){{renderWidth - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, renderHeight - SCROLLBAR_MARGIN}});
 
     // Bottom right box
-    set_rgb_colour(RGB_BACKGROUND_GREY);
-    render_rectangle(mainArea, {{renderWidth - SCROLLBAR_WIDTH, renderHeight - SCROLLBAR_WIDTH}, {SCROLLBAR_WIDTH, SCROLLBAR_WIDTH}});
+    set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
+    render_rectangle(mainArea, (tRectangle){{renderWidth - SCROLLBAR_WIDTH, renderHeight - SCROLLBAR_WIDTH}, {SCROLLBAR_WIDTH, SCROLLBAR_WIDTH}});
 
     // Scroll indicator blocks
-    set_rgb_colour(RGB_GREY_9);
-    gScrollState.yThumb = render_rectangle(mainArea, {{renderWidth - SCROLLBAR_WIDTH, gScrollState.yBar - (SCROLLBAR_LENGTH / 2.0)}, {SCROLLBAR_WIDTH, SCROLLBAR_LENGTH}});
-    gScrollState.xThumb = render_rectangle(mainArea, {{gScrollState.xBar - (SCROLLBAR_LENGTH / 2.0), renderHeight - SCROLLBAR_WIDTH}, {SCROLLBAR_LENGTH, SCROLLBAR_WIDTH}});
+    set_rgb_colour((tRgb)RGB_GREY_9);
+    gScrollState.yThumb = render_rectangle(mainArea, (tRectangle){{renderWidth - SCROLLBAR_WIDTH, gScrollState.yBar - (SCROLLBAR_LENGTH / 2.0)}, {SCROLLBAR_WIDTH, SCROLLBAR_LENGTH}});
+    gScrollState.xThumb = render_rectangle(mainArea, (tRectangle){{gScrollState.xBar - (SCROLLBAR_LENGTH / 2.0), renderHeight - SCROLLBAR_WIDTH}, {SCROLLBAR_LENGTH, SCROLLBAR_WIDTH}});
 }
 
 void render_top_bar(void) {
@@ -284,7 +292,7 @@ void render_top_bar(void) {
     char        buff[32]                            = {0};
     tCommsState commsState                          = gCommsState;
     char *      commsStateText                      = "Unknown";
-    tRgb        commsStateColour                    = RGB_RED_7;
+    tRgb        commsStateColour                    = (tRgb)RGB_RED_7;
     tRgb        buttonBackgroundColour              = (tRgb)RGB_BACKGROUND_GREY;
     uint32_t    slot                                = gSlot;
     uint32_t    variation                           = gPatchDescr[slot].activeVariation;
@@ -299,11 +307,11 @@ void render_top_bar(void) {
     double      indicatorX                          = 0.0;
     double      indicatorW                          = 0.0;
 
-    set_rgb_colour(RGB_GREY_5);
-    render_rectangle_with_border(mainArea, {{0.0, MENU_BAR_HEIGHT}, {(get_render_width() / gGlobalGuiScale) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
+    set_rgb_colour((tRgb)RGB_GREY_5);
+    render_rectangle_with_border(mainArea, (tRectangle){{0.0, MENU_BAR_HEIGHT}, {(get_render_width() / gGlobalGuiScale) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
 
-    set_rgb_colour(RGB_BLACK);
-    render_text(mainArea, {{400, 43 + MENU_BAR_HEIGHT}, {NULL, STANDARD_TEXT_HEIGHT}}, "Variation");
+    set_rgb_colour((tRgb)RGB_BLACK);
+    render_text(mainArea, (tRectangle){{400, 43 + MENU_BAR_HEIGHT}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Variation");
 
     COPY_STRING(patchNameCopy, gGlobalSettings.slot[slot].patchName);
 
@@ -312,8 +320,8 @@ void render_top_bar(void) {
     if (patchNameCopy[0] == '\0') {
         COPY_STRING(patchNameCopy, "---");
     }
-    //set_rgb_colour(RGB_BLACK);
-    //render_text(mainArea, {{80, 43}, {NULL, STANDARD_TEXT_HEIGHT}}, "Patch Name");
+    //set_rgb_colour((tRgb)RGB_BLACK);
+    //render_text(mainArea, (tRectangle){{80, 43}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Patch Name");
 
     if (gPatchNameEdit.active && gPatchNameEdit.slot == slot) {
         // Show edit buffer with cursor at cursorPos
@@ -323,20 +331,20 @@ void render_top_bar(void) {
         displayBuf[cp]                               = '|';
         memcpy(&displayBuf[cp + 1], &gPatchNameEdit.buffer[cp], strlen(gPatchNameEdit.buffer) - cp + 1);
 
-        gTopbarControls[topbarPatchNameId].rectangle = draw_button(mainArea, {topbar_control_def(topbarPatchNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, displayBuf, (tRgb)RGB_WHITE);
+        gTopbarControls[topbarPatchNameId].rectangle = draw_button(mainArea, (tRectangle){topbar_control_def(topbarPatchNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, displayBuf, (tRgb)RGB_WHITE);
     } else {
         tRgb col = gTopbarControls[topbarPatchNameId].isPressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
-        gTopbarControls[topbarPatchNameId].rectangle = draw_button(mainArea, {topbar_control_def(topbarPatchNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, patchNameCopy, col);
+        gTopbarControls[topbarPatchNameId].rectangle = draw_button(mainArea, (tRectangle){topbar_control_def(topbarPatchNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, patchNameCopy, col);
     }
     {
         const tTopbarControlDef * def = topbar_control_def(topbarPatchTypeId);
         tRgb                      col = gTopbarControls[topbarPatchTypeId].isPressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
-        gTopbarControls[topbarPatchTypeId].rectangle = draw_button(mainArea, {def->coord, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)patchTypeStrMap[gPatchDescr[slot].category], col);
+        gTopbarControls[topbarPatchTypeId].rectangle = draw_button(mainArea, (tRectangle){def->coord, {get_text_width("Sequencer", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)patchTypeStrMap[gPatchDescr[slot].category], col);
     }
     {
         const tTopbarControlDef * def = topbar_control_def(topbarMonoPolyId);
         tRgb                      col = gTopbarControls[topbarMonoPolyId].isPressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
-        gTopbarControls[topbarMonoPolyId].rectangle = draw_button(mainArea, {def->coord, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], col);
+        gTopbarControls[topbarMonoPolyId].rectangle = draw_button(mainArea, (tRectangle){def->coord, {get_text_width("Legato", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)monoPolyStrMap[gPatchDescr[slot].monoPoly], col);
     }
 
     if (gPatchDescr[slot].monoPoly == monoPolyPoly) {
@@ -351,7 +359,7 @@ void render_top_bar(void) {
         buttonBackgroundColour = (tRgb)RGB_RED_5;
     }
     snprintf(buff, sizeof(buff), "%u", voiceCount);
-    gTopbarControls[topbarVoiceCountId].rectangle = draw_button(mainArea, {topbar_control_def(topbarVoiceCountId)->coord, {get_text_width("XX", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, buff, buttonBackgroundColour);
+    gTopbarControls[topbarVoiceCountId].rectangle = draw_button(mainArea, (tRectangle){topbar_control_def(topbarVoiceCountId)->coord, {get_text_width("XX", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, buff, buttonBackgroundColour);
 
     {
         tModuleKey volKey = {slot, (uint32_t)locationMorph, patchModuleVolume};
@@ -359,15 +367,19 @@ void render_top_bar(void) {
 
         if (module != NULL) {
             snprintf(buff, sizeof(buff), "%s", patchVolumeStrMap[module->param[variation][VOLUME_LEVEL].value]);
-            render_text(mainArea, {{gTopbarControls[topbarPatchVolumeId].rectangle.coord.x, gTopbarControls[topbarPatchVolumeId].rectangle.coord.y - 12}, {NULL, STANDARD_TEXT_HEIGHT}}, buff);
-            gParamRectangle[module->key.slot][module->key.location][module->key.index][VOLUME_LEVEL] = render_dial(mainArea, gTopbarControls[topbarPatchVolumeId].rectangle, module->param[variation][VOLUME_LEVEL].value, 127, 0, RGB_GREY_7);
+            render_text(mainArea, (tRectangle){{gTopbarControls[topbarPatchVolumeId].rectangle.coord.x, gTopbarControls[topbarPatchVolumeId].rectangle.coord.y - 12}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+            gParamRectangle[module->key.slot][module->key.location][module->key.index][VOLUME_LEVEL] = render_dial(mainArea, gTopbarControls[topbarPatchVolumeId].rectangle, module->param[variation][VOLUME_LEVEL].value, 127, 0, (tRgb)RGB_GREY_7);
         }
     }
 
     for (int i = 0; i < TOPBAR_STANDARD_BUTTON_COUNT; i++) {
         const tTopbarControlDef * def = topbar_control_def((tTopbarControlId)i);
 
-        rectangle                    = {def->coord, {get_text_width(def->text, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}};
+        rectangle = (tRectangle){
+            def->coord, {
+                get_text_width(def->text, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT
+            }
+        };
 
         switch (def->anchor) {
             case anchorTopRight:
@@ -389,12 +401,12 @@ void render_top_bar(void) {
         gTopbarControls[i].rectangle = draw_button(mainArea, rectangle, def->text, buttonBackgroundColour);
     }
 
-    commsStateColour = RGB_BACKGROUND_GREY;
+    commsStateColour = (tRgb)RGB_BACKGROUND_GREY;
 
     switch (commsState) {
         case eCommsOnLine:
             commsStateText   = "Online";
-            commsStateColour = RGB_GREEN_7;
+            commsStateColour = (tRgb)RGB_GREEN_7;
             break;
         default:
             commsStateText   = "Offline";
@@ -415,10 +427,15 @@ void render_top_bar(void) {
     double boxW    = boxH; // square
     double txrxX   = onlineX + onlineW + 6.0;
 
-    rectangle      = {{onlineX, onlineY}, {onlineW, STANDARD_BUTTON_TEXT_HEIGHT}};
+    rectangle      = (tRectangle){{
+                                      onlineX, onlineY
+                                  }, {
+                                      onlineW, STANDARD_BUTTON_TEXT_HEIGHT
+                                  }
+    };
     commsStateRect = draw_button(mainArea, rectangle, commsStateText, commsStateColour);
-    draw_button(mainArea, {{txrxX, onlineY}, {boxW, boxH}}, "", txActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
-    draw_button(mainArea, {{txrxX, onlineY + boxH + txrxGap}, {boxW, boxH}}, "", rxActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
+    draw_button(mainArea, (tRectangle){{txrxX, onlineY}, {boxW, boxH}}, "", txActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
+    draw_button(mainArea, (tRectangle){{txrxX, onlineY + boxH + txrxGap}, {boxW, boxH}}, "", rxActive ? (tRgb)RGB_GREEN_7 : (tRgb)RGB_BACKGROUND_GREY);
 
     if (txActive || rxActive) {
         wake_glfw();
@@ -434,9 +451,9 @@ void render_top_bar(void) {
         const tTopbarControlDef * def      = topbar_control_def(toggleId);
 
         if (visible) {
-            gTopbarControls[toggleId].rectangle = draw_button(mainArea, {{x, def->coord.y}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "X", colour);
+            gTopbarControls[toggleId].rectangle = draw_button(mainArea, (tRectangle){{x, def->coord.y}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, "X", colour);
         } else {
-            gTopbarControls[toggleId].rectangle = draw_button(mainArea, {{x, def->coord.y}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, " ", colour);
+            gTopbarControls[toggleId].rectangle = draw_button(mainArea, (tRectangle){{x, def->coord.y}, {get_text_width("X", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, " ", colour);
         }
     }
 
@@ -447,22 +464,22 @@ void render_top_bar(void) {
         const tTopbarControlDef * def = topbar_control_def(topbarHideAllCablesId);
         tRgb                      col = gTopbarControls[topbarHideAllCablesId].isPressed ? (tRgb)RGB_GREY_7 : (hideAll ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
         gTopbarControls[topbarHideAllCablesId].rectangle = draw_button(mainArea,
-                                                                       {def->coord, {get_text_width(def->text, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
+                                                                       (tRectangle){def->coord, {get_text_width(def->text, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                        def->text, col);
     }
     {
         const tTopbarControlDef * def = topbar_control_def(topbarTransparentCablesId);
         tRgb                      col = gTopbarControls[topbarTransparentCablesId].isPressed ? (tRgb)RGB_GREY_7 : (transp ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
         gTopbarControls[topbarTransparentCablesId].rectangle = draw_button(mainArea,
-                                                                           {def->coord, {get_text_width(def->text, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
+                                                                           (tRectangle){def->coord, {get_text_width(def->text, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                            def->text, col);
     }
 
     snprintf(buff, sizeof(buff), "%u BPM", gGlobalSettings.masterClock);
-    gTopbarControls[topbarTempoDialId].rectangle = render_dial_with_text(mainArea, {topbar_control_def(topbarTempoDialId)->coord, {20, 48}}, NULL, buff, STANDARD_BUTTON_TEXT_HEIGHT, gGlobalSettings.masterClock >= 30 ? gGlobalSettings.masterClock - 30 : 0, 211, 0, (tRgb)RGB_BACKGROUND_GREY);
+    gTopbarControls[topbarTempoDialId].rectangle = render_dial_with_text(mainArea, (tRectangle){topbar_control_def(topbarTempoDialId)->coord, {20, 48}}, NULL, buff, STANDARD_BUTTON_TEXT_HEIGHT, gGlobalSettings.masterClock >= 30 ? gGlobalSettings.masterClock - 30 : 0, 211, 0, (tRgb)RGB_BACKGROUND_GREY);
     {
         tRgb clockCol = gTopbarControls[topbarClockRunStopId].isPressed ? (tRgb)RGB_GREY_7 : (clockRunning ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
-        gTopbarControls[topbarClockRunStopId].rectangle = draw_button(mainArea, {topbar_control_def(topbarClockRunStopId)->coord, {get_text_width("Stopped", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)(clockRunning ? "Running" : "Stopped"), clockCol);
+        gTopbarControls[topbarClockRunStopId].rectangle = draw_button(mainArea, (tRectangle){topbar_control_def(topbarClockRunStopId)->coord, {get_text_width("Stopped", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)(clockRunning ? "Running" : "Stopped"), clockCol);
     }
 
     if (gGlobalSettings.perfMode == 1) {
@@ -473,7 +490,7 @@ void render_top_bar(void) {
     {
         tRgb perfModeCol = gTopbarControls[topbarPerfModeId].isPressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
         gTopbarControls[topbarPerfModeId].rectangle = draw_button(mainArea,
-                                                                  {{20, 42 + MENU_BAR_HEIGHT}, {get_text_width("Patch Mode", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
+                                                                  (tRectangle){{20, 42 + MENU_BAR_HEIGHT}, {get_text_width("Patch Mode", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                   buff, perfModeCol);
     }
 
@@ -486,13 +503,13 @@ void render_top_bar(void) {
             perfNameDisplay[cp]                         = '|';
             memcpy(&perfNameDisplay[cp + 1], &gPerfNameEdit.buffer[cp], strlen(gPerfNameEdit.buffer) - cp + 1);
             gTopbarControls[topbarPerfNameId].rectangle = draw_button(mainArea,
-                                                                      {topbar_control_def(topbarPerfNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
+                                                                      (tRectangle){topbar_control_def(topbarPerfNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                       perfNameDisplay, (tRgb)RGB_WHITE);
         } else {
             tRgb perfNameCol = gTopbarControls[topbarPerfNameId].isPressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
             snprintf(perfNameDisplay, sizeof(perfNameDisplay), "%s", gGlobalSettings.perfName[0] ? gGlobalSettings.perfName : "---");
             gTopbarControls[topbarPerfNameId].rectangle = draw_button(mainArea,
-                                                                      {topbar_control_def(topbarPerfNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
+                                                                      (tRectangle){topbar_control_def(topbarPerfNameId)->coord, {get_text_width(LONGEST_PATCH_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}},
                                                                       perfNameDisplay, perfNameCol);
         }
     }
@@ -507,19 +524,19 @@ void render_top_bar(void) {
         double headerY    = row1Y - resLabelH - 2.0;
         double rowLabelOY = (STANDARD_TEXT_HEIGHT - resLabelH) / 2.0;
 
-        render_text(mainArea, {{col1X, headerY}, {BLANK_SIZE, resLabelH}}, "Cycles");
-        render_text(mainArea, {{col2X, headerY}, {BLANK_SIZE, resLabelH}}, "Memory");
-        render_text(mainArea, {{labelX, row1Y + rowLabelOY}, {BLANK_SIZE, resLabelH}}, "VA");
-        render_text(mainArea, {{labelX, row2Y + rowLabelOY}, {BLANK_SIZE, resLabelH}}, "FX");
+        render_text(mainArea, (tRectangle){{col1X, headerY}, {BLANK_SIZE, resLabelH}}, "Cycles");
+        render_text(mainArea, (tRectangle){{col2X, headerY}, {BLANK_SIZE, resLabelH}}, "Memory");
+        render_text(mainArea, (tRectangle){{labelX, row1Y + rowLabelOY}, {BLANK_SIZE, resLabelH}}, "VA");
+        render_text(mainArea, (tRectangle){{labelX, row2Y + rowLabelOY}, {BLANK_SIZE, resLabelH}}, "FX");
 
         snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].cycles[locationVa]);
-        draw_button(mainArea, {{col1X, row1Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
+        draw_button(mainArea, (tRectangle){{col1X, row1Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
         snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].cycles[locationFx]);
-        draw_button(mainArea, {{col1X, row2Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
+        draw_button(mainArea, (tRectangle){{col1X, row2Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
         snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].mem[locationVa]);
-        draw_button(mainArea, {{col2X, row1Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
+        draw_button(mainArea, (tRectangle){{col2X, row1Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
         snprintf(buff, sizeof(buff), "%.1f%%", gResourceAlloc[slot].mem[locationFx]);
-        draw_button(mainArea, {{col2X, row2Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
+        draw_button(mainArea, (tRectangle){{col2X, row2Y}, {valW, STANDARD_BUTTON_TEXT_HEIGHT}}, buff, (tRgb)RGB_BACKGROUND_GREY);
     }
 }
 
@@ -1206,8 +1223,8 @@ static void render_device_busy_overlay(void) {
     double titleH  = 24.0;
 
     draw_dialog_background_overlay();
-    draw_panel_chrome({{boxX, boxY}, {boxW, boxH}}, titleH, "Please wait");
-    render_text(mainArea, {{boxX + 10.0, boxY + titleH + 10.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, gDeviceOpLabel);
+    draw_panel_chrome((tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Please wait");
+    render_text(mainArea, (tRectangle){{boxX + 10.0, boxY + titleH + 10.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, gDeviceOpLabel);
 }
 
 static void check_action_flags(void) {
@@ -1424,7 +1441,7 @@ static void check_action_flags(void) {
 static double render_dropdown(double x, double y, double btnH,
                               const char * valStr, const char * widestVal,
                               tRectangle * rect) {
-    *rect = draw_button(mainArea, {{x, y}, {get_text_width((char *)widestVal, btnH, eCache) + 8.0, btnH}},
+    *rect = draw_button(mainArea, (tRectangle){{x, y}, {get_text_width((char *)widestVal, btnH, eCache) + 8.0, btnH}},
                         (char *)valStr, (tRgb)RGB_BACKGROUND_GREY);
     return x + rect->size.w;
 }
@@ -1450,11 +1467,11 @@ static void render_ss_section(double boxX, double boxW, double margin, double * 
         if (i > 0 && (i % 2) == 0) {
             *y += rowH;
         }
-        set_rgb_colour(RGB_BLACK);
-        render_text(mainArea, {{x, *y + 2.0}, {BLANK_SIZE, btnH}}, (char *)items[i].label);
+        set_rgb_colour((tRgb)RGB_BLACK);
+        render_text(mainArea, (tRectangle){{x, *y + 2.0}, {BLANK_SIZE, btnH}}, (char *)items[i].label);
         x             += get_text_width((char *)items[i].label, btnH, eCache) + 4.0;
         *items[i].rect = draw_button(mainArea,
-                                     {{x, *y}, {get_text_width((char *)items[i].widest, btnH, eCache) + 8.0, btnH}},
+                                     (tRectangle){{x, *y}, {get_text_width((char *)items[i].widest, btnH, eCache) + 8.0, btnH}},
                                      items[i].get_str(),
                                      items[i].get_colour());
     }
@@ -1467,11 +1484,11 @@ static double render_pp_row(double x, double y, double btnH,
     int i = 0;
 
     for (i = 0; i < count; i++) {
-        set_rgb_colour(RGB_BLACK);
-        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, (char *)items[i].label);
+        set_rgb_colour((tRgb)RGB_BLACK);
+        render_text(mainArea, (tRectangle){{x, y + 2.0}, {BLANK_SIZE, btnH}}, (char *)items[i].label);
         x                                += get_text_width((char *)items[i].label, btnH, eCache) + 4.0;
         gPatchParamRects[items[i].rectId] = draw_button(mainArea,
-                                                        {{x, y}, {get_text_width((char *)items[i].widest, btnH, eCache) + 8.0, btnH}},
+                                                        (tRectangle){{x, y}, {get_text_width((char *)items[i].widest, btnH, eCache) + 8.0, btnH}},
                                                         items[i].get_str(),
                                                         items[i].get_colour());
         x                                += get_text_width((char *)items[i].widest, btnH, eCache) + 8.0 + 16.0;
@@ -1502,7 +1519,7 @@ void draw_dialog_background_overlay(void) {
     double renderH = get_render_height() / gGlobalGuiScale;
 
     set_rgb_colour((tRgb)RGB_GREY_2);
-    render_rectangle(mainArea, {{0.0, 0.0}, {renderW, renderH}});
+    render_rectangle(mainArea, (tRectangle){{0.0, 0.0}, {renderW, renderH}});
 }
 
 // Draws the bordered box and the title bar (inset from the border so it never paints
@@ -1516,9 +1533,9 @@ tRectangle draw_panel_chrome(tRectangle box, double titleH, const char * title) 
     render_rectangle_with_border(mainArea, box);
 
     set_rgb_colour((tRgb)RGB_GREY_3);
-    render_rectangle(mainArea, {{box.coord.x + BORDER_LINE_WIDTH, box.coord.y + BORDER_LINE_WIDTH}, {box.size.w - 2.0 * BORDER_LINE_WIDTH, titleH - BORDER_LINE_WIDTH}});
+    render_rectangle(mainArea, (tRectangle){{box.coord.x + BORDER_LINE_WIDTH, box.coord.y + BORDER_LINE_WIDTH}, {box.size.w - 2.0 * BORDER_LINE_WIDTH, titleH - BORDER_LINE_WIDTH}});
     set_rgb_colour((tRgb)RGB_WHITE);
-    render_text(mainArea, {{box.coord.x + 10.0, box.coord.y + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, title);
+    render_text(mainArea, (tRectangle){{box.coord.x + 10.0, box.coord.y + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, title);
 
     return titleBar;
 }
@@ -1533,7 +1550,7 @@ tRectangle draw_panel_close_button(tRectangle box, bool closePressed) {
     tRgb   col    = closePressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
 
     return draw_button(mainArea,
-                       {{box.coord.x + box.size.w - closeW - 8.0 - BORDER_LINE_WIDTH, box.coord.y + 4.0}, {closeW, btnH}},
+                       (tRectangle){{box.coord.x + box.size.w - closeW - 8.0 - BORDER_LINE_WIDTH, box.coord.y + 4.0}, {closeW, btnH}},
                        "Close", col);
 }
 
@@ -1566,16 +1583,16 @@ static void render_patch_settings_panel(void) {
     y                         = boxY + titleH + margin;
 
     draw_dialog_background_overlay();
-    draw_panel_chrome({{boxX, boxY}, {boxW, boxH}}, titleH, "Synth Settings");
-    gSettingsPanelRects.close = draw_panel_close_button({{boxX, boxY}, {boxW, boxH}}, gSettingsPanelRects.closePressed);
+    draw_panel_chrome((tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Synth Settings");
+    gSettingsPanelRects.close = draw_panel_close_button((tRectangle){{boxX, boxY}, {boxW, boxH}}, gSettingsPanelRects.closePressed);
 
     // ── Synth Name ─────────────────────────────────────────────────
     {
         char displayBuf[CLAVIA_NAME_SIZE + 2] = {0};
 
         x  = boxX + margin;
-        set_rgb_colour(RGB_BLACK);
-        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Name:");
+        set_rgb_colour((tRgb)RGB_BLACK);
+        render_text(mainArea, (tRectangle){{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Name:");
         x += get_text_width((char *)"Name:", btnH, eCache) + 4.0;
 
         if (gSynthNameEdit.active) {
@@ -1583,25 +1600,25 @@ static void render_patch_settings_panel(void) {
             memcpy(displayBuf, gSynthNameEdit.buffer, cp);
             displayBuf[cp]                = '|';
             memcpy(&displayBuf[cp + 1], &gSynthNameEdit.buffer[cp], strlen(gSynthNameEdit.buffer) - cp + 1);
-            gSettingsPanelRects.synthName = draw_button(mainArea, {{x, y}, {get_text_width(LONGEST_PATCH_NAME, btnH, eCache), btnH}}, displayBuf, (tRgb)RGB_WHITE);
+            gSettingsPanelRects.synthName = draw_button(mainArea, (tRectangle){{x, y}, {get_text_width(LONGEST_PATCH_NAME, btnH, eCache), btnH}}, displayBuf, (tRgb)RGB_WHITE);
         } else {
             snprintf(displayBuf, sizeof(displayBuf), "%s", gSynthSettings.name);
-            gSettingsPanelRects.synthName = draw_button(mainArea, {{x, y}, {get_text_width(LONGEST_PATCH_NAME, btnH, eCache), btnH}}, displayBuf, (tRgb)RGB_BACKGROUND_GREY);
+            gSettingsPanelRects.synthName = draw_button(mainArea, (tRectangle){{x, y}, {get_text_width(LONGEST_PATCH_NAME, btnH, eCache), btnH}}, displayBuf, (tRgb)RGB_BACKGROUND_GREY);
         }
     }
     y   += rowH;
 
     // ── MIDI Channels ──────────────────────────────────────────────
-    set_rgb_colour(RGB_GREY_7);
-    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "MIDI Channels");
+    set_rgb_colour((tRgb)RGB_GREY_7);
+    render_text(mainArea, (tRectangle){{boxX + margin, y}, {BLANK_SIZE, btnH}}, "MIDI Channels");
     y   += secH;
     colW = (boxW - margin * 2.0) / 4.0;
 
     for (i = 0; i < 4; i++) {
         x  = boxX + margin + i * colW;
         snprintf(buf, sizeof(buf), "%c:", slotLabel[i][0]);
-        set_rgb_colour(RGB_BLACK);
-        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, buf);
+        set_rgb_colour((tRgb)RGB_BLACK);
+        render_text(mainArea, (tRectangle){{x, y + 2.0}, {BLANK_SIZE, btnH}}, buf);
         x += get_text_width((char *)"A:", btnH, eCache) + 4.0;
         midi_chan_str(gSynthSettings.midiChanSlot[i], buf, sizeof(buf));
         render_dropdown(x, y, btnH, buf, "Off", &gSettingsPanelRects.midiChan[i]);
@@ -1613,26 +1630,26 @@ static void render_patch_settings_panel(void) {
     render_ss_section(boxX, boxW, margin, &y, rowH, btnH, kSSGlobal, kSSGlobalCount);
 
     // ── Options ────────────────────────────────────────────────────
-    set_rgb_colour(RGB_GREY_7);
-    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Options");
+    set_rgb_colour((tRgb)RGB_GREY_7);
+    render_text(mainArea, (tRectangle){{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Options");
     y   += secH;
     render_ss_section(boxX, boxW, margin, &y, rowH, btnH, kSSOptions, kSSOptionsCount);
 
     // ── Tuning ─────────────────────────────────────────────────────
-    set_rgb_colour(RGB_GREY_7);
-    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Tuning");
+    set_rgb_colour((tRgb)RGB_GREY_7);
+    render_text(mainArea, (tRectangle){{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Tuning");
     y   += secH;
     render_ss_section(boxX, boxW, margin, &y, rowH, btnH, kSSTuning, kSSTuningCount);
 
     // ── Pedal ──────────────────────────────────────────────────────
-    set_rgb_colour(RGB_GREY_7);
-    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Pedal");
+    set_rgb_colour((tRgb)RGB_GREY_7);
+    render_text(mainArea, (tRectangle){{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Pedal");
     y   += secH;
     render_ss_section(boxX, boxW, margin, &y, rowH, btnH, kSSPedal, kSSPedalCount);
 
     // ── Sort Mode ──────────────────────────────────────────────────
-    set_rgb_colour(RGB_GREY_7);
-    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Sort Mode");
+    set_rgb_colour((tRgb)RGB_GREY_7);
+    render_text(mainArea, (tRectangle){{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Sort Mode");
     y   += secH;
     render_ss_section(boxX, boxW, margin, &y, rowH, btnH, kSSSort, kSSSortCount);
 }
@@ -1667,8 +1684,8 @@ static void render_patch_params_panel(void) {
     char      buf[16]       = {0};
 
     draw_dialog_background_overlay();
-    draw_panel_chrome({{boxX, boxY}, {boxW, boxH}}, titleH, "Patch Settings");
-    gPatchParamClose = draw_panel_close_button({{boxX, boxY}, {boxW, boxH}}, gPatchParamClosePressed);
+    draw_panel_chrome((tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Patch Settings");
+    gPatchParamClose = draw_panel_close_button((tRectangle){{boxX, boxY}, {boxW, boxH}}, gPatchParamClosePressed);
 
     // ── Slot buttons in title bar ──────────────────────────────────
     {
@@ -1679,7 +1696,7 @@ static void render_patch_params_panel(void) {
         for (uint32_t s = 0; s < MAX_SLOTS; s++) {
             tRgb col = (s == slot) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
             gPatchParamSlots[s] = draw_button(mainArea,
-                                              {{slotX + s * (slotBtnW + 8.0), boxY + 4.0}, {slotBtnW, btnH}},
+                                              (tRectangle){{slotX + s * (slotBtnW + 8.0), boxY + 4.0}, {slotBtnW, btnH}},
                                               slotLabels[s], col);
         }
     }
@@ -1687,16 +1704,16 @@ static void render_patch_params_panel(void) {
     // ── Sustain Pedal + Octave Shift ───────────────────────────────
     {
         x                                = boxX + margin;
-        set_rgb_colour(RGB_BLACK);
-        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Sustain Pedal:");
+        set_rgb_colour((tRgb)RGB_BLACK);
+        render_text(mainArea, (tRectangle){{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Sustain Pedal:");
         x                               += get_text_width((char *)"Sustain Pedal:", btnH, eCache) + 4.0;
         gPatchParamRects[pPSustainPedal] = draw_button(mainArea,
-                                                       {{x, y}, {get_text_width((char *)"On", btnH, eCache) + 8.0, btnH}},
+                                                       (tRectangle){{x, y}, {get_text_width((char *)"On", btnH, eCache) + 8.0, btnH}},
                                                        sustainPedal ? "On" : "Off",
                                                        sustainPedal ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
 
         x                                = boxX + boxW / 2.0;
-        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Octave Shift:");
+        render_text(mainArea, (tRectangle){{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Octave Shift:");
         x                               += get_text_width((char *)"Octave Shift:", btnH, eCache) + 4.0;
         snprintf(buf, sizeof(buf), "%+d", (int)octaveShift);
         render_dropdown(x, y, btnH, buf, "+2", &gPatchParamRects[pPOctaveShift]);
@@ -1704,36 +1721,36 @@ static void render_patch_params_panel(void) {
     y                                += rowH;
 
     // ── Arpeggiator ────────────────────────────────────────────────
-    set_rgb_colour(RGB_GREY_7);
-    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Arpeggiator");
+    set_rgb_colour((tRgb)RGB_GREY_7);
+    render_text(mainArea, (tRectangle){{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Arpeggiator");
     y                                += secH;
     render_pp_row(boxX + margin, y, btnH, kPPArp, kPPArpCount);
     y                                += rowH;
 
     // ── Vibrato ────────────────────────────────────────────────────
-    set_rgb_colour(RGB_GREY_7);
-    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Vibrato");
+    set_rgb_colour((tRgb)RGB_GREY_7);
+    render_text(mainArea, (tRectangle){{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Vibrato");
     y                                += secH;
     x                                 = render_pp_row(boxX + margin, y, btnH, kPPVibrato, kPPVibratoCount);
     dialH                             = rowH * 2.0;
     snprintf(buf, sizeof(buf), "%u cnt", (unsigned)vibratoAmount);
-    gPatchParamRects[pPVibratoAmount] = render_dial_with_text(mainArea, {{x, y - 10.0}, {20.0, dialH}}, "Amount", buf, btnH, vibratoAmount, 100, 0, (tRgb)RGB_BACKGROUND_GREY);
+    gPatchParamRects[pPVibratoAmount] = render_dial_with_text(mainArea, (tRectangle){{x, y - 10.0}, {20.0, dialH}}, "Amount", buf, btnH, vibratoAmount, 100, 0, (tRgb)RGB_BACKGROUND_GREY);
     x                                += get_text_width((char *)"100 cnt", btnH, eCache) + 8.0;
     snprintf(buf, sizeof(buf), "%.2f Hz", 4.0 + (vibratoRate / 127.0) * 4.0);
-    gPatchParamRects[pPVibratoRate]   = render_dial_with_text(mainArea, {{x, y - 10.0}, {20.0, dialH}}, "Rate", buf, btnH, vibratoRate, 127, 0, (tRgb)RGB_BACKGROUND_GREY);
+    gPatchParamRects[pPVibratoRate]   = render_dial_with_text(mainArea, (tRectangle){{x, y - 10.0}, {20.0, dialH}}, "Rate", buf, btnH, vibratoRate, 127, 0, (tRgb)RGB_BACKGROUND_GREY);
     y                                += rowH;
 
     // ── Glide ──────────────────────────────────────────────────────
-    set_rgb_colour(RGB_GREY_7);
-    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Glide");
+    set_rgb_colour((tRgb)RGB_GREY_7);
+    render_text(mainArea, (tRectangle){{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Glide");
     y                                += secH;
     x                                 = render_pp_row(boxX + margin, y, btnH, kPPGlide, kPPGlideCount);
-    gPatchParamRects[pPGlideTime]     = render_dial_with_text(mainArea, {{x, y - 10.0}, {20.0, dialH}}, "Time", get_glide_time_str(glideTime), btnH, glideTime, 127, 0, (tRgb)RGB_BACKGROUND_GREY);
+    gPatchParamRects[pPGlideTime]     = render_dial_with_text(mainArea, (tRectangle){{x, y - 10.0}, {20.0, dialH}}, "Time", get_glide_time_str(glideTime), btnH, glideTime, 127, 0, (tRgb)RGB_BACKGROUND_GREY);
     y                                += rowH;
 
     // ── Bend ───────────────────────────────────────────────────────
-    set_rgb_colour(RGB_GREY_7);
-    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Bend");
+    set_rgb_colour((tRgb)RGB_GREY_7);
+    render_text(mainArea, (tRectangle){{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Bend");
     y                                += secH;
     render_pp_row(boxX + margin, y, btnH, kPPBend, kPPBendCount);
 
@@ -1766,43 +1783,43 @@ static void render_perf_settings_panel(void) {
     char   rangeBuf[18]             = {0};
 
     draw_dialog_background_overlay();
-    draw_panel_chrome({{boxX, boxY}, {boxW, boxH}}, titleH, "Performance Settings");
-    gPerfSettingsPanelRects.close = draw_panel_close_button({{boxX, boxY}, {boxW, boxH}}, gPerfSettingsPanelRects.closePressed);
+    draw_panel_chrome((tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Performance Settings");
+    gPerfSettingsPanelRects.close = draw_panel_close_button((tRectangle){{boxX, boxY}, {boxW, boxH}}, gPerfSettingsPanelRects.closePressed);
 
     // ── Perf Name ──────────────────────────────────────────────────
     {
         char   nameBuf[CLAVIA_NAME_SIZE + 2] = {0};
         double x                             = boxX + margin;
-        set_rgb_colour(RGB_BLACK);
-        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Name:");
+        set_rgb_colour((tRgb)RGB_BLACK);
+        render_text(mainArea, (tRectangle){{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Name:");
         x += get_text_width((char *)"Name:", btnH, eCache) + 4.0;
         snprintf(nameBuf, sizeof(nameBuf), "%s", gGlobalSettings.perfName);
-        draw_button(mainArea, {{x, y}, {get_text_width(LONGEST_PATCH_NAME, btnH, eCache), btnH}},
+        draw_button(mainArea, (tRectangle){{x, y}, {get_text_width(LONGEST_PATCH_NAME, btnH, eCache), btnH}},
                     nameBuf, (tRgb)RGB_BACKGROUND_GREY);
     }
     y                            += rowH;
 
     // ── Master Clock ───────────────────────────────────────────────
-    set_rgb_colour(RGB_GREY_7);
-    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Master Clock");
+    set_rgb_colour((tRgb)RGB_GREY_7);
+    render_text(mainArea, (tRectangle){{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Master Clock");
     y                            += secH;
 
     {
         double dialH = 48.0;
         double x     = boxX + margin;
         snprintf(buf, sizeof(buf), "%u BPM", (unsigned)gGlobalSettings.masterClock);
-        gPerfSettingsPanelRects.masterClock        = render_dial_with_text(mainArea, {{x, y}, {20.0, dialH}}, NULL, buf, STANDARD_BUTTON_TEXT_HEIGHT, gGlobalSettings.masterClock >= 30 ? gGlobalSettings.masterClock - 30 : 0, 211, 0, (tRgb)RGB_BACKGROUND_GREY);
+        gPerfSettingsPanelRects.masterClock        = render_dial_with_text(mainArea, (tRectangle){{x, y}, {20.0, dialH}}, NULL, buf, STANDARD_BUTTON_TEXT_HEIGHT, gGlobalSettings.masterClock >= 30 ? gGlobalSettings.masterClock - 30 : 0, 211, 0, (tRgb)RGB_BACKGROUND_GREY);
         x                                         += 20.0 + 12.0;
         gPerfSettingsPanelRects.masterClockRunning = draw_button(mainArea,
-                                                                 {{x, y + (dialH - btnH) / 2.0}, {get_text_width((char *)"Stopped", btnH, eCache) + 8.0, btnH}},
+                                                                 (tRectangle){{x, y + (dialH - btnH) / 2.0}, {get_text_width((char *)"Stopped", btnH, eCache) + 8.0, btnH}},
                                                                  gGlobalSettings.masterClockRunning ? "Running" : "Stopped",
                                                                  gGlobalSettings.masterClockRunning ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
         y                                         += dialH + 4.0;
     }
 
     // ── Slots ──────────────────────────────────────────────────────
-    set_rgb_colour(RGB_GREY_7);
-    render_text(mainArea, {{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Slots");
+    set_rgb_colour((tRgb)RGB_GREY_7);
+    render_text(mainArea, (tRectangle){{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Slots");
     y                            += secH;
 
     double labelColW = get_text_width((char *)"Slot X:", btnH, eCache) + 8.0;
@@ -1820,20 +1837,20 @@ static void render_perf_settings_panel(void) {
     colX[2]                       = colHld;
 
     // Column headers
-    set_rgb_colour(RGB_BLACK);
-    render_text(mainArea, {{colEn, y}, {BLANK_SIZE, btnH}}, "Enable");
-    render_text(mainArea, {{colKbd, y}, {BLANK_SIZE, btnH}}, "Keyboard");
-    render_text(mainArea, {{colHld, y}, {BLANK_SIZE, btnH}}, "Hold");
-    render_text(mainArea, {{colLo, y}, {BLANK_SIZE, btnH}}, "Lower");
-    render_text(mainArea, {{colHi, y}, {BLANK_SIZE, btnH}}, "Upper");
+    set_rgb_colour((tRgb)RGB_BLACK);
+    render_text(mainArea, (tRectangle){{colEn, y}, {BLANK_SIZE, btnH}}, "Enable");
+    render_text(mainArea, (tRectangle){{colKbd, y}, {BLANK_SIZE, btnH}}, "Keyboard");
+    render_text(mainArea, (tRectangle){{colHld, y}, {BLANK_SIZE, btnH}}, "Hold");
+    render_text(mainArea, (tRectangle){{colLo, y}, {BLANK_SIZE, btnH}}, "Lower");
+    render_text(mainArea, (tRectangle){{colHi, y}, {BLANK_SIZE, btnH}}, "Upper");
 
     // Keyboard Range global toggle — right side of header
     {
         double x = colRng;
-        render_text(mainArea, {{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Kbd Range:");
+        render_text(mainArea, (tRectangle){{x, y + 2.0}, {BLANK_SIZE, btnH}}, "Kbd Range:");
         x                                    += get_text_width((char *)"Kbd Range:", btnH, eCache) + 4.0;
         gPerfSettingsPanelRects.keyboardRange = draw_button(mainArea,
-                                                            {{x, y}, {get_text_width((char *)"On", btnH, eCache) + 8.0, btnH}},
+                                                            (tRectangle){{x, y}, {get_text_width((char *)"On", btnH, eCache) + 8.0, btnH}},
                                                             gPerfSettings.keyboardRange ? "On" : "Off",
                                                             gPerfSettings.keyboardRange ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
     }
@@ -1843,12 +1860,12 @@ static void render_perf_settings_panel(void) {
     static const char * slotLabel[] = {"Slot A:", "Slot B:", "Slot C:", "Slot D:"};
 
     for (i = 0; i < MAX_SLOTS; i++) {
-        set_rgb_colour(RGB_BLACK);
-        render_text(mainArea, {{boxX + margin, y + 2.0}, {BLANK_SIZE, btnH}}, (char *)slotLabel[i]);
+        set_rgb_colour((tRgb)RGB_BLACK);
+        render_text(mainArea, (tRectangle){{boxX + margin, y + 2.0}, {BLANK_SIZE, btnH}}, (char *)slotLabel[i]);
 
         for (col = 0; col < kPSSlotToggleCount; col++) {
             kPSSlotToggles[col].rects[i] = draw_button(mainArea,
-                                                       {{colX[col], y}, {get_text_width((char *)"On", btnH, eCache) + 8.0, btnH}},
+                                                       (tRectangle){{colX[col], y}, {get_text_width((char *)"On", btnH, eCache) + 8.0, btnH}},
                                                        kPSSlotToggles[col].get_str(i),
                                                        kPSSlotToggles[col].get_colour(i));
         }
@@ -1862,7 +1879,7 @@ static void render_perf_settings_panel(void) {
         midi_note_name_str(gPerfSettings.slot[i].rangeLower, loNote, sizeof(loNote));
         midi_note_name_str(gPerfSettings.slot[i].rangeUpper, hiNote, sizeof(hiNote));
         snprintf(rangeBuf, sizeof(rangeBuf), "%s - %s", loNote, hiNote);
-        render_text(mainArea, {{colRng, y + 2.0}, {BLANK_SIZE, btnH}}, rangeBuf);
+        render_text(mainArea, (tRectangle){{colRng, y + 2.0}, {BLANK_SIZE, btnH}}, rangeBuf);
 
         y += rowH;
     }
@@ -1887,7 +1904,7 @@ static void render_bank_backup_progress(void) {
     bool   isEverything = gBankBackupIsEverything;
 
     draw_dialog_background_overlay();
-    draw_panel_chrome({{boxX, boxY}, {boxW, boxH}}, titleH,
+    draw_panel_chrome((tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH,
                       isEverything ? "Backup Everything" : (isPerf ? "Backing Up Performance Bank" : "Backing Up Patch Bank"));
 
     if (isEverything) {
@@ -1898,22 +1915,22 @@ static void render_bank_backup_progress(void) {
         snprintf(lineBuf, sizeof(lineBuf), "Bank %u - location %u / %u",
                  gBankBackupBank + 1, gBankBackupLocation + 1, NUM_LOCATIONS_PER_BANK);
     }
-    render_text(mainArea, {{boxX + margin, boxY + titleH + margin}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, lineBuf);
+    render_text(mainArea, (tRectangle){{boxX + margin, boxY + titleH + margin}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, lineBuf);
 
     snprintf(lineBuf, sizeof(lineBuf), "%u %s%s written so far",
              gBankBackupWritten, isPerf ? "performance" : "patch",
              gBankBackupWritten == 1 ? "" : (isPerf ? "s" : "es"));
-    render_text(mainArea, {{boxX + margin, boxY + titleH + margin + STANDARD_TEXT_HEIGHT + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, lineBuf);
+    render_text(mainArea, (tRectangle){{boxX + margin, boxY + titleH + margin + STANDARD_TEXT_HEIGHT + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, lineBuf);
 
     // Progress bar
     double barY = boxY + boxH - margin - 8.0;
     double barW = boxW - margin * 2.0;
     double frac = (double)(gBankBackupLocation + 1) / (double)NUM_LOCATIONS_PER_BANK;
 
-    set_rgb_colour(RGB_GREY_9);
-    render_rectangle(mainArea, {{boxX + margin, barY}, {barW, 8.0}});
-    set_rgb_colour(RGB_GREEN_ON);
-    render_rectangle(mainArea, {{boxX + margin, barY}, {barW * frac, 8.0}});
+    set_rgb_colour((tRgb)RGB_GREY_9);
+    render_rectangle(mainArea, (tRectangle){{boxX + margin, barY}, {barW, 8.0}});
+    set_rgb_colour((tRgb)RGB_GREEN_ON);
+    render_rectangle(mainArea, (tRectangle){{boxX + margin, barY}, {barW * frac, 8.0}});
 }
 
 static void render_bank_restore_progress(void) {
@@ -1933,7 +1950,7 @@ static void render_bank_restore_progress(void) {
     bool   isEverything = gBankRestoreIsEverything;
 
     draw_dialog_background_overlay();
-    draw_panel_chrome({{boxX, boxY}, {boxW, boxH}}, titleH,
+    draw_panel_chrome((tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH,
                       isEverything ? "Restore Everything" : (isPerf ? "Restoring Performance Bank" : "Restoring Patch Bank"));
 
     if (isEverything) {
@@ -1944,22 +1961,22 @@ static void render_bank_restore_progress(void) {
         snprintf(lineBuf, sizeof(lineBuf), "Bank %u - location %u / %u",
                  gBankRestoreBank + 1, gBankRestoreLocation + 1, NUM_LOCATIONS_PER_BANK);
     }
-    render_text(mainArea, {{boxX + margin, boxY + titleH + margin}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, lineBuf);
+    render_text(mainArea, (tRectangle){{boxX + margin, boxY + titleH + margin}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, lineBuf);
 
     snprintf(lineBuf, sizeof(lineBuf), "%u %s%s written so far",
              gBankRestoreWritten, isPerf ? "performance" : "patch",
              gBankRestoreWritten == 1 ? "" : (isPerf ? "s" : "es"));
-    render_text(mainArea, {{boxX + margin, boxY + titleH + margin + STANDARD_TEXT_HEIGHT + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, lineBuf);
+    render_text(mainArea, (tRectangle){{boxX + margin, boxY + titleH + margin + STANDARD_TEXT_HEIGHT + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, lineBuf);
 
     // Progress bar
     double barY = boxY + boxH - margin - 8.0;
     double barW = boxW - margin * 2.0;
     double frac = (double)(gBankRestoreLocation + 1) / (double)NUM_LOCATIONS_PER_BANK;
 
-    set_rgb_colour(RGB_GREY_9);
-    render_rectangle(mainArea, {{boxX + margin, barY}, {barW, 8.0}});
-    set_rgb_colour(RGB_GREEN_ON);
-    render_rectangle(mainArea, {{boxX + margin, barY}, {barW * frac, 8.0}});
+    set_rgb_colour((tRgb)RGB_GREY_9);
+    render_rectangle(mainArea, (tRectangle){{boxX + margin, barY}, {barW, 8.0}});
+    set_rgb_colour((tRgb)RGB_GREEN_ON);
+    render_rectangle(mainArea, (tRectangle){{boxX + margin, barY}, {barW * frac, 8.0}});
 }
 
 static void render_patch_notes_edit(void) {
@@ -1985,13 +2002,13 @@ static void render_patch_notes_edit(void) {
     double btnH         = STANDARD_BUTTON_TEXT_HEIGHT;
 
     draw_dialog_background_overlay();
-    draw_panel_chrome({{boxX, boxY}, {boxW, boxH}}, titleH, "Patch Notes");
-    gPatchNotesCloseRect = draw_panel_close_button({{boxX, boxY}, {boxW, boxH}}, gPatchNotesClosePressed);
+    draw_panel_chrome((tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Patch Notes");
+    gPatchNotesCloseRect = draw_panel_close_button((tRectangle){{boxX, boxY}, {boxW, boxH}}, gPatchNotesClosePressed);
 
     // Character count
     snprintf(countBuf, sizeof(countBuf), "%zu / %d", strlen(gPatchNotesEdit.buffer), PATCH_NOTES_SIZE);
-    set_rgb_colour(RGB_GREY_9);
-    render_text(mainArea, {{boxX + boxW / 2.0 - 30.0, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, countBuf);
+    set_rgb_colour((tRgb)RGB_GREY_9);
+    render_text(mainArea, (tRectangle){{boxX + boxW / 2.0 - 30.0, boxY + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, countBuf);
 
     // Cache geometry for click-to-cursor and keyboard navigation
     gNoteTextX           = textX;
@@ -2019,8 +2036,8 @@ static void render_patch_notes_edit(void) {
         gNoteScrollLine = 0;
     }
     // Text content area background
-    set_rgb_colour(RGB_WHITE);
-    render_rectangle(mainArea, {{boxX + 1, boxY + titleH}, {boxW - 2, boxH - titleH - hintH - 1}});
+    set_rgb_colour((tRgb)RGB_WHITE);
+    render_rectangle(mainArea, (tRectangle){{boxX + 1, boxY + titleH}, {boxW - 2, boxH - titleH - hintH - 1}});
 
     {
         const char * buf = gPatchNotesEdit.buffer;
@@ -2051,26 +2068,26 @@ static void render_patch_notes_edit(void) {
                 strncpy(displayLine, buf + start, len);
                 displayLine[len] = '\0';
             }
-            set_rgb_colour(RGB_BLACK);
-            render_text(mainArea, {{textX, y}, {textW, STANDARD_TEXT_HEIGHT}}, displayLine);
+            set_rgb_colour((tRgb)RGB_BLACK);
+            render_text(mainArea, (tRectangle){{textX, y}, {textW, STANDARD_TEXT_HEIGHT}}, displayLine);
             y += lineH;
         }
     }
 
     // Bottom bar: Discard Edits button + hint text. Inset so it doesn't paint over the panel's
     // bottom/left/right border line, same as the title bar above.
-    set_rgb_colour(RGB_GREY_3);
-    render_rectangle(mainArea, {{boxX + BORDER_LINE_WIDTH, boxY + boxH - hintH}, {boxW - 2.0 * BORDER_LINE_WIDTH, hintH - BORDER_LINE_WIDTH}});
+    set_rgb_colour((tRgb)RGB_GREY_3);
+    render_rectangle(mainArea, (tRectangle){{boxX + BORDER_LINE_WIDTH, boxY + boxH - hintH}, {boxW - 2.0 * BORDER_LINE_WIDTH, hintH - BORDER_LINE_WIDTH}});
 
     double btnY       = boxY + boxH - hintH + (hintH - btnH) / 2.0 - 2.0; // draw_button's internal padding sits its text a couple px lower than render_text at the same y - nudge up so "Discard Edits" lines up with the hint text baseline
     double btnX       = boxX + margin;
     tRgb   discardCol = gPatchNotesDiscardPressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
     gPatchNotesDiscardRect = draw_button(mainArea,
-                                         {{btnX, btnY}, {get_text_width((char *)"Discard Edits", btnH, eCache) + 4.0, btnH}},
+                                         (tRectangle){{btnX, btnY}, {get_text_width((char *)"Discard Edits", btnH, eCache) + 4.0, btnH}},
                                          (char *)"Discard Edits", discardCol);
     btnX                  += gPatchNotesDiscardRect.size.w + 12.0;
-    set_rgb_colour(RGB_WHITE);
-    render_text(mainArea, {{btnX, boxY + boxH - hintH + (hintH - STANDARD_TEXT_HEIGHT) / 2.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}},
+    set_rgb_colour((tRgb)RGB_WHITE);
+    render_text(mainArea, (tRectangle){{btnX, boxY + boxH - hintH + (hintH - STANDARD_TEXT_HEIGHT) / 2.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}},
                 "Arrows/Click=move   Enter=newline   Esc=close without saving");
 }
 
@@ -2200,9 +2217,9 @@ static void render_mouse_crosshair(void) {
 
     get_global_gui_scaled_mouse_coord(&coord);
 
-    set_rgb_colour(RGB_RED_7);
-    render_rectangle(mainArea, {{0.0, coord.y}, {logicalW, thickness}});
-    render_rectangle(mainArea, {{coord.x, 0.0}, {thickness, logicalH}});
+    set_rgb_colour((tRgb)RGB_RED_7);
+    render_rectangle(mainArea, (tRectangle){{0.0, coord.y}, {logicalW, thickness}});
+    render_rectangle(mainArea, (tRectangle){{coord.x, 0.0}, {thickness, logicalH}});
 
     // Keep the readout on-screen when the cursor is near the right/top edge,
     // otherwise the one value you actually want to read is the one clipped away.
@@ -2217,7 +2234,7 @@ static void render_mouse_crosshair(void) {
     if (textY < textHeight) {
         textY = coord.y + textHeight + 5.0;
     }
-    render_text(mainArea, {{textX, textY}, {BLANK_SIZE, textHeight}}, buff);
+    render_text(mainArea, (tRectangle){{textX, textY}, {BLANK_SIZE, textHeight}}, buff);
 }
 #endif
 

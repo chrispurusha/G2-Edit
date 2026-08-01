@@ -346,7 +346,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
             smallRectangle.size.h   = (smallRectangle.size.h - (space * (double)(leds + 1))) / (double)leds;
             smallRectangle.size.w  -= space * 2;
 
-            set_rgb_colour(RGB_BLACK);
+            set_rgb_colour((tRgb)RGB_BLACK);
             render_rectangle(moduleArea, rectangle);
 
             value                  &= 0x0ff;                         // There's a value of 3 in the high nibble, which is unknown use. Might be an indication of this being individual bit per LED?
@@ -374,9 +374,9 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
             double   fullHeight        = rectangle.size.h;
             double   stepHeight        = fullHeight / (double)config->segments;
             int      valueThresholds[] = {7, 11, 12}; // exclusive upper bounds: green/yellow/red
-            tRgb     colours[]         = {RGB_GREEN_7, RGB_YELLOW_7, RGB_RED_7};
+            tRgb     colours[]         = {RGB_GREEN_7, (tRgb)RGB_YELLOW_7, RGB_RED_7};
 
-            set_rgb_colour(RGB_BLACK);
+            set_rgb_colour((tRgb)RGB_BLACK);
             render_rectangle(moduleArea, rectangle);
 
             double   previousHeight    = 0;
@@ -394,20 +394,22 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
                     set_rgb_colour(colours[i]);
                     render_rectangle(
                         moduleArea,
-                        {{rectangle.coord.x,
-                            rectangle.coord.y + fullHeight - previousHeight - segmentDrawHeight},
-                            {rectangle.size.w,
-                             segmentDrawHeight}});
+                        (tRectangle){{rectangle.coord.x,
+                                      rectangle.coord.y + fullHeight - previousHeight - segmentDrawHeight},
+                                     {rectangle.size.w,
+                                      segmentDrawHeight}
+                        });
                     previousHeight   += segmentDrawHeight;
                 }
             }
 
             // Clip: bright red stripe at the very top of the meter (red zone) when clipping.
             if (clip) {
-                set_rgb_colour(RGB_RED_7);
+                set_rgb_colour((tRgb)RGB_RED_7);
                 render_rectangle(moduleArea,
-                                 {{rectangle.coord.x, rectangle.coord.y},
-                                     {rectangle.size.w, stepHeight}});
+                                 (tRectangle){{rectangle.coord.x, rectangle.coord.y},
+                                              {rectangle.size.w, stepHeight}
+                                 });
             }
             break;
         }
@@ -423,7 +425,7 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
             smallRectangle.size.w   = (smallRectangle.size.w - (space * (double)(leds + 1))) / (double)leds;
             smallRectangle.size.h  -= space * 2;
 
-            set_rgb_colour(RGB_BLACK);
+            set_rgb_colour((tRgb)RGB_BLACK);
             render_rectangle(moduleArea, rectangle);
 
             value                  &= 0x0ff;                         // There's a value of 3 in the high nibble, which is unknown use. Might be an indication of this being individual bit per LED?
@@ -458,7 +460,7 @@ static char       gKnobOverlayLabel[MAX_KNOB_OVERLAYS][32] = {0};
 
 void render_knob_assignment_overlay(void) {
     for (int i = 0; i < gKnobOverlayCount; i++) {
-        draw_button(moduleArea, gKnobOverlayRect[i], gKnobOverlayLabel[i], RGB_GREY_9);
+        draw_button(moduleArea, gKnobOverlayRect[i], gKnobOverlayLabel[i], (tRgb)RGB_GREY_9);
     }
 }
 
@@ -470,9 +472,11 @@ static void queue_overlay_row(tRectangle rectangle, const char * label) {
     }
     double     labelWidth = get_text_width(label, (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8, eCache);
     double     rowHeight  = ((double)STANDARD_TEXT_HEIGHT * 0.8) + 2.0;
-    tRectangle labelRect  = {{rectangle.coord.x + (rectangle.size.w - labelWidth) / 2.0,
-        rectangle.coord.y + rectangle.size.h + 2.0 + (rowHeight * (double)gKnobOverlayCount)},
-        {labelWidth,                                               (double)STANDARD_TEXT_HEIGHT * 0.8}};
+    tRectangle labelRect  = {{
+                                 rectangle.coord.x + (rectangle.size.w - labelWidth) / 2.0,
+                                 rectangle.coord.y + rectangle.size.h + 2.0 + (rowHeight * (double)gKnobOverlayCount)
+                             },
+                             {labelWidth,(double)STANDARD_TEXT_HEIGHT * 0.8}};
 
     COPY_STRING(gKnobOverlayLabel[gKnobOverlayCount], label);
     gKnobOverlayRect[gKnobOverlayCount] = labelRect;
@@ -529,7 +533,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             render_param_function = &render_paramType1StandardToggle;
 
             if (render_param_function != NULL) {
-                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
+                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, (tRgb)RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
             }
             break;
         }
@@ -539,7 +543,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             render_param_function = &render_paramType1Bypass;
 
             if (render_param_function != NULL) {
-                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
+                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, (tRgb)RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
             }
             break;
         }
@@ -550,7 +554,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             render_param_function = &render_paramType1Enable;
 
             if (render_param_function != NULL) {
-                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
+                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, (tRgb)RGB_GREY_5, paramIndex, paramRef, paramLocationList[paramRef].strMap);
             }
             break;
         }
@@ -617,7 +621,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             }
 
             if (render_param_function != NULL) {
-                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, RGB_GREY_5, paramRef);
+                gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex] = render_param_function(module, rectangle, label, buff, sizeof(buff), paramValue, paramLocationList[paramRef].range, morphRange, (tRgb)RGB_GREY_5, paramRef);
             }
             break;
         }
@@ -688,7 +692,7 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             char buff[16] = {0};
 
             snprintf(buff, sizeof(buff), "%u", module->mode[0].value);
-            module->mode[modeIndex].rectangle                                                   = render_dial_with_text(moduleArea, rectangle, (char *)modeLocationList[modeRef].label, buff, rectangle.size.h / 4.0, module->mode[0].value, modeLocationList[modeRef].range, 0, RGB_GREY_5); // TODO: Check if Mode can be morphed
+            module->mode[modeIndex].rectangle                                                   = render_dial_with_text(moduleArea, rectangle, (char *)modeLocationList[modeRef].label, buff, rectangle.size.h / 4.0, module->mode[0].value, modeLocationList[modeRef].range, 0, (tRgb)RGB_GREY_5); // TODO: Check if Mode can be morphed
             sModeClickCtx[module->key.slot][module->key.location][module->key.index][modeIndex] = (tModeClickCtx){
                 module->key, modeIndex
             };
@@ -710,16 +714,16 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
                 //Debug help for value
                 char debug[64] = {0};
                 snprintf(debug, sizeof(debug), "modeRef %u", modeRef);
-                gParamRectangle[module->key.slot][module->key.location][module->key.index][modeIndex] = draw_button(moduleArea, {{rectangle.coord.x, y}, {30, textHeight}}, debug, RGB_BACKGROUND_GREY);
+                gParamRectangle[module->key.slot][module->key.location][module->key.index][modeIndex] = draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {30, textHeight}}, debug, (tRgb)RGB_BACKGROUND_GREY);
                 return;
             }
             //if (paramLocationList[paramRef].colourMap != NULL) {
             //    set_rgb_colour(paramLocationList[paramRef].colourMap[paramValue]);
             //} else {
-            //    set_rgb_colour(RGB_BACKGROUND_GREY);
+            //    set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
             //}
 
-            module->mode[modeIndex].rectangle                                                   = draw_button(moduleArea, {{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight, eCache), textHeight}}, strMap[modeValue], RGB_BACKGROUND_GREY);
+            module->mode[modeIndex].rectangle                                                   = draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight, eCache), textHeight}}, strMap[modeValue], (tRgb)RGB_BACKGROUND_GREY);
             sModeClickCtx[module->key.slot][module->key.location][module->key.index][modeIndex] = (tModeClickCtx){
                 module->key, modeIndex
             };
@@ -793,20 +797,20 @@ void render_led_common(tRectangle rectangle, tModule * module, uint32_t ledRef, 
             bool     red    = ledVal & 1;
 
             if (green && red) {
-                set_rgb_colour(RGB_YELLOW_7);
+                set_rgb_colour((tRgb)RGB_YELLOW_7);
             } else if (green) {
-                set_rgb_colour(RGB_GREEN_7);
+                set_rgb_colour((tRgb)RGB_GREEN_7);
             } else if (red) {
-                set_rgb_colour(RGB_RED_7);
+                set_rgb_colour((tRgb)RGB_RED_7);
             } else {
-                set_rgb_colour(RGB_BLACK);
+                set_rgb_colour((tRgb)RGB_BLACK);
             }
             render_rectangle(moduleArea, rectangle);
             break;
         }
         case ledTypePark:
         {
-            set_rgb_colour(RGB_GREEN_3);
+            set_rgb_colour((tRgb)RGB_GREEN_3);
             render_rectangle(moduleArea, rectangle);
             break;
         }
@@ -831,7 +835,7 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
         textRectangle.size.w = BLANK_SIZE;
         textRectangle.size.h = STANDARD_TEXT_HEIGHT;
 
-        set_rgb_colour(RGB_BLACK);
+        set_rgb_colour((tRgb)RGB_BLACK);
 
         switch (connectorLocationList[connectorListIndex].labelLoc) {
             case labelLocUp:
@@ -865,17 +869,17 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
     set_rgb_colour(connectorColourMap[effective_connector_type(type, module->upRate)]);  // Note, was using "module->connector[connectorIndex].type", check that this type param is OK
 
     if (module->connector[connectorIndex].dir == connectorDirIn) {
-        module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, {rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)}, rectangle.size.w / 2.0, 10.0, 0.0, 10.0);
+        module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, (tCoord){rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)}, rectangle.size.w / 2.0, 10.0, 0.0, 10.0);
     } else {
-        module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, {rectangle.coord, {rectangle.size.w, rectangle.size.h}});
+        module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, (tRectangle){rectangle.coord, {rectangle.size.w, rectangle.size.h}});
     }
     sConnectorClickCtx[module->key.slot][module->key.location][module->key.index][connectorIndex] = (tConnectorClickCtx){
         module->key, connectorIndex
     };
     register_click_region(module->connector[connectorIndex].rectangle, eClickLayerCanvas, connector_click_handler,
                           &sConnectorClickCtx[module->key.slot][module->key.location][module->key.index][connectorIndex]);
-    set_rgb_colour(RGB_BLACK);
-    render_circle_part(moduleArea, {rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)}, rectangle.size.w / 4.0, 10.0, 0.0, 10.0);
+    set_rgb_colour((tRgb)RGB_BLACK);
+    render_circle_part(moduleArea, (tCoord){rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)}, rectangle.size.w / 4.0, 10.0, 0.0, 10.0);
 }
 
 tRectangle adjust_rectangle(tRectangle moduleBase, tRectangle relative, tAnchor anchor, tModule * module) {
@@ -1166,20 +1170,22 @@ static void render_oscshpb_waveform_graph(tRectangle rectangle, tModule * module
     const int              numCycles         = 1;   // one period across the box, matching the original editor
     tCoord                 prev              = {0};
 
-    set_rgb_colour(RGB_GREY_2);
+    set_rgb_colour((tRgb)RGB_GREY_2);
     render_rectangle(moduleArea, graphRect);
 
-    set_rgb_colour(RGB_GREY_5);
-    render_line(moduleArea, {graphRect.coord.x, midY}, {graphRect.coord.x + graphRect.size.w, midY}, 1.0);
+    set_rgb_colour((tRgb)RGB_GREY_5);
+    render_line(moduleArea, (tCoord){graphRect.coord.x, midY}, (tCoord){graphRect.coord.x + graphRect.size.w, midY}, 1.0);
 
-    set_rgb_colour(RGB_GREEN_ON);
+    set_rgb_colour((tRgb)RGB_GREEN_ON);
 
     for (int i = 0; i <= numSamples; i++) {
         double xFraction = (double)i / (double)numSamples;                 // raw position across the box, 0..1
         double phase     = fmod(xFraction * numCycles, 1.0);               // wrapped per-cycle phase for the sample
         double sample    = oscshpb_waveform_sample(waveformValue, phase, shape);
-        tCoord point     = {graphRect.coord.x + (xFraction * graphRect.size.w),
-                            graphRect.coord.y + (graphRect.size.h / 2.0) - (sample * graphRect.size.h * 0.45)};
+        tCoord point     = {
+            graphRect.coord.x + (xFraction * graphRect.size.w),
+            graphRect.coord.y + (graphRect.size.h / 2.0) - (sample * graphRect.size.h * 0.45)
+        };
 
         if (i > 0) {
             render_line(moduleArea, prev, point, 1.5);
@@ -1257,6 +1263,31 @@ static double envadsr_decay_level(double t, double levelStart, double levelEnd, 
     return envadsr_exp_decay(t, levelStart, levelEnd); // Exp - concave
 }
 
+// Maps an envelope "shape" value (0 at the start, 1 at the attack peak) to a y coordinate.
+// "shape" is always expressed in Pos's own convention; each Output Type converts it to what it
+// actually outputs (per the manual's six descriptions) before the mapping.
+static double env_level_to_y(double shape, uint32_t outputType, double zeroY, double fullSwing) {
+    double actualLevel;
+
+    switch (outputType) {
+        case 1: actualLevel  = 1.0 - shape;
+            break;                                   // PosInv
+
+        case 2: actualLevel  = shape - 1.0;
+            break;                                   // Neg
+
+        case 3: actualLevel  = -shape;
+            break;                                   // NegInv
+
+        case 5: actualLevel  = -shape;
+            break;                                   // BipInv
+
+        default: actualLevel = shape;
+            break;                                   // Pos, Bip
+    }
+    return zeroY - (actualLevel * fullSwing);
+}
+
 static void render_envadsr_graph(tRectangle rectangle, tModule * module) {
     // Env Shape (index 0), Attack (1), Decay (2), Sustain (3), Release (4), Output Type (5) -
     // fixed positions for moduleTypeEnvADSR's entries in paramLocationList, see moduleResources.h.
@@ -1307,52 +1338,31 @@ static void render_envadsr_graph(tRectangle rectangle, tModule * module) {
     double                 zeroY                = isBip ? (graphRect.coord.y + (graphRect.size.h * 0.5)) : (isNegFamily ? graphRect.coord.y : (graphRect.coord.y + graphRect.size.h));
     double                 fullSwing            = isBip ? (graphRect.size.h * 0.5) : graphRect.size.h;
 
-    set_rgb_colour(RGB_GREY_2);
+    set_rgb_colour((tRgb)RGB_GREY_2);
     render_rectangle(moduleArea, graphRect);
 
-    set_rgb_colour(RGB_YELLOW_7);
-    render_line(moduleArea, {x0, zeroY}, {x0 + graphRect.size.w, zeroY}, 1.0);
+    set_rgb_colour((tRgb)RGB_YELLOW_7);
+    render_line(moduleArea, (tCoord){x0, zeroY}, (tCoord){x0 + graphRect.size.w, zeroY}, 1.0);
 
     // "shape" (0 at the start, 1 at the attack peak, effectiveSustain during hold, releaseTarget
     // at the end) is always expressed in Pos's own convention; convert it to what each Output
     // Type actually outputs (per the manual's six descriptions) before mapping to a y coordinate.
-    auto                   levelToY = [&](double shape) {
-        double actualLevel;
 
-        switch (outputType) {
-            case 1: actualLevel  = 1.0 - shape;
-                break;                                   // PosInv
+    tCoord                 p0                   = {x0, env_level_to_y(0.0, outputType, zeroY, fullSwing)};
+    tCoord                 p1                   = {x0 + (attackW * graphRect.size.w), env_level_to_y(1.0, outputType, zeroY, fullSwing)};
+    tCoord                 p2                   = {p1.x + (decayW * graphRect.size.w), env_level_to_y(effectiveSustain, outputType, zeroY, fullSwing)};
+    tCoord                 p3                   = {p2.x + (holdWidth * graphRect.size.w), p2.y};
+    tCoord                 p4                   = {p3.x + (releaseW * graphRect.size.w), env_level_to_y(releaseTarget, outputType, zeroY, fullSwing)};
 
-            case 2: actualLevel  = shape - 1.0;
-                break;                                   // Neg
+    const int              numCurveSteps        = 12;
+    tCoord                 prev                 = p0;
 
-            case 3: actualLevel  = -shape;
-                break;                                   // NegInv
-
-            case 5: actualLevel  = -shape;
-                break;                                   // BipInv
-
-            default: actualLevel = shape;
-                break;                                   // Pos, Bip
-        }
-        return zeroY - (actualLevel * fullSwing);
-    };
-
-    tCoord    p0            = {x0, levelToY(0.0)};
-    tCoord    p1            = {x0 + (attackW * graphRect.size.w), levelToY(1.0)};
-    tCoord    p2            = {p1.x + (decayW * graphRect.size.w), levelToY(effectiveSustain)};
-    tCoord    p3            = {p2.x + (holdWidth * graphRect.size.w), p2.y};
-    tCoord    p4            = {p3.x + (releaseW * graphRect.size.w), levelToY(releaseTarget)};
-
-    const int numCurveSteps = 12;
-    tCoord    prev          = p0;
-
-    set_rgb_colour(RGB_GREEN_ON);
+    set_rgb_colour((tRgb)RGB_GREEN_ON);
 
     for (int i = 1; i <= numCurveSteps; i++) {
         double t     = (double)i / (double)numCurveSteps;
         double level = envadsr_attack_level(t, envShapeIndex);
-        tCoord point = {p0.x + (t * (p1.x - p0.x)), levelToY(level)};
+        tCoord point = {p0.x + (t * (p1.x - p0.x)), env_level_to_y(level, outputType, zeroY, fullSwing)};
 
         render_line(moduleArea, prev, point, 1.5);
         prev = point;
@@ -1361,22 +1371,22 @@ static void render_envadsr_graph(tRectangle rectangle, tModule * module) {
     for (int i = 1; i <= numCurveSteps; i++) {
         double t     = (double)i / (double)numCurveSteps;
         double level = envadsr_decay_level(t, 1.0, effectiveSustain, envShapeIndex);
-        tCoord point = {p1.x + (t * (p2.x - p1.x)), levelToY(level)};
+        tCoord point = {p1.x + (t * (p2.x - p1.x)), env_level_to_y(level, outputType, zeroY, fullSwing)};
 
         render_line(moduleArea, prev, point, 1.5);
         prev = point;
     }
 
-    set_rgb_colour(RGB_ORANGE_1); // sustain segment - matches the original editor's own colouring
+    set_rgb_colour((tRgb)RGB_ORANGE_1); // sustain segment - matches the original editor's own colouring
     render_line(moduleArea, p2, p3, 1.5);
 
-    set_rgb_colour(RGB_GREEN_ON);
+    set_rgb_colour((tRgb)RGB_GREEN_ON);
     prev = p3;
 
     for (int i = 1; i <= numCurveSteps; i++) {
         double t     = (double)i / (double)numCurveSteps;
         double level = envadsr_decay_level(t, effectiveSustain, releaseTarget, envShapeIndex);
-        tCoord point = {p3.x + (t * (p4.x - p3.x)), levelToY(level)};
+        tCoord point = {p3.x + (t * (p4.x - p3.x)), env_level_to_y(level, outputType, zeroY, fullSwing)};
 
         render_line(moduleArea, prev, point, 1.5);
         prev = point;
@@ -1431,13 +1441,13 @@ static void render_fltclassic_response_graph(tRectangle rectangle, tModule * mod
     const int              numSamples      = 100;
     tCoord                 prev            = {0};
 
-    set_rgb_colour(RGB_GREY_2);
+    set_rgb_colour((tRgb)RGB_GREY_2);
     render_rectangle(moduleArea, graphRect);
 
-    set_rgb_colour(RGB_GREY_5);
-    render_line(moduleArea, {graphRect.coord.x, baseY}, {graphRect.coord.x + graphRect.size.w, baseY}, 1.0);
+    set_rgb_colour((tRgb)RGB_GREY_5);
+    render_line(moduleArea, (tCoord){graphRect.coord.x, baseY}, (tCoord){graphRect.coord.x + graphRect.size.w, baseY}, 1.0);
 
-    set_rgb_colour(RGB_GREEN_ON);
+    set_rgb_colour((tRgb)RGB_GREEN_ON);
 
     for (int i = 0; i <= numSamples; i++) {
         double x         = (double)i / (double)numSamples;
@@ -1587,11 +1597,11 @@ void render_module(tModule * module) {
         double w = moduleRectangle.size.w;
         double h = moduleRectangle.size.h;
 
-        set_rgb_colour(RGB_YELLOW_7);
-        render_line(moduleArea, {x, y}, {x + w, y}, t);                 // top
-        render_line(moduleArea, {x + w, y}, {x + w, y + h}, t);         // right
-        render_line(moduleArea, {x + w, y + h}, {x, y + h}, t);         // bottom
-        render_line(moduleArea, {x, y + h}, {x, y}, t);                 // left
+        set_rgb_colour((tRgb)RGB_YELLOW_7);
+        render_line(moduleArea, (tCoord){x, y}, (tCoord){x + w, y}, t);                 // top
+        render_line(moduleArea, (tCoord){x + w, y}, (tCoord){x + w, y + h}, t);         // right
+        render_line(moduleArea, (tCoord){x + w, y + h}, (tCoord){x, y + h}, t);         // bottom
+        render_line(moduleArea, (tCoord){x, y + h}, (tCoord){x, y}, t);                 // left
     }
 
     // Patch Mutator: mark excluded modules with a thin red frame, but only while the panel is
@@ -1603,15 +1613,17 @@ void render_module(tModule * module) {
         double w = moduleRectangle.size.w;
         double h = moduleRectangle.size.h;
 
-        set_rgb_colour(RGB_RED_7);
-        render_line(moduleArea, {x, y}, {x + w, y}, t);                 // top
-        render_line(moduleArea, {x + w, y}, {x + w, y + h}, t);         // right
-        render_line(moduleArea, {x + w, y + h}, {x, y + h}, t);         // bottom
-        render_line(moduleArea, {x, y + h}, {x, y}, t);                 // left
+        set_rgb_colour((tRgb)RGB_RED_7);
+        render_line(moduleArea, (tCoord){x, y}, (tCoord){x + w, y}, t);                 // top
+        render_line(moduleArea, (tCoord){x + w, y}, (tCoord){x + w, y + h}, t);         // right
+        render_line(moduleArea, (tCoord){x + w, y + h}, (tCoord){x, y + h}, t);         // bottom
+        render_line(moduleArea, (tCoord){x, y + h}, (tCoord){x, y}, t);                 // left
     }
-    rgb              = {rgb.red * 1.05, rgb.green * 1.05, rgb.blue * 1.05};
+    rgb              = (tRgb){
+        rgb.red * 1.05, rgb.green * 1.05, rgb.blue * 1.05
+    };
     set_rgb_colour(rgb);
-    module->dragArea = render_rectangle(moduleArea, {{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3}, {moduleRectangle.size.w - 6, STANDARD_TEXT_HEIGHT + 2}});
+    module->dragArea = render_rectangle(moduleArea, (tRectangle){{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3}, {moduleRectangle.size.w - 6, STANDARD_TEXT_HEIGHT + 2}});
     register_click_region(module->dragArea, eClickLayerCanvas, drag_area_click_handler,
                           &sModuleClickCtx[module->key.slot][module->key.location][module->key.index]);
 
@@ -1628,30 +1640,33 @@ void render_module(tModule * module) {
         memcpy(&editBuf[cp + 1], &gModuleNameEdit.buffer[cp], strlen(gModuleNameEdit.buffer) - cp + 1);
 
         // Highlight the drag area to show edit mode
-        set_rgb_colour(RGB_WHITE);
-        render_rectangle(moduleArea, {{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3},
-                             {get_text_width(LONGEST_MODULE_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache) + 5, STANDARD_BUTTON_TEXT_HEIGHT + 2}});
+        set_rgb_colour((tRgb)RGB_WHITE);
+        render_rectangle(moduleArea, (tRectangle){{moduleRectangle.coord.x + 3, moduleRectangle.coord.y + 3},
+                                                  {get_text_width(LONGEST_MODULE_NAME, STANDARD_BUTTON_TEXT_HEIGHT, eCache) + 5, STANDARD_BUTTON_TEXT_HEIGHT + 2}
+                         });
 
-        set_rgba_colour(RGBA_BLACK_ON_TRANSPARENT);
-        render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0},
-                        {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, editBuf);
+        set_rgba_colour((tRgba)RGBA_BLACK_ON_TRANSPARENT);
+        render_text(moduleArea, (tRectangle){{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0},
+                                             {BLANK_SIZE, STANDARD_TEXT_HEIGHT}
+                    }, editBuf);
     } else {
         snprintf(buff, sizeof(buff), "%s", module->name);
-        set_rgba_colour(RGBA_BLACK_ON_TRANSPARENT);
-        render_text(moduleArea, {{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0},
-                        {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+        set_rgba_colour((tRgba)RGBA_BLACK_ON_TRANSPARENT);
+        render_text(moduleArea, (tRectangle){{moduleRectangle.coord.x + 5.0, moduleRectangle.coord.y + 5.0},
+                                             {BLANK_SIZE, STANDARD_TEXT_HEIGHT}
+                    }, buff);
     }
     // Temporary items purely for development debug
     snprintf(buff, sizeof(buff), "(%s)", gModuleProperties[module->type].name);
 
-    render_text(moduleArea, {{moduleRectangle.coord.x + 180.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    render_text(moduleArea, (tRectangle){{moduleRectangle.coord.x + 180.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
 
     snprintf(buff, sizeof(buff), "%u", module->key.index);
-    render_text(moduleArea, {{moduleRectangle.coord.x + moduleRectangle.size.w - 20.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    render_text(moduleArea, (tRectangle){{moduleRectangle.coord.x + moduleRectangle.size.w - 20.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
 
     if (module->modeCount > 0) {
         snprintf(buff, sizeof(buff), "Modes %u", module->modeCount);
-        render_text(moduleArea, {{moduleRectangle.coord.x + 250.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+        render_text(moduleArea, (tRectangle){{moduleRectangle.coord.x + 250.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
     }
 }
 
@@ -1671,7 +1686,7 @@ void render_modules(void) {
             // scale/scroll transform so a module straddling the viewport edge still renders.
             double     moduleHeight    = gModuleProperties[module->type].height;
             tRectangle moduleRectangle = {{module->column * MODULE_X_SPAN, module->row * MODULE_Y_SPAN                  },
-                {MODULE_WIDTH,                   (moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP}};
+                                          {MODULE_WIDTH,                   (moduleHeight * MODULE_Y_SPAN) - MODULE_Y_GAP}};
 
             if (!rectangle_visible_in_module_area(moduleRectangle)) {
                 // Still off-screen — but cables reference this module's connector positions
@@ -1689,19 +1704,19 @@ void render_modules(void) {
         double x2 = gRubberBand.start.x > gRubberBand.current.x ? gRubberBand.start.x : gRubberBand.current.x;
         double y2 = gRubberBand.start.y > gRubberBand.current.y ? gRubberBand.start.y : gRubberBand.current.y;
 
-        set_rgb_colour(RGB_YELLOW_7);
-        render_line(moduleArea, {x1, y1}, {x2, y1}, 1.5); // top
-        render_line(moduleArea, {x2, y1}, {x2, y2}, 1.5); // right
-        render_line(moduleArea, {x2, y2}, {x1, y2}, 1.5); // bottom
-        render_line(moduleArea, {x1, y2}, {x1, y1}, 1.5); // left
+        set_rgb_colour((tRgb)RGB_YELLOW_7);
+        render_line(moduleArea, (tCoord){x1, y1}, (tCoord){x2, y1}, 1.5); // top
+        render_line(moduleArea, (tCoord){x2, y1}, (tCoord){x2, y2}, 1.5); // right
+        render_line(moduleArea, (tCoord){x2, y2}, (tCoord){x1, y2}, 1.5); // bottom
+        render_line(moduleArea, (tCoord){x1, y2}, (tCoord){x1, y1}, 1.5); // left
     }
     // Draw background areas
-    //set_rgb_colour(RGB_RED_7/*RGB_BACKGROUND_GREY*/);
+    //set_rgb_colour((tRgb)RGB_RED_7/*RGB_BACKGROUND_GREY*/);
     //tRectangle area        = module_area();
-    //render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
-    //render_rectangle(mainArea, {{0.0, area.coord.y - MODULE_MARGIN}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
-    //render_rectangle(mainArea, {{area.coord.x + area.size.w, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
-    //render_rectangle(mainArea, {{0.0, area.coord.y + area.size.h}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
+    //render_rectangle(mainArea, (tRectangle){{0.0, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
+    //render_rectangle(mainArea, (tRectangle){{0.0, area.coord.y - MODULE_MARGIN}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
+    //render_rectangle(mainArea, (tRectangle){{area.coord.x + area.size.w, area.coord.y - MODULE_MARGIN}, {MODULE_MARGIN, area.size.h + (MODULE_MARGIN * 2.0)}});
+    //render_rectangle(mainArea, (tRectangle){{0.0, area.coord.y + area.size.h}, {area.size.w + (MODULE_MARGIN * 2.0), MODULE_MARGIN}});
 }
 
 void render_cable_from_to(tConnector from, tConnector to, double thickness) {
@@ -1733,7 +1748,7 @@ void render_cable_from_to(tConnector from, tConnector to, double thickness) {
     double minY      = fmin(fmin(from.coord.y, to.coord.y), control.y);
     double maxY      = fmax(fmax(from.coord.y, to.coord.y), control.y);
 
-    if (!rectangle_visible_in_module_area({{minX, minY}, {maxX - minX, maxY - minY}})) {
+    if (!rectangle_visible_in_module_area((tRectangle){{minX, minY}, {maxX - minX, maxY - minY}})) {
         return;
     }
     render_bezier_curve(moduleArea, from.coord, control, to.coord, thickness, 15);
@@ -1765,12 +1780,12 @@ static bool cable_touches_hover_connector(tCable * cable) {
 void render_cable(tCable * cable, double alpha) {
     tRgb      colour             = gCableColourMap[cable->colour];
 
-    tModule * moduleFrom         = get_module({cable->key.slot, cable->key.location, cable->key.moduleFromIndex});
+    tModule * moduleFrom         = get_module((tModuleKey){cable->key.slot, cable->key.location, cable->key.moduleFromIndex});
 
     if (moduleFrom == NULL) {
         return;
     }
-    tModule * moduleTo           = get_module({cable->key.slot, cable->key.location, cable->key.moduleToIndex});
+    tModule * moduleTo           = get_module((tModuleKey){cable->key.slot, cable->key.location, cable->key.moduleToIndex});
 
     if (moduleTo == NULL) {
         return;
@@ -1779,7 +1794,7 @@ void render_cable(tCable * cable, double alpha) {
     if (alpha < 1.0) {
         glEnable(GL_BLEND);  // TODO - move blend enables to graphics routines
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        set_rgba_colour({colour.red, colour.green, colour.blue, alpha});
+        set_rgba_colour((tRgba){colour.red, colour.green, colour.blue, alpha});
     } else {
         set_rgb_colour(colour);
     }
@@ -1845,7 +1860,7 @@ void render_morph_groups(void) {
     tRectangle rectangle        = {{840, 4 + MENU_BAR_HEIGHT}, {STANDARD_TEXT_HEIGHT *2, STANDARD_TEXT_HEIGHT * 4}};
     char       dialValueStr[16] = {0};
     char       label[16]        = {0};
-    tRgb       dialColour       = RGB_BACKGROUND_GREY;
+    tRgb       dialColour       = (tRgb)RGB_BACKGROUND_GREY;
     uint32_t   i                = 0;
     uint32_t   j                = 0;
     double     textHeight       = 0.0;
@@ -1854,13 +1869,13 @@ void render_morph_groups(void) {
     uint32_t   slot             = gSlot;
     uint32_t   variation        = gPatchDescr[slot].activeVariation;
 
-    tModule *  module           = get_module({slot, (uint32_t)locationMorph, 1});
+    tModule *  module           = get_module((tModuleKey){slot, (uint32_t)locationMorph, 1});
 
     if (module != NULL) {
         // Make sure all rectangles (for mouse click) are nullified
         for (i = 0; i < NUM_VARIATIONS_USB; i++) {
             for (j = 0; j < (NUM_MORPHS * 2); j++) {
-                gParamRectangle[module->key.slot][module->key.location][module->key.index][j] = NULL_RECTANGLE;
+                gParamRectangle[module->key.slot][module->key.location][module->key.index][j] = (tRectangle)NULL_RECTANGLE;
             }
         }
 
@@ -1881,15 +1896,15 @@ void render_morph_groups(void) {
             }
             textHeight                                                                                 = rectangle.size.h / 4.0;
 
-            set_rgb_colour(RGB_BLACK);
-            render_text(mainArea, {{rectangle.coord.x - 3, rectangle.coord.y}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, (char *)morphStrMap[i]);
+            set_rgb_colour((tRgb)RGB_BLACK);
+            render_text(mainArea, (tRectangle){{rectangle.coord.x - 3, rectangle.coord.y}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, (char *)morphStrMap[i]);
 
             if (i == gMorphGroupFocus) {
                 dialColour = isKnob ? (tRgb)RGB_ORANGE_0 : (tRgb)RGB_ORANGE_2;
             } else {
-                dialColour = RGB_GREY_3;
+                dialColour = (tRgb)RGB_GREY_3;
             }
-            gParamRectangle[module->key.slot][module->key.location][module->key.index][i]              = render_dial_with_text(mainArea, {{rectangle.coord.x, rectangle.coord.y + 16}, {rectangle.size.w, rectangle.size.h}}, NULL, dialValueStr, rectangle.size.h / 4.0, module->param[variation][i].value, 128, module->param[variation][i].morphRange[gMorphGroupFocus], dialColour);
+            gParamRectangle[module->key.slot][module->key.location][module->key.index][i]              = render_dial_with_text(mainArea, (tRectangle){{rectangle.coord.x, rectangle.coord.y + 16}, {rectangle.size.w, rectangle.size.h}}, NULL, dialValueStr, rectangle.size.h / 4.0, module->param[variation][i].value, 128, module->param[variation][i].morphRange[gMorphGroupFocus], dialColour);
             register_click_region(gParamRectangle[module->key.slot][module->key.location][module->key.index][i],
                                   eClickLayerPanel, morph_param_click_handler, (void *)(intptr_t)i);
 
@@ -1903,9 +1918,9 @@ void render_morph_groups(void) {
                 memcpy(editBuf, gParamNameEdit.buffer, cp);
                 editBuf[cp]        = '|';
                 memcpy(&editBuf[cp + 1], &gParamNameEdit.buffer[cp], strlen(gParamNameEdit.buffer) - cp + 1);
-                gMorphLabelRect[i] = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y + 57}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, editBuf, RGB_WHITE);
+                gMorphLabelRect[i] = draw_button(mainArea, (tRectangle){{rectangle.coord.x - 5, rectangle.coord.y + 57}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, editBuf, (tRgb)RGB_WHITE);
             } else {
-                gMorphLabelRect[i] = draw_button(mainArea, {{rectangle.coord.x - 5, rectangle.coord.y + 57}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, RGB_BACKGROUND_GREY);
+                gMorphLabelRect[i] = draw_button(mainArea, (tRectangle){{rectangle.coord.x - 5, rectangle.coord.y + 57}, {STANDARD_TEXT_HEIGHT * 4, textHeight}}, label, (tRgb)RGB_BACKGROUND_GREY);
             }
             gParamRectangle[module->key.slot][module->key.location][module->key.index][i + NUM_MORPHS] = gMorphLabelRect[i];
             register_click_region(gParamRectangle[module->key.slot][module->key.location][module->key.index][i + NUM_MORPHS],
