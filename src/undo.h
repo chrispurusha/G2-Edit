@@ -54,6 +54,23 @@ void undo_push_paste(uint32_t slot, uint32_t location, uint32_t anchorCol, uint3
 void undo_begin_cable_edit(uint32_t slot, uint32_t location);
 void undo_commit_cable_edit(void);
 
+// Record an Add Module, AFTER the module exists — the snapshot is what redo puts back.
+void undo_push_create_module(tModuleKey key);
+
+// Record a module colour change (old → new).
+void undo_push_module_colour(tModuleKey key, uint32_t oldColour, uint32_t newColour);
+
+// MIDI CC assignment changes, bracketed like cable edits: assigning a CC another parameter owns
+// is two changes at once (steal, then assign), so the slot's whole controller table is snapshotted
+// rather than the individual entries. Commit pushes nothing if the table came out unchanged.
+void undo_begin_midi_cc_edit(uint32_t slot);
+void undo_commit_midi_cc_edit(void);
+
+// Global knob assignments, bracketed like the MIDI CC pair and for the same reason. Performance-
+// wide, so no slot argument.
+void undo_begin_global_knob_edit(void);
+void undo_commit_global_knob_edit(void);
+
 // Record a single param value change (old → new). variation ignored for modes.
 void undo_push_param_change(tModuleKey key, uint32_t paramIndex, uint32_t variation, uint32_t oldValue, uint32_t newValue);
 void undo_push_mode_change(tModuleKey key, uint32_t modeIndex, uint32_t oldValue, uint32_t newValue);
