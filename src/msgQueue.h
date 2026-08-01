@@ -46,9 +46,10 @@ typedef enum {
     eRspLoadPeek,
     eRspSynthRestorePeek,
     // UI-thread-originated deferred work (posted from menu actions, run in the render loop).
-    eRspShowOpenRead,     // open the "load file" browser
-    eRspShowOpenWrite,    // open the "save file" browser (drain builds the default name)
-    eRspSaveToCurrentPath // save straight back to the remembered path, no browser
+    eRspShowOpenRead,      // open the "load file" browser
+    eRspShowOpenWrite,     // open the "save file" browser (drain builds the default name)
+    eRspSaveToCurrentPath, // save straight back to the remembered path, no browser
+    eRspOfflineConflict    // offlineEditData: edits were made while the G2 was away — ask the user
 } eResponseType;
 
 typedef enum {
@@ -87,6 +88,7 @@ typedef enum {
     eMsgCmdSavePatchFile,
     eMsgCmdSavePerfFile,
     eMsgCmdNewPatch,
+    eMsgCmdResolveOfflineEdits,  // offlineEditData: the user's answer to eRspOfflineConflict
     eMsgCmdWritePerfName,
     eMsgCmdWritePerfSettings,
     eMsgCmdSetCustomData,
@@ -292,6 +294,14 @@ typedef struct {
     char message[256];
 } tAlertData;
 
+// Offline-edit conflict, both directions. slotMask has bit N set for each slot the editor edited
+// while the G2 was away (USB -> GUI, eRspOfflineConflict), then comes back alongside the user's
+// answer (GUI -> USB, eMsgCmdResolveOfflineEdits) so the push targets exactly those slots.
+typedef struct {
+    uint32_t slotMask;
+    bool     pushToDevice;  // Resolve only: true = push the editor's slots, false = take the G2's
+} tOfflineEditData;
+
 typedef struct {
     uint32_t cmd;
     uint32_t slot;
@@ -326,6 +336,7 @@ typedef struct {
         tPatchFileData            patchFileData;
         tFileResultData           fileResultData;   // reverse queue (gToGuiThread) only
         tAlertData                alertData;        // reverse queue (gToGuiThread) only
+        tOfflineEditData          offlineEditData;  // both directions — see tOfflineEditData
     };
 } tMessageContent;
 
