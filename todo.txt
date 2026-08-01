@@ -409,15 +409,44 @@ none of these exist in G2-Edit at all, confirmed by source search)
   bracket the edit; commit compares as a SET (delete-and-recreate reshuffles database indices) and
   pushes nothing when unchanged. Colour lives in the snapshot, so a user's colour override survives
   undo along with the topology. BUILT, NOT HARDWARE-TESTED.
-  Other menus.c actions that appear to push nothing (grep for undo_push against each action_* —
-  VERIFY each, some may push indirectly via the selection/clipboard helpers rather than inline):
-  action_set_module_colour, menu_action_create (add module), action_copy_variation,
-  action_assign_global_knob / action_deassign_global_knob (the non-global knob pair DOES push),
-  action_assign_midi_cc / action_deassign_midi_cc, action_rename_morph_label, action_setting_u8 /
-  action_setting_i8 / action_perf_setting_u8.
-  Worth deciding the PRINCIPLE first — is everything undoable, or is there a defensible line (e.g.
-  patch content yes, view/UI state no)? — because that determines whether this is a bounded sweep
-  or an open-ended one. No decision taken.
+  PRINCIPLE DECIDED (owner, 2026-08-01): PATCH CONTENT is undoable; DEVICE-GLOBAL CONFIGURATION is
+  not. Ctrl-Z after editing a patch must not silently reach over and change the synth's own global
+  settings. That makes this a bounded sweep rather than an open-ended one.
+
+  DONE 2026-08-01 (all built, NONE hardware-tested):
+   * menu_action_create (Add Module) — eUndoCmdCreate. Snapshot taken AFTER creation so redo puts
+     back exactly what was made rather than re-deriving defaults; undo goes through
+     delete_module_and_cables() so anything patched to it since goes with it. recreate_module() was
+     refactored to take slot/location instead of a delete payload so both paths share it, and the
+     module-snapshot code came out of undo_push_delete_selection() into snapshot_module(), now
+     shared by delete-undo, create-redo and the clipboard.
+   * action_set_module_colour — eUndoCmdModuleColour, plain old/new.
+   * action_assign_midi_cc / action_deassign_midi_cc — eUndoCmdMidiCc, a bracketed before/after
+     image of the SLOT'S WHOLE CONTROLLER TABLE. Assigning a CC that another parameter already owns
+     steals it AND assigns it, so one click is two changes and per-entry recording would
+     misrepresent it. Apply deassigns whatever is not in the target, then assigns the target.
+   * action_assign_global_knob / action_deassign_global_knob — eUndoCmdGlobalKnob, same pattern,
+     performance-wide (no slot). Apply only messages the knobs that actually differ.
+
+  NOT DOING, per the principle above: action_setting_u8 / action_setting_i8. They write through
+  gSettingU8Target into SYNTH settings — device-global config, not patch content. (Reversing this
+  would need the target's IDENTITY recorded, not just its value; the pointer-based design gives an
+  undo payload nothing stable to name the field by.)
+
+  FALSE POSITIVE: action_rename_morph_label only opens the inline editor. The commit goes through
+  the shared param-name path, which already pushes undo_push_param_name. Confirm when testing.
+
+  STILL OPEN — action_copy_variation, the last real gap and the biggest:
+    Copying variation N over variation M rewrites EVERY parameter of EVERY module in the slot, so
+    undo has to snapshot the whole target variation before the copy: up to MAX_NUM_MODULES (128) x
+    MAX_NUM_PARAMETERS (128) tParam, which is real memory per undo entry and would want storing
+    only for ACTIVE modules at their actual module_param_count(), not the full rectangle. Redo can
+    just re-run the copy. Note the action also copies each param's morphRange[] across all
+    NUM_MORPHS, so the snapshot must be the whole tParam, not just .value. Worth checking whether
+    the existing eUndoCmdParam machinery can carry a batch rather than inventing a third snapshot
+    shape.
+    Also unchecked: action_perf_setting_u8 (perf settings — undo_push_perf_setting already exists
+    for that domain, so it may just need wiring rather than new machinery).
 
 - Reconnect clobbers offline edits — BUILT 2026-08-01, mostly hardware-verified. Kept below for the
   reasoning; what shipped is at the end of this entry.

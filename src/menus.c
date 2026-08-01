@@ -497,6 +497,7 @@ static void action_set_module_colour(int index) {
     if (module == NULL) {
         return;
     }
+    undo_push_module_colour(module->key, module->colour, gContextMenu.items[index].param);
     module->colour                            = gContextMenu.items[index].param;
 
     messageContent.cmd                        = eMsgCmdSetModuleColour;
@@ -731,11 +732,16 @@ int32_t create_module_at(tModuleType type, uint32_t column, uint32_t row, bool s
 
 static void menu_action_create(int index) {
     if (gContextMenu.items[index].param != 0) {
-        uint32_t column = 0;
-        uint32_t row    = 0;
+        uint32_t column  = 0;
+        uint32_t row     = 0;
 
         convert_mouse_coord_to_module_column_row(&column, &row, gContextMenu.originCoord);
-        create_module_at((tModuleType)gContextMenu.items[index].param, column, row, true);
+
+        int32_t  created = create_module_at((tModuleType)gContextMenu.items[index].param, column, row, true);
+
+        if (created >= 0) {
+            undo_push_create_module((tModuleKey){gSlot, gLocation, (uint32_t)created});
+        }
     }
 }
 
@@ -866,6 +872,8 @@ static void action_assign_global_knob(int index) {
 
     existingKnob                             = find_global_knob_for_param(slot, location, moduleIndex, paramIndex);
 
+    undo_begin_global_knob_edit();
+
     if (gGlobalKnobArray[targetKnob].assigned) {
         gGlobalKnobArray[targetKnob].assigned = false;
         msg.cmd                               = eMsgCmdDeassignGlobalKnob;
@@ -896,6 +904,7 @@ static void action_assign_global_knob(int index) {
     msg.globalKnobAssignData.knobIndex       = targetKnob;
     msg_send(&gToUsbThread, &msg);
 
+    undo_commit_global_knob_edit();
     gContextMenu.active                      = false;
     synthlib_request_redraw();
 }
@@ -908,12 +917,15 @@ static void action_deassign_global_knob(int index) {
     int32_t         knobIndex   = find_global_knob_for_param(slot, location, moduleIndex, paramIndex);
     tMessageContent msg         = {0};
 
+    undo_begin_global_knob_edit();
+
     if (knobIndex >= 0) {
         gGlobalKnobArray[knobIndex].assigned = false;
         msg.cmd                              = eMsgCmdDeassignGlobalKnob;
         msg.globalKnobDeassignData.knobIndex = (uint32_t)knobIndex;
         msg_send(&gToUsbThread, &msg);
     }
+    undo_commit_global_knob_edit();
     gContextMenu.active = false;
     synthlib_request_redraw();
 }
@@ -973,6 +985,10 @@ static void action_assign_midi_cc(int index) {
     int32_t         paramEntry;
     tMessageContent msg         = {0};
 
+    // One click can both steal the CC from whoever had it and assign it here — see
+    // undo_begin_midi_cc_edit(), which snapshots the whole table rather than the entries.
+    undo_begin_midi_cc_edit(slot);
+
     if (  ccOwner >= 0
        && !(  gControllerArray[slot].controller[ccOwner].location == location
            && gControllerArray[slot].controller[ccOwner].moduleIndex == moduleIndex
@@ -1007,6 +1023,7 @@ static void action_assign_midi_cc(int index) {
     msg.midiCCAssignData.midiCC     = targetCC;
     msg_send(&gToUsbThread, &msg);
 
+    undo_commit_midi_cc_edit();
     gContextMenu.active             = false;
     synthlib_request_redraw();
 }
@@ -1019,6 +1036,8 @@ static void action_deassign_midi_cc(int index) {
     int32_t         entry       = find_controller_for_param(slot, location, moduleIndex, paramIndex);
     tMessageContent msg         = {0};
 
+    undo_begin_midi_cc_edit(slot);
+
     if (entry >= 0) {
         uint32_t cc = gControllerArray[slot].controller[entry].midiCC;
         remove_controller_entry(slot, (uint32_t)entry);
@@ -1027,6 +1046,7 @@ static void action_deassign_midi_cc(int index) {
         msg.midiCCDeassignData.midiCC = cc;
         msg_send(&gToUsbThread, &msg);
     }
+    undo_commit_midi_cc_edit();  // Pushes nothing if the click landed on an unassigned param
     gContextMenu.active = false;
     synthlib_request_redraw();
 }

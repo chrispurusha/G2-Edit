@@ -148,6 +148,37 @@ typedef struct {
     uint8_t newValue;
 } tUndoPerfSettingPayload;
 
+// Add Module. The snapshot is taken AFTER creation so redo restores exactly what was made,
+// defaults and all, rather than re-deriving it and hoping the defaults never change.
+typedef struct {
+    uint32_t         slot;
+    uint32_t         location;
+    tClipboardModule module;
+} tUndoCreatePayload;
+
+typedef struct {
+    tModuleKey key;
+    uint32_t   oldColour;
+    uint32_t   newColour;
+} tUndoModuleColourPayload;
+
+// MIDI CC assignments are recorded as a before/after image of the whole slot's controller table,
+// for the same reason cable edits are: assigning a CC that another parameter already owns both
+// steals it from that parameter AND assigns it here, so a single click is two changes, and the
+// table is the only thing that describes the result honestly.
+typedef struct {
+    uint32_t    slot;
+    uint32_t    beforeCount;
+    tController before[MAX_NUM_CONTROLLERS];
+    uint32_t    afterCount;
+    tController after[MAX_NUM_CONTROLLERS];
+} tUndoMidiCcPayload;
+
+typedef struct {
+    tGlobalKnob before[MAX_NUM_KNOBS];
+    tGlobalKnob after[MAX_NUM_KNOBS];
+} tUndoGlobalKnobPayload;
+
 typedef enum {
     eUndoCmdMove,
     eUndoCmdDelete,
@@ -162,6 +193,10 @@ typedef enum {
     eUndoCmdPerfSetting,
     eUndoCmdModuleExclude,
     eUndoCmdCableEdit,
+    eUndoCmdCreate,
+    eUndoCmdModuleColour,
+    eUndoCmdMidiCc,
+    eUndoCmdGlobalKnob,
 } tUndoCmdType;
 
 typedef struct {
@@ -223,6 +258,10 @@ static void free_command(tUndoCommand * cmd) {
         case eUndoCmdPerfName:
         case eUndoCmdPerfSetting:
         case eUndoCmdModuleExclude:
+        case eUndoCmdCreate:
+        case eUndoCmdModuleColour:
+        case eUndoCmdMidiCc:
+        case eUndoCmdGlobalKnob:
             free(cmd->payload);
             break;
     }
@@ -255,6 +294,38 @@ static void stack_push(tUndoCmdType type, void * payload) {
 
 // ─── Push helpers (public) ─────────────────────────────────────────────────
 
+// Everything about a module that has to survive being deleted and put back: type, position,
+// colour, up-rate, name, every variation's params, modes, and any custom param labels. The same
+// snapshot serves delete-undo, create-redo and the clipboard, which is why it is a tClipboardModule
+// rather than a private struct.
+static void snapshot_module(tModule * mod, tClipboardModule * cm) {
+    memset(cm, 0, sizeof(*cm));
+    cm->type                = mod->type;
+    cm->origIndex           = mod->key.index;
+    cm->origColumn          = mod->column;
+    cm->origRow             = mod->row;
+    cm->dColumn             = 0;
+    cm->dRow                = 0;
+    cm->colour              = mod->colour;
+    cm->upRate              = mod->upRate;
+    cm->excludeFromMutation = mod->excludeFromMutation;
+    COPY_STRING(cm->name, mod->name);
+    memcpy(cm->param, mod->param, sizeof(cm->param));
+
+    for (uint32_t m = 0; m < MAX_NUM_MODES; m++) {
+        cm->mode[m] = mod->mode[m].value;
+    }
+
+    for (uint32_t pi = 0; pi < MAX_NUM_PARAMETERS; pi++) {
+        cm->paramNumLabels[pi] = mod->paramNumLabels[pi];
+
+        for (uint32_t l = 0; l < MAX_NUM_LABELS; l++) {
+            cm->paramNameSet[pi][l] = mod->paramNameSet[pi][l];
+            COPY_STRING(cm->paramName[pi][l], mod->paramName[pi][l]);
+        }
+    }
+}
+
 void undo_push_delete_selection(void) {
     if (gSelection.count == 0) {
         return;
@@ -283,37 +354,12 @@ void undo_push_delete_selection(void) {
 
     // Snapshot each selected module
     for (uint32_t si = 0; si < gSelection.count; si++) {
-        tModule *          mod = get_module(gSelection.keys[si]);
+        tModule * mod = get_module(gSelection.keys[si]);
 
         if (!mod) {
             continue;
         }
-        tClipboardModule * cm  = &p->modules[p->moduleCount++];
-        memset(cm, 0, sizeof(*cm));
-        cm->type                = mod->type;
-        cm->origIndex           = mod->key.index;
-        cm->origColumn          = mod->column;
-        cm->origRow             = mod->row;
-        cm->dColumn             = 0;
-        cm->dRow                = 0;
-        cm->colour              = mod->colour;
-        cm->upRate              = mod->upRate;
-        cm->excludeFromMutation = mod->excludeFromMutation;
-        COPY_STRING(cm->name, mod->name);
-        memcpy(cm->param, mod->param, sizeof(cm->param));
-
-        for (uint32_t m = 0; m < MAX_NUM_MODES; m++) {
-            cm->mode[m] = mod->mode[m].value;
-        }
-
-        for (uint32_t pi = 0; pi < MAX_NUM_PARAMETERS; pi++) {
-            cm->paramNumLabels[pi] = mod->paramNumLabels[pi];
-
-            for (uint32_t l = 0; l < MAX_NUM_LABELS; l++) {
-                cm->paramNameSet[pi][l] = mod->paramNameSet[pi][l];
-                COPY_STRING(cm->paramName[pi][l], mod->paramName[pi][l]);
-            }
-        }
+        snapshot_module(mod, &p->modules[p->moduleCount++]);
     }
 
     // Snapshot all cables that touch any selected module
@@ -441,11 +487,11 @@ static void apply_move(tUndoMovePayload * p, bool isUndo) {
     synthlib_request_redraw();
 }
 
-static void recreate_module(tUndoDeletePayload * p, tClipboardModule * cm) {
-    tModuleKey      key      = {p->slot, p->location, cm->origIndex};
+static void recreate_module(uint32_t slot, uint32_t location, tClipboardModule * cm) {
+    tModuleKey      key      = {slot, location, cm->origIndex};
 
     // Abort if the original slot is occupied by something else
-    tModule *       existing = get_module_slot(p->slot, p->location, cm->origIndex);
+    tModule *       existing = get_module_slot(slot, location, cm->origIndex);
 
     if (existing && existing->active) {
         LOG_ERROR("undo_delete: index %u occupied\n", cm->origIndex);
@@ -463,7 +509,7 @@ static void recreate_module(tUndoDeletePayload * p, tClipboardModule * cm) {
 
     tMessageContent msg      = {0};
     msg.cmd                            = eMsgCmdWriteModule;
-    msg.slot                           = p->slot;
+    msg.slot                           = slot;
     msg.moduleData.moduleKey           = key;
     msg.moduleData.type                = cm->type;
     msg.moduleData.row                 = cm->origRow;
@@ -493,13 +539,13 @@ static void recreate_module(tUndoDeletePayload * p, tClipboardModule * cm) {
     for (uint32_t v = 0; v < NUM_VARIATIONS; v++) {  // NUM_VARIATIONS (9), not 10 — variation 9 is the G2's private init reference
         for (uint32_t pi = 0; pi < paramCount; pi++) {
             dbMod->param[v][pi] = cm->param[v][pi];
-            send_param_value(p->slot, key, pi, v, cm->param[v][pi].value);
+            send_param_value(slot, key, pi, v, cm->param[v][pi].value);
         }
     }
 
     for (uint32_t m = 0; m < modeCount; m++) {
         dbMod->mode[m].value = cm->mode[m];
-        send_mode_value(p->slot, key, m, cm->mode[m]);
+        send_mode_value(slot, key, m, cm->mode[m]);
     }
 
     for (uint32_t pi = 0; pi < paramCount; pi++) {
@@ -512,7 +558,7 @@ static void recreate_module(tUndoDeletePayload * p, tClipboardModule * cm) {
             if (cm->paramNameSet[pi][l]) {
                 tMessageContent nmsg = {0};
                 nmsg.cmd                       = eMsgCmdSetParamLabel;
-                nmsg.slot                      = p->slot;
+                nmsg.slot                      = slot;
                 nmsg.paramLabelData.moduleKey  = key;
                 nmsg.paramLabelData.paramIndex = pi;
                 COPY_STRING(nmsg.paramLabelData.name, cm->paramName[pi][l]);
@@ -525,7 +571,7 @@ static void recreate_module(tUndoDeletePayload * p, tClipboardModule * cm) {
 static void apply_delete_undo(tUndoDeletePayload * p) {
     // Re-create all modules at their original indices
     for (uint32_t i = 0; i < p->moduleCount; i++) {
-        recreate_module(p, &p->modules[i]);
+        recreate_module(p->slot, p->location, &p->modules[i]);
     }
 
     // Re-create all cables
@@ -601,6 +647,233 @@ static void apply_paste_redo(tUndoPastePayload * p) {
                    p->anchorCol, p->anchorRow,
                    p->clipModules, p->clipModuleCount,
                    p->clipCables, p->clipCableCount);
+}
+
+// ─── Add module ────────────────────────────────────────────────────────────
+
+void undo_push_create_module(tModuleKey key) {
+    tModule *            mod = get_module(key);
+
+    if (mod == NULL) {
+        return;
+    }
+    tUndoCreatePayload * p   = malloc(sizeof(tUndoCreatePayload));
+
+    if (!p) {
+        return;
+    }
+    p->slot     = key.slot;
+    p->location = key.location;
+    snapshot_module(mod, &p->module);
+    stack_push(eUndoCmdCreate, p);
+}
+
+static void apply_create(tUndoCreatePayload * p, bool isUndo) {
+    if (isUndo) {
+        tModuleKey key = {p->slot, p->location, p->module.origIndex};
+        tModule *  mod = get_module(key);
+
+        if ((mod != NULL) && mod->active) {
+            delete_module_and_cables(key);  // Cables too: anything patched to it since goes with it
+        }
+        selection_clear();
+    } else {
+        recreate_module(p->slot, p->location, &p->module);
+    }
+    update_module_up_rates();
+    synthlib_request_redraw();
+}
+
+// ─── Module colour ─────────────────────────────────────────────────────────
+
+void undo_push_module_colour(tModuleKey key, uint32_t oldColour, uint32_t newColour) {
+    if (oldColour == newColour) {
+        return;
+    }
+    tUndoModuleColourPayload * p = malloc(sizeof(tUndoModuleColourPayload));
+
+    if (!p) {
+        return;
+    }
+    p->key       = key;
+    p->oldColour = oldColour;
+    p->newColour = newColour;
+    stack_push(eUndoCmdModuleColour, p);
+}
+
+static void apply_module_colour(tUndoModuleColourPayload * p, bool isUndo) {
+    tModule *       module = get_module(p->key);
+
+    if (module == NULL) {
+        return;
+    }
+    module->colour                 = isUndo ? p->oldColour : p->newColour;
+
+    tMessageContent msg    = {0};
+
+    msg.cmd                        = eMsgCmdSetModuleColour;
+    msg.slot                       = p->key.slot;
+    msg.moduleColourData.moduleKey = p->key;
+    msg.moduleColourData.colour    = module->colour;
+    msg_send(&gToUsbThread, &msg);
+    synthlib_request_redraw();
+}
+
+// ─── MIDI CC assignments ───────────────────────────────────────────────────
+
+static bool        gMidiCcEditOpen  = false;
+static uint32_t    gMidiCcEditSlot  = 0;
+static uint32_t    gMidiCcEditCount = 0;
+static tController gMidiCcEditTable[MAX_NUM_CONTROLLERS];
+
+void undo_begin_midi_cc_edit(uint32_t slot) {
+    if (gMidiCcEditOpen || (slot >= MAX_SLOTS)) {
+        return;
+    }
+    gMidiCcEditOpen  = true;
+    gMidiCcEditSlot  = slot;
+    gMidiCcEditCount = gControllerCount[slot];
+    memcpy(gMidiCcEditTable, gControllerArray[slot].controller, sizeof(gMidiCcEditTable));
+}
+
+void undo_commit_midi_cc_edit(void) {
+    if (!gMidiCcEditOpen) {
+        return;
+    }
+    gMidiCcEditOpen = false;
+
+    uint32_t             slot = gMidiCcEditSlot;
+    bool                 same = (gMidiCcEditCount == gControllerCount[slot])
+                                && (memcmp(gMidiCcEditTable, gControllerArray[slot].controller,
+                                           gMidiCcEditCount * sizeof(tController)) == 0);
+
+    if (same) {
+        return;
+    }
+    tUndoMidiCcPayload * p    = malloc(sizeof(tUndoMidiCcPayload));
+
+    if (!p) {
+        return;
+    }
+    p->slot         = slot;
+    p->beforeCount  = gMidiCcEditCount;
+    memcpy(p->before, gMidiCcEditTable, sizeof(p->before));
+    p->afterCount   = gControllerCount[slot];
+    memcpy(p->after, gControllerArray[slot].controller, sizeof(p->after));
+    stack_push(eUndoCmdMidiCc, p);
+}
+
+// Drives the slot's controller table to the chosen image. The G2 is told by deassigning every CC
+// that is not in the target and assigning every entry that is, which is safe to over-apply: a
+// deassign of an unassigned CC and an assign of an identical mapping are both no-ops on the device.
+static void apply_midi_cc(tUndoMidiCcPayload * p, bool isUndo) {
+    const tController * target      = isUndo ? p->before : p->after;
+    uint32_t            targetCount = isUndo ? p->beforeCount : p->afterCount;
+    tMessageContent     msg         = {0};
+
+    for (uint32_t i = 0; i < gControllerCount[p->slot]; i++) {
+        uint8_t cc    = gControllerArray[p->slot].controller[i].midiCC;
+        bool    keeps = false;
+
+        for (uint32_t t = 0; t < targetCount; t++) {
+            if (target[t].midiCC == cc) {
+                keeps = true;
+                break;
+            }
+        }
+
+        if (!keeps) {
+            memset(&msg, 0, sizeof(msg));
+            msg.cmd                       = eMsgCmdDeassignMidiCC;
+            msg.slot                      = p->slot;
+            msg.midiCCDeassignData.midiCC = cc;
+            msg_send(&gToUsbThread, &msg);
+        }
+    }
+
+    gControllerCount[p->slot] = targetCount;
+    memcpy(gControllerArray[p->slot].controller, target, MAX_NUM_CONTROLLERS * sizeof(tController));
+
+    for (uint32_t i = 0; i < targetCount; i++) {
+        memset(&msg, 0, sizeof(msg));
+        msg.cmd                         = eMsgCmdAssignMidiCC;
+        msg.slot                        = p->slot;
+        msg.midiCCAssignData.moduleKey  = (tModuleKey){
+            p->slot, target[i].location, target[i].moduleIndex
+        };
+        msg.midiCCAssignData.paramIndex = target[i].paramIndex;
+        msg.midiCCAssignData.midiCC     = target[i].midiCC;
+        msg_send(&gToUsbThread, &msg);
+    }
+
+    synthlib_request_redraw();
+}
+
+// ─── Global knob assignments ───────────────────────────────────────────────
+//
+// Same shape as MIDI CC: assigning a knob that is already taken frees it first, so one click is
+// two changes and the table is what has to be recorded. Global knobs are performance-wide, hence
+// no slot on the payload.
+
+static bool        gGlobalKnobEditOpen = false;
+static tGlobalKnob gGlobalKnobEditTable[MAX_NUM_KNOBS];
+
+void undo_begin_global_knob_edit(void) {
+    if (gGlobalKnobEditOpen) {
+        return;
+    }
+    gGlobalKnobEditOpen = true;
+    memcpy(gGlobalKnobEditTable, gGlobalKnobArray, sizeof(gGlobalKnobEditTable));
+}
+
+void undo_commit_global_knob_edit(void) {
+    if (!gGlobalKnobEditOpen) {
+        return;
+    }
+    gGlobalKnobEditOpen = false;
+
+    if (memcmp(gGlobalKnobEditTable, gGlobalKnobArray, sizeof(gGlobalKnobEditTable)) == 0) {
+        return;
+    }
+    tUndoGlobalKnobPayload * p = malloc(sizeof(tUndoGlobalKnobPayload));
+
+    if (!p) {
+        return;
+    }
+    memcpy(p->before, gGlobalKnobEditTable, sizeof(p->before));
+    memcpy(p->after, gGlobalKnobArray, sizeof(p->after));
+    stack_push(eUndoCmdGlobalKnob, p);
+}
+
+static void apply_global_knob(tUndoGlobalKnobPayload * p, bool isUndo) {
+    const tGlobalKnob * target = isUndo ? p->before : p->after;
+    tMessageContent     msg    = {0};
+
+    for (uint32_t i = 0; i < MAX_NUM_KNOBS; i++) {
+        // Only touch knobs that actually differ — the device does not need to hear about the 100+
+        // that this edit never went near.
+        if (memcmp(&gGlobalKnobArray[i], &target[i], sizeof(tGlobalKnob)) == 0) {
+            continue;
+        }
+        gGlobalKnobArray[i] = target[i];
+
+        memset(&msg, 0, sizeof(msg));
+
+        if (target[i].assigned) {
+            msg.cmd                              = eMsgCmdAssignGlobalKnob;
+            msg.globalKnobAssignData.slotIndex   = target[i].slotIndex;
+            msg.globalKnobAssignData.location    = target[i].location;
+            msg.globalKnobAssignData.moduleIndex = target[i].moduleIndex;
+            msg.globalKnobAssignData.paramIndex  = target[i].paramIndex;
+            msg.globalKnobAssignData.knobIndex   = i;
+        } else {
+            msg.cmd                              = eMsgCmdDeassignGlobalKnob;
+            msg.globalKnobDeassignData.knobIndex = i;
+        }
+        msg_send(&gToUsbThread, &msg);
+    }
+
+    synthlib_request_redraw();
 }
 
 // ─── Cable edits ───────────────────────────────────────────────────────────
@@ -1214,6 +1487,22 @@ void undo_undo(void) {
         case eUndoCmdCableEdit:
             apply_cable_edit(cmd->payload, true);
             break;
+
+        case eUndoCmdCreate:
+            apply_create(cmd->payload, true);
+            break;
+
+        case eUndoCmdModuleColour:
+            apply_module_colour(cmd->payload, true);
+            break;
+
+        case eUndoCmdMidiCc:
+            apply_midi_cc(cmd->payload, true);
+            break;
+
+        case eUndoCmdGlobalKnob:
+            apply_global_knob(cmd->payload, true);
+            break;
     }
 }
 
@@ -1275,6 +1564,22 @@ void undo_redo(void) {
 
         case eUndoCmdCableEdit:
             apply_cable_edit(cmd->payload, false);
+            break;
+
+        case eUndoCmdCreate:
+            apply_create(cmd->payload, false);
+            break;
+
+        case eUndoCmdModuleColour:
+            apply_module_colour(cmd->payload, false);
+            break;
+
+        case eUndoCmdMidiCc:
+            apply_midi_cc(cmd->payload, false);
+            break;
+
+        case eUndoCmdGlobalKnob:
+            apply_global_knob(cmd->payload, false);
             break;
     }
 }
