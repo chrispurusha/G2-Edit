@@ -42,6 +42,7 @@ extern "C" {
 #include "utils.h"
 #include "msgQueue.h"
 #include "protocol.h"
+#include "deviceSync.h"
 #include "usbComms.h"
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
@@ -4149,10 +4150,55 @@ static void state_handler(void) {
         return;
     }
 
+    // The user has been asked whether their offline edits or the G2's patches win, and nothing can
+    // proceed until they answer. The alert is modal, so no further edits can arrive meanwhile.
+    if (gCommsState == eCommsAwaitingSyncDecision) {
+        tMessageContent decision = {0};
+
+        if (msg_receive(&gToUsbThread, eRcvPoll, &decision) != EXIT_SUCCESS) {
+            usleep(50000);  // 50ms — waiting on a human, so nothing here needs to be tight
+            return;
+        }
+
+        if (decision.cmd != eMsgCmdResolveOfflineEdits) {
+            return;  // Nothing else should be queued while modal; ignore it rather than act on it
+        }
+
+        // Push BEFORE the pull, then pull as usual: the device ends up holding the editor's
+        // patches and the editor re-reads them, so both sides finish provably identical and the
+        // normal init sequence still runs exactly once.
+        if (decision.offlineEditData.pushToDevice) {
+            for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+                if ((decision.offlineEditData.slotMask & (1u << slot)) != 0) {
+                    LOG_DEBUG("Pushing editor's slot %u to the G2 after offline edits\n", slot);
+                    push_slot_to_device(slot);
+                }
+            }
+        }
+        gCommsState = eCommsWaitingReady;  // Fall through to the normal ready/init path next pass
+        return;
+    }
+
     if (gCommsState == eCommsWaitingReady) {
         if (send_get_patch_version(0) == EXIT_SUCCESS) {
+            // Anything still queued was enqueued while the G2 was away, so it is both the record
+            // of what diverged and a set of increments that must NOT be replayed over the patch
+            // the pull is about to install. Drain it, and ask before pulling if it held real edits.
+            uint32_t dirtySlots = device_sync_drain_offline_edits();
+
+            if (dirtySlots != 0) {
+                tMessageContent conflict = {0};
+
+                conflict.cmd                      = eRspOfflineConflict;
+                conflict.offlineEditData.slotMask = dirtySlots;
+                msg_send(&gToGuiThread, &conflict);
+                call_wake_glfw();
+
+                gCommsState                       = eCommsAwaitingSyncDecision;
+                return;
+            }
             LOG_DEBUG("G2 ready — starting init sequence\n");
-            int result = send_init_sequence_pull();
+            int      result     = send_init_sequence_pull();
 
             if (result == EXIT_SUCCESS) {
                 gCommsState = eCommsOnLine;
