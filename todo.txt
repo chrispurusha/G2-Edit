@@ -7,6 +7,23 @@ are collected under "DO NOT RE-TRY" at the end of this file.
 
 AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless the check fails)
 
+- SynthLib alertDialog — TWO CHANGES, NOT YET COMMITTED IN THE SUBMODULE AND NO PIN BUMPED. Both
+  were needed by the offline-edits dialog but affect every SynthLib app:
+    (1) show_choice() — up to three mutually-exclusive buttons on one row, callback takes the index
+        counted from the RIGHT (0 = rightmost, drawn green as the affirmative), -1 on dismissal.
+        Buttons are sized to their own labels and the panel widens to fit the row; the fixed 64px
+        button_rect() the confirm dialog uses overlaps as soon as a label is more than one word.
+    (2) wrap_text() now honours '\n' as a HARD break, with a blank line for a paragraph gap. It
+        only ever split on spaces, so any existing message containing '\n' has been rendering as
+        "sentence.Next sentence" — this fixes those too, in all three apps.
+  Commit in SynthLib, then advance the pin in G2-Edit AND check EmuUtility/SynthEdit still build.
+
+- File > Save vs Save As (2026-08-01) — "Save Patch"/"Save Perf" writes straight back to wherever
+  the patch was last opened from or saved to, no browser; greyed until there is such a path. Path
+  is remembered per SLOT (each of the four can come from a different file) plus one for the perf,
+  set by BOTH opening and saving, and routed through the same on_file_saved() funnel as Save As so
+  the online/offline and patch/perf branching is shared. Built, not exercised on hardware.
+
 - Text rendering, pixel-exact glyph rendering — NOT RE-VERIFIED ON RETINA since the rewrite (the
   display was 1x for that whole session). Same code path and it should be equal or better on 2x,
   but worth an eyeball. Verified good on a real 1600x900 1x display: "Rate Hi", "554.4Hz", "25%",
@@ -265,6 +282,10 @@ none of these exist in G2-Edit at all, confirmed by source search)
   New shared layer: src/cableChain.c / cableChain.h — chain/tree walking (find root, collect
   subtree / branch / whole tree), colour derivation, connect, delete, and the Disconnect and Break
   cores. menus.c keeps only menu plumbing; mouseHandle.c and selection.c call the recolour.
+  HARDWARE STATUS 2026-08-01: DELETE and DELETE UNUSED CABLES confirmed end-to-end (sent, acked,
+  and gone from the device's own patch dump after a restart). DISCONNECT, BREAK and CABLE COLOUR
+  are still unconfirmed — and note that any Disconnect test predating 2026-08-01 is void, because
+  it was run against the duplicate-cable bug in item 4 below.
 
   MODEL MISMATCH: RESOLVED, and it was never real. Every one of the original's cable commands is
   keyed on a CONNECTOR, not a cable — GetDisconnectCableNodeMolecules (163473),
@@ -329,10 +350,21 @@ none of these exist in G2-Edit at all, confirmed by source search)
    3. Disconnect at an OUTPUT. The original's IsBase() branch makes the first child the new parent
       and chains the other children under it, leaving the lot sourceless and white. Unit-tested to
       behave that way, but it is an odd-looking operation and worth eyeballing in the real editor.
-   4. That white cables STICK on the G2. Recolour still goes out as a full SUB_COMMAND_WRITE_CABLE
-      (0x50) against an existing cable; SUB_COMMAND_WRITE_CABLE_COLOUR (0x54, defs.h) is defined
-      but never sent, and the original has a distinct CMCableRecolor molecule. If white does not
-      stick on hardware, change that first.
+   4. CLOSED 2026-08-01, and it was a REAL BUG — worse than "white might not stick". Recolour went
+      out as a full SUB_COMMAND_WRITE_CABLE (0x50) against an existing cable, and on the G2 a cable
+      write is an ADD, not an upsert. So every drag-connect left TWO cables on the device (one in
+      the created colour, one recoloured), the editor's own write_cable() coalesced them so nothing
+      looked wrong, and a later delete removed only one copy — which is what "Disconnect doesn't
+      remove the cable on the hardware" actually was. Fixed by sending SUB_COMMAND_WRITE_CABLE_COLOUR
+      (0x54) via a new eMsgCmdSetCableColour; header byte is (location << 3) | colour per
+      CMCableRecolor::WriteStream (G2Editor.c:18192). Callers: cable_chain_apply_colour() and
+      apply_cable_edit() in undo.c when a cable exists and only its colour differs.
+      HARDWARE-CONFIRMED: two drags now leave two cables on the device (was four), and deleting
+      them leaves none. NOTE: patches written by older builds may still carry duplicate cables.
+      METHOD WORTH REUSING: decode the device's OWN cable list out of the patch dump in the USB
+      log rather than trusting the editor's view — find the newest EX message with data[1]&7 ==
+      slot, scan for a `52 00 LL` section, then parse per protocol.c parse_cable_list(). A one-off
+      script settled in seconds what days of reasoning from the decompile could not.
    5. Far more cables will now come out white than before (any input-to-input link with no source).
       The topbar has a white visibility toggle (gPatchDescr[slot].visible[6]), so hiding white is
       now a much more destructive-looking action than it used to be.
@@ -347,8 +379,8 @@ none of these exist in G2-Edit at all, confirmed by source search)
   (cable move / drag-an-end-elsewhere and paste are the obvious candidates — neither recolours in
   G2-Edit today). 151152 is now attributed: CPatch::InternalRecolorCable, the COLOR menu entry.
 
-  Note NO cable op is undoable — see the undo sweep entry below. Disconnect and Delete make that
-  worse: Delete can remove a whole branch and Disconnect rewires several cables, both in one click.
+  All five ARE now undoable (2026-07-31) — see the undo sweep entry below. Built, not yet tested on
+  hardware; testing it only became meaningful once the duplicate-cable bug in item 4 was fixed.
 
 - White cables — RULE IMPLEMENTED 2026-07-31, previously only understood. The invariant is:
       every cable in a chain shares ONE colour = the source output's signal-type colour,
@@ -370,14 +402,13 @@ none of these exist in G2-Edit at all, confirmed by source search)
 
 - Sweep up the missing undos — undo coverage grew per-feature and is now patchy, so Ctrl-Z does
   something for some edits and silently nothing for others, which is worse than uniformly absent.
-  There is no undo_push_cable* of ANY kind, so every cable edit is unundoable: connect (cable drag,
-  handle_cable_connect in mouseHandle.c) and all five popup commands — Disconnect, Break, Cable
-  colour, Delete and Delete unused cables. This got materially worse on 2026-07-31: Delete removes
-  a whole branch in one click, Delete unused cables sweeps the entire patch, and Disconnect deletes
-  several cables AND creates replacements AND recolours, with no way back. Connect now recolours a
-  whole tree too, so even undoing a plain cable drag has to restore colours, not just topology.
-  A cable undo payload would cover all four; the tCable key + colour is all that needs storing, and
-  undo.c already has a tUndoCableEntry for the delete-selection snapshot to model it on.
+  CABLES ARE NOW COVERED (2026-07-31, eUndoCmdCableEdit): all five popup commands plus drag-connect
+  in handle_cable_connect(). Recorded as a before/after SNAPSHOT of every cable in the location
+  rather than a change list, because Disconnect deletes, re-creates AND recolours in one command and
+  the affected set is only knowable by walking the chain. undo_begin_cable_edit/undo_commit_cable_edit
+  bracket the edit; commit compares as a SET (delete-and-recreate reshuffles database indices) and
+  pushes nothing when unchanged. Colour lives in the snapshot, so a user's colour override survives
+  undo along with the topology. BUILT, NOT HARDWARE-TESTED.
   Other menus.c actions that appear to push nothing (grep for undo_push against each action_* —
   VERIFY each, some may push indirectly via the selection/clipboard helpers rather than inline):
   action_set_module_colour, menu_action_create (add module), action_copy_variation,
@@ -388,7 +419,9 @@ none of these exist in G2-Edit at all, confirmed by source search)
   patch content yes, view/UI state no)? — because that determines whether this is a bounded sweep
   or an open-ended one. No decision taken.
 
-- Reconnect clobbers offline edits — SILENT DATA LOSS, raised 2026-07-31. Edit a patch with the G2
+- Reconnect clobbers offline edits — BUILT 2026-08-01, mostly hardware-verified. Kept below for the
+  reasoning; what shipped is at the end of this entry.
+  Original report (2026-07-31): edit a patch with the G2
   unplugged (entirely normal, and the backdoor test channel exists precisely to drive the app
   offline), then plug the G2 in: the app fetches the synth's patch and overwrites the in-memory
   database, and the offline work is gone with no warning and no way back.
@@ -417,8 +450,36 @@ none of these exist in G2-Edit at all, confirmed by source search)
   that never existed on the synth — ties into the undo sweep entry above.
   SCOPE NOTE: this is not really about reconnect. It is the general "editor copy has diverged from
   the synth copy" problem, and the same conflict exists on slot change and on any other reload from
-  the device. Worth solving once, generally, rather than special-casing the reconnect path.
-  NO DECISION TAKEN.
+  the device. Worth solving once, generally, rather than special-casing the reconnect path. The
+  mechanism below is reusable for those, but is currently wired to the reconnect path only.
+
+  WHAT SHIPPED (owner chose A + C: auto-preserve, then ask):
+   * DIRTY TRACKING TURNED OUT TO BE FREE. While online every edit is sent to the G2 as it is made,
+     so the copies can only drift while it is away — and those edits are already recorded in the
+     USB command queue, which state_handler() only drains when online. Anything sitting in it at
+     reconnect was enqueued while the G2 was gone, and each message carries its slot. So the drain
+     IS the divergence check, per slot, with no dirty flag anywhere. src/deviceSync.c.
+   * THE QUEUE IS ALWAYS DISCARDED, NEVER REPLAYED. It holds increments addressed to a patch the
+     reconnect is about to replace; replaying them would edit whatever now occupies each index.
+     "Send to Synth" therefore pushes WHOLE patches (push_slot_to_device per dirty slot), which is
+     also what the owner asked for.
+   * THE PULL IS DEFERRED, not done-then-regretted: new eCommsAwaitingSyncDecision state parks the
+     USB thread until the user answers. That deferral is the actual bug fix.
+   * RECOVERY FILE FIRST, then the dialog: one .pch2 per dirty slot in
+     ~/Library/Application Support/G2-Edit/Recovery, so no answer — including Escape — can lose
+     the work, and the dialog says so. Pruned to the newest 10 on each write, and deleted only on
+     a successful "Save As..." (never on the Pull branch, where it is the only copy left).
+   * Three-way dialog: Send to Synth / Save As... / Pull from Synth. Escape means Pull. Undo is
+     cleared on every branch, because after a wholesale push or replacement its entries describe a
+     device state that no longer exists.
+   * Needed a 3-button alert (SynthLib show_choice) — see the SynthLib entry under AWAITING OWNER
+     VERIFICATION for the submodule commit + pin bump that still has to happen.
+  VERIFIED ON HARDWARE 2026-08-01 by real unplug/replug: detection, per-slot mask, deferred pull,
+  recovery file, dialog layout, and the Pull branch resolving cleanly (twice).
+  NOT YET EXERCISED: the "Send to Synth" push branch, and "Save As..." including its recovery-file
+  cleanup. Both need one more unplug/replug cycle; Send overwrites the synth's edit buffer.
+  STILL OPEN: dirty state is per SLOT and only covers the reconnect path. Slot change and any other
+  device reload can still clobber silently, and the performance domain is not covered at all.
 - Scrollbars on the patch selectors (Load/Store/Delete/Restore bank-location pickers,
   bankBrowser.cpp) — currently no visible scrollbar for long lists.
 

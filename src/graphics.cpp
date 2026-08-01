@@ -65,6 +65,8 @@ extern "C" {
 #include "patchParamsResources.h"
 #include "perfSettingsResources.h"
 #include "menus.h"
+#include "undo.h"
+#include "deviceSync.h"
 #include "mutatorUI.h"
 #include "appMenuBar.h"
 #include "fileBrowser.h"
@@ -968,6 +970,87 @@ static void on_file_opened(const char * path) {
     wake_glfw();
 }
 
+// ── Offline-edit conflict on reconnect ──────────────────────────────────────
+//
+// The USB thread has found edits made while the G2 was away and parked itself until the user
+// decides whose copy wins. Recovery files are already on disk by the time the dialog appears, so
+// every answer here — including Escape — is safe.
+//
+// Non-zero only between choosing "Save As..." and that save finishing, so on_file_saved() knows to
+// finish resolving the conflict afterwards. The dialog is modal and the USB thread is parked, so
+// no second conflict can start meanwhile.
+static uint32_t sConflictMaskPendingSave = 0;
+
+// Tells the USB thread to resume: push the editor's slots to the G2, or take the G2's patches.
+// Either way the undo history goes, because after a wholesale resend (or a wholesale replacement)
+// its entries describe a device state that no longer exists.
+static void resolve_offline_conflict(uint32_t slotMask, bool pushToDevice) {
+    tMessageContent msg = {0};
+
+    msg.cmd                          = eMsgCmdResolveOfflineEdits;
+    msg.offlineEditData.slotMask     = slotMask;
+    msg.offlineEditData.pushToDevice = pushToDevice;
+    msg_send(&gToUsbThread, &msg);
+
+    undo_clear();
+    wake_glfw();
+}
+
+static void on_offline_conflict_choice(int choice) {
+    uint32_t slotMask = sConflictMaskPendingSave;
+
+    sConflictMaskPendingSave = 0;
+
+    switch (choice) {
+        case 0:  // Send to Synth — the editor's patches win
+            resolve_offline_conflict(slotMask, true);
+            break;
+
+        case 1:  // Save As... — park the resolve until the save has been through the browser
+            sConflictMaskPendingSave = slotMask;
+            file_menu_save_patch();
+            break;
+
+        default:  // Pull from Synth, and what Escape means: the G2's patches win
+            resolve_offline_conflict(slotMask, false);
+            break;
+    }
+}
+
+void show_offline_conflict_dialog(uint32_t slotMask) {
+    char     location[FILE_PATH_SIZE] = {0};
+    char     slots[32]                = {0};
+    char     message[512]             = {0};
+    uint32_t recovered                = device_sync_write_recovery_files(slotMask, location, sizeof(location));
+    size_t   used                     = 0;
+
+    for (uint32_t slot = 0; slot < MAX_SLOTS; slot++) {
+        if ((slotMask & (1u << slot)) != 0) {
+            used += (size_t)snprintf(slots + used, sizeof(slots) - used, "%s%c",
+                                     (used > 0) ? ", " : "", (char)('A' + slot));
+        }
+    }
+
+    snprintf(message, sizeof(message),
+             "You edited slot %s while the G2 was disconnected, so the editor and the synth now "
+             "disagree.\n\n"
+             "%s\n\n"
+             "Send to Synth writes the editor's patches over the synth's. Pull from Synth replaces "
+             "the editor's with the synth's. Either way the undo history is cleared.",
+             slots,
+             (recovered > 0)
+             ? "Your edits have already been saved to a recovery file, so nothing here can lose them:"
+             : "WARNING: a recovery file could not be written, so choosing Pull WILL discard your edits.");
+
+    if ((recovered > 0) && (location[0] != '\0')) {
+        used = strlen(message);
+        snprintf(message + used, sizeof(message) - used, "\n%s", location);
+    }
+    sConflictMaskPendingSave = slotMask;  // Carried into the callback, which has no user-data slot
+    show_choice("Offline Edits", message, "Send to Synth", "Save As...", "Pull from Synth",
+                on_offline_conflict_choice);
+}
+
 static void on_file_saved(const char * path) {
     uint32_t slot = gSlot;
 
@@ -1002,6 +1085,22 @@ static void on_file_saved(const char * path) {
             set_patch_name_from_filename(slot, path);
         }
         remember_file_path(path);
+    }
+
+    // The save that a conflict's "Save As..." branch was waiting on. Resolve either way: a
+    // cancelled save (path == NULL) still has to release the parked USB thread, and the recovery
+    // file written before the dialog means taking the synth's copy is not a loss even then.
+    if (sConflictMaskPendingSave != 0) {
+        uint32_t slotMask = sConflictMaskPendingSave;
+
+        sConflictMaskPendingSave = 0;
+
+        if (path != NULL) {
+            // Saved where they chose, so the automatic copy is redundant. Only here — on the Pull
+            // branch that file is the only copy of the work that exists.
+            device_sync_discard_recovery_files();
+        }
+        resolve_offline_conflict(slotMask, false);
     }
     gNeedFocus = true;
     wake_glfw();
@@ -1153,6 +1252,10 @@ static void check_action_flags(void) {
                     if (resp.fileResultData.result != EXIT_SUCCESS) {
                         show_alert("New Patch Failed", "The G2 did not accept the new patch. It may have gone offline.");
                     }
+                    break;
+
+                case eRspOfflineConflict:
+                    show_offline_conflict_dialog(resp.offlineEditData.slotMask);
                     break;
 
                 case eRspAlert:

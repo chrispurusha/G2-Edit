@@ -41,6 +41,10 @@ void toggle_mouse_crosshair(void); // TEMPORARY debug aid — F9, Debug builds o
 // to stay atomic against the USB thread's own DB writes — see their handlers in usbComms.c.
 void set_patch_name_from_filename(uint32_t slot, const char * filepath);
 int write_database_to_file(const char * filepath, uint32_t slot);  // EXIT_SUCCESS / EXIT_FAILURE
+
+// Asks the user whose copy wins after edits were made while the G2 was disconnected. Called from
+// the reverse-queue drain on eRspOfflineConflict; writes recovery files before it asks.
+void show_offline_conflict_dialog(uint32_t slotMask);
 int write_perf_to_file(const char * filepath);                     // EXIT_SUCCESS / EXIT_FAILURE
 
 // Busy state for in-flight whole-slot device ops. device_op_begin() is called when the op is enqueued
