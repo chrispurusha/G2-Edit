@@ -257,9 +257,46 @@ none of these exist in G2-Edit at all, confirmed by source search)
     F8        View MIDI CC# Assignments — the MIDI CC# (if any) mapped to each parameter
     Ctrl+F8   View Parameter MIDI Values — how each knob is actually sent/received over MIDI
   None implemented — no F5-F8 key handling anywhere in the source.
+- Parameter Pages window (Ctrl-F) — *** NEXT UP, owner-requested 2026-08-01 *** the graphical
+  stand-in for the G2 front panel's PARAMETER PAGES and their ASSIGNABLE KNOBS/BUTTONS (manual
+  p.89-91, "The Parameter Pages window"). Each page shows its knobs with, per assigned knob, the
+  module name and the parameter's current value; turning a knob there click-and-hold focuses AND
+  changes the module parameter in the patch window, and moves the real front-panel knob. The
+  reverse also holds: turning an assigned knob on the hardware updates both the window and the
+  module parameter.
+  WHAT ALREADY EXISTS, so this is a UI job rather than a protocol one:
+    * gKnobArray[slot].knob[120] with assigned/location/moduleIndex/paramIndex — populated by
+      protocol.c's parse of the patch's knob section, so the assignments are already in the
+      database and already round-trip to file and device.
+    * Assignment/deassignment already work per-parameter from the right-click menu
+      (action_assign_knob / action_deassign_knob in menus.c, eMsgCmdAssignKnob/eMsgCmdDeassignKnob),
+      and are undoable (undo_push_knob). The global/perf pair is separate and now undoable too.
+    * Param editing, dial rendering and the value/strMap plumbing all exist in renderParams.c.
+  SO WHAT IS MISSING is the WINDOW: a page-at-a-time grid of 8 (check against the hardware) knob
+  widgets with module/param/value readouts, page navigation, and the two-way live link described
+  above. Worth checking whether SynthEdit's render_page_tabs() is reusable for the page selector
+  rather than inventing a second one (see the page-tab unification note in the commonalise
+  section).
+  LAYOUT, from the manual p.19 ("PARAMETER PAGES"), which also explains the 120 in gKnobArray:
+    8 ASSIGNABLE KNOBS/BUTTONS per page x 15 pages = 120 per patch. The 15 pages are a MATRIX,
+    3 wide by 5 high: rows lettered A-E, columns numbered 1-3, so a page is named A1, D2 etc.
+    Knob index therefore maps as page = index / 8 within that matrix — CONFIRM the row/column
+    order of the mapping against the hardware before trusting it either way round.
+    There are also 15 GLOBAL parameter pages (another 120), assignable from all four slots at
+    once, with one button toggling between patch pages and global pages. G2-Edit already keeps
+    the global set separately (gGlobalKnobArray[MAX_NUM_KNOBS], and the assign/deassign pair in
+    menus.c), so the same panel should serve both with a patch/global toggle.
+  FORM DECIDED (owner, 2026-08-01): a FULL-CANVAS PANEL, like the existing patch settings and
+  patch notes panels — not a floating window. Follow those for the open/close and render plumbing.
+  OPEN QUESTION remaining: does the hardware send knob-turn events we already parse, i.e. is the
+  "turn the front-panel knob and the window follows" direction free, or does it need new message
+  handling? Check what protocol.c does with the knob/controller stream before designing the
+  refresh path.
+
 - Parameter Overview window (Ctrl-L) — floating window showing every Parameter Page's knob/button
   assignments at once in one grid, with drag-and-drop to make/move/reorganize assignments directly
-  from the overview instead of one page at a time.
+  from the overview instead of one page at a time. Natural follow-on from Parameter Pages above,
+  and shares its widgets.
 - Bulk MIDI CC tools (Tools menu) — "Assign MIDI" (auto-assign the next free CC# to every
   panel-assigned knob/button, in page order), "Clear MIDI" (clear every CC# in the Patch at once,
   undoable), "View Buttons" (toggle the popup overlay between a combined dial+button assignment's
