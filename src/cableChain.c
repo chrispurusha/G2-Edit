@@ -249,7 +249,9 @@ uint32_t cable_chain_apply_colour(uint32_t slot, uint32_t location,
             continue;
         }
         cable->colour = (uint32_t)colour;
-        cable_send_message(eMsgCmdWriteCable, slot, location, &keys[i], cable->colour);
+        // Recolour in place — a plain write would make the G2 hold the cable twice; see
+        // send_write_cable_colour() in usbComms.c.
+        cable_send_message(eMsgCmdSetCableColour, slot, location, &keys[i], cable->colour);
         changed++;
     }
 
