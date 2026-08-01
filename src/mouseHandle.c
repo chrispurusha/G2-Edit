@@ -684,6 +684,9 @@ bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {
     if (fromModule == NULL) {
         return false;
     }
+    // Bracketed as one cable edit: a connect can repaint the whole tree as well as add the
+    // cable, and undo has to put the old colours back along with the topology.
+    undo_begin_cable_edit(slot, location);
 
     for (uint32_t idx = 0; idx < MAX_NUM_MODULES && !found; idx++) {
         tModule * toModule = get_module_slot(slot, location, idx);
@@ -761,6 +764,7 @@ bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {
         cable_chain_recolour(slot, location, connectedNode);
     }
     update_module_up_rates();
+    undo_commit_cable_edit();  // Pushes nothing if the drag landed somewhere that added no cable
 
     return found;
 }
