@@ -1034,6 +1034,28 @@ static void action_assign_midi_cc(int index) {
 // the whole Slot: undo_begin_midi_cc_edit() snapshots the entire controller table, so however many
 // entries a sweep touches, Ctrl-Z puts all of them back in one step. Both push nothing when the
 // sweep changes nothing.
+//
+// WHY ONE WHOLE-PATCH WRITE RATHER THAN A BURST OF PER-ENTRY COMMANDS. Every slot command is
+// stamped with the slot's patch version by usb_cmd_slot() (usbComms.c), and that version is only
+// ever refreshed when the G2's asynchronous SUB_RESPONSE_PATCH_VERSION_CHANGE (0x38) notification
+// is parsed — nothing bumps it locally after a send. int_rec() returns the moment it sees the
+// expected SUB_RESPONSE_OK and does not drain what else is pending, so back-to-back commands race
+// the version bump from the one before: whichever loses is rejected by the device, silently,
+// because the caller discards send_assign_midi_cc()'s return value and the local table has already
+// recorded the change. That is why a sweep of up to 120 assigns landed only sometimes. A single
+// eMsgCmdWritePatch carries the entire controller table (write_controllers(), protocol.c) in one
+// versioned command, so there is no second command to race. The per-parameter right-click assign
+// is left alone: one command with idle time either side never hits this, and a whole-patch write
+// for a single CC would be heavy-handed.
+
+// Queues the whole slot as one patch write. See the note above for why bulk edits go this way.
+static void send_whole_patch(uint32_t slot) {
+    tMessageContent msg = {0};
+
+    msg.cmd  = eMsgCmdWritePatch;
+    msg.slot = slot;
+    msg_send(&gToUsbThread, &msg);
+}
 
 // Assigns the lowest CC number not already in use. -1 when all 128 are taken.
 static int32_t next_free_midi_cc(uint32_t slot) {
@@ -1051,8 +1073,8 @@ static int32_t next_free_midi_cc(uint32_t slot) {
 // Parameters that already carry a CC keep the one they have - the point is to fill in the gaps,
 // not to renumber a patch someone has already set up by hand.
 void midi_cc_assign_all_knobs(void) {
-    uint32_t        slot = gSlot;
-    tMessageContent msg  = {0};
+    uint32_t slot    = gSlot;
+    bool     changed = false;
 
     undo_begin_midi_cc_edit(slot);
 
@@ -1087,16 +1109,12 @@ void midi_cc_assign_all_knobs(void) {
         };
         mod->param[0][knob->paramIndex].midiCC    = (uint8_t)cc;
         mod->param[0][knob->paramIndex].hasMidiCC = true;
-
-        memset(&msg, 0, sizeof(msg));
-        msg.cmd                                   = eMsgCmdAssignMidiCC;
-        msg.slot                                  = slot;
-        msg.midiCCAssignData.moduleKey            = key;
-        msg.midiCCAssignData.paramIndex           = knob->paramIndex;
-        msg.midiCCAssignData.midiCC               = (uint32_t)cc;
-        msg_send(&gToUsbThread, &msg);
+        changed                                   = true;
     }
 
+    if (changed) {
+        send_whole_patch(slot);
+    }
     undo_commit_midi_cc_edit();
     synthlib_request_redraw();
 }
@@ -1104,21 +1122,17 @@ void midi_cc_assign_all_knobs(void) {
 // Clears every MIDI CC in the Slot. remove_controller_entry() compacts by swapping the last entry
 // into the hole, so repeatedly removing index 0 walks the whole table.
 void midi_cc_clear_all(void) {
-    uint32_t        slot = gSlot;
-    tMessageContent msg  = {0};
+    uint32_t slot    = gSlot;
+    bool     changed = (gControllerCount[slot] > 0);
 
     undo_begin_midi_cc_edit(slot);
 
     while (gControllerCount[slot] > 0) {
-        uint32_t cc = gControllerArray[slot].controller[0].midiCC;
-
         remove_controller_entry(slot, 0);
+    }
 
-        memset(&msg, 0, sizeof(msg));
-        msg.cmd                       = eMsgCmdDeassignMidiCC;
-        msg.slot                      = slot;
-        msg.midiCCDeassignData.midiCC = cc;
-        msg_send(&gToUsbThread, &msg);
+    if (changed) {
+        send_whole_patch(slot);
     }
     undo_commit_midi_cc_edit();
     synthlib_request_redraw();

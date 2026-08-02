@@ -763,31 +763,32 @@ void undo_commit_midi_cc_edit(void) {
     stack_push(eUndoCmdMidiCc, p);
 }
 
-// Drives the slot's controller table to the chosen image. The G2 is told by deassigning every CC
-// that is not in the target and assigning every entry that is, which is safe to over-apply: a
-// deassign of an unassigned CC and an assign of an identical mapping are both no-ops on the device.
+// Drives the slot's controller table to the chosen image, then tells the G2 with ONE whole-patch
+// write. This used to replay a deassign per dropped CC followed by an assign per surviving entry,
+// which put it in exactly the position the bulk Tools sweep was in: each of those commands carries
+// the slot's patch version, that version only advances when the device's async 0x38 notification is
+// parsed, and back-to-back commands race it — so undoing a sweep of 120 assignments landed only
+// partly, silently. write_controllers() (protocol.c) sends the whole table inside a single
+// versioned command, which is both atomic and exact, so there is no over-apply to reason about.
+// See the bulk MIDI CC note in menus.c.
 static void apply_midi_cc(tUndoMidiCcPayload * p, bool isUndo) {
     const tController * target      = isUndo ? p->before : p->after;
     uint32_t            targetCount = isUndo ? p->beforeCount : p->afterCount;
     tMessageContent     msg         = {0};
 
+    // The hasMidiCC shadow on each module param is what the canvas and the MIDI CC overlay read,
+    // so clear the outgoing image's flags before stamping the incoming one — otherwise a CC that
+    // the target does not have stays lit on the module it used to belong to.
     for (uint32_t i = 0; i < gControllerCount[p->slot]; i++) {
-        uint8_t cc    = gControllerArray[p->slot].controller[i].midiCC;
-        bool    keeps = false;
+        tModuleKey key = {
+            p->slot, gControllerArray[p->slot].controller[i].location,
+            gControllerArray[p->slot].controller[i].moduleIndex
+        };
+        tModule *  mod = get_module(key);
+        uint32_t   pi  = gControllerArray[p->slot].controller[i].paramIndex;
 
-        for (uint32_t t = 0; t < targetCount; t++) {
-            if (target[t].midiCC == cc) {
-                keeps = true;
-                break;
-            }
-        }
-
-        if (!keeps) {
-            memset(&msg, 0, sizeof(msg));
-            msg.cmd                       = eMsgCmdDeassignMidiCC;
-            msg.slot                      = p->slot;
-            msg.midiCCDeassignData.midiCC = cc;
-            msg_send(&gToUsbThread, &msg);
+        if ((mod != NULL) && (pi < MAX_NUM_PARAMETERS)) {
+            mod->param[0][pi].hasMidiCC = false;
         }
     }
 
@@ -795,16 +796,18 @@ static void apply_midi_cc(tUndoMidiCcPayload * p, bool isUndo) {
     memcpy(gControllerArray[p->slot].controller, target, MAX_NUM_CONTROLLERS * sizeof(tController));
 
     for (uint32_t i = 0; i < targetCount; i++) {
-        memset(&msg, 0, sizeof(msg));
-        msg.cmd                         = eMsgCmdAssignMidiCC;
-        msg.slot                        = p->slot;
-        msg.midiCCAssignData.moduleKey  = (tModuleKey){
-            p->slot, target[i].location, target[i].moduleIndex
-        };
-        msg.midiCCAssignData.paramIndex = target[i].paramIndex;
-        msg.midiCCAssignData.midiCC     = target[i].midiCC;
-        msg_send(&gToUsbThread, &msg);
+        tModuleKey key = {p->slot, target[i].location, target[i].moduleIndex};
+        tModule *  mod = get_module(key);
+
+        if ((mod != NULL) && (target[i].paramIndex < MAX_NUM_PARAMETERS)) {
+            mod->param[0][target[i].paramIndex].midiCC    = target[i].midiCC;
+            mod->param[0][target[i].paramIndex].hasMidiCC = true;
+        }
     }
+
+    msg.cmd                   = eMsgCmdWritePatch;
+    msg.slot                  = p->slot;
+    msg_send(&gToUsbThread, &msg);
 
     synthlib_request_redraw();
 }

@@ -425,11 +425,49 @@ none of these exist in G2-Edit at all, confirmed by source search)
   assignments at once in one grid, with drag-and-drop to make/move/reorganize assignments directly
   from the overview instead of one page at a time. Natural follow-on from Parameter Pages above,
   and shares its widgets.
-- Bulk MIDI CC tools (Tools menu) — "Assign MIDI" (auto-assign the next free CC# to every
-  panel-assigned knob/button, in page order), "Clear MIDI" (clear every CC# in the Patch at once,
-  undoable), "View Buttons" (toggle the popup overlay between a combined dial+button assignment's
-  knob half and button half, e.g. on Sequencer modules). G2-Edit's Tools menu currently only has
-  Mutator. Per-parameter right-click "Assign MIDI CC" already exists and does not need redoing.
+- Bulk MIDI CC tools (Tools menu) — "Assign MIDI" and "Clear MIDI" BUILT 2026-08-02 as Tools >
+  Assign MIDI CC to Knobs / Clear All MIDI CC (menus.c, midi_cc_assign_all_knobs /
+  midi_cc_clear_all). Numbering follows the manual (p.126): lowest free CC# to the first assigned
+  knob in page order, and parameters that already carry a CC keep it, so a hand-numbered patch is
+  filled in rather than renumbered. Per-parameter right-click "Assign MIDI CC" already existed and
+  was not touched.
+  THE FIRST VERSION LANDED ONLY SOMETIMES, and the reason generalises to any future bulk operation
+  on this device. Every slot command is stamped with the slot's patch version by usb_cmd_slot()
+  (usbComms.c), and that version is only ever refreshed when the G2's ASYNCHRONOUS
+  SUB_RESPONSE_PATCH_VERSION_CHANGE (0x38) notification is parsed — nothing bumps it locally after
+  a send. int_rec() returns the moment it sees the expected SUB_RESPONSE_OK and does not drain
+  what else is pending, so in a burst, command N+1 races the version bump from command N and the
+  G2 rejects whichever loses. It was silent because send_assign_midi_cc()'s return value is
+  discarded by its caller and the local table had already recorded the change — so the UI showed
+  CC#s the device never accepted. Single right-click assigns never hit it: one command, with idle
+  time either side for the 0x38 to arrive.
+  FIXED by sending the whole slot as ONE eMsgCmdWritePatch instead. write_controllers()
+  (protocol.c) already serialises the entire controller table, so all 120 assignments cross in a
+  single versioned command and there is nothing to race. eMsgCmdWritePatch was already used this
+  way from the UI thread for something as ordinary as a patch-notes edit (mouseHandle.c,
+  mousePanels.c) — no synth stop, no ceremony.
+  UNDO SURVIVES, and was in fact broken the same way before this: apply_midi_cc() (undo.c) replayed
+  the same burst of per-entry deassign/assign commands, so Ctrl-Z after a sweep landed only partly.
+  It now drives the local table to the target image and sends the same single patch write. Fixing
+  it also fixed a second bug it always had — it never maintained the hasMidiCC shadow on the module
+  params, which is what the canvas and the MIDI CC overlay actually read, so an undone CC stayed
+  lit on the module it used to belong to.
+  STILL TO DO:
+   1. UNCONFIRMED ON HARDWARE. Builds clean; the diagnosis above is from code reading, not from a
+      capture. To confirm: uncomment ENABLE_USB_LOG (defs.h) and read ~/G2_usb.log — byte 2 of each
+      TX is the version stamp. The old symptom was that stamp staying flat across consecutive TXs
+      while the 0x38 RX lines lagged behind.
+   2. Global pages are not covered — the sweep walks gKnobArray[slot] only, and Global-page knobs
+      live in gGlobalKnobArray. The original's Assign MIDI sits on the Parameter Overview, which
+      has a Global Pages toggle.
+   3. The button half of a combined knob+button assignment is skipped: tKnob.isLed is unused by the
+      sweep, but the manual's View Buttons section says a Sequencer module's knob and its
+      pushbutton can each hold a DIFFERENT CC#. One CC per knob entry is half the job. Ties into
+      "View Buttons" below.
+   4. next_free_midi_cc() starts at CC 0 — worth confirming the G2 accepts 0 (Bank Select). The
+      manual only says "first available MIDI CC#" without stating a floor.
+   5. "View Buttons" (toggle the popup overlay between a combined dial+button assignment's knob
+      half and button half, e.g. on Sequencer modules) is not built.
 - MIDI Learn (L key) — assign the focused parameter to whichever MIDI CC# was last received, without
   opening a picker.
 - Patch Window Split Bar — the original shows Voice Area and FX Area SIMULTANEOUSLY in one window,
