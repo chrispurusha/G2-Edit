@@ -55,6 +55,7 @@ extern "C" {
 #include "paramPages.h"
 #include "paramOverview.h"
 #include "virtualKeyboard.h"
+#include "patchAdjuster.h"
 #include "misc.h"
 #include "appMenuBar.h"
 #include "fileBrowser.h"
@@ -920,6 +921,11 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         return;
     }
 
+    if (handle_patch_adjuster_mouse(coord, mouseButton)) {
+        synthlib_request_redraw();
+        return;
+    }
+
     if (handle_patch_params_mouse(coord, mouseButton)) {
         synthlib_request_redraw();
         return;
@@ -1240,6 +1246,12 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     //y = (y * (double)get_render_height()) / (double)height;
 
     gHoverConnector.active = false;
+
+    if (gPatchAdjuster.active && (gPatchAdjuster.dragKnob >= 0)) {
+        handle_patch_adjuster_cursor_pos(coord);
+        synthlib_request_redraw();
+        return;
+    }
 
     if (gMutator.active && (gMutator.draggingPanel || (gMutator.draggingSlider >= 0))) {
         handle_mutator_cursor_pos(coord);
@@ -1835,6 +1847,11 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
     }
 
     if (handle_virtual_keyboard_key(key, mods, action)) {
+        synthlib_request_redraw();
+        return;
+    }
+
+    if (handle_patch_adjuster_key(key, mods, action)) {
         synthlib_request_redraw();
         return;
     }
