@@ -30,6 +30,8 @@ extern "C" {
 
 #pragma clang diagnostic pop
 
+#include <math.h>
+
 #include "paramPages.h"
 #include "defs.h"
 #include "synthlibDefs.h"
@@ -56,6 +58,8 @@ static const char *const kPageRowLabel[NUM_PARAM_PAGES] = {"A", "B", "C", "D", "
 #define PP_DIAL_SIZE       26.0
 #define PP_PAGE_BTN_W      30.0
 #define PP_PAGE_BTN_GAP    4.0
+#define PP_CELL_PAD        5.0    // inset from a cell's edge to its content, both sides
+#define PP_MIN_CELL_W      64.0   // keeps an all-empty page from collapsing to a thin strip
 
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
 
@@ -194,37 +198,153 @@ static const char * module_display_name(const tModule * module) {
     return gModuleProperties[module->type].name;
 }
 
+// Total width draw_button() occupies for text of the given width, padding included.
+static double button_width_for(double textWidth, double textHeight) {
+    return draw_button_bounds((tRectangle){{0.0, 0.0}, {textWidth, textHeight}}).size.w;
+}
+
+// The label render_param_common() will put on this param: a name the patch carries for it wins
+// over the paramLocationList one, which is the precedence that function itself applies.
+static const char * knob_param_label(const tKnobTarget * target) {
+    if (target->module->paramNameSet[target->paramIndex][0]) {
+        return target->module->paramName[target->paramIndex][0];
+    }
+
+    if (paramLocationList[target->paramRef].label != NULL) {
+        return paramLocationList[target->paramRef].label;
+    }
+    return "";
+}
+
+// What one knob's widget needs horizontally.
+//
+// Both numbers have to be worked out per param TYPE, because the renderers don't agree on what
+// rectangle.size.w means. A dial takes it as its diameter and then draws label and value text
+// left-anchored at the same x, ignoring the width entirely. A toggle ignores it too and sizes its
+// own button to its strMap. But paramTypeEnable draws a button exactly rectangle.size.w wide with
+// the param's LABEL inside it - so a param the patch has renamed to something long needs to be
+// given a rect that wide, or the text simply runs out of the button. On the canvas that never
+// shows, because adjust_rectangle() hands each param the width its paramLocationList entry
+// specifies; here the panel is choosing the rectangle, so it has to choose a big enough one.
+//
+// `content` is the total extent the widget will paint, which matters because nothing clips (there
+// is no scissor anywhere in SynthLib) - a widget wider than its cell isn't trimmed, it runs into
+// the next cell and that cell's background then paints over the top of it.
+typedef struct {
+    double content;     // total width the widget will paint, from its rect's x
+    double rectWidth;   // what to hand it as rectangle.size.w
+    bool   dialLike;    // value text is generated inside the renderer, and the dial is the thing
+                        // worth centring
+} tKnobMetrics;
+
+static tKnobMetrics knob_metrics(uint32_t pos, double textH) {
+    tKnobTarget            target    = knob_target(pos);
+    tKnobMetrics           metrics   = {PP_DIAL_SIZE, PP_DIAL_SIZE, false};
+
+    if (!target.assigned) {
+        return metrics;
+    }
+    const tParamLocation * loc       = &paramLocationList[target.paramRef];
+    uint32_t               variation = gPatchDescr[target.key.slot].activeVariation;
+    uint32_t               value     = target.module->param[variation][target.paramIndex].value;
+    double                 labelW    = get_text_width((char *)knob_param_label(&target), textH, eCache);
+
+    switch (loc->type) {
+        case paramTypeEnable:
+            // Button width comes from the rect, label goes inside it.
+            metrics.rectWidth = fmax(PP_DIAL_SIZE, labelW);
+            metrics.content   = button_width_for(metrics.rectWidth, textH);
+            break;
+
+        case paramTypeToggle:
+        case paramTypeMenu:
+        case paramTypeCustomData:
+            // Label on its own line, then a button sized to largest_text_width() over the param's
+            // declared range. Measure the string actually on screen as well: where a module's
+            // declared range is out of step with its strMap (there are known cases - see the
+            // module-verification items in todo.txt) the current entry can be longer than
+            // anything largest_text_width() looked at.
+            metrics.content   = fmax(PP_DIAL_SIZE, labelW);
+
+            if (loc->strMap != NULL) {
+                metrics.content = fmax(metrics.content, button_width_for(largest_text_width((int)loc->range, loc->strMap, textH, eCache), textH));
+
+                if (value < array_size_str_map(loc->strMap)) {
+                    metrics.content = fmax(metrics.content, button_width_for(get_text_width((char *)loc->strMap[value], textH, eCache), textH));
+                }
+            }
+            break;
+
+        case paramTypeBypass:
+            // A power button drawn to fill the rect; no text at all.
+            break;
+
+        default:
+            // Dials and sliders. The value string is formatted inside the renderer, so it can't
+            // be measured up front - allow for the widest shape any of them produce.
+            metrics.content   = fmax(PP_DIAL_SIZE, fmax(labelW, get_text_width((char *)"-1234.5kHz", textH, eCache)));
+            metrics.dialLike  = true;
+            break;
+    }
+    return metrics;
+}
+
 void render_param_pages_panel(void) {
     if (!gParamPages.active) {
         return;
     }
-    double renderW = get_render_width() / gGlobalGuiScale;
-    double renderH = get_render_height() / gGlobalGuiScale;
-    double margin  = 10.0;
-    double titleH  = 24.0;
-    double rowH    = 20.0;
-    double btnH    = STANDARD_BUTTON_TEXT_HEIGHT;
-    double textH   = STANDARD_TEXT_HEIGHT;
+    double       renderW                     = get_render_width() / gGlobalGuiScale;
+    double       renderH                     = get_render_height() / gGlobalGuiScale;
+    double       margin                      = 10.0;
+    double       titleH                      = 24.0;
+    double       rowH                        = 20.0;
+    double       btnH                        = STANDARD_BUTTON_TEXT_HEIGHT;
+    double       textH                       = STANDARD_TEXT_HEIGHT;
     // Cell height: module name, then the param widget's own label + value + dial (the three
     // rows render_dial_with_text() lays out from the rectangle it's handed).
-    double cellH   = textH + (textH * 2.0) + PP_DIAL_SIZE + 8.0;
-    double gridW   = (PP_PAGE_BTN_W * NUM_BANKS_PER_PAGE) + (PP_PAGE_BTN_GAP * (NUM_BANKS_PER_PAGE - 1));
-    double boxW    = 780.0;
+    double       cellH                       = textH + (textH * 2.0) + PP_DIAL_SIZE + 8.0;
+    double       gridW                       = (PP_PAGE_BTN_W * NUM_BANKS_PER_PAGE) + (PP_PAGE_BTN_GAP * (NUM_BANKS_PER_PAGE - 1));
 
-    if (boxW > (renderW - (margin * 2.0))) {
-        boxW = renderW - (margin * 2.0);
+    // Cells are sized to the widest widget on the page rather than to a fixed panel width, and
+    // the panel width follows from them. All eight share one width so the row stays a row, and
+    // the page keeps its size as the mouse moves over it. The panel is as wide as this page needs
+    // and no wider - switching pages can resize it, which is the honest trade for never having a
+    // widget run into its neighbour.
+    double       cellW                       = PP_MIN_CELL_W;
+    tKnobMetrics metrics[NUM_KNOBS_PER_BANK] = {0};
+
+    for (uint32_t pos = 0; pos < NUM_KNOBS_PER_BANK; pos++) {
+        metrics[pos] = knob_metrics(pos, textH);
+        cellW        = fmax(cellW, metrics[pos].content + (PP_CELL_PAD * 2.0));
+
+        // A dial is centred by putting the DIAL on the cell's centre line, but its label and
+        // value are drawn from the dial's left edge rightwards - so everything past the dial has
+        // to fit in the right half of the cell. Asking for that width here is what lets the
+        // centring below actually happen; if the row can't have it, the fallback there keeps the
+        // content inside the cell at the cost of sitting off-centre.
+        if (metrics[pos].dialLike) {
+            cellW = fmax(cellW, (metrics[pos].content * 2.0) - PP_DIAL_SIZE + (PP_CELL_PAD * 2.0));
+        }
     }
-    double cellsW  = boxW - (margin * 3.0) - gridW;
-    double cellW   = (cellsW - (PP_CELL_GAP * (NUM_KNOBS_PER_BANK - 1))) / NUM_KNOBS_PER_BANK;
-    double boxH    = titleH + margin + rowH + margin + cellH + margin;
-    double gridH   = (rowH * NUM_PARAM_PAGES) + (PP_PAGE_BTN_GAP * (NUM_PARAM_PAGES - 1));
+
+    double       boxW                        = (margin * 3.0) + gridW + (cellW * NUM_KNOBS_PER_BANK) + (PP_CELL_GAP * (NUM_KNOBS_PER_BANK - 1));
+
+    // Too wide for the window: give the cells whatever is left. They can end up narrower than
+    // their content needs, and with no clipping available that means an overlap again - but a
+    // panel running off both edges of the window would be worse.
+    if (boxW > (renderW - (margin * 2.0))) {
+        boxW  = renderW - (margin * 2.0);
+        cellW = ((boxW - (margin * 3.0) - gridW) - (PP_CELL_GAP * (NUM_KNOBS_PER_BANK - 1))) / NUM_KNOBS_PER_BANK;
+    }
+    double       boxH                        = titleH + margin + rowH + margin + cellH + margin;
+    double       gridH                       = (rowH * NUM_PARAM_PAGES) + (PP_PAGE_BTN_GAP * (NUM_PARAM_PAGES - 1));
 
     if (boxH < (titleH + margin + rowH + margin + gridH + margin)) {
         boxH = titleH + margin + rowH + margin + gridH + margin;
     }
-    double boxX    = (renderW - boxW) / 2.0;
-    double boxY    = (renderH - boxH) / 2.0;
-    double y       = boxY + titleH + margin;
+    double       boxX                        = (renderW - boxW) / 2.0;
+    double       boxY                        = (renderH - boxH) / 2.0;
+    double       y                           = boxY + titleH + margin;
 
     draw_dialog_background_overlay();
     draw_panel_chrome((tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Parameter Pages");
@@ -312,7 +432,7 @@ void render_param_pages_panel(void) {
             if (!target.assigned) {
                 set_rgb_colour((tRgb)RGB_GREY_5);
                 snprintf(label, sizeof(label), "%u  --", pos + 1);
-                render_text(mainArea, (tRectangle){{x + 3.0, y + 2.0}, {BLANK_SIZE, textH}}, label);
+                render_text(mainArea, (tRectangle){{x + ((cellW - get_text_width(label, textH, eCache)) / 2.0), y + 2.0}, {BLANK_SIZE, textH}}, label);
                 continue;
             }
             // Header line: the knob's position on the page, then the module it drives. A global
@@ -325,17 +445,29 @@ void render_param_pages_panel(void) {
                 } else {
                     snprintf(name, sizeof(name), "%u %s", pos + 1, module_display_name(target.module));
                 }
-                fit_text(label, sizeof(label), name, cellW - 6.0, textH);
+                fit_text(label, sizeof(label), name, cellW - (PP_CELL_PAD * 2.0), textH);
                 set_rgb_colour((tRgb)RGB_BLACK);
-                render_text(mainArea, (tRectangle){{x + 3.0, y + 2.0}, {BLANK_SIZE, textH}}, label);
+                render_text(mainArea, (tRectangle){{x + ((cellW - get_text_width(label, textH, eCache)) / 2.0), y + 2.0}, {BLANK_SIZE, textH}}, label);
             }
 
+            // Where in the cell the widget starts. A dial goes on the cell's centre line; anything
+            // else has its whole painted block centred, which is the closest equivalent for a
+            // widget that is all button. Both fall back to a left-anchored position if centring
+            // would push the content past the cell's right edge - which only happens once the
+            // window is too narrow for the width the sizing pass above asked for.
+            double widgetX = x + PP_CELL_PAD;
+
+            if (metrics[pos].dialLike && ((cellW - PP_DIAL_SIZE) / 2.0) + metrics[pos].content <= (cellW - PP_CELL_PAD)) {
+                widgetX = x + ((cellW - PP_DIAL_SIZE) / 2.0);
+            } else if (metrics[pos].content <= (cellW - (PP_CELL_PAD * 2.0))) {
+                widgetX = x + ((cellW - metrics[pos].content) / 2.0);
+            }
             // The param widget itself, drawn by exactly the code the canvas uses - so a dial
             // looks like a dial, a toggle looks like a toggle, and the value text is formatted
             // by that param type's own rule. render_param_common() records the widget's
             // clickable rect in gParamRectangle; read it straight back for hit-testing, so
             // there's only ever one description of where the control is.
-            render_param_common((tRectangle){{x + ((cellW - PP_DIAL_SIZE) / 2.0), y + textH + 4.0}, {PP_DIAL_SIZE, PP_DIAL_SIZE}},
+            render_param_common((tRectangle){{widgetX, y + textH + 4.0}, {metrics[pos].rectWidth, PP_DIAL_SIZE}},
                                 target.module, target.paramRef, target.paramIndex);
             gParamPages.knobWidget[pos] = gParamRectangle[target.key.slot][target.key.location][target.key.index][target.paramIndex];
         }

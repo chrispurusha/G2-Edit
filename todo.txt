@@ -305,8 +305,27 @@ none of these exist in G2-Edit at all, confirmed by source search)
       three agree, but A1,A2,A3,B1... vs column-major is still unconfirmed against the hardware.
    3. Anything involving a real G2: the hardware-knob-turn refresh, and whether an edit made in
       the panel reaches the device (offline it only reaches the database and the queue).
-   4. Whether 8-across is right at small window sizes. The panel clamps to the window width and
-      the cells narrow with it; not tried below about 800 logical px.
+   4. Whether 8-across is right at small window sizes. The panel now sizes itself to its content
+      (see the layout note below) and only clamps once that exceeds the window; not tried below
+      about 800 logical px, where the clamp starts to bite and overlaps can return.
+  LAYOUT, reworked 2026-08-02 after the owner reported knob boxes overlapping each other. Two
+  separate causes, both from the panel choosing rectangles that the canvas normally gets from
+  paramLocationList:
+   * NOTHING CLIPS - there is no scissor anywhere in SynthLib - and every widget paints
+     left-anchored from the rect it is handed, growing rightwards by whatever its content needs.
+     A fixed cell width therefore can't hold a wide value string or a wide strMap button, and the
+     next cell's background then paints over the overflow. Cells are now measured
+     (knob_metrics()) and the panel's width follows from the widest widget on the page, so
+     switching pages can resize the panel.
+   * paramTypeEnable is the exception to "the renderer sizes itself": render_paramType1Enable()
+     draws a button exactly rectangle.size.w wide with the param's LABEL inside it. Handing it a
+     fixed 26 is what put "Mod" in the button and "Amt" outside it on page A1 knob 6, whose param
+     the patch has renamed "Mod Amt". The rect width is now per param type.
+  Dials are centred on their cell (owner's request), and everything else has its painted block
+  centred. That costs width: a centred dial draws its label and value from the dial's left edge
+  rightwards, so the cell has to be about twice the content width. The sizing pass asks for that,
+  and each cell falls back to block-centred and then to left-anchored if the window is too narrow
+  to grant it.
   STILL OPEN: the manual describes click-and-hold on a panel knob also FOCUSING the parameter in
   the patch window (and moving the real front-panel knob). Neither is implemented - the panel
   edits the value but does not scroll the canvas to the module or highlight it.
