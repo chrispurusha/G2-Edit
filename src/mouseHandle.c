@@ -54,6 +54,7 @@ extern "C" {
 #include "mutatorUI.h"
 #include "paramPages.h"
 #include "paramOverview.h"
+#include "virtualKeyboard.h"
 #include "misc.h"
 #include "appMenuBar.h"
 #include "fileBrowser.h"
@@ -910,6 +911,11 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     }
 
     if (handle_param_overview_mouse(coord, mouseButton)) {
+        synthlib_request_redraw();
+        return;
+    }
+
+    if (handle_virtual_keyboard_mouse(coord, mouseButton)) {
         synthlib_request_redraw();
         return;
     }
@@ -1824,6 +1830,11 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
     }
 
     if (handle_param_overview_key(key, mods, action)) {
+        synthlib_request_redraw();
+        return;
+    }
+
+    if (handle_virtual_keyboard_key(key, mods, action)) {
         synthlib_request_redraw();
         return;
     }

@@ -44,6 +44,13 @@ int32_t find_controller_for_param(uint32_t slot, uint32_t location, uint32_t mod
 // Overview panel offers these on whichever Slot IT is showing, which need not be the selected one.
 void midi_cc_assign_all_knobs(uint32_t slot);
 void midi_cc_clear_all(uint32_t slot);
+
+// The original's "Assign MIDI to Selection" / "Deassign MIDI from Selection". NOT the same thing as
+// the pair above: these cover every parameter of the selected modules, assigned to a panel knob or
+// not, where those two only ever touch the 120 panel knob assignments. Always the selected Slot,
+// since that is the only Slot a selection can be in.
+void midi_cc_assign_selection(void);
+void midi_cc_deassign_selection(void);
 void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex);
 void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, uint32_t paramRef);
 void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeIndex, uint32_t modeRef);
