@@ -1232,7 +1232,7 @@ static void render_device_busy_overlay(void) {
     double titleH  = 24.0;
 
     draw_dialog_background_overlay();
-    draw_panel_chrome((tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Please wait");
+    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Please wait");
     render_text(mainArea, (tRectangle){{boxX + 10.0, boxY + titleH + 10.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, gDeviceOpLabel);
 }
 
@@ -1535,33 +1535,11 @@ void draw_dialog_background_overlay(void) {
 // over the white/black border line) with white title text. Returns the full-width,
 // non-inset title bar rectangle — callers that need it as a drag handle (Mutator) can
 // hit-test against that; everyone else can ignore the return value.
-tRectangle draw_panel_chrome(tRectangle box, double titleH, const char * title) {
-    tRectangle titleBar = {box.coord, {box.size.w, titleH}};
-
-    set_rgb_colour((tRgb)RGB_GREY_5);
-    render_rectangle_with_border(mainArea, box);
-
-    set_rgb_colour((tRgb)RGB_GREY_3);
-    render_rectangle(mainArea, (tRectangle){{box.coord.x + BORDER_LINE_WIDTH, box.coord.y + BORDER_LINE_WIDTH}, {box.size.w - 2.0 * BORDER_LINE_WIDTH, titleH - BORDER_LINE_WIDTH}});
-    set_rgb_colour((tRgb)RGB_WHITE);
-    render_text(mainArea, (tRectangle){{box.coord.x + 10.0, box.coord.y + 6.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, title);
-
-    return titleBar;
-}
 
 // Draws the standard "Close" button, right-aligned in the title bar at the app's
 // standard inset, darkened while closePressed is true. Returns its rectangle for the
 // caller's own hit-testing (this function does not track press state itself, since
 // each panel already has its own closePressed bool wired into its mouse handler).
-tRectangle draw_panel_close_button(tRectangle box, bool closePressed) {
-    double btnH   = STANDARD_BUTTON_TEXT_HEIGHT;
-    double closeW = get_text_width("Close", btnH, eCache) + 4.0;
-    tRgb   col    = closePressed ? (tRgb)RGB_GREY_7 : (tRgb)RGB_BACKGROUND_GREY;
-
-    return draw_button(mainArea,
-                       (tRectangle){{box.coord.x + box.size.w - closeW - 8.0 - BORDER_LINE_WIDTH, box.coord.y + 4.0}, {closeW, btnH}},
-                       "Close", col);
-}
 
 static void render_patch_settings_panel(void) {
     static const char * slotLabel[4] = {"A", "B", "C", "D"};
@@ -1592,8 +1570,8 @@ static void render_patch_settings_panel(void) {
     y                         = boxY + titleH + margin;
 
     draw_dialog_background_overlay();
-    draw_panel_chrome((tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Synth Settings");
-    gSettingsPanelRects.close = draw_panel_close_button((tRectangle){{boxX, boxY}, {boxW, boxH}}, gSettingsPanelRects.closePressed);
+    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Synth Settings");
+    gSettingsPanelRects.close = draw_panel_close_button(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, gSettingsPanelRects.closePressed);
 
     // ── Synth Name ─────────────────────────────────────────────────
     {
@@ -1693,14 +1671,15 @@ static void render_patch_params_panel(void) {
     char      buf[16]       = {0};
 
     draw_dialog_background_overlay();
-    draw_panel_chrome((tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Patch Settings");
-    gPatchParamClose = draw_panel_close_button((tRectangle){{boxX, boxY}, {boxW, boxH}}, gPatchParamClosePressed);
+    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Patch Settings");
+    gPatchParamClose = draw_panel_close_button(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, gPatchParamClosePressed);
 
     // ── Slot buttons in title bar ──────────────────────────────────
     {
         static const char * slotLabels[MAX_SLOTS] = {"A", "B", "C", "D"};
         double              slotBtnW              = get_text_width((char *)"A", btnH, eCache) /* + 6.0*/;
-        double              slotX                 = boxX + boxW - 70.0 - (slotBtnW + 2.0) * MAX_SLOTS - 8.0;
+        // Right-aligned against the panel edge, now that the close control has moved top left.
+        double              slotX                 = boxX + boxW - 8.0 - BORDER_LINE_WIDTH - ((slotBtnW + 8.0) * MAX_SLOTS);
 
         for (uint32_t s = 0; s < MAX_SLOTS; s++) {
             tRgb col = (s == slot) ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY;
@@ -1794,8 +1773,8 @@ static void render_perf_settings_panel(void) {
     char   rangeBuf[18]             = {0};
 
     draw_dialog_background_overlay();
-    draw_panel_chrome((tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Performance Settings");
-    gPerfSettingsPanelRects.close = draw_panel_close_button((tRectangle){{boxX, boxY}, {boxW, boxH}}, gPerfSettingsPanelRects.closePressed);
+    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Performance Settings");
+    gPerfSettingsPanelRects.close = draw_panel_close_button(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, gPerfSettingsPanelRects.closePressed);
 
     // ── Perf Name ──────────────────────────────────────────────────
     {
@@ -1918,7 +1897,7 @@ static void render_bank_backup_progress(void) {
     bool   isEverything = gBankBackupIsEverything;
 
     draw_dialog_background_overlay();
-    draw_panel_chrome((tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH,
+    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH,
                       isEverything ? "Backup Everything" : (isPerf ? "Backing Up Performance Bank" : "Backing Up Patch Bank"));
 
     if (isEverything) {
@@ -1964,7 +1943,7 @@ static void render_bank_restore_progress(void) {
     bool   isEverything = gBankRestoreIsEverything;
 
     draw_dialog_background_overlay();
-    draw_panel_chrome((tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH,
+    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH,
                       isEverything ? "Restore Everything" : (isPerf ? "Restoring Performance Bank" : "Restoring Patch Bank"));
 
     if (isEverything) {
@@ -2016,8 +1995,8 @@ static void render_patch_notes_edit(void) {
     double btnH         = STANDARD_BUTTON_TEXT_HEIGHT;
 
     draw_dialog_background_overlay();
-    draw_panel_chrome((tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Patch Notes");
-    gPatchNotesCloseRect = draw_panel_close_button((tRectangle){{boxX, boxY}, {boxW, boxH}}, gPatchNotesClosePressed);
+    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Patch Notes");
+    gPatchNotesCloseRect = draw_panel_close_button(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, gPatchNotesClosePressed);
 
     // Character count
     snprintf(countBuf, sizeof(countBuf), "%zu / %d", strlen(gPatchNotesEdit.buffer), PATCH_NOTES_SIZE);
