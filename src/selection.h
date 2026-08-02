@@ -24,6 +24,7 @@
 
 bool is_selected(tModuleKey key);
 void selection_clear(void);
+void selection_select_all(void);
 void selection_set_single(tModuleKey key);
 void selection_toggle(tModuleKey key);
 void selection_add_rect(tRectangle rect, uint32_t slot, uint32_t location);

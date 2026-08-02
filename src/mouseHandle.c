@@ -2217,6 +2217,13 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
             paste_clipboard();
         }
 
+        // Select All joins the Cut/Copy/Paste/Undo shortcuts rather than being menu-only: those
+        // four already carry theirs, and it is an edit command rather than one of the panels the
+        // owner has kept shortcut-free.
+        if (key == GLFW_KEY_A) {
+            selection_select_all();
+        }
+
         if (key == GLFW_KEY_Z) {
             if (mods & GLFW_MOD_SHIFT) {
                 undo_redo();
