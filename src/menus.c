@@ -370,6 +370,109 @@ static void menu_action_delete_chain(int index) {
 // source-reachability rather than from the stored colour. A patch loaded from a file, or from a
 // G2 that an older build wrote, can carry a colour that predates the invariant, so the topology
 // is the only thing worth trusting here.
+static void menu_action_select_all(int index) {
+    (void)index;
+    selection_select_all();
+    gContextMenu.active = false;
+}
+
+// Deletes every module in the viewed location with nothing patched to it — the original's
+// Patch > Delete Unused Modules. "Unused" means no cable touches it at either end, which is the
+// same test the original applies and is deliberately blunter than "contributes no audio": a module
+// feeding only a muted chain is still wired up, and guessing at intent would delete work.
+//
+// Goes through the selection rather than deleting directly, so it inherits the existing
+// undo_push_delete_selection() bracket and one Ctrl-Z takes the whole sweep back.
+static void menu_action_delete_unused_modules(int index) {
+    uint32_t slot     = gSlot;
+    uint32_t location = gLocation;
+
+    (void)index;
+
+    selection_clear();
+
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, location, i);
+        bool      used   = false;
+
+        if ((module == NULL) || !module->active) {
+            continue;
+        }
+
+        for (uint32_t c = 0; (c < MAX_NUM_CABLES) && !used; c++) {
+            tCable * cable = get_cable_slot(slot, location, c);
+
+            if ((cable == NULL) || !cable->active) {
+                continue;
+            }
+
+            if ((cable->key.moduleFromIndex == i) || (cable->key.moduleToIndex == i)) {
+                used = true;
+            }
+        }
+
+        if (!used) {
+            // toggle, not add: selection_add() is private to selection.c, and the selection was
+            // just cleared so toggling can only ever add.
+            selection_toggle((tModuleKey){slot, location, i});
+        }
+    }
+
+    if (gSelection.count > 0) {
+        undo_push_delete_selection();
+        delete_selection();
+    }
+    gContextMenu.active = false;
+    synthlib_request_redraw();
+}
+
+// Pastes the copied module's PARAMETER VALUES onto the module that was right-clicked, leaving that
+// module, its cables and its position alone — the original's Edit > Paste Params. Only meaningful
+// between two modules of the same type, which is what the menu entry checks before offering it.
+//
+// All variations are pasted, not just the active one, because that is what was copied and because
+// pasting one variation's worth would leave the others silently disagreeing with it.
+static void menu_action_paste_params(int index) {
+    uint32_t                 slot      = gSlot;
+    tModuleKey               key       = gMenuContext.moduleKey;
+    tModule *                module    = get_module(key);
+
+    (void)index;
+
+    if ((module == NULL) || !gClipboard.active || (gClipboard.moduleCount == 0)) {
+        gContextMenu.active = false;
+        return;
+    }
+    const tClipboardModule * src       = &gClipboard.modules[0];
+
+    if (src->type != module->type) {
+        gContextMenu.active = false;
+        return;
+    }
+    uint32_t                 numParams = module_param_count(module->type);
+
+    if (numParams > MAX_NUM_PARAMETERS) {
+        numParams = MAX_NUM_PARAMETERS;
+    }
+
+    for (uint32_t v = 0; v < NUM_VARIATIONS_USB; v++) {
+        for (uint32_t p = 0; p < numParams; p++) {
+            uint32_t oldValue = module->param[v][p].value;
+            uint32_t newValue = src->param[v][p].value;
+
+            if (oldValue == newValue) {
+                continue;
+            }
+            module->param[v][p].value = (uint8_t)newValue;
+            send_param_value(slot, key, p, v, newValue);
+            undo_push_param_change(key, p, v, oldValue, newValue);
+        }
+    }
+
+    gContextMenu.active = false;
+    synthlib_request_redraw();
+}
+
 static void menu_action_delete_unused_cables(int index) {
     uint32_t  slot     = gSlot;
     uint32_t  location = gLocation;
@@ -2063,25 +2166,51 @@ void open_module_context_menu(tCoord coord, tModuleKey moduleKey) {
         {NULL, RGB_BLACK,            NULL,                      0, NULL}
     };
 
-    static tMenuItem menuItems[] = {
-        {"Rename",     RGB_GREY_3, action_rename_module,                0, NULL,            0,                      0.0},
-        {"Set colour", RGB_GREY_3, NULL,                                0, colourMenuItems, 6, STANDARD_TEXT_HEIGHT * 2},
-        {"Copy",       RGB_GREY_3, menu_action_copy_module,             0, NULL,            0,                      0.0},
-        {"Cut",        RGB_GREY_3, menu_action_cut_module,              0, NULL},
-        {"Paste",      RGB_GREY_3, menu_action_paste,                   0, NULL},
-        {"Delete",     RGB_GREY_3, menu_action_delete_module,           0, NULL},
-        {NULL,         RGB_GREY_3, action_toggle_exclude_from_mutation, 0, NULL},
-        {NULL,         RGB_BLACK,  NULL,                                0, NULL}
+    // The two entries that are rewritten below are indexed by name rather than by a bare number:
+    // inserting Paste Params into this array silently moved "Delete" under the index the exclude
+    // label was being written to, which deleted the Delete entry from the menu. Named indices make
+    // the next insertion harmless.
+    enum {
+        kItemRename,
+        kItemColour,
+        kItemCopy,
+        kItemCut,
+        kItemPaste,
+        kItemPasteParams,
+        kItemDelete,
+        kItemExclude,
+        kItemTerminator
     };
 
-    tModule *        module      = get_module(moduleKey);
-    bool             excluded    = (module != NULL) && module->excludeFromMutation;
+    static tMenuItem menuItems[]    = {
+        {"Rename",       RGB_GREY_3, action_rename_module,                0, NULL,            0,                      0.0},
+        {"Set colour",   RGB_GREY_3, NULL,                                0, colourMenuItems, 6, STANDARD_TEXT_HEIGHT * 2},
+        {"Copy",         RGB_GREY_3, menu_action_copy_module,             0, NULL,            0,                      0.0},
+        {"Cut",          RGB_GREY_3, menu_action_cut_module,              0, NULL},
+        {"Paste",        RGB_GREY_3, menu_action_paste,                   0, NULL},
+        {"Paste Params", RGB_GREY_3, menu_action_paste_params,            0, NULL},
+        {"Delete",       RGB_GREY_3, menu_action_delete_module,           0, NULL},
+        {NULL,           RGB_GREY_3, action_toggle_exclude_from_mutation, 0, NULL},
+        {NULL,           RGB_BLACK,  NULL,                                0, NULL}
+    };
+
+    tModule *        module         = get_module(moduleKey);
+    bool             excluded       = (module != NULL) && module->excludeFromMutation;
+
+    // Paste Params only means anything with a module of the SAME TYPE on the clipboard — a Decay
+    // from an EnvADSR has no counterpart on an OscB. Greyed rather than hidden, so the entry stays
+    // in the same place and its absence is explained by looking at it.
+    bool             canPasteParams = gClipboard.active && (gClipboard.moduleCount > 0)
+                                      && (module != NULL) && (gClipboard.modules[0].type == module->type);
+
+    menuItems[kItemPasteParams].colour = canPasteParams ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5;
+    menuItems[kItemPasteParams].action = canPasteParams ? menu_action_paste_params : NULL;
 
     snprintf(gExcludeMutationMenuLabel, sizeof(gExcludeMutationMenuLabel), "[%s] Exclude From Mutation",
              excluded ? "x" : " ");
-    menuItems[6].label     = gExcludeMutationMenuLabel;
+    menuItems[kItemExclude].label      = gExcludeMutationMenuLabel;
 
-    gMenuContext.moduleKey = moduleKey;
+    gMenuContext.moduleKey             = moduleKey;
     open_context_menu(coord, menuItems, 0, 0.0);
 }
 
@@ -2325,9 +2454,11 @@ void open_module_area_context_menu(tCoord coord) {
         {NULL,       RGB_BLACK,  NULL,               0, NULL           },
     };
     static tMenuItem menuItems[]       = {
-        {"Create module", RGB_GREY_3, menu_action_create, 0, moduleMenuItems},
-        {"Paste",         RGB_GREY_3, menu_action_paste,  0, NULL           },
-        {NULL,            RGB_BLACK,  NULL,               0, NULL           },
+        {"Create module",         RGB_GREY_3, menu_action_create,                0, moduleMenuItems},
+        {"Paste",                 RGB_GREY_3, menu_action_paste,                 0, NULL           },
+        {"Select All",            RGB_GREY_3, menu_action_select_all,            0, NULL           },
+        {"Delete unused modules", RGB_GREY_3, menu_action_delete_unused_modules, 0, NULL           },
+        {NULL,                    RGB_BLACK,  NULL,                              0, NULL           },
     };
 
     gContextMenu.originCoord = coord;

@@ -76,6 +76,27 @@ void selection_set_single(tModuleKey key) {
     selection_add(key);
 }
 
+// Select every module in the location currently being viewed. The original's Edit > Select All
+// (Ctrl-A). Deliberately scoped to ONE location: the canvas only ever shows VA or FX, so selecting
+// modules you cannot see — and would then Cut or Delete unseen — would be a trap rather than a
+// convenience.
+void selection_select_all(void) {
+    uint32_t slot     = (uint32_t)gSlot;
+    uint32_t location = (uint32_t)gLocation;
+
+    selection_clear();
+
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, location, i);
+
+        if ((module != NULL) && module->active) {
+            selection_add((tModuleKey){slot, location, i});
+        }
+    }
+
+    synthlib_request_redraw();
+}
+
 void selection_toggle(tModuleKey key) {
     if (is_selected(key)) {
         selection_remove(key);
