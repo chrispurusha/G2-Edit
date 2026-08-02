@@ -321,8 +321,8 @@ void render_mutator_panel(void) {
 
     // titleBarRect is also the drag handle, so it stays the full-width rect returned by
     // draw_panel_chrome() (whose visual fill is inset from the border internally).
-    gMutator.titleBarRect    = draw_panel_chrome(panel, titleH, "Patch Mutator");
-    gMutator.closeButtonRect = draw_panel_close_button(panel, gMutator.closeButtonPressed);
+    gMutator.titleBarRect    = draw_panel_chrome(mainArea, panel, titleH, "Patch Mutator");
+    gMutator.closeButtonRect = draw_panel_close_button(mainArea, panel, gMutator.closeButtonPressed);
 
     double                   rowY                        = y + titleH + margin;
 

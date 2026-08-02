@@ -353,15 +353,17 @@ void render_param_pages_panel(void) {
     double       y                           = boxY + titleH + margin;
 
     draw_dialog_background_overlay();
-    draw_panel_chrome((tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Parameter Pages");
-    gParamPages.close = draw_panel_close_button((tRectangle){{boxX, boxY}, {boxW, boxH}}, gParamPages.closePressed);
+    draw_panel_chrome(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, titleH, "Parameter Pages");
+    gParamPages.close = draw_panel_close_button(mainArea, (tRectangle){{boxX, boxY}, {boxW, boxH}}, gParamPages.closePressed);
 
     // ── Slot buttons in the title bar ──────────────────────────────────
     // Only for the patch pages: a global assignment carries its own Slot per knob, so there's
     // nothing for a panel-wide Slot selector to mean there.
     {
         double slotBtnW = get_text_width((char *)"A", btnH, eCache);
-        double slotX    = boxX + boxW - 70.0 - ((slotBtnW + 8.0) * MAX_SLOTS);
+        // Right-aligned against the panel edge. They used to stop short of it to clear the
+        // "Close" button that sat in this corner; the close control is top left now.
+        double slotX    = boxX + boxW - 8.0 - BORDER_LINE_WIDTH - ((slotBtnW + 8.0) * MAX_SLOTS);
 
         for (uint32_t s = 0; s < MAX_SLOTS; s++) {
             if (gParamPages.showGlobal) {

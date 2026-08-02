@@ -165,9 +165,12 @@ OPEN WORK
 
 - moduleGraphics.cpp:685 — "can Mode be morphed?" Needs a manual/hardware check, not a code guess.
 
-- moduleGraphics.cpp/renderParams.c — port custom graph displays from the original editor (none
-  exist today besides render_volume_meter): envelope shapes (AD/AR/D/H/AHD/ADSR/ADBDSR/Multi/DX),
-  filter response curves (Classic/Normal/Small/Static/Comb), oscillator & LFO waveform shapes, EQ
+- moduleGraphics.cpp/renderParams.c — port the REMAINING custom graph displays from the original
+  editor. Three are done (render_oscshpb_waveform_graph, render_envadsr_graph,
+  render_fltclassic_response_graph) alongside render_volume_meter; this list was written before
+  they existed and said "none exist". Still to do: the rest of the envelope shapes
+  (AD/AR/D/H/AHD/ADBDSR/Multi/DX), the rest of the
+  filter response curves (Normal/Small/Static/Comb), oscillator & LFO waveform shapes, EQ
   curves (2-band/3-band/peak), compressor/expander, distortion/waveshaping (Dist A/B/Wrap/Shape/
   Saturate), FM operator + DX router, phaser, vocoder, tuned noise, random distribution/trigger —
   see Original Editor/G2Editor.c, CCustomObjectFactory::CreateCustom (~line 101952) and the
@@ -626,6 +629,29 @@ none of these exist in G2-Edit at all, confirmed by source search)
   device reload can still clobber silently, and the performance domain is not covered at all.
 - Scrollbars on the patch selectors (Load/Store/Delete/Restore bank-location pickers,
   bankBrowser.cpp) — currently no visible scrollbar for long lists.
+
+- Close button: move to the TOP LEFT and draw it as a cross (owner, 2026-08-02). Every panel and
+  popup puts its close control at the top RIGHT, which is backwards on macOS — the close control
+  belongs top left. Replace the current "Close" text button with a small square carrying a drawn
+  cross.
+  DRAW THE CROSS, DON'T TYPESET IT: it must be two rendered diagonal lines, not the character 'X'
+  in a button label. A glyph 'X' inherits the text metrics and hinting, so it sits wherever the
+  baseline puts it rather than centred in its box, and it won't scale with the button — this is
+  the specific thing the owner does not want. render_line() (utilsGraphics.h) already draws
+  arbitrary lines with a thickness, so a cross is two calls plus the box.
+  WHERE IT LIVES: draw_panel_close_button() (graphics.c) is the one implementation, used by the
+  synth-settings, patch-settings, perf-settings, patch-notes, Mutator and Parameter Pages panels —
+  changing it covers all six at once, and each caller just stores the returned rect, so no
+  hit-testing changes are needed. THREE SynthLib popups replicate the geometry by hand rather than
+  calling it, and must be changed to match or they'll be the odd ones out:
+  fileBrowser.cpp (close_button_rect(), line ~344), bankBrowser.cpp (~588) and alertDialog.c
+  (~547) — all three carry a comment saying they mirror draw_panel_close_button() exactly. Worth
+  taking the opportunity to give SynthLib the shared implementation those three should have been
+  calling all along, with G2-Edit's copy deferring to it.
+  WATCH FOR: the title text is drawn from the left of the title bar (draw_panel_chrome), so it
+  will need indenting past the new button. The Parameter Pages panel also puts its Slot A-D
+  buttons in the title bar, right-aligned against the old Close position — those can move right
+  once the corner is free.
 
 
 ARCHITECTURE — RATIONALISE AND COMMONALISE FOR THE OTHER PROJECTS
