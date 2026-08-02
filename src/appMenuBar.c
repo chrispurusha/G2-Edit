@@ -34,6 +34,7 @@ extern "C" {
 #include "mutatorUI.h"
 #include "paramPages.h"
 #include "paramOverlay.h"
+#include "menus.h"
 #include "appMenuBar.h"
 #include "synthlibPersistence.h"
 
@@ -378,10 +379,22 @@ static void action_toggle_mutator(int index) {
     }
 }
 
+static void action_assign_midi_cc_all(int index) {
+    (void)index;
+    midi_cc_assign_all_knobs();
+}
+
+static void action_clear_midi_cc_all(int index) {
+    (void)index;
+    midi_cc_clear_all();
+}
+
 static void open_tools_menu(tCoord anchor) {
     static tMenuItem items[] = {
-        {"Mutator", (tRgb)RGB_GREY_3, action_toggle_mutator, 0, NULL, 0, 0.0},
-        {NULL,      (tRgb)RGB_BLACK,  NULL,                  0, NULL, 0, 0.0},
+        {"Mutator",                 (tRgb)RGB_GREY_3, action_toggle_mutator,     0, NULL, 0, 0.0},
+        {"Assign MIDI CC to Knobs", (tRgb)RGB_GREY_3, action_assign_midi_cc_all, 0, NULL, 0, 0.0},
+        {"Clear All MIDI CC",       (tRgb)RGB_GREY_3, action_clear_midi_cc_all,  0, NULL, 0, 0.0},
+        {NULL,                      (tRgb)RGB_BLACK,  NULL,                      0, NULL, 0, 0.0},
     };
 
     // Label reflects current state the same way Controls' dial-mode items do (checkmark-style

@@ -1028,6 +1028,102 @@ static void action_assign_midi_cc(int index) {
     synthlib_request_redraw();
 }
 
+// ─── Bulk MIDI CC tools (Tools menu) ─────────────────────────────────────────
+//
+// The original editor's "Assign MIDI" and "Clear MIDI". Both are single undoable operations over
+// the whole Slot: undo_begin_midi_cc_edit() snapshots the entire controller table, so however many
+// entries a sweep touches, Ctrl-Z puts all of them back in one step. Both push nothing when the
+// sweep changes nothing.
+
+// Assigns the lowest CC number not already in use. -1 when all 128 are taken.
+static int32_t next_free_midi_cc(uint32_t slot) {
+    for (uint32_t cc = 0; cc < MAX_NUM_CONTROLLERS; cc++) {
+        if (find_controller_for_cc(slot, cc) < 0) {
+            return (int32_t)cc;
+        }
+    }
+
+    return -1;
+}
+
+// Gives every panel-assigned knob a MIDI CC, walking the knobs in page order (A1 knob 1 first) so
+// the numbering follows the panel layout rather than the order modules happen to sit in the patch.
+// Parameters that already carry a CC keep the one they have - the point is to fill in the gaps,
+// not to renumber a patch someone has already set up by hand.
+void midi_cc_assign_all_knobs(void) {
+    uint32_t        slot = gSlot;
+    tMessageContent msg  = {0};
+
+    undo_begin_midi_cc_edit(slot);
+
+    for (uint32_t knobIdx = 0; knobIdx < MAX_NUM_KNOBS; knobIdx++) {
+        const tKnob * knob = &gKnobArray[slot].knob[knobIdx];
+
+        if (!knob->assigned || (knob->paramIndex >= MAX_NUM_PARAMETERS)) {
+            continue;
+        }
+        tModuleKey    key  = {slot, knob->location, knob->moduleIndex};
+        tModule *     mod  = get_module(key);
+
+        if ((mod == NULL) || !mod->active) {
+            continue;
+        }
+
+        if (find_controller_for_param(slot, knob->location, knob->moduleIndex, knob->paramIndex) >= 0) {
+            continue;   // already has one
+        }
+
+        if (gControllerCount[slot] >= MAX_NUM_CONTROLLERS) {
+            break;
+        }
+        int32_t       cc   = next_free_midi_cc(slot);
+
+        if (cc < 0) {
+            break;
+        }
+        uint32_t      idx  = gControllerCount[slot]++;
+        gControllerArray[slot].controller[idx]    = (tController){
+            (uint8_t)cc, knob->location, knob->moduleIndex, knob->paramIndex
+        };
+        mod->param[0][knob->paramIndex].midiCC    = (uint8_t)cc;
+        mod->param[0][knob->paramIndex].hasMidiCC = true;
+
+        memset(&msg, 0, sizeof(msg));
+        msg.cmd                                   = eMsgCmdAssignMidiCC;
+        msg.slot                                  = slot;
+        msg.midiCCAssignData.moduleKey            = key;
+        msg.midiCCAssignData.paramIndex           = knob->paramIndex;
+        msg.midiCCAssignData.midiCC               = (uint32_t)cc;
+        msg_send(&gToUsbThread, &msg);
+    }
+
+    undo_commit_midi_cc_edit();
+    synthlib_request_redraw();
+}
+
+// Clears every MIDI CC in the Slot. remove_controller_entry() compacts by swapping the last entry
+// into the hole, so repeatedly removing index 0 walks the whole table.
+void midi_cc_clear_all(void) {
+    uint32_t        slot = gSlot;
+    tMessageContent msg  = {0};
+
+    undo_begin_midi_cc_edit(slot);
+
+    while (gControllerCount[slot] > 0) {
+        uint32_t cc = gControllerArray[slot].controller[0].midiCC;
+
+        remove_controller_entry(slot, 0);
+
+        memset(&msg, 0, sizeof(msg));
+        msg.cmd                       = eMsgCmdDeassignMidiCC;
+        msg.slot                      = slot;
+        msg.midiCCDeassignData.midiCC = cc;
+        msg_send(&gToUsbThread, &msg);
+    }
+    undo_commit_midi_cc_edit();
+    synthlib_request_redraw();
+}
+
 static void action_deassign_midi_cc(int index) {
     uint32_t        slot        = gSlot;
     uint32_t        location    = gMenuContext.moduleKey.location;
