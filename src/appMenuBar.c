@@ -35,6 +35,7 @@ extern "C" {
 #include "paramPages.h"
 #include "paramOverview.h"
 #include "virtualKeyboard.h"
+#include "patchAdjuster.h"
 #include "paramOverlay.h"
 #include "menus.h"
 #include "appMenuBar.h"
@@ -158,6 +159,11 @@ static void action_open_param_overview(int index) {
 static void action_open_virtual_keyboard(int index) {
     (void)index;
     settings_menu_open_virtual_keyboard();
+}
+
+static void action_open_patch_adjuster(int index) {
+    (void)index;
+    settings_menu_open_patch_adjuster();
 }
 
 static void action_open_perf_settings(int index) {
@@ -413,7 +419,7 @@ static void action_deassign_midi_cc_selection(int index) {
 }
 
 static void open_tools_menu(tCoord anchor) {
-    static tMenuItem items[8];  // 6 entries + the NULL terminator, with room to grow
+    static tMenuItem items[10];  // 7 entries + the NULL terminator, with room to grow
     // The two selection entries have nothing to act on without one, and the original greys them
     // the same way rather than letting the click be a silent no-op.
     bool             haveSelection = gSelection.count > 0;
@@ -430,6 +436,9 @@ static void open_tools_menu(tCoord anchor) {
     // Parameter Pages/Overview — those two sit under Settings here by the owner's earlier call.
     items[i++] = (tMenuItem){
         "Virtual Keyboard", (tRgb)RGB_GREY_3, action_open_virtual_keyboard, 0, NULL, 0, 0.0
+    };
+    items[i++] = (tMenuItem){
+        "Patch Adjuster", (tRgb)RGB_GREY_3, action_open_patch_adjuster, 0, NULL, 0, 0.0
     };
     items[i++] = (tMenuItem){
         "Assign MIDI CC to Knobs", (tRgb)RGB_GREY_3, action_assign_midi_cc_all, 0, NULL, 0, 0.0

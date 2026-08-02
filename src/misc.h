@@ -63,6 +63,7 @@ void settings_menu_open_notes(void);
 void settings_menu_open_param_pages(void);
 void settings_menu_open_param_overview(void);
 void settings_menu_open_virtual_keyboard(void);
+void settings_menu_open_patch_adjuster(void);
 
 // Backup menu actions
 void backup_menu_patch_bank(void);

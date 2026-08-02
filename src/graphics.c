@@ -71,6 +71,7 @@ extern "C" {
 #include "paramPages.h"
 #include "paramOverview.h"
 #include "virtualKeyboard.h"
+#include "patchAdjuster.h"
 #include "paramOverlay.h"
 #include "appMenuBar.h"
 #include "fileBrowser.h"
@@ -2264,6 +2265,7 @@ static void render_frame(void) {
     render_param_pages_panel();
     render_param_overview_panel();
     render_virtual_keyboard_panel();
+    render_patch_adjuster_panel();
     render_context_menu();
     render_patch_notes_edit();
     render_bank_backup_progress();

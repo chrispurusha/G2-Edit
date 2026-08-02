@@ -592,6 +592,56 @@ none of these exist in G2-Edit at all, confirmed by source search)
   wants a USB-log comparison against the real editor rather than a guess. Worth settling, since it
   would also explain any deassign that silently does nothing.
 
+- Patch Adjuster — BUILT 2026-08-02 (src/patchAdjuster.c / .h), Tools > Patch Adjuster. The manual's
+  chapter 8 (p.113), and NOT the Mutator despite both being ways to shape a patch without hunting
+  for parameters: the Mutator generates new patches at random, this is deterministic and semantic.
+  Eight knobs — Attack, Decay, Sustain, Release, Mod. Rate, Timbre, Resonance, Effects — each of
+  which nudges EVERY parameter of its category across the whole patch at once.
+  NOT PATCH PARAMETERS AND NOT MORPH GROUPS. The manual is explicit that they "act as remote,
+  relative editing tools" and consequently "cannot be assigned to MIDI Controllers or to physical
+  knobs on the synth". Nothing about the knobs is stored in the patch; only the parameters they move
+  are, which is why none of this needed a protocol change.
+  THE CURVE, decoded from CPatch::ApplyDistribution() in the reference — knobs run -50..+50 with 0
+  at centre, working from a BASELINE snapshot rather than from live values:
+      amount > 0:  new = orig + (max - orig) * amount/50      (toward maximum)
+      amount < 0:  new = orig * (50 + amount)/50              (toward zero)
+      amount == 0: untouched
+  Working from a baseline is what makes the manual's described behaviour fall out: returning a knob
+  to centre restores its category exactly, and several knobs can be off-centre at once without
+  fighting, since each owns a disjoint set of parameters.
+  SENT ONE PARAMETER AT A TIME, the opposite of the bulk MIDI CC tools above, and deliberately:
+  send_param_value() is a COMMAND_WRITE_NO_RESP write expecting no acknowledgement — what the
+  canvas's own dial drags have always used — so there is no ack to be left in the pipe and no
+  patch-version race to lose. Only parameters whose computed value actually CHANGES are sent, which
+  is the original's own test and matters because a Timbre sweep over a dense patch touches a lot.
+  COMMIT: the manual says the change becomes permanent "as soon as you move the focus to another
+  variation or add or remove a module". check_for_commit() notices both by polling the active
+  variation and a module count once a frame, which keeps those code paths ignorant of this panel.
+  CLASSIFICATION IS AN APPROXIMATION, and this is the part to be sceptical of. The original matches
+  the G2's own parameter-TYPE ids (Attack 0x0b; Decay 0x0c,0x10; Sustain 0x0d; Release 0x0e; Mod
+  Rate 0x16,0x41,0x88; Resonance 0x12,0x87; Timbre 0x05,0x06,0x11,0x22,0x8b; Effects 0x29,0x83 —
+  all recorded in patchAdjuster.c). G2-Edit's paramLocationList does NOT carry those ids, so this
+  classifies on (module type, param type, label) as mutator.c's classify_param() already does. The
+  manual is loose in the same places ("various waveshape parameters", "some Time parameters"), so
+  exact parity was never reachable from the documentation either. Unambiguous cases are claimed;
+  ambiguous ones are left alone, on the grounds that a knob missing a parameter beats one mangling
+  an unrelated parameter you won't notice until you hear it.
+  STILL TO DO:
+   1. NO UNDO. Every other edit in the app pushes one; this pushes nothing, so a commit cannot be
+      taken back with Ctrl-Z. Returning a knob to centre before the commit is the only way back.
+      The right shape is a new eUndoCmdParamBulk holding before/after images, exactly as
+      eUndoCmdMidiCc and eUndoCmdCableEdit already do — the baseline array IS the "before" image,
+      so most of the work is already sitting there.
+   2. UNVERIFIED BEYOND RENDERING. The panel draws correctly (checked 2026-08-02) but no knob has
+      been moved: synthetic drags don't reach the app, and the test instance was online with real
+      hardware, so a sweep would have edited a live patch. Needs an ear on it.
+   3. Classification gaps, all the same kind — a parameter whose module gives it meaning but whose
+      type is the catch-all paramTypeCommonDial: LfoB's rate (two undistinguished CommonDials), FM
+      and shaper amounts that Timbre should claim, dry/wet on FX modules not labelled "Dry/Wet".
+      Each is a module-name case in adjuster_classify_param().
+   4. The reference has a special case this doesn't: module type 0x54's param 3 counts as Decay or
+      Release depending on the value of its param 7. Which module that is hasn't been identified.
+
 - MIDI Learn (L key) — assign the focused parameter to whichever MIDI CC# was last received, without
   opening a picker.
 - Patch Window Split Bar — the original shows Voice Area and FX Area SIMULTANEOUSLY in one window,
