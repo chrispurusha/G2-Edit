@@ -34,6 +34,7 @@ extern "C" {
 #include "mutatorUI.h"
 #include "paramPages.h"
 #include "paramOverview.h"
+#include "virtualKeyboard.h"
 #include "paramOverlay.h"
 #include "menus.h"
 #include "appMenuBar.h"
@@ -152,6 +153,11 @@ static void action_open_param_pages(int index) {
 static void action_open_param_overview(int index) {
     (void)index;
     settings_menu_open_param_overview();
+}
+
+static void action_open_virtual_keyboard(int index) {
+    (void)index;
+    settings_menu_open_virtual_keyboard();
 }
 
 static void action_open_perf_settings(int index) {
@@ -396,19 +402,54 @@ static void action_clear_midi_cc_all(int index) {
     midi_cc_clear_all(gSlot);
 }
 
+static void action_assign_midi_cc_selection(int index) {
+    (void)index;
+    midi_cc_assign_selection();
+}
+
+static void action_deassign_midi_cc_selection(int index) {
+    (void)index;
+    midi_cc_deassign_selection();
+}
+
 static void open_tools_menu(tCoord anchor) {
-    static tMenuItem items[] = {
-        {"Mutator",                 (tRgb)RGB_GREY_3, action_toggle_mutator,     0, NULL, 0, 0.0},
-        {"Assign MIDI CC to Knobs", (tRgb)RGB_GREY_3, action_assign_midi_cc_all, 0, NULL, 0, 0.0},
-        {"Clear All MIDI CC",       (tRgb)RGB_GREY_3, action_clear_midi_cc_all,  0, NULL, 0, 0.0},
-        {NULL,                      (tRgb)RGB_BLACK,  NULL,                      0, NULL, 0, 0.0},
-    };
+    static tMenuItem items[8];  // 6 entries + the NULL terminator, with room to grow
+    // The two selection entries have nothing to act on without one, and the original greys them
+    // the same way rather than letting the click be a silent no-op.
+    bool             haveSelection = gSelection.count > 0;
+    int              i             = 0;
 
     // Label reflects current state the same way Controls' dial-mode items do (checkmark-style
-    // "* " prefix — see open_controls_menu — isn't used here since there's only one item and
-    // its own name already says what it does; a "Close Mutator" vs "Open Mutator" label reads
-    // clearer for a single toggle than a checkmark would).
-    items[0].label = gMutator.active ? "Close Mutator" : "Open Mutator";
+    // "* " prefix — see open_controls_menu — isn't used here since the item's own name already
+    // says what it does; a "Close Mutator" vs "Open Mutator" label reads clearer for a single
+    // toggle than a checkmark would).
+    items[i++] = (tMenuItem){
+        gMutator.active ? "Close Mutator" : "Open Mutator", (tRgb)RGB_GREY_3, action_toggle_mutator, 0, NULL, 0, 0.0
+    };
+    // Tools is where the original keeps the Virtual Keyboard (manual p.128), alongside its
+    // Parameter Pages/Overview — those two sit under Settings here by the owner's earlier call.
+    items[i++] = (tMenuItem){
+        "Virtual Keyboard", (tRgb)RGB_GREY_3, action_open_virtual_keyboard, 0, NULL, 0, 0.0
+    };
+    items[i++] = (tMenuItem){
+        "Assign MIDI CC to Knobs", (tRgb)RGB_GREY_3, action_assign_midi_cc_all, 0, NULL, 0, 0.0
+    };
+    items[i++] = (tMenuItem){
+        "Assign MIDI CC to Selection",
+        haveSelection ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+        haveSelection ? action_assign_midi_cc_selection : NULL, 0, NULL, 0, 0.0
+    };
+    items[i++] = (tMenuItem){
+        "Deassign MIDI CC from Selection",
+        haveSelection ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+        haveSelection ? action_deassign_midi_cc_selection : NULL, 0, NULL, 0, 0.0
+    };
+    items[i++] = (tMenuItem){
+        "Clear All MIDI CC", (tRgb)RGB_GREY_3, action_clear_midi_cc_all, 0, NULL, 0, 0.0
+    };
+    items[i]   = (tMenuItem){
+        NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
+    };
 
     open_context_menu(anchor, items, 0, 0.0);
 }

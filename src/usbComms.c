@@ -3006,6 +3006,41 @@ static int send_deassign_midi_cc(uint32_t slot, uint32_t midiCC) {
     return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
 }
 
+// Virtual Keyboard note on/off. Derived from CMPlayNote::WriteStream() (G2Editor.c):
+//
+//     CMIDIOutStream::Initialize(stream, 0x56, 0, 1);
+//     <write>(stream, action == 1);      // the note-on/note-off flag
+//     <write>(stream, note);             // the MIDI note number
+//
+// Both values go through the same vtable slot (+0x58) that CMCtrlAssign::WriteStream() uses for
+// the location and param-index bytes of SUB_COMMAND_ASSIGN_MIDICC, which G2-Edit already sends as
+// plain 8-bit fields — hence 8 bits each here. No slot field: the class carries none, and the synth
+// routes the note by its own keyboard assignment, as it would a note from the real keys.
+//
+// THE FLAG IS INVERTED FROM THE OBVIOUS READING, AND THIS IS HARDWARE-CONFIRMED (owner, 2026-08-02,
+// by ear): ZERO SOUNDS THE NOTE, ONE RELEASES IT. Sending 1 for on gave a keyboard that was exactly
+// backwards — silent on press, sounding on release. So CMPlayNote::EAction's value 1 is the
+// note-OFF action, and the decompiled `action == 1` is asking "is this a release?", not "is this a
+// press?". Nothing in the decompile says which way round the enum runs; only the hardware did.
+//
+// COMMAND_WRITE_NO_RESP rather than COMMAND_REQ deliberately, and no send_and_receive(). A held
+// key can fire many of these, and an unconsumed ack left in the pipe is exactly what desynchronises
+// the next command's receive (see the patch-version note in menus.c). send_set_param_value() is the
+// precedent: the app's highest-traffic command, no-response, known good. If the G2 turns out to ack
+// this one regardless, that is the first thing to revisit.
+//
+// Velocity is accepted by the caller but NOT sent: the reference writes two values only. If notes
+// come out at a fixed velocity on hardware, that is why, and it matches what the original does.
+static int send_play_note(uint32_t note, bool on) {
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+
+    usb_cmd_sys(buff, &bitPos, (uint8_t)gGlobalSettings.perfVersion, SUB_COMMAND_PLAY_NOTE);
+    write_bit_stream(buff, &bitPos, 8, on ? 0 : 1);   // 0 = sound it, 1 = release it — see above
+    write_bit_stream(buff, &bitPos, 8, (uint8_t)note);
+    return send_message(buff, BIT_TO_BYTE(bitPos));
+}
+
 static int send_copy_variation(uint32_t slot, uint32_t fromVariation, uint32_t toVariation) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
@@ -3904,6 +3939,12 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdDeassignMidiCC:
         {
             retVal = send_deassign_midi_cc(messageContent->slot, messageContent->midiCCDeassignData.midiCC);
+            break;
+        }
+
+        case eMsgCmdPlayNote:
+        {
+            retVal = send_play_note(messageContent->playNoteData.note, messageContent->playNoteData.on);
             break;
         }
 

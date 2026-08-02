@@ -510,6 +510,89 @@ none of these exist in G2-Edit at all, confirmed by source search)
       manual only says "first available MIDI CC#" without stating a floor.
    5. "View Buttons" (toggle the popup overlay between a combined dial+button assignment's knob
       half and button half, e.g. on Sequencer modules) is not built.
+- Assign / Deassign MIDI to Selection — BUILT 2026-08-02 as Tools > Assign MIDI CC to Selection /
+  Deassign MIDI CC from Selection (menus.c, midi_cc_assign_selection / midi_cc_deassign_selection).
+  A DIFFERENT OPERATION from "Assign MIDI CC to Knobs" above despite the similar name, and the two
+  are easy to confuse: that one walks the 120 PANEL KNOB ASSIGNMENTS in page order, so it only ever
+  touches parameters already placed on a Parameter Page. These walk EVERY PARAMETER OF THE SELECTED
+  MODULES, knob or no knob (manual p.130, p.143: "all parameters of the selected modules will be
+  automatically assigned to MIDI CC# numbers"). One fills in a control surface, the other blankets
+  a few modules.
+  Everything else is shared with the bulk tools: one undo bracket over the whole controller table,
+  the assign fills gaps rather than renumbering, and a single whole-patch write at the end.
+  Deassign walks the controller table BACKWARDS, because remove_controller_entry() compacts by
+  swapping the last entry into the hole and a forward walk would step over whatever moved down.
+  Both menu entries grey out with no selection, as the original's do.
+  STILL TO DO: unverified — needs a selection made on real hardware. Note it only covers modules in
+  the SELECTED Slot; a selection can't span Slots today, so that guard is belt-and-braces.
+
+- Virtual Keyboard — BUILT 2026-08-02 (src/virtualKeyboard.c / .h), opened from TOOLS > Virtual
+  Keyboard (owner's call 2026-08-02, and where the original keeps it — Parameter Pages/Overview
+  stay under Settings). NO Ctrl-K, consistent with those two.
+  Three octaves of clickable keys with the four scroll buttons the original has (double arrows an
+  octave, singles a note), C labelled with its octave number, the sounding key shown both by
+  highlight and by the black dot the manual describes, and the note sustaining while the button is
+  held. One note at a time, which is what a mouse and the manual's "single notes" imply. Every
+  change of note funnels through set_sounding_note(), so closing the panel or scrolling the range
+  always sends the note-off first and a note can never hang.
+  DRONE AND REPEAT added 2026-08-02, the original's other two buttons (manual p.128 — the owner
+  asked for "Hold", which the original calls DRONE, so the button says Drone):
+    * Drone — "make the next played note start sounding infinitely. Click the Drone button again
+      to disengage." Mouse-up stops sending the note-off; disengaging silences whatever is running.
+    * Repeat — "make the last played note play repeatedly." Re-struck note-off-then-on (so the
+      patch's envelopes actually retrigger) from virtual_keyboard_tick(), driven by the render
+      loop. THE RATE IS A GUESS: 250ms, since neither the manual nor the original exposes one. If
+      the real editor locks it to the master clock, VKB_REPEAT_MS is the constant to replace.
+      This is also why graphics.c grew a virtual_keyboard_wants_ticks() branch — the idle path
+      sleeps in glfwWaitEvents(), which would stall a repeat until the next input event.
+    Neither toggle survives closing the panel: both leave the synth making a noise, and reopening
+    to find it already droning would be a nasty surprise.
+  NOTE ON/OFF CONFIRMED ON HARDWARE 2026-08-02, after one real bug: THE FLAG BYTE IS INVERTED FROM
+  THE OBVIOUS READING. ZERO SOUNDS THE NOTE, ONE RELEASES IT. Sent as 1-for-on first, which gave a
+  keyboard that was exactly backwards — silent on press, sounding on release. So CMPlayNote::
+  EAction's value 1 is the note-OFF action and the decompiled `action == 1` is asking "is this a
+  release?", not "is this a press?". Nothing in the decompile says which way round the enum runs;
+  only the hardware did. A good example of why a decompile settles the SHAPE of a message but not
+  its polarity.
+  Worth recording how it was found, since the same confusion could recur: the symptom looked like a
+  missing note-off, and the UI path was suspected first. It was traced and cleared —
+  mouse_button() → convert_to_mouse_button() maps GLFW_RELEASE to mouseButtonLeftUp →
+  handle_virtual_keyboard_mouse() → set_sounding_note(-1) → send_note(note, false) — and a
+  temporary LOG_DEBUG in send_note() then showed ON and OFF being sent in the right order at the
+  right times, which pinned it on the wire encoding rather than the plumbing. REMOVE THAT LOG LINE
+  once there is no further doubt.
+  THE WIRE FORMAT IS REVERSE-ENGINEERED. SUB_COMMAND_PLAY_NOTE (0x56) was already
+  in defs.h but had never been sent. CMPlayNote::WriteStream() in the Ghidra decompile is:
+      CMIDIOutStream::Initialize(stream, 0x56, 0, 1);
+      <write>(stream, action == 1);      // note-on/note-off flag
+      <write>(stream, note);             // MIDI note number
+  Both values go through the same vtable slot (+0x58) that CMCtrlAssign::WriteStream() uses for the
+  location and param-index bytes of SUB_COMMAND_ASSIGN_MIDICC, which G2-Edit already sends as plain
+  8-bit fields — hence 8 bits each. No slot field in the class, so send_play_note() frames it as a
+  SYS command and lets the synth route the note by its own keyboard assignment.
+  Sent with COMMAND_WRITE_NO_RESP and no send_and_receive(), deliberately: a held key fires many of
+  these and an unconsumed ack is exactly what desynchronises the next command (see the bulk MIDI CC
+  entry). send_set_param_value() is the precedent. IF NOTHING SOUNDS, that framing is the first
+  thing to doubt — the panel itself is ordinary drawing and hit-testing.
+  Velocity is accepted by the caller but not sent; the reference writes two values only.
+  STILL TO DO:
+   1. Drone and Repeat are built but unrun, and Repeat's 250ms rate is unverified against the
+      original.
+   2. Remove the temporary LOG_DEBUG in send_note() once note handling is settled.
+   3. The original expands its range by drag-resizing the window frame, and hides its button bar
+      the same way. This panel has a fixed 37-key span and the scroll buttons instead.
+   4. The panel's own rendering has never been seen — the app has been in the owner's hands
+      throughout. Synthetic clicks would verify layout; only ears verify the notes.
+
+- WHILE DECODING PLAY NOTE, A QUESTION ABOUT send_deassign_midi_cc() TURNED UP. CMCtrlDeassign::
+  WriteStream() (0x23) writes a 1-bit field of value 1 (vtable +0x44) followed by the CC number as
+  SEVEN bits (+0x3c, which takes an explicit width) — i.e. a byte of 0x80|cc. G2-Edit writes eight
+  bits of cc, so 0x00|cc. CMCtrlAssign (0x22) ends the same way. If the decompile's widths are read
+  right, both our assign and deassign have the top bit clear where the original sets it. DELIBERATELY
+  NOT CHANGED: the vtable-slot widths are inferred, per-param assign is believed to work, and this
+  wants a USB-log comparison against the real editor rather than a guess. Worth settling, since it
+  would also explain any deassign that silently does nothing.
+
 - MIDI Learn (L key) — assign the focused parameter to whichever MIDI CC# was last received, without
   opening a picker.
 - Patch Window Split Bar — the original shows Voice Area and FX Area SIMULTANEOUSLY in one window,

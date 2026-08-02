@@ -70,6 +70,7 @@ extern "C" {
 #include "mutatorUI.h"
 #include "paramPages.h"
 #include "paramOverview.h"
+#include "virtualKeyboard.h"
 #include "paramOverlay.h"
 #include "appMenuBar.h"
 #include "fileBrowser.h"
@@ -2262,6 +2263,7 @@ static void render_frame(void) {
     render_patch_params_panel();
     render_param_pages_panel();
     render_param_overview_panel();
+    render_virtual_keyboard_panel();
     render_context_menu();
     render_patch_notes_edit();
     render_bank_backup_progress();
@@ -2607,6 +2609,9 @@ void do_graphics_loop(void) {
         // immediately) unless the G2_EDIT_BACKDOOR env var is set.
         backdoor_poll();
 
+        // The Virtual Keyboard's Repeat button. No-op unless a repeat is actually running.
+        virtual_keyboard_tick();
+
         if ((gModuleDrag.active == true) || (gCableDrag.active == true) || (gContextMenu.active == true)) {
             double x = 0.0;
             double y = 0.0;
@@ -2615,6 +2620,8 @@ void do_graphics_loop(void) {
             glfwWaitEventsTimeout(0.016);
         } else if (gDeviceOpInProgress > 0) {
             glfwWaitEventsTimeout(0.05); // tick while busy so the device-op safety timeout can fire even with no events
+        } else if (virtual_keyboard_wants_ticks()) {
+            glfwWaitEventsTimeout(0.02); // Repeat is running — glfwWaitEvents() would stall it until the next input event
         } else if (backdoor_enabled()) {
             glfwWaitEventsTimeout(0.1);  // poll cadence for the backdoor command file — only when enabled (owner's normal launch keeps full idle-sleep below)
         } else {

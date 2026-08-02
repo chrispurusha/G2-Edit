@@ -1144,6 +1144,106 @@ void midi_cc_clear_all(uint32_t slot) {
     synthlib_request_redraw();
 }
 
+// ─── MIDI CC over the selection (Tools menu) ─────────────────────────────────
+//
+// The original's "Assign MIDI to Selection" / "Deassign MIDI from Selection" (manual p.130, p.143).
+// A DIFFERENT OPERATION from the two above despite the similar name, and worth keeping straight:
+// midi_cc_assign_all_knobs() walks the 120 PANEL KNOB ASSIGNMENTS in page order, so it only ever
+// touches parameters someone has already put on a Parameter Page. These two walk EVERY PARAMETER
+// OF THE SELECTED MODULES ("all parameters of the selected modules will be automatically assigned
+// to MIDI CC# numbers"), whether or not a knob points at them. One fills in a control surface, the
+// other blankets a few modules.
+//
+// Both share the everything-else of the bulk tools: one undo bracket over the whole controller
+// table, existing assignments left alone by the assign (it fills gaps, it does not renumber), and
+// a single whole-patch write at the end rather than a burst of per-entry commands.
+
+// Walks the selection in the order the modules were selected, and each module's params in index
+// order, which is the order the original numbers them in.
+void midi_cc_assign_selection(void) {
+    uint32_t slot    = gSlot;
+    bool     changed = false;
+
+    if (gSelection.count == 0) {
+        return;
+    }
+    undo_begin_midi_cc_edit(slot);
+
+    for (uint32_t si = 0; si < gSelection.count; si++) {
+        tModuleKey key    = gSelection.keys[si];
+        tModule *  module = get_module(key);
+
+        if ((module == NULL) || !module->active || (key.slot != slot)) {
+            continue;
+        }
+        uint32_t   count  = module_param_count(module->type);
+
+        if (count > MAX_NUM_PARAMETERS) {
+            count = MAX_NUM_PARAMETERS;
+        }
+
+        for (uint32_t paramIndex = 0; paramIndex < count; paramIndex++) {
+            if (find_controller_for_param(slot, key.location, key.index, paramIndex) >= 0) {
+                continue;   // already has one — fill the gaps, don't renumber
+            }
+
+            if (gControllerCount[slot] >= MAX_NUM_CONTROLLERS) {
+                break;
+            }
+            int32_t  cc  = next_free_midi_cc(slot);
+
+            if (cc < 0) {
+                break;
+            }
+            uint32_t idx = gControllerCount[slot]++;
+            gControllerArray[slot].controller[idx] = (tController){
+                (uint8_t)cc, key.location, key.index, paramIndex
+            };
+            module->param[0][paramIndex].midiCC    = (uint8_t)cc;
+            module->param[0][paramIndex].hasMidiCC = true;
+            changed                                = true;
+        }
+    }
+
+    if (changed) {
+        send_whole_patch(slot);
+    }
+    undo_commit_midi_cc_edit();
+    synthlib_request_redraw();
+}
+
+// Clears every CC belonging to a selected module. Walks the controller table backwards because
+// remove_controller_entry() compacts by swapping the last entry into the hole — going forwards
+// would step straight over whatever got moved down into the index just vacated.
+void midi_cc_deassign_selection(void) {
+    uint32_t slot    = gSlot;
+    bool     changed = false;
+
+    if (gSelection.count == 0) {
+        return;
+    }
+    undo_begin_midi_cc_edit(slot);
+
+    for (int32_t i = (int32_t)gControllerCount[slot] - 1; i >= 0; i--) {
+        tModuleKey key = {
+            slot,
+            gControllerArray[slot].controller[i].location,
+            gControllerArray[slot].controller[i].moduleIndex
+        };
+
+        if (is_selected(key)) {
+            remove_controller_entry(slot, (uint32_t)i);
+            changed = true;
+        }
+    }
+
+    if (changed) {
+        send_whole_patch(slot);
+    }
+    undo_commit_midi_cc_edit();
+    synthlib_request_redraw();
+}
+
 static void action_deassign_midi_cc(int index) {
     uint32_t        slot        = gSlot;
     uint32_t        location    = gMenuContext.moduleKey.location;
