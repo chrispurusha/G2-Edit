@@ -24,6 +24,12 @@
 
 #include "sysIncludes.h"
 #include "types.h"
+#include "synthlibTypes.h"
+
+// Selects the drawing area the widgets below render into: moduleArea (the default) for the
+// scrolled/zoomed patch canvas, mainArea for a panel reusing the same widgets. Set it around
+// the panel's own render pass and put it back afterwards.
+void set_param_render_area(tArea area);
 
 tRectangle render_paramType1Freq(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramRef);
 tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramRef);
