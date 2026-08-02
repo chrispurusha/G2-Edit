@@ -2669,8 +2669,8 @@ const tLedLocation       ledLocationList[]       = {
     {moduleTypeModADSR,    ledTypeYes,  {{  3, 13}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:33 H:5
     {moduleTypeModAHD,     ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:19 H:5
     {moduleTypeEnvAHD,     ledTypeYes,  {{  3,  9}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:18 H:4
-    {moduleTypeEnvH,       ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft }, // XPos:40  YPos:18 H:2
-    {moduleTypeEnvD,       ledTypeYes,  {{ 3, 7}, {3, 3}}, anchorTopLeft }, // XPos:40  YPos:18 H:2
+    {moduleTypeEnvH,       ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft }, // XPos:40  YPos:18 H:2
+    {moduleTypeEnvD,       ledTypeYes,  {{  3,  7}, {3, 3}}, anchorTopLeft }, // XPos:40  YPos:18 H:2
     {moduleTypeEnvADR,     ledTypeYes,  {{  3, 12}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:18 H:3
     {moduleTypeEnvMulti,   ledTypeYes,  {{  3,  6}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:18 H:6
     {moduleTypeEnvADDSR,   ledTypeYes,  {{  3,  8}, {3, 3}}, anchorTopLeft }, // XPos:6   YPos:19 H:5
