@@ -679,7 +679,43 @@ none of these exist in G2-Edit at all, confirmed by source search)
 
 - MIDI Learn (L key) — assign the focused parameter to whichever MIDI CC# was last received, without
   opening a picker.
-- Patch Window Split Bar — the original shows Voice Area and FX Area SIMULTANEOUSLY in one window,
+- Patch Window Split Bar — STEP 1 OF 4 DONE 2026-08-02, in SYNTHLIB (utilsGraphics.c/.h), so it
+  lands in that submodule's own commit, not this repo's.
+  WHAT MADE THIS WIDE-RANGING, and what step 1 addressed: tArea is only an enum, and `moduleArea`
+  selects a transform chain — scale by gZoomFactor, subtract the scroll, offset into module_area()
+  — where all three were SINGLETONS. There was exactly one of everything, which is what a split
+  view breaks. Step 1 introduced a MODULE PANE owning its scroll position and its slice of the
+  canvas band, with MAX_MODULE_PANES 2 but only one pane in use, so behaviour is unchanged.
+  New API: set_module_pane() / module_pane() / module_pane_count() / set_module_pane_count() /
+  set_module_pane_extent() / module_area_for_pane(). The transform reads the CURRENT pane in the
+  same "mode rather than argument" style set_param_render_area() already uses for the parameter
+  renderers — rendering is sequential, so a mode suffices and no pane argument has to be threaded
+  through the hundreds of render calls.
+  SLICES ARE FRACTIONS of the canvas band, not pixels, so a window resize redistributes the split
+  proportionally rather than stranding a pane at a fixed height. Pane 0 is {top 0.0, height 1.0},
+  which is arithmetically the whole band — the same rectangle module_area() returned before.
+  ZOOM STAYS GLOBAL, deliberately. Zoom is G2-Edit's own invention (the original editor has none),
+  so there is no parity to satisfy and it was a free design choice: matched scale is what makes two
+  areas comparable across the divider, and it keeps scale() a plain global multiply for the many
+  callers that have no idea panes exist. Promoting zoom into the pane later is contained.
+  VERIFIED BY A/B 2026-08-02, and the method is worth reusing for any "no visible change" refactor
+  here: screenshots at default zoom, at ZOOM 1.5 + SCROLL 0.5 0.4, and at ZOOM 0.5 + SCROLL 1.0 1.0
+  (the last two exercise exactly the changed code), captured before and after via the backdoor.
+  Byte comparison ALONE IS USELESS — the same build differs between runs, because the module LEDs
+  are live and blinking. The discriminator is magnitude: LED noise touches tens of rows, a broken
+  transform would move every module and touch ~1000. Control (same build twice) was 22/0/0
+  differing rows; test (panes vs baseline) was 23/0/0. Both zoomed captures pixel-identical.
+  REMAINING STEPS: 2. second pane + the split bar, with the existing VA/FX topbar buttons becoming
+  the manual's V/F "give this area full height" rather than being replaced. 3. per-pane scrollbars
+  (gScrollState is still one pair). 4. per-pane zoom, only if wanted.
+  THE HARD PART IS STILL AHEAD, and it is not the bar: gLocation is read in 40 places across 10
+  files and conflates "the location being displayed" with "the location I am editing". Setting it
+  from whichever pane a click lands in should resolve most, but each site needs reading. Module
+  drag, rubber band and cable drag all need clamping to their originating pane. Hit-testing itself
+  should fall out free, since module/param/cable rectangles are all stored in SCREEN space at
+  render time and will already be pane-correct.
+
+- Patch Window Split Bar (original description) — the original shows Voice Area and FX Area SIMULTANEOUSLY in one window,
   split by a drag-resizable horizontal bar (up/down-arrow buttons to show one area full-height, a
   double-arrow to restore the previous split, V/F shortcuts to toggle full-screen on the current
   area). G2-Edit's VA/FX topbar buttons (mouseTopbar.c, set_exclusive_button_highlight) are a hard
