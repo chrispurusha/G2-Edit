@@ -47,6 +47,7 @@ extern "C" {
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "globalVars.h"
+#include "paramPages.h"
 #include "graphics.h"      // set_patch_name_from_filename / write_database_to_file (extern "C")
 #include "mouseHandle.h"   // init_patch (extern "C")
 #include <stdatomic.h>
@@ -370,7 +371,12 @@ static void parse_param_change(uint32_t slot, uint8_t * buff, int length) {
     LOG_DEBUG("Param change - module %u:%u param=%u value=%u\n",
               key.location, key.index, param, value);
 
-    if (key.location == (uint32_t)locationMorph) {
+    // The Parameter Pages panel is a live readout of whichever params its page's knobs are
+    // assigned to, and turning one of those knobs on the G2 itself arrives here - so it needs a
+    // wake, where the canvas has always got away without one. Deliberately not filtered down to
+    // "is this param actually on the page being shown": that would mean resolving eight knob
+    // assignments on the USB thread for every param change the device reports.
+    if ((key.location == (uint32_t)locationMorph) || gParamPages.active) {
         call_wake_glfw();
     }
 }

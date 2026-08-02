@@ -25,6 +25,12 @@
 
 void render_module(tModule * module);
 void render_modules(void);
+
+// Draws one module parameter - dial, slider, toggle or menu button, whichever the param's type
+// calls for - and records its clickable rect in gParamRectangle. Used by render_module() for the
+// patch canvas and by the Parameter Pages panel, which draws the same widget somewhere else; see
+// set_param_render_area() (renderParams.h) for switching which area it renders into.
+void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramRef, uint32_t paramIndex);
 void render_knob_assignment_overlay(void);
 void render_cables(void);
 void render_morph_groups(void);

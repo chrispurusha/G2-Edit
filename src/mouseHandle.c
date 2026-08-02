@@ -52,6 +52,7 @@ extern "C" {
 #include "selection.h"
 #include "undo.h"
 #include "mutatorUI.h"
+#include "paramPages.h"
 #include "misc.h"
 #include "appMenuBar.h"
 #include "fileBrowser.h"
@@ -602,6 +603,39 @@ bool is_cursor_hidden_dragging(void) {
     return gParamDragging.active || gTempoDragging || gPerfTempoDragging || gVibRateDragging || gVibAmountDragging || gGlideTimeDragging;
 }
 
+// Ends a param/mode dial drag: records the undo entry for the whole drag as one old->new pair,
+// then clears every drag state. Shared with the Parameter Pages panel, which drives the same
+// gParamDragging machinery but swallows the mouse-up before the canvas handler below ever sees
+// it - so without this the panel's drags would be silently missing from Ctrl-Z.
+void finish_param_drag(void) {
+    // Push the undo before stop_dragging() zeros gParamDragging
+    if (gParamDragging.active) {
+        tModule * pdMod = get_module(gParamDragging.moduleKey);
+
+        if (pdMod) {
+            // The dragged module's own Slot, not gSlot - a Global parameter page can hold a knob
+            // assigned to a module in a Slot other than the one on screen.
+            uint32_t pdVariation = gPatchDescr[gParamDragging.moduleKey.slot].activeVariation;
+
+            if (gParamDragging.type3 == paramType3Param) {
+                uint32_t curVal = pdMod->param[pdVariation][gParamDragging.param].value;
+                undo_push_param_change(gParamDragging.moduleKey,
+                                       gParamDragging.param,
+                                       pdVariation,
+                                       gParamDragging.startValue,
+                                       curVal);
+            } else {
+                uint32_t curVal = pdMod->mode[gParamDragging.mode].value;
+                undo_push_mode_change(gParamDragging.moduleKey,
+                                      gParamDragging.mode,
+                                      gParamDragging.startValue,
+                                      curVal);
+            }
+        }
+    }
+    stop_dragging();
+}
+
 void stop_dragging(void) {
     bool wasCursorDragging = is_cursor_hidden_dragging();
 
@@ -869,6 +903,11 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
         return;
     }
 
+    if (handle_param_pages_mouse(coord, mouseButton)) {
+        synthlib_request_redraw();
+        return;
+    }
+
     if (handle_patch_params_mouse(coord, mouseButton)) {
         synthlib_request_redraw();
         return;
@@ -1056,31 +1095,7 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 gRubberBand.active = false;
                 found              = true;
             }
-
-            // Push param/mode undo before stop_dragging() zeros gParamDragging
-            if (gParamDragging.active) {
-                tModule * pdMod = get_module(gParamDragging.moduleKey);
-
-                if (pdMod) {
-                    uint32_t pdVariation = gPatchDescr[slot].activeVariation;
-
-                    if (gParamDragging.type3 == paramType3Param) {
-                        uint32_t curVal = pdMod->param[pdVariation][gParamDragging.param].value;
-                        undo_push_param_change(gParamDragging.moduleKey,
-                                               gParamDragging.param,
-                                               pdVariation,
-                                               gParamDragging.startValue,
-                                               curVal);
-                    } else {
-                        uint32_t curVal = pdMod->mode[gParamDragging.mode].value;
-                        undo_push_mode_change(gParamDragging.moduleKey,
-                                              gParamDragging.mode,
-                                              gParamDragging.startValue,
-                                              curVal);
-                    }
-                }
-            }
-            stop_dragging();
+            finish_param_drag();
         }
         break;
 
@@ -1363,6 +1378,14 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         tModule * module = get_module(gParamDragging.moduleKey);
 
         if (module != NULL) {
+            // Read and write through the dragged module's own Slot rather than the on-screen
+            // gSlot the rest of this function uses. Identical for a drag on the patch canvas,
+            // but a drag started in the Parameter Pages panel can be on a Global page knob
+            // assigned to a module in one of the other three Slots, each with its own active
+            // Variation.
+            slot      = module->key.slot;
+            variation = gPatchDescr[slot].activeVariation;
+
             switch (gParamDragging.type3) {
                 case paramType3Param:
 
@@ -1785,6 +1808,11 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
     }
 
     if (handle_mutator_key(key, mods, action)) {
+        synthlib_request_redraw();
+        return;
+    }
+
+    if (handle_param_pages_key(key, mods, action)) {
         synthlib_request_redraw();
         return;
     }

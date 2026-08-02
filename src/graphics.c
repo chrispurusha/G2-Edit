@@ -68,6 +68,7 @@ extern "C" {
 #include "undo.h"
 #include "deviceSync.h"
 #include "mutatorUI.h"
+#include "paramPages.h"
 #include "appMenuBar.h"
 #include "fileBrowser.h"
 #include "bankBrowser.h"
@@ -2262,6 +2263,7 @@ static void render_frame(void) {
     render_patch_settings_panel();
     render_perf_settings_panel();
     render_patch_params_panel();
+    render_param_pages_panel();
     render_context_menu();
     render_patch_notes_edit();
     render_bank_backup_progress();

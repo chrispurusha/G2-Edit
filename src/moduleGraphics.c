@@ -45,6 +45,7 @@ extern "C" {
 #include "menus.h"
 #include "selection.h"
 #include "mutatorUI.h"
+#include "paramPages.h"
 #include "protocol.h"
 #include "undo.h"
 #include "clickRegion.h"
@@ -503,7 +504,11 @@ static void queue_knob_overlay(tRectangle rectangle, int32_t knobIdx, bool isGlo
 void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramRef, uint32_t paramIndex) {
     char     buff[16]                    = {0};
     char     label[CLAVIA_NAME_SIZE + 1] = {0};
-    uint32_t slot                        = gSlot;
+    // The module's own Slot, not gSlot: identical while rendering the canvas (which only ever
+    // draws the selected Slot), but the Parameter Pages panel reuses these widgets to draw a
+    // Global page's knobs, and those can point at a module in any of the four Slots - each with
+    // its own active Variation. Same reason the renderParams.c widgets read module->key.slot.
+    uint32_t slot                        = module->key.slot;
     uint32_t variation                   = gPatchDescr[slot].activeVariation;
     uint32_t paramValue                  = module->param[variation][paramIndex].value;
     uint32_t morphRange                  = module->param[variation][paramIndex].morphRange[gMorphGroupFocus];
@@ -658,6 +663,15 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
             // Don't show a knob/CC overlay for a param that's actually hidden behind the Mutator
             // floater right now.
             if ((gMutator.active && within_rectangle(mouseCoord, gMutator.panelRect))) {
+                return;
+            }
+
+            // Nor while the Parameter Pages panel is up. It covers the canvas, and it renders its
+            // own knobs through this very function - so the hover test below would match against a
+            // gParamRectangle the panel has just overwritten with its own widget's position, and
+            // queue an overlay drawn in moduleArea's scrolled/zoomed space, landing nowhere near
+            // the thing the mouse is actually over.
+            if (gParamPages.active) {
                 return;
             }
 

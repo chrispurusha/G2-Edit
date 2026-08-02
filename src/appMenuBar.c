@@ -32,6 +32,7 @@ extern "C" {
 #include "misc.h"
 #include "graphics.h"
 #include "mutatorUI.h"
+#include "paramPages.h"
 #include "appMenuBar.h"
 #include "synthlibPersistence.h"
 
@@ -140,6 +141,11 @@ static void action_open_patch_settings(int index) {
     settings_menu_open_patch();
 }
 
+static void action_open_param_pages(int index) {
+    (void)index;
+    settings_menu_open_param_pages();
+}
+
 static void action_open_perf_settings(int index) {
     (void)index;
     settings_menu_open_perf();
@@ -152,11 +158,12 @@ static void action_open_notes(int index) {
 
 static void open_settings_menu(tCoord anchor) {
     static tMenuItem items[] = {
-        {"Synth", (tRgb)RGB_GREY_3, action_open_synth,          0, NULL, 0, 0.0},
-        {"Patch", (tRgb)RGB_GREY_3, action_open_patch_settings, 0, NULL, 0, 0.0},
-        {"Perf",  (tRgb)RGB_GREY_3, action_open_perf_settings,  0, NULL, 0, 0.0},
-        {"Notes", (tRgb)RGB_GREY_3, action_open_notes,          0, NULL, 0, 0.0},
-        {NULL,    (tRgb)RGB_BLACK,  NULL,                       0, NULL, 0, 0.0},
+        {"Synth",           (tRgb)RGB_GREY_3, action_open_synth,          0, NULL, 0, 0.0},
+        {"Patch",           (tRgb)RGB_GREY_3, action_open_patch_settings, 0, NULL, 0, 0.0},
+        {"Perf",            (tRgb)RGB_GREY_3, action_open_perf_settings,  0, NULL, 0, 0.0},
+        {"Notes",           (tRgb)RGB_GREY_3, action_open_notes,          0, NULL, 0, 0.0},
+        {"Parameter Pages", (tRgb)RGB_GREY_3, action_open_param_pages,    0, NULL, 0, 0.0},
+        {NULL,              (tRgb)RGB_BLACK,  NULL,                       0, NULL, 0, 0.0},
     };
 
     open_context_menu(anchor, items, 0, 0.0);

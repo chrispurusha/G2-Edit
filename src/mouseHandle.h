@@ -30,6 +30,11 @@ void init_patch(uint32_t slot);
 void get_global_gui_scaled_mouse_coord(tCoord * coord);
 void start_cursor_drag(void);
 void stop_dragging(void);
+
+// stop_dragging() preceded by the undo push for a param/mode dial drag. Anything that starts a
+// drag by filling in gParamDragging must end it through here, not through stop_dragging(), or
+// the drag won't be undoable.
+void finish_param_drag(void);
 void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord);
 
 // True while any drag that hides the cursor (CURSOR_DISABLED) is active —

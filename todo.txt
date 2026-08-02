@@ -257,41 +257,62 @@ none of these exist in G2-Edit at all, confirmed by source search)
     F8        View MIDI CC# Assignments — the MIDI CC# (if any) mapped to each parameter
     Ctrl+F8   View Parameter MIDI Values — how each knob is actually sent/received over MIDI
   None implemented — no F5-F8 key handling anywhere in the source.
-- Parameter Pages window (Ctrl-F) — *** NEXT UP, owner-requested 2026-08-01 *** the graphical
+- Parameter Pages window — BUILT 2026-08-02 (src/paramPages.c / paramPages.h). The graphical
   stand-in for the G2 front panel's PARAMETER PAGES and their ASSIGNABLE KNOBS/BUTTONS (manual
-  p.89-91, "The Parameter Pages window"). Each page shows its knobs with, per assigned knob, the
-  module name and the parameter's current value; turning a knob there click-and-hold focuses AND
-  changes the module parameter in the patch window, and moves the real front-panel knob. The
-  reverse also holds: turning an assigned knob on the hardware updates both the window and the
-  module parameter.
-  WHAT ALREADY EXISTS, so this is a UI job rather than a protocol one:
-    * gKnobArray[slot].knob[120] with assigned/location/moduleIndex/paramIndex — populated by
-      protocol.c's parse of the patch's knob section, so the assignments are already in the
-      database and already round-trip to file and device.
-    * Assignment/deassignment already work per-parameter from the right-click menu
-      (action_assign_knob / action_deassign_knob in menus.c, eMsgCmdAssignKnob/eMsgCmdDeassignKnob),
-      and are undoable (undo_push_knob). The global/perf pair is separate and now undoable too.
-    * Param editing, dial rendering and the value/strMap plumbing all exist in renderParams.c.
-  SO WHAT IS MISSING is the WINDOW: a page-at-a-time grid of 8 (check against the hardware) knob
-  widgets with module/param/value readouts, page navigation, and the two-way live link described
-  above. Worth checking whether SynthEdit's render_page_tabs() is reusable for the page selector
-  rather than inventing a second one (see the page-tab unification note in the commonalise
-  section).
-  LAYOUT, from the manual p.19 ("PARAMETER PAGES"), which also explains the 120 in gKnobArray:
-    8 ASSIGNABLE KNOBS/BUTTONS per page x 15 pages = 120 per patch. The 15 pages are a MATRIX,
-    3 wide by 5 high: rows lettered A-E, columns numbered 1-3, so a page is named A1, D2 etc.
-    Knob index therefore maps as page = index / 8 within that matrix — CONFIRM the row/column
-    order of the mapping against the hardware before trusting it either way round.
-    There are also 15 GLOBAL parameter pages (another 120), assignable from all four slots at
-    once, with one button toggling between patch pages and global pages. G2-Edit already keeps
-    the global set separately (gGlobalKnobArray[MAX_NUM_KNOBS], and the assign/deassign pair in
-    menus.c), so the same panel should serve both with a patch/global toggle.
-  FORM DECIDED (owner, 2026-08-01): a FULL-CANVAS PANEL, like the existing patch settings and
-  patch notes panels — not a floating window. Follow those for the open/close and render plumbing.
-  OPEN QUESTION remaining: does the hardware send knob-turn events we already parse, i.e. is the
-  "turn the front-panel knob and the window follows" direction free, or does it need new message
-  handling? Check what protocol.c does with the knob/controller stream before designing the
-  refresh path.
+  p.19 and p.89-91). Opened from Settings > Parameter Pages; NO keyboard shortcut, owner's
+  explicit call 2026-08-02 (the original's Ctrl-F was implemented and then removed).
+  Full-canvas panel per the owner's form decision: title bar with Slot A-D buttons and Close, a
+  Patch/Global toggle, the 15 pages as a 3-wide x 5-high A1..E3 matrix, and the selected page's
+  eight knobs in a row. Each cell shows position number, module name (Slot-prefixed on a Global
+  page, since those can point into any Slot) and the live param widget.
+  HOW IT'S PUT TOGETHER, since the shape matters more than the line count:
+    * The knob widgets ARE the canvas's widgets — render_param_common() is called directly, so a
+      dial looks like a dial, a toggle like a toggle, and every value string is formatted by that
+      param type's own rule with no second implementation to keep in step. renderParams.c's ~30
+      renderers hard-coded moduleArea (canvas zoom + scroll); they now take it from a file-scope
+      area that set_param_render_area() (renderParams.h) switches to mainArea around the panel's
+      render pass. A mode, not a parameter, to avoid threading an argument through 30 signatures
+      and their function-pointer types.
+    * Hit-testing reads back gParamRectangle, which render_param_common() has just written, so
+      there is only one description of where a control is. Dragging fills in gParamDragging, i.e.
+      the canvas's own drag machinery: cursor_pos() tracks it and sends the value. Mouse-up goes
+      through the new finish_param_drag() (mouseHandle.h), extracted from the canvas's mouse-up so
+      the undo push is shared — without it the panel's drags would be silently missing from Ctrl-Z.
+    * Cross-Slot correctness: render_param_common(), the renderParams.c widgets, cursor_pos()'s
+      drag branch and finish_param_drag() all now read module->key.slot rather than gSlot. A no-op
+      on the canvas (which only ever draws the selected Slot) but required for a Global page, whose
+      knobs can point at modules in any of the four Slots, each with its own active Variation.
+    * The reverse direction was FREE, which answers the old open question: turning an assigned
+      knob on the G2 arrives as an ordinary param change, usbComms.c's parse_param_change() writes
+      it into the same module param, and the panel redraws from it. No new message handling. One
+      change was needed: that function only woke GLFW for locationMorph, so it now also wakes
+      whenever the panel is up.
+    * Right-click a cell opens the canvas's own param context menu, so a knob can be reassigned or
+      cleared from the page it's shown on.
+  VERIFIED OFFLINE via the backdoor + cliclick 2026-08-02: panel chrome, page matrix (including the
+  lighter shade marking a page that has assignments), Patch/Global toggle, per-Slot switching,
+  empty vs assigned cells, and a real edit — changing a waveform from the panel's menu-type widget
+  updated the module on the canvas. The stray knob-assignment hover overlay this first exposed is
+  fixed (moduleGraphics.c now suppresses the canvas hover check while the panel is up; it was
+  matching against a gParamRectangle the panel had overwritten and painting the label in
+  moduleArea's scrolled space).
+  NOT VERIFIED, and needs the owner:
+   1. DIAL DRAGGING. Untestable through the harness — a synthetic cliclick drag moves no dial, on
+      the panel OR on the patch canvas, so the test says nothing either way. The code path is the
+      canvas's own, but it has not been seen to work.
+   2. The knob index -> page mapping (page = index / 24, bank = (index % 24) / 8, position =
+      index % 8). The panel follows what menus.c and moduleGraphics.c already assumed, so all
+      three agree, but A1,A2,A3,B1... vs column-major is still unconfirmed against the hardware.
+   3. Anything involving a real G2: the hardware-knob-turn refresh, and whether an edit made in
+      the panel reaches the device (offline it only reaches the database and the queue).
+   4. Whether 8-across is right at small window sizes. The panel clamps to the window width and
+      the cells narrow with it; not tried below about 800 logical px.
+  STILL OPEN: the manual describes click-and-hold on a panel knob also FOCUSING the parameter in
+  the patch window (and moving the real front-panel knob). Neither is implemented - the panel
+  edits the value but does not scroll the canvas to the module or highlight it.
+  Also still worth checking whether SynthEdit's render_page_tabs() should have been reused for the
+  page selector rather than this second one (see the page-tab unification note in the commonalise
+  section) - the A1..E3 matrix is a grid rather than a tab row, so it may not fit.
 
 - Parameter Overview window (Ctrl-L) — floating window showing every Parameter Page's knob/button
   assignments at once in one grid, with drag-and-drop to make/move/reorganize assignments directly
