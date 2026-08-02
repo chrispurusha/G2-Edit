@@ -61,6 +61,11 @@ static const char *const kPageRowLabel[NUM_PARAM_PAGES] = {"A", "B", "C", "D", "
 #define PP_CELL_PAD        5.0    // inset from a cell's edge to its content, both sides
 #define PP_MIN_CELL_W      64.0   // keeps an all-empty page from collapsing to a thin strip
 
+// The label and value rows a dial widget draws ABOVE itself (render_dial_with_text is
+// dial-anchored). Reserved whether or not this particular param has a label, so that every dial
+// on the page lines up.
+#define PP_WIDGET_TEXT_ROWS    (STANDARD_TEXT_HEIGHT * 2.0)
+
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
 
 void open_param_pages_panel(uint32_t slot) {
@@ -300,9 +305,10 @@ void render_param_pages_panel(void) {
     double       rowH                        = 20.0;
     double       btnH                        = STANDARD_BUTTON_TEXT_HEIGHT;
     double       textH                       = STANDARD_TEXT_HEIGHT;
-    // Cell height: module name, then the param widget's own label + value + dial (the three
-    // rows render_dial_with_text() lays out from the rectangle it's handed).
-    double       cellH                       = textH + (textH * 2.0) + PP_DIAL_SIZE + 8.0;
+    // Cell height: the module name, then the param widget's own label and value rows, then the
+    // dial. render_dial_with_text() is dial-anchored and draws those two rows upwards from the
+    // dial, so the dial's own y is PP_WIDGET_TEXT_ROWS below the top of the widget's block.
+    double       cellH                       = textH + PP_WIDGET_TEXT_ROWS + PP_DIAL_SIZE + 8.0;
     double       gridW                       = (PP_PAGE_BTN_W * NUM_BANKS_PER_PAGE) + (PP_PAGE_BTN_GAP * (NUM_BANKS_PER_PAGE - 1));
 
     // Cells are sized to the widest widget on the page rather than to a fixed panel width, and
@@ -467,7 +473,13 @@ void render_param_pages_panel(void) {
             // by that param type's own rule. render_param_common() records the widget's
             // clickable rect in gParamRectangle; read it straight back for hit-testing, so
             // there's only ever one description of where the control is.
-            render_param_common((tRectangle){{widgetX, y + textH + 4.0}, {metrics[pos].rectWidth, PP_DIAL_SIZE}},
+            // Dials and sliders take the rect as the control itself and draw their text upwards,
+            // so they start two text rows down. Toggles, menus and Enable buttons still draw
+            // downwards from the rect, so they start at the top of the widget block and their
+            // button lands on the same line as a dial's value.
+            double widgetY = y + textH + 4.0 + (metrics[pos].dialLike ? PP_WIDGET_TEXT_ROWS : 0.0);
+
+            render_param_common((tRectangle){{widgetX, widgetY}, {metrics[pos].rectWidth, PP_DIAL_SIZE}},
                                 target.module, target.paramRef, target.paramIndex);
             gParamPages.knobWidget[pos] = gParamRectangle[target.key.slot][target.key.location][target.key.index][target.paramIndex];
         }
