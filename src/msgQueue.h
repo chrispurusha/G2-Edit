@@ -105,7 +105,8 @@ typedef enum {
     eMsgCmdPeekSynthSettingsRestore,
     eMsgCmdApplySynthSettingsRestore,
     eMsgCmdRestoreEverything,
-    eMsgCmdSetMutationLock
+    eMsgCmdSetMutationLock,
+    eMsgCmdPlayNote
     //eMsgCmdReloadAllPatchData
 } eMsgCmd;
 
@@ -115,6 +116,14 @@ typedef struct {
     uint32_t   param;
     uint32_t   value;
 } tParamData;
+
+// Virtual Keyboard note on/off. No slot: SUB_COMMAND_PLAY_NOTE carries none, the synth routing the
+// note by its own keyboard assignment exactly as it would a note from the real keys.
+typedef struct {
+    uint32_t note;      // MIDI note number, 0-127
+    uint32_t velocity;  // 0-127
+    bool     on;
+} tPlayNoteData;
 
 typedef struct {
     tModuleKey moduleKey;
@@ -323,6 +332,7 @@ typedef struct {
         tGlobalKnobDeassignData   globalKnobDeassignData;
         tMidiCCAssignData         midiCCAssignData;
         tMidiCCDeassignData       midiCCDeassignData;
+        tPlayNoteData             playNoteData;
         tCopyVariationData        copyVariationData;
         tMasterClockBPMData       masterClockBPMData;
         tMasterClockRunData       masterClockRunData;
