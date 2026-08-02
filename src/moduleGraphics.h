@@ -31,7 +31,6 @@ void render_modules(void);
 // patch canvas and by the Parameter Pages panel, which draws the same widget somewhere else; see
 // set_param_render_area() (renderParams.h) for switching which area it renders into.
 void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramRef, uint32_t paramIndex);
-void render_knob_assignment_overlay(void);
 void render_cables(void);
 void render_morph_groups(void);
 void calculate_module_bounds(double * xEndMax, double * yEndMax, tRectangle moduleArea);
