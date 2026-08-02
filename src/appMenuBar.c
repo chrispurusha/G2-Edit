@@ -33,6 +33,7 @@ extern "C" {
 #include "graphics.h"
 #include "mutatorUI.h"
 #include "paramPages.h"
+#include "paramOverlay.h"
 #include "appMenuBar.h"
 #include "synthlibPersistence.h"
 
@@ -320,12 +321,48 @@ static void action_zoom_reset(int index) {
     wake_glfw();
 }
 
+// The overlay views. Selecting the mode already showing turns it off again, so the entries behave
+// as a radio group with a toggle on the active one.
+//
+// NOTE the argument is the item's POSITION in the menu, not the payload - contextMenu.c calls
+// action(index) and leaves the action to fetch its own value out of
+// gContextMenu.items[index].param, the same way every action in menus.c does.
+static void action_overlay_mode(int index) {
+    tParamOverlayMode mode = (tParamOverlayMode)gContextMenu.items[index].param;
+
+    param_overlay_set_mode((param_overlay_mode() == mode) ? overlayModeNone : mode);
+}
+
 static void open_view_menu(tCoord anchor) {
-    static tMenuItem items[] = {
-        {"Zoom In (Cmd +)",  (tRgb)RGB_GREY_3, action_zoom_in,    0, NULL, 0, 0.0},
-        {"Zoom Out (Cmd -)", (tRgb)RGB_GREY_3, action_zoom_out,   0, NULL, 0, 0.0},
-        {"Zoom Reset",       (tRgb)RGB_GREY_3, action_zoom_reset, 0, NULL, 0, 0.0},
-        {NULL,               (tRgb)RGB_BLACK,  NULL,              0, NULL, 0, 0.0},
+    static tMenuItem items[9]                         = {0};
+    static char      overlayLabel[overlayModeMax][40] = {0};
+    int              i                                = 0;
+
+    items[i++] = (tMenuItem){
+        "Zoom In (Cmd +)", (tRgb)RGB_GREY_3, action_zoom_in, 0, NULL, 0, 0.0
+    };
+    items[i++] = (tMenuItem){
+        "Zoom Out (Cmd -)", (tRgb)RGB_GREY_3, action_zoom_out, 0, NULL, 0, 0.0
+    };
+    items[i++] = (tMenuItem){
+        "Zoom Reset", (tRgb)RGB_GREY_3, action_zoom_reset, 0, NULL, 0, 0.0
+    };
+
+    // The five overlay views, the active one ticked. overlayModeNone isn't offered as an entry of
+    // its own - re-picking the active view is how you turn it off.
+    for (tParamOverlayMode mode = overlayModeValues; mode < overlayModeMax; mode++) {
+        bool active = (param_overlay_mode() == mode);
+
+        snprintf(overlayLabel[mode], sizeof(overlayLabel[mode]), "%s View %s",
+                 active ? "*" : " ", param_overlay_mode_name(mode));
+        items[i++] = (tMenuItem){
+            overlayLabel[mode], active ? (tRgb)RGB_CONTEXT_MENU_GREEN : (tRgb)RGB_GREY_3,
+            action_overlay_mode, (uint32_t)mode, NULL, 0, 0.0
+        };
+    }
+
+    items[i]   = (tMenuItem){
+        NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
     };
 
     open_context_menu(anchor, items, 0, 0.0);

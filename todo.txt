@@ -290,8 +290,55 @@ testing needed before touching; do not guess)
 MISSING FEATURES (parity with the original editor — cross-checked against g2manual.txt 2026-07-25;
 none of these exist in G2-Edit at all, confirmed by source search)
 
-- Pop-up overlay views (F5-F8, Ctrl+F8) — a family of "yellow popup box" overlays drawn over the
-  patch canvas, each showing a different thing per parameter at a glance:
+- Pop-up overlay views — BUILT 2026-08-02 (src/paramOverlay.c / .h), needs an owner eyeball.
+  All five of the original's overlays, reached from the VIEW MENU rather than the function keys
+  (owner's call, as with Parameter Pages): Parameter Values, Morph Groups, Knob Assignments, MIDI
+  CC Assignments, Parameter MIDI Values. Mutually exclusive as in the original, and picking the
+  one already showing turns it off, so the entries act as a radio group with the active one ticked.
+  DELIBERATELY NOT IN SYNTHLIB - every mode is about a G2 module parameter (morph groups, the 120
+  Parameter Page knobs, the patch controller table), none of which exist in the other two apps.
+  SHAPE: moduleGraphics.c lost ~50 lines of overlay bookkeeping and now makes one call,
+  param_overlay_note_param(module, paramIndex, rectangle, buff), for every parameter it draws. The
+  overlay module decides for itself whether that parameter earns a label, so the renderer knows
+  nothing about the modes; the old hover-only knob/CC labels became just overlayModeNone inside
+  the same switch rather than a separate path. render_param_common() already holds the formatted
+  display string the widget drew, so it is passed through rather than re-deriving per-type
+  formatting here.
+  DRAWN OVER THE PARAMETER, not under it (owner: that is what the original does, and there is no
+  room underneath in a dense module) - but NOTHING is blanked underneath. The chip's backing is
+  translucent (OVERLAY_BOX_ALPHA) and every control stays visible: dial, button and menu box alike.
+  Two earlier attempts are worth not repeating. Masking the widget opaque so the label could not
+  clash with it turned dials into blank white squares, and it hid exactly the button text the view
+  was meant to annotate. What makes going maskless work is that THE CHIP NEVER REPEATS WHAT THE
+  WIDGET ALREADY SHOWS: it carries the raw wire value alone, so it stays two or three characters
+  wide. Raw and formatted still end up next to each other as in the original - the formatted half
+  just comes from the control itself.
+  Placement follows from the same idea: centred on a dial, which has nothing inside its circle to
+  collide with, and in the TOP-LEFT CORNER of a widget that carries its own text, where centring
+  would land the chip across the word ("Semi" under a "0" reads as "S0mi"). The caller handing
+  over a non-empty display string is what distinguishes the two.
+  WHAT THE VALUES VIEW SHOWS: the raw wire value always, and the formatted value ONLY where the
+  box has covered it. Since dials became dial-anchored the mask covers just the circle, so a
+  dial's own "Pitch / 0.0" is still on screen above the box and repeating it would print the same
+  string twice; a button's text IS its value and is covered, so that one is reproduced.
+  Z-ORDER: param_overlay_render() runs immediately after the modules and cables, BEFORE the top
+  bar, menus and every panel - it used to run near the end of the frame, which let it paint over
+  open menus.
+  STILL TO LOOK AT:
+   1. A corner chip still covers the first character or so of a button's text ("saw" reads as
+      "2aw", "FM Lin" as "0M Lin"). Nudging it further out would clear the word but push it over
+      whatever sits above. Owner to judge from examples.
+   2. overlayModeMidiValues assumes a plain proportional scale into 0-127 for parameters whose
+      range is not 128. NEEDS A HARDWARE CHECK - the manual only says the view shows "how each
+      knob is actually sent and received over MIDI" without stating the mapping.
+   3. MAX_PARAM_OVERLAYS is 1024 rows; beyond that queueing simply stops, which drops labels off a
+      very crowded canvas rather than misdrawing. Not yet seen to trigger.
+  FOUND ON THE WAY, worth knowing: contextMenu.c calls action(index) with the item's POSITION in
+  the menu, not the payload - actions fetch their own value from gContextMenu.items[index].param,
+  as every action in menus.c does. Using the argument directly made "Parameter Values" select
+  "Knob Assignments".
+
+  ORIGINAL REFERENCE (the manual's own descriptions):
     F5        View Parameter Values     — each parameter's current value
     F6        View Morph Groups         — which of the 8 morph groups each parameter belongs to
     F7        View Knob Assignments     — which panel knob (if any) each parameter is mapped to
