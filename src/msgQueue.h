@@ -106,7 +106,8 @@ typedef enum {
     eMsgCmdApplySynthSettingsRestore,
     eMsgCmdRestoreEverything,
     eMsgCmdSetMutationLock,
-    eMsgCmdPlayNote
+    eMsgCmdPlayNote,
+    eMsgCmdSendCtrlSnapshot
     //eMsgCmdReloadAllPatchData
 } eMsgCmd;
 

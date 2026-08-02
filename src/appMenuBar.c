@@ -166,6 +166,15 @@ static void action_open_patch_adjuster(int index) {
     settings_menu_open_patch_adjuster();
 }
 
+static void action_send_ctrl_snapshot(int index) {
+    tMessageContent msg = {0};
+
+    (void)index;
+    msg.cmd  = eMsgCmdSendCtrlSnapshot;
+    msg.slot = gSlot;
+    msg_send(&gToUsbThread, &msg);
+}
+
 static void action_open_perf_settings(int index) {
     (void)index;
     settings_menu_open_perf();
@@ -423,6 +432,7 @@ static void open_tools_menu(tCoord anchor) {
     // The two selection entries have nothing to act on without one, and the original greys them
     // the same way rather than letting the click be a silent no-op.
     bool             haveSelection = gSelection.count > 0;
+    bool             online        = gCommsState == eCommsOnLine;
     int              i             = 0;
 
     // Label reflects current state the same way Controls' dial-mode items do (checkmark-style
@@ -455,6 +465,13 @@ static void open_tools_menu(tCoord anchor) {
     };
     items[i++] = (tMenuItem){
         "Clear All MIDI CC", (tRgb)RGB_GREY_3, action_clear_midi_cc_all, 0, NULL, 0, 0.0
+    };
+    // Only means anything with the synth attached — it asks the G2 to transmit, so offline there
+    // is nothing to transmit from.
+    items[i++] = (tMenuItem){
+        "Send Controller Snapshot",
+        online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5,
+        online ? action_send_ctrl_snapshot : NULL, 0, NULL, 0, 0.0
     };
     items[i]   = (tMenuItem){
         NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0

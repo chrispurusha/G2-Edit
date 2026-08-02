@@ -642,6 +642,41 @@ none of these exist in G2-Edit at all, confirmed by source search)
    4. The reference has a special case this doesn't: module type 0x54's param 3 counts as Decay or
       Release depending on the value of its param 7. Which module that is hasn't been identified.
 
+- Delete Unused Modules / Select All / Paste Params / Send Controller Snapshot — ALL FOUR BUILT
+  2026-08-02.
+  * DELETE UNUSED MODULES — module-area right-click menu, beside the existing "Delete unused
+    cables". "Unused" means no cable touches the module at either end, which is the original's own
+    test and deliberately blunter than "contributes no audio": a module feeding a muted chain is
+    still wired up, and guessing at intent would delete work. Goes through the SELECTION rather
+    than deleting directly, so it inherits the existing undo_push_delete_selection() bracket and
+    one Ctrl-Z takes the whole sweep back.
+  * SELECT ALL — Cmd-A, plus a module-area menu entry. Scoped to the location being viewed, not the
+    whole patch: the canvas only ever shows VA or FX, so selecting modules you cannot see and might
+    then Cut would be a trap. Given a shortcut, unlike the panels, because Cut/Copy/Paste/Undo
+    already carry theirs and this is an edit command of the same kind. VERIFIED 2026-08-02.
+  * PASTE PARAMS — module right-click menu. Pastes the copied module's parameter values onto the
+    right-clicked module, leaving that module, its cables and its position alone. All variations
+    are pasted, not just the active one, because that is what was copied and pasting one would
+    leave the others silently disagreeing. Greyed unless the clipboard holds a module of the SAME
+    TYPE — a Decay from an EnvADSR has no counterpart on an OscB. No Ctrl-E: it needs a right-
+    clicked target, and there is no "focused module" concept to hang a shortcut on.
+  * SEND CONTROLLER SNAPSHOT — Tools menu, greyed offline (it asks the G2 to transmit, so there is
+    nothing to transmit from). SUB_COMMAND_CTRL_SNAPSHOT (0x55) was in defs.h but had never been
+    sent. CMSendCtrlSnap::WriteStream() in the reference is a BARE command with no payload at all,
+    and the (id, 0, 1) Initialize shape is CALIBRATED rather than guessed: CMCurrentNotesRequest
+    has the identical shape with id 0x68, which G2-Edit already implements as usb_cmd_slot
+    (COMMAND_REQ) with no payload — and which works. UNTESTED on hardware; needs an external device
+    listening to confirm anything actually goes out.
+  ONE REAL BUG FOUND BY LOOKING AT IT: inserting Paste Params into the module menu's array shifted
+  the entries under two hard-coded indices, so the exclude-from-mutation label overwrote "Delete"
+  and the entry vanished from the menu entirely. Both indices are now named constants
+  (kItemPasteParams / kItemExclude) so the next insertion is harmless. The Tools menu's items[]
+  had the same shape of latent problem and was resized twice today; worth a look at whether any
+  other menu still hard-codes an index.
+  STILL TO DO: only Select All and the two menus' contents have been verified on screen. Delete
+  Unused Modules, Paste Params and Send Controller Snapshot are unrun — the test instance was
+  online with real hardware and all three write.
+
 - MIDI Learn (L key) — assign the focused parameter to whichever MIDI CC# was last received, without
   opening a picker.
 - Patch Window Split Bar — the original shows Voice Area and FX Area SIMULTANEOUSLY in one window,

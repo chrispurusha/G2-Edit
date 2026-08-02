@@ -3041,6 +3041,25 @@ static int send_play_note(uint32_t note, bool on) {
     return send_message(buff, BIT_TO_BYTE(bitPos));
 }
 
+// Send Controller Snapshot — the original's Synth > Send Controller Snapshot (Ctrl-M). Makes the
+// G2 transmit the current value of every MIDI-CC-assigned parameter, so an external device or a
+// sequencer's automation lane can be brought into line with the patch in one go.
+//
+// A BARE COMMAND WITH NO PAYLOAD, which is exactly what CMSendCtrlSnap::WriteStream() is in the
+// reference:
+//     CMIDIOutStream::Initialize(stream, 0x55, 0, 1);
+//     (nothing else)
+// The (id, 0, 1) shape is calibrated rather than guessed: CMCurrentNotesRequest::WriteStream() has
+// the identical shape with id 0x68, and G2-Edit's send_get_current_note() already implements that
+// one as usb_cmd_slot(COMMAND_REQ) with no payload — and works. So this follows it exactly.
+static int send_ctrl_snapshot(uint32_t slot) {
+    uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
+    uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+
+    usb_cmd_slot(buff, &bitPos, slot, COMMAND_REQ, SUB_COMMAND_CTRL_SNAPSHOT);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_OK, USB_RECV_ACK_MS);
+}
+
 static int send_copy_variation(uint32_t slot, uint32_t fromVariation, uint32_t toVariation) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
@@ -3945,6 +3964,12 @@ static int send_write_data(tMessageContent * messageContent) {
         case eMsgCmdPlayNote:
         {
             retVal = send_play_note(messageContent->playNoteData.note, messageContent->playNoteData.on);
+            break;
+        }
+
+        case eMsgCmdSendCtrlSnapshot:
+        {
+            retVal = send_ctrl_snapshot(messageContent->slot);
             break;
         }
 
