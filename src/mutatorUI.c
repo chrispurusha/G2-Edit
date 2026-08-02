@@ -354,17 +354,20 @@ void render_mutator_panel(void) {
     // left (linked by default), Cross Prob on the right.
     double                   dialW                       = 26.0;
     double                   dialRowH                    = STANDARD_TEXT_HEIGHT * 2.0 + dialW;
+    // render_dial_with_text() is dial-anchored - it draws the label and value in the two text
+    // rows ABOVE the rect - so the dials sit two rows down from the top of this row.
+    double                   dialY                       = rowY + (STANDARD_TEXT_HEIGHT * 2.0);
     char                     buf[16];
 
     snprintf(buf, sizeof(buf), "%d%%", (int)lround(gMutator.mutateProb * 100.0));
-    gMutator.probSliderRect  = render_dial_with_text(mainArea, (tRectangle){{x + margin, rowY}, {dialW, dialW}},
+    gMutator.probSliderRect  = render_dial_with_text(mainArea, (tRectangle){{x + margin, dialY}, {dialW, dialW}},
                                                      "Prob", buf, STANDARD_TEXT_HEIGHT,
                                                      (uint32_t)lround(gMutator.mutateProb * 100.0), 101, 0, (tRgb)RGB_GREY_9);
 
     double                   rangeX                      = x + margin + dialW + 20.0;
 
     snprintf(buf, sizeof(buf), "+/-%d%%", (int)lround(gMutator.mutateRange * 100.0));
-    gMutator.rangeSliderRect = render_dial_with_text(mainArea, (tRectangle){{rangeX, rowY}, {dialW, dialW}},
+    gMutator.rangeSliderRect = render_dial_with_text(mainArea, (tRectangle){{rangeX, dialY}, {dialW, dialW}},
                                                      "Range", buf, STANDARD_TEXT_HEIGHT,
                                                      (uint32_t)lround(gMutator.mutateRange * 100.0), 101, 0, (tRgb)RGB_GREY_9);
 
@@ -377,7 +380,7 @@ void render_mutator_panel(void) {
     double                   crossX                      = x + w - margin - dialW;
 
     snprintf(buf, sizeof(buf), "%d%%", (int)lround(gMutator.crossProb * 100.0));
-    gMutator.crossSliderRect = render_dial_with_text(mainArea, (tRectangle){{crossX, rowY}, {dialW, dialW}},
+    gMutator.crossSliderRect = render_dial_with_text(mainArea, (tRectangle){{crossX, dialY}, {dialW, dialW}},
                                                      "Cross", buf, STANDARD_TEXT_HEIGHT,
                                                      (uint32_t)lround(gMutator.crossProb * 100.0), 101, 0, (tRgb)RGB_GREY_9);
 
