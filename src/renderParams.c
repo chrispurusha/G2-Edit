@@ -900,10 +900,14 @@ tRectangle render_paramType1StandardToggle(tModule * module, tRectangle rectangl
         return draw_button(gParamRenderArea, text_rectangle, debug, (tRgb)RGB_BACKGROUND_GREY);
     }
 
+    // BUTTON-ANCHORED, the same rule render_dial_with_text() follows: the rectangle IS the button,
+    // and the label is drawn in the row ABOVE it. It used to be the other way round - the label at
+    // the rectangle and the button pushed a row below it - which made the button's position depend
+    // on whether the param happened to have a label, exactly the problem the dials had. It also
+    // moved the button whenever a patch RENAMED the param, since that name arrives at runtime.
     if (strlen(label) > 0) {
         set_rgb_colour((tRgb)RGB_BLACK);
-        render_text(gParamRenderArea, (tRectangle){{rectangle.coord.x, y}, {BLANK_SIZE, textHeight}}, label);
-        y += textHeight;
+        render_text(gParamRenderArea, (tRectangle){{rectangle.coord.x, y - textHeight}, {BLANK_SIZE, textHeight}}, label);
     }
 
     if (paramLocationList[paramRef].colourMap != NULL) {

@@ -69,6 +69,7 @@ extern "C" {
 #include "deviceSync.h"
 #include "mutatorUI.h"
 #include "paramPages.h"
+#include "paramOverlay.h"
 #include "appMenuBar.h"
 #include "fileBrowser.h"
 #include "bankBrowser.h"
@@ -2248,6 +2249,9 @@ static void render_frame(void) {
             render_cable_from_to(module->connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector, 4.0);
         }
     }
+    // Above the modules and cables it annotates, but below every piece of chrome - the top bar,
+    // the menus and every panel and popup have to be able to cover it.
+    param_overlay_render();
     render_top_bar();
     render_menu_bar(gAppMenuBar, app_menu_bar_rect());
     render_morph_groups();
@@ -2261,7 +2265,6 @@ static void render_frame(void) {
     render_bank_backup_progress();
     render_bank_restore_progress();
     render_mutator_panel();
-    render_knob_assignment_overlay();
     render_file_browser();
     render_bank_browser();
     render_device_busy_overlay(); // dim + "please wait" while a whole-slot device op is in flight

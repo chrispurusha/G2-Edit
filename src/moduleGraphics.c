@@ -46,6 +46,7 @@ extern "C" {
 #include "selection.h"
 #include "mutatorUI.h"
 #include "paramPages.h"
+#include "paramOverlay.h"
 #include "protocol.h"
 #include "undo.h"
 #include "clickRegion.h"
@@ -446,59 +447,6 @@ void render_volume_meter(tRectangle rectangle, tVolumeType volumeType, uint32_t 
     }
 }
 
-// The assignment label(s) are recorded here (during per-module rendering)
-// but only actually painted by render_knob_assignment_overlay(), called once
-// the whole frame's modules/cables are drawn — otherwise later components
-// (this module's own name/text, or modules drawn afterwards) paint over it.
-// A param can be assigned to a local (patch) knob, a Global Parameter Page
-// knob, and a MIDI CC all at once — they're independent — so up to one
-// overlay row of each is queued and shown stacked.
-#define MAX_KNOB_OVERLAYS    3
-
-static int        gKnobOverlayCount                        = 0;
-static tRectangle gKnobOverlayRect[MAX_KNOB_OVERLAYS]      = {0};
-static char       gKnobOverlayLabel[MAX_KNOB_OVERLAYS][32] = {0};
-
-void render_knob_assignment_overlay(void) {
-    for (int i = 0; i < gKnobOverlayCount; i++) {
-        draw_button(moduleArea, gKnobOverlayRect[i], gKnobOverlayLabel[i], (tRgb)RGB_GREY_9);
-    }
-}
-
-// Queues one hover overlay row below the given param rectangle with the
-// given (already-formatted) label; additional rows stack further down.
-static void queue_overlay_row(tRectangle rectangle, const char * label) {
-    if (gKnobOverlayCount >= MAX_KNOB_OVERLAYS) {
-        return;
-    }
-    double     labelWidth = get_text_width(label, (double)STANDARD_BUTTON_TEXT_HEIGHT * 0.8, eCache);
-    double     rowHeight  = ((double)STANDARD_TEXT_HEIGHT * 0.8) + 2.0;
-    tRectangle labelRect  = {{
-                                 rectangle.coord.x + (rectangle.size.w - labelWidth) / 2.0,
-                                 rectangle.coord.y + rectangle.size.h + 2.0 + (rowHeight * (double)gKnobOverlayCount)
-                             },
-                             {labelWidth,(double)STANDARD_TEXT_HEIGHT * 0.8}};
-
-    COPY_STRING(gKnobOverlayLabel[gKnobOverlayCount], label);
-    gKnobOverlayRect[gKnobOverlayCount] = labelRect;
-    gKnobOverlayCount++;
-}
-
-// Local/Global knob labels ("A 1 3" / "G A 1 3") from a 0-119 knob index.
-static void queue_knob_overlay(tRectangle rectangle, int32_t knobIdx, bool isGlobal) {
-    int  page = knobIdx / 24;
-    int  bank = (knobIdx % 24) / 8;
-    int  pos  = knobIdx % 8;
-    char label[16];
-
-    if (isGlobal) {
-        snprintf(label, sizeof(label), "G %c %d %d", 'A' + page, bank + 1, pos + 1);
-    } else {
-        snprintf(label, sizeof(label), "%c %d %d", 'A' + page, bank + 1, pos + 1);
-    }
-    queue_overlay_row(rectangle, label);
-}
-
 // This might be too generic and won't be able to use, or we add extra params!
 // TODO: possibly move all the type cases into functions in a new source file, references by function pointer?
 void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramRef, uint32_t paramIndex) {
@@ -636,63 +584,7 @@ void render_param_common(tRectangle rectangle, tModule * module, uint32_t paramR
     };
     register_click_region(gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex],
                           eClickLayerCanvas, param_click_handler, &sParamClickCtx[module->key.slot][module->key.location][module->key.index][paramIndex]);
-    {
-        // A param can be assigned to a local (patch) knob, a Global
-        // Parameter Page knob, and a MIDI CC all at the same time — they're
-        // independent (the manual counts 120 per Slot plus 120 Global as
-        // fully additive, and MIDI CC deassign is keyed purely by CC
-        // number, not by param) — so show all rows that apply.
-        int32_t localKnobIdx  = find_knob_for_param(module->key.slot, module->key.location,
-                                                    module->key.index, paramIndex);
-        int32_t globalKnobIdx = find_global_knob_for_param(module->key.slot, module->key.location,
-                                                           module->key.index, paramIndex);
-        int32_t ccIdx         = find_controller_for_param(module->key.slot, module->key.location,
-                                                          module->key.index, paramIndex);
-
-        // Skip the hover check entirely while a cursor-hiding drag (param,
-        // tempo, vibrato, glide-time...) is active: the reported cursor
-        // position during those is a virtual/relative-delta accumulator,
-        // not a real on-screen point, and can drift over an unrelated
-        // param — showing its knob/CC overlay instead of (or as well as)
-        // the one actually being dragged.
-        if ((localKnobIdx >= 0 || globalKnobIdx >= 0 || ccIdx >= 0) && !is_cursor_hidden_dragging()) {
-            tCoord mouseCoord = {0};
-
-            get_global_gui_scaled_mouse_coord(&mouseCoord);
-
-            // Don't show a knob/CC overlay for a param that's actually hidden behind the Mutator
-            // floater right now.
-            if ((gMutator.active && within_rectangle(mouseCoord, gMutator.panelRect))) {
-                return;
-            }
-
-            // Nor while the Parameter Pages panel is up. It covers the canvas, and it renders its
-            // own knobs through this very function - so the hover test below would match against a
-            // gParamRectangle the panel has just overwritten with its own widget's position, and
-            // queue an overlay drawn in moduleArea's scrolled/zoomed space, landing nowhere near
-            // the thing the mouse is actually over.
-            if (gParamPages.active) {
-                return;
-            }
-
-            if (within_rectangle(mouseCoord, gParamRectangle[module->key.slot][module->key.location][module->key.index][paramIndex])) {
-                if (localKnobIdx >= 0) {
-                    queue_knob_overlay(rectangle, localKnobIdx, false);
-                }
-
-                if (globalKnobIdx >= 0) {
-                    queue_knob_overlay(rectangle, globalKnobIdx, true);
-                }
-
-                if (ccIdx >= 0) {
-                    char ccLabel[16];
-
-                    snprintf(ccLabel, sizeof(ccLabel), "CC %u", gControllerArray[module->key.slot].controller[ccIdx].midiCC);
-                    queue_overlay_row(rectangle, ccLabel);
-                }
-            }
-        }
-    }
+    param_overlay_note_param(module, paramIndex, rectangle, buff);
 }
 
 void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef, uint32_t modeIndex) {
@@ -1697,7 +1589,7 @@ void render_modules(void) {
     uint32_t slot     = gSlot;
     uint32_t location = gLocation;
 
-    gKnobOverlayCount = 0; // re-armed below only if a knob-assigned param is under the mouse this frame
+    param_overlay_begin_frame(); // re-queued below by whichever params the active overlay mode wants
 
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
         tModule * module = get_module_slot(slot, location, i);
