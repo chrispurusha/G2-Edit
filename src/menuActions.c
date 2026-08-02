@@ -34,6 +34,7 @@
 #include "bankBrowser.h"
 #include "msgQueue.h"
 #include "paramPages.h"
+#include "paramOverview.h"
 
 // Bank number (0-indexed) chosen from the "Backup Patch Bank"/"Backup Performance Bank" dropdown
 // dialog, stashed here between that dialog's confirm callback and the folder-choose panel's
@@ -474,6 +475,11 @@ void settings_menu_open_patch(void) {
 
 void settings_menu_open_param_pages(void) {
     open_param_pages_panel(gSlot);
+    wake_glfw();
+}
+
+void settings_menu_open_param_overview(void) {
+    open_param_overview_panel(gSlot);
     wake_glfw();
 }
 

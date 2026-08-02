@@ -53,6 +53,7 @@ extern "C" {
 #include "undo.h"
 #include "mutatorUI.h"
 #include "paramPages.h"
+#include "paramOverview.h"
 #include "misc.h"
 #include "appMenuBar.h"
 #include "fileBrowser.h"
@@ -904,6 +905,11 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     }
 
     if (handle_param_pages_mouse(coord, mouseButton)) {
+        synthlib_request_redraw();
+        return;
+    }
+
+    if (handle_param_overview_mouse(coord, mouseButton)) {
         synthlib_request_redraw();
         return;
     }
@@ -1813,6 +1819,11 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
     }
 
     if (handle_param_pages_key(key, mods, action)) {
+        synthlib_request_redraw();
+        return;
+    }
+
+    if (handle_param_overview_key(key, mods, action)) {
         synthlib_request_redraw();
         return;
     }

@@ -44,6 +44,31 @@
 // NEEDS A HARDWARE CONFIRM: that A1,A2,A3,B1... really is the order the G2 numbers them in, and
 // not column-major.
 
+// One knob assignment resolved to the thing it actually drives. Shared with the Parameter
+// Overview panel (paramOverview.c), which needs the same resolution over all 120 assignments at
+// once — hence public rather than private to paramPages.c. `assigned` is false both for an empty
+// position and for an assignment that no longer resolves: the module deleted since, or a param
+// index the module's type does not have.
+typedef struct {
+    bool       assigned;
+    tModuleKey key;
+    uint32_t   paramIndex;
+    uint32_t   paramRef;
+    tModule *  module;
+} tKnobTarget;
+
+// Resolves one of the 120 knob assignments. `index` is the flat knob index, i.e.
+// ((page * NUM_BANKS_PER_PAGE) + bank) * NUM_KNOBS_PER_BANK + position. `slot` is ignored when
+// showGlobal is true, since a global assignment carries its own Slot per knob.
+tKnobTarget param_pages_knob_target(bool showGlobal, uint32_t slot, uint32_t index);
+
+// The module's patch-given name if it has one, else its type name.
+const char * param_pages_module_display_name(const tModule * module);
+
+// The label render_param_common() will put on this param — a name the patch carries for it wins
+// over the paramLocationList one, which is the precedence that function itself applies.
+const char * param_pages_knob_param_label(const tKnobTarget * target);
+
 typedef struct {
     bool       active;
     uint32_t   slot;                 // which Slot's patch pages are shown (own copy, as with

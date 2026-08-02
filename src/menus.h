@@ -40,9 +40,10 @@ int32_t find_global_knob_for_param(uint32_t slot, uint32_t location, uint32_t mo
 int32_t find_controller_for_param(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex);
 
 // Bulk MIDI CC tools, the original editor's "Assign MIDI" / "Clear MIDI". Each is one undoable
-// operation over the whole Slot.
-void midi_cc_assign_all_knobs(void);
-void midi_cc_clear_all(void);
+// operation over the whole Slot. The Slot is explicit rather than gSlot because the Parameter
+// Overview panel offers these on whichever Slot IT is showing, which need not be the selected one.
+void midi_cc_assign_all_knobs(uint32_t slot);
+void midi_cc_clear_all(uint32_t slot);
 void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex);
 void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, uint32_t paramRef);
 void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeIndex, uint32_t modeRef);

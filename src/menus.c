@@ -1072,10 +1072,12 @@ static int32_t next_free_midi_cc(uint32_t slot) {
 // the numbering follows the panel layout rather than the order modules happen to sit in the patch.
 // Parameters that already carry a CC keep the one they have - the point is to fill in the gaps,
 // not to renumber a patch someone has already set up by hand.
-void midi_cc_assign_all_knobs(void) {
-    uint32_t slot    = gSlot;
-    bool     changed = false;
+void midi_cc_assign_all_knobs(uint32_t slot) {
+    bool changed = false;
 
+    if (slot >= MAX_SLOTS) {
+        return;
+    }
     undo_begin_midi_cc_edit(slot);
 
     for (uint32_t knobIdx = 0; knobIdx < MAX_NUM_KNOBS; knobIdx++) {
@@ -1121,9 +1123,13 @@ void midi_cc_assign_all_knobs(void) {
 
 // Clears every MIDI CC in the Slot. remove_controller_entry() compacts by swapping the last entry
 // into the hole, so repeatedly removing index 0 walks the whole table.
-void midi_cc_clear_all(void) {
-    uint32_t slot    = gSlot;
-    bool     changed = (gControllerCount[slot] > 0);
+void midi_cc_clear_all(uint32_t slot) {
+    bool changed = false;
+
+    if (slot >= MAX_SLOTS) {
+        return;
+    }
+    changed = (gControllerCount[slot] > 0);
 
     undo_begin_midi_cc_edit(slot);
 

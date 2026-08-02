@@ -82,14 +82,6 @@ void close_param_pages_panel(void) {
 
 // ─── Knob -> parameter resolution ────────────────────────────────────────────
 
-typedef struct {
-    bool       assigned;
-    tModuleKey key;
-    uint32_t   paramIndex;
-    uint32_t   paramRef;
-    tModule *  module;
-} tKnobTarget;
-
 static uint32_t knob_index(uint32_t page, uint32_t bank, uint32_t pos) {
     return (((page * NUM_BANKS_PER_PAGE) + bank) * NUM_KNOBS_PER_BANK) + pos;
 }
@@ -117,14 +109,16 @@ static bool param_ref_for_index(tModule * module, uint32_t paramIndex, uint32_t 
     return false;
 }
 
-// Resolves one of the eight knob positions on the page currently being shown. Returns a target
-// with assigned == false for an empty position, and equally for an assignment that no longer
-// resolves - the module deleted since, or a param index the module type doesn't have.
-static tKnobTarget knob_target(uint32_t pos) {
+// Resolves one of the 120 knob assignments. See paramPages.h — public because the Parameter
+// Overview panel resolves all of them at once and must agree with this panel exactly.
+tKnobTarget param_pages_knob_target(bool showGlobal, uint32_t slot, uint32_t index) {
     tKnobTarget target = {0};
-    uint32_t    index  = knob_index(gParamPages.page, gParamPages.bank, pos);
 
-    if (gParamPages.showGlobal) {
+    if (index >= MAX_NUM_KNOBS) {
+        return target;
+    }
+
+    if (showGlobal) {
         const tGlobalKnob * knob = &gGlobalKnobArray[index];
 
         if (!knob->assigned) {
@@ -135,13 +129,13 @@ static tKnobTarget knob_target(uint32_t pos) {
         };
         target.paramIndex = knob->paramIndex;
     } else {
-        const tKnob * knob = &gKnobArray[gParamPages.slot].knob[index];
+        const tKnob * knob = &gKnobArray[slot].knob[index];
 
         if (!knob->assigned) {
             return target;
         }
         target.key        = (tModuleKey){
-            gParamPages.slot, knob->location, knob->moduleIndex
+            slot, knob->location, knob->moduleIndex
         };
         target.paramIndex = knob->paramIndex;
     }
@@ -160,6 +154,12 @@ static tKnobTarget knob_target(uint32_t pos) {
     }
     target.assigned = true;
     return target;
+}
+
+// The eight knob positions of the page currently being shown.
+static tKnobTarget knob_target(uint32_t pos) {
+    return param_pages_knob_target(gParamPages.showGlobal, gParamPages.slot,
+                                   knob_index(gParamPages.page, gParamPages.bank, pos));
 }
 
 static bool page_has_any_assignment(uint32_t page, uint32_t bank) {
@@ -196,11 +196,15 @@ static void fit_text(char * dst, size_t dstSize, const char * src, double maxWid
     }
 }
 
-static const char * module_display_name(const tModule * module) {
+const char * param_pages_module_display_name(const tModule * module) {
     if (module->name[0] != '\0') {
         return module->name;
     }
     return gModuleProperties[module->type].name;
+}
+
+static const char * module_display_name(const tModule * module) {
+    return param_pages_module_display_name(module);
 }
 
 // Total width draw_button() occupies for text of the given width, padding included.
@@ -210,7 +214,7 @@ static double button_width_for(double textWidth, double textHeight) {
 
 // The label render_param_common() will put on this param: a name the patch carries for it wins
 // over the paramLocationList one, which is the precedence that function itself applies.
-static const char * knob_param_label(const tKnobTarget * target) {
+const char * param_pages_knob_param_label(const tKnobTarget * target) {
     if (target->module->paramNameSet[target->paramIndex][0]) {
         return target->module->paramName[target->paramIndex][0];
     }
@@ -219,6 +223,10 @@ static const char * knob_param_label(const tKnobTarget * target) {
         return paramLocationList[target->paramRef].label;
     }
     return "";
+}
+
+static const char * knob_param_label(const tKnobTarget * target) {
+    return param_pages_knob_param_label(target);
 }
 
 // What one knob's widget needs horizontally.
