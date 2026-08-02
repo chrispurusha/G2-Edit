@@ -630,28 +630,33 @@ none of these exist in G2-Edit at all, confirmed by source search)
 - Scrollbars on the patch selectors (Load/Store/Delete/Restore bank-location pickers,
   bankBrowser.cpp) — currently no visible scrollbar for long lists.
 
-- Close button: move to the TOP LEFT and draw it as a cross (owner, 2026-08-02). Every panel and
-  popup puts its close control at the top RIGHT, which is backwards on macOS — the close control
-  belongs top left. Replace the current "Close" text button with a small square carrying a drawn
-  cross.
-  DRAW THE CROSS, DON'T TYPESET IT: it must be two rendered diagonal lines, not the character 'X'
-  in a button label. A glyph 'X' inherits the text metrics and hinting, so it sits wherever the
-  baseline puts it rather than centred in its box, and it won't scale with the button — this is
-  the specific thing the owner does not want. render_line() (utilsGraphics.h) already draws
-  arbitrary lines with a thickness, so a cross is two calls plus the box.
-  WHERE IT LIVES: draw_panel_close_button() (graphics.c) is the one implementation, used by the
-  synth-settings, patch-settings, perf-settings, patch-notes, Mutator and Parameter Pages panels —
-  changing it covers all six at once, and each caller just stores the returned rect, so no
-  hit-testing changes are needed. THREE SynthLib popups replicate the geometry by hand rather than
-  calling it, and must be changed to match or they'll be the odd ones out:
-  fileBrowser.cpp (close_button_rect(), line ~344), bankBrowser.cpp (~588) and alertDialog.c
-  (~547) — all three carry a comment saying they mirror draw_panel_close_button() exactly. Worth
-  taking the opportunity to give SynthLib the shared implementation those three should have been
-  calling all along, with G2-Edit's copy deferring to it.
-  WATCH FOR: the title text is drawn from the left of the title bar (draw_panel_chrome), so it
-  will need indenting past the new button. The Parameter Pages panel also puts its Slot A-D
-  buttons in the title bar, right-aligned against the old Close position — those can move right
-  once the corner is free.
+- Close button moved TOP LEFT and drawn as a cross — DONE 2026-08-02, needs an owner eyeball.
+  macOS puts the close control top left; every panel and popup had a "Close" text button top right.
+  Now a 14px square with a drawn cross (two render_line() diagonals, never the character 'X').
+  SHARED AT LAST: draw_panel_chrome() and draw_panel_close_button() moved out of graphics.c into
+  SynthLib (utilsGraphics.c), joined by panel_close_button_rect() for hit-testing outside the
+  render pass. The three popups that used to replicate the chrome by hand - alertDialog.c,
+  fileBrowser.cpp, bankBrowser.cpp, each with a comment admitting it mirrored G2-Edit's copy
+  pixel-for-pixel - now just call it, and their close_button_rect() is a one-line delegation.
+  The title text indents past the button, and the Slot A-D buttons in the Patch Settings and
+  Parameter Pages title bars moved right into the corner the old Close button had occupied.
+  THIS ONE DOES REACH THE OTHER TWO APPS, unlike the dial-anchoring change: SynthEdit and
+  EmuUtility both use alertDialog/fileBrowser/bankBrowser, so their popups get the new close
+  button too. All three build; only G2-Edit has been looked at on screen.
+  TRAP WORTH REMEMBERING: utilsGraphics.c compiles WITHOUT G2_EDIT defined, so inside it
+  RGB_BACKGROUND_GREY is synthlibDefs.h's other branch - 0.30, the same value as the RGB_GREY_3
+  title bar. The first cut used it for the button fill and drew a black cross, which made the
+  button vanish into the banner with an almost invisible mark on it. The colours are now derived
+  from RGB_GREY_3/RGB_GREY_7 (0.30/0.70 in BOTH branches) with contrasting_text_colour() picking
+  the stroke, so it is stable whichever app compiles the file. Any future SynthLib drawing code
+  should assume the non-G2_EDIT palette.
+  Line weights are split - PANEL_CLOSE_BOX_LINE 1.0 for the frame, PANEL_CLOSE_CROSS_LINE 1.5 for
+  the cross - because the frame's axis-aligned lines stay crisp while the diagonals antialias, and
+  equal numbers made the box dominate the mark. BORDER_LINE_WIDTH (2.0) is a slab at this size.
+  Fits inside both title bar heights in use (24 in G2-Edit's panels, 26 in the SynthLib popups);
+  the button spans y+6..y+20. No popup has content that high - fileBrowser's Up button is the
+  closest at y+30.
+  SynthLib is dirty again: commit and re-advance all three pins.
 
 
 ARCHITECTURE — RATIONALISE AND COMMONALISE FOR THE OTHER PROJECTS
