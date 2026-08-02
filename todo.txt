@@ -421,10 +421,52 @@ none of these exist in G2-Edit at all, confirmed by source search)
   page selector rather than this second one (see the page-tab unification note in the commonalise
   section) - the A1..E3 matrix is a grid rather than a tab row, so it may not fit.
 
-- Parameter Overview window (Ctrl-L) — floating window showing every Parameter Page's knob/button
-  assignments at once in one grid, with drag-and-drop to make/move/reorganize assignments directly
-  from the overview instead of one page at a time. Natural follow-on from Parameter Pages above,
-  and shares its widgets.
+- Parameter Overview window — BUILT 2026-08-02 (src/paramOverview.c / .h). All fifteen Parameter
+  Pages' assignments at once as a 15-row x 8-column grid, opened from Settings > Parameter Overview.
+  NO keyboard shortcut (the original's Ctrl-L), matching the owner's standing menu-only call for
+  this family of panels.
+  BOXES, NOT LIVE WIDGETS - unlike the Parameter Pages panel, which renders the canvas's own param
+  widgets. The original's overview is a grid of display boxes carrying names, and 120 live widgets
+  would be both unreadable at this density and a lot of per-frame work. A box shows the module name
+  on line 1 and the param name on line 2; View MIDI swaps line 2 for the parameter's CC# ("CC 34",
+  or "--" where it has none), which is exactly what that button does in the original.
+  SHARES ITS RESOLUTION WITH PARAMETER PAGES rather than reimplementing it: tKnobTarget and
+  param_pages_knob_target() / _module_display_name() / _knob_param_label() moved from private
+  statics in paramPages.c to paramPages.h, so the two panels can never disagree about what a knob
+  points at. param_ref_for_index()'s walk of paramLocationList is the tricky part and now has one
+  home.
+  DRAG A BOX ONTO ANOTHER BOX to move that assignment. It OVERWRITES the destination rather than
+  swapping, which is what the original does - a swap would silently resurrect an assignment the
+  user was deliberately replacing. The patch case sends ONE eMsgCmdWritePatch rather than the
+  deassign/deassign/assign triple the right-click Assign menu uses, since write_knobs() is already
+  part of push_slot_to_device() and a burst of small slot commands is exactly what loses edits to
+  the patch-version race (see the bulk MIDI CC entry above). Global knobs have no whole-perf push
+  to ride on - write_global_knobs() is only used when SAVING a performance file - so those still go
+  as individual commands.
+  ASSIGN MIDI / CLEAR MIDI sit on this panel too, as they do in the original. They act on the Slot
+  THIS panel is showing, which is why midi_cc_assign_all_knobs()/midi_cc_clear_all() now take an
+  explicit slot instead of reading gSlot. Both are hidden on the global pages: those knobs each
+  name their own Slot, so there is no single controller table for "assign every CC in this view" to
+  write.
+  VERIFIED LIVE 2026-08-02 against a real patch with assignments (owner's, on hardware): grid
+  layout and A1..E3 / 1..8 labelling, populated boxes resolving both default type+index module
+  names (LevConv1, Mix4-1S1) and custom ones (Cutoff Freq, Filter Overdrive), View MIDI showing
+  real CC numbers off the controller table, the Patch/Global toggle, and slot + bulk-MIDI buttons
+  correctly hidden on the global pages. The panel also re-lays itself out when a patch loads
+  underneath it, since cell width is sized to content.
+  STILL TO DO:
+   1. DRAG-TO-MOVE IS UNVERIFIED. Synthetic drags do not reach the app at all, and neither do
+      synthetic KEY events - key_callback() logged nothing for a cliclick Escape, so the panel's
+      Escape-to-close is untested too. Both need the owner at a real keyboard/mouse.
+   2. Assign MIDI / Clear MIDI on this panel were deliberately NOT clicked during verification: the
+      G2 was online and they would have written to real hardware. Same code as the Tools menu
+      entries, so they are only unverified in the sense that path is.
+   3. The original also drags a box OUT onto a module parameter in the patch window to CREATE an
+      assignment (and Alt-drags a module knob INTO the overview). Neither is possible while this is
+      a full-canvas modal overlay - the canvas is behind a dimming layer. Making assignments stays
+      on the canvas's right-click Assign menu. Would need the panel to become a genuine floating,
+      non-modal window first, which is a bigger change and would also serve the Patch Window Split
+      Bar and Virtual Keyboard items below.
 - Bulk MIDI CC tools (Tools menu) — "Assign MIDI" and "Clear MIDI" BUILT 2026-08-02 as Tools >
   Assign MIDI CC to Knobs / Clear All MIDI CC (menus.c, midi_cc_assign_all_knobs /
   midi_cc_clear_all). Numbering follows the manual (p.126): lowest free CC# to the first assigned
