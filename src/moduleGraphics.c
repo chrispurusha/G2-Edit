@@ -1579,10 +1579,13 @@ void render_module(tModule * module) {
     snprintf(buff, sizeof(buff), "%u", module->key.index);
     render_text(moduleArea, (tRectangle){{moduleRectangle.coord.x + moduleRectangle.size.w - 20.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
 
-    if (module->modeCount > 0) {
-        snprintf(buff, sizeof(buff), "Modes %u", module->modeCount);
-        render_text(moduleArea, (tRectangle){{moduleRectangle.coord.x + 250.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
-    }
+    // Mode count — debug only, and the one of these three that says nothing a user would want:
+    // the type name and the index both identify the module, this just counts its mode entries.
+    // Commented rather than deleted so it can go back for protocol work on modes.
+    //if (module->modeCount > 0) {
+    //    snprintf(buff, sizeof(buff), "Modes %u", module->modeCount);
+    //    render_text(moduleArea, (tRectangle){{moduleRectangle.coord.x + 250.0, moduleRectangle.coord.y + 5.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, buff);
+    //}
 }
 
 void render_modules(void) {
