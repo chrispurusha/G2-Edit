@@ -559,8 +559,10 @@ none of these exist in G2-Edit at all, confirmed by source search)
   mouse_button() → convert_to_mouse_button() maps GLFW_RELEASE to mouseButtonLeftUp →
   handle_virtual_keyboard_mouse() → set_sounding_note(-1) → send_note(note, false) — and a
   temporary LOG_DEBUG in send_note() then showed ON and OFF being sent in the right order at the
-  right times, which pinned it on the wire encoding rather than the plumbing. REMOVE THAT LOG LINE
-  once there is no further doubt.
+  right times, which pinned it on the wire encoding rather than the plumbing. That log line has
+  since been removed.
+  OWNER CONFIRMED 2026-08-02: the keyboard and all six of its buttons work on hardware — keys,
+  the four scroll buttons, Drone and Repeat.
   THE WIRE FORMAT IS REVERSE-ENGINEERED. SUB_COMMAND_PLAY_NOTE (0x56) was already
   in defs.h but had never been sent. CMPlayNote::WriteStream() in the Ghidra decompile is:
       CMIDIOutStream::Initialize(stream, 0x56, 0, 1);
@@ -576,13 +578,10 @@ none of these exist in G2-Edit at all, confirmed by source search)
   thing to doubt — the panel itself is ordinary drawing and hit-testing.
   Velocity is accepted by the caller but not sent; the reference writes two values only.
   STILL TO DO:
-   1. Drone and Repeat are built but unrun, and Repeat's 250ms rate is unverified against the
-      original.
-   2. Remove the temporary LOG_DEBUG in send_note() once note handling is settled.
-   3. The original expands its range by drag-resizing the window frame, and hides its button bar
+   1. Repeat's 250ms rate works but has never been compared against the original's, which exposes
+      no control over it either. VKB_REPEAT_MS is the constant if it should track the master clock.
+   2. The original expands its range by drag-resizing the window frame, and hides its button bar
       the same way. This panel has a fixed 37-key span and the scroll buttons instead.
-   4. The panel's own rendering has never been seen — the app has been in the owner's hands
-      throughout. Synthetic clicks would verify layout; only ears verify the notes.
 
 - WHILE DECODING PLAY NOTE, A QUESTION ABOUT send_deassign_midi_cc() TURNED UP. CMCtrlDeassign::
   WriteStream() (0x23) writes a 1-bit field of value 1 (vtable +0x44) followed by the CC number as
