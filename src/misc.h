@@ -60,6 +60,7 @@ void settings_menu_open_synth(void);
 void settings_menu_open_patch(void);
 void settings_menu_open_perf(void);
 void settings_menu_open_notes(void);
+void settings_menu_open_param_pages(void);
 
 // Backup menu actions
 void backup_menu_patch_bank(void);
