@@ -477,7 +477,15 @@ void render_top_bar(void) {
     }
 
     snprintf(buff, sizeof(buff), "%u BPM", gGlobalSettings.masterClock);
-    gTopbarControls[topbarTempoDialId].rectangle = render_dial_with_text(mainArea, (tRectangle){topbar_control_def(topbarTempoDialId)->coord, {20, 48}}, NULL, buff, STANDARD_BUTTON_TEXT_HEIGHT, gGlobalSettings.masterClock >= 30 ? gGlobalSettings.masterClock - 30 : 0, 211, 0, (tRgb)RGB_BACKGROUND_GREY);
+    {
+        // render_dial_with_text() is dial-anchored: the rect is the circle's bounding square and
+        // text grows upwards from it. The topbar entry's coord is still where the BPM string goes,
+        // so the dial itself sits one text row below that.
+        tCoord tempoCoord = topbar_control_def(topbarTempoDialId)->coord;
+
+        tempoCoord.y                                += STANDARD_BUTTON_TEXT_HEIGHT;
+        gTopbarControls[topbarTempoDialId].rectangle = render_dial_with_text(mainArea, (tRectangle){tempoCoord, {20, 20}}, NULL, buff, STANDARD_BUTTON_TEXT_HEIGHT, gGlobalSettings.masterClock >= 30 ? gGlobalSettings.masterClock - 30 : 0, 211, 0, (tRgb)RGB_BACKGROUND_GREY);
+    }
     {
         tRgb clockCol = gTopbarControls[topbarClockRunStopId].isPressed ? (tRgb)RGB_GREY_7 : (clockRunning ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
         gTopbarControls[topbarClockRunStopId].rectangle = draw_button(mainArea, (tRectangle){topbar_control_def(topbarClockRunStopId)->coord, {get_text_width("Stopped", STANDARD_BUTTON_TEXT_HEIGHT, eCache), STANDARD_BUTTON_TEXT_HEIGHT}}, (char *)(clockRunning ? "Running" : "Stopped"), clockCol);
@@ -1733,12 +1741,14 @@ static void render_patch_params_panel(void) {
     render_text(mainArea, (tRectangle){{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Vibrato");
     y                                += secH;
     x                                 = render_pp_row(boxX + margin, y, btnH, kPPVibrato, kPPVibratoCount);
-    dialH                             = rowH * 2.0;
+    // Dial-anchored: the rect is the circle, and its label and value are drawn in the two text
+    // rows above it - so the dial goes two rows below where the block used to start.
+    dialH                             = 20.0;
     snprintf(buf, sizeof(buf), "%u cnt", (unsigned)vibratoAmount);
-    gPatchParamRects[pPVibratoAmount] = render_dial_with_text(mainArea, (tRectangle){{x, y - 10.0}, {20.0, dialH}}, "Amount", buf, btnH, vibratoAmount, 100, 0, (tRgb)RGB_BACKGROUND_GREY);
+    gPatchParamRects[pPVibratoAmount] = render_dial_with_text(mainArea, (tRectangle){{x, (y - 10.0) + (btnH * 2.0)}, {20.0, dialH}}, "Amount", buf, btnH, vibratoAmount, 100, 0, (tRgb)RGB_BACKGROUND_GREY);
     x                                += get_text_width((char *)"100 cnt", btnH, eCache) + 8.0;
     snprintf(buf, sizeof(buf), "%.2f Hz", 4.0 + (vibratoRate / 127.0) * 4.0);
-    gPatchParamRects[pPVibratoRate]   = render_dial_with_text(mainArea, (tRectangle){{x, y - 10.0}, {20.0, dialH}}, "Rate", buf, btnH, vibratoRate, 127, 0, (tRgb)RGB_BACKGROUND_GREY);
+    gPatchParamRects[pPVibratoRate]   = render_dial_with_text(mainArea, (tRectangle){{x, (y - 10.0) + (btnH * 2.0)}, {20.0, dialH}}, "Rate", buf, btnH, vibratoRate, 127, 0, (tRgb)RGB_BACKGROUND_GREY);
     y                                += rowH;
 
     // ── Glide ──────────────────────────────────────────────────────
@@ -1746,7 +1756,7 @@ static void render_patch_params_panel(void) {
     render_text(mainArea, (tRectangle){{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Glide");
     y                                += secH;
     x                                 = render_pp_row(boxX + margin, y, btnH, kPPGlide, kPPGlideCount);
-    gPatchParamRects[pPGlideTime]     = render_dial_with_text(mainArea, (tRectangle){{x, y - 10.0}, {20.0, dialH}}, "Time", get_glide_time_str(glideTime), btnH, glideTime, 127, 0, (tRgb)RGB_BACKGROUND_GREY);
+    gPatchParamRects[pPGlideTime]     = render_dial_with_text(mainArea, (tRectangle){{x, (y - 10.0) + (btnH * 2.0)}, {20.0, dialH}}, "Time", get_glide_time_str(glideTime), btnH, glideTime, 127, 0, (tRgb)RGB_BACKGROUND_GREY);
     y                                += rowH;
 
     // ── Bend ───────────────────────────────────────────────────────
@@ -1806,22 +1816,25 @@ static void render_perf_settings_panel(void) {
     y                            += secH;
 
     {
-        double dialH = 48.0;
-        double x     = boxX + margin;
+        // blockH is the whole BPM readout + dial, which the Running button centres against and
+        // the row advance uses. The dial itself is one text row down from the top of that, since
+        // render_dial_with_text() is dial-anchored and draws the BPM string above it.
+        double blockH = 48.0;
+        double x      = boxX + margin;
         snprintf(buf, sizeof(buf), "%u BPM", (unsigned)gGlobalSettings.masterClock);
-        gPerfSettingsPanelRects.masterClock        = render_dial_with_text(mainArea, (tRectangle){{x, y}, {20.0, dialH}}, NULL, buf, STANDARD_BUTTON_TEXT_HEIGHT, gGlobalSettings.masterClock >= 30 ? gGlobalSettings.masterClock - 30 : 0, 211, 0, (tRgb)RGB_BACKGROUND_GREY);
+        gPerfSettingsPanelRects.masterClock        = render_dial_with_text(mainArea, (tRectangle){{x, y + STANDARD_BUTTON_TEXT_HEIGHT}, {20.0, 20.0}}, NULL, buf, STANDARD_BUTTON_TEXT_HEIGHT, gGlobalSettings.masterClock >= 30 ? gGlobalSettings.masterClock - 30 : 0, 211, 0, (tRgb)RGB_BACKGROUND_GREY);
         x                                         += 20.0 + 12.0;
         gPerfSettingsPanelRects.masterClockRunning = draw_button(mainArea,
-                                                                 (tRectangle){{x, y + (dialH - btnH) / 2.0}, {get_text_width((char *)"Stopped", btnH, eCache) + 8.0, btnH}},
+                                                                 (tRectangle){{x, y + (blockH - btnH) / 2.0}, {get_text_width((char *)"Stopped", btnH, eCache) + 8.0, btnH}},
                                                                  gGlobalSettings.masterClockRunning ? "Running" : "Stopped",
                                                                  gGlobalSettings.masterClockRunning ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
-        y                                         += dialH + 4.0;
+        y                                         += blockH + 4.0;
     }
 
     // ── Slots ──────────────────────────────────────────────────────
     set_rgb_colour((tRgb)RGB_GREY_7);
     render_text(mainArea, (tRectangle){{boxX + margin, y}, {BLANK_SIZE, btnH}}, "Slots");
-    y                            += secH;
+    y      += secH;
 
     double labelColW = get_text_width((char *)"Slot X:", btnH, eCache) + 8.0;
     double dropW     = get_text_width((char *)"On", btnH, eCache) + 16.0;
@@ -1833,9 +1846,9 @@ static void render_perf_settings_panel(void) {
     double colHi     = colLo + noteDropW + 8.0;
     double colRng    = colHi + noteDropW + 12.0;
 
-    colX[0]                       = colEn;
-    colX[1]                       = colKbd;
-    colX[2]                       = colHld;
+    colX[0] = colEn;
+    colX[1] = colKbd;
+    colX[2] = colHld;
 
     // Column headers
     set_rgb_colour((tRgb)RGB_BLACK);
@@ -1855,7 +1868,7 @@ static void render_perf_settings_panel(void) {
                                                             gPerfSettings.keyboardRange ? "On" : "Off",
                                                             gPerfSettings.keyboardRange ? (tRgb)RGB_GREEN_ON : (tRgb)RGB_BACKGROUND_GREY);
     }
-    y                            += rowH;
+    y      += rowH;
 
     // Slot rows A–D
     static const char * slotLabel[] = {"Slot A:", "Slot B:", "Slot C:", "Slot D:"};
@@ -2304,6 +2317,12 @@ static void render_frame(void) {
 //   SLOT <0-3|A-D>    — select the slot the canvas renders
 //   DUMP              — current slot + every module: type, name, location, col/row
 //   SCREENSHOT <path> — synchronous render_frame() then glReadPixels + PNG
+//   SCROLL <x> <y>    — scroll the canvas, each 0.0-1.0 of that axis's full travel
+//   ZOOM <factor>     — canvas zoom, same 0.25-2.0 range Cmd +/- walks through
+//
+// SCROLL and ZOOM exist because a synthetic drag doesn't reach the app at all — neither the
+// scrollbar thumb nor a dial responds to one — so without them a scripted check can only ever see
+// the modules that happen to be on screen at the default zoom.
 static bool backdoor_enabled(void) {
     static int cached = -1;
 
@@ -2502,6 +2521,31 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
 
         backdoor_dump_state(dump, sizeof(dump));
         backdoor_write_result(dump);
+    } else if (strcmp(cmd, "SCROLL") == 0) {
+        double xFraction = 0.0;
+        double yFraction = 0.0;
+
+        if (sscanf(arg, "%lf %lf", &xFraction, &yFraction) != 2) {
+            backdoor_write_result("ERROR: expected 'SCROLL <x 0.0-1.0> <y 0.0-1.0>'\n");
+            return;
+        }
+        // set_[xy]_scroll_bar() take a position along the scrollbar track in logical pixels;
+        // clamp_scroll_bar() inside them pins anything past the end, so scaling the fraction by
+        // the render size is enough to reach either extreme.
+        set_x_scroll_bar(xFraction * (get_render_width() / gGlobalGuiScale));
+        set_y_scroll_bar(yFraction * (get_render_height() / gGlobalGuiScale));
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "ZOOM") == 0) {
+        double zoom = 0.0;
+
+        if (sscanf(arg, "%lf", &zoom) != 1) {
+            backdoor_write_result("ERROR: expected 'ZOOM <0.25-2.0>'\n");
+            return;
+        }
+        set_zoom_factor(zoom, (tCoord){0.0, 0.0});
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "SCREENSHOT") == 0) {
         if (arg[0] == '\0') {
             backdoor_write_result("ERROR: expected 'SCREENSHOT <path>'\n");

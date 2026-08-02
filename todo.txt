@@ -7,6 +7,44 @@ are collected under "DO NOT RE-TRY" at the end of this file.
 
 AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless the check fails)
 
+- render_dial_with_text() IS NOW DIAL-ANCHORED (2026-08-02) — SynthLib 17c1ee4, committed and
+  pushed by the owner; ALL THREE PINS STILL NEED ADVANCING (all three worktrees are already at
+  17c1ee4, only the recorded gitlinks are behind at 91a7a9f). The rect handed to it is now the
+  dial circle's bounding square,
+  and the value and label are drawn in the two rows ABOVE it, growing upwards. It used to take the
+  top-left of the whole label+value+dial block and work downwards, which made the dial's position
+  depend on how many of the two strings were non-NULL: a dial with no label rode a row higher than
+  its neighbours, and the only remedy was to write "" instead of NULL in moduleResources.h so the
+  row was reserved but blank. NULL and "" are now equivalent - neither can move the dial.
+  COMPENSATION, so the canvas didn't jump: all 378 dial entries in paramLocationList had their rect
+  height 14 -> 7 (it is the dial, not the block), and the 23 top-anchored ones y += 7. The table's
+  units are uniform - scale_from_percent() is val * MODULE_WIDTH / 100 with MODULE_WIDTH a constant
+  350, so one unit is 3.5px in every module, x and y alike - which is what let this be a scripted
+  edit in whole percent units rather than per-module hand-tuning. Values stay integers.
+  NET EFFECT: every dial moved DOWN 0.5px (uniform, so relative alignment is untouched), except the
+  16 params that previously had no label row, which moved down 12.5px INTO line with their
+  neighbours. Those 16 are LfoA/LfoC/LfoShpA Rate, Mix8to1B In1-In8, EnvH Hold, Constant Value,
+  FltVoice Vowel, LevAmp Gain and EnvADR Release.
+  Also converted, since they place dials by hand rather than through the table: the topbar tempo
+  dial, the perf-settings master clock, the patch-settings Vibrato Amount / Vibrato Rate / Glide
+  Time, the three Mutator dials, the morph-group dials, and render_mode_common()'s OscWave branch
+  (unexercised - no modeLocationList entry is an OscWave today).
+  VERIFIED: a pixel diff of the whole canvas before/after on ioosc.pch2 shows the dial regions are
+  the old ones shifted by exactly one device pixel (99.89% identical at +1px on a 2x display) and
+  nothing else moved; and all 9 module types holding those 16 params were eyeballed across
+  EnvFx/DelayLevel/RndFilter/LogicMidi/SwitchSeqNote and now line up.
+  STILL TO DO: advance the pin in G2-Edit AND SynthEdit AND EmuUtility (git add SynthLib + commit
+  in each). All three build clean against 17c1ee4. The other two are unaffected by construction,
+  not merely compiling: render_dial_with_text is the only function the commit touches and neither
+  calls it - SynthEdit draws its dials with render_dial() plus its own text (synthGraphics.c:1312)
+  and EmuUtility has its own render_dial_knob() (emuGraphics.c:140).
+
+- Backdoor SCROLL and ZOOM commands (2026-08-02, graphics.c) — SCROLL <x> <y> as 0.0-1.0 fractions
+  and ZOOM <0.25-2.0>. Added because a synthetic drag doesn't reach the app AT ALL - neither a
+  scrollbar thumb nor a dial responds to one - so a scripted check could otherwise only ever see
+  whatever modules happened to be on screen at the default zoom. This is what makes the "fuller
+  systematic sweep of the remaining ~190 module types" item below actually cheap.
+
 - SynthLib alertDialog — TWO CHANGES, NOT YET COMMITTED IN THE SUBMODULE AND NO PIN BUMPED. Both
   were needed by the offline-edits dialog but affect every SynthLib app:
     (1) show_choice() — up to three mutually-exclusive buttons on one row, callback takes the index

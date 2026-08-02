@@ -703,10 +703,19 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
     switch (modeLocationList[modeRef].type) {
         case paramTypeOscWave:
         {
-            char buff[16] = {0};
+            char       buff[16]     = {0};
 
             snprintf(buff, sizeof(buff), "%u", module->mode[0].value);
-            module->mode[modeIndex].rectangle                                                   = render_dial_with_text(moduleArea, rectangle, (char *)modeLocationList[modeRef].label, buff, rectangle.size.h / 4.0, module->mode[0].value, modeLocationList[modeRef].range, 0, (tRgb)RGB_GREY_5); // TODO: Check if Mode can be morphed
+            // render_dial_with_text() is dial-anchored and draws its text upwards, so shift the
+            // rect down by the rows this mode will use to keep the block where it was. No entry
+            // in modeLocationList is currently an OscWave, so this path is unexercised - it is
+            // converted for correctness rather than because anything renders through it today.
+            double     modeLabelH   = rectangle.size.h / 4.0;
+            tRectangle modeDialRect = rectangle;
+
+            modeDialRect.coord.y                                                               += (modeLocationList[modeRef].label != NULL) ? (modeLabelH * 2.0) : modeLabelH;
+            modeDialRect.size.h                                                                 = modeDialRect.size.w;
+            module->mode[modeIndex].rectangle                                                   = render_dial_with_text(moduleArea, modeDialRect, (char *)modeLocationList[modeRef].label, buff, modeLabelH, module->mode[0].value, modeLocationList[modeRef].range, 0, (tRgb)RGB_GREY_5); // TODO: Check if Mode can be morphed
             sModeClickCtx[module->key.slot][module->key.location][module->key.index][modeIndex] = (tModeClickCtx){
                 module->key, modeIndex
             };
@@ -1918,7 +1927,10 @@ void render_morph_groups(void) {
             } else {
                 dialColour = (tRgb)RGB_GREY_3;
             }
-            gParamRectangle[module->key.slot][module->key.location][module->key.index][i]              = render_dial_with_text(mainArea, (tRectangle){{rectangle.coord.x, rectangle.coord.y + 16}, {rectangle.size.w, rectangle.size.h}}, NULL, dialValueStr, rectangle.size.h / 4.0, module->param[variation][i].value, 128, module->param[variation][i].morphRange[gMorphGroupFocus], dialColour);
+            // + textHeight on top of the existing + 16 because render_dial_with_text() is
+            // dial-anchored: the rect is now the circle and the value string is drawn in the row
+            // above it, where it previously started at the rect's own y.
+            gParamRectangle[module->key.slot][module->key.location][module->key.index][i]              = render_dial_with_text(mainArea, (tRectangle){{rectangle.coord.x, rectangle.coord.y + 16 + textHeight}, {rectangle.size.w, rectangle.size.w}}, NULL, dialValueStr, textHeight, module->param[variation][i].value, 128, module->param[variation][i].morphRange[gMorphGroupFocus], dialColour);
             register_click_region(gParamRectangle[module->key.slot][module->key.location][module->key.index][i],
                                   eClickLayerPanel, morph_param_click_handler, (void *)(intptr_t)i);
 
