@@ -64,6 +64,23 @@ extern "C" {
 
 #define OUT_PARAM_ACTIVE         (1)   // 2toOut's Bypass, non-zero is on
 
+// OscShpB lays its parameters out differently from OscB — Active is 8, not 9, and the waveform is
+// at 10 with eight choices rather than at 8 with five.
+#define SHPB_PARAM_TUNE          (0)
+#define SHPB_PARAM_CENT          (1)
+#define SHPB_PARAM_KBT           (2)
+#define SHPB_PARAM_PITCH_TYPE    (4)
+#define SHPB_PARAM_SHAPE         (6)
+#define SHPB_PARAM_ACTIVE        (8)
+#define SHPB_PARAM_WAVEFORM      (10)
+
+// Mix4to1C: one level per input, then a pad and a curve.
+#define MIX_PARAM_LEVEL_BASE     (0)
+#define MIX_PARAM_CURVE          (9)   // 0 = linear taper, otherwise exponential
+
+// A node takes at most this many inputs — four, which is what the 4-into-1 mixers need.
+#define MAX_NODE_INPUTS          (4)
+
 // Which connector carries the signal into each module. Everything the walk follows is a module's
 // FIRST input; LevMult and 2toOut take a second as well.
 #define CONNECTOR_IN_A          (0)
@@ -108,38 +125,49 @@ typedef enum {
 #define MAX_ENGINE_NODES    (12)
 
 typedef enum {
-    eNodeOsc = 0,
+    eNodeOsc = 0,        // OscB
+    eNodeOscShp,         // OscShpB — a different parameter layout and waveform set
     eNodeFilter,
     eNodeLevAmp,
     eNodeLevMult,
-    eNodeEnv,
+    eNodeMix,            // Mix4to1C
+    eNodeEnv,            // envelope, and a VCA for whatever is patched into its audio input
+    eNodePassThru,       // an effect that is not modelled yet: passes its input along unchanged
     eNodeOut,
 } tNodeKind;
 
 typedef struct {
     tNodeKind kind;
     uint32_t  moduleIndex;   // so per-node audio state can survive a knob turn (see topology_signature)
-    int32_t   inA;           // node index feeding the primary input, -1 for nothing
-    int32_t   inB;           // second input: LevMult's other leg, 2toOut's right channel
-    bool      active;        // the module's own power button
 
-    tOscWave  wave;          // oscillator
-    bool      oscKbt;
-    double    basePitch;
-    double    shape;
+    // What feeds each input: the node index, and WHICH of that node's outputs the cable came from.
+    // The output matters because a module can offer more than one — an EnvADSR's first output is the
+    // envelope itself and its second is the audio it has shaped, and a cable to one means something
+    // quite different from a cable to the other.
+    int32_t  in[MAX_NODE_INPUTS];
+    uint32_t srcOut[MAX_NODE_INPUTS];
+    uint32_t inCount;
+    bool     active;                 // the module's own power button
 
-    double    cutoffHz;      // filter
-    double    resonance;
-    uint32_t  extraPoles;
-    double    fltKbt;
-    double    modAmount;     // how far the Env input moves the cutoff, 0..2 (the dial's 0..200%)
+    double   level[MAX_NODE_INPUTS]; // mixer channel levels
 
-    double    attack;        // envelope, in seconds
-    double    decay;
-    double    sustain;       // 0..1
-    double    release;
+    tOscWave wave;                   // oscillator
+    bool     oscKbt;
+    double   basePitch;
+    double   shape;
 
-    double    gain;          // LevAmp
+    double   cutoffHz;       // filter
+    double   resonance;
+    uint32_t extraPoles;
+    double   fltKbt;
+    double   modAmount;      // how far the Env input moves the cutoff, 0..2 (the dial's 0..200%)
+
+    double   attack;         // envelope, in seconds
+    double   decay;
+    double   sustain;        // 0..1
+    double   release;
+
+    double   gain;           // LevAmp
 } tEngineNode;
 
 typedef struct {
@@ -323,7 +351,11 @@ const char * sound_engine_debug_text(void) {
     static char  text[1024];
     size_t       used       = 0;
     uint32_t     i          = 0;
-    const char * kindName[] = {"Osc", "Filter", "LevAmp", "LevMult", "Env", "Out"};
+    // One entry per tNodeKind, in enum order. Kept in step with it — a short array here is read off
+    // the end by the kindName[n->kind] below, which is a stack overflow rather than a wrong label.
+    const char * kindName[] = {
+        "Osc", "OscShp", "Filter", "LevAmp", "LevMult", "Mix", "Env", "PassThru", "Out"
+    };
 
     used += (size_t)snprintf(text + used, sizeof(text) - used,
                              "active=%d status=%d nodes=%u tap=%d variation=%u peak=%.3f\n",
@@ -335,12 +367,16 @@ const char * sound_engine_debug_text(void) {
         const tEngineNode * n = &gParams.node[i];
 
         used += (size_t)snprintf(text + used, sizeof(text) - used,
-                                 "[%u] %-7s mod=%u inA=%d inB=%d active=%d "
+                                 "[%u] %-8s mod=%u in=%d/%d/%d/%d src=%u/%u/%u/%u active=%d "
                                  "wave=%d kbt=%d pitch=%.2f shape=%.2f "
                                  "cut=%.1f res=%.2f poles=%u env=%.2f "
                                  "a=%.3f d=%.3f s=%.2f r=%.3f gain=%.2f\n",
-                                 (unsigned)i, kindName[n->kind], (unsigned)n->moduleIndex,
-                                 (int)n->inA, (int)n->inB, (int)n->active,
+                                 (unsigned)i,
+                                 (n->kind < (sizeof(kindName) / sizeof(kindName[0]))) ? kindName[n->kind] : "?",
+                                 (unsigned)n->moduleIndex,
+                                 (int)n->in[0], (int)n->in[1], (int)n->in[2], (int)n->in[3],
+                                 (unsigned)n->srcOut[0], (unsigned)n->srcOut[1],
+                                 (unsigned)n->srcOut[2], (unsigned)n->srcOut[3], (int)n->active,
                                  (int)n->wave, (int)n->oscKbt, n->basePitch, n->shape,
                                  n->cutoffHz, n->resonance, (unsigned)n->extraPoles, n->modAmount,
                                  n->attack, n->decay, n->sustain, n->release, n->gain);
@@ -390,6 +426,26 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
             *kind = eNodeEnv;
             return true;
         }
+        case moduleTypeOscShpB:
+        {
+            *kind = eNodeOscShp;
+            return true;
+        }
+        case moduleTypeMix4to1C:
+        case moduleTypeMix4to1S:
+        {
+            *kind = eNodeMix;
+            return true;
+        }
+        // Not modelled, but they sit in the signal path of real patches and stopping the chain at
+        // them would mean hearing nothing at all. Passing the audio through unchanged loses their
+        // character but keeps everything downstream audible.
+        case moduleTypeStChorus:
+        case moduleTypeCompress:
+        {
+            *kind = eNodePassThru;
+            return true;
+        }
         case moduleType2toOut:
         case moduleType4toOut:
         {
@@ -403,12 +459,59 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
     }
 }
 
+// Which connectors each kind draws its signal from, in the order the node stores them.
+static uint32_t input_connectors(tNodeKind kind, const uint32_t ** connectors) {
+    static const uint32_t oneIn[]    = {CONNECTOR_IN_A};
+    static const uint32_t twoIn[]    = {CONNECTOR_IN_A, CONNECTOR_IN_B};
+    static const uint32_t filterIn[] = {CONNECTOR_IN_A, FLT_CONNECTOR_ENV_IN};
+    static const uint32_t mixIn[]    = {0, 1, 2, 3};
+    static const uint32_t envIn[]    = {0};   // connector 0 is the audio the envelope shapes
+    static const uint32_t none[]     = {0};
+
+    switch (kind) {
+        case eNodeFilter:
+        {
+            *connectors = filterIn;
+            return 2;
+        }
+        case eNodeLevMult:
+        case eNodeOut:
+        {
+            *connectors = twoIn;
+            return 2;
+        }
+        case eNodeMix:
+        {
+            *connectors = mixIn;
+            return 4;
+        }
+        case eNodeEnv:
+        {
+            *connectors = envIn;
+            return 1;
+        }
+        case eNodeLevAmp:
+        case eNodePassThru:
+        {
+            *connectors = oneIn;
+            return 1;
+        }
+        default:
+        {
+            *connectors = none;
+            return 0;
+        }
+    }
+}
+
 // The module feeding a given input connector, or NULL. cable_chain_find_root() does the walking —
 // it follows a chain back to the output that sources it, including through the input-to-input links
 // the G2 uses for serial chains, and returns false if the chain never reaches a real output.
-static tModule * module_feeding(tModule * sink, uint32_t connectorIndex) {
+static tModule * module_feeding(tModule * sink, uint32_t connectorIndex, uint32_t * sourceOutput) {
     tCableNode inputNode = {0};
     tCableNode root      = {0};
+
+    *sourceOutput = 0;
 
     if (cable_chain_node_from_connector(sink, connectorIndex, &inputNode) == false) {
         return NULL;
@@ -417,6 +520,7 @@ static tModule * module_feeding(tModule * sink, uint32_t connectorIndex) {
     if (cable_chain_find_root(sink->key.slot, sink->key.location, inputNode, &root) == false) {
         return NULL;    // nothing plugged in, or a chain with no source at the far end
     }
+    *sourceOutput = root.ioCount;
     return get_module_slot(sink->key.slot, sink->key.location, root.moduleIndex);
 }
 
@@ -427,11 +531,12 @@ static tModule * module_feeding(tModule * sink, uint32_t connectorIndex) {
 // `depth` bounds the recursion. G2 patches are allowed to contain feedback loops, so without it a
 // cycle would recurse until the stack ran out.
 static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t variation, uint32_t depth) {
-    tNodeKind     kind = eNodeOsc;
-    tEngineNode * node = NULL;
-    int32_t       inA  = -1;
-    int32_t       inB  = -1;
-    int32_t       self = 0;
+    tNodeKind     kind                            = eNodeOsc;
+    tEngineNode * node                            = NULL;
+    int32_t       self                            = 0;
+    int32_t       resolvedIn[MAX_NODE_INPUTS]     = {-1, -1, -1, -1};
+    uint32_t      resolvedSrcOut[MAX_NODE_INPUTS] = {0};
+    uint32_t      inCount                         = 0;
 
     if ((module == NULL) || (depth >= MAX_ENGINE_NODES) || (params->nodeCount >= MAX_ENGINE_NODES)) {
         return -1;
@@ -454,16 +559,20 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
     }
 
     // Inputs first, so they land at lower node indices than this one.
-    if ((kind == eNodeFilter) || (kind == eNodeLevAmp) || (kind == eNodeLevMult) || (kind == eNodeOut)) {
-        inA = add_node(params, module_feeding(module, CONNECTOR_IN_A), variation, depth + 1);
-    }
+    {
+        const uint32_t * connectors = NULL;
+        uint32_t         count      = input_connectors(kind, &connectors);
+        uint32_t         c          = 0;
 
-    if ((kind == eNodeLevMult) || (kind == eNodeOut)) {
-        inB = add_node(params, module_feeding(module, CONNECTOR_IN_B), variation, depth + 1);
-    } else if (kind == eNodeFilter) {
-        // A filter's second input is its Env control input rather than a second audio leg, so an
-        // envelope patched there sweeps the cutoff — the usual way to make a filter move.
-        inB = add_node(params, module_feeding(module, FLT_CONNECTOR_ENV_IN), variation, depth + 1);
+        for (c = 0; c < count; c++) {
+            uint32_t  sourceOutput = 0;
+            tModule * source       = module_feeding(module, connectors[c], &sourceOutput);
+
+            resolvedIn[c]     = add_node(params, source, variation, depth + 1);
+            resolvedSrcOut[c] = sourceOutput;
+        }
+
+        inCount = count;
     }
 
     if (params->nodeCount >= MAX_ENGINE_NODES) {
@@ -474,11 +583,52 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
     memset(node, 0, sizeof(*node));
     node->kind        = kind;
     node->moduleIndex = module->key.index;
-    node->inA         = inA;
-    node->inB         = inB;
+    node->inCount     = inCount;
     node->active      = true;
 
+    {
+        uint32_t c = 0;
+
+        for (c = 0; c < MAX_NODE_INPUTS; c++) {
+            node->in[c]     = (c < inCount) ? resolvedIn[c] : -1;
+            node->srcOut[c] = (c < inCount) ? resolvedSrcOut[c] : 0;
+        }
+    }
+
     switch (kind) {
+        case eNodeOscShp:
+        {
+            // The shape oscillators offer eight waveforms. Four of them are sine variants of rising
+            // brightness and the rest are shaped saws and pulses; they are mapped onto the waveforms
+            // this engine has, which is an approximation — Sine2..4 in particular are brighter than a
+            // plain sine and here they are not.
+            static const tOscWave shpWave[] = {
+                eOscWaveSine,     eOscWaveSine, eOscWaveSine,   eOscWaveSine,
+                eOscWaveTriangle, eOscWaveSaw,  eOscWaveSquare, eOscWaveSquare
+            };
+            uint32_t              w         = module->param[variation][SHPB_PARAM_WAVEFORM].value;
+
+            node->wave      = shpWave[(w < 8) ? w : 0];
+            node->oscKbt    = (module->param[variation][SHPB_PARAM_KBT].value != 0);
+            node->basePitch = (double)module->param[variation][SHPB_PARAM_TUNE].value
+                              + (osc_fine_cents((double)module->param[variation][SHPB_PARAM_CENT].value) / 100.0);
+            node->shape     = osc_shape_percent((double)module->param[variation][SHPB_PARAM_SHAPE].value) / 100.0;
+            node->active    = (module->param[variation][SHPB_PARAM_ACTIVE].value != 0);
+            break;
+        }
+        case eNodeMix:
+        {
+            uint32_t c   = 0;
+            bool     exp = (module->param[variation][MIX_PARAM_CURVE].value != 0);
+
+            for (c = 0; c < MAX_NODE_INPUTS; c++) {
+                double knob = (double)module->param[variation][MIX_PARAM_LEVEL_BASE + c].value / 127.0;
+
+                node->level[c] = exp ? (knob * knob) : knob;
+            }
+
+            break;
+        }
         case eNodeOsc:
         {
             double tune      = (double)module->param[variation][OSCB_PARAM_TUNE].value;
@@ -543,7 +693,7 @@ static bool chain_has_source(const tSoundEngineParams * params) {
     uint32_t i = 0;
 
     for (i = 0; i < params->nodeCount; i++) {
-        if (params->node[i].kind == eNodeOsc) {
+        if ((params->node[i].kind == eNodeOsc) || (params->node[i].kind == eNodeOscShp)) {
             return true;
         }
     }
@@ -557,7 +707,8 @@ static bool chain_is_bypassed(const tSoundEngineParams * params) {
     uint32_t i = 0;
 
     for (i = 0; i < params->nodeCount; i++) {
-        if ((params->node[i].kind == eNodeOsc) && (params->node[i].active == true)) {
+        if (  ((params->node[i].kind == eNodeOsc) || (params->node[i].kind == eNodeOscShp))
+           && (params->node[i].active == true)) {
             return false;
         }
     }
@@ -575,8 +726,10 @@ static uint64_t topology_signature(const tSoundEngineParams * params) {
         sig = (sig * 1099511628211ull)
               ^ ((uint64_t)params->node[i].kind << 40)
               ^ ((uint64_t)params->node[i].moduleIndex << 20)
-              ^ ((uint64_t)(uint32_t)(params->node[i].inA + 1) << 10)
-              ^ ((uint64_t)(uint32_t)(params->node[i].inB + 1));
+              ^ ((uint64_t)(uint32_t)(params->node[i].in[0] + 1) << 10)
+              ^ ((uint64_t)(uint32_t)(params->node[i].in[1] + 1))
+              ^ ((uint64_t)(uint32_t)(params->node[i].in[2] + 1) << 30)
+              ^ ((uint64_t)(uint32_t)(params->node[i].in[3] + 1) << 50);
     }
 
     return sig;
@@ -841,6 +994,16 @@ static double envelope_step(uint32_t node, const tEngineNode * spec, bool gate) 
     return level;
 }
 
+// The signal arriving at one of a node's inputs: whichever output of whichever node feeds it.
+static double signal_in(const tEngineNode * spec, double value[][2], uint32_t input) {
+    int32_t source = spec->in[input];
+
+    if ((input >= spec->inCount) || (source < 0)) {
+        return 0.0;
+    }
+    return value[source][(spec->srcOut[input] > 0) ? 1 : 0];
+}
+
 static double oscillator_step(uint32_t node, const tEngineNode * spec, int32_t voiceNote) {
     double pitch     = spec->basePitch;
     double frequency = 0.0;
@@ -995,7 +1158,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
     }
 
     for (frame = 0; frame < frameCount; frame++) {
-        double value[MAX_ENGINE_NODES];
+        double value[MAX_ENGINE_NODES][2];
         double sample       = 0.0;
         double rampTarget   = ((gGateOpen == true) && (params.tap >= 0)) ? 1.0 : 0.0;
         double envelopeStep = 1.0 / (ENVELOPE_SECONDS * gSampleRate);
@@ -1015,55 +1178,82 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
         }
 
         // One forward pass. add_node() built the list depth first, so every node's inputs sit at
-        // lower indices and are already evaluated by the time it is reached.
+        // lower indices and are already evaluated by the time it is reached. Each node publishes two
+        // outputs because some modules have two that mean different things — see tEngineNode.
         for (n = 0; n < params.nodeCount; n++) {
             const tEngineNode * spec = &params.node[n];
-            double              a    = (spec->inA >= 0) ? value[spec->inA] : 0.0;
-            double              b    = (spec->inB >= 0) ? value[spec->inB] : 0.0;
+            double              a    = signal_in(spec, value, 0);
+
+            value[n][0] = 0.0;
+            value[n][1] = 0.0;
 
             switch (spec->kind) {
                 case eNodeOsc:
+                case eNodeOscShp:
                 {
-                    value[n] = (spec->active == true) ? oscillator_step(n, spec, gVoiceNote) : 0.0;
+                    value[n][0] = (spec->active == true) ? oscillator_step(n, spec, gVoiceNote) : 0.0;
                     break;
                 }
                 case eNodeFilter:
                 {
-                    value[n] = filter_step(n, spec, a, b, gVoiceNote);
+                    value[n][0] = filter_step(n, spec, a, signal_in(spec, value, 1), gVoiceNote);
                     break;
                 }
                 case eNodeEnv:
                 {
-                    value[n] = envelope_step(n, spec, gGateOpen);
+                    double env = envelope_step(n, spec, gGateOpen);
+
+                    // Output 0 is the envelope itself, for patching at a modulation input. Output 1
+                    // is whatever audio is patched into the module, shaped by that envelope — the
+                    // G2's envelopes carry their own VCA, and this patch uses it as the amp.
+                    value[n][0] = env;
+                    value[n][1] = a * env;
                     break;
                 }
                 case eNodeLevAmp:
                 {
-                    value[n] = a * spec->gain;
+                    value[n][0] = a * spec->gain;
                     break;
                 }
                 case eNodeLevMult:
                 {
-                    value[n] = a * b;
+                    value[n][0] = a * signal_in(spec, value, 1);
+                    break;
+                }
+                case eNodeMix:
+                {
+                    uint32_t c = 0;
+
+                    for (c = 0; c < spec->inCount; c++) {
+                        value[n][0] += signal_in(spec, value, c) * spec->level[c];
+                    }
+
+                    break;
+                }
+                case eNodePassThru:
+                {
+                    value[n][0] = a;
+                    value[n][1] = a;   // stereo pairs feed both legs from the one signal
                     break;
                 }
                 case eNodeOut:
                 {
                     // Sums its inputs — the two legs are the left and right channels, and the engine
                     // is mono to the speakers for now.
-                    value[n] = (spec->active == true) ? (a + b) : 0.0;
+                    value[n][0] = (spec->active == true) ? (a + signal_in(spec, value, 1)) : 0.0;
                     break;
                 }
                 default:
                 {
-                    value[n] = 0.0;
                     break;
                 }
             }
         }
 
         if (params.tap >= 0) {
-            sample = value[params.tap];
+            // Tapping a module means listening to its main output; for an envelope used as an amp
+            // that is its shaped audio rather than the envelope signal.
+            sample = value[params.tap][(params.node[params.tap].kind == eNodeEnv) ? 1 : 0];
         }
         // With an envelope module shaping the note, the fixed ramp would only double up on it; it is
         // still applied when the chain has none.
