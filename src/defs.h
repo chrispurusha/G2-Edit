@@ -27,6 +27,12 @@
 // SynthLib's own source files get it too, without needing to include this
 // header — see contextMenu.c/utilsGraphics.cpp).
 //#define ENABLE_LOG_MODULE_DATA    // Uncomment for module-data logging in any configuration
+// Scroll rates, in CONTENT pixels — see pane_scroll_by() in splitView.c. Expressed in content
+// rather than scrollbar units so the feel stays constant as the zoom and the pane's height change.
+#define WHEEL_SCROLL_STEP     (40.0)     // roughly one module row per wheel notch
+#define DRAG_SCROLL_X_RATE    (900.0)    // per second, while a drag is held past a pane's edge
+#define DRAG_SCROLL_Y_RATE    (900.0)
+
 //#define ENABLE_USB_LOG    // Uncomment to enable USB message logging to ~/G2_usb.log
 
 // TEMPORARY debug aid — mouse crosshair for validating button hit points.
