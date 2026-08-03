@@ -866,15 +866,10 @@ none of these exist in G2-Edit at all, confirmed by source search)
   should fall out free, since module/param/cable rectangles are all stored in SCREEN space at
   render time and will already be pane-correct.
 
-- Patch Window Split Bar (original description) — the original shows Voice Area and FX Area SIMULTANEOUSLY in one window,
-  split by a drag-resizable horizontal bar (up/down-arrow buttons to show one area full-height, a
-  double-arrow to restore the previous split, V/F shortcuts to toggle full-screen on the current
-  area). G2-Edit's VA/FX topbar buttons (mouseTopbar.c, set_exclusive_button_highlight) are a hard
-  exclusive toggle instead — only one ever visible, no split view, no drag bar, no V/F shortcuts, no
-  "restore previous split" concept.
-- Virtual/On-Screen Keyboard (Ctrl-K) — floating window to play notes with the mouse: click-to-sound
-  keys (sustains while held), horizontal resize to widen the visible note range, octave/note scroll
-  buttons, and Drone / Repeat toggles. Zero references anywhere in the source.
+- The two bullets that used to sit here — the original's Patch Window Split Bar description and the
+  Virtual/On-Screen Keyboard — were the pre-implementation notes for features that are now BUILT.
+  Their real entries, with what was done and what is still open, are above. Removed 2026-08-03 so
+  the parity list stops claiming them as missing.
 - Cable popup — ALL FIVE of the original's commands now implemented (2026-07-31), plus the white
   cable invariant they all depend on. Built, uncrustified, unit-tested; NOTHING YET CHECKED ON
   HARDWARE OR AGAINST THE REAL EDITOR.
