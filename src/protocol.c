@@ -432,7 +432,11 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
     uint32_t moduleCountBitPos = 0;
     uint32_t variationsBitPos  = 0;
     uint32_t paramCount        = 0;
-    uint32_t variations        = 0;
+    // The count the section header declares. It used to be assigned only inside the per-module loop
+    // below, so a location holding no module with parameters wrote 0 here — and parse_param_list()
+    // rejects a variation count of 0 outright, losing the whole section rather than reading it as
+    // empty.
+    uint32_t variations        = numVariations;
     uint32_t i                 = 0;
     uint32_t j                 = 0;
 
@@ -457,8 +461,17 @@ void write_param_list(uint32_t slot, tLocation location, uint8_t * buff, uint32_
         }
         paramCount = module->actualParamCount;
 
+        // actualParamCount is only populated by parse_param_list(), i.e. by data that came from the
+        // G2 or from a file that already had a good parameter section. A module created in the
+        // editor, or one loaded from a file whose parameters were dropped by this very bug, has 0
+        // here — and skipping it would write yet another file with no parameter values, carrying the
+        // breakage forward every time such a patch is re-saved. The module's type knows how many
+        // parameters it has, so fall back to that.
+        if (paramCount == 0) {
+            paramCount = module_param_count(module->type);
+        }
+
         if (paramCount > 0) {
-            variations = numVariations;
             moduleCount++;
 
             write_bit_stream(buff, bitPos, 8, module->key.index);
