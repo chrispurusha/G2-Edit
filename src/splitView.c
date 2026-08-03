@@ -415,7 +415,7 @@ void handle_split_bar_cursor_pos(tCoord coord) {
 // alongside it, so it cannot drift out of step with a pane scrolled by the wheel or by a zoom.
 
 #define PANE_SCROLL_MIN_THUMB    (24.0)   // never so short it can't be grabbed
-#define PANE_SCROLL_INSET        (3.0)    // thumb floats inside its track, rather than filling it
+#define PANE_SCROLL_INSET        (2.0)    // thumb floats inside its track, rather than filling it
 
 static tRectangle sVTrack[MAX_MODULE_PANES];
 static tRectangle sVThumb[MAX_MODULE_PANES];
