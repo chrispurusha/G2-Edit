@@ -33,6 +33,7 @@ extern "C" {
 #include "globalVars.h"
 #include "moduleResourcesAccess.h"
 #include "mouseHandle.h"
+#include "soundEngine.h"
 #include "main.h"
 
 static void signal_handler(int sigraised) {
@@ -91,6 +92,10 @@ int main(int argc, char ** argv) {
     start_usb_thread();
 
     do_graphics_loop();
+
+    // Before the graphics teardown: stopping the engine waits for any render in flight to return,
+    // and that render reads patch data the rest of the shutdown is entitled to tear down.
+    sound_engine_stop();
 
     clean_up_graphics();
 

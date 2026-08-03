@@ -38,6 +38,8 @@ extern "C" {
 #include "virtualKeyboard.h"
 #include "patchAdjuster.h"
 #include "paramOverlay.h"
+#include "soundEngine.h"
+#include "alertDialog.h"
 #include "menus.h"
 #include "appMenuBar.h"
 #include "synthlibPersistence.h"
@@ -408,6 +410,23 @@ static void action_toggle_mutator(int index) {
     }
 }
 
+// The engine follows whatever single oscillator is selected at the time, so it is deliberately not
+// greyed out when the selection is unsuitable — it simply makes no sound until one is selected, and
+// can be left switched on while clicking around the patch.
+static void action_toggle_sound_engine(int index) {
+    (void)index;
+
+    if (sound_engine_active()) {
+        sound_engine_stop();
+    } else if (sound_engine_start() == false) {
+        // Starting can fail with no output device, or one another app holds exclusively. Say so
+        // rather than leaving a menu that claims the engine is on while it is silent.
+        show_alert("Sound Engine", "Could not open the audio output device.");
+    } else {
+        sound_engine_update_from_patch();    // don't wait for the next redraw to pick up the selection
+    }
+}
+
 static void action_assign_midi_cc_all(int index) {
     (void)index;
     midi_cc_assign_all_knobs(gSlot);
@@ -429,7 +448,7 @@ static void action_deassign_midi_cc_selection(int index) {
 }
 
 static void open_tools_menu(tCoord anchor) {
-    static tMenuItem items[10];  // 7 entries + the NULL terminator, with room to grow
+    static tMenuItem items[10];  // 8 entries + the NULL terminator, with room to grow
     // The two selection entries have nothing to act on without one, and the original greys them
     // the same way rather than letting the click be a silent no-op.
     bool             haveSelection = gSelection.count > 0;
@@ -481,15 +500,46 @@ static void open_tools_menu(tCoord anchor) {
     open_context_menu(anchor, items, 0, 0.0);
 }
 
+// Work that is being tried out rather than relied on. Kept as its own menu so that what is
+// finished and what is an experiment are not sitting side by side under Tools — anything here may
+// change or disappear, and graduates into one of the other menus once it has settled.
+static void open_experimental_menu(tCoord anchor) {
+    static tMenuItem items[4];   // 1 entry + the NULL terminator, with room to grow
+    int              i = 0;
+
+    // The engine follows whichever single oscillator is selected, so this is deliberately never
+    // greyed out — it simply makes no sound until one is. Same state-in-the-label idiom as the
+    // Mutator entry under Tools.
+    items[i++] = (tMenuItem){
+        sound_engine_active() ? "Disable Sound Engine" : "Enable Sound Engine",
+        (tRgb)RGB_GREY_3, action_toggle_sound_engine, 0, NULL, 0, 0.0
+    };
+
+    // A status line while it is on. Greyed and with no action, so it reads as information rather
+    // than something to click. Without it an engine that is on but silent gives no clue why — the
+    // usual reason is simply that no OscB is selected.
+    if (sound_engine_active()) {
+        items[i++] = (tMenuItem){
+            (char *)sound_engine_status_text(), (tRgb)RGB_GREY_5, NULL, 0, NULL, 0, 0.0
+        };
+    }
+    items[i]   = (tMenuItem){
+        NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
+    };
+
+    open_context_menu(anchor, items, 0, 0.0);
+}
+
 tMenuBarItem gAppMenuBar[] = {
-    {"File",     open_file_menu    },
-    {"Settings", open_settings_menu},
-    {"Backup",   open_backup_menu  },
-    {"Restore",  open_restore_menu },
-    {"Controls", open_controls_menu},
-    {"Tools",    open_tools_menu   },
-    {"View",     open_view_menu    },
-    {NULL,       NULL              },
+    {"File",         open_file_menu        },
+    {"Settings",     open_settings_menu    },
+    {"Backup",       open_backup_menu      },
+    {"Restore",      open_restore_menu     },
+    {"Controls",     open_controls_menu    },
+    {"Tools",        open_tools_menu       },
+    {"View",         open_view_menu        },
+    {"Experimental", open_experimental_menu},
+    {NULL,           NULL                  },
 };
 
 tRectangle app_menu_bar_rect(void) {

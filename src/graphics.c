@@ -73,6 +73,7 @@ extern "C" {
 #include "paramOverview.h"
 #include "virtualKeyboard.h"
 #include "patchAdjuster.h"
+#include "soundEngine.h"
 #include "paramOverlay.h"
 #include "appMenuBar.h"
 #include "fileBrowser.h"
@@ -2242,6 +2243,12 @@ static void render_mouse_crosshair(void) {
 static void render_frame(void) {
     glClearColor(0.8, 0.8, 0.8, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // The sound engine reads the selected module's parameters from here. A redraw is exactly the
+    // event it needs — every parameter change and every selection change causes one, whether it came
+    // from the mouse or from the USB thread — so it needs no polling of its own and this costs
+    // nothing when the engine is switched off.
+    sound_engine_update_from_patch();
 
     clear_click_regions();
 

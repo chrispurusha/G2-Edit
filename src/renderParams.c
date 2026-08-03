@@ -57,6 +57,72 @@ void set_param_render_area(tArea area) {
     gParamRenderArea = area;
 }
 
+// The oscillator dial curves, kept apart from the renderers that print them so the sound engine
+// can share them. See renderParams.h for why. Nothing here touches global state, so both the
+// UI thread and the audio thread's parameter snapshot can call them freely.
+
+int osc_pitch_type_param_index(tModule * module) {
+    switch (module->type) {
+        case moduleTypeOscB:
+        case moduleTypeResonator:
+        case moduleTypeOscShpB:
+        case moduleTypeOscString:
+        case moduleTypeOscNoise:
+        case moduleTypeOscShpA:
+        case moduleTypeOscDual:
+        {
+            return 4;
+        }
+        case moduleTypeOscMaster:
+        case moduleTypeOscC:
+        case moduleTypeOscPM:
+        {
+            return 3;
+        }
+        case moduleTypeOscPerc:
+        {
+            return 2;
+        }
+        case moduleTypeOscA:
+        {
+            return 6;
+        }
+        default:
+        {
+            return -1;
+        }
+    }
+}
+
+double osc_freq_semitones(double paramValue) {
+    if (paramValue >= 127.0) {
+        return 63.0;    // Clip - the dial's top step is +63, not +64
+    }
+    return paramValue - 64.0;
+}
+
+double osc_freq_hz(double paramValue) {
+    double minFreq = 8.1758;    // A concert-pitch C-1
+    double maxFreq = 12550.0;
+
+    return exp(paramValue / 127.0 * log(maxFreq / minFreq)) * minFreq;
+}
+
+double osc_freq_factor(double paramValue) {
+    double minFactor = 0.0248;
+    double maxFactor = 38.072;
+
+    return exp(paramValue / 127.0 * log(maxFactor / minFactor)) * minFactor;
+}
+
+double osc_fine_cents(double paramValue) {
+    return (paramValue - 64.0) / 64.0 * 50.0;
+}
+
+double osc_shape_percent(double paramValue) {
+    return paramValue * 49.0 / 127.0 + 50.0;
+}
+
 tRectangle render_paramType1Freq(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double freq = 0.0;
 
@@ -76,69 +142,27 @@ tRectangle render_paramType1Freq(tModule * module, tRectangle rectangle, char * 
 
 tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     // Frequency dial for oscillators. Uses PitchType param to control display of Tune
-    int      pitchTypeParamIndex = 0;
+    int      pitchTypeParamIndex = osc_pitch_type_param_index(module);
     uint32_t slot                = module->key.slot;
     //uint32_t location            = gLocation;
     uint32_t variation           = gPatchDescr[slot].activeVariation;
 
-    switch (module->type) {
-        case moduleTypeOscMaster:
-        {
-            pitchTypeParamIndex = 3;
-            break;
-        }
-        case moduleTypeOscB:
-        case moduleTypeResonator:
-        case moduleTypeOscShpB:
-        case moduleTypeOscString:
-        case moduleTypeOscNoise:
-        case moduleTypeOscShpA:
-        case moduleTypeOscDual:
-        {
-            pitchTypeParamIndex = 4;
-            break;
-        }
-        case moduleTypeOscC:
-        case moduleTypeOscPM:
-        {
-            pitchTypeParamIndex = 3;
-            break;
-        }
-        case moduleTypeOscPerc:
-        {
-            pitchTypeParamIndex = 2;
-            break;
-        }
-        case moduleTypeOscA:
-        {
-            pitchTypeParamIndex = 6;
-            break;
-        }
-        default:
-        {
-            LOG_ERROR("paramType1OscFreq missing module->type implementation %d\n", module->type);
-        }
+    if (pitchTypeParamIndex < 0) {
+        LOG_ERROR("paramType1OscFreq missing module->type implementation %d\n", module->type);
+        pitchTypeParamIndex = 0;
     }
 
     switch (module->param[variation][pitchTypeParamIndex].value) {
         case 0:   // Semi. -64 to 63
         {
-            double res;
+            double res = osc_freq_semitones(paramValue);
 
-            if (paramValue < 127) {
-                res = round((((double)paramValue - 64.0) * 10.0)) / 10.0;
-            } else {
-                res = 63.0;             // Clip
-            }
             snprintf(buff, buffSize, "%.1f", res);
             break;
         }
         case 1:   // Freq. 8.1758 Hz to 12.55 kHz
         {
-            double res;
-            double min_freq = 8.1758;
-            double max_freq = 12550.0;
-            res = exp((double)paramValue / 127.0 * log(max_freq / min_freq)) * min_freq;
+            double res = osc_freq_hz(paramValue);
 
             if (res < 100) {
                 snprintf(buff, buffSize, "%.2fHz", res);
@@ -153,10 +177,8 @@ tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char
         }
         case 2:   // Factor. 0->0.0248, 127 -> 38.072
         {
-            double res;
-            double min_factor = .0248;
-            double max_factor = 38.072;
-            res = exp((double)paramValue / 127.0 * log(max_factor / min_factor)) * min_factor;
+            double res = osc_freq_factor(paramValue);
+
             snprintf(buff, buffSize, "%.4fx", res);
             break;
         }
@@ -185,7 +207,7 @@ tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char
 }
 
 tRectangle render_paramType1Fine(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
-    double res = ((double)paramValue - 64.0) / 64.0 * 50.0;
+    double res = osc_fine_cents(paramValue);
 
     snprintf(buff, buffSize, "%.1f", res);
     return render_dial_with_text(gParamRenderArea, rectangle, label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
@@ -220,9 +242,8 @@ tRectangle render_paramType1GeneralFreq(tModule * module, tRectangle rectangle, 
 
 tRectangle render_paramType1Shape(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     // 50.0->99.9
-    int val = 0;
+    int val = (int)osc_shape_percent(paramValue);
 
-    val = (int)(paramValue * 49.0 / 127.0 + 50.0);
     snprintf(buff, buffSize, "%u%%", val);
     return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
