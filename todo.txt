@@ -705,9 +705,143 @@ none of these exist in G2-Edit at all, confirmed by source search)
   are live and blinking. The discriminator is magnitude: LED noise touches tens of rows, a broken
   transform would move every module and touch ~1000. Control (same build twice) was 22/0/0
   differing rows; test (panes vs baseline) was 23/0/0. Both zoomed captures pixel-identical.
-  REMAINING STEPS: 2. second pane + the split bar, with the existing VA/FX topbar buttons becoming
-  the manual's V/F "give this area full height" rather than being replaced. 3. per-pane scrollbars
-  (gScrollState is still one pair). 4. per-pane zoom, only if wanted.
+  STEP 2 OF 4 DONE 2026-08-02 — src/splitView.c/.h in this repo, plus a clipping addition in
+  SynthLib. Two panes, Voice Area above and FX Area below, a draggable bar between them carrying
+  the manual's three buttons (top full height / bottom full height / restore). The VA and FX topbar
+  buttons became the manual's "give this area the whole window", and clicking the area that is
+  ALREADY full re-opens the split, so one button round-trips both ways without a separate control.
+  The divider is remembered across a trip through FULL. Default is still ONE pane showing the Voice
+  Area, i.e. the pre-split behaviour, so nothing changes until the split is asked for.
+  gLocation IS SET FROM THE PANE A PRESS LANDS IN, before the click is interpreted — that one line
+  is what lets all 40-odd existing gLocation readers keep working without learning about panes.
+  TWO REAL BUGS FOUND BY LOOKING AT IT, both invisible to the compiler:
+   1. NOTHING IN SYNTHLIB CLIPPED. Modules taller than their pane, or scrolled to straddle the
+      divider, drew straight on into the neighbouring pane; and render_modules() deliberately still
+      draws connectors for CULLED modules (so cables keep their endpoints), which used to be safely
+      off-screen and now landed in the other half of the window. Fixed by adding
+      module_pane_clip_begin()/_end() (glScissor) around each pane's render pass — one fix for both
+      symptoms, since the strays are outside the pane rect too. NOTE the flip: glScissor is in
+      framebuffer pixels with a BOTTOM-left origin, everything else here is scaled window units
+      with a TOP-left origin.
+   2. tTriangle's second and third vertices are RELATIVE to the first, not absolute. Passing three
+      absolute points drew garbage, which is what the bar's arrow buttons did at first.
+  ALSO: param_overlay_begin_frame() moved out of render_modules() into render_frame(). That
+  function now runs once PER PANE, and resetting the overlay queue between panes threw away what
+  the first pane had queued. The rubber band, also inside render_modules(), is now drawn only in
+  the focused pane for the same reason.
+  VERIFIED 2026-08-02: default single-pane view unchanged; the split lays out, clips cleanly at the
+  divider, and the bar chrome draws correctly. Pane 1's render path was proven by TEMPORARILY
+  pointing both panes at the Voice Area and confirming two independent, independently-scrolled
+  copies — worth knowing because NONE OF THE TEST PATCHES HAVE MODULES IN THE FX AREA (RndFilter
+  and EnvFx both put everything in the Voice Area, FX cycles read 0.0%), so an empty lower pane is
+  correct for them and proves nothing on its own.
+  STEP 2 FINISHED 2026-08-03. Four changes on top of the above, all verified on screen:
+   * THE DIVIDER IS NOW PATCH DATA AND ALWAYS ON SCREEN. gPatchDescr[slot].barPosition is the source
+     of truth, in PIXELS of Voice Area height, so it round-trips to file and device for free and
+     each Slot remembers its own. The separate "one area full height" MODE is gone: full height is
+     just the divider at an end. tSplitView lost split/divider/fullLocation/restoreDivider.
+   * A GAP EITHER SIDE OF THE BAR (SPLIT_BAR_GAP = MODULE_MARGIN), so modules never butt against it
+     — the same courtesy the top bar already gets. The bar's vertical FOOTPRINT is therefore larger
+     than the bar, which is what the pane extents reserve.
+   * VA/FX LIGHT ONLY WHEN THAT AREA HAS THE WHOLE WINDOW, neither when both are visible — driven
+     from split_view_apply() each frame so it is right after a patch load too, not just after a
+     click. This could not use set_exclusive_button_highlight(), which always lights exactly one.
+   * THE WHEEL ACTS ON THE PANE UNDER THE CURSOR, not the focused one — hover the FX half and scroll
+     and the FX half moves, no click needed. set_x/y_scroll_bar() already write through to the
+     current pane, so pointing the current pane at the hovered one is the whole mechanism.
+  NEW-PATCH DEFAULT is now 300 (a visible split) rather than the reference's 4000 (Voice Area takes
+  everything) — owner's call, on the grounds that the divider is the point of the window. Patches
+  from file or device carry their own value and are untouched.
+  A TESTING LESSON WORTH MORE THAN THE FEATURE: a run of "the drag doesn't work" results were
+  BOTH OF US DRIVING THE MOUSE AT THE SAME TIME. Synthetic clicks and a human hand collide silently
+  and the failures look like real bugs — one nearly became a false diagnosis about the device
+  round-trip reverting the divider. When driving the app, put the window fully on screen and say so,
+  and treat any weird interactive result as suspect until it reproduces with nobody else touching it.
+  FULLY CONFIRMED 2026-08-03 on "1 Mini Emulator" (Bank 1 Loc 10 on the owner's G2), which is the
+  first patch tried that has REAL CONTENT IN BOTH AREAS — none of the PatchTestFiles do, so use a
+  factory patch for this from now on. Voice Area above with its modules and cables, FX Area below
+  with Fx-In/DelayB/Reverb/Mix4-1S and cables, clipped cleanly at the divider, gap either side,
+  and both topbar buttons correctly unlit. Loading the patch also snapped the divider to that
+  patch's OWN stored barPosition — the per-patch persistence working end to end.
+  STEP 3 DONE 2026-08-03 — per-pane scrollbars, plus two owner-requested changes that landed with
+  them:
+   * ONE VERTICAL AND ONE HORIZONTAL BAR PER PANE, each spanning only that pane and driving only its
+     own scroll. The window's single shared pair could not do this: two panes scroll independently,
+     so one thumb could only ever tell the truth about one of them. The horizontal was tried as a
+     single shared bar following the focused pane first and it was WRONG for exactly that reason —
+     the wheel already scrolls each pane's X independently, so a shared bar either misreported a
+     pane or dragged them into lockstep and undid what the wheel had just done. The reference agrees:
+     its layout adds a scrollbar's height into the TOP pane's extent, so the original has one each
+     too. The top pane gives up SCROLLBAR_WIDTH at its foot for its bar; the bottom pane's lives in
+     the strip the canvas band already leaves above the window bottom.
+   * THUMBS HAVE ROUNDED ENDS — body rectangle short by one radius at each end, capped with a filled
+     circle, radius half the thumb's short side. Square ends read as truncated, as though the thumb
+     had been clipped by its track rather than sitting in it.
+   * THUMBS ARE NOW PROPORTIONAL — length is the fraction of the content currently visible, so it
+     grows as you zoom out and shrinks as you zoom in, with the position being that fraction slid
+     along the remaining track. The old bars drew a FIXED-LENGTH block that said nothing about how
+     much content there was, which was the least standard thing about them. Clamped at
+     PANE_SCROLL_MIN_THUMB (24px) so a big patch can never shrink the thumb below grabbable, and
+     inset by PANE_SCROLL_INSET so it floats in its track rather than filling it.
+     Both are DERIVED from the pane's scroll percent each frame rather than tracked alongside it, so
+     they cannot drift out of step with a pane scrolled by the wheel or by a zoom.
+     gScrollState's own xThumb/yThumb are no longer drawn or hit-tested; only the dead corner square
+     is still drawn by render_scrollbars().
+   * VA AND FX TOPBAR BUTTONS REMOVED (owner's call), since the divider is permanently on screen and
+     the bar's own up/down arrows already give "this area takes the whole window". Dropped from
+     topbarControls.def, and with them went their init colours and the highlight-follows-state
+     helper added earlier the same day.
+  STILL TO DO: 4. per-pane zoom, only if wanted — and nothing needs it yet.
+  NOT YET RUN: the proportional thumbs and the button removal are built and formatted but were not
+  driven before hand-off; the owner was testing at the machine.
+  DRAGGING THE BAR IS VERIFIED WORKING 2026-08-02, after the owner reported it didn't. Traced end
+  to end with a flushed log: press sets the drag, each move recomputes the divider (y 331 -> 0.376,
+  y 255 -> 0.247), and the bar visibly moved. What almost certainly went wrong is that THE BAR IS A
+  14px TARGET WITH NO CURSOR FEEDBACK — miss it and the press lands in a pane and starts a
+  rubber-band select, which looks exactly like a dead drag. The grab area is now taller than the
+  drawn bar (SV_BAR_GRAB_MARGIN), the usual treatment for a thin splitter. A resize cursor over the
+  bar would finish the job and is not done.
+  TWO METHOD LESSONS FROM THAT HUNT, both of which cost time:
+   1. LOG_DEBUG goes to stdout, which is BLOCK-BUFFERED into a file and lost entirely on kill. An
+      absence of log lines proves nothing. Uncomment ENABLE_USB_LOG (defs.h) instead — LOG_DEBUG
+      also feeds _USB_LOG, which fflushes every write to ~/G2_usb.log.
+   2. SYNTHETIC DRAGS DO REACH THE APP — cliclick dd: / m: / du: works. The earlier claim in this
+      file that they don't was wrong, and was based on dials specifically not responding. That
+      means the Patch Adjuster knobs and the Parameter Overview's drag-to-move CAN be tested this
+      way after all, and should be.
+  STILL TO DO ON STEP 2 ITSELF:
+   * The three bar buttons (top full / bottom full / restore) are drawn and wired but unclicked.
+   * A resize cursor over the grab area.
+   * THE DIVIDER POSITION IS IN THE PROTOCOL AND G2-EDIT ALREADY HANDLES IT — found 2026-08-03 on
+     the owner's hint. It is gPatchDescr[slot].barPosition, the 14-bit field in the patch
+     description read at protocol.c:89 and written back at protocol.c:163. So it already round-trips
+     to file and device; patches are NOT being corrupted today. Nothing reads it — the split view
+     needs to start honouring it.
+     CONFIRMED AGAINST THE REFERENCE: NSFile_V11::CPatchHeaderData_11::Get/SetSplitterPos, a short
+     clamped to 0..0x3fff — the same 14 bits.
+     THE UNIT IS PIXELS, not a fraction. The decompile's layout code (G2Editor.c ~171252) computes
+     the top pane's bottom edge as toolbarHeight + scrollBarHeight + splitterPos, clamps it to the
+     window less the scrollbar less 11, and gives the bar itself a height of 0xb = 11 px. So
+     splitterPos IS THE VOICE AREA PANE'S HEIGHT IN PIXELS.
+     DESIGN CONSEQUENCE, and it needs an owner decision. tSplitView.divider is a FRACTION of the
+     canvas band, which redistributes proportionally on a window resize. The stored value is pixels,
+     which does not — the original keeps the top pane's pixel height and lets the bottom absorb the
+     change, clamping when it runs out. Two options:
+       (a) PIXEL-FAITHFUL: make barPosition the source of truth and derive the fraction each frame.
+           Round-trips exactly, matches the original's resize behaviour.
+       (b) PROPORTIONAL: keep the fraction internally and convert at the protocol boundary using the
+           current band height. Nicer on resize, but the stored value then depends on the window
+           size at the time, which is a lossy round-trip.
+     Leaning (a) for parity and exactness.
+     ALSO: the original's default for a NEW patch is SetSplitterPos(4000) — far larger than any real
+     window, so it clamps to "voice area takes everything". G2-Edit's new-patch default is 600
+     (mouseHandle.c:127), i.e. a ~600px voice area. Worth aligning to 4000.
+     And the original's bar is 11 px; ours is SV_BAR_H = 14.
+   * Module drag, rubber band and cable drag are NOT yet clamped to their originating pane. Starting
+     a drag in one pane and crossing into the other is currently undefined and is the next real
+     hazard to close.
+   * A patch with genuine FX-area content still needs loading to see the two areas side by side for
+     real.
   THE HARD PART IS STILL AHEAD, and it is not the bar: gLocation is read in 40 places across 10
   files and conflates "the location being displayed" with "the location I am editing". Setting it
   from whichever pane a click lands in should resolve most, but each site needs reading. Module

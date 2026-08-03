@@ -44,6 +44,7 @@ extern "C" {
 #include "utilsGraphics.h"
 #include "mouseHandle.h"
 #include "graphics.h"
+#include "splitView.h"
 #include "globalVars.h"
 #include "protocol.h"
 #include "menus.h"
@@ -123,8 +124,13 @@ void adjust_scroll_for_drag(void) {
 void init_patch(uint32_t slot) {  // Todo - think where this should really go
     memset(&gPatchDescr[slot], 0, sizeof(gPatchDescr[0]));
     gPatchDescr[slot].voiceCount      = 1;
-    gPatchDescr[slot].barPosition     = 600;
-    gPatchDescr[slot].unknown3        = 2;   // unknown9 in Delphi
+    // Voice Area pane height in pixels — see splitView.h. The reference's own default is 4000, which
+    // is larger than any window and so clamps to "Voice Area takes everything"; G2-Edit shows BOTH
+    // areas on a new patch instead (owner's call), because the divider is the point of the window
+    // and a new patch is exactly when you want to see it. Patches loaded from file or from the G2
+    // carry their own value and are untouched by this.
+    gPatchDescr[slot].barPosition     = 300;
+    gPatchDescr[slot].unknown3        = 2;    // unknown9 in Delphi
     gPatchDescr[slot].visible[0]      = 1;
     gPatchDescr[slot].visible[1]      = 1;
     gPatchDescr[slot].visible[2]      = 1;
@@ -593,13 +599,8 @@ bool handle_scrollbar_click(tCoord coord) {
         gScrollState.xBarDragging = true;
         return true;
     }
-
-    if (within_rectangle(coord, gScrollState.yThumb)) {
-        gScrollState.yGrabOffset  = coord.y - gScrollState.yBar;
-        gScrollState.yBarDragging = true;
-        return true;
-    }
-    return false;
+    // Vertical is per pane now — see splitView.c.
+    return handle_pane_scrollbar_click(coord);
 }
 
 bool is_cursor_hidden_dragging(void) {
@@ -644,6 +645,7 @@ void stop_dragging(void) {
 
     gScrollState.yBarDragging = false;
     gScrollState.xBarDragging = false;
+    pane_scrollbar_release();
     memset(&gModuleDrag, 0, sizeof(gModuleDrag));
     memset(&gParamDragging, 0, sizeof(gParamDragging));
     memset(&gCableDrag, 0, sizeof(gCableDrag));
@@ -939,6 +941,21 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
     stop_module_name_editing();
     stop_param_name_editing();
     stop_perf_name_editing();
+
+    // The split bar owns its own strip, and it sits between the panes rather than inside either, so
+    // it gets first refusal before anything tries to interpret the click as a canvas click.
+    if (handle_split_bar_mouse(coord, mouseButton)) {
+        synthlib_request_redraw();
+        return;
+    }
+
+    // Focus follows the pane a press lands in, BEFORE the click is interpreted: everything below
+    // reads gLocation, and in a split view that has to mean "the half you just clicked in" or a
+    // module in the FX pane would be looked up in the Voice Area.
+    if (mouseButton == mouseButtonLeftDown || mouseButton == mouseButtonRightDown) {
+        split_view_focus_at(coord);
+        location = gLocation;
+    }
 
     switch (mouseButton) {
         case mouseButtonLeftDown:
@@ -1246,6 +1263,16 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
     //y = (y * (double)get_render_height()) / (double)height;
 
     gHoverConnector.active = false;
+
+    if (gSplitView.dragging) {
+        handle_split_bar_cursor_pos(coord);
+        return;
+    }
+
+    if (pane_scrollbar_dragging()) {
+        handle_pane_scrollbar_drag(coord);
+        return;
+    }
 
     if (gPatchAdjuster.active && (gPatchAdjuster.dragKnob >= 0)) {
         handle_patch_adjuster_cursor_pos(coord);
@@ -1692,9 +1719,25 @@ void scroll_event(GLFWwindow * window, double x, double y) {
         handle_bank_browser_scroll(y);
         return;
     }
+    // The wheel acts on the pane UNDER THE CURSOR, not the focused one — hovering the FX half and
+    // scrolling should move the FX half, without first having to click into it. set_x/y_scroll_bar()
+    // and set_zoom_factor() both write through to whichever pane is current, so pointing the
+    // current pane at the hovered one is the whole mechanism. Restored afterwards so nothing else
+    // inherits the switch.
+    //
+    // The scrollbar THUMB is still a single shared pair (gScrollState), so after scrolling the
+    // unfocused pane the thumb reflects that pane rather than the focused one. Per-pane thumbs are
+    // step 3 of the split-bar work; until then this is the honest lesser evil, since the thumb at
+    // least shows what the wheel just moved.
+    get_global_gui_scaled_mouse_coord(&coord);
+    int32_t  hovered  = split_view_pane_at(coord);
+    uint32_t prevPane = module_pane();
+
+    if (hovered >= 0) {
+        set_module_pane((uint32_t)hovered);
+    }
 
     if (gCommandKeyPressed == true) {
-        get_global_gui_scaled_mouse_coord(&coord);
         zoomFactor  = get_zoom_factor();
         zoomFactor += y * ZOOM_DELTA;
         set_zoom_factor(zoomFactor, coord);
@@ -1710,6 +1753,7 @@ void scroll_event(GLFWwindow * window, double x, double y) {
             set_y_scroll_bar(gScrollState.yBar);
         }
     }
+    set_module_pane(prevPane);
 //    LOG_DEBUG("Area: %f %f - size: %i %i - barY %f %f %f \n", moduleArea.size.w,moduleArea.size.h, width,height, gScrollState.yBar, gScrollState.yRectangle.size.h,gScrollState.yRectangle.coord.y);
 
     synthlib_request_redraw();

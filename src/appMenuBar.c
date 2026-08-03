@@ -31,6 +31,7 @@ extern "C" {
 #include "globalVars.h"
 #include "misc.h"
 #include "graphics.h"
+#include "splitView.h"
 #include "mutatorUI.h"
 #include "paramPages.h"
 #include "paramOverview.h"

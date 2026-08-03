@@ -43,6 +43,7 @@ extern "C" {
 #include "utilsGraphics.h"
 #include "mouseHandle.h"
 #include "graphics.h"
+#include "splitView.h"
 #include "globalVars.h"
 #include "protocol.h"
 #include "menus.h"
@@ -53,22 +54,6 @@ static void handle_button(tTopbarControlId controlId) {
     uint32_t slot = gSlot;
 
     switch (controlId) {
-        case topbarVaId:
-        {
-            gLocation = locationVa;
-            set_exclusive_button_highlight(topbarVaId, topbarFxId, controlId);
-            set_x_scroll_bar(0);
-            set_y_scroll_bar(0);
-            break;
-        }
-        case topbarFxId:
-        {
-            gLocation = locationFx;
-            set_exclusive_button_highlight(topbarVaId, topbarFxId, controlId);
-            set_x_scroll_bar(0);
-            set_y_scroll_bar(0);
-            break;
-        }
         case topbarVariation1Id:
         case topbarVariation2Id:
         case topbarVariation3Id:
