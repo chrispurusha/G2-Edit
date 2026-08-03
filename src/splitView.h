@@ -111,6 +111,11 @@ void split_view_flush_position(void);
 
 // One vertical scrollbar per visible pane, replacing the window's single shared one — two panes
 // scroll independently, so one thumb could only ever be right about one of them.
+// Scrolls one pane by a number of content pixels, relative to its own current position. Used by the
+// wheel and by the drag-past-the-edge auto-scroll; both used to share a single accumulator, which
+// made scrolling one pane yank the other to the same place.
+void pane_scroll_by(uint32_t pane, double dxPixels, double dyPixels);
+
 void render_pane_scrollbars(void);
 bool handle_pane_scrollbar_click(tCoord coord);
 void handle_pane_scrollbar_drag(tCoord coord);

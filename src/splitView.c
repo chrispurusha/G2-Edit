@@ -106,10 +106,10 @@ void split_view_apply(void) {
     }
     // The TOP pane gives up a strip at its foot for its own horizontal scrollbar, PLUS the same gap
     // the divider gets, so modules never butt straight up against the bar. The bottom pane doesn't
-    // need to reserve anything: the canvas band already stops SCROLLBAR_WIDTH + MODULE_MARGIN above
+    // need to reserve anything: the canvas band already stops MODULE_SCROLLBAR_WIDTH + MODULE_MARGIN above
     // the window bottom, and that reserved strip is exactly where its bar lands once the same gap is
     // applied below its own foot.
-    double topModules = top - SCROLLBAR_WIDTH - SPLIT_BAR_GAP;
+    double topModules = top - MODULE_SCROLLBAR_WIDTH - SPLIT_BAR_GAP;
 
     if (topModules < 0.0) {
         topModules = 0.0;
@@ -241,8 +241,8 @@ static tRectangle split_bar_grab_rect(void) {
 void render_split_bar(void) {
     // Always drawn — with the divider at an end, the bar is the only handle for bringing the
     // collapsed area back, so it can never be the thing that disappears.
-    tRectangle top    = module_area_for_pane(0);
-    tRectangle bottom = module_area_for_pane(1);
+    tRectangle top      = module_area_for_pane(0);
+    tRectangle bottom   = module_area_for_pane(1);
 
     // Anchored to the BOTTOM pane and given a fixed height, rather than filling whatever space lies
     // between the two panes. That gap is no longer just the bar: the top pane also gives up a strip
@@ -250,13 +250,19 @@ void render_split_bar(void) {
     // drew it straight over that scrollbar. Working back from the bottom pane's top edge keeps the
     // order — top pane, its scrollbar, gap, bar, gap, bottom pane — and stays correct when the top
     // pane is collapsed and has no scrollbar at all.
-    double     y      = bottom.coord.y - SPLIT_BAR_GAP - SPLIT_BAR_HEIGHT;
-    double     h      = SPLIT_BAR_HEIGHT;
+    double     y        = bottom.coord.y - SPLIT_BAR_GAP - SPLIT_BAR_HEIGHT;
+    double     h        = SPLIT_BAR_HEIGHT;
+
+    // Spans exactly the same x range as the horizontal scrollbars rather than the pane's own,
+    // so the divider and the bars line up at both ends instead of the divider starting 6px further
+    // left (the pane uses MODULE_MARGIN, the bars use MODULE_SCROLLBAR_MARGIN).
+    double     barLeft  = MODULE_SCROLLBAR_MARGIN;
+    double     barRight = (get_render_width() / gGlobalGuiScale) - MODULE_SCROLLBAR_WIDTH - MODULE_MARGIN;
 
     gSplitView.barRect = (tRectangle){{
-                                          top.coord.x, y
+                                          barLeft, y
                                       }, {
-                                          top.size.w, h
+                                          barRight - barLeft, h
                                       }
     };
 
@@ -265,7 +271,7 @@ void render_split_bar(void) {
 
     // A pair of grip lines, so the bar reads as draggable rather than as a border.
     set_rgb_colour((tRgb)RGB_GREY_3);
-    double     cx     = top.coord.x + (top.size.w / 2.0);
+    double     cx       = gSplitView.barRect.coord.x + (gSplitView.barRect.size.w / 2.0);
 
     for (int i = -1; i <= 1; i += 2) {
         render_line(mainArea, (tCoord){cx - 18.0, y + (h / 2.0) + (i * 2.0)},
@@ -275,8 +281,8 @@ void render_split_bar(void) {
     // The three buttons the manual describes, at the right-hand end: give the top pane everything,
     // give the bottom pane everything, and come back to the remembered split. Drawn on the bar
     // itself so they travel with it.
-    double     bx     = top.coord.x + top.size.w - ((SV_BUTTON_W + SV_BUTTON_GAP) * 3.0) - 4.0;
-    double     midY   = y + (h / 2.0);
+    double     bx       = top.coord.x + top.size.w - ((SV_BUTTON_W + SV_BUTTON_GAP) * 3.0) - 4.0;
+    double     midY     = y + (h / 2.0);
 
     gSplitView.upButton      = (tRectangle){{
                                                 bx, y + 1.0
@@ -491,9 +497,8 @@ static void draw_track_and_thumb(tRectangle track, tRectangle thumb, bool vertic
 }
 
 void render_pane_scrollbars(void) {
-    double renderWidth  = get_render_width() / gGlobalGuiScale;
-    double renderHeight = get_render_height() / gGlobalGuiScale;
-    double x            = renderWidth - SCROLLBAR_WIDTH;
+    double renderWidth = get_render_width() / gGlobalGuiScale;
+    double x           = renderWidth - MODULE_SCROLLBAR_WIDTH;
 
     for (uint32_t pane = 0; pane < MAX_MODULE_PANES; pane++) {
         tRectangle r       = (pane < module_pane_count()) ? module_area_for_pane(pane) : (tRectangle){
@@ -512,7 +517,7 @@ void render_pane_scrollbars(void) {
         sVTrack[pane] = (tRectangle){{
                                          x, r.coord.y
                                      }, {
-                                         SCROLLBAR_WIDTH, r.size.h
+                                         MODULE_SCROLLBAR_WIDTH, r.size.h
                                      }
         };
 
@@ -529,7 +534,7 @@ void render_pane_scrollbars(void) {
         sVThumb[pane] = (tRectangle){{
                                          x + PANE_SCROLL_INSET, r.coord.y + ((percent / 100.0) * travel)
                                      }, {
-                                         SCROLLBAR_WIDTH - (PANE_SCROLL_INSET * 2.0), len
+                                         MODULE_SCROLLBAR_WIDTH - (PANE_SCROLL_INSET * 2.0), len
                                      }
         };
         draw_track_and_thumb(sVTrack[pane], sVThumb[pane], true);
@@ -555,14 +560,14 @@ void render_pane_scrollbars(void) {
         }
         // Both bars stop the same distance clear of the bottom-right corner as the vertical ones do
         // of the window bottom, so the two meet symmetrically rather than one running further in.
-        double     right   = renderWidth - SCROLLBAR_WIDTH - MODULE_MARGIN;
+        double     right   = renderWidth - MODULE_SCROLLBAR_WIDTH - MODULE_MARGIN;
 
         // One gap below the modules, matching the divider's — and for the bottom pane this puts the
         // bar precisely in the strip the canvas band already leaves at the window bottom.
         sHTrack[pane] = (tRectangle){{
-                                         SCROLLBAR_MARGIN, r.coord.y + r.size.h + SPLIT_BAR_GAP
+                                         MODULE_SCROLLBAR_MARGIN, r.coord.y + r.size.h + SPLIT_BAR_GAP
                                      }, {
-                                         right - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH
+                                         right - MODULE_SCROLLBAR_MARGIN, MODULE_SCROLLBAR_WIDTH
                                      }
         };
 
@@ -580,11 +585,50 @@ void render_pane_scrollbars(void) {
                                          sHTrack[pane].coord.x + ((percent / 100.0) * travel),
                                          sHTrack[pane].coord.y + PANE_SCROLL_INSET
                                      }, {
-                                         len, SCROLLBAR_WIDTH - (PANE_SCROLL_INSET * 2.0)
+                                         len, MODULE_SCROLLBAR_WIDTH - (PANE_SCROLL_INSET * 2.0)
                                      }
         };
         draw_track_and_thumb(sHTrack[pane], sHThumb[pane], false);
     }
+}
+
+// Scrolls one pane by a number of CONTENT pixels, relative to where that pane already is.
+//
+// The wheel and the drag-scroll used to accumulate into gScrollState.xBar/yBar and convert that
+// into the current pane's percent. That shared accumulator was fine with one canvas and wrong with
+// two: scrolling pane 0 to 50% and then wheeling over pane 1 snapped pane 1 to ~50% rather than
+// nudging it from its own position. Reading the pane's own percent back and adjusting it keeps each
+// pane independent, and expressing the step in content pixels keeps the feel constant as the zoom
+// and the pane's height change.
+void pane_scroll_by(uint32_t pane, double dxPixels, double dyPixels) {
+    if (pane >= module_pane_count()) {
+        return;
+    }
+    tRectangle r       = module_area_for_pane(pane);
+
+    if (r.size.h <= 0.0) {
+        return;
+    }
+    uint32_t   prev    = module_pane();
+
+    set_module_pane(pane);
+
+    double     travelX = content_width() - r.size.w;
+    double     travelY = content_height() - r.size.h;
+
+    if (travelX > 0.0) {
+        double px = get_x_scroll_percent() + ((dxPixels / travelX) * 100.0);
+
+        set_x_scroll_percent((px < 0.0) ? 0.0 : ((px > 100.0) ? 100.0 : px));
+    }
+
+    if (travelY > 0.0) {
+        double py = get_y_scroll_percent() + ((dyPixels / travelY) * 100.0);
+
+        set_y_scroll_percent((py < 0.0) ? 0.0 : ((py > 100.0) ? 100.0 : py));
+    }
+    set_module_pane(prev);
+    synthlib_request_redraw();
 }
 
 bool handle_pane_scrollbar_click(tCoord coord) {

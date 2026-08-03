@@ -791,7 +791,24 @@ none of these exist in G2-Edit at all, confirmed by source search)
      the bar's own up/down arrows already give "this area takes the whole window". Dropped from
      topbarControls.def, and with them went their init colours and the highlight-follows-state
      helper added earlier the same day.
+  SMOKE TESTED 2026-08-03 before the community release, on "1 Mini Emulator" with both areas
+  populated and the G2 online. Verified: right-click on a module in the BOTTOM pane opens the module
+  menu anchored correctly with the right entries; clicking a MENU-type parameter in the bottom pane
+  (Reverb's room size) opens its dropdown with the right options — i.e. a click in the lower pane
+  resolves to the correct module AND parameter, which was the one failure mode that would have been
+  data corruption rather than cosmetics. No crash, no error lines in the log across the session, and
+  no crash reports generated.
   STILL TO DO: 4. per-pane zoom, only if wanted — and nothing needs it yet.
+  KNOWN ROUGH EDGES GOING INTO THE RELEASE, none blocking but worth knowing:
+   * Module drag, rubber band and cable drag are still NOT clamped to the pane they start in. A drag
+     that crosses the divider keeps computing in the originating pane's coordinate space, so a
+     module dropped over the other pane lands at a far row rather than where the cursor is. Not a
+     regression (the old single canvas behaved the same past its edge) but the divider makes it look
+     like it ought to work.
+   * The Patch Adjuster has NO UNDO and its parameter classification is approximate.
+   * Send Controller Snapshot has never been exercised — needs an external device listening.
+   * Assign/Deassign MIDI CC to Selection, Delete Unused Modules and Paste Params are built and
+     reviewed but were not run on hardware.
   NOT YET RUN: the proportional thumbs and the button removal are built and formatted but were not
   driven before hand-off; the owner was testing at the machine.
   DRAGGING THE BAR IS VERIFIED WORKING 2026-08-02, after the owner reported it didn't. Traced end

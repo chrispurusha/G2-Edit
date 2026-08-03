@@ -84,40 +84,33 @@ void get_global_gui_scaled_mouse_coord(tCoord * coord) {
 }
 
 void adjust_scroll_for_drag(void) {
-    tCoord     coord         = {0};
-    double     x             = 0.0;
-    double     y             = 0.0;
-    double     xAdjustAmount = 0.1;
-    double     yAdjustAmount = 0.2;
-    double     timeDelta     = get_time_delta();
-    tRectangle area          = module_area();
+    tCoord     coord     = {0};
+    double     timeDelta = get_time_delta();
+    uint32_t   pane      = split_view_focused_pane();
+    tRectangle area      = module_area_for_pane(pane);
+    double     stepX     = DRAG_SCROLL_X_RATE * timeDelta;
+    double     stepY     = DRAG_SCROLL_Y_RATE * timeDelta;
+    double     dx        = 0.0;
+    double     dy        = 0.0;
 
     get_global_gui_scaled_mouse_coord(&coord);
-    x              = coord.x;
-    y              = coord.y;
 
-
-    xAdjustAmount *= timeDelta;
-    yAdjustAmount *= timeDelta;
-
-    if (x > (area.coord.x + area.size.w)) {
-        gScrollState.xBar += xAdjustAmount;
-        set_x_scroll_bar(gScrollState.xBar);
+    // Dragging past a pane's edge scrolls THAT pane. Clamped to the pane the drag started in, so a
+    // drag heading for the divider scrolls its own half rather than reaching into the other one.
+    if (coord.x > (area.coord.x + area.size.w)) {
+        dx = stepX;
+    } else if (coord.x < area.coord.x) {
+        dx = -stepX;
     }
 
-    if (x < (area.coord.x)) {
-        gScrollState.xBar -= xAdjustAmount;
-        set_x_scroll_bar(gScrollState.xBar);
+    if (coord.y > (area.coord.y + area.size.h)) {
+        dy = stepY;
+    } else if (coord.y < area.coord.y) {
+        dy = -stepY;
     }
 
-    if (y > (area.coord.y + area.size.h)) {
-        gScrollState.yBar += yAdjustAmount;
-        set_y_scroll_bar(gScrollState.yBar);
-    }
-
-    if (y < (area.coord.y)) {
-        gScrollState.yBar -= yAdjustAmount;
-        set_y_scroll_bar(gScrollState.yBar);
+    if ((dx != 0.0) || (dy != 0.0)) {
+        pane_scroll_by(pane, dx, dy);
     }
 }
 
@@ -592,14 +585,8 @@ void set_y_scroll_bar(double y) {
 }
 
 bool handle_scrollbar_click(tCoord coord) {
-    //printf("Mouse %f %f bar x %f %f %f %f\n", coord.x, coord.y, gScrollState.xRectangle.coord.x,  gScrollState.xRectangle.coord.y,  gScrollState.xRectangle.size.w,  gScrollState.xRectangle.size.h);
-
-    if (within_rectangle(coord, gScrollState.xThumb)) {
-        gScrollState.xGrabOffset  = coord.x - gScrollState.xBar;
-        gScrollState.xBarDragging = true;
-        return true;
-    }
-    // Vertical is per pane now — see splitView.c.
+    // Both axes belong to the split view now — one vertical bar per pane and one horizontal per
+    // pane, all proportional. gScrollState's own thumbs are no longer drawn or hit-tested.
     return handle_pane_scrollbar_click(coord);
 }
 
@@ -1671,8 +1658,8 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         // Dummy
     } else if (  (coord.x >= 0.0)
               && (coord.y >= TOP_BAR_HEIGHT + MENU_BAR_HEIGHT)
-              && (coord.x < (get_render_width() / gGlobalGuiScale) - SCROLLBAR_WIDTH)
-              && (coord.y < (get_render_height() / gGlobalGuiScale) - SCROLLBAR_WIDTH)) {
+              && (coord.x < (get_render_width() / gGlobalGuiScale) - MODULE_SCROLLBAR_WIDTH)
+              && (coord.y < (get_render_height() / gGlobalGuiScale) - MODULE_SCROLLBAR_WIDTH)) {
         uint32_t hoverSlot = gSlot;
         uint32_t hoverLoc  = gLocation;
 
@@ -1707,8 +1694,8 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
 }
 
 void scroll_event(GLFWwindow * window, double x, double y) {
-    tCoord coord      = {0};
-    double zoomFactor = 0.0;
+    tCoord  coord      = {0};
+    double  zoomFactor = 0.0;
 
     if (file_browser_active()) {
         handle_file_browser_scroll(y);
@@ -1720,40 +1707,27 @@ void scroll_event(GLFWwindow * window, double x, double y) {
         return;
     }
     // The wheel acts on the pane UNDER THE CURSOR, not the focused one — hovering the FX half and
-    // scrolling should move the FX half, without first having to click into it. set_x/y_scroll_bar()
-    // and set_zoom_factor() both write through to whichever pane is current, so pointing the
-    // current pane at the hovered one is the whole mechanism. Restored afterwards so nothing else
-    // inherits the switch.
-    //
-    // The scrollbar THUMB is still a single shared pair (gScrollState), so after scrolling the
-    // unfocused pane the thumb reflects that pane rather than the focused one. Per-pane thumbs are
-    // step 3 of the split-bar work; until then this is the honest lesser evil, since the thumb at
-    // least shows what the wheel just moved.
+    // scrolling should move the FX half, without first having to click into it.
     get_global_gui_scaled_mouse_coord(&coord);
-    int32_t  hovered  = split_view_pane_at(coord);
-    uint32_t prevPane = module_pane();
+    int32_t hovered    = split_view_pane_at(coord);
 
-    if (hovered >= 0) {
-        set_module_pane((uint32_t)hovered);
+    if (hovered < 0) {
+        hovered = (int32_t)split_view_focused_pane();
     }
 
     if (gCommandKeyPressed == true) {
+        uint32_t prevPane = module_pane();
+
+        set_module_pane((uint32_t)hovered);
         zoomFactor  = get_zoom_factor();
         zoomFactor += y * ZOOM_DELTA;
         set_zoom_factor(zoomFactor, coord);
         save_zoom_factor(get_zoom_factor());
+        set_module_pane(prevPane);
     } else {
-        if (x != 0) {
-            gScrollState.xBar -= x / 2;
-            set_x_scroll_bar(gScrollState.xBar);
-        }
-
-        if (y != 0) {
-            gScrollState.yBar -= y;
-            set_y_scroll_bar(gScrollState.yBar);
-        }
+        // Content pixels per notch, relative to THAT PANE's own position — see pane_scroll_by().
+        pane_scroll_by((uint32_t)hovered, -x * WHEEL_SCROLL_STEP, -y * WHEEL_SCROLL_STEP);
     }
-    set_module_pane(prevPane);
 //    LOG_DEBUG("Area: %f %f - size: %i %i - barY %f %f %f \n", moduleArea.size.w,moduleArea.size.h, width,height, gScrollState.yBar, gScrollState.yRectangle.size.h,gScrollState.yRectangle.coord.y);
 
     synthlib_request_redraw();
