@@ -801,6 +801,12 @@ int32_t create_module_at(tModuleType type, uint32_t column, uint32_t row, bool s
     module.row                                    = row;
     module.excludeFromMutation                    = default_mutation_lock(module.type) ? 1 : 0;
 
+    // How many parameters this module actually has. Only parse_param_list() used to set this, so a
+    // module created here rather than received from the G2 was left at 0 — and write_param_list()
+    // skips any module with a count of 0, which meant the knob values of every editor-created module
+    // were silently dropped on save. Offline that is every module in the patch.
+    module.actualParamCount                       = module_param_count(module.type);
+
     COPY_STRING(module.name, gModuleProperties[module.type].name);
 
     messageContent.cmd                            = eMsgCmdWriteModule;

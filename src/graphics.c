@@ -75,7 +75,11 @@ extern "C" {
 #include "patchAdjuster.h"
 #include "soundEngine.h"
 #include "paramOverlay.h"
+#include <strings.h>
+
 #include "appMenuBar.h"
+#include "selection.h"
+#include "contextMenu.h"
 #include "fileBrowser.h"
 #include "bankBrowser.h"
 #include "alertDialog.h"
@@ -2339,6 +2343,13 @@ static void render_frame(void) {
 //   LOADFILE <path>   — read_file_into_memory_and_process() (works offline)
 //   SLOT <0-3|A-D>    — select the slot the canvas renders
 //   DUMP              — current slot + every module: type, name, location, col/row
+//   MENU <bar> [item] — run a menu item by label (leading substring, case-insensitive);
+//                       with no item, lists that menu's current labels
+//   SELECT <VA|FX> <n> — select one module by index; SELECT NONE clears
+//   SNDSTATUS         — what the sound engine's status line currently reads
+//   SNDDUMP           — the resolved chain, the parameters read, and the peak level since last read
+//   NOTE <n>|OFF      — play/release a note on the sound engine
+//   SAVEFILE <path>   — write the current slot to a path (no save panel)
 //   SCREENSHOT <path> — synchronous render_frame() then glReadPixels + PNG
 //   SCROLL <x> <y>    — scroll the canvas, each 0.0-1.0 of that axis's full travel
 //   ZOOM <factor>     — canvas zoom, same 0.25-2.0 range Cmd +/- walks through
@@ -2544,6 +2555,151 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
 
         backdoor_dump_state(dump, sizeof(dump));
         backdoor_write_result(dump);
+    } else if (strcmp(cmd, "MENU") == 0) {
+        // MENU <bar label> <item label> — runs a menu item without going near the mouse. Both labels
+        // are matched case-insensitively on a leading substring, so 'MENU Exp Enable' hits
+        // Experimental > Enable Sound Engine. Driving these by screen coordinates meant re-deriving
+        // them every time a window moved, which was slow and wrong often enough to be worth this.
+        char        barWanted[64]  = {0};
+        char        itemWanted[64] = {0};
+        uint32_t    b              = 0;
+        tMenuItem * items          = NULL;
+
+        if (sscanf(arg, "%63s %63[^\n]", barWanted, itemWanted) < 1) {
+            backdoor_write_result("ERROR: expected 'MENU <bar label> [item label]'\n");
+            return;
+        }
+
+        for (b = 0; gAppMenuBar[b].label != NULL; b++) {
+            if (strncasecmp(gAppMenuBar[b].label, barWanted, strlen(barWanted)) == 0) {
+                break;
+            }
+        }
+
+        if (gAppMenuBar[b].label == NULL) {
+            backdoor_write_result("ERROR: no such menu\n");
+            return;
+        }
+        // Populates gContextMenu with the items that menu would show right now, which is what makes
+        // state-dependent labels ("Disable Sound Engine") matchable.
+        gAppMenuBar[b].open((tCoord){0.0, 0.0});
+        items = (gContextMenu.depth > 0) ? gContextMenu.frame[0].items : NULL;
+
+        if (itemWanted[0] == '\0') {
+            char     list[512] = {0};
+            size_t   used      = 0;
+            uint32_t i         = 0;
+
+            used += (size_t)snprintf(list + used, sizeof(list) - used, "OK\n");
+
+            for (i = 0; (items != NULL) && (items[i].label != NULL) && (used < sizeof(list)); i++) {
+                used += (size_t)snprintf(list + used, sizeof(list) - used, "%s\n", items[i].label);
+            }
+
+            close_context_menu();
+            backdoor_write_result(list);
+            return;
+        }
+        {
+            uint32_t i = 0;
+
+            for (i = 0; (items != NULL) && (items[i].label != NULL); i++) {
+                if (strncasecmp(items[i].label, itemWanted, strlen(itemWanted)) == 0) {
+                    void (*action)(int index) = items[i].action;
+
+                    // action() callbacks read gContextMenu.items[index].param, so point that at the
+                    // array the item actually lives in before running it — the same thing a real
+                    // click does.
+                    gContextMenu.items = items;
+
+                    if (action == NULL) {
+                        close_context_menu();
+                        backdoor_write_result("ERROR: item is disabled\n");
+                        return;
+                    }
+                    action((int)i);
+                    close_context_menu();
+                    synthlib_request_redraw();
+                    backdoor_write_result("OK\n");
+                    return;
+                }
+            }
+        }
+        close_context_menu();
+        backdoor_write_result("ERROR: no such item\n");
+    } else if (strcmp(cmd, "SELECT") == 0) {
+        // SELECT <VA|FX> <index>, or SELECT NONE — the engine keys off the selection, and clicking a
+        // module's header strip by coordinate was the single most error-prone step in driving it.
+        char     locName[8] = {0};
+        uint32_t index      = 0;
+
+        if (strncasecmp(arg, "NONE", 4) == 0) {
+            selection_clear();
+            synthlib_request_redraw();
+            backdoor_write_result("OK\n");
+            return;
+        }
+
+        if (sscanf(arg, "%7s %u", locName, &index) != 2) {
+            backdoor_write_result("ERROR: expected 'SELECT <VA|FX> <index>' or 'SELECT NONE'\n");
+            return;
+        }
+        {
+            uint32_t  location = (strncasecmp(locName, "FX", 2) == 0) ? (uint32_t)locationFx : (uint32_t)locationVa;
+            tModule * module   = get_module_slot(gSlot, location, index);
+
+            if ((module == NULL) || (module->type == 0)) {
+                backdoor_write_result("ERROR: no module at that index\n");
+                return;
+            }
+            selection_set_single((tModuleKey){gSlot, location, index});
+            synthlib_request_redraw();
+            backdoor_write_result("OK\n");
+        }
+    } else if (strcmp(cmd, "SAVEFILE") == 0) {
+        // SAVEFILE <path> — writes the current slot straight to a path, no save panel involved.
+        // Driving the native panel with synthetic keystrokes is how a test patch got overwritten;
+        // this exists so a round-trip can be checked without going anywhere near it.
+        tMessageContent msg = {0};
+
+        if ((arg == NULL) || (arg[0] == '\0')) {
+            backdoor_write_result("ERROR: expected 'SAVEFILE <path>'\n");
+            return;
+        }
+        msg.cmd                = eMsgCmdSavePatchFile;
+        msg.patchFileData.slot = gSlot;
+        strncpy(msg.patchFileData.filePath, arg, sizeof(msg.patchFileData.filePath) - 1);
+        msg_send(&gToUsbThread, &msg);
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "NOTE") == 0) {
+        // NOTE <midi note> plays, NOTE OFF releases. The last thing that needed a mouse to test the
+        // sound engine end to end.
+        int32_t note = 0;
+
+        if (strncasecmp(arg, "OFF", 3) == 0) {
+            sound_engine_note(-1, false);
+            backdoor_write_result("OK\n");
+            return;
+        }
+
+        if (sscanf(arg, "%d", &note) != 1) {
+            backdoor_write_result("ERROR: expected 'NOTE <0-127>' or 'NOTE OFF'\n");
+            return;
+        }
+        sound_engine_note(note, true);
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "SNDDUMP") == 0) {
+        char text[1200] = {0};
+
+        snprintf(text, sizeof(text), "OK\n%s", sound_engine_debug_text());
+        backdoor_write_result(text);
+    } else if (strcmp(cmd, "SNDSTATUS") == 0) {
+        // Reads back what the Experimental menu would show, so a test can assert on why the engine
+        // is or is not making a sound without taking a screenshot of a menu.
+        char text[160] = {0};
+
+        snprintf(text, sizeof(text), "OK\n%s\n", sound_engine_status_text());
+        backdoor_write_result(text);
     } else if (strcmp(cmd, "SCROLL") == 0) {
         double xFraction = 0.0;
         double yFraction = 0.0;
