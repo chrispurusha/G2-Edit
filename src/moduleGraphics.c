@@ -39,6 +39,7 @@ extern "C" {
 #include "moduleResourcesAccess.h"
 #include "utilsGraphics.h"
 #include "moduleGraphics.h"
+#include "splitView.h"
 #include "globalVars.h"
 #include "renderParams.h"
 #include "mouseHandle.h"
@@ -1592,7 +1593,9 @@ void render_modules(void) {
     uint32_t slot     = gSlot;
     uint32_t location = gLocation;
 
-    param_overlay_begin_frame(); // re-queued below by whichever params the active overlay mode wants
+    // param_overlay_begin_frame() used to live here. It moved out to render_frame() when the canvas
+    // gained panes: this function now runs once PER PANE, and resetting the overlay queue between
+    // panes would throw away everything the first pane had just queued.
 
     for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
         tModule * module = get_module_slot(slot, location, i);
@@ -1616,7 +1619,10 @@ void render_modules(void) {
         }
     }
 
-    if (gRubberBand.active) {
+    // Only in the pane it was started in. This function runs once per pane now, and the band's
+    // coordinates are module-space for ONE pane — drawing it in the other would put a second
+    // rectangle at the same module coordinates in the wrong half of the window.
+    if (gRubberBand.active && (module_pane() == split_view_focused_pane())) {
         double x1 = gRubberBand.start.x < gRubberBand.current.x ? gRubberBand.start.x : gRubberBand.current.x;
         double y1 = gRubberBand.start.y < gRubberBand.current.y ? gRubberBand.start.y : gRubberBand.current.y;
         double x2 = gRubberBand.start.x > gRubberBand.current.x ? gRubberBand.start.x : gRubberBand.current.x;
