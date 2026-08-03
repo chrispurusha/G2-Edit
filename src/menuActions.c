@@ -338,15 +338,17 @@ bool file_menu_have_saved_path(void) {
 }
 
 void file_menu_new_patch(void) {
-    if (gCommsState != eCommsOnLine) {
-        show_alert("G2 Not Connected", "Connect the G2 and wait for it to come online before creating a new patch.");
-        return;
-    }
+    // Works offline. A new patch is a local edit — the device push below is what needs the G2, not
+    // the patch itself, and refusing outright made the editor unusable as an offline sketchpad
+    // (which is also the only way to try the sound engine with no hardware around). The USB thread
+    // skips the push when there is nothing to push to.
+    //
     // Do the init (local DB reset) AND the device push together on the USB thread as one ordered
     // command, so the reset can't be clobbered by the USB thread's async patch-change re-reads
     // between the two — same reasoning as the file-load path. (Without a push the G2 would keep
     // playing its old patch, diverging from what the editor shows.)
     tMessageContent messageContent = {0};
+
     messageContent.cmd                = eMsgCmdNewPatch;
     messageContent.patchFileData.slot = gSlot;
     msg_send(&gToUsbThread, &messageContent);

@@ -123,10 +123,33 @@ double osc_shape_percent(double paramValue) {
     return paramValue * 49.0 / 127.0 + 50.0;
 }
 
+// 13.75 Hz is A-1, so like the oscillators' Tune the filter's Freq dial is really a pitch — its
+// value counts semitones up from there, reaching about 21 kHz at 127 (manual: "13.76 Hz to 21.1 kHz").
+double flt_cutoff_hz(double paramValue) {
+    return 13.75 * pow(2.0, paramValue / 12.0);
+}
+
+// 0.5 at the bottom of the dial up to 50 at the top, which is the range filter_resonanceStrMap
+// prints.
+double flt_resonance_q(double paramValue) {
+    return 0.5 * pow(100.0, paramValue / 127.0);
+}
+
+// The dB scroll button selects how many one-pole stages sit on top of the base two: 12, 18 or 24 dB
+// per octave.
+uint32_t flt_slope_extra_poles(uint32_t slopeValue) {
+    return (slopeValue > 2) ? 2 : slopeValue;
+}
+
+// The Kbt scroll button is Off / 25% / 50% / 75% / 100% keyboard tracking (manual p.196).
+double flt_kbt_amount(uint32_t kbtValue) {
+    return (kbtValue > 4) ? 1.0 : ((double)kbtValue * 0.25);
+}
+
 tRectangle render_paramType1Freq(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double freq = 0.0;
 
-    freq = round(13.75 * pow(2, (double)paramValue / 12.0) * 100.0) / 100.0;
+    freq = round(flt_cutoff_hz(paramValue) * 100.0) / 100.0;
 
     if (freq < 100) {
         snprintf(buff, buffSize, "%.2fHz", freq);

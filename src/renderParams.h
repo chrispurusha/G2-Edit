@@ -46,6 +46,13 @@ double osc_freq_factor(double paramValue);      // PitchType 2 "Factor": 0.0248x
 double osc_fine_cents(double paramValue);       // Cent dial:            -50 .. +50 cents
 double osc_shape_percent(double paramValue);    // Shape dial:           50% .. 99%
 
+// The same idea for the filters: one definition of the cutoff, resonance and slope curves, shared
+// by the dial text, the response curve drawn on the module, and the sound engine.
+double flt_cutoff_hz(double paramValue);             // Freq dial:  13.75 Hz .. ~21 kHz
+double flt_resonance_q(double paramValue);           // Res dial:   Q 0.5 .. 50
+uint32_t flt_slope_extra_poles(uint32_t slopeValue); // 0/1/2 extra one-pole stages: 12/18/24 dB
+double flt_kbt_amount(uint32_t kbtValue);            // Kbt scroll: 0, 0.25, 0.5, 0.75, 1.0
+
 tRectangle render_paramType1Freq(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramRef);
 tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramRef);
 tRectangle render_paramType1Fine(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef);

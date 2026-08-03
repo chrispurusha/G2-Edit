@@ -1340,14 +1340,15 @@ static void render_fltclassic_response_graph(tRectangle rectangle, tModule * mod
     // min Freq the peak used to sit hard against the left edge with its lower half off-screen. This is
     // a small horizontal zoom-out: the box now shows a slightly wider window than the knob's own
     // ~14Hz..21kHz range so the curve never runs off either edge.
-    const double           kCutoffMinX     = 0.15; // min-Freq cutoff sits 15% in from the left edge
-    const double           kCutoffMaxX     = 0.90; // max-Freq cutoff sits 10% in from the right edge
+    const double           kCutoffMinX     = 0.15;                                            // min-Freq cutoff sits 15% in from the left edge
+    const double           kCutoffMaxX     = 0.90;                                            // max-Freq cutoff sits 10% in from the right edge
     double                 cutoffX         = kCutoffMinX + (cutoffKnob * (kCutoffMaxX - kCutoffMinX));
-    double                 resNorm         = (double)module->param[variation][resParamIndex].value / 127.0;
     uint32_t               slopeIndex      = module->param[variation][slopeParamIndex].value; // 0=12dB, 1=18dB, 2=24dB
 
-    double                 q               = 0.5 * pow(100.0, resNorm);                       // 0.5..50, matches filter_resonanceStrMap's real range
-    int                    extraPoles      = (int)slopeIndex;                                 // 0/1/2 extra one-pole stages -> 12/18/24 dB/octave
+    // Shared with the dial text and the sound engine — see renderParams.h. What the curve draws and
+    // what the engine plays come from one definition.
+    double                 q               = flt_resonance_q((double)module->param[variation][resParamIndex].value);
+    int                    extraPoles      = (int)flt_slope_extra_poles(slopeIndex);           // 12/18/24 dB/octave
 
     const tGraphLocation * graphLoc        = find_graph_location(module->type);
     tRectangle             graphRect       = adjust_rectangle(rectangle, graphLoc->rectangle, graphLoc->anchor, module);
