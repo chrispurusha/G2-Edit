@@ -12,6 +12,9 @@
 		8388B1E72FCE2E7A00DD4947 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 832FC5D22D01F6190084A230 /* OpenGL.framework */; };
 		8388B1E82FCE2E9600DD4947 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 832FC5DD2D01F7840084A230 /* Quartz.framework */; };
 		8388B1E92FCE2E9D00DD4947 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 830BFBC02FCDE5440006DA88 /* Security.framework */; };
+		83A0D1012FD0A10100DD4947 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 83A0D0FF2FD0A10100DD4947 /* AudioToolbox.framework */; };
+		83A0D1022FD0A10100DD4947 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 83A0D1002FD0A10100DD4947 /* CoreAudio.framework */; };
+		83A0D1042FD0A10100DD4947 /* CoreMIDI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 83A0D1032FD0A10100DD4947 /* CoreMIDI.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,6 +24,9 @@
 		832FC5D82D01F6C20084A230 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		832FC5DD2D01F7840084A230 /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
 		8388B1A42FCE2CC700DD4947 /* G2 Editor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "G2 Editor.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		83A0D0FF2FD0A10100DD4947 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		83A0D1002FD0A10100DD4947 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		83A0D1032FD0A10100DD4947 /* CoreMIDI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMIDI.framework; path = System/Library/Frameworks/CoreMIDI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -46,6 +52,9 @@
 				8388B1B42FCE2DD200DD4947 /* IOKit.framework in Frameworks */,
 				8388B1E72FCE2E7A00DD4947 /* OpenGL.framework in Frameworks */,
 				8388B1E82FCE2E9600DD4947 /* Quartz.framework in Frameworks */,
+				83A0D1012FD0A10100DD4947 /* AudioToolbox.framework in Frameworks */,
+				83A0D1022FD0A10100DD4947 /* CoreAudio.framework in Frameworks */,
+				83A0D1042FD0A10100DD4947 /* CoreMIDI.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +87,9 @@
 				832FC5D82D01F6C20084A230 /* Cocoa.framework */,
 				832FC5D62D01F68C0084A230 /* IOKit.framework */,
 				832FC5D22D01F6190084A230 /* OpenGL.framework */,
+				83A0D0FF2FD0A10100DD4947 /* AudioToolbox.framework */,
+				83A0D1002FD0A10100DD4947 /* CoreAudio.framework */,
+				83A0D1032FD0A10100DD4947 /* CoreMIDI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";

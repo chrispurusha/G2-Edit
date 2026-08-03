@@ -31,6 +31,21 @@
 // the panel's own render pass and put it back afterwards.
 void set_param_render_area(tArea area);
 
+// The arithmetic behind the oscillator dials, split out from the renderers that print it so
+// that the sound engine can derive its pitch and shape from exactly the same numbers the dial
+// text shows. Changing a curve here changes what you see and what you hear together, which is
+// the point - the two drifting apart would be invisible until it sounded wrong.
+//
+// Each takes the raw 0..127 param value. Which of the frequency curves applies is decided by
+// the module's own PitchType param, whose index differs per module - osc_pitch_type_param_index()
+// gives it, or -1 for a module that has no such param.
+int osc_pitch_type_param_index(tModule * module);
+double osc_freq_semitones(double paramValue);   // PitchType 0 "Semi":   -64 .. +63 semitones
+double osc_freq_hz(double paramValue);          // PitchType 1 "Freq":   8.1758 Hz .. 12.55 kHz
+double osc_freq_factor(double paramValue);      // PitchType 2 "Factor": 0.0248x .. 38.072x
+double osc_fine_cents(double paramValue);       // Cent dial:            -50 .. +50 cents
+double osc_shape_percent(double paramValue);    // Shape dial:           50% .. 99%
+
 tRectangle render_paramType1Freq(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramRef);
 tRectangle render_paramType1OscFreq(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphrange, tRgb colour, uint32_t paramRef);
 tRectangle render_paramType1Fine(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef);
