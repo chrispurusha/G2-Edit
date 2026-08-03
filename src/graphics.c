@@ -2689,7 +2689,7 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         sound_engine_note(note, true);
         backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "SNDDUMP") == 0) {
-        char text[1200] = {0};
+        char text[4300] = {0};
 
         snprintf(text, sizeof(text), "OK\n%s", sound_engine_debug_text());
         backdoor_write_result(text);
