@@ -72,6 +72,12 @@ void sound_engine_note(int32_t note, bool on);
 // forces one, so nothing else needs to poll.
 void sound_engine_update_from_patch(void);
 
+// The resolved chain as the engine currently sees it — one line per node with the parameters it
+// actually read. For diagnosing "it looks right on screen but makes no sound": the usual causes are
+// a parameter read from the wrong variation, or a chain that resolved differently than it looks.
+// UI thread only.
+const char * sound_engine_debug_text(void);
+
 // Audio thread, real-time context: no locks, no allocation, no logging below this line.
 // Fills frameCount frames of interleaved float, channelCount channels wide.
 void sound_engine_set_sample_rate(double sampleRate);
