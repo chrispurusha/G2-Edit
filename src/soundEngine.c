@@ -27,6 +27,7 @@ extern "C" {
 #include "synthlibDefs.h"
 #include "types.h"
 #include "dataBase.h"
+#include "cableChain.h"
 #include "globalVars.h"
 #include "renderParams.h"
 #include "audioOutput.h"
@@ -62,8 +63,16 @@ typedef enum {
 
 // Kbt off means the keyboard does not reach the oscillator at all (manual p.173), so it holds the
 // pitch its Tune value names on its own.
-#define VOICE_GAIN          (0.25)         // headroom — a single osc runs nowhere near full scale
-#define ENVELOPE_SECONDS    (0.005)        // click suppression only; there is no envelope module here
+#define VOICE_GAIN                (0.25)   // headroom — a single osc runs nowhere near full scale
+#define ENVELOPE_SECONDS          (0.005)  // click suppression only; there is no envelope module here
+
+// FltClassic's parameter indices, in moduleResources.h order.
+#define FLT_PARAM_FREQ            (0)
+#define FLT_PARAM_KBT             (2)
+#define FLT_PARAM_RES             (3)
+#define FLT_PARAM_SLOPE           (4)
+#define FLT_PARAM_ACTIVE          (5)
+#define FLT_AUDIO_IN_CONNECTOR    (0)   // FltClassic's first connector is its audio input
 
 typedef struct {
     bool     sounding;      // false publishes silence — nothing suitable is selected, or it is bypassed
@@ -71,6 +80,14 @@ typedef struct {
     bool     kbt;
     double   basePitch;     // MIDI note number, Tune plus Cent, before the played note is applied
     double   shape;         // 0.5 .. 0.99
+
+    // The filter, when the chain has one. Selecting a filter plays whatever oscillator feeds it, so
+    // the two knobs can be tweaked against each other while it sounds.
+    bool     hasFilter;
+    double   cutoffHz;
+    double   resonance;     // 0..1 straight off the dial; the ladder's feedback is derived from it
+    uint32_t extraPoles;    // 0/1/2 on top of the base two, for 12/18/24 dB per octave
+    double   filterKbt;     // 0 .. 1, how much the played note moves the cutoff
 } tSoundEngineParams;
 
 // Published by the UI thread, consumed by the audio thread, via a seqlock: the writer makes the
@@ -99,6 +116,7 @@ typedef enum {
     eStatusMultipleSelected,
     eStatusUnsupportedModule,
     eStatusBypassed,
+    eStatusFilterNoSource,
     eStatusPlaying,
 } tSoundEngineStatus;
 
@@ -113,6 +131,7 @@ static uint32_t           gSeenGeneration = 0;
 static bool               gGateOpen       = false;
 static int32_t            gVoiceNote      = -1;
 static tSoundEngineParams gLastGoodParams = {0};
+static double             gLadder[4]      = {0.0, 0.0, 0.0, 0.0};   // the filter's four one-pole stages
 
 bool sound_engine_active(void) {
     return atomic_load(&gActive);
@@ -135,6 +154,10 @@ bool sound_engine_start(void) {
     gEnvelope      = 0.0;
     gGateOpen      = false;
     gVoiceNote     = -1;
+    gLadder[0]     = 0.0;
+    gLadder[1]     = 0.0;
+    gLadder[2]     = 0.0;
+    gLadder[3]     = 0.0;
 
     if (audio_output_start() == false) {
         return false;
@@ -169,7 +192,7 @@ const char * sound_engine_status_text(void) {
     switch (gStatus) {
         case eStatusNoSelection:
         {
-            return "Select an OscB module to play it";
+            return "Select an OscB, or a FltClassic fed by one";
         }
         case eStatusMultipleSelected:
         {
@@ -177,11 +200,15 @@ const char * sound_engine_status_text(void) {
         }
         case eStatusUnsupportedModule:
         {
-            return "Only OscB plays so far";
+            return "Only OscB and FltClassic play so far";
         }
         case eStatusBypassed:
         {
             return "That OscB is switched off";
+        }
+        case eStatusFilterNoSource:
+        {
+            return "Connect an OscB to the filter's audio input";
         }
         case eStatusPlaying:
         {
@@ -200,6 +227,56 @@ void sound_engine_note(int32_t note, bool on) {
     atomic_fetch_add(&gNoteGeneration, 1);
 }
 
+// Fills in the oscillator half of the snapshot. Returns false if the module is bypassed.
+static bool read_oscillator(tModule * module, uint32_t variation, tSoundEngineParams * snapshot) {
+    double tune      = (double)module->param[variation][OSCB_PARAM_TUNE].value;
+    double cent      = (double)module->param[variation][OSCB_PARAM_CENT].value;
+    int    pitchType = (int)module->param[variation][OSCB_PARAM_PITCH_TYPE].value;
+
+    // Factor and Partial set the pitch as a ratio against a master oscillator reached over a cable,
+    // and only the audio path is followed, so there is nothing to be a ratio of. Reading the dial as
+    // Semi at least tracks the knob instead of sitting at a wrong fixed pitch.
+    if (pitchType > 1) {
+        LOG_DEBUG("Sound engine: OscB PitchType %d not supported, reading Tune as Semi\n", pitchType);
+    }
+    snapshot->wave      = (tOscWave)module->param[variation][OSCB_PARAM_WAVEFORM].value;
+    snapshot->kbt       = (module->param[variation][OSCB_PARAM_KBT].value != 0);
+    snapshot->basePitch = tune + (osc_fine_cents(cent) / 100.0);
+    snapshot->shape     = osc_shape_percent((double)module->param[variation][OSCB_PARAM_SHAPE].value) / 100.0;
+    return module->param[variation][OSCB_PARAM_ACTIVE].value != 0;
+}
+
+// Fills in the filter half. Returns false if the filter is bypassed.
+static bool read_filter(tModule * module, uint32_t variation, tSoundEngineParams * snapshot) {
+    snapshot->hasFilter  = true;
+    snapshot->cutoffHz   = flt_cutoff_hz((double)module->param[variation][FLT_PARAM_FREQ].value);
+    snapshot->resonance  = (double)module->param[variation][FLT_PARAM_RES].value / 127.0;
+    snapshot->extraPoles = flt_slope_extra_poles(module->param[variation][FLT_PARAM_SLOPE].value);
+    snapshot->filterKbt  = flt_kbt_amount(module->param[variation][FLT_PARAM_KBT].value);
+    return module->param[variation][FLT_PARAM_ACTIVE].value != 0;
+}
+
+// The oscillator feeding a module's audio input, or NULL. cable_chain_find_root() does the walking —
+// it follows a chain back to the output that sources it, including through the input-to-input links
+// the G2 uses for serial chains, and returns false if the chain never reaches a real output.
+static tModule * find_source_oscillator(tModule * sink) {
+    tCableNode inputNode = {0};
+    tCableNode root      = {0};
+    tModule *  source    = NULL;
+
+    // Audio in is the filter's first input connector.
+    if (cable_chain_node_from_connector(sink, FLT_AUDIO_IN_CONNECTOR, &inputNode) == false) {
+        return NULL;
+    }
+
+    if (cable_chain_find_root(sink->key.slot, sink->key.location, inputNode, &root) == false) {
+        return NULL;    // nothing plugged in, or a chain with no source at the far end
+    }
+    source = get_module_slot(sink->key.slot, sink->key.location, root.moduleIndex);
+
+    return ((source != NULL) && (source->type == moduleTypeOscB)) ? source : NULL;
+}
+
 void sound_engine_update_from_patch(void) {
     tSoundEngineParams snapshot  = {0};
     tModule *          module    = NULL;
@@ -209,9 +286,9 @@ void sound_engine_update_from_patch(void) {
         return;
     }
 
-    // Exactly one module, and it has to be one the engine knows. Anything else is silence rather
-    // than a guess — the engine can stay switched on while you click around the patch. Each way of
-    // being silent records why, so the menu can say so instead of leaving it a mystery.
+    // You hear what you select, plus whatever feeds it that the engine understands: select the OscB
+    // for the raw oscillator, or select the filter to hear that oscillator through it. Anything else
+    // is silence rather than a guess, and each way of being silent records why so the menu can say.
     if (gSelection.count == 1) {
         module = get_module(gSelection.keys[0]);
     }
@@ -220,39 +297,33 @@ void sound_engine_update_from_patch(void) {
         gStatus = eStatusNoSelection;
     } else if (gSelection.count > 1) {
         gStatus = eStatusMultipleSelected;
-    } else if ((module == NULL) || (module->type != moduleTypeOscB)) {
+    } else if (module == NULL) {
         gStatus = eStatusUnsupportedModule;
+    } else if (module->type == moduleTypeOscB) {
+        variation         = gPatchDescr[module->key.slot].activeVariation;
+        snapshot.sounding = read_oscillator(module, variation, &snapshot);
+        gStatus           = snapshot.sounding ? eStatusPlaying : eStatusBypassed;
+    } else if (module->type == moduleTypeFltClassic) {
+        tModule * source = find_source_oscillator(module);
+
+        if (source == NULL) {
+            gStatus = eStatusFilterNoSource;
+        } else {
+            bool oscOn = false;
+            bool fltOn = false;
+
+            variation          = gPatchDescr[module->key.slot].activeVariation;
+            oscOn              = read_oscillator(source, variation, &snapshot);
+            fltOn              = read_filter(module, variation, &snapshot);
+
+            // A bypassed filter still passes its input through on the G2, so only the oscillator
+            // being off is silence.
+            snapshot.sounding  = oscOn;
+            snapshot.hasFilter = fltOn;
+            gStatus            = oscOn ? eStatusPlaying : eStatusBypassed;
+        }
     } else {
-        gStatus = eStatusPlaying;
-    }
-
-    if ((module != NULL) && (module->type == moduleTypeOscB)) {
-        double tune      = 0.0;
-        double cent      = 0.0;
-        int    pitchType = 0;
-
-        variation          = gPatchDescr[module->key.slot].activeVariation;
-
-        tune               = (double)module->param[variation][OSCB_PARAM_TUNE].value;
-        cent               = (double)module->param[variation][OSCB_PARAM_CENT].value;
-        pitchType          = (int)module->param[variation][OSCB_PARAM_PITCH_TYPE].value;
-
-        // Factor and Partial set the pitch as a ratio against a master oscillator reached over a
-        // cable, and cables are not followed yet, so there is nothing to be a ratio of. Reading the
-        // dial as Semi at least tracks the knob instead of going silent or sitting at a wrong fixed
-        // pitch.
-        if (pitchType > 1) {
-            LOG_DEBUG("Sound engine: OscB PitchType %d not supported, reading Tune as Semi\n", pitchType);
-        }
-        snapshot.sounding  = (module->param[variation][OSCB_PARAM_ACTIVE].value != 0);
-
-        if (snapshot.sounding == false) {
-            gStatus = eStatusBypassed;    // its own power button is off, which is easy to miss
-        }
-        snapshot.wave      = (tOscWave)module->param[variation][OSCB_PARAM_WAVEFORM].value;
-        snapshot.kbt       = (module->param[variation][OSCB_PARAM_KBT].value != 0);
-        snapshot.basePitch = tune + (osc_fine_cents(cent) / 100.0);
-        snapshot.shape     = osc_shape_percent((double)module->param[variation][OSCB_PARAM_SHAPE].value) / 100.0;
+        gStatus = eStatusUnsupportedModule;
     }
     atomic_fetch_add(&gParamsSeq, 1);    // now odd — a reader seeing this discards its copy
     gParams = snapshot;
@@ -325,6 +396,42 @@ static double osc_triangle(double phase, double width) {
     return 1.0 - ((2.0 * (phase - width)) / (1.0 - width));
 }
 
+// A cascade of one-pole lowpasses with the last stage fed back to the input — the usual ladder
+// arrangement, which is what gives a resonant peak at the cutoff and the gentle saturation the
+// classic filters are liked for. Two stages is 12 dB/octave, three 18, four 24, matching the dB
+// scroll button.
+//
+// `g` is the per-stage coefficient for the cutoff, `k` the feedback depth. Feedback is taken from
+// the stage the slope actually ends on, so resonance behaves the same at every slope setting.
+static double ladder_filter(double input, double g, double k, uint32_t stages) {
+    double   feedback = gLadder[stages - 1];
+    double   x        = 0.0;
+    uint32_t i        = 0;
+
+    // Feeding the output back subtracts from the input, so a ladder loses passband level as
+    // resonance rises — authentic, but taken raw it just sounds like the filter getting quieter and
+    // duller as you turn the knob up, which buries the peak you turned it up for. Putting half of it
+    // back keeps the level roughly steady across the sweep while leaving some of the thinning that
+    // gives the design its character.
+    input *= 1.0 + (k * 0.5);
+    x      = input - (k * feedback);
+
+    // Soft-clip the feedback path rather than the output: it keeps self-oscillation bounded without
+    // dulling the signal when resonance is low.
+    if (x > 1.0) {
+        x = 1.0;
+    } else if (x < -1.0) {
+        x = -1.0;
+    }
+
+    for (i = 0; i < stages; i++) {
+        gLadder[i] += g * (x - gLadder[i]);
+        x           = gLadder[i];
+    }
+
+    return x;
+}
+
 static double advance_phase(double * phase, double dt) {
     double current = *phase;
 
@@ -344,6 +451,9 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
     double             envelopeStep = 0.0;
     uint32_t           frame        = 0;
     bool               audible      = true;
+    double             filterG      = 0.0;
+    double             filterK      = 0.0;
+    uint32_t           filterStages = 0;
 
     if ((out == NULL) || (channelCount == 0)) {
         return;
@@ -400,6 +510,33 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
     }
 
     envelopeStep = 1.0 / (ENVELOPE_SECONDS * gSampleRate);
+
+    // Filter coefficients, worked out once per buffer rather than per sample — a knob cannot move
+    // faster than the snapshot that carries it.
+    if (params.hasFilter == true) {
+        double cutoff = params.cutoffHz;
+
+        // Kbt moves the cutoff with the note, relative to middle C, at the percentage the scroll
+        // button selects (manual p.196).
+        if ((params.filterKbt > 0.0) && (gVoiceNote >= 0)) {
+            cutoff *= pow(2.0, ((double)gVoiceNote - 60.0) * params.filterKbt / 12.0);
+        }
+
+        // Keep it below Nyquist or the one-pole coefficient stops meaning anything.
+        if (cutoff > (gSampleRate * 0.45)) {
+            cutoff = gSampleRate * 0.45;
+        }
+
+        if (cutoff < 1.0) {
+            cutoff = 1.0;
+        }
+        filterG      = 1.0 - exp(-2.0 * M_PI * cutoff / gSampleRate);
+        filterStages = 2 + params.extraPoles;
+
+        // Up to just under 4, where a ladder self-oscillates. Stopping short keeps the resonance
+        // dramatic without the filter screaming on its own with no note played.
+        filterK      = 3.9 * params.resonance;
+    }
 
     for (frame = 0; frame < frameCount; frame++) {
         double target = ((gGateOpen == true) && (params.sounding == true) && (audible == true)) ? 1.0 : 0.0;
@@ -460,6 +597,12 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 sample = 0.0;
                 break;
             }
+        }
+
+        // Filter before the envelope, which is where it sits in the patch — the envelope here is
+        // only click suppression, not a level the filter should be reacting to.
+        if (params.hasFilter == true) {
+            sample = ladder_filter(sample, filterG, filterK, filterStages);
         }
         sample *= gEnvelope * VOICE_GAIN;
 

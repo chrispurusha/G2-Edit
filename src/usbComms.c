@@ -4047,7 +4047,12 @@ static int send_write_data(tMessageContent * messageContent) {
             uint32_t slot = messageContent->patchFileData.slot;
 
             init_patch(slot);
-            retVal = push_slot_to_device(slot);
+
+            // Offline there is nothing to push to, and attempting it would fail the whole command
+            // and report an error for what was a perfectly good local reset.
+            if (gCommsState == eCommsOnLine) {
+                retVal = push_slot_to_device(slot);
+            }
             call_full_patch_change_notify();
             call_wake_glfw();
             post_file_result_response(eRspNewPatch, retVal, "");
