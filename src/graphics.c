@@ -51,6 +51,7 @@ extern "C" {
 #include "protocol.h"
 #include "usbComms.h"
 #include "graphics.h"
+#include "splitView.h"
 #include "utilsGraphics.h"
 #include "mouseHandle.h"
 #include "dataBase.h"
@@ -276,19 +277,20 @@ void render_scrollbars(GLFWwindow * window) {
     double renderWidth  = get_render_width() / gGlobalGuiScale;
     double renderHeight = get_render_height() / gGlobalGuiScale;
 
-    // Scrollbar background
-    set_rgb_colour((tRgb)RGB_GREY_7);
-    render_rectangle(mainArea, (tRectangle){{0.0, renderHeight - SCROLLBAR_WIDTH}, {renderWidth - SCROLLBAR_MARGIN, SCROLLBAR_WIDTH}});
-    render_rectangle(mainArea, (tRectangle){{renderWidth - SCROLLBAR_WIDTH, 0.0}, {SCROLLBAR_WIDTH, renderHeight - SCROLLBAR_MARGIN}});
+    // The tracks and thumbs belong to the split view now — one vertical bar per pane and a
+    // horizontal one for the focused pane, all with proportional thumbs. The filler square that used
+    // to sit where the two bars met has gone with them: both bars now stop the same distance clear
+    // of the corner, so there is no junction left to cover.
+    (void)renderWidth;
+    (void)renderHeight;
 
-    // Bottom right box
-    set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
-    render_rectangle(mainArea, (tRectangle){{renderWidth - SCROLLBAR_WIDTH, renderHeight - SCROLLBAR_WIDTH}, {SCROLLBAR_WIDTH, SCROLLBAR_WIDTH}});
-
-    // Scroll indicator blocks
-    set_rgb_colour((tRgb)RGB_GREY_9);
-    gScrollState.yThumb = render_rectangle(mainArea, (tRectangle){{renderWidth - SCROLLBAR_WIDTH, gScrollState.yBar - (SCROLLBAR_LENGTH / 2.0)}, {SCROLLBAR_WIDTH, SCROLLBAR_LENGTH}});
-    gScrollState.xThumb = render_rectangle(mainArea, (tRectangle){{gScrollState.xBar - (SCROLLBAR_LENGTH / 2.0), renderHeight - SCROLLBAR_WIDTH}, {SCROLLBAR_LENGTH, SCROLLBAR_WIDTH}});
+    gScrollState.xThumb = (tRectangle){
+        0
+    };
+    gScrollState.yThumb = (tRectangle){
+        0
+    };
+    render_pane_scrollbars();
 }
 
 void render_top_bar(void) {
@@ -313,7 +315,10 @@ void render_top_bar(void) {
     double      indicatorW                          = 0.0;
 
     set_rgb_colour((tRgb)RGB_GREY_5);
-    render_rectangle_with_border(mainArea, (tRectangle){{0.0, MENU_BAR_HEIGHT}, {(get_render_width() / gGlobalGuiScale) - SCROLLBAR_MARGIN, TOP_BAR_HEIGHT}});
+    // Full width now. The strip on the right used to be reserved for the vertical scrollbar, which
+    // ran the whole window height; the per-pane bars start at their pane's top edge, which is below
+    // this, so nothing lives up here any more.
+    render_rectangle_with_border(mainArea, (tRectangle){{0.0, MENU_BAR_HEIGHT}, {get_render_width() / gGlobalGuiScale, TOP_BAR_HEIGHT}});
 
     set_rgb_colour((tRgb)RGB_BLACK);
     render_text(mainArea, (tRectangle){{400, 43 + MENU_BAR_HEIGHT}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}}, "Variation");
@@ -559,13 +564,11 @@ void wake_glfw(void) {
 }
 
 void notify_full_patch_change(void) {
-    gLocation                          = locationVa;
-    gTopbarControls[topbarVaId].colour = (tRgb)RGB_GREEN_ON;
-    gTopbarControls[topbarFxId].colour = (tRgb)RGB_BACKGROUND_GREY;
+    gLocation         = locationVa;
     // Set scrollbars back to top/left
-    gScrollState.xBar                  = (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN;
+    gScrollState.xBar = (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN;
     set_x_scroll_bar(gScrollState.xBar);
-    gScrollState.yBar                  = (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN;
+    gScrollState.yBar = (SCROLLBAR_LENGTH / 2.0) + SCROLLBAR_MARGIN;
     set_y_scroll_bar(gScrollState.yBar);
 }
 
@@ -599,6 +602,7 @@ void init_graphics(void) {
         .mouseCoord = get_global_gui_scaled_mouse_coord,
     });
     synthlib_scale_init(TARGET_FRAME_BUFF_WIDTH);
+    split_view_init();   // one pane showing the Voice Area — the pre-split behaviour, as the default
 
     glfwSetErrorCallback(error_callback);
 
@@ -2240,8 +2244,32 @@ static void render_frame(void) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     clear_click_regions();
-    render_modules();
-    render_cables();
+
+    // Draw each module pane in turn. render_modules()/render_cables() both read gLocation at their
+    // top, so the Location is set around each pass in the same "mode rather than argument" style
+    // the panes themselves use — which is why neither function needed a new parameter. gLocation is
+    // put back to the focused pane's Location afterwards, since that is what every other reader in
+    // the app means by it.
+    split_view_apply();
+
+    tLocation focusLocation = gLocation;
+    uint32_t  focusPane     = split_view_focused_pane();
+
+    param_overlay_begin_frame();   // hoisted out of render_modules(): one queue per FRAME, not per pane
+
+    for (uint32_t pane = 0; pane < module_pane_count(); pane++) {
+        set_module_pane(pane);
+        gLocation = (tLocation)split_view_location_for_pane(pane);
+        module_pane_clip_begin();
+        render_modules();
+        render_cables();
+        module_pane_clip_end();
+    }
+
+    set_module_pane(focusPane);
+    gLocation = focusLocation;
+
+    render_split_bar();
 
     if (gCableDrag.active == true) {
         tModule * module = get_module(gCableDrag.fromModuleKey);
