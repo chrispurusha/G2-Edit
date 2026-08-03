@@ -39,6 +39,7 @@ extern "C" {
 #include "globalVars.h"
 #include "graphics.h"
 #include "msgQueue.h"
+#include "soundEngine.h"
 #include "utilsGraphics.h"
 
 tVirtualKeyboard  gVirtualKeyboard = {0};
@@ -109,6 +110,11 @@ static void set_sounding_note(int32_t note) {
         send_note((uint32_t)note, true);
     }
     gVirtualKeyboard.noteOn = note;
+
+    // The local sound engine plays the same notes, when it is switched on. It sits after the G2
+    // sends rather than before so nothing here can delay the hardware, and it is a no-op while the
+    // engine is off. -1 means silence to both.
+    sound_engine_note(note, note >= 0);
 }
 
 void close_virtual_keyboard_panel(void) {
