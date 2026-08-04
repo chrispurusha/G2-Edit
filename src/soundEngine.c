@@ -342,6 +342,18 @@ static double             gEnvelope               = 0.0; // the anti-click ramp,
 
 // Per-node state, indexed by node position. Carried across snapshots while the topology signature
 // holds, so turning a knob does not restart the oscillator or reopen the envelope.
+// Oversampling factor for the oscillator section. The G2 runs its audio at 96 kHz against the 48 kHz
+// typical here, so 2x alone would match the hardware's rate; 4x is used because polyBLEP's residual
+// error falls with the square of the phase step, and the shape waveforms have no band-limiting of
+// their own at all and depend entirely on this. Costs four waveform evaluations plus one filter per
+// oscillator per sample, which a monophonic voice can afford.
+#define OSC_OVERSAMPLE       (4)
+#define OSC_DECIMATE_TAPS    (32)
+
+static double             gOscDecimate[OSC_DECIMATE_TAPS];
+static double             gOscHistory[MAX_ENGINE_NODES][OSC_DECIMATE_TAPS];
+static uint32_t           gOscHistoryPos[MAX_ENGINE_NODES];
+
 static double             gPhase[MAX_ENGINE_NODES];
 static double             gSuperPhase[MAX_ENGINE_NODES][2];
 static double             gLadder[MAX_ENGINE_NODES][LADDER_POLES];
@@ -476,6 +488,8 @@ static void reset_node_state(void) {
         // Spread rather than zeroed, for the same reason the note-on path leaves them alone: from
         // the very first note the oscillators should be at unrelated points in their cycles. The
         // step is irrational-ish so no two land together.
+        gOscHistoryPos[i] = 0;
+        memset(gOscHistory[i], 0, sizeof(gOscHistory[i]));
         gPhase[i]         = fmod((double)i * 0.381966, 1.0);
         gSuperPhase[i][0] = 0.0;
         gSuperPhase[i][1] = 0.0;
@@ -501,10 +515,39 @@ static void reset_node_state(void) {
     memset(gAllpassPos, 0, sizeof(gAllpassPos));
 }
 
+// The lowpass that turns OSC_OVERSAMPLE samples back into one. A windowed sinc: cut just under the
+// output rate's Nyquist so nothing is lost from the audible band, with a Blackman window to hold the
+// stopband down where the images sit — an image that survives here is exactly the aliasing the
+// oversampling was meant to remove.
+static void build_decimator(void) {
+    double   cutoff = 0.45 / (double)OSC_OVERSAMPLE;    // as a fraction of the oversampled rate
+    double   sum    = 0.0;
+    uint32_t i      = 0;
+
+    for (i = 0; i < OSC_DECIMATE_TAPS; i++) {
+        double offset = (double)i - ((double)(OSC_DECIMATE_TAPS - 1) / 2.0);
+        double sinc   = (fabs(offset) < 1e-9)
+                        ? (2.0 * cutoff)
+                        : (sin(2.0 * M_PI * cutoff * offset) / (M_PI * offset));
+        double window = 0.42
+                        - (0.50 * cos((2.0 * M_PI * (double)i) / (double)(OSC_DECIMATE_TAPS - 1)))
+                        + (0.08 * cos((4.0 * M_PI * (double)i) / (double)(OSC_DECIMATE_TAPS - 1)));
+
+        gOscDecimate[i] = sinc * window;
+        sum            += gOscDecimate[i];
+    }
+
+    // Normalise to unity gain at DC, so oversampling does not change the level.
+    for (i = 0; i < OSC_DECIMATE_TAPS; i++) {
+        gOscDecimate[i] /= sum;
+    }
+}
+
 bool sound_engine_start(void) {
     if (atomic_load(&gActive) == true) {
         return true;
     }
+    build_decimator();
     // Start from silence rather than inheriting whatever the last run left behind. That includes
     // the note queue: anything posted while the engine was off — the Virtual Keyboard, or MIDI from
     // a previous run — is stale, and starting the read index behind the write index would have the
@@ -1331,8 +1374,11 @@ static double poly_blep(double t, double dt) {
     return 0.0;
 }
 
+// Ramps DOWN, matching the G2. Measured against a hardware capture of a single saw at C7: the G2's
+// ramp falls where a plain (2 * phase) - 1 rises. Alone this is inaudible, but it decides whether a
+// second oscillator mixed against this one reinforces or cancels, so it has to match.
 static double osc_saw(double phase, double dt) {
-    return ((2.0 * phase) - 1.0) - poly_blep(phase, dt);
+    return poly_blep(phase, dt) - ((2.0 * phase) - 1.0);
 }
 
 static double osc_square(double phase, double dt, double width) {
@@ -1697,28 +1743,8 @@ static double signal_in(const tEngineNode * spec, double value[][2], uint32_t in
     return value[source][(spec->srcOut[input] > 0) ? 1 : 0];
 }
 
-static double oscillator_step(uint32_t node, const tEngineNode * spec, double voicePitch) {
-    double pitch     = spec->basePitch;
-    double frequency = 0.0;
-    double dt        = 0.0;
-    double phase     = 0.0;
-
-    // Kbt on transposes the played note by the oscillator's offset from unity; Kbt off leaves the
-    // keyboard disconnected and the oscillator holds the pitch Tune names.
-    if ((spec->oscKbt == true) && (voicePitch >= 0.0)) {
-        pitch = voicePitch + (spec->basePitch - OSCB_TUNE_UNITY);
-    }
-    frequency = 440.0 * pow(2.0, (pitch - MIDI_NOTE_A440) / 12.0);
-
-    // Above Nyquist there is no waveform left to produce, only aliasing. Return silence rather than
-    // just stopping the phase: a halted sawtooth is not silence, it is a DC offset held at whatever
-    // level the waveform sat at, which thumps.
-    if (frequency > (gSampleRate * 0.5)) {
-        return 0.0;
-    }
-    dt        = frequency / gSampleRate;
-    phase     = advance_phase(&gPhase[node], dt);
-
+// One sample of the raw waveform, at whatever rate the caller is stepping the phase.
+static double osc_waveform(uint32_t node, const tEngineNode * spec, double phase, double dt) {
     // The shape oscillators have their own eight waveforms, and Shape morphs each of them rather
     // than acting as a pulse width, so they do not share the switch below.
     if (spec->kind == eNodeOscShp) {
@@ -1759,6 +1785,54 @@ static double oscillator_step(uint32_t node, const tEngineNode * spec, double vo
             return 0.0;
         }
     }
+}
+
+// Runs the oscillator OSC_OVERSAMPLE times per output sample and filters the result back down.
+//
+// The oscillators are the only part of the graph that creates harmonics which were not already
+// there — the filter, mixers and amplifiers below them are linear — so oversampling here alone
+// removes the aliasing without disturbing the delay, chorus and reverb, whose buffers are sized in
+// samples and would all have to be resized for a change of engine rate.
+static double oscillator_step(uint32_t node, const tEngineNode * spec, double voicePitch) {
+    double   pitch     = spec->basePitch;
+    double   frequency = 0.0;
+    double   dt        = 0.0;
+    double   sum       = 0.0;
+    uint32_t step      = 0;
+    uint32_t tap       = 0;
+
+    // Kbt on transposes the played note by the oscillator's offset from unity; Kbt off leaves the
+    // keyboard disconnected and the oscillator holds the pitch Tune names.
+    if ((spec->oscKbt == true) && (voicePitch >= 0.0)) {
+        pitch = voicePitch + (spec->basePitch - OSCB_TUNE_UNITY);
+    }
+    frequency = 440.0 * pow(2.0, (pitch - MIDI_NOTE_A440) / 12.0);
+
+    // Above Nyquist there is no waveform left to produce, only aliasing. Return silence rather than
+    // just stopping the phase: a halted sawtooth is not silence, it is a DC offset held at whatever
+    // level the waveform sat at, which thumps. The limit stays the OUTPUT rate's Nyquist even though
+    // the oscillator now runs faster, because the decimator would remove anything above it anyway.
+    if (frequency > (gSampleRate * 0.5)) {
+        return 0.0;
+    }
+    dt        = frequency / (gSampleRate * (double)OSC_OVERSAMPLE);
+
+    for (step = 0; step < OSC_OVERSAMPLE; step++) {
+        double phase = advance_phase(&gPhase[node], dt);
+
+        gOscHistory[node][gOscHistoryPos[node]] = osc_waveform(node, spec, phase, dt);
+        gOscHistoryPos[node]                    = (gOscHistoryPos[node] + 1) % OSC_DECIMATE_TAPS;
+    }
+
+    // One output for every OSC_OVERSAMPLE inputs, so the filter only has to be evaluated at the
+    // output rate however high the oversampling factor is.
+    for (tap = 0; tap < OSC_DECIMATE_TAPS; tap++) {
+        uint32_t oldest = (gOscHistoryPos[node] + tap) % OSC_DECIMATE_TAPS;
+
+        sum += gOscHistory[node][oldest] * gOscDecimate[OSC_DECIMATE_TAPS - 1 - tap];
+    }
+
+    return sum;
 }
 
 static double filter_step(uint32_t node, const tEngineNode * spec, double input, double mod, double voicePitch) {
