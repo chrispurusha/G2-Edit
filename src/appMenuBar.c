@@ -40,6 +40,7 @@ extern "C" {
 #include "paramOverlay.h"
 #include "soundEngine.h"
 #include "audioOutput.h"
+#include "midiInput.h"
 #include "alertDialog.h"
 #include "menus.h"
 #include "appMenuBar.h"
@@ -418,12 +419,33 @@ static void action_select_audio_device(int index) {
     audio_output_select_device((uint32_t)index);
 }
 
+static void action_select_buffer_frames(int index) {
+    // Item 0 is "Device default"; the rest are the powers of two below.
+    static const uint32_t sizes[] = {0, 32, 64, 128, 256, 512, 1024, 2048};
+
+    audio_output_select_buffer_frames(sizes[((size_t)index < (sizeof(sizes) / sizeof(sizes[0]))) ? index : 0]);
+}
+
 static void action_select_left_output(int index) {
     audio_output_select_left_channel((uint32_t)index);
 }
 
 static void action_select_right_output(int index) {
     audio_output_select_right_channel((uint32_t)index);
+}
+
+static void action_select_midi_source(int index) {
+    // The list is offered with "None" first, so item 0 is None and the rest are shifted by one.
+    midi_input_select_source((index == 0) ? MIDI_INPUT_NONE : (index - 1));
+}
+
+static void action_select_midi_channel(int index) {
+    midi_input_select_channel((uint32_t)index);   // 0 is Omni, 1..16 a channel
+}
+
+static void action_toggle_midi_to_synth(int index) {
+    (void)index;
+    midi_input_set_sends_to_synth(!midi_input_sends_to_synth());
 }
 
 static void action_toggle_sound_engine(int index) {
@@ -520,7 +542,12 @@ static void open_experimental_menu(tCoord anchor) {
     // A 32-output interface is 16 pairs, and a machine can easily have half a dozen devices.
 #define MAX_AUDIO_DEVICE_ITEMS      (33)
 #define MAX_OUTPUT_CHANNEL_ITEMS    (65)
-    static tMenuItem items[8];   // toggle, status, device, pair + the NULL terminator
+#define MAX_MIDI_SOURCE_ITEMS       (34)
+    // Sized with room to spare, and deliberately generous: the entries here are conditional — the
+    // status line only appears with the engine running, the output lists only on a multi-channel
+    // device — so the real count varies, and overrunning this array corrupts whatever static
+    // follows it. It did exactly that, blanking the device flyout only while the engine was on.
+    static tMenuItem items[16];
     int              i = 0;
 
     // The engine follows whichever single oscillator is selected, so this is deliberately never
@@ -595,6 +622,36 @@ static void open_experimental_menu(tCoord anchor) {
             "Audio Device", (tRgb)RGB_GREY_3, NULL, 0, devices, 0, 0.0
         };
 
+        // Buffer size. Fewer frames means a keypress lands sooner, since the buffer length is the
+        // floor on how late a note can take effect; more means the audio thread is woken less often.
+        {
+            static const uint32_t sizes[] = {0, 32, 64, 128, 256, 512, 1024, 2048};
+            static tMenuItem      buffers[9];
+            static char           bufferLabel[9][28];
+            uint32_t              n       = 0;
+
+            for (n = 0; n < (sizeof(sizes) / sizeof(sizes[0])); n++) {
+                if (sizes[n] == 0) {
+                    snprintf(bufferLabel[n], sizeof(bufferLabel[n]), "%sDevice default",
+                             (audio_output_buffer_frames() == 0) ? "* " : "  ");
+                } else {
+                    snprintf(bufferLabel[n], sizeof(bufferLabel[n]), "%s%u frames",
+                             (audio_output_buffer_frames() == sizes[n]) ? "* " : "  ",
+                             (unsigned)sizes[n]);
+                }
+                buffers[n] = (tMenuItem){
+                    bufferLabel[n], (tRgb)RGB_GREY_3, action_select_buffer_frames, n, NULL, 0, 0.0
+                };
+            }
+
+            buffers[n] = (tMenuItem){
+                NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
+            };
+            items[i++] = (tMenuItem){
+                "Buffer Size", (tRgb)RGB_GREY_3, NULL, 0, buffers, 0, 0.0
+            };
+        }
+
         // A stereo device has nothing to choose. Multi-column past eight, or a 32-output interface
         // runs off the bottom of the screen.
         if (channels > 2) {
@@ -605,6 +662,65 @@ static void open_experimental_menu(tCoord anchor) {
                 "Right Output", (tRgb)RGB_GREY_3, NULL, 0, rights, (channels > 8) ? 2 : 1, 0.0
             };
         }
+    }
+
+    // Where MIDI comes from, on which channel, and whether it also plays the G2. The same input
+    // serves the sound engine and the hardware, which is the point: one keyboard, both instruments,
+    // the same notes — that is how the two get compared.
+    {
+        static tMenuItem sources[MAX_MIDI_SOURCE_ITEMS];
+        static tMenuItem chans[18];
+        static char      sourceLabel[MAX_MIDI_SOURCE_ITEMS][80];
+        static char      chanLabel[18][20];
+        uint32_t         count = midi_input_source_count();
+        uint32_t         m     = 0;
+        uint32_t         ch    = 0;
+
+        snprintf(sourceLabel[0], sizeof(sourceLabel[0]), "%sNone",
+                 midi_input_is_enabled() ? "  " : "* ");
+        sources[0]     = (tMenuItem){
+            sourceLabel[0], (tRgb)RGB_GREY_3, action_select_midi_source, 0, NULL, 0, 0.0
+        };
+
+        for (m = 0; (m < count) && ((m + 1) < (MAX_MIDI_SOURCE_ITEMS - 1)); m++) {
+            snprintf(sourceLabel[m + 1], sizeof(sourceLabel[m + 1]), "%s%s",
+                     midi_input_source_is_selected(m) ? "* " : "  ", midi_input_source_name(m));
+            sources[m + 1] = (tMenuItem){
+                sourceLabel[m + 1], (tRgb)RGB_GREY_3, action_select_midi_source, m + 1, NULL, 0, 0.0
+            };
+        }
+
+        sources[m + 1] = (tMenuItem){
+            NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
+        };
+
+        for (ch = 0; ch <= 16; ch++) {
+            if (ch == 0) {
+                snprintf(chanLabel[0], sizeof(chanLabel[0]), "%sAll (Omni)",
+                         (midi_input_channel() == 0) ? "* " : "  ");
+            } else {
+                snprintf(chanLabel[ch], sizeof(chanLabel[ch]), "%sChannel %u",
+                         (midi_input_channel() == ch) ? "* " : "  ", (unsigned)ch);
+            }
+            chans[ch] = (tMenuItem){
+                chanLabel[ch], (tRgb)RGB_GREY_3, action_select_midi_channel, ch, NULL, 0, 0.0
+            };
+        }
+
+        chans[17]      = (tMenuItem){
+            NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
+        };
+
+        items[i++]     = (tMenuItem){
+            "MIDI Input", (tRgb)RGB_GREY_3, NULL, 0, sources, 0, 0.0
+        };
+        items[i++]     = (tMenuItem){
+            "MIDI Channel", (tRgb)RGB_GREY_3, NULL, 0, chans, 2, 0.0
+        };
+        items[i++]     = (tMenuItem){
+            midi_input_sends_to_synth() ? "MIDI Plays the G2: On" : "MIDI Plays the G2: Off",
+            (tRgb)RGB_GREY_3, action_toggle_midi_to_synth, 0, NULL, 0, 0.0
+        };
     }
     items[i] = (tMenuItem){
         NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
