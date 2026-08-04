@@ -81,10 +81,46 @@ extern "C" {
 
 // Mix4to1C: one level per input, then a pad and a curve.
 #define MIX_PARAM_LEVEL_BASE    (0)
-#define MIX_PARAM_CURVE         (9)    // 0 = linear taper, otherwise exponential
+// The two mixers put Curve in different places: Mix4to1C has a Pad at 8 and Curve at 9, Mix4to1S
+// has no Pad and Curve at 8.
+#define MIX_PARAM_CURVE         (9)
+#define MIXS_PARAM_CURVE        (8)
 
-// A node takes at most this many inputs — four, which is what the 4-into-1 mixers need.
-#define MAX_NODE_INPUTS         (4)
+// StChorus: a detune depth and an amount, then its power button.
+#define CHORUS_PARAM_DETUNE     (0)
+#define CHORUS_PARAM_AMOUNT     (1)
+#define CHORUS_PARAM_ACTIVE     (2)
+
+// Compress: threshold and reference level run 0..42, ratio 0..66.
+#define COMP_PARAM_THRESHOLD    (0)
+#define COMP_PARAM_RATIO        (1)
+#define COMP_PARAM_ATTACK       (2)
+#define COMP_PARAM_RELEASE      (3)
+#define COMP_PARAM_ACTIVE       (6)
+
+// DelayB. Its range is a MODE, like the shape oscillators' waveform.
+#define DELAY_PARAM_TIME        (0)
+#define DELAY_PARAM_FEEDBACK    (1)
+#define DELAY_PARAM_LP          (2)
+#define DELAY_PARAM_DRYWET      (3)
+#define DELAY_PARAM_ACTIVE      (7)
+#define DELAY_MODE_RANGE        (0)
+
+#define REVERB_PARAM_TIME       (0)
+#define REVERB_PARAM_BRIGHT     (1)
+#define REVERB_PARAM_DRYWET     (2)
+#define REVERB_PARAM_ACTIVE     (3)
+
+#define CONST_PARAM_VALUE       (0)
+#define CONST_PARAM_BIPOLAR     (1)   // 0 = unipolar 0..1, otherwise -1..+1
+
+#define FXIN_PARAM_ACTIVE       (1)
+
+// A node takes at most this many inputs. Eight, because the STEREO 4-into-1 mixer has four channels
+// of two legs each and both legs have to be read: patches routinely put two different modules on the
+// left and right of one channel — this patch feeds its two delays to In2L and In2R — so taking only
+// the left leg silently dropped whichever module sat on the right.
+#define MAX_NODE_INPUTS    (8)
 
 // Which connector carries the signal into each module. Everything the walk follows is a module's
 // FIRST input; LevMult and 2toOut take a second as well.
@@ -113,8 +149,16 @@ typedef enum {
 #define MIDI_NOTE_A440        (69.0)
 #define MIDI_NOTE_MIDDLE_C    (60.0)
 
-#define VOICE_GAIN            (0.25)       // headroom — one voice runs nowhere near full scale
-#define ENVELOPE_SECONDS      (0.005)      // the anti-click ramp used when no EnvADSR is in the chain
+// Output trim. A busy patch — several oscillators into a mixer, a resonant filter, then a second
+// mixer summing dry against delays and reverb — genuinely reaches five or six times a single
+// oscillator's level, and that is the G2's own arrangement rather than anything wrong. So the trim
+// has to leave room for it: 0.15 puts a hot patch just under full scale instead of 3 dB into the
+// clipper, at the cost of a single-oscillator sketch being quieter.
+#define VOICE_GAIN          (0.15)
+
+// Where the output starts bending rather than shearing.
+#define OUTPUT_KNEE         (0.80)
+#define ENVELOPE_SECONDS    (0.005)        // the anti-click ramp used when no EnvADSR is in the chain
 
 // Envelope times. The G2's range runs from well under a millisecond to tens of seconds; this is an
 // exponential fit across that span rather than a reading of the hardware's own table, in keeping
@@ -127,7 +171,9 @@ typedef enum {
 
 // The chain the engine renders. Small and fixed: these are hand-built sketches, not whole patches,
 // and a bound is what keeps the walk safe against a patch that feeds back into itself.
-#define MAX_ENGINE_NODES    (12)
+// Raised from 12 once whole patches came into scope: a real one runs to a couple of dozen modules
+// across the Voice and FX areas.
+#define MAX_ENGINE_NODES    (28)
 
 typedef enum {
     eNodeOsc = 0,        // OscB
@@ -137,6 +183,12 @@ typedef enum {
     eNodeLevMult,
     eNodeMix,            // Mix4to1C
     eNodeEnv,            // envelope, and a VCA for whatever is patched into its audio input
+    eNodeChorus,
+    eNodeCompress,
+    eNodeDelay,
+    eNodeReverb,
+    eNodeConstant,
+    eNodeFxIn,           // the FX area's feed from the Voice area — no cable, an implicit link
     eNodePassThru,       // an effect that is not modelled yet: passes its input along unchanged
     eNodeOut,
 } tNodeKind;
@@ -144,6 +196,7 @@ typedef enum {
 typedef struct {
     tNodeKind kind;
     uint32_t  moduleIndex;   // so per-node audio state can survive a knob turn (see topology_signature)
+    uint32_t  location;      // Voice or FX — the two areas number their modules independently
 
     // What feeds each input: the node index, and WHICH of that node's outputs the cable came from.
     // The output matters because a module can offer more than one — an EnvADSR's first output is the
@@ -173,6 +226,17 @@ typedef struct {
     double   release;
 
     double   gain;           // LevAmp
+
+    double   depth;          // chorus detune depth, and the delay's feedback
+    double   amount;         // chorus wet amount, delay/reverb dry-wet
+    double   timeSeconds;    // delay time
+    double   damping;        // delay LP / reverb brightness, 0..1
+    double   threshold;      // compressor
+    double   ratio;
+    double   attackCoeff;
+    double   releaseCoeff;
+    double   constant;       // Constant module's value
+    uint32_t line;           // which shared delay line this node owns, if it needs one
 } tEngineNode;
 
 typedef struct {
@@ -188,21 +252,46 @@ typedef struct {
 // side ever blocks, and the audio thread never waits on the UI thread. A plain pair of buffers
 // would not do: the UI can publish twice while one audio buffer is being filled, which is long
 // enough to land back on the buffer the audio thread is mid-copy of.
-static tSoundEngineParams gParams         = {0};
-static _Atomic uint32_t   gParamsSeq      = 0;
+static tSoundEngineParams gParams    = {0};
+static _Atomic uint32_t   gParamsSeq = 0;
 
 #define PARAMS_READ_ATTEMPTS    (4)   // then keep last good — a retry loop must not spin in audio
 
-// Note state. The generation counter is what makes a retrigger unambiguous — restriking the same
-// note changes no other field, and Repeat on the virtual keyboard does exactly that.
-static _Atomic int32_t    gNote           = -1;
-static _Atomic uint32_t   gNoteGeneration = 0;
+// Note events queue up here rather than being a single "current note" the audio thread samples once
+// per buffer. Two things were wrong with that: the note only took effect at a buffer boundary, which
+// is audible jitter at any sensible buffer size, and if two events landed inside one buffer only the
+// last survived — so fast playing dropped notes.
+//
+// Written by the MIDI thread and the UI thread, drained by the audio thread. Multiple producers, one
+// consumer: the write index is claimed with a fetch_add so no two producers take the same slot, and
+// each slot publishes its own sequence number afterwards so the consumer can tell a slot that has
+// been claimed from one that has actually been filled in.
+#define NOTE_QUEUE_SIZE    (64)
 
-static _Atomic bool       gActive         = false;
+typedef struct {
+    int32_t          note;
+    bool             on;
+    _Atomic uint32_t sequence;   // claim index + 1 once written; 0 means never used
+} tNoteEvent;
+
+static tNoteEvent         gNoteQueue[NOTE_QUEUE_SIZE];
+static _Atomic uint32_t   gNoteWrite              = 0;
+static uint32_t           gNoteRead               = 0; // audio thread only
+
+static _Atomic bool       gActive                 = false;
+
+// Morph positions, 0..1, one per group. Written by the MIDI thread as controllers move, read by the
+// UI thread when it builds a snapshot. Plain atomics: each is independent and a torn read is not
+// possible on a value this size.
+static _Atomic uint32_t   gMorphMilli[NUM_MORPHS] = {0};
 
 // Highest absolute sample the audio thread has produced since this was last read. Purely a
 // diagnostic — it is what lets a test say "sound is coming out" without a pair of ears.
-static _Atomic uint32_t   gPeakMilli      = 0;
+static _Atomic uint32_t   gPeakMilli              = 0;
+
+// The peak BEFORE the output gain, so the real headroom a patch needs is visible rather than being
+// hidden by whatever the guard clamped it to.
+static _Atomic uint32_t   gRawPeakMilli           = 0;
 
 // Why the engine is or is not making a sound. UI thread only — written while building the snapshot,
 // read by the menu.
@@ -217,23 +306,58 @@ typedef enum {
     eStatusPlaying,
 } tSoundEngineStatus;
 
-static tSoundEngineStatus gStatus         = eStatusOff;
-static uint32_t           gPlayingCount   = 0;   // how many modules are in the rendered chain
+static tSoundEngineStatus gStatus                 = eStatusOff;
+static uint32_t           gPlayingCount           = 0; // how many modules are in the rendered chain
 
 // Audio-thread-only state. Nothing else may touch these.
-static double             gSampleRate     = 48000.0;
-static uint32_t           gSeenGeneration = 0;
-static bool               gGateOpen       = false;
-static int32_t            gVoiceNote      = -1;
-static tSoundEngineParams gLastGoodParams = {0};
-static uint64_t           gSeenTopology   = 0;
-static double             gEnvelope       = 0.0;   // the anti-click ramp, when no EnvADSR is present
+static double             gSampleRate             = 48000.0;
+static bool               gGateOpen               = false;
+static int32_t            gVoiceNote              = -1;
+static tSoundEngineParams gLastGoodParams         = {0};
+static uint64_t           gSeenTopology           = 0;
+static double             gEnvelope               = 0.0; // the anti-click ramp, when no EnvADSR is present
 
 // Per-node state, indexed by node position. Carried across snapshots while the topology signature
 // holds, so turning a knob does not restart the oscillator or reopen the envelope.
 static double             gPhase[MAX_ENGINE_NODES];
 static double             gSuperPhase[MAX_ENGINE_NODES][2];
 static double             gLadder[MAX_ENGINE_NODES][LADDER_POLES];
+
+// Delay memory. Held as float rather than double purely for size — half a second per line at any
+// sensible rate, four lines, is enough for the delays a patch normally has and keeps this under a
+// megabyte. Nodes beyond that many run dry rather than sharing a line and smearing into each other.
+#define MAX_DELAY_LINES       (4)
+#define DELAY_LINE_SAMPLES    (48000)
+static float              gDelayLine[MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
+static uint32_t           gDelayWrite[MAX_DELAY_LINES];
+static double             gDelayDamp[MAX_DELAY_LINES];
+
+// The chorus's own short sweep, one per node, plus its LFO phase.
+#define CHORUS_SAMPLES    (2048)
+static float              gChorusLine[MAX_ENGINE_NODES][CHORUS_SAMPLES];
+static uint32_t           gChorusWrite[MAX_ENGINE_NODES];
+static double             gChorusLfo[MAX_ENGINE_NODES];
+
+// Compressor gain-reduction state, one per node.
+static double             gCompEnv[MAX_ENGINE_NODES];
+
+// A Schroeder reverb: four combs into two allpasses. One reverb is modelled; any further ones pass
+// their input through, which is what a patch with two of them would mostly sound like anyway.
+#define REVERB_COMBS      (4)
+#define REVERB_ALLPASS    (3)
+
+// Mutually prime lengths, so the combs do not reinforce each other into a ringing tone. The buffers
+// are sized from the longest of each set rather than a hand-written number — getting those out of
+// step is a buffer overrun, and it is the kind that only shows up as a crash much later.
+#define REVERB_COMB_MAX       (1356)
+#define REVERB_ALLPASS_MAX    (225)
+static const uint32_t     kCombLen[REVERB_COMBS]      = {1116, 1188, 1277, REVERB_COMB_MAX};
+static const uint32_t     kAllpassLen[REVERB_ALLPASS] = {REVERB_ALLPASS_MAX, 149, 97};
+static float              gComb[REVERB_COMBS][REVERB_COMB_MAX];
+static uint32_t           gCombPos[REVERB_COMBS];
+static double             gCombStore[REVERB_COMBS];
+static float              gAllpass[REVERB_ALLPASS][REVERB_ALLPASS_MAX];
+static uint32_t           gAllpassPos[REVERB_ALLPASS];
 static double             gEnvLevel[MAX_ENGINE_NODES];
 static uint32_t           gEnvStage[MAX_ENGINE_NODES];
 
@@ -244,6 +368,49 @@ typedef enum {
     eEnvSustain,
     eEnvRelease,
 } tEnvStage;
+
+void sound_engine_set_morph(uint32_t group, double amount) {
+    if (group >= NUM_MORPHS) {
+        return;
+    }
+
+    if (amount < 0.0) {
+        amount = 0.0;
+    } else if (amount > 1.0) {
+        amount = 1.0;
+    }
+    atomic_store(&gMorphMilli[group], (uint32_t)(amount * 1000.0));
+}
+
+// A parameter's value with every morph applied. morphRange is a SIGNED 8-bit offset from the dialled
+// value — under 128 it is positive, at or above it is that value minus 256 — so a morph sweeps the
+// parameter from where the knob sits towards its morph target as the controller moves.
+static double param_value(tModule * module, uint32_t variation, uint32_t index) {
+    const tParam * param = &module->param[variation][index];
+    double         value = (double)param->value;
+    uint32_t       group = 0;
+
+    for (group = 0; group < NUM_MORPHS; group++) {
+        uint32_t raw = param->morphRange[group];
+
+        if (raw == 0) {
+            continue;
+        }
+        {
+            int32_t offset = (raw < 128) ? (int32_t)raw : ((int32_t)raw - 256);
+            double  amount = (double)atomic_load(&gMorphMilli[group]) / 1000.0;
+
+            value += (double)offset * amount;
+        }
+    }
+
+    if (value < 0.0) {
+        value = 0.0;
+    } else if (value > 127.0) {
+        value = 127.0;
+    }
+    return value;
+}
 
 bool sound_engine_active(void) {
     return atomic_load(&gActive);
@@ -271,14 +438,31 @@ static void reset_node_state(void) {
         gLadder[i][3]     = 0.0;
         gEnvLevel[i]      = 0.0;
         gEnvStage[i]      = eEnvIdle;
+        gChorusWrite[i]   = 0;
+        gChorusLfo[i]     = 0.0;
+        gCompEnv[i]       = 0.0;
+        memset(gChorusLine[i], 0, sizeof(gChorusLine[i]));
     }
+
+    memset(gDelayLine, 0, sizeof(gDelayLine));
+    memset(gDelayWrite, 0, sizeof(gDelayWrite));
+    memset(gDelayDamp, 0, sizeof(gDelayDamp));
+    memset(gComb, 0, sizeof(gComb));
+    memset(gCombPos, 0, sizeof(gCombPos));
+    memset(gCombStore, 0, sizeof(gCombStore));
+    memset(gAllpass, 0, sizeof(gAllpass));
+    memset(gAllpassPos, 0, sizeof(gAllpassPos));
 }
 
 bool sound_engine_start(void) {
     if (atomic_load(&gActive) == true) {
         return true;
     }
-    // Start from silence rather than inheriting whatever the last run left behind.
+    // Start from silence rather than inheriting whatever the last run left behind. That includes
+    // the note queue: anything posted while the engine was off — the Virtual Keyboard, or MIDI from
+    // a previous run — is stale, and starting the read index behind the write index would have the
+    // audio thread chewing through history instead of playing what is being pressed now.
+    gNoteRead  = atomic_load(&gNoteWrite);
     reset_node_state();
     gEnvelope  = 0.0;
     gGateOpen  = false;
@@ -356,20 +540,24 @@ const char * sound_engine_status_text(void) {
 }
 
 const char * sound_engine_debug_text(void) {
-    static char  text[1024];
+    // Big enough for a full patch: a couple of dozen nodes at roughly 230 characters each. It was
+    // 1024, which silently cut the listing off after five nodes.
+    static char  text[8192];
     size_t       used       = 0;
     uint32_t     i          = 0;
     // One entry per tNodeKind, in enum order. Kept in step with it — a short array here is read off
     // the end by the kindName[n->kind] below, which is a stack overflow rather than a wrong label.
     const char * kindName[] = {
-        "Osc", "OscShp", "Filter", "LevAmp", "LevMult", "Mix", "Env", "PassThru", "Out"
+        "Osc",    "OscShp",   "Filter", "LevAmp", "LevMult", "Mix",  "Env",
+        "Chorus", "Compress", "Delay",  "Reverb", "Const",   "FxIn", "PassThru", "Out"
     };
 
     used += (size_t)snprintf(text + used, sizeof(text) - used,
-                             "active=%d status=%d nodes=%u tap=%d variation=%u peak=%.3f\n",
+                             "active=%d status=%d nodes=%u tap=%d variation=%u peak=%.3f rawpeak=%.3f\n",
                              (int)atomic_load(&gActive), (int)gStatus, (unsigned)gParams.nodeCount,
                              (int)gParams.tap, (unsigned)gPatchDescr[gSlot].activeVariation,
-                             (double)atomic_exchange(&gPeakMilli, 0) / 1000.0);
+                             (double)atomic_exchange(&gPeakMilli, 0) / 1000.0,
+                             (double)atomic_exchange(&gRawPeakMilli, 0) / 1000.0);
 
     for (i = 0; (i < gParams.nodeCount) && (used < sizeof(text)); i++) {
         const tEngineNode * n = &gParams.node[i];
@@ -377,8 +565,8 @@ const char * sound_engine_debug_text(void) {
         used += (size_t)snprintf(text + used, sizeof(text) - used,
                                  "[%u] %-8s mod=%u in=%d/%d/%d/%d src=%u/%u/%u/%u active=%d "
                                  "wave=%d kbt=%d pitch=%.2f shape=%.2f "
-                                 "cut=%.1f res=%.2f poles=%u env=%.2f "
-                                 "a=%.3f d=%.3f s=%.2f r=%.3f gain=%.2f\n",
+                                 "cut=%.1f res=%.2f poles=%u env=%.2f fltkbt=%.2f "
+                                 "a=%.3f d=%.3f s=%.2f r=%.3f gain=%.2f time=%.3f mix=%.2f fb=%.2f\n",
                                  (unsigned)i,
                                  (n->kind < (sizeof(kindName) / sizeof(kindName[0]))) ? kindName[n->kind] : "?",
                                  (unsigned)n->moduleIndex,
@@ -386,16 +574,60 @@ const char * sound_engine_debug_text(void) {
                                  (unsigned)n->srcOut[0], (unsigned)n->srcOut[1],
                                  (unsigned)n->srcOut[2], (unsigned)n->srcOut[3], (int)n->active,
                                  (int)n->wave, (int)n->oscKbt, n->basePitch, n->shape,
-                                 n->cutoffHz, n->resonance, (unsigned)n->extraPoles, n->modAmount,
-                                 n->attack, n->decay, n->sustain, n->release, n->gain);
+                                 n->cutoffHz, n->resonance, (unsigned)n->extraPoles, n->modAmount, n->fltKbt,
+                                 n->attack, n->decay, n->sustain, n->release, n->gain,
+                                 n->timeSeconds, n->amount, n->depth);
     }
 
     return text;
 }
 
 void sound_engine_note(int32_t note, bool on) {
-    atomic_store(&gNote, on ? note : -1);
-    atomic_fetch_add(&gNoteGeneration, 1);
+    uint32_t claim = atomic_fetch_add(&gNoteWrite, 1);
+    uint32_t slot  = claim % NOTE_QUEUE_SIZE;
+
+    gNoteQueue[slot].note = note;
+    gNoteQueue[slot].on   = on;
+
+    // Published last: the consumer treats a slot as filled only once this matches.
+    atomic_store(&gNoteQueue[slot].sequence, claim + 1);
+}
+
+// Audio thread. Applies the next queued event if there is one, returning false when the queue is
+// empty. Called per sample, so a note lands on the sample it arrived rather than at the next buffer
+// boundary.
+static bool take_next_note_event(void) {
+    uint32_t write = atomic_load(&gNoteWrite);
+    uint32_t slot  = 0;
+
+    if (gNoteRead >= write) {
+        return false;
+    }
+
+    // If the writer has lapped us the oldest events have already been overwritten, and the slot the
+    // read index points at now holds something far newer. Waiting for a sequence number that can
+    // never arrive would wedge the queue for good — every later note silently dropped — so skip
+    // forward to the oldest event still intact. Losing the tail of a burst is recoverable; wedging
+    // is not, and wedging is what made rapid playing fall apart.
+    if ((write - gNoteRead) > NOTE_QUEUE_SIZE) {
+        gNoteRead = write - NOTE_QUEUE_SIZE;
+    }
+    slot = gNoteRead % NOTE_QUEUE_SIZE;
+
+    if (atomic_load(&gNoteQueue[slot].sequence) != (gNoteRead + 1)) {
+        return false;   // claimed but not yet written; it will be there next time round
+    }
+
+    // Only the gate closes on note-off. gVoiceNote holds the pitch it was last played at, because
+    // the release is still sounding and has to keep that pitch.
+    if ((gNoteQueue[slot].on == true) && (gNoteQueue[slot].note >= 0)) {
+        gVoiceNote = gNoteQueue[slot].note;
+        gGateOpen  = true;
+    } else {
+        gGateOpen = false;
+    }
+    gNoteRead++;
+    return true;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -445,13 +677,35 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
             *kind = eNodeMix;
             return true;
         }
-        // Not modelled, but they sit in the signal path of real patches and stopping the chain at
-        // them would mean hearing nothing at all. Passing the audio through unchanged loses their
-        // character but keeps everything downstream audible.
         case moduleTypeStChorus:
+        {
+            *kind = eNodeChorus;
+            return true;
+        }
         case moduleTypeCompress:
         {
-            *kind = eNodePassThru;
+            *kind = eNodeCompress;
+            return true;
+        }
+        case moduleTypeDelayB:
+        case moduleTypeDelayA:
+        {
+            *kind = eNodeDelay;
+            return true;
+        }
+        case moduleTypeReverb:
+        {
+            *kind = eNodeReverb;
+            return true;
+        }
+        case moduleTypeConstant:
+        {
+            *kind = eNodeConstant;
+            return true;
+        }
+        case moduleTypeFxtoIn:
+        {
+            *kind = eNodeFxIn;
             return true;
         }
         case moduleType2toOut:
@@ -468,13 +722,14 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
 }
 
 // Which connectors each kind draws its signal from, in the order the node stores them.
-static uint32_t input_connectors(tNodeKind kind, const uint32_t ** connectors) {
-    static const uint32_t oneIn[]    = {CONNECTOR_IN_A};
-    static const uint32_t twoIn[]    = {CONNECTOR_IN_A, CONNECTOR_IN_B};
-    static const uint32_t filterIn[] = {CONNECTOR_IN_A, FLT_CONNECTOR_ENV_IN};
-    static const uint32_t mixIn[]    = {0, 1, 2, 3};
-    static const uint32_t envIn[]    = {0};   // connector 0 is the audio the envelope shapes
-    static const uint32_t none[]     = {0};
+static uint32_t input_connectors(tNodeKind kind, bool stereoMix, const uint32_t ** connectors) {
+    static const uint32_t oneIn[]       = {CONNECTOR_IN_A};
+    static const uint32_t twoIn[]       = {CONNECTOR_IN_A, CONNECTOR_IN_B};
+    static const uint32_t filterIn[]    = {CONNECTOR_IN_A, FLT_CONNECTOR_ENV_IN};
+    static const uint32_t mixIn[]       = {0, 1, 2, 3};
+    static const uint32_t mixStereoIn[] = {2, 3, 4, 5, 6, 7, 8, 9}; // In1L,In1R .. In4L,In4R
+    static const uint32_t envIn[]       = {0};                      // connector 0 is the audio the envelope shapes
+    static const uint32_t none[]        = {0};
 
     switch (kind) {
         case eNodeFilter:
@@ -490,13 +745,33 @@ static uint32_t input_connectors(tNodeKind kind, const uint32_t ** connectors) {
         }
         case eNodeMix:
         {
-            *connectors = mixIn;
-            return 4;
+            // Mix4to1C's four inputs are its first four connectors. Mix4to1S puts its two outputs
+            // first and then interleaves the inputs as stereo pairs, so all eight legs are read and
+            // summed to mono, with each channel's level applied to both of its legs.
+            *connectors = stereoMix ? mixStereoIn : mixIn;
+            return stereoMix ? 8 : 4;
+        }
+        case eNodeChorus:
+        case eNodeDelay:
+        case eNodeCompress:
+        {
+            *connectors = oneIn;
+            return 1;
+        }
+        case eNodeReverb:
+        {
+            *connectors = twoIn;
+            return 2;
         }
         case eNodeEnv:
         {
             *connectors = envIn;
             return 1;
+        }
+        case eNodeFxIn:
+        {
+            *connectors = none;   // filled in by the Voice-area bridge, not by a cable
+            return 0;
         }
         case eNodeLevAmp:
         case eNodePassThru:
@@ -532,6 +807,23 @@ static tModule * module_feeding(tModule * sink, uint32_t connectorIndex, uint32_
     return get_module_slot(sink->key.slot, sink->key.location, root.moduleIndex);
 }
 
+// The Voice area's Out module, which is what feeds the FX area. There is no cable for this link —
+// the 2-Out's "Out to" setting routes it — so the walk has to make the jump itself when it reaches
+// an Fx-In, or the whole FX chain would look like it had nothing patched into it.
+static tModule * voice_area_output(uint32_t slot) {
+    uint32_t index = 0;
+
+    for (index = 0; index < MAX_NUM_MODULES; index++) {
+        tModule * module = get_module_slot(slot, (uint32_t)locationVa, index);
+
+        if ((module != NULL) && ((module->type == moduleType2toOut) || (module->type == moduleType4toOut))) {
+            return module;
+        }
+    }
+
+    return NULL;
+}
+
 // Adds `module` and everything upstream of it, depth first so a node's inputs always occupy lower
 // indices than the node itself — which is what lets the audio thread evaluate the list as a single
 // forward pass. Returns the node's index, or -1 if it could not be added.
@@ -560,7 +852,11 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         uint32_t existing = 0;
 
         for (existing = 0; existing < params->nodeCount; existing++) {
-            if (params->node[existing].moduleIndex == module->key.index) {
+            // Keyed on the area as well as the index: the two areas number their modules
+            // independently, so a Voice module and an FX module routinely share an index and
+            // matching on the index alone silently merged two unrelated modules into one node.
+            if (  (params->node[existing].moduleIndex == module->key.index)
+               && (params->node[existing].location == module->key.location)) {
                 return (int32_t)existing;
             }
         }
@@ -569,7 +865,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
     // Inputs first, so they land at lower node indices than this one.
     {
         const uint32_t * connectors = NULL;
-        uint32_t         count      = input_connectors(kind, &connectors);
+        uint32_t         count      = input_connectors(kind, module->type == moduleTypeMix4to1S, &connectors);
         uint32_t         c          = 0;
 
         for (c = 0; c < count; c++) {
@@ -581,6 +877,15 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
 
         inCount = count;
+
+        // An Fx-In takes no cable: it carries whatever the Voice area's Out sends across. Follow
+        // that link explicitly, or a patch whose real output lives in the FX area looks like it has
+        // nothing patched into it and plays silence.
+        if (kind == eNodeFxIn) {
+            resolvedIn[0]     = add_node(params, voice_area_output(module->key.slot), variation, depth + 1);
+            resolvedSrcOut[0] = 0;
+            inCount           = 1;
+        }
     }
 
     if (params->nodeCount >= MAX_ENGINE_NODES) {
@@ -591,6 +896,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
     memset(node, 0, sizeof(*node));
     node->kind        = kind;
     node->moduleIndex = module->key.index;
+    node->location    = module->key.location;
     node->inCount     = inCount;
     node->active      = true;
 
@@ -612,20 +918,84 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             // waveforms lost the entire point of the module, since at 50% Shape all four Sine
             // variants ARE a plain sine and everything interesting happens as Shape opens.
             node->wave      = (tOscWave)module->mode[SHPB_MODE_WAVEFORM].value;
-            node->oscKbt    = (module->param[variation][SHPB_PARAM_KBT].value != 0);
-            node->basePitch = (double)module->param[variation][SHPB_PARAM_TUNE].value
-                              + (osc_fine_cents((double)module->param[variation][SHPB_PARAM_CENT].value) / 100.0);
-            node->shape     = osc_shape_percent((double)module->param[variation][SHPB_PARAM_SHAPE].value) / 100.0;
-            node->active    = (module->param[variation][SHPB_PARAM_ACTIVE].value != 0);
+            node->oscKbt    = (param_value(module, variation, SHPB_PARAM_KBT) != 0.0);
+            node->basePitch = param_value(module, variation, SHPB_PARAM_TUNE)
+                              + (osc_fine_cents(param_value(module, variation, SHPB_PARAM_CENT)) / 100.0);
+            node->shape     = osc_shape_percent(param_value(module, variation, SHPB_PARAM_SHAPE)) / 100.0;
+            node->active    = (param_value(module, variation, SHPB_PARAM_ACTIVE) != 0.0);
+            break;
+        }
+        case eNodeChorus:
+        {
+            // Detune sets how far the delay is swept, Amount how much of the wet signal is heard.
+            node->depth  = param_value(module, variation, CHORUS_PARAM_DETUNE) / 127.0;
+            node->amount = param_value(module, variation, CHORUS_PARAM_AMOUNT) / 127.0;
+            node->active = (param_value(module, variation, CHORUS_PARAM_ACTIVE) != 0.0);
+            break;
+        }
+        case eNodeCompress:
+        {
+            // Threshold and reference run 0..42 on the dial, ratio 0..66. Read as dB below 0 and as
+            // a ratio from 1:1 upwards — an approximation of the curve, not a reading of it.
+            double thrDb = -42.0 + param_value(module, variation, COMP_PARAM_THRESHOLD);
+            double att   = param_value(module, variation, COMP_PARAM_ATTACK) / 127.0;
+            double rel   = param_value(module, variation, COMP_PARAM_RELEASE) / 127.0;
+
+            node->threshold    = pow(10.0, thrDb / 20.0);
+            node->ratio        = 1.0 + (param_value(module, variation, COMP_PARAM_RATIO) / 8.0);
+            // 0.1 ms .. 300 ms attack, 10 ms .. 3 s release, as one-pole coefficients.
+            node->attackCoeff  = 1.0 - exp(-1.0 / (gSampleRate * (0.0001 * pow(3000.0, att))));
+            node->releaseCoeff = 1.0 - exp(-1.0 / (gSampleRate * (0.01 * pow(300.0, rel))));
+            node->active       = (param_value(module, variation, COMP_PARAM_ACTIVE) != 0.0);
+            break;
+        }
+        case eNodeDelay:
+        {
+            // The range selector is a mode. Its four settings are progressively longer maximum
+            // times; the dial then scales within the chosen one.
+            // The four range settings, straight off delayABRangeStrMap: 500ms, 1.0s, 2.0s, 2.7s.
+            static const double rangeSeconds[] = {0.5, 1.0, 2.0, 2.7};
+            uint32_t            range          = module->mode[DELAY_MODE_RANGE].value;
+            double              maxTime        = rangeSeconds[(range < 4) ? range : 3];
+
+            node->timeSeconds = maxTime * (param_value(module, variation, DELAY_PARAM_TIME) / 127.0);
+            node->depth       = param_value(module, variation, DELAY_PARAM_FEEDBACK) / 127.0 * 0.95;
+            node->damping     = param_value(module, variation, DELAY_PARAM_LP) / 127.0;
+            node->amount      = param_value(module, variation, DELAY_PARAM_DRYWET) / 127.0;
+            node->active      = (param_value(module, variation, DELAY_PARAM_ACTIVE) != 0.0);
+            break;
+        }
+        case eNodeReverb:
+        {
+            node->timeSeconds = 0.2 + (3.0 * (param_value(module, variation, REVERB_PARAM_TIME) / 127.0));
+            node->damping     = param_value(module, variation, REVERB_PARAM_BRIGHT) / 127.0;
+            node->amount      = param_value(module, variation, REVERB_PARAM_DRYWET) / 127.0;
+            node->active      = (param_value(module, variation, REVERB_PARAM_ACTIVE) != 0.0);
+            break;
+        }
+        case eNodeConstant:
+        {
+            double v = param_value(module, variation, CONST_PARAM_VALUE) / 127.0;
+
+            node->constant = (param_value(module, variation, CONST_PARAM_BIPOLAR) != 0.0)
+                             ? ((v * 2.0) - 1.0) : v;
+            break;
+        }
+        case eNodeFxIn:
+        {
+            node->active = (param_value(module, variation, FXIN_PARAM_ACTIVE) != 0.0);
             break;
         }
         case eNodeMix:
         {
             uint32_t c   = 0;
-            bool     exp = (module->param[variation][MIX_PARAM_CURVE].value != 0);
+            // Read raw, not through param_value(): Curve is a drop-down, and drop-downs cannot be
+            // assigned to a morph group (manual p.20), so there is never a morph range on one.
+            bool     exp = (module->param[variation][(module->type == moduleTypeMix4to1S)
+                                                     ? MIXS_PARAM_CURVE : MIX_PARAM_CURVE].value != 0);
 
             for (c = 0; c < MAX_NODE_INPUTS; c++) {
-                double knob = (double)module->param[variation][MIX_PARAM_LEVEL_BASE + c].value / 127.0;
+                double knob = param_value(module, variation, MIX_PARAM_LEVEL_BASE + c) / 127.0;
 
                 node->level[c] = exp ? (knob * knob) : knob;
             }
@@ -634,51 +1004,51 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeOsc:
         {
-            double tune      = (double)module->param[variation][OSCB_PARAM_TUNE].value;
-            double cent      = (double)module->param[variation][OSCB_PARAM_CENT].value;
-            int    pitchType = (int)module->param[variation][OSCB_PARAM_PITCH_TYPE].value;
+            double tune      = param_value(module, variation, OSCB_PARAM_TUNE);
+            double cent      = param_value(module, variation, OSCB_PARAM_CENT);
+            int    pitchType = (int)param_value(module, variation, OSCB_PARAM_PITCH_TYPE);
 
             // Factor and Partial set the pitch as a ratio against a master oscillator, which the
             // engine has no notion of; reading the dial as Semi at least tracks the knob.
             if (pitchType > 1) {
                 LOG_DEBUG("Sound engine: OscB PitchType %d not supported, reading Tune as Semi\n", pitchType);
             }
-            node->wave      = (tOscWave)module->param[variation][OSCB_PARAM_WAVEFORM].value;
-            node->oscKbt    = (module->param[variation][OSCB_PARAM_KBT].value != 0);
+            node->wave      = (tOscWave)param_value(module, variation, OSCB_PARAM_WAVEFORM);
+            node->oscKbt    = (param_value(module, variation, OSCB_PARAM_KBT) != 0.0);
             node->basePitch = tune + (osc_fine_cents(cent) / 100.0);
-            node->shape     = osc_shape_percent((double)module->param[variation][OSCB_PARAM_SHAPE].value) / 100.0;
-            node->active    = (module->param[variation][OSCB_PARAM_ACTIVE].value != 0);
+            node->shape     = osc_shape_percent(param_value(module, variation, OSCB_PARAM_SHAPE)) / 100.0;
+            node->active    = (param_value(module, variation, OSCB_PARAM_ACTIVE) != 0.0);
             break;
         }
         case eNodeFilter:
         {
-            node->cutoffHz   = flt_cutoff_hz((double)module->param[variation][FLT_PARAM_FREQ].value);
-            node->resonance  = (double)module->param[variation][FLT_PARAM_RES].value / 127.0;
-            node->extraPoles = flt_slope_extra_poles(module->param[variation][FLT_PARAM_SLOPE].value);
-            node->fltKbt     = flt_kbt_amount(module->param[variation][FLT_PARAM_KBT].value);
-            node->modAmount  = (double)module->param[variation][FLT_PARAM_ENV].value * 2.0 / 128.0;
-            node->active     = (module->param[variation][FLT_PARAM_ACTIVE].value != 0);
+            node->cutoffHz   = flt_cutoff_hz(param_value(module, variation, FLT_PARAM_FREQ));
+            node->resonance  = param_value(module, variation, FLT_PARAM_RES) / 127.0;
+            node->extraPoles = flt_slope_extra_poles((uint32_t)param_value(module, variation, FLT_PARAM_SLOPE));
+            node->fltKbt     = flt_kbt_amount((uint32_t)param_value(module, variation, FLT_PARAM_KBT));
+            node->modAmount  = param_value(module, variation, FLT_PARAM_ENV) * 2.0 / 128.0;
+            node->active     = (param_value(module, variation, FLT_PARAM_ACTIVE) != 0.0);
             break;
         }
         case eNodeEnv:
         {
-            node->attack  = env_time_seconds((double)module->param[variation][ENV_PARAM_ATTACK].value);
-            node->decay   = env_time_seconds((double)module->param[variation][ENV_PARAM_DECAY].value);
-            node->sustain = (double)module->param[variation][ENV_PARAM_SUSTAIN].value / 127.0;
-            node->release = env_time_seconds((double)module->param[variation][ENV_PARAM_RELEASE].value);
+            node->attack  = env_time_seconds(param_value(module, variation, ENV_PARAM_ATTACK));
+            node->decay   = env_time_seconds(param_value(module, variation, ENV_PARAM_DECAY));
+            node->sustain = param_value(module, variation, ENV_PARAM_SUSTAIN) / 127.0;
+            node->release = env_time_seconds(param_value(module, variation, ENV_PARAM_RELEASE));
             break;
         }
         case eNodeLevAmp:
         {
-            double knob = (double)module->param[variation][LEVAMP_PARAM_GAIN].value / 64.0;   // 64 is unity
+            double knob = param_value(module, variation, LEVAMP_PARAM_GAIN) / 64.0;   // 64 is unity
 
             // Type selects a linear or an exponential taper; exp is the default and the musical one.
-            node->gain = (module->param[variation][LEVAMP_PARAM_TYPE].value != 0) ? (knob * knob) : knob;
+            node->gain = (param_value(module, variation, LEVAMP_PARAM_TYPE) != 0.0) ? (knob * knob) : knob;
             break;
         }
         case eNodeOut:
         {
-            node->active = (module->param[variation][OUT_PARAM_ACTIVE].value != 0);
+            node->active = (param_value(module, variation, OUT_PARAM_ACTIVE) != 0.0);
             break;
         }
         default:
@@ -729,18 +1099,26 @@ static uint64_t topology_signature(const tSoundEngineParams * params) {
         sig = (sig * 1099511628211ull)
               ^ ((uint64_t)params->node[i].kind << 40)
               ^ ((uint64_t)params->node[i].moduleIndex << 20)
+              ^ ((uint64_t)params->node[i].location << 56)
               ^ ((uint64_t)(uint32_t)(params->node[i].in[0] + 1) << 10)
               ^ ((uint64_t)(uint32_t)(params->node[i].in[1] + 1))
               ^ ((uint64_t)(uint32_t)(params->node[i].in[2] + 1) << 30)
-              ^ ((uint64_t)(uint32_t)(params->node[i].in[3] + 1) << 50);
+              ^ ((uint64_t)(uint32_t)(params->node[i].in[3] + 1) << 50)
+              ^ ((uint64_t)(uint32_t)(params->node[i].in[6] + 1) << 12)
+              ^ ((uint64_t)(uint32_t)(params->node[i].in[7] + 1) << 34);
     }
 
     return sig;
 }
 
-// With nothing selected, play the patch: find an Out module with something patched into it.
+// With nothing selected, play the patch: find the Out module that is actually the end of it.
+//
+// The FX area is searched FIRST and that ordering matters. A patch like this one has an Out in each
+// area: the Voice area's is labelled "Fx Out" and routes into the FX area rather than to the
+// speakers, and the FX area's is the real end of the chain. Taking the Voice one — which is what
+// scanning in area order does — plays the patch dry, with the delays and reverb silently skipped.
 static tModule * find_output_module(void) {
-    const uint32_t locations[] = {(uint32_t)locationVa, (uint32_t)locationFx};
+    const uint32_t locations[] = {(uint32_t)locationFx, (uint32_t)locationVa};
     uint32_t       l           = 0;
     uint32_t       index       = 0;
 
@@ -813,6 +1191,21 @@ void sound_engine_update_from_patch(void) {
 
     if (gStatus != eStatusPlaying) {
         snapshot.tap = -1;    // publish silence rather than a half-built chain
+    }
+    // Hand out the shared delay lines. Done here rather than in add_node() so the assignment is
+    // stable for a given chain — the audio thread keys its buffers off it.
+    {
+        uint32_t i     = 0;
+        uint32_t lines = 0;
+        uint32_t verbs = 0;
+
+        for (i = 0; i < snapshot.nodeCount; i++) {
+            if (snapshot.node[i].kind == eNodeDelay) {
+                snapshot.node[i].line = lines++;
+            } else if (snapshot.node[i].kind == eNodeReverb) {
+                snapshot.node[i].line = verbs++;
+            }
+        }
     }
     snapshot.topology = topology_signature(&snapshot);
 
@@ -987,6 +1380,129 @@ static double osc_shp_wave(uint32_t waveform, double phase, double dt, double sh
     }
 }
 
+// A delay line with feedback and a one-pole damping filter in the loop — the usual arrangement, and
+// what the LP knob on the module controls.
+static double delay_step(uint32_t line, double input, double timeSeconds, double feedback,
+                         double damping, double mix) {
+    uint32_t samples = (uint32_t)(timeSeconds * gSampleRate);
+    uint32_t readPos = 0;
+    double   wet     = 0.0;
+
+    if (line >= MAX_DELAY_LINES) {
+        return input;
+    }
+
+    if (samples < 1) {
+        samples = 1;
+    } else if (samples >= DELAY_LINE_SAMPLES) {
+        samples = DELAY_LINE_SAMPLES - 1;
+    }
+    readPos                             = (gDelayWrite[line] + DELAY_LINE_SAMPLES - samples) % DELAY_LINE_SAMPLES;
+    wet                                 = (double)gDelayLine[line][readPos];
+
+    // Damping in the feedback path, so each repeat is duller than the last rather than the dry
+    // signal being filtered once.
+    gDelayDamp[line]                   += (1.0 - damping) * (wet - gDelayDamp[line]);
+
+    gDelayLine[line][gDelayWrite[line]] = (float)(input + (gDelayDamp[line] * feedback));
+    gDelayWrite[line]                   = (gDelayWrite[line] + 1) % DELAY_LINE_SAMPLES;
+
+    return (input * (1.0 - mix)) + (wet * mix);
+}
+
+// A short delay whose length is swept by a slow LFO — detune sets the sweep depth, amount how much
+// of it is mixed in. Stereo on the hardware; mono here, since the engine sums to mono anyway.
+static double chorus_step(uint32_t node, double input, double depth, double amount) {
+    double   sweep   = 0.0;
+    uint32_t samples = 0;
+    uint32_t readPos = 0;
+    double   wet     = 0.0;
+
+    gChorusLfo[node]                     += 0.7 / gSampleRate; // a slow sweep, under a hertz
+
+    if (gChorusLfo[node] >= 1.0) {
+        gChorusLfo[node] -= 1.0;
+    }
+    // 4 ms centre, swept by up to 3 ms either way.
+    sweep                                 = 0.004 + (0.003 * depth * sin(gChorusLfo[node] * 2.0 * M_PI));
+    samples                               = (uint32_t)(sweep * gSampleRate);
+
+    if (samples < 1) {
+        samples = 1;
+    } else if (samples >= CHORUS_SAMPLES) {
+        samples = CHORUS_SAMPLES - 1;
+    }
+    readPos                               = (gChorusWrite[node] + CHORUS_SAMPLES - samples) % CHORUS_SAMPLES;
+    wet                                   = (double)gChorusLine[node][readPos];
+
+    gChorusLine[node][gChorusWrite[node]] = (float)input;
+    gChorusWrite[node]                    = (gChorusWrite[node] + 1) % CHORUS_SAMPLES;
+
+    // A balanced mix rather than wet piled on top of dry. It used to return input + wet, which at a
+    // high Amount is close to double gain — a chorus should change the character at roughly constant
+    // level, not act as a 6 dB boost.
+    return (input * (1.0 - (amount * 0.5))) + (wet * amount * 0.5);
+}
+
+// Peak-following compressor. Above the threshold the excess is divided by the ratio; the follower
+// has separate attack and release so it grabs quickly and lets go slowly.
+static double compress_step(uint32_t node, double input, const tEngineNode * spec) {
+    double level = fabs(input);
+    double gain  = 1.0;
+
+    if (level > gCompEnv[node]) {
+        gCompEnv[node] += spec->attackCoeff * (level - gCompEnv[node]);
+    } else {
+        gCompEnv[node] += spec->releaseCoeff * (level - gCompEnv[node]);
+    }
+
+    if ((gCompEnv[node] > spec->threshold) && (spec->threshold > 0.0)) {
+        double over = gCompEnv[node] / spec->threshold;
+
+        gain = pow(over, (1.0 / spec->ratio) - 1.0);
+    }
+    return input * gain;
+}
+
+// Schroeder reverb — parallel combs for density, allpasses to smear the result.
+static double reverb_step(double input, double timeSeconds, double damping, double mix) {
+    double   diffused = input;
+    double   sum      = 0.0;
+    uint32_t i        = 0;
+
+    // Diffusion first: three short allpasses smear the input within a few milliseconds, so there is
+    // something there before the combs respond and no single tap stands out as an echo.
+    for (i = 0; i < REVERB_ALLPASS; i++) {
+        uint32_t len = kAllpassLen[i];
+        double   out = (double)gAllpass[i][gAllpassPos[i]];
+        double   in  = diffused + (out * 0.5);
+
+        gAllpass[i][gAllpassPos[i]] = (float)in;
+        gAllpassPos[i]              = (gAllpassPos[i] + 1) % len;
+        diffused                    = out - (in * 0.5);
+    }
+
+    // Then the combs, in parallel, for the tail.
+    for (i = 0; i < REVERB_COMBS; i++) {
+        uint32_t len = kCombLen[i];
+        double   out = (double)gComb[i][gCombPos[i]];
+        // Feedback set so the tail decays to -60 dB over the chosen time.
+        double   fb  = pow(0.001, ((double)len / gSampleRate) / timeSeconds);
+
+        gCombStore[i]        += (1.0 - damping) * (out - gCombStore[i]);
+        gComb[i][gCombPos[i]] = (float)(diffused + (gCombStore[i] * fb));
+        gCombPos[i]           = (gCombPos[i] + 1) % len;
+        sum                  += out;
+    }
+
+    // A little of the diffused input so the onset is early rather than waiting for the shortest comb
+    // at ~23 ms. Kept low: the allpass chain is near enough flat in magnitude, so too much of this
+    // reads as the dry signal leaking back through a send that is supposed to be fully wet.
+    sum = (sum * 0.25) + (diffused * 0.12);
+
+    return (input * (1.0 - mix)) + (sum * mix);
+}
+
 static double advance_phase(double * phase, double dt) {
     double current = *phase + dt;
 
@@ -1011,7 +1527,11 @@ static double ladder_filter(double * state, double input, double g, double k, ui
     // duller as you turn the knob up, which buries the peak you turned it up for. Putting half of it
     // back keeps the level roughly steady across the sweep while leaving some of the thinning that
     // gives the design its character.
-    input *= 1.0 + (k * 0.5);
+    // Partial compensation only. Putting half the loss back made turning Res up worth as much as
+    // 3x of gain the hardware never applies, which is most of why a busy patch arrived at the output
+    // clipping. A quarter keeps the knob musically usable while leaving the thinning that is the
+    // design's real character.
+    input *= 1.0 + (k * 0.25);
     x      = input - (k * feedback);
 
     // Soft-clip the feedback path rather than the output: it keeps self-oscillation bounded without
@@ -1037,7 +1557,12 @@ static double envelope_step(uint32_t node, const tEngineNode * spec, bool gate) 
     double step  = 0.0;
 
     if (gate == true) {
-        if (gEnvStage[node] == eEnvIdle) {
+        // Retrigger from Release as well as from Idle. Only accepting Idle meant a note played
+        // before the previous release had finished was ignored until it had: the envelope carried on
+        // FALLING, holding the filter part open, and the attack began late from wherever it landed.
+        // Attacking from the current level is what an ADSR does — the level is deliberately not
+        // zeroed, so a fast retrigger rises from where it was rather than clicking to nothing first.
+        if ((gEnvStage[node] == eEnvIdle) || (gEnvStage[node] == eEnvRelease)) {
             gEnvStage[node] = eEnvAttack;
         }
     } else if (gEnvStage[node] != eEnvIdle) {
@@ -1203,7 +1728,6 @@ static double filter_step(uint32_t node, const tEngineNode * spec, double input,
 
 void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount) {
     tSoundEngineParams params;
-    uint32_t           generation       = 0;
     uint32_t           frame            = 0;
     bool               chainHasEnvelope = false;
     uint32_t           n                = 0;
@@ -1216,34 +1740,17 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
     if (atomic_load(&gActive) == false) {
         return;
     }
-    params     = read_params();
-    generation = atomic_load(&gNoteGeneration);
+    params = read_params();
 
     if (params.topology != gSeenTopology) {
         gSeenTopology = params.topology;
         reset_node_state();
     }
-
-    if (generation != gSeenGeneration) {
-        int32_t note = atomic_load(&gNote);
-
-        gSeenGeneration = generation;
-
-        // Deliberately NOT resetting the oscillator phases here. They free-run, as the G2's do
-        // unless something is patched to their Sync input, and that matters more than it sounds:
-        // several oscillators detuned by a few cents are what makes a patch thick, and starting them
-        // all at phase zero has them summing as one voice for the seconds it takes a 7 cent
-        // difference to drift apart. Restarting the cycle made each strike identical, which is tidy
-        // and wrong.
-        // Only the gate closes on note-off. gVoiceNote holds the pitch it was last played at,
-        // because the release is still sounding and it has to keep that pitch — clearing it here
-        // dropped the oscillator back to its own Tune value mid-release, which came out as a fixed
-        // tone at whatever note the dial named rather than the note just let go of.
-        if (note >= 0) {
-            gVoiceNote = note;
-        }
-        gGateOpen       = (note >= 0);
-    }
+    // Oscillator phases are deliberately NOT reset when a note starts. They free-run, as the G2's do
+    // unless something is patched to their Sync input, and that matters more than it sounds: several
+    // oscillators detuned by a few cents are what makes a patch thick, and starting them all at
+    // phase zero has them summing as one voice for the seconds a 7 cent difference takes to drift
+    // apart. Note events themselves are taken inside the sample loop below.
 
     if ((params.tap < 0) && (gEnvelope <= 0.0)) {
         return;
@@ -1260,6 +1767,12 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
 
     for (frame = 0; frame < frameCount; frame++) {
         double value[MAX_ENGINE_NODES][2];
+
+        // One event per sample. A chord's worth of note-ons arriving together therefore lands over
+        // consecutive samples rather than all but the last being thrown away, and every note takes
+        // effect where it actually arrived instead of at the next buffer boundary.
+        (void)take_next_note_event();
+
         double sample       = 0.0;
         double rampTarget   = ((gGateOpen == true) && (params.tap >= 0)) ? 1.0 : 0.0;
         double envelopeStep = 1.0 / (ENVELOPE_SECONDS * gSampleRate);
@@ -1325,10 +1838,57 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 {
                     uint32_t c = 0;
 
+                    // A stereo mixer reads eight legs but has only four level knobs, so both legs
+                    // of a channel share one.
                     for (c = 0; c < spec->inCount; c++) {
-                        value[n][0] += signal_in(spec, value, c) * spec->level[c];
+                        uint32_t channel = (spec->inCount > MAX_NODE_INPUTS / 2) ? (c / 2) : c;
+
+                        value[n][0] += signal_in(spec, value, c) * spec->level[channel];
                     }
 
+                    break;
+                }
+                case eNodeChorus:
+                {
+                    value[n][0] = (spec->active == true)
+                                  ? chorus_step(n, a, spec->depth, spec->amount) : a;
+                    value[n][1] = value[n][0];   // stereo on the hardware, summed to mono here
+                    break;
+                }
+                case eNodeCompress:
+                {
+                    value[n][0] = (spec->active == true) ? compress_step(n, a, spec) : a;
+                    value[n][1] = value[n][0];
+                    break;
+                }
+                case eNodeDelay:
+                {
+                    value[n][0] = (spec->active == true)
+                                  ? delay_step(spec->line, a, spec->timeSeconds, spec->depth,
+                                               spec->damping, spec->amount) : a;
+                    value[n][1] = value[n][0];
+                    break;
+                }
+                case eNodeReverb:
+                {
+                    // Only the first reverb in a chain is modelled; see the DSP note above.
+                    double in = (a + signal_in(spec, value, 1)) * 0.5;
+
+                    value[n][0] = ((spec->active == true) && (spec->line == 0))
+                                  ? reverb_step(in, spec->timeSeconds, spec->damping, spec->amount) : in;
+                    value[n][1] = value[n][0];
+                    break;
+                }
+                case eNodeConstant:
+                {
+                    value[n][0] = spec->constant;
+                    value[n][1] = spec->constant;
+                    break;
+                }
+                case eNodeFxIn:
+                {
+                    value[n][0] = (spec->active == true) ? a : 0.0;
+                    value[n][1] = value[n][0];
                     break;
                 }
                 case eNodePassThru:
@@ -1358,14 +1918,29 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
         }
         // With an envelope module shaping the note, the fixed ramp would only double up on it; it is
         // still applied when the chain has none.
+        {
+            uint32_t rawMilli = (uint32_t)(fabs(sample) * 1000.0);
+
+            if (rawMilli > atomic_load(&gRawPeakMilli)) {
+                atomic_store(&gRawPeakMilli, rawMilli);
+            }
+        }
         sample *= VOICE_GAIN;
 
         if (chainHasEnvelope == false) {
             sample *= gEnvelope;
         }
 
-        // A guard, not a limiter. Nothing above should reach full scale; if a bug ever does, this is
-        // what stops it arriving at the speakers at full volume.
+        // Soft knee rather than a hard edge. Below the knee nothing is touched at all, so ordinary
+        // playing is untouched; above it the curve bends over instead of shearing the tops off, which
+        // is both kinder to listen to and closer to what an overloaded analogue output does. The hard
+        // clamp afterwards is only a guard against a bug producing something enormous.
+        if (sample > OUTPUT_KNEE) {
+            sample = OUTPUT_KNEE + ((1.0 - OUTPUT_KNEE) * tanh((sample - OUTPUT_KNEE) / (1.0 - OUTPUT_KNEE)));
+        } else if (sample < -OUTPUT_KNEE) {
+            sample = -OUTPUT_KNEE - ((1.0 - OUTPUT_KNEE) * tanh((-sample - OUTPUT_KNEE) / (1.0 - OUTPUT_KNEE)));
+        }
+
         if (sample > 1.0) {
             sample = 1.0;
         } else if (sample < -1.0) {

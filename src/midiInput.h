@@ -22,6 +22,10 @@
 
 #include "sysIncludes.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // MIDI note input for the local sound engine, so a real keyboard can play it instead of the on
 // screen one. Like audioOutput.c this is the platform half — CoreMIDI lives here and nowhere else.
 //
@@ -39,5 +43,9 @@ void midi_input_stop(void);
 
 // How many sources are currently connected. Informational, for the log and any future UI.
 uint32_t midi_input_source_count(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __MIDI_INPUT_H__
