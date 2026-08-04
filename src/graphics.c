@@ -2343,8 +2343,8 @@ static void render_frame(void) {
 //   LOADFILE <path>   — read_file_into_memory_and_process() (works offline)
 //   SLOT <0-3|A-D>    — select the slot the canvas renders
 //   DUMP              — current slot + every module: type, name, location, col/row
-//   MENU <bar> [item] — run a menu item by label (leading substring, case-insensitive);
-//                       with no item, lists that menu's current labels
+//   MENU <bar>[/<item>[/<sub>]] — run a menu item by label (leading substring, case-insensitive,
+//                       '/' separated); omit the last level to LIST what that level contains
 //   SELECT <VA|FX> <n> — select one module by index; SELECT NONE clears
 //   SNDSTATUS         — what the sound engine's status line currently reads
 //   SNDDUMP           — the resolved chain, the parameters read, and the peak level since last read
@@ -2373,6 +2373,29 @@ static const char * backdoor_cmd_path(void) {
 
 static const char * backdoor_result_path(void) {
     return "/tmp/g2edit_result.txt";
+}
+
+// Case-insensitive "does this label contain that text", for the MENU command's label matching.
+static bool label_contains(const char * label, const char * wanted) {
+    size_t wantedLength = strlen(wanted);
+    size_t labelLength  = strlen(label);
+    size_t at           = 0;
+
+    if (wantedLength == 0) {
+        return false;
+    }
+
+    if (wantedLength > labelLength) {
+        return false;
+    }
+
+    for (at = 0; at <= (labelLength - wantedLength); at++) {
+        if (strncasecmp(label + at, wanted, wantedLength) == 0) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 static void backdoor_write_result(const char * text) {
@@ -2556,22 +2579,53 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         backdoor_dump_state(dump, sizeof(dump));
         backdoor_write_result(dump);
     } else if (strcmp(cmd, "MENU") == 0) {
-        // MENU <bar label> <item label> — runs a menu item without going near the mouse. Both labels
-        // are matched case-insensitively on a leading substring, so 'MENU Exp Enable' hits
-        // Experimental > Enable Sound Engine. Driving these by screen coordinates meant re-deriving
-        // them every time a window moved, which was slow and wrong often enough to be worth this.
-        char        barWanted[64]  = {0};
-        char        itemWanted[64] = {0};
-        uint32_t    b              = 0;
-        tMenuItem * items          = NULL;
+        // MENU <bar>[/<item>[/<subitem>]] — runs a menu item by label without going near the mouse.
+        // Labels are matched case-insensitively on a leading substring and separated by '/', so
+        // 'MENU Exp/Audio Device/QU-24' reaches into a flyout. Any trailing level omitted, the
+        // deepest menu reached is LISTED instead of clicked, which is how a test discovers what is
+        // there. Driving these by screen coordinates meant re-deriving them whenever a window moved.
+        char        part[3][64] = {0};
+        uint32_t    partCount   = 0;
+        uint32_t    b           = 0;
+        tMenuItem * items       = NULL;
 
-        if (sscanf(arg, "%63s %63[^\n]", barWanted, itemWanted) < 1) {
-            backdoor_write_result("ERROR: expected 'MENU <bar label> [item label]'\n");
+        {
+            const char * p = arg;
+
+            while ((partCount < 3) && (*p != '\0')) {
+                const char * slash  = strchr(p, '/');
+                size_t       length = (slash != NULL) ? (size_t)(slash - p) : strlen(p);
+
+                while ((length > 0) && (*p == ' ')) {
+                    p++;
+                    length--;
+                }
+
+                while ((length > 0) && (p[length - 1] == ' ')) {
+                    length--;
+                }
+
+                if (length >= sizeof(part[0])) {
+                    length = sizeof(part[0]) - 1;
+                }
+                memcpy(part[partCount], p, length);
+                part[partCount][length] = '\0';
+                partCount++;
+
+                if (slash == NULL) {
+                    break;
+                }
+                p                       = slash + 1;
+            }
+        }
+
+        if (partCount == 0) {
+            backdoor_write_result("ERROR: expected 'MENU <bar>[/<item>[/<subitem>]]'\n");
             return;
         }
 
         for (b = 0; gAppMenuBar[b].label != NULL; b++) {
-            if (strncasecmp(gAppMenuBar[b].label, barWanted, strlen(barWanted)) == 0) {
+            if (label_contains(gAppMenuBar[b].label, part[0]) == true) {
                 break;
             }
         }
@@ -2585,48 +2639,84 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         gAppMenuBar[b].open((tCoord){0.0, 0.0});
         items = (gContextMenu.depth > 0) ? gContextMenu.frame[0].items : NULL;
 
-        if (itemWanted[0] == '\0') {
-            char     list[512] = {0};
-            size_t   used      = 0;
-            uint32_t i         = 0;
+        {
+            uint32_t level = 1;
+
+            // Walk down through the named levels. Every level but the last must be a flyout.
+            while ((level < partCount) && (items != NULL)) {
+                uint32_t i     = 0;
+                bool     found = false;
+
+                for (i = 0; items[i].label != NULL; i++) {
+                    // Matched ANYWHERE in the label, not just at the front: menu labels carry a
+                    // leading "* " marker for the current selection, so a leading-substring match
+                    // could never name the thing being selected.
+                    if (label_contains(items[i].label, part[level]) == false) {
+                        continue;
+                    }
+                    found = true;
+
+                    if (level == (partCount - 1)) {
+                        // The deepest named level: click it, unless it is itself a flyout, in which
+                        // case descend so the listing below shows what it contains.
+                        if (items[i].subMenu != NULL) {
+                            items = items[i].subMenu;
+                            break;
+                        }
+                        {
+                            void (*action)(int index) = items[i].action;
+
+                            // action() callbacks read gContextMenu.items[index].param, so point that
+                            // at the array the item lives in — the same thing a real click does.
+                            gContextMenu.items = items;
+
+                            if (action == NULL) {
+                                close_context_menu();
+                                backdoor_write_result("ERROR: item is disabled\n");
+                                return;
+                            }
+                            action((int)i);
+                            close_context_menu();
+                            synthlib_request_redraw();
+                            backdoor_write_result("OK\n");
+                            return;
+                        }
+                    }
+
+                    if (items[i].subMenu == NULL) {
+                        close_context_menu();
+                        backdoor_write_result("ERROR: that item has no submenu\n");
+                        return;
+                    }
+                    items = items[i].subMenu;
+                    break;
+                }
+
+                if (found == false) {
+                    close_context_menu();
+                    backdoor_write_result("ERROR: no such item\n");
+                    return;
+                }
+                level++;
+            }
+        }
+
+        // Nothing left to click: list what the level we reached contains.
+        {
+            char     list[2048] = {0};
+            size_t   used       = 0;
+            uint32_t i          = 0;
 
             used += (size_t)snprintf(list + used, sizeof(list) - used, "OK\n");
 
             for (i = 0; (items != NULL) && (items[i].label != NULL) && (used < sizeof(list)); i++) {
-                used += (size_t)snprintf(list + used, sizeof(list) - used, "%s\n", items[i].label);
+                used += (size_t)snprintf(list + used, sizeof(list) - used, "%s%s\n",
+                                         items[i].label, (items[i].subMenu != NULL) ? " >" : "");
             }
 
             close_context_menu();
             backdoor_write_result(list);
-            return;
         }
-        {
-            uint32_t i = 0;
-
-            for (i = 0; (items != NULL) && (items[i].label != NULL); i++) {
-                if (strncasecmp(items[i].label, itemWanted, strlen(itemWanted)) == 0) {
-                    void (*action)(int index) = items[i].action;
-
-                    // action() callbacks read gContextMenu.items[index].param, so point that at the
-                    // array the item actually lives in before running it — the same thing a real
-                    // click does.
-                    gContextMenu.items = items;
-
-                    if (action == NULL) {
-                        close_context_menu();
-                        backdoor_write_result("ERROR: item is disabled\n");
-                        return;
-                    }
-                    action((int)i);
-                    close_context_menu();
-                    synthlib_request_redraw();
-                    backdoor_write_result("OK\n");
-                    return;
-                }
-            }
-        }
-        close_context_menu();
-        backdoor_write_result("ERROR: no such item\n");
     } else if (strcmp(cmd, "SELECT") == 0) {
         // SELECT <VA|FX> <index>, or SELECT NONE — the engine keys off the selection, and clicking a
         // module's header strip by coordinate was the single most error-prone step in driving it.

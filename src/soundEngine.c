@@ -473,12 +473,6 @@ bool sound_engine_start(void) {
     }
     atomic_store(&gActive, true);
 
-    // A real keyboard playing the engine, alongside the on-screen one. Not fatal if it fails: the
-    // engine is perfectly usable from the Virtual Keyboard, so a missing MIDI service should not
-    // stop the audio that already started.
-    if (midi_input_start() == false) {
-        LOG_ERROR("Sound engine: MIDI input unavailable, Virtual Keyboard only\n");
-    }
     return true;
 }
 
@@ -489,7 +483,6 @@ void sound_engine_stop(void) {
     // Clear the flag first: the device teardown below waits for any render in flight to finish, and
     // that render should already be seeing an inactive engine.
     atomic_store(&gActive, false);
-    midi_input_stop();     // before the audio device, so no note can arrive for a stopped voice
     audio_output_stop();
 }
 
@@ -529,7 +522,7 @@ const char * sound_engine_status_text(void) {
         {
             snprintf(text, sizeof(text), "Playing %u module%s%s", (unsigned)gPlayingCount,
                      (gPlayingCount == 1) ? "" : "s",
-                     (midi_input_source_count() > 0) ? " - MIDI in connected" : " - use the Virtual Keyboard");
+                     (midi_input_connected_count() > 0) ? " - MIDI in connected" : " - use the Virtual Keyboard");
             return text;
         }
         default:

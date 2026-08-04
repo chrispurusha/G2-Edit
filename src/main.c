@@ -34,6 +34,7 @@ extern "C" {
 #include "moduleResourcesAccess.h"
 #include "mouseHandle.h"
 #include "soundEngine.h"
+#include "midiInput.h"
 #include "main.h"
 
 static void signal_handler(int sigraised) {
@@ -89,6 +90,11 @@ int main(int argc, char ** argv) {
     register_sleep_wake_notifications();
     setup_main_menu();
 
+    // MIDI input runs for the life of the application rather than with the sound engine: incoming
+    // notes can be sent on to the G2, which is worth having whether or not the engine is switched on.
+    if (midi_input_start() == false) {
+        LOG_ERROR("MIDI input unavailable\n");
+    }
     start_usb_thread();
 
     do_graphics_loop();
@@ -96,6 +102,7 @@ int main(int argc, char ** argv) {
     // Before the graphics teardown: stopping the engine waits for any render in flight to return,
     // and that render reads patch data the rest of the shutdown is entitled to tear down.
     sound_engine_stop();
+    midi_input_stop();
 
     clean_up_graphics();
 

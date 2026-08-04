@@ -65,7 +65,13 @@ uint32_t audio_output_left_channel(void);
 uint32_t audio_output_right_channel(void);
 uint32_t audio_output_selected_device_channels(void);
 
-// Reads the remembered device and channel pair. Call once at startup, after prefs_init().
+// Buffer size, in frames. Fewer frames means a note takes effect sooner — the buffer length is the
+// floor on how late a keypress can land — at the cost of waking the audio thread more often. 0 means
+// leave whatever the device is already set to.
+uint32_t audio_output_buffer_frames(void);
+void audio_output_select_buffer_frames(uint32_t frames);
+
+// Reads the remembered device, channels and buffer size. Call once at startup, after prefs_init().
 void audio_output_load_settings(void);
 
 #ifdef __cplusplus

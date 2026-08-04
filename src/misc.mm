@@ -29,6 +29,7 @@
 #include "usbComms.h"
 #include "prefs.h"
 #include "audioOutput.h"
+#include "midiInput.h"
 
 // Sets up the minimal native Cocoa app menu (Quit/About/Hide/Services — GLFW's Cocoa backend
 // already populates these at index 0), then restores window/zoom/dial-mode/last-folder state
@@ -49,6 +50,7 @@ void setup_main_menu(void) {
     // Which audio device and output pair the sound engine should use. Read here because prefs_init()
     // has just run and the engine may be switched on before anything else touches audioOutput.
     audio_output_load_settings();
+    midi_input_load_settings();
     load_saved_settings();
 }
 
