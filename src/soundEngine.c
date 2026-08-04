@@ -401,9 +401,11 @@ void sound_engine_pitch_bend(double bend) {
     atomic_store(&gBendMilli, (int32_t)(bend * 1000.0));
 }
 
-void sound_engine_set_morph(uint32_t group, double amount) {
+bool sound_engine_set_morph(uint32_t group, double amount) {
+    uint32_t scaled = 0;
+
     if (group >= NUM_MORPHS) {
-        return;
+        return false;
     }
 
     if (amount < 0.0) {
@@ -411,7 +413,11 @@ void sound_engine_set_morph(uint32_t group, double amount) {
     } else if (amount > 1.0) {
         amount = 1.0;
     }
-    atomic_store(&gMorphMilli[group], (uint32_t)(amount * 1000.0));
+    scaled = (uint32_t)(amount * 1000.0);
+
+    // A controller repeating its current value is common — a wheel resting at zero, a sustain pedal
+    // held down — and each one would otherwise cost a redraw of the whole patch.
+    return atomic_exchange(&gMorphMilli[group], scaled) != scaled;
 }
 
 // The Glide dial's 128 settings are a table of times running from 19 ms to 6.27 s, written as text
