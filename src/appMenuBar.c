@@ -39,6 +39,7 @@ extern "C" {
 #include "patchAdjuster.h"
 #include "paramOverlay.h"
 #include "soundEngine.h"
+#include "audioOutput.h"
 #include "alertDialog.h"
 #include "menus.h"
 #include "appMenuBar.h"
@@ -413,6 +414,18 @@ static void action_toggle_mutator(int index) {
 // The engine follows whatever single oscillator is selected at the time, so it is deliberately not
 // greyed out when the selection is unsuitable — it simply makes no sound until one is selected, and
 // can be left switched on while clicking around the patch.
+static void action_select_audio_device(int index) {
+    audio_output_select_device((uint32_t)index);
+}
+
+static void action_select_left_output(int index) {
+    audio_output_select_left_channel((uint32_t)index);
+}
+
+static void action_select_right_output(int index) {
+    audio_output_select_right_channel((uint32_t)index);
+}
+
 static void action_toggle_sound_engine(int index) {
     (void)index;
 
@@ -504,7 +517,10 @@ static void open_tools_menu(tCoord anchor) {
 // finished and what is an experiment are not sitting side by side under Tools — anything here may
 // change or disappear, and graduates into one of the other menus once it has settled.
 static void open_experimental_menu(tCoord anchor) {
-    static tMenuItem items[4];   // 1 entry + the NULL terminator, with room to grow
+    // A 32-output interface is 16 pairs, and a machine can easily have half a dozen devices.
+#define MAX_AUDIO_DEVICE_ITEMS      (33)
+#define MAX_OUTPUT_CHANNEL_ITEMS    (65)
+    static tMenuItem items[8];   // toggle, status, device, pair + the NULL terminator
     int              i = 0;
 
     // The engine follows whichever single oscillator is selected, so this is deliberately never
@@ -523,7 +539,74 @@ static void open_experimental_menu(tCoord anchor) {
             (char *)sound_engine_status_text(), (tRgb)RGB_GREY_5, NULL, 0, NULL, 0, 0.0
         };
     }
-    items[i]   = (tMenuItem){
+    // Which device the engine plays through, and which pair of its outputs. Both are flyouts off
+    // this menu, and both remember the choice — see audioOutput.h for why the device is stored by
+    // UID rather than by position in the list.
+    {
+        static tMenuItem devices[MAX_AUDIO_DEVICE_ITEMS];
+        static tMenuItem lefts[MAX_OUTPUT_CHANNEL_ITEMS];
+        static tMenuItem rights[MAX_OUTPUT_CHANNEL_ITEMS];
+        static char      deviceLabel[MAX_AUDIO_DEVICE_ITEMS][80];
+        static char      leftLabel[MAX_OUTPUT_CHANNEL_ITEMS][24];
+        static char      rightLabel[MAX_OUTPUT_CHANNEL_ITEMS][24];
+        uint32_t         count    = audio_output_device_count();
+        uint32_t         channels = audio_output_selected_device_channels();
+        uint32_t         d        = 0;
+        uint32_t         c        = 0;
+
+        for (d = 0; (d < count) && (d < (MAX_AUDIO_DEVICE_ITEMS - 1)); d++) {
+            // A leading marker rather than a checkmark, matching how Controls marks its dial modes.
+            snprintf(deviceLabel[d], sizeof(deviceLabel[d]), "%s%s (%u ch)",
+                     audio_output_device_is_selected(d) ? "* " : "  ",
+                     audio_output_device_name(d), (unsigned)audio_output_device_channels(d));
+            devices[d] = (tMenuItem){
+                deviceLabel[d], (tRgb)RGB_GREY_3, action_select_audio_device, d, NULL, 0, 0.0
+            };
+        }
+
+        devices[d] = (tMenuItem){
+            NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
+        };
+
+        // Left and right are separate lists, not pairs: the two legs of a monitor path on a desk are
+        // not necessarily neighbouring outputs, and forcing 29/30 when the wiring wants 29/31 would
+        // mean repatching the desk to suit the software.
+        for (c = 0; (c < channels) && (c < (MAX_OUTPUT_CHANNEL_ITEMS - 1)); c++) {
+            snprintf(leftLabel[c], sizeof(leftLabel[c]), "%sOut %u",
+                     (audio_output_left_channel() == c) ? "* " : "  ", (unsigned)c + 1);
+            snprintf(rightLabel[c], sizeof(rightLabel[c]), "%sOut %u",
+                     (audio_output_right_channel() == c) ? "* " : "  ", (unsigned)c + 1);
+            lefts[c]  = (tMenuItem){
+                leftLabel[c], (tRgb)RGB_GREY_3, action_select_left_output, c, NULL, 0, 0.0
+            };
+            rights[c] = (tMenuItem){
+                rightLabel[c], (tRgb)RGB_GREY_3, action_select_right_output, c, NULL, 0, 0.0
+            };
+        }
+
+        lefts[c]   = (tMenuItem){
+            NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
+        };
+        rights[c]  = (tMenuItem){
+            NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
+        };
+
+        items[i++] = (tMenuItem){
+            "Audio Device", (tRgb)RGB_GREY_3, NULL, 0, devices, 0, 0.0
+        };
+
+        // A stereo device has nothing to choose. Multi-column past eight, or a 32-output interface
+        // runs off the bottom of the screen.
+        if (channels > 2) {
+            items[i++] = (tMenuItem){
+                "Left Output", (tRgb)RGB_GREY_3, NULL, 0, lefts, (channels > 8) ? 2 : 1, 0.0
+            };
+            items[i++] = (tMenuItem){
+                "Right Output", (tRgb)RGB_GREY_3, NULL, 0, rights, (channels > 8) ? 2 : 1, 0.0
+            };
+        }
+    }
+    items[i] = (tMenuItem){
         NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
     };
 

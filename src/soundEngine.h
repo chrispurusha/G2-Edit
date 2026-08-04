@@ -21,6 +21,10 @@
 #define __SOUND_ENGINE_H__
 
 #include "sysIncludes.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "types.h"
 
 // A local sound engine, so the editor can make a noise on its own — most usefully offline, where
@@ -63,6 +67,12 @@ const char * sound_engine_status_text(void);
 bool sound_engine_start(void);
 void sound_engine_stop(void);
 
+// A morph group's position, 0..1. The G2 has eight, each hard-wired to a source — group 0 is the
+// modulation wheel, and morphStrMap in moduleResources.h names the rest. Setting one sweeps every
+// parameter that has a morph range recorded for that group between its dialled value and its morph
+// target. Called from the MIDI thread.
+void sound_engine_set_morph(uint32_t group, double amount);
+
 // Note input. Called from the UI thread — see set_sounding_note() in virtualKeyboard.c, which is
 // the single point every note change goes through. Passing on == false with any note silences.
 void sound_engine_note(int32_t note, bool on);
@@ -82,5 +92,9 @@ const char * sound_engine_debug_text(void);
 // Fills frameCount frames of interleaved float, channelCount channels wide.
 void sound_engine_set_sample_rate(double sampleRate);
 void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __SOUND_ENGINE_H__
