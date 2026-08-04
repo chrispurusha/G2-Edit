@@ -88,6 +88,13 @@ static _Atomic bool     gSendsToSynth    = true;
 static uint8_t          gHeld[MIDI_MAX_HELD];
 static uint8_t          gHeldCount       = 0;
 
+// How many pressure messages have arrived, of either kind. This exists because the obvious way to
+// answer "is the keyboard sending aftertouch at all" — logging each message — is exactly what must
+// not happen here: LOG_DEBUG writes to stdout AND to the USB log file, and doing that per message on
+// CoreMIDI's callback thread stalls MIDI input outright. An atomic counter costs nothing and the UI
+// thread can read it whenever it likes.
+static _Atomic uint32_t gPressureCount   = 0;
+
 static void held_remove(uint8_t note) {
     uint8_t i = 0;
 
@@ -179,6 +186,11 @@ static void handle_message(uint32_t word) {
 
     // Omni takes everything; otherwise only the chosen channel. Filtering here rather than per
     // message type means a controller chattering on another channel cannot move a morph either.
+    //
+    // An MPE controller needs Omni. MPE gives every note its own member channel and sends that
+    // note's pressure and bend on the same channel, so picking a single channel throws away most of
+    // the keyboard — and, because the notes on the surviving channel still play, it fails by
+    // dropping expression rather than by going silent, which looks like the pressure not working.
     if ((wanted != MIDI_CHANNEL_OMNI) && (((uint32_t)(status & 0x0F) + 1) != wanted)) {
         return;
     }
@@ -223,10 +235,26 @@ static void handle_message(uint32_t word) {
             sound_engine_pitch_bend((double)raw / 8192.0);
             break;
         }
+        case 0xA0:
+        {
+            // Polyphonic key pressure, which carries the note in the FIRST data byte and the
+            // pressure in the second — the opposite way round from channel pressure below.
+            //
+            // Plenty of keyboards send this instead of channel pressure, and an MPE controller may
+            // send either. The engine has a single voice, so only the note actually sounding is
+            // allowed to move the morph; without that test a key still held underneath would fight
+            // the one being played.
+            if ((gHeldCount > 0) && (data1 == gHeld[gHeldCount - 1])) {
+                morph_moved(sound_engine_set_morph(MORPH_GROUP_AFTERTOUCH, (double)data2 / 127.0));
+            }
+            atomic_fetch_add(&gPressureCount, 1);
+            break;
+        }
         case 0xD0:
         {
             // Channel pressure. Its value is in the first data byte, not the second.
             morph_moved(sound_engine_set_morph(MORPH_GROUP_AFTERTOUCH, (double)data1 / 127.0));
+            atomic_fetch_add(&gPressureCount, 1);
             break;
         }
         default:
@@ -388,6 +416,10 @@ bool midi_input_sends_to_synth(void) {
 void midi_input_set_sends_to_synth(bool enable) {
     atomic_store(&gSendsToSynth, enable);
     prefs_set_int(PREF_KEY_TO_SYNTH, enable ? 1 : 0);
+}
+
+uint32_t midi_input_pressure_count(void) {
+    return atomic_load(&gPressureCount);
 }
 
 void midi_input_load_settings(void) {
