@@ -51,6 +51,7 @@ extern "C" {
 #define PREF_KEY_LEFT        "audioOutputLeftChannel"
 #define PREF_KEY_RIGHT       "audioOutputRightChannel"
 #define PREF_KEY_CHANNEL     "audioOutputFirstChannel"   // superseded; read once to migrate
+#define PREF_KEY_BUFFER      "audioOutputBufferFrames"
 
 typedef struct {
     AudioObjectID id;
@@ -71,6 +72,9 @@ static uint32_t     gDeviceCount                  = 0;
 static char         gSelectedUid[DEVICE_UID_SIZE] = {0};
 static uint32_t     gLeftChannel                  = 0;
 static uint32_t     gRightChannel                 = 1;
+
+// 0 means "whatever the device already has", which is what it was before this was selectable.
+static uint32_t     gBufferFrames                 = 0;
 
 // Reads a CFString device property into a plain C buffer.
 static void device_string_property(AudioObjectID device, AudioObjectPropertySelector selector,
@@ -217,6 +221,45 @@ bool audio_output_device_is_selected(uint32_t index) {
     return (int32_t)index == selected_device_index();
 }
 
+uint32_t audio_output_buffer_frames(void) {
+    return gBufferFrames;
+}
+
+// Asks the device for a buffer size. It is a property of the DEVICE, so it is shared with anything
+// else playing through it; CoreAudio arbitrates. Best effort — a device that refuses keeps what it
+// had, which costs responsiveness and nothing else.
+static void apply_buffer_frames(AudioObjectID device) {
+    AudioObjectPropertyAddress address = {
+        kAudioDevicePropertyBufferFrameSizeRange,
+        kAudioObjectPropertyScopeGlobal,
+        kAudioObjectPropertyElementMain
+    };
+    AudioValueRange            range   = {0.0, 0.0};
+    UInt32                     size    = (UInt32)sizeof(range);
+    UInt32                     frames  = gBufferFrames;
+
+    if (gBufferFrames == 0) {
+        return;
+    }
+
+    if (AudioObjectGetPropertyData(device, &address, 0, NULL, &size, &range) == noErr) {
+        if ((double)frames < range.mMinimum) {
+            frames = (UInt32)range.mMinimum;
+        } else if ((double)frames > range.mMaximum) {
+            frames = (UInt32)range.mMaximum;
+        }
+    }
+    address.mSelector = kAudioDevicePropertyBufferFrameSize;
+
+    // Must happen BEFORE the device is bound to the unit. Once the HAL unit has the device, this is
+    // accepted and then quietly ignored — the size the unit was bound with is the one that sticks.
+    if (AudioObjectSetPropertyData(device, &address, 0, NULL, (UInt32)sizeof(frames), &frames) != noErr) {
+        LOG_ERROR("Sound engine: the device would not take a %u frame buffer\n", (unsigned)frames);
+    } else {
+        LOG_DEBUG("Sound engine: buffer set to %u frames\n", (unsigned)frames);
+    }
+}
+
 uint32_t audio_output_left_channel(void) {
     return gLeftChannel;
 }
@@ -249,6 +292,7 @@ void audio_output_load_settings(void) {
         gLeftChannel  = first;
         gRightChannel = first + 1;
     }
+    gBufferFrames = (uint32_t)prefs_get_int(PREF_KEY_BUFFER, 0);
 }
 
 void audio_output_select_device(uint32_t index) {
@@ -279,6 +323,12 @@ static void reopen_if_running(void) {
         audio_output_stop();
         (void)audio_output_start();
     }
+}
+
+void audio_output_select_buffer_frames(uint32_t frames) {
+    gBufferFrames = frames;
+    prefs_set_int(PREF_KEY_BUFFER, (long)frames);
+    reopen_if_running();
 }
 
 void audio_output_select_left_channel(uint32_t channel) {
@@ -327,6 +377,16 @@ bool audio_output_start(void) {
 
     if (gRunning == true) {
         return true;
+    }
+    // Buffer size first, before an AudioUnit instance exists at all. Once this process has a unit —
+    // even an unbound one — the HAL appears to settle the device's buffer and later requests are
+    // accepted but ignored.
+    {
+        int32_t early = selected_device_index();
+
+        if (early >= 0) {
+            apply_buffer_frames(gDevice[early].id);
+        }
     }
     description.componentType         = kAudioUnitType_Output;
     description.componentSubType      = kAudioUnitSubType_HALOutput;
