@@ -35,6 +35,7 @@ extern "C" {
 #include "msgQueue.h"
 #include "prefs.h"
 #include "midiInput.h"
+#include "synthlibGlobals.h"
 #include "soundEngine.h"
 
 // See midiInput.h. CoreMIDI delivers on its own high-priority thread, so the read callback below
@@ -156,6 +157,18 @@ static void all_notes_off(void) {
     sound_engine_note(-1, false);
 }
 
+// A morph position is not read by the audio thread the way pitch bend is — it is folded into the
+// parameter snapshot, and that snapshot is only rebuilt during a redraw. An idle window sits in
+// glfwWaitEvents(), and turning a wheel produces no window event, so without this a morph would not
+// be heard until something unrelated happened to wake the render loop. Safe from the MIDI thread.
+//
+// The redraw is wanted in its own right too: morphed dials move on screen as the wheel turns.
+static void morph_moved(bool changed) {
+    if (changed == true) {
+        synthlib_request_redraw();
+    }
+}
+
 // One MIDI 1.0 channel-voice message, as a Universal MIDI Packet word.
 static void handle_message(uint32_t word) {
     uint8_t  status = (uint8_t)((word >> 16) & 0xFF);
@@ -193,11 +206,11 @@ static void handle_message(uint32_t word) {
             if ((data1 == 123) || (data1 == 120)) {
                 all_notes_off();
             } else if (data1 == MIDI_CC_MOD_WHEEL) {
-                sound_engine_set_morph(MORPH_GROUP_WHEEL, (double)data2 / 127.0);
+                morph_moved(sound_engine_set_morph(MORPH_GROUP_WHEEL, (double)data2 / 127.0));
             } else if (data1 == MIDI_CC_CTRL_PEDAL) {
-                sound_engine_set_morph(MORPH_GROUP_CTRL_PEDAL, (double)data2 / 127.0);
+                morph_moved(sound_engine_set_morph(MORPH_GROUP_CTRL_PEDAL, (double)data2 / 127.0));
             } else if (data1 == MIDI_CC_SUSTAIN) {
-                sound_engine_set_morph(MORPH_GROUP_SUSTAIN, (double)data2 / 127.0);
+                morph_moved(sound_engine_set_morph(MORPH_GROUP_SUSTAIN, (double)data2 / 127.0));
             }
             break;
         }
@@ -213,7 +226,7 @@ static void handle_message(uint32_t word) {
         case 0xD0:
         {
             // Channel pressure. Its value is in the first data byte, not the second.
-            sound_engine_set_morph(MORPH_GROUP_AFTERTOUCH, (double)data1 / 127.0);
+            morph_moved(sound_engine_set_morph(MORPH_GROUP_AFTERTOUCH, (double)data1 / 127.0));
             break;
         }
         default:
