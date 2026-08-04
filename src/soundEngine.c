@@ -72,14 +72,19 @@ extern "C" {
 #define SHPB_PARAM_PITCH_TYPE    (4)
 #define SHPB_PARAM_SHAPE         (6)
 #define SHPB_PARAM_ACTIVE        (8)
-#define SHPB_PARAM_WAVEFORM      (10)
+
+// The waveform selector is a MODE, not a parameter — the G2 keeps drop-down selectors out of the
+// parameter list entirely because, unlike a knob, they cannot be assigned to a morph group or a
+// controller and hold one setting across every variation (manual p.20). It lives in
+// modeLocationList, so it is read from module->mode[] and reading param[10] found nothing.
+#define SHPB_MODE_WAVEFORM      (0)
 
 // Mix4to1C: one level per input, then a pad and a curve.
-#define MIX_PARAM_LEVEL_BASE     (0)
-#define MIX_PARAM_CURVE          (9)   // 0 = linear taper, otherwise exponential
+#define MIX_PARAM_LEVEL_BASE    (0)
+#define MIX_PARAM_CURVE         (9)    // 0 = linear taper, otherwise exponential
 
 // A node takes at most this many inputs — four, which is what the 4-into-1 mixers need.
-#define MAX_NODE_INPUTS          (4)
+#define MAX_NODE_INPUTS         (4)
 
 // Which connector carries the signal into each module. Everything the walk follows is a module's
 // FIRST input; LevMult and 2toOut take a second as well.
@@ -254,7 +259,10 @@ static void reset_node_state(void) {
     uint32_t i = 0;
 
     for (i = 0; i < MAX_ENGINE_NODES; i++) {
-        gPhase[i]         = 0.0;
+        // Spread rather than zeroed, for the same reason the note-on path leaves them alone: from
+        // the very first note the oscillators should be at unrelated points in their cycles. The
+        // step is irrational-ish so no two land together.
+        gPhase[i]         = fmod((double)i * 0.381966, 1.0);
         gSuperPhase[i][0] = 0.0;
         gSuperPhase[i][1] = 0.0;
         gLadder[i][0]     = 0.0;
@@ -598,17 +606,12 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
     switch (kind) {
         case eNodeOscShp:
         {
-            // The shape oscillators offer eight waveforms. Four of them are sine variants of rising
-            // brightness and the rest are shaped saws and pulses; they are mapped onto the waveforms
-            // this engine has, which is an approximation — Sine2..4 in particular are brighter than a
-            // plain sine and here they are not.
-            static const tOscWave shpWave[] = {
-                eOscWaveSine,     eOscWaveSine, eOscWaveSine,   eOscWaveSine,
-                eOscWaveTriangle, eOscWaveSaw,  eOscWaveSquare, eOscWaveSquare
-            };
-            uint32_t              w         = module->param[variation][SHPB_PARAM_WAVEFORM].value;
-
-            node->wave      = shpWave[(w < 8) ? w : 0];
+            // The waveform index is kept RAW: the shape oscillators have their own eight waveforms
+            // with their own meanings, and Shape morphs each of them rather than acting as a pulse
+            // width. osc_shp_wave() does the work — mapping these onto the plain oscillator's
+            // waveforms lost the entire point of the module, since at 50% Shape all four Sine
+            // variants ARE a plain sine and everything interesting happens as Shape opens.
+            node->wave      = (tOscWave)module->mode[SHPB_MODE_WAVEFORM].value;
             node->oscKbt    = (module->param[variation][SHPB_PARAM_KBT].value != 0);
             node->basePitch = (double)module->param[variation][SHPB_PARAM_TUNE].value
                               + (osc_fine_cents((double)module->param[variation][SHPB_PARAM_CENT].value) / 100.0);
@@ -888,6 +891,102 @@ static double osc_triangle(double phase, double width) {
     return 1.0 - ((2.0 * (phase - width)) / (1.0 - width));
 }
 
+// OscShpB's eight waveforms. Shape runs 50%..99% and morphs each one — at 50% every waveform in the
+// first four is a pure sine, and the character only appears as Shape is opened. Descriptions are
+// from the G2 manual (p.176-177); the implementations are ordinary floating point approximations of
+// what it describes, not models of the hardware.
+//
+// `t` below is Shape mapped to 0..1 across that 50%..99% range.
+static double osc_shp_wave(uint32_t waveform, double phase, double dt, double shape) {
+    double t = (shape - 0.5) / 0.49;
+
+    if (t < 0.0) {
+        t = 0.0;
+    } else if (t > 1.0) {
+        t = 1.0;
+    }
+
+    switch (waveform) {
+        case 0:
+        {
+            // Sine1 — "a phase modulated sine wave... at 99% similar to a sawtooth". A two segment
+            // phase warp: at 50% the warp is the identity and this is a plain sine; as Shape opens,
+            // the first half of the cosine is crammed into an ever smaller part of the cycle, giving
+            // a fast rise and a long fall.
+            double d = (0.5 * (1.0 - t)) + (0.02 * t);
+            double w = (phase < d) ? (0.5 * phase / d)
+                       : (0.5 + (0.5 * (phase - d) / (1.0 - d)));
+
+            return -cos(w * 2.0 * M_PI);
+        }
+        case 1:
+        {
+            // Sine2 — "Sine -> Double Sine". The two half cycles keep their shape but not their
+            // width: at 99% the first covers almost the whole period and the second is a spike.
+            double d = (0.5 * (1.0 - t)) + (0.99 * t);
+
+            return (phase < d) ? sin(M_PI * phase / d)
+                   : -sin(M_PI * (phase - d) / (1.0 - d));
+        }
+        case 2:
+        {
+            // Sine3 — "Sine -> Even harmonics". Rectification is what produces even harmonics, so
+            // blend towards a full wave rectified sine with its DC removed.
+            double raw = sin(phase * 2.0 * M_PI);
+
+            return ((1.0 - t) * raw) + (t * ((2.0 * fabs(raw)) - 1.0));
+        }
+        case 3:
+        {
+            // Sine4 — "Sine -> Odd harmonics". A square holds only odd harmonics, so drive the sine
+            // progressively harder into a soft clip, which approaches one.
+            double raw   = sin(phase * 2.0 * M_PI);
+            double drive = 1.0 + (30.0 * t);
+
+            return tanh(drive * raw) / tanh(drive);
+        }
+        case 4:
+        {
+            // TriSaw — "Triangle -> Sawtooth", perfect triangle at 50% and a perfect saw at 99%.
+            return osc_triangle(phase, (0.5 * (1.0 - t)) + (0.99 * t));
+        }
+        case 5:
+        {
+            // DblSaw — two sawtooths, the second drifting away from the first as Shape opens.
+            // Approximate: the manual does not describe this one in the detail it gives the others.
+            double second = fmod(phase + (0.5 * t), 1.0);
+
+            return (osc_saw(phase, dt) + osc_saw(second, dt)) * 0.5;
+        }
+        case 6:
+        {
+            // Pulse — square at 50%, down to a 1% pulse at 99%. This one is a plain pulse width, so
+            // the band limited square already does it.
+            return osc_square(phase, dt, shape);
+        }
+        default:
+        {
+            // SymPulse — a SYMMETRIC pulse width: a positive pulse and an equally narrow negative
+            // one, square at 50% and 1% wide at 99%. Not band limited; at narrow widths it is a
+            // brighter waveform than this engine renders cleanly.
+            double w = (0.5 * (1.0 - t)) + (0.01 * t);
+
+            if (phase < w) {
+                return 1.0;
+            }
+
+            if (phase < 0.5) {
+                return 0.0;
+            }
+
+            if (phase < (0.5 + w)) {
+                return -1.0;
+            }
+            return 0.0;
+        }
+    }
+}
+
 static double advance_phase(double * phase, double dt) {
     double current = *phase + dt;
 
@@ -1026,6 +1125,12 @@ static double oscillator_step(uint32_t node, const tEngineNode * spec, int32_t v
     dt        = frequency / gSampleRate;
     phase     = advance_phase(&gPhase[node], dt);
 
+    // The shape oscillators have their own eight waveforms, and Shape morphs each of them rather
+    // than acting as a pulse width, so they do not share the switch below.
+    if (spec->kind == eNodeOscShp) {
+        return osc_shp_wave((uint32_t)spec->wave, phase, dt, spec->shape);
+    }
+
     switch (spec->wave) {
         case eOscWaveSine:
         {
@@ -1124,16 +1229,12 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
 
         gSeenGeneration = generation;
 
-        // A fresh note restarts every oscillator's cycle, so each strike sounds the same rather than
-        // depending on wherever the phases happened to be.
-        if ((note >= 0) && ((gGateOpen == false) || (note != gVoiceNote))) {
-            for (n = 0; n < MAX_ENGINE_NODES; n++) {
-                gPhase[n]         = 0.0;
-                gSuperPhase[n][0] = 0.0;
-                gSuperPhase[n][1] = 0.0;
-            }
-        }
-
+        // Deliberately NOT resetting the oscillator phases here. They free-run, as the G2's do
+        // unless something is patched to their Sync input, and that matters more than it sounds:
+        // several oscillators detuned by a few cents are what makes a patch thick, and starting them
+        // all at phase zero has them summing as one voice for the seconds it takes a 7 cent
+        // difference to drift apart. Restarting the cycle made each strike identical, which is tidy
+        // and wrong.
         // Only the gate closes on note-off. gVoiceNote holds the pitch it was last played at,
         // because the release is still sounding and it has to keep that pitch — clearing it here
         // dropped the oscillator back to its own Tune value mid-release, which came out as a fixed
@@ -1148,8 +1249,8 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
         return;
     }
 
-    // An EnvADSR in the chain is the note's shape; the fixed ramp is only there to stop a click when
-    // there is no envelope module to do the job.
+// An EnvADSR in the chain is the note's shape; the fixed ramp is only there to stop a click when
+// there is no envelope module to do the job.
     for (n = 0; n < params.nodeCount; n++) {
         if (params.node[n].kind == eNodeEnv) {
             chainHasEnvelope = true;
