@@ -63,6 +63,10 @@ void midi_input_select_channel(uint32_t channel);
 // How many sources are feeding in right now, as opposed to how many exist to choose from.
 uint32_t midi_input_connected_count(void);
 
+// Pressure messages seen since startup, channel and polyphonic together. Answers "is this keyboard
+// sending aftertouch at all" without logging on the MIDI thread, which must never do I/O.
+uint32_t midi_input_pressure_count(void);
+
 bool midi_input_sends_to_synth(void);
 void midi_input_set_sends_to_synth(bool enable);
 
