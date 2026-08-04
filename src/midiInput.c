@@ -201,6 +201,15 @@ static void handle_message(uint32_t word) {
             }
             break;
         }
+        case 0xE0:
+        {
+            // Pitch bend is 14 bits split across the two data bytes, low 7 first, centred on 8192.
+            // Sent as -1..+1; how many semitones that is comes from the patch's own Bend range.
+            int32_t raw = (int32_t)(((uint32_t)data2 << 7) | (uint32_t)data1) - 8192;
+
+            sound_engine_pitch_bend((double)raw / 8192.0);
+            break;
+        }
         case 0xD0:
         {
             // Channel pressure. Its value is in the first data byte, not the second.
