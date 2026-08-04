@@ -43,6 +43,7 @@ extern "C" {
 #define OSCB_PARAM_TUNE          (0)
 #define OSCB_PARAM_CENT          (1)
 #define OSCB_PARAM_KBT           (2)
+#define OSCB_PARAM_PITCH_MOD     (3)   // depth for the two pitch modulation inputs
 #define OSCB_PARAM_PITCH_TYPE    (4)
 #define OSCB_PARAM_SHAPE         (6)
 #define OSCB_PARAM_WAVEFORM      (8)
@@ -65,6 +66,7 @@ extern "C" {
 #define LEVAMP_PARAM_TYPE        (1)   // 0 = lin, 1 = exp
 
 #define OUT_PARAM_ACTIVE         (1)   // 2toOut's Bypass, non-zero is on
+#define OUT_PARAM_PAD            (2)   // padStrMap: 0 dB or -6 dB
 
 // Glide and Bend are per-PATCH settings rather than module parameters: they live on hidden modules
 // in the Morph location, which is where the G2 keeps the things the patch-settings page edits.
@@ -79,6 +81,7 @@ typedef enum {
 #define SHPB_PARAM_TUNE          (0)
 #define SHPB_PARAM_CENT          (1)
 #define SHPB_PARAM_KBT           (2)
+#define SHPB_PARAM_PITCH_MOD     (3)
 #define SHPB_PARAM_PITCH_TYPE    (4)
 #define SHPB_PARAM_SHAPE         (6)
 #define SHPB_PARAM_ACTIVE        (8)
@@ -93,8 +96,10 @@ typedef enum {
 #define MIX_PARAM_LEVEL_BASE    (0)
 // The two mixers put Curve in different places: Mix4to1C has a Pad at 8 and Curve at 9, Mix4to1S
 // has no Pad and Curve at 8.
+#define MIX_PARAM_PAD           (8)   // Mix4to1C only: 0 dB or -6 dB on every input at once
 #define MIX_PARAM_CURVE         (9)
 #define MIXS_PARAM_CURVE        (8)
+#define MIX_CURVE_LIN           (1)   // expStrMap is {"Exp", "Lin", "dB"} — Lin is the middle one
 
 // StChorus: a detune depth and an amount, then its power button.
 #define CHORUS_PARAM_DETUNE     (0)
@@ -109,11 +114,15 @@ typedef enum {
 #define COMP_PARAM_ACTIVE       (6)
 
 // DelayB. Its range is a MODE, like the shape oscillators' waveform.
+// The two delays share their first four parameters but NOT their Bypass: DelayA has six parameters
+// with Bypass at 4, DelayB has nine with Bypass at 7 (and an extra HP at 8). Reading DelayB's index
+// on a DelayA lands past the end of its parameter list, reads zero, and silently bypasses it.
 #define DELAY_PARAM_TIME        (0)
 #define DELAY_PARAM_FEEDBACK    (1)
-#define DELAY_PARAM_LP          (2)
+#define DELAY_PARAM_LP          (2)   // DelayA calls this Filter; both are a damping control
 #define DELAY_PARAM_DRYWET      (3)
-#define DELAY_PARAM_ACTIVE      (7)
+#define DELAYA_PARAM_ACTIVE     (4)
+#define DELAYB_PARAM_ACTIVE     (7)
 #define DELAY_MODE_RANGE        (0)
 
 #define REVERB_PARAM_TIME       (0)
@@ -121,10 +130,33 @@ typedef enum {
 #define REVERB_PARAM_DRYWET     (2)
 #define REVERB_PARAM_ACTIVE     (3)
 
-#define CONST_PARAM_VALUE       (0)
-#define CONST_PARAM_BIPOLAR     (1)   // 0 = unipolar 0..1, otherwise -1..+1
+// The four LFO variants share a design but not a parameter order, so each one carries its own index
+// set. A -1 means the variant does not have that control at all: LfoC has no waveform selector and
+// no Kbt, and only LfoShpA has a Shape dial.
+//
+// None of them has an output LEVEL. G2 LFOs emit at full scale and the DEPTH is set at the
+// destination — the oscillator's own Pitch modulation knob — which is exactly how a vibrato patch is
+// wired, and why no level parameter is read here.
+typedef struct {
+    int rate;
+    int range;      // which of the Rate Sub/Lo/Hi/BPM/Clk sweeps the rate dial walks
+    int waveform;
+    int polarity;   // posStrMap: Pos, PosInv, Neg, NegInv, Bip, BipInv
+    int shape;      // LfoShpA only
+    int active;
+} tLfoParams;
 
-#define FXIN_PARAM_ACTIVE       (1)
+// LfoB's rate dial is an ordinary dial rather than the LFORate type, but it indexes the same sweeps.
+static const tLfoParams kLfoA    = {0, 7, 4, 6, -1, 5};
+static const tLfoParams kLfoB    = {0, 2, 4, 8, -1, 7};
+static const tLfoParams kLfoC    = {0, 3, -1, 2, -1, 4};
+static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4};
+
+#define CONST_PARAM_VALUE      (0)
+#define CONST_PARAM_BIPOLAR    (1)    // 0 = unipolar 0..1, otherwise -1..+1
+
+#define FXIN_PARAM_ACTIVE      (1)
+#define FXIN_PARAM_PAD         (2)    // db12PadStrMap: +6 dB, 0 dB, -6 dB, -12 dB
 
 // A node takes at most this many inputs. Eight, because the STEREO 4-into-1 mixer has four channels
 // of two legs each and both legs have to be read: patches routinely put two different modules on the
@@ -141,6 +173,24 @@ typedef enum {
 // The G2 caps the total pitch modulation reaching an oscillator or filter at +/-64 semitones
 // (manual p.78), which is what an Env amount of 100% corresponds to.
 #define FULL_MOD_SEMITONES    (64.0)
+
+// A full-scale bipolar signal on an oscillator's Pitch input sweeps one octave either way: the
+// manual's own worked example (p.78) is an A4 modulated "up and down by one octave", and it stays an
+// octave whatever note is played, because a Pitch input modulates on the note scale rather than
+// linearly in frequency. That is a much smaller range than the filter's Env input above.
+#define PITCH_MOD_SEMITONES    (12.0)
+
+// Aftertouch's morph group. The G2 hard-wires the eight — morphStrMap lists them Wheel, Vel, Keyb,
+// Aft.Tch, ... — so aftertouch is group 3. midiInput.c has the same constant for the same reason.
+#define MORPH_GROUP_WHEEL         (0)
+#define MORPH_GROUP_AFTERTOUCH    (3)
+
+// patchModuleVibrato's Mod setting, in the order the patch-settings dropdown offers them.
+typedef enum {
+    eVibratoOff = 0,
+    eVibratoAfterTouch,
+    eVibratoWheel,
+} tVibratoSource;
 
 // Waveform menu order, matching shapeTypeStrMap in moduleResources.h.
 typedef enum {
@@ -197,6 +247,7 @@ typedef enum {
     eNodeCompress,
     eNodeDelay,
     eNodeReverb,
+    eNodeLfo,            // LfoA/B/C/ShpA — a control-rate source, full scale out
     eNodeConstant,
     eNodeFxIn,           // the FX area's feed from the Voice area — no cable, an implicit link
     eNodePassThru,       // an effect that is not modelled yet: passes its input along unchanged
@@ -223,6 +274,9 @@ typedef struct {
     bool     oscKbt;
     double   basePitch;
     double   shape;
+    double   rateHz;         // LFO speed
+    uint32_t polarity;       // LFO output range, posStrMap order
+    bool     shpWave;        // LFO uses LfoShpA's waveform set rather than the plain one
 
     double   cutoffHz;       // filter
     double   resonance;
@@ -252,6 +306,11 @@ typedef struct {
 typedef struct {
     uint32_t    nodeCount;
     int32_t     tap;           // the node whose output reaches the speakers, -1 for silence
+    // Patch-wide settings, from the hidden modules in the Morph location rather than from any module
+    // on the canvas. Vibrato is how a patch gets aftertouch vibrato with no LFO in it anywhere.
+    uint32_t    vibratoSource; // 0 off, 1 aftertouch, 2 wheel
+    double      vibratoCents;
+    double      vibratoHz;
     tGlideMode  glideMode;     // patch-wide, not per node
     double      glideSeconds;
     double      bendSemitones; // 0 when the patch has bend switched off
@@ -288,27 +347,30 @@ typedef struct {
 } tNoteEvent;
 
 static tNoteEvent         gNoteQueue[NOTE_QUEUE_SIZE];
-static _Atomic uint32_t   gNoteWrite              = 0;
-static uint32_t           gNoteRead               = 0; // audio thread only
+static _Atomic uint32_t   gNoteWrite                  = 0;
+static uint32_t           gNoteRead                   = 0; // audio thread only
 
-static _Atomic bool       gActive                 = false;
+static _Atomic bool       gActive                     = false;
 
 // Morph positions, 0..1, one per group. Written by the MIDI thread as controllers move, read by the
 // UI thread when it builds a snapshot. Plain atomics: each is independent and a torn read is not
 // possible on a value this size.
-static _Atomic uint32_t   gMorphMilli[NUM_MORPHS] = {0};
+static _Atomic uint32_t   gMorphMilli[NUM_MORPHS]     = {0};
+// The highest each morph has reached. The live value is useless as a diagnostic — by the time you
+// have let go of the key and opened a menu to look at it, it has fallen back to zero.
+static _Atomic uint32_t   gMorphPeakMilli[NUM_MORPHS] = {0};
 
 // Pitch bend as it arrives, -1..+1. Scaled to semitones by the patch's own Bend range at render
 // time, so changing the range takes effect without the wheel having to move.
-static _Atomic int32_t    gBendMilli              = 0;
+static _Atomic int32_t    gBendMilli                  = 0;
 
 // Highest absolute sample the audio thread has produced since this was last read. Purely a
 // diagnostic — it is what lets a test say "sound is coming out" without a pair of ears.
-static _Atomic uint32_t   gPeakMilli              = 0;
+static _Atomic uint32_t   gPeakMilli                  = 0;
 
 // The peak BEFORE the output gain, so the real headroom a patch needs is visible rather than being
 // hidden by whatever the guard clamped it to.
-static _Atomic uint32_t   gRawPeakMilli           = 0;
+static _Atomic uint32_t   gRawPeakMilli               = 0;
 
 // Why the engine is or is not making a sound. UI thread only — written while building the snapshot,
 // read by the menu.
@@ -323,58 +385,74 @@ typedef enum {
     eStatusPlaying,
 } tSoundEngineStatus;
 
-static tSoundEngineStatus gStatus                 = eStatusOff;
-static uint32_t           gPlayingCount           = 0; // how many modules are in the rendered chain
+static tSoundEngineStatus gStatus                     = eStatusOff;
+static uint32_t           gPlayingCount               = 0; // how many modules are in the rendered chain
 
 // Audio-thread-only state. Nothing else may touch these.
-static double             gSampleRate             = 48000.0;
-static bool               gGateOpen               = false;
-static int32_t            gVoiceNote              = -1;
+static double             gSampleRate                 = 48000.0;
+static bool               gGateOpen                   = false;
+static int32_t            gVoiceNote                  = -1;
 
 // The pitch actually sounding, in MIDI note numbers and fractional — it chases gVoiceNote rather
 // than jumping to it, which is what portamento is. Kept as a double because a glide spends most of
 // its time between notes. -1 means nothing has been played yet.
-static double             gGlidePitch             = -1.0;
-static bool               gGlideActive            = false;
-static tSoundEngineParams gLastGoodParams         = {0};
-static uint64_t           gSeenTopology           = 0;
-static double             gEnvelope               = 0.0; // the anti-click ramp, when no EnvADSR is present
+static double             gGlidePitch                 = -1.0;
+static double             gVibratoPhase               = 0.0;
+static bool               gGlideActive                = false;
+static tSoundEngineParams gLastGoodParams             = {0};
+static uint64_t           gSeenTopology               = 0;
+static double             gEnvelope                   = 0.0; // the anti-click ramp, when no EnvADSR is present
 
 // Per-node state, indexed by node position. Carried across snapshots while the topology signature
 // holds, so turning a knob does not restart the oscillator or reopen the envelope.
-// Oversampling factor for the oscillator section. The G2 runs its audio at 96 kHz against the 48 kHz
+// Oversampling for the oscillator section. The G2 runs its audio at 96 kHz against the 48 kHz
 // typical here, so 2x alone would match the hardware's rate; 4x is used because polyBLEP's residual
 // error falls with the square of the phase step, and the shape waveforms have no band-limiting of
-// their own at all and depend entirely on this. Costs four waveform evaluations plus one filter per
-// oscillator per sample, which a monophonic voice can afford.
+// their own at all and depend entirely on this.
+//
+// The two numbers are not independent, and the filter is the one that matters. Measured on a
+// sawtooth at C7 (the worst case in the audible range), residual aliasing went:
+//
+//     32 taps -34 dB | 64 taps -43 dB | 128 taps -71 dB | 256 taps -73 dB
+//
+// and 8x oversampling at 256 taps measured the same as 4x at 128 — what counts is the transition
+// width, which is taps DIVIDED BY the oversampling factor, so doubling the rate without doubling the
+// filter buys nothing and costs twice the arithmetic. 4x/128 sits at the knee: the hardware capture
+// this was matched against measures about -32 dB, so the engine is now well clear of it.
+//
+// Decimation only computes the samples it keeps, so the cost is 128 multiply-accumulates plus four
+// waveform evaluations per oscillator per output sample.
 #define OSC_OVERSAMPLE       (4)
-#define OSC_DECIMATE_TAPS    (32)
+#define OSC_DECIMATE_TAPS    (128)
 
-static double             gOscDecimate[OSC_DECIMATE_TAPS];
-static double             gOscHistory[MAX_ENGINE_NODES][OSC_DECIMATE_TAPS];
-static uint32_t           gOscHistoryPos[MAX_ENGINE_NODES];
+static double         gOscDecimate[OSC_DECIMATE_TAPS];
+static double         gOscHistory[MAX_ENGINE_NODES][OSC_DECIMATE_TAPS];
+static uint32_t       gOscHistoryPos[MAX_ENGINE_NODES];
 
-static double             gPhase[MAX_ENGINE_NODES];
-static double             gSuperPhase[MAX_ENGINE_NODES][2];
-static double             gLadder[MAX_ENGINE_NODES][LADDER_POLES];
+static double         gPhase[MAX_ENGINE_NODES];
+static double         gLfoLastPhase[MAX_ENGINE_NODES];
+static double         gLfoTarget[MAX_ENGINE_NODES];
+static double         gLfoHeld[MAX_ENGINE_NODES];
+static double         gSuperPhase[MAX_ENGINE_NODES][2];
+static double         gLadder[MAX_ENGINE_NODES][LADDER_POLES];
 
 // Delay memory. Held as float rather than double purely for size — half a second per line at any
 // sensible rate, four lines, is enough for the delays a patch normally has and keeps this under a
 // megabyte. Nodes beyond that many run dry rather than sharing a line and smearing into each other.
 #define MAX_DELAY_LINES       (4)
 #define DELAY_LINE_SAMPLES    (48000)
-static float              gDelayLine[MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
-static uint32_t           gDelayWrite[MAX_DELAY_LINES];
-static double             gDelayDamp[MAX_DELAY_LINES];
+static float          gDelayLine[MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
+static uint32_t       gDelayWrite[MAX_DELAY_LINES];
+static double         gDelayDamp[MAX_DELAY_LINES];
 
 // The chorus's own short sweep, one per node, plus its LFO phase.
 #define CHORUS_SAMPLES    (2048)
-static float              gChorusLine[MAX_ENGINE_NODES][CHORUS_SAMPLES];
-static uint32_t           gChorusWrite[MAX_ENGINE_NODES];
-static double             gChorusLfo[MAX_ENGINE_NODES];
+static float          gChorusLine[MAX_ENGINE_NODES][CHORUS_SAMPLES];
+static uint32_t       gChorusWrite[MAX_ENGINE_NODES];
+static double         gChorusLfo[MAX_ENGINE_NODES];
 
 // Compressor gain-reduction state, one per node.
-static double             gCompEnv[MAX_ENGINE_NODES];
+static double         gCompEnv[MAX_ENGINE_NODES];
 
 // A Schroeder reverb: four combs into two allpasses. One reverb is modelled; any further ones pass
 // their input through, which is what a patch with two of them would mostly sound like anyway.
@@ -386,15 +464,15 @@ static double             gCompEnv[MAX_ENGINE_NODES];
 // step is a buffer overrun, and it is the kind that only shows up as a crash much later.
 #define REVERB_COMB_MAX       (1356)
 #define REVERB_ALLPASS_MAX    (225)
-static const uint32_t     kCombLen[REVERB_COMBS]      = {1116, 1188, 1277, REVERB_COMB_MAX};
-static const uint32_t     kAllpassLen[REVERB_ALLPASS] = {REVERB_ALLPASS_MAX, 149, 97};
-static float              gComb[REVERB_COMBS][REVERB_COMB_MAX];
-static uint32_t           gCombPos[REVERB_COMBS];
-static double             gCombStore[REVERB_COMBS];
-static float              gAllpass[REVERB_ALLPASS][REVERB_ALLPASS_MAX];
-static uint32_t           gAllpassPos[REVERB_ALLPASS];
-static double             gEnvLevel[MAX_ENGINE_NODES];
-static uint32_t           gEnvStage[MAX_ENGINE_NODES];
+static const uint32_t kCombLen[REVERB_COMBS]      = {1116, 1188, 1277, REVERB_COMB_MAX};
+static const uint32_t kAllpassLen[REVERB_ALLPASS] = {REVERB_ALLPASS_MAX, 149, 97};
+static float          gComb[REVERB_COMBS][REVERB_COMB_MAX];
+static uint32_t       gCombPos[REVERB_COMBS];
+static double         gCombStore[REVERB_COMBS];
+static float          gAllpass[REVERB_ALLPASS][REVERB_ALLPASS_MAX];
+static uint32_t       gAllpassPos[REVERB_ALLPASS];
+static double         gEnvLevel[MAX_ENGINE_NODES];
+static uint32_t       gEnvStage[MAX_ENGINE_NODES];
 
 typedef enum {
     eEnvIdle = 0,
@@ -488,6 +566,9 @@ static void reset_node_state(void) {
         // Spread rather than zeroed, for the same reason the note-on path leaves them alone: from
         // the very first note the oscillators should be at unrelated points in their cycles. The
         // step is irrational-ish so no two land together.
+        gLfoLastPhase[i]  = 0.0;
+        gLfoTarget[i]     = 0.0;
+        gLfoHeld[i]       = 0.0;
         gOscHistoryPos[i] = 0;
         memset(gOscHistory[i], 0, sizeof(gOscHistory[i]));
         gPhase[i]         = fmod((double)i * 0.381966, 1.0);
@@ -624,6 +705,39 @@ const char * sound_engine_status_text(void) {
     }
 }
 
+// Answers the question "why is there no vibrato" without a debugger: whether the keyboard is
+// sending pressure at all, where that has left the morph, and whether the patch actually put an LFO
+// into the graph. Those three failures look identical from the outside — silence — but need
+// completely different fixes.
+const char * sound_engine_modulation_text(void) {
+    static char text[160];
+    char        vib[48] = {0};
+    uint32_t    lfos    = 0;
+    uint32_t    i       = 0;
+
+    // gParams is the UI thread's own copy, the same one sound_engine_debug_text() reads.
+    for (i = 0; i < gParams.nodeCount; i++) {
+        if (gParams.node[i].kind == eNodeLfo) {
+            lfos++;
+        }
+    }
+
+    {
+        static const char * source[] = {"Off", "AfTouch", "Wheel"};
+        uint32_t            mod      = (gParams.vibratoSource < 3) ? gParams.vibratoSource : 0;
+
+        snprintf(vib, sizeof(vib), "Vib %s %ucnt %.1fHz", source[mod],
+                 (unsigned)gParams.vibratoCents, gParams.vibratoHz);
+    }
+
+    snprintf(text, sizeof(text), "Aftertouch %u msg, morph %u%% peak %u%%, %s, %u LFO of %u nodes",
+             (unsigned)midi_input_pressure_count(),
+             (unsigned)((atomic_load(&gMorphMilli[MORPH_GROUP_AFTERTOUCH]) + 5) / 10),
+             (unsigned)((atomic_load(&gMorphPeakMilli[MORPH_GROUP_AFTERTOUCH]) + 5) / 10),
+             vib, (unsigned)lfos, (unsigned)gParams.nodeCount);
+    return text;
+}
+
 const char * sound_engine_debug_text(void) {
     // Big enough for a full patch: a couple of dozen nodes at roughly 230 characters each. It was
     // 1024, which silently cut the listing off after five nodes.
@@ -633,8 +747,8 @@ const char * sound_engine_debug_text(void) {
     // One entry per tNodeKind, in enum order. Kept in step with it — a short array here is read off
     // the end by the kindName[n->kind] below, which is a stack overflow rather than a wrong label.
     const char * kindName[] = {
-        "Osc",    "OscShp",   "Filter", "LevAmp", "LevMult", "Mix",  "Env",
-        "Chorus", "Compress", "Delay",  "Reverb", "Const",   "FxIn", "PassThru", "Out"
+        "Osc",    "OscShp",   "Filter", "LevAmp", "LevMult", "Mix",   "Env",
+        "Chorus", "Compress", "Delay",  "Reverb", "Lfo",     "Const", "FxIn","PassThru", "Out"
     };
 
     used += (size_t)snprintf(text + used, sizeof(text) - used,
@@ -732,6 +846,27 @@ static double env_time_seconds(double paramValue) {
     return ENV_TIME_MIN * pow(ENV_TIME_MAX / ENV_TIME_MIN, paramValue / 127.0);
 }
 
+static const tLfoParams * lfo_params(tModuleType type) {
+    switch (type) {
+        case moduleTypeLfoA:
+        {
+            return &kLfoA;
+        }
+        case moduleTypeLfoB:
+        {
+            return &kLfoB;
+        }
+        case moduleTypeLfoC:
+        {
+            return &kLfoC;
+        }
+        default:
+        {
+            return &kLfoShpA;
+        }
+    }
+}
+
 static bool module_kind(tModule * module, tNodeKind * kind) {
     switch (module->type) {
         case moduleTypeOscB:
@@ -742,6 +877,14 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
         case moduleTypeFltClassic:
         {
             *kind = eNodeFilter;
+            return true;
+        }
+        case moduleTypeLfoA:
+        case moduleTypeLfoB:
+        case moduleTypeLfoC:
+        case moduleTypeLfoShpA:
+        {
+            *kind = eNodeLfo;
             return true;
         }
         case moduleTypeLevAmp:
@@ -822,12 +965,22 @@ static uint32_t input_connectors(tNodeKind kind, bool stereoMix, const uint32_t 
     static const uint32_t mixIn[]       = {0, 1, 2, 3};
     static const uint32_t mixStereoIn[] = {2, 3, 4, 5, 6, 7, 8, 9}; // In1L,In1R .. In4L,In4R
     static const uint32_t envIn[]       = {0};                      // connector 0 is the audio the envelope shapes
+    // OscB has "two pitch modulation inputs, one frequency modulation input, one sync modulation
+    // input and a Shape modulation input" (manual, OscB). The two pitch inputs are the control-rate
+    // pair at 0 and 1; both are summed and scaled by the one Pitch knob the module carries.
+    static const uint32_t oscIn[]       = {0, 1};
     static const uint32_t none[]        = {0};
 
     switch (kind) {
         case eNodeFilter:
         {
             *connectors = filterIn;
+            return 2;
+        }
+        case eNodeOsc:
+        case eNodeOscShp:
+        {
+            *connectors = oscIn;
             return 2;
         }
         case eNodeLevMult:
@@ -1015,6 +1168,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->basePitch = param_value(module, variation, SHPB_PARAM_TUNE)
                               + (osc_fine_cents(param_value(module, variation, SHPB_PARAM_CENT)) / 100.0);
             node->shape     = osc_shape_percent(param_value(module, variation, SHPB_PARAM_SHAPE)) / 100.0;
+            node->modAmount = param_value(module, variation, SHPB_PARAM_PITCH_MOD) / 127.0;
             node->active    = (param_value(module, variation, SHPB_PARAM_ACTIVE) != 0.0);
             break;
         }
@@ -1055,7 +1209,9 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->depth       = param_value(module, variation, DELAY_PARAM_FEEDBACK) / 127.0 * 0.95;
             node->damping     = param_value(module, variation, DELAY_PARAM_LP) / 127.0;
             node->amount      = param_value(module, variation, DELAY_PARAM_DRYWET) / 127.0;
-            node->active      = (param_value(module, variation, DELAY_PARAM_ACTIVE) != 0.0);
+            node->active      = (param_value(module, variation,
+                                             (module->type == moduleTypeDelayA)
+                                             ? DELAYA_PARAM_ACTIVE : DELAYB_PARAM_ACTIVE) != 0.0);
             break;
         }
         case eNodeReverb:
@@ -1064,6 +1220,23 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->damping     = param_value(module, variation, REVERB_PARAM_BRIGHT) / 127.0;
             node->amount      = param_value(module, variation, REVERB_PARAM_DRYWET) / 127.0;
             node->active      = (param_value(module, variation, REVERB_PARAM_ACTIVE) != 0.0);
+            break;
+        }
+        case eNodeLfo:
+        {
+            const tLfoParams * p     = lfo_params(module->type);
+            uint32_t           range = (p->range >= 0)
+                                       ? (uint32_t)param_value(module, variation, (uint32_t)p->range) : 1;
+
+            node->rateHz   = lfo_rate_hz(range, param_value(module, variation, (uint32_t)p->rate));
+            node->wave     = (p->waveform >= 0)
+                             ? (tOscWave)param_value(module, variation, (uint32_t)p->waveform) : eOscWaveSine;
+            node->polarity = (p->polarity >= 0)
+                             ? (uint32_t)param_value(module, variation, (uint32_t)p->polarity) : 0;
+            node->shape    = (p->shape >= 0)
+                             ? (param_value(module, variation, (uint32_t)p->shape) / 127.0) : 0.5;
+            node->active   = (param_value(module, variation, (uint32_t)p->active) != 0.0);
+            node->shpWave  = (module->type == moduleTypeLfoShpA);
             break;
         }
         case eNodeConstant:
@@ -1076,21 +1249,39 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeFxIn:
         {
+            // db12PadStrMap is {"+6dB", "0dB", "-6dB", "-12dB"}, and the default is the FIRST entry,
+            // so a freshly created FxtoIn is boosting by 6 dB rather than sitting at unity.
+            static const double padGain[] = {2.0, 1.0, 0.5, 0.25};
+            uint32_t            pad       = (uint32_t)param_value(module, variation, FXIN_PARAM_PAD);
+
             node->active = (param_value(module, variation, FXIN_PARAM_ACTIVE) != 0.0);
+            node->gain   = padGain[(pad < 4) ? pad : 1];
             break;
         }
         case eNodeMix:
         {
-            uint32_t c   = 0;
+            uint32_t c      = 0;
             // Read raw, not through param_value(): Curve is a drop-down, and drop-downs cannot be
             // assigned to a morph group (manual p.20), so there is never a morph range on one.
-            bool     exp = (module->param[variation][(module->type == moduleTypeMix4to1S)
-                                                     ? MIXS_PARAM_CURVE : MIX_PARAM_CURVE].value != 0);
+            //
+            // expStrMap is {"Exp", "Lin", "dB"} — Lin is the MIDDLE entry, so the test is against 1
+            // and not against 0. The manual (p.216) is explicit that Exp and dB are the same curve:
+            // "there is no functional difference between the Exp and the dB curves, it is just a
+            // matter of whether you want the knobs to display an exact dB value or the basically
+            // meaningless Exp value". So both non-Lin settings take the same branch.
+            bool     linear = (module->param[variation][(module->type == moduleTypeMix4to1S)
+                                                        ? MIXS_PARAM_CURVE : MIX_PARAM_CURVE].value == MIX_CURVE_LIN);
+
+            // The -6 dB Pad attenuates every input together. Mix4to1S has no Pad; only Mix4to1C.
+            double   pad    = (  (module->type != moduleTypeMix4to1S)
+                              && (module->param[variation][MIX_PARAM_PAD].value != 0)) ? 0.5 : 1.0;
 
             for (c = 0; c < MAX_NODE_INPUTS; c++) {
                 double knob = param_value(module, variation, MIX_PARAM_LEVEL_BASE + c) / 127.0;
 
-                node->level[c] = exp ? (knob * knob) : knob;
+                // Approximation: the exponential taper is squared rather than the hardware's exact
+                // "-infinity to 0 dB" attenuator law, which the manual does not state numerically.
+                node->level[c] = (linear ? knob : (knob * knob)) * pad;
             }
 
             break;
@@ -1109,6 +1300,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->wave      = (tOscWave)param_value(module, variation, OSCB_PARAM_WAVEFORM);
             node->oscKbt    = (param_value(module, variation, OSCB_PARAM_KBT) != 0.0);
             node->basePitch = tune + (osc_fine_cents(cent) / 100.0);
+            node->modAmount = param_value(module, variation, OSCB_PARAM_PITCH_MOD) / 127.0;
             node->shape     = osc_shape_percent(param_value(module, variation, OSCB_PARAM_SHAPE)) / 100.0;
             node->active    = (param_value(module, variation, OSCB_PARAM_ACTIVE) != 0.0);
             break;
@@ -1133,15 +1325,16 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeLevAmp:
         {
-            double knob = param_value(module, variation, LEVAMP_PARAM_GAIN) / 64.0;   // 64 is unity
-
-            // Type selects a linear or an exponential taper; exp is the default and the musical one.
-            node->gain = (param_value(module, variation, LEVAMP_PARAM_TYPE) != 0.0) ? (knob * knob) : knob;
+            // The manual (p.227) gives the range as 0.25x to 4.0x, which is what the dial displays;
+            // sharing lev_amp_gain() with the dial keeps the two from drifting apart. This is NOT a
+            // plain knob/64, which would run 0x to 2x and reach unity in the wrong place.
+            node->gain = lev_amp_gain(param_value(module, variation, LEVAMP_PARAM_GAIN));
             break;
         }
         case eNodeOut:
         {
             node->active = (param_value(module, variation, OUT_PARAM_ACTIVE) != 0.0);
+            node->gain   = (param_value(module, variation, OUT_PARAM_PAD) != 0.0) ? 0.5 : 1.0;
             break;
         }
         default:
@@ -1253,6 +1446,16 @@ void sound_engine_update_from_patch(void) {
 
             snapshot.glideMode    = (mode <= (uint32_t)eGlideAuto) ? (tGlideMode)mode : eGlideOff;
             snapshot.glideSeconds = glide_time_seconds(glide->param[0][GLIDE_SPEED].value);
+        }
+        {
+            tModule * vibrato = get_module_slot(gSlot, (uint32_t)locationMorph, patchModuleVibrato);
+
+            if (vibrato != NULL) {
+                // Depth is in cents as the dial reads it, and the rate dial spans 4 to 8 Hz.
+                snapshot.vibratoSource = vibrato->param[0][VIBRATO_MOD].value;
+                snapshot.vibratoCents  = (double)vibrato->param[0][VIBRATO_DEPTH].value;
+                snapshot.vibratoHz     = 4.0 + (((double)vibrato->param[0][VIBRATO_RATE].value / 127.0) * 4.0);
+            }
         }
 
         if ((bend != NULL) && (bend->param[0][BEND_ON_OFF].value != 0)) {
@@ -1793,7 +1996,8 @@ static double osc_waveform(uint32_t node, const tEngineNode * spec, double phase
 // there — the filter, mixers and amplifiers below them are linear — so oversampling here alone
 // removes the aliasing without disturbing the delay, chorus and reverb, whose buffers are sized in
 // samples and would all have to be resized for a change of engine rate.
-static double oscillator_step(uint32_t node, const tEngineNode * spec, double voicePitch) {
+static double oscillator_step(uint32_t node, const tEngineNode * spec, double voicePitch,
+                              double pitchDirect, double pitchVar) {
     double   pitch     = spec->basePitch;
     double   frequency = 0.0;
     double   dt        = 0.0;
@@ -1805,6 +2009,14 @@ static double oscillator_step(uint32_t node, const tEngineNode * spec, double vo
     // keyboard disconnected and the oscillator holds the pitch Tune names.
     if ((spec->oscKbt == true) && (voicePitch >= 0.0)) {
         pitch = voicePitch + (spec->basePitch - OSCB_TUNE_UNITY);
+    }
+
+    // The two pitch modulation inputs are NOT equivalent. The upper one ("Pitch") is direct — what
+    // arrives is what it does — while the lower one ("PitchVar") is attenuated by the module's Pitch
+    // knob, which is the knob drawn alongside it. A vibrato patch rides on the variable one, since
+    // that is the knob an aftertouch morph can open.
+    if ((pitchDirect != 0.0) || ((spec->modAmount > 0.0) && (pitchVar != 0.0))) {
+        pitch += (pitchDirect + (pitchVar * spec->modAmount)) * PITCH_MOD_SEMITONES;
     }
     frequency = 440.0 * pow(2.0, (pitch - MIDI_NOTE_A440) / 12.0);
 
@@ -1833,6 +2045,132 @@ static double oscillator_step(uint32_t node, const tEngineNode * spec, double vo
     }
 
     return sum;
+}
+
+// One LFO sample. The waveform is generated bipolar and then mapped into whichever range the Pos
+// scroll button selects — posStrMap is {Pos, PosInv, Neg, NegInv, Bip, BipInv}, so half the settings
+// are simply the inverse of another, which is what makes an LFO able to close something as it opens
+// something else.
+//
+// Not band-limited, and deliberately so: an LFO runs at control rate on the hardware, well below
+// anything that could alias into the audio band.
+static double lfo_step(uint32_t node, const tEngineNode * spec) {
+    double phase = advance_phase(&gPhase[node], spec->rateHz / gSampleRate);
+    double wave  = 0.0;
+
+    if (spec->active == false) {
+        return 0.0;
+    }
+
+    if (spec->shpWave == true) {
+        // LfoShpA's six shapes, Shape morphing each one. lfoShpAWaveStrMap order.
+        switch ((uint32_t)spec->wave) {
+            case 1:
+            {
+                wave = -cos(phase * 2.0 * M_PI);
+                break;
+            }                                                                          // CosBell
+            case 2:
+            {
+                wave = (osc_triangle(phase, 0.5) + 1.0) - 1.0;
+                break;
+            }                                                                          // TriBell
+            case 3:
+            {
+                wave = osc_triangle(phase, 0.5 + (0.49 * spec->shape));
+                break;
+            }                                                                           // Saw>Tri
+            case 4:                                                                     // Tri>Squ
+            {
+                double tri = osc_triangle(phase, 0.5);
+                double dry = 1.0 + (20.0 * spec->shape);
+
+                wave = tanh(tri * dry) / tanh(dry);
+                break;
+            }
+            case 5:
+            {
+                wave = (phase < (0.5 + (0.49 * spec->shape))) ? 1.0 : -1.0;
+                break;
+            }                                                                                // Pulse
+            default:
+            {
+                wave = sin(phase * 2.0 * M_PI);
+                break;
+            }                                                                                // Sine
+        }
+    } else {
+        // lfoWaveStrMap: Sin, Tri, Saw, Squ, RndSt, Rnd. The two random settings step a new value
+        // once per cycle; Rnd smooths between steps where RndSt jumps.
+        switch ((uint32_t)spec->wave) {
+            case 1:
+            {
+                wave = osc_triangle(phase, 0.5);
+                break;
+            }
+            case 2:
+            {
+                wave = (2.0 * phase) - 1.0;
+                break;
+            }
+            case 3:
+            {
+                wave = (phase < 0.5) ? 1.0 : -1.0;
+                break;
+            }
+            case 4:
+            case 5:
+            {
+                if (phase < gLfoLastPhase[node]) {
+                    gLfoTarget[node] = ((double)rand() / (double)RAND_MAX * 2.0) - 1.0;
+                }
+                wave = (spec->wave == 4) ? gLfoTarget[node]
+                       : (gLfoHeld[node] + ((gLfoTarget[node] - gLfoHeld[node]) * phase));
+
+                if (phase < gLfoLastPhase[node]) {
+                    gLfoHeld[node] = gLfoTarget[node];
+                }
+                break;
+            }
+            default:
+            {
+                wave = sin(phase * 2.0 * M_PI);
+                break;
+            }
+        }
+    }
+    gLfoLastPhase[node] = phase;
+
+    {
+        double unipolar = (wave + 1.0) * 0.5;
+
+        switch (spec->polarity) {
+            case 1:
+            {
+                return 1.0 - unipolar;
+            }                                      // PosInv
+            case 2:
+            {
+                return -unipolar;
+            }                                      // Neg
+            case 3:
+            {
+                return unipolar - 1.0;
+            }                                      // NegInv
+            case 4:
+            {
+                return wave;
+            }                                      // Bip
+            case 5:
+            {
+                return -wave;
+            }                                      // BipInv
+            default:
+            {
+                return unipolar;
+            }                                      // Pos
+        }
+    }
 }
 
 static double filter_step(uint32_t node, const tEngineNode * spec, double input, double mod, double voicePitch) {
@@ -1938,6 +2276,21 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
         voicePitch = gGlidePitch
                      + (((double)atomic_load(&gBendMilli) / 1000.0) * params.bendSemitones);
 
+        // The patch's own Vibrato, which is nothing to do with the cabling: it lives on a hidden
+        // module beside Glide and Bend, and is how a patch gets aftertouch vibrato without an LFO
+        // anywhere in it. The chosen controller sets the depth, so at rest there is none.
+        if (params.vibratoSource != eVibratoOff) {
+            uint32_t group = (params.vibratoSource == eVibratoWheel)
+                             ? MORPH_GROUP_WHEEL : MORPH_GROUP_AFTERTOUCH;
+            double   depth = (double)atomic_load(&gMorphMilli[group]) / 1000.0;
+
+            gVibratoPhase += params.vibratoHz / gSampleRate;
+
+            if (gVibratoPhase >= 1.0) {
+                gVibratoPhase -= 1.0;
+            }
+            voicePitch    += (sin(gVibratoPhase * 2.0 * M_PI) * depth * params.vibratoCents) / 100.0;
+        }
         double sample       = 0.0;
         double rampTarget   = ((gGateOpen == true) && (params.tap >= 0)) ? 1.0 : 0.0;
         double envelopeStep = 1.0 / (ENVELOPE_SECONDS * gSampleRate);
@@ -1967,10 +2320,20 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             value[n][1] = 0.0;
 
             switch (spec->kind) {
+                case eNodeLfo:
+                {
+                    value[n][0] = lfo_step(n, spec);
+                    value[n][1] = value[n][0];
+                    break;
+                }
                 case eNodeOsc:
                 case eNodeOscShp:
                 {
-                    value[n][0] = (spec->active == true) ? oscillator_step(n, spec, voicePitch) : 0.0;
+                    // Connector 0 is the direct Pitch input, connector 1 the knob-attenuated
+                    // PitchVar — see oscillator_step().
+                    value[n][0] = (spec->active == true)
+                                  ? oscillator_step(n, spec, voicePitch, a, signal_in(spec, value, 1))
+                                  : 0.0;
                     break;
                 }
                 case eNodeFilter:
@@ -2052,7 +2415,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 }
                 case eNodeFxIn:
                 {
-                    value[n][0] = (spec->active == true) ? a : 0.0;
+                    value[n][0] = (spec->active == true) ? (a * spec->gain) : 0.0;
                     value[n][1] = value[n][0];
                     break;
                 }
@@ -2066,7 +2429,8 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 {
                     // Sums its inputs — the two legs are the left and right channels, and the engine
                     // is mono to the speakers for now.
-                    value[n][0] = (spec->active == true) ? (a + signal_in(spec, value, 1)) : 0.0;
+                    value[n][0] = (spec->active == true)
+                                  ? ((a + signal_in(spec, value, 1)) * spec->gain) : 0.0;
                     break;
                 }
                 default:

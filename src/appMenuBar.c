@@ -565,6 +565,12 @@ static void open_experimental_menu(tCoord anchor) {
         items[i++] = (tMenuItem){
             (char *)sound_engine_status_text(), (tRgb)RGB_GREY_5, NULL, 0, NULL, 0, 0.0
         };
+        // A second information line for modulation. "No vibrato" has three quite different causes —
+        // the keyboard not sending pressure, the morph not moving, or no LFO in the resolved chain —
+        // and they are indistinguishable by ear.
+        items[i++] = (tMenuItem){
+            (char *)sound_engine_modulation_text(), (tRgb)RGB_GREY_5, NULL, 0, NULL, 0, 0.0
+        };
     }
     // Which device the engine plays through, and which pair of its outputs. Both are flyouts off
     // this menu, and both remember the choice — see audioOutput.h for why the device is stored by

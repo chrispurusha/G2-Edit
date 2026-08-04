@@ -311,12 +311,20 @@
 #define NULL_RECTANGLE         {{0.0, 0.0}, {0.0, 0.0}}
 #define ARRAY_SIZE(arr)    (sizeof(arr) / sizeof(arr[0]))
 
-#define COPY_STRING(dst, src)                     \
-   do {                                           \
-       pthread_mutex_lock(&(gStringCopyMutex));   \
-       strncpy((dst), (src), sizeof(dst) - 1);    \
-       (dst)[sizeof(dst) - 1] = '\0';             \
-       pthread_mutex_unlock(&(gStringCopyMutex)); \
+// NOTE: dst is expanded three times, so it must be a plain array expression with no side effects —
+// never something like buffer[atomicIndex], which would be re-read each time.
+//
+// The self-copy guard matters: strncpy takes restrict-qualified pointers, so copying a buffer onto
+// itself is undefined behaviour, not a no-op. It is easy to reach by accident whenever a "save back
+// to the remembered path" hands that same buffer in as the source.
+#define COPY_STRING(dst, src)                            \
+   do {                                                  \
+       if ((const char *)(dst) != (const char *)(src)) { \
+           pthread_mutex_lock(&(gStringCopyMutex));      \
+           strncpy((dst), (src), sizeof(dst) - 1);       \
+           (dst)[sizeof(dst) - 1] = '\0';                \
+           pthread_mutex_unlock(&(gStringCopyMutex));    \
+       }                                                 \
    } while (0)
 
 #endif // #define __DEFS_H__

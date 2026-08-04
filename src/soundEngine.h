@@ -62,6 +62,11 @@ bool sound_engine_active(void);
 // on but silent otherwise gives no clue which of the several reasons applies. UI thread only.
 const char * sound_engine_status_text(void);
 
+// Why there is no vibrato, in one line: whether the keyboard is sending pressure at all, where that
+// has left the morph, and whether the patch actually put an LFO into the graph. Those three failures
+// all present as silence but need different fixes. UI thread only.
+const char * sound_engine_modulation_text(void);
+
 // Opens the audio device and starts rendering. False if the device would not start, in which case
 // nothing is held and the engine stays inactive.
 bool sound_engine_start(void);

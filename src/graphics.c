@@ -987,14 +987,31 @@ int write_perf_to_file(const char * filepath) {
 // because each of the four can have come from a different file; perf files own all four at once
 // and so get a single path of their own.
 static void remember_file_path(const char * path) {
+    // Read the slot ONCE. COPY_STRING expands its destination three times — the strncpy, the
+    // sizeof, and the terminator write — and gSlot is atomic, so writing gSavedPatchPath[gSlot]
+    // directly is three separate loads. A slot change part way through would terminate a different
+    // buffer than the one just copied into.
+    uint32_t slot = gSlot;
+
     if ((path == NULL) || (path[0] == '\0')) {
         return;
     }
 
+    if (slot >= MAX_SLOTS) {
+        LOG_ERROR("remember_file_path: slot %u out of range\n", slot);
+        return;
+    }
+
+    // File > Save hands back the very buffer it is about to write into: the path being saved to IS
+    // the remembered path (see eRspSaveToCurrentPath). strncpy's arguments are restrict-qualified,
+    // so copying a buffer onto itself is undefined behaviour rather than a harmless no-op, and it
+    // crashed here intermittently. Save As never hit it because the panel supplies a fresh buffer.
     if (gGlobalSettings.perfMode == 1) {
-        COPY_STRING(gSavedPerfPath, path);
-    } else {
-        COPY_STRING(gSavedPatchPath[gSlot], path);
+        if (gSavedPerfPath != path) {
+            COPY_STRING(gSavedPerfPath, path);
+        }
+    } else if (gSavedPatchPath[slot] != path) {
+        COPY_STRING(gSavedPatchPath[slot], path);
     }
 }
 

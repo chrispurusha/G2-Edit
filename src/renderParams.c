@@ -285,6 +285,41 @@ tRectangle render_paramType1FreqDrum(tModule * module, tRectangle rectangle, cha
     return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
+// An LFO's speed in Hz, for a given Range setting. The four continuous ranges are exponential
+// sweeps between the endpoints the dial displays; BPM is beats per minute, so a sixth of a hertz per
+// unit. Shared with the sound engine so the rate heard and the rate shown cannot drift apart.
+//
+// ClkSync needs the patch's master clock, which the engine has no notion of, so it falls back to the
+// slow end of Rate Lo rather than pretending to be in time with something.
+double lfo_rate_hz(uint32_t rangeMode, double paramValue) {
+    switch (rangeMode) {
+        case 0:   // Rate Sub, expressed as a period of 699 s down to 5.46 s
+        {
+            return 1.0 / (699.0 * exp(paramValue * log(5.46 / 699.0) / 127.0));
+        }
+        case 1:   // Rate Lo, a period of 62.9 s down to 0.04098 s (24.4 Hz)
+        {
+            return 1.0 / (62.9 * exp(paramValue * log(0.04098 / 62.9) / 127.0));
+        }
+        case 2:   // Rate Hi, stated directly in Hz
+        {
+            return 0.26 * exp(paramValue * log(392.0 / 0.26) / 127.0);
+        }
+        case 3:   // BPM
+        {
+            double bpm = (paramValue < 33.0) ? (24.0 + round(2.0 * paramValue))
+                         : (paramValue < 97.0) ? (56.0 + round(paramValue))
+                         : (154.0 + round(2.0 * (paramValue - 97.0)));
+
+            return bpm / 60.0;
+        }
+        default:
+        {
+            return 1.0;
+        }
+    }
+}
+
 tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     double   rate;
     int      rateModeParamIndex;
@@ -317,9 +352,7 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
     switch (module->param[variation][rateModeParamIndex].value) {
         case 0: // Sub - compute range in s
         {
-            double range_start = 699.0;
-            double range_end   = 5.46;
-            rate = range_start * exp((double)paramValue * log(range_end / range_start) / 127.0);
+            rate = 1.0 / lfo_rate_hz(0, (double)paramValue);
 
             if (rate > 100.0) {
                 snprintf(buff, buffSize, "%.0fs", rate);
@@ -333,9 +366,7 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
 
         case 1: // Rate Lo -- compute rate in s
         {
-            double range_start = 62.9;
-            double range_end   = 0.04098; // 24.4 Hz
-            rate = range_start * exp((double)paramValue * log(range_end / range_start) / 127.0);
+            rate = 1.0 / lfo_rate_hz(1, (double)paramValue);
 
             if (rate > 10.0) {
                 snprintf(buff, buffSize, "%.1fs", rate);
@@ -348,9 +379,7 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
         }
         case 2: // Rate Hi - compute rate in Hz
         {
-            double min_freq = 0.26;
-            double max_freq = 392.0;
-            double freq     = min_freq * exp((double)paramValue * log(max_freq / min_freq) / 127.0);
+            double freq = lfo_rate_hz(2, (double)paramValue);
 
             if (freq < 10.0) {
                 snprintf(buff, buffSize, "%.2fHz", freq);
@@ -363,15 +392,8 @@ tRectangle render_paramType1LFORate(tModule * module, tRectangle rectangle, char
         }
         case 3: // BPM
         {
-            int bpm;
+            int bpm = (int)round(lfo_rate_hz(3, (double)paramValue) * 60.0);
 
-            if (paramValue < 33) {        // 0->24, 32->88 in steps of 2
-                bpm = 24 + round(2 * paramValue);
-            } else if (paramValue < 97) { // 33 -> 89, 96 -> 152 in steps of 1
-                bpm = 56 + round(paramValue);
-            } else {                      // 97 -> 154, 127 -> 214 in steps of 2
-                bpm = 154 + round(2 * (paramValue - 97.0));
-            }
             snprintf(buff, buffSize, "%u", bpm);
             break;
         }
@@ -772,12 +794,16 @@ tRectangle render_paramType1UniPol(tModule * module, tRectangle rectangle, char 
     return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
+// LevAmp's amplification, as a multiplier. The manual (p.227) gives the range as "0.25 to 4.0 times
+// the input level"; the dial walks that range exponentially, passing through unity at 64. Shared
+// with the sound engine so what is heard and what the dial reads cannot drift apart.
+double lev_amp_gain(double paramValue) {
+    return exp(paramValue * 0.0218) * 0.25;
+}
+
 tRectangle render_paramType1LevAmpDial(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
     // 0.25 to 4.0
-    double lev = 1.0;
-
-    // scale 0 -> 0.25x and 127 -> 4.0x, exponentially
-    lev = round(exp((double)paramValue * 0.0218) * 0.25 * 100.0) / 100.0;
+    double lev = round(lev_amp_gain((double)paramValue) * 100.0) / 100.0;
 
     snprintf(buff, buffSize, "%.2fx", lev);
 
