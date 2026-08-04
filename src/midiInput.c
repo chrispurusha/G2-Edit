@@ -37,7 +37,19 @@ extern "C" {
 // See midiInput.h. CoreMIDI delivers on its own high-priority thread, so the read callback below
 // does no allocation and no locking — it only touches the held-note stack and the engine's atomics.
 
-#define MIDI_MAX_HELD    (16)   // deeper than any hand; a stuck note past this is dropped, not queued
+#define MIDI_MAX_HELD    (16)
+
+// Which morph group each controller drives. The G2 hard-wires these — morphStrMap in
+// moduleResources.h lists them in order as Wheel, Vel, Keyb, Aft.Tch, Sust.Pd, Ctrl.Pd, P.Stick,
+// G.Wh — so a patch that morphs its filter frequency from the wheel is morphing group 0.
+#define MORPH_GROUP_WHEEL         (0)
+#define MORPH_GROUP_AFTERTOUCH    (3)
+#define MORPH_GROUP_SUSTAIN       (4)
+#define MORPH_GROUP_CTRL_PEDAL    (5)
+
+#define MIDI_CC_MOD_WHEEL         (1)
+#define MIDI_CC_CTRL_PEDAL        (4)
+#define MIDI_CC_SUSTAIN           (64) // deeper than any hand; a stuck note past this is dropped, not queued
 
 static MIDIClientRef    gClient      = 0;
 static MIDIPortRef      gPort        = 0;
@@ -119,7 +131,19 @@ static void handle_message(uint32_t word) {
             // 123 All Notes Off, 120 All Sound Off. Panic buttons; both silence the voice.
             if ((data1 == 123) || (data1 == 120)) {
                 all_notes_off();
+            } else if (data1 == MIDI_CC_MOD_WHEEL) {
+                sound_engine_set_morph(MORPH_GROUP_WHEEL, (double)data2 / 127.0);
+            } else if (data1 == MIDI_CC_CTRL_PEDAL) {
+                sound_engine_set_morph(MORPH_GROUP_CTRL_PEDAL, (double)data2 / 127.0);
+            } else if (data1 == MIDI_CC_SUSTAIN) {
+                sound_engine_set_morph(MORPH_GROUP_SUSTAIN, (double)data2 / 127.0);
             }
+            break;
+        }
+        case 0xD0:
+        {
+            // Channel pressure. Its value is in the first data byte, not the second.
+            sound_engine_set_morph(MORPH_GROUP_AFTERTOUCH, (double)data1 / 127.0);
             break;
         }
         default:
