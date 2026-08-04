@@ -23,6 +23,7 @@ extern "C" {
 
 #include <math.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "defs.h"
 #include "synthlibDefs.h"
@@ -31,6 +32,7 @@ extern "C" {
 #include "cableChain.h"
 #include "globalVars.h"
 #include "renderParams.h"
+#include "patchParamsResources.h"
 #include "audioOutput.h"
 #include "midiInput.h"
 #include "soundEngine.h"
@@ -63,6 +65,14 @@ extern "C" {
 #define LEVAMP_PARAM_TYPE        (1)   // 0 = lin, 1 = exp
 
 #define OUT_PARAM_ACTIVE         (1)   // 2toOut's Bypass, non-zero is on
+
+// Glide and Bend are per-PATCH settings rather than module parameters: they live on hidden modules
+// in the Morph location, which is where the G2 keeps the things the patch-settings page edits.
+typedef enum {
+    eGlideOff = 0,
+    eGlideNormal,
+    eGlideAuto,     // glides only between overlapping notes
+} tGlideMode;
 
 // OscShpB lays its parameters out differently from OscB — Active is 8, not 9, and the waveform is
 // at 10 with eight choices rather than at 8 with five.
@@ -242,6 +252,9 @@ typedef struct {
 typedef struct {
     uint32_t    nodeCount;
     int32_t     tap;           // the node whose output reaches the speakers, -1 for silence
+    tGlideMode  glideMode;     // patch-wide, not per node
+    double      glideSeconds;
+    double      bendSemitones; // 0 when the patch has bend switched off
     uint64_t    topology;      // changes shape => the audio thread resets its per-node state
     tEngineNode node[MAX_ENGINE_NODES];
 } tSoundEngineParams;
@@ -285,6 +298,10 @@ static _Atomic bool       gActive                 = false;
 // possible on a value this size.
 static _Atomic uint32_t   gMorphMilli[NUM_MORPHS] = {0};
 
+// Pitch bend as it arrives, -1..+1. Scaled to semitones by the patch's own Bend range at render
+// time, so changing the range takes effect without the wheel having to move.
+static _Atomic int32_t    gBendMilli              = 0;
+
 // Highest absolute sample the audio thread has produced since this was last read. Purely a
 // diagnostic — it is what lets a test say "sound is coming out" without a pair of ears.
 static _Atomic uint32_t   gPeakMilli              = 0;
@@ -313,6 +330,12 @@ static uint32_t           gPlayingCount           = 0; // how many modules are i
 static double             gSampleRate             = 48000.0;
 static bool               gGateOpen               = false;
 static int32_t            gVoiceNote              = -1;
+
+// The pitch actually sounding, in MIDI note numbers and fractional — it chases gVoiceNote rather
+// than jumping to it, which is what portamento is. Kept as a double because a glide spends most of
+// its time between notes. -1 means nothing has been played yet.
+static double             gGlidePitch             = -1.0;
+static bool               gGlideActive            = false;
 static tSoundEngineParams gLastGoodParams         = {0};
 static uint64_t           gSeenTopology           = 0;
 static double             gEnvelope               = 0.0; // the anti-click ramp, when no EnvADSR is present
@@ -369,6 +392,15 @@ typedef enum {
     eEnvRelease,
 } tEnvStage;
 
+void sound_engine_pitch_bend(double bend) {
+    if (bend < -1.0) {
+        bend = -1.0;
+    } else if (bend > 1.0) {
+        bend = 1.0;
+    }
+    atomic_store(&gBendMilli, (int32_t)(bend * 1000.0));
+}
+
 void sound_engine_set_morph(uint32_t group, double amount) {
     if (group >= NUM_MORPHS) {
         return;
@@ -380,6 +412,15 @@ void sound_engine_set_morph(uint32_t group, double amount) {
         amount = 1.0;
     }
     atomic_store(&gMorphMilli[group], (uint32_t)(amount * 1000.0));
+}
+
+// The Glide dial's 128 settings are a table of times running from 19 ms to 6.27 s, written as text
+// for the patch-settings display. Reading the milliseconds back out of it means the engine glides
+// for exactly as long as the editor says it will.
+static double glide_time_seconds(uint8_t setting) {
+    const char * text = get_glide_time_str(setting);
+
+    return (text != NULL) ? ((double)atoi(text) / 1000.0) : 0.019;
 }
 
 // A parameter's value with every morph applied. morphRange is a SIGNED 8-bit offset from the dialled
@@ -462,11 +503,13 @@ bool sound_engine_start(void) {
     // the note queue: anything posted while the engine was off — the Virtual Keyboard, or MIDI from
     // a previous run — is stale, and starting the read index behind the write index would have the
     // audio thread chewing through history instead of playing what is being pressed now.
-    gNoteRead  = atomic_load(&gNoteWrite);
+    gNoteRead    = atomic_load(&gNoteWrite);
     reset_node_state();
-    gEnvelope  = 0.0;
-    gGateOpen  = false;
-    gVoiceNote = -1;
+    gEnvelope    = 0.0;
+    gGateOpen    = false;
+    gVoiceNote   = -1;
+    gGlidePitch  = -1.0;
+    gGlideActive = false;
 
     if (audio_output_start() == false) {
         return false;
@@ -614,8 +657,16 @@ static bool take_next_note_event(void) {
     // Only the gate closes on note-off. gVoiceNote holds the pitch it was last played at, because
     // the release is still sounding and has to keep that pitch.
     if ((gNoteQueue[slot].on == true) && (gNoteQueue[slot].note >= 0)) {
-        gVoiceNote = gNoteQueue[slot].note;
-        gGateOpen  = true;
+        // Auto glide only slides between overlapping notes, which is the point of it: a phrase
+        // played legato slides, a detached note starts where it means to. Whether the gate is
+        // already open is exactly that test, so it has to be read BEFORE this note opens it.
+        gGlideActive = (gGateOpen == true);
+        gVoiceNote   = gNoteQueue[slot].note;
+        gGateOpen    = true;
+
+        if (gGlidePitch < 0.0) {
+            gGlidePitch = (double)gVoiceNote;   // first note of all: start where it is played
+        }
     } else {
         gGateOpen = false;
     }
@@ -1142,6 +1193,25 @@ void sound_engine_update_from_patch(void) {
     }
     snapshot.tap = -1;
 
+    // Glide and Bend come from the patch, not from any module in the chain — they sit on hidden
+    // modules in the Morph location alongside the rest of the patch settings.
+    {
+        tModule * glide = get_module_slot(gSlot, (uint32_t)locationMorph, patchModuleGlide);
+        tModule * bend  = get_module_slot(gSlot, (uint32_t)locationMorph, patchModuleBend);
+
+        if (glide != NULL) {
+            uint32_t mode = glide->param[0][GLIDE_TYPE].value;
+
+            snapshot.glideMode    = (mode <= (uint32_t)eGlideAuto) ? (tGlideMode)mode : eGlideOff;
+            snapshot.glideSeconds = glide_time_seconds(glide->param[0][GLIDE_SPEED].value);
+        }
+
+        if ((bend != NULL) && (bend->param[0][BEND_ON_OFF].value != 0)) {
+            // The dial reads one more than it stores, so 0 is a single semitone.
+            snapshot.bendSemitones = (double)bend->param[0][BEND_RANGE].value + 1.0;
+        }
+    }
+
     // You hear what you select, plus everything upstream of it the engine understands. With nothing
     // selected it falls back to the patch's own Out, so a finished patch just plays.
     if (gSelection.count > 1) {
@@ -1621,7 +1691,7 @@ static double signal_in(const tEngineNode * spec, double value[][2], uint32_t in
     return value[source][(spec->srcOut[input] > 0) ? 1 : 0];
 }
 
-static double oscillator_step(uint32_t node, const tEngineNode * spec, int32_t voiceNote) {
+static double oscillator_step(uint32_t node, const tEngineNode * spec, double voicePitch) {
     double pitch     = spec->basePitch;
     double frequency = 0.0;
     double dt        = 0.0;
@@ -1629,8 +1699,8 @@ static double oscillator_step(uint32_t node, const tEngineNode * spec, int32_t v
 
     // Kbt on transposes the played note by the oscillator's offset from unity; Kbt off leaves the
     // keyboard disconnected and the oscillator holds the pitch Tune names.
-    if ((spec->oscKbt == true) && (voiceNote >= 0)) {
-        pitch = (double)voiceNote + (spec->basePitch - OSCB_TUNE_UNITY);
+    if ((spec->oscKbt == true) && (voicePitch >= 0.0)) {
+        pitch = voicePitch + (spec->basePitch - OSCB_TUNE_UNITY);
     }
     frequency = 440.0 * pow(2.0, (pitch - MIDI_NOTE_A440) / 12.0);
 
@@ -1685,7 +1755,7 @@ static double oscillator_step(uint32_t node, const tEngineNode * spec, int32_t v
     }
 }
 
-static double filter_step(uint32_t node, const tEngineNode * spec, double input, double mod, int32_t voiceNote) {
+static double filter_step(uint32_t node, const tEngineNode * spec, double input, double mod, double voicePitch) {
     double cutoff = spec->cutoffHz;
     double g      = 0.0;
 
@@ -1701,8 +1771,9 @@ static double filter_step(uint32_t node, const tEngineNode * spec, double input,
 
     // Kbt moves the cutoff with the note, relative to middle C, at the percentage the scroll button
     // selects (manual p.196).
-    if ((spec->fltKbt > 0.0) && (voiceNote >= 0)) {
-        cutoff *= pow(2.0, ((double)voiceNote - MIDI_NOTE_MIDDLE_C) * spec->fltKbt / 12.0);
+    // Tracks the SOUNDING pitch, so a glide carries the cutoff with it rather than snapping.
+    if ((spec->fltKbt > 0.0) && (voicePitch >= 0.0)) {
+        cutoff *= pow(2.0, (voicePitch - MIDI_NOTE_MIDDLE_C) * spec->fltKbt / 12.0);
     }
 
     if (cutoff > (gSampleRate * 0.45)) {
@@ -1723,6 +1794,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
     tSoundEngineParams params;
     uint32_t           frame            = 0;
     bool               chainHasEnvelope = false;
+    double             voicePitch       = 0.0;
     uint32_t           n                = 0;
 
     if ((out == NULL) || (channelCount == 0)) {
@@ -1766,6 +1838,26 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
         // effect where it actually arrived instead of at the next buffer boundary.
         (void)take_next_note_event();
 
+        // Portamento. The sounding pitch chases the played note; how fast, and whether at all, comes
+        // from the patch's Glide setting. Exponential rather than linear — it is what a glide sounds
+        // like, and the coefficient is set so the remaining distance is down to a percent by the time
+        // the dial says, which is close enough to the stated figure to be worth quoting.
+        if (gVoiceNote >= 0) {
+            bool sliding = (params.glideMode == eGlideNormal)
+                           || ((params.glideMode == eGlideAuto) && (gGlideActive == true));
+
+            if ((sliding == true) && (params.glideSeconds > 0.0)) {
+                double coefficient = 1.0 - exp(-4.6 / (params.glideSeconds * gSampleRate));
+
+                gGlidePitch += coefficient * ((double)gVoiceNote - gGlidePitch);
+            } else {
+                gGlidePitch = (double)gVoiceNote;
+            }
+        }
+        // Bend rides on top of the glide, scaled by the patch's own Bend range.
+        voicePitch = gGlidePitch
+                     + (((double)atomic_load(&gBendMilli) / 1000.0) * params.bendSemitones);
+
         double sample       = 0.0;
         double rampTarget   = ((gGateOpen == true) && (params.tap >= 0)) ? 1.0 : 0.0;
         double envelopeStep = 1.0 / (ENVELOPE_SECONDS * gSampleRate);
@@ -1798,12 +1890,12 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 case eNodeOsc:
                 case eNodeOscShp:
                 {
-                    value[n][0] = (spec->active == true) ? oscillator_step(n, spec, gVoiceNote) : 0.0;
+                    value[n][0] = (spec->active == true) ? oscillator_step(n, spec, voicePitch) : 0.0;
                     break;
                 }
                 case eNodeFilter:
                 {
-                    value[n][0] = filter_step(n, spec, a, signal_in(spec, value, 1), gVoiceNote);
+                    value[n][0] = filter_step(n, spec, a, signal_in(spec, value, 1), voicePitch);
                     break;
                 }
                 case eNodeEnv:

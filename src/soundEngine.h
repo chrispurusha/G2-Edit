@@ -73,6 +73,10 @@ void sound_engine_stop(void);
 // target. Called from the MIDI thread.
 void sound_engine_set_morph(uint32_t group, double amount);
 
+// Pitch bend, -1..+1 across the wheel's travel. How many semitones that is comes from the patch's
+// own Bend setting, so the engine bends by the same amount the G2 would. Called from the MIDI thread.
+void sound_engine_pitch_bend(double bend);
+
 // Note input. Called from the UI thread — see set_sounding_note() in virtualKeyboard.c, which is
 // the single point every note change goes through. Passing on == false with any note silences.
 void sound_engine_note(int32_t note, bool on);
