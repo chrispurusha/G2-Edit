@@ -71,7 +71,12 @@ void sound_engine_stop(void);
 // modulation wheel, and morphStrMap in moduleResources.h names the rest. Setting one sweeps every
 // parameter that has a morph range recorded for that group between its dialled value and its morph
 // target. Called from the MIDI thread.
-void sound_engine_set_morph(uint32_t group, double amount);
+//
+// Returns true if the position actually moved. Unlike pitch bend, a morph is not read by the audio
+// thread directly — it is folded into the parameter snapshot, which is only rebuilt on a redraw. So
+// a caller that moves a morph MUST ask for a redraw when this returns true, or the change will not
+// be heard until something else happens to wake the render loop.
+bool sound_engine_set_morph(uint32_t group, double amount);
 
 // Pitch bend, -1..+1 across the wheel's travel. How many semitones that is comes from the patch's
 // own Bend setting, so the engine bends by the same amount the G2 would. Called from the MIDI thread.
