@@ -1835,30 +1835,38 @@ static double advance_phase(double * phase, double dt) {
 // arrangement, which is what gives a resonant peak at the cutoff and the gentle saturation the
 // classic filters are liked for. Two stages is 12 dB/octave, three 18, four 24, matching the dB
 // scroll button.
+// Smooth saturation for a ladder stage: y = x - x^3/3, the first two terms of tanh's series, held
+// flat outside +/-1 where the cubic would turn back on itself. Unity slope at the origin, so a quiet
+// signal passes through untouched and only a driven one is shaped.
+static double ladder_saturate(double x) {
+    if (x <= -1.0) {
+        return -2.0 / 3.0;
+    }
+
+    if (x >= 1.0) {
+        return 2.0 / 3.0;
+    }
+    return x - ((x * x * x) / 3.0);
+}
+
 static double ladder_filter(double * state, double input, double g, double k, uint32_t tapStage) {
     double   feedback = state[LADDER_POLES - 1];
     double   x        = 0.0;
     uint32_t i        = 0;
 
-    // Feeding the output back subtracts from the input, so a ladder loses passband level as
-    // resonance rises — authentic, but taken raw it just sounds like the filter getting quieter and
-    // duller as you turn the knob up, which buries the peak you turned it up for. Putting half of it
-    // back keeps the level roughly steady across the sweep while leaving some of the thinning that
-    // gives the design its character.
-    // Partial compensation only. Putting half the loss back made turning Res up worth as much as
-    // 3x of gain the hardware never applies, which is most of why a busy patch arrived at the output
-    // clipping. A quarter keeps the knob musically usable while leaving the thinning that is the
-    // design's real character.
-    input *= 1.0 + (k * 0.25);
-    x      = input - (k * feedback);
+    // NO PASSBAND COMPENSATION. Feeding the output back subtracts from the input, so a ladder loses
+    // passband level as resonance rises — and that is not an artefact to be corrected, it is the
+    // specified behaviour: the manual (p.198, FltClassic) says "just like on analog filters the
+    // amplitude of the passband will drop about 12 dB when the resonance is set to a high value".
+    // Earlier versions put a quarter of the loss back, which made the filter louder than the
+    // hardware exactly where a patch is most likely to be driven hard.
+    x = input - (k * feedback);
 
-    // Soft-clip the feedback path rather than the output: it keeps self-oscillation bounded without
-    // dulling the signal when resonance is low.
-    if (x > 1.0) {
-        x = 1.0;
-    } else if (x < -1.0) {
-        x = -1.0;
-    }
+    // The stage input saturates rather than clipping flat. A real ladder's transistor stages
+    // compress smoothly, which is what rounds off the resonance peak instead of tearing it, and it
+    // is what bounds self-oscillation. The cubic below is the standard cheap stand-in for that
+    // curve: unity slope through zero, flattening to +/-2/3 at the limits, and constant beyond.
+    x = ladder_saturate(x);
 
     for (i = 0; i < LADDER_POLES; i++) {
         state[i] += g * (x - state[i]);
