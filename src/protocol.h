@@ -53,7 +53,11 @@ void store_note2(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32_t coun
 void store_patch_notes(uint32_t slot, uint8_t * buff, uint32_t * bitPos, uint32_t count);
 int parse_synth_settings(uint8_t * buff, int length);
 int parse_performance_settings(uint8_t * buff, int length);
-int parse_midi_cc(uint8_t * buff, int length);
+int parse_midi_cc(uint8_t * buff, int length, uint32_t slot);
+
+// Marks the reply to send_get_midi_cc() so its contents are not mistaken for a controller arriving.
+// That reply lists existing assignments; MIDI Learn must ignore it.
+void midi_cc_parse_set_solicited(bool solicited);
 int parse_patch_version(uint8_t * buff, int length);
 int parse_patch(uint32_t slot, uint8_t * buff, int length);
 int parse_perf(uint8_t * buff, int length);

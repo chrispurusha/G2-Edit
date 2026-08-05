@@ -60,6 +60,8 @@ void param_overlay_note_param(tModule * module, uint32_t paramIndex, tRectangle 
 
 // Paints everything queued this frame. Must run after the whole canvas is drawn, or later modules
 // paint over the labels.
-void param_overlay_render(void);
+// Draws the chips queued from one module pane, and must be called from inside that pane's transform
+// and its scissor — the rectangles are in the pane's own coordinate space.
+void param_overlay_render_pane(uint32_t pane);
 
 #endif /* PARAM_OVERLAY_H */

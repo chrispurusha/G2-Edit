@@ -574,6 +574,15 @@ typedef struct {
                                  // continues from the existing offset instead of resetting it
 } tParamDragging;
 
+// The parameter last clicked on the canvas. The original editor's MIDI Learn is "click a knob, then
+// press L", so the L key needs a target that outlives the click — gParamDragging is cleared on
+// mouse-up and only ever covers the draggable param types anyway.
+typedef struct {
+    bool       valid;
+    tModuleKey moduleKey;
+    uint32_t   paramIndex;
+} tParamFocus;
+
 typedef struct {
     bool       active;
     tModuleKey fromModuleKey;

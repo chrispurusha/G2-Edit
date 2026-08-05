@@ -40,6 +40,10 @@ const char *            monoPolyStrMap[monoPolyMax]                             
 tCableDragging          gCableDrag                                                                   = {0};
 tHoverConnector         gHoverConnector                                                              = {0};
 tParamDragging          gParamDragging                                                               = {0};
+tParamFocus             gParamFocus                                                                  = {0};
+_Atomic int32_t         gLastDeviceMidiCC[MAX_SLOTS]                                                 = {-1, -1, -1, -1};
+int32_t                 gLastDeviceMidiChan[MAX_SLOTS]                                               = {-1, -1, -1, -1};
+uint32_t                gDeviceMidiCCCount                                                           = 0;
 tModuleDragging         gModuleDrag                                                                  = {0};
 tSelection              gSelection                                                                   = {0};
 tRubberBand             gRubberBand                                                                  = {0};

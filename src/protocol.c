@@ -134,6 +134,10 @@ uint8_t peek_patch_category(const uint8_t * content, uint32_t contentLen) {
         int16_t count = 0;
 
         if (type != SUB_RESPONSE_SEL_PARAM_PAGE) {
+            // Two more bytes than the loop guard checked for — see parse_patch().
+            if ((BIT_TO_BYTE(bitOffset) + 2) > contentLen) {
+                break;
+            }
             count = (int16_t)read_bit_stream((uint8_t *)content, &bitOffset, 16);
 
             if ((count < 0) || (BIT_TO_BYTE(bitOffset) + (uint32_t)count > contentLen)) {
@@ -1276,25 +1280,63 @@ int parse_performance_settings(uint8_t * buff, int length) {
     return EXIT_SUCCESS;
 }
 
-int parse_midi_cc(uint8_t * buff, int length) {
-    uint32_t bitPos      = 0;
-    uint8_t  subResponse = 0;
+// Set while the reply to send_get_midi_cc() is being parsed. That reply carries ONE RECORD PER
+// SLOT in order, rather than a single event, so the records have to be filed by position instead of
+// by the slot in the message header.
+static bool gMidiCCSolicited = false;
+
+void midi_cc_parse_set_solicited(bool solicited) {
+    gMidiCCSolicited = solicited;
+}
+
+int parse_midi_cc(uint8_t * buff, int length, uint32_t slot) {
+    uint32_t bitPos = 0;
+    uint32_t record = 0;
 
     if (buff == NULL) {
         return EXIT_FAILURE;
     }
 
-    while ((BIT_TO_BYTE_ROUND_UP(bitPos) + 3) <= length) {
-        uint32_t midiChan = read_bit_stream(buff, &bitPos, 8);
+    // A record is two bytes — a first byte then the controller NUMBER — and where several are sent
+    // they are SEPARATED by a repeat of the 0x80 sub-response byte. Two shapes arrive here:
+    //
+    //   * UNSOLICITED, one record, no separator, when the synth receives a CC assigned to nothing.
+    //     The capture that settled it is 82 01 04 00 80 00 10 e5 cd — sub-response, record, CRC.
+    //     The slot it belongs to is the one in the message header.
+    //   * THE REPLY TO send_get_midi_cc(), four records, one PER SLOT in order, giving the last CC
+    //     each slot saw. 0xff means that slot has seen none. This is what makes Learn work straight
+    //     after the editor starts, without the user having to move the controller again.
+    //
+    // Both halves of this have been wrong before: the original guard asked for three bytes and so
+    // never ran on a two-byte payload; a flat two-byte stride then walked the four-record reply out
+    // of step, which showed up as impossible channel numbers and invented controllers.
+    while ((BIT_TO_BYTE_ROUND_UP(bitPos) + 2) <= length) {
+        uint32_t first    = read_bit_stream(buff, &bitPos, 8);
         uint32_t ccNumVal = read_bit_stream(buff, &bitPos, 8);
+        uint32_t target   = (gMidiCCSolicited == true) ? record : slot;
 
-        LOG_DEBUG("MIDI Chan 0x%x\n", midiChan);
-        LOG_DEBUG("CC Numb/value 0x%x\n", ccNumVal);
-        subResponse = read_bit_stream(buff, &bitPos, 8);
+        // WHETHER THE FIRST BYTE IS THE MIDI CHANNEL OR THE SLOT IS NOT SETTLED — both are 0 in
+        // every sample seen so far, so nothing distinguishes them. It is logged rather than used.
+        // If it is the slot, the sentinel records below will carry 1, 2 and 3.
+        if (ccNumVal > 127) {
+            LOG_DEBUG("MIDI CC: slot %u none (first byte 0x%02x, value 0x%02x)\n",
+                      target, first, ccNumVal);
+        } else if (target < MAX_SLOTS) {
+            gLastDeviceMidiChan[target] = (int32_t)first;
+            atomic_store(&gLastDeviceMidiCC[target], (int32_t)ccNumVal);
+            gDeviceMidiCCCount++;
+            LOG_INFO("MIDI CC %u %s slot %u (first byte 0x%02x)\n", ccNumVal,
+                     (gMidiCCSolicited == true) ? "last seen by" : "received from synth on",
+                     target, first);
+        }
+        record++;
 
-        if (subResponse != SUB_RESPONSE_MIDI_CC) {
-            LOG_DEBUG("MIDI CC stream end on 0x%02x bitPos(byte)=%u length=%d\n",
-                      subResponse, BIT_TO_BYTE_ROUND_UP(bitPos), length);
+        // Another record only follows if the sub-response byte repeats.
+        if ((BIT_TO_BYTE_ROUND_UP(bitPos) + 1) > (uint32_t)length) {
+            break;
+        }
+
+        if (read_bit_stream(buff, &bitPos, 8) != SUB_RESPONSE_MIDI_CC) {
             break;
         }
     }
@@ -1343,6 +1385,13 @@ int parse_patch(uint32_t slot, uint8_t * buff, int length) {
         subOffset = 0;
 
         if (type != SUB_RESPONSE_SEL_PARAM_PAGE) {
+            // The loop guard only covers the type byte just read. The count is two more, so a
+            // message that ends mid-header would read past `length` — the same mismatch between
+            // guard and body that made parse_midi_cc() silently wrong.
+            if ((BIT_TO_BYTE(bitOffset) + 2) > (uint32_t)length) {
+                LOG_ERROR("parse_patch: truncated header for type 0x%02x, aborting\n", type);
+                return EXIT_FAILURE;
+            }
             count = (int16_t)read_bit_stream(buff, &bitOffset, 16);
 
             if (count < 0) {
@@ -1493,6 +1542,11 @@ int parse_perf(uint8_t * buff, int length) {
         subOffset = 0;
 
         if (type != SUB_RESPONSE_SEL_PARAM_PAGE) {
+            // See parse_patch(): the guard covers the type byte only, the count is two more.
+            if ((BIT_TO_BYTE(bitOffset) + 2) > (uint32_t)length) {
+                LOG_ERROR("parse_perf: truncated header for type 0x%02x, aborting\n", type);
+                return EXIT_FAILURE;
+            }
             count = (int16_t)read_bit_stream(buff, &bitOffset, 16);
 
             if (count < 0) {

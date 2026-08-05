@@ -64,6 +64,10 @@ static tParamOverlayMode gMode                                 = overlayModeNone
 static int               gOverlayCount                         = 0;
 static tRectangle        gOverlayRect[MAX_PARAM_OVERLAYS]      = {0};
 static char              gOverlayLabel[MAX_PARAM_OVERLAYS][32] = {0};
+// Which module pane the chip was queued from. Its rectangle is in THAT pane's coordinate space, so
+// drawing it under another pane's transform puts it in the wrong place — and with the split view
+// there is more than one pane to be wrong about.
+static uint32_t          gOverlayPane[MAX_PARAM_OVERLAYS]      = {0};
 
 // How many rows this parameter has already contributed this frame, so a second or third row for
 // the same parameter stacks below the first rather than on top of it. Reset per parameter.
@@ -102,10 +106,16 @@ void param_overlay_begin_frame(void) {
     gOverlayCount = 0;
 }
 
-void param_overlay_render(void) {
+// Draws only the chips queued from `pane`. Called once per pane, from inside that pane's transform
+// and its scissor, so a chip annotating a module at the bottom of the Voice Area cannot spill over
+// the divider into the FX Area below it.
+void param_overlay_render_pane(uint32_t pane) {
     tRgb backing = (tRgb)RGB_GREY_9;
 
     for (int i = 0; i < gOverlayCount; i++) {
+        if (gOverlayPane[i] != pane) {
+            continue;
+        }
         // gOverlayRect is the TEXT rect. draw_button() would pad it and put the text back at
         // +margin inside; the backing is drawn by hand here to get an alpha on it, so recover the
         // same padding from draw_button_bounds() and inset the box around the text rather than
@@ -169,6 +179,7 @@ static void queue_row(tRectangle rectangle, const char * label, bool textAnchor)
 
     COPY_STRING(gOverlayLabel[gOverlayCount], label);
     gOverlayRect[gOverlayCount] = labelRect;
+    gOverlayPane[gOverlayCount] = module_pane();
     gOverlayCount++;
     gRowsThisParam++;
 }

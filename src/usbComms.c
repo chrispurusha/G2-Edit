@@ -476,7 +476,13 @@ static int parse_resources_used(uint32_t slot, uint8_t * buff, uint32_t * bitPos
     }
     *bitPos -= 8; // Multiple messages in here, so need to move back a byte to process each sub response
 
-    while ((BIT_TO_BYTE(*bitPos)) < (length - CRC_BYTES)) {
+    // One record is a fixed 29 bytes: sub(1) location(1) cyclesRed(2) cyclesBlue(2) zpMem(1)
+    // unknown(2) xmemV1(2) ymemV1(2) pmemV1(2) xmemV2(2) ymemV2(2) pmemV2(2) ram(2) qmem(4) rmem(2).
+    // The guard has to require the WHOLE record: asking only that a byte remains lets a truncated
+    // message read past the end, which is the mismatch that made parse_midi_cc() silently wrong.
+#define RESOURCES_RECORD_BYTES    (29)
+
+    while ((BIT_TO_BYTE(*bitPos) + RESOURCES_RECORD_BYTES) <= (length - CRC_BYTES)) {
         sub                                   = read_bit_stream(buff, bitPos, 8);
 
         if (sub != SUB_RESPONSE_RESOURCES_USED) {
@@ -852,7 +858,7 @@ static int parse_command_response(uint8_t * buff, uint32_t * bitPos,
         case SUB_RESPONSE_MIDI_CC:
             LOG_DEBUG("Got MIDI CC response slot %u\n", slot);
             parse_midi_cc(&buff[BIT_TO_BYTE(*bitPos)],
-                          length - BIT_TO_BYTE(*bitPos) - CRC_BYTES);
+                          length - BIT_TO_BYTE(*bitPos) - CRC_BYTES, slot);
             return EXIT_SUCCESS;
 
         case SUB_RESPONSE_GLOBAL_PAGE:
@@ -1395,9 +1401,17 @@ static int send_get_synth_settings(void) {
 static int send_get_midi_cc(void) {
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
+    int      retVal                  = 0;
 
     usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_GET_MIDI_CC);
-    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_MIDI_CC, USB_RECV_DATA_MS);
+
+    // The reply is parsed synchronously inside send_and_receive(), so bracketing the call is enough
+    // to tell parse_midi_cc() that what it is about to read is a list of existing assignments rather
+    // than news of a controller arriving.
+    midi_cc_parse_set_solicited(true);
+    retVal = send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_MIDI_CC, USB_RECV_DATA_MS);
+    midi_cc_parse_set_solicited(false);
+    return retVal;
 }
 
 static int send_get_slot_selection(void) {
