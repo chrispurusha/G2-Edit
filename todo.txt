@@ -130,8 +130,27 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
 - PartQuant(22) dial range — display verified via backdoor; the changed creation default
   (100 -> 64) still needs a (CT) hardware confirm.
 
-- Sound engine dial curves read their own tables — 2026-08-05. Two dials were being approximated by
-  a formula fitted to the endpoints, and both were badly wrong in between:
+- Sound engine dial curves are COMPUTED for the audio path — owner's call 2026-08-05: "compute
+  should be for what we hear". The tables stay as the DISPLAY's business.
+  THE REASON THIS MATTERS MORE THAN ACCURACY: morphs and the parameter smoothing both produce
+  FRACTIONAL dial values, and a table index truncates them — so a morphed or swept envelope time
+  stepped between whole dial positions instead of moving continuously. Computing fixes the stepping,
+  not just the error.
+   * A/D/R times: t = 1.015839e-16 * (v + 39.55)^7.94210. A POWER LAW, not the exponential one would
+     reach for first — the ratio between neighbouring table entries falls from 1.20 to 1.049, which
+     is what gives it away. Median error against the table 0.35%, worst 4% at index 2 where the
+     TABLE carries one significant figure ("0.7ms"), so the formula is arguably the more accurate of
+     the two there. The exponential this replaced was out by 86% mid-range.
+   * Glide: INTERPOLATED between table entries instead, because that table has no decent closed
+     form — the best power-law fit is 17% out at the median and 38% at worst, far worse than reading
+     it. Interpolation gives the same continuity without inventing a bad curve.
+  TO NOTE, owner's request: the DISPLAY could be made more accurate in its own right at some point.
+  ADRTimeStrMap and patch_settings_glideStrMap are rounded strings — as little as one significant
+  figure at the short end — so the dial currently reads less precisely than the engine now plays.
+  A display derived from the same curve (or simply more decimal places) would close that.
+
+- (superseded by the entry above, kept for the measurements) Dial curves were approximated by a
+  formula fitted to the endpoints, and both were badly wrong in between:
    * FILTER RESONANCE Q was 0.5*100^(i/127), wrong by up to 245% against filter_resonanceStrMap
      which the Res dial PRINTS (table reads Q 3.16 at index 85 where the curve gave 10.9). Endpoints
      matched at 0.5 and 50, which is why it went unnoticed. Now reads the table.
@@ -155,6 +174,34 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
   STILL FORMULA-BASED, and worth the same check: flt_cutoff_hz (13.75 * 2^(v/12)), osc_freq_hz,
   osc_fine_cents, osc_shape_percent. Any dial with a strMap in paramLocationList can be compared
   against it the same way this was.
+
+- WHOLE-GRAPH OVERSAMPLING — done 2026-08-05, the proper fix the raspiness entry below asked for.
+  ENGINE_OVERSAMPLE 2, so the graph runs at 96 kHz for a 48 kHz device, which is exactly what the G2
+  does (manual p.71: audio at 96 kHz). gSampleRate IS the internal rate, so every coefficient
+  already derived from it — envelope and glide times, filter and chorus coefficients, LFO and
+  oscillator increments — scaled with no further change. One windowed-sinc decimator (64 taps) at
+  the very output; nothing else in the graph knows it is happening.
+  WHY WHOLE-GRAPH RATHER THAN PER-NODE: only the nonlinear parts actually need it (the ladder and
+  its saturation, LevMult as a ring modulator, the compressor), but doing it per node means
+  interpolating an input and decimating an output for each of them. One rate throughout is simpler,
+  and the linear parts cost little.
+  WHAT HAD TO CHANGE, all of it because these are counts of SAMPLES rather than times:
+   * DELAY_LINE_SAMPLES — and it was ALREADY WRONG: a flat 48000, i.e. one second, against a Time
+     dial that offers up to 2.7 s. Long delays were being silently truncated to well under half.
+     Now 2.8 s at the internal rate.
+   * CHORUS_SAMPLES, and the reverb comb/allpass lengths — fixed sample counts that would otherwise
+     have halved the room.
+   * OSC_OVERSAMPLE is now relative to the engine rate (4 / ENGINE_OVERSAMPLE), so the oscillators
+     still run at four times the DEVICE rate overall, as before.
+  RESULT: the filter is clean across the entire cutoff range — 59.8 dB of margin at every setting,
+  where 17.7 kHz previously measured 31.8. The internal coefficient at the very top of the dial is
+  now 0.728, inside the model's valid region, so LADDER_MAX_G no longer engages at all within the
+  dial's range and the full range is usable again. The clamp is kept as a guard for lower device
+  rates or if the oversampling is ever turned off.
+  COST: CPU 1.8% -> 3.4% of the real-time budget on a 12-module patch. Memory: the delay lines are
+  now ~4 MB.
+  NOT VERIFIED BY EAR. All 14 suites pass and the delay still measures 496 ms, i.e. timings survived
+  the rate change — but nobody has listened to it.
 
 - Filter raspiness at high cutoff — FOUND AND FIXED 2026-08-05 from an owner report: full resonance
   at 17.7 kHz, no env, Kbt off, sounded raspy where the G2 is smooth.
