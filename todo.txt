@@ -446,6 +446,27 @@ OPEN WORK
    2. Three columns of 24 rows = 72 visible, against MAX_NUM_CONTROLLERS of 128. A patch with more
       than 72 assignments silently stops drawing rather than scrolling.
 
+- Delay Time in CLOCK mode shows milliseconds, and plays them too — found 2026-08-05, not fixed.
+  The delays carry a Time/Clk selector (timeClkStrMap = {"Time", "Clk"}), and NOTHING reads it:
+   * DISPLAY: render_paramType1TimeClk() (renderParams.c) switches only on module->mode[0].value,
+     which is the RANGE selector, and maps the dial to milliseconds within it (5ms/25ms/100ms/500ms/
+     1s/2s/2.7s). It references the Time/Clk param zero times, so in Clk mode the dial prints a
+     millisecond figure that bears no relation to what is heard, since the delay is following the
+     master clock.
+   * ENGINE: soundEngine.c's eNodeDelay computes timeSeconds from the range the same way and ignores
+     Clk entirely, so a clock-synced delay plays the wrong time as well as displaying it. The
+     display is only half the bug.
+  THE PIECES ALREADY EXIST. clkSyncStrMap has the 32 musical divisions, and
+  render_paramType1LFORate()'s "case 4: ClkSync" shows the mapping — value/4 into that table. The
+  engine would need the tempo, which it does have access to via gGlobalSettings.masterClock.
+  TWO THINGS TO SETTLE FIRST, and the first is the trap that made DelayA permanently bypassed:
+   1. WHICH PARAM INDEX carries Time/Clk PER MODULE. It is 4 on DelayB but 5 on DelayA, and this one
+      renderer serves DelayQuad, DelayA, DelayB and DlyStereo. Check every type before writing a
+      shared constant.
+   2. Whether a clock-synced delay should follow the patch's master clock or an external one when
+      the patch is set to receive clock — parse_performance_settings() carries masterClock, and the
+      answer decides whether the engine can compute this offline at all.
+
 - Sw8-1(15), ValSw1-2(17) — need more resources.
 
 - Seq* park-LED (SeqNote/SeqEvent/SeqVal/SeqLev/SeqCtr) — DEFERRED pending a look at the REAL
