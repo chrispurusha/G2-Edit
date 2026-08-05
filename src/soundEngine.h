@@ -81,6 +81,11 @@ void sound_engine_stop(void);
 // thread directly — it is folded into the parameter snapshot, which is only rebuilt on a redraw. So
 // a caller that moves a morph MUST ask for a redraw when this returns true, or the change will not
 // be heard until something else happens to wake the render loop.
+// Output attenuation in dB, 0 or negative. Applied before the output limiter, so it pulls a hot
+// patch down rather than leaving the limiter to do it. Positive values are treated as 0 — this is a
+// trim, and boosting into the limiter is what it exists to avoid.
+void sound_engine_set_output_level_db(double db);
+
 bool sound_engine_set_morph(uint32_t group, double amount);
 
 // Pitch bend, -1..+1 across the wheel's travel. How many semitones that is comes from the patch's

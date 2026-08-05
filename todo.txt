@@ -175,6 +175,22 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
   osc_fine_cents, osc_shape_percent. Any dial with a strMap in paramLocationList can be compared
   against it the same way this was.
 
+- Sound engine output level — added 2026-08-05, owner's request. Experimental > Output Level, with
+  0 / -3 / -6 / -9 / -12 / -18 / -24 dB, the current one marked. Saved in the NVM settings alongside
+  the device, channel and buffer choices (audioOutputLevelDb), and pushed into the engine as
+  audio_output_load_settings() runs so a remembered trim survives a restart.
+  APPLIED BEFORE THE OUTPUT KNEE, which is the point of it: a patch that arrives hot should be
+  brought down rather than left for the limiter to squash. A few oscillators through two mixers sits
+  well inside the G2's own 18 dB of headroom but not inside a DAC's.
+  ATTENUATION ONLY — a positive value is clamped to 0. Boosting into the limiter is exactly what
+  this exists to avoid, so it is not offered.
+  Held as a gain x1000 in one atomic, so the audio thread reads an integer rather than calling pow()
+  per sample. Verified across the whole range: every step measures within 0.1 dB of its label, and
+  +6 dB correctly does nothing.
+  The Experimental menu's item array went 16 -> 20 with this entry. It overflowed once before, at 8,
+  and the symptom was another menu's array being quietly overwritten rather than anything visibly
+  wrong in this one.
+
 - WHOLE-GRAPH OVERSAMPLING — done 2026-08-05, the proper fix the raspiness entry below asked for.
   ENGINE_OVERSAMPLE 2, so the graph runs at 96 kHz for a 48 kHz device, which is exactly what the G2
   does (manual p.71: audio at 96 kHz). gSampleRate IS the internal rate, so every coefficient
