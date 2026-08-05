@@ -1146,6 +1146,16 @@ void assign_midi_cc_to_param(uint32_t slot, tModuleKey moduleKey, uint32_t param
     synthlib_request_redraw();
 }
 
+// "Assign to CC# nn (last received)". The CC travels in the item's payload like the picker entries
+// do, so this shares their assign path; it exists separately only to clear the focus, which the L
+// key also does — either route ends with nothing selected, so neither can be repeated by accident.
+static void action_assign_midi_cc_learn(int index) {
+    assign_midi_cc_to_param(gSlot, gMenuContext.moduleKey, gMenuContext.paramIndex,
+                            (uint32_t)gContextMenu.items[index].param);
+    gParamFocus.valid   = false;
+    gContextMenu.active = false;
+}
+
 static void action_assign_midi_cc(int index) {
     assign_midi_cc_to_param(gSlot, gMenuContext.moduleKey, gMenuContext.paramIndex,
                             (uint32_t)gContextMenu.items[index].param);
@@ -1184,76 +1194,37 @@ int32_t midi_learn_last_cc(const char ** source) {
 // way rather than the safe way, since nothing shows you which CC you are about to use.
 //
 // Returns false with a reason logged when there is nothing to do, so the caller can stay silent.
-// Set when L is pressed with no parameter to act on. The manual's order is click-then-L, but there
-// is no reason the other way round should fail — so L with nothing focused waits, and the next
-// parameter clicked takes the CC. Pressing L again while armed cancels, so a stray press does not
-// lie in wait and quietly reassign the next parameter touched.
-static bool gMidiLearnArmed = false;
+bool midi_learn_focused_param(void) {
+    const char * source     = NULL;
+    int32_t      cc         = midi_learn_last_cc(&source);
+    tModuleKey   moduleKey  = gParamFocus.moduleKey;
+    uint32_t     paramIndex = gParamFocus.paramIndex;
 
-bool midi_learn_armed(void) {
-    return gMidiLearnArmed;
-}
+    LOG_INFO("MIDI Learn: focus valid=%d slot=%u loc=%u module=%u param=%u | gSlot=%u | "
+             "cc=%d (from %s) synth=%d local=%d\n",
+             (int)gParamFocus.valid, moduleKey.slot, moduleKey.location, moduleKey.index,
+             paramIndex, (unsigned)gSlot, cc, (source != NULL) ? source : "?",
+             (int)atomic_load(&gLastDeviceMidiCC[gSlot]), (int)midi_input_last_cc());
 
-// Called from param_click_handler() for every parameter click. Assigns and disarms if L is waiting;
-// does nothing at all otherwise, which is the overwhelmingly common case.
-void midi_learn_param_clicked(tModuleKey moduleKey, uint32_t paramIndex) {
-    const char * source = NULL;
-    int32_t      cc     = midi_learn_last_cc(&source);
-
-    if (gMidiLearnArmed == false) {
-        return;
+    if (gParamFocus.valid == false) {
+        LOG_INFO("MIDI Learn: select a parameter first\n");
+        return false;
     }
-    gMidiLearnArmed = false;
+    // L CONSUMES THE FOCUS, whether or not the assignment goes through. Nothing is left armed, and a
+    // second L cannot quietly reassign the parameter still sitting in focus from the first — the
+    // sequence is deliberately select, press, done.
+    gParamFocus.valid = false;
 
     if (cc < 0) {
-        LOG_INFO("MIDI Learn: armed, but no MIDI CC has been received\n");
-        return;
+        LOG_INFO("MIDI Learn: no MIDI CC received yet\n");
+        return false;
     }
 
     if (moduleKey.slot != gSlot) {
         LOG_INFO("MIDI Learn: that parameter is in another slot\n");
-        return;
+        return false;
     }
-    LOG_INFO("MIDI Learn: armed, taking CC %d (from %s)\n", cc, source);
     assign_midi_cc_to_param(gSlot, moduleKey, paramIndex, (uint32_t)cc);
-}
-
-bool midi_learn_focused_param(void) {
-    const char * source = NULL;
-    int32_t      cc     = midi_learn_last_cc(&source);
-
-    LOG_INFO("MIDI Learn: focus valid=%d slot=%u loc=%u module=%u param=%u | gSlot=%u | "
-             "cc=%d (from %s) synth=%d local=%d\n",
-             (int)gParamFocus.valid, gParamFocus.moduleKey.slot, gParamFocus.moduleKey.location,
-             gParamFocus.moduleKey.index, gParamFocus.paramIndex, (unsigned)gSlot,
-             cc, (source != NULL) ? source : "?",
-             (int)atomic_load(&gLastDeviceMidiCC[gSlot]), (int)midi_input_last_cc());
-
-    if (gParamFocus.valid == false) {
-        gMidiLearnArmed = !gMidiLearnArmed;
-        LOG_INFO("MIDI Learn: %s - click a parameter to assign\n",
-                 gMidiLearnArmed ? "armed" : "cancelled");
-        return false;
-    }
-
-    // The focus is only meaningful in the slot it was clicked in.
-    // A focus left over from another slot is stale rather than wrong to act on, so arm instead of
-    // refusing outright — the next click settles it.
-    if (gParamFocus.moduleKey.slot != gSlot) {
-        gMidiLearnArmed = true;
-        LOG_INFO("MIDI Learn: armed - the focused parameter is in another slot\n");
-        return false;
-    }
-
-    if (cc < 0) {
-        gMidiLearnArmed = true;
-        LOG_INFO("MIDI Learn: armed - no MIDI CC received yet\n");
-        return false;
-    }
-    LOG_INFO("MIDI Learn: CC %d (from %s) -> module %u param %u\n", cc, source,
-             gParamFocus.moduleKey.index, gParamFocus.paramIndex);
-    gMidiLearnArmed = false;
-    assign_midi_cc_to_param(gSlot, gParamFocus.moduleKey, gParamFocus.paramIndex, (uint32_t)cc);
     return true;
 }
 
@@ -1820,7 +1791,28 @@ void open_param_context_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramI
             "Deassign global knob", RGB_GREY_3, action_deassign_global_knob, 0, NULL
         };
     }
-    menuItems[count++]                   = (tMenuItem){
+    // The manual's own alternative to the L key (p.145): right-click and "first check if the Assign
+    // to CC# xx menu item indeed shows the MIDI CC# that the other instrument is sending". The
+    // 128-entry picker below cannot answer that question, so this carries the number the synth last
+    // reported and assigns it in one click.
+    {
+        static char  learnLabel[64];
+        const char * source = NULL;
+        int32_t      lastCC = midi_learn_last_cc(&source);
+
+        if (lastCC >= 0) {
+            snprintf(learnLabel, sizeof(learnLabel), "Assign to CC# %d (last received)", lastCC);
+            menuItems[count++] = (tMenuItem){
+                learnLabel, RGB_GREY_3, action_assign_midi_cc_learn, (uint32_t)lastCC, NULL
+            };
+        } else {
+            menuItems[count++] = (tMenuItem){
+                "No MIDI CC received yet", RGB_GREY_5, NULL, 0, NULL
+            };
+        }
+    }
+
+    menuItems[count++] = (tMenuItem){
         "MIDI CC...", RGB_GREY_3, NULL, 0, ccGroupMenuItems
     };
 

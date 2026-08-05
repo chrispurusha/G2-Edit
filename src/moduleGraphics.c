@@ -118,9 +118,6 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
         LOG_INFO("Param focus: slot %u location %u module %u param %u (type %u)\n",
                  module->key.slot, module->key.location, module->key.index, ctx->paramIndex, paramType);
 
-        // If L is waiting for a parameter, this click is the one it wanted.
-        midi_learn_param_clicked(module->key, ctx->paramIndex);
-
         if (  paramType != paramTypeToggle && paramType != paramTypeMenu
            && paramType != paramTypeBypass && paramType != paramTypeEnable
            && paramType != paramTypePush && paramType != paramTypeCustomData) {
