@@ -650,6 +650,17 @@ void render_mode_common(tRectangle rectangle, tModule * module, uint32_t modeRef
             //    set_rgb_colour((tRgb)RGB_BACKGROUND_GREY);
             //}
 
+            // The label sits ABOVE the button, and the button does not move to make room. The dial
+            // branch above does the opposite — it offsets the dial downwards — but every position in
+            // modeLocationList was laid out against a renderer that drew no label at all, so pushing
+            // the buttons down would shift every mode dropdown in the app. Drawing upwards into the
+            // space the module already leaves keeps those positions meaning what they always did.
+            if (modeLocationList[modeRef].label != NULL) {
+                set_rgb_colour((tRgb)RGB_BLACK);
+                render_text(moduleArea,
+                            (tRectangle){{rectangle.coord.x, y - textHeight}, {rectangle.size.w, textHeight}},
+                            (char *)modeLocationList[modeRef].label);
+            }
             module->mode[modeIndex].rectangle                                                   = draw_button(moduleArea, (tRectangle){{rectangle.coord.x, y}, {largest_text_width(modeLocationList[modeRef].range, strMap, textHeight, eCache), textHeight}}, strMap[modeValue], (tRgb)RGB_BACKGROUND_GREY);
             sModeClickCtx[module->key.slot][module->key.location][module->key.index][modeIndex] = (tModeClickCtx){
                 module->key, modeIndex
