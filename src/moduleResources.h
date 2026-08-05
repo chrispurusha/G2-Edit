@@ -1420,15 +1420,15 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeDelayA,     paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                       // 176 On/Off
     {moduleTypeDelayA,     paramTypeMenu,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, timeClkStrMap,                         NULL          },                       // 176 Time/Clk
     // 177 DelayB
-    {moduleTypeDelayB,     paramTypeTimeClk,     {{ 40, -10}, { 7,  7}}, anchorBottomLeft,  "Time",         128,   0, NULL,                                  NULL          },                       // 176 Time
-    {moduleTypeDelayB,     paramTypeCommonDial,  {{ 50, -17}, { 7,  7}}, anchorBottomLeft,  "FB",           128,   0, NULL,                                  NULL          },                       // 176 FB
-    {moduleTypeDelayB,     paramTypeFreq,        {{ 60,  -3}, { 7,  7}}, anchorBottomLeft,  "LP",           128,  64, NULL,                                  NULL          },                       // 176 Filter
-    {moduleTypeDelayB,     paramTypeCommonDial,  {{ 75, -17}, { 7,  7}}, anchorBottomLeft,  "Dry/Wet",      128,  64, NULL,                                  NULL          },                       // 176 Filter
-    {moduleTypeDelayB,     paramTypeMenu,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, timeClkStrMap,                         NULL          },                       // 176 Time/Clk
-    {moduleTypeDelayB,     paramTypeCommonDial,  {{ 50,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                       // 176 FBmod
-    {moduleTypeDelayB,     paramTypeCommonDial,  {{ 75,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,           128,   0, NULL,                                  NULL          },                       // 176 DryWet mod
-    {moduleTypeDelayB,     paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                       // 176 On/Off
-    {moduleTypeDelayB,     paramTypeFreq,        {{ 60, -17}, { 7,  7}}, anchorBottomLeft,  "HP",           128,  64, NULL,                                  NULL          },                       // 176 Filter
+    {moduleTypeDelayB,     paramTypeTimeClk,     {{ 20, 30}, { 7,  7}}, anchorTopLeft,  NULL,         128,   0, NULL,                                  NULL          },                       // 176 Time
+    {moduleTypeDelayB,     paramTypeCommonDial,  {{ 35, 18}, { 7,  7}}, anchorTopLeft,  "FB",           128,   0, NULL,                                  NULL          },                       // 176 FB
+    {moduleTypeDelayB,     paramTypeFreq,        {{ 52,  18}, { 7,  7}}, anchorTopLeft,  "LP",           128,  64, NULL,                                  NULL          },                       // 176 Filter
+    {moduleTypeDelayB,     paramTypeCommonDial,  {{ 69, 18}, { 7,  7}}, anchorTopLeft,  "Dry/Wet",      128,  64, NULL,                                  NULL          },                       // 176 Filter
+    {moduleTypeDelayB,     paramTypeMenu,        {{ 20,  20}, { 7,  7}}, anchorTopLeft,  NULL,             2,   0, timeClkStrMap,                         NULL          },                       // 176 Time/Clk
+    {moduleTypeDelayB,     paramTypeCommonDial,  {{ 35,  -3}, { 7,  7}}, anchorBottomLeft,  "FB Mod",           128,   0, NULL,                                  NULL          },                       // 176 FBmod
+    {moduleTypeDelayB,     paramTypeCommonDial,  {{ 69,  -3}, { 7,  7}}, anchorBottomLeft,  "Dry/Wet Mod",           128,   0, NULL,                                  NULL          },                       // 176 DryWet mod
+    {moduleTypeDelayB,     paramTypeBypass,      {{ -3, 0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                       // 176 On/Off
+    {moduleTypeDelayB,     paramTypeFreq,        {{ 52, -3}, { 7,  7}}, anchorBottomLeft,  "HP",           128,  64, NULL,                                  NULL          },                       // 176 Filter
     // 178 DlyClock
     {moduleTypeDlyClock,   paramTypeInt,         {{ 40,  -3}, { 7,  7}}, anchorBottomLeft,  "Sample delay", 128,   0, NULL,                                  NULL          },                       // 176 Time
     // 179 DlyShiftReg
@@ -2414,9 +2414,9 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleTypeDelayA,      connectorDirIn,  connectorTypeAudio,   {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 177
     {moduleTypeDelayA,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
     // 177 DelayB
-    {moduleTypeDelayB,      connectorDirIn,  connectorTypeAudio,   {{ -3, -17}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },          // 177
-    {moduleTypeDelayB,      connectorDirIn,  connectorTypeControl, {{ 43,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },          // 169 E
-    {moduleTypeDelayB,      connectorDirIn,  connectorTypeControl, {{ 68,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },          // 169 E
+    {moduleTypeDelayB,      connectorDirIn,  connectorTypeAudio,   {{ -3, 6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight, NULL,           labelLocUp   },          // 177
+    {moduleTypeDelayB,      connectorDirIn,  connectorTypeControl, {{ 28,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },          // 169 E
+    {moduleTypeDelayB,      connectorDirIn,  connectorTypeControl, {{ 62,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomLeft,  NULL,           labelLocLeft },          // 169 E
     {moduleTypeDelayB,      connectorDirOut, connectorTypeAudio,   {{ -3,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocUp   },
     // 178 DlyClock
     {moduleTypeDlyClock,    connectorDirIn,  connectorTypeControl, {{-10,  -3}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorBottomRight, NULL,           labelLocLeft }, // 178 In
@@ -2596,7 +2596,7 @@ const tModeLocation      modeLocationList[] = {
     {moduleTypeDelayDual,  paramTypeMenu,   {{ 10,  0}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap    },  // 174 Delay Range
     {moduleTypeDelayQuad,  paramTypeMenu,   {{ 80,  0}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap    },  // 175 Delay Range
     {moduleTypeDelayA,     paramTypeMenu,   {{  3,  0}, { 7, 7}}, anchorBottomLeft,  "Slope", 4, 0, delayABRangeStrMap  },  // 176 Delay Range
-    {moduleTypeDelayB,     paramTypeMenu,   {{  3,  0}, { 7, 7}}, anchorBottomLeft,  "Slope", 4, 0, delayABRangeStrMap  },  // 177 Delay Range
+    {moduleTypeDelayB,     paramTypeMenu,   {{  3,  25}, { 7, 7}}, anchorTopLeft,  "Range", 4, 0, delayABRangeStrMap  },  // 177 Delay Range
     {moduleTypeDlyStereo,  paramTypeMenu,   {{ 10,  0}, { 7, 7}}, anchorBottomLeft,  "Slope", 3, 0, dlyStereoRangeStrMap},  // 182 Delay Range
     {moduleTypeDlyEight,   paramTypeMenu,   {{ 10, -7}, { 7, 7}}, anchorBottomLeft,  "Slope", 7, 0, delayRangeStrMap    },  // 181 Delay Range
     {moduleTypeOscPM,      paramTypeMenu,   {{-30,  8}, { 7, 7}}, anchorTopRight,    "Wave",  2, 0, oscPmWaveStrMap     },  // 183 Wave
