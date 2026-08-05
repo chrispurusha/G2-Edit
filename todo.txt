@@ -130,6 +130,102 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
 - PartQuant(22) dial range — display verified via backdoor; the changed creation default
   (100 -> 64) still needs a (CT) hardware confirm.
 
+- Sound engine dial curves read their own tables — 2026-08-05. Two dials were being approximated by
+  a formula fitted to the endpoints, and both were badly wrong in between:
+   * FILTER RESONANCE Q was 0.5*100^(i/127), wrong by up to 245% against filter_resonanceStrMap
+     which the Res dial PRINTS (table reads Q 3.16 at index 85 where the curve gave 10.9). Endpoints
+     matched at 0.5 and 50, which is why it went unnoticed. Now reads the table.
+     CORRECTION TO AN EARLIER CLAIM HERE: this does NOT affect the audio. flt_resonance_q() is used
+     only by the FltClassic response GRAPH (moduleGraphics.c); the sound engine takes the raw dial
+     over 127 and scales it to a feedback of at most 3.9. The fix straightens the drawn curve, not
+     what is heard.
+   * ENVELOPE A/D/R times were an exponential between 0.5 ms and 45 s, wrong by 86% at index 49
+     (295 ms in the table, 41 ms from the formula). Now reads ADRTimeStrMap.
+  IS THE TABLE DERIVABLE? For the A/D/R times, nearly: t = 9.89e-17 * (i + 39.6)^7.947 fits to
+  better than 1% almost everywhere, 4% worst — and part of that residual is the TABLE's own display
+  rounding, since its first entries carry one significant figure ("0.5ms"). Rounding the exponent to
+  8 and the offset to 40 costs little but is not exact (it spans 92311 against the table's 90000).
+  NOT SWITCHED TO THE FORMULA: the table is what the dial prints, and the project's rule is that
+  what is heard and what is shown come from one place. The formula is recorded because it says what
+  KIND of curve the hardware uses, which the table alone does not.
+  WHAT THE DEMO DOES: it calculates. Its envelope's audio-rate part consumes a pre-computed
+  COEFFICIENT rather than looking up a time, and the coefficient parts evaluate polynomials — the
+  filter's coefficient routine visibly squares and cubes its input. Consistent with the power-law
+  fit above: a polynomial, not a 128-entry lookup.
+  STILL FORMULA-BASED, and worth the same check: flt_cutoff_hz (13.75 * 2^(v/12)), osc_freq_hz,
+  osc_fine_cents, osc_shape_percent. Any dial with a strMap in paramLocationList can be compared
+  against it the same way this was.
+
+- Filter raspiness at high cutoff — FOUND AND FIXED 2026-08-05 from an owner report: full resonance
+  at 17.7 kHz, no env, Kbt off, sounded raspy where the G2 is smooth.
+  IT WAS THE SATURATION ADDED THE SAME DAY. Isolating it settled the cause immediately: with the
+  cubic in, non-harmonic content sat 32 dB below the note; with it removed the filter DIVERGED to
+  NaN instead, which is what the saturation was there to prevent. So neither the old code nor the
+  new was right — the model itself breaks down up there.
+  MEASURED, sweeping cutoff at full resonance and reading the margin between the note and the worst
+  non-harmonic content:
+      g 0.728  60 dB    g 0.806  60 dB    g 0.842  53 dB    g 0.874  32 dB    g 0.902  32 dB
+  Below g = 0.806 it is clean; by 0.874 the margin has collapsed AND the passband has dropped 6 dB,
+  i.e. the filter is misbehaving rather than merely distorting. Each ladder stage is a one-pole
+  using the previous sample's output, and four of them in a feedback loop stop behaving as a filter
+  once the poles approach Nyquist.
+  THIS IS A CONSEQUENCE OF RUNNING AT 48 kHz. FltClassic reaches 21.1 kHz (manual p.198), which at
+  the G2's own 96 kHz gives half this g and sits well inside the model. The same dial at 48 kHz does
+  not. FIXED by clamping g to LADDER_MAX_G 0.80 — the whole dial now measures 59.9 dB of margin.
+  The cost is that cutoff stops climbing near the very top, where a 24 dB/octave lowpass is close to
+  transparent anyway.
+  ALSO: ladder_saturate() is now LINEAR BELOW A KNEE (0.7) instead of curving on every sample. An
+  always-on nonlinearity generates harmonics on every sample, and this filter is not oversampled, so
+  they fold. Only a genuinely driven signal is shaped now.
+  THE PROPER FIX IS TO OVERSAMPLE THE FILTER, as the oscillators already are. That would restore the
+  top of the cutoff range and remove the folding at source, and it is the difference between this
+  and the hardware.
+
+- Sound engine parameter smoothing — 2026-08-05, after the owner heard ZIPPER NOISE sweeping Shape
+  between triangle and saw where the G2 is smooth.
+  THE CAUSE IS THE UPDATE RATE, NOT MISSING SMOOTHING ON THE HARDWARE'S PART. The G2 runs modulation
+  at 24 kHz (manual p.71: "modules can process and output signals at two sample rates: 96kHz and
+  24kHz", the lower one for modulation), so a dial arrives at its DSP finely stepped and needs no
+  smoothing of its own. This engine rebuilds its parameter snapshot ON A REDRAW, i.e. at frame rate
+  — a few hundred times coarser — and a stepped parameter is audible, most obviously on Shape where
+  each step moves the waveform itself.
+  FIXED by interpolating per sample toward the snapshot value (PARAM_SMOOTH_SECONDS 0.008) for the
+  continuous parameters: shape, filter cutoff and resonance, gains and mixer levels. Discrete things
+  are deliberately NOT smoothed — waveform, slope, curve, active flags — since interpolating an
+  index is meaningless.
+  gSmoothPrimed[] snaps the first sample a node is seen rather than interpolating from whatever the
+  previous patch left in that slot, so a patch load is still instant.
+  MEASURED: largest sample-to-sample jump across a full Shape sweep is 0.021, i.e. below the
+  waveform's own per-sample motion — no step stands out. CPU went DOWN slightly (1.8% from 2.2%),
+  the smoothing being cheaper than the noise it removes is coincidence, not causation.
+  WORTH KNOWING: this only smooths what the snapshot carries. A parameter that changes discretely
+  by design (waveform, slope) will still click, as it does on the hardware.
+
+- Sound engine EnvADSR + mixer Channel Mute — 2026-08-05.
+  * TIMES NOW COME FROM THE DIAL'S OWN TABLE. The A/D/R dials index ADRTimeStrMap, 128 real times
+    from 0.5 ms to 45 s, and that is what the dial prints; the engine had been using an exponential
+    curve fitted to the endpoints, so everything between them was approximate. Same fix as glide.
+    Measured: a dial reading 496 ms now takes 512 ms on the linear shape, i.e. within a measurement
+    block.
+  * ENVELOPE SHAPE IS READ AT LAST. ENV_PARAM_SHAPE had been defined but never used, so every
+    envelope was linear whatever the module said. envShapeStrMap is {LogExp, LinExp, ExpExp,
+    LinLin}: the first half names the ATTACK curve, the second the decay/release curve, so only
+    LinLin is straight throughout.
+    Implemented by shaping a linear 0..1 PROGRESS through the segment rather than by changing the
+    step size — so a segment still lasts exactly what its dial says whatever curve it draws, which
+    a per-sample multiplier would not have. Retrigger and key-release capture the level they started
+    from (gEnvStart), so a fast retrigger still rises from where it was caught rather than clicking.
+  * MIXER CHANNEL MUTE IS HONOURED. The four buttons after the level dials were never read, so a
+    muted channel still sounded. offOnColourMap indexes them {grey, green}, i.e. NON-ZERO IS
+    ENABLED. Fixed a latent confusion at the same time: the loop read EIGHT levels because
+    MAX_NODE_INPUTS is 8, which meant params 4-7 (the mute buttons) were being read as levels —
+    harmless only because nothing used level[4..7], since Mix4to1S's eight legs are stereo pairs
+    sharing four levels.
+  WATCH FOR: paramLocationList gives those Enable buttons a DEFAULT OF 0, i.e. muted. Patches from
+  the hardware carry sensible values (3 Chris' Lead has its three used channels lit), but a mixer
+  created in the editor may come up silent. If it does, the table default is what needs changing,
+  not the engine.
+
 - EnvADSR(20) values — "Delay"->"Decay", Sustain now 0-64 via paramTypeUniPol. Display verified
   via backdoor; NEEDS (CT) VERIFY on hardware.
 
