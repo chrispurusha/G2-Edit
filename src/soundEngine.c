@@ -410,6 +410,11 @@ static uint32_t           gPlayingCount               = 0; // how many modules a
 // and having one rate throughout means nothing has to know it is happening.
 #define ENGINE_OVERSAMPLE    (2)
 
+// The tempo a clock-synced module works to. The engine does not run the patch's master clock, so
+// anything set to Clk needs a reference; 120 BPM is the obvious one and makes 1/4 exactly half a
+// second. See the delay's Clk branch — this is a stand-in, not the hardware's tempo.
+#define ENGINE_REFERENCE_BPM    (120.0)
+
 static double             gDeviceRate                 = 48000.0;
 static double             gSampleRate                 = 96000.0;
 static bool               gGateOpen                   = false;
@@ -1398,16 +1403,52 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             // The range selector is a mode. Its four settings are progressively longer maximum
             // times; the dial then scales within the chosen one.
             // The four range settings, straight off delayABRangeStrMap: 500ms, 1.0s, 2.0s, 2.7s.
-            static const double rangeSeconds[] = {0.5, 1.0, 2.0, 2.7};
-            uint32_t            range          = module->mode[DELAY_MODE_RANGE].value;
-            double              maxTime        = rangeSeconds[(range < 4) ? range : 3];
+            // Three different Range tables exist and the delay modules do not share one — this
+            // held only DelayA/DelayB's, so every other delay's Range was read against the wrong
+            // list. delay_range_max_seconds() is the single definition, shared with the dial.
+            uint32_t range   = module->mode[DELAY_MODE_RANGE].value;
+            double   maxTime = delay_range_max_seconds(module->type, range);
 
-            node->timeSeconds = maxTime * (param_value(module, variation, DELAY_PARAM_TIME) / 127.0);
-            node->depth       = param_value(module, variation, DELAY_PARAM_FEEDBACK) / 127.0 * 0.95;
-            node->damping     = param_value(module, variation, DELAY_PARAM_LP) / 127.0;
-            node->amount      = param_value(module, variation, DELAY_PARAM_DRYWET) / 127.0;
-            node->active      = (param_value(module, variation,
-                                             (module->type == moduleTypeDelayA)
+            {
+                int  clkIndex = delay_time_clk_param_index(module->type);
+                bool clocked  = (clkIndex >= 0)
+                                && (module->param[variation][clkIndex].value != 0);
+
+                if (clocked == true) {
+                    // Clock mode: the dial picks a musical division, not a time. The engine has no
+                    // running master clock of its own, so it works to a FIXED 120 BPM reference —
+                    // half a second to the beat. That keeps a clocked delay musically proportioned
+                    // and the dial honest about which division it selects; it will not agree with a
+                    // patch running at some other tempo on the hardware.
+                    node->timeSeconds = clk_sync_beats(param_value(module, variation, DELAY_PARAM_TIME))
+                                        * (60.0 / ENGINE_REFERENCE_BPM);
+
+                    // The Range still caps it. Manual, Time/Clk scroll button: "if the delay time
+                    // (based on the current Master Clock rate and the Sync factor) should exceed the
+                    // selected 'Range' time, the actual delay time will automatically be divided by
+                    // two." Halving repeatedly is what makes the long divisions land somewhere
+                    // musical instead of simply being clamped to the Range — 2/1 is four seconds at
+                    // 120 BPM, past every Range there is, so without this the top of the dial was
+                    // wrong on every setting.
+                    //
+                    // The DISPLAY deliberately does not do this: the dial shows the sync factor you
+                    // chose, which is what the hardware shows too.
+                    while ((node->timeSeconds > maxTime) && (node->timeSeconds > 0.0)) {
+                        node->timeSeconds *= 0.5;
+                    }
+                } else {
+                    // Linear from a hair above zero to the range's maximum — read off the G2:
+                    // 0.01 ms, 7.89 ms, 15.8 ms, i.e. a constant step. See renderParams.c.
+                    node->timeSeconds = DELAY_TIME_MIN
+                                        + ((param_value(module, variation, DELAY_PARAM_TIME) / 127.0)
+                                           * (maxTime - DELAY_TIME_MIN));
+                }
+            }
+            node->depth   = param_value(module, variation, DELAY_PARAM_FEEDBACK) / 127.0 * 0.95;
+            node->damping = param_value(module, variation, DELAY_PARAM_LP) / 127.0;
+            node->amount  = param_value(module, variation, DELAY_PARAM_DRYWET) / 127.0;
+            node->active  = (param_value(module, variation,
+                                         (module->type == moduleTypeDelayA)
                                              ? DELAYA_PARAM_ACTIVE : DELAYB_PARAM_ACTIVE) != 0.0);
             break;
         }

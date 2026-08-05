@@ -446,7 +446,21 @@ OPEN WORK
    2. Three columns of 24 rows = 72 visible, against MAX_NUM_CONTROLLERS of 128. A patch with more
       than 72 assignments silently stops drawing rather than scrolling.
 
-- Delay Time in CLOCK mode shows milliseconds, and plays them too — found 2026-08-05, not fixed.
+- Delay Time DIAL RANGE in Time mode — owner reported 2026-08-05: "highest raw = 1 second, lowest
+  raw = 0.01m(s?)". THIS DOES NOT MATCH THE CODE and was not acted on — record only.
+  render_paramType1TimeClk() currently uses min_time = 0.001 (1 ms) with the maximum taken from the
+  Range selector (mode[0]): 5ms / 25ms / 100ms / 500ms / 1s / 2s / 2.7s. So:
+   * the reported minimum of 0.01 ms is 100x SMALLER than the 1 ms the code uses;
+   * the reported maximum of 1 s is one of the seven Range maxima, not the only one.
+  WHAT TO ESTABLISH before changing anything: which MODULE and which RANGE setting the observation
+  was made on. If the span is 0.01 ms to 1 s for one Range, then min_time is wrong and is probably
+  per-range rather than the single constant it is now. The sound engine has the same assumption in
+  its own form — eNodeDelay does maxTime * (dial/127) with no minimum at all — so display and engine
+  would both need it.
+
+- Delay Time in CLOCK mode — DONE 2026-08-05 (display and engine); the entry below describes what
+  was wrong before.
+- Delay Time in CLOCK mode shows milliseconds, and plays them too — found 2026-08-05, NOW FIXED.
   The delays carry a Time/Clk selector (timeClkStrMap = {"Time", "Clk"}), and NOTHING reads it:
    * DISPLAY: render_paramType1TimeClk() (renderParams.c) switches only on module->mode[0].value,
      which is the RANGE selector, and maps the dial to milliseconds within it (5ms/25ms/100ms/500ms/
@@ -456,9 +470,17 @@ OPEN WORK
    * ENGINE: soundEngine.c's eNodeDelay computes timeSeconds from the range the same way and ignores
      Clk entirely, so a clock-synced delay plays the wrong time as well as displaying it. The
      display is only half the bug.
-  THE PIECES ALREADY EXIST. clkSyncStrMap has the 32 musical divisions, and
-  render_paramType1LFORate()'s "case 4: ClkSync" shows the mapping — value/4 into that table. The
-  engine would need the tempo, which it does have access to via gGlobalSettings.masterClock.
+  FIXED: the display prints the division and the engine computes its time from it at a fixed
+  120 BPM reference (ENGINE_REFERENCE_BPM), since the engine runs no master clock of its own.
+  THE MAPPING IS NOT THE LFO'S, and copying it was the first mistake here. The delay runs BACKWARDS
+  through 22 of clkSyncStrMap's 32 entries: raw 0 is "1/64T" (index 31) and the top of the dial is
+  "2/1" (index 10) — owner-supplied, not derived from the source. The LFO's ClkSync is value/4
+  across all 32 and the two are NOT interchangeable. clk_sync_index()/clk_sync_beats() in
+  renderParams.c are the single definition, shared by the display and the engine.
+  Selector index per module, since it differs: DelayB 4, DelayA 5, DlyStereo 6, DelayQuad 8 (where
+  one selector governs all four Time dials). delay_time_clk_param_index() holds it.
+  STILL TO CHECK: whether DlyStereo and DelayQuad span the same 22 divisions — the endpoints came
+  from one module. CLK_SYNC_LOWEST/HIGHEST are the two constants if not.
   TWO THINGS TO SETTLE FIRST, and the first is the trap that made DelayA permanently bypassed:
    1. WHICH PARAM INDEX carries Time/Clk PER MODULE. It is 4 on DelayB but 5 on DelayA, and this one
       renderer serves DelayQuad, DelayA, DelayB and DlyStereo. Check every type before writing a
