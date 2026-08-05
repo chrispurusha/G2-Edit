@@ -102,6 +102,27 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
   STILL OPEN (optional): a fuller systematic sweep of the remaining ~190 module types — cheap now
   via the backdoor, just not yet done.
 
+- Sound engine FltClassic — moved closer to the hardware 2026-08-05, measured against the manual
+  rather than by ear. Two changes, both removing something the engine was doing that the G2 is not:
+   * NO PASSBAND COMPENSATION. The manual (p.198) specifies the loss rather than merely permitting
+     it — "the amplitude of the passband will drop about 12 dB when the resonance is set to a high
+     value" — and the engine had been putting a quarter of it back, i.e. gain the hardware never
+     applies, exactly where a patch is most likely to be driven hard. Now measures an 11.2 dB drop
+     against the manual's ~12.
+   * SMOOTH SATURATION INSTEAD OF A HARD CLIP on the stage input: y = x - x^3/3, held flat outside
+     +/-1. Unity slope at the origin so quiet signals are untouched; it rounds the resonance peak
+     rather than tearing it, and it is what bounds self-oscillation. The manual's own description of
+     this filter is a "classic analog" ladder with a "more narrow resonance peak", which is the
+     behaviour a saturating feedback path produces.
+  THE TEST NOW ENCODES THE SPEC, NOT THE IMPLEMENTATION. test_filter's passband check was a one-sided
+  floor (0.6, then 0.45 as the compensation shrank), which could only ever catch too MUCH loss —
+  while the actual defect for months was too LITTLE. It is now a BAND of roughly 6..16 dB, so
+  compensation creeping back fails the test. New test_fltclassic covers the 12 dB figure, saturation
+  under drive, and bounded self-oscillation.
+  NOT COMPARED AGAINST HARDWARE AUDIO — the target came from the manual's stated figure, not from a
+  capture of the real filter. A recording of the same patch through the G2 would settle whether the
+  resonance mapping and the saturation depth are right, which the 12 dB figure alone does not.
+
 - FltClassic response graph (render_fltclassic_response_graph) — cutoff now inset into a
   kCutoffMinX 0.15..kCutoffMaxX 0.90 band so the resonance bump keeps headroom at minimum Freq.
   Build verified; not yet eyeballed on-screen.
