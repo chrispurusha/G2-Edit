@@ -52,6 +52,7 @@ extern "C" {
 #define PREF_KEY_RIGHT       "audioOutputRightChannel"
 #define PREF_KEY_CHANNEL     "audioOutputFirstChannel"   // superseded; read once to migrate
 #define PREF_KEY_BUFFER      "audioOutputBufferFrames"
+#define PREF_KEY_LEVEL       "audioOutputLevelDb"
 
 typedef struct {
     AudioObjectID id;
@@ -75,6 +76,12 @@ static uint32_t     gRightChannel                 = 1;
 
 // 0 means "whatever the device already has", which is what it was before this was selectable.
 static uint32_t     gBufferFrames                 = 0;
+
+// The engine's output attenuation, in dB and never positive. Kept here with the other output
+// settings rather than in the engine, because this is where the preferences plumbing already lives
+// and where the rest of the audio path's remembered state is read at startup. The engine holds the
+// working value; this owns the persistence.
+static int32_t      gLevelDb                      = 0;
 
 // Reads a CFString device property into a plain C buffer.
 static void device_string_property(AudioObjectID device, AudioObjectPropertySelector selector,
@@ -280,9 +287,17 @@ void audio_output_load_settings(void) {
     if (uid != NULL) {
         strncpy(gSelectedUid, uid, sizeof(gSelectedUid) - 1);
     }
-
     // Left and right used to be one "first channel of a pair" setting. Carry an old one over rather
     // than dropping someone back to outputs 1/2 without explanation.
+    // Read the level before anything can make a noise, and push it into the engine — the engine has
+    // no preference of its own, so without this a remembered attenuation would be forgotten.
+    gLevelDb      = (int32_t)prefs_get_int(PREF_KEY_LEVEL, 0);
+
+    if (gLevelDb > 0) {
+        gLevelDb = 0;
+    }
+    sound_engine_set_output_level_db((double)gLevelDb);
+
     if (prefs_has_key(PREF_KEY_LEFT) == true) {
         gLeftChannel  = (uint32_t)prefs_get_int(PREF_KEY_LEFT, 0);
         gRightChannel = (uint32_t)prefs_get_int(PREF_KEY_RIGHT, 1);
@@ -323,6 +338,19 @@ static void reopen_if_running(void) {
         audio_output_stop();
         (void)audio_output_start();
     }
+}
+
+int32_t audio_output_level_db(void) {
+    return gLevelDb;
+}
+
+void audio_output_select_level_db(int32_t db) {
+    if (db > 0) {
+        db = 0;
+    }
+    gLevelDb = db;
+    prefs_set_int(PREF_KEY_LEVEL, (long)db);
+    sound_engine_set_output_level_db((double)db);
 }
 
 void audio_output_select_buffer_frames(uint32_t frames) {
