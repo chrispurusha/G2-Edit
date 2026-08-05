@@ -71,6 +71,7 @@ extern "C" {
 #include "mutatorUI.h"
 #include "paramPages.h"
 #include "paramOverview.h"
+#include "midiCcList.h"
 #include "virtualKeyboard.h"
 #include "patchAdjuster.h"
 #include "soundEngine.h"
@@ -2321,6 +2322,7 @@ static void render_frame(void) {
     render_patch_params_panel();
     render_param_pages_panel();
     render_param_overview_panel();
+    render_midi_cc_list_panel();
     render_virtual_keyboard_panel();
     render_patch_adjuster_panel();
     render_context_menu();

@@ -35,6 +35,7 @@ extern "C" {
 #include "mutatorUI.h"
 #include "paramPages.h"
 #include "paramOverview.h"
+#include "midiCcList.h"
 #include "virtualKeyboard.h"
 #include "patchAdjuster.h"
 #include "paramOverlay.h"
@@ -156,6 +157,11 @@ static void action_open_param_pages(int index) {
     settings_menu_open_param_pages();
 }
 
+static void action_open_midi_cc_list(int index) {
+    (void)index;
+    open_midi_cc_list_panel(gSlot);
+}
+
 static void action_open_param_overview(int index) {
     (void)index;
     settings_menu_open_param_overview();
@@ -192,13 +198,16 @@ static void action_open_notes(int index) {
 
 static void open_settings_menu(tCoord anchor) {
     static tMenuItem items[] = {
-        {"Synth",              (tRgb)RGB_GREY_3, action_open_synth,          0, NULL, 0, 0.0},
-        {"Patch",              (tRgb)RGB_GREY_3, action_open_patch_settings, 0, NULL, 0, 0.0},
-        {"Perf",               (tRgb)RGB_GREY_3, action_open_perf_settings,  0, NULL, 0, 0.0},
-        {"Notes",              (tRgb)RGB_GREY_3, action_open_notes,          0, NULL, 0, 0.0},
-        {"Parameter Pages",    (tRgb)RGB_GREY_3, action_open_param_pages,    0, NULL, 0, 0.0},
-        {"Parameter Overview", (tRgb)RGB_GREY_3, action_open_param_overview, 0, NULL, 0, 0.0},
-        {NULL,                 (tRgb)RGB_BLACK,  NULL,                       0, NULL, 0, 0.0},
+        {"Synth",                (tRgb)RGB_GREY_3, action_open_synth,          0, NULL, 0, 0.0},
+        {"Patch",                (tRgb)RGB_GREY_3, action_open_patch_settings, 0, NULL, 0, 0.0},
+        {"Perf",                 (tRgb)RGB_GREY_3, action_open_perf_settings,  0, NULL, 0, 0.0},
+        {"Notes",                (tRgb)RGB_GREY_3, action_open_notes,          0, NULL, 0, 0.0},
+        {"Parameter Pages",      (tRgb)RGB_GREY_3, action_open_param_pages,    0, NULL, 0, 0.0},
+        {"Parameter Overview",   (tRgb)RGB_GREY_3, action_open_param_overview, 0, NULL, 0, 0.0},
+        // The original reaches this from a right-click menu and the M key; menu-only here, matching
+        // the standing decision for this family of panels.
+        {"MIDI Controller List", (tRgb)RGB_GREY_3, action_open_midi_cc_list,   0, NULL, 0, 0.0},
+        {NULL,                   (tRgb)RGB_BLACK,  NULL,                       0, NULL, 0, 0.0},
     };
 
     open_context_menu(anchor, items, 0, 0.0);

@@ -55,6 +55,7 @@ extern "C" {
 #include "mutatorUI.h"
 #include "paramPages.h"
 #include "paramOverview.h"
+#include "midiCcList.h"
 #include "virtualKeyboard.h"
 #include "patchAdjuster.h"
 #include "misc.h"
@@ -897,6 +898,10 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
     if (handle_param_pages_mouse(coord, mouseButton)) {
         synthlib_request_redraw();
+        return;
+    }
+
+    if (handle_midi_cc_list_mouse(coord, mouseButton)) {
         return;
     }
 
@@ -1863,6 +1868,11 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
     }
 
     if (handle_param_pages_key(key, mods, action)) {
+        synthlib_request_redraw();
+        return;
+    }
+
+    if (handle_midi_cc_list_key(key, mods, action)) {
         synthlib_request_redraw();
         return;
     }
