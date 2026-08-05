@@ -32,6 +32,7 @@ extern "C" {
 #include "cableChain.h"
 #include "globalVars.h"
 #include "renderParams.h"
+#include "moduleResourcesAccess.h"
 #include "patchParamsResources.h"
 #include "audioOutput.h"
 #include "midiInput.h"
@@ -90,28 +91,32 @@ typedef enum {
 // parameter list entirely because, unlike a knob, they cannot be assigned to a morph group or a
 // controller and hold one setting across every variation (manual p.20). It lives in
 // modeLocationList, so it is read from module->mode[] and reading param[10] found nothing.
-#define SHPB_MODE_WAVEFORM      (0)
+#define SHPB_MODE_WAVEFORM       (0)
 
 // Mix4to1C: one level per input, then a pad and a curve.
-#define MIX_PARAM_LEVEL_BASE    (0)
+#define MIX_PARAM_LEVEL_BASE     (0)
+// The four Channel Mute buttons sit directly after the four level dials. offOnColourMap indexes
+// them {grey, green}, so NON-ZERO IS ENABLED — a lit button is a channel that sounds.
+#define MIX_PARAM_ENABLE_BASE    (4)
+#define MIX_CHANNELS             (4)
 // The two mixers put Curve in different places: Mix4to1C has a Pad at 8 and Curve at 9, Mix4to1S
 // has no Pad and Curve at 8.
-#define MIX_PARAM_PAD           (8)   // Mix4to1C only: 0 dB or -6 dB on every input at once
-#define MIX_PARAM_CURVE         (9)
-#define MIXS_PARAM_CURVE        (8)
-#define MIX_CURVE_LIN           (1)   // expStrMap is {"Exp", "Lin", "dB"} — Lin is the middle one
+#define MIX_PARAM_PAD            (8)  // Mix4to1C only: 0 dB or -6 dB on every input at once
+#define MIX_PARAM_CURVE          (9)
+#define MIXS_PARAM_CURVE         (8)
+#define MIX_CURVE_LIN            (1)  // expStrMap is {"Exp", "Lin", "dB"} — Lin is the middle one
 
 // StChorus: a detune depth and an amount, then its power button.
-#define CHORUS_PARAM_DETUNE     (0)
-#define CHORUS_PARAM_AMOUNT     (1)
-#define CHORUS_PARAM_ACTIVE     (2)
+#define CHORUS_PARAM_DETUNE      (0)
+#define CHORUS_PARAM_AMOUNT      (1)
+#define CHORUS_PARAM_ACTIVE      (2)
 
 // Compress: threshold and reference level run 0..42, ratio 0..66.
-#define COMP_PARAM_THRESHOLD    (0)
-#define COMP_PARAM_RATIO        (1)
-#define COMP_PARAM_ATTACK       (2)
-#define COMP_PARAM_RELEASE      (3)
-#define COMP_PARAM_ACTIVE       (6)
+#define COMP_PARAM_THRESHOLD     (0)
+#define COMP_PARAM_RATIO         (1)
+#define COMP_PARAM_ATTACK        (2)
+#define COMP_PARAM_RELEASE       (3)
+#define COMP_PARAM_ACTIVE        (6)
 
 // DelayB. Its range is a MODE, like the shape oscillators' waveform.
 // The two delays share their first four parameters but NOT their Bypass: DelayA has six parameters
@@ -472,6 +477,31 @@ static double         gCombStore[REVERB_COMBS];
 static float          gAllpass[REVERB_ALLPASS][REVERB_ALLPASS_MAX];
 static uint32_t       gAllpassPos[REVERB_ALLPASS];
 static double         gEnvLevel[MAX_ENGINE_NODES];
+// Linear 0..1 through the current segment, and the level it started from. Shaping this rather than
+// the step keeps a segment's DURATION exactly what its dial says, whatever curve it draws.
+// PARAMETER SMOOTHING. The G2 runs its modulation at 24 kHz (manual p.71 — "modules can process and
+// output signals at two sample rates: 96kHz and 24kHz", the lower one being for modulation), so a
+// dial being turned arrives at the DSP finely stepped and needs no smoothing of its own. This engine
+// rebuilds its parameter snapshot on a REDRAW, i.e. at frame rate, which is a few hundred times
+// coarser — and a stepped parameter is audible as zipper noise, most obviously on a Shape sweep
+// where each step moves the waveform itself.
+//
+// Interpolating per sample toward the snapshot value restores what the hardware gets for free.
+// The time constant is short enough not to lag a deliberate move and long enough to bridge the gap
+// between frames.
+#define PARAM_SMOOTH_SECONDS    (0.008)
+
+static double         gSmoothShape[MAX_ENGINE_NODES];
+static double         gSmoothCutoff[MAX_ENGINE_NODES];
+static double         gSmoothRes[MAX_ENGINE_NODES];
+static double         gSmoothGain[MAX_ENGINE_NODES];
+static double         gSmoothLevel[MAX_ENGINE_NODES][MAX_NODE_INPUTS];
+// Until a node has been seen once there is nothing to interpolate FROM, so the first sample snaps.
+// Also what stops a patch load sweeping every parameter up from whatever the last patch left.
+static bool           gSmoothPrimed[MAX_ENGINE_NODES];
+
+static double         gEnvProgress[MAX_ENGINE_NODES];
+static double         gEnvStart[MAX_ENGINE_NODES];
 static uint32_t       gEnvStage[MAX_ENGINE_NODES];
 
 typedef enum {
@@ -579,6 +609,9 @@ static void reset_node_state(void) {
         gLadder[i][2]     = 0.0;
         gLadder[i][3]     = 0.0;
         gEnvLevel[i]      = 0.0;
+        gEnvProgress[i]   = 0.0;
+        gSmoothPrimed[i]  = false;
+        gEnvStart[i]      = 0.0;
         gEnvStage[i]      = eEnvIdle;
         gChorusWrite[i]   = 0;
         gChorusLfo[i]     = 0.0;
@@ -842,8 +875,72 @@ static bool take_next_note_event(void) {
 // ---------------------------------------------------------------------------------------------
 
 // An exponential fit across the G2's envelope range. See ENV_TIME_MIN/MAX.
+// The A/D/R dials index a 128-entry table of real times, running 0.5 ms to 45 s, and that table is
+// what the dial prints. Reading it back means an envelope lasts as long as the module says it does,
+// rather than as long as a curve fitted to the endpoints says — the same reason glide reads its own
+// table. The strings carry their unit: "0.5ms", "103ms", "1.02s".
 static double env_time_seconds(double paramValue) {
-    return ENV_TIME_MIN * pow(ENV_TIME_MAX / ENV_TIME_MIN, paramValue / 127.0);
+    int          index = (int)paramValue;
+    const char * text  = NULL;
+    double       value = 0.0;
+
+    if (index < 0) {
+        index = 0;
+    } else if (index > 127) {
+        index = 127;
+    }
+    text  = ADRTimeStrMap[index];
+
+    if (text == NULL) {
+        return ENV_TIME_MIN;
+    }
+    value = atof(text);
+
+    // "ms" or "s" — check for the 'm', since every entry ends in 's' either way.
+    if (strstr(text, "ms") != NULL) {
+        value /= 1000.0;
+    }
+    return (value > 0.0) ? value : ENV_TIME_MIN;
+}
+
+// EnvADSR's Shape scroll button, in envShapeStrMap order: LogExp, LinExp, ExpExp, LinLin. The first
+// half names the ATTACK curve and the second the decay/release curve, so three of the four have an
+// exponential fall and only LinLin is straight throughout.
+//
+// Applied by shaping a linear 0..1 progress rather than by changing the step size, so a segment
+// still takes exactly the time its dial states whatever curve it is drawn with.
+typedef enum {
+    eEnvShapeLogExp = 0,
+    eEnvShapeLinExp,
+    eEnvShapeExpExp,
+    eEnvShapeLinLin,
+} tEnvShape;
+
+// Log rises fast then flattens; Exp starts slow then accelerates; Lin is the straight line.
+static double env_attack_curve(uint32_t shape, double progress) {
+    switch (shape) {
+        case eEnvShapeLogExp:
+        {
+            // 1 - e^-5t, normalised so it still reaches exactly 1 at the end of the segment.
+            return (1.0 - exp(-5.0 * progress)) / (1.0 - exp(-5.0));
+        }
+        case eEnvShapeExpExp:
+        {
+            return (exp(5.0 * progress) - 1.0) / (exp(5.0) - 1.0);
+        }
+        default:
+        {
+            return progress;   // LinExp and LinLin both rise linearly
+        }
+    }
+}
+
+// The falling segments: exponential for everything except LinLin, which is straight.
+static double env_fall_curve(uint32_t shape, double progress) {
+    if (shape == (uint32_t)eEnvShapeLinLin) {
+        return 1.0 - progress;
+    }
+    return (exp(-5.0 * progress) - exp(-5.0)) / (1.0 - exp(-5.0));
 }
 
 static const tLfoParams * lfo_params(tModuleType type) {
@@ -1276,12 +1373,17 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             double   pad    = (  (module->type != moduleTypeMix4to1S)
                               && (module->param[variation][MIX_PARAM_PAD].value != 0)) ? 0.5 : 1.0;
 
-            for (c = 0; c < MAX_NODE_INPUTS; c++) {
-                double knob = param_value(module, variation, MIX_PARAM_LEVEL_BASE + c) / 127.0;
+            // Only four channels: the parameters after the level dials are the Channel Mute
+            // buttons, not four more levels. Reading all eight as levels was harmless only because
+            // nothing downstream used level[4..7] — Mix4to1S has four channels too, its eight legs
+            // being stereo pairs that share a level.
+            for (c = 0; c < MIX_CHANNELS; c++) {
+                double knob    = param_value(module, variation, MIX_PARAM_LEVEL_BASE + c) / 127.0;
+                bool   enabled = (module->param[variation][MIX_PARAM_ENABLE_BASE + c].value != 0);
 
                 // Approximation: the exponential taper is squared rather than the hardware's exact
                 // "-infinity to 0 dB" attenuator law, which the manual does not state numerically.
-                node->level[c] = (linear ? knob : (knob * knob)) * pad;
+                node->level[c] = enabled ? ((linear ? knob : (knob * knob)) * pad) : 0.0;
             }
 
             break;
@@ -1317,6 +1419,8 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeEnv:
         {
+            // Read raw: Shape is a drop-down, and drop-downs cannot be morphed (manual p.20).
+            node->wave    = (tOscWave)module->param[variation][ENV_PARAM_SHAPE].value;
             node->attack  = env_time_seconds(param_value(module, variation, ENV_PARAM_ATTACK));
             node->decay   = env_time_seconds(param_value(module, variation, ENV_PARAM_DECAY));
             node->sustain = param_value(module, variation, ENV_PARAM_SUSTAIN) / 127.0;
@@ -1838,15 +1942,42 @@ static double advance_phase(double * phase, double dt) {
 // Smooth saturation for a ladder stage: y = x - x^3/3, the first two terms of tanh's series, held
 // flat outside +/-1 where the cubic would turn back on itself. Unity slope at the origin, so a quiet
 // signal passes through untouched and only a driven one is shaped.
-static double ladder_saturate(double x) {
-    if (x <= -1.0) {
-        return -2.0 / 3.0;
+// One-pole move toward a target. Snapping when unprimed is what keeps a patch load instant.
+static double smooth_to(double * current, double target, double coeff, bool primed) {
+    if (primed == false) {
+        *current = target;
+    } else {
+        *current += coeff * (target - *current);
     }
+    return *current;
+}
 
-    if (x >= 1.0) {
-        return 2.0 / 3.0;
+// LINEAR BELOW THE KNEE, saturating above it. The knee matters as much as the curve: a nonlinearity
+// that acts on every sample generates harmonics on every sample, and this filter runs at the output
+// rate with no oversampling, so anything it makes above Nyquist folds back down. With the cutoff up
+// near Nyquist and the resonant feedback amplifying those products before they fold, a plain
+// x - x^3/3 — only 0.2% away from linear at these levels — was enough to put audible rasp roughly
+// 30 dB below the note. The hardware does not have this problem because it runs at 96 kHz.
+//
+// So below LADDER_KNEE the response is exactly linear and generates nothing at all; above it the
+// curve approaches 1 exponentially, with unity slope at the knee so there is no corner to radiate
+// harmonics of its own. A driven filter still compresses; an ordinary one is untouched.
+#define LADDER_KNEE    (0.7)
+
+// The highest one-pole coefficient the four-stage feedback model stays well behaved at — see the
+// measurements where it is applied. 0.806 was clean, 0.842 was not.
+#define LADDER_MAX_G    (0.80)
+
+static double ladder_saturate(double x) {
+    double magnitude = fabs(x);
+    double excess    = 0.0;
+
+    if (magnitude <= LADDER_KNEE) {
+        return x;
     }
-    return x - ((x * x * x) / 3.0);
+    excess    = (magnitude - LADDER_KNEE) / (1.0 - LADDER_KNEE);
+    magnitude = LADDER_KNEE + ((1.0 - LADDER_KNEE) * (1.0 - exp(-excess)));
+    return (x < 0.0) ? -magnitude : magnitude;
 }
 
 static double ladder_filter(double * state, double input, double g, double k, uint32_t tapStage) {
@@ -1889,28 +2020,49 @@ static double envelope_step(uint32_t node, const tEngineNode * spec, bool gate) 
         // Attacking from the current level is what an ADSR does — the level is deliberately not
         // zeroed, so a fast retrigger rises from where it was rather than clicking to nothing first.
         if ((gEnvStage[node] == eEnvIdle) || (gEnvStage[node] == eEnvRelease)) {
-            gEnvStage[node] = eEnvAttack;
+            gEnvStage[node]    = eEnvAttack;
+            gEnvProgress[node] = 0.0;
+            gEnvStart[node]    = level;   // rise from wherever a fast retrigger caught it
         }
     } else if (gEnvStage[node] != eEnvIdle) {
+        if (gEnvStage[node] != eEnvRelease) {
+            gEnvProgress[node] = 0.0;
+            gEnvStart[node]    = level;   // fall from the level the key was let go at
+        }
         gEnvStage[node] = eEnvRelease;
     }
 
     switch (gEnvStage[node]) {
         case eEnvAttack:
         {
-            step   = 1.0 / (spec->attack * gSampleRate);
-            level += step;
+            step                = 1.0 / (spec->attack * gSampleRate);
+            gEnvProgress[node] += step;
 
-            if (level >= 1.0) {
-                level           = 1.0;
-                gEnvStage[node] = eEnvDecay;
+            if (gEnvProgress[node] >= 1.0) {
+                gEnvProgress[node] = 0.0;
+                level              = 1.0;
+                gEnvStage[node]    = eEnvDecay;
+            } else {
+                // From wherever the stage began, so a note struck during release still rises
+                // smoothly from the level it had rather than jumping.
+                level = gEnvStart[node]
+                        + ((1.0 - gEnvStart[node]) * env_attack_curve((uint32_t)spec->wave, gEnvProgress[node]));
             }
             break;
         }
         case eEnvDecay:
         {
-            step   = (1.0 - spec->sustain) / (spec->decay * gSampleRate);
-            level -= step;
+            step                = 1.0 / (spec->decay * gSampleRate);
+            gEnvProgress[node] += step;
+
+            if (gEnvProgress[node] >= 1.0) {
+                gEnvProgress[node] = 0.0;
+                level              = spec->sustain;
+                gEnvStage[node]    = eEnvSustain;
+            } else {
+                level = spec->sustain
+                        + ((1.0 - spec->sustain) * env_fall_curve((uint32_t)spec->wave, gEnvProgress[node]));
+            }
 
             if (level <= spec->sustain) {
                 level           = spec->sustain;
@@ -1925,8 +2077,16 @@ static double envelope_step(uint32_t node, const tEngineNode * spec, bool gate) 
         }
         case eEnvRelease:
         {
-            step   = 1.0 / (spec->release * gSampleRate);
-            level -= step;
+            step                = 1.0 / (spec->release * gSampleRate);
+            gEnvProgress[node] += step;
+
+            if (gEnvProgress[node] >= 1.0) {
+                gEnvProgress[node] = 0.0;
+                level              = 0.0;
+                gEnvStage[node]    = eEnvIdle;
+            } else {
+                level = gEnvStart[node] * env_fall_curve((uint32_t)spec->wave, gEnvProgress[node]);
+            }
 
             if (level <= 0.0) {
                 level           = 0.0;
@@ -1955,11 +2115,11 @@ static double signal_in(const tEngineNode * spec, double value[][2], uint32_t in
 }
 
 // One sample of the raw waveform, at whatever rate the caller is stepping the phase.
-static double osc_waveform(uint32_t node, const tEngineNode * spec, double phase, double dt) {
+static double osc_waveform(uint32_t node, const tEngineNode * spec, double phase, double dt, double shape) {
     // The shape oscillators have their own eight waveforms, and Shape morphs each of them rather
     // than acting as a pulse width, so they do not share the switch below.
     if (spec->kind == eNodeOscShp) {
-        return osc_shp_wave((uint32_t)spec->wave, phase, dt, spec->shape);
+        return osc_shp_wave((uint32_t)spec->wave, phase, dt, shape);
     }
 
     switch (spec->wave) {
@@ -1969,7 +2129,7 @@ static double osc_waveform(uint32_t node, const tEngineNode * spec, double phase
         }
         case eOscWaveTriangle:
         {
-            return osc_triangle(phase, spec->shape);
+            return osc_triangle(phase, shape);
         }
         case eOscWaveSaw:
         {
@@ -1977,7 +2137,7 @@ static double osc_waveform(uint32_t node, const tEngineNode * spec, double phase
         }
         case eOscWaveSquare:
         {
-            return osc_square(phase, dt, spec->shape);
+            return osc_square(phase, dt, shape);
         }
         case eOscWaveSuper:
         {
@@ -2005,7 +2165,7 @@ static double osc_waveform(uint32_t node, const tEngineNode * spec, double phase
 // removes the aliasing without disturbing the delay, chorus and reverb, whose buffers are sized in
 // samples and would all have to be resized for a change of engine rate.
 static double oscillator_step(uint32_t node, const tEngineNode * spec, double voicePitch,
-                              double pitchDirect, double pitchVar) {
+                              double pitchDirect, double pitchVar, double shape) {
     double   pitch     = spec->basePitch;
     double   frequency = 0.0;
     double   dt        = 0.0;
@@ -2040,7 +2200,7 @@ static double oscillator_step(uint32_t node, const tEngineNode * spec, double vo
     for (step = 0; step < OSC_OVERSAMPLE; step++) {
         double phase = advance_phase(&gPhase[node], dt);
 
-        gOscHistory[node][gOscHistoryPos[node]] = osc_waveform(node, spec, phase, dt);
+        gOscHistory[node][gOscHistoryPos[node]] = osc_waveform(node, spec, phase, dt, shape);
         gOscHistoryPos[node]                    = (gOscHistoryPos[node] + 1) % OSC_DECIMATE_TAPS;
     }
 
@@ -2181,8 +2341,9 @@ static double lfo_step(uint32_t node, const tEngineNode * spec) {
     }
 }
 
-static double filter_step(uint32_t node, const tEngineNode * spec, double input, double mod, double voicePitch) {
-    double cutoff = spec->cutoffHz;
+static double filter_step(uint32_t node, const tEngineNode * spec, double input, double mod, double voicePitch,
+                          double cutoffHz, double resonance) {
+    double cutoff = cutoffHz;
     double g      = 0.0;
 
     if (spec->active == false) {
@@ -2211,9 +2372,28 @@ static double filter_step(uint32_t node, const tEngineNode * spec, double input,
     }
     g = 1.0 - exp(-2.0 * M_PI * cutoff / gSampleRate);
 
+    // THE LADDER MODEL ONLY HOLDS WHILE g IS WELL BELOW 1. Each stage is a plain one-pole using the
+    // previous sample's output, and four of those inside a feedback loop stop behaving as a filter
+    // once the poles get close to Nyquist: measured with full resonance, everything up to g = 0.806
+    // is clean at 60 dB of margin, g = 0.842 loses 7 dB of it, and by g = 0.874 the margin has
+    // collapsed to 32 dB AND the passband has dropped 6 dB — the filter is misbehaving, not merely
+    // adding a little distortion. What is heard is the saturation's harmonics folding back down,
+    // amplified on the way by the resonant feedback.
+    //
+    // This is a consequence of running at the OUTPUT rate. FltClassic's range reaches 21.1 kHz
+    // (manual p.198), which at the G2's own 96 kHz gives half this g and sits comfortably inside the
+    // model; at 48 kHz the top of the same dial does not. Clamping g is what keeps the top of the
+    // dial usable rather than raspy — the cost is that cutoff stops climbing near the very top,
+    // where a 24 dB/octave lowpass is close to transparent anyway.
+    //
+    // The real fix is to run the filter oversampled, as the oscillators already are. Until then this
+    // trades a little range at the extreme for a filter that does not rasp.
+    if (g > LADDER_MAX_G) {
+        g = LADDER_MAX_G;
+    }
     // Up to just under 4, where a ladder self-oscillates. Stopping short keeps the resonance
     // dramatic without the filter screaming on its own with no note played.
-    return ladder_filter(gLadder[node], input, g, 3.9 * spec->resonance, 1 + spec->extraPoles);
+    return ladder_filter(gLadder[node], input, g, 3.9 * resonance, 1 + spec->extraPoles);
 }
 
 void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount) {
@@ -2321,11 +2501,19 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
         // lower indices and are already evaluated by the time it is reached. Each node publishes two
         // outputs because some modules have two that mean different things — see tEngineNode.
         for (n = 0; n < params.nodeCount; n++) {
-            const tEngineNode * spec = &params.node[n];
-            double              a    = signal_in(spec, value, 0);
+            const tEngineNode * spec        = &params.node[n];
+            double              a           = signal_in(spec, value, 0);
+            bool                primed      = gSmoothPrimed[n];
+            double              smoothCoeff = 1.0 - exp(-1.0 / (PARAM_SMOOTH_SECONDS * gSampleRate));
+            double              shape       = smooth_to(&gSmoothShape[n], spec->shape, smoothCoeff, primed);
+            double              cutoffHz    = smooth_to(&gSmoothCutoff[n], spec->cutoffHz, smoothCoeff, primed);
+            double              resonance   = smooth_to(&gSmoothRes[n], spec->resonance, smoothCoeff, primed);
+            double              gain        = smooth_to(&gSmoothGain[n], spec->gain, smoothCoeff, primed);
 
-            value[n][0] = 0.0;
-            value[n][1] = 0.0;
+            gSmoothPrimed[n] = true;
+
+            value[n][0]      = 0.0;
+            value[n][1]      = 0.0;
 
             switch (spec->kind) {
                 case eNodeLfo:
@@ -2340,13 +2528,14 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                     // Connector 0 is the direct Pitch input, connector 1 the knob-attenuated
                     // PitchVar — see oscillator_step().
                     value[n][0] = (spec->active == true)
-                                  ? oscillator_step(n, spec, voicePitch, a, signal_in(spec, value, 1))
+                                  ? oscillator_step(n, spec, voicePitch, a, signal_in(spec, value, 1), shape)
                                   : 0.0;
                     break;
                 }
                 case eNodeFilter:
                 {
-                    value[n][0] = filter_step(n, spec, a, signal_in(spec, value, 1), voicePitch);
+                    value[n][0] = filter_step(n, spec, a, signal_in(spec, value, 1), voicePitch,
+                                              cutoffHz, resonance);
                     break;
                 }
                 case eNodeEnv:
@@ -2362,7 +2551,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 }
                 case eNodeLevAmp:
                 {
-                    value[n][0] = a * spec->gain;
+                    value[n][0] = a * gain;
                     break;
                 }
                 case eNodeLevMult:
@@ -2379,7 +2568,9 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                     for (c = 0; c < spec->inCount; c++) {
                         uint32_t channel = (spec->inCount > MAX_NODE_INPUTS / 2) ? (c / 2) : c;
 
-                        value[n][0] += signal_in(spec, value, c) * spec->level[channel];
+                        value[n][0] += signal_in(spec, value, c)
+                                       * smooth_to(&gSmoothLevel[n][channel], spec->level[channel],
+                                                   smoothCoeff, primed);
                     }
 
                     break;
@@ -2423,7 +2614,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 }
                 case eNodeFxIn:
                 {
-                    value[n][0] = (spec->active == true) ? (a * spec->gain) : 0.0;
+                    value[n][0] = (spec->active == true) ? (a * gain) : 0.0;
                     value[n][1] = value[n][0];
                     break;
                 }
@@ -2438,7 +2629,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                     // Sums its inputs — the two legs are the left and right channels, and the engine
                     // is mono to the speakers for now.
                     value[n][0] = (spec->active == true)
-                                  ? ((a + signal_in(spec, value, 1)) * spec->gain) : 0.0;
+                                  ? ((a + signal_in(spec, value, 1)) * gain) : 0.0;
                     break;
                 }
                 default:

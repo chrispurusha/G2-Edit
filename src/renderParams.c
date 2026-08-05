@@ -132,7 +132,24 @@ double flt_cutoff_hz(double paramValue) {
 // 0.5 at the bottom of the dial up to 50 at the top, which is the range filter_resonanceStrMap
 // prints.
 double flt_resonance_q(double paramValue) {
-    return 0.5 * pow(100.0, paramValue / 127.0);
+    int    index = (int)paramValue;
+    double value = 0.0;
+
+    if (index < 0) {
+        index = 0;
+    } else if (index > 127) {
+        index = 127;
+    }
+
+    // Read the dial's own table. It was an exponential between the endpoints, which matched at 0.5
+    // and 50 and was wrong by as much as 245% in between — the table reads Q 3.16 where the curve
+    // gave 10.9 — so the engine had far more resonance than the module was showing across most of
+    // the knob's travel. The Res dial is a paramTypeStrMap, i.e. it PRINTS this table, so the two
+    // were visibly disagreeing.
+    if (filter_resonanceStrMap[index] != NULL) {
+        value = atof(filter_resonanceStrMap[index]);
+    }
+    return (value > 0.0) ? value : 0.5;
 }
 
 // The dB scroll button selects how many one-pole stages sit on top of the base two: 12, 18 or 24 dB
