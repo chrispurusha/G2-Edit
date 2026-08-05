@@ -2491,9 +2491,23 @@ static double filter_step(uint32_t node, const tEngineNode * spec, double input,
     if (g > LADDER_MAX_G) {
         g = LADDER_MAX_G;
     }
-    // Up to just under 4, where a ladder self-oscillates. Stopping short keeps the resonance
-    // dramatic without the filter screaming on its own with no note played.
-    return ladder_filter(gLadder[node], input, g, 3.9 * resonance, 1 + spec->extraPoles);
+    // MAXIMUM FEEDBACK, and it is not the textbook 4. That figure is for a ladder with no delay in
+    // its loop; this one has a sample of it, and how much phase that sample contributes depends on
+    // the sample rate — so the rate at which the loop actually reaches oscillation moved when the
+    // engine started running oversampled, and the resonance went quiet with it.
+    //
+    // Measured at ENGINE_OVERSAMPLE 2, peak gain from Res 0 to Res 127 at a 1.4 kHz cutoff:
+    //
+    //     k 3.9 -> +16/+21/+24 dB      k 5.0 -> +79/+81/+73 dB      k 6.0 -> +82/+85/+86 dB
+    //             (12/18/24 dB slopes)
+    //
+    // 3.9 barely resonated. Past about 6 the knob's useful travel collapses into its last few
+    // steps, since the peak is already enormous at Res 100. 5.0 resonates properly and still sweeps
+    // progressively. RE-MEASURE THIS IF ENGINE_OVERSAMPLE CHANGES — it is a property of the rate,
+    // not of the filter.
+#define LADDER_K_MAX    (5.0)
+
+    return ladder_filter(gLadder[node], input, g, LADDER_K_MAX * resonance, 1 + spec->extraPoles);
 }
 
 void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount) {
