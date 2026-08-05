@@ -68,6 +68,11 @@ uint32_t audio_output_selected_device_channels(void);
 // Buffer size, in frames. Fewer frames means a note takes effect sooner — the buffer length is the
 // floor on how late a keypress can land — at the cost of waking the audio thread more often. 0 means
 // leave whatever the device is already set to.
+// The engine's output attenuation in dB, 0 or negative. Remembered between runs like the device and
+// channel choices; the engine itself holds no preference of its own.
+int32_t audio_output_level_db(void);
+void audio_output_select_level_db(int32_t db);
+
 uint32_t audio_output_buffer_frames(void);
 void audio_output_select_buffer_frames(uint32_t frames);
 

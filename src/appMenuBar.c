@@ -428,6 +428,16 @@ static void action_select_audio_device(int index) {
     audio_output_select_device((uint32_t)index);
 }
 
+// Output level. Attenuation only — see sound_engine_set_output_level_db() for why boosting into the
+// limiter is not offered.
+static const int32_t kOutputLevels[] = {0, -3, -6, -9, -12, -18, -24};
+
+static void action_select_output_level(int index) {
+    if ((index >= 0) && (index < (int)(sizeof(kOutputLevels) / sizeof(kOutputLevels[0])))) {
+        audio_output_select_level_db(kOutputLevels[index]);
+    }
+}
+
 static void action_select_buffer_frames(int index) {
     // Item 0 is "Device default"; the rest are the powers of two below.
     static const uint32_t sizes[] = {0, 32, 64, 128, 256, 512, 1024, 2048};
@@ -556,7 +566,9 @@ static void open_experimental_menu(tCoord anchor) {
     // status line only appears with the engine running, the output lists only on a multi-channel
     // device — so the real count varies, and overrunning this array corrupts whatever static
     // follows it. It did exactly that, blanking the device flyout only while the engine was on.
-    static tMenuItem items[16];
+    // One slot per entry with room to spare. This overflowed once already, at 8, and the symptom
+    // was another menu's array being quietly overwritten rather than anything obviously wrong here.
+    static tMenuItem items[20];
     int              i = 0;
 
     // The engine follows whichever single oscillator is selected, so this is deliberately never
@@ -664,6 +676,36 @@ static void open_experimental_menu(tCoord anchor) {
             };
             items[i++] = (tMenuItem){
                 "Buffer Size", (tRgb)RGB_GREY_3, NULL, 0, buffers, 0, 0.0
+            };
+        }
+
+        // Output level. A patch can arrive hot — several oscillators through two mixers is well
+        // within the G2's own headroom but not within a DAC's — and a fixed trim is easier to
+        // reason about than leaving the output limiter to decide.
+        {
+            static tMenuItem levels[(sizeof(kOutputLevels) / sizeof(kOutputLevels[0])) + 1];
+            static char      levelLabel[(sizeof(kOutputLevels) / sizeof(kOutputLevels[0]))][24];
+            uint32_t         n = 0;
+
+            for (n = 0; n < (sizeof(kOutputLevels) / sizeof(kOutputLevels[0])); n++) {
+                if (kOutputLevels[n] == 0) {
+                    snprintf(levelLabel[n], sizeof(levelLabel[n]), "%s0 dB (full)",
+                             (audio_output_level_db() == 0) ? "* " : "  ");
+                } else {
+                    snprintf(levelLabel[n], sizeof(levelLabel[n]), "%s%d dB",
+                             (audio_output_level_db() == kOutputLevels[n]) ? "* " : "  ",
+                             (int)kOutputLevels[n]);
+                }
+                levels[n] = (tMenuItem){
+                    levelLabel[n], (tRgb)RGB_GREY_3, action_select_output_level, n, NULL, 0, 0.0
+                };
+            }
+
+            levels[n]  = (tMenuItem){
+                NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
+            };
+            items[i++] = (tMenuItem){
+                "Output Level", (tRgb)RGB_GREY_3, NULL, 0, levels, 0, 0.0
             };
         }
 

@@ -367,6 +367,11 @@ static _Atomic uint32_t   gMorphPeakMilli[NUM_MORPHS] = {0};
 
 // Pitch bend as it arrives, -1..+1. Scaled to semitones by the patch's own Bend range at render
 // time, so changing the range takes effect without the wheel having to move.
+// Output attenuation, as a gain x1000 so the audio thread reads one atomic rather than calling pow.
+// Applied BEFORE the output knee, which is the point of it: pulling a hot patch down so the limiter
+// stops being the thing that controls the level.
+static _Atomic int32_t    gOutputGainMilli            = 1000;
+
 static _Atomic int32_t    gBendMilli                  = 0;
 
 // Highest absolute sample the audio thread has produced since this was last read. Purely a
@@ -554,6 +559,15 @@ void sound_engine_pitch_bend(double bend) {
         bend = 1.0;
     }
     atomic_store(&gBendMilli, (int32_t)(bend * 1000.0));
+}
+
+void sound_engine_set_output_level_db(double db) {
+    double gain = pow(10.0, db / 20.0);
+
+    if (db >= 0.0) {
+        gain = 1.0;    // attenuation only: this is a trim, not a boost into the limiter
+    }
+    atomic_store(&gOutputGainMilli, (int32_t)((gain * 1000.0) + 0.5));
 }
 
 bool sound_engine_set_morph(uint32_t group, double amount) {
@@ -2744,11 +2758,13 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                     atomic_store(&gRawPeakMilli, rawMilli);
                 }
             }
-            sample *= VOICE_GAIN;
+            sample                     *= VOICE_GAIN;
 
             if (chainHasEnvelope == false) {
                 sample *= gEnvelope;
             }
+            // The user's own attenuation, ahead of the knee.
+            sample                     *= (double)atomic_load(&gOutputGainMilli) / 1000.0;
 
             // Soft knee rather than a hard edge. Below the knee nothing is touched at all, so ordinary
             // playing is untouched; above it the curve bends over instead of shearing the tops off, which
