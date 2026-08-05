@@ -114,11 +114,6 @@ void assign_midi_cc_to_param(uint32_t slot, tModuleKey moduleKey, uint32_t param
 // with a reason logged, when there is no focused parameter or no CC has arrived.
 bool midi_learn_focused_param(void);
 
-// Every parameter click goes through this. If L was pressed with nothing to act on, the click takes
-// the CC; otherwise it does nothing, so the two can be done in either order.
-void midi_learn_param_clicked(tModuleKey moduleKey, uint32_t paramIndex);
-bool midi_learn_armed(void);
-
 // The CC MIDI Learn would use, and where it came from ("synth" or "MIDI in"), or -1 if none has been
 // seen. The synth's own report wins: it is the thing with a MIDI IN socket.
 int32_t midi_learn_last_cc(const char ** source);

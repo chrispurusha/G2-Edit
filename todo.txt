@@ -739,10 +739,18 @@ none of these exist in G2-Edit at all, confirmed by source search)
   SILENT WHEN IT CANNOT ACT (no focused param, no CC yet, focus in another slot) — reason goes to
   the log only. It is the fast alternative to the right-click menu, and a dialog on every stray L
   would defeat the point. The manual makes the same trade, calling the menu "a more safe way".
-  EITHER ORDER WORKS (owner's request): click-then-L assigns immediately; L-then-click ARMS and the
-  next parameter clicked takes the CC. Pressing L again while armed cancels, so a stray press cannot
-  lie in wait and quietly reassign the next parameter touched. The cases that used to refuse — no
-  CC yet, focus in another slot — now arm instead, since the next click settles them.
+  STRICT ORDER: select a parameter, THEN press L. An "either order" version was built at the
+  owner's request and then withdrawn by them the same day — arming on L and letting the next click
+  take the CC leaves hidden state lying around, which is the opposite of what a one-key shortcut
+  should do.
+  L CONSUMES THE FOCUS, whether or not the assignment goes through, so a second press cannot
+  reassign the parameter still sitting in focus from the first. The right-click "Assign to CC# nn
+  (last received)" entry clears it the same way, so neither route can be repeated by accident.
+  That menu entry was also removed and then restored at the owner's request; it is the manual's own
+  alternative to L (p.145 — right-click and "first check if the Assign to CC# xx menu item indeed
+  shows the MIDI CC# that the other instrument is sending"), and the 128-entry picker beside it
+  cannot answer that question. When no CC has arrived it shows a greyed "No MIDI CC received yet"
+  rather than vanishing, so the absence explains itself.
   NO ON-SCREEN FEEDBACK, by the owner's decision: the transient notices and the green focus ring
   were both built and removed. Everything logs instead.
   A LESSON FROM THE RING, worth keeping even though the ring is gone: gParamRectangle holds the rect
