@@ -43,6 +43,7 @@ extern const char *             patchVolumeStrMap[];
 //const double                    pulseLoTime[];
 extern const char *             dbLvlStrMap[];
 extern const char *             ADRTimeStrMap[];
+extern const char *             filter_resonanceStrMap[];
 extern const char *             pulseLoTimeStrMap[];
 extern const char *             freq_shift_hiStrMap[];
 extern const char *             freq_shift_loStrMap[];
