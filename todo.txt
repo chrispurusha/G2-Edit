@@ -175,6 +175,27 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
   osc_fine_cents, osc_shape_percent. Any dial with a strMap in paramLocationList can be compared
   against it the same way this was.
 
+- Filter resonance too weak — FIXED 2026-08-05, owner reported the engine less resonant than the
+  hardware on the same patch. IT WAS A SIDE EFFECT OF THE OVERSAMPLING. The textbook feedback of 4
+  is for a ladder with NO delay in its loop; this one has a sample of it, and how much phase that
+  sample contributes depends on the sample rate — so moving the engine to 96 kHz pushed the loop
+  further from oscillation and took the resonance with it. Nothing about the filter changed; the
+  rate did.
+  MEASURED, peak gain from Res 0 to Res 127 at a 1.4 kHz cutoff, 12/18/24 dB slopes:
+      k 3.9 -> +16/+21/+24 dB     k 5.0 -> +79/+81/+73 dB     k 6.0 -> +82/+85/+86 dB
+  3.9 barely resonated. Past about 6 the knob's useful travel collapses into its last few steps.
+  LADDER_K_MAX is now 5.0, and self-oscillation with no input at all goes from 0.0055 to 0.034.
+  RE-MEASURE IF ENGINE_OVERSAMPLE CHANGES — the constant is a property of the RATE, not the filter.
+  A TEST HAD TO GO, and it is worth saying why rather than it looking like a threshold being bent:
+  test_filter asserted the passband drop from OVERALL rms, which was only ever a proxy. Once the
+  filter properly resonates the peak dominates that figure — 91% of the energy now sits near the
+  cutoff — so it no longer measures the passband at all. It is reported but not asserted; the real
+  measurement is in test_fltclassic, which places a tone well below the cutoff and still checks it
+  against the manual's stated ~12 dB (now reading 14.9).
+  SLOPES: 12/18/24 dB are implemented by TAPPING stage 2, 3 or 4 of the ladder while the feedback
+  always comes from stage 4 — a two-pole loop cannot reach the 180 degrees it would need to resonate,
+  which is how a real ladder's multimode outputs work too.
+
 - Sound engine output level — added 2026-08-05, owner's request. Experimental > Output Level, with
   0 / -3 / -6 / -9 / -12 / -18 / -24 dB, the current one marked. Saved in the NVM settings alongside
   the device, channel and buffer choices (audioOutputLevelDb), and pushed into the engine as
