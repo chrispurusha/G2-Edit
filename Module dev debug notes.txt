@@ -138,7 +138,7 @@
 174 DelayDual
 175 DelayQuad
 176 DelayA
-177 DelayB
+177 DelayB OK (CT) Apart from when Clk is set, dial should show time divisions
 178 DlyClock
 179 DlyShiftReg
 180 Operator
