@@ -434,7 +434,7 @@ const tParamLocation     paramLocationList[] = {
     {moduleType4toOut,     paramTypeMenu,        {{  3,   0}, { 7,  7}}, anchorBottomLeft,  "Pad",            2,   0, padStrMap,                             NULL          },
     // 4 2-Out
     {moduleType2toOut,     paramTypeMenu,        {{ 20,   0}, { 7,  7}}, anchorBottomLeft,  "Out to",         6,   0, outToStrMap,                           NULL          },                          // 4 2-Out
-    {moduleType2toOut,     paramTypeBypass,      {{ 39,  -3}, { 5,  5}}, anchorBottomLeft,  "Bypass",         2,   1, NULL,                                  NULL          },
+    {moduleType2toOut,     paramTypeBypass,      {{ -3,  -3}, { 5,  5}}, anchorBottomRight,  "Bypass",         2,   1, NULL,                                  NULL          },
     {moduleType2toOut,     paramTypeMenu,        {{  3,   0}, { 7,  7}}, anchorBottomLeft,  "Pad",            2,   0, padStrMap,                             NULL          },
     //  5 Invert -- No params
     //  6 Unknown
@@ -1420,11 +1420,11 @@ const tParamLocation     paramLocationList[] = {
     {moduleTypeDelayA,     paramTypeBypass,      {{ -3, -10}, { 5,  5}}, anchorBottomRight, "Bypass",         2,   1, NULL,                                  NULL          },                       // 176 On/Off
     {moduleTypeDelayA,     paramTypeMenu,        {{ 30,  -3}, { 7,  7}}, anchorBottomLeft,  NULL,             2,   0, timeClkStrMap,                         NULL          },                       // 176 Time/Clk
     // 177 DelayB
-    {moduleTypeDelayB,     paramTypeTimeClk,     {{ 20, 30}, { 7,  7}}, anchorTopLeft,  NULL,         128,   0, NULL,                                  NULL          },                       // 176 Time
+    {moduleTypeDelayB,     paramTypeTimeClk,     {{ 19, 28}, { 7,  7}}, anchorTopLeft,  NULL,         128,   0, NULL,                                  NULL          },                       // 176 Time
     {moduleTypeDelayB,     paramTypeCommonDial,  {{ 35, 18}, { 7,  7}}, anchorTopLeft,  "FB",           128,   0, NULL,                                  NULL          },                       // 176 FB
     {moduleTypeDelayB,     paramTypeFreq,        {{ 52,  18}, { 7,  7}}, anchorTopLeft,  "LP",           128,  64, NULL,                                  NULL          },                       // 176 Filter
     {moduleTypeDelayB,     paramTypeCommonDial,  {{ 69, 18}, { 7,  7}}, anchorTopLeft,  "Dry/Wet",      128,  64, NULL,                                  NULL          },                       // 176 Filter
-    {moduleTypeDelayB,     paramTypeMenu,        {{ 20,  20}, { 7,  7}}, anchorTopLeft,  NULL,             2,   0, timeClkStrMap,                         NULL          },                       // 176 Time/Clk
+    {moduleTypeDelayB,     paramTypeMenu,        {{ 19,  19}, { 7,  7}}, anchorTopLeft,  NULL,             2,   0, timeClkStrMap,                         NULL          },                       // 176 Time/Clk
     {moduleTypeDelayB,     paramTypeCommonDial,  {{ 35,  -3}, { 7,  7}}, anchorBottomLeft,  "FB Mod",           128,   0, NULL,                                  NULL          },                       // 176 FBmod
     {moduleTypeDelayB,     paramTypeCommonDial,  {{ 69,  -3}, { 7,  7}}, anchorBottomLeft,  "Dry/Wet Mod",           128,   0, NULL,                                  NULL          },                       // 176 DryWet mod
     {moduleTypeDelayB,     paramTypeBypass,      {{ -3, 0}, { 5,  5}}, anchorMiddleRight, "Bypass",         2,   1, NULL,                                  NULL          },                       // 176 On/Off
@@ -1611,8 +1611,8 @@ const tConnectorLocation connectorLocationList[] = {
     {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{-12,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "3",            labelLocUp   },
     {moduleType4toOut,      connectorDirIn,  connectorTypeAudio,   {{ -3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "4",            labelLocUp   },
     //  4 2-Out
-    {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{-12,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "L",            labelLocUp   },         // 4
-    {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{ -3,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    "R",            labelLocUp   },
+    {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{-10,  6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,            labelLocUp   },         // 4
+    {moduleType2toOut,      connectorDirIn,  connectorTypeAudio,   {{ -3,  6}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,            labelLocUp   },
     //  5 Invert
     {moduleTypeInvert,      connectorDirIn,  connectorTypeLogic,   {{-48,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft },          // 5 In 1
     {moduleTypeInvert,      connectorDirOut, connectorTypeLogic,   {{-33,  10}, {CONNECTOR_SIZE, CONNECTOR_SIZE}}, anchorTopRight,    NULL,           labelLocLeft },          // 5 Out 1
