@@ -47,6 +47,14 @@ extern tTopbarControl          gTopbarControls[topbarControlMax];
 extern tCableDragging          gCableDrag;
 extern tHoverConnector         gHoverConnector;
 extern tParamDragging          gParamDragging;
+extern tParamFocus             gParamFocus;
+
+// The last MIDI CC the SYNTH reported receiving (SUB_RESPONSE_MIDI_CC). Written on the USB thread,
+// read by the UI thread for MIDI Learn. -1 until one arrives. See parse_midi_cc() for the open
+// question of whether the byte is the CC number or its value.
+extern _Atomic int32_t         gLastDeviceMidiCC[MAX_SLOTS];
+extern int32_t                 gLastDeviceMidiChan[MAX_SLOTS];
+extern uint32_t                gDeviceMidiCCCount;
 extern tModuleDragging         gModuleDrag;
 extern tSelection              gSelection;
 extern tRubberBand             gRubberBand;

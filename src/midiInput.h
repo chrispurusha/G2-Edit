@@ -67,6 +67,10 @@ uint32_t midi_input_connected_count(void);
 // sending aftertouch at all" without logging on the MIDI thread, which must never do I/O.
 uint32_t midi_input_pressure_count(void);
 
+// The most recent MIDI CC number received, or -1 if none has arrived yet. Backs MIDI Learn (the L
+// key), which assigns the focused parameter to whatever came in last.
+int32_t midi_input_last_cc(void);
+
 bool midi_input_sends_to_synth(void);
 void midi_input_set_sends_to_synth(bool enable);
 

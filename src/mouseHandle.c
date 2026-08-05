@@ -1825,6 +1825,14 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
 
     LOG_DEBUG("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
 
+    if ((key == GLFW_KEY_L) && (action == GLFW_PRESS)) {
+        LOG_INFO("L key: mods=0x%x cmdFlag=%d | fileBrowser=%d bankBrowser=%d alert=%d menu=%d "
+                 "notesEdit=%d perfNameEdit=%d\n",
+                 mods, (int)gCommandKeyPressed, (int)file_browser_active(), (int)bank_browser_active(),
+                 (int)alert_dialog_active(), (int)gContextMenu.active,
+                 (int)gPatchNotesEdit.active, (int)gPerfNameEdit.active);
+    }
+
     if (file_browser_active()) {
         handle_file_browser_key(key, action);
         synthlib_request_redraw();
@@ -2198,6 +2206,13 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         gCommandKeyPressed = true;
     } else if (key == GLFW_KEY_LEFT_SUPER && action == GLFW_RELEASE) {
         gCommandKeyPressed = false;
+    } else if (  (action == GLFW_PRESS) && (key == GLFW_KEY_L)
+              && ((mods & (GLFW_MOD_SUPER | GLFW_MOD_CONTROL | GLFW_MOD_ALT)) == 0)) {
+        // MIDI Learn, and the original editor's only BARE-key shortcut — everything else here is
+        // Command-modified. Deliberately silent when it cannot act: it is a fast alternative to the
+        // right-click assign menu, and a dialog every time a stray L is typed would defeat that.
+        LOG_INFO("L pressed - MIDI Learn\n");
+        midi_learn_focused_param();
     } else if (action == GLFW_PRESS && gCommandKeyPressed == true) {
         tRectangle area  = {0};
         tCoord     coord = {0};

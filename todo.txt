@@ -62,6 +62,30 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
   set by BOTH opening and saving, and routed through the same on_file_saved() funnel as Save As so
   the online/offline and patch/perf branching is shared. Built, not exercised on hardware.
 
+- File > Save CRASH — FIXED 2026-08-04, needs the owner to confirm it stops recurring. Owner
+  reported an occasional crash on a straight Save (never on Save As), stack ending in
+  remember_file_path() -> COPY_STRING. TWO DEFECTS, both in the same two lines:
+   1. SELF-COPY, which is undefined behaviour, not a harmless no-op. eRspSaveToCurrentPath
+      (graphics.c) takes its path FROM gSavedPatchPath[gSlot] and hands it to on_file_saved(),
+      which finally remembers it back INTO that same buffer — so strncpy(dst, dst, n). strncpy's
+      parameters are restrict-qualified, so the compiler may assume the regions do not overlap and
+      vectorise on that basis. Save As never hit it because the file panel supplies a fresh buffer.
+      COPY_STRING now guards dst != src, which protects every call site rather than just this one.
+   2. COPY_STRING EXPANDS ITS DESTINATION THREE TIMES (the strncpy, the sizeof, and the terminator
+      write), and gSlot is _Atomic — so COPY_STRING(gSavedPatchPath[gSlot], ...) was three separate
+      atomic loads. A slot change part way through would terminate a DIFFERENT slot's buffer than
+      the copy went into. Silent corruption rather than a crash. remember_file_path() now reads the
+      slot once into a plain local and bounds-checks it. The macro carries a note that its
+      destination must be a side-effect-free array expression.
+  VERIFICATION IS WEAK ON PURPOSE-OF-RECORD: ten consecutive saves back to the same path did not
+  crash, but the fault was intermittent and undefined behaviour frequently appears to work. The
+  argument is that the UB is gone, NOT that its absence was reproduced. If it ever recurs, the fact
+  that it is no longer a self-copy narrows the search a lot.
+  STILL OPEN, deliberately not fixed here: the slot can still change between the call site reading
+  gSlot to build the path and remember_file_path() reading it again — the call site already carries
+  a comment acknowledging that race. It is a correctness wrinkle, not a crash; fixing it properly
+  means threading the slot through as a parameter rather than re-reading the global.
+
 - Text rendering, pixel-exact glyph rendering — NOT RE-VERIFIED ON RETINA since the rewrite (the
   display was 1x for that whole session). Same code path and it should be equal or better on 2x,
   but worth an eyeball. Verified good on a real 1600x900 1x display: "Rate Hi", "554.4Hz", "25%",
@@ -583,6 +607,17 @@ none of these exist in G2-Edit at all, confirmed by source search)
    2. The original expands its range by drag-resizing the window frame, and hides its button bar
       the same way. This panel has a fixed 37-key span and the scroll buttons instead.
 
+- ASSIGN MIDI CC WIRE FORMAT CONFIRMED 2026-08-05 from an owner USB capture of the ORIGINAL editor
+  performing a MIDI Learn. The single command it sent was:
+      00 0c 01 28 01 22 01 01 07 10 79 3d
+      len=000c  ver=28  cmd=01  sub=22 (ASSIGN_MIDICC)  loc=01 mod=01 param=07 cc=10  crc=793d
+  So the payload is location/module/param/CC as four plain 8-bit fields, and THE CC IS WRITTEN WITH
+  ITS TOP BIT CLEAR (0x10 for CC 16). That is byte-for-byte what send_assign_midi_cc() already
+  builds, so G2-Edit's assign is correct as it stands.
+  This substantially weakens the "top bit set" reading recorded below, since assign and deassign
+  were supposed to share that encoding. Deassign itself was not in the capture, so it stays open —
+  but do not "fix" it on the strength of the inferred widths alone.
+
 - WHILE DECODING PLAY NOTE, A QUESTION ABOUT send_deassign_midi_cc() TURNED UP. CMCtrlDeassign::
   WriteStream() (0x23) writes a 1-bit field of value 1 (vtable +0x44) followed by the CC number as
   SEVEN bits (+0x3c, which takes an explicit width) — i.e. a byte of 0x80|cc. G2-Edit writes eight
@@ -677,8 +712,137 @@ none of these exist in G2-Edit at all, confirmed by source search)
   Unused Modules, Paste Params and Send Controller Snapshot are unrun — the test instance was
   online with real hardware and all three write.
 
-- MIDI Learn (L key) — assign the focused parameter to whichever MIDI CC# was last received, without
-  opening a picker.
+- MIDI Learn (L key) — BUILT 2026-08-05. Click a parameter, press L, and it takes whichever MIDI
+  CC# arrived most recently (manual p.145). Only became possible once the local MIDI input existed —
+  before that nothing in the app knew what the "last received" CC was.
+  FOUR SMALL PIECES:
+   * midiInput.c records every incoming CC into an atomic, EXCEPT 120/123 (All Sound Off / All Notes
+     Off are channel-mode messages, not controllers anything could sensibly be learned from). It is
+     stored before the morph handling, so a CC this editor does nothing else with is still learnable.
+   * gParamFocus (types.h/globalVars) remembers the last parameter CLICKED. gParamDragging could not
+     serve: it is cleared on mouse-up and only ever covers the draggable param types, whereas a
+     button can carry a CC too.
+     SET IN param_click_handler() (moduleGraphics.c), NOT in mouseHandle.c. This cost a round trip
+     and is worth knowing generally: handle_module_press()/handle_module_press_for_module() LOOK
+     like the canvas click path and are not — every widget registers a click region at render time
+     and dispatch_click_region() matches first, so those functions are legacy fallback that no
+     longer runs for a canvas parameter. mouse_button() says so in a comment; I put the focus there
+     anyway and it was simply never executed.
+   * assign_midi_cc_to_param() extracted VERBATIM out of action_assign_midi_cc() (menus.c) so the
+     right-click "Assign to CC# nn" menu and MIDI Learn cannot drift apart. The menu action is now
+     four lines calling it. Undo, the CC steal and the device message are all unchanged.
+   * The L key is the only BARE-key shortcut in the app — every other one is Command-modified — so
+     it needed its own branch in key_callback() ahead of the gCommandKeyPressed block.
+  STEALING IS CORRECT, not a side effect: the manual is explicit that "a MIDI CC# can only be
+  assigned to one single knob in the patch and if L assigns a MIDI CC# to a knob that was already
+  assigned to another knob the other knob will loose its assignment".
+  SILENT WHEN IT CANNOT ACT (no focused param, no CC yet, focus in another slot) — reason goes to
+  the log only. It is the fast alternative to the right-click menu, and a dialog on every stray L
+  would defeat the point. The manual makes the same trade, calling the menu "a more safe way".
+  EITHER ORDER WORKS (owner's request): click-then-L assigns immediately; L-then-click ARMS and the
+  next parameter clicked takes the CC. Pressing L again while armed cancels, so a stray press cannot
+  lie in wait and quietly reassign the next parameter touched. The cases that used to refuse — no
+  CC yet, focus in another slot — now arm instead, since the next click settles them.
+  NO ON-SCREEN FEEDBACK, by the owner's decision: the transient notices and the green focus ring
+  were both built and removed. Everything logs instead.
+  A LESSON FROM THE RING, worth keeping even though the ring is gone: gParamRectangle holds the rect
+  the widget actually drew, in WINDOW coordinates — which is why mouseHandle.c hit-tests it against
+  the raw cursor position. Drawing it through moduleArea applies the canvas zoom and scroll a SECOND
+  time, which put the ring well below its parameter. The overlay chips DO use moduleArea correctly,
+  because they are queued from the rectangle passed INTO the renderer, not the one it returns.
+  A transient on-canvas notice for the other two moments (a CC arriving, and the L outcome including
+  its refusals) was built and then REMOVED the same day at the owner's request, along with the
+  "Assign to CC# nn (last received)" right-click entry. The refusals log instead. Worth knowing if
+  the question comes back: the L key is deliberately quiet, so when it declines there is now nothing
+  on screen saying why — the ring showing no parameter is focused is the only visible clue.
+
+  ALSO ADDED 2026-08-05, after the owner reported L doing nothing with no way to tell why: the param
+  right-click menu now carries "Assign to CC# nn (last received)" above the 128-entry picker, or a
+  greyed "No MIDI CC received yet" when none has arrived. This IS the manual's own workflow — p.145
+  says to right-click and "first check if the Assign to CC# xx menu item indeed shows the MIDI CC#
+  that the other instrument is sending", calling it the safe alternative to L — so the 128-entry
+  picker, which cannot answer that question, was only ever half of that menu. It doubles as the
+  diagnostic: if it reads "No MIDI CC received yet" then L is correctly doing nothing.
+  WHERE "LAST RECEIVED" COMES FROM — REWORKED 2026-08-05 after the owner pointed out the obvious:
+  THE SYNTH IS THE THING WITH A MIDI IN SOCKET, so in the setup the manual describes it is the G2
+  that sees the controller and the editor never does. Learning from the editor's own CoreMIDI input
+  only works when the controller is plugged into the Mac. Both are now accepted, synth first.
+  The synth side goes through SUB_RESPONSE_MIDI_CC (0x80), which parse_midi_cc() has always decoded
+  into a channel and a CC byte and then THROWN AWAY. Now recorded.
+  TWO REAL BUGS FIXED HERE:
+   * 0xff IS A SENTINEL meaning "nothing to report", and it was being stored as though it were CC
+     255. Controller numbers stop at 127, so anything above that is now rejected. This is what the
+     owner saw as "thinks the last CC received was 255" — it was the reply to the request issued at
+     CONNECT, before any controller had been touched.
+   * THE REQUEST WAS ONLY EVER SENT AT CONNECT (send_get_midi_cc(), usbComms.c:3469/3528), i.e.
+     exactly when the answer is guaranteed to be "none". New eMsgCmdGetMidiCC lets the UI ask again.
+  L NOW COMPLETES ASYNCHRONOUSLY when online: the press parks the target parameter, posts the
+  request, and midi_learn_poll() (once a frame, from render_frame) finishes the assignment when a
+  FRESH reply lands — freshness being a rise in the arrival count, not merely a non-negative value,
+  since the previous answer is still in hand. Gives up after ~2s and logs that the synth reported
+  nothing. The param right-click menu re-requests as it opens and names its source, so the label
+  reads "Assign to CC# 74 (last, from synth)" or "(from MIDI in)".
+  SETTLED 2026-08-05 BY AN OWNER USB CAPTURE of the original editor doing a Learn (new patch, all
+  MIDI deassigned, one filter, controller into the G2's MIDI IN, dial moved, parameter clicked, L
+  pressed). THE G2 PUSHES IT UNSOLICITED — nothing is requested:
+      t=3.722  G2 -> editor   82 01 04 00 80 00 10 e5 cd
+                                          ^^ ^^ ^^
+                                     sub=80  chan=00  cc=10
+      t=19.213 editor -> G2   00 0c 01 28 01 22 01 01 07 10 79 3d      (ASSIGN, cc=10)
+  So SUB_RESPONSE_MIDI_CC arrives on its own when the synth receives a CC that is assigned to
+  NOTHING, carrying the channel and then the controller NUMBER — which also settles the old
+  "CC Numb/value" ambiguity in parse_midi_cc(): it is the NUMBER. The editor just remembers it, and
+  the Learn is a single assign command with no query anywhere in it.
+  SUB_COMMAND_GET_MIDI_CC'S REPLY IS ONE RECORD PER SLOT — the owner spotted it from a clean log
+  showing exactly four records, the first carrying CC 20 and the other three 0xff. So it is the last
+  CC EACH SLOT has seen, not a list of assignments, and 0xff means that slot has seen none. It is
+  what makes Learn work immediately after the editor starts, instead of demanding the controller be
+  moved again. gLastDeviceMidiCC is now per slot and midi_learn_last_cc() reads the current one.
+  (An intermediate version treated this reply as assignments and DISCARDED it, which was wrong for
+  the same reason the very first version was wrong — it is the useful message, not the noise.)
+  IT HOLDS SEVERAL RECORDS SEPARATED BY A REPEAT OF THE 0x80 SUB-RESPONSE BYTE, while the
+  unsolicited notification is a single record with no separator. A flat two-byte stride walked the
+  reply out of step, which is how it announced itself: "channel 129", i.e. a 0x80 separator read as
+  a channel. The loop now consumes a separator between records and stops when the next byte is not
+  0x80, and files each record by POSITION when solicited, by the message's own slot when not.
+  STILL UNSETTLED: whether the first byte of a record is the MIDI CHANNEL or the SLOT. Every sample
+  so far has 0 in it, so nothing distinguishes them; it is logged, not used. If it is the slot, the
+  0xff records will carry 1, 2 and 3 — which the next connect log will show.
+  A MIDI CHANNEL IS 0..15, so a channel byte above 15 now aborts the walk with an error rather than
+  reporting invented controllers — every value after a desync is worthless and MIDI Learn would
+  otherwise take the last of them. Worth applying wherever a parser has a field with a known range.
+
+  THE REASON IT HAD NEVER WORKED, found by the owner reading parse_midi_cc(): its loop guard asked
+  for THREE bytes (`(BIT_TO_BYTE_ROUND_UP(bitPos) + 3) <= length`) while the payload is TWO, so the
+  loop never ran and the message was parsed into nothing. Two separate mistakes in the same loop:
+    * the guard did not match the body, which read channel + controller + a trailing byte it hoped
+      would be another 0x80 marking a further record;
+    * there is no marker byte. The capture is 82 01 04 00 80 00 10 e5 cd — sub-response, then the
+      two-byte payload, then the CRC. The third read was taking the CRC (seen as 0xa5 in the log).
+  Now `(... + 2) <= length`, and the trailing read is gone. Note the guard must require a WHOLE
+  record rather than merely a byte remaining: `< length` happens to work for a lone two-byte payload
+  but would let a stray trailing byte start a record that reads past the end.
+
+  CONSEQUENCE: the poll-the-synth-on-L machinery built earlier the same day was the wrong shape and
+  has been REMOVED (eMsgCmdGetMidiCC, request_synth_last_cc(), midi_learn_poll() and its per-frame
+  call). L assigns synchronously from the value parse_midi_cc() has already recorded, exactly as the
+  original does. send_get_midi_cc() at connect is untouched — it is pre-existing and harmless.
+  WHAT REMAINS UNPROVEN: whether 0x81 answers anything useful. It might instead be the stored assignment TABLE — parse_midi_cc() loops over
+  MULTIPLE records, which fits a table better than a single last-received value, and the name says
+  "GET_MIDI_CC" rather than anything about receiving. No dedicated learn command exists among the
+  SUB_COMMAND_* constants (checked: the only never-sent ones are CLEAR_BANK, MIDI_DUMP,
+  QUERY_PARAM_NAMES, QUERY_PARAMS, SET_ASSIGNED_VOICES, SET_KEY_SPLIT, SET_PERF_MODE — none of them
+  plausible). THE TEST: with a controller into the G2's own MIDI IN, move one control, then press L
+  or right-click a parameter. If the CC appears, 0x81 is the right question. If it stays "No MIDI CC
+  received yet" while the synth is plainly receiving, then the G2 does not report received CCs this
+  way and the feature needs a different message — which would want a USB-log capture of the real
+  editor doing a Learn to settle.
+  NOT VERIFIED, and it cannot be through the harness: synthetic KEY events do not reach the app at
+  all (the same limitation already recorded for the Parameter Overview's Escape), and neither do
+  synthetic clicks, so BOTH halves of "click a knob, press L" are out of reach. What IS known: the
+  assign half is the pre-existing menu path moved verbatim, so only the CC tracking, the click
+  focus and the key branch are genuinely new. NEEDS THE OWNER: send a CC from a controller, click a
+  knob, press L, and confirm the module shows the CC and that the previous owner lost it.
 - Patch Window Split Bar — STEP 1 OF 4 DONE 2026-08-02, in SYNTHLIB (utilsGraphics.c/.h), so it
   lands in that submodule's own commit, not this repo's.
   WHAT MADE THIS WIDE-RANGING, and what step 1 addressed: tArea is only an enum, and `moduleArea`
@@ -993,6 +1157,24 @@ none of these exist in G2-Edit at all, confirmed by source search)
   NOT in the repo — it lives in the session scratchpad and links cableChain.c / dataBase.c /
   moduleResourcesAccess.c with a stubbed msg_send. Worth reconstructing if this area is touched
   again; there is no test target in the Xcode project to host it.
+
+- Bit-stream loop guards audited 2026-08-05, after the parse_midi_cc() bug (see MIDI Learn above).
+  THE PATTERN TO LOOK FOR: a loop guard that asks whether ANY bytes remain while the body reads a
+  whole RECORD. It fails in both directions — a payload smaller than the body's appetite is skipped
+  entirely (which is what hid every received CC), and a truncated one is read past.
+  FOUR LOOPS CARRIED IT. All now require the bytes they are about to read:
+   * protocol.c parse_patch()  — guard covered the 1-byte type, body then read a 16-bit count.
+   * protocol.c parse_perf()   — same.
+   * protocol.c (category scan) — same, breaks out instead of failing.
+   * usbComms.c parse_resources_used() — guard wanted 1 byte, the record is a fixed 29
+     (RESOURCES_RECORD_BYTES, tallied in a comment there).
+  The three TLV ones already bounds-checked the VALUE after reading the count; it was the header
+  itself that was unguarded, so the overrun was at most two bytes and into the same buffer — wrong
+  values rather than a crash, which is why it has gone unnoticed.
+  VERIFIED: all nine PatchTestFiles still load with their expected module counts, and Corrupt.pch2
+  still fails deliberately (0 modules) rather than being newly rejected for the wrong reason.
+  NOT AUDITED YET: the many straight-line parsers that read a fixed layout without looping. They
+  cannot loop past the end, but nothing checks `length` against what they read either.
 
 - Sweep up the missing undos — undo coverage grew per-feature and is now patchy, so Ctrl-Z does
   something for some edits and silently nothing for others, which is worse than uniformly absent.

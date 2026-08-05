@@ -107,6 +107,20 @@ static void param_click_handler(tCoord coord, eClickPhase phase, void * userData
     tParamType       paramType = paramLocationList[param->paramRef].type;
 
     if (phase == eClickPress) {
+        // The parameter MIDI Learn will act on. Every param type, not just the draggable ones — a
+        // button can carry a CC too. This has to live here rather than in mouseHandle.c's
+        // handle_module_press_for_module(), which looks like the click path but is legacy fallback:
+        // every widget registers a click region at render time and dispatch_click_region() gets
+        // there first, so that function no longer runs for a canvas parameter.
+        gParamFocus.valid      = true;
+        gParamFocus.moduleKey  = module->key;
+        gParamFocus.paramIndex = ctx->paramIndex;
+        LOG_INFO("Param focus: slot %u location %u module %u param %u (type %u)\n",
+                 module->key.slot, module->key.location, module->key.index, ctx->paramIndex, paramType);
+
+        // If L is waiting for a parameter, this click is the one it wanted.
+        midi_learn_param_clicked(module->key, ctx->paramIndex);
+
         if (  paramType != paramTypeToggle && paramType != paramTypeMenu
            && paramType != paramTypeBypass && paramType != paramTypeEnable
            && paramType != paramTypePush && paramType != paramTypeCustomData) {
