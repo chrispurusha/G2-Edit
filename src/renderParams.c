@@ -575,7 +575,133 @@ tRectangle render_paramType1Time(tModule * module, tRectangle rectangle, char * 
     return render_dial_with_text(gParamRenderArea, rectangle, (char *)paramLocationList[paramRef].label, buff, (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue, paramLocationList[paramRef].range, morphRange, colour);
 }
 
+// Which parameter carries a delay's Time/Clk selector. It differs per module — DelayB puts it at 4,
+// DelayA at 5, DlyStereo at 6, DelayQuad at 8 where it governs all four of its Time dials — and
+// getting this wrong is the mistake that left DelayA permanently bypassed in the sound engine.
+// Returns -1 for a module that has no such selector.
+int delay_time_clk_param_index(tModuleType moduleType) {
+    switch (moduleType) {
+        case moduleTypeDelayB:
+        {
+            return 4;
+        }
+        case moduleTypeDelayA:
+        {
+            return 5;
+        }
+        case moduleTypeDlyStereo:
+        {
+            return 6;
+        }
+        case moduleTypeDelayQuad:
+        {
+            return 8;
+        }
+        default:
+        {
+            return -1;
+        }
+    }
+}
+
+// Raw dial value to an index into clkSyncStrMap. The delay does NOT span the whole table and does
+// not run the way the dial does: raw 0 is the SHORTEST division, "1/64T" at index 31, and the top of
+// the dial is "2/1" at index 10 — so it runs BACKWARDS through 22 of the 32 entries. (The LFO's own
+// ClkSync range is a different mapping again, value/4 across all 32; they are not interchangeable.)
+// The maximum a delay's Time dial reaches, for a given Range setting. THERE ARE THREE DIFFERENT
+// RANGE TABLES and the modules do not share one:
+//
+//   delayRangeStrMap     7 entries  5ms/25ms/100ms/500ms/1.0s/2.0s/2.7s  DlySingleA/B, DelayDual,
+//                                                                        DelayQuad, DlyEight
+//   delayABRangeStrMap   4 entries  500ms/1.0s/2.0s/2.7s                 DelayA, DelayB
+//   dlyStereoRangeStrMap 3 entries  500ms/1.0s/1.35s                     DlyStereo
+//
+// This was one switch using the 7-entry maxima for all of them, so a DelayB set to its second Range
+// showed 25 ms where the synth showed 1 s — the tables agree on neither length nor order.
+double delay_range_max_seconds(tModuleType moduleType, uint32_t rangeValue) {
+    static const double sevenWay[]  = {0.005, 0.025, 0.100, 0.500, 1.0, 2.0, 2.7};
+    static const double abWay[]     = {0.500, 1.0, 2.0, 2.7};
+    static const double stereoWay[] = {0.500, 1.0, 1.35};
+    const double *      table       = sevenWay;
+    uint32_t            count       = sizeof(sevenWay) / sizeof(sevenWay[0]);
+
+    switch (moduleType) {
+        case moduleTypeDelayA:
+        case moduleTypeDelayB:
+        {
+            table = abWay;
+            count = sizeof(abWay) / sizeof(abWay[0]);
+            break;
+        }
+        case moduleTypeDlyStereo:
+        {
+            table = stereoWay;
+            count = sizeof(stereoWay) / sizeof(stereoWay[0]);
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+    return table[(rangeValue < count) ? rangeValue : (count - 1)];
+}
+
+#define CLK_SYNC_LOWEST     (31)   // "1/64T"
+#define CLK_SYNC_HIGHEST    (10)   // "2/1"
+
+uint32_t clk_sync_index(double paramValue) {
+    double span  = (double)(CLK_SYNC_LOWEST - CLK_SYNC_HIGHEST);
+    int    index = 0;
+
+    if (paramValue < 0.0) {
+        paramValue = 0.0;
+    } else if (paramValue > 127.0) {
+        paramValue = 127.0;
+    }
+    index = CLK_SYNC_LOWEST - (int)(((paramValue * span) / 127.0) + 0.5);
+
+    if (index < CLK_SYNC_HIGHEST) {
+        index = CLK_SYNC_HIGHEST;
+    } else if (index > CLK_SYNC_LOWEST) {
+        index = CLK_SYNC_LOWEST;
+    }
+    return (uint32_t)index;
+}
+
+// That division as a multiple of one beat. "1/4" IS the beat, so it is 1.0; D is dotted (x1.5) and
+// T is a triplet (x2/3). Same entries clkSyncStrMap prints, so heard and shown cannot diverge.
+double clk_sync_beats(double paramValue) {
+    static const double beats[32] = {
+        256.0,     192.0,     128.0,  96.0,      64.0,       48.0,      32.0,      24.0,
+        16.0,       12.0,       8.0,   6.0,       4.0,        3.0, 8.0 / 3.0,       2.0,
+        1.5,   4.0 / 3.0,       1.0,  0.75, 2.0 / 3.0,        0.5,     0.375, 1.0 / 3.0,
+        0.25,     0.1875, 1.0 / 6.0, 0.125,   0.09375, 1.0 / 12.0,    0.0625, 1.0 / 24.0
+    };
+
+    return beats[clk_sync_index(paramValue)];
+}
+
 tRectangle render_paramType1TimeClk(tModule * module, tRectangle rectangle, char * label, char * buff, int buffSize, double paramValue, uint32_t range, uint32_t morphRange, tRgb colour, uint32_t paramRef) {
+    // In Clk mode the delay follows the master clock, so a millisecond figure derived from the
+    // Range would be meaningless — show the division the dial actually selects.
+    {
+        int clkIndex = delay_time_clk_param_index(module->type);
+
+        if (clkIndex >= 0) {
+            uint32_t clkSlot      = module->key.slot;
+            uint32_t clkVariation = gPatchDescr[clkSlot].activeVariation;
+
+            if (module->param[clkVariation][clkIndex].value != 0) {
+                snprintf(buff, buffSize, "%s", clkSyncStrMap[clk_sync_index(paramValue)]);
+                return render_dial_with_text(gParamRenderArea, rectangle,
+                                             (char *)paramLocationList[paramRef].label, buff,
+                                             (double)STANDARD_BUTTON_TEXT_HEIGHT, paramValue,
+                                             paramLocationList[paramRef].range, morphRange, colour);
+            }
+        }
+    }
+
     double time = 0.0;
     double min_time, max_time;
 
@@ -587,48 +713,7 @@ tRectangle render_paramType1TimeClk(tModule * module, tRectangle rectangle, char
         {
             min_time = 0.001;
 
-            switch (module->mode[0].value) {
-                case 0:
-                {
-                    max_time = 0.005;
-                    break;
-                }
-                case 1:
-                {
-                    max_time = 0.025;
-                    break;
-                }
-                case 2:
-                {
-                    max_time = 0.100;
-                    break;
-                }
-                case 3:
-                {
-                    max_time = 0.500;
-                    break;
-                }
-                case 4:
-                {
-                    max_time = 1.0;
-                    break;
-                }
-                case 5:
-                {
-                    max_time = 2.0;
-                    break;
-                }
-                case 6:
-                {
-                    max_time = 2.7;
-                    break;
-                }
-                default:
-                {
-                    max_time = 0.0;
-                    LOG_ERROR("paramType1TimeClk module[0]->value wrong value, %u", module->type);
-                }
-            }
+            max_time = delay_range_max_seconds(module->type, module->mode[0].value);
             break;
         }
         default:
@@ -638,8 +723,14 @@ tRectangle render_paramType1TimeClk(tModule * module, tRectangle rectangle, char
             LOG_ERROR("paramType1TimeClk missing module->type implementation, %u", module->type);
         }
     }
-    // scale 0 -> min_time and 127 -> max_time, exponentially
-    time = exp((double)paramValue / 127 * log(max_time / min_time)) * min_time;
+    // LINEAR, not exponential. Read off the G2 itself: raw 0 is 0.01 ms, then 7.89 ms, then 15.8 ms
+    // — a constant step of about 7.89 ms — and 127 of those steps reaches the 1 s the Range selector
+    // promises. An exponential sweep between the endpoints was out by a long way through the middle
+    // of the dial, the same mistake the envelope times had.
+    //
+    // The Range selector chooses the TOP of the scale; the bottom is a fixed hair above zero rather
+    // than the 1 ms this used to assume.
+    time = DELAY_TIME_MIN + (((double)paramValue / 127.0) * (max_time - DELAY_TIME_MIN));
 
     if (time < 1.0) {
         snprintf(buff, buffSize, "%.0fms", time * 1000);
