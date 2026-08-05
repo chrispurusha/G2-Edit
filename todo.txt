@@ -170,9 +170,32 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
 
 OPEN WORK
 
-- Store/Load-to-Bank perf-domain path — the patch case is fixed + hardware-confirmed; the PERF
-  domain path of send_store_patch/send_retrieve_patch was left unchanged and is still UNVERIFIED
-  (no perf capture available at the time). Confirm perf Store/Load hits the selected slot.
+- Load Perf from Bank — FIXED 2026-08-05 from an owner log, needs a confirming run. TWO faults, both
+  in the perf domain that had been left unverified when the patch case was fixed:
+   1. THE FIRST PAYLOAD BYTE IS A SLOT, and the perf path was sending the bank-upload DOMAIN value
+      there — which is 1, i.e. slot B. The performance is addressed as slot MAX_SLOTS: that is
+      already how parse_patch_version() reads it, where slot == MAX_SLOTS carries the PERF version
+      rather than a slot's. Both send_store_patch() and send_retrieve_patch() now send MAX_SLOTS.
+   2. IT WAS WAITING FOR THE WRONG REPLY. A performance load changes all four slots at once and the
+      G2 answers with SUB_RESPONSE_PERF_PATCH_VERSIONS (0x1f), not the single-slot
+      SUB_RESPONSE_PATCH_VERSION_CHANGE (0x38). The log made this unmistakable — "response = 0x1f
+      expected = 0x38", three times, with the patch versions climbing 33/34/35 as each retry
+      RE-SENT the retrieve. So the load had been working all along; the editor rejected the reply
+      and then loaded the performance three times over before reporting failure.
+  3. THE PERFORMANCE NAME DID NOT UPDATE after a successful load, because nothing re-read the perf
+     settings. parse_perf_patch_versions() raises gotPerfSettingsChangeIndication ONLY when the perf
+     VERSION changes, and a load does not necessarily change it — the log of a working load reads
+     "Old perf = 8 new = 8", so the refresh never fired and the previous name stayed on screen.
+     load_patch_from_bank() now calls send_get_performance_settings() after a successful PERF
+     retrieve. Note this is safe here but is deliberately NOT done in load_perf_from_payload() (the
+     file-load path), where the settings are about to be overwritten from the file and reading the
+     device would pull the OLD perf's data over them — the comment there explains it.
+  WORTH REMEMBERING: a send_and_receive() expectation that does not match reality does not merely
+  mis-report — the retry re-sends the command, so a "failed" operation can happen several times.
+  ALSO: a version-change flag is not a substitute for "this operation changed things". Any refresh
+  hung off gotPerfSettingsChangeIndication silently does nothing when the version happens to match.
+  STILL UNVERIFIED: the perf domain of send_store_patch(). It is a flash write, so test on a
+  scratch location; its expected reply (SUB_RESPONSE_STORE_PATCH) may need the same treatment.
 
 - usbComms.c:360 perf-mode ownership ("synth" or "perf"? ambiguous in the protocol) —
   parse_synth_settings() (protocol.c:1139) is the STALE perfMode
@@ -200,6 +223,28 @@ OPEN WORK
   see Original Editor/G2Editor.c, CCustomObjectFactory::CreateCustom (~line 101952) and the
   CPnl*Graph class family for reference implementations.
 
+- MIDI CC Assignments list — BUILT 2026-08-05 (src/midiCcList.c / .h), View > MIDI CC Assignments.
+  The original's "MIDI Controller" function (manual p.143), which it reaches from a right-click menu
+  and the M key; MENU-ONLY here at the owner's request, consistent with the other panels.
+  WHY IT IS NOT THE SAME AS THE EXISTING OVERLAY: View MIDI CC Assignments annotates parameters on
+  the canvas, so it can only show the LOCATION BEING VIEWED — an FX assignment is invisible while
+  the Voice Area is on screen. The manual draws the same distinction, pointing at this function for
+  "the complete list of all MIDI CC# assignments in a Patch". It also answers a question MIDI Learn
+  creates: L STEALS the CC from whatever held it, silently and by design, and this is the only place
+  that shows what it took.
+  Sorted by CC number — the controller table's own order is assignment order and gets reshuffled by
+  removals, so it is never sensible to show directly. Slot buttons A-D, since the controller table
+  is per slot. Module and parameter names come from paramPages.h's helpers, so this panel, Parameter
+  Pages and Parameter Overview cannot disagree about what a parameter is called.
+  READ-ONLY on purpose: removing an assignment stays on the parameter's own right-click menu, where
+  which parameter is being acted on is unambiguous.
+  STILL TO DO:
+   1. NOT YET SEEN ON SCREEN — the owner's editor was running against the G2 at the time and a
+      second instance would have fought it for the USB device. Layout, the column sizing and the
+      empty-slot case all need an eyeball.
+   2. Three columns of 24 rows = 72 visible, against MAX_NUM_CONTROLLERS of 128. A patch with more
+      than 72 assignments silently stops drawing rather than scrolling.
+
 - Sw8-1(15), ValSw1-2(17) — need more resources.
 
 - Seq* park-LED (SeqNote/SeqEvent/SeqVal/SeqLev/SeqCtr) — DEFERRED pending a look at the REAL
@@ -210,9 +255,9 @@ OPEN WORK
   input is patched, but the exact trigger isn't provable from the opaque decompile. G2-Edit paints a
   permanent dim green (RGB_GREEN_3, render_led_common ledTypePark) — likely wrong. Once we can watch
   the real editor, confirm the rule (probably "green when Park input has a cable, else off") and
-  implement it. NOTE: the live sequencer step-position indicator is a SEPARATE, bigger feature — it
-  needs the Blink stream (kMesBlinkDualBit/MultiBit, CPanel::Blink), which G2-Edit does not
-  implement at all (the step bar is currently static).
+  implement it. NOTE: the live sequencer step-position indicator WORKS — owner confirmed 2026-08-05
+  that sequencer LEDs move as expected, driven by parse_led_data() and SUB_RESPONSE_LED_DATA. An
+  earlier note here claimed it needed the Blink stream and was unimplemented; that was wrong.
 
 - Verify remaining 117 unverified module types (filters, oscillators, delay lines, sequencer/logic,
   MIDI send/receive, Resonator, Operator, Random* family, etc.) — see Module dev debug notes.txt.

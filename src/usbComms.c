@@ -1562,12 +1562,17 @@ static int send_store_patch(uint8_t domain, uint32_t bank, uint32_t location) {
     // slot A regardless of selection. Confirmed via a stock-editor RETRIEVE (load) capture:
     // "01 2c 41 0a 01 00 00" loads bank1/loc1 into slot B; STORE (0x0b) is the mirror operation in
     // the same command family and uses the same framing (inferred by symmetry — not yet confirmed
-    // with a stock-editor store capture, since store is a flash write). The patch/perf distinction
-    // isn't in this message; perf domain path is left as-was (unverified).
-    uint8_t  slotOrDomain            = (domain == BANK_UPLOAD_DOMAIN_PATCH) ? (uint8_t)gSlot : domain;
+    // with a stock-editor store capture, since store is a flash write).
+    //
+    // THE PERFORMANCE IS ADDRESSED AS SLOT MAX_SLOTS. It used to send the bank-upload domain value
+    // here, which is 1 — and since this byte is a slot, that asked the G2 for SLOT B rather than
+    // for the performance. parse_patch_version() already decodes MAX_SLOTS as the perf version
+    // rather than a slot's, so that index is how this protocol names the performance.
+    uint8_t  slotOrPerf              = (domain == BANK_UPLOAD_DOMAIN_PATCH)
+                                       ? (uint8_t)gSlot : (uint8_t)MAX_SLOTS;
 
     usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_STORE);
-    write_bit_stream(buff, &bitPos, 8, slotOrDomain);
+    write_bit_stream(buff, &bitPos, 8, slotOrPerf);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)bank);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)location);
     sSuppressNameTableUpdate = true;
@@ -1587,15 +1592,26 @@ static int send_retrieve_patch(uint8_t domain, uint32_t bank, uint32_t location)
     uint8_t  buff[SEND_MESSAGE_SIZE] = {0};
     uint32_t bitPos                  = BYTE_TO_BIT(COMMAND_OFFSET);
 
-    // See send_store_patch(): first payload byte is the target slot for patch loads (perf domain
-    // left unchanged/unverified).
-    uint8_t  slotOrDomain            = (domain == BANK_UPLOAD_DOMAIN_PATCH) ? (uint8_t)gSlot : domain;
+    // See send_store_patch(): first payload byte is the target slot, and the performance is
+    // addressed as MAX_SLOTS. Sending the domain value (1) here asked for slot B instead.
+    uint8_t  slotOrPerf              = (domain == BANK_UPLOAD_DOMAIN_PATCH)
+                                       ? (uint8_t)gSlot : (uint8_t)MAX_SLOTS;
 
+    // A performance load changes all four slots at once, and the G2 says so with
+    // SUB_RESPONSE_PERF_PATCH_VERSIONS rather than the single-slot SUB_RESPONSE_PATCH_VERSION_CHANGE.
+    // Waiting for the patch-domain reply made a working load look like a failure — and worse, the
+    // retry re-sent the RETRIEVE, so the performance was loaded three times over before giving up.
+    uint8_t  expected                = (domain == BANK_UPLOAD_DOMAIN_PATCH)
+                                       ? SUB_RESPONSE_PATCH_VERSION_CHANGE
+                                       : SUB_RESPONSE_PERF_PATCH_VERSIONS;
+
+    LOG_DEBUG("Retrieve: domain %u -> first byte %u (bank %u location %u), expecting 0x%02x\n",
+              domain, slotOrPerf, bank, location, expected);
     usb_cmd_sys(buff, &bitPos, 0x41, SUB_COMMAND_RETRIEVE);
-    write_bit_stream(buff, &bitPos, 8, slotOrDomain);
+    write_bit_stream(buff, &bitPos, 8, slotOrPerf);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)bank);
     write_bit_stream(buff, &bitPos, 8, (uint8_t)location);
-    return send_and_receive(buff, BIT_TO_BYTE(bitPos), SUB_RESPONSE_PATCH_VERSION_CHANGE, USB_RECV_DATA_MS);
+    return send_and_receive(buff, BIT_TO_BYTE(bitPos), expected, USB_RECV_DATA_MS);
 }
 
 // Reads back just the name (and whether it's populated) of whatever currently occupies bank/
@@ -2138,6 +2154,19 @@ static int load_patch_from_bank(uint32_t bank, uint32_t location, bool isPerf) {
         return EXIT_FAILURE;
     }
     result = send_retrieve_patch(domain, bank, location);
+
+    // A performance load replaces the perf's own settings — its NAME above all — and nothing else
+    // fetches them. parse_perf_patch_versions() raises gotPerfSettingsChangeIndication only when the
+    // perf VERSION changes, and a load does not necessarily change it: the log of a working load
+    // reads "Old perf = 8 new = 8", so the refresh never fired and the previous performance's name
+    // stayed on screen.
+    //
+    // Safe to read here, unlike the file-load path (load_perf_from_payload), which deliberately does
+    // NOT do this: there the settings are about to be overwritten from the file, so reading the
+    // device would pull the OLD perf's data over them. Here the device IS the source.
+    if ((result == EXIT_SUCCESS) && (domain == BANK_UPLOAD_DOMAIN_PERFORMANCE)) {
+        send_get_performance_settings();
+    }
 
     // Success needs no alert — the loaded patch shows on the redrawn canvas. Only report failure.
     if (result != EXIT_SUCCESS) {
