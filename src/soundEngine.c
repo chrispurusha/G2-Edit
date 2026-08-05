@@ -394,7 +394,19 @@ static tSoundEngineStatus gStatus                     = eStatusOff;
 static uint32_t           gPlayingCount               = 0; // how many modules are in the rendered chain
 
 // Audio-thread-only state. Nothing else may touch these.
-static double             gSampleRate                 = 48000.0;
+// THE WHOLE GRAPH RUNS OVERSAMPLED, which is what the G2 does: its audio rate is 96 kHz against a
+// typical 48 kHz output (manual p.71). Two things need it and cannot get it any other way — the
+// ladder filter, whose model stops holding as its poles approach Nyquist, and any nonlinearity,
+// whose harmonics fold back down if they are made too close to the output rate.
+//
+// Doing it for the WHOLE graph rather than per node is both simpler and better: there is no input
+// to interpolate for each nonlinear node and no per-node decimator, just one filter at the very
+// end. The linear parts (mixers, amplifiers, delay, reverb) gain nothing from it but cost little,
+// and having one rate throughout means nothing has to know it is happening.
+#define ENGINE_OVERSAMPLE    (2)
+
+static double             gDeviceRate                 = 48000.0;
+static double             gSampleRate                 = 96000.0;
 static bool               gGateOpen                   = false;
 static int32_t            gVoiceNote                  = -1;
 
@@ -427,8 +439,19 @@ static double             gEnvelope                   = 0.0; // the anti-click r
 //
 // Decimation only computes the samples it keeps, so the cost is 128 multiply-accumulates plus four
 // waveform evaluations per oscillator per output sample.
-#define OSC_OVERSAMPLE       (4)
+// Relative to the ENGINE rate, which is itself oversampled — so the oscillators still run at four
+// times the device rate overall, as they did when the graph ran at the device rate and this was 4.
+#define OSC_OVERSAMPLE       (4 / ENGINE_OVERSAMPLE)
 #define OSC_DECIMATE_TAPS    (128)
+
+// The engine's own output filter, removing everything above the DEVICE's Nyquist before the extra
+// samples are dropped. Same windowed-sinc design as the oscillators' — see the note there on why the
+// transition width, not the oversampling factor, is what governs the result.
+#define OUT_DECIMATE_TAPS    (64)
+
+static double         gOutDecimate[OUT_DECIMATE_TAPS];
+static double         gOutHistory[OUT_DECIMATE_TAPS];
+static uint32_t       gOutHistoryPos = 0;
 
 static double         gOscDecimate[OSC_DECIMATE_TAPS];
 static double         gOscHistory[MAX_ENGINE_NODES][OSC_DECIMATE_TAPS];
@@ -444,14 +467,19 @@ static double         gLadder[MAX_ENGINE_NODES][LADDER_POLES];
 // Delay memory. Held as float rather than double purely for size — half a second per line at any
 // sensible rate, four lines, is enough for the delays a patch normally has and keeps this under a
 // megabyte. Nodes beyond that many run dry rather than sharing a line and smearing into each other.
-#define MAX_DELAY_LINES       (4)
-#define DELAY_LINE_SAMPLES    (48000)
+#define MAX_DELAY_LINES    (4)
+// Long enough for the longest range the Time dial offers (2.7 s), at the INTERNAL rate. It used to
+// be a flat 48000, i.e. one second at 48 kHz — so the top of the dial was silently truncated to
+// well under half the delay it promised.
+// 2.8 s at 48 kHz, times the oversampling — integer arithmetic so it stays a constant expression an
+// array can be sized with.
+#define DELAY_LINE_SAMPLES    (134400 * ENGINE_OVERSAMPLE)
 static float          gDelayLine[MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
 static uint32_t       gDelayWrite[MAX_DELAY_LINES];
 static double         gDelayDamp[MAX_DELAY_LINES];
 
 // The chorus's own short sweep, one per node, plus its LFO phase.
-#define CHORUS_SAMPLES    (2048)
+#define CHORUS_SAMPLES    (2048 * ENGINE_OVERSAMPLE)
 static float          gChorusLine[MAX_ENGINE_NODES][CHORUS_SAMPLES];
 static uint32_t       gChorusWrite[MAX_ENGINE_NODES];
 static double         gChorusLfo[MAX_ENGINE_NODES];
@@ -467,10 +495,17 @@ static double         gCompEnv[MAX_ENGINE_NODES];
 // Mutually prime lengths, so the combs do not reinforce each other into a ringing tone. The buffers
 // are sized from the longest of each set rather than a hand-written number — getting those out of
 // step is a buffer overrun, and it is the kind that only shows up as a crash much later.
-#define REVERB_COMB_MAX       (1356)
-#define REVERB_ALLPASS_MAX    (225)
-static const uint32_t kCombLen[REVERB_COMBS]      = {1116, 1188, 1277, REVERB_COMB_MAX};
-static const uint32_t kAllpassLen[REVERB_ALLPASS] = {REVERB_ALLPASS_MAX, 149, 97};
+#define REVERB_COMB_MAX       (1356 * ENGINE_OVERSAMPLE)
+#define REVERB_ALLPASS_MAX    (225 * ENGINE_OVERSAMPLE)
+// Scaled with the rate: these are sample counts, so leaving them fixed would halve the room.
+static const uint32_t kCombLen[REVERB_COMBS]      = {
+    1116 * ENGINE_OVERSAMPLE, 1188 * ENGINE_OVERSAMPLE,
+    1277 * ENGINE_OVERSAMPLE, REVERB_COMB_MAX
+};
+static const uint32_t kAllpassLen[REVERB_ALLPASS] = {
+    REVERB_ALLPASS_MAX, 149 * ENGINE_OVERSAMPLE,
+    97 * ENGINE_OVERSAMPLE
+};
 static float          gComb[REVERB_COMBS][REVERB_COMB_MAX];
 static uint32_t       gCombPos[REVERB_COMBS];
 static double         gCombStore[REVERB_COMBS];
@@ -543,10 +578,35 @@ bool sound_engine_set_morph(uint32_t group, double amount) {
 // The Glide dial's 128 settings are a table of times running from 19 ms to 6.27 s, written as text
 // for the patch-settings display. Reading the milliseconds back out of it means the engine glides
 // for exactly as long as the editor says it will.
-static double glide_time_seconds(uint8_t setting) {
-    const char * text = get_glide_time_str(setting);
+// Glide time. INTERPOLATED between table entries rather than computed, because unlike the A/D/R
+// curve this table has no decent closed form — the best power-law fit is 17% out at the median and
+// 38% at worst, which would be a far bigger error than reading it. Interpolating gives what
+// computing was wanted for, a value that moves continuously with a morphed or smoothed dial, while
+// staying exact at every position the dial can actually stop on.
+static double glide_time_seconds(double setting) {
+    const char * lowText  = NULL;
+    const char * highText = NULL;
+    double       fraction = 0.0;
+    double       low      = 0.0;
+    double       high     = 0.0;
+    int          index    = 0;
 
-    return (text != NULL) ? ((double)atoi(text) / 1000.0) : 0.019;
+    if (setting < 0.0) {
+        setting = 0.0;
+    } else if (setting > 127.0) {
+        setting = 127.0;
+    }
+    index    = (int)setting;
+    fraction = setting - (double)index;
+    lowText  = get_glide_time_str((uint8_t)index);
+    highText = get_glide_time_str((uint8_t)((index < 127) ? (index + 1) : 127));
+
+    if ((lowText == NULL) || (highText == NULL)) {
+        return 0.019;
+    }
+    low      = (double)atoi(lowText) / 1000.0;
+    high     = (double)atoi(highText) / 1000.0;
+    return low + ((high - low) * fraction);
 }
 
 // A parameter's value with every morph applied. morphRange is a SIGNED 8-bit offset from the dialled
@@ -583,9 +643,13 @@ bool sound_engine_active(void) {
     return atomic_load(&gActive);
 }
 
+// The device's rate; the ENGINE runs at ENGINE_OVERSAMPLE times this. gSampleRate is the internal
+// rate, so every coefficient already derived from it — envelope and glide times, filter and chorus
+// coefficients, LFO and oscillator increments — scales with no further change.
 void sound_engine_set_sample_rate(double sampleRate) {
     if (sampleRate > 0.0) {
-        gSampleRate = sampleRate;
+        gDeviceRate = sampleRate;
+        gSampleRate = sampleRate * (double)ENGINE_OVERSAMPLE;
     }
 }
 
@@ -655,6 +719,29 @@ static void build_decimator(void) {
     for (i = 0; i < OSC_DECIMATE_TAPS; i++) {
         gOscDecimate[i] /= sum;
     }
+
+    cutoff         = 0.45 / (double)ENGINE_OVERSAMPLE;
+    sum            = 0.0;
+
+    for (i = 0; i < OUT_DECIMATE_TAPS; i++) {
+        double offset = (double)i - ((double)(OUT_DECIMATE_TAPS - 1) / 2.0);
+        double sinc   = (fabs(offset) < 1e-9)
+                        ? (2.0 * cutoff)
+                        : (sin(2.0 * M_PI * cutoff * offset) / (M_PI * offset));
+        double window = 0.42
+                        - (0.50 * cos((2.0 * M_PI * (double)i) / (double)(OUT_DECIMATE_TAPS - 1)))
+                        + (0.08 * cos((4.0 * M_PI * (double)i) / (double)(OUT_DECIMATE_TAPS - 1)));
+
+        gOutDecimate[i] = sinc * window;
+        sum            += gOutDecimate[i];
+    }
+
+    for (i = 0; i < OUT_DECIMATE_TAPS; i++) {
+        gOutDecimate[i] /= sum;
+    }
+
+    memset(gOutHistory, 0, sizeof(gOutHistory));
+    gOutHistoryPos = 0;
 }
 
 bool sound_engine_start(void) {
@@ -875,32 +962,31 @@ static bool take_next_note_event(void) {
 // ---------------------------------------------------------------------------------------------
 
 // An exponential fit across the G2's envelope range. See ENV_TIME_MIN/MAX.
-// The A/D/R dials index a 128-entry table of real times, running 0.5 ms to 45 s, and that table is
-// what the dial prints. Reading it back means an envelope lasts as long as the module says it does,
-// rather than as long as a curve fitted to the endpoints says — the same reason glide reads its own
-// table. The strings carry their unit: "0.5ms", "103ms", "1.02s".
+// A/D/R time from the dial value, COMPUTED rather than looked up.
+//
+// Two reasons it is computed. Morphs and the parameter smoothing both produce FRACTIONAL dial
+// values, and a table index truncates them — so a morphed attack would step between whole dial
+// positions instead of sweeping. And the table is display text, rounded to as little as one
+// significant figure at the short end ("0.5ms"), where this is smooth.
+//
+// The curve was fitted to that table: a power law, not the exponential one would reach for first —
+// the ratio between neighbouring entries falls from 1.20 to 1.049 across the range, which is what
+// gives it away. Median error against the table is 0.35%, worst 4% at index 2 where the table
+// itself carries one significant figure. An exponential between the endpoints, which is what this
+// used to be, was out by 86% in the middle.
+#define ENV_TIME_SCALE     (1.015839e-16)
+#define ENV_TIME_OFFSET    (39.55)
+#define ENV_TIME_POWER     (7.94210)
+
 static double env_time_seconds(double paramValue) {
-    int          index = (int)paramValue;
-    const char * text  = NULL;
-    double       value = 0.0;
+    double value = paramValue;
 
-    if (index < 0) {
-        index = 0;
-    } else if (index > 127) {
-        index = 127;
+    if (value < 0.0) {
+        value = 0.0;
+    } else if (value > 127.0) {
+        value = 127.0;
     }
-    text  = ADRTimeStrMap[index];
-
-    if (text == NULL) {
-        return ENV_TIME_MIN;
-    }
-    value = atof(text);
-
-    // "ms" or "s" — check for the 'm', since every entry ends in 's' either way.
-    if (strstr(text, "ms") != NULL) {
-        value /= 1000.0;
-    }
-    return (value > 0.0) ? value : ENV_TIME_MIN;
+    return ENV_TIME_SCALE * pow(value + ENV_TIME_OFFSET, ENV_TIME_POWER);
 }
 
 // EnvADSR's Shape scroll button, in envShapeStrMap order: LogExp, LinExp, ExpExp, LinLin. The first
@@ -2437,253 +2523,275 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
     }
 
     for (frame = 0; frame < frameCount; frame++) {
-        double value[MAX_ENGINE_NODES][2];
+        uint32_t sub = 0;
 
-        // One event per sample. A chord's worth of note-ons arriving together therefore lands over
-        // consecutive samples rather than all but the last being thrown away, and every note takes
-        // effect where it actually arrived instead of at the next buffer boundary.
-        (void)take_next_note_event();
+        // ENGINE_OVERSAMPLE passes of the whole graph per output sample. Note events are consumed
+        // inside, so they land on the finer grid too rather than being quantised to the output rate.
+        for (sub = 0; sub < ENGINE_OVERSAMPLE; sub++) {
+            double value[MAX_ENGINE_NODES][2];
 
-        // Portamento. The sounding pitch chases the played note; how fast, and whether at all, comes
-        // from the patch's Glide setting. Exponential rather than linear — it is what a glide sounds
-        // like, and the coefficient is set so the remaining distance is down to a percent by the time
-        // the dial says, which is close enough to the stated figure to be worth quoting.
-        if (gVoiceNote >= 0) {
-            bool sliding = (params.glideMode == eGlideNormal)
-                           || ((params.glideMode == eGlideAuto) && (gGlideActive == true));
+            // One event per sample. A chord's worth of note-ons arriving together therefore lands over
+            // consecutive samples rather than all but the last being thrown away, and every note takes
+            // effect where it actually arrived instead of at the next buffer boundary.
+            (void)take_next_note_event();
 
-            if ((sliding == true) && (params.glideSeconds > 0.0)) {
-                double coefficient = 1.0 - exp(-4.6 / (params.glideSeconds * gSampleRate));
+            // Portamento. The sounding pitch chases the played note; how fast, and whether at all, comes
+            // from the patch's Glide setting. Exponential rather than linear — it is what a glide sounds
+            // like, and the coefficient is set so the remaining distance is down to a percent by the time
+            // the dial says, which is close enough to the stated figure to be worth quoting.
+            if (gVoiceNote >= 0) {
+                bool sliding = (params.glideMode == eGlideNormal)
+                               || ((params.glideMode == eGlideAuto) && (gGlideActive == true));
 
-                gGlidePitch += coefficient * ((double)gVoiceNote - gGlidePitch);
-            } else {
-                gGlidePitch = (double)gVoiceNote;
+                if ((sliding == true) && (params.glideSeconds > 0.0)) {
+                    double coefficient = 1.0 - exp(-4.6 / (params.glideSeconds * gSampleRate));
+
+                    gGlidePitch += coefficient * ((double)gVoiceNote - gGlidePitch);
+                } else {
+                    gGlidePitch = (double)gVoiceNote;
+                }
             }
-        }
-        // Bend rides on top of the glide, scaled by the patch's own Bend range.
-        voicePitch = gGlidePitch
-                     + (((double)atomic_load(&gBendMilli) / 1000.0) * params.bendSemitones);
+            // Bend rides on top of the glide, scaled by the patch's own Bend range.
+            voicePitch = gGlidePitch
+                         + (((double)atomic_load(&gBendMilli) / 1000.0) * params.bendSemitones);
 
-        // The patch's own Vibrato, which is nothing to do with the cabling: it lives on a hidden
-        // module beside Glide and Bend, and is how a patch gets aftertouch vibrato without an LFO
-        // anywhere in it. The chosen controller sets the depth, so at rest there is none.
-        if (params.vibratoSource != eVibratoOff) {
-            uint32_t group = (params.vibratoSource == eVibratoWheel)
+            // The patch's own Vibrato, which is nothing to do with the cabling: it lives on a hidden
+            // module beside Glide and Bend, and is how a patch gets aftertouch vibrato without an LFO
+            // anywhere in it. The chosen controller sets the depth, so at rest there is none.
+            if (params.vibratoSource != eVibratoOff) {
+                uint32_t group = (params.vibratoSource == eVibratoWheel)
                              ? MORPH_GROUP_WHEEL : MORPH_GROUP_AFTERTOUCH;
-            double   depth = (double)atomic_load(&gMorphMilli[group]) / 1000.0;
+                double   depth = (double)atomic_load(&gMorphMilli[group]) / 1000.0;
 
-            gVibratoPhase += params.vibratoHz / gSampleRate;
+                gVibratoPhase += params.vibratoHz / gSampleRate;
 
-            if (gVibratoPhase >= 1.0) {
-                gVibratoPhase -= 1.0;
+                if (gVibratoPhase >= 1.0) {
+                    gVibratoPhase -= 1.0;
+                }
+                voicePitch    += (sin(gVibratoPhase * 2.0 * M_PI) * depth * params.vibratoCents) / 100.0;
             }
-            voicePitch    += (sin(gVibratoPhase * 2.0 * M_PI) * depth * params.vibratoCents) / 100.0;
-        }
-        double sample       = 0.0;
-        double rampTarget   = ((gGateOpen == true) && (params.tap >= 0)) ? 1.0 : 0.0;
-        double envelopeStep = 1.0 / (ENVELOPE_SECONDS * gSampleRate);
-
-        if (gEnvelope < rampTarget) {
-            gEnvelope += envelopeStep;
-
-            if (gEnvelope > rampTarget) {
-                gEnvelope = rampTarget;
-            }
-        } else if (gEnvelope > rampTarget) {
-            gEnvelope -= envelopeStep;
+            double sample       = 0.0;
+            double rampTarget   = ((gGateOpen == true) && (params.tap >= 0)) ? 1.0 : 0.0;
+            double envelopeStep = 1.0 / (ENVELOPE_SECONDS * gSampleRate);
 
             if (gEnvelope < rampTarget) {
-                gEnvelope = rampTarget;
-            }
-        }
+                gEnvelope += envelopeStep;
 
-        // One forward pass. add_node() built the list depth first, so every node's inputs sit at
-        // lower indices and are already evaluated by the time it is reached. Each node publishes two
-        // outputs because some modules have two that mean different things — see tEngineNode.
-        for (n = 0; n < params.nodeCount; n++) {
-            const tEngineNode * spec        = &params.node[n];
-            double              a           = signal_in(spec, value, 0);
-            bool                primed      = gSmoothPrimed[n];
-            double              smoothCoeff = 1.0 - exp(-1.0 / (PARAM_SMOOTH_SECONDS * gSampleRate));
-            double              shape       = smooth_to(&gSmoothShape[n], spec->shape, smoothCoeff, primed);
-            double              cutoffHz    = smooth_to(&gSmoothCutoff[n], spec->cutoffHz, smoothCoeff, primed);
-            double              resonance   = smooth_to(&gSmoothRes[n], spec->resonance, smoothCoeff, primed);
-            double              gain        = smooth_to(&gSmoothGain[n], spec->gain, smoothCoeff, primed);
-
-            gSmoothPrimed[n] = true;
-
-            value[n][0]      = 0.0;
-            value[n][1]      = 0.0;
-
-            switch (spec->kind) {
-                case eNodeLfo:
-                {
-                    value[n][0] = lfo_step(n, spec);
-                    value[n][1] = value[n][0];
-                    break;
+                if (gEnvelope > rampTarget) {
+                    gEnvelope = rampTarget;
                 }
-                case eNodeOsc:
-                case eNodeOscShp:
-                {
-                    // Connector 0 is the direct Pitch input, connector 1 the knob-attenuated
-                    // PitchVar — see oscillator_step().
-                    value[n][0] = (spec->active == true)
+            } else if (gEnvelope > rampTarget) {
+                gEnvelope -= envelopeStep;
+
+                if (gEnvelope < rampTarget) {
+                    gEnvelope = rampTarget;
+                }
+            }
+
+            // One forward pass. add_node() built the list depth first, so every node's inputs sit at
+            // lower indices and are already evaluated by the time it is reached. Each node publishes two
+            // outputs because some modules have two that mean different things — see tEngineNode.
+            for (n = 0; n < params.nodeCount; n++) {
+                const tEngineNode * spec        = &params.node[n];
+                double              a           = signal_in(spec, value, 0);
+                bool                primed      = gSmoothPrimed[n];
+                double              smoothCoeff = 1.0 - exp(-1.0 / (PARAM_SMOOTH_SECONDS * gSampleRate));
+                double              shape       = smooth_to(&gSmoothShape[n], spec->shape, smoothCoeff, primed);
+                double              cutoffHz    = smooth_to(&gSmoothCutoff[n], spec->cutoffHz, smoothCoeff, primed);
+                double              resonance   = smooth_to(&gSmoothRes[n], spec->resonance, smoothCoeff, primed);
+                double              gain        = smooth_to(&gSmoothGain[n], spec->gain, smoothCoeff, primed);
+
+                gSmoothPrimed[n] = true;
+
+                value[n][0]      = 0.0;
+                value[n][1]      = 0.0;
+
+                switch (spec->kind) {
+                    case eNodeLfo:
+                    {
+                        value[n][0] = lfo_step(n, spec);
+                        value[n][1] = value[n][0];
+                        break;
+                    }
+                    case eNodeOsc:
+                    case eNodeOscShp:
+                    {
+                        // Connector 0 is the direct Pitch input, connector 1 the knob-attenuated
+                        // PitchVar — see oscillator_step().
+                        value[n][0] = (spec->active == true)
                                   ? oscillator_step(n, spec, voicePitch, a, signal_in(spec, value, 1), shape)
                                   : 0.0;
-                    break;
-                }
-                case eNodeFilter:
-                {
-                    value[n][0] = filter_step(n, spec, a, signal_in(spec, value, 1), voicePitch,
-                                              cutoffHz, resonance);
-                    break;
-                }
-                case eNodeEnv:
-                {
-                    double env = envelope_step(n, spec, gGateOpen);
-
-                    // Output 0 is the envelope itself, for patching at a modulation input. Output 1
-                    // is whatever audio is patched into the module, shaped by that envelope — the
-                    // G2's envelopes carry their own VCA, and this patch uses it as the amp.
-                    value[n][0] = env;
-                    value[n][1] = a * env;
-                    break;
-                }
-                case eNodeLevAmp:
-                {
-                    value[n][0] = a * gain;
-                    break;
-                }
-                case eNodeLevMult:
-                {
-                    value[n][0] = a * signal_in(spec, value, 1);
-                    break;
-                }
-                case eNodeMix:
-                {
-                    uint32_t c = 0;
-
-                    // A stereo mixer reads eight legs but has only four level knobs, so both legs
-                    // of a channel share one.
-                    for (c = 0; c < spec->inCount; c++) {
-                        uint32_t channel = (spec->inCount > MAX_NODE_INPUTS / 2) ? (c / 2) : c;
-
-                        value[n][0] += signal_in(spec, value, c)
-                                       * smooth_to(&gSmoothLevel[n][channel], spec->level[channel],
-                                                   smoothCoeff, primed);
+                        break;
                     }
+                    case eNodeFilter:
+                    {
+                        value[n][0] = filter_step(n, spec, a, signal_in(spec, value, 1), voicePitch,
+                                                  cutoffHz, resonance);
+                        break;
+                    }
+                    case eNodeEnv:
+                    {
+                        double env = envelope_step(n, spec, gGateOpen);
 
-                    break;
-                }
-                case eNodeChorus:
-                {
-                    value[n][0] = (spec->active == true)
+                        // Output 0 is the envelope itself, for patching at a modulation input. Output 1
+                        // is whatever audio is patched into the module, shaped by that envelope — the
+                        // G2's envelopes carry their own VCA, and this patch uses it as the amp.
+                        value[n][0] = env;
+                        value[n][1] = a * env;
+                        break;
+                    }
+                    case eNodeLevAmp:
+                    {
+                        value[n][0] = a * gain;
+                        break;
+                    }
+                    case eNodeLevMult:
+                    {
+                        value[n][0] = a * signal_in(spec, value, 1);
+                        break;
+                    }
+                    case eNodeMix:
+                    {
+                        uint32_t c = 0;
+
+                        // A stereo mixer reads eight legs but has only four level knobs, so both legs
+                        // of a channel share one.
+                        for (c = 0; c < spec->inCount; c++) {
+                            uint32_t channel = (spec->inCount > MAX_NODE_INPUTS / 2) ? (c / 2) : c;
+
+                            value[n][0] += signal_in(spec, value, c)
+                                           * smooth_to(&gSmoothLevel[n][channel], spec->level[channel],
+                                                       smoothCoeff, primed);
+                        }
+
+                        break;
+                    }
+                    case eNodeChorus:
+                    {
+                        value[n][0] = (spec->active == true)
                                   ? chorus_step(n, a, spec->depth, spec->amount) : a;
-                    value[n][1] = value[n][0];   // stereo on the hardware, summed to mono here
-                    break;
-                }
-                case eNodeCompress:
-                {
-                    value[n][0] = (spec->active == true) ? compress_step(n, a, spec) : a;
-                    value[n][1] = value[n][0];
-                    break;
-                }
-                case eNodeDelay:
-                {
-                    value[n][0] = (spec->active == true)
+                        value[n][1] = value[n][0]; // stereo on the hardware, summed to mono here
+                        break;
+                    }
+                    case eNodeCompress:
+                    {
+                        value[n][0] = (spec->active == true) ? compress_step(n, a, spec) : a;
+                        value[n][1] = value[n][0];
+                        break;
+                    }
+                    case eNodeDelay:
+                    {
+                        value[n][0] = (spec->active == true)
                                   ? delay_step(spec->line, a, spec->timeSeconds, spec->depth,
                                                spec->damping, spec->amount) : a;
-                    value[n][1] = value[n][0];
-                    break;
-                }
-                case eNodeReverb:
-                {
-                    // Only the first reverb in a chain is modelled; see the DSP note above.
-                    double in = (a + signal_in(spec, value, 1)) * 0.5;
+                        value[n][1] = value[n][0];
+                        break;
+                    }
+                    case eNodeReverb:
+                    {
+                        // Only the first reverb in a chain is modelled; see the DSP note above.
+                        double in = (a + signal_in(spec, value, 1)) * 0.5;
 
-                    value[n][0] = ((spec->active == true) && (spec->line == 0))
+                        value[n][0] = ((spec->active == true) && (spec->line == 0))
                                   ? reverb_step(in, spec->timeSeconds, spec->damping, spec->amount) : in;
-                    value[n][1] = value[n][0];
-                    break;
-                }
-                case eNodeConstant:
-                {
-                    value[n][0] = spec->constant;
-                    value[n][1] = spec->constant;
-                    break;
-                }
-                case eNodeFxIn:
-                {
-                    value[n][0] = (spec->active == true) ? (a * gain) : 0.0;
-                    value[n][1] = value[n][0];
-                    break;
-                }
-                case eNodePassThru:
-                {
-                    value[n][0] = a;
-                    value[n][1] = a;   // stereo pairs feed both legs from the one signal
-                    break;
-                }
-                case eNodeOut:
-                {
-                    // Sums its inputs — the two legs are the left and right channels, and the engine
-                    // is mono to the speakers for now.
-                    value[n][0] = (spec->active == true)
+                        value[n][1] = value[n][0];
+                        break;
+                    }
+                    case eNodeConstant:
+                    {
+                        value[n][0] = spec->constant;
+                        value[n][1] = spec->constant;
+                        break;
+                    }
+                    case eNodeFxIn:
+                    {
+                        value[n][0] = (spec->active == true) ? (a * gain) : 0.0;
+                        value[n][1] = value[n][0];
+                        break;
+                    }
+                    case eNodePassThru:
+                    {
+                        value[n][0] = a;
+                        value[n][1] = a; // stereo pairs feed both legs from the one signal
+                        break;
+                    }
+                    case eNodeOut:
+                    {
+                        // Sums its inputs — the two legs are the left and right channels, and the engine
+                        // is mono to the speakers for now.
+                        value[n][0] = (spec->active == true)
                                   ? ((a + signal_in(spec, value, 1)) * gain) : 0.0;
-                    break;
-                }
-                default:
-                {
-                    break;
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
                 }
             }
-        }
 
-        if (params.tap >= 0) {
-            // Tapping a module means listening to its main output; for an envelope used as an amp
-            // that is its shaped audio rather than the envelope signal.
-            sample = value[params.tap][(params.node[params.tap].kind == eNodeEnv) ? 1 : 0];
-        }
-        // With an envelope module shaping the note, the fixed ramp would only double up on it; it is
-        // still applied when the chain has none.
-        {
-            uint32_t rawMilli = (uint32_t)(fabs(sample) * 1000.0);
-
-            if (rawMilli > atomic_load(&gRawPeakMilli)) {
-                atomic_store(&gRawPeakMilli, rawMilli);
+            if (params.tap >= 0) {
+                // Tapping a module means listening to its main output; for an envelope used as an amp
+                // that is its shaped audio rather than the envelope signal.
+                sample = value[params.tap][(params.node[params.tap].kind == eNodeEnv) ? 1 : 0];
             }
-        }
-        sample *= VOICE_GAIN;
+            // With an envelope module shaping the note, the fixed ramp would only double up on it; it is
+            // still applied when the chain has none.
+            {
+                uint32_t rawMilli = (uint32_t)(fabs(sample) * 1000.0);
 
-        if (chainHasEnvelope == false) {
-            sample *= gEnvelope;
+                if (rawMilli > atomic_load(&gRawPeakMilli)) {
+                    atomic_store(&gRawPeakMilli, rawMilli);
+                }
+            }
+            sample *= VOICE_GAIN;
+
+            if (chainHasEnvelope == false) {
+                sample *= gEnvelope;
+            }
+
+            // Soft knee rather than a hard edge. Below the knee nothing is touched at all, so ordinary
+            // playing is untouched; above it the curve bends over instead of shearing the tops off, which
+            // is both kinder to listen to and closer to what an overloaded analogue output does. The hard
+            // clamp afterwards is only a guard against a bug producing something enormous.
+            if (sample > OUTPUT_KNEE) {
+                sample = OUTPUT_KNEE + ((1.0 - OUTPUT_KNEE) * tanh((sample - OUTPUT_KNEE) / (1.0 - OUTPUT_KNEE)));
+            } else if (sample < -OUTPUT_KNEE) {
+                sample = -OUTPUT_KNEE - ((1.0 - OUTPUT_KNEE) * tanh((-sample - OUTPUT_KNEE) / (1.0 - OUTPUT_KNEE)));
+            }
+
+            if (sample > 1.0) {
+                sample = 1.0;
+            } else if (sample < -1.0) {
+                sample = -1.0;
+            }
+            // Every internal sample goes through the decimator; only the last of each group produces
+            // an output. Feeding all of them is the point — dropping the others without filtering is
+            // exactly what would fold the high end back down.
+            gOutHistory[gOutHistoryPos] = sample;
+            gOutHistoryPos              = (gOutHistoryPos + 1) % OUT_DECIMATE_TAPS;
         }
 
-        // Soft knee rather than a hard edge. Below the knee nothing is touched at all, so ordinary
-        // playing is untouched; above it the curve bends over instead of shearing the tops off, which
-        // is both kinder to listen to and closer to what an overloaded analogue output does. The hard
-        // clamp afterwards is only a guard against a bug producing something enormous.
-        if (sample > OUTPUT_KNEE) {
-            sample = OUTPUT_KNEE + ((1.0 - OUTPUT_KNEE) * tanh((sample - OUTPUT_KNEE) / (1.0 - OUTPUT_KNEE)));
-        } else if (sample < -OUTPUT_KNEE) {
-            sample = -OUTPUT_KNEE - ((1.0 - OUTPUT_KNEE) * tanh((-sample - OUTPUT_KNEE) / (1.0 - OUTPUT_KNEE)));
-        }
-
-        if (sample > 1.0) {
-            sample = 1.0;
-        } else if (sample < -1.0) {
-            sample = -1.0;
-        }
         {
-            uint32_t channel = 0;
-            uint32_t milli   = (uint32_t)(fabs(sample) * 1000.0);
+            uint32_t channel   = 0;
+            uint32_t tap       = 0;
+            double   milli     = 0.0;
+            double   outSample = 0.0;
 
-            if (milli > atomic_load(&gPeakMilli)) {
-                atomic_store(&gPeakMilli, milli);
+            for (tap = 0; tap < OUT_DECIMATE_TAPS; tap++) {
+                uint32_t oldest = (gOutHistoryPos + tap) % OUT_DECIMATE_TAPS;
+
+                outSample += gOutHistory[oldest] * gOutDecimate[OUT_DECIMATE_TAPS - 1 - tap];
+            }
+
+            milli = fabs(outSample) * 1000.0;
+
+            if ((uint32_t)milli > atomic_load(&gPeakMilli)) {
+                atomic_store(&gPeakMilli, (uint32_t)milli);
             }
 
             for (channel = 0; channel < channelCount; channel++) {
-                out[(frame * channelCount) + channel] = (float)sample;
+                out[(frame * channelCount) + channel] = (float)outSample;
             }
         }
     }
