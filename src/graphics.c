@@ -2291,6 +2291,10 @@ static void render_frame(void) {
         module_pane_clip_begin();
         render_modules();
         render_cables();
+        // Inside the pane's own clip and transform. Drawing every pane's chips in one pass after
+        // the loop put them all through the FOCUSED pane's transform with no scissor, so the Voice
+        // Area's annotations landed over the FX Area.
+        param_overlay_render_pane(pane);
         module_pane_clip_end();
     }
 
@@ -2308,9 +2312,6 @@ static void render_frame(void) {
             render_cable_from_to(module->connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector, 4.0);
         }
     }
-    // Above the modules and cables it annotates, but below every piece of chrome - the top bar,
-    // the menus and every panel and popup have to be able to cover it.
-    param_overlay_render();
     render_top_bar();
     render_menu_bar(gAppMenuBar, app_menu_bar_rect());
     render_morph_groups();

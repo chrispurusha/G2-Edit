@@ -35,6 +35,8 @@ extern "C" {
 #include "globalVars.h"
 #include "protocol.h"
 #include "mouseHandle.h"
+#include "midiInput.h"
+#include "graphics.h"
 #include "menus.h"
 #include "selection.h"
 #include "undo.h"
@@ -1084,15 +1086,23 @@ static void remove_controller_entry(uint32_t slot, uint32_t idx) {
     gControllerCount[slot]                 = last;
 }
 
-static void action_assign_midi_cc(int index) {
-    uint32_t        slot        = gSlot;
-    uint32_t        targetCC    = (uint32_t)gContextMenu.items[index].param;
-    uint32_t        location    = gMenuContext.moduleKey.location;
-    uint32_t        moduleIndex = gMenuContext.moduleKey.index;
-    uint32_t        paramIndex  = gMenuContext.paramIndex;
+// Assigns one parameter to one MIDI CC#, stealing the CC from whatever held it. Shared by the
+// right-click "Assign to CC# nn" menu and by MIDI Learn, so the two cannot drift apart.
+//
+// The steal is the documented behaviour, not a side effect: the manual is explicit that "a MIDI CC#
+// can only be assigned to one single knob in the patch and if L assigns a MIDI CC# to a knob that
+// was already assigned to another knob the other knob will loose its assignment".
+void assign_midi_cc_to_param(uint32_t slot, tModuleKey moduleKey, uint32_t paramIndex, uint32_t targetCC) {
+    uint32_t        location    = moduleKey.location;
+
+    LOG_INFO("Assign MIDI CC %u -> slot %u location %u module %u param %u\n",
+             targetCC, slot, moduleKey.location, moduleKey.index, paramIndex);
+
+    uint32_t        moduleIndex = moduleKey.index;
     int32_t         ccOwner     = find_controller_for_cc(slot, targetCC);
     int32_t         paramEntry;
     tMessageContent msg         = {0};
+    tModule *       mod         = NULL;
 
     // One click can both steal the CC from whoever had it and assign it here — see
     // undo_begin_midi_cc_edit(), which snapshots the whole table rather than the entries.
@@ -1119,7 +1129,7 @@ static void action_assign_midi_cc(int index) {
             (uint8_t)targetCC, location, moduleIndex, paramIndex
         };
     }
-    tModule * mod = get_module(gMenuContext.moduleKey);
+    mod                             = get_module(moduleKey);
 
     if ((mod != NULL) && (paramIndex < MAX_NUM_PARAMETERS)) {
         mod->param[0][paramIndex].midiCC    = (uint8_t)targetCC;
@@ -1127,14 +1137,124 @@ static void action_assign_midi_cc(int index) {
     }
     msg.cmd                         = eMsgCmdAssignMidiCC;
     msg.slot                        = slot;
-    msg.midiCCAssignData.moduleKey  = gMenuContext.moduleKey;
+    msg.midiCCAssignData.moduleKey  = moduleKey;
     msg.midiCCAssignData.paramIndex = paramIndex;
     msg.midiCCAssignData.midiCC     = targetCC;
     msg_send(&gToUsbThread, &msg);
 
     undo_commit_midi_cc_edit();
-    gContextMenu.active             = false;
     synthlib_request_redraw();
+}
+
+static void action_assign_midi_cc(int index) {
+    assign_midi_cc_to_param(gSlot, gMenuContext.moduleKey, gMenuContext.paramIndex,
+                            (uint32_t)gContextMenu.items[index].param);
+    gContextMenu.active = false;
+}
+
+// Where "last received" comes from, in preference order. The SYNTH is the thing with a MIDI IN, so
+// a controller wired into the G2 is only visible through its SUB_RESPONSE_MIDI_CC report; the
+// editor's own CoreMIDI input only sees what is plugged into the Mac. Either can be the real setup,
+// so both are accepted and the synth wins when both have something.
+//
+// NOTHING IS REQUESTED. Confirmed from a USB capture of the original editor doing a Learn: when the
+// G2 receives a CC that is assigned to nothing it PUSHES SUB_RESPONSE_MIDI_CC unsolicited, carrying
+// the channel and the controller NUMBER, and the editor simply remembers it. The Learn itself is
+// then a single assign command with no query anywhere. An earlier attempt here polled the synth at
+// the moment L was pressed, which is both unnecessary and too late.
+int32_t midi_learn_last_cc(const char ** source) {
+    int32_t fromSynth = atomic_load(&gLastDeviceMidiCC[gSlot]);
+    int32_t fromLocal = midi_input_last_cc();
+
+    if (fromSynth >= 0) {
+        if (source != NULL) {
+            *source = "synth";
+        }
+        return fromSynth;
+    }
+
+    if (source != NULL) {
+        *source = "MIDI in";
+    }
+    return fromLocal;
+}
+
+// MIDI Learn, the original editor's L key (manual p.145): assign the parameter that was last
+// clicked to whichever CC# arrived most recently. The manual's own warning applies — it is the fast
+// way rather than the safe way, since nothing shows you which CC you are about to use.
+//
+// Returns false with a reason logged when there is nothing to do, so the caller can stay silent.
+// Set when L is pressed with no parameter to act on. The manual's order is click-then-L, but there
+// is no reason the other way round should fail — so L with nothing focused waits, and the next
+// parameter clicked takes the CC. Pressing L again while armed cancels, so a stray press does not
+// lie in wait and quietly reassign the next parameter touched.
+static bool gMidiLearnArmed = false;
+
+bool midi_learn_armed(void) {
+    return gMidiLearnArmed;
+}
+
+// Called from param_click_handler() for every parameter click. Assigns and disarms if L is waiting;
+// does nothing at all otherwise, which is the overwhelmingly common case.
+void midi_learn_param_clicked(tModuleKey moduleKey, uint32_t paramIndex) {
+    const char * source = NULL;
+    int32_t      cc     = midi_learn_last_cc(&source);
+
+    if (gMidiLearnArmed == false) {
+        return;
+    }
+    gMidiLearnArmed = false;
+
+    if (cc < 0) {
+        LOG_INFO("MIDI Learn: armed, but no MIDI CC has been received\n");
+        return;
+    }
+
+    if (moduleKey.slot != gSlot) {
+        LOG_INFO("MIDI Learn: that parameter is in another slot\n");
+        return;
+    }
+    LOG_INFO("MIDI Learn: armed, taking CC %d (from %s)\n", cc, source);
+    assign_midi_cc_to_param(gSlot, moduleKey, paramIndex, (uint32_t)cc);
+}
+
+bool midi_learn_focused_param(void) {
+    const char * source = NULL;
+    int32_t      cc     = midi_learn_last_cc(&source);
+
+    LOG_INFO("MIDI Learn: focus valid=%d slot=%u loc=%u module=%u param=%u | gSlot=%u | "
+             "cc=%d (from %s) synth=%d local=%d\n",
+             (int)gParamFocus.valid, gParamFocus.moduleKey.slot, gParamFocus.moduleKey.location,
+             gParamFocus.moduleKey.index, gParamFocus.paramIndex, (unsigned)gSlot,
+             cc, (source != NULL) ? source : "?",
+             (int)atomic_load(&gLastDeviceMidiCC[gSlot]), (int)midi_input_last_cc());
+
+    if (gParamFocus.valid == false) {
+        gMidiLearnArmed = !gMidiLearnArmed;
+        LOG_INFO("MIDI Learn: %s - click a parameter to assign\n",
+                 gMidiLearnArmed ? "armed" : "cancelled");
+        return false;
+    }
+
+    // The focus is only meaningful in the slot it was clicked in.
+    // A focus left over from another slot is stale rather than wrong to act on, so arm instead of
+    // refusing outright — the next click settles it.
+    if (gParamFocus.moduleKey.slot != gSlot) {
+        gMidiLearnArmed = true;
+        LOG_INFO("MIDI Learn: armed - the focused parameter is in another slot\n");
+        return false;
+    }
+
+    if (cc < 0) {
+        gMidiLearnArmed = true;
+        LOG_INFO("MIDI Learn: armed - no MIDI CC received yet\n");
+        return false;
+    }
+    LOG_INFO("MIDI Learn: CC %d (from %s) -> module %u param %u\n", cc, source,
+             gParamFocus.moduleKey.index, gParamFocus.paramIndex);
+    gMidiLearnArmed = false;
+    assign_midi_cc_to_param(gSlot, gParamFocus.moduleKey, gParamFocus.paramIndex, (uint32_t)cc);
+    return true;
 }
 
 // ─── Bulk MIDI CC tools (Tools menu) ─────────────────────────────────────────

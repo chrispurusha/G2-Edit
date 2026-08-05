@@ -95,6 +95,9 @@ static uint8_t          gHeldCount       = 0;
 // thread can read it whenever it likes.
 static _Atomic uint32_t gPressureCount   = 0;
 
+// The most recent controller number seen, for MIDI Learn (the L key). -1 until one arrives.
+static _Atomic int32_t  gLastCC          = -1;
+
 static void held_remove(uint8_t note) {
     uint8_t i = 0;
 
@@ -217,7 +220,13 @@ static void handle_message(uint32_t word) {
             // 123 All Notes Off, 120 All Sound Off. Panic buttons; both silence the voice.
             if ((data1 == 123) || (data1 == 120)) {
                 all_notes_off();
-            } else if (data1 == MIDI_CC_MOD_WHEEL) {
+                break;    // channel-mode messages, not controllers anything can be learned from
+            }
+            // Recorded before the morph handling below, because MIDI Learn wants whatever arrived
+            // last whether or not this editor does anything else with it.
+            atomic_store(&gLastCC, (int32_t)data1);
+
+            if (data1 == MIDI_CC_MOD_WHEEL) {
                 morph_moved(sound_engine_set_morph(MORPH_GROUP_WHEEL, (double)data2 / 127.0));
             } else if (data1 == MIDI_CC_CTRL_PEDAL) {
                 morph_moved(sound_engine_set_morph(MORPH_GROUP_CTRL_PEDAL, (double)data2 / 127.0));
@@ -416,6 +425,10 @@ bool midi_input_sends_to_synth(void) {
 void midi_input_set_sends_to_synth(bool enable) {
     atomic_store(&gSendsToSynth, enable);
     prefs_set_int(PREF_KEY_TO_SYNTH, enable ? 1 : 0);
+}
+
+int32_t midi_input_last_cc(void) {
+    return atomic_load(&gLastCC);
 }
 
 uint32_t midi_input_pressure_count(void) {
