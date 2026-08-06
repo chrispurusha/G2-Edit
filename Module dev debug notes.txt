@@ -133,8 +133,8 @@
 169 ModAHD
 170 2-In OK (CT)
 171 4-In OK (CT)
-172 DlySingleA
-173 DlySingleB
+172 DlySingleA  OK (CT) 
+173 DlySingleB  OK (CT) 
 174 DelayDual
 175 DelayQuad
 176 DelayA
@@ -143,8 +143,7 @@
 179 DlyShiftReg
 180 Operator
 181 DlyEight
-182 DlyStereo
-183 OscPM
+182 DlyStereo  OK (CT) Apart from when Clk is set, dial should show time divisions
 184 Mix1-1A OK (CT)
 185 Mix1-1S OK (CT)
 186 Sw1-2M
