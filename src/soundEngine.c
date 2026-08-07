@@ -1437,11 +1437,10 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
                         node->timeSeconds *= 0.5;
                     }
                 } else {
-                    // Linear from a hair above zero to the range's maximum — read off the G2:
-                    // 0.01 ms, 7.89 ms, 15.8 ms, i.e. a constant step. See renderParams.c.
-                    node->timeSeconds = DELAY_TIME_MIN
-                                        + ((param_value(module, variation, DELAY_PARAM_TIME) / 127.0)
-                                           * (maxTime - DELAY_TIME_MIN));
+                    // Shared with the readout so the two cannot disagree — see delay_time_seconds()
+                    // in renderParams.c for the derivation and its hardware confirmation.
+                    node->timeSeconds = delay_time_seconds(maxTime,
+                                                           param_value(module, variation, DELAY_PARAM_TIME));
                 }
             }
             node->depth   = param_value(module, variation, DELAY_PARAM_FEEDBACK) / 127.0 * 0.95;

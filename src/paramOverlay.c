@@ -161,7 +161,13 @@ static void queue_row(tRectangle rectangle, const char * label, bool textAnchor)
     // bigger than the one on the dial beside it, and the views read better when every chip looks
     // the same wherever it lands.
     double     textHeight = (double)STANDARD_BUTTON_TEXT_HEIGHT * OVERLAY_TEXT_SCALE;
-    double     labelWidth = get_text_width(label, textHeight, eCache);
+    // eNoCache, NOT eCache: that cache is keyed on the text POINTER, so it is only safe for string
+    // literals, whose address and contents travel together. Every label here is built into a caller's
+    // stack buffer, which is the same address on every call — so the first label measured through
+    // that buffer had its width returned for every label after it, whatever the new contents were.
+    // The chip is sized from this, so a value that reached three digits kept the box it was given as
+    // one and overflowed its own backing.
+    double     labelWidth = get_text_width(label, textHeight, eNoCache);
     double     rowHeight  = textHeight + 2.0;
 
     // draw_button() insets its text from the rect it is handed by the padding it adds around it.

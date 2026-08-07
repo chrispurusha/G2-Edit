@@ -60,12 +60,16 @@ int delay_time_clk_param_index(tModuleType moduleType);
 // A delay's clock division: raw 0 is "1/64T" and the top of the dial is "2/1", i.e. backwards
 // through 22 of clkSyncStrMap's 32 entries — NOT the LFO's value/4 across all of them.
 // The bottom of a delay's Time scale, 0.01 ms — the scale is LINEAR from here to the Range maximum.
-#define DELAY_TIME_MIN    (0.00001)
+// The G2's own engine rate. Delay times are a whole number of SAMPLES at this rate, so it sets the
+// grid the Time dial lands on — see delay_time_seconds(). Nothing to do with the rate G2-Edit's own
+// sound engine happens to be running at.
+#define G2_ENGINE_SAMPLE_RATE    (96000.0)
 
 // The maximum a delay's Time dial reaches for a Range setting. Three different range tables exist
 // and the delay modules do not share one — see the implementation.
 double delay_range_max_seconds(tModuleType moduleType, uint32_t rangeValue);
 
+double delay_time_seconds(double maxSeconds, double paramValue);
 uint32_t clk_sync_index(double paramValue);
 double clk_sync_beats(double paramValue);
 
