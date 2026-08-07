@@ -50,21 +50,60 @@ extern "C" {
 #define OSCB_PARAM_WAVEFORM      (8)
 #define OSCB_PARAM_ACTIVE        (9)   // A power button: non-zero is on, 0 is bypassed
 
-#define FLT_PARAM_FREQ           (0)
-#define FLT_PARAM_ENV            (1)   // modulation depth for the Env input, 0..200%
-#define FLT_PARAM_KBT            (2)
-#define FLT_PARAM_RES            (3)
-#define FLT_PARAM_SLOPE          (4)
-#define FLT_PARAM_ACTIVE         (5)
+// Where each filter module keeps its parameters. They are NOT all laid out like FltClassic: FltLP
+// has no resonance at all, and its Slope sits one index earlier because of it. Reading a missing
+// parameter would take whatever the next one happens to be — for FltLP that would be Slope read as
+// resonance, i.e. a filter that self-oscillates because a menu index landed in a gain.
+//
+// -1 for a parameter the module does not have.
+typedef struct {
+    int freq;
+    int env;
+    int kbt;
+    int res;
+    int slope;
+    int active;
+} tFilterParams;
 
-#define ENV_PARAM_SHAPE          (0)
-#define ENV_PARAM_ATTACK         (1)
-#define ENV_PARAM_DECAY          (2)
-#define ENV_PARAM_SUSTAIN        (3)
-#define ENV_PARAM_RELEASE        (4)
+static bool filter_param_map(tModuleType type, tFilterParams * map) {
+    switch (type) {
+        case moduleTypeFltClassic:
+        {
+            *map = (tFilterParams){
+                0, 1, 2, 3, 4, 5
+            };
+            return true;
+        }
+        case moduleTypeFltLP:
+        {
+            // Freq, FreqMod, Kbt, Slope, Bypass — no Res.
+            *map = (tFilterParams){
+                0, 1, 2, -1, 3, 4
+            };
+            return true;
+        }
+        default:
+        {
+            return false;
+        }
+    }
+}
 
-#define LEVAMP_PARAM_GAIN        (0)
-#define LEVAMP_PARAM_TYPE        (1)   // 0 = lin, 1 = exp
+#define FLT_PARAM_FREQ       (0)
+#define FLT_PARAM_ENV        (1)       // modulation depth for the Env input, 0..200%
+#define FLT_PARAM_KBT        (2)
+#define FLT_PARAM_RES        (3)
+#define FLT_PARAM_SLOPE      (4)
+#define FLT_PARAM_ACTIVE     (5)
+
+#define ENV_PARAM_SHAPE      (0)
+#define ENV_PARAM_ATTACK     (1)
+#define ENV_PARAM_DECAY      (2)
+#define ENV_PARAM_SUSTAIN    (3)
+#define ENV_PARAM_RELEASE    (4)
+
+#define LEVAMP_PARAM_GAIN    (0)
+#define LEVAMP_PARAM_TYPE    (1)       // 0 = lin, 1 = exp
 
 // "Out to" — where the module sends. NOT every Out module reaches the speakers: the other settings
 // are internal routing, and a patch commonly uses one to feed its FX area.
@@ -177,9 +216,16 @@ static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4};
 
 // Which connector carries the signal into each module. Everything the walk follows is a module's
 // FIRST input; LevMult and 2toOut take a second as well.
-#define CONNECTOR_IN_A          (0)
-#define CONNECTOR_IN_B          (1)
-#define FLT_CONNECTOR_ENV_IN    (2)   // FltClassic's control input, the one beside its Env knob
+#define CONNECTOR_IN_A    (0)
+#define CONNECTOR_IN_B    (1)
+// FltClassic's control input, the one beside its Env knob.
+//
+// A RAW CONNECTOR INDEX, like every other entry in the connector maps below — cable_chain_node_from_
+// connector() indexes module->connector[] directly and derives the ioCount itself. FltClassic's
+// connectors run In(audio), Out(audio), In(control), In(control), so 2 is the first control input.
+// Briefly changed to 1 on the mistaken belief that these were input-direction indices; 1 is the
+// module's OUTPUT connector, which broke the filter outright.
+#define FLT_CONNECTOR_ENV_IN    (2)
 
 // The G2 caps the total pitch modulation reaching an oscillator or filter at +/-64 semitones
 // (manual p.78), which is what an Env amount of 100% corresponds to.
@@ -394,7 +440,8 @@ static _Atomic uint32_t   gRawPeakMilli               = 0;
 // read by the menu.
 typedef enum {
     eStatusOff = 0,
-    eStatusNoOutput,          // the patch has no Out module to take sound from
+    eStatusNoOutput,          // nothing selected, and no audible Out module to fall back to
+    eStatusMultipleSelected,
     eStatusUnsupportedModule,
     eStatusNoSource,
     eStatusChainTooDeep,
@@ -845,7 +892,11 @@ const char * sound_engine_status_text(void) {
     switch (gStatus) {
         case eStatusNoOutput:
         {
-            return "Patch something into an Out module";
+            return "Select a module, or patch something into an Out";
+        }
+        case eStatusMultipleSelected:
+        {
+            return "Select one module only";
         }
         case eStatusUnsupportedModule:
         {
@@ -935,16 +986,17 @@ const char * sound_engine_debug_text(void) {
         const tEngineNode * n = &gParams.node[i];
 
         used += (size_t)snprintf(text + used, sizeof(text) - used,
-                                 "[%u] %-8s mod=%u in=%d/%d/%d/%d src=%u/%u/%u/%u active=%d "
+                                 "[%u] %-8s mod=%u n=%u in=%d/%d src=%u/%u active=%d "
                                  "wave=%d kbt=%d pitch=%.2f shape=%.2f "
                                  "cut=%.1f res=%.2f poles=%u env=%.2f fltkbt=%.2f "
                                  "a=%.3f d=%.3f s=%.2f r=%.3f gain=%.2f time=%.3f mix=%.2f fb=%.2f\n",
                                  (unsigned)i,
                                  (n->kind < (sizeof(kindName) / sizeof(kindName[0]))) ? kindName[n->kind] : "?",
                                  (unsigned)n->moduleIndex,
-                                 (int)n->in[0], (int)n->in[1], (int)n->in[2], (int)n->in[3],
+                                 (unsigned)n->inCount,
+                                 (int)n->in[0], (int)n->in[1],
                                  (unsigned)n->srcOut[0], (unsigned)n->srcOut[1],
-                                 (unsigned)n->srcOut[2], (unsigned)n->srcOut[3], (int)n->active,
+                                 (int)n->active,
                                  (int)n->wave, (int)n->oscKbt, n->basePitch, n->shape,
                                  n->cutoffHz, n->resonance, (unsigned)n->extraPoles, n->modAmount, n->fltKbt,
                                  n->attack, n->decay, n->sustain, n->release, n->gain,
@@ -1090,6 +1142,7 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
             return true;
         }
         case moduleTypeFltClassic:
+        case moduleTypeFltLP:
         {
             *kind = eNodeFilter;
             return true;
@@ -1173,12 +1226,20 @@ static bool module_kind(tModule * module, tNodeKind * kind) {
 }
 
 // Which connectors each kind draws its signal from, in the order the node stores them.
-static uint32_t input_connectors(tNodeKind kind, bool stereoMix, const uint32_t ** connectors) {
+#define anyConnectorType    ((tConnectorType) - 1)
+static int connector_index_for_input(tModuleType moduleType, uint32_t nth, tConnectorType wantedType);
+
+static uint32_t input_connectors(tNodeKind kind, tModuleType moduleType, bool stereoMix, const uint32_t ** connectors) {
+    // Derived from the module resources rather than written out — see connector_index_for_input().
+    // Static because the chain is built on one thread; the contents are rewritten per call.
+    static uint32_t       derived[MAX_NODE_INPUTS];
     static const uint32_t oneIn[]       = {CONNECTOR_IN_A};
     static const uint32_t twoIn[]       = {CONNECTOR_IN_A, CONNECTOR_IN_B};
     static const uint32_t filterIn[]    = {CONNECTOR_IN_A, FLT_CONNECTOR_ENV_IN};
     static const uint32_t mixIn[]       = {0, 1, 2, 3};
-    static const uint32_t mixStereoIn[] = {2, 3, 4, 5, 6, 7, 8, 9}; // In1L,In1R .. In4L,In4R
+    // In1L, In1R .. In4L, In4R as RAW CONNECTOR indices: Mix4to1S's connector list really does run
+    // Out, Out, then ten inputs, so the first eight input legs are connectors 2..9.
+    static const uint32_t mixStereoIn[] = {2, 3, 4, 5, 6, 7, 8, 9};
     static const uint32_t envIn[]       = {0};                      // connector 0 is the audio the envelope shapes
     // OscB has "two pitch modulation inputs, one frequency modulation input, one sync modulation
     // input and a Shape modulation input" (manual, OscB). The two pitch inputs are the control-rate
@@ -1189,7 +1250,15 @@ static uint32_t input_connectors(tNodeKind kind, bool stereoMix, const uint32_t 
     switch (kind) {
         case eNodeFilter:
         {
-            *connectors = filterIn;
+            // Input 0 is the audio; the first CONTROL input is the one the Env knob scales. Asking
+            // the resources gets this right for any filter, whatever order its connectors sit in —
+            // FltClassic interleaves them as In(audio), Out, In(control), In(control).
+            int audioIn   = connector_index_for_input(moduleType, 0, connectorTypeAudio);
+            int controlIn = connector_index_for_input(moduleType, 1, anyConnectorType);
+
+            derived[0]  = (audioIn >= 0) ? (uint32_t)audioIn : CONNECTOR_IN_A;
+            derived[1]  = (controlIn >= 0) ? (uint32_t)controlIn : FLT_CONNECTOR_ENV_IN;
+            *connectors = derived;
             return 2;
         }
         case eNodeOsc:
@@ -1206,11 +1275,21 @@ static uint32_t input_connectors(tNodeKind kind, bool stereoMix, const uint32_t 
         }
         case eNodeMix:
         {
-            // Mix4to1C's four inputs are its first four connectors. Mix4to1S puts its two outputs
-            // first and then interleaves the inputs as stereo pairs, so all eight legs are read and
-            // summed to mono, with each channel's level applied to both of its legs.
-            *connectors = stereoMix ? mixStereoIn : mixIn;
-            return stereoMix ? 8 : 4;
+            // A mono mixer's four inputs, or a stereo one's eight legs as four stereo pairs. Both
+            // are just "the first N inputs", which the resources can answer — Mix4to1C happens to
+            // put its inputs first and Mix4to1S puts its two outputs first, and neither fact needs
+            // to be written down here any more.
+            uint32_t count = stereoMix ? 8 : 4;
+            uint32_t leg   = 0;
+
+            for (leg = 0; leg < count; leg++) {
+                int found = connector_index_for_input(moduleType, leg, anyConnectorType);
+
+                derived[leg] = (found >= 0) ? (uint32_t)found : (stereoMix ? mixStereoIn[leg] : mixIn[leg]);
+            }
+
+            *connectors = derived;
+            return count;
         }
         case eNodeChorus:
         case eNodeDelay:
@@ -1251,6 +1330,61 @@ static uint32_t input_connectors(tNodeKind kind, bool stereoMix, const uint32_t 
 // The module feeding a given input connector, or NULL. cable_chain_find_root() does the walking —
 // it follows a chain back to the output that sources it, including through the input-to-input links
 // the G2 uses for serial chains, and returns false if the chain never reaches a real output.
+
+// ---------------------------------------------------------------------------------------------
+// Connector lookup, derived from the module resources rather than hard-coded
+// ---------------------------------------------------------------------------------------------
+
+// The RAW connector index of a module type's Nth input, optionally restricted to a connector type.
+//
+// The engine used to carry hand-written index constants per module — CONNECTOR_IN_A, an "env in" at
+// 2, a mixer's legs at {2..9}. Every one of those encodes a fact the resources already state, and
+// getting one wrong is invisible: the signal simply never arrives, or arrives from the wrong socket.
+// Two such constants were "corrected" in opposite directions in one session before it became clear
+// they were describing the same thing badly. Ask the table instead.
+//
+// `anyConnectorType` means "any". Returns -1 when there is no such input, which callers treat as
+// unconnected.
+static int connector_index_for_input(tModuleType moduleType, uint32_t nth, tConnectorType wantedType) {
+    uint32_t total   = module_connector_count(moduleType);
+    uint32_t seen    = 0;
+    uint32_t index   = 0;
+    uint32_t listLen = array_size_connector_location_list();
+    uint32_t entry   = 0;
+
+    for (entry = 0; entry < listLen; entry++) {
+        const tConnectorLocation * loc = &connectorLocationList[entry];
+
+        if (loc->moduleType != moduleType) {
+            continue;
+        }
+
+        if (index >= total) {
+            break;
+        }
+
+        if (loc->direction == connectorDirIn) {
+            // Audio and Control are interchangeable as signal carriers here — the engine works in
+            // doubles throughout — so a caller asking for Control accepts Audio too and vice versa.
+            // Logic is what must not be mistaken for either.
+            bool typeOk = (wantedType == anyConnectorType)
+                          || (loc->type == wantedType)
+                          || (  ((wantedType == connectorTypeControl) || (wantedType == connectorTypeAudio))
+                             && ((loc->type == connectorTypeControl) || (loc->type == connectorTypeAudio)));
+
+            if (typeOk == true) {
+                if (seen == nth) {
+                    return (int)index;
+                }
+                seen++;
+            }
+        }
+        index++;
+    }
+
+    return -1;
+}
+
 static tModule * module_feeding(tModule * sink, uint32_t connectorIndex, uint32_t * sourceOutput) {
     tCableNode inputNode = {0};
     tCableNode root      = {0};
@@ -1288,13 +1422,13 @@ static tModule * voice_area_output_for_fx(uint32_t slot, uint32_t wantedBus) {
     uint32_t index = 0;
 
     for (index = 0; index < MAX_NUM_MODULES; index++) {
-        tModule * module = get_module_slot(slot, (uint32_t)locationVa, index);
+        tModule * module      = get_module_slot(slot, (uint32_t)locationVa, index);
 
         if (module == NULL) {
             continue;
         }
-        uint32_t variation   = gPatchDescr[slot].activeVariation;
-        uint32_t destination = module->param[variation][OUT_PARAM_DESTINATION].value;
+        uint32_t  variation   = gPatchDescr[slot].activeVariation;
+        uint32_t  destination = module->param[variation][OUT_PARAM_DESTINATION].value;
 
         if (module->type == moduleType2toOut) {
             // FX 1/2 is destination 2 and FX 3/4 is 3, so the bus index is the destination less 2.
@@ -1322,8 +1456,17 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
     tNodeKind     kind                            = eNodeOsc;
     tEngineNode * node                            = NULL;
     int32_t       self                            = 0;
-    int32_t       resolvedIn[MAX_NODE_INPUTS]     = {-1, -1, -1, -1};
+    // Every leg starts UNCONNECTED. This used to be written {-1, -1, -1, -1}, which supplies only
+    // four of the eight and lets C zero-fill the rest — and 0 is not "unconnected", it is node 0,
+    // the first node in the chain. A stereo mixer reads all eight legs, so its unpatched channels
+    // were quietly summing in whatever node 0 happened to be, usually an oscillator, raw.
+    int32_t       resolvedIn[MAX_NODE_INPUTS];
     uint32_t      resolvedSrcOut[MAX_NODE_INPUTS] = {0};
+
+    for (uint32_t leg = 0; leg < MAX_NODE_INPUTS; leg++) {
+        resolvedIn[leg] = -1;
+    }
+
     uint32_t      inCount                         = 0;
 
     if ((module == NULL) || (depth >= MAX_ENGINE_NODES) || (params->nodeCount >= MAX_ENGINE_NODES)) {
@@ -1352,13 +1495,28 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
 
     // Inputs first, so they land at lower node indices than this one.
     {
-        const uint32_t * connectors = NULL;
-        uint32_t         count      = input_connectors(kind, module->type == moduleTypeMix4to1S, &connectors);
-        uint32_t         c          = 0;
+        const uint32_t * connectors                     = NULL;
+        uint32_t         count                          = input_connectors(kind, module->type, module->type == moduleTypeMix4to1S, &connectors);
+        uint32_t         c                              = 0;
+        // COPIED before the loop, because input_connectors() may hand back a pointer to a static
+        // buffer and add_node() below recurses into itself for every input — a deeper node's own
+        // call would otherwise overwrite this node's list while it is still being walked, leaving
+        // every input after the first reading whatever the deepest module happened to want. The
+        // chain then differs from one build to the next, and since the engine resets its node state
+        // whenever the topology signature changes, the result is envelopes restarting continuously.
+        uint32_t         connectorList[MAX_NODE_INPUTS] = {0};
+
+        if (count > MAX_NODE_INPUTS) {
+            count = MAX_NODE_INPUTS;
+        }
+
+        for (c = 0; c < count; c++) {
+            connectorList[c] = connectors[c];
+        }
 
         for (c = 0; c < count; c++) {
             uint32_t  sourceOutput = 0;
-            tModule * source       = module_feeding(module, connectors[c], &sourceOutput);
+            tModule * source       = module_feeding(module, connectorList[c], &sourceOutput);
 
             resolvedIn[c]     = add_node(params, source, variation, depth + 1);
             resolvedSrcOut[c] = sourceOutput;
@@ -1594,11 +1752,18 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         case eNodeFilter:
         {
             node->cutoffHz   = flt_cutoff_hz(param_value(module, variation, FLT_PARAM_FREQ));
-            node->resonance  = param_value(module, variation, FLT_PARAM_RES) / 127.0;
-            node->extraPoles = flt_slope_extra_poles((uint32_t)param_value(module, variation, FLT_PARAM_SLOPE));
-            node->fltKbt     = flt_kbt_amount((uint32_t)param_value(module, variation, FLT_PARAM_KBT));
-            node->modAmount  = param_value(module, variation, FLT_PARAM_ENV) * 2.0 / 128.0;
-            node->active     = (param_value(module, variation, FLT_PARAM_ACTIVE) != 0.0);
+            tFilterParams map = {0, 1, 2, 3, 4, 5};
+
+            (void)filter_param_map(module->type, &map);
+
+            // A filter with no resonance control sits at the bottom of its range, not the middle.
+            node->resonance  = (map.res >= 0)
+                               ? (param_value(module, variation, (uint32_t)map.res) / 127.0) : 0.0;
+            node->extraPoles = (map.slope >= 0)
+                               ? flt_slope_extra_poles((uint32_t)param_value(module, variation, (uint32_t)map.slope)) : 0;
+            node->fltKbt     = flt_kbt_amount((uint32_t)param_value(module, variation, (uint32_t)map.kbt));
+            node->modAmount  = param_value(module, variation, (uint32_t)map.env) * 2.0 / 128.0;
+            node->active     = (param_value(module, variation, (uint32_t)map.active) != 0.0);
             break;
         }
         case eNodeEnv:
@@ -1770,14 +1935,13 @@ void sound_engine_update_from_patch(void) {
         }
     }
 
-    // SOUND COMES FROM THE PATCH'S OUTPUTS, always — never from whatever happens to be selected.
+    // SOUND COMES FROM THE PATCH'S AUDIBLE OUTPUTS, never from whatever happens to be selected.
     //
     // Auditioning the selected module was useful while the engine could only render a fragment of a
     // patch; now that it resolves the whole thing, a selection quietly changing what you hear is a
-    // surprise rather than a feature. It was also why the application and the plug-in disagreed:
-    // with a module selected the application tapped THAT, while the plug-in — which has no
-    // selection and no way to make one — always fell through to the outputs. Two different signal
-    // paths from one patch, and only one of them was what the patch actually says.
+    // surprise rather than a feature. It also gave the application and the plug-in two different
+    // signal paths from one patch — the plug-in has no selection and always took the outputs — which
+    // hid engine faults in whichever path was not being listened to.
     {
         tapModule = find_output_module();
 
@@ -1793,7 +1957,7 @@ void sound_engine_update_from_patch(void) {
             } else {
                 snapshot.tap = add_node(&snapshot, tapModule, variation, 0);
 
-                // Every other Out module in the patch, summed with the first.
+                // Every other audible Out module, summed with the first.
                 if (snapshot.tap >= 0) {
                     for (uint32_t l = 0; l < 2; l++) {
                         uint32_t location = (l == 0) ? (uint32_t)locationFx : (uint32_t)locationVa;
@@ -2812,14 +2976,26 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                     }
                     case eNodeMix:
                     {
-                        uint32_t c = 0;
+                        uint32_t c           = 0;
 
                         // A stereo mixer reads eight legs but has only four level knobs, so both legs
-                        // of a channel share one.
-                        for (c = 0; c < spec->inCount; c++) {
-                            uint32_t channel = (spec->inCount > MAX_NODE_INPUTS / 2) ? (c / 2) : c;
+                        // of a channel share one — and each CHANNEL contributes the average of its
+                        // two legs, not their sum.
+                        //
+                        // That halving matters because the engine is mono. Where a stereo pair is
+                        // fed from one mono-collapsed module — an Fx-In's L and R, or a reverb's two
+                        // outputs — both legs carry the SAME value, so summing them counted that
+                        // channel twice. A patch mixing dry (one stereo source) against two separate
+                        // mono delays (a pair of different modules) therefore heard the dry and the
+                        // reverb 6 dB hot against the delays. Averaging is also the right mono
+                        // downmix for a genuinely stereo pair, so it is correct in both cases.
+                        bool     stereoPairs = (spec->inCount > (MAX_NODE_INPUTS / 2));
+                        double   legScale    = stereoPairs ? 0.5 : 1.0;
 
-                            value[n][0] += signal_in(spec, value, c)
+                        for (c = 0; c < spec->inCount; c++) {
+                            uint32_t channel = stereoPairs ? (c / 2) : c;
+
+                            value[n][0] += signal_in(spec, value, c) * legScale
                                            * smooth_to(&gSmoothLevel[n][channel], spec->level[channel],
                                                        smoothCoeff, primed);
                         }
