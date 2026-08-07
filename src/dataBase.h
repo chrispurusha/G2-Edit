@@ -44,4 +44,7 @@ int find_index_from_io_count(tModule * module, tConnectorDir dir, int targetCoun
 void database_delete_cables_by_slot(uint32_t slot);
 void init_database(void);
 
+// Clear a slot completely: its modules, its cables, and the per-slot globals that go with them.
+void clear_slot_data(uint32_t slot);
+
 #endif // __DATABASE_H__
