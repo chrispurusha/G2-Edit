@@ -371,6 +371,140 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
 
 OPEN WORK
 
+=== SOUND ENGINE HANDOVER 2026-08-07 ===
+(Say "read the SOUND ENGINE HANDOVER section in G2-Edit/todo.txt" to pick this up in a new session.)
+
+--- 1. THE BLOCKER: the engine depends on connector data only the RENDERER fills in ---
+
+module->connector[].dir and .type are populated in moduleGraphics.c:768, i.e. while DRAWING each
+module. cable_chain_node_from_connector() reads module->connector[connectorIndex].dir, so every
+cable lookup silently depends on the module having been rendered at least once.
+
+Consequences:
+  - The application works. It draws the patch, so the array is filled and the filter envelope
+    connects. Owner confirms envelope modulation of the filter is roughly OK on the standalone.
+  - The VST3 plug-in NEVER RENDERS, so its connector array stays zeroed, every cable lookup fails,
+    and modulation inputs silently do not connect. This is why the plug-in's filter played shut.
+  - Any headless harness has the same fault, which is what misled me on 2026-08-07: I read a
+    zeroed-array failure as a cableChain bug and wrote it up as one. There is NO cableChain bug.
+
+FIX: populate module->connector[] from connectorLocationList when a module is created/loaded —
+dataBase.c or protocol.c — instead of as a side effect of drawing. The data is entirely static per
+module type, so this is the same "ask the resources" move as connector_index_for_input() in
+soundEngine.c, applied to the array itself. moduleGraphics.c:768 can then just read it.
+
+Until that is done, ANY headless measurement of the engine is unreliable: chains resolve with
+modulation inputs missing, so levels and tone are both wrong and wrong in a way that looks like a
+DSP problem. Do not tune the engine against a headless harness before fixing this.
+
+--- 2. Filter modulation scaling is the wrong SHAPE, not just the wrong number ---
+
+Ours (soundEngine.c, filter_step):
+    cutoff *= pow(2.0, mod * modAmount * FULL_MOD_SEMITONES / 12.0);   // FULL_MOD_SEMITONES = 64
+Multiplicative, in octaves, with NO clamp on (mod * modAmount).
+
+The hardware (G2Demo.c, CNativeFilterModPart::Compute ~line 359837) instead:
+    scaled = -knob * modSignal
+    sum    = baseCutoff + (scaled >> 23)          Q23 fixed point
+    ctrl   = clamp(sum, -0x800000, 0x7fffff)      i.e. +/-1.0 in a NORMALISED control domain
+    ctrl then feeds two multiply-accumulates that produce the coefficient pair
+i.e. modulation is summed with the base and CLAMPED in a 0..1 control domain, and only then
+converted to a frequency — the conversion living downstream in CNativeFilterCoeffsPart.
+
+Do NOT just retune FULL_MOD_SEMITONES to 127. Fitting a constant to compensate for a missing clamp
+and a different domain is exactly how the old envelope-time power fit and the LFO Rate Sub
+exponential both ended up plausible and wrong. Port the model: normalise base cutoff to 0..1, add
+mod * knob, clamp, convert once using the constants from CNativeFilterCoeffsPart.
+
+--- 3. CLEARED 2026-08-07: the filter coefficient rate is CORRECT, this was not a bug ---
+
+The suspicion was that filter_step computes g = 1 - exp(-2*pi*cutoff / gSampleRate) against an
+oversampled gSampleRate while the filter itself runs at base rate, making the cutoff several times
+too low. It does not. THE WHOLE GRAPH RUNS OVERSAMPLED, not just the oscillators (ENGINE_OVERSAMPLE
+is 2, soundEngine.c:465):
+  - sound_engine_set_sample_rate() sets gDeviceRate 48k, gSampleRate 96k — gSampleRate IS the
+    internal rate by definition.
+  - sound_engine_render() wraps the entire node graph in for (sub < ENGINE_OVERSAMPLE), :2854-3119,
+    and filter_step is called INSIDE it at :2952. The output decimator runs after, once per frame.
+So the filter is evaluated at 96 kHz and its coefficient is derived from 96 kHz. Rate matches; no
+4x error and no 2x one. OSC_OVERSAMPLE = (4 / ENGINE_OVERSAMPLE) keeps the oscillators at 4x the
+device rate on top of that. The VST3 passes the host rate straight in (g2Vst3.cpp:287), so the
+plug-in's filter is no darker than the app's — its shut filter is entirely section 1.
+
+STALE COMMENT, worth fixing when the filter is next touched: the block at soundEngine.c:2779 still
+says the LADDER_MAX_G clamp is "a consequence of running at the OUTPUT rate" and that "the real fix
+is to run the filter oversampled". That describes the pre-ENGINE_OVERSAMPLE engine. The clamp may
+now bite earlier than it needs to at 96 kHz, but that is range at the very top of the dial, not
+tone across it.
+
+--- 4. G2Demo.c DOES contain the full emulated DSP (I claimed otherwise; I was wrong) ---
+
+Real audio: AudioOutputProc -> PortAudio -> CoreAudio AudioDeviceAddIOProc (~line 402172).
+299 CNative*Part classes, each with Compute() — the per-module DSP. List them with:
+    grep -oE "CNative[A-Za-z0-9_]*Part" G2Demo.c | sort -u
+Searching for AudioUnit/RenderCallback finds nothing and is what misled me.
+
+Reading the Compute() bodies (CDspEmulator = SHARC fixed point emulated in software):
+    0x7fffff / 0xff800000   24-bit saturation clamps
+    >> 0x17 after a multiply Q23 fixed-point multiply
+    g_r3 / g_r4             emulated register indices into the input arrays
+    DAT_0031xxxx            coefficient constants — the actual magic numbers
+    repeated x = a*x >> 0x17  successive powers, i.e. a polynomial
+Worked example: CNativeSaturatePart::Compute builds successive powers, so Saturate is a polynomial
+waveshaper. Also present: 229 ParamText:: functions giving parameter->real-unit meanings
+authoritatively (that family is what fixed the delay Clk mapping).
+Cross-check DSP against github.com/gleb812/pch2csd (MIT) — its resources/value_maps.json has 116
+parameter maps, 113 still unchecked. Do not cite decompilation in committed material.
+
+--- 5. KEEP: connector indices are now derived from moduleResources ---
+
+connector_index_for_input(moduleType, nth, wantedType) in soundEngine.c walks connectorLocationList
+and answers "raw index of this module's Nth input, of this type". Filter and both mixers use it;
+the old constants remain only as fallbacks. DO NOT go back to hard-coded indices — two of them were
+"corrected" in opposite directions in one session before it became clear they restated facts the
+resources already hold.
+
+--- 6. Fixed 2026-08-07, do not re-break ---
+
+- resolvedIn[MAX_NODE_INPUTS] was initialised {-1,-1,-1,-1} — only 4 of 8, so legs 4-7 defaulted to
+  0, i.e. NODE 0. Unpatched stereo-mixer channels summed a raw oscillator.
+- input_connectors() returns a pointer to a STATIC buffer and add_node() recurses per input, so a
+  deeper node clobbered the outer node's list mid-walk. The chain then varied between builds, and
+  since the engine resets node state whenever the topology signature changes, envelopes restarted
+  continuously ("envelope seems to be cycling"). The list is now copied to a local before recursing.
+- "Out to" was never read: FX/Bus destinations were treated as speaker outputs. out_module_is_audible().
+- Fx-In was fed by the Voice-area Out regardless of routing; both selectors must now agree
+  (voice_area_output_for_fx).
+- Stereo mixer pairs were SUMMED; a mono-collapsed pair (Fx-In L/R, reverb L/R) counted twice, 6 dB
+  hot against a pair of genuinely different modules. Now averaged.
+- Selection-based auditioning REMOVED at owner's instruction: sound comes only from audible Outs.
+
+--- 7. Tried and REVERTED — do not retry ---
+
+- FLT_CONNECTOR_ENV_IN 2 -> 1 and mixStereoIn {2..9} -> {0..7}, on the false premise that these were
+  input-direction indices. They are RAW CONNECTOR indices: cable_chain_node_from_connector() indexes
+  module->connector[] directly and derives the ioCount itself. Index 1 on FltClassic is its OUTPUT,
+  which broke the filter outright. The apparent evidence (mixIn = {0,1,2,3} "working") proved
+  nothing — Mix4to1C's first four connectors are inputs, so it reads the same under either
+  convention. A case that cannot discriminate is not evidence.
+
+--- 8. Also open ---
+
+- VOICE_GAIN is a flat 0.15 (-16.5 dB) and the engine is monophonic, so it is not protecting against
+  voice stacking. Measured as exactly the quiet output level. Needs a real gain-staging decision,
+  especially before polyphony.
+- Polyphony: Voice Area is per-voice, FX Area is global. Needs node state split by area
+  ([MAX_VOICES][MAX_ENGINE_NODES] for VA nodes, single-instance for FX), a voice allocator honouring
+  gPatchDescr[slot].voiceCount, and per-voice glide/note queue. The VA-Out -> FX-bus link the engine
+  now models correctly is already the right join point.
+- Module coverage: ~17 of the G2's modules. FltLP added 2026-08-07 with a per-module filter param
+  map (it has NO resonance, so its Slope sits one index earlier than FltClassic's — blind reuse
+  would read a menu index as a resonance value). Extend that map per module; read indices, never
+  assume them. FltHP was deliberately NOT added: its Slope entry sits ~1500 lines from its other
+  params in moduleResources.h and could not be confirmed.
+
+=== END SOUND ENGINE HANDOVER ===
+
 - clear_slot_data(): TWO FUNCTIONS DISAGREED AND STILL DO (2026-08-07). There were two functions of
   that name — one in graphics.c, one `static` in usbComms.c quietly shadowing it. Moving the first
   into dataBase.c (so a GUI-free build could reach it) made them collide and exposed the difference:
