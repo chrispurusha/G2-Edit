@@ -29,9 +29,13 @@
 // than inherited. It is dull but it is all here, which is the point.
 //
 // One class implements IComponent, IAudioProcessor and IEditController together. VST3 allows a
-// processor and a controller to be separate objects, and a large plug-in wants that separation, but
-// this one has no parameters to automate and no editor, so splitting them would be three files of
-// ceremony around nothing.
+// processor and a controller to be separate objects, and a large plug-in wants that separation - but
+// this one has nine parameters and no custom editor, so splitting them would be three files of
+// ceremony around very little.
+//
+// There is no IPlugView: the host draws its own generic panel from the parameters the controller
+// reports. Those parameters are therefore the entire user interface, which is why exposing none made
+// the plug-in look broken in a host even though it loaded and played correctly.
 
 #include <atomic>
 #include <cstring>
@@ -45,6 +49,7 @@
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
 #include "pluginterfaces/vst/ivsteditcontroller.h"
 #include "pluginterfaces/vst/ivstevents.h"
+#include "pluginterfaces/vst/ivstparameterchanges.h"
 
 extern "C" {
 #include "soundEngine.h"
@@ -277,6 +282,37 @@ public:
     }
 
     tresult PLUGIN_API process(ProcessData & data) SMTG_OVERRIDE {
+        // Automation, before anything is rendered. Only the LAST point in each queue is taken: the
+        // engine has no notion of a parameter ramping within a block, so interpolating between
+        // points would be inventing a resolution it cannot use. Same block-granularity trade as the
+        // notes below.
+        if (data.inputParameterChanges != nullptr) {
+            int32 queues = data.inputParameterChanges->getParameterCount();
+
+            for (int32 q = 0; q < queues; q++) {
+                IParamValueQueue * queue = data.inputParameterChanges->getParameterData(q);
+
+                if (queue == nullptr) {
+                    continue;
+                }
+                int32 points = queue->getPointCount();
+
+                if (points <= 0) {
+                    continue;
+                }
+                int32      offset = 0;
+                ParamValue value  = 0.0;
+
+                if (queue->getPoint(points - 1, offset, value) == kResultOk) {
+                    ParamID id = queue->getParameterId();
+
+                    if (id < (ParamID)kNumParams) {
+                        apply_param(id, value);
+                    }
+                }
+            }
+        }
+
         // Notes first, for the whole block. The engine timestamps nothing, so sample-accurate event
         // placement inside the block is lost - a note lands at the start of the buffer it arrived
         // in. At 44.1k and a 512 frame buffer that is under 12 ms of jitter; worth revisiting only
@@ -332,55 +368,94 @@ public:
     }
 
     // ---- IEditController -----------------------------------------------------------------------
-    // No automatable parameters yet: the patch is the state, and the morph groups are the obvious
-    // first thing to expose once there is something to test against.
+    // There is no custom editor - createView() returns nothing - so these parameters ARE the user
+    // interface: the host draws its own generic panel from them. A plug-in that exposes none gets an
+    // empty panel and looks broken, which is exactly how it looked before these existed.
+    //
+    // The eight morph groups are the G2's own performance controls, so they are the right things to
+    // put in front of a host: automating a morph is the nearest thing to playing the hardware.
     tresult PLUGIN_API setComponentState(IBStream * state) SMTG_OVERRIDE {
         return setState(state);
     }
 
     int32 PLUGIN_API getParameterCount(void) SMTG_OVERRIDE {
-        return 0;
+        return kNumParams;
     }
 
     tresult PLUGIN_API getParameterInfo(int32 paramIndex, ParameterInfo & info) SMTG_OVERRIDE {
-        (void)paramIndex;
-        (void)info;
-        return kResultFalse;
+        if ((paramIndex < 0) || (paramIndex >= kNumParams)) {
+            return kResultFalse;
+        }
+        memset(&info, 0, sizeof(info));
+        info.id                 = (ParamID)paramIndex;
+        info.stepCount          = 0;                    // continuous
+        info.unitId             = 0;                    // kRootUnitId
+        info.flags              = ParameterInfo::kCanAutomate;
+
+        if (paramIndex < kMorphCount) {
+            char title[32];
+
+            snprintf(title, sizeof(title), "Morph %d", paramIndex + 1);
+            copy_name(info.title, title);
+            copy_name(info.shortTitle, title);
+            info.defaultNormalizedValue = 0.0;
+        } else {
+            copy_name(info.title, "Output Level");
+            copy_name(info.shortTitle, "Level");
+            copy_name(info.units, "dB");
+            info.defaultNormalizedValue = 1.0;           // unity; the trim only attenuates
+        }
+        return kResultOk;
     }
 
     tresult PLUGIN_API getParamStringByValue(ParamID id, ParamValue valueNormalized, String128 string) SMTG_OVERRIDE {
-        (void)id;
-        (void)valueNormalized;
-        (void)string;
-        return kResultFalse;
+        char text[32];
+
+        if (id < kMorphCount) {
+            snprintf(text, sizeof(text), "%.1f%%", valueNormalized * 100.0);
+        } else if (id == kParamLevel) {
+            double db = level_db(valueNormalized);
+
+            if (db <= kLevelMinDb) {
+                snprintf(text, sizeof(text), "-inf");
+            } else {
+                snprintf(text, sizeof(text), "%.1f", db);
+            }
+        } else {
+            return kResultFalse;
+        }
+        copy_name(string, text);
+        return kResultOk;
     }
 
     tresult PLUGIN_API getParamValueByString(ParamID id, TChar * string, ParamValue & valueNormalized) SMTG_OVERRIDE {
         (void)id;
         (void)string;
         (void)valueNormalized;
-        return kResultFalse;
+        return kResultFalse;                             // typed entry not supported; the host falls back to its knob
     }
 
     ParamValue PLUGIN_API normalizedParamToPlain(ParamID id, ParamValue valueNormalized) SMTG_OVERRIDE {
-        (void)id;
-        return valueNormalized;
+        return (id == kParamLevel) ? level_db(valueNormalized) : (valueNormalized * 100.0);
     }
 
     ParamValue PLUGIN_API plainParamToNormalized(ParamID id, ParamValue plainValue) SMTG_OVERRIDE {
-        (void)id;
-        return plainValue;
+        if (id == kParamLevel) {
+            return (plainValue - kLevelMinDb) / (0.0 - kLevelMinDb);
+        }
+        return plainValue / 100.0;
     }
 
     ParamValue PLUGIN_API getParamNormalized(ParamID id) SMTG_OVERRIDE {
-        (void)id;
-        return 0.0;
+        return (id < kNumParams) ? params[id] : 0.0;
     }
 
     tresult PLUGIN_API setParamNormalized(ParamID id, ParamValue value) SMTG_OVERRIDE {
-        (void)id;
-        (void)value;
-        return kResultFalse;
+        if (id >= kNumParams) {
+            return kResultFalse;
+        }
+        apply_param(id, value);
+        return kResultOk;
     }
 
     tresult PLUGIN_API setComponentHandler(IComponentHandler * handler) SMTG_OVERRIDE {
@@ -398,7 +473,36 @@ public:
     }
 
 private:
-    static const int32 kMaxBlock = 4096;
+    static const int32  kMaxBlock   = 4096;
+    static const int32  kMorphCount = 8;                 // NUM_MORPHS, without pulling defs.h into C++
+    static const ParamID kParamLevel = 8;
+    static const int32  kNumParams  = 9;
+
+    // The output trim attenuates only — sound_engine_set_output_level_db() clamps anything at or
+    // above 0 dB to unity, deliberately, so this is a fader and not a boost into the limiter.
+    static constexpr double kLevelMinDb = -60.0;
+
+    static double level_db(ParamValue normalized) {
+        return kLevelMinDb + (normalized * (0.0 - kLevelMinDb));
+    }
+
+    // Both the host's generic panel (via setParamNormalized, on its UI thread) and automation (via
+    // process(), on the audio thread) land here. Every engine entry point it calls stores through an
+    // atomic, so there is nothing to guard.
+    void apply_param(ParamID id, ParamValue value) {
+        if (value < 0.0) {
+            value = 0.0;
+        } else if (value > 1.0) {
+            value = 1.0;
+        }
+        params[id] = value;
+
+        if (id < (ParamID)kMorphCount) {
+            sound_engine_set_morph((uint32_t)id, value);
+        } else if (id == kParamLevel) {
+            sound_engine_set_output_level_db(level_db(value));
+        }
+    }
 
     void load_patch(void) {
         // Slot 0 always: a plug-in instance is one patch, and the four-slot performance layout is a
@@ -422,6 +526,7 @@ private:
     }
 
     std::atomic<int32> refCount;
+    ParamValue         params[kNumParams] = {0};
     double             sampleRate;
     bool               active;
     std::string        patchPath;
