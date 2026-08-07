@@ -466,6 +466,116 @@ bool handle_module_press(tCoord coord, tMouseButton mouseButton) {
     return false;
 }
 
+// Step the parameter under the cursor by one raw wire unit. A dial maps its whole range across a
+// few tens of pixels, so a drag cannot reliably land on a chosen value, let alone move by exactly
+// one - which is what identifying a parameter's real quantisation needs (where does the synth's own
+// display actually change?). The step is written to the device exactly as a drag's is, so the G2
+// reacts to each one. Pair it with View > Parameter Values to see the raw number being stepped.
+static bool nudge_param_for_module(tModule * module, tCoord coord, uint32_t variation, int delta) {
+    uint32_t paramCount = 0;
+
+    if (module->key.location == locationMorph) {
+        paramCount = (module->key.index == 1) ? (NUM_MORPHS * 2) : 1;
+    } else {
+        paramCount = module_param_count(module->type);
+    }
+
+    for (uint32_t i = 0; i < paramCount; i++) {
+        tParam *   param = &module->param[variation][i];
+        tParamType type  = paramTypeCommonDial;
+        uint32_t   range = 128;
+        int        newValue;
+
+        if (!within_rectangle(coord, gParamRectangle[module->key.slot][module->key.location][module->key.index][i])) {
+            continue;
+        }
+
+        if (module->key.location != locationMorph) {
+            type  = paramLocationList[param->paramRef].type;
+            range = paramLocationList[param->paramRef].range;
+        }
+
+        // Push is momentary and CustomData is not a scalar, so neither has a value to step. Return
+        // true regardless: the cursor IS over this parameter, and falling through to keep looking
+        // would let a widget behind it take the keypress instead.
+        if ((type == paramTypePush) || (type == paramTypeCustomData) || (range == 0)) {
+            return true;
+        }
+        newValue = (int)param->value + delta;
+
+        if (newValue < 0) {
+            newValue = 0;
+        } else if (newValue >= (int)range) {
+            newValue = (int)range - 1;
+        }
+
+        if ((uint32_t)newValue != param->value) {
+            param->value = (uint32_t)newValue;
+            send_param_value(module->key.slot, module->key, i, variation, (uint32_t)newValue);
+        }
+        return true;
+    }
+
+    // Mode selectors render as dials too, so hovering one and getting nothing would be the
+    // surprise. They carry their own range table and their own write command.
+    for (uint32_t i = 0; i < module->modeCount; i++) {
+        tMode *  mode  = &module->mode[i];
+        uint32_t range = modeLocationList[mode->modeRef].range;
+        int      newValue;
+
+        if (!within_rectangle(coord, mode->rectangle)) {
+            continue;
+        }
+
+        if (range == 0) {
+            return true;
+        }
+        newValue = (int)mode->value + delta;
+
+        if (newValue < 0) {
+            newValue = 0;
+        } else if (newValue >= (int)range) {
+            newValue = (int)range - 1;
+        }
+
+        if ((uint32_t)newValue != mode->value) {
+            mode->value = (uint32_t)newValue;
+            send_mode_value(module->key.slot, module->key, i, (uint32_t)newValue);
+        }
+        return true;
+    }
+
+    return false;
+}
+
+static bool nudge_param_under_cursor(int delta) {
+    tCoord   coord     = {0};
+    uint32_t slot      = gSlot;
+    uint32_t variation = gPatchDescr[slot].activeVariation;
+
+    get_global_gui_scaled_mouse_coord(&coord);
+
+    // Same precedence as handle_module_press(): morph knobs are drawn on top of the canvas, so they
+    // have to win the hit test against a module param that happens to sit at the same place.
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
+
+        if (module->active && nudge_param_for_module(module, coord, variation, delta)) {
+            return true;
+        }
+    }
+
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, gLocation, i);
+
+        if (module->active && nudge_param_for_module(module, coord, variation, delta)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static bool handle_module_release_for_module(tModule * module, tCoord coord, tMouseButton mouseButton, uint32_t slot, uint32_t variation) {
     bool       retVal     = false;
     uint32_t   paramCount = 0;
@@ -2247,6 +2357,23 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         // right-click assign menu, and a dialog every time a stray L is typed would defeat that.
         LOG_INFO("L pressed - MIDI Learn\n");
         midi_learn_focused_param();
+    } else if (  (  (key == GLFW_KEY_EQUAL) || (key == GLFW_KEY_KP_ADD)
+                 || (key == GLFW_KEY_MINUS) || (key == GLFW_KEY_KP_SUBTRACT))
+              && ((action == GLFW_PRESS) || (action == GLFW_REPEAT))
+              && (gCommandKeyPressed == false)
+              && ((mods & (GLFW_MOD_SUPER | GLFW_MOD_CONTROL | GLFW_MOD_ALT)) == 0)) {
+        // Bare +/- step the hovered parameter up/down by one raw unit. GLFW reports the physical
+        // key, so '+' arrives as GLFW_KEY_EQUAL with Shift held - which is why Shift is deliberately
+        // NOT in the modifier guard below, and why the keypad's own pair is accepted too.
+        //
+        // The other two guards are both needed: mods covers the real keyboard, gCommandKeyPressed is
+        // the flag the Cmd branch below runs on, and Cmd -/+ (canvas zoom) must keep reaching it.
+        // GLFW_REPEAT is honoured so holding a key walks the range instead of one press per unit.
+        bool increment = (key == GLFW_KEY_EQUAL) || (key == GLFW_KEY_KP_ADD);
+
+        if (nudge_param_under_cursor(increment ? 1 : -1)) {
+            synthlib_request_redraw();
+        }
     } else if (action == GLFW_PRESS && gCommandKeyPressed == true) {
         tRectangle area  = {0};
         tCoord     coord = {0};
