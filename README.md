@@ -114,4 +114,49 @@ After editing source files, run from the repository root:
 ./do-uncrustify
 ```
 
+Note this covers `src/` and `SynthLib/src/` only — **not** `vst3/`.
+
+## Building the VST3 plug-in (experimental)
+
+The sound engine can also be built as a VST3 plug-in. It plays a `.pch2` file rather than talking
+to a G2, and it renders through the same `soundEngine.c` the application uses.
+
+### Prerequisites
+
+Download the [VST3 SDK](https://github.com/steinbergmedia/vst3sdk) — MIT licensed, so it is
+compatible with this project's GPLv3 — and place it at `~/Documents/vst3sdk`, or point
+`VST3_SDK` at wherever you put it. Only its `pluginterfaces/` directory is compiled, plus one file
+from `public.sdk` that does nothing but instantiate interface IDs. No CMake is involved, and the
+SDK does **not** need building first.
+
+### Build
+
+```
+./do-vst3
+```
+
+Writes `build/G2 Edit.vst3` — universal (arm64 + x86_64), ad-hoc signed. To install it:
+
+```
+cp -R "build/G2 Edit.vst3" ~/Library/Audio/Plug-Ins/VST3/
+```
+
+As with the application, there is no paid Apple Developer membership behind this, so a host may
+refuse to load the bundle until its quarantine flag is cleared.
+
+### Choosing the patch
+
+There is no plug-in editor, so the patch is chosen by path, in this order:
+
+1. the path saved into the host project (the plug-in stores a path, not the patch bytes, so
+   editing that patch in G2-Edit is picked up rather than frozen into the project)
+2. `$G2_VST3_PATCH`
+3. `~/Documents/G2-Edit/plugin.pch2`
+
+### What to expect
+
+The plug-in inherits exactly what the sound engine can do, which is a **subset** of the G2: around
+17 module types. A patch built from anything else will load without complaint and render silence.
+`PatchTestFiles/SimpleLead.pch2` is known to work.
+
 See [THIRD_PARTY.md](./THIRD_PARTY.md) for open-source acknowledgments.

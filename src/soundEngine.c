@@ -757,6 +757,36 @@ static void build_decimator(void) {
     gOutHistoryPos = 0;
 }
 
+// Everything sound_engine_start() does APART from opening an audio device. Split out so a host that
+// owns the device already — the VST3 wrapper, which is handed a buffer to fill rather than asking
+// CoreAudio for one — can prepare the engine without audioOutput.c being involved at all.
+static void engine_prime(void) {
+    build_decimator();
+    // Start from silence rather than inheriting whatever the last run left behind. That includes
+    // the note queue: anything posted while the engine was off — the Virtual Keyboard, or MIDI from
+    // a previous run — is stale, and starting the read index behind the write index would have the
+    // audio thread chewing through history instead of playing what is being pressed now.
+    gNoteRead    = atomic_load(&gNoteWrite);
+    reset_node_state();
+    gEnvelope    = 0.0;
+    gGateOpen    = false;
+    gVoiceNote   = -1;
+    gGlidePitch  = -1.0;
+    gGlideActive = false;
+}
+
+// For a plug-in host: prime the engine and mark it live, but leave the audio device alone. The
+// caller drives sound_engine_render() from its own process callback.
+void sound_engine_start_hosted(double sampleRate) {
+    sound_engine_set_sample_rate(sampleRate);
+    engine_prime();
+    atomic_store(&gActive, true);
+}
+
+void sound_engine_stop_hosted(void) {
+    atomic_store(&gActive, false);
+}
+
 bool sound_engine_start(void) {
     if (atomic_load(&gActive) == true) {
         return true;

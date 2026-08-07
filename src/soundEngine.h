@@ -72,6 +72,11 @@ const char * sound_engine_modulation_text(void);
 bool sound_engine_start(void);
 void sound_engine_stop(void);
 
+// Plug-in host entry points: same preparation as sound_engine_start()/stop(), but the caller owns
+// the audio device and drives sound_engine_render() itself. audioOutput.c is not involved.
+void sound_engine_start_hosted(double sampleRate);
+void sound_engine_stop_hosted(void);
+
 // A morph group's position, 0..1. The G2 has eight, each hard-wired to a source — group 0 is the
 // modulation wheel, and morphStrMap in moduleResources.h names the rest. Setting one sweeps every
 // parameter that has a morph range recorded for that group between its dialled value and its morph

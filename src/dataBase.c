@@ -23,6 +23,7 @@ extern "C" {
 
 #include "defs.h"
 #include "synthlibDefs.h"
+#include "globalVars.h"
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 
@@ -248,3 +249,23 @@ void init_database(void) {
 #ifdef __cplusplus
 }
 #endif
+
+// Clearing everything a slot holds - modules, cables and the per-slot arrays that live in
+// globalVars rather than in the database proper. Was in graphics.c, which made it unreachable
+// from anything without a GUI; nothing in it ever touched the screen.
+
+void clear_slot_data(uint32_t slot) {
+    if (slot < MAX_SLOTS) {
+        database_delete_cables_by_slot(slot);
+        database_delete_modules_by_slot(slot);
+        gMorphCount[slot]      = 0;
+        gNote2Size[slot]       = 0;
+        gControllerCount[slot] = 0;
+        gPatchNotesSize[slot]  = 0;
+        memset(&(gPatchDescr[slot]), 0, sizeof(gPatchDescr[0]));
+        memset(&(gKnobArray[slot]), 0, sizeof(gKnobArray[0]));
+        memset(gNote2[slot], 0, sizeof(gNote2[0]));
+        memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
+        memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
+    }
+}

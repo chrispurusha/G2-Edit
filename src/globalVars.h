@@ -20,14 +20,9 @@
 #ifndef __GLOBAL_VARS_H__
 #define __GLOBAL_VARS_H__
 
-// Disable warnings from external library headers etc.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Weverything"
-
-#define GL_SILENCE_DEPRECATION    1
-#include <GLFW/glfw3.h>
-
-#pragma clang diagnostic pop
+// No GLFW here: nothing this header declares uses it, and pulling it in made globalVars.h — which
+// the sound engine needs — impossible to include from a build with no window system, such as the
+// VST3 plug-in. The files that genuinely draw include it themselves.
 
 #include "sysIncludes.h"
 #include "defs.h"
@@ -78,7 +73,7 @@ extern uint32_t                gNote2Size[MAX_SLOTS];
 extern uint8_t                 gNote2[MAX_SLOTS][1024];
 extern uint32_t                gAssignedVoices[MAX_SLOTS];
 extern tControllerArray        gControllerArray[MAX_SLOTS];
-extern uint32_t                gControllerCount[MAX_SLOTS]; // nullified alongside gKnobArray/gControllerArray by clear_slot_data() (graphics.cpp) on every new patch load
+extern uint32_t                gControllerCount[MAX_SLOTS]; // nullified alongside gKnobArray/gControllerArray by clear_slot_data() (dataBase.c) on every new patch load
 extern uint32_t                gPatchNotesSize[MAX_SLOTS];
 extern uint8_t                 gPatchNotes[MAX_SLOTS][PATCH_NOTES_SIZE + 1];
 extern char                    gSavedPatchPath[MAX_SLOTS][FILE_PATH_SIZE];

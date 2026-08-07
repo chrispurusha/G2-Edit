@@ -2836,7 +2836,12 @@ static int send_select_variation(uint32_t slot, uint32_t variation) {
 // Slot data management
 // ---------------------------------------------------------------------------
 
-static void clear_slot_data(uint32_t slot) {
+// The USB thread's own slot clear, NOT dataBase.c's clear_slot_data(). The two are deliberately
+// kept apart because they do not agree: this one leaves gMorphCount at 8 where the other zeroes it,
+// and it does not clear gNote2/gPatchNotes at all. Which is right is an open question — until it is
+// answered, neither path's behaviour is changed by merging them. They were previously both called
+// clear_slot_data(), the static one here quietly shadowing the other.
+static void clear_slot_data_usb(uint32_t slot) {
     database_delete_modules_by_slot(slot);
     database_delete_cables_by_slot(slot);
 
@@ -2910,7 +2915,7 @@ static int send_set_seq_note_custom_data(uint32_t slot, tModuleKey key, uint32_t
 static int send_get_patch_data(uint32_t slot) {
     int retVal = EXIT_SUCCESS;
 
-    clear_slot_data(slot);
+    clear_slot_data_usb(slot);
 
     retVal |= send_get_patch_version(slot);
     retVal |= send_get_patch(slot);
@@ -3719,7 +3724,7 @@ static int load_perf_from_payload(uint8_t * buff, int64_t byteOffset, int64_t pa
     gotPerfSettingsChangeIndication = false;
 
     for (int i = 0; i < MAX_SLOTS; i++) {
-        clear_slot_data(i);
+        clear_slot_data_usb(i);
     }
 
     // Derive performance name from the filename (strip directory and .prf2 extension).
@@ -3760,7 +3765,7 @@ static int load_patch_from_payload(uint8_t * buff, int64_t byteOffset, int64_t p
     // read the old device patch back over what we're about to parse and write.
     gotPatchChangeIndication[slot] = false;
 
-    clear_slot_data(slot);
+    clear_slot_data_usb(slot);
     parse_patch(slot, buff + byteOffset, (uint32_t)payloadLen);
     set_patch_name_from_filename(slot, filePath);
     free(buff);

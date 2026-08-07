@@ -1,0 +1,117 @@
+#!/bin/zsh
+# Build the G2-Edit VST3 plug-in.
+#
+# A separate script rather than an Xcode target, because a .vst3 is just a bundle around one dylib
+# and this needs no build system to say so - the same reasoning that keeps do-release a script.
+#
+# Only pluginterfaces/ from the SDK is used: its headers, plus the two .cpp files that define the
+# interface IIDs and the FUnknown helpers. public.sdk and vstgui are not compiled, so there is no
+# CMake anywhere in this.
+
+set -e
+
+SDK="${VST3_SDK:-$HOME/Documents/vst3sdk}"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+OUT="$HERE/build/G2 Edit.vst3"
+BIN="$OUT/Contents/MacOS/G2 Edit"
+
+if [[ ! -d "$SDK/pluginterfaces" ]]; then
+    print -u2 "error: VST3 SDK not found at $SDK"
+    print -u2 "       set VST3_SDK to its location"
+    exit 1
+fi
+
+# The engine and everything it reads the patch through. Deliberately NOT graphics.c, mouseHandle.c
+# or anything else with a window in it - if this list ever needs one of those, something that should
+# have stayed platform-free has grown a dependency on the GUI.
+SOURCES=(
+    "$HERE/src/soundEngine.c"
+    "$HERE/src/paramCurves.c"
+    "$HERE/src/dataBase.c"
+    "$HERE/src/globalVars.c"
+    "$HERE/src/cableChain.c"
+    "$HERE/src/moduleResourcesAccess.c"
+    "$HERE/src/protocol.c"
+    "$HERE/src/patchParamsResources.c"
+    "$HERE/vst3/g2Patch.c"
+    "$HERE/vst3/g2HostIo.c"
+    "$HERE/SynthLib/src/utils.c"
+)
+
+CXX_SOURCES=(
+    "$HERE/vst3/g2Vst3.cpp"
+    "$SDK/pluginterfaces/base/funknown.cpp"
+    "$SDK/pluginterfaces/base/coreiids.cpp"
+    # The one file taken from public.sdk. It contains no logic at all - it exists solely to
+    # instantiate the VST interface IIDs that the headers only declare - so taking it does not
+    # pull in the helper classes or their build system.
+    "$SDK/public.sdk/source/vst/vstinitiids.cpp"
+    "$SDK/pluginterfaces/base/ustring.cpp"
+    "$SDK/pluginterfaces/base/conststringtable.cpp"
+)
+
+INCLUDES=(-I"$HERE/src" -I"$HERE/SynthLib/src" -I"$HERE/vst3" -I"$SDK")
+
+ARCHS=(-arch arm64 -arch x86_64)
+MIN=-mmacosx-version-min=11.5
+
+rm -rf "$OUT"
+mkdir -p "$OUT/Contents/MacOS"
+
+print "Building ${#SOURCES[@]} C + ${#CXX_SOURCES[@]} C++ sources..."
+
+# Compiled in two passes rather than one command: -std= applies to the whole invocation, so C and
+# C++ sources cannot share one. Objects go to a temp dir and are linked below.
+OBJDIR="$(mktemp -d)"
+trap 'rm -rf "$OBJDIR"' EXIT
+OBJECTS=()
+
+for src in "${SOURCES[@]}"; do
+    obj="$OBJDIR/$(basename "$src" .c).o"
+    clang $ARCHS $MIN -O2 -std=gnu11 -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -c "$src" -o "$obj"
+    OBJECTS+=("$obj")
+done
+
+for src in "${CXX_SOURCES[@]}"; do
+    obj="$OBJDIR/$(basename "${src%.*}").oxx"
+    clang++ $ARCHS $MIN -O2 -std=gnu++17 -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -c "$src" -o "$obj"
+    OBJECTS+=("$obj")
+done
+
+clang++ $ARCHS $MIN -bundle "${OBJECTS[@]}" -framework CoreFoundation -o "$BIN"
+
+# A bundle needs its Info.plist and the four-character PkgInfo, or the host will not look inside it.
+cat > "$OUT/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key><string>G2 Edit</string>
+    <key>CFBundleIdentifier</key><string>com.chrispurusha.g2edit.vst3</string>
+    <key>CFBundleName</key><string>G2 Edit</string>
+    <key>CFBundlePackageType</key><string>BNDL</string>
+    <key>CFBundleSignature</key><string>????</string>
+    <key>CFBundleShortVersionString</key><string>0.1.0</string>
+    <key>CFBundleVersion</key><string>0.1.0</string>
+    <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+    <key>LSMinimumSystemVersion</key><string>11.5</string>
+</dict>
+</plist>
+PLIST
+
+printf 'BNDL????' > "$OUT/Contents/PkgInfo"
+
+# Ad-hoc signed, same as do-release: there is no paid Apple membership behind this, so a host will
+# still need the quarantine flag cleared before it will load the bundle.
+codesign --force --sign - "$OUT" 2>/dev/null || print -u2 "warning: ad-hoc signing failed"
+
+print ""
+print "Built: $OUT"
+lipo -archs "$BIN" | read -r archs
+print "Architectures: $archs"
+print ""
+print "To install for testing:"
+print "  cp -R \"$OUT\" ~/Library/Audio/Plug-Ins/VST3/"
+print ""
+print "Patch source, in order: host-saved path, then \$G2_VST3_PATCH,"
+print "then ~/Documents/G2-Edit/plugin.pch2"
