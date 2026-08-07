@@ -39,16 +39,59 @@
 #include "utils.h"
 #include "soundEngine.h"
 #include "g2Patch.h"
+#include "g2BuiltInPatch.h"
+
+// Parse a .pch2 image already in memory. Split out from the file loader so the built-in patch and a
+// file on disk go through exactly one implementation of the CRC check and the header walk.
+bool g2_plugin_parse_patch(const uint8_t * buff, int64_t fileSize, uint32_t slot) {
+    int64_t  byteOffset = 0;
+    uint32_t readCrc    = 0;
+    uint32_t calcCrc    = 0;
+    uint8_t  type       = 0;
+
+    // A patch carries a header, a version and type byte, and a trailing CRC, so anything this short
+    // cannot be one — and the offsets below would run off the end working it out.
+    if ((buff == NULL) || (fileSize < 8) || (slot >= MAX_SLOTS)) {
+        return false;
+    }
+
+    // The binary section starts after the ASCII header, which is terminated by the first NUL.
+    for (int64_t i = 0; i < fileSize; i++) {
+        if (buff[i] == 0x00) {
+            byteOffset = i + 1;
+            break;
+        }
+    }
+
+    if ((byteOffset == 0) || (byteOffset + 2 >= fileSize)) {
+        return false;
+    }
+    readCrc = (uint32_t)(buff[fileSize - 2] << 8 | buff[fileSize - 1]);
+    calcCrc = calc_crc16(buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
+
+    if (readCrc != calcCrc) {
+        return false;
+    }
+    byteOffset++;                   // version, not needed here
+    type = buff[byteOffset++];
+
+    if (type != 0) {                // 0 is a patch; a performance (1) has four slots and no meaning here
+        return false;
+    }
+    clear_slot_data(slot);
+    parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
+    return true;
+}
+
+bool g2_plugin_load_builtin_patch(uint32_t slot) {
+    return g2_plugin_parse_patch(kG2BuiltInPatch, (int64_t)sizeof(kG2BuiltInPatch), slot);
+}
 
 bool g2_plugin_load_patch(const char * filepath, uint32_t slot) {
     FILE *    file       = NULL;
     uint8_t * buff       = NULL;
     int64_t   fileSize   = 0;
-    int64_t   byteOffset = 0;
     size_t    readSize   = 0;
-    uint32_t  readCrc    = 0;
-    uint32_t  calcCrc    = 0;
-    uint8_t   type       = 0;
     bool      loaded     = false;
 
     if ((filepath == NULL) || (filepath[0] == '\0') || (slot >= MAX_SLOTS)) {
@@ -84,31 +127,7 @@ bool g2_plugin_load_patch(const char * filepath, uint32_t slot) {
         return false;
     }
 
-    // The binary section starts after the ASCII header, which is terminated by the first NUL.
-    for (int64_t i = 0; i < fileSize; i++) {
-        if (buff[i] == 0x00) {
-            byteOffset = i + 1;
-            break;
-        }
-    }
-
-    if ((byteOffset == 0) || (byteOffset + 2 >= fileSize)) {
-        free(buff);
-        return false;
-    }
-    readCrc = (uint32_t)(buff[fileSize - 2] << 8 | buff[fileSize - 1]);
-    calcCrc = calc_crc16(buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
-
-    if (readCrc == calcCrc) {
-        byteOffset++;               // version, not needed here
-        type = buff[byteOffset++];
-
-        if (type == 0) {            // 0 is a patch; a performance (1) has four slots and no meaning here
-            clear_slot_data(slot);
-            parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
-            loaded = true;
-        }
-    }
+    loaded = g2_plugin_parse_patch(buff, fileSize, slot);
     free(buff);
 
     return loaded;
