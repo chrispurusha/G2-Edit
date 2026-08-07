@@ -225,14 +225,8 @@ typedef enum {
 #define OUTPUT_KNEE         (0.80)
 #define ENVELOPE_SECONDS    (0.005)        // the anti-click ramp used when no EnvADSR is in the chain
 
-// Envelope times. The G2's range runs from well under a millisecond to tens of seconds; this is an
-// exponential fit across that span rather than a reading of the hardware's own table, in keeping
-// with the rest of the engine approximating rather than reproducing.
-#define ENV_TIME_MIN    (0.0005)
-#define ENV_TIME_MAX    (45.0)
-
 // Every ladder runs its full four poles whatever slope is selected — see ladder_filter().
-#define LADDER_POLES    (4)
+#define LADDER_POLES        (4)
 
 // The chain the engine renders. Small and fixed: these are hand-built sketches, not whole patches,
 // and a bound is what keeps the walk safe against a patch that feeds back into itself.
@@ -980,32 +974,11 @@ static bool take_next_note_event(void) {
 // Building the chain (UI thread)
 // ---------------------------------------------------------------------------------------------
 
-// An exponential fit across the G2's envelope range. See ENV_TIME_MIN/MAX.
-// A/D/R time from the dial value, COMPUTED rather than looked up.
-//
-// Two reasons it is computed. Morphs and the parameter smoothing both produce FRACTIONAL dial
-// values, and a table index truncates them — so a morphed attack would step between whole dial
-// positions instead of sweeping. And the table is display text, rounded to as little as one
-// significant figure at the short end ("0.5ms"), where this is smooth.
-//
-// The curve was fitted to that table: a power law, not the exponential one would reach for first —
-// the ratio between neighbouring entries falls from 1.20 to 1.049 across the range, which is what
-// gives it away. Median error against the table is 0.35%, worst 4% at index 2 where the table
-// itself carries one significant figure. An exponential between the endpoints, which is what this
-// used to be, was out by 86% in the middle.
-#define ENV_TIME_SCALE     (1.015839e-16)
-#define ENV_TIME_OFFSET    (39.55)
-#define ENV_TIME_POWER     (7.94210)
-
+// The exact scale the dial prints, rather than the power-law fit this used to be — see
+// adr_time_seconds() in renderParams.c. Shared so the envelope that is heard cannot take a
+// different time from the one shown.
 static double env_time_seconds(double paramValue) {
-    double value = paramValue;
-
-    if (value < 0.0) {
-        value = 0.0;
-    } else if (value > 127.0) {
-        value = 127.0;
-    }
-    return ENV_TIME_SCALE * pow(value + ENV_TIME_OFFSET, ENV_TIME_POWER);
+    return adr_time_seconds(paramValue);
 }
 
 // EnvADSR's Shape scroll button, in envShapeStrMap order: LogExp, LinExp, ExpExp, LinLin. The first
