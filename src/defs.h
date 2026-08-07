@@ -29,9 +29,16 @@
 //#define ENABLE_LOG_MODULE_DATA    // Uncomment for module-data logging in any configuration
 // Scroll rates, in CONTENT pixels — see pane_scroll_by() in splitView.c. Expressed in content
 // rather than scrollbar units so the feel stays constant as the zoom and the pane's height change.
-#define WHEEL_SCROLL_STEP     (40.0)     // roughly one module row per wheel notch
-#define DRAG_SCROLL_X_RATE    (900.0)    // per second, while a drag is held past a pane's edge
-#define DRAG_SCROLL_Y_RATE    (900.0)
+#define WHEEL_SCROLL_STEP    (40.0)         // roughly one module row per wheel notch
+// Edge auto-scroll while a drag is held past a pane's edge. The rate ramps with how far past the
+// edge the cursor is, so easing over the boundary creeps and shoving well past it moves quickly —
+// a fixed rate makes the slow end of the range unreachable.
+#define DRAG_SCROLL_MIN_RATE       (120.0)  // content pixels per SECOND, cursor just past the edge
+#define DRAG_SCROLL_MAX_RATE       (1200.0) // content pixels per second, at DRAG_SCROLL_RAMP_DIST or beyond
+#define DRAG_SCROLL_RAMP_DIST      (150.0)  // pixels of overshoot over which the rate ramps min -> max
+// Frame delta cap. Covers both a rendering hitch and the first tick of a drag (where the previous
+// timestamp is left over from an earlier drag), neither of which should teleport the canvas.
+#define DRAG_SCROLL_MAX_STEP_MS    (50.0)
 
 //#define ENABLE_USB_LOG    // Uncomment to enable USB message logging to ~/G2_usb.log
 
