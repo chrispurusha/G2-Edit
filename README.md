@@ -153,6 +153,13 @@ There is no plug-in editor, so the patch is chosen by path, in this order:
 2. `$G2_VST3_PATCH`
 3. `~/Documents/G2-Edit/plugin.pch2`
 
+### Controls
+
+There is no custom editor, so the host draws its own generic panel. Nine parameters are exposed and
+all are automatable: **Morph 1-8** (the G2's own performance controls) and **Output Level**.
+
+Pitch bend and mod wheel are not yet routed.
+
 ### What to expect
 
 The plug-in inherits exactly what the sound engine can do, which is a **subset** of the G2: around
