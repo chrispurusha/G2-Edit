@@ -401,9 +401,14 @@ OPEN WORK
   asks only for IPluginFactory never notices that IPluginFactory2 is absent. Worth keeping in mind
   before trusting it again: it proves the plug-in works, not that a host will accept it.
 
-- VST3: no plug-in editor and no automatable parameters. The patch is chosen by file path only.
-  Morph groups are the obvious first parameters to expose (sound_engine_set_morph is already there
-  and already host-shaped), but there is no point wiring them up before the plug-in is known to load.
+- VST3: no custom editor (createView returns nullptr), so the host's GENERIC PANEL is the whole UI
+  and the exposed parameters are the whole of that. Nine now exist — 8 morph groups + output level —
+  added 2026-08-07 after Ableton loaded the plug-in but showed nothing to open. A custom IPlugView
+  is a much larger job: the app draws through GLFW, which does not embed into a host-owned window,
+  so an editor means a second renderer, not a port of the existing one.
+- VST3: pitch bend and mod wheel are NOT routed. VST3 delivers those through IMidiMapping
+  (kPitchBend etc. mapped onto parameters), which is not implemented — sound_engine_pitch_bend()
+  exists and is host-shaped, so this is wiring, not new engine work.
 
 - VST3: MIDI events are applied at BLOCK GRANULARITY, not sample-accurate. The engine timestamps
   nothing, so a note lands at the start of the buffer it arrived in — under 12 ms at 44.1k/512.
