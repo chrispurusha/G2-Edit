@@ -51,6 +51,12 @@
 #include "pluginterfaces/vst/ivstevents.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 
+#include "g2Editor.h"
+
+extern "C" {
+#include "g2BuiltInPatch.h"
+}
+
 extern "C" {
 #include "soundEngine.h"
 #include "g2Patch.h"
@@ -61,10 +67,11 @@ using namespace Steinberg::Vst;
 
 // Stable identity. A host remembers a plug-in by this, so it must never change once a project has
 // been saved against it.
-static const FUID kG2EditProcessorUID(0x9A47C1E2, 0x5B3D4F08, 0xA1726C93, 0xD4E8B550);
+static const FUID kG2EditProcessorUID(0x7D14B03C, 0x6E284A97, 0x8C5F1D62, 0xB93A47E1);
+static const FUID kG2EditControllerUID(0x2B69F58D, 0x41A70C36, 0x95E284BF, 0x1D6035CA);
 
-#define G2_VENDOR       "Chris Turner"
-#define G2_PLUGIN_NAME  "G2 Edit"
+#define G2_VENDOR       "Chris Purusha"
+#define G2_PLUGIN_NAME  "G2 Alike"
 #define G2_VERSION      "0.1.0"
 
 // Where the patch comes from, with no editor to choose one. Checked in order:
@@ -85,7 +92,15 @@ static std::string default_patch_path(void) {
     return std::string(home ? home : ".") + "/Documents/G2-Edit/plugin.pch2";
 }
 
-class G2EditPlugin : public IComponent, public IAudioProcessor, public IEditController {
+// Processor and controller are SEPARATE CLASSES, both registered with the factory.
+//
+// VST3 also permits one object to implement both, and that is what this was — it is simpler, and a
+// hand-written test host accepted it happily. Ableton did not: it loaded the plug-in, reported
+// "parameter count is 0", and gave a wrench icon that opened nothing, because it obtains the
+// controller by instantiating the class named by IComponent::getControllerClassId() and does not
+// fall back to asking the component for IEditController. Splitting them is the shape every host
+// expects, so it is the shape used here.
+class G2EditPlugin : public IComponent, public IAudioProcessor {
 public:
     G2EditPlugin(void) : refCount(1), sampleRate(44100.0), active(false) {}
     virtual ~G2EditPlugin(void) {}
@@ -96,7 +111,6 @@ public:
         QUERY_INTERFACE(iid, obj, IPluginBase::iid, IComponent)
         QUERY_INTERFACE(iid, obj, IComponent::iid, IComponent)
         QUERY_INTERFACE(iid, obj, IAudioProcessor::iid, IAudioProcessor)
-        QUERY_INTERFACE(iid, obj, IEditController::iid, IEditController)
         *obj = nullptr;
         return kNoInterface;
     }
@@ -132,9 +146,11 @@ public:
     }
 
     tresult PLUGIN_API getControllerClassId(TUID classId) SMTG_OVERRIDE {
-        // Processor and controller are the same object here, so there is no separate class to name.
-        (void)classId;
-        return kNotImplemented;
+        // This is how the host finds the controller. Returning kNotImplemented here — which is what
+        // a single-object processor+controller does — left Ableton with no controller and therefore
+        // no parameters and no panel.
+        memcpy(classId, kG2EditControllerUID.toTUID(), sizeof(TUID));
+        return kResultOk;
     }
 
     tresult PLUGIN_API setIoMode(IoMode mode) SMTG_OVERRIDE {
@@ -367,6 +383,118 @@ public:
         return kResultOk;
     }
 
+    static FUnknown * createInstance(void * /*context*/) {
+        return (IAudioProcessor *)new G2EditPlugin();
+    }
+
+private:
+    static const int32  kMaxBlock   = 4096;
+    static const int32  kMorphCount = 8;                 // NUM_MORPHS, without pulling defs.h into C++
+    static const ParamID kParamLevel = 8;
+    static const int32  kNumParams  = 9;
+
+    // The output trim attenuates only — sound_engine_set_output_level_db() clamps anything at or
+    // above 0 dB to unity, deliberately, so this is a fader and not a boost into the limiter.
+    static constexpr double kLevelMinDb = -60.0;
+
+    static double level_db(ParamValue normalized) {
+        return kLevelMinDb + (normalized * (0.0 - kLevelMinDb));
+    }
+
+    // Both the host's generic panel (via setParamNormalized, on its UI thread) and automation (via
+    // process(), on the audio thread) land here. Every engine entry point it calls stores through an
+    // atomic, so there is nothing to guard.
+    void apply_param(ParamID id, ParamValue value) {
+        if (value < 0.0) {
+            value = 0.0;
+        } else if (value > 1.0) {
+            value = 1.0;
+        }
+        params[id] = value;
+
+        if (id < (ParamID)kMorphCount) {
+            sound_engine_set_morph((uint32_t)id, value);
+        } else if (id == kParamLevel) {
+            sound_engine_set_output_level_db(level_db(value));
+        }
+    }
+
+    void load_patch(void) {
+        // TEMPORARY: the built-in patch, always. The file path below is still resolved and still
+        // saved with the project, but is not read — see the note in do-vst3. Slot 0 either way: a
+        // plug-in instance is one patch, and the four-slot performance layout is a hardware notion
+        // with nothing to map onto here.
+        g2_plugin_load_builtin_patch(0);
+
+        // Only meaningful once the engine is live — see setActive(). Harmless when it is not, and
+        // called anyway so that a patch swapped in mid-session takes effect immediately.
+        if (active) {
+            sound_engine_update_from_patch();
+        }
+    }
+
+    static void copy_name(String128 dst, const char * src) {
+        int i = 0;
+
+        for (; (src[i] != '\0') && (i < 127); i++) {
+            dst[i] = (TChar)src[i];
+        }
+        dst[i] = 0;
+    }
+
+    std::atomic<int32> refCount;
+    ParamValue         params[kNumParams] = {0};
+    double             sampleRate;
+    bool               active;
+    std::string        patchPath;
+    float              scratch[kMaxBlock * 2];
+};
+
+
+// The controller half. Holds the parameters the host draws its generic panel from, and pushes them
+// into the engine as they move. The engine's own state is process-wide (globals reached through
+// atomics), so the controller can write to it directly without knowing which processor it belongs
+// to — which also means two instances of this plug-in in one project would fight over the same
+// engine. One instance only, for now.
+class G2EditController : public IEditController {
+public:
+    G2EditController(void) : refCount(1) {
+        params[kParamLevel] = 1.0;
+    }
+
+    virtual ~G2EditController(void) {}
+
+    tresult PLUGIN_API queryInterface(const TUID iid, void ** obj) SMTG_OVERRIDE {
+        QUERY_INTERFACE(iid, obj, FUnknown::iid, IEditController)
+        QUERY_INTERFACE(iid, obj, IPluginBase::iid, IEditController)
+        QUERY_INTERFACE(iid, obj, IEditController::iid, IEditController)
+        *obj = nullptr;
+        return kNoInterface;
+    }
+
+    uint32 PLUGIN_API addRef(void) SMTG_OVERRIDE {
+        return (uint32)++refCount;
+    }
+
+    uint32 PLUGIN_API release(void) SMTG_OVERRIDE {
+        int32 c = --refCount;
+
+        if (c == 0) {
+            delete this;
+            return 0;
+        }
+        return (uint32)c;
+    }
+
+    tresult PLUGIN_API initialize(FUnknown * context) SMTG_OVERRIDE {
+        (void)context;
+        return kResultOk;
+    }
+
+    tresult PLUGIN_API terminate(void) SMTG_OVERRIDE {
+        return kResultOk;
+    }
+
     // ---- IEditController -----------------------------------------------------------------------
     // There is no custom editor - createView() returns nothing - so these parameters ARE the user
     // interface: the host draws its own generic panel from them. A plug-in that exposes none gets an
@@ -374,8 +502,22 @@ public:
     //
     // The eight morph groups are the G2's own performance controls, so they are the right things to
     // put in front of a host: automating a morph is the nearest thing to playing the hardware.
+    // The host hands the controller the processor's saved state so the two agree. Ours is a patch
+    // path, which the controller does not act on — the processor loads the patch — so this only has
+    // to accept it without complaint.
     tresult PLUGIN_API setComponentState(IBStream * state) SMTG_OVERRIDE {
-        return setState(state);
+        (void)state;
+        return kResultOk;
+    }
+
+    tresult PLUGIN_API setState(IBStream * state) SMTG_OVERRIDE {
+        (void)state;
+        return kResultOk;
+    }
+
+    tresult PLUGIN_API getState(IBStream * state) SMTG_OVERRIDE {
+        (void)state;
+        return kResultOk;
     }
 
     int32 PLUGIN_API getParameterCount(void) SMTG_OVERRIDE {
@@ -458,25 +600,30 @@ public:
         return kResultOk;
     }
 
+    // Kept so the editor panel can report its moves back through beginEdit/performEdit/endEdit —
+    // without it the host would see slider changes appear from nowhere and could not record them.
     tresult PLUGIN_API setComponentHandler(IComponentHandler * handler) SMTG_OVERRIDE {
-        (void)handler;
+        componentHandler = handler;
         return kResultOk;
     }
 
     IPlugView * PLUGIN_API createView(FIDString name) SMTG_OVERRIDE {
-        (void)name;
-        return nullptr;             // no editor; the host draws a generic panel
+        if ((name == nullptr) || (strcmp(name, ViewType::kEditor) != 0)) {
+            return nullptr;
+        }
+        // Names the patch actually playing, which while the built-in one is forced is not the path.
+        return g2_create_editor_view(this, componentHandler, G2_BUILTIN_PATCH_NAME " (built in)");
     }
 
+
     static FUnknown * createInstance(void * /*context*/) {
-        return (IAudioProcessor *)new G2EditPlugin();
+        return (IEditController *)new G2EditController();
     }
 
 private:
-    static const int32  kMaxBlock   = 4096;
-    static const int32  kMorphCount = 8;                 // NUM_MORPHS, without pulling defs.h into C++
+    static const int32   kMorphCount = 8;                // NUM_MORPHS, without pulling defs.h into C++
     static const ParamID kParamLevel = 8;
-    static const int32  kNumParams  = 9;
+    static const int32   kNumParams  = 9;
 
     // The output trim attenuates only — sound_engine_set_output_level_db() clamps anything at or
     // above 0 dB to unity, deliberately, so this is a fader and not a boost into the limiter.
@@ -486,9 +633,6 @@ private:
         return kLevelMinDb + (normalized * (0.0 - kLevelMinDb));
     }
 
-    // Both the host's generic panel (via setParamNormalized, on its UI thread) and automation (via
-    // process(), on the audio thread) land here. Every engine entry point it calls stores through an
-    // atomic, so there is nothing to guard.
     void apply_param(ParamID id, ParamValue value) {
         if (value < 0.0) {
             value = 0.0;
@@ -504,18 +648,6 @@ private:
         }
     }
 
-    void load_patch(void) {
-        // Slot 0 always: a plug-in instance is one patch, and the four-slot performance layout is a
-        // hardware notion with nothing to map onto here.
-        g2_plugin_load_patch(patchPath.c_str(), 0);
-
-        // Only meaningful once the engine is live — see setActive(). Harmless when it is not, and
-        // called anyway so that a patch swapped in mid-session takes effect immediately.
-        if (active) {
-            sound_engine_update_from_patch();
-        }
-    }
-
     static void copy_name(String128 dst, const char * src) {
         int i = 0;
 
@@ -525,12 +657,9 @@ private:
         dst[i] = 0;
     }
 
-    std::atomic<int32> refCount;
-    ParamValue         params[kNumParams] = {0};
-    double             sampleRate;
-    bool               active;
-    std::string        patchPath;
-    float              scratch[kMaxBlock * 2];
+    std::atomic<int32>  refCount;
+    IComponentHandler * componentHandler = nullptr;
+    ParamValue          params[kNumParams] = {0};
 };
 
 // ---- Factory -----------------------------------------------------------------------------------
@@ -586,50 +715,74 @@ public:
     }
 
     int32 PLUGIN_API countClasses(void) SMTG_OVERRIDE {
-        return 1;
+        return 2;                                        // processor + controller
     }
 
+    // Class 0 is the processor, class 1 the controller. The controller is registered under
+    // kVstComponentControllerClass, NOT kVstAudioEffectClass — a host enumerating instruments must
+    // not find two.
     tresult PLUGIN_API getClassInfo(int32 index, PClassInfo * info) SMTG_OVERRIDE {
-        if ((index != 0) || (info == nullptr)) {
+        if ((info == nullptr) || (index < 0) || (index > 1)) {
             return kInvalidArgument;
         }
         memset(info, 0, sizeof(PClassInfo));
-        memcpy(info->cid, kG2EditProcessorUID.toTUID(), sizeof(TUID));
         info->cardinality = PClassInfo::kManyInstances;
-        strncpy(info->category, kVstAudioEffectClass, PClassInfo::kCategorySize - 1);
-        strncpy(info->name, G2_PLUGIN_NAME, PClassInfo::kNameSize - 1);
+
+        if (index == 0) {
+            memcpy(info->cid, kG2EditProcessorUID.toTUID(), sizeof(TUID));
+            strncpy(info->category, kVstAudioEffectClass, PClassInfo::kCategorySize - 1);
+            strncpy(info->name, G2_PLUGIN_NAME, PClassInfo::kNameSize - 1);
+        } else {
+            memcpy(info->cid, kG2EditControllerUID.toTUID(), sizeof(TUID));
+            strncpy(info->category, kVstComponentControllerClass, PClassInfo::kCategorySize - 1);
+            strncpy(info->name, G2_PLUGIN_NAME " Controller", PClassInfo::kNameSize - 1);
+        }
         return kResultOk;
     }
 
     // The one that actually matters — see the note on the class. kInstrumentSynth is "Instrument|Synth".
     tresult PLUGIN_API getClassInfo2(int32 index, PClassInfo2 * info) SMTG_OVERRIDE {
-        if ((index != 0) || (info == nullptr)) {
+        if ((info == nullptr) || (index < 0) || (index > 1)) {
             return kInvalidArgument;
         }
         memset(info, 0, sizeof(PClassInfo2));
-        memcpy(info->cid, kG2EditProcessorUID.toTUID(), sizeof(TUID));
         info->cardinality = PClassInfo::kManyInstances;
         info->classFlags  = 0;
-        strncpy(info->category, kVstAudioEffectClass, PClassInfo::kCategorySize - 1);
-        strncpy(info->name, G2_PLUGIN_NAME, PClassInfo::kNameSize - 1);
-        strncpy(info->subCategories, PlugType::kInstrumentSynth, PClassInfo2::kSubCategoriesSize - 1);
         strncpy(info->vendor, G2_VENDOR, PClassInfo2::kVendorSize - 1);
         strncpy(info->version, G2_VERSION, PClassInfo2::kVersionSize - 1);
         strncpy(info->sdkVersion, kVstVersionString, PClassInfo2::kVersionSize - 1);
+
+        if (index == 0) {
+            memcpy(info->cid, kG2EditProcessorUID.toTUID(), sizeof(TUID));
+            strncpy(info->category, kVstAudioEffectClass, PClassInfo::kCategorySize - 1);
+            strncpy(info->name, G2_PLUGIN_NAME, PClassInfo::kNameSize - 1);
+            strncpy(info->subCategories, PlugType::kInstrumentSynth, PClassInfo2::kSubCategoriesSize - 1);
+        } else {
+            memcpy(info->cid, kG2EditControllerUID.toTUID(), sizeof(TUID));
+            strncpy(info->category, kVstComponentControllerClass, PClassInfo::kCategorySize - 1);
+            strncpy(info->name, G2_PLUGIN_NAME " Controller", PClassInfo::kNameSize - 1);
+        }
         return kResultOk;
     }
 
     tresult PLUGIN_API getClassInfoUnicode(int32 index, PClassInfoW * info) SMTG_OVERRIDE {
-        if ((index != 0) || (info == nullptr)) {
+        if ((info == nullptr) || (index < 0) || (index > 1)) {
             return kInvalidArgument;
         }
         memset(info, 0, sizeof(PClassInfoW));
-        memcpy(info->cid, kG2EditProcessorUID.toTUID(), sizeof(TUID));
         info->cardinality = PClassInfo::kManyInstances;
         info->classFlags  = 0;
-        strncpy(info->category, kVstAudioEffectClass, PClassInfo::kCategorySize - 1);
-        strncpy(info->subCategories, PlugType::kInstrumentSynth, PClassInfo2::kSubCategoriesSize - 1);
-        widen(info->name, G2_PLUGIN_NAME, PClassInfo::kNameSize);
+
+        if (index == 0) {
+            memcpy(info->cid, kG2EditProcessorUID.toTUID(), sizeof(TUID));
+            strncpy(info->category, kVstAudioEffectClass, PClassInfo::kCategorySize - 1);
+            strncpy(info->subCategories, PlugType::kInstrumentSynth, PClassInfo2::kSubCategoriesSize - 1);
+            widen(info->name, G2_PLUGIN_NAME, PClassInfo::kNameSize);
+        } else {
+            memcpy(info->cid, kG2EditControllerUID.toTUID(), sizeof(TUID));
+            strncpy(info->category, kVstComponentControllerClass, PClassInfo::kCategorySize - 1);
+            widen(info->name, G2_PLUGIN_NAME " Controller", PClassInfo::kNameSize);
+        }
         widen(info->vendor, G2_VENDOR, PClassInfo2::kVendorSize);
         widen(info->version, G2_VERSION, PClassInfo2::kVersionSize);
         widen(info->sdkVersion, kVstVersionString, PClassInfo2::kVersionSize);
@@ -642,10 +795,15 @@ public:
     }
 
     tresult PLUGIN_API createInstance(FIDString cid, FIDString _iid, void ** obj) SMTG_OVERRIDE {
-        if (memcmp(cid, kG2EditProcessorUID.toTUID(), sizeof(TUID)) != 0) {
+        FUnknown * instance = nullptr;
+
+        if (memcmp(cid, kG2EditProcessorUID.toTUID(), sizeof(TUID)) == 0) {
+            instance = G2EditPlugin::createInstance(nullptr);
+        } else if (memcmp(cid, kG2EditControllerUID.toTUID(), sizeof(TUID)) == 0) {
+            instance = G2EditController::createInstance(nullptr);
+        } else {
             return kResultFalse;
         }
-        FUnknown * instance = G2EditPlugin::createInstance(nullptr);
         // _iid is a FIDString (const char *); queryInterface's TUID parameter decays to the same
         // thing, so it is passed straight through — a cast to TUID would be a cast to an array type.
         tresult    result   = instance->queryInterface(_iid, obj);

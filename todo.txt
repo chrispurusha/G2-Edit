@@ -401,11 +401,21 @@ OPEN WORK
   asks only for IPluginFactory never notices that IPluginFactory2 is absent. Worth keeping in mind
   before trusting it again: it proves the plug-in works, not that a host will accept it.
 
-- VST3: no custom editor (createView returns nullptr), so the host's GENERIC PANEL is the whole UI
-  and the exposed parameters are the whole of that. Nine now exist — 8 morph groups + output level —
-  added 2026-08-07 after Ableton loaded the plug-in but showed nothing to open. A custom IPlugView
-  is a much larger job: the app draws through GLFW, which does not embed into a host-owned window,
-  so an editor means a second renderer, not a port of the existing one.
+- VST3: PROCESSOR AND CONTROLLER MUST STAY SEPARATE CLASSES (2026-08-07). Written first as one object
+  implementing IComponent+IAudioProcessor+IEditController — legal VST3, and the test harness was
+  happy. Ableton logged "parameter count is 0" and its wrench opened nothing: it instantiates the
+  class named by getControllerClassId() and does NOT fall back to querying the component. Two
+  classes now, controller under kVstComponentControllerClass. Do not "simplify" this back.
+
+- VST3 (now named "G2 Alike", vendor "Chris Purusha"): HAS AN EDITOR as of 2026-08-07 —
+  vst3/g2Editor.mm, an AppKit panel with 8 morph sliders + output trim + a patch readout, verified
+  created at 460x300 with NSView support. NOT SEEN IN A HOST YET.
+  It is deliberately NOT the application's canvas: G2-Edit draws through GLFW, which owns its own
+  window and cannot adopt a host-supplied NSView, so showing the patch would mean a second renderer.
+  If that is ever wanted, the route is an NSOpenGLView/CAMetalLayer plus the existing drawing
+  primitives in utilsGraphics — not a GLFW change.
+  NOTE the CIDs changed with the rename (nothing was saved against the old ones), so any stale
+  "G2 Edit" entry in a host's plug-in database is orphaned and should be rescanned away.
 - VST3: pitch bend and mod wheel are NOT routed. VST3 delivers those through IMidiMapping
   (kPitchBend etc. mapped onto parameters), which is not implemented — sound_engine_pitch_bend()
   exists and is host-shaped, so this is wiring, not new engine work.
