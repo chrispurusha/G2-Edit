@@ -371,6 +371,68 @@ AWAITING OWNER VERIFICATION (code done + built; nothing further to write unless 
 
 OPEN WORK
 
+- clear_slot_data(): TWO FUNCTIONS DISAGREED AND STILL DO (2026-08-07). There were two functions of
+  that name — one in graphics.c, one `static` in usbComms.c quietly shadowing it. Moving the first
+  into dataBase.c (so a GUI-free build could reach it) made them collide and exposed the difference:
+    * gMorphCount[slot] is set to 0 by the graphics/dataBase one, and to 8 by the usbComms one.
+    * Only the graphics/dataBase one clears gNote2[] and gPatchNotes[].
+  The usbComms one is now clear_slot_data_usb(), so BOTH paths keep exactly the behaviour they had —
+  nothing was merged. WHICH IS CORRECT IS UNRESOLVED. A patch loaded from file and the same patch
+  arriving from the device therefore leave the slot in measurably different states; at least one of
+  them is wrong. Worth deciding before it bites: gMorphCount 0 vs 8 is the part most likely to show.
+
+- ./do-uncrustify does NOT cover vst3/. It walks src/ and SynthLib/src/ only, so the plug-in sources
+  are unformatted. Either extend the script or accept it and say so — currently it is just a silent
+  gap that will produce a noisy diff the first time anyone runs a formatter over that directory.
+
+- VST3 plug-in: FIRST DAW ATTEMPT 2026-08-07. Ableton 12.4.3 rejected the first build with "This
+  VST3 plug-in could not be opened"; its own log gave the reason exactly:
+      error: Vst3: plugin has an effect category, but no valid audio input bus
+  The plug-in loaded fine — it was CLASSIFIED as an effect, and effects must have an audio input.
+  Plain IPluginFactory can only report a category ("Audio Module Class"), never a subcategory, so a
+  host has nothing to tell it this is an instrument. Fixed by implementing IPluginFactory3 (hence
+  IPluginFactory2) and reporting PlugType::kInstrumentSynth in getClassInfo2(). Reinstalled;
+  AWAITING A RESCAN — still not confirmed to load, only confirmed to advertise itself correctly.
+  ~/Library/Preferences/Ableton/Live */Log.txt is the place to look for any further rejection; it
+  names the cause precisely and is far quicker than guessing at bundle structure.
+
+- VST3: the hand-written test host in the scratchpad verified loading, instantiation, bus reporting
+  and rendering (SimpleLead.pch2, peak 0.019) — and STILL missed the above, because a harness that
+  asks only for IPluginFactory never notices that IPluginFactory2 is absent. Worth keeping in mind
+  before trusting it again: it proves the plug-in works, not that a host will accept it.
+
+- VST3: no plug-in editor and no automatable parameters. The patch is chosen by file path only.
+  Morph groups are the obvious first parameters to expose (sound_engine_set_morph is already there
+  and already host-shaped), but there is no point wiring them up before the plug-in is known to load.
+
+- VST3: MIDI events are applied at BLOCK GRANULARITY, not sample-accurate. The engine timestamps
+  nothing, so a note lands at the start of the buffer it arrived in — under 12 ms at 44.1k/512.
+  Fixing this means teaching the engine to place an event within a block, not changing the wrapper.
+
+- pch2csd (github.com/gleb812/pch2csd, MIT) is a useful independent cross-check for parameter maps —
+  its resources/value_maps.json holds 116 of them. Three checked so far (delay time, delay clk,
+  envelope times); 113 unchecked, with the filter (12 maps), level (9) and oscillator (14) families
+  the densest. It confirmed our delay Time formula at 128/128 points and our ADRTimeStrMap exactly.
+  NOTE its DLYCLK table has an off-by-one at raw 84 (boundary at 85 where hardware says 84, and it is
+  the only boundary in their own table that is not a multiple of 4) — worth reporting upstream.
+
+- env_timesStrMap in moduleResources.h is DEAD CODE with a 1000x unit error: it labels the envelope
+  range 0.0005ms-45.000ms where the manual (p.9157) says 0.5 ms to 45 s. It appears exactly once in
+  the tree — its own definition — and the live table (ADRTimeStrMap) is correct. DELETE it rather
+  than fix it; a wrong lookalike sitting beside the right one is a trap for whoever reaches for it.
+
+- get_text_width(..., eCache) keys its cache on the TEXT POINTER, not contents, so it is only safe
+  for string literals. Passing a stack buffer returns the first string ever measured at that address
+  forever after. Fixed in paramOverlay.c (chips were sized for one digit and overflowed at three);
+  STILL LIVE elsewhere. Worst shape is a truncate-to-fit loop that re-measures the same buffer after
+  shortening it — the cached original width comes back every iteration, so the label should be
+  stripped to nothing rather than truncated:
+    * paramOverview.c ~line 184 and paramPages.c ~line 193 (the truncation loops — real, visible)
+    * midiCcList.c:158, patchAdjuster.c:450, paramOverview.c:245-246 (plain sizing calls)
+    * SynthLib alertDialog.c:260 (lands in the submodule's own tree)
+  Either pass eNoCache at each site, or make the cache compare contents — the latter fixes the whole
+  class at once but changes shared SynthLib behaviour for all three apps.
+
 - Load Perf from Bank — FIXED 2026-08-05 from an owner log, needs a confirming run. TWO faults, both
   in the perf domain that had been left unverified when the patch case was fixed:
    1. THE FIRST PAYLOAD BYTE IS A SLOT, and the perf path was sending the bank-upload DOMAIN value

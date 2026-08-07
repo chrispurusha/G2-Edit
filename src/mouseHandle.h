@@ -20,6 +20,15 @@
 #ifndef __MOUSE_HANDLE_H__
 #define __MOUSE_HANDLE_H__
 
+// GLFWwindow appears in the signatures below, so this header includes GLFW itself rather than
+// relying on globalVars.h to have pulled it in.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
+#define GL_SILENCE_DEPRECATION    1
+#include <GLFW/glfw3.h>
+#pragma clang diagnostic pop
+
+
 #include "sysIncludes.h"
 
 #ifdef __cplusplus

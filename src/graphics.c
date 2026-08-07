@@ -694,22 +694,6 @@ void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
     LOG_DEBUG("Patch name from file: '%s'\n", patchName);
 }
 
-void clear_slot_data(uint32_t slot) {
-    if (slot < MAX_SLOTS) {
-        database_delete_cables_by_slot(slot);
-        database_delete_modules_by_slot(slot);
-        gMorphCount[slot]      = 0;
-        gNote2Size[slot]       = 0;
-        gControllerCount[slot] = 0;
-        gPatchNotesSize[slot]  = 0;
-        memset(&(gPatchDescr[slot]), 0, sizeof(gPatchDescr[0]));
-        memset(&(gKnobArray[slot]), 0, sizeof(gKnobArray[0]));
-        memset(gNote2[slot], 0, sizeof(gNote2[0]));
-        memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
-        memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
-    }
-}
-
 void read_file_into_memory_and_process(const char * filepath) {
     int64_t   byteOffset = 0;
     int64_t   fileSize   = 0;
