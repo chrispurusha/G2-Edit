@@ -142,6 +142,57 @@ uint32_t module_connector_count(tModuleType moduleType) {
     return cache[moduleType];
 }
 
+// A connector's direction and type are STATIC per module type: they restate what
+// connectorLocationList already holds, which is why tConnector's own fields carry the note
+// "Should pull from the location list".
+//
+// They used to be written only as a side effect of DRAWING, in render_connector_common(). The
+// application always draws, so the array was always filled and nothing looked wrong — but
+// anything that renders no pixels (the VST3 plug-in, any headless harness) saw a zeroed array,
+// and every cable lookup that reads .dir then failed silently. The sound engine's modulation
+// inputs simply never connected, which presents as a filter that plays shut rather than as an
+// error. Populating at load time makes the data available whether or not anything is drawn.
+//
+// Only .dir and .type are set here. .coord and .rectangle are genuine geometry — they depend on
+// where the module is actually rendered — and remain the renderer's to fill in.
+void populate_module_connectors(tModule * module) {
+    uint32_t connector = 0;
+    uint32_t count     = 0;
+    uint32_t i         = 0;
+
+    if (module == NULL) {
+        return;
+    }
+    count = module_connector_count(module->type);
+
+    if (count == 0) {
+        return;
+    }
+
+    if (count > MAX_NUM_CONNECTORS) {
+        LOG_ERROR("MAX_NUM_CONNECTORS needs increasing to >= %u for module type %u\n", count, module->type);
+        count = MAX_NUM_CONNECTORS;
+    }
+
+    for (i = 0; i < array_size_connector_location_list(); i++) {
+        if (connectorLocationList[i].moduleType == module->type) {
+            // The renderer's own walk starts from this cached offset, so seeding it here saves it
+            // rescanning the list from the top.
+            if (module->gotConnectorIndexCache == false) {
+                module->connectorIndexCache    = i;
+                module->gotConnectorIndexCache = true;
+            }
+            module->connector[connector].dir  = connectorLocationList[i].direction;
+            module->connector[connector].type = connectorLocationList[i].type;
+            connector++;
+
+            if (connector >= count) {
+                break;
+            }
+        }
+    }
+}
+
 uint32_t module_mode_count(tModuleType moduleType) {
     static uint32_t cache[moduleTypeMax]      = {0};
     static bool     validCache[moduleTypeMax] = {0};

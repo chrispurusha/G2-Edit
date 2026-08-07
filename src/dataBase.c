@@ -53,6 +53,10 @@ void write_module(tModuleKey key, tModule * module) {
     module->key    = key;
     module->active = true;
 
+    // Same reason as the patch-parse path: .dir/.type drive every cable lookup and must not
+    // depend on the module having been drawn. Cheap, and idempotent if already populated.
+    populate_module_connectors(module);
+
     if ((key.slot < MAX_SLOTS) && (key.location < (uint32_t)locationMax) && (key.index < MAX_NUM_MODULES)) {
         gModule[key.slot][key.location][key.index] = *module;
     } else {

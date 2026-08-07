@@ -765,8 +765,12 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
         exit(1);
     }
     module->connector[connectorIndex].coord = rectangle.coord;  // Register where we're rendering this connector, for cable connecting
-    module->connector[connectorIndex].dir   = dir;
-    module->connector[connectorIndex].type  = type;
+    // .dir and .type are deliberately NOT written here any more. They are static per module type
+    // and are now filled by populate_module_connectors() when the module enters the database, so
+    // they are correct for code that never draws — the sound engine's cable lookups above all.
+    // Setting them here as well would restore two owners for one fact, which is how they came to be
+    // available only after rendering in the first place. Geometry stays ours; the rest is the
+    // resource list's.
 
     if (connectorLocationList[connectorListIndex].label != NULL) {
         tRectangle textRectangle = rectangle;
@@ -806,7 +810,10 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
     // must never reflect this purely-cosmetic promotion.
     set_rgb_colour(connectorColourMap[effective_connector_type(type, module->upRate)]);  // Note, was using "module->connector[connectorIndex].type", check that this type param is OK
 
-    if (module->connector[connectorIndex].dir == connectorDirIn) {
+    // The passed-in dir, not module->connector[].dir — they hold the same value from the same
+    // connectorLocationList entry, and using the parameter keeps this drawing code independent of
+    // when the array happens to have been filled.
+    if (dir == connectorDirIn) {
         module->connector[connectorIndex].rectangle = render_circle_part(moduleArea, (tCoord){rectangle.coord.x + (rectangle.size.w / 2.0), rectangle.coord.y + (rectangle.size.h / 2.0)}, rectangle.size.w / 2.0, 10.0, 0.0, 10.0);
     } else {
         module->connector[connectorIndex].rectangle = render_rectangle(moduleArea, (tRectangle){rectangle.coord, {rectangle.size.w, rectangle.size.h}});
