@@ -55,11 +55,12 @@ double flt_kbt_amount(uint32_t kbtValue);                  // Kbt scroll: 0, 0.2
 double lev_amp_gain(double paramValue);                    // LevAmp multiplier: 0.25x .. 4.0x, unity at 64
 double lfo_rate_hz(uint32_t rangeMode, double paramValue); // LFO speed in Hz for a Range setting
 
+// An envelope segment's length: the 0.5 ms .. 45 s scale ADRTimeStrMap prints, as seconds.
+double adr_time_seconds(double paramValue);
+
 // A delay's Time/Clk selector index, which differs per module type; -1 if it has none.
 int delay_time_clk_param_index(tModuleType moduleType);
-// A delay's clock division: raw 0 is "1/64T" and the top of the dial is "2/1", i.e. backwards
-// through 22 of clkSyncStrMap's 32 entries — NOT the LFO's value/4 across all of them.
-// The bottom of a delay's Time scale, 0.01 ms — the scale is LINEAR from here to the Range maximum.
+
 // The G2's own engine rate. Delay times are a whole number of SAMPLES at this rate, so it sets the
 // grid the Time dial lands on — see delay_time_seconds(). Nothing to do with the rate G2-Edit's own
 // sound engine happens to be running at.
