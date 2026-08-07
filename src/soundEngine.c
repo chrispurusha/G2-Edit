@@ -66,6 +66,12 @@ extern "C" {
 #define LEVAMP_PARAM_GAIN        (0)
 #define LEVAMP_PARAM_TYPE        (1)   // 0 = lin, 1 = exp
 
+// "Out to" — where the module sends. NOT every Out module reaches the speakers: the other settings
+// are internal routing, and a patch commonly uses one to feed its FX area.
+//   2toOut, outToStrMap:     Out 1/2, Out 3/4, FX 1/2, FX 3/4, Bus 1/2, Bus 3/4  -> 0,1 audible
+//   4toOut, outTo4OutStrMap: Out, Fx, Bus                                        -> 0   audible
+#define OUT_PARAM_DESTINATION    (0)
+#define FXIN_PARAM_SOURCE        (0)   // Fx-In's "In from": inFxStrMap, 0 = FX 1/2, 1 = FX 3/4
 #define OUT_PARAM_ACTIVE         (1)   // 2toOut's Bypass, non-zero is on
 #define OUT_PARAM_PAD            (2)   // padStrMap: 0 dB or -6 dB
 
@@ -302,9 +308,17 @@ typedef struct {
     uint32_t line;           // which shared delay line this node owns, if it needs one
 } tEngineNode;
 
+// A patch can hold more than one Out module — SimpleLead has two, a Voice Area output carrying the
+// dry voice and an FX Area output carrying the delays and reverb — and on the hardware they SUM at
+// the sockets. Tapping only the first one silently drops the other, which on that patch means
+// hearing the effects with no dry signal underneath them.
+#define MAX_ENGINE_TAPS    (4)
+
 typedef struct {
     uint32_t    nodeCount;
-    int32_t     tap;           // the node whose output reaches the speakers, -1 for silence
+    int32_t     tap;                           // the node whose output reaches the speakers, -1 for silence
+    int32_t     extraTap[MAX_ENGINE_TAPS - 1]; // further Out modules, summed with `tap`
+    uint32_t    extraTapCount;
     // Patch-wide settings, from the hidden modules in the Morph location rather than from any module
     // on the canvas. Vibrato is how a patch gets aftertouch vibrato with no LFO in it anywhere.
     uint32_t    vibratoSource; // 0 off, 1 aftertouch, 2 wheel
@@ -380,8 +394,7 @@ static _Atomic uint32_t   gRawPeakMilli               = 0;
 // read by the menu.
 typedef enum {
     eStatusOff = 0,
-    eStatusNoSelection,
-    eStatusMultipleSelected,
+    eStatusNoOutput,          // the patch has no Out module to take sound from
     eStatusUnsupportedModule,
     eStatusNoSource,
     eStatusChainTooDeep,
@@ -830,13 +843,9 @@ const char * sound_engine_status_text(void) {
     }
 
     switch (gStatus) {
-        case eStatusNoSelection:
+        case eStatusNoOutput:
         {
-            return "Select a module, or patch something into an Out";
-        }
-        case eStatusMultipleSelected:
-        {
-            return "Select one module only";
+            return "Patch something into an Out module";
         }
         case eStatusUnsupportedModule:
         {
@@ -915,9 +924,10 @@ const char * sound_engine_debug_text(void) {
     };
 
     used += (size_t)snprintf(text + used, sizeof(text) - used,
-                             "active=%d status=%d nodes=%u tap=%d variation=%u peak=%.3f rawpeak=%.3f\n",
+                             "active=%d status=%d nodes=%u tap=%d extraTaps=%u variation=%u peak=%.3f rawpeak=%.3f\n",
                              (int)atomic_load(&gActive), (int)gStatus, (unsigned)gParams.nodeCount,
-                             (int)gParams.tap, (unsigned)gPatchDescr[gSlot].activeVariation,
+                             (int)gParams.tap, (unsigned)gParams.extraTapCount,
+                             (unsigned)gPatchDescr[gSlot].activeVariation,
                              (double)atomic_exchange(&gPeakMilli, 0) / 1000.0,
                              (double)atomic_exchange(&gRawPeakMilli, 0) / 1000.0);
 
@@ -1261,14 +1271,41 @@ static tModule * module_feeding(tModule * sink, uint32_t connectorIndex, uint32_
 // The Voice area's Out module, which is what feeds the FX area. There is no cable for this link —
 // the 2-Out's "Out to" setting routes it — so the walk has to make the jump itself when it reaches
 // an Fx-In, or the whole FX chain would look like it had nothing patched into it.
-static tModule * voice_area_output(uint32_t slot) {
+// The Voice area Out that feeds a given Fx-In — the one whose "Out to" names the same FX bus the
+// Fx-In is listening on.
+//
+// This used to return the FIRST Out module in the Voice area whatever it was set to, which routed
+// signal into the FX area even when the Out was aimed at the speakers and nothing was being sent to
+// FX at all. The two selectors have to agree for anything to cross:
+//
+//   2toOut "Out to":  0 Out 1/2, 1 Out 3/4, 2 FX 1/2, 3 FX 3/4, 4 Bus 1/2, 5 Bus 3/4
+//   4toOut "Out to":  0 Out, 1 Fx, 2 Bus            — one setting for all four channels
+//   Fx-In  "In from": 0 FX 1/2, 1 FX 3/4
+//
+// Returns NULL when nothing is feeding that bus, which is correct: an Fx-In listening to a bus
+// nobody sends to receives silence.
+static tModule * voice_area_output_for_fx(uint32_t slot, uint32_t wantedBus) {
     uint32_t index = 0;
 
     for (index = 0; index < MAX_NUM_MODULES; index++) {
         tModule * module = get_module_slot(slot, (uint32_t)locationVa, index);
 
-        if ((module != NULL) && ((module->type == moduleType2toOut) || (module->type == moduleType4toOut))) {
-            return module;
+        if (module == NULL) {
+            continue;
+        }
+        uint32_t variation   = gPatchDescr[slot].activeVariation;
+        uint32_t destination = module->param[variation][OUT_PARAM_DESTINATION].value;
+
+        if (module->type == moduleType2toOut) {
+            // FX 1/2 is destination 2 and FX 3/4 is 3, so the bus index is the destination less 2.
+            if ((destination >= 2) && ((destination - 2) == wantedBus)) {
+                return module;
+            }
+        } else if (module->type == moduleType4toOut) {
+            // A 4-Out has one "Fx" setting covering all four channels, so it feeds both pairs.
+            if (destination == 1) {
+                return module;
+            }
         }
     }
 
@@ -1329,11 +1366,15 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
 
         inCount = count;
 
-        // An Fx-In takes no cable: it carries whatever the Voice area's Out sends across. Follow
-        // that link explicitly, or a patch whose real output lives in the FX area looks like it has
-        // nothing patched into it and plays silence.
+        // An Fx-In takes no cable: it carries whatever a Voice area Out sends across the FX bus it is
+        // listening on. Follow that link explicitly, or a patch whose real output lives in the FX
+        // area looks like it has nothing patched into it and plays silence. The bus has to MATCH,
+        // though — see voice_area_output_for_fx().
         if (kind == eNodeFxIn) {
-            resolvedIn[0]     = add_node(params, voice_area_output(module->key.slot), variation, depth + 1);
+            uint32_t  wantedBus = module->param[variation][FXIN_PARAM_SOURCE].value;
+            tModule * feeder    = voice_area_output_for_fx(module->key.slot, wantedBus);
+
+            resolvedIn[0]     = (feeder != NULL) ? add_node(params, feeder, variation, depth + 1) : -1;
             resolvedSrcOut[0] = 0;
             inCount           = 1;
         }
@@ -1650,6 +1691,23 @@ static uint64_t topology_signature(const tSoundEngineParams * params) {
 // area: the Voice area's is labelled "Fx Out" and routes into the FX area rather than to the
 // speakers, and the FX area's is the real end of the chain. Taking the Voice one — which is what
 // scanning in area order does — plays the patch dry, with the delays and reverb silently skipped.
+// Does this Out module actually reach the speakers, or is it internal routing? Getting this wrong is
+// audible in both directions: treat a send as an output and the FX area's input is heard raw
+// alongside the finished signal; ignore a real output and the patch is silent.
+static bool out_module_is_audible(tModule * module) {
+    uint32_t destination = 0;
+
+    if (module == NULL) {
+        return false;
+    }
+    destination = module->param[gPatchDescr[module->key.slot].activeVariation][OUT_PARAM_DESTINATION].value;
+
+    if (module->type == moduleType4toOut) {
+        return destination == 0;              // "Out"; "Fx" and "Bus" are internal
+    }
+    return destination <= 1;                  // "Out 1/2" or "Out 3/4"
+}
+
 static tModule * find_output_module(void) {
     const uint32_t locations[] = {(uint32_t)locationFx, (uint32_t)locationVa};
     uint32_t       l           = 0;
@@ -1663,7 +1721,8 @@ static tModule * find_output_module(void) {
                 continue;
             }
 
-            if ((module->type == moduleType2toOut) || (module->type == moduleType4toOut)) {
+            if (  ((module->type == moduleType2toOut) || (module->type == moduleType4toOut))
+               && (out_module_is_audible(module) == true)) {
                 return module;
             }
         }
@@ -1711,19 +1770,19 @@ void sound_engine_update_from_patch(void) {
         }
     }
 
-    // You hear what you select, plus everything upstream of it the engine understands. With nothing
-    // selected it falls back to the patch's own Out, so a finished patch just plays.
-    if (gSelection.count > 1) {
-        gStatus = eStatusMultipleSelected;
-    } else {
-        if (gSelection.count == 1) {
-            tapModule = get_module(gSelection.keys[0]);
-        } else {
-            tapModule = find_output_module();
-        }
+    // SOUND COMES FROM THE PATCH'S OUTPUTS, always — never from whatever happens to be selected.
+    //
+    // Auditioning the selected module was useful while the engine could only render a fragment of a
+    // patch; now that it resolves the whole thing, a selection quietly changing what you hear is a
+    // surprise rather than a feature. It was also why the application and the plug-in disagreed:
+    // with a module selected the application tapped THAT, while the plug-in — which has no
+    // selection and no way to make one — always fell through to the outputs. Two different signal
+    // paths from one patch, and only one of them was what the patch actually says.
+    {
+        tapModule = find_output_module();
 
         if (tapModule == NULL) {
-            gStatus = eStatusNoSelection;
+            gStatus = eStatusNoOutput;
         } else {
             tNodeKind kind = eNodeOsc;
 
@@ -1733,6 +1792,36 @@ void sound_engine_update_from_patch(void) {
                 gStatus = eStatusUnsupportedModule;
             } else {
                 snapshot.tap = add_node(&snapshot, tapModule, variation, 0);
+
+                // Every other Out module in the patch, summed with the first.
+                if (snapshot.tap >= 0) {
+                    for (uint32_t l = 0; l < 2; l++) {
+                        uint32_t location = (l == 0) ? (uint32_t)locationFx : (uint32_t)locationVa;
+
+                        for (uint32_t index = 0; index < MAX_NUM_MODULES; index++) {
+                            tModule * other = get_module_slot(gSlot, location, index);
+
+                            if ((other == NULL) || (other == tapModule)) {
+                                continue;
+                            }
+
+                            if (  (  (other->type != moduleType2toOut)
+                                  && (other->type != moduleType4toOut))
+                               || (out_module_is_audible(other) == false)) {
+                                continue;
+                            }
+
+                            if (snapshot.extraTapCount >= (MAX_ENGINE_TAPS - 1)) {
+                                break;
+                            }
+                            int32_t   extra = add_node(&snapshot, other, variation, 0);
+
+                            if (extra >= 0) {
+                                snapshot.extraTap[snapshot.extraTapCount++] = extra;
+                            }
+                        }
+                    }
+                }
 
                 if (snapshot.tap < 0) {
                     // The kind lookup above already succeeded, so this is the node budget or the
@@ -2805,6 +2894,14 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 // Tapping a module means listening to its main output; for an envelope used as an amp
                 // that is its shaped audio rather than the envelope signal.
                 sample = value[params.tap][(params.node[params.tap].kind == eNodeEnv) ? 1 : 0];
+
+                // The patch's other Out modules, summed rather than mixed at some fraction: that is
+                // what the hardware's sockets do when two areas both drive them.
+                for (uint32_t t = 0; t < params.extraTapCount; t++) {
+                    int32_t e = params.extraTap[t];
+
+                    sample += value[e][(params.node[e].kind == eNodeEnv) ? 1 : 0];
+                }
             }
             // With an envelope module shaping the note, the fixed ramp would only double up on it; it is
             // still applied when the chain has none.

@@ -135,28 +135,42 @@ SDK does **not** need building first.
 ./do-vst3
 ```
 
-Writes `build/G2 Edit.vst3` — universal (arm64 + x86_64), ad-hoc signed. To install it:
+Writes `build/G2 Alike.vst3` — universal (arm64 + x86_64), ad-hoc signed. To install it:
 
 ```
-cp -R "build/G2 Edit.vst3" ~/Library/Audio/Plug-Ins/VST3/
+cp -R "build/G2 Alike.vst3" ~/Library/Audio/Plug-Ins/VST3/
 ```
 
 As with the application, there is no paid Apple Developer membership behind this, so a host may
 refuse to load the bundle until its quarantine flag is cleared.
 
-### Choosing the patch
+### Which patch it plays
 
-There is no plug-in editor, so the patch is chosen by path, in this order:
+**Temporarily, one patch is compiled into the plug-in** — `PatchTestFiles/SimpleLead.pch2` by
+default, overridable at build time with `$G2_BUILTIN_PATCH`. `do-vst3` generates
+`vst3/g2BuiltInPatch.h` from it on every build, so the file is the source of truth and the header
+is build output.
 
-1. the path saved into the host project (the plug-in stores a path, not the patch bytes, so
-   editing that patch in G2-Edit is picked up rather than frozen into the project)
-2. `$G2_VST3_PATCH`
-3. `~/Documents/G2-Edit/plugin.pch2`
+That is not just convenience. A host may sandbox a plug-in and deny it access to `~/Documents`, in
+which case a perfectly correct file path still produces silence — and silence looks the same
+whatever caused it. Embedding removes that whole class of failure while the rest is being proven.
+
+The file-path machinery is still in the source behind it, unused for now, and will choose the patch
+in this order when it comes back: the path saved into the host project, then `$G2_VST3_PATCH`, then
+`~/Documents/G2-Edit/plugin.pch2`. Note that a host launched from the Dock does not inherit shell
+environment variables, so that middle option only ever applies to a scripted run.
 
 ### Controls
 
-There is no custom editor, so the host draws its own generic panel. Nine parameters are exposed and
-all are automatable: **Morph 1-8** (the G2's own performance controls) and **Output Level**.
+The plug-in is called **G2 Alike**, since it plays a patch rather than editing one.
+
+It has its own editor window: a Cocoa panel with sliders for **Morph 1-8** — the G2's own
+performance controls — and an **Output Level** trim, plus a readout of which patch is loaded. All
+nine are exposed as automatable VST3 parameters as well, so a host can record them.
+
+That window is *not* a view of the patch. The application draws through GLFW, which owns its own
+window and cannot adopt the one a host provides, so the plug-in has a second and much smaller
+interface rather than a port of the editor's canvas.
 
 Pitch bend and mod wheel are not yet routed.
 
