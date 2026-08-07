@@ -374,28 +374,35 @@ OPEN WORK
 === SOUND ENGINE HANDOVER 2026-08-07 ===
 (Say "read the SOUND ENGINE HANDOVER section in G2-Edit/todo.txt" to pick this up in a new session.)
 
---- 1. THE BLOCKER: the engine depends on connector data only the RENDERER fills in ---
+--- 1. FIXED 2026-08-07: the engine no longer depends on connector data the RENDERER fills in ---
 
-module->connector[].dir and .type are populated in moduleGraphics.c:768, i.e. while DRAWING each
-module. cable_chain_node_from_connector() reads module->connector[connectorIndex].dir, so every
-cable lookup silently depends on the module having been rendered at least once.
+WAS: module->connector[].dir and .type were written only in render_connector_common()
+(moduleGraphics.c), i.e. while DRAWING. cable_chain_node_from_connector() reads .dir, so every cable
+lookup silently depended on the module having been rendered at least once. connectorDirIn is 0, so
+an undrawn module read as "every connector is an input" — outputs were misread and lookups failed
+with no error anywhere. The app always draws so it always worked; the VST3 plug-in never draws, so
+its modulation inputs never connected and its filter played shut. Any headless harness had the same
+fault, which is what produced the bogus "cableChain bug" write-up. There is NO cableChain bug.
 
-Consequences:
-  - The application works. It draws the patch, so the array is filled and the filter envelope
-    connects. Owner confirms envelope modulation of the filter is roughly OK on the standalone.
-  - The VST3 plug-in NEVER RENDERS, so its connector array stays zeroed, every cable lookup fails,
-    and modulation inputs silently do not connect. This is why the plug-in's filter played shut.
-  - Any headless harness has the same fault, which is what misled me on 2026-08-07: I read a
-    zeroed-array failure as a cableChain bug and wrote it up as one. There is NO cableChain bug.
+FIX: populate_module_connectors(tModule *) in moduleResourcesAccess.c fills .dir/.type from
+connectorLocationList. Called from the two places a module can enter the database:
+  - protocol.c parse_module_list(), just after module->type is set (the patch-parse path)
+  - dataBase.c write_module() (covers menus.c, selection.c, undo.c)
+Those two cover every path that assigns a module type — verified by grep, no others exist.
+render_connector_common() no longer writes .dir/.type at all; it still owns .coord and .rectangle,
+which are genuine geometry. Deliberately ONE owner now — two writers is how this arose.
 
-FIX: populate module->connector[] from connectorLocationList when a module is created/loaded —
-dataBase.c or protocol.c — instead of as a side effect of drawing. The data is entirely static per
-module type, so this is the same "ask the resources" move as connector_index_for_input() in
-soundEngine.c, applied to the array itself. moduleGraphics.c:768 can then just read it.
+VERIFIED headlessly, with no renderer linked into the binary at all: parse each PatchTestFiles
+patch, then compare every module's connector dirs against connectorLocationList. Pre-fix vs
+post-fix on SimpleLead.pch2 — out connectors 0 -> 18, mismatches 13 -> 0. All 8 valid test patches
+pass (Corrupt.pch2 correctly refuses to load). The pre-fix run used the HEAD copies of the three
+files, so the test is known to discriminate rather than merely agree.
 
-Until that is done, ANY headless measurement of the engine is unreliable: chains resolve with
-modulation inputs missing, so levels and tone are both wrong and wrong in a way that looks like a
-DSP problem. Do not tune the engine against a headless harness before fixing this.
+Also closed a latent APP bug: the upRate cable-recolour walk in protocol.c reads .dir/.type, and on
+a module that had never been drawn it would skip every connector and recolour nothing.
+
+Headless measurement of the engine is now trustworthy, so sections 2 and 8 can be worked on
+against a harness.
 
 --- 2. Filter modulation scaling is the wrong SHAPE, not just the wrong number ---
 
