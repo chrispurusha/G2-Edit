@@ -62,8 +62,7 @@ bool multi_select_modifier_held(void) {
 // events, and both coordinate conversions moved into src/canvasCoords.c — out of mouseHandle.c and
 // menus.c respectively — because the arithmetic never needed a window in the first place.
 
-void start_cursor_drag(void) {
-}
+// start_cursor_drag() is NOT here any more — it is real, in g2Input.c, because it needs the mouse.
 
 // ── Editing ─────────────────────────────────────────────────────────────────────────────────────
 //
@@ -158,6 +157,21 @@ void synthlib_request_redraw(void) {
     g2_gl_view_request_redraw();
 }
 
+// The application's wake-the-render-loop wrapper (graphics.c). It is one line there too — this is
+// not a stub so much as the same function, since synthlib_request_redraw() above already does the
+// right thing in a plug-in. Every menu action calls it.
+void wake_glfw(void) {
+    synthlib_request_redraw();
+}
+
+// Settable now, from the View menu. Rotary is the default because the other two want a hidden,
+// warped cursor that a host view does not give us — see the note in g2Menu.c's View menu.
+static tDialMode gDialMode = eDialModeRotary;
+
 tDialMode synthlib_dial_mode(void) {
-    return eDialModeRotary;
+    return gDialMode;
+}
+
+void synthlib_set_dial_mode(tDialMode mode) {
+    gDialMode = mode;
 }
