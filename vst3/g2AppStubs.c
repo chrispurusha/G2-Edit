@@ -149,8 +149,10 @@ void undo_redo(void) {
 
 // The rest of the undo surface, reached from menus.c. Same reasoning as the pushes above: there is
 // no undo stack here, and the begin/commit pairs bracket edits that simply are not recorded.
-void undo_push_create_module(tModuleKey key) {
+void undo_push_create_module(tModuleKey key, tUndoMoveEntry * displaced, uint32_t displacedCount) {
     (void)key;
+    (void)displaced;
+    (void)displacedCount;
 }
 
 void undo_push_module_colour(tModuleKey key, uint32_t oldColour, uint32_t newColour) {
@@ -243,7 +245,8 @@ int32_t midi_input_last_cc(void) {
 void undo_push_paste(uint32_t slot, uint32_t location, uint32_t anchorCol, uint32_t anchorRow,
                      tModuleKey * pastedKeys, uint32_t pastedCount,
                      tClipboardModule * clipModules, uint32_t clipModuleCount,
-                     tClipboardCable * clipCables, uint32_t clipCableCount) {
+                     tClipboardCable * clipCables, uint32_t clipCableCount,
+                     tUndoMoveEntry * displaced, uint32_t displacedCount) {
     (void)slot;
     (void)location;
     (void)anchorCol;
@@ -254,6 +257,8 @@ void undo_push_paste(uint32_t slot, uint32_t location, uint32_t anchorCol, uint3
     (void)clipModuleCount;
     (void)clipCables;
     (void)clipCableCount;
+    (void)displaced;
+    (void)displacedCount;
 }
 
 // open_toggle_menu(), open_mode_toggle_menu() and find_unique_module_id() are NO LONGER STUBS —

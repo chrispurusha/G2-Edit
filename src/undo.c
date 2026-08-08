@@ -80,9 +80,11 @@ typedef struct {
     uint32_t           pastedCount;
     tModuleKey         pastedKeys[MAX_NUM_MODULES];
     uint32_t           clipModuleCount;
-    tClipboardModule * clipModules;  // malloc'd copy
+    tClipboardModule * clipModules;                // malloc'd copy
     uint32_t           clipCableCount;
-    tClipboardCable *  clipCables;   // malloc'd copy
+    tClipboardCable *  clipCables;                 // malloc'd copy
+    uint32_t           displacedCount;
+    tUndoMoveEntry     displaced[MAX_NUM_MODULES]; // modules the paste pushed down its column
 } tUndoPastePayload;
 
 typedef struct {
@@ -154,6 +156,8 @@ typedef struct {
     uint32_t         slot;
     uint32_t         location;
     tClipboardModule module;
+    uint32_t         displacedCount;
+    tUndoMoveEntry   displaced[MAX_NUM_MODULES]; // modules the new one pushed down its column
 } tUndoCreatePayload;
 
 typedef struct {
@@ -428,7 +432,8 @@ void undo_push_paste(uint32_t slot, uint32_t location,
                      uint32_t anchorCol, uint32_t anchorRow,
                      tModuleKey * pastedKeys, uint32_t pastedCount,
                      tClipboardModule * clipModules, uint32_t clipModuleCount,
-                     tClipboardCable * clipCables, uint32_t clipCableCount) {
+                     tClipboardCable * clipCables, uint32_t clipCableCount,
+                     tUndoMoveEntry * displaced, uint32_t displacedCount) {
     tUndoPastePayload * p = malloc(sizeof(tUndoPastePayload));
 
     if (!p) {
@@ -460,6 +465,13 @@ void undo_push_paste(uint32_t slot, uint32_t location,
         if (p->clipCables) {
             memcpy(p->clipCables, clipCables, clipCableCount * sizeof(tClipboardCable));
         }
+    }
+    p->displacedCount  = displacedCount < MAX_NUM_MODULES ? displacedCount : MAX_NUM_MODULES;
+
+    if ((displaced != NULL) && (p->displacedCount > 0)) {
+        memcpy(p->displaced, displaced, p->displacedCount * sizeof(tUndoMoveEntry));
+    } else {
+        p->displacedCount = 0;
     }
     stack_push(eUndoCmdPaste, p);
 }
@@ -634,6 +646,19 @@ static void apply_paste_undo(tUndoPastePayload * p) {
         }
     }
 
+    // Put back anything the paste shoved down its column to make room. After the deletes above, so
+    // the rows they are returning to are free again.
+    for (uint32_t i = 0; i < p->displacedCount; i++) {
+        tModule * mod = get_module(p->displaced[i].key);
+
+        if (mod == NULL || !mod->active) {
+            continue;
+        }
+        mod->column = p->displaced[i].oldColumn;
+        mod->row    = p->displaced[i].oldRow;
+        send_module_move_msg(mod);
+    }
+
     selection_clear();
     update_module_up_rates();
     synthlib_request_redraw();
@@ -651,7 +676,7 @@ static void apply_paste_redo(tUndoPastePayload * p) {
 
 // ─── Add module ────────────────────────────────────────────────────────────
 
-void undo_push_create_module(tModuleKey key) {
+void undo_push_create_module(tModuleKey key, tUndoMoveEntry * displaced, uint32_t displacedCount) {
     tModule *            mod = get_module(key);
 
     if (mod == NULL) {
@@ -662,9 +687,17 @@ void undo_push_create_module(tModuleKey key) {
     if (!p) {
         return;
     }
-    p->slot     = key.slot;
-    p->location = key.location;
+    p->slot           = key.slot;
+    p->location       = key.location;
     snapshot_module(mod, &p->module);
+
+    p->displacedCount = displacedCount < MAX_NUM_MODULES ? displacedCount : MAX_NUM_MODULES;
+
+    if ((displaced != NULL) && (p->displacedCount > 0)) {
+        memcpy(p->displaced, displaced, p->displacedCount * sizeof(tUndoMoveEntry));
+    } else {
+        p->displacedCount = 0;
+    }
     stack_push(eUndoCmdCreate, p);
 }
 
@@ -680,6 +713,21 @@ static void apply_create(tUndoCreatePayload * p, bool isUndo) {
     } else {
         recreate_module(p->slot, p->location, &p->module);
     }
+
+    // Whatever the new module shoved down its column goes back where it was on undo, and back out of
+    // the way on redo — recreate_module() restores the module's own recorded position, so nothing
+    // else re-derives the shift.
+    for (uint32_t i = 0; i < p->displacedCount; i++) {
+        tModule * mod = get_module(p->displaced[i].key);
+
+        if (mod == NULL || !mod->active) {
+            continue;
+        }
+        mod->column = isUndo ? p->displaced[i].oldColumn : p->displaced[i].newColumn;
+        mod->row    = isUndo ? p->displaced[i].oldRow : p->displaced[i].newRow;
+        send_module_move_msg(mod);
+    }
+
     update_module_up_rates();
     synthlib_request_redraw();
 }

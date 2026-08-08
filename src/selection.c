@@ -270,9 +270,10 @@ void shift_modules_down(tModuleKey key) {
 // Like shift_modules_down but applied to every selected module. Selected modules
 // are transparent to each other — only conflicts with non-selected modules are resolved.
 void shift_selection_down(void) {
-    uint32_t slot     = (uint32_t)gSlot;
-    uint32_t location = (uint32_t)gLocation;
+    shift_selection_down_in((uint32_t)gSlot, (uint32_t)gLocation);
+}
 
+void shift_selection_down_in(uint32_t slot, uint32_t location) {
     for (uint32_t si = 0; si < gSelection.count; si++) {
         tModuleKey key               = gSelection.keys[si];
         tModule *  module            = get_module(key);
@@ -338,6 +339,56 @@ void shift_selection_down(void) {
             }
         }
     }
+}
+
+// Both shifts above move modules the user never touched, and undo has to put those back as well as
+// reversing whatever caused the shift. These two fill in the halves of a tUndoMoveEntry list either
+// side of the operation: snapshot the location's positions first, then ask which of them moved.
+// out must have room for MAX_NUM_MODULES entries.
+uint32_t module_positions_snapshot(uint32_t slot, uint32_t location, tUndoMoveEntry * out) {
+    uint32_t count = 0;
+
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * mod = get_module_slot(slot, location, i);
+
+        if ((mod == NULL) || !mod->active) {
+            continue;
+        }
+        out[count].key       = mod->key;
+        out[count].oldColumn = mod->column;
+        out[count].oldRow    = mod->row;
+        out[count].newColumn = mod->column;
+        out[count].newRow    = mod->row;
+        count++;
+    }
+
+    return count;
+}
+
+// Compacted in place — the write index never overtakes the read index — leaving only the entries
+// whose module actually moved, each carrying both its old and its new position.
+uint32_t module_positions_changed(tUndoMoveEntry * entries, uint32_t count) {
+    uint32_t moved = 0;
+
+    for (uint32_t i = 0; i < count; i++) {
+        tModule * mod = get_module(entries[i].key);
+
+        if ((mod == NULL) || !mod->active) {
+            continue;
+        }
+
+        if ((mod->column == entries[i].oldColumn) && (mod->row == entries[i].oldRow)) {
+            continue;
+        }
+        entries[moved].key       = entries[i].key;
+        entries[moved].oldColumn = entries[i].oldColumn;
+        entries[moved].oldRow    = entries[i].oldRow;
+        entries[moved].newColumn = mod->column;
+        entries[moved].newRow    = mod->row;
+        moved++;
+    }
+
+    return moved;
 }
 
 void copy_selection(void) {
@@ -543,6 +594,12 @@ void paste_snapshot(uint32_t slot, uint32_t location,
         selection_add(module.key);
     }
 
+    // A paste lands wherever the pointer is, which is very often on top of something. Re-order the
+    // column exactly as a drop does: the pasted modules push whatever they overlap further down, and
+    // are transparent to each other so the pasted block keeps its own shape. Every pasted module is
+    // in gSelection by now, so this is the same call canvas_module_drag_release() makes.
+    shift_selection_down_in(slot, location);
+
     // Reconnect internal cables using remapped indices
     for (uint32_t ci = 0; ci < cableCount; ci++) {
         tClipboardCable * cc       = &cables[ci];
@@ -585,21 +642,30 @@ void paste_clipboard(void) {
     if (!gClipboard.active || gClipboard.moduleCount == 0) {
         return;
     }
-    uint32_t slot       = (uint32_t)gSlot;
-    uint32_t location   = (uint32_t)gLocation;
-    uint32_t anchorCol  = 0;
-    uint32_t anchorRow  = 0;
-    tCoord   mouseCoord = {0};
+    uint32_t       slot           = (uint32_t)gSlot;
+    uint32_t       location       = (uint32_t)gLocation;
+    uint32_t       anchorCol      = 0;
+    uint32_t       anchorRow      = 0;
+    tCoord         mouseCoord     = {0};
 
     get_global_gui_scaled_mouse_coord(&mouseCoord);
     convert_mouse_coord_to_module_column_row(&anchorCol, &anchorRow, mouseCoord);
+
+    // Modules already here may be pushed down to make room. Their positions are recorded before and
+    // after so ONE Undo puts them back as well as removing what was pasted — a paste that shoved half
+    // a column downwards and then only half-undid it would be worse than not shifting at all.
+    tUndoMoveEntry displaced[MAX_NUM_MODULES];
+    uint32_t       displacedCount = module_positions_snapshot(slot, location, displaced);
 
     paste_snapshot(slot, location, anchorCol, anchorRow,
                    gClipboard.modules, gClipboard.moduleCount,
                    gClipboard.cables, gClipboard.cableCount);
 
+    uint32_t       movedCount     = module_positions_changed(displaced, displacedCount);
+
     undo_push_paste(slot, location, anchorCol, anchorRow,
                     gSelection.keys, gSelection.count,
                     gClipboard.modules, gClipboard.moduleCount,
-                    gClipboard.cables, gClipboard.cableCount);
+                    gClipboard.cables, gClipboard.cableCount,
+                    displaced, movedCount);
 }
