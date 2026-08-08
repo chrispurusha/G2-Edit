@@ -254,6 +254,14 @@ static void send_master_clock_bpm(uint32_t bpm) {
     msg_send(&gToUsbThread, &messageContent);
 }
 
+// The application's answer: ask GLFW directly. See mouseHandle.h for why this is a function.
+bool multi_select_modifier_held(void) {
+    return (glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+           || (glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS)
+           || (glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SUPER) == GLFW_PRESS)
+           || (glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS);
+}
+
 void start_cursor_drag(void) {
     glfwGetCursorPos(synthlib_window(), &gDragStartX, &gDragStartY);
     gDragPrevX     = gDragStartX;
@@ -358,10 +366,7 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
 
     if (retVal == false) {
         if (within_rectangle(coord, module->dragArea) && mouseButton == mouseButtonLeftDown) {
-            bool multiSelectHeld = glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-                                   || glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS
-                                   || glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SUPER) == GLFW_PRESS
-                                   || glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
+            bool multiSelectHeld = multi_select_modifier_held();
 
             if (multiSelectHeld) {
                 selection_toggle(module->key);
@@ -402,10 +407,7 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
     // Clicking anywhere else on the module body selects without starting a drag
     if (retVal == false) {
         if (within_rectangle(coord, module->rectangle) && mouseButton == mouseButtonLeftDown) {
-            bool multiSelectHeld = glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-                                   || glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS
-                                   || glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SUPER) == GLFW_PRESS
-                                   || glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
+            bool multiSelectHeld = multi_select_modifier_held();
 
             if (multiSelectHeld) {
                 selection_toggle(module->key);

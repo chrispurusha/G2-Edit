@@ -37,6 +37,18 @@ extern "C" {
 
 void init_patch(uint32_t slot);
 void get_global_gui_scaled_mouse_coord(tCoord * coord);
+// Is a multi-select modifier — either Shift or either Command — held right now?
+//
+// One function rather than the four-way glfwGetKey() expression written out at each site, which it
+// was in four places. It is also the ONLY reason moduleGraphics.c reached for GLFW: extracting it
+// leaves that file able to link into a build with no GLFW in it at all, which is what lets the
+// canvas renderer be reused by the VST3 plug-in. See vst3/plugin-gui-notes.md.
+//
+// The implementation is therefore part of the PLATFORM, not of the drawing: the application answers
+// it from GLFW (below), and the plug-in answers it from whatever its host gives it — currently
+// nothing, so false.
+bool multi_select_modifier_held(void);
+
 void start_cursor_drag(void);
 void stop_dragging(void);
 
