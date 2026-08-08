@@ -50,6 +50,8 @@
 #include "menuBar.h"
 #include "g2Menu.h"
 
+#include "dataBase.h"
+#include "moduleResourcesAccess.h"
 #include "g2GlDraw.h"
 
 // The application's canvas grey (graphics.c render_frame()), so the strip reads as a piece of the
@@ -77,13 +79,11 @@ void g2_gl_draw_init(void) {
     // defs.h, so it has to be told before anything is drawn — exactly as init_graphics() does. The
     // values come from synthlibDefs.h so the plug-in and the application cannot drift apart.
     configure_synthlib_theme((tSynthLibTheme){
-        // Zero, not the application's value. topBarHeight tells the renderer how much of the window
-        // the app's top bar and menu occupy so the canvas can sit below them; this strip is the whole
-        // surface and has neither, so borrowing the app's number would push everything down by the
-        // height of a bar that is not there.
-        // The canvas starts BELOW the menu bar and the reserved topbar band. Telling the renderer
-        // this is what keeps modules from being drawn underneath them — and reserving the topbar's
-        // height now means adding its controls later does not shift the whole patch down.
+        // The canvas starts BELOW the menu bar and the reserved topbar band. topBarHeight is how the
+        // renderer is told that, and it is what keeps modules from being drawn underneath them.
+        // NOT the application's value: its bar carries slot, performance and clock controls that a
+        // plug-in has no use for, so the reserved band here is smaller. Reserving it now means adding
+        // the topbar's controls later does not shift the whole patch down.
         .topBarHeight   = MENU_BAR_HEIGHT + G2_PLUGIN_TOPBAR_HEIGHT,
         .orange1        = (tRgb)RGB_ORANGE_1,
         .orange2        = (tRgb)RGB_ORANGE_2,
@@ -163,6 +163,21 @@ void g2_gl_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
 
     render_modules();
     render_cables();
+
+    // The cable being dragged, if any. Drawn AFTER the settled ones, as render_frame() does — it is
+    // the thing under the pointer and belongs on top. Without it a cable drag is invisible until it
+    // lands, which reads as nothing happening at all.
+    if (gCableDrag.active == true) {
+        tModule * from = get_module(gCableDrag.fromModuleKey);
+
+        if (from != NULL) {
+            tCableColour dragColour = cable_colour_for_connector_type(
+                from->connector[gCableDrag.fromConnectorIndex].type);
+
+            set_rgb_colour(gCableColourMap[dragColour]);
+            render_cable_from_to(from->connector[gCableDrag.fromConnectorIndex], gCableDrag.toConnector, 4.0);
+        }
+    }
 
     // Chrome over the canvas. The reserved topbar band is drawn as a plain strip for now: an empty
     // gap would read as a rendering fault, whereas a filled bar reads as a bar with nothing in it.
