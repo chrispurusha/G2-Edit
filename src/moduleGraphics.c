@@ -228,10 +228,7 @@ static void module_body_click_handler(tCoord coord, eClickPhase phase, void * us
     }
     tModuleClickCtx * ctx             = (tModuleClickCtx *)userData;
     tModule *         module          = get_module(ctx->key);
-    bool              multiSelectHeld = glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-                                        || glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS
-                                        || glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_LEFT_SUPER) == GLFW_PRESS
-                                        || glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
+    bool              multiSelectHeld = multi_select_modifier_held();
 
     if (multiSelectHeld) {
         selection_toggle(module->key);
@@ -253,10 +250,7 @@ static void drag_area_click_handler(tCoord coord, eClickPhase phase, void * user
     }
     tModuleClickCtx * ctx             = (tModuleClickCtx *)userData;
     tModule *         module          = get_module(ctx->key);
-    bool              multiSelectHeld = glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-                                        || glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS
-                                        || glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_LEFT_SUPER) == GLFW_PRESS
-                                        || glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
+    bool              multiSelectHeld = multi_select_modifier_held();
 
     if (multiSelectHeld) {
         selection_toggle(module->key);
