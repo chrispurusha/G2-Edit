@@ -254,11 +254,28 @@ that sets `gModuleDrag`, and the plug-in shares it.
 Still not carried over: the move is not recorded for **undo**. The application builds a
 `tUndoMoveEntry` on release; a plug-in has no undo stack, so that stayed behind.
 
-Remaining, in order:
+**Dial dragging works**, 2026-08-08. The parameter-drag arm of `cursor_pos()` — 173 lines — moved
+into `canvasDrag.c` as `canvas_param_drag_motion()`, unchanged in behaviour. It learns from arguments
+what it used to read from GLFW: the canvas coordinate, the raw cursor position, and whether Alt is
+held (Alt drags the morph OFFSET rather than the value).
 
-1. Extract the param-drag arm of `cursor_pos()` so dial drags work. Note `start_cursor_drag()` is
-   still a stub — the hide-and-warp behaviour that vertical/horizontal dial modes rely on is a
-   platform capability, which is why `synthlib_dial_mode()` currently reports rotary here.
+The drag reference points (`gDragStartX/Y`, `gDragPrevX/Y`) moved to `globalVars.c` rather than into
+`canvasDrag.c`, because `cursor_pos()`'s remaining arms — tempo, vibrato, glide — difference against
+the same two points and stayed behind.
+
+**ROTARY DIAL MODE ONLY in the plug-in, and this is load-bearing.** Rotary reads an absolute angle
+each event, so passing the canvas coordinate as the "raw" one is harmless. Vertical and horizontal
+modes difference raw cursor deltas AND depend on `start_cursor_drag()` hiding and warping the
+cursor — a platform capability the plug-in does not have, which is why `synthlib_dial_mode()`
+reports rotary there. Wiring the other two modes means giving the plug-in real cursor control first.
+
+A BUG WORTH REMEMBERING, found when module re-ordering silently did nothing: **a press CAPTURES its
+click region** (clickRegion.h), so `dispatch_click_region()` returns true on the matching RELEASE
+too. The plug-in's input path was returning early on that, so the drag-end path — which does the
+re-ordering — was never reached, and `gModuleDrag` stayed active into the next gesture. The release
+must run both the captured handler and the drag-end work; only the press may return early.
+
+Remaining, in order:
 2. Scroll and zoom, then the FX pane — needed before a patch bigger than the window is usable.
 3. Right-click context menus: `open_toggle_menu()`/`open_mode_toggle_menu()` are stubs, and those
    need SynthLib's menu stack, which needs an event loop.

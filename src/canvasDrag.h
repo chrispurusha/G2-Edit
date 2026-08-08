@@ -54,4 +54,15 @@ bool canvas_rubber_band_release(tCoord coord, uint32_t slot, uint32_t location, 
 // that itself, and a plug-in has no undo stack.
 bool canvas_module_drag_release(void);
 
+// Records where a drag began, in RAW cursor coordinates. The incremental dial modes difference
+// against it; Alt-held morph dragging measures from it rather than from the previous event.
+void canvas_drag_set_origin(double rawX, double rawY);
+
+// Dial dragging. See the long note above the definition for what each argument replaces.
+bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHeld);
+
+// Ends a dial drag: records it for undo and clears the drag state. MUST be called on mouse release
+// or the dial stays held and the next click anywhere keeps dragging it.
+bool canvas_param_drag_release(void);
+
 #endif // __CANVAS_DRAG_H__
