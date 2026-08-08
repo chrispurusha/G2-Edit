@@ -41,6 +41,7 @@
 #include "types.h"
 #include "globalVars.h"
 #include "moduleGraphics.h"
+#include "soundEngine.h"
 
 #include "g2GlDraw.h"
 
@@ -113,13 +114,21 @@ void g2_gl_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
     glClearColor((GLfloat)BACKGROUND_GREY, (GLfloat)BACKGROUND_GREY, (GLfloat)BACKGROUND_GREY, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // THE ACTUAL PATCH. render_modules() and render_cables() are the application's own canvas
-    // functions, called here exactly as render_frame() calls them — they read the module database
-    // that g2Patch.c already filled when the plug-in loaded its .pch2.
+    // PUSH THE PATCH TO THE ENGINE, exactly as the application's render_frame() does (graphics.c).
     //
+    // Turning a dial writes to the module database; the audio thread reads a parameter SNAPSHOT, and
+    // nothing is heard until that snapshot is rebuilt. In the application a redraw is the event that
+    // rebuilds it, and every edit causes a redraw — so doing it here gives the plug-in the same
+    // behaviour, and covers every kind of edit rather than dials alone.
+    //
+    // Safe against process() rebuilding on the audio thread at the same moment: the snapshot's
+    // writers were given a mutex (gParamsWriteMutex in soundEngine.c) when the mod wheel latency was
+    // fixed, and the critical section is one struct copy.
+    sound_engine_update_from_patch();
+
     // The click regions must be cleared each frame because the renderer registers one for every
-    // module, dial and connector as it draws. Nothing in the plug-in consumes them yet, but letting
-    // them accumulate would grow without limit for as long as the window is open.
+    // module, dial and connector as it draws — letting them accumulate would grow without limit for
+    // as long as the window is open.
     clear_click_regions();
 
     // Which slot and area to draw. The plug-in loads its patch into slot 0, and the Voice Area is

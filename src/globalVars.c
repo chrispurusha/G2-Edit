@@ -161,3 +161,15 @@ void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId las
 #ifdef __cplusplus
 }
 #endif
+
+// Drag reference points, in RAW cursor coordinates. Shared rather than private to either file: the
+// parameter-drag arm lives in canvasDrag.c (so the plug-in can use it) while the tempo, vibrato and
+// glide drags stayed in mouseHandle.c, and both difference against the same two points.
+//
+// gDragStart* is fixed at the press; gDragPrev* advances with each event. Alt-held morph dragging
+// measures from the START, because the value it is adjusting deliberately does not move — measuring
+// from the previous event would collapse to nothing the moment the mouse paused.
+double gDragStartX = 0.0;
+double gDragStartY = 0.0;
+double gDragPrevX  = 0.0;
+double gDragPrevY  = 0.0;

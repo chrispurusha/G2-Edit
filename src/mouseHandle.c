@@ -67,12 +67,8 @@ extern "C" {
 #include "clickRegion.h"
 #include "cableChain.h"
 
-// Drag-start state for vertical/horizontal dial modes
-static double gDragStartX    = 0.0; // cursor position at press — fixed reference point for Alt-held morph-offset dragging
-static double gDragStartY    = 0.0;
-static double gDragPrevX     = 0.0; // cursor position at previous cursor_pos call — used for incremental delta
-static double gDragPrevY     = 0.0;
-static int    gDragSkipCount = 0;   // skip first N cursor_pos events after CURSOR_DISABLED — covers stale NORMAL-mode events + transition event
+// Drag-start state moved to canvasDrag.c along with the parameter-drag arm that uses it.
+static int gDragSkipCount = 0;      // skip first N cursor_pos events after CURSOR_DISABLED — covers stale NORMAL-mode events + transition event
 
 void get_global_gui_scaled_mouse_coord(tCoord * coord) {
     int winWidth  = 0;
@@ -246,9 +242,13 @@ bool multi_select_modifier_held(void) {
 }
 
 void start_cursor_drag(void) {
-    glfwGetCursorPos(synthlib_window(), &gDragStartX, &gDragStartY);
-    gDragPrevX     = gDragStartX;
-    gDragPrevY     = gDragStartY;
+    {
+        double startX = 0.0;
+        double startY = 0.0;
+
+        glfwGetCursorPos(synthlib_window(), &startX, &startY);
+        canvas_drag_set_origin(startX, startY);
+    }
     gDragSkipCount = 3;
     glfwSetInputMode(synthlib_window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
@@ -719,31 +719,9 @@ bool is_cursor_hidden_dragging(void) {
 // gParamDragging machinery but swallows the mouse-up before the canvas handler below ever sees
 // it - so without this the panel's drags would be silently missing from Ctrl-Z.
 void finish_param_drag(void) {
-    // Push the undo before stop_dragging() zeros gParamDragging
-    if (gParamDragging.active) {
-        tModule * pdMod = get_module(gParamDragging.moduleKey);
-
-        if (pdMod) {
-            // The dragged module's own Slot, not gSlot - a Global parameter page can hold a knob
-            // assigned to a module in a Slot other than the one on screen.
-            uint32_t pdVariation = gPatchDescr[gParamDragging.moduleKey.slot].activeVariation;
-
-            if (gParamDragging.type3 == paramType3Param) {
-                uint32_t curVal = pdMod->param[pdVariation][gParamDragging.param].value;
-                undo_push_param_change(gParamDragging.moduleKey,
-                                       gParamDragging.param,
-                                       pdVariation,
-                                       gParamDragging.startValue,
-                                       curVal);
-            } else {
-                uint32_t curVal = pdMod->mode[gParamDragging.mode].value;
-                undo_push_mode_change(gParamDragging.moduleKey,
-                                      gParamDragging.mode,
-                                      gParamDragging.startValue,
-                                      curVal);
-            }
-        }
-    }
+    // Undo push and clear are shared with the plug-in — see canvasDrag.h. stop_dragging() below
+    // still clears the other drag kinds and restores the cursor.
+    (void)canvas_param_drag_release();
     stop_dragging();
 }
 
@@ -1516,179 +1494,9 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
                 send_param_value(slot, glideKey, GLIDE_SPEED, 0, value);
             }
         }
-    } else if (gParamDragging.active == true) {
-        tModule * module = get_module(gParamDragging.moduleKey);
-
-        if (module != NULL) {
-            // Read and write through the dragged module's own Slot rather than the on-screen
-            // gSlot the rest of this function uses. Identical for a drag on the patch canvas,
-            // but a drag started in the Parameter Pages panel can be on a Global page knob
-            // assigned to a module in one of the other three Slots, each with its own active
-            // Variation.
-            slot      = module->key.slot;
-            variation = gPatchDescr[slot].activeVariation;
-
-            switch (gParamDragging.type3) {
-                case paramType3Param:
-
-                    if (module->key.location == locationMorph) {
-                        paramType = paramTypeCommonDial;
-                    } else {
-                        paramType = paramLocationList[module->param[variation][gParamDragging.param].paramRef].type;
-                    }
-
-                    if (  paramType != paramTypeToggle && paramType != paramTypeMenu
-                       && paramType != paramTypeBypass && paramType != paramTypeEnable
-                       && paramType != paramTypePush) {
-                        if (module->key.location == locationMorph) {
-                            range     = 128;
-                            paramType = paramTypeCommonDial;
-                        } else {
-                            range     = paramLocationList[module->param[variation][gParamDragging.param].paramRef].range;
-                            paramType = paramLocationList[module->param[variation][gParamDragging.param].paramRef].type;
-                        }
-                        // Alt held = setting the morph offset rather than the value itself
-                        // (see below): module->param[...].value deliberately stays fixed
-                        // while dragging like that, so the delta must be measured from the
-                        // drag's fixed start point (gDragStartX/Y), not the continuously-
-                        // reset gDragPrevX/Y — otherwise each event only reflects the tiny
-                        // motion since the *previous* event against an unmoving base, which
-                        // collapses to ~0 (and the morph amount flickers back to 0) the
-                        // instant the mouse isn't actively moving between two polls. Rotary
-                        // doesn't have this problem since it reads an absolute angle each
-                        // event instead of an incremental delta.
-                        bool    altHeld       = (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS);
-
-                        // Continue adjusting from the morph offset that was already there at
-                        // drag-start, rather than snapping it back to 0 the moment a new
-                        // Alt-drag begins — same wraparound decoding used below when writing it.
-                        int32_t altBaseOffset = 0;
-
-                        if (altHeld) {
-                            altBaseOffset = (gParamDragging.startMorphRange < 128)
-                                            ? (int32_t)gParamDragging.startMorphRange
-                                            : (int32_t)gParamDragging.startMorphRange - 256;
-                        }
-
-                        if (paramType == paramTypeSlider) {
-                            double refY   = altHeld ? gDragStartY : gDragPrevY;
-                            int    newVal = (int)module->param[variation][gParamDragging.param].value + altBaseOffset + (int)((refY - yCoord) * (double)range / 200.0);
-                            gDragPrevY = yCoord;
-
-                            if (newVal < 0) {
-                                newVal = 0;
-                            }
-
-                            if (newVal >= (int)range) {
-                                newVal = (int)range - 1;
-                            }
-                            value      = (uint32_t)newVal;
-                        } else if (synthlib_dial_mode() == eDialModeVertical) {
-                            double refY   = altHeld ? gDragStartY : gDragPrevY;
-                            int    newVal = (int)module->param[variation][gParamDragging.param].value + altBaseOffset + (int)((refY - yCoord) * (double)range / 200.0);
-                            gDragPrevY = yCoord;
-
-                            if (newVal < 0) {
-                                newVal = 0;
-                            }
-
-                            if (newVal >= (int)range) {
-                                newVal = (int)range - 1;
-                            }
-                            value      = (uint32_t)newVal;
-                        } else if (synthlib_dial_mode() == eDialModeHorizontal) {
-                            double refX   = altHeld ? gDragStartX : gDragPrevX;
-                            int    newVal = (int)module->param[variation][gParamDragging.param].value + altBaseOffset + (int)((xCoord - refX) * (double)range / 200.0);
-                            gDragPrevX = xCoord;
-
-                            if (newVal < 0) {
-                                newVal = 0;
-                            }
-
-                            if (newVal >= (int)range) {
-                                newVal = (int)range - 1;
-                            }
-                            value      = (uint32_t)newVal;
-                        } else {
-                            angle = calculate_mouse_angle((tCoord){x, y}, gParamRectangle[module->key.slot][module->key.location][module->key.index][gParamDragging.param]);
-                            value = angle_to_value(angle, range);
-                        }
-
-                        if (!altHeld) {
-                            if (module->param[variation][gParamDragging.param].value != value) {
-                                module->param[variation][gParamDragging.param].value = value;
-                                send_param_value(slot, gParamDragging.moduleKey, gParamDragging.param, variation, value);
-                            }
-                        } else {
-                            uint32_t baseValue = module->param[variation][gParamDragging.param].value;
-                            uint8_t  newMorphRange;
-
-                            if (value >= baseValue) {
-                                newMorphRange = (uint8_t)(value - baseValue);
-                            } else {
-                                newMorphRange = (uint8_t)(256 - (baseValue - value));
-                            }
-
-                            if (module->param[variation][gParamDragging.param].morphRange[gMorphGroupFocus] != newMorphRange) {
-                                module->param[variation][gParamDragging.param].morphRange[gMorphGroupFocus] = newMorphRange;
-                                LOG_DEBUG("Write to module %u variation %u\n", module->key.index, variation);
-
-                                messageContent.cmd                                                          = eMsgCmdSetParamMorph;
-                                messageContent.slot                                                         = slot;
-                                messageContent.paramMorphData.moduleKey                                     = module->key;
-                                messageContent.paramMorphData.param                                         = gParamDragging.param;
-                                messageContent.paramMorphData.paramMorph                                    = gMorphGroupFocus;
-                                messageContent.paramMorphData.value                                         = module->param[variation][gParamDragging.param].morphRange[gMorphGroupFocus];
-                                messageContent.paramMorphData.negative                                      = 0;
-                                messageContent.paramMorphData.variation                                     = variation;
-                                msg_send(&gToUsbThread, &messageContent);
-                            }
-                        }
-                    }
-                    break;
-                case paramType3Mode:
-
-                    if (  modeLocationList[module->mode[gParamDragging.mode].modeRef].type != paramTypeToggle
-                       && modeLocationList[module->mode[gParamDragging.mode].modeRef].type != paramTypeMenu) {
-                        uint32_t modeRange = modeLocationList[module->mode[gParamDragging.mode].modeRef].range;
-
-                        if (synthlib_dial_mode() == eDialModeVertical) {
-                            int newVal = (int)module->mode[gParamDragging.mode].value + (int)((gDragPrevY - yCoord) * (double)modeRange / 200.0);
-                            gDragPrevY = yCoord;
-
-                            if (newVal < 0) {
-                                newVal = 0;
-                            }
-
-                            if (newVal >= (int)modeRange) {
-                                newVal = (int)modeRange - 1;
-                            }
-                            value      = (uint32_t)newVal;
-                        } else if (synthlib_dial_mode() == eDialModeHorizontal) {
-                            int newVal = (int)module->mode[gParamDragging.mode].value + (int)((xCoord - gDragPrevX) * (double)modeRange / 200.0);
-                            gDragPrevX = xCoord;
-
-                            if (newVal < 0) {
-                                newVal = 0;
-                            }
-
-                            if (newVal >= (int)modeRange) {
-                                newVal = (int)modeRange - 1;
-                            }
-                            value      = (uint32_t)newVal;
-                        } else {
-                            angle = calculate_mouse_angle((tCoord){x, y}, module->mode[gParamDragging.mode].rectangle);
-                            value = angle_to_value(angle, modeRange);
-                        }
-
-                        if (module->mode[gParamDragging.mode].value != value) {
-                            module->mode[gParamDragging.mode].value = value;
-                            send_mode_value(slot, gParamDragging.moduleKey, gParamDragging.mode, value);
-                        }
-                    }
-                    break;
-            }
-        }
+    } else if (canvas_param_drag_motion(coord, xCoord, yCoord,
+                                        glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS)) {
+        // Parameter dragging moved to canvasDrag.c so the plug-in shares it — see canvasDrag.h.
     } else if (gModuleDrag.active == true) {
         // Module drag motion moved to canvasDrag.c so the plug-in can share it — see canvasDrag.h.
         // The auto-scroll stays here: it belongs to whoever owns the scrollbars, which a plug-in

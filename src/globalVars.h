@@ -175,4 +175,11 @@ void set_exclusive_button_highlight(tTopbarControlId first, tTopbarControlId las
 }
 #endif
 
+// Drag reference points in raw cursor coordinates — see globalVars.c. Shared between canvasDrag.c's
+// parameter dragging and mouseHandle.c's tempo/vibrato/glide dragging.
+extern double                  gDragStartX;
+extern double                  gDragStartY;
+extern double                  gDragPrevX;
+extern double                  gDragPrevY;
+
 #endif // __GLOBAL_VARS_H__

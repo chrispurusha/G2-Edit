@@ -62,6 +62,16 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
     // A drag in progress owns the motion outright — the click regions are not consulted, exactly as
     // the application's cursor_pos() does not consult them while something is being dragged.
     if (phase == eClickDrag) {
+        // Dials first: a parameter drag and a module drag can never both be active, but the
+        // parameter one is the common case and reads an absolute angle, so it costs nothing to ask.
+        //
+        // The raw coordinates are the canvas ones here. That is correct ONLY because the plug-in
+        // reports eDialModeRotary, which reads an absolute angle rather than differencing against
+        // the previous event. Vertical and horizontal dial modes would need genuine raw cursor
+        // deltas AND start_cursor_drag()'s cursor hiding, neither of which a host view gives us yet.
+        if (canvas_param_drag_motion(gMouse, gMouse.x, gMouse.y, false) == true) {
+            return true;
+        }
         return canvas_drag_motion(gMouse);
     }
 
@@ -98,6 +108,12 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
     // Ends the module drag and re-orders around it, as the application does. Undo is the one thing
     // not carried over — a plug-in has no undo stack.
     if (canvas_module_drag_release() == true) {
+        handled = true;
+    }
+
+    // Ends a dial drag. Without this gParamDragging stays set, the dial remains "held" after the
+    // button is up, and the next click anywhere carries on turning it.
+    if (canvas_param_drag_release() == true) {
         handled = true;
     }
     return handled;
