@@ -21,7 +21,7 @@
 #include "synthlibTypes.h"
 #include "synthlibGlobals.h"
 #include "prefs.h"
-#include "persistence.h"
+#include "misc.h"   // load_saved_settings() and friends are declared here, not in a persistence.h
 
 #include "g2Prefs.h"
 
