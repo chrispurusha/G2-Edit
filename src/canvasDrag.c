@@ -44,6 +44,24 @@
 #include "mouseHandle.h"
 #include "canvasDrag.h"
 
+// Where a cable's loose end goes for a pointer at coord. The single definition of it: the press, the
+// motion and the plug-in's own motion path all reach it here, and they did not previously agree.
+//
+// THE ORDER MATTERS AND WAS WRONG. The half-connector offset centres the cable on the pointer rather
+// than hanging it from the connector square's top-left corner, and it is in MODULE SPACE — 8.75
+// units, off a fixed MODULE_WIDTH of 350. Subtracting it from the SCREEN coordinate first meant
+// convert_mouse_coord_to_module_area_coord() then divided it by the zoom factor along with
+// everything else, while render_cable_from_to() adds the same offset back unscaled. The two only
+// cancel at 100%: the end lands 8.75 * (zoom - 1) logical pixels from the pointer, trailing it when
+// zoomed out and leading it when zoomed in. Converting first and offsetting after keeps the offset
+// in the space it is expressed in.
+void cable_drag_set_end(tCoord coord) {
+    convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, coord);
+
+    gCableDrag.toConnector.coord.x -= scale_from_percent(CONNECTOR_SIZE / 2.0);
+    gCableDrag.toConnector.coord.y -= scale_from_percent(CONNECTOR_SIZE / 2.0);
+}
+
 void canvas_drag_set_origin(double rawX, double rawY) {
     gDragStartX = rawX;
     gDragStartY = rawY;
@@ -122,11 +140,7 @@ bool canvas_drag_motion(tCoord coord) {
     }
 
     if (gCableDrag.active == true) {
-        // The loose end follows the pointer, offset by half a connector so the cable appears to be
-        // held by its middle rather than its corner.
-        convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord,
-                                                 (tCoord){coord.x - scale_from_percent(CONNECTOR_SIZE / 2.0),
-                                                          coord.y - scale_from_percent(CONNECTOR_SIZE / 2.0)});
+        cable_drag_set_end(coord);
         return true;
     }
 

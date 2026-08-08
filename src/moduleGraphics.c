@@ -50,6 +50,7 @@ extern "C" {
 #include "paramOverlay.h"
 #include "protocol.h"
 #include "undo.h"
+#include "canvasDrag.h"
 #include "clickRegion.h"
 
 // ── Click-region registration ────────────────────────────────────────────────
@@ -213,7 +214,7 @@ static void connector_click_handler(tCoord coord, eClickPhase phase, void * user
 
     gCableDrag.fromModuleKey      = module->key;
     gCableDrag.fromConnectorIndex = ctx->connectorIndex;
-    convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, coord);
+    cable_drag_set_end(coord);   // same placement the motion uses, so the end doesn't jump on the first move
     gCableDrag.active             = true;
 }
 

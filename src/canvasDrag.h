@@ -80,6 +80,11 @@ bool handle_module_area_click(tCoord coord);
 // Updates gHoverConnector from a pointer position. Call on every move with no button down.
 void canvas_hover_update(tCoord coord);
 
+// Places a cable drag's loose end for a pointer at coord, converting to module-area coordinates and
+// applying the half-connector centring offset in that order — see the definition for why the order
+// is not a detail. Every site that moves the loose end must go through this.
+void cable_drag_set_end(tCoord coord);
+
 // Cable dragging. The PRESS is a click-region handler in moduleGraphics.c; motion is carried by
 // canvas_drag_motion() above. This completes the drag: if the pointer is over a connector, the cable
 // is created. Returns true if one was.
