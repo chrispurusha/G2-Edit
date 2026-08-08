@@ -52,6 +52,7 @@
 
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
+#include "splitView.h"
 #include "g2GlDraw.h"
 
 // The application's canvas grey (graphics.c render_frame()), so the strip reads as a piece of the
@@ -97,6 +98,10 @@ void g2_gl_draw_init(void) {
     synthlib_host_init((tSynthLibHost){
         .mouseCoord = get_global_gui_scaled_mouse_coord,
     });
+
+    // Two panes: the Voice Area and the FX Area, with a draggable bar between them — the same
+    // arrangement the application starts in.
+    split_view_init();
 
     gFontReady = preload_glyph_textures(FONT_PATH, FONT_PRELOAD_SIZE);
 }
@@ -164,17 +169,35 @@ void g2_gl_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
     // as long as the window is open.
     clear_click_regions();
 
-    // Which slot and area to draw. The plug-in loads its patch into slot 0, and the Voice Area is
-    // where the interesting part of a patch lives; the FX area is a second pane in the application
-    // and would need the pane machinery to show here.
-    gSlot     = 0;
-    gLocation = locationVa;
+    // The plug-in loads its patch into slot 0; a plug-in instance is one patch, and the G2's
+    // four-slot performance layout is a hardware notion with nothing to map onto here.
+    gSlot = 0;
 
-    set_module_pane_count(1);
-    set_module_pane(0);
+    // BOTH PANES, driven exactly as render_frame() drives them. render_modules()/render_cables()
+    // read gLocation at their top, so the location is set around each pass rather than passed in —
+    // the "mode rather than argument" style the pane machinery uses throughout. gLocation is put
+    // back to the focused pane's afterwards, since that is what every other reader means by it.
+    split_view_apply();
 
-    render_modules();
-    render_cables();
+    {
+        tLocation focusLocation = gLocation;
+        uint32_t  focusPane     = split_view_focused_pane();
+
+        for (uint32_t pane = 0; pane < module_pane_count(); pane++) {
+            set_module_pane(pane);
+            gLocation = (tLocation)split_view_location_for_pane(pane);
+            module_pane_clip_begin();
+            render_modules();
+            render_cables();
+            module_pane_clip_end();
+        }
+
+        set_module_pane(focusPane);
+        gLocation = focusLocation;
+    }
+
+    render_split_bar();
+    render_pane_scrollbars();
 
     // The cable being dragged, if any. Drawn AFTER the settled ones, as render_frame() does — it is
     // the thing under the pointer and belongs on top. Without it a cable drag is invisible until it

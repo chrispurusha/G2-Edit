@@ -39,6 +39,9 @@
 #include "menus.h"
 #include "moduleGraphics.h"
 #include "cableChain.h"
+#include "utils.h"
+#include "splitView.h"
+#include "mouseHandle.h"
 #include "canvasDrag.h"
 
 void canvas_drag_set_origin(double rawX, double rawY) {
@@ -656,5 +659,72 @@ bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {
     undo_commit_cable_edit();  // Pushes nothing if the drag landed somewhere that added no cable
 
     return found;
+}
+
+
+// ── Auto-scroll while dragging ──────────────────────────────────────────────────────────────────
+//
+// Dragging a module or a cable past the edge of a pane scrolls that pane to follow. Moved out of
+// mouseHandle.c once the plug-in gained scrollbars of its own — it was left behind on the first pass
+// precisely because a plug-in with no scrollbars had nothing to scroll.
+//
+// Nothing in it was ever platform-bound: get_time_ms() is SynthLib's, and the rest is the pane
+// machinery. The rate RAMPS from DRAG_SCROLL_MIN_RATE to DRAG_SCROLL_MAX_RATE across
+// DRAG_SCROLL_RAMP_DIST of overshoot, so easing just past the edge creeps and pushing well beyond it
+// moves quickly — which is what stops it feeling like a runaway.
+
+// Distance in content pixels to scroll this tick, given how far past the pane edge the cursor is.
+// Sign is the caller's; overshoot is always positive here.
+static double drag_scroll_step(double overshoot, double seconds) {
+    double ramp = overshoot / DRAG_SCROLL_RAMP_DIST;
+
+    if (ramp > 1.0) {
+        ramp = 1.0;
+    }
+    return (DRAG_SCROLL_MIN_RATE + ((DRAG_SCROLL_MAX_RATE - DRAG_SCROLL_MIN_RATE) * ramp)) * seconds;
+}
+
+void adjust_scroll_for_drag(void) {
+    // Own timestamp rather than get_time_delta(): that function's static is shared with the USB
+    // thread, which consumes part of the elapsed time out from under us at unpredictable moments.
+    static double lastTimeMs = 0.0;
+    double        nowMs      = get_time_ms();
+    double        timeDelta  = (lastTimeMs == 0.0) ? 0.0 : (nowMs - lastTimeMs);
+    tCoord        coord      = {0};
+    uint32_t      pane       = split_view_focused_pane();
+    tRectangle    area       = module_area_for_pane(pane);
+    double        dx         = 0.0;
+    double        dy         = 0.0;
+
+    lastTimeMs = nowMs;
+
+    if (timeDelta > DRAG_SCROLL_MAX_STEP_MS) {
+        timeDelta = DRAG_SCROLL_MAX_STEP_MS;
+    }
+    // The rates are per second; the delta is in milliseconds.
+    double        seconds    = timeDelta / 1000.0;
+
+    if (seconds <= 0.0) {
+        return;
+    }
+    get_global_gui_scaled_mouse_coord(&coord);
+
+    // Dragging past a pane's edge scrolls THAT pane. Clamped to the pane the drag started in, so a
+    // drag heading for the divider scrolls its own half rather than reaching into the other one.
+    if (coord.x > (area.coord.x + area.size.w)) {
+        dx = drag_scroll_step(coord.x - (area.coord.x + area.size.w), seconds);
+    } else if (coord.x < area.coord.x) {
+        dx = -drag_scroll_step(area.coord.x - coord.x, seconds);
+    }
+
+    if (coord.y > (area.coord.y + area.size.h)) {
+        dy = drag_scroll_step(coord.y - (area.coord.y + area.size.h), seconds);
+    } else if (coord.y < area.coord.y) {
+        dy = -drag_scroll_step(area.coord.y - coord.y, seconds);
+    }
+
+    if ((dx != 0.0) || (dy != 0.0)) {
+        pane_scroll_by(pane, dx, dy);
+    }
 }
 

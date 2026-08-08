@@ -65,6 +65,11 @@ bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHe
 // or the dial stays held and the next click anywhere keeps dragging it.
 bool canvas_param_drag_release(void);
 
+// Scrolls the focused pane when a drag has gone past its edge. Call once per motion event while a
+// module or cable drag is in progress; it times itself, so calling it more often does not scroll
+// faster.
+void adjust_scroll_for_drag(void);
+
 // Right-click on the canvas: opens the connector, parameter, module or morph-label menu under the
 // pointer, in that order of priority. Returns true if one was opened.
 bool canvas_right_click(tCoord coord, uint32_t slot, uint32_t location);
