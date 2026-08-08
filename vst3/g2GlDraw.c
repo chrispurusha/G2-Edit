@@ -108,8 +108,9 @@ void g2_gl_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
     if ((pixelWidth <= 0) || (pixelHeight <= 0) || (backingScale <= 0.0)) {
         return;
     }
-    pointWidth  = (double)pixelWidth / backingScale;
-    pointHeight = (double)pixelHeight / backingScale;
+    // Logical units, once gGlobalGuiScale is set below. Named point* historically; they are the
+    // canvas's own coordinate space, which is what every render call below expects.
+    (void)backingScale;
 
     // What synthlibScale.c's synthlib_scale_update() does, minus the part that needs GLFW. It is
     // repeated rather than called because that file's two OTHER functions call glfwGetWindowContentScale,
@@ -125,12 +126,23 @@ void g2_gl_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
     set_render_width(pixelWidth);
     set_render_height(pixelHeight);
 
-    // The renderer multiplies every coordinate by this on its way to the screen, so setting it to the
-    // backing scale is what makes the drawing below read in POINTS while the surface stays at full
-    // resolution. The application derives it from a fixed target canvas width instead, because its
-    // window is resizable and the layout has to hold its proportions; a fixed-size plug-in strip has
-    // no such requirement yet.
-    gGlobalGuiScale = backingScale;
+    // THE APPLICATION'S OWN SCALING FORMULA, and adopting it is what makes the plug-in show the same
+    // field of view as the editor rather than a cropped corner of it.
+    //
+    // The whole UI is laid out in a fixed logical canvas TARGET_FRAME_BUFF_WIDTH/2 units wide (1280),
+    // and gGlobalGuiScale maps that onto however many physical pixels there are. This used to be set
+    // to the backing scale, which quietly redefined the logical canvas as 900 units — so roughly 70%
+    // of the app's field of view, with larger patches running off the edge and no scrolling to
+    // recover them.
+    //
+    // A consequence worth stating: coordinates below are now LOGICAL UNITS, not points. At a 900pt
+    // window they are about 1.42 to the point. Everything the renderer draws — including the menu
+    // bar's own MENU_BAR_HEIGHT — is in those units, which is exactly how the application treats
+    // them, so the chrome scales with the canvas instead of staying a fixed pixel size.
+    gGlobalGuiScale = (double)pixelWidth / (TARGET_FRAME_BUFF_WIDTH / 2.0);
+
+    pointWidth      = (double)pixelWidth / gGlobalGuiScale;
+    pointHeight     = (double)pixelHeight / gGlobalGuiScale;
 
     glClearColor((GLfloat)BACKGROUND_GREY, (GLfloat)BACKGROUND_GREY, (GLfloat)BACKGROUND_GREY, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
