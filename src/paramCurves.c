@@ -183,33 +183,45 @@ double flt_kbt_amount(uint32_t kbtValue) {
     return (kbtValue > 4) ? 1.0 : ((double)kbtValue * 0.25);
 }
 
-// An LFO's speed in Hz, for a given Range setting. The four continuous ranges are exponential
-// sweeps between the endpoints the dial displays; BPM is beats per minute, so a sixth of a hertz per
-// unit. Shared with the sound engine so the rate heard and the rate shown cannot drift apart.
+// An LFO's speed in Hz, for a given Range setting. Shared with the sound engine so the rate heard
+// and the rate shown cannot drift apart.
+//
+// THE TWO FAST RANGES ARE SEMITONE SCALES: a rate of base * 2^(value/12), i.e. the dial is a pitch,
+// twelve steps to a doubling, the same shape as an oscillator's Tune. That is why 127 steps spans
+// 2^(127/12) = 1535: the whole dial is ten and a half octaves of rate. These were previously written
+// as an exponential fitted between the two endpoints the manual quotes, which lands on the same
+// curve to within a percent — the fit and the real law agree because the range IS 127 semitones —
+// but stating the base and the semitone directly says what the control actually is, and removes a
+// 1.8 % error at the bottom of Rate Hi where the fitted endpoint was rounded to 0.26.
 //
 // ClkSync needs the patch's master clock, which the engine has no notion of, so it falls back to the
 // slow end of Rate Lo rather than pretending to be in time with something.
+#define LFO_SEMITONE_RATIO    (1.0 / 12.0)
+
 double lfo_rate_hz(uint32_t rangeMode, double paramValue) {
     switch (rangeMode) {
         case 0:   // Rate Sub: a period of 699 s down to 5.46 s
         {
-            // LINEAR IN FREQUENCY, not exponential like the other ranges — the period is simply
-            // 699 s divided by (value + 1), which is why the top of the dial lands on 699/128 =
+            // LINEAR IN FREQUENCY, not a semitone scale like the two below — the period is simply
+            // 699.05 s divided by (value + 1), which is why the top of the dial lands on 699/128 =
             // 5.46 s, exactly the figure the manual quotes (p.148). Reading the two endpoints and
             // assuming the usual exponential sweep between them was out by up to 90% through the
             // middle: at raw 25 it gave a 269 s period where the hardware's divider gives 26.9 s.
-            return (paramValue + 1.0) / 699.0;
+            return (paramValue + 1.0) / 699.0506666667;
         }
-        case 1:   // Rate Lo, a period of 62.9 s down to 0.04098 s (24.4 Hz)
+        case 1:   // Rate Lo: 0.0159 Hz (62.9 s/cycle) to 24.4 Hz
         {
-            return 1.0 / (62.9 * exp(paramValue * log(0.04098 / 62.9) / 127.0));
+            return 0.0159 * pow(2.0, paramValue * LFO_SEMITONE_RATIO);
         }
-        case 2:   // Rate Hi, stated directly in Hz
+        case 2:   // Rate Hi: 0.2555 Hz to 392 Hz
         {
-            return 0.26 * exp(paramValue * log(392.0 / 0.26) / 127.0);
+            return 0.2555 * pow(2.0, paramValue * LFO_SEMITONE_RATIO);
         }
-        case 3:   // BPM
+        case 3:   // BPM: three straight runs, 24..214, always a whole number of beats
         {
+            // Confirmed unchanged against the instrument's own three-branch arithmetic, including
+            // the two joins: the branches meet at 88 and at 152 whichever side of the boundary they
+            // are taken from, so the one-step difference in where this splits changes no value.
             double bpm = (paramValue < 33.0) ? (24.0 + round(2.0 * paramValue))
                          : (paramValue < 97.0) ? (56.0 + round(paramValue))
                          : (154.0 + round(2.0 * (paramValue - 97.0)));
