@@ -64,6 +64,7 @@ extern "C" {
 extern "C" {
 #include "soundEngine.h"
 #include "g2Patch.h"
+#include "noteStack.h"
 }
 
 using namespace Steinberg;
@@ -380,19 +381,19 @@ public:
 
                 if (e.type == Event::kNoteOnEvent) {
                     // A note-on at zero velocity is a note-off, as it is over MIDI.
-                    bool on = (e.noteOn.velocity > 0.0f);
-
-                    sound_engine_note(e.noteOn.pitch, on);
-
-                    if (on) {
-                        soundingNote = e.noteOn.pitch;
+                    //
+                    // Through the shared note stack, NOT straight to the engine. The engine is
+                    // monophonic, so releasing a note has to fall back to whatever is still held or
+                    // legato playing breaks — hold D, play F, let F go, and the D under your finger
+                    // must come back rather than the sound stopping. noteStack.c is the application's
+                    // own logic, moved out of midiInput.c so both get it from one place.
+                    if (e.noteOn.velocity > 0.0f) {
+                        note_stack_note_on((uint8_t)e.noteOn.pitch);
+                    } else {
+                        note_stack_note_off((uint8_t)e.noteOn.pitch);
                     }
                 } else if (e.type == Event::kNoteOffEvent) {
-                    sound_engine_note(e.noteOff.pitch, false);
-
-                    if (e.noteOff.pitch == soundingNote) {
-                        soundingNote = -1;
-                    }
+                    note_stack_note_off((uint8_t)e.noteOff.pitch);
                 } else if (e.type == Event::kPolyPressureEvent) {
                     // POLYPHONIC key pressure, which arrives as an EVENT and not as a parameter
                     // change. IMidiMapping's kAfterTouch is CHANNEL pressure (MIDI 0xD0) only, so a
@@ -402,7 +403,7 @@ public:
                     // The engine has one voice, so as in the application only the note actually
                     // sounding may move the morph; without that test a key still held underneath
                     // would fight the one being played.
-                    if (e.polyPressure.pitch == soundingNote) {
+                    if ((int32)e.polyPressure.pitch == note_stack_top()) {
                         if (sound_engine_set_morph(kMorphGroupAftertouch,
                                                    (double)e.polyPressure.pressure) == true) {
                             gMorphSnapshotDirty.store(true);
@@ -513,11 +514,6 @@ private:
         }
         dst[i] = 0;
     }
-
-    // The note poly pressure is allowed to act on. The engine is monophonic, so as in the
-    // application only the note actually sounding may move the aftertouch morph — otherwise a key
-    // still held underneath fights the one being played.
-    int32              soundingNote = -1;
 
     std::atomic<int32> refCount;
     ParamValue         params[kNumParams] = {0};

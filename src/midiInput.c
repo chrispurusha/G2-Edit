@@ -37,11 +37,11 @@ extern "C" {
 #include "midiInput.h"
 #include "synthlibGlobals.h"
 #include "soundEngine.h"
+#include "noteStack.h"
 
 // See midiInput.h. CoreMIDI delivers on its own high-priority thread, so the read callback below
 // does no allocation and no locking — it only touches the held-note stack and the engine's atomics.
 
-#define MIDI_MAX_HELD    (16)
 
 // Which morph group each controller drives. The G2 hard-wires these — morphStrMap in
 // moduleResources.h lists them in order as Wheel, Vel, Keyb, Aft.Tch, Sust.Pd, Ctrl.Pd, P.Stick,
@@ -82,12 +82,6 @@ static bool             gEnabled         = true;
 static _Atomic uint32_t gChannel         = MIDI_CHANNEL_OMNI;
 static _Atomic bool     gSendsToSynth    = true;
 
-// Last-note priority for a monophonic voice. Without this, releasing the first key of a legato pair
-// would silence a note whose key is still held — pressing C then D then letting go of C should leave
-// D sounding, and letting go of D should then return to C if it is still down.
-static uint8_t          gHeld[MIDI_MAX_HELD];
-static uint8_t          gHeldCount       = 0;
-
 // How many pressure messages have arrived, of either kind. This exists because the obvious way to
 // answer "is the keyboard sending aftertouch at all" — logging each message — is exactly what must
 // not happen here: LOG_DEBUG writes to stdout AND to the USB log file, and doing that per message on
@@ -97,23 +91,6 @@ static _Atomic uint32_t gPressureCount   = 0;
 
 // The most recent controller number seen, for MIDI Learn (the L key). -1 until one arrives.
 static _Atomic int32_t  gLastCC          = -1;
-
-static void held_remove(uint8_t note) {
-    uint8_t i = 0;
-
-    for (i = 0; i < gHeldCount; i++) {
-        if (gHeld[i] == note) {
-            uint8_t j = 0;
-
-            for (j = (uint8_t)(i + 1); j < gHeldCount; j++) {
-                gHeld[j - 1] = gHeld[j];
-            }
-
-            gHeldCount--;
-            return;
-        }
-    }
-}
 
 // The same message the Virtual Keyboard posts — see send_note() in virtualKeyboard.c. Posted from
 // the CoreMIDI thread, which is safe: msg_send() takes a mutex and allocates, which would be wrong
@@ -132,39 +109,28 @@ static void send_note_to_synth(uint8_t note, uint8_t velocity, bool on) {
 }
 
 static void note_on(uint8_t note, uint8_t velocity) {
-    held_remove(note);   // a repeat without its note off must not occupy two slots
+    note_stack_note_on(note);
 
-    if (gHeldCount < MIDI_MAX_HELD) {
-        gHeld[gHeldCount++] = note;
-    }
-    sound_engine_note((int32_t)note, true);
-
-    // The G2 gets the note as played. The last-note stack above is for the engine, which is
+    // The G2 gets the note as played. The last-note stack is for the local engine, which is
     // monophonic; the G2 does its own voice allocation and wants every note.
     send_note_to_synth(note, velocity, true);
 }
 
 static void note_off(uint8_t note) {
-    held_remove(note);
-
-    if (gHeldCount > 0) {
-        sound_engine_note((int32_t)gHeld[gHeldCount - 1], true);   // fall back to the newest still held
-    } else {
-        sound_engine_note(-1, false);
-    }
+    note_stack_note_off(note);       // falls back to the newest note still held — see noteStack.h
     send_note_to_synth(note, 0, false);
 }
 
 static void all_notes_off(void) {
     uint8_t i = 0;
 
-    // Release everything that was held on the G2 too, or a panic here would leave it droning.
-    for (i = 0; i < gHeldCount; i++) {
-        send_note_to_synth(gHeld[i], 0, false);
+    // Release everything that was held on the G2 too, or a panic here would leave it droning. Walk
+    // the stack BEFORE clearing it.
+    for (i = 0; i < note_stack_count(); i++) {
+        send_note_to_synth(note_stack_at(i), 0, false);
     }
 
-    gHeldCount = 0;
-    sound_engine_note(-1, false);
+    note_stack_all_off();
 }
 
 // A morph position is not read by the audio thread the way pitch bend is — it is folded into the
@@ -266,7 +232,7 @@ static void handle_message(uint32_t word) {
             // send either. The engine has a single voice, so only the note actually sounding is
             // allowed to move the morph; without that test a key still held underneath would fight
             // the one being played.
-            if ((gHeldCount > 0) && (data1 == gHeld[gHeldCount - 1])) {
+            if ((int32_t)data1 == note_stack_top()) {
                 morph_moved(sound_engine_set_morph(MORPH_GROUP_AFTERTOUCH, (double)data2 / 127.0));
             }
             atomic_fetch_add(&gPressureCount, 1);
@@ -477,17 +443,17 @@ bool midi_input_start(void) {
     if (gClient != 0) {
         return true;
     }
-    gHeldCount = 0;
+    note_stack_all_off();
 
-    status     = MIDIClientCreate(CFSTR("G2 Editor"), notify_callback, NULL, &gClient);
+    status = MIDIClientCreate(CFSTR("G2 Editor"), notify_callback, NULL, &gClient);
 
     if (status != noErr) {
         LOG_ERROR("MIDI input: MIDIClientCreate failed (%d)\n", (int)status);
         gClient = 0;
         return false;
     }
-    status     = MIDIInputPortCreateWithProtocol(gClient, CFSTR("G2 Editor In"), kMIDIProtocol_1_0,
-                                                 &gPort, ^ (const MIDIEventList * evtlist, void * srcConnRefCon) {
+    status = MIDIInputPortCreateWithProtocol(gClient, CFSTR("G2 Editor In"), kMIDIProtocol_1_0,
+                                             &gPort, ^ (const MIDIEventList * evtlist, void * srcConnRefCon) {
         read_callback(evtlist, srcConnRefCon);
     });
 
@@ -512,8 +478,8 @@ void midi_input_stop(void) {
         gPort = 0;
     }
     MIDIClientDispose(gClient);
-    gClient    = 0;
-    gHeldCount = 0;
+    gClient = 0;
+    note_stack_all_off();
     atomic_store(&gSourceCount, 0);
 }
 
