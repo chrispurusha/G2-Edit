@@ -373,10 +373,28 @@ TWO CONSEQUENCES worth knowing:
   `gGlobalGuiScale`, which is the same conversion `get_global_gui_scaled_mouse_coord()` performs in
   the application. The two were only equal while the logical canvas was mis-sized.
 
-The editor is now resizable (`canResize`, `onSize`, `checkSizeConstraint` with a 640x400 minimum and
-no maximum). A bigger window shows the same patch LARGER rather than showing more of it, which is how
-the application behaves. **Resize is UNTESTED** — the local test host drives the view directly rather
-than through `IPlugView`, so `onSize()` is never exercised there; it needs a real host.
+The editor is now resizable, **with the ASPECT RATIO LOCKED to 2560:1440** — the same ratio the
+application pins its window to via `glfwSetWindowAspectRatio(TARGET_FRAME_BUFF_WIDTH,
+TARGET_FRAME_BUFF_HEIGHT)` in `init_graphics()`.
+
+THE LOCK IS WHAT COMPLETES THE SCALING, and missing it was a real bug. `gGlobalGuiScale` comes from
+WIDTH alone, so a taller window on its own merely uncovers more rows rather than drawing the patch
+larger. The application never exhibits that because its window cannot be made taller without also
+becoming wider. Free-resizing the plug-in let it do exactly what the application is prevented from
+doing. `checkSizeConstraint()` now treats width as the authority and derives height from it.
+
+CONSEQUENCE WORTH KNOWING: the visible canvas is now exactly the application's 1280x720 logical
+space at every window size. A patch taller than that needs SCROLLING to reach the rest — which the
+plug-in does not have. Before the lock, a tall window could reveal those rows by accident. So
+scrollbars/zoom move back up the list of things worth having.
+
+`onSize()` itself is still **UNTESTED locally** — the test host drives the view directly rather than
+through `IPlugView`, so it is never exercised there.
+
+An alternative, NOT implemented and noted only so the option is on record: scale from whichever axis
+is tighter (uniform fit, letterboxing a wide-short window), or scale to the bounding box of the
+modules that actually exist (zoom-to-fit, so any patch fills the window). Both would diverge from the
+application, which is why neither was chosen.
 
 Remaining, in order:
 2. Scroll and zoom, then the FX pane — needed before a patch bigger than the window is usable.
