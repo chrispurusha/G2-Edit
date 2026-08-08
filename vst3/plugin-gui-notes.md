@@ -572,6 +572,24 @@ THE SAME SHAPE AS THE AUTO-SCROLL FIX, and worth stating as a rule: anything the
 from its per-frame loop needs a tick here, because a plug-in has no loop. So far that is auto-scroll
 and menu dwell; the next one that behaves oddly "only while the mouse is still" will be a third.
 
+**Submenu dwell, second attempt** — the first fix was incomplete. The tick timer was only STARTED on
+`mouseDown`, but a right-click context menu opens from `-rightMouseUp:`, and any menu opened after the
+timer had already stopped itself had nothing driving it. `ensureTickTimer` is now called after EVERY
+mouse event; the tick still stops itself once neither a drag nor an open menu needs it. Verified: the
+"Set colour" flyout opens one second after a single move, with no further movement.
+
+**Persistence via the application's own `persistence.c`**, which has ZERO GLFW calls and was simply
+never linked. That gives the plug-in zoom, dial mode and the file browser's last folder on the same
+keys the application uses (`zoomFactor`, `dialMode`, `fileBrowserLastDirectory`) rather than a second
+set that could drift. `save_zoom_factor()` stopped being a stub as a result.
+
+The complete set anything persists is: `zoomFactor` and `fileBrowserLastDirectory` (persistence.c),
+plus `dialMode`, `windowWidth`, `windowX`, `windowY` (synthlibPersistence.c). The plug-in takes the
+first three. `synthlibPersistence.c` itself is NOT linked — its only other job is restoring the window
+with `glfwSetWindowSize()`/`glfwSetWindowPos()`, and a plug-in owns neither — so `g2Prefs.c` supplies
+`synthlib_load_window_and_dial_mode()` doing the dial-mode half and dropping the window half. Editor
+WIDTH is remembered separately through `getSize()`; position is not ours to control.
+
 Remaining, in order:
 2. Scroll and zoom, then the FX pane — needed before a patch bigger than the window is usable.
 3. Right-click context menus: `open_toggle_menu()`/`open_mode_toggle_menu()` are stubs, and those
