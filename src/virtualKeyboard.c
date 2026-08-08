@@ -26,7 +26,11 @@ extern "C" {
 #pragma clang diagnostic ignored "-Weverything"
 
 #define GL_SILENCE_DEPRECATION    1
+// GLFW here is for its KEY CONSTANTS only — no GLFW function is called, so this links into
+// a build with no GLFW library. get_time_ms() replaced the one call that was (glfwGetTime).
 #include <GLFW/glfw3.h>
+
+#include "utils.h"
 
 #pragma clang diagnostic pop
 
@@ -132,7 +136,7 @@ void virtual_keyboard_tick(void) {
     if (!gVirtualKeyboard.active || !gVirtualKeyboard.repeat || (gVirtualKeyboard.lastNote < 0)) {
         return;
     }
-    double now = glfwGetTime() * 1000.0;
+    double now = (get_time_ms() / 1000.0) * 1000.0;
 
     if (now < gVirtualKeyboard.nextRepeatAt) {
         return;
@@ -371,7 +375,7 @@ bool handle_virtual_keyboard_mouse(tCoord coord, tMouseButton mouseButton) {
                 // lastNote is what Repeat re-strikes — "the LAST PLAYED note" — so it follows the
                 // keyboard even while a repeat is already running, and the repeat moves with it.
                 gVirtualKeyboard.lastNote     = note;
-                gVirtualKeyboard.nextRepeatAt = (glfwGetTime() * 1000.0) + VKB_REPEAT_MS;
+                gVirtualKeyboard.nextRepeatAt = ((get_time_ms() / 1000.0) * 1000.0) + VKB_REPEAT_MS;
                 set_sounding_note(note);   // sustains until mouse-up, as the manual describes
             }
         }
@@ -411,7 +415,7 @@ bool handle_virtual_keyboard_mouse(tCoord coord, tMouseButton mouseButton) {
             gVirtualKeyboard.repeat = !gVirtualKeyboard.repeat;
 
             if (gVirtualKeyboard.repeat) {
-                gVirtualKeyboard.nextRepeatAt = glfwGetTime() * 1000.0;   // first strike immediately
+                gVirtualKeyboard.nextRepeatAt = (get_time_ms() / 1000.0) * 1000.0;   // first strike immediately
             } else if (!gVirtualKeyboard.drone) {
                 set_sounding_note(-1);
             }

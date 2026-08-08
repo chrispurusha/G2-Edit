@@ -96,7 +96,19 @@ static void action_store_to_bank(int index) {
     file_menu_store_to_bank();
 }
 
-static void open_file_menu(tCoord anchor) {
+// WHETHER A G2 CAN EVER BE ATTACHED, as distinct from whether one is attached right now.
+//
+// The application greys its bank and device entries while offline, because going online is a thing
+// that can happen and a greyed entry says "this exists". The VST3 plug-in has no USB layer at all,
+// so for it those entries are not disabled — they are meaningless, and a permanently greyed row is
+// worse than no row. Default true, so the application is unchanged.
+static bool sDeviceCapable = true;
+
+void app_menu_set_device_capable(bool capable) {
+    sDeviceCapable = capable;
+}
+
+void open_file_menu(tCoord anchor) {
     static tMenuItem items[10];  // 9 entries + the NULL terminator
     bool             online       = gCommsState == eCommsOnLine;
     bool             isPerf       = gGlobalSettings.perfMode == 1;
@@ -105,12 +117,18 @@ static void open_file_menu(tCoord anchor) {
     items[i++] = (tMenuItem){
         "Open Patch/Perf File...", (tRgb)RGB_GREY_3, action_open_patch, 0, NULL, 0, 0.0
     };
-    items[i++] = (tMenuItem){
-        "Load Patch from Bank...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_load_patch_location : NULL, 0, NULL, 0, 0.0
-    };
-    items[i++] = (tMenuItem){
-        "Load Performance from Bank...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_load_perf_location : NULL, 0, NULL, 0, 0.0
-    };
+
+    if (sDeviceCapable) {
+        items[i++] = (tMenuItem){
+            "Load Patch from Bank...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_load_patch_location : NULL, 0, NULL, 0, 0.0
+        };
+    }
+
+    if (sDeviceCapable) {
+        items[i++] = (tMenuItem){
+            "Load Performance from Bank...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_load_perf_location : NULL, 0, NULL, 0, 0.0
+        };
+    }
     // Save writes back to wherever this patch/perf came from; it only appears live once there IS
     // such a place, which is why Save As sits below it rather than being the only option.
     bool             haveSavePath = file_menu_have_saved_path();
@@ -123,15 +141,24 @@ static void open_file_menu(tCoord anchor) {
     items[i++] = (tMenuItem){
         isPerf ? "Save Perf As..." : "Save Patch As...", (tRgb)RGB_GREY_3, action_save_patch, 0, NULL, 0, 0.0
     };
-    items[i++] = (tMenuItem){
-        isPerf ? "Store Perf to Bank..." : "Store Patch to Bank...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_store_to_bank : NULL, 0, NULL, 0, 0.0
-    };
-    items[i++] = (tMenuItem){
-        "Delete Patch...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_delete_patch_location : NULL, 0, NULL, 0, 0.0
-    };
-    items[i++] = (tMenuItem){
-        "Delete Performance...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_delete_perf_location : NULL, 0, NULL, 0, 0.0
-    };
+
+    if (sDeviceCapable) {
+        items[i++] = (tMenuItem){
+            isPerf ? "Store Perf to Bank..." : "Store Patch to Bank...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_store_to_bank : NULL, 0, NULL, 0, 0.0
+        };
+    }
+
+    if (sDeviceCapable) {
+        items[i++] = (tMenuItem){
+            "Delete Patch...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_delete_patch_location : NULL, 0, NULL, 0, 0.0
+        };
+    }
+
+    if (sDeviceCapable) {
+        items[i++] = (tMenuItem){
+            "Delete Performance...", online ? (tRgb)RGB_GREY_3 : (tRgb)RGB_GREY_5, online ? action_delete_perf_location : NULL, 0, NULL, 0, 0.0
+        };
+    }
     items[i++] = (tMenuItem){
         "New Patch", (tRgb)RGB_GREY_3, action_new_patch, 0, NULL, 0, 0.0
     };
@@ -196,7 +223,7 @@ static void action_open_notes(int index) {
     settings_menu_open_notes();
 }
 
-static void open_settings_menu(tCoord anchor) {
+void open_settings_menu(tCoord anchor) {
     static tMenuItem items[] = {
         {"Synth",                (tRgb)RGB_GREY_3, action_open_synth,          0, NULL, 0, 0.0},
         {"Patch",                (tRgb)RGB_GREY_3, action_open_patch_settings, 0, NULL, 0, 0.0},
@@ -233,7 +260,7 @@ static void action_backup_everything(int index) {
     backup_menu_everything();
 }
 
-static void open_backup_menu(tCoord anchor) {
+void open_backup_menu(tCoord anchor) {
     static tMenuItem items[6];
     bool             online = gCommsState == eCommsOnLine;
     int              i      = 0;
@@ -277,7 +304,7 @@ static void action_restore_everything(int index) {
     restore_menu_everything();
 }
 
-static void open_restore_menu(tCoord anchor) {
+void open_restore_menu(tCoord anchor) {
     static tMenuItem items[6];
     bool             online = gCommsState == eCommsOnLine;
     int              i      = 0;
@@ -319,7 +346,7 @@ static void action_dial_mode_horizontal(int index) {
     synthlib_save_dial_mode(synthlib_dial_mode());
 }
 
-static void open_controls_menu(tCoord anchor) {
+void open_controls_menu(tCoord anchor) {
     static tMenuItem items[]      = {
         {"* Rotary",     (tRgb)RGB_GREY_3, action_dial_mode_rotary,     0, NULL, 0, 0.0},
         {"* Vertical",   (tRgb)RGB_GREY_3, action_dial_mode_vertical,   0, NULL, 0, 0.0},
@@ -376,7 +403,7 @@ static void action_overlay_mode(int index) {
     param_overlay_set_mode((param_overlay_mode() == mode) ? overlayModeNone : mode);
 }
 
-static void open_view_menu(tCoord anchor) {
+void open_view_menu(tCoord anchor) {
     static tMenuItem items[9]                         = {0};
     static char      overlayLabel[overlayModeMax][40] = {0};
     int              i                                = 0;
@@ -424,19 +451,29 @@ static void action_toggle_mutator(int index) {
 // The engine follows whatever single oscillator is selected at the time, so it is deliberately not
 // greyed out when the selection is unsuitable — it simply makes no sound until one is selected, and
 // can be left switched on while clicking around the patch.
+#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
+
 static void action_select_audio_device(int index) {
     audio_output_select_device((uint32_t)index);
 }
+#endif // G2_VST3_BUILD
+
 
 // Output level. Attenuation only — see sound_engine_set_output_level_db() for why boosting into the
 // limiter is not offered.
 static const int32_t kOutputLevels[] = {0, -3, -6, -9, -12, -18, -24};
+
+#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
 
 static void action_select_output_level(int index) {
     if ((index >= 0) && (index < (int)(sizeof(kOutputLevels) / sizeof(kOutputLevels[0])))) {
         audio_output_select_level_db(kOutputLevels[index]);
     }
 }
+#endif // G2_VST3_BUILD
+
+
+#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
 
 static void action_select_buffer_frames(int index) {
     // Item 0 is "Device default"; the rest are the powers of two below.
@@ -444,28 +481,49 @@ static void action_select_buffer_frames(int index) {
 
     audio_output_select_buffer_frames(sizes[((size_t)index < (sizeof(sizes) / sizeof(sizes[0]))) ? index : 0]);
 }
+#endif // G2_VST3_BUILD
+
+
+#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
 
 static void action_select_left_output(int index) {
     audio_output_select_left_channel((uint32_t)index);
 }
+#endif // G2_VST3_BUILD
+
+
+#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
 
 static void action_select_right_output(int index) {
     audio_output_select_right_channel((uint32_t)index);
 }
+#endif // G2_VST3_BUILD
+
+
+#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
 
 static void action_select_midi_source(int index) {
     // The list is offered with "None" first, so item 0 is None and the rest are shifted by one.
     midi_input_select_source((index == 0) ? MIDI_INPUT_NONE : (index - 1));
 }
+#endif // G2_VST3_BUILD
+
+
+#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
 
 static void action_select_midi_channel(int index) {
     midi_input_select_channel((uint32_t)index);   // 0 is Omni, 1..16 a channel
 }
+#endif // G2_VST3_BUILD
+
+
+#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
 
 static void action_toggle_midi_to_synth(int index) {
     (void)index;
     midi_input_set_sends_to_synth(!midi_input_sends_to_synth());
 }
+#endif // G2_VST3_BUILD
 
 static void action_toggle_sound_engine(int index) {
     (void)index;
@@ -501,7 +559,7 @@ static void action_deassign_midi_cc_selection(int index) {
     midi_cc_deassign_selection();
 }
 
-static void open_tools_menu(tCoord anchor) {
+void open_tools_menu(tCoord anchor) {
     static tMenuItem items[10];  // 8 entries + the NULL terminator, with room to grow
     // The two selection entries have nothing to act on without one, and the original greys them
     // the same way rather than letting the click be a silent no-op.
@@ -557,7 +615,9 @@ static void open_tools_menu(tCoord anchor) {
 // Work that is being tried out rather than relied on. Kept as its own menu so that what is
 // finished and what is an experiment are not sitting side by side under Tools — anything here may
 // change or disappear, and graduates into one of the other menus once it has settled.
-static void open_experimental_menu(tCoord anchor) {
+#ifndef G2_VST3_BUILD    // needs the application's audio-device and MIDI-input layers
+
+void open_experimental_menu(tCoord anchor) {
     // A 32-output interface is 16 pairs, and a machine can easily have half a dozen devices.
 #define MAX_AUDIO_DEVICE_ITEMS      (33)
 #define MAX_OUTPUT_CHANNEL_ITEMS    (65)
@@ -785,6 +845,8 @@ static void open_experimental_menu(tCoord anchor) {
 
     open_context_menu(anchor, items, 0, 0.0);
 }
+#endif // G2_VST3_BUILD
+
 
 tMenuBarItem gAppMenuBar[] = {
     {"File",         open_file_menu        },
@@ -794,7 +856,9 @@ tMenuBarItem gAppMenuBar[] = {
     {"Controls",     open_controls_menu    },
     {"Tools",        open_tools_menu       },
     {"View",         open_view_menu        },
+#ifndef G2_VST3_BUILD
     {"Experimental", open_experimental_menu},
+#endif
     {NULL,           NULL                  },
 };
 

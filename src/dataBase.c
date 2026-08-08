@@ -258,6 +258,74 @@ void init_database(void) {
 // globalVars rather than in the database proper. Was in graphics.c, which made it unreachable
 // from anything without a GUI; nothing in it ever touched the screen.
 
+// A brand-new, empty patch. Moved here from mouseHandle.c, where its own comment asked where it
+// really belonged: nothing in it touches a window, and clear_slot_data() below came here for the
+// same reason — a GUI-less build could not reach it otherwise.
+//
+// THE VST3 PLUG-IN NEEDS THIS BEFORE IT HAS LOADED ANYTHING. Without it gPatchDescr is all zeroes,
+// and a zero barPosition means "Voice Area takes no height" — which put the pane divider hard
+// against the top of an empty plug-in window instead of partway down it.
+void init_patch(uint32_t slot) {
+    memset(&gPatchDescr[slot], 0, sizeof(gPatchDescr[0]));
+    gPatchDescr[slot].voiceCount      = 1;
+    // Voice Area pane height in pixels — see splitView.h. The reference's own default is 4000, which
+    // is larger than any window and so clamps to "Voice Area takes everything"; G2-Edit shows BOTH
+    // areas on a new patch instead (owner's call), because the divider is the point of the window
+    // and a new patch is exactly when you want to see it. Patches loaded from file or from the G2
+    // carry their own value and are untouched by this.
+    gPatchDescr[slot].barPosition     = 300;
+    gPatchDescr[slot].unknown3        = 2;    // unknown9 in Delphi
+    gPatchDescr[slot].visible[0]      = 1;
+    gPatchDescr[slot].visible[1]      = 1;
+    gPatchDescr[slot].visible[2]      = 1;
+    gPatchDescr[slot].visible[3]      = 1;
+    gPatchDescr[slot].visible[4]      = 1;
+    gPatchDescr[slot].visible[5]      = 1;
+    gPatchDescr[slot].visible[6]      = 1;
+    gPatchDescr[slot].monoPoly        = 1;
+    gPatchDescr[slot].activeVariation = 0;
+    gPatchDescr[slot].category        = 0;
+
+    database_delete_cables_by_slot(slot);
+    database_delete_modules_by_slot(slot);
+    gMorphCount[slot]                 = 8; // Check default!?
+
+    // database_delete_modules_by_slot() above zeroes every module for this slot, including the
+    // morph-groups pseudo-module (locationMorph/patchModuleMorph) that every patch structurally has.
+    // render_morph_groups() reads it via get_module(), which returns NULL unless active is set, so
+    // without this the morph knobs would silently render nothing for a freshly-initialised patch —
+    // reactivate it here with its key set, same as parse_module_list() does when a real patch
+    // arrives from the device.
+    {
+        tModule * morphModule = get_module_slot(slot, (uint32_t)locationMorph, patchModuleMorph);
+
+        morphModule->active = true;
+        morphModule->key    = (tModuleKey){
+            slot, (uint32_t)locationMorph, patchModuleMorph
+        };
+
+        // Each morph group's "mode" param (index i+NUM_MORPHS) is 0 for plain manual-knob mode,
+        // nonzero for assigned-to-a-fixed-source mode (see render_morph_groups()'s isKnob check) —
+        // default every group to its fixed source (Wheel, Vel, Keyb, ... per morphStrMap[i]) rather
+        // than leaving all 8 as unnamed knobs, across every variation so it holds regardless of
+        // which one is active.
+        for (uint32_t variation = 0; variation < NUM_VARIATIONS_USB; variation++) {
+            for (uint32_t morph = 0; morph < NUM_MORPHS; morph++) {
+                morphModule->param[variation][morph + NUM_MORPHS].value = 1;
+            }
+        }
+    }
+    gNote2Size[slot]       = 0;
+    gControllerCount[slot] = 0;            // Seems to default to 2, so might need to set up defaults
+    gPatchNotesSize[slot]  = 0;
+    memset(&(gKnobArray[slot]), 0, sizeof(gKnobArray[0]));
+    memset(gNote2[slot], 0, sizeof(gNote2[0]));
+    memset(&(gControllerArray[slot]), 0, sizeof(gControllerArray[0]));
+    memset(gPatchNotes[slot], 0, sizeof(gPatchNotes[0]));
+
+    COPY_STRING(gGlobalSettings.slot[slot].patchName, "Init");
+}
+
 void clear_slot_data(uint32_t slot) {
     if (slot < MAX_SLOTS) {
         database_delete_cables_by_slot(slot);

@@ -33,6 +33,11 @@
 #include <OpenGL/gl.h>
 
 #include "sysIncludes.h"
+// defs.h BEFORE synthlibDefs.h — it defines G2_EDIT, and synthlibDefs.h gates TOP_BAR_HEIGHT, the
+// colour palette and several layout constants on it. Included the other way round, TOP_BAR_HEIGHT
+// silently becomes 0.0 (the non-G2 branch), which put the module band 80 units too high, hidden
+// behind the top bar and with the margin between them swallowed.
+#include "defs.h"
 #include "synthlibDefs.h"
 #include "synthlibTypes.h"
 #include "geometry.h"
@@ -49,6 +54,9 @@
 #include "contextMenu.h"
 #include "menuBar.h"
 #include "g2Menu.h"
+#include "topbarRender.h"
+#include "topbarResourcesAccess.h"
+#include "mouseTopbar.h"
 
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
@@ -64,10 +72,6 @@
 // the app's, so anything loaded relative to it would have to be found all over again.
 #define FONT_PATH     "/System/Library/Fonts/Supplemental/Arial.ttf"
 #define FONT_PRELOAD_SIZE    (72.0)
-
-// Shown until the File menu is used. Says WHICH patch rather than just "a patch": a plug-in playing
-// the wrong thing and a plug-in playing nothing look the same from outside.
-#define G2_BUILTIN_PATCH_LABEL    "Built-in patch"
 
 static bool gFontReady = false;
 
@@ -99,9 +103,27 @@ void g2_gl_draw_init(void) {
         .mouseCoord = get_global_gui_scaled_mouse_coord,
     });
 
+    // A brand-new empty patch FIRST. gPatchDescr is otherwise all zeroes, and the pane divider's
+    // position is patch data (gPatchDescr[].barPosition) — zero meaning "Voice Area takes no
+    // height", which pinned the divider to the top of an empty window. init_patch() sets the same
+    // 300 the application uses for a new patch, deliberately showing both areas.
+    //
+    // A patch loaded afterwards carries its own barPosition and overwrites this, exactly as in the
+    // application.
+    // Tells appMenuBar.c there can never be a G2 attached, so its bank entries are omitted.
+    g2_menu_init();
+
+    init_patch(0);
+
     // Two panes: the Voice Area and the FX Area, with a draggable bar between them — the same
     // arrangement the application starts in.
     split_view_init();
+
+    // The top bar's controls take their colours from here. WITHOUT IT every control is drawn with a
+    // zeroed tRgb — which is BLACK — so Undo/Redo and the A-D slot buttons came out as black
+    // rectangles. init_graphics() calls it for the same reason; nothing about the bar works until
+    // it has.
+    topbar_init_controls();
 
     gFontReady = preload_glyph_textures(FONT_PATH, FONT_PRELOAD_SIZE);
 }
@@ -214,23 +236,16 @@ void g2_gl_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
         }
     }
 
-    // Chrome over the canvas. The reserved topbar band is drawn as a plain strip for now: an empty
-    // gap would read as a rendering fault, whereas a filled bar reads as a bar with nothing in it.
-    {
-        tRectangle topbar = g2_topbar_rect(pointWidth);
+    // THE APPLICATION'S OWN TOP BAR, not a second implementation of it. An earlier attempt here
+    // drew a hand-picked subset — patch name, variations, cable toggles — and looked nothing like
+    // the editor, which defeats the point: a plug-in that resembles the application is the whole
+    // reason for reusing its renderer. The controls that describe hardware draw too and should:
+    // "Offline" is the truthful state here, and the TX/RX lamps simply stay dark.
+    render_top_bar();
 
-        set_rgb_colour((tRgb)RGB_GREY_5);
-        render_rectangle(mainArea, topbar);
-
-        set_rgb_colour((tRgb)RGB_GREY_3);
-
-        {
-            const char * patch = g2_menu_loaded_patch_name();
-
-            render_text(mainArea, (tRectangle){{10.0, topbar.coord.y + 14.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}},
-                        (patch != NULL) ? patch : G2_BUILTIN_PATCH_LABEL);
-        }
-    }
+    // The morph group dials that sit at the right-hand end of the bar — Wheel, Vel, Keyb, Aft.Tch
+    // and the rest. A separate function in the application too, and already linked here.
+    render_morph_groups();
 
     render_menu_bar(gPluginMenuBar, g2_menu_bar_rect(pointWidth));
 

@@ -429,6 +429,92 @@ view runs a 60 Hz `NSTimer` for the duration of a drag, started on press and inv
 (and on `removeFromSuperview`, since the block retains the view). Only module and cable drags get it:
 a rubber band selects what is already visible and a dial drag is not going anywhere.
 
+**Remembered settings: dial mode and editor size**, 2026-08-08, through the same SynthLib prefs
+store the application uses (`prefs.cpp` — a plain file under Application Support, and zero GLFW).
+
+`prefs_init("G2 Alike")`, NOT `"G2-Edit"`. A shared dial-mode preference between app and plug-in
+would be a nice touch, but `prefs.cpp` rewrites the whole file on a change and the standalone editor
+and a hosted plug-in are very likely to be open at once — last-writer-wins would quietly lose
+settings. Separate files are worth more than the shared setting.
+
+Only the editor WIDTH is stored; height is derived from the locked aspect ratio, so storing both
+would record the same fact twice and invite them to disagree. It is restored in the view's
+CONSTRUCTOR because `getSize()` is asked before `attached()`, and written on every `onSize()` rather
+than at close — a host is under no obligation to announce teardown in any particular order.
+
+**WINDOW POSITION CANNOT BE REMEMBERED, and this is not a gap to fill later.** VST3 gives a plug-in
+no way to place its own editor window: the host creates and positions it, and `IPlugView` only ever
+negotiates SIZE (`getSize`/`onSize`/`checkSizeConstraint`). The application can call
+`glfwSetWindowPos()` because it owns its window; a plug-in does not own its own. Whether the editor
+reopens where it was is the host's behaviour to get right, not ours.
+
+**The application's OWN top bar**, 2026-08-08 — `render_top_bar()` moved out of `graphics.c` into
+`src/topbarRender.c` and is now drawn by both, along with `render_morph_groups()` (already in
+`moduleGraphics.c`), `mouseTopbar.c` and `topbarResourcesAccess.c`.
+
+A HAND-WRITTEN SUBSET WAS TRIED FIRST AND WAS THE WRONG CALL. It carried patch name, variations and
+cable toggles, and looked nothing like the editor — which defeats the point of reusing the renderer
+at all. The reasoning that led there was that `render_top_bar()` reads USB comms state; but "Offline"
+is the TRUTHFUL state for a plug-in, and the TX/RX lamps simply stay dark. Nothing had to be hidden
+to be honest, and a second implementation of the same bar could only drift from it.
+
+`topbar_init_controls()` MUST BE CALLED. It copies each control's `defaultColour` out of the resource
+table; without it every control draws with a zeroed `tRgb` — which is black — so Undo/Redo and the
+A-D slot buttons came out as black rectangles.
+
+**AN INCLUDE-ORDER BUG THAT WAS WORSE THAN IT LOOKED.** `defs.h` defines `G2_EDIT`, and
+`synthlibDefs.h` gates `TOP_BAR_HEIGHT`, the colour palette and several layout constants on it. Four
+plug-in files included `synthlibDefs.h` FIRST, so it expanded with `G2_EDIT` undefined and
+`TOP_BAR_HEIGHT` became 0.0. That made `gTheme.topBarHeight` 24 instead of 104 — so the module band
+started 80 units too high, most of it hidden behind the top bar, and the `MODULE_MARGIN` gap between
+bar and canvas was swallowed. It presented only as "the gap is missing"; the patch was actually
+positioned wrongly the whole time. Verified fixed by sampling the pixel column at the boundary
+against the running application: background band now 384-396, matching the application's 385-398.
+
+**The built-in patch is gone.** It was scaffolding from before the plug-in had an editor: with no way
+to choose a file, embedding one removed a whole class of "why is it silent". `File > Open Patch
+File...` replaced it, and a plug-in that quietly plays somebody else's lead patch is worse than one
+that starts empty. `load_patch()` now uses the path chain that was always in `g2Patch.c`, and
+`do-vst3` no longer generates `g2BuiltInPatch.h`.
+
+**Empty-plug-in defaults**, 2026-08-08. `init_patch()` moved from `mouseHandle.c` to `dataBase.c` —
+its own comment asked where it really belonged, nothing in it touches a window, and `clear_slot_data()`
+came here for the same reason.
+
+THE PANE DIVIDER'S POSITION IS PATCH DATA (`gPatchDescr[].barPosition`, see `splitView.h`). With no
+patch loaded, `gPatchDescr` was all zeroes, and zero means "Voice Area takes no height" — so the
+divider sat hard against the top of an empty window. The plug-in now calls `init_patch(0)` at
+start-up, which sets the same 300 the application uses for a new patch, deliberately showing both
+areas. A patch loaded afterwards carries its own value and overwrites it, as it does in the
+application. It also fixes the empty plug-in showing a blank patch name and zero voice count.
+
+**The application's menus**, 2026-08-08 — File, Settings, Controls, Tools, View. The plug-in composes
+its bar from `appMenuBar.c`'s own menu functions, now exposed individually, rather than defining a
+second set. Backup, Restore and Experimental are simply not in its bar.
+
+`app_menu_set_device_capable(false)` OMITS the bank and device entries rather than greying them. The
+application greys them while offline because going online is possible and a greyed row says "this
+exists"; here it never is, and a permanently greyed row is worse than no row. Default true, so the
+application is unchanged.
+
+Getting it to LINK was the work, and the shape of it is worth recording — 41 undefined symbols,
+resolved in four groups:
+
+- **23 were `audio_output_*` / `midi_input_*`, ALL inside `open_experimental_menu()` and its private
+  helpers.** Those are compiled out with `#ifndef G2_VST3_BUILD` — a compile-time guard rather than
+  a runtime flag, because the linker needs every symbol in an object whether or not it runs.
+- **Three real GLFW calls across every panel**, and no more: `glfwGetKey` in `mutatorUI.c` (its
+  private `shift_held`/`cmd_held`, now the shared `shift_modifier_held()`/`cmd_modifier_held()` seam)
+  and `glfwGetTime` in `virtualKeyboard.c`, `bankBrowser.cpp` and `fileBrowser.cpp` (now SynthLib's
+  own `get_time_ms()`, which `contextMenu.c` was converted to as well so there is one clock).
+  Everything else only used GLFW's key CONSTANTS, which need the header and not the library.
+- **`draw_dialog_background_overlay()`** moved from `graphics.c` to `utilsGraphics.c`: six lines of
+  drawing with no window in them.
+- **The rest are genuinely absent capabilities** and are stubbed: `device_op_begin/end`,
+  `save_zoom_factor`, and `is_cursor_hidden_dragging()` returning false (the plug-in cannot hide a
+  cursor). `gMutator` and `param_overlay_note_param()` STOPPED being stubs — `mutatorUI.c` and
+  `paramOverlay.c` are linked now, so the Mutator panel and parameter overlay are real.
+
 Remaining, in order:
 2. Scroll and zoom, then the FX pane — needed before a patch bigger than the window is usable.
 3. Right-click context menus: `open_toggle_menu()`/`open_mode_toggle_menu()` are stubs, and those

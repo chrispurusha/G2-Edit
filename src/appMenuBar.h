@@ -37,6 +37,21 @@ extern tMenuBarItem gAppMenuBar[];
 
 tRectangle app_menu_bar_rect(void);
 
+// The individual menus, so a host other than the application can compose its own bar from a subset
+// of them — the VST3 plug-in drops Backup, Restore and Experimental entirely.
+void open_file_menu(tCoord anchor);
+void open_settings_menu(tCoord anchor);
+void open_backup_menu(tCoord anchor);
+void open_restore_menu(tCoord anchor);
+void open_controls_menu(tCoord anchor);
+void open_tools_menu(tCoord anchor);
+void open_view_menu(tCoord anchor);
+void open_experimental_menu(tCoord anchor);
+
+// False omits the bank and device entries rather than greying them. See the note in appMenuBar.c:
+// greyed means "not right now", and the plug-in needs "not ever".
+void app_menu_set_device_capable(bool capable);
+
 #ifdef __cplusplus
 }
 #endif

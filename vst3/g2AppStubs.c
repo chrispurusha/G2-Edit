@@ -35,6 +35,11 @@
 // something harmless and obvious rather than uninitialised memory.
 
 #include "sysIncludes.h"
+// defs.h BEFORE synthlibDefs.h — it defines G2_EDIT, and synthlibDefs.h gates TOP_BAR_HEIGHT, the
+// colour palette and several layout constants on it. Included the other way round, TOP_BAR_HEIGHT
+// silently becomes 0.0 (the non-G2 branch), which put the module band 80 units too high, hidden
+// behind the top bar and with the margin between them swallowed.
+#include "defs.h"
 #include "synthlibDefs.h"
 #include "types.h"
 #include "geometry.h"
@@ -46,6 +51,9 @@
 #include "utilsGraphics.h"
 #include "synthlibGlobals.h"
 #include "g2GlView.h"
+#include "prefs.h"
+#include "g2Prefs.h"
+#include "canvasDrag.h"
 
 // ── Mouse position ──────────────────────────────────────────────────────────────────────────────
 //
@@ -54,6 +62,16 @@
 // which is why they are grouped rather than scattered.
 
 bool multi_select_modifier_held(void) {
+    return false;
+}
+
+// No modifier state from the host view yet. Shift-drag on a mutator slider and Cmd-click behave as
+// unmodified clicks until there is.
+bool shift_modifier_held(void) {
+    return false;
+}
+
+bool cmd_modifier_held(void) {
     return false;
 }
 
@@ -91,6 +109,15 @@ void undo_push_mode_change(tModuleKey key, uint32_t modeIndex, uint32_t oldValue
 }
 
 void undo_push_delete_selection(void) {
+}
+
+// The Undo/Redo buttons on the top bar call these. There is no undo stack in the plug-in, so they
+// draw and click but do nothing — which is at least honest, and the buttons are part of the
+// application's bar rather than something added here.
+void undo_undo(void) {
+}
+
+void undo_redo(void) {
 }
 
 // The rest of the undo surface, reached from menus.c. Same reasoning as the pushes above: there is
@@ -150,6 +177,39 @@ void undo_begin_midi_cc_edit(uint32_t slot) {
 void undo_commit_midi_cc_edit(void) {
 }
 
+// A device operation starting or finishing. The plug-in never performs one — there is no G2 — but
+// menuActions.c references these unconditionally.
+void device_op_begin(const char * label) {
+    (void)label;
+}
+
+void device_op_end(void) {
+}
+
+// Zoom is remembered by the application through its own prefs file; the plug-in has its own, and
+// zoom is not yet among the things it stores.
+void save_zoom_factor(double zoom) {
+    (void)zoom;
+}
+
+// The application's Controls menu calls this when the dial mode changes. Route it to the plug-in's
+// own prefs so the setting persists here too — synthlib_set_dial_mode() already writes it, so this
+// only has to not throw the value away.
+void synthlib_save_dial_mode(tDialMode mode) {
+    prefs_set_int(G2_PREF_DIAL_MODE, (long)mode);
+}
+
+// Ends a dial drag. The application also restores the cursor it hid; there is nothing hidden here.
+void finish_param_drag(void) {
+    (void)canvas_param_drag_release();
+}
+
+// True while a drag that hides the cursor is running. The plug-in cannot hide the cursor, so the
+// only honest answer is no — which is also what makes hover highlighting behave during a dial drag.
+bool is_cursor_hidden_dragging(void) {
+    return false;
+}
+
 // MIDI Learn's "what controller arrived last". No MIDI input layer here — the host delivers events
 // straight to the processor — so there is nothing to report.
 int32_t midi_input_last_cc(void) {
@@ -176,18 +236,11 @@ void undo_push_paste(uint32_t slot, uint32_t location, uint32_t anchorCol, uint3
 // menus.c is linked in now, so the drop-down a toggle or menu parameter opens is the application's
 // own. It was stubbed only while SynthLib's context-menu system could not be linked.
 
-void param_overlay_note_param(tModule * module, uint32_t paramIndex, tRectangle rectangle, const char * displayValue) {
-    (void)module;
-    (void)paramIndex;
-    (void)rectangle;
-    (void)displayValue;
-}
-
 // ── Ambient state ───────────────────────────────────────────────────────────────────────────────
-
-// The Mutator panel's state. Referenced by the canvas because a mutating module is drawn
-// differently; zeroed here means "not mutating", which is the whole of what the plug-in needs.
-tMutatorState gMutator = {0};
+//
+// gMutator and param_overlay_note_param() used to be faked here. They are REAL now — mutatorUI.c and
+// paramOverlay.c are linked, so the Mutator panel and the parameter overlay work rather than being
+// pretended at.
 
 // synthlibGlobals.c is NOT linked in: its synthlib_request_redraw() calls glfwPostEmptyEvent(), so
 // taking the file would take GLFW with it. Only these two are actually reached from the renderer.
@@ -208,8 +261,12 @@ void wake_glfw(void) {
     synthlib_request_redraw();
 }
 
-// Settable now, from the View menu. Rotary is the default because the other two want a hidden,
-// warped cursor that a host view does not give us — see the note in g2Menu.c's View menu.
+// Settable from the View menu, and REMEMBERED between sessions the way the application remembers
+// it — through the same SynthLib prefs store, though under the plug-in's own name. See
+// g2_plugin_prefs_init() for why the file is not shared with the application's.
+//
+// Rotary is the default because the other two want a hidden, warped cursor that a host view does not
+// give us — see the note in g2Menu.c's View menu.
 static tDialMode gDialMode = eDialModeRotary;
 
 tDialMode synthlib_dial_mode(void) {
@@ -218,4 +275,5 @@ tDialMode synthlib_dial_mode(void) {
 
 void synthlib_set_dial_mode(tDialMode mode) {
     gDialMode = mode;
+    prefs_set_int(G2_PREF_DIAL_MODE, (long)mode);
 }
