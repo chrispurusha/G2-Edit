@@ -61,12 +61,15 @@ static const CGFloat kEditorWidth  = 900.0;
 
 // Canvas plus the menu bar and the reserved topbar band above it, so adding the topbar's controls
 // later does not steal height from the patch.
-static const CGFloat kCanvasHeight = 600.0;
-static const CGFloat kEditorHeight = kCanvasHeight + G2_PLUGIN_CHROME_HEIGHT;
+// ON the locked ratio from the start, so the host's first resize does not jump the window to fit it.
+static const CGFloat kEditorHeight = kEditorWidth * 1440.0 / 2560.0;
 
 // Below this the module text stops being legible. No maximum: everything scales.
 static const CGFloat kMinWidth     = 640.0;
-static const CGFloat kMinHeight    = 400.0;
+
+// Same ratio the application locks its window to (TARGET_FRAME_BUFF_WIDTH : TARGET_FRAME_BUFF_HEIGHT,
+// 2560:1440). Height follows width, so the canvas can never gain rows by being stretched.
+static const double  kAspectRatio  = (double)TARGET_FRAME_BUFF_WIDTH / (double)TARGET_FRAME_BUFF_HEIGHT;
 static const int     kMorphCount   = 8;
 static const int     kParamLevelId = 8;
 
@@ -318,21 +321,28 @@ public:
         return kResultTrue;
     }
 
-    // Only a minimum. Below roughly this the module text stops being legible and the menu bar starts
-    // colliding with itself; above it there is no upper bound worth imposing, since everything
-    // scales.
+    // THE ASPECT RATIO IS LOCKED, as it is in the application — which calls
+    // glfwSetWindowAspectRatio(TARGET_FRAME_BUFF_WIDTH, TARGET_FRAME_BUFF_HEIGHT) in init_graphics().
+    //
+    // That lock is what completes the scaling. gGlobalGuiScale is derived from WIDTH alone, so on its
+    // own a taller window would simply uncover more rows rather than drawing the patch larger. The
+    // application never shows that because its window cannot be made taller without also becoming
+    // wider. Without this the plug-in was free-resizing and did exactly what the application is
+    // prevented from doing.
+    //
+    // Width is treated as the authority and height derived from it: a drag usually changes both, and
+    // following the width matches how the application's own resize feels.
     tresult PLUGIN_API checkSizeConstraint(ViewRect * rect) SMTG_OVERRIDE {
         if (rect == nullptr) {
             return kInvalidArgument;
         }
+        int32 width = rect->right - rect->left;
 
-        if ((rect->right - rect->left) < (int32)kMinWidth) {
-            rect->right = rect->left + (int32)kMinWidth;
+        if (width < (int32)kMinWidth) {
+            width = (int32)kMinWidth;
         }
-
-        if ((rect->bottom - rect->top) < (int32)kMinHeight) {
-            rect->bottom = rect->top + (int32)kMinHeight;
-        }
+        rect->right  = rect->left + width;
+        rect->bottom = rect->top + (int32)((double)width / kAspectRatio);
         return kResultTrue;
     }
 
