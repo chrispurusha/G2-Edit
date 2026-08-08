@@ -201,13 +201,39 @@ Known limits of what is drawn:
 - **Nothing repaints on change.** `synthlib_request_redraw()` is a stub; the view redraws only when
   the host asks it to.
 
+**Repaint-on-change and mouse CLICKS work**, same day. Verified by clicking a module in a host
+window and watching it acquire the selection border and repaint.
+
+- `synthlib_request_redraw()` is no longer a stub. It calls `g2_gl_view_request_redraw()`, which
+  hops to the main thread (`dispatch_async`, never `_sync` — a sync hop from a thread the main
+  thread waits on is a deadlock) and marks the view dirty. Every part of the editor that changes
+  something already calls this, so one function made the whole canvas repaint on change.
+- `vst3/g2Input.c` turns a position into a `dispatch_click_region()` call. **The hit-testing was not
+  reimplemented** — every clickable thing already registers a click region as it is drawn, and
+  SynthLib's dispatcher is already platform-free, so press-capture and layer priority came for free.
+  The only thing missing had been somebody to say where the mouse is.
+- `convert_mouse_coord_to_module_area_coord()` moved out of `mouseHandle.c` into
+  `src/canvasCoords.c`. It was always pure arithmetic — `module_area()`, the scroll offsets, the
+  zoom factor — with no window in it, so both the app and the plug-in now share one copy.
+
+**DIAL DRAGS DO NOT WORK YET, and the reason is structural.** A press on a dial dispatches correctly
+and sets up `gParamDragging`, but the code that turns subsequent motion into a value change lives in
+`cursor_pos(GLFWwindow *, double, double)` in `mouseHandle.c` — a GLFW callback the plug-in cannot
+link. So the drag begins and nothing consumes it.
+
+That function is the next extraction, and it is a bigger one than the two done so far: it is long and
+handles every drag the editor has (params, modes, modules, cables, tempo, vibrato, glide) mixed
+together with GLFW's cursor warping and hiding. The param-drag arm is the piece worth pulling out
+first, into something platform-free that takes a position rather than reading one.
+
 Remaining, in order:
 
-1. Repaint on change — turn the stubbed `synthlib_request_redraw()` into `setNeedsDisplay:`
-   marshalled to the main thread. Small, and the plug-in looks static without it.
-2. The input path: mouse events from the NSView into the existing hit-test machinery. This is where
-   the ~180 key constants and `glfwGetKey`'s pull-vs-push problem finally have to be faced.
-3. Scroll and zoom, then the FX pane.
+1. Extract the param-drag arm of `cursor_pos()` so dial drags work. Note `start_cursor_drag()` is
+   still a stub — the hide-and-warp behaviour that vertical/horizontal dial modes rely on is a
+   platform capability, which is why `synthlib_dial_mode()` currently reports rotary here.
+2. Scroll and zoom, then the FX pane — needed before a patch bigger than the window is usable.
+3. Right-click context menus: `open_toggle_menu()`/`open_mode_toggle_menu()` are stubs, and those
+   need SynthLib's menu stack, which needs an event loop.
 4. Split the two GLFW-calling functions out of `synthlibScale.c` (`synthlib_scale_query_initial`,
    `synthlib_scale_set_content_scale`) so the real `synthlib_scale_update()` can be called instead
    of repeating its four lines. Lands in the SynthLib repo and affects SynthEdit and EmuUtility when

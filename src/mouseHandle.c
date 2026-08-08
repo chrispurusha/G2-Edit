@@ -228,24 +228,6 @@ bool swap_cable_to_from_if_needed(tCableKey * cableKey, tModule * fromModule, tM
     return false;
 }
 
-void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord) {
-    if (targetCoord == NULL) {
-        return;
-    }
-    double     val  = 0.0;
-    tRectangle area = module_area();
-
-    val            = coord.x - area.coord.x;
-    val           += calc_scroll_x();
-    val           /= get_zoom_factor();
-    targetCoord->x = val;
-
-    val            = coord.y - area.coord.y;
-    val           += calc_scroll_y();
-    val           /= get_zoom_factor();
-    targetCoord->y = val;
-}
-
 static void send_master_clock_bpm(uint32_t bpm) {
     tMessageContent messageContent = {0};
 
