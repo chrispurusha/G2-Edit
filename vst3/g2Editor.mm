@@ -41,6 +41,10 @@
 #include "g2Editor.h"
 #include "g2GlView.h"
 
+extern "C" {
+#include "g2Menu.h"
+}
+
 using namespace Steinberg;
 using namespace Steinberg::Vst;
 
@@ -54,7 +58,11 @@ using namespace Steinberg::Vst;
 // them. The G2AlikePanel class below is kept, unreferenced, for the moment: it is the fallback if a
 // host turns out not to tolerate the GL surface.
 static const CGFloat kEditorWidth  = 900.0;
-static const CGFloat kEditorHeight = 600.0;
+
+// Canvas plus the menu bar and the reserved topbar band above it, so adding the topbar's controls
+// later does not steal height from the patch.
+static const CGFloat kCanvasHeight = 600.0;
+static const CGFloat kEditorHeight = kCanvasHeight + G2_PLUGIN_CHROME_HEIGHT;
 static const int     kMorphCount   = 8;
 static const int     kParamLevelId = 8;
 

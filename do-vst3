@@ -38,6 +38,7 @@ SOURCES=(
     "$HERE/vst3/g2GlDraw.c"
     "$HERE/vst3/g2AppStubs.c"
     "$HERE/vst3/g2Input.c"
+    "$HERE/vst3/g2Menu.c"
     # The canvas renderer itself, unchanged from the application. moduleGraphics.c and
     # renderParams.c also contain the canvas CLICK HANDLERS, which is why g2AppStubs.c exists —
     # those handlers never run here but their references still have to resolve.
@@ -49,6 +50,9 @@ SOURCES=(
     "$HERE/src/canvasDrag.c"
     "$HERE/src/splitView.c"
     "$HERE/SynthLib/src/clickRegion.c"
+    "$HERE/SynthLib/src/synthlibHost.c"
+    "$HERE/SynthLib/src/contextMenu.c"
+    "$HERE/SynthLib/src/menuBar.c"
     "$HERE/SynthLib/src/utils.c"
     # The application's renderer, unchanged. It includes GLFW's header for the GL declarations but
     # makes no GLFW CALL, so it needs the include path below and not the library — which is the
@@ -62,6 +66,7 @@ SOURCES=(
 # it — a VST3 interface is a C++ vtable, and that is the only reason any of this folder is C++.
 OBJC_SOURCES=(
     "$HERE/vst3/g2GlView.m"
+    "$HERE/vst3/g2FileDialog.m"
 )
 
 # Objective-C++ for the editor window: it builds an AppKit view, and the host owns the NSView it is

@@ -42,6 +42,13 @@
 #include "globalVars.h"
 #include "moduleGraphics.h"
 #include "soundEngine.h"
+#include "synthlibHost.h"
+#include "canvasCoords.h"
+#include "mouseHandle.h"
+
+#include "contextMenu.h"
+#include "menuBar.h"
+#include "g2Menu.h"
 
 #include "g2GlDraw.h"
 
@@ -54,6 +61,10 @@
 // the app's, so anything loaded relative to it would have to be found all over again.
 #define FONT_PATH     "/System/Library/Fonts/Supplemental/Arial.ttf"
 #define FONT_PRELOAD_SIZE    (72.0)
+
+// Shown until the File menu is used. Says WHICH patch rather than just "a patch": a plug-in playing
+// the wrong thing and a plug-in playing nothing look the same from outside.
+#define G2_BUILTIN_PATCH_LABEL    "Built-in patch"
 
 static bool gFontReady = false;
 
@@ -70,11 +81,21 @@ void g2_gl_draw_init(void) {
         // the app's top bar and menu occupy so the canvas can sit below them; this strip is the whole
         // surface and has neither, so borrowing the app's number would push everything down by the
         // height of a bar that is not there.
-        .topBarHeight   = 0.0,
+        // The canvas starts BELOW the menu bar and the reserved topbar band. Telling the renderer
+        // this is what keeps modules from being drawn underneath them — and reserving the topbar's
+        // height now means adding its controls later does not shift the whole patch down.
+        .topBarHeight   = MENU_BAR_HEIGHT + G2_PLUGIN_TOPBAR_HEIGHT,
         .orange1        = (tRgb)RGB_ORANGE_1,
         .orange2        = (tRgb)RGB_ORANGE_2,
         .greenOn        = (tRgb)RGB_GREEN_ON,
         .backgroundGrey = (tRgb)RGB_BACKGROUND_GREY,
+    });
+
+    // SynthLib's popups and menu bar ask the host where the pointer is rather than reaching for a
+    // window — the same injection init_graphics() performs. g2Input.c answers it from the host's
+    // events, so the context-menu system works here unchanged.
+    synthlib_host_init((tSynthLibHost){
+        .mouseCoord = get_global_gui_scaled_mouse_coord,
     });
 
     gFontReady = preload_glyph_textures(FONT_PATH, FONT_PRELOAD_SIZE);
@@ -142,6 +163,29 @@ void g2_gl_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
 
     render_modules();
     render_cables();
+
+    // Chrome over the canvas. The reserved topbar band is drawn as a plain strip for now: an empty
+    // gap would read as a rendering fault, whereas a filled bar reads as a bar with nothing in it.
+    {
+        tRectangle topbar = g2_topbar_rect(pointWidth);
+
+        set_rgb_colour((tRgb)RGB_GREY_5);
+        render_rectangle(mainArea, topbar);
+
+        set_rgb_colour((tRgb)RGB_GREY_3);
+
+        {
+            const char * patch = g2_menu_loaded_patch_name();
+
+            render_text(mainArea, (tRectangle){{10.0, topbar.coord.y + 14.0}, {BLANK_SIZE, STANDARD_TEXT_HEIGHT}},
+                        (patch != NULL) ? patch : G2_BUILTIN_PATCH_LABEL);
+        }
+    }
+
+    render_menu_bar(gPluginMenuBar, g2_menu_bar_rect(pointWidth));
+
+    // LAST, so an open menu is drawn over everything it overlaps.
+    render_context_menu();
 
     if (gFontReady == false) {
         // A patch of unreadable modules and a patch of missing font look far too similar to leave

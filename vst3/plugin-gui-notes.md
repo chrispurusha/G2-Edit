@@ -275,6 +275,47 @@ too. The plug-in's input path was returning early on that, so the drag-end path 
 re-ordering — was never reached, and `gModuleDrag` stayed active into the next gesture. The release
 must run both the captured handler and the drag-end work; only the press may return early.
 
+**Menu bar, File → Open Patch File…, and reserved topbar space**, 2026-08-08.
+
+SynthLib's `contextMenu.c`, `menuBar.c` and `synthlibHost.c` now link into the plug-in. That needed
+almost nothing: `wake_glfw()` turned out to be the application's own one-line wrapper around
+`synthlib_request_redraw()` (all 16 call sites resolve from one line here), and `glfwGetTime()` in
+`contextMenu.c` — its ONLY real GLFW reference, a submenu hover delay — became
+`clock_gettime(CLOCK_MONOTONIC)`. **That is a SynthLib change**, internal with no API impact, and it
+removes a GLFW dependency, so SynthEdit and EmuUtility only gain by it.
+
+`vst3/g2Menu.c` is a SMALLER menu than `appMenuBar.c`, deliberately. Five of the application's eight
+menus (Settings, Backup, Restore, Controls, Experimental) exist to talk to a G2 over USB; porting
+them would produce entries that either do nothing or look as though they might. The machinery is
+shared; only the contents are the plug-in's.
+
+`File → Open Patch File…` is the one that changes what the plug-in IS — until now it played a patch
+compiled into the binary at build time. `vst3/g2FileDialog.m` is a small NSOpenPanel returning a
+PATH; `misc.mm`'s `file_menu_open_patch()` was not reused because it also loads, through a loader
+that carries the online branch and pulls in GLFW, and `g2Patch.c` already has the plug-in's loader.
+
+A BUG THAT ONLY THE INCREMENTAL MODES COULD SHOW: `start_cursor_drag()` was left as an empty stub,
+so `canvas_drag_set_origin()` never ran and `gDragPrevY` stayed at 0. Vertical and horizontal compute
+`value + (previousY - currentY) * range / 200`, so the first movement evaluated `(0 - currentY)` — a
+large negative — and drove every dial straight to zero. Rotary hid it completely by reading an
+absolute angle and never touching those variables. The plug-in now implements `start_cursor_drag()`
+in `g2Input.c` (it needs the mouse); it still cannot hide or warp the cursor, but recording the
+origin was never the optional part.
+
+`View` offers all three dial-drag modes. Vertical and horizontal work here because they difference
+the pointer against its previous position, and canvas coordinates serve for that — they are simply
+scaled in points rather than backing pixels, so a little less sensitive than the application's on a
+Retina display. What is missing is `start_cursor_drag()`'s cursor hiding and warping: the pointer
+visibly travels away from the dial rather than staying put. Offered anyway, with rotary the default.
+
+**Topbar space is RESERVED but empty** — `G2_PLUGIN_TOPBAR_HEIGHT`, a strip below the menu bar
+showing the loaded patch name. Reserved now so the canvas is laid out around it from the start;
+adding the controls later would otherwise shift the whole patch down. It is 44 rather than the
+application's 80 because the slot, performance and clock controls that fill much of the app's bar
+have no meaning in a plug-in — the host owns tempo, and a plug-in instance is one patch, not four
+slots. Worth having when built: variations ×8 + Init, patch name, mono/poly, voice count, patch
+volume, and the cable hide/transparent/colour toggles.
+
 Remaining, in order:
 2. Scroll and zoom, then the FX pane — needed before a patch bigger than the window is usable.
 3. Right-click context menus: `open_toggle_menu()`/`open_mode_toggle_menu()` are stubs, and those
