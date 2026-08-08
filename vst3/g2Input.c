@@ -41,6 +41,10 @@
 #include "clickRegion.h"
 #include "globalVars.h"
 #include "canvasDrag.h"
+#include "contextMenu.h"
+#include "menuBar.h"
+#include "utilsGraphics.h"
+#include "g2Menu.h"
 
 #include "g2Input.h"
 
@@ -76,6 +80,16 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
     }
 
     if (phase == eClickPress) {
+        // MENUS FIRST, exactly as mouseHandle.c orders it. An open popup must swallow the click that
+        // dismisses it, and the menu bar must win over whatever the canvas has drawn underneath.
+        if (handle_context_menu_click(gMouse) == true) {
+            return true;
+        }
+
+        if (handle_menu_bar_click(gPluginMenuBar, g2_menu_bar_rect(get_render_width() / gGlobalGuiScale), gMouse) == true) {
+            return true;
+        }
+
         if (dispatch_click_region(gMouse, phase) == true) {
             return true;
         }
@@ -117,6 +131,22 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
         handled = true;
     }
     return handled;
+}
+
+// Called by the canvas when a dial drag begins (moduleGraphics.c). In the application this ALSO
+// hides the cursor and warps it, which is what lets a vertical drag run past the screen edge; here
+// it cannot, so the pointer stays visible and travels.
+//
+// SETTING THE ORIGIN IS NOT OPTIONAL, though, and leaving this empty was a real bug. The vertical and
+// horizontal dial modes compute the new value as
+//
+//     value + (previousY - currentY) * range / 200
+//
+// so with no origin recorded, previousY was still 0 and the very first movement evaluated
+// (0 - currentY), a large negative number that drove every dial straight to zero. Rotary hid it by
+// reading an absolute angle and never touching these.
+void start_cursor_drag(void) {
+    canvas_drag_set_origin(gMouse.x, gMouse.y);
 }
 
 // The application reads this from GLFW; the plug-in reads it from whatever the host last delivered.
