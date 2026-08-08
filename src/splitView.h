@@ -116,6 +116,14 @@ void split_view_flush_position(void);
 // made scrolling one pane yank the other to the same place.
 void pane_scroll_by(uint32_t pane, double dxPixels, double dyPixels);
 
+// The zoom at which every module in every visible pane is on screen at once — the smallest zoom any
+// pane asks for, since one zoom serves both. Returns the current zoom for a patch with nothing in it.
+double split_view_zoom_to_fit(void);
+
+// Each pane scrolled so its own leftmost module is against its left edge and its topmost module
+// against its top. Pairs with the above, and must be called AFTER the new zoom is set.
+void split_view_scroll_to_content(void);
+
 void render_pane_scrollbars(void);
 bool handle_pane_scrollbar_click(tCoord coord);
 void handle_pane_scrollbar_drag(tCoord coord);

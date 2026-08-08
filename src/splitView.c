@@ -39,6 +39,8 @@ extern "C" {
 #include "globalVars.h"
 #include "graphics.h"
 #include "utilsGraphics.h"
+#include "dataBase.h"
+#include "moduleResourcesAccess.h"
 
 tSplitView gSplitView = {0};
 
@@ -629,6 +631,148 @@ void pane_scroll_by(uint32_t pane, double dxPixels, double dyPixels) {
     }
     set_module_pane(prev);
     synthlib_request_redraw();
+}
+
+// The bounding box of a Location's modules, in module-space units — the same space module positions
+// are expressed in, before zoom and before scroll. `any` is false for an empty area, in which case
+// the bounds mean nothing. mod->rectangle is screen-space and deliberately not used here, exactly as
+// in selection_add_rect().
+typedef struct {
+    double minX;
+    double minY;
+    double maxX;
+    double maxY;
+    bool   any;
+} tContentBounds;
+
+static tContentBounds location_content_bounds(uint32_t slot, uint32_t location) {
+    tContentBounds bounds = {0};
+
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * module = get_module_slot(slot, location, i);
+
+        if ((module == NULL) || !module->active) {
+            continue;
+        }
+        double    left   = module->column * MODULE_X_SPAN;
+        double    top    = module->row * MODULE_Y_SPAN;
+        double    right  = left + MODULE_WIDTH;
+        double    bottom = top + (gModuleProperties[module->type].height * MODULE_Y_SPAN) - MODULE_Y_GAP;
+
+        if ((bounds.any == false) || (left < bounds.minX)) {
+            bounds.minX = left;
+        }
+
+        if ((bounds.any == false) || (top < bounds.minY)) {
+            bounds.minY = top;
+        }
+
+        if ((bounds.any == false) || (right > bounds.maxX)) {
+            bounds.maxX = right;
+        }
+
+        if ((bounds.any == false) || (bottom > bounds.maxY)) {
+            bounds.maxY = bottom;
+        }
+        bounds.any = true;
+    }
+
+    return bounds;
+}
+
+static double clamp_percent(double percent) {
+    if (percent < 0.0) {
+        return 0.0;
+    }
+
+    if (percent > 100.0) {
+        return 100.0;
+    }
+    return percent;
+}
+
+// The zoom at which every module in every VISIBLE pane is on screen at once. One zoom serves both
+// panes — it is a property of the canvas, not of a pane — so the answer is the SMALLEST any pane
+// asks for: whichever area has to shrink furthest sets the figure, and the other then has room to
+// spare. A collapsed pane asks for nothing, since no zoom would make it visible.
+//
+// Fitted to the SPAN of the modules, not to their distance from the canvas origin, and on both axes
+// rather than just the wider one. A patch parked out at column 4 with nothing to its left is no
+// bigger than the same patch at column 0, and a tall patch fitted only for width still runs off the
+// bottom — which is the case this exists for. What makes the span the right measure is that
+// split_view_scroll_to_content() then puts that span's corner in the corner of the pane.
+double split_view_zoom_to_fit(void) {
+    double smallest = 0.0;
+
+    for (uint32_t pane = 0; pane < module_pane_count(); pane++) {
+        tRectangle     area   = module_area_for_pane(pane);
+
+        if ((area.size.w <= 0.0) || (area.size.h <= 0.0)) {
+            continue;
+        }
+        tContentBounds bounds = location_content_bounds((uint32_t)gSlot, split_view_location_for_pane(pane));
+
+        if (bounds.any == false) {
+            continue;                       // nothing patched in this area: it constrains nothing
+        }
+        double         width  = bounds.maxX - bounds.minX;
+        double         height = bounds.maxY - bounds.minY;
+
+        if ((width <= 0.0) || (height <= 0.0)) {
+            continue;
+        }
+        double         zoomX  = area.size.w / width;
+        double         zoomY  = area.size.h / height;
+        double         zoom   = (zoomX < zoomY) ? zoomX : zoomY;
+
+        if ((smallest <= 0.0) || (zoom < smallest)) {
+            smallest = zoom;
+        }
+    }
+
+    // An empty patch has nothing to fit around, so it keeps the zoom it has rather than slamming to
+    // one end of the range for no visible reason. set_zoom_factor() clamps to 0.25..2.0.
+    return (smallest > 0.0) ? smallest : get_zoom_factor();
+}
+
+// Scrolls each pane so its own leftmost module sits against the left edge and its topmost module
+// against the top, by whatever amount that takes. NOT the canvas origin: a patch built out at column
+// 4 would otherwise be fitted correctly and then left showing four columns of empty grid beside it.
+// Each pane goes to ITS OWN content, the two areas being laid out independently of each other.
+//
+// MUST BE CALLED AFTER THE ZOOM IS SET. Scroll positions are held as a percentage of the travel, and
+// the travel is the canvas extent AT THE CURRENT ZOOM less the pane — so the same percentage means a
+// different place before and after a zoom change.
+void split_view_scroll_to_content(void) {
+    uint32_t prev = module_pane();
+    double   zoom = get_zoom_factor();
+
+    for (uint32_t pane = 0; pane < module_pane_count(); pane++) {
+        tRectangle     area    = module_area_for_pane(pane);
+
+        if (area.size.h <= 0.0) {
+            continue;
+        }
+        tContentBounds bounds  = location_content_bounds((uint32_t)gSlot, split_view_location_for_pane(pane));
+
+        set_module_pane(pane);
+
+        if (bounds.any == false) {
+            set_x_scroll_percent(0.0);      // nothing to bring into view
+            set_y_scroll_percent(0.0);
+            continue;
+        }
+        double         travelX = content_width() - area.size.w;
+        double         travelY = content_height() - area.size.h;
+        // Where the content's own corner sits, in the screen pixels the travel is measured in.
+        double         wantX   = bounds.minX * zoom;
+        double         wantY   = bounds.minY * zoom;
+
+        set_x_scroll_percent((travelX > 0.0) ? clamp_percent((wantX / travelX) * 100.0) : 0.0);
+        set_y_scroll_percent((travelY > 0.0) ? clamp_percent((wantY / travelY) * 100.0) : 0.0);
+    }
+
+    set_module_pane(prev);
 }
 
 bool handle_pane_scrollbar_click(tCoord coord) {
