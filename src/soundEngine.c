@@ -329,7 +329,10 @@ typedef struct {
     uint32_t polarity;       // LFO output range, posStrMap order
     bool     shpWave;        // LFO uses LfoShpA's waveform set rather than the plain one
 
-    double   cutoffHz;       // filter
+    // The filter's Freq DIAL VALUE (0..127, fractional), not a frequency. Kept in dial units because
+    // that is the domain modulation and keyboard tracking act in, and because the dial is itself
+    // logarithmic in frequency — see filter_step().
+    double   cutoffParam;    // filter
     double   resonance;
     uint32_t extraPoles;
     double   fltKbt;
@@ -998,7 +1001,7 @@ const char * sound_engine_debug_text(void) {
                                  (unsigned)n->srcOut[0], (unsigned)n->srcOut[1],
                                  (int)n->active,
                                  (int)n->wave, (int)n->oscKbt, n->basePitch, n->shape,
-                                 n->cutoffHz, n->resonance, (unsigned)n->extraPoles, n->modAmount, n->fltKbt,
+                                 flt_cutoff_hz(n->cutoffParam), n->resonance, (unsigned)n->extraPoles, n->modAmount, n->fltKbt,
                                  n->attack, n->decay, n->sustain, n->release, n->gain,
                                  n->timeSeconds, n->amount, n->depth);
     }
@@ -1751,19 +1754,19 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeFilter:
         {
-            node->cutoffHz   = flt_cutoff_hz(param_value(module, variation, FLT_PARAM_FREQ));
+            node->cutoffParam = param_value(module, variation, FLT_PARAM_FREQ);
             tFilterParams map = {0, 1, 2, 3, 4, 5};
 
             (void)filter_param_map(module->type, &map);
 
             // A filter with no resonance control sits at the bottom of its range, not the middle.
-            node->resonance  = (map.res >= 0)
+            node->resonance   = (map.res >= 0)
                                ? (param_value(module, variation, (uint32_t)map.res) / 127.0) : 0.0;
-            node->extraPoles = (map.slope >= 0)
+            node->extraPoles  = (map.slope >= 0)
                                ? flt_slope_extra_poles((uint32_t)param_value(module, variation, (uint32_t)map.slope)) : 0;
-            node->fltKbt     = flt_kbt_amount((uint32_t)param_value(module, variation, (uint32_t)map.kbt));
-            node->modAmount  = param_value(module, variation, (uint32_t)map.env) * 2.0 / 128.0;
-            node->active     = (param_value(module, variation, (uint32_t)map.active) != 0.0);
+            node->fltKbt      = flt_kbt_amount((uint32_t)param_value(module, variation, (uint32_t)map.kbt));
+            node->modAmount   = param_value(module, variation, (uint32_t)map.env) * 2.0 / 128.0;
+            node->active      = (param_value(module, variation, (uint32_t)map.active) != 0.0);
             break;
         }
         case eNodeEnv:
@@ -2737,10 +2740,30 @@ static double lfo_step(uint32_t node, const tEngineNode * spec) {
     }
 }
 
+// MODULATION IS SUMMED INTO THE DIAL VALUE AND CLAMPED THERE, then converted to a frequency exactly
+// once. This is not a rearrangement for tidiness — the clamp is the whole point, and it can only be
+// applied in this domain.
+//
+// The Freq dial is a pitch: flt_cutoff_hz() is 13.75 * 2^(value/12), i.e. the value counts semitones
+// up from A-1, reaching the 21.1 kHz the manual quotes at 127. Because the dial is already
+// logarithmic in frequency, "multiply the cutoff by 2^(semitones/12)" and "add semitones to the dial
+// value" are algebraically THE SAME OPERATION. The previous code did the former, so its shape was
+// never actually wrong — what it lacked was any limit, because there is no natural place to put one
+// in the frequency domain, and a modulated cutoff could run far past the top of the dial's range.
+//
+// It did not run away audibly only because two later clamps caught it: the Nyquist guard below and
+// LADDER_MAX_G. Both are safety limits on the filter model, not statements about the instrument's
+// range, so the cutoff was being bounded by an implementation detail at whatever frequency those
+// happened to bite. Clamping the control to the dial's own 0..127 puts the limit where the hardware
+// has it, and leaves the other two doing only the job they were written for.
+#define FLT_CONTROL_MIN    (0.0)
+#define FLT_CONTROL_MAX    (127.0)
+
 static double filter_step(uint32_t node, const tEngineNode * spec, double input, double mod, double voicePitch,
-                          double cutoffHz, double resonance) {
-    double cutoff = cutoffHz;
-    double g      = 0.0;
+                          double cutoffParam, double resonance) {
+    double control = cutoffParam;
+    double cutoff  = 0.0;
+    double g       = 0.0;
 
     if (spec->active == false) {
         return input;    // a bypassed filter passes its input straight through
@@ -2748,17 +2771,35 @@ static double filter_step(uint32_t node, const tEngineNode * spec, double input,
 
     // Whatever is patched into the Env input sweeps the cutoff, scaled by the Env knob. An envelope
     // there is what turns a static filter into one that opens and closes with the note.
+    //
+    // FULL_MOD_SEMITONES is 64 against a modAmount that reaches 2.0 (the dial's 0..200%), so a
+    // full-scale modulator at the knob's maximum sweeps 128 semitones — the dial's whole range.
+    // That the two constants multiply out to the range exactly is the reason to believe 64 rather
+    // than some value fitted to make the old unclamped arithmetic sound reasonable.
     if ((spec->modAmount > 0.0) && (mod != 0.0)) {
-        cutoff *= pow(2.0, mod * spec->modAmount * FULL_MOD_SEMITONES / 12.0);
+        control += mod * spec->modAmount * FULL_MOD_SEMITONES;
     }
 
     // Kbt moves the cutoff with the note, relative to middle C, at the percentage the scroll button
-    // selects (manual p.196).
+    // selects (manual p.196). One semitone of note is one unit of dial, which is what makes 100% Kbt
+    // track the keyboard exactly.
     // Tracks the SOUNDING pitch, so a glide carries the cutoff with it rather than snapping.
     if ((spec->fltKbt > 0.0) && (voicePitch >= 0.0)) {
-        cutoff *= pow(2.0, (voicePitch - MIDI_NOTE_MIDDLE_C) * spec->fltKbt / 12.0);
+        control += (voicePitch - MIDI_NOTE_MIDDLE_C) * spec->fltKbt;
     }
 
+    if (control < FLT_CONTROL_MIN) {
+        control = FLT_CONTROL_MIN;
+    }
+
+    if (control > FLT_CONTROL_MAX) {
+        control = FLT_CONTROL_MAX;
+    }
+    cutoff = flt_cutoff_hz(control);
+
+    // Nyquist guard. With the control clamp above this cannot bite at any normal device rate — the
+    // top of the dial is 21.1 kHz against an engine running at 96 kHz — so it is a guard against an
+    // unusually low device rate, not part of the instrument's behaviour.
     if (cutoff > (gSampleRate * 0.45)) {
         cutoff = gSampleRate * 0.45;
     }
@@ -2766,7 +2807,7 @@ static double filter_step(uint32_t node, const tEngineNode * spec, double input,
     if (cutoff < 1.0) {
         cutoff = 1.0;
     }
-    g = 1.0 - exp(-2.0 * M_PI * cutoff / gSampleRate);
+    g      = 1.0 - exp(-2.0 * M_PI * cutoff / gSampleRate);
 
     // THE LADDER MODEL ONLY HOLDS WHILE g IS WELL BELOW 1. Each stage is a plain one-pole using the
     // previous sample's output, and four of those inside a feedback loop stop behaving as a filter
@@ -2776,14 +2817,17 @@ static double filter_step(uint32_t node, const tEngineNode * spec, double input,
     // adding a little distortion. What is heard is the saturation's harmonics folding back down,
     // amplified on the way by the resonant feedback.
     //
-    // This is a consequence of running at the OUTPUT rate. FltClassic's range reaches 21.1 kHz
-    // (manual p.198), which at the G2's own 96 kHz gives half this g and sits comfortably inside the
-    // model; at 48 kHz the top of the same dial does not. Clamping g is what keeps the top of the
-    // dial usable rather than raspy — the cost is that cutoff stops climbing near the very top,
-    // where a 24 dB/octave lowpass is close to transparent anyway.
+    // This USED to be load-bearing, and the note here used to say so: when the graph ran at the
+    // output rate, the top of FltClassic's 21.1 kHz range (manual p.198) landed outside the model
+    // and this clamp was what kept it from rasping. Both halves of that have since gone away. The
+    // whole graph now runs oversampled (ENGINE_OVERSAMPLE), so 21.1 kHz against 96 kHz gives
+    // g = 0.75, inside the model; and the control clamp in this function now stops the modulated
+    // cutoff exceeding the top of the dial in the first place.
     //
-    // The real fix is to run the filter oversampled, as the oscillators already are. Until then this
-    // trades a little range at the extreme for a filter that does not rasp.
+    // So this is now a backstop that should never fire at a normal device rate, rather than
+    // something shaping the sound. Left in place deliberately: it costs one comparison, and it is
+    // the only thing standing between an unusual rate — or a future module whose range exceeds
+    // FltClassic's — and a filter that misbehaves rather than merely distorts.
     if (g > LADDER_MAX_G) {
         g = LADDER_MAX_G;
     }
@@ -2921,7 +2965,11 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 bool                primed      = gSmoothPrimed[n];
                 double              smoothCoeff = 1.0 - exp(-1.0 / (PARAM_SMOOTH_SECONDS * gSampleRate));
                 double              shape       = smooth_to(&gSmoothShape[n], spec->shape, smoothCoeff, primed);
-                double              cutoffHz    = smooth_to(&gSmoothCutoff[n], spec->cutoffHz, smoothCoeff, primed);
+                // Smoothed in DIAL units, not hertz. Smoothing a logarithmic control linearly in
+                // frequency makes a knob move slowly at the bottom of its travel and leap at the
+                // top; smoothing the dial value sweeps evenly in pitch, which is what the dial
+                // means and what turning it sounds like.
+                double              cutoffParam = smooth_to(&gSmoothCutoff[n], spec->cutoffParam, smoothCoeff, primed);
                 double              resonance   = smooth_to(&gSmoothRes[n], spec->resonance, smoothCoeff, primed);
                 double              gain        = smooth_to(&gSmoothGain[n], spec->gain, smoothCoeff, primed);
 
@@ -2950,7 +2998,7 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                     case eNodeFilter:
                     {
                         value[n][0] = filter_step(n, spec, a, signal_in(spec, value, 1), voicePitch,
-                                                  cutoffHz, resonance);
+                                                  cutoffParam, resonance);
                         break;
                     }
                     case eNodeEnv:
