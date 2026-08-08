@@ -75,11 +75,6 @@ void msg_send(tMessageQueue * msgQueue, const void * content) {
     (void)content;
 }
 
-int32_t find_unique_module_id(uint32_t location) {
-    (void)location;
-    return -1;    // "no free id" — nothing here creates modules
-}
-
 void undo_push_param_change(tModuleKey key, uint32_t paramIndex, uint32_t variation, uint32_t oldValue, uint32_t newValue) {
     (void)key;
     (void)paramIndex;
@@ -98,6 +93,69 @@ void undo_push_mode_change(tModuleKey key, uint32_t modeIndex, uint32_t oldValue
 void undo_push_delete_selection(void) {
 }
 
+// The rest of the undo surface, reached from menus.c. Same reasoning as the pushes above: there is
+// no undo stack here, and the begin/commit pairs bracket edits that simply are not recorded.
+void undo_push_create_module(tModuleKey key) {
+    (void)key;
+}
+
+void undo_push_module_colour(tModuleKey key, uint32_t oldColour, uint32_t newColour) {
+    (void)key;
+    (void)oldColour;
+    (void)newColour;
+}
+
+void undo_push_module_exclude(tModuleKey key, uint8_t oldValue, uint8_t newValue) {
+    (void)key;
+    (void)oldValue;
+    (void)newValue;
+}
+
+void undo_push_patch_descr(uint32_t slot, uint8_t which, uint8_t oldValue, uint8_t newValue) {
+    (void)slot;
+    (void)which;
+    (void)oldValue;
+    (void)newValue;
+}
+
+void undo_push_knob(uint32_t slot, uint32_t idx1, const tKnob * before1, const tKnob * after1,
+                    int32_t idx2, const tKnob * before2, const tKnob * after2) {
+    (void)slot;
+    (void)idx1;
+    (void)before1;
+    (void)after1;
+    (void)idx2;
+    (void)before2;
+    (void)after2;
+}
+
+void undo_begin_cable_edit(uint32_t slot, uint32_t location) {
+    (void)slot;
+    (void)location;
+}
+
+void undo_commit_cable_edit(void) {
+}
+
+void undo_begin_global_knob_edit(void) {
+}
+
+void undo_commit_global_knob_edit(void) {
+}
+
+void undo_begin_midi_cc_edit(uint32_t slot) {
+    (void)slot;
+}
+
+void undo_commit_midi_cc_edit(void) {
+}
+
+// MIDI Learn's "what controller arrived last". No MIDI input layer here — the host delivers events
+// straight to the processor — so there is nothing to report.
+int32_t midi_input_last_cc(void) {
+    return -1;
+}
+
 void undo_push_paste(uint32_t slot, uint32_t location, uint32_t anchorCol, uint32_t anchorRow,
                      tModuleKey * pastedKeys, uint32_t pastedCount,
                      tClipboardModule * clipModules, uint32_t clipModuleCount,
@@ -114,23 +172,9 @@ void undo_push_paste(uint32_t slot, uint32_t location, uint32_t anchorCol, uint3
     (void)clipCableCount;
 }
 
-// The drop-down a toggle or mode parameter opens when clicked. It is a SynthLib context menu, which
-// needs the application's menu stack and its event loop to run — so this is not merely "nothing to
-// do" like the undo stubs, but a real capability the plug-in does not have yet. It arrives with the
-// input path, not before.
-void open_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t paramIndex, uint32_t paramRef) {
-    (void)coord;
-    (void)moduleKey;
-    (void)paramIndex;
-    (void)paramRef;
-}
-
-void open_mode_toggle_menu(tCoord coord, tModuleKey moduleKey, uint32_t modeIndex, uint32_t modeRef) {
-    (void)coord;
-    (void)moduleKey;
-    (void)modeIndex;
-    (void)modeRef;
-}
+// open_toggle_menu(), open_mode_toggle_menu() and find_unique_module_id() are NO LONGER STUBS —
+// menus.c is linked in now, so the drop-down a toggle or menu parameter opens is the application's
+// own. It was stubbed only while SynthLib's context-menu system could not be linked.
 
 void param_overlay_note_param(tModule * module, uint32_t paramIndex, tRectangle rectangle, const char * displayValue) {
     (void)module;

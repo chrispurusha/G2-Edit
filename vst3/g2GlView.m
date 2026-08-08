@@ -107,14 +107,36 @@ static __weak G2GlView * gCurrentView = nil;
     [[self openGLContext] update];
 }
 
+// WITHOUT A TRACKING AREA, -mouseMoved: IS NEVER CALLED. That is why menu items did not highlight:
+// the highlight is drawn from the pointer position (render_context_menu reads it), and the position
+// was only ever updated on a click. AppKit delivers mouse-moved events to a view solely on the
+// strength of a tracking area covering it, and the area has to be rebuilt whenever the view resizes.
+- (void)updateTrackingAreas {
+    [super updateTrackingAreas];
+
+    for (NSTrackingArea * area in [self trackingAreas]) {
+        [self removeTrackingArea:area];
+    }
+
+    NSTrackingArea * area = [[NSTrackingArea alloc]
+                             initWithRect:[self bounds]
+                                  options:(NSTrackingMouseMoved | NSTrackingActiveInKeyWindow |
+                                           NSTrackingInVisibleRect | NSTrackingMouseEnteredAndExited)
+                                    owner:self
+                                 userInfo:nil];
+
+    [self addTrackingArea:area];
+}
+
 // ── Mouse ───────────────────────────────────────────────────────────────────────────────────────
 //
 // Cocoa's origin is bottom-left and the canvas's is top-left, so y is flipped here — at the
 // boundary, in the only file that knows Cocoa's convention. Everything past this point is in the
 // canvas's own coordinates and the application's existing hit-testing takes over (g2Input.c).
 //
-// Nothing is done about which BUTTON was pressed: the canvas's click regions do not distinguish
-// them, and the right-button context menus are not available in the plug-in yet.
+// The LEFT button goes through the click regions, which do not distinguish buttons; the RIGHT button
+// has its own path, because the application's context menus hit-test connectors, parameters and
+// module bodies in a specific order of their own.
 
 - (BOOL)acceptsFirstMouse:(NSEvent *)event {
     (void)event;
@@ -151,9 +173,22 @@ static __weak G2GlView * gCurrentView = nil;
 - (void)mouseMoved:(NSEvent *)event {
     NSPoint c = [self canvasPointFor:event];
 
-    // Position only, no dispatch: hover highlighting reads the mouse position, and a dispatch here
-    // would deliver a click nobody made.
-    g2_input_set_mouse(c.x, c.y);
+    // No dispatch — a click nobody made. But the hover state must be advanced: menu highlighting
+    // and the dwell timer that opens a submenu flyout both work off the pointer.
+    g2_input_hover(c.x, c.y);
+    [self setNeedsDisplay:YES];
+}
+
+// The application opens its context menus on right button UP, not down, so the same here.
+- (void)rightMouseDown:(NSEvent *)event {
+    (void)event;    // the application has no use for right-down either; the menu opens on release
+}
+
+- (void)rightMouseUp:(NSEvent *)event {
+    NSPoint c = [self canvasPointFor:event];
+
+    g2_input_right_click(c.x, c.y);
+    [self setNeedsDisplay:YES];
 }
 
 - (void)drawRect:(NSRect)dirtyRect {

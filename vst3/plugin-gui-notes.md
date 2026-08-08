@@ -316,6 +316,44 @@ have no meaning in a plug-in — the host owns tempo, and a plug-in instance is 
 slots. Worth having when built: variations ×8 + Init, patch name, mono/poly, voice count, patch
 volume, and the cable hide/transparent/colour toggles.
 
+**Module drop-downs work**, 2026-08-08 — Wave selectors, Curve, Pad, slope menus and every other
+toggle/menu parameter. `menus.c` (2577 lines) linked in as-is: it has **zero** GLFW calls, and once
+SynthLib's context-menu system was linkable it needed only eleven more `undo_*` stubs plus
+`midi_input_last_cc()`. `open_toggle_menu()`, `open_mode_toggle_menu()` and `find_unique_module_id()`
+stopped being stubs at that point — `menus.c` defines all three, so linking it replaced them.
+
+**Right-click menus and menu hover highlighting**, 2026-08-08 — two unrelated causes that presented
+together.
+
+*Right-click* was simply never handled: the view implemented only the left button. The canvas half of
+`mouseHandle.c`'s `mouseButtonRightUp` case moved into `canvasDrag.c` as `canvas_right_click()`. Its
+hit-test ORDER matters and is preserved — connectors, then parameters, then module body, then morph
+labels — because a connector sits inside its module's rectangle, so testing the body first would
+swallow every connector right-click.
+
+*Hover highlighting* needed *two* things, and either alone would have looked like a failure:
+
+1. **An `NSTrackingArea`.** AppKit does not deliver `-mouseMoved:` to a view without one, so the
+   pointer position was only ever updated on a click, and `render_context_menu()` draws its highlight
+   from that position. The area must be rebuilt on resize (`-updateTrackingAreas`).
+2. **Polling the hover updaters.** `update_context_menu_hover()` and `update_menu_bar_hover()` are
+   called every tick in the application (`graphics.c:2886`) — the dwell timer that opens a submenu
+   flyout only advances when something asks it to. The plug-in calls them on pointer movement, which
+   is enough given it redraws on demand rather than continuously.
+
+**Cable dragging works**, 2026-08-08 — the last big piece of `cursor_pos()` the canvas needed.
+
+The press already worked: `connector_click_handler` in `moduleGraphics.c` sets `gCableDrag`, and the
+plug-in links that file. What moved out of `mouseHandle.c` into `canvasDrag.c` was
+`handle_cable_connect()` and its three helpers (`set_up_cable_key`, `swap_cable_to_from_if_needed`,
+`input_connector_has_cable`), plus the loose-end motion added to `canvas_drag_motion()`. The in-flight
+cable is drawn in `g2GlDraw.c` after the settled ones, as `render_frame()` does — without it a drag is
+invisible until it lands, which reads as nothing happening.
+
+`msg_send()` inside the connect tells the G2 about the new cable; here it reaches a stub and does
+nothing, which is correct — the cable exists locally, the engine picks it up from the database, and no
+hardware is written to.
+
 Remaining, in order:
 2. Scroll and zoom, then the FX pane — needed before a patch bigger than the window is usable.
 3. Right-click context menus: `open_toggle_menu()`/`open_mode_toggle_menu()` are stubs, and those
@@ -329,3 +367,65 @@ The language split in this folder is deliberate: `g2GlDraw.c` is plain C because
 runtime, `g2GlView.m` is plain Objective-C because `NSOpenGLView` needs one but nothing needs C++,
 and `g2Editor.mm` is Objective-C++ only because `IPlugView` is a C++ vtable that has to hand over a
 Cocoa view.
+
+---
+
+## What sharing this code has revealed about the application's mouse handling
+
+Observations, NOT a plan — nothing here is proposed for implementation yet. They are recorded because
+each one was learned by hitting it, and the evidence will otherwise be forgotten.
+
+**1. A gesture's three phases live in three files, with nothing connecting them.**
+A dial drag presses in `moduleGraphics.c` (sets `gParamDragging`, calls `start_cursor_drag()`), moves
+in `cursor_pos()` in `mouseHandle.c`, and releases in `finish_param_drag()` reached from
+`mouseButtonLeftUp`. Nothing declares that all three exist.
+
+THIS CAUSED THREE BUGS IN ONE SESSION, all in the plug-in and all the same shape: module re-ordering
+did nothing (release never reached), a dial stayed held after mouse-up (its release never reached),
+and vertical dials slammed to zero (the press half of `start_cursor_drag()` was stubbed away). Each
+was invisible until the feature was used. A gesture owning press/motion/release together would make
+an unwired phase a compile-time or at least an obvious omission.
+
+**2. `cursor_pos()` is a dispatch table written as an if/else chain.**
+~450 lines over scrollbars, tempo, perf tempo, vibrato rate/amount, glide time, param drag, module
+drag, cable drag, rubber band, context menu and connector hover — each arm independent, selected by
+whichever `gXxxDragging` flag is set. With four arms now extracted, the rest reads as a list wanting
+to be a table keyed on an active-gesture enum.
+
+**3. `cursor_pos()` never used its `GLFWwindow *` argument.**
+It read the pointer through `get_global_gui_scaled_mouse_coord()`. The signature implied a GLFW
+dependency the body did not have, which is the main reason the extraction looked daunting and turned
+out to be mechanical. Worth checking other signatures for the same lie.
+
+**4. `start_cursor_drag()` conflates logic with platform.**
+It records the drag origin AND hides/warps the cursor. Splitting it — `canvas_drag_set_origin()`
+plus an optional `cursor_capture()`/`cursor_release()` — makes the platform half genuinely optional
+instead of something a port can drop by accident, which is exactly what happened here.
+
+**5. Modifier predicates are duplicated.**
+The four-key Shift-or-Cmd multi-select test appeared four times (now one:
+`multi_select_modifier_held()`); a Shift-only variant appears twice more; `mutatorUI.c` keeps private
+`shift_held()`/`cmd_held()`. Three predicates, seven-plus copies.
+
+**6. `glfwGetKey` is a PULL api, used 25 times.**
+A plug-in only receives pushed events. An input-state struct updated by the shell would serve both,
+and is what the plug-in needs before vertical/horizontal dial modes can behave exactly as they do in
+the application.
+
+**7. What is already right, and should not be "improved".**
+The click-region registry. Every widget registers as it is drawn and `dispatch_click_region()`
+resolves a coordinate against it, with press-capture and layer priority. That design is why
+hit-testing needed NO work whatsoever to serve the plug-in — the single largest saving in this whole
+exercise. Note the application's own comment that `handle_morph_press()`/`handle_module_press()` are
+"pure legacy fallback... should be nothing today"; those are candidates for removal.
+
+**Shape a shared API might take**, if it is ever worth doing:
+
+    canvas_press(coord, button, modifiers)     // returns true if consumed
+    canvas_motion(coord, rawCoord)
+    canvas_release(coord, button, modifiers)
+    canvas_modifiers()                          // replaces glfwGetKey polling, set by the shell
+    cursor_capture() / cursor_release()         // optional; absent in a plug-in
+
+with the application adding its topbar, scrollbar and panel handling around those calls, exactly as
+it already wraps the extracted pieces today.
