@@ -196,6 +196,77 @@ void delete_selection(void) {
     selection_clear();
 }
 
+// Moved here from menus.c so the VST3 plug-in can share it: a module dropped on top of another
+// must push it out of the way, and menus.c is not linked into the plug-in. Its sibling below has
+// always lived here, and the two belong together — see canvasDrag.h for the drag that calls them.
+//
+// send_module_move_msg() tells the G2 where the module went. In the plug-in that reaches a stubbed
+// msg_send() and does nothing, which is correct: there is no synth attached.
+void shift_modules_down(tModuleKey key) {
+    tModule * module            = get_module(key);
+
+    if (module == NULL) {
+        return;
+    }
+    bool      moduleRePosition  = false;
+    bool      doDrop            = false;
+    uint32_t  rowAndBelowToDrop = 0;
+    uint32_t  dropAmount        = 0;
+
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * walk = get_module_slot(key.slot, key.location, i);
+
+        if (!walk->active || walk->key.index == key.index) {
+            continue;
+        }
+
+        if ((walk->column == module->column) && (module->row > walk->row) && (module->row < walk->row + gModuleProperties[walk->type].height)) {
+            module->row      = walk->row + gModuleProperties[walk->type].height;
+            send_module_move_msg(module);
+            moduleRePosition = true;
+            break;
+        }
+    }
+
+    if (moduleRePosition == false) {
+        send_module_move_msg(module);
+    }
+
+    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+        tModule * walk = get_module_slot(key.slot, key.location, i);
+
+        if (!walk->active || walk->key.index == key.index) {
+            continue;
+        }
+
+        if ((walk->column == module->column) && (walk->row >= module->row) && (walk->row < module->row + gModuleProperties[module->type].height)) {
+            rowAndBelowToDrop = walk->row;
+            dropAmount        = (module->row + gModuleProperties[module->type].height) - walk->row;
+            doDrop            = true;
+            break;
+        }
+    }
+
+    if (doDrop == true) {
+        for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
+            tModule * walk = get_module_slot(key.slot, key.location, i);
+
+            if (!walk->active || walk->key.index == key.index) {
+                continue;
+            }
+
+            if ((walk->column == module->column) && (walk->row >= rowAndBelowToDrop)) {
+                walk->row += dropAmount;
+
+                if (walk->row > MAX_ROWS) {
+                    walk->row = MAX_ROWS;
+                }
+                send_module_move_msg(walk);
+            }
+        }
+    }
+}
+
 // Like shift_modules_down but applied to every selected module. Selected modules
 // are transparent to each other — only conflicts with non-selected modules are resolved.
 void shift_selection_down(void) {
