@@ -34,4 +34,7 @@
 // produces) and returns the position within the scrolled, zoomed module area.
 void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord);
 
+// Which module grid square a coordinate falls in. Was in menus.c; moved for the same reason.
+void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row, tCoord coord);
+
 #endif // __CANVAS_COORDS_H__

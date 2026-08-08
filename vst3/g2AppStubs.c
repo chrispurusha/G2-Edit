@@ -57,21 +57,10 @@ bool multi_select_modifier_held(void) {
     return false;
 }
 
-// get_global_gui_scaled_mouse_coord() is REAL now — g2Input.c answers it from the host's events.
-// convert_mouse_coord_to_module_area_coord() is real too: it moved out of mouseHandle.c into
-// src/canvasCoords.c, which the plug-in links, because the arithmetic never needed a window.
-
-void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row, tCoord coord) {
-    (void)coord;
-
-    if (column != NULL) {
-        *column = 0;
-    }
-
-    if (row != NULL) {
-        *row = 0;
-    }
-}
+// NONE OF THE MOUSE-POSITION FUNCTIONS ARE STUBS ANY MORE, which is why the group is empty but for
+// the modifier below. get_global_gui_scaled_mouse_coord() is answered by g2Input.c from the host's
+// events, and both coordinate conversions moved into src/canvasCoords.c — out of mouseHandle.c and
+// menus.c respectively — because the arithmetic never needed a window in the first place.
 
 void start_cursor_drag(void) {
 }

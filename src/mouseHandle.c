@@ -43,6 +43,7 @@ extern "C" {
 #include "topbarResourcesAccess.h"
 #include "utilsGraphics.h"
 #include "mouseHandle.h"
+#include "canvasDrag.h"
 #include "graphics.h"
 #include "splitView.h"
 #include "globalVars.h"
@@ -1102,20 +1103,13 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 found = handle_module_press(coord, mouseButton);
             }
 
-            // Click on empty module-area space: clear selection and start rubber-band
-            if (!found && !gContextMenu.active && within_rectangle(coord, module_area())) {
-                bool   multiSelectHeld = glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-                                         || glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+            // Click on empty module-area space: clear selection and start rubber-band. Shared with
+            // the plug-in — see canvasDrag.h.
+            if (!found && !gContextMenu.active) {
+                bool shiftHeld = (glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+                                 || (glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
 
-                if (!multiSelectHeld) {
-                    selection_clear();
-                }
-                tCoord moduleCoord     = {0};
-                convert_mouse_coord_to_module_area_coord(&moduleCoord, coord);
-                gRubberBand.start   = moduleCoord;
-                gRubberBand.current = moduleCoord;
-                gRubberBand.active  = true;
-                found               = true;
+                found = canvas_empty_press(coord, shiftHeld);
             }
         }
         break;
@@ -1219,26 +1213,13 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             if (!found) {
                 found = handle_module_release(coord, mouseButton);
             }
+            {
+                bool shiftHeld = (glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+                                 || (glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
 
-            if (gRubberBand.active) {
-                tCoord     moduleCoord     = {0};
-                convert_mouse_coord_to_module_area_coord(&moduleCoord, coord);
-
-                double     x1              = gRubberBand.start.x < moduleCoord.x ? gRubberBand.start.x : moduleCoord.x;
-                double     y1              = gRubberBand.start.y < moduleCoord.y ? gRubberBand.start.y : moduleCoord.y;
-                double     x2              = gRubberBand.start.x > moduleCoord.x ? gRubberBand.start.x : moduleCoord.x;
-                double     y2              = gRubberBand.start.y > moduleCoord.y ? gRubberBand.start.y : moduleCoord.y;
-
-                tRectangle selRect         = {{x1, y1}, {x2 - x1, y2 - y1}};
-                bool       multiSelectHeld = glfwGetKey(synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-                                             || glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-
-                if (!multiSelectHeld) {
-                    selection_clear();
+                if (canvas_rubber_band_release(coord, slot, location, shiftHeld)) {
+                    found = true;
                 }
-                selection_add_rect(selRect, slot, location);
-                gRubberBand.active = false;
-                found              = true;
             }
             finish_param_drag();
         }
@@ -1709,74 +1690,16 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
             }
         }
     } else if (gModuleDrag.active == true) {
-        if (gModuleDrag.isMulti) {
-            uint32_t newCol = 0;
-            uint32_t newRow = 0;
-            convert_mouse_coord_to_module_column_row(&newCol, &newRow, (tCoord){x, y});
-
-            if (newCol > MAX_COLUMNS) {
-                newCol = MAX_COLUMNS;
-            }
-
-            if (newRow > MAX_ROWS) {
-                newRow = MAX_ROWS;
-            }
-            int32_t  dc     = (int32_t)newCol - (int32_t)gModuleDrag.prevColumn;
-            int32_t  dr     = (int32_t)newRow - (int32_t)gModuleDrag.prevRow;
-
-            if (dc != 0 || dr != 0) {
-                for (uint32_t i = 0; i < gSelection.count; i++) {
-                    tModule * sel = get_module(gSelection.keys[i]);
-
-                    if (sel == NULL) {
-                        continue;
-                    }
-                    int32_t   nc  = (int32_t)sel->column + dc;
-                    int32_t   nr  = (int32_t)sel->row + dr;
-
-                    if (nc < 0) {
-                        nc = 0;
-                    }
-
-                    if (nr < 0) {
-                        nr = 0;
-                    }
-
-                    if (nc > (int32_t)MAX_COLUMNS) {
-                        nc = (int32_t)MAX_COLUMNS;
-                    }
-
-                    if (nr > (int32_t)MAX_ROWS) {
-                        nr = (int32_t)MAX_ROWS;
-                    }
-                    sel->column = (uint32_t)nc;
-                    sel->row    = (uint32_t)nr;
-                }
-
-                gModuleDrag.prevColumn = newCol;
-                gModuleDrag.prevRow    = newRow;
-            }
-        } else {
-            tModule * module = get_module(gModuleDrag.moduleKey);
-
-            if (module != NULL) {
-                convert_mouse_coord_to_module_column_row(&module->column, &module->row, (tCoord){x, y});
-
-                if (module->row > MAX_ROWS) {
-                    module->row = MAX_ROWS;
-                }
-
-                if (module->column > MAX_COLUMNS) {
-                    module->column = MAX_COLUMNS;
-                }
-            }
-        }
+        // Module drag motion moved to canvasDrag.c so the plug-in can share it — see canvasDrag.h.
+        // The auto-scroll stays here: it belongs to whoever owns the scrollbars, which a plug-in
+        // canvas does not yet.
+        (void)canvas_drag_motion(coord);
         adjust_scroll_for_drag();
     } else if (gCableDrag.active == true) {
         convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, (tCoord){x - scale_from_percent(CONNECTOR_SIZE / 2.0), y - scale_from_percent(CONNECTOR_SIZE / 2.0)});  // SOMETHING NOT RIGHT HERE
         adjust_scroll_for_drag();
     } else if (gRubberBand.active == true) {
-        convert_mouse_coord_to_module_area_coord(&gRubberBand.current, coord);
+        (void)canvas_drag_motion(coord);   // shared with the plug-in — see canvasDrag.h
     } else if (gContextMenu.active == true) {
         // Dummy
     } else if (  (coord.x >= 0.0)

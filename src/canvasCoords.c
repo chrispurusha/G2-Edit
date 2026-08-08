@@ -19,6 +19,8 @@
 
 // See canvasCoords.h for why this is not in mouseHandle.c any more.
 
+#include <math.h>
+
 #include "sysIncludes.h"
 #include "synthlibDefs.h"
 #include "types.h"
@@ -42,4 +44,35 @@ void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord
     val           += calc_scroll_y();
     val           /= get_zoom_factor();
     targetCoord->y = val;
+}
+
+// Which module GRID SQUARE a coordinate falls in. Moved here from menus.c alongside its sibling
+// above: same arithmetic, same absence of any window, and the module drag needs it.
+void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row, tCoord coord) {
+    double     val  = 0.0;
+    tRectangle area = module_area();
+
+    if (column != NULL) {
+        val     = coord.x - area.coord.x;
+        val    += calc_scroll_x();
+        val    /= MODULE_X_SPAN;
+        val    /= get_zoom_factor();
+
+        if (val < 0.0) {
+            val = 0.0;
+        }
+        *column = floor(val);
+    }
+
+    if (row != NULL) {
+        val  = coord.y - area.coord.y;
+        val += calc_scroll_y();
+        val /= MODULE_Y_SPAN;
+        val /= get_zoom_factor();
+
+        if (val < 0.0) {
+            val = 0.0;
+        }
+        *row = floor(val);
+    }
 }
