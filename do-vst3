@@ -35,7 +35,29 @@ SOURCES=(
     "$HERE/src/patchParamsResources.c"
     "$HERE/vst3/g2Patch.c"
     "$HERE/vst3/g2HostIo.c"
+    "$HERE/vst3/g2GlDraw.c"
+    "$HERE/vst3/g2AppStubs.c"
+    # The canvas renderer itself, unchanged from the application. moduleGraphics.c and
+    # renderParams.c also contain the canvas CLICK HANDLERS, which is why g2AppStubs.c exists —
+    # those handlers never run here but their references still have to resolve.
+    "$HERE/src/moduleGraphics.c"
+    "$HERE/src/renderParams.c"
+    "$HERE/src/selection.c"
+    "$HERE/src/splitView.c"
+    "$HERE/SynthLib/src/clickRegion.c"
     "$HERE/SynthLib/src/utils.c"
+    # The application's renderer, unchanged. It includes GLFW's header for the GL declarations but
+    # makes no GLFW CALL, so it needs the include path below and not the library — which is the
+    # whole reason the editor's drawing can appear in a plug-in at all.
+    "$HERE/SynthLib/src/utilsGraphics.c"
+    "$HERE/SynthLib/src/geometry.c"
+)
+
+# Plain Objective-C: the GL surface subclasses NSOpenGLView, which needs the runtime but no C++.
+# Kept out of the Objective-C++ pass below so the C++ is confined to the one file that has to speak
+# it — a VST3 interface is a C++ vtable, and that is the only reason any of this folder is C++.
+OBJC_SOURCES=(
+    "$HERE/vst3/g2GlView.m"
 )
 
 # Objective-C++ for the editor window: it builds an AppKit view, and the host owns the NSView it is
@@ -59,7 +81,17 @@ CXX_SOURCES=(
     "$SDK/pluginterfaces/base/conststringtable.cpp"
 )
 
-INCLUDES=(-I"$HERE/src" -I"$HERE/SynthLib/src" -I"$HERE/vst3" -I"$SDK")
+INCLUDES=(-I"$HERE/src" -I"$HERE/SynthLib/src" -I"$HERE/vst3" -I"$SDK"
+          # Headers only. GLFW's is here because utilsGraphics.c includes it for the GL
+          # declarations; freetype's because the text renderer is built on it. The bundled copies
+          # are used rather than Homebrew's so the deployment target matches the application's —
+          # see "Third Party build notes.txt".
+          -I"$HERE/SynthLib/ThirdParty/glfw/include"
+          -I"$HERE/SynthLib/ThirdParty/freetype/include")
+
+# freetype is the one real library the renderer needs. The static build is taken so the .vst3 stays
+# a self-contained bundle — a host will not go looking in Homebrew for it.
+FREETYPE_LIB="$HERE/SynthLib/ThirdParty/freetype/build/libfreetype.a"
 
 ARCHS=(-arch arm64 -arch x86_64)
 MIN=-mmacosx-version-min=11.5
@@ -94,7 +126,7 @@ print "Embedding patch: $(basename "$BUILTIN_PATCH") ($(wc -c < "$BUILTIN_PATCH"
 rm -rf "$OUT"
 mkdir -p "$OUT/Contents/MacOS"
 
-print "Building ${#SOURCES[@]} C + ${#CXX_SOURCES[@]} C++ + ${#OBJCXX_SOURCES[@]} Obj-C++ sources..."
+print "Building ${#SOURCES[@]} C + ${#CXX_SOURCES[@]} C++ + ${#OBJC_SOURCES[@]} Obj-C + ${#OBJCXX_SOURCES[@]} Obj-C++ sources..."
 
 # Compiled in two passes rather than one command: -std= applies to the whole invocation, so C and
 # C++ sources cannot share one. Objects go to a temp dir and are linked below.
@@ -114,13 +146,20 @@ for src in "${CXX_SOURCES[@]}"; do
     OBJECTS+=("$obj")
 done
 
+for src in "${OBJC_SOURCES[@]}"; do
+    obj="$OBJDIR/$(basename "${src%.*}").om"
+    clang $ARCHS $MIN -O2 -std=gnu11 -fobjc-arc -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -x objective-c -c "$src" -o "$obj"
+    OBJECTS+=("$obj")
+done
+
 for src in "${OBJCXX_SOURCES[@]}"; do
     obj="$OBJDIR/$(basename "${src%.*}").omm"
     clang++ $ARCHS $MIN -O2 -std=gnu++17 -fobjc-arc -DG2_VST3_BUILD=1 "${INCLUDES[@]}" -x objective-c++ -c "$src" -o "$obj"
     OBJECTS+=("$obj")
 done
 
-clang++ $ARCHS $MIN -bundle "${OBJECTS[@]}" -framework CoreFoundation -framework Cocoa -o "$BIN"
+clang++ $ARCHS $MIN -bundle "${OBJECTS[@]}" "$FREETYPE_LIB" \
+    -framework CoreFoundation -framework Cocoa -framework OpenGL -o "$BIN"
 
 # A bundle needs its Info.plist and the four-character PkgInfo, or the host will not look inside it.
 cat > "$OUT/Contents/Info.plist" <<PLIST

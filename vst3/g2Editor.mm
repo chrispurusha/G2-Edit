@@ -39,14 +39,24 @@
 #include "pluginterfaces/vst/ivsteditcontroller.h"
 
 #include "g2Editor.h"
+#include "g2GlView.h"
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
 
-static const CGFloat kEditorWidth   = 460.0;
-static const CGFloat kEditorHeight  = 300.0;
-static const int     kMorphCount    = 8;
-static const int     kParamLevelId  = 8;
+// THE WHOLE WINDOW IS NOW THE CANVAS. The AppKit slider panel that used to fill it is gone: it
+// existed because the application's renderer could not draw into a host-owned window, and it can.
+// A patch is what the plug-in should show.
+//
+// The eight morph parameters and the output trim REMAIN as VST3 parameters — only their sliders
+// went. A plug-in exposing no parameters leaves a host's generic panel empty and looks broken, and
+// automation is the main reason a host wants them at all; neither depends on this window drawing
+// them. The G2AlikePanel class below is kept, unreferenced, for the moment: it is the fallback if a
+// host turns out not to tolerate the GL surface.
+static const CGFloat kEditorWidth  = 900.0;
+static const CGFloat kEditorHeight = 600.0;
+static const int     kMorphCount   = 8;
+static const int     kParamLevelId = 8;
 
 // ------------------------------------------------------------------------------------------------
 // The Cocoa side
@@ -231,19 +241,22 @@ public:
         }
         NSView * host = (__bridge NSView *)parent;
 
-        panel = [[G2AlikePanel alloc] initWithFrame:NSMakeRect(0.0, 0.0, kEditorWidth, kEditorHeight)];
-        panel.controller = controller;
-        panel.handler    = handler;
-        [panel setPatchText:patchPath.c_str()];
-        [panel syncFromController];
-        [host addSubview:panel];
+        glView = g2_create_gl_view(NSMakeRect(0.0, 0.0, kEditorWidth, kEditorHeight));
+
+        if (glView == nil) {
+            return kResultFalse;    // no pixel format; better to fail than show an empty window
+        }
+        [host addSubview:glView];
         return kResultOk;
     }
 
     tresult PLUGIN_API removed(void) SMTG_OVERRIDE {
-        if (panel != nil) {
-            [panel removeFromSuperview];
-            panel = nil;
+        // The GL view holds a context bound to this window, and tearing the window down around a
+        // live surface is the sort of thing that works everywhere except the one host somebody
+        // reports it from.
+        if (glView != nil) {
+            [glView removeFromSuperview];
+            glView = nil;
         }
         return kResultOk;
     }
@@ -290,6 +303,7 @@ private:
     IEditController *   controller;
     IComponentHandler * handler;
     G2AlikePanel * __strong panel;
+    NSView * __strong   glView    = nil;
     IPlugFrame *        plugFrame = nullptr;
     std::string         patchPath;
 };
