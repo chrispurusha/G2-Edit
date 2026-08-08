@@ -25,6 +25,7 @@ extern "C" {
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <time.h>
 
 #include "defs.h"
 #include "synthlibDefs.h"
@@ -303,6 +304,30 @@ typedef enum {
 // across the Voice and FX areas.
 #define MAX_ENGINE_NODES    (28)
 
+// How many voices the engine can hold at once. The patch's own figure is what actually governs it —
+// see voice_count_for_patch() — and this is only the ceiling that sizes the state arrays. 32 is the
+// most the patch descriptor can ask for: voiceCount is a 5-bit field holding the count MINUS ONE.
+//
+// COST IS PER SOUNDING VOICE, NOT PER ALLOCATED VOICE. Only voices actually producing sound are
+// rendered (see voice_is_finished()), so a 32-voice patch played one note at a time costs what the
+// monophonic engine cost. Holding 32 notes really does cost 32 times as much, which no amount of
+// arranging avoids — it is 32 copies of the Voice Area.
+#define MAX_VOICES    (32)
+
+// What counts as an inaudible voice, and how long it has to stay that way before the voice can be
+// handed to another note. -80 dB is below anything that survives the output stage; the window is
+// long enough that a waveform passing through zero cannot be mistaken for silence.
+#define VOICE_SILENCE            (1.0e-4)
+#define VOICE_SILENCE_SECONDS    (0.02)
+
+// How long a voice may go on sounding after its key is up and its envelope has finished, before it
+// is faded out and taken back. A patch whose EnvADSR modulates only the filter never stops on its
+// own — correct, and what the hardware does, but on a soft synth it means every voice the patch owns
+// stays in the render for ever, and the cost of that is permanent rather than while you are playing.
+// The fade is what makes taking it back inaudible; without one this would be a click.
+#define VOICE_MAX_TAIL_SECONDS    (2.0)
+#define VOICE_FADE_SECONDS        (0.03)
+
 typedef enum {
     eNodeOsc = 0,        // OscB
     eNodeOscShp,         // OscShpB — a different parameter layout and waveform set
@@ -375,6 +400,11 @@ typedef struct {
     double   brightness;     // reverb, 0..1 as the dial reads it — HIGH IS BRIGHT
     double   timeNorm;       // reverb Time as the dial reads it, 0..1 — drives the diffusion
     uint32_t reverbType;     // reverb room size: Small/Medium/Large/Hall
+
+    // Evaluated ONCE per sample, after the voices are summed, rather than once per voice. True for
+    // everything in the FX Area, for the three module kinds that own a shared delay buffer wherever
+    // they sit, and for anything downstream of one of those. See mark_post_mix_nodes().
+    bool postMix;
 } tEngineNode;
 
 // A patch can hold more than one Out module — SimpleLead has two, a Voice Area output carrying the
@@ -397,6 +427,7 @@ typedef struct {
     double      glideSeconds;
     double      bendSemitones; // 0 when the patch has bend switched off
     uint64_t    topology;      // changes shape => the audio thread resets its per-node state
+    uint32_t    voiceCount;    // how many voices this patch may sound at once, 1 for Mono/Legato
     tEngineNode node[MAX_ENGINE_NODES];
 } tSoundEngineParams;
 
@@ -508,18 +539,51 @@ static uint32_t           gPlayingCount               = 0; // how many modules a
 
 static double             gDeviceRate                 = 48000.0;
 static double             gSampleRate                 = 96000.0;
-static bool               gGateOpen                   = false;
-static int32_t            gVoiceNote                  = -1;
 
-// The pitch actually sounding, in MIDI note numbers and fractional — it chases gVoiceNote rather
-// than jumping to it, which is what portamento is. Kept as a double because a glide spends most of
-// its time between notes. -1 means nothing has been played yet.
-static double             gGlidePitch                 = -1.0;
-static double             gVibratoPhase               = 0.0;
-static bool               gGlideActive                = false;
-static tSoundEngineParams gLastGoodParams             = {0};
-static uint64_t           gSeenTopology               = 0;
-static double             gEnvelope                   = 0.0; // the anti-click ramp, when no EnvADSR is present
+// ── VOICES ──────────────────────────────────────────────────────────────────────────────────────
+//
+// One of these per simultaneously sounding note. Everything here used to be a single global, which
+// is what made the engine monophonic — not any shortage of oscillators, just one copy of "which note
+// is playing and is its key still down".
+//
+// `note` OUTLIVES THE GATE. A released voice is still sounding its release, and that release has to
+// stay at the pitch it was played at, so the note is only cleared when the voice is taken for
+// something else.
+typedef struct {
+    int32_t  note;         // MIDI note this voice holds, -1 for none
+    bool     gate;         // key still down
+    bool     sounding;     // rendered this block: gate open, or still releasing
+    double   glidePitch;   // chases `note`; fractional, since a glide is mostly between two notes
+    bool     glideActive;  // this note began while another was still held — see the Auto glide mode
+    double   envelope;     // the anti-click ramp, used only when the patch has no EnvADSR
+    uint64_t age;          // allocation order, so the oldest can be identified for stealing
+    uint32_t quiet;        // consecutive samples this voice's output has been inaudible
+    uint32_t released;     // samples since the key came up, 0 while it is held
+    double   fade;         // 1.0 normally; driven to 0 to retire a voice that will not stop on its own
+} tVoice;
+
+static tVoice             gVoice[MAX_VOICES] = {0};
+static uint64_t           gVoiceClock        = 0;
+
+// Published for the note stack, which has to know whether to release the note it was given or to
+// fall back to the newest one still held. An atomic rather than a look into the parameter snapshot:
+// it is read from the MIDI thread, and copying the whole snapshot to answer one question would be
+// absurd. See sound_engine_is_polyphonic().
+static _Atomic uint32_t   gEngineVoices      = 1;
+
+// RENDER LOAD, as a percentage of real time, peak-held. The time spent inside sound_engine_render()
+// against the time the buffer it filled will take to play: at 100 % the engine is using the whole of
+// its deadline and the next buffer is late, which is heard as crackling rather than as anything
+// musical. Peak-held because the interesting figure is the worst buffer, not the average — one late
+// buffer in a hundred is plainly audible and would vanish into a mean.
+static _Atomic uint32_t   gLoadPercent       = 0;
+
+static void reset_voices(void);
+static uint32_t voice_count_for_patch(uint32_t slot);
+
+static double             gVibratoPhase      = 0.0;
+static tSoundEngineParams gLastGoodParams    = {0};
+static uint64_t           gSeenTopology      = 0;
 
 // Per-node state, indexed by node position. Carried across snapshots while the topology signature
 // holds, so turning a knob does not restart the oscillator or reopen the envelope.
@@ -542,8 +606,23 @@ static double             gEnvelope                   = 0.0; // the anti-click r
 // waveform evaluations per oscillator per output sample.
 // Relative to the ENGINE rate, which is itself oversampled — so the oscillators still run at four
 // times the device rate overall, as they did when the graph ran at the device rate and this was 4.
-#define OSC_OVERSAMPLE       (4 / ENGINE_OVERSAMPLE)
-#define OSC_DECIMATE_TAPS    (128)
+#define OSC_OVERSAMPLE    (4 / ENGINE_OVERSAMPLE)
+// 48, not the 128 this began with, and the difference is CPU rather than taste. This filter is the
+// engine's single largest cost — it runs once per oscillator per voice per oversampled sample, so
+// its length is multiplied by the polyphony, and at eight voices 128 taps was enough on its own to
+// miss the audio deadline (CoreAudio reports that as "skipping cycle due to overload", heard as
+// crackling).
+//
+// MEASURED, worst image folding back into 0..20 kHz when decimating 192 kHz to 96 kHz, against the
+// deviation the filter causes inside that band:
+//
+//     128 taps  -116 dB   0.00 dB      48 taps   -90 dB   0.00 dB
+//      64 taps   -98 dB   0.00 dB      32 taps   -82 dB   0.00 dB
+//
+// The passband is untouched at every length because the cutoff sits at 43 kHz, far above anything
+// audible — the taps buy stopband depth alone. 90 dB is below the noise floor of any playback path
+// this will meet, so the remaining 26 dB was being paid for in CPU and heard by nobody.
+#define OSC_DECIMATE_TAPS    (48)
 
 // The engine's own output filter, removing everything above the DEVICE's Nyquist before the extra
 // samples are dropped. Same windowed-sinc design as the oscillators' — see the note there on why the
@@ -555,15 +634,34 @@ static double   gOutHistory[OUT_DECIMATE_TAPS];
 static uint32_t gOutHistoryPos = 0;
 
 static double   gOscDecimate[OSC_DECIMATE_TAPS];
-static double   gOscHistory[MAX_ENGINE_NODES][OSC_DECIMATE_TAPS];
-static uint32_t gOscHistoryPos[MAX_ENGINE_NODES];
 
-static double   gPhase[MAX_ENGINE_NODES];
-static double   gLfoLastPhase[MAX_ENGINE_NODES];
-static double   gLfoTarget[MAX_ENGINE_NODES];
-static double   gLfoHeld[MAX_ENGINE_NODES];
-static double   gSuperPhase[MAX_ENGINE_NODES][2];
-static double   gLadder[MAX_ENGINE_NODES][LADDER_POLES];
+// ── PER-VOICE NODE STATE ────────────────────────────────────────────────────────────────────────
+//
+// The Voice Area is instantiated once PER VOICE on the hardware and the FX Area once for the whole
+// patch (manual p.85: "you don't need a separate Reverb in each voice, all voices can share one
+// Reverb module in the FX Area"). So everything a Voice Area module remembers between samples —
+// oscillator phase, filter poles, envelope stage — has to exist once per voice, or two notes held
+// together share one oscillator phase and one envelope and behave as one.
+//
+// Indexed [voice][node]. The voice index is 0 for everything in the FX Area, which is evaluated once
+// after the voices have been summed.
+//
+// NOT per voice, deliberately: the delay lines, the chorus lines and the reverb. They are the large
+// buffers, they are FX modules, and one shared instance is what the hardware has. A patch that puts
+// one of them in the VOICE area gets a single shared instance rather than one per voice — an
+// approximation, and the only one in this split.
+// FLOAT, not double, and for the same reason the tap count came down: at eight voices this array is
+// walked a few million times a second and the loop is bound by how fast it can be read rather than
+// by the arithmetic. Halving the bytes halves that. The accumulation is still done in double.
+static float    gOscHistory[MAX_VOICES][MAX_ENGINE_NODES][OSC_DECIMATE_TAPS];
+static uint32_t gOscHistoryPos[MAX_VOICES][MAX_ENGINE_NODES];
+
+static double   gPhase[MAX_VOICES][MAX_ENGINE_NODES];
+static double   gLfoLastPhase[MAX_VOICES][MAX_ENGINE_NODES];
+static double   gLfoTarget[MAX_VOICES][MAX_ENGINE_NODES];
+static double   gLfoHeld[MAX_VOICES][MAX_ENGINE_NODES];
+static double   gSuperPhase[MAX_VOICES][MAX_ENGINE_NODES][2];
+static double   gLadder[MAX_VOICES][MAX_ENGINE_NODES][LADDER_POLES];
 
 // Delay memory. Held as float rather than double purely for size — half a second per line at any
 // sensible rate, four lines, is enough for the delays a patch normally has and keeps this under a
@@ -586,7 +684,7 @@ static uint32_t gChorusWrite[MAX_ENGINE_NODES];
 static double   gChorusLfo[MAX_ENGINE_NODES];
 
 // Compressor gain-reduction state, one per node.
-static double   gCompEnv[MAX_ENGINE_NODES];
+static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
 
 // A Schroeder reverb: four combs into two allpasses. One reverb is modelled; any further ones pass
 // their input through, which is what a patch with two of them would mostly sound like anyway.
@@ -649,7 +747,7 @@ static uint32_t       gCombPos[REVERB_COMBS];
 static double         gCombStore[REVERB_COMBS];
 static float          gAllpass[REVERB_ALLPASS][REVERB_ALLPASS_MAX];
 static uint32_t       gAllpassPos[REVERB_ALLPASS];
-static double         gEnvLevel[MAX_ENGINE_NODES];
+static double         gEnvLevel[MAX_VOICES][MAX_ENGINE_NODES];
 // Linear 0..1 through the current segment, and the level it started from. Shaping this rather than
 // the step keeps a segment's DURATION exactly what its dial says, whatever curve it draws.
 // PARAMETER SMOOTHING. The G2 runs its modulation at 24 kHz (manual p.71 — "modules can process and
@@ -669,13 +767,22 @@ static double         gSmoothCutoff[MAX_ENGINE_NODES];
 static double         gSmoothRes[MAX_ENGINE_NODES];
 static double         gSmoothGain[MAX_ENGINE_NODES];
 static double         gSmoothLevel[MAX_ENGINE_NODES][MAX_NODE_INPUTS];
+
+// Where the per-sample smoothing pass leaves its results, for the voice passes to read. Not per
+// voice: a knob is in one place however many notes are sounding, and smoothing it inside the voice
+// loop would advance the filter once per voice — so a sweep would speed up as more keys went down.
+static double         gSmoothedShape[MAX_ENGINE_NODES];
+static double         gSmoothedCutoff[MAX_ENGINE_NODES];
+static double         gSmoothedRes[MAX_ENGINE_NODES];
+static double         gSmoothedGain[MAX_ENGINE_NODES];
+static double         gSmoothedLevel[MAX_ENGINE_NODES][MAX_NODE_INPUTS];
 // Until a node has been seen once there is nothing to interpolate FROM, so the first sample snaps.
 // Also what stops a patch load sweeping every parameter up from whatever the last patch left.
 static bool           gSmoothPrimed[MAX_ENGINE_NODES];
 
-static double         gEnvProgress[MAX_ENGINE_NODES];
-static double         gEnvStart[MAX_ENGINE_NODES];
-static uint32_t       gEnvStage[MAX_ENGINE_NODES];
+static double         gEnvProgress[MAX_VOICES][MAX_ENGINE_NODES];
+static double         gEnvStart[MAX_VOICES][MAX_ENGINE_NODES];
+static uint32_t       gEnvStage[MAX_VOICES][MAX_ENGINE_NODES];
 
 typedef enum {
     eEnvIdle = 0,
@@ -802,31 +909,40 @@ void sound_engine_set_sample_rate(double sampleRate) {
 
 static void reset_node_state(void) {
     uint32_t i = 0;
+    uint32_t v = 0;
+
+    for (v = 0; v < MAX_VOICES; v++) {
+        for (i = 0; i < MAX_ENGINE_NODES; i++) {
+            gLfoLastPhase[v][i]  = 0.0;
+            gLfoTarget[v][i]     = 0.0;
+            gLfoHeld[v][i]       = 0.0;
+            gOscHistoryPos[v][i] = 0;
+            memset(gOscHistory[v][i], 0, sizeof(gOscHistory[v][i]));
+
+            // Spread rather than zeroed, for the same reason the note-on path leaves them alone:
+            // from the very first note the oscillators should be at unrelated points in their
+            // cycles. The step is irrational-ish so no two land together — and the VOICE is folded
+            // into it as well, so two voices playing the same note are not phase-locked copies of
+            // each other. Held notes on the hardware do not cancel and reinforce like that.
+            gPhase[v][i]         = fmod(((double)i + ((double)v * 0.618034)) * 0.381966, 1.0);
+            gSuperPhase[v][i][0] = 0.0;
+            gSuperPhase[v][i][1] = 0.0;
+            gLadder[v][i][0]     = 0.0;
+            gLadder[v][i][1]     = 0.0;
+            gLadder[v][i][2]     = 0.0;
+            gLadder[v][i][3]     = 0.0;
+            gEnvLevel[v][i]      = 0.0;
+            gEnvProgress[v][i]   = 0.0;
+            gEnvStart[v][i]      = 0.0;
+            gEnvStage[v][i]      = eEnvIdle;
+            gCompEnv[v][i]       = 0.0;
+        }
+    }
 
     for (i = 0; i < MAX_ENGINE_NODES; i++) {
-        // Spread rather than zeroed, for the same reason the note-on path leaves them alone: from
-        // the very first note the oscillators should be at unrelated points in their cycles. The
-        // step is irrational-ish so no two land together.
-        gLfoLastPhase[i]  = 0.0;
-        gLfoTarget[i]     = 0.0;
-        gLfoHeld[i]       = 0.0;
-        gOscHistoryPos[i] = 0;
-        memset(gOscHistory[i], 0, sizeof(gOscHistory[i]));
-        gPhase[i]         = fmod((double)i * 0.381966, 1.0);
-        gSuperPhase[i][0] = 0.0;
-        gSuperPhase[i][1] = 0.0;
-        gLadder[i][0]     = 0.0;
-        gLadder[i][1]     = 0.0;
-        gLadder[i][2]     = 0.0;
-        gLadder[i][3]     = 0.0;
-        gEnvLevel[i]      = 0.0;
-        gEnvProgress[i]   = 0.0;
-        gSmoothPrimed[i]  = false;
-        gEnvStart[i]      = 0.0;
-        gEnvStage[i]      = eEnvIdle;
-        gChorusWrite[i]   = 0;
-        gChorusLfo[i]     = 0.0;
-        gCompEnv[i]       = 0.0;
+        gSmoothPrimed[i] = false;
+        gChorusWrite[i]  = 0;
+        gChorusLfo[i]    = 0.0;
         memset(gChorusLine[i], 0, sizeof(gChorusLine[i]));
     }
 
@@ -900,13 +1016,9 @@ static void engine_prime(void) {
     // the note queue: anything posted while the engine was off — the Virtual Keyboard, or MIDI from
     // a previous run — is stale, and starting the read index behind the write index would have the
     // audio thread chewing through history instead of playing what is being pressed now.
-    gNoteRead    = atomic_load(&gNoteWrite);
+    gNoteRead = atomic_load(&gNoteWrite);
     reset_node_state();
-    gEnvelope    = 0.0;
-    gGateOpen    = false;
-    gVoiceNote   = -1;
-    gGlidePitch  = -1.0;
-    gGlideActive = false;
+    reset_voices();
 }
 
 // For a plug-in host: prime the engine and mark it live, but leave the audio device alone. The
@@ -930,13 +1042,9 @@ bool sound_engine_start(void) {
     // the note queue: anything posted while the engine was off — the Virtual Keyboard, or MIDI from
     // a previous run — is stale, and starting the read index behind the write index would have the
     // audio thread chewing through history instead of playing what is being pressed now.
-    gNoteRead    = atomic_load(&gNoteWrite);
+    gNoteRead = atomic_load(&gNoteWrite);
     reset_node_state();
-    gEnvelope    = 0.0;
-    gGateOpen    = false;
-    gVoiceNote   = -1;
-    gGlidePitch  = -1.0;
-    gGlideActive = false;
+    reset_voices();
 
     if (audio_output_start() == false) {
         return false;
@@ -990,9 +1098,13 @@ const char * sound_engine_status_text(void) {
         }
         case eStatusPlaying:
         {
-            snprintf(text, sizeof(text), "Playing %u module%s%s", (unsigned)gPlayingCount,
-                     (gPlayingCount == 1) ? "" : "s",
-                     (midi_input_connected_count() > 0) ? " - MIDI in connected" : " - use the Virtual Keyboard");
+            // The voice figures are what say whether a chord is being cut short: sounding against
+            // allowed, the second being the patch's own Poly count.
+            snprintf(text, sizeof(text), "Playing %u module%s, %u/%u voices, load %u%%%s",
+                     (unsigned)gPlayingCount, (gPlayingCount == 1) ? "" : "s",
+                     (unsigned)sound_engine_voices_sounding(), (unsigned)sound_engine_voice_count(),
+                     (unsigned)sound_engine_load_percent(),
+                     (midi_input_connected_count() > 0) ? " - MIDI in" : " - Virtual Keyboard");
             return text;
         }
         default:
@@ -1091,6 +1203,172 @@ void sound_engine_note(int32_t note, bool on) {
     atomic_store(&gNoteQueue[slot].sequence, claim + 1);
 }
 
+// ── VOICE ALLOCATION (audio thread) ─────────────────────────────────────────────────────────────
+
+static void reset_voices(void) {
+    uint32_t v = 0;
+
+    for (v = 0; v < MAX_VOICES; v++) {
+        gVoice[v].note        = -1;
+        gVoice[v].gate        = false;
+        gVoice[v].sounding    = false;
+        gVoice[v].glidePitch  = -1.0;
+        gVoice[v].glideActive = false;
+        gVoice[v].envelope    = 0.0;
+        gVoice[v].age         = 0;
+        gVoice[v].quiet       = 0;
+        gVoice[v].released    = 0;
+        gVoice[v].fade        = 1.0;
+    }
+
+    gVoiceClock = 0;
+}
+
+// How many voices this patch may use at once. Mono and Legato are one voice whatever the count says,
+// and in Poly the descriptor's field holds the count MINUS ONE — the topbar's readout does exactly
+// this arithmetic (topbarRender.c), and taking it from the same place is what stops the engine
+// playing a different number of notes from the one on screen.
+static uint32_t voice_count_for_patch(uint32_t slot) {
+    uint32_t count = 1;
+
+    if (gPatchDescr[slot].monoPoly == monoPolyPoly) {
+        count = (uint32_t)gPatchDescr[slot].voiceCount + 1;
+    }
+
+    if (count < 1) {
+        count = 1;
+    }
+    return (count > MAX_VOICES) ? MAX_VOICES : count;
+}
+
+// The voice already holding a note, or -1. Matched whether or not the key is still down: a repeated
+// note-on for something still releasing belongs on the voice that is releasing it, or the release
+// carries on underneath the new note as a duplicate.
+static int32_t voice_holding_note(int32_t note, uint32_t count) {
+    for (uint32_t v = 0; v < count; v++) {
+        if ((gVoice[v].note == note) && (gVoice[v].sounding || gVoice[v].gate)) {
+            return (int32_t)v;
+        }
+    }
+
+    return -1;
+}
+
+// Which voice a new note should take, out of the `count` the patch allows. In preference order: one
+// that is doing nothing, then the longest-released, then the oldest still held. Only the last of
+// those is a steal — cutting a note off — and it is what a polyphonic instrument does when it runs
+// out, so it is worth being sure the two cheaper cases are exhausted first.
+static uint32_t voice_to_allocate(uint32_t count) {
+    uint32_t best    = 0;
+    uint64_t bestAge = UINT64_MAX;
+
+    for (uint32_t v = 0; v < count; v++) {
+        if ((gVoice[v].sounding == false) && (gVoice[v].gate == false)) {
+            return v;
+        }
+    }
+
+    for (uint32_t v = 0; v < count; v++) {   // released but still ringing: the oldest of them
+        if ((gVoice[v].gate == false) && (gVoice[v].age < bestAge)) {
+            bestAge = gVoice[v].age;
+            best    = v;
+        }
+    }
+
+    if (bestAge != UINT64_MAX) {
+        return best;
+    }
+
+    for (uint32_t v = 0; v < count; v++) {   // everything is held: steal the oldest
+        if (gVoice[v].age < bestAge) {
+            bestAge = gVoice[v].age;
+            best    = v;
+        }
+    }
+
+    return best;
+}
+
+static void voice_note_on(int32_t note) {
+    uint32_t count = atomic_load(&gEngineVoices);
+
+    // Bounded BEFORE it is used to pick a voice, not after. A published count is already clamped,
+    // but a zero would send voice_to_allocate() round an empty loop and every note would land on
+    // voice 0 — one note at a time, silently, with no obvious cause.
+    if (count < 1) {
+        count = 1;
+    } else if (count > MAX_VOICES) {
+        count = MAX_VOICES;
+    }
+    int32_t  held  = voice_holding_note(note, count);
+    uint32_t v     = (held >= 0) ? (uint32_t)held : voice_to_allocate(count);
+    tVoice * voice = &gVoice[v];
+    // Auto glide only slides between overlapping notes, which is the point of it: a phrase played
+    // legato slides, a detached note starts where it means to. Whether THIS VOICE'S gate is already
+    // open is that test — and it is why the check has to happen before the gate is opened below.
+    //
+    // Per voice rather than patch-wide: in Poly each note lands on a voice of its own, which was not
+    // playing anything, so nothing slides. That is correct. A glide in Poly only happens when a
+    // voice is reused, which is also what the hardware does.
+    voice->glideActive = voice->gate;
+
+    if (voice->glidePitch < 0.0) {
+        voice->glidePitch = (double)note;   // first note this voice has had: start where it is played
+    }
+    voice->note        = note;
+    voice->gate        = true;
+    voice->sounding    = true;
+    voice->released    = 0;
+    voice->fade        = 1.0;   // a stolen voice may have been fading; this note cancels that
+    voice->age         = ++gVoiceClock;
+}
+
+// A note-off names its note; -1 is all-notes-off. Only the gate closes — the voice keeps its note
+// and goes on sounding its release, at the pitch it was played at.
+static void voice_note_off(int32_t note) {
+    for (uint32_t v = 0; v < MAX_VOICES; v++) {
+        if ((note < 0) || (gVoice[v].note == note)) {
+            gVoice[v].gate = false;
+        }
+    }
+}
+
+// Peak render load since the last read, as a percentage of real time. READING IT CLEARS IT, so the
+// figure is always "the worst buffer since you last looked".
+uint32_t sound_engine_load_percent(void) {
+    return atomic_exchange(&gLoadPercent, 0);
+}
+
+bool sound_engine_is_polyphonic(void) {
+    return atomic_load(&gEngineVoices) > 1;
+}
+
+uint32_t sound_engine_voice_count(void) {
+    return atomic_load(&gEngineVoices);
+}
+
+// Read without a lock from whichever thread asks. It is a display figure that changes every time a
+// key moves, so a torn read is one frame of a number that is about to change anyway.
+uint32_t sound_engine_voices_sounding(void) {
+    uint32_t count  = 0;
+    uint32_t voices = atomic_load(&gEngineVoices);
+
+    // Only the voices this patch may use. Lowering a patch's voice count can leave a higher voice
+    // flagged as sounding when it is no longer rendered or allocated; counting those would report
+    // more voices in use than the engine is actually running.
+    if (voices > MAX_VOICES) {
+        voices = MAX_VOICES;
+    }
+
+    for (uint32_t v = 0; v < voices; v++) {
+        if (gVoice[v].sounding == true) {
+            count++;
+        }
+    }
+
+    return count;
+}
+
 // Audio thread. Applies the next queued event if there is one, returning false when the queue is
 // empty. Called per sample, so a note lands on the sample it arrived rather than at the next buffer
 // boundary.
@@ -1116,21 +1394,10 @@ static bool take_next_note_event(void) {
         return false;   // claimed but not yet written; it will be there next time round
     }
 
-    // Only the gate closes on note-off. gVoiceNote holds the pitch it was last played at, because
-    // the release is still sounding and has to keep that pitch.
     if ((gNoteQueue[slot].on == true) && (gNoteQueue[slot].note >= 0)) {
-        // Auto glide only slides between overlapping notes, which is the point of it: a phrase
-        // played legato slides, a detached note starts where it means to. Whether the gate is
-        // already open is exactly that test, so it has to be read BEFORE this note opens it.
-        gGlideActive = (gGateOpen == true);
-        gVoiceNote   = gNoteQueue[slot].note;
-        gGateOpen    = true;
-
-        if (gGlidePitch < 0.0) {
-            gGlidePitch = (double)gVoiceNote;   // first note of all: start where it is played
-        }
+        voice_note_on(gNoteQueue[slot].note);
     } else {
-        gGateOpen = false;
+        voice_note_off(gNoteQueue[slot].note);
     }
     gNoteRead++;
     return true;
@@ -1986,6 +2253,37 @@ static tModule * find_output_module(void) {
     return NULL;
 }
 
+// Which nodes are evaluated after the voices are mixed rather than once per voice.
+//
+// THE DELAY, CHORUS AND REVERB MODULES OWN ONE BUFFER EACH, and a buffer has one write pointer. Run
+// one of them once per voice and that pointer advances as many times per sample as there are notes
+// held: the delay time divides by the number of voices and the read position sweeps at that multiple
+// too, which is heard as the sound stretching and tearing — intermittently, because it only happens
+// while more than one note is down. They are therefore evaluated exactly once, on the summed voices,
+// which is what the FX Area already does and what the hardware does with the FX Area.
+//
+// The flag has to spread DOWNSTREAM as well. A module fed by one of these has an input that only
+// exists after the mix, so it cannot be evaluated per voice either. add_node() lists every node
+// after its own inputs, so one forward pass settles the whole graph.
+static void mark_post_mix_nodes(tSoundEngineParams * params) {
+    for (uint32_t n = 0; n < params->nodeCount; n++) {
+        tEngineNode * node = &params->node[n];
+
+        node->postMix = (node->location == (uint32_t)locationFx)
+                        || (node->kind == eNodeDelay)
+                        || (node->kind == eNodeChorus)
+                        || (node->kind == eNodeReverb);
+
+        for (uint32_t c = 0; (c < node->inCount) && (node->postMix == false); c++) {
+            int32_t in = node->in[c];
+
+            if ((in >= 0) && (in < (int32_t)params->nodeCount) && (params->node[in].postMix == true)) {
+                node->postMix = true;
+            }
+        }
+    }
+}
+
 void sound_engine_update_from_patch(void) {
     tSoundEngineParams snapshot  = {0};
     tModule *          tapModule = NULL;
@@ -2112,12 +2410,19 @@ void sound_engine_update_from_patch(void) {
             }
         }
     }
-    snapshot.topology = topology_signature(&snapshot);
+    mark_post_mix_nodes(&snapshot);
+    snapshot.topology   = topology_signature(&snapshot);
+    snapshot.voiceCount = voice_count_for_patch((uint32_t)gSlot);
+
+    // How many voices the audio thread may allocate. Published separately as well as in the snapshot
+    // because the note stack asks the same question from the MIDI thread, where reading the whole
+    // snapshot to answer it would be absurd.
+    atomic_store(&gEngineVoices, snapshot.voiceCount);
 
     // The snapshot above was built into a local, so only this section needs the writers' mutex.
     pthread_mutex_lock(&gParamsWriteMutex);
     atomic_fetch_add(&gParamsSeq, 1);    // now odd — a reader seeing this discards its copy
-    gParams           = snapshot;
+    gParams             = snapshot;
     atomic_fetch_add(&gParamsSeq, 1);    // even again, snapshot is whole
     pthread_mutex_unlock(&gParamsWriteMutex);
 }
@@ -2357,18 +2662,18 @@ static double chorus_step(uint32_t node, double input, double depth, double amou
 
 // Peak-following compressor. Above the threshold the excess is divided by the ratio; the follower
 // has separate attack and release so it grabs quickly and lets go slowly.
-static double compress_step(uint32_t node, double input, const tEngineNode * spec) {
+static double compress_step(uint32_t voice, uint32_t node, double input, const tEngineNode * spec) {
     double level = fabs(input);
     double gain  = 1.0;
 
-    if (level > gCompEnv[node]) {
-        gCompEnv[node] += spec->attackCoeff * (level - gCompEnv[node]);
+    if (level > gCompEnv[voice][node]) {
+        gCompEnv[voice][node] += spec->attackCoeff * (level - gCompEnv[voice][node]);
     } else {
-        gCompEnv[node] += spec->releaseCoeff * (level - gCompEnv[node]);
+        gCompEnv[voice][node] += spec->releaseCoeff * (level - gCompEnv[voice][node]);
     }
 
-    if ((gCompEnv[node] > spec->threshold) && (spec->threshold > 0.0)) {
-        double over = gCompEnv[node] / spec->threshold;
+    if ((gCompEnv[voice][node] > spec->threshold) && (spec->threshold > 0.0)) {
+        double over = gCompEnv[voice][node] / spec->threshold;
 
         gain = pow(over, (1.0 / spec->ratio) - 1.0);
     }
@@ -2560,8 +2865,8 @@ static double ladder_filter(double * state, double input, double g, double k, ui
 
 // One ADSR step. Times are in seconds; each stage moves linearly towards its target, which is
 // plenty for shaping a note and keeps the stage logic obvious.
-static double envelope_step(uint32_t node, const tEngineNode * spec, bool gate) {
-    double level = gEnvLevel[node];
+static double envelope_step(uint32_t voice, uint32_t node, const tEngineNode * spec, bool gate) {
+    double level = gEnvLevel[voice][node];
     double step  = 0.0;
 
     if (gate == true) {
@@ -2570,54 +2875,54 @@ static double envelope_step(uint32_t node, const tEngineNode * spec, bool gate) 
         // FALLING, holding the filter part open, and the attack began late from wherever it landed.
         // Attacking from the current level is what an ADSR does — the level is deliberately not
         // zeroed, so a fast retrigger rises from where it was rather than clicking to nothing first.
-        if ((gEnvStage[node] == eEnvIdle) || (gEnvStage[node] == eEnvRelease)) {
-            gEnvStage[node]    = eEnvAttack;
-            gEnvProgress[node] = 0.0;
-            gEnvStart[node]    = level;   // rise from wherever a fast retrigger caught it
+        if ((gEnvStage[voice][node] == eEnvIdle) || (gEnvStage[voice][node] == eEnvRelease)) {
+            gEnvStage[voice][node]    = eEnvAttack;
+            gEnvProgress[voice][node] = 0.0;
+            gEnvStart[voice][node]    = level;   // rise from wherever a fast retrigger caught it
         }
-    } else if (gEnvStage[node] != eEnvIdle) {
-        if (gEnvStage[node] != eEnvRelease) {
-            gEnvProgress[node] = 0.0;
-            gEnvStart[node]    = level;   // fall from the level the key was let go at
+    } else if (gEnvStage[voice][node] != eEnvIdle) {
+        if (gEnvStage[voice][node] != eEnvRelease) {
+            gEnvProgress[voice][node] = 0.0;
+            gEnvStart[voice][node]    = level;   // fall from the level the key was let go at
         }
-        gEnvStage[node] = eEnvRelease;
+        gEnvStage[voice][node] = eEnvRelease;
     }
 
-    switch (gEnvStage[node]) {
+    switch (gEnvStage[voice][node]) {
         case eEnvAttack:
         {
-            step                = 1.0 / (spec->attack * gSampleRate);
-            gEnvProgress[node] += step;
+            step                       = 1.0 / (spec->attack * gSampleRate);
+            gEnvProgress[voice][node] += step;
 
-            if (gEnvProgress[node] >= 1.0) {
-                gEnvProgress[node] = 0.0;
-                level              = 1.0;
-                gEnvStage[node]    = eEnvDecay;
+            if (gEnvProgress[voice][node] >= 1.0) {
+                gEnvProgress[voice][node] = 0.0;
+                level                     = 1.0;
+                gEnvStage[voice][node]    = eEnvDecay;
             } else {
                 // From wherever the stage began, so a note struck during release still rises
                 // smoothly from the level it had rather than jumping.
-                level = gEnvStart[node]
-                        + ((1.0 - gEnvStart[node]) * env_attack_curve((uint32_t)spec->wave, gEnvProgress[node]));
+                level = gEnvStart[voice][node]
+                        + ((1.0 - gEnvStart[voice][node]) * env_attack_curve((uint32_t)spec->wave, gEnvProgress[voice][node]));
             }
             break;
         }
         case eEnvDecay:
         {
-            step                = 1.0 / (spec->decay * gSampleRate);
-            gEnvProgress[node] += step;
+            step                       = 1.0 / (spec->decay * gSampleRate);
+            gEnvProgress[voice][node] += step;
 
-            if (gEnvProgress[node] >= 1.0) {
-                gEnvProgress[node] = 0.0;
-                level              = spec->sustain;
-                gEnvStage[node]    = eEnvSustain;
+            if (gEnvProgress[voice][node] >= 1.0) {
+                gEnvProgress[voice][node] = 0.0;
+                level                     = spec->sustain;
+                gEnvStage[voice][node]    = eEnvSustain;
             } else {
                 level = spec->sustain
-                        + ((1.0 - spec->sustain) * env_fall_curve((uint32_t)spec->wave, gEnvProgress[node]));
+                        + ((1.0 - spec->sustain) * env_fall_curve((uint32_t)spec->wave, gEnvProgress[voice][node]));
             }
 
             if (level <= spec->sustain) {
-                level           = spec->sustain;
-                gEnvStage[node] = eEnvSustain;
+                level                  = spec->sustain;
+                gEnvStage[voice][node] = eEnvSustain;
             }
             break;
         }
@@ -2628,20 +2933,20 @@ static double envelope_step(uint32_t node, const tEngineNode * spec, bool gate) 
         }
         case eEnvRelease:
         {
-            step                = 1.0 / (spec->release * gSampleRate);
-            gEnvProgress[node] += step;
+            step                       = 1.0 / (spec->release * gSampleRate);
+            gEnvProgress[voice][node] += step;
 
-            if (gEnvProgress[node] >= 1.0) {
-                gEnvProgress[node] = 0.0;
-                level              = 0.0;
-                gEnvStage[node]    = eEnvIdle;
+            if (gEnvProgress[voice][node] >= 1.0) {
+                gEnvProgress[voice][node] = 0.0;
+                level                     = 0.0;
+                gEnvStage[voice][node]    = eEnvIdle;
             } else {
-                level = gEnvStart[node] * env_fall_curve((uint32_t)spec->wave, gEnvProgress[node]);
+                level = gEnvStart[voice][node] * env_fall_curve((uint32_t)spec->wave, gEnvProgress[voice][node]);
             }
 
             if (level <= 0.0) {
-                level           = 0.0;
-                gEnvStage[node] = eEnvIdle;
+                level                  = 0.0;
+                gEnvStage[voice][node] = eEnvIdle;
             }
             break;
         }
@@ -2651,7 +2956,7 @@ static double envelope_step(uint32_t node, const tEngineNode * spec, bool gate) 
             break;
         }
     }
-    gEnvLevel[node] = level;
+    gEnvLevel[voice][node] = level;
     return level;
 }
 
@@ -2715,7 +3020,7 @@ static double osc_waveform(uint32_t node, const tEngineNode * spec, double phase
 // there — the filter, mixers and amplifiers below them are linear — so oversampling here alone
 // removes the aliasing without disturbing the delay, chorus and reverb, whose buffers are sized in
 // samples and would all have to be resized for a change of engine rate.
-static double oscillator_step(uint32_t node, const tEngineNode * spec, double voicePitch,
+static double oscillator_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double voicePitch,
                               double pitchDirect, double pitchVar, double shape) {
     double   pitch     = spec->basePitch;
     double   frequency = 0.0;
@@ -2749,18 +3054,31 @@ static double oscillator_step(uint32_t node, const tEngineNode * spec, double vo
     dt        = frequency / (gSampleRate * (double)OSC_OVERSAMPLE);
 
     for (step = 0; step < OSC_OVERSAMPLE; step++) {
-        double phase = advance_phase(&gPhase[node], dt);
+        double phase = advance_phase(&gPhase[voice][node], dt);
 
-        gOscHistory[node][gOscHistoryPos[node]] = osc_waveform(node, spec, phase, dt, shape);
-        gOscHistoryPos[node]                    = (gOscHistoryPos[node] + 1) % OSC_DECIMATE_TAPS;
+        gOscHistory[voice][node][gOscHistoryPos[voice][node]] = (float)osc_waveform(node, spec, phase, dt, shape);
+        gOscHistoryPos[voice][node]                           = (gOscHistoryPos[voice][node] + 1) % OSC_DECIMATE_TAPS;
     }
 
     // One output for every OSC_OVERSAMPLE inputs, so the filter only has to be evaluated at the
     // output rate however high the oversampling factor is.
-    for (tap = 0; tap < OSC_DECIMATE_TAPS; tap++) {
-        uint32_t oldest = (gOscHistoryPos[node] + tap) % OSC_DECIMATE_TAPS;
+    // THE INDEX IS WALKED, NOT RECOMPUTED. This loop is the engine's hottest: it runs once per
+    // oscillator per voice per oversampled sample, so at eight voices it is executed a few million
+    // times a second, and it used to do an integer division (the %) on every one of its 128 taps.
+    // Walking the read position and wrapping with a comparison is the identical sequence of taps in
+    // the identical order — bit-for-bit the same output — for a fraction of the cost.
+    {
+        const float * history = gOscHistory[voice][node];
+        uint32_t      oldest  = gOscHistoryPos[voice][node];
 
-        sum += gOscHistory[node][oldest] * gOscDecimate[OSC_DECIMATE_TAPS - 1 - tap];
+        for (tap = 0; tap < OSC_DECIMATE_TAPS; tap++) {
+            sum += (double)history[oldest] * gOscDecimate[OSC_DECIMATE_TAPS - 1 - tap];
+            oldest++;
+
+            if (oldest >= OSC_DECIMATE_TAPS) {
+                oldest = 0;
+            }
+        }
     }
 
     return sum;
@@ -2773,8 +3091,8 @@ static double oscillator_step(uint32_t node, const tEngineNode * spec, double vo
 //
 // Not band-limited, and deliberately so: an LFO runs at control rate on the hardware, well below
 // anything that could alias into the audio band.
-static double lfo_step(uint32_t node, const tEngineNode * spec) {
-    double phase = advance_phase(&gPhase[node], spec->rateHz / gSampleRate);
+static double lfo_step(uint32_t voice, uint32_t node, const tEngineNode * spec) {
+    double phase = advance_phase(&gPhase[voice][node], spec->rateHz / gSampleRate);
     double wave  = 0.0;
 
     if (spec->active == false) {
@@ -2840,14 +3158,14 @@ static double lfo_step(uint32_t node, const tEngineNode * spec) {
             case 4:
             case 5:
             {
-                if (phase < gLfoLastPhase[node]) {
-                    gLfoTarget[node] = ((double)rand() / (double)RAND_MAX * 2.0) - 1.0;
+                if (phase < gLfoLastPhase[voice][node]) {
+                    gLfoTarget[voice][node] = ((double)rand() / (double)RAND_MAX * 2.0) - 1.0;
                 }
-                wave = (spec->wave == 4) ? gLfoTarget[node]
-                       : (gLfoHeld[node] + ((gLfoTarget[node] - gLfoHeld[node]) * phase));
+                wave = (spec->wave == 4) ? gLfoTarget[voice][node]
+                       : (gLfoHeld[voice][node] + ((gLfoTarget[voice][node] - gLfoHeld[voice][node]) * phase));
 
-                if (phase < gLfoLastPhase[node]) {
-                    gLfoHeld[node] = gLfoTarget[node];
+                if (phase < gLfoLastPhase[voice][node]) {
+                    gLfoHeld[voice][node] = gLfoTarget[voice][node];
                 }
                 break;
             }
@@ -2858,7 +3176,7 @@ static double lfo_step(uint32_t node, const tEngineNode * spec) {
             }
         }
     }
-    gLfoLastPhase[node] = phase;
+    gLfoLastPhase[voice][node] = phase;
 
     {
         double unipolar = (wave + 1.0) * 0.5;
@@ -2911,7 +3229,7 @@ static double lfo_step(uint32_t node, const tEngineNode * spec) {
 #define FLT_CONTROL_MIN    (0.0)
 #define FLT_CONTROL_MAX    (127.0)
 
-static double filter_step(uint32_t node, const tEngineNode * spec, double input, double mod, double voicePitch,
+static double filter_step(uint32_t voice, uint32_t node, const tEngineNode * spec, double input, double mod, double voicePitch,
                           double cutoffParam, double resonance) {
     double control = cutoffParam;
     double cutoff  = 0.0;
@@ -2999,15 +3317,199 @@ static double filter_step(uint32_t node, const tEngineNode * spec, double input,
     // not of the filter.
 #define LADDER_K_MAX    (5.0)
 
-    return ladder_filter(gLadder[node], input, g, LADDER_K_MAX * resonance, 1 + spec->extraPoles);
+    return ladder_filter(gLadder[voice][node], input, g, LADDER_K_MAX * resonance, 1 + spec->extraPoles);
+}
+
+// One node's output for one voice, written into value[n]. Extracted so the Voice Area pass and the
+// FX Area pass are the same code rather than two copies that could drift — they differ only in which
+// nodes they visit and in the voice index they carry.
+//
+// `voice` selects the per-voice state; FX Area nodes are evaluated once with voice 0, which is also
+// the only voice the shared delay/chorus/reverb buffers ever see.
+static void eval_node(uint32_t voice, uint32_t n, const tSoundEngineParams * paramsIn,
+                      double value[][2], double voicePitch) {
+    const tEngineNode * spec = &paramsIn->node[n];
+    double              a    = signal_in(spec, value, 0);
+
+    value[n][0] = 0.0;
+    value[n][1] = 0.0;
+
+    switch (spec->kind) {
+        case eNodeLfo:
+        {
+            value[n][0] = lfo_step(voice, n, spec);
+            value[n][1] = value[n][0];
+            break;
+        }
+        case eNodeOsc:
+        case eNodeOscShp:
+        {
+            // Connector 0 is the direct Pitch input, connector 1 the knob-attenuated
+            // PitchVar — see oscillator_step().
+            value[n][0] = (spec->active == true)
+                              ? oscillator_step(voice, n, spec, voicePitch, a, signal_in(spec, value, 1),
+                                                gSmoothedShape[n])
+                              : 0.0;
+            break;
+        }
+        case eNodeFilter:
+        {
+            value[n][0] = filter_step(voice, n, spec, a, signal_in(spec, value, 1), voicePitch,
+                                      gSmoothedCutoff[n], gSmoothedRes[n]);
+            break;
+        }
+        case eNodeEnv:
+        {
+            double env = envelope_step(voice, n, spec, gVoice[voice].gate);
+
+            // Output 0 is the envelope itself, for patching at a modulation input. Output 1
+            // is whatever audio is patched into the module, shaped by that envelope — the
+            // G2's envelopes carry their own VCA, and this patch uses it as the amp.
+            value[n][0] = env;
+            value[n][1] = a * env;
+            break;
+        }
+        case eNodeLevAmp:
+        {
+            value[n][0] = a * gSmoothedGain[n];
+            break;
+        }
+        case eNodeLevMult:
+        {
+            value[n][0] = a * signal_in(spec, value, 1);
+            break;
+        }
+        case eNodeMix:
+        {
+            uint32_t c           = 0;
+
+            // A stereo mixer reads eight legs but has only four level knobs, so both legs
+            // of a channel share one — and each CHANNEL contributes the average of its
+            // two legs, not their sum.
+            //
+            // That halving matters because the engine is mono. Where a stereo pair is
+            // fed from one mono-collapsed module — an Fx-In's L and R, or a reverb's two
+            // outputs — both legs carry the SAME value, so summing them counted that
+            // channel twice. A patch mixing dry (one stereo source) against two separate
+            // mono delays (a pair of different modules) therefore heard the dry and the
+            // reverb 6 dB hot against the delays. Averaging is also the right mono
+            // downmix for a genuinely stereo pair, so it is correct in both cases.
+            bool     stereoPairs = (spec->inCount > (MAX_NODE_INPUTS / 2));
+            double   legScale    = stereoPairs ? 0.5 : 1.0;
+
+            for (c = 0; c < spec->inCount; c++) {
+                uint32_t channel = stereoPairs ? (c / 2) : c;
+
+                value[n][0] += signal_in(spec, value, c) * legScale * gSmoothedLevel[n][channel];
+            }
+
+            break;
+        }
+        case eNodeChorus:
+        {
+            value[n][0] = (spec->active == true)
+                              ? chorus_step(n, a, spec->depth, spec->amount) : a;
+            value[n][1] = value[n][0];         // stereo on the hardware, summed to mono here
+            break;
+        }
+        case eNodeCompress:
+        {
+            value[n][0] = (spec->active == true) ? compress_step(voice, n, a, spec) : a;
+            value[n][1] = value[n][0];
+            break;
+        }
+        case eNodeDelay:
+        {
+            value[n][0] = (spec->active == true)
+                              ? delay_step(spec->line, a, spec->timeSeconds, spec->depth,
+                                           spec->damping, spec->amount) : a;
+            value[n][1] = value[n][0];
+            break;
+        }
+        case eNodeReverb:
+        {
+            // Only the first reverb in a chain is modelled; see the DSP note above.
+            double in = (a + signal_in(spec, value, 1)) * 0.5;
+
+            value[n][0] = ((spec->active == true) && (spec->line == 0))
+                              ? reverb_step(in, spec->timeSeconds, spec->timeNorm, spec->brightness,
+                                            spec->amount, spec->reverbType) : in;
+            value[n][1] = value[n][0];
+            break;
+        }
+        case eNodeConstant:
+        {
+            value[n][0] = spec->constant;
+            value[n][1] = spec->constant;
+            break;
+        }
+        case eNodeFxIn:
+        {
+            value[n][0] = (spec->active == true) ? (a * gSmoothedGain[n]) : 0.0;
+            value[n][1] = value[n][0];
+            break;
+        }
+        case eNodePassThru:
+        {
+            value[n][0] = a;
+            value[n][1] = a;         // stereo pairs feed both legs from the one signal
+            break;
+        }
+        case eNodeOut:
+        {
+            // Sums its inputs — the two legs are the left and right channels, and the engine
+            // is mono to the speakers for now.
+            value[n][0] = (spec->active == true)
+                              ? ((a + signal_in(spec, value, 1)) * gSmoothedGain[n]) : 0.0;
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+}
+
+// A voice is done when its key is up AND it has stopped making sound — only then can it be handed
+// to another note without cutting anything off. Which test that is depends on what is shaping the
+// note: an EnvADSR's own release when the patch has one, the anti-click ramp when it does not.
+//
+// Asking the envelopes rather than watching the output level is deliberate: an envelope says when it
+// has finished, where a level has to be watched for long enough to be sure it is not just passing
+// through zero.
+static bool voice_is_finished(const tSoundEngineParams * paramsIn, uint32_t v, bool chainHasEnvelope) {
+    if (gVoice[v].gate == true) {
+        return false;
+    }
+
+    if (chainHasEnvelope == false) {
+        return gVoice[v].envelope <= 0.0;
+    }
+
+    for (uint32_t n = 0; n < paramsIn->nodeCount; n++) {
+        // Per-voice envelopes only. One after the mix is shaping the effect, not the note, and it
+        // has no per-voice state to ask.
+        if ((paramsIn->node[n].kind != eNodeEnv) || (paramsIn->node[n].postMix == true)) {
+            continue;
+        }
+
+        if ((gEnvStage[v][n] != (uint32_t)eEnvIdle) || (fabs(gEnvLevel[v][n]) > 1.0e-5)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount) {
     tSoundEngineParams params;
     uint32_t           frame            = 0;
     bool               chainHasEnvelope = false;
-    double             voicePitch       = 0.0;
     uint32_t           n                = 0;
+
+    struct timespec    started          = {0};
+
+    (void)clock_gettime(CLOCK_MONOTONIC, &started);
 
     if ((out == NULL) || (channelCount == 0)) {
         return;
@@ -3029,14 +3531,25 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
     // phase zero has them summing as one voice for the seconds a 7 cent difference takes to drift
     // apart. Note events themselves are taken inside the sample loop below.
 
-    if ((params.tap < 0) && (gEnvelope <= 0.0)) {
+    if (params.tap < 0) {
         return;
     }
 
-// An EnvADSR in the chain is the note's shape; the fixed ramp is only there to stop a click when
-// there is no envelope module to do the job.
+    // A snapshot that has never been published carries a voice count of zero, and zero voices render
+    // silence — which would look exactly like the engine being broken. One voice is the safe reading
+    // of "not told yet", and it is what the engine did before it could count.
+    if (params.voiceCount < 1) {
+        params.voiceCount = 1;
+    } else if (params.voiceCount > MAX_VOICES) {
+        params.voiceCount = MAX_VOICES;
+    }
+
+    // A PER-VOICE EnvADSR is the note's shape; the fixed ramp is only there to stop a click when
+    // there is none to do that job. Per-voice only, and it has to be: an envelope after the mix
+    // shapes the effect rather than the note, and counting it here would leave every voice unramped
+    // AND have voice_is_finished() retire voices the moment a key came up.
     for (n = 0; n < params.nodeCount; n++) {
-        if (params.node[n].kind == eNodeEnv) {
+        if ((params.node[n].kind == eNodeEnv) && (params.node[n].postMix == false)) {
             chainHasEnvelope = true;
             break;
         }
@@ -3049,35 +3562,21 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
         // inside, so they land on the finer grid too rather than being quantised to the output rate.
         for (sub = 0; sub < ENGINE_OVERSAMPLE; sub++) {
             double value[MAX_ENGINE_NODES][2];
+            double voiceSum[MAX_ENGINE_NODES][2];
 
             // One event per sample. A chord's worth of note-ons arriving together therefore lands over
             // consecutive samples rather than all but the last being thrown away, and every note takes
             // effect where it actually arrived instead of at the next buffer boundary.
             (void)take_next_note_event();
 
-            // Portamento. The sounding pitch chases the played note; how fast, and whether at all, comes
-            // from the patch's Glide setting. Exponential rather than linear — it is what a glide sounds
-            // like, and the coefficient is set so the remaining distance is down to a percent by the time
-            // the dial says, which is close enough to the stated figure to be worth quoting.
-            if (gVoiceNote >= 0) {
-                bool sliding = (params.glideMode == eGlideNormal)
-                               || ((params.glideMode == eGlideAuto) && (gGlideActive == true));
-
-                if ((sliding == true) && (params.glideSeconds > 0.0)) {
-                    double coefficient = 1.0 - exp(-4.6 / (params.glideSeconds * gSampleRate));
-
-                    gGlidePitch += coefficient * ((double)gVoiceNote - gGlidePitch);
-                } else {
-                    gGlidePitch = (double)gVoiceNote;
-                }
-            }
-            // Bend rides on top of the glide, scaled by the patch's own Bend range.
-            voicePitch = gGlidePitch
-                         + (((double)atomic_load(&gBendMilli) / 1000.0) * params.bendSemitones);
-
             // The patch's own Vibrato, which is nothing to do with the cabling: it lives on a hidden
             // module beside Glide and Bend, and is how a patch gets aftertouch vibrato without an LFO
             // anywhere in it. The chosen controller sets the depth, so at rest there is none.
+            //
+            // ONE PHASE FOR THE WHOLE PATCH, not one per voice: it is a property of the patch rather
+            // than of a note, so a chord's notes wobble together instead of drifting apart.
+            double vibrato      = 0.0;
+
             if (params.vibratoSource != eVibratoOff) {
                 uint32_t group = (params.vibratoSource == eVibratoWheel)
                              ? MORPH_GROUP_WHEEL : MORPH_GROUP_AFTERTOUCH;
@@ -3088,183 +3587,169 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 if (gVibratoPhase >= 1.0) {
                     gVibratoPhase -= 1.0;
                 }
-                voicePitch    += (sin(gVibratoPhase * 2.0 * M_PI) * depth * params.vibratoCents) / 100.0;
+                vibrato        = (sin(gVibratoPhase * 2.0 * M_PI) * depth * params.vibratoCents) / 100.0;
             }
+            double bend         = ((double)atomic_load(&gBendMilli) / 1000.0) * params.bendSemitones;
             double sample       = 0.0;
-            double rampTarget   = ((gGateOpen == true) && (params.tap >= 0)) ? 1.0 : 0.0;
             double envelopeStep = 1.0 / (ENVELOPE_SECONDS * gSampleRate);
+            double smoothCoeff  = 1.0 - exp(-1.0 / (PARAM_SMOOTH_SECONDS * gSampleRate));
+            // Depends on the patch and the rate, not on the voice, so it is worked out once here
+            // rather than once per voice — an exp() per voice per sample is not free at eight of them.
+            double glideCoeff   = (params.glideSeconds > 0.0)
+                                  ? (1.0 - exp(-4.6 / (params.glideSeconds * gSampleRate))) : 1.0;
 
-            if (gEnvelope < rampTarget) {
-                gEnvelope += envelopeStep;
-
-                if (gEnvelope > rampTarget) {
-                    gEnvelope = rampTarget;
-                }
-            } else if (gEnvelope > rampTarget) {
-                gEnvelope -= envelopeStep;
-
-                if (gEnvelope < rampTarget) {
-                    gEnvelope = rampTarget;
-                }
-            }
-
-            // One forward pass. add_node() built the list depth first, so every node's inputs sit at
-            // lower indices and are already evaluated by the time it is reached. Each node publishes two
-            // outputs because some modules have two that mean different things — see tEngineNode.
+            // PARAMETER SMOOTHING IS PER SAMPLE, NOT PER VOICE. It tracks where a knob is, which is
+            // one thing however many notes are sounding — and running it inside the voice loop would
+            // advance it once per voice, so a knob would sweep faster the more keys were held.
             for (n = 0; n < params.nodeCount; n++) {
-                const tEngineNode * spec        = &params.node[n];
-                double              a           = signal_in(spec, value, 0);
-                bool                primed      = gSmoothPrimed[n];
-                double              smoothCoeff = 1.0 - exp(-1.0 / (PARAM_SMOOTH_SECONDS * gSampleRate));
-                double              shape       = smooth_to(&gSmoothShape[n], spec->shape, smoothCoeff, primed);
+                const tEngineNode * spec   = &params.node[n];
+                bool                primed = gSmoothPrimed[n];
+
+                gSmoothedShape[n]  = smooth_to(&gSmoothShape[n], spec->shape, smoothCoeff, primed);
                 // Smoothed in DIAL units, not hertz. Smoothing a logarithmic control linearly in
                 // frequency makes a knob move slowly at the bottom of its travel and leap at the
                 // top; smoothing the dial value sweeps evenly in pitch, which is what the dial
                 // means and what turning it sounds like.
-                double              cutoffParam = smooth_to(&gSmoothCutoff[n], spec->cutoffParam, smoothCoeff, primed);
-                double              resonance   = smooth_to(&gSmoothRes[n], spec->resonance, smoothCoeff, primed);
-                double              gain        = smooth_to(&gSmoothGain[n], spec->gain, smoothCoeff, primed);
+                gSmoothedCutoff[n] = smooth_to(&gSmoothCutoff[n], spec->cutoffParam, smoothCoeff, primed);
+                gSmoothedRes[n]    = smooth_to(&gSmoothRes[n], spec->resonance, smoothCoeff, primed);
+                gSmoothedGain[n]   = smooth_to(&gSmoothGain[n], spec->gain, smoothCoeff, primed);
 
-                gSmoothPrimed[n] = true;
+                for (uint32_t c = 0; c < MAX_NODE_INPUTS; c++) {
+                    gSmoothedLevel[n][c] = smooth_to(&gSmoothLevel[n][c], spec->level[c], smoothCoeff, primed);
+                }
 
-                value[n][0]      = 0.0;
-                value[n][1]      = 0.0;
+                gSmoothPrimed[n]   = true;
+            }
 
-                switch (spec->kind) {
-                    case eNodeLfo:
-                    {
-                        value[n][0] = lfo_step(n, spec);
-                        value[n][1] = value[n][0];
-                        break;
-                    }
-                    case eNodeOsc:
-                    case eNodeOscShp:
-                    {
-                        // Connector 0 is the direct Pitch input, connector 1 the knob-attenuated
-                        // PitchVar — see oscillator_step().
-                        value[n][0] = (spec->active == true)
-                                  ? oscillator_step(n, spec, voicePitch, a, signal_in(spec, value, 1), shape)
-                                  : 0.0;
-                        break;
-                    }
-                    case eNodeFilter:
-                    {
-                        value[n][0] = filter_step(n, spec, a, signal_in(spec, value, 1), voicePitch,
-                                                  cutoffParam, resonance);
-                        break;
-                    }
-                    case eNodeEnv:
-                    {
-                        double env = envelope_step(n, spec, gGateOpen);
+            memset(voiceSum, 0, sizeof(voiceSum));
 
-                        // Output 0 is the envelope itself, for patching at a modulation input. Output 1
-                        // is whatever audio is patched into the module, shaped by that envelope — the
-                        // G2's envelopes carry their own VCA, and this patch uses it as the amp.
-                        value[n][0] = env;
-                        value[n][1] = a * env;
-                        break;
-                    }
-                    case eNodeLevAmp:
-                    {
-                        value[n][0] = a * gain;
-                        break;
-                    }
-                    case eNodeLevMult:
-                    {
-                        value[n][0] = a * signal_in(spec, value, 1);
-                        break;
-                    }
-                    case eNodeMix:
-                    {
-                        uint32_t c           = 0;
+            // ── VOICE AREA: the whole area, once per sounding voice ──────────────────────────
+            //
+            // Each voice is a complete instance of the Voice Area with its own oscillator phases,
+            // filter state and envelopes, exactly as the hardware instantiates it. The FX Area is
+            // NOT in here: it is one shared instance fed by the sum of the voices, which is what
+            // lets a chord share one reverb instead of running 8 of them.
+            for (uint32_t v = 0; v < params.voiceCount; v++) {
+                tVoice * voice      = &gVoice[v];
 
-                        // A stereo mixer reads eight legs but has only four level knobs, so both legs
-                        // of a channel share one — and each CHANNEL contributes the average of its
-                        // two legs, not their sum.
-                        //
-                        // That halving matters because the engine is mono. Where a stereo pair is
-                        // fed from one mono-collapsed module — an Fx-In's L and R, or a reverb's two
-                        // outputs — both legs carry the SAME value, so summing them counted that
-                        // channel twice. A patch mixing dry (one stereo source) against two separate
-                        // mono delays (a pair of different modules) therefore heard the dry and the
-                        // reverb 6 dB hot against the delays. Averaging is also the right mono
-                        // downmix for a genuinely stereo pair, so it is correct in both cases.
-                        bool     stereoPairs = (spec->inCount > (MAX_NODE_INPUTS / 2));
-                        double   legScale    = stereoPairs ? 0.5 : 1.0;
+                if (voice->sounding == false) {
+                    continue;               // costs nothing when it is not playing
+                }
 
-                        for (c = 0; c < spec->inCount; c++) {
-                            uint32_t channel = stereoPairs ? (c / 2) : c;
+                // Portamento. The sounding pitch chases the played note; how fast, and whether at
+                // all, comes from the patch's Glide setting. Exponential rather than linear — it is
+                // what a glide sounds like, and the coefficient is set so the remaining distance is
+                // down to a percent by the time the dial says.
+                if (voice->note >= 0) {
+                    bool sliding = (params.glideMode == eGlideNormal)
+                                   || ((params.glideMode == eGlideAuto) && (voice->glideActive == true));
 
-                            value[n][0] += signal_in(spec, value, c) * legScale
-                                           * smooth_to(&gSmoothLevel[n][channel], spec->level[channel],
-                                                       smoothCoeff, primed);
-                        }
-
-                        break;
-                    }
-                    case eNodeChorus:
-                    {
-                        value[n][0] = (spec->active == true)
-                                  ? chorus_step(n, a, spec->depth, spec->amount) : a;
-                        value[n][1] = value[n][0]; // stereo on the hardware, summed to mono here
-                        break;
-                    }
-                    case eNodeCompress:
-                    {
-                        value[n][0] = (spec->active == true) ? compress_step(n, a, spec) : a;
-                        value[n][1] = value[n][0];
-                        break;
-                    }
-                    case eNodeDelay:
-                    {
-                        value[n][0] = (spec->active == true)
-                                  ? delay_step(spec->line, a, spec->timeSeconds, spec->depth,
-                                               spec->damping, spec->amount) : a;
-                        value[n][1] = value[n][0];
-                        break;
-                    }
-                    case eNodeReverb:
-                    {
-                        // Only the first reverb in a chain is modelled; see the DSP note above.
-                        double in = (a + signal_in(spec, value, 1)) * 0.5;
-
-                        value[n][0] = ((spec->active == true) && (spec->line == 0))
-                                  ? reverb_step(in, spec->timeSeconds, spec->timeNorm, spec->brightness,
-                                                spec->amount, spec->reverbType) : in;
-                        value[n][1] = value[n][0];
-                        break;
-                    }
-                    case eNodeConstant:
-                    {
-                        value[n][0] = spec->constant;
-                        value[n][1] = spec->constant;
-                        break;
-                    }
-                    case eNodeFxIn:
-                    {
-                        value[n][0] = (spec->active == true) ? (a * gain) : 0.0;
-                        value[n][1] = value[n][0];
-                        break;
-                    }
-                    case eNodePassThru:
-                    {
-                        value[n][0] = a;
-                        value[n][1] = a; // stereo pairs feed both legs from the one signal
-                        break;
-                    }
-                    case eNodeOut:
-                    {
-                        // Sums its inputs — the two legs are the left and right channels, and the engine
-                        // is mono to the speakers for now.
-                        value[n][0] = (spec->active == true)
-                                  ? ((a + signal_in(spec, value, 1)) * gain) : 0.0;
-                        break;
-                    }
-                    default:
-                    {
-                        break;
+                    if ((sliding == true) && (params.glideSeconds > 0.0)) {
+                        voice->glidePitch += glideCoeff * ((double)voice->note - voice->glidePitch);
+                    } else {
+                        voice->glidePitch = (double)voice->note;
                     }
                 }
+                double   voicePitch = voice->glidePitch + bend + vibrato;
+
+                // The anti-click ramp, per voice. Only used when the patch has no EnvADSR to shape
+                // the note itself — with one, this would just double up on it.
+                double   rampTarget = (voice->gate == true) ? 1.0 : 0.0;
+
+                if (voice->envelope < rampTarget) {
+                    voice->envelope += envelopeStep;
+
+                    if (voice->envelope > rampTarget) {
+                        voice->envelope = rampTarget;
+                    }
+                } else if (voice->envelope > rampTarget) {
+                    voice->envelope -= envelopeStep;
+
+                    if (voice->envelope < rampTarget) {
+                        voice->envelope = rampTarget;
+                    }
+                }
+                voice->released = (voice->gate == true) ? 0 : (voice->released + 1);
+
+                // Past the limit, wind the voice down rather than cutting it. voice->fade reaching
+                // zero is what retires it below.
+                if (  (voice->gate == false)
+                   && (voice->released > (uint32_t)(VOICE_MAX_TAIL_SECONDS * gSampleRate))) {
+                    voice->fade -= 1.0 / (VOICE_FADE_SECONDS * gSampleRate);
+
+                    if (voice->fade < 0.0) {
+                        voice->fade = 0.0;
+                    }
+                }
+                double level   = ((chainHasEnvelope == true) ? 1.0 : voice->envelope) * voice->fade;
+
+                for (n = 0; n < params.nodeCount; n++) {
+                    if (params.node[n].postMix == true) {
+                        continue;
+                    }
+                    eval_node(v, n, &params, value, voicePitch);
+                }
+
+                // The voices SUM, which is what playing more than one note at once means. Only the
+                // per-voice nodes are summed here — everything inside the voice was read from
+                // value[] during its own pass, before the next voice overwrites it.
+                double leaving = 0.0;
+
+                for (n = 0; n < params.nodeCount; n++) {
+                    if (params.node[n].postMix == true) {
+                        continue;
+                    }
+                    voiceSum[n][0] += value[n][0] * level;
+                    voiceSum[n][1] += value[n][1] * level;
+
+                    // What this voice is putting out, measured at its Out modules — the point where
+                    // it leaves the voice for the mix or for the FX Area.
+                    if (params.node[n].kind == eNodeOut) {
+                        double magnitude = fabs(value[n][0] * level);
+
+                        if (magnitude > leaving) {
+                            leaving = magnitude;
+                        }
+                    }
+                }
+
+                voice->quiet = (leaving < VOICE_SILENCE) ? (voice->quiet + 1) : 0;
+
+                // RETIRED ONLY WHEN IT HAS GONE QUIET AS WELL as finishing its envelope. The
+                // envelope alone is not enough: a patch whose EnvADSR modulates the filter rather
+                // than acting as the amp goes on sounding after that envelope is idle, and dropping
+                // it from the render at that moment cuts it off mid-note with a click. A patch that
+                // genuinely drones simply never frees the voice, so new notes take the others and
+                // eventually steal — which is what the instrument does with a droning patch too.
+                if (  (  (voice_is_finished(&params, v, chainHasEnvelope) == true)
+                      && (voice->quiet > (uint32_t)(VOICE_SILENCE_SECONDS * gSampleRate)))
+                   || (voice->fade <= 0.0)) {
+                    voice->sounding = false;
+                    voice->quiet    = 0;
+                    voice->released = 0;
+                    voice->fade     = 1.0;
+                }
+            }
+
+            // What everything after the mix sees of the voices is their SUM.
+            for (n = 0; n < params.nodeCount; n++) {
+                if (params.node[n].postMix == false) {
+                    value[n][0] = voiceSum[n][0];
+                    value[n][1] = voiceSum[n][1];
+                }
+            }
+
+            // ── AFTER THE MIX: one shared instance, whatever the polyphony ───────────────────────
+            //
+            // The FX Area, plus any delay, chorus or reverb sitting in the Voice Area and anything
+            // downstream of one — see mark_post_mix_nodes(). Runs even with every voice silent, so a
+            // reverb tail or a delay repeat carries on after the last note is released rather than
+            // being cut off with it.
+            for (n = 0; n < params.nodeCount; n++) {
+                if (params.node[n].postMix == false) {
+                    continue;
+                }
+                eval_node(0, n, &params, value, 0.0);
             }
 
             if (params.tap >= 0) {
@@ -3290,10 +3775,9 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                 }
             }
             sample                     *= VOICE_GAIN;
-
-            if (chainHasEnvelope == false) {
-                sample *= gEnvelope;
-            }
+            // The anti-click ramp is applied PER VOICE as each voice's output leaves the Voice Area
+            // (see the voice loop), not here. Applying it to the mixed output would fade the whole
+            // instrument — including the FX tail — every time any one note was released.
             // The user's own attenuation, ahead of the knee.
             sample                     *= (double)atomic_load(&gOutputGainMilli) / 1000.0;
 
@@ -3325,10 +3809,19 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
             double   milli     = 0.0;
             double   outSample = 0.0;
 
-            for (tap = 0; tap < OUT_DECIMATE_TAPS; tap++) {
-                uint32_t oldest = (gOutHistoryPos + tap) % OUT_DECIMATE_TAPS;
+            // Walked rather than recomputed, as in the oscillator decimator above and for the same
+            // reason — the same taps in the same order, without a division per tap.
+            {
+                uint32_t oldest = gOutHistoryPos;
 
-                outSample += gOutHistory[oldest] * gOutDecimate[OUT_DECIMATE_TAPS - 1 - tap];
+                for (tap = 0; tap < OUT_DECIMATE_TAPS; tap++) {
+                    outSample += gOutHistory[oldest] * gOutDecimate[OUT_DECIMATE_TAPS - 1 - tap];
+                    oldest++;
+
+                    if (oldest >= OUT_DECIMATE_TAPS) {
+                        oldest = 0;
+                    }
+                }
             }
 
             milli = fabs(outSample) * 1000.0;
@@ -3339,6 +3832,27 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
 
             for (channel = 0; channel < channelCount; channel++) {
                 out[(frame * channelCount) + channel] = (float)outSample;
+            }
+        }
+    }
+
+    // What that cost, against what it bought. frameCount / gDeviceRate is the time the buffer will
+    // take to play, i.e. the whole deadline; anything approaching 100 % is the engine running out of
+    // it, and what that sounds like is crackling.
+    {
+        struct timespec finished  = {0};
+
+        (void)clock_gettime(CLOCK_MONOTONIC, &finished);
+
+        double          spent     = ((double)(finished.tv_sec - started.tv_sec))
+                                    + (((double)(finished.tv_nsec - started.tv_nsec)) / 1.0e9);
+        double          available = (gDeviceRate > 0.0) ? ((double)frameCount / gDeviceRate) : 0.0;
+
+        if ((available > 0.0) && (spent >= 0.0)) {
+            uint32_t percent = (uint32_t)((spent / available) * 100.0);
+
+            if (percent > atomic_load(&gLoadPercent)) {
+                atomic_store(&gLoadPercent, percent);
             }
         }
     }
