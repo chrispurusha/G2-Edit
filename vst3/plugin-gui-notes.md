@@ -239,9 +239,20 @@ Note how "empty canvas" is detected: `dispatch_click_region()` returning false. 
 of the canvas registers a region as it draws, so a press nothing claims IS a press on bare canvas.
 That is the application's own test, not a new one.
 
-Known gap: the plug-in's drag release does not run `shift_modules_down()`/`shift_selection_down()`,
-which shuffle overlapping modules aside and record the move for undo — those live in `menus.c`,
-which is not linked. **A dragged module can therefore end up overlapping a neighbour.**
+**Re-ordering on drop works too.** `shift_modules_down()` moved from `menus.c` into `selection.c`,
+directly above `shift_selection_down()` — the code already described them as siblings, and
+`selection.c` was already linked into the plug-in. `canvas_module_drag_release()` now calls whichever
+applies, so a module dropped on another pushes it down its column exactly as the application does.
+`send_module_move_msg()` inside them reaches the stubbed `msg_send()` and does nothing, which is
+correct: there is no synth attached.
+
+Dragging is restricted to the module's top name bar in the plug-in, as in the application — verified
+by dragging from the body and confirming the module selects but does not move. That came for free:
+`drag_area_click_handler` is registered on `module->dragArea` (the title strip) and is the only thing
+that sets `gModuleDrag`, and the plug-in shares it.
+
+Still not carried over: the move is not recorded for **undo**. The application builds a
+`tUndoMoveEntry` on release; a plug-in has no undo stack, so that stayed behind.
 
 Remaining, in order:
 

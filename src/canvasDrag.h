@@ -49,8 +49,9 @@ bool canvas_empty_press(tCoord coord, bool additive);
 // Finishes a rubber band, selecting what it enclosed. Returns true if one was in progress.
 bool canvas_rubber_band_release(tCoord coord, uint32_t slot, uint32_t location, bool additive);
 
-// Ends a module drag without the application's follow-up (overlap shuffling and the move undo entry,
-// both of which need menus.c). Intended for the plug-in; the application has its own richer path.
-bool canvas_module_drag_clear(void);
+// Ends a module drag, pushing aside anything the module was dropped on top of — the same
+// re-ordering the application performs. It does NOT record the move for undo; the application does
+// that itself, and a plug-in has no undo stack.
+bool canvas_module_drag_release(void);
 
 #endif // __CANVAS_DRAG_H__
