@@ -238,6 +238,22 @@ static const tLfoParams kLfoShpA = {0, 1, 11, 10, 5, 4};
 // linearly in frequency. That is a much smaller range than the filter's Env input above.
 #define PITCH_MOD_SEMITONES    (12.0)
 
+// The oscillators' Pitch mod-amount knob is an ATTENUATOR TYPE II — exponential, not linear. The
+// manual names the family ("the pitch mod-input on the various oscillators ... are examples of Type
+// II attenuation", p.79) and says what it means: "a setting of 50 attenuates the incoming signal by
+// a factor considerably less than 0.5". Reading the knob linearly, as this did, leaves roughly twice
+// the modulation at a half-open knob, which on a vibrato patch is the difference between a detune
+// and a siren.
+//
+// SQUARED is the same approximation the mixer's Exp/dB curve already uses (see eNodeMix, which the
+// manual confirms is the same Type II scale). Exact at both ends — 0 "shuts off the modulation
+// completely", 127 "leaves the incoming signal unaffected" — and convex between them, which is the
+// shape described. The exact law is not stated numerically anywhere in the manual, and the knob has
+// no value display to read it off, so this is closer rather than right.
+static double type_ii_attenuator(double knob) {
+    return knob * knob;
+}
+
 // Aftertouch's morph group. The G2 hard-wires the eight — morphStrMap lists them Wheel, Vel, Keyb,
 // Aft.Tch, ... — so aftertouch is group 3. midiInput.c has the same constant for the same reason.
 #define MORPH_GROUP_WHEEL         (0)
@@ -356,6 +372,9 @@ typedef struct {
     double   releaseCoeff;
     double   constant;       // Constant module's value
     uint32_t line;           // which shared delay line this node owns, if it needs one
+    double   brightness;     // reverb, 0..1 as the dial reads it — HIGH IS BRIGHT
+    double   timeNorm;       // reverb Time as the dial reads it, 0..1 — drives the diffusion
+    uint32_t reverbType;     // reverb room size: Small/Medium/Large/Hall
 } tEngineNode;
 
 // A patch can hold more than one Out module — SimpleLead has two, a Voice Area output carrying the
@@ -531,20 +550,20 @@ static double             gEnvelope                   = 0.0; // the anti-click r
 // transition width, not the oversampling factor, is what governs the result.
 #define OUT_DECIMATE_TAPS    (64)
 
-static double         gOutDecimate[OUT_DECIMATE_TAPS];
-static double         gOutHistory[OUT_DECIMATE_TAPS];
-static uint32_t       gOutHistoryPos = 0;
+static double   gOutDecimate[OUT_DECIMATE_TAPS];
+static double   gOutHistory[OUT_DECIMATE_TAPS];
+static uint32_t gOutHistoryPos = 0;
 
-static double         gOscDecimate[OSC_DECIMATE_TAPS];
-static double         gOscHistory[MAX_ENGINE_NODES][OSC_DECIMATE_TAPS];
-static uint32_t       gOscHistoryPos[MAX_ENGINE_NODES];
+static double   gOscDecimate[OSC_DECIMATE_TAPS];
+static double   gOscHistory[MAX_ENGINE_NODES][OSC_DECIMATE_TAPS];
+static uint32_t gOscHistoryPos[MAX_ENGINE_NODES];
 
-static double         gPhase[MAX_ENGINE_NODES];
-static double         gLfoLastPhase[MAX_ENGINE_NODES];
-static double         gLfoTarget[MAX_ENGINE_NODES];
-static double         gLfoHeld[MAX_ENGINE_NODES];
-static double         gSuperPhase[MAX_ENGINE_NODES][2];
-static double         gLadder[MAX_ENGINE_NODES][LADDER_POLES];
+static double   gPhase[MAX_ENGINE_NODES];
+static double   gLfoLastPhase[MAX_ENGINE_NODES];
+static double   gLfoTarget[MAX_ENGINE_NODES];
+static double   gLfoHeld[MAX_ENGINE_NODES];
+static double   gSuperPhase[MAX_ENGINE_NODES][2];
+static double   gLadder[MAX_ENGINE_NODES][LADDER_POLES];
 
 // Delay memory. Held as float rather than double purely for size — half a second per line at any
 // sensible rate, four lines, is enough for the delays a patch normally has and keeps this under a
@@ -556,36 +575,73 @@ static double         gLadder[MAX_ENGINE_NODES][LADDER_POLES];
 // 2.8 s at 48 kHz, times the oversampling — integer arithmetic so it stays a constant expression an
 // array can be sized with.
 #define DELAY_LINE_SAMPLES    (134400 * ENGINE_OVERSAMPLE)
-static float          gDelayLine[MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
-static uint32_t       gDelayWrite[MAX_DELAY_LINES];
-static double         gDelayDamp[MAX_DELAY_LINES];
+static float    gDelayLine[MAX_DELAY_LINES][DELAY_LINE_SAMPLES];
+static uint32_t gDelayWrite[MAX_DELAY_LINES];
+static double   gDelayDamp[MAX_DELAY_LINES];
 
 // The chorus's own short sweep, one per node, plus its LFO phase.
 #define CHORUS_SAMPLES    (2048 * ENGINE_OVERSAMPLE)
-static float          gChorusLine[MAX_ENGINE_NODES][CHORUS_SAMPLES];
-static uint32_t       gChorusWrite[MAX_ENGINE_NODES];
-static double         gChorusLfo[MAX_ENGINE_NODES];
+static float    gChorusLine[MAX_ENGINE_NODES][CHORUS_SAMPLES];
+static uint32_t gChorusWrite[MAX_ENGINE_NODES];
+static double   gChorusLfo[MAX_ENGINE_NODES];
 
 // Compressor gain-reduction state, one per node.
-static double         gCompEnv[MAX_ENGINE_NODES];
+static double   gCompEnv[MAX_ENGINE_NODES];
 
 // A Schroeder reverb: four combs into two allpasses. One reverb is modelled; any further ones pass
 // their input through, which is what a patch with two of them would mostly sound like anyway.
 #define REVERB_COMBS      (4)
 #define REVERB_ALLPASS    (3)
 
+// The Reverb's TYPE selector — Small, Medium, Large, Hall (reverbTypeStrMap) — is what sets the size
+// of the room, and it was not read at all: all four types sounded identical, which is most of why
+// this reverb does not sound like the instrument's. It is a MODE, not a parameter, so it comes from
+// module->mode[] like OscShpB's waveform does.
+#define REVERB_MODE_TYPE     (0)
+#define REVERB_TYPE_COUNT    (4)
+
+// "Range: 1.1 ms to 17.58 s" (manual p.251), stated for the Time dial. The curve between those two
+// is not stated anywhere; see the derivation where they are used for why the exponent is 3.
+#define REVERB_TIME_MIN_S    (0.0011)
+#define REVERB_TIME_MAX_S    (17.58)
+#define REVERB_TIME_CURVE    (3.0)
+
+// The allpass diffusion coefficient rises with the reverb time and is held between two limits. The
+// slope and the limits are the instrument's; what drives them is normalised Time here, which is the
+// part that is inferred rather than known — but the limits are close enough together that the whole
+// range is only 0.45..0.62, so being wrong about the position within it is a small error and being
+// outside it would not be.
+#define REVERB_DIFFUSE_SLOPE    (0.75)
+#define REVERB_DIFFUSE_BASE     (0.40)
+#define REVERB_DIFFUSE_MIN      (0.45)
+#define REVERB_DIFFUSE_MAX      (0.62)
+
+// How much bigger each type's room is than the base set below. THE SHAPE OF THIS IS RIGHT: the
+// instrument really does scale every one of its delay lines by a single factor per type, so one
+// number per room is the correct form rather than a convenience.
+//
+// THE FOUR NUMBERS ARE NOT. They are chosen to be musical and monotonic; the instrument's own table
+// is four floats that nothing available states. Replacing them is a small, self-contained change if
+// a measurement ever turns up — the ratio between the decay of, say, Small and Hall on the hardware
+// at one Time setting would pin all four.
+static const double   kReverbTypeScale[REVERB_TYPE_COUNT] = {0.5, 0.75, 1.0, 1.6};
+#define REVERB_SCALE_MAX    (1.6)
+
 // Mutually prime lengths, so the combs do not reinforce each other into a ringing tone. The buffers
 // are sized from the longest of each set rather than a hand-written number — getting those out of
-// step is a buffer overrun, and it is the kind that only shows up as a crash much later.
-#define REVERB_COMB_MAX       (1356 * ENGINE_OVERSAMPLE)
-#define REVERB_ALLPASS_MAX    (225 * ENGINE_OVERSAMPLE)
-// Scaled with the rate: these are sample counts, so leaving them fixed would halve the room.
-static const uint32_t kCombLen[REVERB_COMBS]      = {
+// step is a buffer overrun, and it is the kind that only shows up as a crash much later. The base
+// set is scaled with the rate (these are sample counts, so leaving them fixed would halve the room)
+// AND by the type, hence the extra headroom for the largest type in the two MAX figures.
+#define REVERB_COMB_BASE       (1356 * ENGINE_OVERSAMPLE)
+#define REVERB_ALLPASS_BASE    (225 * ENGINE_OVERSAMPLE)
+#define REVERB_COMB_MAX        ((uint32_t)(REVERB_COMB_BASE * REVERB_SCALE_MAX) + 1)
+#define REVERB_ALLPASS_MAX     ((uint32_t)(REVERB_ALLPASS_BASE * REVERB_SCALE_MAX) + 1)
+static const uint32_t kCombLen[REVERB_COMBS]              = {
     1116 * ENGINE_OVERSAMPLE, 1188 * ENGINE_OVERSAMPLE,
-    1277 * ENGINE_OVERSAMPLE, REVERB_COMB_MAX
+    1277 * ENGINE_OVERSAMPLE, REVERB_COMB_BASE
 };
-static const uint32_t kAllpassLen[REVERB_ALLPASS] = {
-    REVERB_ALLPASS_MAX, 149 * ENGINE_OVERSAMPLE,
+static const uint32_t kAllpassLen[REVERB_ALLPASS]         = {
+    REVERB_ALLPASS_BASE, 149 * ENGINE_OVERSAMPLE,
     97 * ENGINE_OVERSAMPLE
 };
 static float          gComb[REVERB_COMBS][REVERB_COMB_MAX];
@@ -1590,7 +1646,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->basePitch = param_value(module, variation, SHPB_PARAM_TUNE)
                               + (osc_fine_cents(param_value(module, variation, SHPB_PARAM_CENT)) / 100.0);
             node->shape     = osc_shape_percent(param_value(module, variation, SHPB_PARAM_SHAPE)) / 100.0;
-            node->modAmount = param_value(module, variation, SHPB_PARAM_PITCH_MOD) / 127.0;
+            node->modAmount = type_ii_attenuator(param_value(module, variation, SHPB_PARAM_PITCH_MOD) / 127.0);
             node->active    = (param_value(module, variation, SHPB_PARAM_ACTIVE) != 0.0);
             break;
         }
@@ -1673,10 +1729,26 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeReverb:
         {
-            node->timeSeconds = 0.2 + (3.0 * (param_value(module, variation, REVERB_PARAM_TIME) / 127.0));
-            node->damping     = param_value(module, variation, REVERB_PARAM_BRIGHT) / 127.0;
+            // The manual states the Time dial's endpoints outright — "Range: 1.1 ms to 17.58 s"
+            // (p.251) — where this had a linear 0.2..3.2 s, reaching neither. THE ENDPOINTS ARE
+            // DOCUMENTED, THE CURVE BETWEEN THEM IS NOT, and the two obvious readings are both
+            // clearly wrong: linear puts 8.8 s at the middle of the travel, geometric puts 0.14 s
+            // there, and a fresh Reverb module defaults to exactly that middle. Whatever the real
+            // curve is, it has to sound like a reverb at its default.
+            // So: the manual's endpoints, with an exponent chosen to land the midpoint at a bit over
+            // two seconds. CHOSEN, NOT MEASURED — worth replacing the moment the dial gains a value
+            // display to read the real curve off, as the envelope times did.
+            node->timeNorm    = param_value(module, variation, REVERB_PARAM_TIME) / 127.0;
+            node->timeSeconds = REVERB_TIME_MIN_S
+                                + ((REVERB_TIME_MAX_S - REVERB_TIME_MIN_S)
+                                   * pow(node->timeNorm, REVERB_TIME_CURVE));
+            // Named for the dial, not for the filter coefficient it used to be assigned straight to
+            // — see reverb_step(), which now does the inversion itself.
+            node->brightness  = param_value(module, variation, REVERB_PARAM_BRIGHT) / 127.0;
             node->amount      = param_value(module, variation, REVERB_PARAM_DRYWET) / 127.0;
             node->active      = (param_value(module, variation, REVERB_PARAM_ACTIVE) != 0.0);
+            // Raw, like every other drop-down: a mode cannot carry a morph (manual p.20).
+            node->reverbType  = module->mode[REVERB_MODE_TYPE].value;
             break;
         }
         case eNodeLfo:
@@ -1762,7 +1834,7 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
             node->wave      = (tOscWave)param_value(module, variation, OSCB_PARAM_WAVEFORM);
             node->oscKbt    = (param_value(module, variation, OSCB_PARAM_KBT) != 0.0);
             node->basePitch = tune + (osc_fine_cents(cent) / 100.0);
-            node->modAmount = param_value(module, variation, OSCB_PARAM_PITCH_MOD) / 127.0;
+            node->modAmount = type_ii_attenuator(param_value(module, variation, OSCB_PARAM_PITCH_MOD) / 127.0);
             node->shape     = osc_shape_percent(param_value(module, variation, OSCB_PARAM_SHAPE)) / 100.0;
             node->active    = (param_value(module, variation, OSCB_PARAM_ACTIVE) != 0.0);
             break;
@@ -2304,30 +2376,78 @@ static double compress_step(uint32_t node, double input, const tEngineNode * spe
 }
 
 // Schroeder reverb — parallel combs for density, allpasses to smear the result.
-static double reverb_step(double input, double timeSeconds, double damping, double mix) {
-    double   diffused = input;
-    double   sum      = 0.0;
-    uint32_t i        = 0;
+//
+// brightness is the dial as it reads: HIGH IS BRIGHT. It used to be handed straight to the damping
+// filter's coefficient, which inverted it — a knob labelled Brightness made the tail darker as it
+// opened, and the manual's advice that "the most natural range is between 25 and 50" (p.251) landed
+// on the dullest part of the travel instead of the liveliest.
+static double reverb_step(double input, double timeSeconds, double timeNorm, double brightness,
+                          double mix, uint32_t type) {
+    double          diffused  = input;
+    double          sum       = 0.0;
+    uint32_t        i         = 0;
+    // A one-pole lowpass inside each comb, so every pass round the loop loses more high end — which
+    // is what makes a tail decay into a thump rather than ringing on with the same tone.
+    double          damping   = 1.0 - brightness;
+    double          scale     = kReverbTypeScale[(type < REVERB_TYPE_COUNT) ? type : 0];
+    double          diffusion = (REVERB_DIFFUSE_SLOPE * timeNorm) + REVERB_DIFFUSE_BASE;
+    static uint32_t sLastType = REVERB_TYPE_COUNT;   // forces the reset below on the first call
+
+    if (diffusion < REVERB_DIFFUSE_MIN) {
+        diffusion = REVERB_DIFFUSE_MIN;
+    } else if (diffusion > REVERB_DIFFUSE_MAX) {
+        diffusion = REVERB_DIFFUSE_MAX;
+    }
+
+    // Changing type resizes every delay line, so the positions into them are meaningless and the
+    // contents are a room that no longer exists. Cleared rather than carried over — which is also
+    // what the instrument does: "changing reverb type will force the Sound Engine to recalculate and
+    // thus cause a brief moment of silence" (p.251).
+    if (type != sLastType) {
+        memset(gComb, 0, sizeof(gComb));
+        memset(gCombPos, 0, sizeof(gCombPos));
+        memset(gCombStore, 0, sizeof(gCombStore));
+        memset(gAllpass, 0, sizeof(gAllpass));
+        memset(gAllpassPos, 0, sizeof(gAllpassPos));
+        sLastType = type;
+    }
 
     // Diffusion first: three short allpasses smear the input within a few milliseconds, so there is
     // something there before the combs respond and no single tap stands out as an echo.
+    //
+    // The coefficient RISES WITH THE REVERB TIME rather than sitting at a fixed 0.5, and both the
+    // slope and the two limits it is held between are the instrument's own: a longer room diffuses
+    // harder. The bounds are what matter most here — a coefficient outside them stops sounding like
+    // this reverb — and they are narrow enough that the exact position within them is a detail.
     for (i = 0; i < REVERB_ALLPASS; i++) {
-        uint32_t len = kAllpassLen[i];
-        double   out = (double)gAllpass[i][gAllpassPos[i]];
-        double   in  = diffused + (out * 0.5);
+        uint32_t len = (uint32_t)(kAllpassLen[i] * scale);
+        double   out = 0.0;
+        double   in  = 0.0;
 
+        if (len == 0) {
+            continue;
+        }
+        gAllpassPos[i]             %= len;           // the type may have shrunk this line under us
+        out                         = (double)gAllpass[i][gAllpassPos[i]];
+        in                          = diffused + (out * diffusion);
         gAllpass[i][gAllpassPos[i]] = (float)in;
         gAllpassPos[i]              = (gAllpassPos[i] + 1) % len;
-        diffused                    = out - (in * 0.5);
+        diffused                    = out - (in * diffusion);
     }
 
     // Then the combs, in parallel, for the tail.
     for (i = 0; i < REVERB_COMBS; i++) {
-        uint32_t len = kCombLen[i];
-        double   out = (double)gComb[i][gCombPos[i]];
-        // Feedback set so the tail decays to -60 dB over the chosen time.
-        double   fb  = pow(0.001, ((double)len / gSampleRate) / timeSeconds);
+        uint32_t len = (uint32_t)(kCombLen[i] * scale);
+        double   out = 0.0;
+        double   fb  = 0.0;
 
+        if (len == 0) {
+            continue;
+        }
+        gCombPos[i]          %= len;
+        out                   = (double)gComb[i][gCombPos[i]];
+        // Feedback set so the tail decays to -60 dB over the chosen time.
+        fb                    = pow(0.001, ((double)len / gSampleRate) / timeSeconds);
         gCombStore[i]        += (1.0 - damping) * (out - gCombStore[i]);
         gComb[i][gCombPos[i]] = (float)(diffused + (gCombStore[i] * fb));
         gCombPos[i]           = (gCombPos[i] + 1) % len;
@@ -2339,7 +2459,21 @@ static double reverb_step(double input, double timeSeconds, double damping, doub
     // reads as the dry signal leaking back through a send that is supposed to be fully wet.
     sum = (sum * 0.25) + (diffused * 0.12);
 
-    return (input * (1.0 - mix)) + (sum * mix);
+    // DRY/WET IS NOT A CROSSFADE, and this was the largest single difference from the instrument.
+    // The two gains are independent, each a ramp CUBED, and the ramps overlap: the dry side holds
+    // full scale until the knob passes the middle and only then falls, while the wet side reaches
+    // full scale AT the middle and stays there. So the centre detent is both signals at full, not
+    // half of each — which is why the hardware's reverb at a middle setting is so much wetter, and
+    // louder, than a linear blend of the same two signals.
+    //
+    // The cube makes the taper steep at the quiet end: a quarter-open knob passes an eighth of the
+    // wet signal, where a linear reading would pass a quarter.
+    {
+        double wetRamp = (mix >= 0.5) ? 1.0 : (mix * 2.0);
+        double dryRamp = (mix <= 0.5) ? 1.0 : ((1.0 - mix) * 2.0);
+
+        return (input * dryRamp * dryRamp * dryRamp) + (sum * wetRamp * wetRamp * wetRamp);
+    }
 }
 
 static double advance_phase(double * phase, double dt) {
@@ -3095,7 +3229,8 @@ void sound_engine_render(float * out, uint32_t frameCount, uint32_t channelCount
                         double in = (a + signal_in(spec, value, 1)) * 0.5;
 
                         value[n][0] = ((spec->active == true) && (spec->line == 0))
-                                  ? reverb_step(in, spec->timeSeconds, spec->damping, spec->amount) : in;
+                                  ? reverb_step(in, spec->timeSeconds, spec->timeNorm, spec->brightness,
+                                                spec->amount, spec->reverbType) : in;
                         value[n][1] = value[n][0];
                         break;
                     }

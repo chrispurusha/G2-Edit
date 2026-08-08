@@ -1983,6 +1983,60 @@ PARTIALLY DONE / STILL OPEN:
   simpler single-device E-mu client) and is NOT safe to merge mechanically.
 
 
+- REVERB: a full match is a PROJECT, not a fix (2026-08-08). Three things were recovered exactly and
+  are now implemented — the dry/wet law, the diffusion coefficient's slope and limits, and the fact
+  that room Type scales every delay line by ONE factor. What is left is the part that would make it
+  actually sound like the instrument, and it is large:
+   * IT HAS ABOUT 31 DELAY LINES. Ours has 4 combs + 3 allpasses. Every length is a room-size factor
+     times one of these constants, plus a common base: 14470, 15537, 5403, 6307, 17021, 18693, 7347,
+     8992, 12398(+110), 1680, 3589, 19561, 21432, 10589, 22599, 1000, 11651, 7300, 18600, 921, 110,
+     255, 532, 1677, 11655, 17536, 6726, 12393, 1004, 4425, 15080. Those are ADDRESSES in one buffer,
+     so the actual line lengths are the DIFFERENCES between pairs of them — e.g. 15537-12508 = 3029,
+     5403-1680 = 3723, 6307-3589 = 2718, 17021-14470 = 2551, all times the room factor.
+   * THE ROUTING IS NOT RECOVERABLE the same way. Which line feeds which lives in a block of emulated
+     fixed-point DSP with no structure left in it, and the coefficients come from memory rather than
+     from immediates. Lengths without topology are worse than useless — a real set of lengths in the
+     wrong arrangement sounds plausible and is wrong, which is the hardest kind of error to find.
+   * THE FOUR ROOM SIZES ARE DATA, not code, and are not in anything available. One hardware
+     measurement pins them: the ratio of the decay of Small to Hall at the same Time setting.
+  ALSO WORTH TRYING FIRST, and much cheaper: github.com/gleb812/pch2csd (MIT). It is an independent
+  reimplementation with 116 parameter maps in resources/value_maps.json, already used to confirm the
+  delay Time formula and ADRTimeStrMap. If it models the reverb at all, its topology is a far better
+  starting point than the decompile, and its value maps may hold the Time curve that is currently
+  fitted (see REVERB_TIME_CURVE) and the room sizes.
+
+- Mouse-up debounce while dragging — NOT BUILT, and probably not ours (2026-08-08). Owner reported
+  drags occasionally ending on their own. DIAGNOSED AS HARDWARE, on the owner's own evidence: the
+  same thing happens resizing windows and drag-selecting text in other applications, so it is a
+  failing microswitch bouncing, not anything this code does. Recorded only because a debounce would
+  help anyone else with an ageing mouse, and because the design has two traps worth writing down
+  before someone reaches for the obvious version.
+  IT CANNOT BE A DEBOUNCE IN THE USUAL SENSE — there is no way to know a re-press is coming except
+  by waiting for it, so the only workable shape is DEFER THE RELEASE, never "release now and retract
+  it if a press follows". Retracting would mean undoing a cable connect, a module shift-down and an
+  undo push after the fact.
+  SHAPE, if it is ever wanted:
+   * Armed ONLY while a drag is active (module, cable, dial, rubber band). A global debounce would
+     add latency to every click and interfere with double-click.
+   * On up: stash the COORDINATE and the timestamp, FREEZE the drag, do not end it.
+   * On down inside the window: discard the pending release, unfreeze, the drag simply continues.
+   * On a tick past the window: run the real release using the STASHED coordinate. This matters —
+     the cable connect hit-tests the release position, so firing it at wherever the pointer has
+     since drifted would connect the wrong thing.
+   * Freeze rather than keep following the pointer, or every legitimate release visibly overshoots
+     and snaps back.
+   * 40-60 ms: above contact bounce, below a deliberate human re-click.
+   * The standalone blocks in glfwWaitEvents() when idle, so a pending release needs a timeout tick
+     or a drag released with no further input hangs until the next event. Slots into the existing
+     ladder at graphics.c:2614, which already does this for the button auto-repeat. The plug-in has
+     ensureTickTimer.
+  MEASURE BEFORE BUILDING. Log the interval between a mouse-up during a drag and the next
+  mouse-down: switch bounce is sub-20 ms, unmistakably. If the gaps are 200 ms+ it is NOT bounce and
+  a debounce would mask a software fault rather than fix it — look instead at the cursor warp in
+  start_cursor_drag() (dial drags hide and warp the pointer) and, in the plug-in, the view's
+  tracking area.
+
+
 DO NOT RE-TRY (conclusions from completed work — the reasoning is gone from this file, the constraint is not)
 
 - FT_LOAD_FORCE_AUTOHINT in the glyph rasteriser: tried and REJECTED. Crisper, but it changes glyph
