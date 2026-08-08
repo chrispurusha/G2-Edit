@@ -107,6 +107,20 @@ bool multi_select_modifier_held(void) {
            || (glfwGetKey(synthlib_window(), GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS);
 }
 
+// WHETHER WE ACTUALLY HID THE CURSOR, tracked explicitly rather than inferred from the drag flags.
+//
+// stop_dragging() used to decide by asking is_cursor_hidden_dragging(), i.e. by re-reading the very
+// state it was about to clear. That is fragile in two ways, and both have bitten:
+//
+//   - Anything that clears a drag flag BEFORE stop_dragging() runs leaves the cursor hidden for good.
+//     finish_param_drag() started doing exactly that when its undo push moved out to
+//     canvas_param_drag_release(), which memsets gParamDragging — so dragging the slot volume, or any
+//     dial, could strand the pointer with no way to get it back.
+//   - A spurious or duplicated mouse-up has the same effect for the same reason.
+//
+// A flag set where the cursor is hidden and cleared where it is restored cannot disagree with itself.
+static bool sCursorHidden = false;
+
 void start_cursor_drag(void) {
     {
         double startX = 0.0;
@@ -117,6 +131,7 @@ void start_cursor_drag(void) {
     }
     gDragSkipCount = 3;
     glfwSetInputMode(synthlib_window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    sCursorHidden  = true;
 }
 
 static bool handle_module_press_for_module(tModule * module, tCoord coord, tMouseButton mouseButton, uint32_t variation) {
@@ -568,6 +583,20 @@ bool handle_scrollbar_click(tCoord coord) {
     return handle_pane_scrollbar_click(coord);
 }
 
+// Last resort: the cursor is hidden but nothing is being dragged any more.
+//
+// The explicit flag handles a spurious or duplicated mouse-up — those still reach stop_dragging(),
+// which restores. What it cannot handle is a mouse-up that never ARRIVES at all: no stop_dragging,
+// no restore, pointer gone. Polled from the render loop so that state cannot persist for more than a
+// frame, which is a better answer than debouncing the button — a debounce delays every real release
+// to guard against a rare bad one, and still loses if the event is dropped rather than repeated.
+void recover_lost_cursor(void) {
+    if ((sCursorHidden == true) && (is_cursor_hidden_dragging() == false)) {
+        glfwSetInputMode(synthlib_window(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        sCursorHidden = false;
+    }
+}
+
 bool is_cursor_hidden_dragging(void) {
     return gParamDragging.active || gTempoDragging || gPerfTempoDragging || gVibRateDragging || gVibAmountDragging || gGlideTimeDragging;
 }
@@ -584,8 +613,6 @@ void finish_param_drag(void) {
 }
 
 void stop_dragging(void) {
-    bool wasCursorDragging = is_cursor_hidden_dragging();
-
     gScrollState.yBarDragging = false;
     gScrollState.xBarDragging = false;
     pane_scrollbar_release();
@@ -607,8 +634,11 @@ void stop_dragging(void) {
     // of that was redundant, and two independent warps in a row can land a
     // pixel or two off from each other — enough, in SynthEdit's tightly
     // packed filter dials, to spill onto a neighbouring control.
-    if (wasCursorDragging) {
+    // Unconditional on the flag, not on the drag state — see sCursorHidden. Restoring a cursor that
+    // is already visible costs nothing; failing to restore a hidden one costs the user their pointer.
+    if (sCursorHidden == true) {
         glfwSetInputMode(synthlib_window(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        sCursorHidden = false;
     }
 }
 
@@ -988,16 +1018,13 @@ static uint32_t calc_tempo_drag_value(double xCoord, double yCoord, double x, do
 }
 
 void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
-    tCoord          coord          = {0};
-    double          angle          = 0.0;
-    uint32_t        range          = 0;
-    uint32_t        value          = 0;
-    tMessageContent messageContent = {0};
-    tParamType      paramType      = paramTypeCommonDial;
-    uint32_t        slot           = gSlot;
-    uint32_t        variation      = gPatchDescr[slot].activeVariation;
-    double          x              = 0;
-    double          y              = 0;
+    // Several locals went with the parameter-drag arm when it moved to canvasDrag.c; what is left is
+    // what the remaining arms actually use.
+    tCoord   coord = {0};
+    uint32_t value = 0;
+    uint32_t slot  = gSlot;
+    double   x     = 0;
+    double   y     = 0;
 
 
     get_global_gui_scaled_mouse_coord(&coord);

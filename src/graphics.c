@@ -2603,6 +2603,9 @@ void do_graphics_loop(void) {
         // The Virtual Keyboard's Repeat button. No-op unless a repeat is actually running.
         virtual_keyboard_tick();
 
+        // Belt and braces: a hidden pointer with no drag behind it never survives a frame.
+        recover_lost_cursor();
+
         if ((gModuleDrag.active == true) || (gCableDrag.active == true) || (gContextMenu.active == true)) {
             double x = 0.0;
             double y = 0.0;

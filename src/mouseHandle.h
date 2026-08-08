@@ -72,6 +72,10 @@ void finish_param_drag(void);
 // control, so anything that hover-highlights "what's under the mouse"
 // (e.g. render_knob_assignment_overlay()'s per-param hover check) needs to
 // suppress itself while this is true, or it'll highlight the wrong control.
+// Restores the pointer if it is hidden with no drag running — call once per frame. See the note in
+// mouseHandle.c for why this rather than debouncing the mouse button.
+void recover_lost_cursor(void);
+
 bool is_cursor_hidden_dragging(void);
 void stop_synth_name_editing(void);
 bool handle_scrollbar_click(tCoord coord);
