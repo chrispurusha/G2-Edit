@@ -258,6 +258,33 @@ void init_database(void) {
 // globalVars rather than in the database proper. Was in graphics.c, which made it unreachable
 // from anything without a GUI; nothing in it ever touched the screen.
 
+// The patch name a file implies: its basename with the extension dropped. Moved from graphics.c —
+// it is string handling, and the plug-in sets the name the same way when it opens a file.
+void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
+    const char * base                            = filepath;
+    const char * p                               = filepath;
+    char         patchName[CLAVIA_NAME_SIZE + 1] = {0};
+    int          i                               = 0;
+
+    // Find last path separator
+    while (*p != '\0') {
+        if (*p == '/' || *p == '\\') {
+            base = p + 1;
+        }
+        p++;
+    }
+    // Copy up to PATCH_NAME_SIZE chars, stop at '.' (extension)
+    memset(patchName, 0, sizeof(patchName));
+
+    while (i < CLAVIA_NAME_SIZE && base[i] != '\0' && base[i] != '.') {
+        patchName[i] = base[i];
+        i++;
+    }
+    COPY_STRING(gGlobalSettings.slot[slot].patchName, patchName);
+
+    LOG_DEBUG("Patch name from file: '%s'\n", patchName);
+}
+
 // A brand-new, empty patch. Moved here from mouseHandle.c, where its own comment asked where it
 // really belonged: nothing in it touches a window, and clear_slot_data() below came here for the
 // same reason — a GUI-less build could not reach it otherwise.

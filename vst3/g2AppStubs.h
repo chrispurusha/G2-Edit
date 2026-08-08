@@ -17,21 +17,24 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __G2_FILE_DIALOG_H__
-#define __G2_FILE_DIALOG_H__
+#ifndef __G2_APP_STUBS_H__
+#define __G2_APP_STUBS_H__
 
 #include "sysIncludes.h"
+#include "types.h"
+#include "msgQueue.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Puts up the system open panel and returns the chosen .pch2 path. False if the user cancelled or
-// nothing usable came back. Main thread only — it runs a modal panel.
-bool g2_choose_patch_file(char * pathOut, size_t pathLen);
+// Takes the pending GUI-thread message, if any. The application drains this queue in its render
+// loop; the plug-in drains it in its draw, for the same reason — a browser must not be opened from
+// inside a menu callback.
+bool g2_take_gui_message(tMessageContent * out);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // __G2_FILE_DIALOG_H__
+#endif // __G2_APP_STUBS_H__

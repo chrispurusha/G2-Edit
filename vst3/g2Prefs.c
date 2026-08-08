@@ -21,6 +21,7 @@
 #include "synthlibTypes.h"
 #include "synthlibGlobals.h"
 #include "prefs.h"
+#include "persistence.h"
 
 #include "g2Prefs.h"
 
@@ -34,7 +35,19 @@ void g2_plugin_prefs_init(void) {
 
     prefs_init(G2_PREFS_APP_NAME);
 
-    // Restore the dial mode straight away. Set through synthlib_set_dial_mode() rather than poked
-    // into the global, so the plug-in's own accessor stays the single owner of it.
+    // The application's own restore: zoom, dial mode and the file browser's last folder, plus
+    // registering the callback that keeps that folder up to date. persistence.c has no GLFW in it,
+    // so the plug-in uses it rather than keeping a second set of keys that could drift.
+    load_saved_settings();
+}
+
+// synthlibPersistence.c is NOT linked: its only other job is restoring the WINDOW, and it does that
+// with glfwSetWindowSize()/glfwSetWindowPos(). A plug-in owns neither — the host places and sizes
+// the editor, and VST3 offers no way to ask otherwise (the width it reopens at is handled in
+// g2Editor.mm through getSize()). So the dial-mode half is done here and the window half dropped.
+void synthlib_load_window_and_dial_mode(int targetFrameBuffWidth, int targetFrameBuffHeight) {
+    (void)targetFrameBuffWidth;
+    (void)targetFrameBuffHeight;
+
     synthlib_set_dial_mode((tDialMode)prefs_get_int(G2_PREF_DIAL_MODE, (long)eDialModeRotary));
 }

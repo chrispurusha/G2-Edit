@@ -162,8 +162,19 @@ static __weak G2GlView * gCurrentView = nil;
     return NSMakePoint(p.x * scale, (bounds.size.height - p.y) * scale);
 }
 
-// Started on press and stopped on release rather than left running: 60 Hz of doing nothing is a poor
-// thing to leave ticking inside somebody else's host.
+// Started when there is something to advance and stopped by the tick itself once there is not:
+// 60 Hz of doing nothing is a poor thing to leave running inside somebody else's host.
+//
+// CALLED AFTER EVERY MOUSE EVENT, not just on press. A right-click context menu opens from
+// -rightMouseUp:, and a menu opened once the timer had already stopped itself would otherwise have
+// nothing driving its dwell timer at all — which is why submenus still needed a jiggle after the
+// first fix.
+- (void)ensureTickTimer {
+    if (self.dragTimer == nil) {
+        [self startDragTimer];
+    }
+}
+
 - (void)startDragTimer {
     [self stopDragTimer];
     self.dragTimer = [NSTimer scheduledTimerWithTimeInterval:1.0 / 60.0
@@ -173,6 +184,8 @@ static __weak G2GlView * gCurrentView = nil;
 
         if (g2_input_drag_tick() == true) {
             [self setNeedsDisplay:YES];
+        } else {
+            [self stopDragTimer];    // nothing left to advance
         }
     }];
 }
@@ -186,7 +199,7 @@ static __weak G2GlView * gCurrentView = nil;
     NSPoint c = [self canvasPointFor:event];
 
     g2_input_mouse_event(c.x, c.y, eClickPress);
-    [self startDragTimer];
+    [self ensureTickTimer];
     [self setNeedsDisplay:YES];
 }
 
@@ -200,8 +213,11 @@ static __weak G2GlView * gCurrentView = nil;
 - (void)mouseUp:(NSEvent *)event {
     NSPoint c = [self canvasPointFor:event];
 
-    [self stopDragTimer];
+    // NOT stopped here any more. The button coming up does not mean nothing needs ticking: a menu
+    // opened by that very click stays open and its submenu dwell timer still has to run. The tick
+    // itself stops the timer once nothing is left to do.
     g2_input_mouse_event(c.x, c.y, eClickRelease);
+    [self ensureTickTimer];
     [self setNeedsDisplay:YES];
 }
 
@@ -211,6 +227,7 @@ static __weak G2GlView * gCurrentView = nil;
     // No dispatch — a click nobody made. But the hover state must be advanced: menu highlighting
     // and the dwell timer that opens a submenu flyout both work off the pointer.
     g2_input_hover(c.x, c.y);
+    [self ensureTickTimer];
     [self setNeedsDisplay:YES];
 }
 
@@ -236,6 +253,7 @@ static __weak G2GlView * gCurrentView = nil;
     NSPoint c = [self canvasPointFor:event];
 
     g2_input_right_click(c.x, c.y);
+    [self ensureTickTimer];
     [self setNeedsDisplay:YES];
 }
 

@@ -51,6 +51,9 @@
 #include "utilsGraphics.h"
 #include "g2Menu.h"
 #include "splitView.h"
+#include "fileBrowser.h"
+#include "mouseTopbar.h"
+#include "topbarResourcesAccess.h"
 
 #include "g2Input.h"
 
@@ -112,7 +115,25 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
         }
     }
 
+    // THE BROWSER IS MODAL. While it is open nothing behind it may act on a click — the application
+    // makes the same check before anything else in its own press handler.
+    if (file_browser_active() == true) {
+        if (phase == eClickPress) {
+            handle_file_browser_mouse_down(gMouse);
+            (void)handle_file_browser_click(gMouse);
+        }
+        return true;
+    }
+
     if (phase == eClickPress) {
+        // ANY click ends an in-progress name edit, as it does in the application — which calls these
+        // before it interprets the click as anything else. Clicking the patch name again simply
+        // ends the edit and the topbar starts a new one.
+        stop_patch_name_editing();
+        stop_module_name_editing();
+        stop_param_name_editing();
+        stop_perf_name_editing();
+
         // MENUS FIRST, exactly as mouseHandle.c orders it. An open popup must swallow the click that
         // dismisses it, and the menu bar must win over whatever the canvas has drawn underneath.
         if (handle_context_menu_click(gMouse) == true) {
@@ -120,6 +141,16 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
         }
 
             if (handle_menu_bar_click(gPluginMenuBar, g2_menu_bar_rect(get_render_width() / gGlobalGuiScale), gMouse) == true) {
+            return true;
+        }
+
+        // THE TOPBAR. Its controls are NOT click regions — mouseTopbar.c hit-tests them against the
+        // rectangles topbarResourcesAccess.c holds — so nothing reaches them unless they are asked
+        // directly. That is why the morph dials worked (they DO register click regions, in
+        // moduleGraphics.c) while every button and dial beside them did nothing.
+        //
+        // Straight after the menu bar and before the scrollbars, which is the application's order.
+        if (handle_topbar_left_down(gMouse, gSlot) == true) {
             return true;
         }
 
@@ -159,6 +190,18 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
     // gModuleDrag stayed active into the next gesture.
     //
     // Both must run: the captured handler needs its release, and the drag needs finishing.
+    // EVERY TOPBAR BUTTON RELEASES, whether or not the release landed on one — the application does
+    // exactly this at the top of its own mouse-up. Without it isPressed stayed set, so buttons kept
+    // their pressed grey after the mouse came up, and that grey also masked the green a slot or a
+    // Hide/Dim toggle had just been given by set_exclusive_button_highlight().
+    for (int i = 0; i < (int)topbarControlMax; i++) {
+        gTopbarControls[i].isPressed = false;
+    }
+
+    if (handle_topbar_left_up(gMouse, gSlot) == true) {
+        handled = true;
+    }
+
     (void)handle_split_bar_mouse(gMouse, mouseButtonLeftUp);
     pane_scrollbar_release();
 
@@ -199,6 +242,14 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
 // movement is enough here, since the plug-in redraws on demand rather than continuously.
 void g2_input_hover(double x, double y) {
     g2_input_set_mouse(x, y);
+
+    if (handle_file_browser_mouse_move(gMouse) == true) {
+        return;
+    }
+
+    // Which connector the pointer is over. The canvas dims every cable not touching it, so without
+    // this the plug-in never dimmed anything.
+    canvas_hover_update(gMouse);
     update_context_menu_hover();
     update_menu_bar_hover(gPluginMenuBar, g2_menu_bar_rect(get_render_width() / gGlobalGuiScale));
 }
@@ -212,7 +263,16 @@ bool g2_input_right_click(double x, double y) {
     if (handle_context_menu_click(gMouse) == true) {
         return true;
     }
-    return canvas_right_click(gMouse, gSlot, gLocation);
+    if (handle_topbar_right_up(gMouse) == true) {
+        return true;
+    }
+    if (canvas_right_click(gMouse, gSlot, gLocation) == true) {
+        return true;
+    }
+
+    // Nothing on a module was hit, so this is bare canvas — the create-module menu, exactly as the
+    // application falls through to it.
+    return handle_module_area_click(gMouse);
 }
 
 // Wheel or trackpad. Scrolls whichever pane the pointer is over rather than the focused one, which
@@ -239,12 +299,26 @@ void g2_input_scroll(double x, double y, double deltaX, double deltaY) {
 //
 // Returns true if anything moved, so the caller only redraws when there is a reason to.
 bool g2_input_drag_tick(void) {
-    if ((gModuleDrag.active == false) && (gCableDrag.active == false)) {
-        return false;
+    bool busy = false;
+
+    // A DRAG needs ticking so auto-scroll keeps running with the pointer held still past a pane
+    // edge; see adjust_scroll_for_drag().
+    if ((gModuleDrag.active == true) || (gCableDrag.active == true)) {
+        (void)canvas_drag_motion(gMouse);
+        adjust_scroll_for_drag();
+        busy = true;
     }
-    (void)canvas_drag_motion(gMouse);
-    adjust_scroll_for_drag();
-    return true;
+
+    // AN OPEN MENU needs ticking for the same kind of reason: a submenu opens on a DWELL timer, and
+    // that timer only advances when something asks it to. Driving it from pointer movement alone
+    // meant a flyout would not appear unless the mouse was kept jiggling on the parent item. The
+    // application polls this every frame.
+    if (gContextMenu.active == true) {
+        update_context_menu_hover();
+        update_menu_bar_hover(gPluginMenuBar, g2_menu_bar_rect(get_render_width() / gGlobalGuiScale));
+        busy = true;
+    }
+    return busy;
 }
 
 // Called by the canvas when a dial drag begins (moduleGraphics.c). In the application this ALSO
