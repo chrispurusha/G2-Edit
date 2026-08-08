@@ -112,7 +112,9 @@ double osc_shape_percent(double paramValue) {
 // 13.75 Hz is A-1, so like the oscillators' Tune the filter's Freq dial is really a pitch — its
 // value counts semitones up from there, reaching about 21 kHz at 127 (manual: "13.76 Hz to 21.1 kHz").
 double flt_cutoff_hz(double paramValue) {
-    return 13.75 * pow(2.0, paramValue / 12.0);
+    // exp2 rather than pow(2, x): the same value, but this is called once per filter per voice
+    // per oversampled sample, where a general pow() is several times the cost of the base-2 form.
+    return 13.75 * exp2(paramValue / 12.0);
 }
 
 // An envelope segment's length in seconds — the 0.5 ms to 45 s scale the manual quotes for the Decay
@@ -211,11 +213,11 @@ double lfo_rate_hz(uint32_t rangeMode, double paramValue) {
         }
         case 1:   // Rate Lo: 0.0159 Hz (62.9 s/cycle) to 24.4 Hz
         {
-            return 0.0159 * pow(2.0, paramValue * LFO_SEMITONE_RATIO);
+            return 0.0159 * exp2(paramValue * LFO_SEMITONE_RATIO);
         }
         case 2:   // Rate Hi: 0.2555 Hz to 392 Hz
         {
-            return 0.2555 * pow(2.0, paramValue * LFO_SEMITONE_RATIO);
+            return 0.2555 * exp2(paramValue * LFO_SEMITONE_RATIO);
         }
         case 3:   // BPM: three straight runs, 24..214, always a whole number of beats
         {
