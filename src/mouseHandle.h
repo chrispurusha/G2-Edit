@@ -30,6 +30,9 @@
 
 
 #include "sysIncludes.h"
+// convert_mouse_coord_to_module_area_coord() moved out to canvasCoords.c — it is arithmetic, not
+// window handling. Included here so the callers that already include this header still see it.
+#include "canvasCoords.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,7 +59,6 @@ void stop_dragging(void);
 // drag by filling in gParamDragging must end it through here, not through stop_dragging(), or
 // the drag won't be undoable.
 void finish_param_drag(void);
-void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord);
 
 // True while any drag that hides the cursor (CURSOR_DISABLED) is active —
 // param/tempo/perf-tempo/vibrato-rate/vibrato-amount/glide-time dragging.

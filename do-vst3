@@ -37,12 +37,14 @@ SOURCES=(
     "$HERE/vst3/g2HostIo.c"
     "$HERE/vst3/g2GlDraw.c"
     "$HERE/vst3/g2AppStubs.c"
+    "$HERE/vst3/g2Input.c"
     # The canvas renderer itself, unchanged from the application. moduleGraphics.c and
     # renderParams.c also contain the canvas CLICK HANDLERS, which is why g2AppStubs.c exists —
     # those handlers never run here but their references still have to resolve.
     "$HERE/src/moduleGraphics.c"
     "$HERE/src/renderParams.c"
     "$HERE/src/selection.c"
+    "$HERE/src/canvasCoords.c"
     "$HERE/src/splitView.c"
     "$HERE/SynthLib/src/clickRegion.c"
     "$HERE/SynthLib/src/utils.c"

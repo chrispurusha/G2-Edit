@@ -33,13 +33,30 @@
 // drags GLFW along through synthlibScale.c, and that untangling is only worth doing once the surface
 // itself is known to work.
 
+// extern "C" because one caller is g2Editor.mm, which is Objective-C++ — the implementation is plain
+// Objective-C, so without this the C++ side asks the linker for a mangled name that the C side never
+// emitted.
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// Mark the surface as needing to be redrawn. Safe from ANY thread: the view must be touched on the
+// main thread, and this hops there itself rather than making every caller remember to.
+//
+// Declared outside the Objective-C section deliberately. This is what plain C reaches for — it is
+// how synthlib_request_redraw() is answered in the plug-in (g2AppStubs.c), which is the whole
+// mechanism by which a change anywhere in the editor causes a repaint. The application posts an
+// empty event to wake a blocked GLFW loop; here, AppKit schedules the frame.
+void g2_gl_view_request_redraw(void);
+
+#ifdef __cplusplus
+}
+#endif
+
 #ifdef __OBJC__
 
 #import <Cocoa/Cocoa.h>
 
-// extern "C" because the only caller is g2Editor.mm, which is Objective-C++ — the implementation is
-// plain Objective-C, so without this the C++ side asks the linker for a mangled name that the C
-// side never emitted.
 #ifdef __cplusplus
 extern "C" {
 #endif

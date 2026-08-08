@@ -37,9 +37,17 @@
 
 #include "g2GlDraw.h"
 #include "g2GlView.h"
+#include "g2Input.h"
 
 @interface G2GlView : NSOpenGLView
 @end
+
+// The view currently attached, for g2_gl_view_request_redraw() to find. A host can open more than
+// one instance of the plug-in, so this is "the most recently attached" rather than "the" view —
+// enough while the editor is a single window per instance, and the thing to revisit when a redraw
+// needs to reach a specific instance. Weak so a closed editor leaves nil here rather than a dangling
+// pointer.
+static __weak G2GlView * gCurrentView = nil;
 
 @implementation G2GlView
 
@@ -99,6 +107,55 @@
     [[self openGLContext] update];
 }
 
+// ── Mouse ───────────────────────────────────────────────────────────────────────────────────────
+//
+// Cocoa's origin is bottom-left and the canvas's is top-left, so y is flipped here — at the
+// boundary, in the only file that knows Cocoa's convention. Everything past this point is in the
+// canvas's own coordinates and the application's existing hit-testing takes over (g2Input.c).
+//
+// Nothing is done about which BUTTON was pressed: the canvas's click regions do not distinguish
+// them, and the right-button context menus are not available in the plug-in yet.
+
+- (BOOL)acceptsFirstMouse:(NSEvent *)event {
+    (void)event;
+    return YES;    // act on the click that focuses the window too, rather than swallowing it
+}
+
+- (NSPoint)canvasPointFor:(NSEvent *)event {
+    NSPoint p = [self convertPoint:[event locationInWindow] fromView:nil];
+
+    return NSMakePoint(p.x, [self bounds].size.height - p.y);
+}
+
+- (void)mouseDown:(NSEvent *)event {
+    NSPoint c = [self canvasPointFor:event];
+
+    g2_input_mouse_event(c.x, c.y, eClickPress);
+    [self setNeedsDisplay:YES];
+}
+
+- (void)mouseDragged:(NSEvent *)event {
+    NSPoint c = [self canvasPointFor:event];
+
+    g2_input_mouse_event(c.x, c.y, eClickDrag);
+    [self setNeedsDisplay:YES];
+}
+
+- (void)mouseUp:(NSEvent *)event {
+    NSPoint c = [self canvasPointFor:event];
+
+    g2_input_mouse_event(c.x, c.y, eClickRelease);
+    [self setNeedsDisplay:YES];
+}
+
+- (void)mouseMoved:(NSEvent *)event {
+    NSPoint c = [self canvasPointFor:event];
+
+    // Position only, no dispatch: hover highlighting reads the mouse position, and a dispatch here
+    // would deliver a click nobody made.
+    g2_input_set_mouse(c.x, c.y);
+}
+
 - (void)drawRect:(NSRect)dirtyRect {
     (void)dirtyRect;
 
@@ -127,6 +184,19 @@
 
 @end
 
+// Called from plain C — and, in the application's design, potentially from the USB thread, which is
+// why the main-thread hop is here rather than being every caller's problem. dispatch_async and not
+// _sync: a synchronous hop from a thread the main thread is waiting on is a deadlock, and redrawing
+// a frame later is never worth that risk.
+void g2_gl_view_request_redraw(void) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [gCurrentView setNeedsDisplay:YES];    // nil-safe; a closed editor simply does nothing
+    });
+}
+
 NSView * g2_create_gl_view(NSRect frame) {
-    return [[G2GlView alloc] initWithFrame:frame];
+    G2GlView * view = [[G2GlView alloc] initWithFrame:frame];
+
+    gCurrentView = view;
+    return view;
 }
