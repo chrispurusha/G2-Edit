@@ -515,6 +515,63 @@ resolved in four groups:
   cursor). `gMutator` and `param_overlay_note_param()` STOPPED being stubs — `mutatorUI.c` and
   `paramOverlay.c` are linked now, so the Mutator panel and parameter overlay are real.
 
+**The custom file browser, and a bug it exposed**, 2026-08-08.
+
+`File > Open Patch File...` did nothing at first, and the reason is worth knowing:
+`file_menu_open_patch()` DOES NOT OPEN A BROWSER. It posts `eRspShowOpenRead` to `gToGuiThread` so
+the browser opens from the render loop rather than from inside a menu callback (menuActions.c says
+so). The plug-in's `msg_send()` was a no-op stub, so the message vanished.
+
+`msg_send()` now DISCRIMINATES: `gToUsbThread` is still discarded — there is no synth, and a plug-in
+must never write to one — while `gToGuiThread` is queued for the editor to drain in its draw, for
+exactly the reason the application drains it there. One slot is enough; these are user actions.
+
+That done, `open_file_browser_read()` is SynthLib's own browser, already linked, so the plug-in gets
+the editor's file browser rather than an `NSOpenPanel`. `vst3/g2FileDialog.m` has been deleted. The
+browser is modal: `file_browser_active()` is checked before anything else in the press path, as the
+application checks it.
+
+**A REAL BUG FOUND BY TESTING ZOOM, unrelated to zoom.** `g2_gl_draw_init()` runs when the editor
+view is first created — AFTER the processor has loaded its patch. It called `init_patch(0)`
+unconditionally, so OPENING THE EDITOR WIPED THE LOADED PATCH. Now guarded with
+`slot_has_modules(0) == false`: defaults are for an empty plug-in, not for one that already has
+something.
+
+**Zoom already works** via View > Zoom In/Out/Reset — `set_zoom_factor()` is in `utilsGraphics.c` and
+was linked all along. What is missing is the other two ways the application offers it: Cmd +/- (the
+plug-in has no key handling) and Ctrl-scroll zoom-at-cursor (`scroll_event()` in mouseHandle.c),
+plus persistence, since `save_zoom_factor()` is still a stub here.
+
+**Topbar input**, 2026-08-08. The bar drew correctly but nothing on it responded, and the exception
+was the giveaway: the MORPH DIALS worked while every button and dial beside them did not.
+
+Morph dials register CLICK REGIONS (moduleGraphics.c), so `dispatch_click_region()` found them for
+free. The rest of the topbar does not: `mouseTopbar.c` hit-tests those controls itself against the
+rectangles `topbarResourcesAccess.c` holds, and nothing reaches them unless they are asked directly.
+The file was linked but never called.
+
+`handle_topbar_left_down/left_up/right_up()` are now called from the plug-in's press, release and
+right-click paths, in the application's own order — straight after the menu bar and before the
+scrollbars. Verified: Hide hides the cables, and Variation 3 switches to genuinely different
+parameter values.
+
+WORTH GENERALISING: "is it a click region, or does its own file hit-test it?" is the question to ask
+of any chrome that draws but does not respond. Click regions come for free; everything else needs its
+handler called explicitly.
+
+**Submenu dwell**, 2026-08-08. A flyout opens on a HOVER TIMER, and that timer only advances when
+`update_context_menu_hover()` is called. The plug-in was calling it on pointer MOVEMENT only, so a
+submenu would not appear unless the mouse was kept jiggling on its parent item. The application polls
+it every frame.
+
+The drag tick timer now covers menus too: it runs while a drag OR an open menu needs advancing, and
+stops itself when neither does. It is no longer stopped on mouse-up — a menu opened by that very
+click stays open and still needs ticking.
+
+THE SAME SHAPE AS THE AUTO-SCROLL FIX, and worth stating as a rule: anything the application drives
+from its per-frame loop needs a tick here, because a plug-in has no loop. So far that is auto-scroll
+and menu dwell; the next one that behaves oddly "only while the mouse is still" will be a third.
+
 Remaining, in order:
 2. Scroll and zoom, then the FX pane — needed before a patch bigger than the window is usable.
 3. Right-click context menus: `open_toggle_menu()`/`open_mode_toggle_menu()` are stubs, and those

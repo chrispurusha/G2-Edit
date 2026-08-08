@@ -728,3 +728,56 @@ void adjust_scroll_for_drag(void) {
     }
 }
 
+// Right-click on EMPTY canvas: the create-module menu. Moved from mouseHandle.c so the plug-in
+// gets it too — canvas_right_click() above handles everything that is on a module, and this is what
+// the application calls next when none of it matched.
+bool handle_module_area_click(tCoord coord) {
+    if (within_rectangle(coord, module_area())) {
+        open_module_area_context_menu(coord);
+        return true;
+    }
+    return false;
+}
+
+// Which connector the pointer is over, if any. Lifted from cursor_pos()'s final branch.
+//
+// The canvas dims every cable NOT touching the hovered connector, so without this the plug-in drew
+// the hover state it was never given — every cable stayed lit.
+//
+// Clears gHoverConnector first, so "over nothing" is as much an answer as "over this one".
+void canvas_hover_update(tCoord coord) {
+    gHoverConnector.active = false;
+
+    if (  (coord.x < 0.0)
+       || (coord.y < (TOP_BAR_HEIGHT + MENU_BAR_HEIGHT))
+       || (coord.x >= ((get_render_width() / gGlobalGuiScale) - MODULE_SCROLLBAR_WIDTH))
+       || (coord.y >= ((get_render_height() / gGlobalGuiScale) - MODULE_SCROLLBAR_WIDTH))) {
+        return;
+    }
+    uint32_t hoverSlot = gSlot;
+    uint32_t hoverLoc  = gLocation;
+
+    for (uint32_t idx = 0; idx < MAX_NUM_MODULES; idx++) {
+        tModule * hoverModule = get_module_slot(hoverSlot, hoverLoc, idx);
+
+        if (!hoverModule->active) {
+            continue;
+        }
+
+        for (int i = 0; i < (int)module_connector_count(hoverModule->type); i++) {
+            if (within_rectangle(coord, hoverModule->connector[i].rectangle)) {
+                gHoverConnector.active      = true;
+                gHoverConnector.slot        = hoverSlot;
+                gHoverConnector.location    = hoverLoc;
+                gHoverConnector.moduleIndex = hoverModule->key.index;
+                gHoverConnector.ioCount     = (uint32_t)find_io_count_from_index(hoverModule, hoverModule->connector[i].dir, i);
+                gHoverConnector.dir         = hoverModule->connector[i].dir;
+                break;
+            }
+        }
+
+        if (gHoverConnector.active) {
+            break;
+        }
+    }
+}

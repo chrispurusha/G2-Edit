@@ -46,7 +46,6 @@
 
 #include "appMenuBar.h"
 #include "g2Patch.h"
-#include "g2FileDialog.h"
 #include "g2GlView.h"
 #include "g2Menu.h"
 

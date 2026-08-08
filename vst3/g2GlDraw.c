@@ -54,13 +54,20 @@
 #include "contextMenu.h"
 #include "menuBar.h"
 #include "g2Menu.h"
+#include "prefs.h"
+#include "g2Prefs.h"
 #include "topbarRender.h"
+#include "dataBase.h"   // set_patch_name_from_filename(), init_patch()
 #include "topbarResourcesAccess.h"
 #include "mouseTopbar.h"
 
 #include "dataBase.h"
 #include "moduleResourcesAccess.h"
 #include "splitView.h"
+#include "fileBrowser.h"
+#include "msgQueue.h"
+#include "g2AppStubs.h"
+#include "g2Patch.h"
 #include "g2GlDraw.h"
 
 // The application's canvas grey (graphics.c render_frame()), so the strip reads as a piece of the
@@ -74,6 +81,25 @@
 #define FONT_PRELOAD_SIZE    (72.0)
 
 static bool gFontReady = false;
+
+// What the file browser hands back. The application's equivalent goes through its own loader, which
+// carries an online branch and pulls in GLFW; the plug-in already has its own in g2Patch.c.
+static void g2_on_file_chosen(const char * path) {
+    if ((path == NULL) || (g2_plugin_load_patch(path, 0) == false)) {
+        return;
+    }
+    sound_engine_update_from_patch();
+
+    // The topbar reads the patch name out of gGlobalSettings, not from us — so set it the way the
+    // application does when it opens a file, rather than only remembering it for ourselves.
+    set_patch_name_from_filename(0, path);
+
+    {
+        const char * leaf = strrchr(path, '/');
+
+        g2_menu_set_loaded_patch_name((leaf != NULL) ? (leaf + 1) : path);
+    }
+}
 
 void g2_gl_draw_init(void) {
     glEnable(GL_BLEND);
@@ -113,7 +139,12 @@ void g2_gl_draw_init(void) {
     // Tells appMenuBar.c there can never be a G2 attached, so its bank entries are omitted.
     g2_menu_init();
 
-    init_patch(0);
+    // ONLY IF NOTHING IS LOADED. This runs when the editor view is first created, which is AFTER the
+    // processor has loaded its patch — so calling it unconditionally WIPED that patch the moment the
+    // window was opened. Defaults are for an empty plug-in, not for one that already has something.
+    if (slot_has_modules(0) == false) {
+        init_patch(0);
+    }
 
     // Two panes: the Voice Area and the FX Area, with a draggable bar between them — the same
     // arrangement the application starts in.
@@ -184,6 +215,21 @@ void g2_gl_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
     // Safe against process() rebuilding on the audio thread at the same moment: the snapshot's
     // writers were given a mutex (gParamsWriteMutex in soundEngine.c) when the mod wheel latency was
     // fixed, and the critical section is one struct copy.
+    // Deferred menu actions, drained here for the same reason the application drains them in its
+    // render loop: a browser must not be opened from inside a menu callback. See msg_send() in
+    // g2AppStubs.c for how the message gets this far.
+    {
+        tMessageContent msg = {0};
+
+        if (g2_take_gui_message(&msg) == true) {
+            if (msg.cmd == eRspShowOpenRead) {
+                // Where it opens and what it remembers are set up once at start-up by
+                // load_saved_settings() (persistence.c), exactly as in the application.
+                open_file_browser_read(g2_on_file_chosen);
+            }
+        }
+    }
+
     sound_engine_update_from_patch();
 
     // The click regions must be cleared each frame because the renderer registers one for every
@@ -250,6 +296,9 @@ void g2_gl_draw_frame(int pixelWidth, int pixelHeight, double backingScale) {
     render_menu_bar(gPluginMenuBar, g2_menu_bar_rect(pointWidth));
 
     // LAST, so an open menu is drawn over everything it overlaps.
+    // Above the canvas and the chrome, below nothing.
+    render_file_browser();
+
     render_context_menu();
 
     if (gFontReady == false) {

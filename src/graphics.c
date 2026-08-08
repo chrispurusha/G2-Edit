@@ -405,31 +405,6 @@ void init_graphics(void) {
     }
 }
 
-void set_patch_name_from_filename(uint32_t slot, const char * filepath) {
-    const char * base                            = filepath;
-    const char * p                               = filepath;
-    char         patchName[CLAVIA_NAME_SIZE + 1] = {0};
-    int          i                               = 0;
-
-    // Find last path separator
-    while (*p != '\0') {
-        if (*p == '/' || *p == '\\') {
-            base = p + 1;
-        }
-        p++;
-    }
-    // Copy up to PATCH_NAME_SIZE chars, stop at '.' (extension)
-    memset(patchName, 0, sizeof(patchName));
-
-    while (i < CLAVIA_NAME_SIZE && base[i] != '\0' && base[i] != '.') {
-        patchName[i] = base[i];
-        i++;
-    }
-    COPY_STRING(gGlobalSettings.slot[slot].patchName, patchName);
-
-    LOG_DEBUG("Patch name from file: '%s'\n", patchName);
-}
-
 void read_file_into_memory_and_process(const char * filepath) {
     int64_t   byteOffset = 0;
     int64_t   fileSize   = 0;

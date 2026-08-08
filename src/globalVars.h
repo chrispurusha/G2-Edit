@@ -182,4 +182,12 @@ extern double                  gDragStartY;
 extern double                  gDragPrevX;
 extern double                  gDragPrevY;
 
+// Cancel an in-progress name edit — see globalVars.c.
+void stop_patch_name_editing(void);
+void stop_module_name_editing(void);
+void stop_param_name_editing(void);
+void stop_perf_name_editing(void);
+void stop_synth_name_editing(void);
+void stop_patch_notes_editing(void);
+
 #endif // __GLOBAL_VARS_H__

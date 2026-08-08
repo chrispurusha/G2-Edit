@@ -173,3 +173,30 @@ double gDragStartX = 0.0;
 double gDragStartY = 0.0;
 double gDragPrevX  = 0.0;
 double gDragPrevY  = 0.0;
+
+// Cancelling an in-progress name edit. One memset each, on state defined in this file — they were
+// in mouseHandle.c, which meant a GUI-less build could not dismiss an edit it could start.
+void stop_patch_name_editing(void) {
+    memset(&gPatchNameEdit, 0, sizeof(gPatchNameEdit));
+}
+
+void stop_module_name_editing(void) {
+    memset(&gModuleNameEdit, 0, sizeof(gModuleNameEdit));
+}
+
+void stop_param_name_editing(void) {
+    memset(&gParamNameEdit, 0, sizeof(gParamNameEdit));
+}
+
+void stop_perf_name_editing(void) {
+    memset(&gPerfNameEdit, 0, sizeof(gPerfNameEdit));
+}
+
+void stop_synth_name_editing(void) {
+    memset(&gSynthNameEdit, 0, sizeof(gSynthNameEdit));
+}
+
+void stop_patch_notes_editing(void) {
+    memset(&gPatchNotesEdit, 0, sizeof(gPatchNotesEdit));
+}
+

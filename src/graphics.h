@@ -39,7 +39,6 @@ void toggle_mouse_crosshair(void); // TEMPORARY debug aid — F9, Debug builds o
 // Patch DB <-> file helpers. Serialising/naming a slot touches the shared patch database, so when
 // online these run on the USB thread (via eMsgCmdSavePatchFile / eMsgCmdSavePerfFile / eMsgCmdLoadFile)
 // to stay atomic against the USB thread's own DB writes — see their handlers in usbComms.c.
-void set_patch_name_from_filename(uint32_t slot, const char * filepath);
 int write_database_to_file(const char * filepath, uint32_t slot);  // EXIT_SUCCESS / EXIT_FAILURE
 
 // Asks the user whose copy wins after edits were made while the G2 was disconnected. Called from

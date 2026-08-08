@@ -46,6 +46,7 @@ void init_database(void);
 
 // Clear a slot completely: its modules, its cables, and the per-slot globals that go with them.
 // Resets a slot to a brand-new empty patch, including the pane divider position.
+void set_patch_name_from_filename(uint32_t slot, const char * filepath);
 void init_patch(uint32_t slot);
 void clear_slot_data(uint32_t slot);
 

@@ -74,6 +74,12 @@ void adjust_scroll_for_drag(void);
 // pointer, in that order of priority. Returns true if one was opened.
 bool canvas_right_click(tCoord coord, uint32_t slot, uint32_t location);
 
+// Right-click on empty canvas: opens the create-module menu. Call after canvas_right_click().
+bool handle_module_area_click(tCoord coord);
+
+// Updates gHoverConnector from a pointer position. Call on every move with no button down.
+void canvas_hover_update(tCoord coord);
+
 // Cable dragging. The PRESS is a click-region handler in moduleGraphics.c; motion is carried by
 // canvas_drag_motion() above. This completes the drag: if the pointer is over a connector, the cable
 // is created. Returns true if one was.

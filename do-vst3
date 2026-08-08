@@ -40,6 +40,7 @@ SOURCES=(
     "$HERE/vst3/g2Input.c"
     "$HERE/vst3/g2Menu.c"
     "$HERE/vst3/g2Prefs.c"
+    "$HERE/src/persistence.c"
     # The canvas renderer itself, unchanged from the application. moduleGraphics.c and
     # renderParams.c also contain the canvas CLICK HANDLERS, which is why g2AppStubs.c exists —
     # those handlers never run here but their references still have to resolve.
@@ -86,7 +87,6 @@ SOURCES=(
 # it — a VST3 interface is a C++ vtable, and that is the only reason any of this folder is C++.
 OBJC_SOURCES=(
     "$HERE/vst3/g2GlView.m"
-    "$HERE/vst3/g2FileDialog.m"
 )
 
 # Objective-C++ for the editor window: it builds an AppKit view, and the host owns the NSView it is

@@ -552,14 +552,6 @@ bool handle_module_release(tCoord coord, tMouseButton mouseButton) {
     return false;
 }
 
-bool handle_module_area_click(tCoord coord) {
-    if (within_rectangle(coord, module_area())) {
-        open_module_area_context_menu(coord);
-        return true;
-    }
-    return false;
-}
-
 void set_x_scroll_bar(double x) {
     gScrollState.xBar = clamp_scroll_bar(x, get_render_width());
     set_x_scroll_percent(get_scroll_bar_percent(gScrollState.xBar, get_render_width() / gGlobalGuiScale));
@@ -618,30 +610,6 @@ void stop_dragging(void) {
     if (wasCursorDragging) {
         glfwSetInputMode(synthlib_window(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     }
-}
-
-void stop_patch_name_editing(void) {
-    memset(&gPatchNameEdit, 0, sizeof(gPatchNameEdit));
-}
-
-void stop_module_name_editing(void) {
-    memset(&gModuleNameEdit, 0, sizeof(gModuleNameEdit));
-}
-
-void stop_param_name_editing(void) {
-    memset(&gParamNameEdit, 0, sizeof(gParamNameEdit));
-}
-
-void stop_patch_notes_editing(void) {
-    memset(&gPatchNotesEdit, 0, sizeof(gPatchNotesEdit));
-}
-
-void stop_synth_name_editing(void) {
-    memset(&gSynthNameEdit, 0, sizeof(gSynthNameEdit));
-}
-
-void stop_perf_name_editing(void) {
-    memset(&gPerfNameEdit, 0, sizeof(gPerfNameEdit));
 }
 
 tMouseButton convert_to_mouse_button(int button, int action) {
@@ -1220,36 +1188,9 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         (void)canvas_drag_motion(coord);   // shared with the plug-in — see canvasDrag.h
     } else if (gContextMenu.active == true) {
         // Dummy
-    } else if (  (coord.x >= 0.0)
-              && (coord.y >= TOP_BAR_HEIGHT + MENU_BAR_HEIGHT)
-              && (coord.x < (get_render_width() / gGlobalGuiScale) - MODULE_SCROLLBAR_WIDTH)
-              && (coord.y < (get_render_height() / gGlobalGuiScale) - MODULE_SCROLLBAR_WIDTH)) {
-        uint32_t hoverSlot = gSlot;
-        uint32_t hoverLoc  = gLocation;
-
-        for (uint32_t idx = 0; idx < MAX_NUM_MODULES; idx++) {
-            tModule * hoverModule = get_module_slot(hoverSlot, hoverLoc, idx);
-
-            if (!hoverModule->active) {
-                continue;
-            }
-
-            for (int i = 0; i < (int)module_connector_count(hoverModule->type); i++) {
-                if (within_rectangle(coord, hoverModule->connector[i].rectangle)) {
-                    gHoverConnector.active      = true;
-                    gHoverConnector.slot        = hoverSlot;
-                    gHoverConnector.location    = hoverLoc;
-                    gHoverConnector.moduleIndex = hoverModule->key.index;
-                    gHoverConnector.ioCount     = (uint32_t)find_io_count_from_index(hoverModule, hoverModule->connector[i].dir, i);
-                    gHoverConnector.dir         = hoverModule->connector[i].dir;
-                    break;
-                }
-            }
-
-            if (gHoverConnector.active) {
-                break;
-            }
-        }
+    } else {
+        // Bounds-checks the coordinate itself now — see canvasDrag.c.
+        canvas_hover_update(coord);
     }
     // Limit re-draw/render if nothing's happened
     // if (noAction == false) {   // Used to have this check, TODO - see if there's a way to not redraw on every move
