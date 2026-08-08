@@ -40,6 +40,7 @@
 #include "g2Input.h"
 
 @interface G2GlView : NSOpenGLView
+@property (strong) NSTimer * dragTimer;
 @end
 
 // The view currently attached, for g2_gl_view_request_redraw() to find. A host can open more than
@@ -111,6 +112,11 @@ static __weak G2GlView * gCurrentView = nil;
 // the highlight is drawn from the pointer position (render_context_menu reads it), and the position
 // was only ever updated on a click. AppKit delivers mouse-moved events to a view solely on the
 // strength of a tracking area covering it, and the area has to be rebuilt whenever the view resizes.
+- (void)removeFromSuperview {
+    [self stopDragTimer];    // the timer retains self through its block; leaving it running leaks the view
+    [super removeFromSuperview];
+}
+
 - (void)updateTrackingAreas {
     [super updateTrackingAreas];
 
@@ -156,10 +162,31 @@ static __weak G2GlView * gCurrentView = nil;
     return NSMakePoint(p.x * scale, (bounds.size.height - p.y) * scale);
 }
 
+// Started on press and stopped on release rather than left running: 60 Hz of doing nothing is a poor
+// thing to leave ticking inside somebody else's host.
+- (void)startDragTimer {
+    [self stopDragTimer];
+    self.dragTimer = [NSTimer scheduledTimerWithTimeInterval:1.0 / 60.0
+                                                     repeats:YES
+                                                       block:^(NSTimer * t) {
+        (void)t;
+
+        if (g2_input_drag_tick() == true) {
+            [self setNeedsDisplay:YES];
+        }
+    }];
+}
+
+- (void)stopDragTimer {
+    [self.dragTimer invalidate];
+    self.dragTimer = nil;
+}
+
 - (void)mouseDown:(NSEvent *)event {
     NSPoint c = [self canvasPointFor:event];
 
     g2_input_mouse_event(c.x, c.y, eClickPress);
+    [self startDragTimer];
     [self setNeedsDisplay:YES];
 }
 
@@ -173,6 +200,7 @@ static __weak G2GlView * gCurrentView = nil;
 - (void)mouseUp:(NSEvent *)event {
     NSPoint c = [self canvasPointFor:event];
 
+    [self stopDragTimer];
     g2_input_mouse_event(c.x, c.y, eClickRelease);
     [self setNeedsDisplay:YES];
 }
@@ -187,6 +215,19 @@ static __weak G2GlView * gCurrentView = nil;
 }
 
 // The application opens its context menus on right button UP, not down, so the same here.
+// Trackpad and wheel both arrive here. Deltas are in points and the canvas scrolls in pixels, so
+// they are handed over as-is and g2Input.c applies the scale — the same division every other
+// coordinate goes through.
+- (void)scrollWheel:(NSEvent *)event {
+    NSPoint c      = [self canvasPointFor:event];
+    NSRect  bounds = [self bounds];
+    NSRect  backing = [self convertRectToBacking:bounds];
+    double  scale  = (bounds.size.width > 0.0) ? (backing.size.width / bounds.size.width) : 1.0;
+
+    g2_input_scroll(c.x, c.y, [event scrollingDeltaX] * scale, [event scrollingDeltaY] * scale);
+    [self setNeedsDisplay:YES];
+}
+
 - (void)rightMouseDown:(NSEvent *)event {
     (void)event;    // the application has no use for right-down either; the menu opens on release
 }
