@@ -396,6 +396,39 @@ is tighter (uniform fit, letterboxing a wide-short window), or scale to the boun
 modules that actually exist (zoom-to-fit, so any patch fills the window). Both would diverge from the
 application, which is why neither was chosen.
 
+**VA/FX panes, the split bar and scrollbars**, 2026-08-08 — all three at once, because they are all
+in `splitView.c`, which the plug-in was ALREADY linking. This was wiring, not porting.
+
+The draw now mirrors `render_frame()`'s pane loop exactly: `split_view_apply()`, then per pane
+`set_module_pane()` / set `gLocation` / `module_pane_clip_begin()` / `render_modules()` /
+`render_cables()` / `module_pane_clip_end()`, then `render_split_bar()` and
+`render_pane_scrollbars()`. The FX area was entirely invisible before this.
+
+Input goes to the chrome BEFORE the canvas, in both press and drag: a drag that began on a scrollbar
+or the split bar must not be handed to whatever module lies underneath. `split_view_focus_at()` on
+press makes the clicked half the focused one. Scroll wheel scrolls the pane UNDER THE POINTER rather
+than the focused one, via `split_view_pane_at()` — which is what makes a two-pane view feel right.
+
+Verified: both panes and the split bar render; dragging the vertical scrollbar scrolls the pane.
+NOT verified — the scroll WHEEL (cliclick has no scroll command) and the split-bar DRAG.
+
+**Auto-scroll while dragging**, 2026-08-08. `adjust_scroll_for_drag()` moved from `mouseHandle.c`
+into `canvasDrag.c` — it was left behind on the first pass precisely because a plug-in with no
+scrollbars had nothing to scroll, and that is no longer true. Nothing in it was ever platform-bound:
+`get_time_ms()` is SynthLib's and the rest is the pane machinery.
+
+The rate is the application's and needs no tuning: it RAMPS from `DRAG_SCROLL_MIN_RATE` (120 content
+px/sec, just past the edge) to `DRAG_SCROLL_MAX_RATE` (1200) across `DRAG_SCROLL_RAMP_DIST` of
+overshoot, so easing over the boundary creeps and pushing well past it moves quickly.
+
+THE TICK MATTERS AS MUCH AS THE FUNCTION. Auto-scroll only advances when something calls it, so a
+pointer held still just past the edge would stop scrolling. The application synthesises a
+`cursor_pos()` call from its main loop while a drag is active — `graphics.c`, commented "Artificially
+do cursor_pos call for drag scrolling when cursor not moving". The plug-in has no main loop, so the
+view runs a 60 Hz `NSTimer` for the duration of a drag, started on press and invalidated on release
+(and on `removeFromSuperview`, since the block retains the view). Only module and cable drags get it:
+a rubber band selects what is already visible and a dial drag is not going anywhere.
+
 Remaining, in order:
 2. Scroll and zoom, then the FX pane — needed before a patch bigger than the window is usable.
 3. Right-click context menus: `open_toggle_menu()`/`open_mode_toggle_menu()` are stubs, and those

@@ -47,6 +47,13 @@ void g2_input_hover(double x, double y);
 // Right button released: opens the connector/parameter/module/morph menu under the pointer.
 bool g2_input_right_click(double x, double y);
 
+// Wheel/trackpad scroll, in physical pixels. Scrolls the pane under the pointer.
+void g2_input_scroll(double x, double y, double deltaX, double deltaY);
+
+// Advances a module/cable drag with no new mouse event — what keeps auto-scroll running while the
+// pointer is held still past a pane edge. Returns true if anything moved.
+bool g2_input_drag_tick(void);
+
 #ifdef __cplusplus
 }
 #endif

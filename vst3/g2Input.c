@@ -45,6 +45,7 @@
 #include "menuBar.h"
 #include "utilsGraphics.h"
 #include "g2Menu.h"
+#include "splitView.h"
 
 #include "g2Input.h"
 
@@ -74,6 +75,14 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
     // A drag in progress owns the motion outright — the click regions are not consulted, exactly as
     // the application's cursor_pos() does not consult them while something is being dragged.
     if (phase == eClickDrag) {
+        // Scrollbar and split-bar drags come first: both are chrome drawn over the canvas, and a
+        // drag that began on one must not be handed to whatever module lies underneath.
+        if (pane_scrollbar_dragging() == true) {
+            handle_pane_scrollbar_drag(gMouse);
+            return true;
+        }
+        handle_split_bar_cursor_pos(gMouse);
+
         // Dials first: a parameter drag and a module drag can never both be active, but the
         // parameter one is the common case and reads an absolute angle, so it costs nothing to ask.
         //
@@ -84,7 +93,18 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
         if (canvas_param_drag_motion(gMouse, gMouse.x, gMouse.y, false) == true) {
             return true;
         }
-        return canvas_drag_motion(gMouse);
+
+        {
+            bool moved = canvas_drag_motion(gMouse);
+
+            // Dragging a module or a cable past a pane's edge scrolls that pane to follow, at the
+            // ramped rate the application uses. Only for those two: a rubber band selects what is
+            // already visible, and a dial drag is not going anywhere.
+            if ((gModuleDrag.active == true) || (gCableDrag.active == true)) {
+                adjust_scroll_for_drag();
+            }
+            return moved;
+        }
     }
 
     if (phase == eClickPress) {
@@ -97,6 +117,19 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
             if (handle_menu_bar_click(gPluginMenuBar, g2_menu_bar_rect(get_render_width() / gGlobalGuiScale), gMouse) == true) {
             return true;
         }
+
+        // Then the canvas chrome, above the modules for the same reason as during a drag.
+        if (handle_split_bar_mouse(gMouse, mouseButtonLeftDown) == true) {
+            return true;
+        }
+
+        if (handle_pane_scrollbar_click(gMouse) == true) {
+            return true;
+        }
+
+        // Which pane the click landed in becomes the focused one, so a subsequent scroll or
+        // rubber band acts on the half being worked in.
+        (void)split_view_focus_at(gMouse);
 
         if (dispatch_click_region(gMouse, phase) == true) {
             return true;
@@ -121,6 +154,9 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
     // gModuleDrag stayed active into the next gesture.
     //
     // Both must run: the captured handler needs its release, and the drag needs finishing.
+    (void)handle_split_bar_mouse(gMouse, mouseButtonLeftUp);
+    pane_scrollbar_release();
+
     handled = dispatch_click_region(gMouse, phase);
 
     if (canvas_rubber_band_release(gMouse, gSlot, gLocation, false) == true) {
@@ -172,6 +208,38 @@ bool g2_input_right_click(double x, double y) {
         return true;
     }
     return canvas_right_click(gMouse, gSlot, gLocation);
+}
+
+// Wheel or trackpad. Scrolls whichever pane the pointer is over rather than the focused one, which
+// is what makes a two-pane view feel right — you scroll what you are looking at.
+void g2_input_scroll(double x, double y, double deltaX, double deltaY) {
+    int32_t pane = 0;
+
+    g2_input_set_mouse(x, y);
+    pane = split_view_pane_at(gMouse);
+
+    if (pane < 0) {
+        return;
+    }
+    pane_scroll_by((uint32_t)pane, -deltaX, -deltaY);
+}
+
+// A drag tick with no new mouse event behind it.
+//
+// Auto-scroll only advances when something asks it to, so holding the pointer still just past a
+// pane's edge would stop the scrolling dead. The application solves this by synthesising a
+// cursor_pos() call from its main loop while a drag is active (graphics.c: "Artificially do
+// cursor_pos call for drag scrolling when cursor not moving"); this is the same trick, driven by a
+// timer in the view.
+//
+// Returns true if anything moved, so the caller only redraws when there is a reason to.
+bool g2_input_drag_tick(void) {
+    if ((gModuleDrag.active == false) && (gCableDrag.active == false)) {
+        return false;
+    }
+    (void)canvas_drag_motion(gMouse);
+    adjust_scroll_for_drag();
+    return true;
 }
 
 // Called by the canvas when a dial drag begins (moduleGraphics.c). In the application this ALSO

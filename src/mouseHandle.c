@@ -81,61 +81,6 @@ void get_global_gui_scaled_mouse_coord(tCoord * coord) {
     coord->y = (coord->y / (double)winHeight) * (get_render_height() / gGlobalGuiScale);
 }
 
-// Distance in content pixels to scroll this tick, given how far past the pane edge the cursor is.
-// Sign is the caller's; overshoot is always positive here.
-static double drag_scroll_step(double overshoot, double seconds) {
-    double ramp = overshoot / DRAG_SCROLL_RAMP_DIST;
-
-    if (ramp > 1.0) {
-        ramp = 1.0;
-    }
-    return (DRAG_SCROLL_MIN_RATE + ((DRAG_SCROLL_MAX_RATE - DRAG_SCROLL_MIN_RATE) * ramp)) * seconds;
-}
-
-void adjust_scroll_for_drag(void) {
-    // Own timestamp rather than get_time_delta(): that function's static is shared with the USB
-    // thread, which consumes part of the elapsed time out from under us at unpredictable moments.
-    static double lastTimeMs = 0.0;
-    double        nowMs      = get_time_ms();
-    double        timeDelta  = (lastTimeMs == 0.0) ? 0.0 : (nowMs - lastTimeMs);
-    tCoord        coord      = {0};
-    uint32_t      pane       = split_view_focused_pane();
-    tRectangle    area       = module_area_for_pane(pane);
-    double        dx         = 0.0;
-    double        dy         = 0.0;
-
-    lastTimeMs = nowMs;
-
-    if (timeDelta > DRAG_SCROLL_MAX_STEP_MS) {
-        timeDelta = DRAG_SCROLL_MAX_STEP_MS;
-    }
-    // The rates are per second; the delta is in milliseconds.
-    double        seconds    = timeDelta / 1000.0;
-
-    if (seconds <= 0.0) {
-        return;
-    }
-    get_global_gui_scaled_mouse_coord(&coord);
-
-    // Dragging past a pane's edge scrolls THAT pane. Clamped to the pane the drag started in, so a
-    // drag heading for the divider scrolls its own half rather than reaching into the other one.
-    if (coord.x > (area.coord.x + area.size.w)) {
-        dx = drag_scroll_step(coord.x - (area.coord.x + area.size.w), seconds);
-    } else if (coord.x < area.coord.x) {
-        dx = -drag_scroll_step(area.coord.x - coord.x, seconds);
-    }
-
-    if (coord.y > (area.coord.y + area.size.h)) {
-        dy = drag_scroll_step(coord.y - (area.coord.y + area.size.h), seconds);
-    } else if (coord.y < area.coord.y) {
-        dy = -drag_scroll_step(area.coord.y - coord.y, seconds);
-    }
-
-    if ((dx != 0.0) || (dy != 0.0)) {
-        pane_scroll_by(pane, dx, dy);
-    }
-}
-
 void init_patch(uint32_t slot) {  // Todo - think where this should really go
     memset(&gPatchDescr[slot], 0, sizeof(gPatchDescr[0]));
     gPatchDescr[slot].voiceCount      = 1;
