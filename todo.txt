@@ -404,24 +404,54 @@ a module that had never been drawn it would skip every connector and recolour no
 Headless measurement of the engine is now trustworthy, so sections 2 and 8 can be worked on
 against a harness.
 
---- 2. Filter modulation scaling is the wrong SHAPE, not just the wrong number ---
+--- 2. DONE 2026-08-07, but the diagnosis above it was OVERSTATED — read this before trusting it ---
 
-Ours (soundEngine.c, filter_step):
-    cutoff *= pow(2.0, mod * modAmount * FULL_MOD_SEMITONES / 12.0);   // FULL_MOD_SEMITONES = 64
-Multiplicative, in octaves, with NO clamp on (mod * modAmount).
+The claim was that our modulation is the wrong SHAPE: ours multiplied the cutoff by
+pow(2, mod*modAmount*64/12) while the hardware sums into a normalised control domain and clamps.
 
-The hardware (G2Demo.c, CNativeFilterModPart::Compute ~line 359837) instead:
-    scaled = -knob * modSignal
-    sum    = baseCutoff + (scaled >> 23)          Q23 fixed point
-    ctrl   = clamp(sum, -0x800000, 0x7fffff)      i.e. +/-1.0 in a NORMALISED control domain
-    ctrl then feeds two multiply-accumulates that produce the coefficient pair
-i.e. modulation is summed with the base and CLAMPED in a 0..1 control domain, and only then
-converted to a frequency — the conversion living downstream in CNativeFilterCoeffsPart.
+THE SHAPE WAS NEVER WRONG. flt_cutoff_hz() is 13.75 * 2^(value/12) — the Freq dial is a PITCH,
+counting semitones up from A-1 to 21.1 kHz at 127 (manual p.198). Because the dial is itself
+logarithmic in frequency:
 
-Do NOT just retune FULL_MOD_SEMITONES to 127. Fitting a constant to compensate for a missing clamp
-and a different domain is exactly how the old envelope-time power fit and the LFO Rate Sub
-exponential both ended up plausible and wrong. Port the model: normalise base cutoff to 0..1, add
-mod * knob, clamp, convert once using the constants from CNativeFilterCoeffsPart.
+    flt_cutoff_hz(P) * 2^(s/12)  ==  flt_cutoff_hz(P + s)        identically, for any s
+
+so "multiply the frequency by 2^(semitones/12)" and "add semitones to the control value" are the
+same operation written two ways. Chasing a shape difference here would have been chasing nothing.
+The real defect was narrower and entirely real: THERE WAS NO CLAMP, because the frequency domain
+offers no natural place to put one.
+
+DONE: filter_step() now keeps the Freq dial value (tEngineNode.cutoffParam, no longer cutoffHz),
+sums Env modulation and Kbt into it in dial units, clamps to 0..127, and converts once via
+flt_cutoff_hz(). Parameter smoothing moved to the dial domain with it — smoothing a log control
+linearly in hertz crawls at the bottom of the travel and leaps at the top.
+
+FULL_MOD_SEMITONES stays 64 and should not be retuned: modAmount reaches 2.0 (the dial's 0..200%),
+so 64 * 2 = 128 semitones is exactly the dial's full range. The two constants multiplying out to
+the range is the reason to believe 64, rather than fitting a number to make the old unclamped
+arithmetic behave.
+
+MEASURED (headless, both engines built from the same harness, SimpleLead.pch2):
+  - Ordinary settings are BIT-IDENTICAL. Freq=40/Env=1.0 across a full envelope sweep: same hertz,
+    same g, every step. This is the algebraic identity above showing up in the audio.
+  - Over a 3456-point grid the two differ at 26% of points, ALL of them clamped: at the top of the
+    dial (the audible ones) or at the bottom, where nothing above 13.8 Hz is ever involved and a
+    24 dB/oct lowpass is shut anyway.
+  - The g clamp (LADDER_MAX_G) fired at 23% of grid points before and NEVER now. That was the real
+    problem: the instrument's ceiling was being set by a safety limit on the filter model at
+    whatever frequency it happened to bite (~24.6 kHz), not by the dial's 21.1 kHz.
+  - In the clamp region the new code is LOUDER AND BRIGHTER despite the lower ceiling — peak
+    -22.03 -> -21.41 dBFS, zcr 799 -> 835 Hz. Old g was pinned at 0.80, where this function's own
+    measurements say the passband has dropped ~6 dB; new g is 0.749, inside the model.
+
+STILL NEEDS AN EAR. Everything above is numerical. The knob-turn behaviour in particular changed
+(smoothing domain) and cannot be measured from steady-state renders.
+
+CORRECTION to the reference reading, for whoever goes back to it: CNativeFilterCoeffsPart::Compute
+is NOT the frequency conversion this section claimed. It computes x + Q23mul(x, y) and stores a
+pair — a coefficient smoother/interpolator. Do not go looking for cutoff-to-hertz constants in it.
+Also note CNativeFilterModPart clamps the sum AFTER a *4, so the effective bound on the sum is
++/-0x200000, not +/-0x800000; that detail was not needed here but will matter if anyone tries to
+match the hardware's modulation depth exactly.
 
 --- 3. CLEARED 2026-08-07: the filter coefficient rate is CORRECT, this was not a bug ---
 
@@ -500,6 +530,12 @@ resources already hold.
 - VOICE_GAIN is a flat 0.15 (-16.5 dB) and the engine is monophonic, so it is not protecting against
   voice stacking. Measured as exactly the quiet output level. Needs a real gain-staging decision,
   especially before polyphony.
+  THERE IS ALREADY A DERIVED ANSWER AND THE CODE IS NOT USING IT (checked 2026-08-07). The headroom
+  work measured the G2 as carrying 8x (18 dB) between a nominal module output and DSP saturation,
+  which makes the principled value 1/8 = 0.125: nominal lands at 0.125 and saturation arrives at 8x
+  nominal, reproducing the hardware's relationship instead of a trim. The code went 0.25 -> 0.15 in
+  commit 58e0725 with no derivation recorded anywhere. So the decision is smaller than it looks —
+  mostly "adopt 0.125, or say why not" — but it is a ~1.6 dB level change and wants an ear.
 - Polyphony: Voice Area is per-voice, FX Area is global. Needs node state split by area
   ([MAX_VOICES][MAX_ENGINE_NODES] for VA nodes, single-instance for FX), a voice allocator honouring
   gPatchDescr[slot].voiceCount, and per-voice glide/note queue. The VA-Out -> FX-bus link the engine
@@ -507,8 +543,23 @@ resources already hold.
 - Module coverage: ~17 of the G2's modules. FltLP added 2026-08-07 with a per-module filter param
   map (it has NO resonance, so its Slope sits one index earlier than FltClassic's — blind reuse
   would read a menu index as a resonance value). Extend that map per module; read indices, never
-  assume them. FltHP was deliberately NOT added: its Slope entry sits ~1500 lines from its other
-  params in moduleResources.h and could not be confirmed.
+  assume them.
+
+  FltHP: STILL NOT ADDED, but the stated reason was wrong (checked 2026-08-07). Its params were
+  dumped straight out of paramLocationList in ordinal order rather than read off the file, and
+  FltHP HAS NO SLOPE PARAMETER AT ALL — it has four: [0] Freq (type 1), [1] FreqMod (type 25),
+  [2] Kbt, [3] Bypass (type 16, the same signature as the other filters' active flag). There was
+  nothing 1500 lines away to confirm. Its map would be {0, 1, 2, -1, -1, 3}.
+
+  THE REAL BLOCKER IS THAT THE ENGINE HAS NO HIGHPASS. eNodeFilter routes to filter_step() ->
+  ladder_filter(), which is a lowpass; FltClassic and FltLP are both lowpass, so nothing has needed
+  one yet. Adding FltHP to the map alone would render a highpass as a lowpass — a patch that should
+  sound thin would sound dark. That is worse than the silence it renders now, because silence is
+  obviously broken and a wrong-mode filter is plausible and wrong. Add the highpass first.
+
+  Worth knowing for that work: dumping paramLocationList in ordinal order for a module type is the
+  reliable way to build one of these maps, and takes about ten lines against
+  array_size_param_location_list(). Do that rather than reading moduleResources.h.
 
 === END SOUND ENGINE HANDOVER ===
 
