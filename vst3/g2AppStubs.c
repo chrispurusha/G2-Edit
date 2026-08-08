@@ -45,6 +45,8 @@
 #include "geometry.h"
 #include "mouseHandle.h"
 #include "msgQueue.h"
+#include "globalVars.h"   // gToGuiThread / gToUsbThread
+#include "g2AppStubs.h"
 #include "undo.h"
 #include "mutatorUI.h"
 #include "paramOverlay.h"
@@ -88,9 +90,34 @@ bool cmd_modifier_held(void) {
 // the single point through which the whole UI reaches the hardware, so a plug-in that never calls
 // it cannot accidentally write to a connected synth — which is the behaviour we want anyway.
 
+// MESSAGES TO THE G2 ARE DROPPED; MESSAGES TO THE GUI ARE NOT.
+//
+// Both go through this one function in the application. Dropping everything was right while the
+// plug-in only drew — but File > Open Patch File... does not open a browser itself: it POSTS
+// eRspShowOpenRead to the GUI queue so the browser opens from the render loop rather than from
+// inside a menu callback (see menuActions.c). Dropping that made the menu item do nothing at all.
+//
+// So gToUsbThread is still discarded — there is no synth, and a plug-in must never write to one —
+// and gToGuiThread is queued for the editor to drain. One slot is enough: these are user actions,
+// arriving one click at a time.
+static tMessageContent gGuiMsg      = {0};
+static bool            gGuiMsgValid = false;
+
 void msg_send(tMessageQueue * msgQueue, const void * content) {
-    (void)msgQueue;
-    (void)content;
+    if ((msgQueue != &gToGuiThread) || (content == NULL)) {
+        return;
+    }
+    gGuiMsg      = *(const tMessageContent *)content;
+    gGuiMsgValid = true;
+}
+
+bool g2_take_gui_message(tMessageContent * out) {
+    if ((gGuiMsgValid == false) || (out == NULL)) {
+        return false;
+    }
+    *out         = gGuiMsg;
+    gGuiMsgValid = false;
+    return true;
 }
 
 void undo_push_param_change(tModuleKey key, uint32_t paramIndex, uint32_t variation, uint32_t oldValue, uint32_t newValue) {
@@ -186,11 +213,8 @@ void device_op_begin(const char * label) {
 void device_op_end(void) {
 }
 
-// Zoom is remembered by the application through its own prefs file; the plug-in has its own, and
-// zoom is not yet among the things it stores.
-void save_zoom_factor(double zoom) {
-    (void)zoom;
-}
+// save_zoom_factor() is REAL now — persistence.c is linked, so zoom persists here as it does in the
+// application.
 
 // The application's Controls menu calls this when the dial mode changes. Route it to the plug-in's
 // own prefs so the setting persists here too — synthlib_set_dial_mode() already writes it, so this
