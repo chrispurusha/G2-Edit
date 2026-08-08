@@ -63,6 +63,10 @@ static const CGFloat kEditorWidth  = 900.0;
 // later does not steal height from the patch.
 static const CGFloat kCanvasHeight = 600.0;
 static const CGFloat kEditorHeight = kCanvasHeight + G2_PLUGIN_CHROME_HEIGHT;
+
+// Below this the module text stops being legible. No maximum: everything scales.
+static const CGFloat kMinWidth     = 640.0;
+static const CGFloat kMinHeight    = 400.0;
 static const int     kMorphCount   = 8;
 static const int     kParamLevelId = 8;
 
@@ -249,7 +253,7 @@ public:
         }
         NSView * host = (__bridge NSView *)parent;
 
-        glView = g2_create_gl_view(NSMakeRect(0.0, 0.0, kEditorWidth, kEditorHeight));
+        glView = g2_create_gl_view(NSMakeRect(0.0, 0.0, currentWidth, currentHeight));
 
         if (glView == nil) {
             return kResultFalse;    // no pixel format; better to fail than show an empty window
@@ -279,13 +283,24 @@ public:
         }
         size->left   = 0;
         size->top    = 0;
-        size->right  = (int32)kEditorWidth;
-        size->bottom = (int32)kEditorHeight;
+        size->right  = (int32)currentWidth;
+        size->bottom = (int32)currentHeight;
         return kResultOk;
     }
 
+    // The host telling us the frame it has given the view. Resize the GL view to match, and record
+    // it so getSize() reports what the host last set rather than the original default — Ableton in
+    // particular asks again after resizing and will fight a stale answer.
     tresult PLUGIN_API onSize(ViewRect * newSize) SMTG_OVERRIDE {
-        (void)newSize;
+        if (newSize == nullptr) {
+            return kInvalidArgument;
+        }
+        currentWidth  = (CGFloat)(newSize->right - newSize->left);
+        currentHeight = (CGFloat)(newSize->bottom - newSize->top);
+
+        if (glView != nil) {
+            [glView setFrame:NSMakeRect(0.0, 0.0, currentWidth, currentHeight)];
+        }
         return kResultOk;
     }
 
@@ -296,14 +311,29 @@ public:
         return kResultOk;
     }
 
-    // Fixed size: nine rows of controls have no sensible reflow, and a host that cannot resize it
-    // will not try.
+    // RESIZABLE, now that the canvas scales. The patch is laid out in a fixed logical width and
+    // gGlobalGuiScale maps it onto whatever pixels there are, so a bigger window shows the same
+    // patch larger rather than showing more of it — which is how the application behaves too.
     tresult PLUGIN_API canResize(void) SMTG_OVERRIDE {
-        return kResultFalse;
+        return kResultTrue;
     }
 
+    // Only a minimum. Below roughly this the module text stops being legible and the menu bar starts
+    // colliding with itself; above it there is no upper bound worth imposing, since everything
+    // scales.
     tresult PLUGIN_API checkSizeConstraint(ViewRect * rect) SMTG_OVERRIDE {
-        return getSize(rect);
+        if (rect == nullptr) {
+            return kInvalidArgument;
+        }
+
+        if ((rect->right - rect->left) < (int32)kMinWidth) {
+            rect->right = rect->left + (int32)kMinWidth;
+        }
+
+        if ((rect->bottom - rect->top) < (int32)kMinHeight) {
+            rect->bottom = rect->top + (int32)kMinHeight;
+        }
+        return kResultTrue;
     }
 
 private:
@@ -312,6 +342,10 @@ private:
     IComponentHandler * handler;
     G2AlikePanel * __strong panel;
     NSView * __strong   glView    = nil;
+
+    // What the host last sized us to; the defaults until it says otherwise.
+    CGFloat             currentWidth  = kEditorWidth;
+    CGFloat             currentHeight = kEditorHeight;
     IPlugFrame *        plugFrame = nullptr;
     std::string         patchPath;
 };

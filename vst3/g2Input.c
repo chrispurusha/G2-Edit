@@ -53,9 +53,17 @@
 // downstream is unchanged.
 static tCoord gMouse = {0.0, 0.0};
 
+// Takes PHYSICAL PIXELS and stores LOGICAL UNITS — the canvas's own space, which is what every
+// hit-test and every click region is expressed in.
+//
+// This is the same conversion get_global_gui_scaled_mouse_coord() performs in the application, and
+// it has to track gGlobalGuiScale rather than the backing scale: the two were equal only while the
+// plug-in mis-sized its logical canvas.
 void g2_input_set_mouse(double x, double y) {
-    gMouse.x = x;
-    gMouse.y = y;
+    double scale = (gGlobalGuiScale > 0.0) ? gGlobalGuiScale : 1.0;
+
+    gMouse.x = x / scale;
+    gMouse.y = y / scale;
 }
 
 bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
@@ -86,7 +94,7 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
             return true;
         }
 
-        if (handle_menu_bar_click(gPluginMenuBar, g2_menu_bar_rect(get_render_width() / gGlobalGuiScale), gMouse) == true) {
+            if (handle_menu_bar_click(gPluginMenuBar, g2_menu_bar_rect(get_render_width() / gGlobalGuiScale), gMouse) == true) {
             return true;
         }
 
