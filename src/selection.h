@@ -30,6 +30,8 @@ void selection_toggle(tModuleKey key);
 void selection_add_rect(tRectangle rect, uint32_t slot, uint32_t location);
 void delete_module_and_cables(tModuleKey key);
 void delete_selection(void);
+// Pushes anything a moved module now overlaps further down its column. Moved from menus.c.
+void shift_modules_down(tModuleKey key);
 void shift_selection_down(void);
 void copy_selection(void);
 void cut_selection(void);

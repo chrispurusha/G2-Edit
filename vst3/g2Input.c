@@ -55,6 +55,8 @@ void g2_input_set_mouse(double x, double y) {
 }
 
 bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
+    bool handled = false;
+
     g2_input_set_mouse(x, y);
 
     // A drag in progress owns the motion outright — the click regions are not consulted, exactly as
@@ -63,32 +65,42 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
         return canvas_drag_motion(gMouse);
     }
 
-    if (dispatch_click_region(gMouse, phase) == true) {
-        return true;
-    }
-
-    // NOTHING WAS UNDER THE POINTER. In the application this is where a click on bare canvas clears
-    // the selection and starts a rubber band; dispatch_click_region() returning false is the whole
-    // of how "empty space" is detected, since every occupied part of the canvas registers a region.
-    // Without this the plug-in could select a module but never deselect one.
     if (phase == eClickPress) {
+        if (dispatch_click_region(gMouse, phase) == true) {
+            return true;
+        }
+
+        // NOTHING WAS UNDER THE POINTER. In the application this is where a click on bare canvas
+        // clears the selection and starts a rubber band; dispatch_click_region() returning false is
+        // the whole of how "empty space" is detected, since every occupied part of the canvas
+        // registers a region. Without this the plug-in could select a module but never deselect one.
+        //
         // No modifier plumbing yet, so a press always replaces the selection rather than adding to
         // it — multi_select_modifier_held() is still false in the plug-in.
         return canvas_empty_press(gMouse, false);
     }
 
-    if ((phase == eClickRelease) || (phase == eClickReleaseOutside)) {
-        bool handled = canvas_rubber_band_release(gMouse, gSlot, gLocation, false);
+    // ---- release ---------------------------------------------------------------------------------
+    //
+    // DO NOT RETURN EARLY WHEN dispatch_click_region() CLAIMS THE RELEASE. A press CAPTURES its
+    // region (see clickRegion.h), so the handler that began a module drag owns the matching release
+    // and dispatch always reports it handled. Returning there was a real bug: the drag was never
+    // ended and never re-ordered, so a module dropped on another simply overlapped it, and
+    // gModuleDrag stayed active into the next gesture.
+    //
+    // Both must run: the captured handler needs its release, and the drag needs finishing.
+    handled = dispatch_click_region(gMouse, phase);
 
-        // Ends a module drag WITHOUT the application's follow-up: it also shuffles overlapping
-        // modules aside and records a move for undo, both of which live in menus.c and are not
-        // linked here. So a dragged module may end up overlapping a neighbour.
-        if (canvas_module_drag_clear() == true) {
-            handled = true;
-        }
-        return handled;
+    if (canvas_rubber_band_release(gMouse, gSlot, gLocation, false) == true) {
+        handled = true;
     }
-    return false;
+
+    // Ends the module drag and re-orders around it, as the application does. Undo is the one thing
+    // not carried over — a plug-in has no undo stack.
+    if (canvas_module_drag_release() == true) {
+        handled = true;
+    }
+    return handled;
 }
 
 // The application reads this from GLFW; the plug-in reads it from whatever the host last delivered.

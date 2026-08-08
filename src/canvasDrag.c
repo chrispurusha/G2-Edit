@@ -158,9 +158,19 @@ bool canvas_rubber_band_release(tCoord coord, uint32_t slot, uint32_t location, 
     return true;
 }
 
-bool canvas_module_drag_clear(void) {
+bool canvas_module_drag_release(void) {
     if (gModuleDrag.active == false) {
         return false;
+    }
+
+    // RE-ORDER FIRST. A module dropped on top of another must push it down its column, exactly as
+    // the application does on release — without this a drag leaves two modules occupying the same
+    // grid squares, drawn over each other. Selected modules are transparent to one another, so a
+    // multiple selection shuffles only what it lands on.
+    if (gModuleDrag.isMulti) {
+        shift_selection_down();
+    } else {
+        shift_modules_down(gModuleDrag.moduleKey);
     }
     gModuleDrag.active = false;
     return true;
