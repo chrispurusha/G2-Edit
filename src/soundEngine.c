@@ -3042,7 +3042,9 @@ static double oscillator_step(uint32_t voice, uint32_t node, const tEngineNode *
     if ((pitchDirect != 0.0) || ((spec->modAmount > 0.0) && (pitchVar != 0.0))) {
         pitch += (pitchDirect + (pitchVar * spec->modAmount)) * PITCH_MOD_SEMITONES;
     }
-    frequency = 440.0 * pow(2.0, (pitch - MIDI_NOTE_A440) / 12.0);
+    // exp2, not pow(2, x). Identical result, and this runs once per oscillator per voice per
+    // oversampled sample — at fifteen voices that is a few million calls a second.
+    frequency = 440.0 * exp2((pitch - MIDI_NOTE_A440) / 12.0);
 
     // Above Nyquist there is no waveform left to produce, only aliasing. Return silence rather than
     // just stopping the phase: a halted sawtooth is not silence, it is a DC offset held at whatever
