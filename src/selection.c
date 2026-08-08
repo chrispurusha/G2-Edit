@@ -178,6 +178,21 @@ void delete_module_and_cables(tModuleKey key) {
         cable_chain_recolour(slot, location, orphaned[i]);
     }
 
+    // Knob, global knob and MIDI CC assignments naming this module go with it. Before the delete, so
+    // the entries can still be read back and the module they point at still exists — remove_controller
+    // _entry() clears a shadow flag on the module's own parameter.
+    clear_assignments_for_module(key);
+
+    // MIDI Learn's target is the parameter LAST CLICKED, and it deliberately outlives the click — so
+    // deleting the module it names leaves L armed at an index that is now free. Press it and the CC
+    // lands on whatever module is given that index next, which is the same trap the assignment tables
+    // above set, reached from the other end.
+    if (  gParamFocus.valid
+       && (gParamFocus.moduleKey.slot == key.slot)
+       && (gParamFocus.moduleKey.location == key.location)
+       && (gParamFocus.moduleKey.index == key.index)) {
+        gParamFocus.valid = false;
+    }
     msg                      = (tMessageContent){
         0
     };

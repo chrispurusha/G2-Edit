@@ -1059,6 +1059,83 @@ void assign_midi_cc_to_param(uint32_t slot, tModuleKey moduleKey, uint32_t param
     synthlib_request_redraw();
 }
 
+// Everything that points AT a module by index, released when that module goes: its patch knob
+// assignments, its global knob assignments and its MIDI CC assignments. Called from
+// delete_module_and_cables(), so it covers Cut, Delete, and the deletes undo and redo perform
+// themselves — the one place every route to a module's removal passes through.
+//
+// LEAVING THESE BEHIND IS NOT MERELY UNTIDY. All three tables address a module by its INDEX, and
+// find_unique_module_id() hands a freed index straight to the next module created — at which point a
+// knob the user never touched is suddenly wired to a parameter of a module they have just added, and
+// the G2 still believes the assignment it was never told to drop.
+//
+// The entries are ZEROED rather than just flagged unassigned: the deassign actions above only clear
+// .assigned and leave the module index behind them, which reads as a live assignment to anything
+// that looks at the fields before the flag.
+void clear_assignments_for_module(tModuleKey key) {
+    uint32_t        slot = key.slot;
+    tMessageContent msg  = {0};
+
+    for (uint32_t i = 0; i < MAX_NUM_KNOBS; i++) {
+        if (  !gKnobArray[slot].knob[i].assigned
+           || (gKnobArray[slot].knob[i].location != key.location)
+           || (gKnobArray[slot].knob[i].moduleIndex != key.index)) {
+            continue;
+        }
+        gKnobArray[slot].knob[i]       = (tKnob){
+            0
+        };
+
+        msg                            = (tMessageContent){
+            0
+        };
+        msg.cmd                        = eMsgCmdDeassignKnob;
+        msg.slot                       = slot;
+        msg.knobDeassignData.knobIndex = i;
+        msg_send(&gToUsbThread, &msg);
+    }
+
+    // Performance-wide, so the entry's own slotIndex decides whether it belongs to this module.
+    for (uint32_t i = 0; i < MAX_NUM_KNOBS; i++) {
+        if (  !gGlobalKnobArray[i].assigned
+           || (gGlobalKnobArray[i].slotIndex != slot)
+           || (gGlobalKnobArray[i].location != key.location)
+           || (gGlobalKnobArray[i].moduleIndex != key.index)) {
+            continue;
+        }
+        gGlobalKnobArray[i]                  = (tGlobalKnob){
+            0
+        };
+
+        msg                                  = (tMessageContent){
+            0
+        };
+        msg.cmd                              = eMsgCmdDeassignGlobalKnob;
+        msg.globalKnobDeassignData.knobIndex = i;
+        msg_send(&gToUsbThread, &msg);
+    }
+
+    // Walked BACKWARDS because remove_controller_entry() closes the gap by moving the last entry
+    // into the freed one — going forwards would step straight over whatever landed there.
+    for (int32_t i = (int32_t)gControllerCount[slot] - 1; i >= 0; i--) {
+        if (  (gControllerArray[slot].controller[i].location != key.location)
+           || (gControllerArray[slot].controller[i].moduleIndex != key.index)) {
+            continue;
+        }
+        uint32_t midiCC = gControllerArray[slot].controller[i].midiCC;
+
+        remove_controller_entry(slot, (uint32_t)i);
+
+        msg                           = (tMessageContent){
+            0
+        };
+        msg.cmd                       = eMsgCmdDeassignMidiCC;
+        msg.slot                      = slot;
+        msg.midiCCDeassignData.midiCC = midiCC;
+        msg_send(&gToUsbThread, &msg);
+    }
+}
+
 // "Assign to CC# nn (last received)". The CC travels in the item's payload like the picker entries
 // do, so this shares their assign path; it exists separately only to clear the focus, which the L
 // key also does — either route ends with nothing selected, so neither can be repeated by accident.
