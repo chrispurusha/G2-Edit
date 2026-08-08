@@ -143,10 +143,17 @@ static __weak G2GlView * gCurrentView = nil;
     return YES;    // act on the click that focuses the window too, rather than swallowing it
 }
 
+// PHYSICAL PIXELS, y-flipped. Not points: the canvas works in its own logical units, and only
+// g2Input.c knows the scale that converts between them. Handing over pixels keeps this file's job to
+// the two things it is actually authoritative about — Cocoa's bottom-left origin, and the backing
+// scale of the surface it owns.
 - (NSPoint)canvasPointFor:(NSEvent *)event {
-    NSPoint p = [self convertPoint:[event locationInWindow] fromView:nil];
+    NSPoint p      = [self convertPoint:[event locationInWindow] fromView:nil];
+    NSRect  bounds = [self bounds];
+    NSRect  backing = [self convertRectToBacking:bounds];
+    double  scale  = (bounds.size.width > 0.0) ? (backing.size.width / bounds.size.width) : 1.0;
 
-    return NSMakePoint(p.x, [self bounds].size.height - p.y);
+    return NSMakePoint(p.x * scale, (bounds.size.height - p.y) * scale);
 }
 
 - (void)mouseDown:(NSEvent *)event {

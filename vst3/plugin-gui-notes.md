@@ -354,6 +354,30 @@ invisible until it lands, which reads as nothing happening.
 nothing, which is correct — the cable exists locally, the engine picks it up from the database, and no
 hardware is written to.
 
+**Overall scaling and a resizable window**, 2026-08-08 — and the scaling was a BUG, not a feature.
+
+The application lays its whole UI out in a fixed logical canvas `TARGET_FRAME_BUFF_WIDTH / 2` = 1280
+units wide, with `gGlobalGuiScale` mapping that onto however many physical pixels exist. The plug-in
+was setting `gGlobalGuiScale = backingScale`, which quietly redefined the logical canvas as 900 units
+— about 70% of the application's field of view. That is why patches ran off the edge: not because the
+window was small, but because the canvas was mis-sized. Adopting the application's formula makes the
+whole of SimpleLead fit in the same window.
+
+TWO CONSEQUENCES worth knowing:
+
+- **Canvas coordinates are LOGICAL UNITS, not points** (~1.42 per point at a 900pt window). Everything
+  the renderer draws is in them, including `MENU_BAR_HEIGHT`, so the chrome scales with the canvas
+  exactly as it does in the application.
+- **Mouse input had to follow.** `g2GlView.m` now hands over PHYSICAL PIXELS — it is authoritative
+  about Cocoa's origin and its own backing scale, and nothing else — and `g2Input.c` divides by
+  `gGlobalGuiScale`, which is the same conversion `get_global_gui_scaled_mouse_coord()` performs in
+  the application. The two were only equal while the logical canvas was mis-sized.
+
+The editor is now resizable (`canResize`, `onSize`, `checkSizeConstraint` with a 640x400 minimum and
+no maximum). A bigger window shows the same patch LARGER rather than showing more of it, which is how
+the application behaves. **Resize is UNTESTED** — the local test host drives the view directly rather
+than through `IPlugView`, so `onSize()` is never exercised there; it needs a real host.
+
 Remaining, in order:
 2. Scroll and zoom, then the FX pane — needed before a patch bigger than the window is usable.
 3. Right-click context menus: `open_toggle_menu()`/`open_mode_toggle_menu()` are stubs, and those
