@@ -38,8 +38,10 @@ void undo_push_delete_selection(void);
 // Record module position changes (called after drop).
 void undo_push_move(uint32_t slot, uint32_t location, tUndoMoveEntry * entries, uint32_t count);
 
-// Record a paste operation so it can be undone and redone.
-void undo_push_paste(uint32_t slot, uint32_t location, uint32_t anchorCol, uint32_t anchorRow, tModuleKey * pastedKeys, uint32_t pastedCount, tClipboardModule * clipModules, uint32_t clipModuleCount, tClipboardCable * clipCables, uint32_t clipCableCount);
+// Record a paste operation so it can be undone and redone. displaced/displacedCount carry the
+// modules the paste pushed down its column to make room, so undo restores them in the same step
+// that removes the pasted modules; redo needs no such list, as the paste re-derives it.
+void undo_push_paste(uint32_t slot, uint32_t location, uint32_t anchorCol, uint32_t anchorRow, tModuleKey * pastedKeys, uint32_t pastedCount, tClipboardModule * clipModules, uint32_t clipModuleCount, tClipboardCable * clipCables, uint32_t clipCableCount, tUndoMoveEntry * displaced, uint32_t displacedCount);
 
 // Cable-chain edits are recorded as a before/after snapshot of every cable in one location
 // rather than as a list of individual changes: a single command (Disconnect especially) can
@@ -54,8 +56,11 @@ void undo_push_paste(uint32_t slot, uint32_t location, uint32_t anchorCol, uint3
 void undo_begin_cable_edit(uint32_t slot, uint32_t location);
 void undo_commit_cable_edit(void);
 
-// Record an Add Module, AFTER the module exists — the snapshot is what redo puts back.
-void undo_push_create_module(tModuleKey key);
+// Record an Add Module, AFTER the module exists — the snapshot is what redo puts back. displaced/
+// displacedCount carry the modules the new one pushed down its column, as for undo_push_paste; here
+// redo needs them too, since it puts the module back at its recorded position rather than re-running
+// the shift that produced it.
+void undo_push_create_module(tModuleKey key, tUndoMoveEntry * displaced, uint32_t displacedCount);
 
 // Record a module colour change (old → new).
 void undo_push_module_colour(tModuleKey key, uint32_t oldColour, uint32_t newColour);
