@@ -1983,10 +1983,15 @@ PARTIALLY DONE / STILL OPEN:
   simpler single-device E-mu client) and is NOT safe to merge mechanically.
 
 
-- SOUND ENGINE ACROSS CORES — investigated 2026-08-08, NOT BUILT. Owner saw one core saturated in
-  Activity Monitor at 15 voices, with CoreAudio reporting "HALC_ProxyIOContext::IOWorkLoop: skipping
-  cycle due to overload" — which is the audio callback missing its deadline, and is what the
-  crackling is. The engine is single-threaded by design.
+- SOUND ENGINE ACROSS CORES — investigated 2026-08-08, NOT BUILT, AND DEPRIORITISED THE SAME DAY:
+  the single-core work listed at the bottom of this entry was enough to help materially, on the
+  owner's ear at 15 voices. Threading is therefore not the next thing to reach for — take the rest of
+  the single-core headroom first, and only come back here if the load figure says it is needed.
+  KEPT IN FULL because the analysis is the expensive part and the API findings are checked rather
+  than remembered.
+  WHAT PROMPTED IT: one core saturated in Activity Monitor at 15 voices, with CoreAudio reporting
+  "HALC_ProxyIOContext::IOWorkLoop: skipping cycle due to overload" — the audio callback missing its
+  deadline, which is what the crackling was. The engine is single-threaded by design.
   THE THREADING IS NOT THE HARD PART. The render loop interleaves voices INSIDE the per-sample loop,
   so a barrier there would fire ~96000 times a second against a few microseconds of work each —
   hopeless. Threading requires restructuring first so that EACH VOICE RENDERS A WHOLE BUFFER, and
