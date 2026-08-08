@@ -391,6 +391,17 @@ static void action_zoom_reset(int index) {
     wake_glfw();
 }
 
+// Pulls back far enough to see the whole patch — what a large patch needs before anything else is
+// worth doing to it. The scroll is half the job and has to come second: see
+// split_view_scroll_to_content().
+static void action_zoom_to_fit(int index) {
+    (void)index;
+    set_zoom_factor(split_view_zoom_to_fit(), (tCoord){0.0, 0.0});
+    split_view_scroll_to_content();
+    save_zoom_factor(get_zoom_factor());
+    wake_glfw();
+}
+
 // The overlay views. Selecting the mode already showing turns it off again, so the entries behave
 // as a radio group with a toggle on the active one.
 //
@@ -404,7 +415,10 @@ static void action_overlay_mode(int index) {
 }
 
 void open_view_menu(tCoord anchor) {
-    static tMenuItem items[9]                         = {0};
+    // 3 zoom entries + Zoom to Fit + one per overlay view + the NULL terminator. It was exactly full
+    // at 9 before Zoom to Fit was added; overflowing one of these arrays does not fail visibly, it
+    // quietly writes over whatever static follows it (see the Experimental menu's note in todo.txt).
+    static tMenuItem items[10]                        = {0};
     static char      overlayLabel[overlayModeMax][40] = {0};
     int              i                                = 0;
 
@@ -416,6 +430,9 @@ void open_view_menu(tCoord anchor) {
     };
     items[i++] = (tMenuItem){
         "Zoom Reset", (tRgb)RGB_GREY_3, action_zoom_reset, 0, NULL, 0, 0.0
+    };
+    items[i++] = (tMenuItem){
+        "Zoom to Fit", (tRgb)RGB_GREY_3, action_zoom_to_fit, 0, NULL, 0, 0.0
     };
 
     // The five overlay views, the active one ticked. overlayModeNone isn't offered as an entry of
