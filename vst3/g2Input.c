@@ -39,6 +39,8 @@
 #include "geometry.h"
 #include "utilsGraphics.h"
 #include "clickRegion.h"
+#include "globalVars.h"
+#include "canvasDrag.h"
 
 #include "g2Input.h"
 
@@ -54,7 +56,39 @@ void g2_input_set_mouse(double x, double y) {
 
 bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
     g2_input_set_mouse(x, y);
-    return dispatch_click_region(gMouse, phase);
+
+    // A drag in progress owns the motion outright — the click regions are not consulted, exactly as
+    // the application's cursor_pos() does not consult them while something is being dragged.
+    if (phase == eClickDrag) {
+        return canvas_drag_motion(gMouse);
+    }
+
+    if (dispatch_click_region(gMouse, phase) == true) {
+        return true;
+    }
+
+    // NOTHING WAS UNDER THE POINTER. In the application this is where a click on bare canvas clears
+    // the selection and starts a rubber band; dispatch_click_region() returning false is the whole
+    // of how "empty space" is detected, since every occupied part of the canvas registers a region.
+    // Without this the plug-in could select a module but never deselect one.
+    if (phase == eClickPress) {
+        // No modifier plumbing yet, so a press always replaces the selection rather than adding to
+        // it — multi_select_modifier_held() is still false in the plug-in.
+        return canvas_empty_press(gMouse, false);
+    }
+
+    if ((phase == eClickRelease) || (phase == eClickReleaseOutside)) {
+        bool handled = canvas_rubber_band_release(gMouse, gSlot, gLocation, false);
+
+        // Ends a module drag WITHOUT the application's follow-up: it also shuffles overlapping
+        // modules aside and records a move for undo, both of which live in menus.c and are not
+        // linked here. So a dragged module may end up overlapping a neighbour.
+        if (canvas_module_drag_clear() == true) {
+            handled = true;
+        }
+        return handled;
+    }
+    return false;
 }
 
 // The application reads this from GLFW; the plug-in reads it from whatever the host last delivered.

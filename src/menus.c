@@ -685,35 +685,6 @@ int32_t find_unique_module_id(uint32_t location) {
     return -1;
 }
 
-void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row, tCoord coord) {
-    double     val  = 0.0;
-    tRectangle area = module_area();
-
-    if (column != NULL) {
-        val     = coord.x - area.coord.x;
-        val    += calc_scroll_x();
-        val    /= MODULE_X_SPAN;
-        val    /= get_zoom_factor();
-
-        if (val < 0.0) {
-            val = 0.0;
-        }
-        *column = floor(val);
-    }
-
-    if (row != NULL) {
-        val  = coord.y - area.coord.y;
-        val += calc_scroll_y();
-        val /= MODULE_Y_SPAN;
-        val /= get_zoom_factor();
-
-        if (val < 0.0) {
-            val = 0.0;
-        }
-        *row = floor(val);
-    }
-}
-
 void shift_modules_down(tModuleKey key) {
     tModule * module            = get_module(key);
 
