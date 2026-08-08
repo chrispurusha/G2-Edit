@@ -45,6 +45,7 @@
 #include "paramOverlay.h"
 #include "utilsGraphics.h"
 #include "synthlibGlobals.h"
+#include "g2GlView.h"
 
 // ── Mouse position ──────────────────────────────────────────────────────────────────────────────
 //
@@ -56,21 +57,9 @@ bool multi_select_modifier_held(void) {
     return false;
 }
 
-void get_global_gui_scaled_mouse_coord(tCoord * coord) {
-    if (coord != NULL) {
-        coord->x = 0.0;
-        coord->y = 0.0;
-    }
-}
-
-void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord) {
-    (void)coord;
-
-    if (targetCoord != NULL) {
-        targetCoord->x = 0.0;
-        targetCoord->y = 0.0;
-    }
-}
+// get_global_gui_scaled_mouse_coord() is REAL now — g2Input.c answers it from the host's events.
+// convert_mouse_coord_to_module_area_coord() is real too: it moved out of mouseHandle.c into
+// src/canvasCoords.c, which the plug-in links, because the arithmetic never needed a window.
 
 void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row, tCoord coord) {
     (void)coord;
@@ -171,11 +160,13 @@ tMutatorState gMutator = {0};
 // synthlibGlobals.c is NOT linked in: its synthlib_request_redraw() calls glfwPostEmptyEvent(), so
 // taking the file would take GLFW with it. Only these two are actually reached from the renderer.
 //
-// Redraw is where the plug-in and the application genuinely differ rather than merely stub out. The
-// application posts an empty event to wake a blocked event loop; a plug-in marks its view dirty and
-// lets AppKit schedule the frame. Wiring that through is the next real piece of work — for now the
-// view redraws when the host tells it to.
+// Redraw is where the plug-in and the application genuinely differ rather than merely stub out, and
+// it is NOT a stub — it is the real thing, routed differently. The application posts an empty event
+// to wake a blocked GLFW loop; here the view is marked dirty and AppKit schedules the frame. Every
+// part of the editor that changes something already calls this, so wiring this one function is what
+// makes the whole canvas repaint on change.
 void synthlib_request_redraw(void) {
+    g2_gl_view_request_redraw();
 }
 
 tDialMode synthlib_dial_mode(void) {

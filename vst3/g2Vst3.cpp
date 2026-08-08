@@ -28,14 +28,17 @@
 // plumbing below - reference counting, queryInterface, the factory - is written out by hand rather
 // than inherited. It is dull but it is all here, which is the point.
 //
-// One class implements IComponent, IAudioProcessor and IEditController together. VST3 allows a
-// processor and a controller to be separate objects, and a large plug-in wants that separation - but
-// this one has nine parameters and no custom editor, so splitting them would be three files of
-// ceremony around very little.
+// The processor and the controller are SEPARATE classes — see the longer note above G2EditPlugin for
+// why, and why the obvious single-object arrangement had to be abandoned.
 //
-// There is no IPlugView: the host draws its own generic panel from the parameters the controller
-// reports. Those parameters are therefore the entire user interface, which is why exposing none made
-// the plug-in look broken in a host even though it loaded and played correctly.
+// The controller also implements IMidiMapping. That is not optional decoration: a VST3 host converts
+// continuous controllers, pitch bend and aftertouch into PARAMETER CHANGES rather than delivering
+// them as MIDI events, and IMidiMapping is the only place a plug-in says which parameter each one
+// becomes. Without it, notes play and every expressive control does nothing at all.
+//
+// There IS an editor (g2Editor.mm, an IPlugView) — but the parameters still matter independently of
+// it: they are what a host automates and what its generic panel shows, and exposing none made the
+// plug-in look broken even though it loaded and played correctly.
 
 #include <atomic>
 #include <cstring>
@@ -48,6 +51,7 @@
 #include "pluginterfaces/vst/ivstcomponent.h"
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
 #include "pluginterfaces/vst/ivsteditcontroller.h"
+#include "pluginterfaces/vst/ivstmidicontrollers.h"
 #include "pluginterfaces/vst/ivstevents.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 
@@ -92,6 +96,24 @@ static std::string default_patch_path(void) {
     return std::string(home ? home : ".") + "/Documents/G2-Edit/plugin.pch2";
 }
 
+// A MORPH DOES NOT REACH THE AUDIO THREAD BY ITSELF, and this flag is how the plug-in copes.
+//
+// sound_engine_set_morph() only records the position. Unlike pitch bend, which the audio thread
+// reads directly, a morph is folded into the parameter SNAPSHOT, and that snapshot is only rebuilt
+// by sound_engine_update_from_patch(). The standalone editor rebuilds it on every redraw, which is
+// why moving a morph there requires asking for one — and why its mod wheel response is capped at
+// the frame rate, since a full canvas repaint sits between the wheel and the sound.
+//
+// The plug-in cannot borrow that arrangement: it has to work with the editor window closed. So the
+// rebuild happens in process() instead, once per block, and only when something actually moved.
+//
+// A FLAG RATHER THAN REBUILDING ON THE SPOT, because the snapshot is published through a SEQLOCK
+// (gParamsSeq in soundEngine.c). A seqlock tolerates exactly one writer; the audio thread is already
+// its reader, and the controller's parameter changes arrive on the host's UI thread. Letting both
+// write would corrupt it. So both merely SET this, and process() — one thread, once per block — is
+// the only writer.
+static std::atomic<bool> gMorphSnapshotDirty{false};
+
 // Processor and controller are SEPARATE CLASSES, both registered with the factory.
 //
 // VST3 also permits one object to implement both, and that is what this was — it is simpler, and a
@@ -102,7 +124,13 @@ static std::string default_patch_path(void) {
 // expects, so it is the shape used here.
 class G2EditPlugin : public IComponent, public IAudioProcessor {
 public:
-    G2EditPlugin(void) : refCount(1), sampleRate(44100.0), active(false) {}
+    G2EditPlugin(void) : refCount(1), sampleRate(44100.0), active(false) {
+        // params[] otherwise zero-initialises, and zero is FULL BEND DOWN rather than centre. It
+        // would only be read back, not applied — nothing calls the engine until the host sends a
+        // value — but a plug-in reporting a two-semitone-flat bend it is not applying is a trap.
+        params[kParamBend]  = 0.5;
+        params[kParamLevel] = 1.0;
+    }
     virtual ~G2EditPlugin(void) {}
 
     // ---- FUnknown ------------------------------------------------------------------------------
@@ -329,6 +357,13 @@ public:
             }
         }
 
+        // Fold any moved morph into the parameter snapshot. Once per block rather than once per
+        // change, and only here — see gMorphSnapshotDirty for why this is the sole writer. Costs a
+        // database walk, which is what the standalone pays on every frame anyway.
+        if (gMorphSnapshotDirty.exchange(false) == true) {
+            sound_engine_update_from_patch();
+        }
+
         // Notes first, for the whole block. The engine timestamps nothing, so sample-accurate event
         // placement inside the block is lost - a note lands at the start of the buffer it arrived
         // in. At 44.1k and a 512 frame buffer that is under 12 ms of jitter; worth revisiting only
@@ -345,9 +380,34 @@ public:
 
                 if (e.type == Event::kNoteOnEvent) {
                     // A note-on at zero velocity is a note-off, as it is over MIDI.
-                    sound_engine_note(e.noteOn.pitch, e.noteOn.velocity > 0.0f);
+                    bool on = (e.noteOn.velocity > 0.0f);
+
+                    sound_engine_note(e.noteOn.pitch, on);
+
+                    if (on) {
+                        soundingNote = e.noteOn.pitch;
+                    }
                 } else if (e.type == Event::kNoteOffEvent) {
                     sound_engine_note(e.noteOff.pitch, false);
+
+                    if (e.noteOff.pitch == soundingNote) {
+                        soundingNote = -1;
+                    }
+                } else if (e.type == Event::kPolyPressureEvent) {
+                    // POLYPHONIC key pressure, which arrives as an EVENT and not as a parameter
+                    // change. IMidiMapping's kAfterTouch is CHANNEL pressure (MIDI 0xD0) only, so a
+                    // keyboard sending poly pressure (0xA0) — and plenty do — reaches a plug-in by
+                    // this path or not at all. midiInput.c handles both for the same reason.
+                    //
+                    // The engine has one voice, so as in the application only the note actually
+                    // sounding may move the morph; without that test a key still held underneath
+                    // would fight the one being played.
+                    if (e.polyPressure.pitch == soundingNote) {
+                        if (sound_engine_set_morph(kMorphGroupAftertouch,
+                                                   (double)e.polyPressure.pressure) == true) {
+                            gMorphSnapshotDirty.store(true);
+                        }
+                    }
                 }
             }
         }
@@ -391,7 +451,11 @@ private:
     static const int32  kMaxBlock   = 4096;
     static const int32  kMorphCount = 8;                 // NUM_MORPHS, without pulling defs.h into C++
     static const ParamID kParamLevel = 8;
-    static const int32  kNumParams  = 9;
+    static const ParamID kParamBend  = 9;                // pitch bend; 0.5 is centre
+    static const int32  kNumParams  = 10;
+
+    // Which of parameters 0-7 the G2 wires aftertouch to (midiInput.c's MORPH_GROUP_AFTERTOUCH).
+    static const ParamID kMorphGroupAftertouch = 3;
 
     // The output trim attenuates only — sound_engine_set_output_level_db() clamps anything at or
     // above 0 dB to unity, deliberately, so this is a fader and not a boost into the limiter.
@@ -413,9 +477,17 @@ private:
         params[id] = value;
 
         if (id < (ParamID)kMorphCount) {
-            sound_engine_set_morph((uint32_t)id, value);
+            // The return says whether the position actually changed — no point rebuilding a
+            // snapshot for a controller resending a value it already sent.
+            if (sound_engine_set_morph((uint32_t)id, value) == true) {
+                gMorphSnapshotDirty.store(true);
+            }
         } else if (id == kParamLevel) {
             sound_engine_set_output_level_db(level_db(value));
+        } else if (id == kParamBend) {
+            // The host hands pitch bend over as 0..1 with 0.5 at rest; the engine wants -1..+1, and
+            // decides for itself how many semitones that is from the patch's own Bend setting.
+            sound_engine_pitch_bend((value * 2.0) - 1.0);
         }
     }
 
@@ -442,6 +514,11 @@ private:
         dst[i] = 0;
     }
 
+    // The note poly pressure is allowed to act on. The engine is monophonic, so as in the
+    // application only the note actually sounding may move the aftertouch morph — otherwise a key
+    // still held underneath fights the one being played.
+    int32              soundingNote = -1;
+
     std::atomic<int32> refCount;
     ParamValue         params[kNumParams] = {0};
     double             sampleRate;
@@ -456,20 +533,55 @@ private:
 // atomics), so the controller can write to it directly without knowing which processor it belongs
 // to — which also means two instances of this plug-in in one project would fight over the same
 // engine. One instance only, for now.
-class G2EditController : public IEditController {
+// IMidiMapping IS WHY PITCH BEND AND THE WHEELS WORK AT ALL. A VST3 host does not deliver them as
+// MIDI events the way note on/off arrive: continuous controllers, pitch bend and aftertouch are
+// converted by the host into PARAMETER CHANGES, and this interface is the only place a plug-in gets
+// to say which parameter each one should become. Without it the host has nowhere to send them, so
+// notes play and every expressive control does nothing — silently, since nothing is technically
+// wrong.
+class G2EditController : public IEditController, public IMidiMapping {
 public:
     G2EditController(void) : refCount(1) {
         params[kParamLevel] = 1.0;
+        params[kParamBend]  = 0.5;    // centred: 0.5 is no bend, as the host's 0..1 range requires
     }
 
     virtual ~G2EditController(void) {}
 
+    // Two interfaces now, so the casts matter: each branch must hand back a pointer to the right
+    // base. Returning the IEditController pointer for an IMidiMapping query would have the host
+    // call through the wrong vtable.
     tresult PLUGIN_API queryInterface(const TUID iid, void ** obj) SMTG_OVERRIDE {
         QUERY_INTERFACE(iid, obj, FUnknown::iid, IEditController)
         QUERY_INTERFACE(iid, obj, IPluginBase::iid, IEditController)
         QUERY_INTERFACE(iid, obj, IEditController::iid, IEditController)
+        QUERY_INTERFACE(iid, obj, IMidiMapping::iid, IMidiMapping)
         *obj = nullptr;
         return kNoInterface;
+    }
+
+    // The G2 hard-wires its wheels and pedals to particular morph groups (manual; morphStrMap in
+    // moduleResources.h names them), and those morph groups are ALREADY exposed as parameters 0-7.
+    // So most of this maps a MIDI controller onto a parameter that exists rather than inventing a
+    // new one — the same routing the standalone editor performs in midiInput.c, expressed the way
+    // VST3 wants it. Only pitch bend needs a parameter of its own, having no morph group.
+    tresult PLUGIN_API getMidiControllerAssignment(int32 busIndex, int16 channel,
+                                                   CtrlNumber midiControllerNumber,
+                                                   ParamID & id) SMTG_OVERRIDE {
+        (void)channel;    // one engine voice, all channels drive it — as the app's Omni handling does
+
+        if (busIndex != 0) {
+            return kResultFalse;
+        }
+
+        switch (midiControllerNumber) {
+            case kPitchBend:        id = kParamBend;                 return kResultTrue;
+            case kCtrlModWheel:     id = kMorphGroupWheel;           return kResultTrue;
+            case kAfterTouch:       id = kMorphGroupAftertouch;      return kResultTrue;
+            case kCtrlSustainOnOff: id = kMorphGroupSustain;         return kResultTrue;
+            case kCtrlFoot:         id = kMorphGroupCtrlPedal;       return kResultTrue;
+            default:                                                 return kResultFalse;
+        }
     }
 
     uint32 PLUGIN_API addRef(void) SMTG_OVERRIDE {
@@ -541,11 +653,18 @@ public:
             copy_name(info.title, title);
             copy_name(info.shortTitle, title);
             info.defaultNormalizedValue = 0.0;
-        } else {
+        } else if (paramIndex == (int32)kParamLevel) {
             copy_name(info.title, "Output Level");
             copy_name(info.shortTitle, "Level");
             copy_name(info.units, "dB");
             info.defaultNormalizedValue = 1.0;           // unity; the trim only attenuates
+        } else {
+            // Pitch bend. It has to be a real, declared parameter even though nobody would choose to
+            // automate it — IMidiMapping can only name a parameter that exists, so this is what the
+            // host writes the wheel's position into.
+            copy_name(info.title, "Pitch Bend");
+            copy_name(info.shortTitle, "Bend");
+            info.defaultNormalizedValue = 0.5;           // centre
         }
         return kResultOk;
     }
@@ -563,6 +682,8 @@ public:
             } else {
                 snprintf(text, sizeof(text), "%.1f", db);
             }
+        } else if (id == kParamBend) {
+            snprintf(text, sizeof(text), "%+.2f", (valueNormalized * 2.0) - 1.0);
         } else {
             return kResultFalse;
         }
@@ -623,7 +744,16 @@ public:
 private:
     static const int32   kMorphCount = 8;                // NUM_MORPHS, without pulling defs.h into C++
     static const ParamID kParamLevel = 8;
-    static const int32   kNumParams  = 9;
+    static const ParamID kParamBend  = 9;                // pitch bend; 0.5 is centre
+    static const int32   kNumParams  = 10;
+
+    // Which morph group the G2 wires each physical control to (midiInput.c's MORPH_GROUP_*), and
+    // therefore which of parameters 0-7 a MIDI controller should drive. Named here so the mapping
+    // above reads as intent rather than as four bare numbers.
+    static const ParamID kMorphGroupWheel      = 0;
+    static const ParamID kMorphGroupAftertouch = 3;
+    static const ParamID kMorphGroupSustain    = 4;
+    static const ParamID kMorphGroupCtrlPedal  = 5;
 
     // The output trim attenuates only — sound_engine_set_output_level_db() clamps anything at or
     // above 0 dB to unity, deliberately, so this is a fader and not a boost into the limiter.
@@ -642,9 +772,17 @@ private:
         params[id] = value;
 
         if (id < (ParamID)kMorphCount) {
-            sound_engine_set_morph((uint32_t)id, value);
+            // The return says whether the position actually changed — no point rebuilding a
+            // snapshot for a controller resending a value it already sent.
+            if (sound_engine_set_morph((uint32_t)id, value) == true) {
+                gMorphSnapshotDirty.store(true);
+            }
         } else if (id == kParamLevel) {
             sound_engine_set_output_level_db(level_db(value));
+        } else if (id == kParamBend) {
+            // The host hands pitch bend over as 0..1 with 0.5 at rest; the engine wants -1..+1, and
+            // decides for itself how many semitones that is from the patch's own Bend setting.
+            sound_engine_pitch_bend((value * 2.0) - 1.0);
         }
     }
 

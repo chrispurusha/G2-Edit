@@ -175,6 +175,19 @@ static void all_notes_off(void) {
 // The redraw is wanted in its own right too: morphed dials move on screen as the wheel turns.
 static void morph_moved(bool changed) {
     if (changed == true) {
+        // FOLD IT IN HERE, not on the next redraw. sound_engine_set_morph() only records the
+        // position; the audio thread reads a parameter SNAPSHOT, and until that is rebuilt the wheel
+        // has moved nothing it can hear. This used to be left to the redraw below, which capped mod
+        // wheel and aftertouch response at the frame rate and put a full canvas repaint between the
+        // control and the sound — the wheel felt laggy, and a fast sweep arrived as steps.
+        //
+        // Safe from this thread since the snapshot's writers were given a mutex of their own
+        // (gParamsWriteMutex in soundEngine.c); the audio thread is a lock-free reader and is not
+        // held up by it.
+        sound_engine_update_from_patch();
+
+        // Still wanted in its own right: morphed dials move on screen as the wheel turns. It is now
+        // only cosmetic, though, so a late frame no longer means a late sound.
         synthlib_request_redraw();
     }
 }

@@ -24,6 +24,7 @@ extern "C" {
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #include "defs.h"
 #include "synthlibDefs.h"
@@ -386,8 +387,22 @@ typedef struct {
 // side ever blocks, and the audio thread never waits on the UI thread. A plain pair of buffers
 // would not do: the UI can publish twice while one audio buffer is being filled, which is long
 // enough to land back on the buffer the audio thread is mid-copy of.
-static tSoundEngineParams gParams    = {0};
-static _Atomic uint32_t   gParamsSeq = 0;
+static tSoundEngineParams gParams           = {0};
+static _Atomic uint32_t   gParamsSeq        = 0;
+
+// SERIALISES WRITERS ONLY. The audio thread never takes this — it is the seqlock's reader and stays
+// lock-free, so there is no priority inversion to worry about.
+//
+// A seqlock tolerates exactly one writer, and for a long time there was one: the render thread,
+// rebuilding the snapshot every frame. That is what forced a morph to go the long way round —
+// sound_engine_set_morph() records the position, but only a rebuild folds it into what the audio
+// thread reads, so the MIDI thread had to ask for a REDRAW and wait for it. Mod wheel response was
+// therefore capped at the frame rate, with a full canvas repaint sitting between the wheel and the
+// sound.
+//
+// With writers serialised here, any thread may rebuild. The MIDI thread now does so immediately on a
+// morph change (midiInput.c) instead of waiting to be drawn.
+static pthread_mutex_t    gParamsWriteMutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define PARAMS_READ_ATTEMPTS    (4)   // then keep last good — a retry loop must not spin in audio
 
@@ -2027,9 +2042,12 @@ void sound_engine_update_from_patch(void) {
     }
     snapshot.topology = topology_signature(&snapshot);
 
+    // The snapshot above was built into a local, so only this section needs the writers' mutex.
+    pthread_mutex_lock(&gParamsWriteMutex);
     atomic_fetch_add(&gParamsSeq, 1);    // now odd — a reader seeing this discards its copy
     gParams           = snapshot;
     atomic_fetch_add(&gParamsSeq, 1);    // even again, snapshot is whole
+    pthread_mutex_unlock(&gParamsWriteMutex);
 }
 
 // Audio thread half of the seqlock. Returns the newest whole snapshot, or the last one it managed to
