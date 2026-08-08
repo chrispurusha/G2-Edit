@@ -34,6 +34,11 @@
 // behaviour a plug-in wants rather than a limitation of it.
 
 #include "sysIncludes.h"
+// defs.h BEFORE synthlibDefs.h — it defines G2_EDIT, and synthlibDefs.h gates TOP_BAR_HEIGHT, the
+// colour palette and several layout constants on it. Included the other way round, TOP_BAR_HEIGHT
+// silently becomes 0.0 (the non-G2 branch), which put the module band 80 units too high, hidden
+// behind the top bar and with the margin between them swallowed.
+#include "defs.h"
 #include "synthlibDefs.h"
 #include "types.h"
 #include "geometry.h"

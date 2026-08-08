@@ -29,6 +29,11 @@
 // plugin-gui-notes.md — so the machinery is the application's; only the contents are ours.
 
 #include "sysIncludes.h"
+// defs.h BEFORE synthlibDefs.h — it defines G2_EDIT, and synthlibDefs.h gates TOP_BAR_HEIGHT, the
+// colour palette and several layout constants on it. Included the other way round, TOP_BAR_HEIGHT
+// silently becomes 0.0 (the non-G2 branch), which put the module band 80 units too high, hidden
+// behind the top bar and with the margin between them swallowed.
+#include "defs.h"
 #include "synthlibDefs.h"
 #include "synthlibTypes.h"
 #include "geometry.h"
@@ -39,111 +44,52 @@
 #include "soundEngine.h"
 #include "synthlibGlobals.h"
 
+#include "appMenuBar.h"
 #include "g2Patch.h"
 #include "g2FileDialog.h"
 #include "g2GlView.h"
 #include "g2Menu.h"
 
-// The patch currently loaded, for the topbar to show once there is one. Also what makes "the plug-in
-// is playing the built-in patch" distinguishable from "the plug-in is playing what you chose".
+// THE APPLICATION'S OWN MENUS, minus the ones that describe hardware.
+//
+// An earlier version here defined its own File and View menus. That was the same mistake the topbar
+// made: a plug-in that resembles the editor is the point, and a second set of menu definitions can
+// only drift from the first. appMenuBar.c's menus are now exposed individually so a bar can be
+// composed from a subset of them.
+//
+// DROPPED ENTIRELY: Backup, Restore and Experimental. All three exist to talk to a G2 over USB or to
+// toggle the sound engine the plug-in IS. The bank entries inside File and Tools are dropped too,
+// via app_menu_set_device_capable(false) — the application GREYS those while offline because going
+// online is possible; here it never is, and a permanently greyed row is worse than no row.
+tMenuBarItem gPluginMenuBar[] = {
+    {"File",     open_file_menu    },
+    {"Settings", open_settings_menu},
+    {"Controls", open_controls_menu},
+    {"Tools",    open_tools_menu   },
+    {"View",     open_view_menu    },
+    {NULL,       NULL              },
+};
+
+void g2_menu_init(void) {
+    app_menu_set_device_capable(false);
+}
+
+// The patch the File menu last opened, for the topbar to show. Set by the plug-in's own
+// file_menu_open_patch() in g2FileMenu.c.
 static char gLoadedPatchName[256] = {0};
 
 const char * g2_menu_loaded_patch_name(void) {
     return (gLoadedPatchName[0] != '\0') ? gLoadedPatchName : NULL;
 }
 
-static void action_open_patch_file(int index) {
-    char path[1024] = {0};
-
-    (void)index;
-
-    if (g2_choose_patch_file(path, sizeof(path)) == false) {
+void g2_menu_set_loaded_patch_name(const char * name) {
+    if (name == NULL) {
+        gLoadedPatchName[0] = '\0';
         return;
     }
-
-    // Slot 0 always: a plug-in instance is one patch, and the G2's four-slot performance layout is a
-    // hardware notion with nothing to map onto here.
-    if (g2_plugin_load_patch(path, 0) == false) {
-        return;
-    }
-
-    // The engine reads a parameter snapshot, not the database — see the note in g2GlDraw.c. The
-    // redraw below rebuilds it, but do it here too so a patch loaded with the editor somehow not
-    // redrawing is still heard.
-    sound_engine_update_from_patch();
-
-    {
-        const char * leaf = strrchr(path, '/');
-
-        leaf = (leaf != NULL) ? (leaf + 1) : path;
-        strncpy(gLoadedPatchName, leaf, sizeof(gLoadedPatchName) - 1);
-        gLoadedPatchName[sizeof(gLoadedPatchName) - 1] = '\0';
-    }
-    g2_gl_view_request_redraw();
+    strncpy(gLoadedPatchName, name, sizeof(gLoadedPatchName) - 1);
+    gLoadedPatchName[sizeof(gLoadedPatchName) - 1] = '\0';
 }
-
-static void open_file_menu(tCoord anchor) {
-    static tMenuItem items[2];
-    int              i = 0;
-
-    items[i++] = (tMenuItem){
-        "Open Patch File...", (tRgb)RGB_GREY_3, action_open_patch_file, 0, NULL, 0, 0.0
-    };
-    // NULL label terminates the list, as the application's menus do.
-    items[i++] = (tMenuItem){
-        NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
-    };
-
-    open_context_menu(anchor, items, 0, 0.0);
-}
-
-// ── View ────────────────────────────────────────────────────────────────────────────────────────
-
-static void action_dial_mode(int index) {
-    synthlib_set_dial_mode((tDialMode)index);
-    g2_gl_view_request_redraw();
-}
-
-static void open_view_menu(tCoord anchor) {
-    static tMenuItem items[4];
-    tDialMode        mode = synthlib_dial_mode();
-    int              i    = 0;
-
-    // ALL THREE DIAL MODES, including the two that want a hidden cursor.
-    //
-    // Vertical and horizontal difference the pointer against its previous position, and that works
-    // here — the plug-in feeds canvas coordinates rather than raw device pixels, so a drag is simply
-    // scaled differently (points, not backing pixels) and therefore a little less sensitive than the
-    // application's on a Retina display.
-    //
-    // What is genuinely missing is start_cursor_drag()'s cursor hiding and warping: the pointer
-    // visibly travels away from the dial instead of staying put, and stops at the screen edge. That
-    // makes them worth OFFERING rather than withholding — someone who prefers vertical dials would
-    // rather have them imperfect than not at all — but it is why rotary remains the default.
-    items[i++] = (tMenuItem){
-        (mode == eDialModeRotary) ? "Dial Drag: Rotary  *" : "Dial Drag: Rotary",
-        (tRgb)RGB_GREY_3, action_dial_mode, (uint32_t)eDialModeRotary, NULL, 0, 0.0
-    };
-    items[i++] = (tMenuItem){
-        (mode == eDialModeVertical) ? "Dial Drag: Vertical  *" : "Dial Drag: Vertical",
-        (tRgb)RGB_GREY_3, action_dial_mode, (uint32_t)eDialModeVertical, NULL, 0, 0.0
-    };
-    items[i++] = (tMenuItem){
-        (mode == eDialModeHorizontal) ? "Dial Drag: Horizontal  *" : "Dial Drag: Horizontal",
-        (tRgb)RGB_GREY_3, action_dial_mode, (uint32_t)eDialModeHorizontal, NULL, 0, 0.0
-    };
-    items[i++] = (tMenuItem){
-        NULL, (tRgb)RGB_BLACK, NULL, 0, NULL, 0, 0.0
-    };
-
-    open_context_menu(anchor, items, 0, 0.0);
-}
-
-tMenuBarItem gPluginMenuBar[] = {
-    {"File", open_file_menu},
-    {"View", open_view_menu},
-    {NULL,   NULL          },
-};
 
 tRectangle g2_menu_bar_rect(double pointWidth) {
     return (tRectangle){{0.0, 0.0}, {pointWidth, MENU_BAR_HEIGHT}};
