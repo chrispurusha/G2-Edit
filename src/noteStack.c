@@ -55,9 +55,19 @@ void note_stack_note_on(uint8_t note) {
 void note_stack_note_off(uint8_t note) {
     held_remove(note);
 
+    // POLYPHONIC: release exactly the note that was let go and leave the rest alone. The fallback
+    // below would be actively wrong here — the note it falls back to already has a voice of its own
+    // sounding it, so retriggering it would restart a note the player is still holding, and the note
+    // actually released would never stop.
+    if (sound_engine_is_polyphonic() == true) {
+        sound_engine_note((int32_t)note, false);
+        return;
+    }
+
     if (gHeldCount > 0) {
-        // THE LEGATO CASE. Retrigger the newest note still held rather than releasing — releasing
-        // here is what makes a monophonic synth stop dead when a passing note is let go.
+        // THE LEGATO CASE, and it is monophonic by definition. Retrigger the newest note still held
+        // rather than releasing — releasing here is what makes a monophonic synth stop dead when a
+        // passing note is let go.
         sound_engine_note((int32_t)gHeld[gHeldCount - 1], true);
     } else {
         sound_engine_note(-1, false);
