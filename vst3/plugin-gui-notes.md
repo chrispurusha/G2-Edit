@@ -226,6 +226,23 @@ handles every drag the editor has (params, modes, modules, cables, tempo, vibrat
 together with GLFW's cursor warping and hiding. The param-drag arm is the piece worth pulling out
 first, into something platform-free that takes a position rather than reading one.
 
+**Module dragging and deselect-on-empty-click work**, 2026-08-08, via a third extraction:
+`src/canvasDrag.c`. It holds the module-drag motion, the rubber band, the empty-canvas press and the
+rubber-band release — all lifted out of `cursor_pos()` and `mouseHandle.c`'s press/release paths,
+unchanged in behaviour. The only difference is that the coordinate arrives as an argument instead of
+being read from GLFW; `cursor_pos()` never used its `GLFWwindow *` argument in the first place.
+
+`convert_mouse_coord_to_module_column_row()` moved from `menus.c` to `canvasCoords.c` to join its
+sibling — the module drag needs it, and like the other it is arithmetic with no window in it.
+
+Note how "empty canvas" is detected: `dispatch_click_region()` returning false. Every occupied part
+of the canvas registers a region as it draws, so a press nothing claims IS a press on bare canvas.
+That is the application's own test, not a new one.
+
+Known gap: the plug-in's drag release does not run `shift_modules_down()`/`shift_selection_down()`,
+which shuffle overlapping modules aside and record the move for undo — those live in `menus.c`,
+which is not linked. **A dragged module can therefore end up overlapping a neighbour.**
+
 Remaining, in order:
 
 1. Extract the param-drag arm of `cursor_pos()` so dial drags work. Note `start_cursor_drag()` is

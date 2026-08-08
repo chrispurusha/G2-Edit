@@ -46,6 +46,7 @@ SOURCES=(
     "$HERE/src/selection.c"
     "$HERE/src/canvasCoords.c"
     "$HERE/src/noteStack.c"
+    "$HERE/src/canvasDrag.c"
     "$HERE/src/splitView.c"
     "$HERE/SynthLib/src/clickRegion.c"
     "$HERE/SynthLib/src/utils.c"
