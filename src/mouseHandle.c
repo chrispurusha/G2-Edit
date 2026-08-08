@@ -220,7 +220,7 @@ static bool handle_module_press_for_module(tModule * module, tCoord coord, tMous
 
                 if (mouseButton == mouseButtonLeftDown) {
                     gCableDrag.fromConnectorIndex = i;
-                    convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, coord);
+                    cable_drag_set_end(coord);
                     gCableDrag.active             = true;
                     retVal                        = true;
                 }
@@ -1209,7 +1209,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         (void)canvas_drag_motion(coord);
         adjust_scroll_for_drag();
     } else if (gCableDrag.active == true) {
-        convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord, (tCoord){x - scale_from_percent(CONNECTOR_SIZE / 2.0), y - scale_from_percent(CONNECTOR_SIZE / 2.0)});  // SOMETHING NOT RIGHT HERE
+        cable_drag_set_end(coord);   // see canvasDrag.c: the offset has to come AFTER the conversion
         adjust_scroll_for_drag();
     } else if (gRubberBand.active == true) {
         (void)canvas_drag_motion(coord);   // shared with the plug-in — see canvasDrag.h
