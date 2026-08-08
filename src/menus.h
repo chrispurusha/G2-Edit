@@ -36,6 +36,9 @@ void open_module_area_context_menu(tCoord coord);
 int32_t find_knob_for_param(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex);
 int32_t find_global_knob_for_param(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex);
 int32_t find_controller_for_param(uint32_t slot, uint32_t location, uint32_t moduleIndex, uint32_t paramIndex);
+// Releases every knob, global knob and MIDI CC assignment pointing at a module, locally and on the
+// G2. Called when the module is deleted; see the comment on the definition for why it matters.
+void clear_assignments_for_module(tModuleKey key);
 
 // Bulk MIDI CC tools, the original editor's "Assign MIDI" / "Clear MIDI". Each is one undoable
 // operation over the whole Slot. The Slot is explicit rather than gSlot because the Parameter

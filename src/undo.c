@@ -46,13 +46,32 @@ typedef struct {
     uint32_t colour;
 } tUndoCableEntry;
 
+// A knob or global knob assignment, paired with the position it occupied — the position is what a
+// restore needs and what the entry itself does not carry.
 typedef struct {
-    uint32_t           slot;
-    uint32_t           location;
-    uint32_t           moduleCount;
-    tClipboardModule * modules;   // malloc'd
-    uint32_t           cableCount;
-    tUndoCableEntry *  cables;    // malloc'd
+    uint32_t knobIndex;
+    tKnob    knob;
+} tUndoKnobEntry;
+
+typedef struct {
+    uint32_t    knobIndex;
+    tGlobalKnob knob;
+} tUndoGlobalKnobEntry;
+
+typedef struct {
+    uint32_t             slot;
+    uint32_t             location;
+    uint32_t             moduleCount;
+    tClipboardModule *   modules;     // malloc'd
+    uint32_t             cableCount;
+    tUndoCableEntry *    cables;      // malloc'd
+    // What clear_assignments_for_module() releases as the modules go, so undo can hand it back.
+    uint32_t             knobCount;
+    tUndoKnobEntry       knobs[MAX_NUM_KNOBS];
+    uint32_t             globalKnobCount;
+    tUndoGlobalKnobEntry globalKnobs[MAX_NUM_KNOBS];
+    uint32_t             controllerCount;
+    tController          controllers[MAX_NUM_CONTROLLERS];
 } tUndoDeletePayload;
 
 // Before/after images of every cable in one location — see undo_begin_cable_edit().
@@ -342,10 +361,10 @@ void undo_push_delete_selection(void) {
     if (!p) {
         return;
     }
-    p->slot        = slot;
-    p->location    = location;
-    p->modules     = malloc(gSelection.count * sizeof(tClipboardModule));
-    p->cables      = malloc(MAX_NUM_CABLES * sizeof(tUndoCableEntry));
+    p->slot            = slot;
+    p->location        = location;
+    p->modules         = malloc(gSelection.count * sizeof(tClipboardModule));
+    p->cables          = malloc(MAX_NUM_CABLES * sizeof(tUndoCableEntry));
 
     if (!p->modules || !p->cables) {
         free(p->modules);
@@ -353,8 +372,45 @@ void undo_push_delete_selection(void) {
         free(p);
         return;
     }
-    p->moduleCount = 0;
-    p->cableCount  = 0;
+    p->moduleCount     = 0;
+    p->cableCount      = 0;
+    p->knobCount       = 0;
+    p->globalKnobCount = 0;
+    p->controllerCount = 0;
+
+    // Every knob, global knob and MIDI CC assignment naming a module that is about to go. The delete
+    // releases all three (clear_assignments_for_module()), so without this an undone Cut brought the
+    // modules back with their knob page blank.
+    for (uint32_t i = 0; i < MAX_NUM_KNOBS; i++) {
+        tKnob * knob = &gKnobArray[slot].knob[i];
+
+        if (!knob->assigned || !is_selected((tModuleKey){slot, knob->location, knob->moduleIndex})) {
+            continue;
+        }
+        p->knobs[p->knobCount].knobIndex = i;
+        p->knobs[p->knobCount].knob      = *knob;
+        p->knobCount++;
+    }
+
+    for (uint32_t i = 0; i < MAX_NUM_KNOBS; i++) {
+        tGlobalKnob * knob = &gGlobalKnobArray[i];
+
+        if (!knob->assigned || !is_selected((tModuleKey){knob->slotIndex, knob->location, knob->moduleIndex})) {
+            continue;
+        }
+        p->globalKnobs[p->globalKnobCount].knobIndex = i;
+        p->globalKnobs[p->globalKnobCount].knob      = *knob;
+        p->globalKnobCount++;
+    }
+
+    for (uint32_t i = 0; i < gControllerCount[slot]; i++) {
+        tController * controller = &gControllerArray[slot].controller[i];
+
+        if (!is_selected((tModuleKey){slot, controller->location, controller->moduleIndex})) {
+            continue;
+        }
+        p->controllers[p->controllerCount++] = *controller;
+    }
 
     // Snapshot each selected module
     for (uint32_t si = 0; si < gSelection.count; si++) {
@@ -615,6 +671,67 @@ static void apply_delete_undo(tUndoDeletePayload * p) {
         msg.cableData.linkType             = ce->linkType;
         msg.cableData.moduleToIndex        = ce->toIndex;
         msg.cableData.connectorToIoIndex   = ce->toIoCount;
+        msg_send(&gToUsbThread, &msg);
+    }
+
+    // Knob, global knob and MIDI CC assignments, put back on the modules that now exist again. AFTER
+    // the recreate: the MIDI CC restore writes a shadow flag onto the module's own parameter, which
+    // has to be there to receive it. Redo needs no counterpart — its delete re-releases them.
+    for (uint32_t i = 0; i < p->knobCount; i++) {
+        uint32_t        knobIndex = p->knobs[i].knobIndex;
+        tKnob           knob      = p->knobs[i].knob;
+
+        gKnobArray[p->slot].knob[knobIndex] = knob;
+
+        tMessageContent msg       = {0};
+        msg.cmd                             = eMsgCmdAssignKnob;
+        msg.slot                            = p->slot;
+        msg.knobAssignData.moduleKey        = (tModuleKey){
+            p->slot, knob.location, knob.moduleIndex
+        };
+        msg.knobAssignData.paramIndex       = knob.paramIndex;
+        msg.knobAssignData.knobIndex        = knobIndex;
+        msg_send(&gToUsbThread, &msg);
+    }
+
+    for (uint32_t i = 0; i < p->globalKnobCount; i++) {
+        uint32_t        knobIndex = p->globalKnobs[i].knobIndex;
+        tGlobalKnob     knob      = p->globalKnobs[i].knob;
+
+        gGlobalKnobArray[knobIndex]          = knob;
+
+        tMessageContent msg       = {0};
+        msg.cmd                              = eMsgCmdAssignGlobalKnob;
+        msg.globalKnobAssignData.slotIndex   = knob.slotIndex;
+        msg.globalKnobAssignData.location    = knob.location;
+        msg.globalKnobAssignData.moduleIndex = knob.moduleIndex;
+        msg.globalKnobAssignData.paramIndex  = knob.paramIndex;
+        msg.globalKnobAssignData.knobIndex   = knobIndex;
+        msg_send(&gToUsbThread, &msg);
+    }
+
+    for (uint32_t i = 0; i < p->controllerCount; i++) {
+        if (gControllerCount[p->slot] >= MAX_NUM_CONTROLLERS) {
+            LOG_ERROR("undo_delete: controller table full, %u assignment(s) lost\n",
+                      p->controllerCount - i);
+            break;
+        }
+        tController     controller = p->controllers[i];
+        tModuleKey      key        = {p->slot, controller.location, controller.moduleIndex};
+        tModule *       mod        = get_module(key);
+
+        gControllerArray[p->slot].controller[gControllerCount[p->slot]++] = controller;
+
+        if ((mod != NULL) && (controller.paramIndex < MAX_NUM_PARAMETERS)) {
+            mod->param[0][controller.paramIndex].midiCC    = controller.midiCC;
+            mod->param[0][controller.paramIndex].hasMidiCC = true;
+        }
+        tMessageContent msg        = {0};
+        msg.cmd                                                           = eMsgCmdAssignMidiCC;
+        msg.slot                                                          = p->slot;
+        msg.midiCCAssignData.moduleKey                                    = key;
+        msg.midiCCAssignData.paramIndex                                   = controller.paramIndex;
+        msg.midiCCAssignData.midiCC                                       = controller.midiCC;
         msg_send(&gToUsbThread, &msg);
     }
 
