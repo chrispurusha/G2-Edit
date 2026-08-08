@@ -231,6 +231,23 @@ static __weak G2GlView * gCurrentView = nil;
     [self setNeedsDisplay:YES];
 }
 
+// The tracking area asked for enter/exit alongside movement, and this is the half that was missing:
+// without it the last hovered menu item or connector stayed highlighted after the pointer had left
+// the plug-in window entirely, since nothing else ever moves the recorded position back off it.
+//
+// A drag that leaves the view is not a departure — AppKit keeps delivering its movement, and the
+// canvas auto-scrolls precisely because the pointer is outside. So an exit with a button still down
+// is ignored, and the release that ends the drag puts the position where the pointer really is.
+- (void)mouseExited:(NSEvent *)event {
+    (void)event;
+
+    if ([NSEvent pressedMouseButtons] != 0) {
+        return;
+    }
+    g2_input_pointer_left();
+    [self setNeedsDisplay:YES];
+}
+
 // The application opens its context menus on right button UP, not down, so the same here.
 // Trackpad and wheel both arrive here. Deltas are in points and the canvas scrolls in pixels, so
 // they are handed over as-is and g2Input.c applies the scale — the same division every other

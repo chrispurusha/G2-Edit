@@ -60,7 +60,14 @@
 // The last position the host told us about, in the canvas's logical units with a top-left origin —
 // the same space get_global_gui_scaled_mouse_coord() produces in the application, so everything
 // downstream is unchanged.
-static tCoord gMouse = {0.0, 0.0};
+//
+// STARTS OFF-CANVAS, and {0,0} would be a bug: it is not a neutral "unknown", it is the top-left
+// corner, which is exactly where the menu bar's first item sits. render_menu_bar() highlights
+// whatever the pointer is inside, so a freshly-opened editor drew "File" lit up before the host had
+// said anything about the pointer at all — and it stayed lit, because the view's tracking area is
+// NSTrackingActiveInKeyWindow and delivers no movement until the plug-in window becomes key. The
+// application never had this: GLFW reports a real cursor position from the first frame.
+static tCoord gMouse = {-1.0, -1.0};
 
 // Takes PHYSICAL PIXELS and stores LOGICAL UNITS — the canvas's own space, which is what every
 // hit-test and every click region is expressed in.
@@ -251,6 +258,20 @@ void g2_input_hover(double x, double y) {
     // this the plug-in never dimmed anything.
     canvas_hover_update(gMouse);
     update_context_menu_hover();
+    update_menu_bar_hover(gPluginMenuBar, g2_menu_bar_rect(get_render_width() / gGlobalGuiScale));
+}
+
+// The pointer has left the plug-in's view. Parks it back off-canvas so nothing hit-tests true — the
+// menu bar item and the connector the pointer was last over both stop being highlighted, rather than
+// staying lit until it comes back. Same sentinel the position starts at, and for the same reason.
+//
+// The caller ignores an exit that arrives with a button still down: a drag deliberately continues
+// outside the view, and AppKit keeps delivering its movement.
+void g2_input_pointer_left(void) {
+    gMouse = (tCoord){
+        -1.0, -1.0
+    };
+    canvas_hover_update(gMouse);   // clears gHoverConnector: it returns early on a negative coord
     update_menu_bar_hover(gPluginMenuBar, g2_menu_bar_rect(get_render_width() / gGlobalGuiScale));
 }
 
