@@ -98,8 +98,27 @@ bool sound_engine_set_morph(uint32_t group, double amount);
 void sound_engine_pitch_bend(double bend);
 
 // Note input. Called from the UI thread — see set_sounding_note() in virtualKeyboard.c, which is
-// the single point every note change goes through. Passing on == false with any note silences.
+// the single point every note change goes through.
+//
+// A note-off NAMES ITS NOTE: the engine releases the voice holding that note and leaves the others
+// alone. Passing note < 0 with on == false is all-notes-off. This matters now the engine is
+// polyphonic — a note-off that did not say which note could only ever mean "stop everything".
 void sound_engine_note(int32_t note, bool on);
+
+// Whether the engine will sound more than one note at once, i.e. the patch is Poly with a voice
+// count above 1. The note stack needs this: in Mono, releasing a key falls back to the newest note
+// still held, and in Poly it must not, because that note already has a voice of its own sounding it.
+bool sound_engine_is_polyphonic(void);
+
+// How many voices the current patch may sound at once, and how many are audible right now. For the
+// status line — the second figure is what tells you whether a chord is being cut short.
+uint32_t sound_engine_voice_count(void);
+uint32_t sound_engine_voices_sounding(void);
+
+// Worst render load since this was last called, as a percentage of real time — reading it clears the
+// peak. Approaching 100 % means the engine is running out of its deadline, which is what crackling
+// is; well below it means a crackle is something else.
+uint32_t sound_engine_load_percent(void);
 
 // UI thread. Reads the current selection and publishes a parameter snapshot for the audio thread.
 // Cheap enough to call on every redraw, which is what graphics.c does — every parameter change
