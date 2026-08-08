@@ -749,15 +749,22 @@ int32_t create_module_at(tModuleType type, uint32_t column, uint32_t row, bool s
 
 static void menu_action_create(int index) {
     if (gContextMenu.items[index].param != 0) {
-        uint32_t column  = 0;
-        uint32_t row     = 0;
+        uint32_t       column         = 0;
+        uint32_t       row            = 0;
 
         convert_mouse_coord_to_module_column_row(&column, &row, gContextMenu.originCoord);
 
-        int32_t  created = create_module_at((tModuleType)gContextMenu.items[index].param, column, row, true);
+        // create_module_at() ends in shift_modules_down(), so a module created on top of another
+        // pushes it down the column. Those positions have to be captured BEFORE the call for undo to
+        // put them back — without it, undoing an Add left the column it disturbed still disturbed.
+        tUndoMoveEntry displaced[MAX_NUM_MODULES];
+        uint32_t       displacedCount = module_positions_snapshot((uint32_t)gSlot, (uint32_t)gLocation, displaced);
+
+        int32_t        created        = create_module_at((tModuleType)gContextMenu.items[index].param, column, row, true);
 
         if (created >= 0) {
-            undo_push_create_module((tModuleKey){gSlot, gLocation, (uint32_t)created});
+            undo_push_create_module((tModuleKey){gSlot, gLocation, (uint32_t)created},
+                                    displaced, module_positions_changed(displaced, displacedCount));
         }
     }
 }
