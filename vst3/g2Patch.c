@@ -39,7 +39,6 @@
 #include "utils.h"
 #include "soundEngine.h"
 #include "g2Patch.h"
-#include "g2BuiltInPatch.h"
 
 // Parse a .pch2 image already in memory. Split out from the file loader so the built-in patch and a
 // file on disk go through exactly one implementation of the CRC check and the header walk.
@@ -81,10 +80,6 @@ bool g2_plugin_parse_patch(const uint8_t * buff, int64_t fileSize, uint32_t slot
     clear_slot_data(slot);
     parse_patch(slot, buff + byteOffset, (uint32_t)((fileSize - byteOffset) - 2));
     return true;
-}
-
-bool g2_plugin_load_builtin_patch(uint32_t slot) {
-    return g2_plugin_parse_patch(kG2BuiltInPatch, (int64_t)sizeof(kG2BuiltInPatch), slot);
 }
 
 bool g2_plugin_load_patch(const char * filepath, uint32_t slot) {

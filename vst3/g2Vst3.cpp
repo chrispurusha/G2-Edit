@@ -58,10 +58,6 @@
 #include "g2Editor.h"
 
 extern "C" {
-#include "g2BuiltInPatch.h"
-}
-
-extern "C" {
 #include "soundEngine.h"
 #include "g2Patch.h"
 #include "noteStack.h"
@@ -493,11 +489,16 @@ private:
     }
 
     void load_patch(void) {
-        // TEMPORARY: the built-in patch, always. The file path below is still resolved and still
-        // saved with the project, but is not read — see the note in do-vst3. Slot 0 either way: a
-        // plug-in instance is one patch, and the four-slot performance layout is a hardware notion
-        // with nothing to map onto here.
-        g2_plugin_load_builtin_patch(0);
+        // THE PATH, not a patch compiled into the binary. The built-in patch was a scaffold from
+        // before the plug-in had an editor: with no way to choose a file, embedding one removed a
+        // whole class of "why is it silent" while the rest was proven. File > Open Patch File... has
+        // replaced it, and a plug-in that quietly plays somebody else's lead patch on load is worse
+        // than one that starts empty.
+        //
+        // Slot 0: a plug-in instance is one patch, and the four-slot performance layout is a
+        // hardware notion with nothing to map onto here. An empty path or a missing file simply
+        // leaves the canvas empty, which is honest.
+        (void)g2_plugin_load_patch(patchPath.c_str(), 0);
 
         // Only meaningful once the engine is live — see setActive(). Harmless when it is not, and
         // called anyway so that a patch swapped in mid-session takes effect immediately.
@@ -729,7 +730,10 @@ public:
             return nullptr;
         }
         // Names the patch actually playing, which while the built-in one is forced is not the path.
-        return g2_create_editor_view(this, componentHandler, G2_BUILTIN_PATCH_NAME " (built in)");
+        // No patch name passed: the editor draws its own topbar and reads the loaded name from
+        // g2Menu.c, which is the one place that knows it. The argument survives from the AppKit
+        // panel that used to print it.
+        return g2_create_editor_view(this, componentHandler, "");
     }
 
 

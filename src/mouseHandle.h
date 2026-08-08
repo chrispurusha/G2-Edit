@@ -38,7 +38,6 @@
 extern "C" {
 #endif
 
-void init_patch(uint32_t slot);
 void get_global_gui_scaled_mouse_coord(tCoord * coord);
 // Is a multi-select modifier — either Shift or either Command — held right now?
 //
@@ -51,6 +50,12 @@ void get_global_gui_scaled_mouse_coord(tCoord * coord);
 // it from GLFW (below), and the plug-in answers it from whatever its host gives it — currently
 // nothing, so false.
 bool multi_select_modifier_held(void);
+
+// Shift and Command on their own. Same reasoning as above: these are the PLATFORM's answer, and the
+// only reason mutatorUI.c reached for GLFW. The application answers from GLFW; the plug-in answers
+// false until a host view gives it modifier state.
+bool shift_modifier_held(void);
+bool cmd_modifier_held(void);
 
 void start_cursor_drag(void);
 void stop_dragging(void);

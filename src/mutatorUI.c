@@ -528,16 +528,6 @@ void render_mutator_panel(void) {
 
 // ─── Mouse ───────────────────────────────────────────────────────────────────
 
-static bool shift_held(void) {
-    return (glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-           || (glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
-}
-
-static bool cmd_held(void) {
-    return (glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_LEFT_SUPER) == GLFW_PRESS)
-           || (glfwGetKey((GLFWwindow *)synthlib_window(), GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS);
-}
-
 // index: 0=Prob, 1=Range, 2=Cross Prob. A real dial, dragged vertically like every other knob in
 // this app (drag up = increase) rather than jumping straight to an absolute position.
 static double * dial_value_ptr(int32_t index) {
@@ -723,7 +713,7 @@ static void click_drag_box(tBoxFamily fam, int32_t idx) {
     }
 
     if (fam == boxFamVariation) {
-        if (cmd_held()) {
+        if (cmd_modifier_held()) {
             if (gMutator.focus != mutatorFocusNone) {
                 request_commit_to_variation(gMutator.genome[gMutator.focus], (uint32_t)idx);
             }
@@ -754,7 +744,7 @@ static void drop_drag_box(tBoxFamily srcFam, int32_t srcIdx, tBoxFamily dstFam, 
 
     memcpy(srcGenome, box_ref_genome(srcFam, srcIdx), sizeof(srcGenome));
 
-    if (shift_held() || cmd_held()) {
+    if (shift_modifier_held() || cmd_modifier_held()) {
         uint8_t dstGenome[MUTATOR_MAX_SCHEMA];
 
         memcpy(dstGenome, box_ref_genome(dstFam, dstIdx), sizeof(dstGenome));
@@ -764,7 +754,7 @@ static void drop_drag_box(tBoxFamily srcFam, int32_t srcIdx, tBoxFamily dstFam, 
         gMutator.genomeValid[mutatorFocusMother] = true;
         gMutator.genomeValid[mutatorFocusFather] = true;
 
-        if (shift_held()) {
+        if (shift_modifier_held()) {
             run_interpolate();
         } else {
             run_cross();

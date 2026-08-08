@@ -45,6 +45,8 @@ void database_delete_cables_by_slot(uint32_t slot);
 void init_database(void);
 
 // Clear a slot completely: its modules, its cables, and the per-slot globals that go with them.
+// Resets a slot to a brand-new empty patch, including the pane divider position.
+void init_patch(uint32_t slot);
 void clear_slot_data(uint32_t slot);
 
 #endif // __DATABASE_H__

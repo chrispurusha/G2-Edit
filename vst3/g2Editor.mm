@@ -43,6 +43,8 @@
 
 extern "C" {
 #include "g2Menu.h"
+#include "prefs.h"
+#include "g2Prefs.h"
 }
 
 using namespace Steinberg;
@@ -215,7 +217,22 @@ static const int     kParamLevelId = 8;
 class G2AlikeView : public IPlugView {
 public:
     G2AlikeView(IEditController * ctrl, IComponentHandler * hdlr, const char * patch)
-        : refCount(1), controller(ctrl), handler(hdlr), panel(nil), patchPath(patch ? patch : "") {}
+        : refCount(1), controller(ctrl), handler(hdlr), panel(nil), patchPath(patch ? patch : "") {
+        // Restore the size the editor was last left at. getSize() is asked BEFORE attached(), so
+        // this has to happen in the constructor for the host to open the window at it.
+        //
+        // WIDTH ONLY IS STORED: height is derived from the locked aspect ratio, so keeping both
+        // would be storing the same fact twice and inviting them to disagree.
+        g2_plugin_prefs_init();
+
+        long saved = prefs_get_int(G2_PREF_EDITOR_WIDTH, (long)kEditorWidth);
+
+        if (saved < (long)kMinWidth) {
+            saved = (long)kMinWidth;
+        }
+        currentWidth  = (CGFloat)saved;
+        currentHeight = (CGFloat)((double)saved / kAspectRatio);
+    }
 
     // ARC owns the panel: clearing the strong reference is the whole teardown.
     virtual ~G2AlikeView(void) {
@@ -300,6 +317,10 @@ public:
         }
         currentWidth  = (CGFloat)(newSize->right - newSize->left);
         currentHeight = (CGFloat)(newSize->bottom - newSize->top);
+
+        // Remembered for next time. Written on every resize rather than on close, because a host is
+        // under no obligation to tell a view it is going away in any particular order.
+        prefs_set_int(G2_PREF_EDITOR_WIDTH, (long)currentWidth);
 
         if (glView != nil) {
             [glView setFrame:NSMakeRect(0.0, 0.0, currentWidth, currentHeight)];

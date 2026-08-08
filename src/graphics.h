@@ -60,7 +60,6 @@ int note_editor_cursor_line_end(int cursorPos);
 int note_editor_cursor_from_click(double logicalX, double logicalY);
 
 // Shared popup-panel chrome (bordered box, inset title bar, Close button) — see graphics.cpp.
-void draw_dialog_background_overlay(void);
 
 #ifdef __cplusplus
 }

@@ -23,7 +23,8 @@
 #include "sysIncludes.h"
 #include "synthlibTypes.h"
 #include "menuBar.h"
-#include "defs.h"   // MENU_BAR_HEIGHT
+#include "defs.h"          // MENU_BAR_HEIGHT
+#include "synthlibDefs.h"  // TOP_BAR_HEIGHT
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,13 +35,22 @@ extern "C" {
 // around it from the start; adding it later would otherwise shift the whole patch down at that
 // point. The application's own TOP_BAR_HEIGHT is 80; this is smaller because the slot, performance
 // and clock controls that fill much of the app's bar have no meaning in a plug-in.
-#define G2_PLUGIN_TOPBAR_HEIGHT    (44.0)
+// The application's own bar height, because it IS the application's bar — render_top_bar() lays
+// itself out against TOP_BAR_HEIGHT, so anything else here would clip it.
+#define G2_PLUGIN_TOPBAR_HEIGHT    (TOP_BAR_HEIGHT)
 
 // Everything above the canvas. The editor sizes its window by this so it need not know how the
 // chrome is divided up, and so moving height between the menu bar and the topbar changes one place.
 #define G2_PLUGIN_CHROME_HEIGHT    (MENU_BAR_HEIGHT + G2_PLUGIN_TOPBAR_HEIGHT)
 
 extern tMenuBarItem gPluginMenuBar[];
+
+// Call once at start-up: tells appMenuBar.c there can never be a G2 attached, so its bank and device
+// entries are omitted rather than greyed.
+void g2_menu_init(void);
+
+// Records what the File menu just opened, for the topbar.
+void g2_menu_set_loaded_patch_name(const char * name);
 
 tRectangle g2_menu_bar_rect(double pointWidth);
 

@@ -17,25 +17,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __G2_PATCH_H__
-#define __G2_PATCH_H__
+#ifndef __TOPBAR_RENDER_H__
+#define __TOPBAR_RENDER_H__
 
-#include "sysIncludes.h"
+// Draws the top bar and registers its click regions. Shared by the application and the VST3
+// plug-in — see topbarRender.c for why it is not in graphics.c any more.
+void render_top_bar(void);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-// Read a .pch2 from disk into the database at `slot`. Offline only, no device involved.
-// Returns false for a missing file, a failed CRC, or a performance file rather than a patch.
-bool g2_plugin_load_patch(const char * filepath, uint32_t slot);
-
-// Parse a .pch2 image already in memory into `slot`.
-bool g2_plugin_parse_patch(const uint8_t * buff, int64_t fileSize, uint32_t slot);
-
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+#endif // __TOPBAR_RENDER_H__

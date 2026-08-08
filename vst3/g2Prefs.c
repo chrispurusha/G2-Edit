@@ -17,25 +17,24 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __G2_PATCH_H__
-#define __G2_PATCH_H__
-
 #include "sysIncludes.h"
+#include "synthlibTypes.h"
+#include "synthlibGlobals.h"
+#include "prefs.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "g2Prefs.h"
 
-// Read a .pch2 from disk into the database at `slot`. Offline only, no device involved.
-// Returns false for a missing file, a failed CRC, or a performance file rather than a patch.
-bool g2_plugin_load_patch(const char * filepath, uint32_t slot);
+void g2_plugin_prefs_init(void) {
+    static bool done = false;
 
-// Parse a .pch2 image already in memory into `slot`.
-bool g2_plugin_parse_patch(const uint8_t * buff, int64_t fileSize, uint32_t slot);
+    if (done == true) {
+        return;
+    }
+    done = true;
 
+    prefs_init(G2_PREFS_APP_NAME);
 
-#ifdef __cplusplus
+    // Restore the dial mode straight away. Set through synthlib_set_dial_mode() rather than poked
+    // into the global, so the plug-in's own accessor stays the single owner of it.
+    synthlib_set_dial_mode((tDialMode)prefs_get_int(G2_PREF_DIAL_MODE, (long)eDialModeRotary));
 }
-#endif
-
-#endif
