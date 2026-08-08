@@ -41,6 +41,12 @@ void g2_input_set_mouse(double x, double y);
 // has travelled — see clickRegion.h.
 bool g2_input_mouse_event(double x, double y, eClickPhase phase);
 
+// Pointer moved with no button down: updates position and advances menu hover/dwell state.
+void g2_input_hover(double x, double y);
+
+// Right button released: opens the connector/parameter/module/morph menu under the pointer.
+bool g2_input_right_click(double x, double y);
+
 #ifdef __cplusplus
 }
 #endif

@@ -65,4 +65,17 @@ bool canvas_param_drag_motion(tCoord coord, double rawX, double rawY, bool altHe
 // or the dial stays held and the next click anywhere keeps dragging it.
 bool canvas_param_drag_release(void);
 
+// Right-click on the canvas: opens the connector, parameter, module or morph-label menu under the
+// pointer, in that order of priority. Returns true if one was opened.
+bool canvas_right_click(tCoord coord, uint32_t slot, uint32_t location);
+
+// Cable dragging. The PRESS is a click-region handler in moduleGraphics.c; motion is carried by
+// canvas_drag_motion() above. This completes the drag: if the pointer is over a connector, the cable
+// is created. Returns true if one was.
+bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location);
+
+// Cable-key helpers, used by the connect and by the cable popup commands.
+void set_up_cable_key(tCableKey * cableKey, tModule * fromModule, tModule * toModule, int toConnectorIndex);
+bool swap_cable_to_from_if_needed(tCableKey * cableKey, tModule * fromModule, tModule * toModule, int toConnectorIndex);
+
 #endif // __CANVAS_DRAG_H__

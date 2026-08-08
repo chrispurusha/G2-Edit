@@ -45,6 +45,7 @@ SOURCES=(
     "$HERE/src/moduleGraphics.c"
     "$HERE/src/renderParams.c"
     "$HERE/src/selection.c"
+    "$HERE/src/menus.c"
     "$HERE/src/canvasCoords.c"
     "$HERE/src/noteStack.c"
     "$HERE/src/canvasDrag.c"

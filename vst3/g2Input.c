@@ -130,7 +130,40 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
     if (canvas_param_drag_release() == true) {
         handled = true;
     }
+
+    // Completes a cable drag — creating the cable if the pointer came to rest on a connector, and
+    // clearing the drag either way so a released-into-nothing cable does not stay attached to the
+    // pointer.
+    if (gCableDrag.active == true) {
+        if (handle_cable_connect(gMouse, gSlot, gLocation) == true) {
+            handled = true;
+        }
+        memset(&gCableDrag, 0, sizeof(gCableDrag));
+        handled = true;
+    }
     return handled;
+}
+
+// Pointer moved with no button down. Updates the position AND advances the hover state: the menu
+// highlight is drawn from the pointer, and a submenu flyout opens on a dwell timer that only ticks
+// when something polls it. The application polls both of these every frame (graphics.c); doing it on
+// movement is enough here, since the plug-in redraws on demand rather than continuously.
+void g2_input_hover(double x, double y) {
+    g2_input_set_mouse(x, y);
+    update_context_menu_hover();
+    update_menu_bar_hover(gPluginMenuBar, g2_menu_bar_rect(get_render_width() / gGlobalGuiScale));
+}
+
+// Right button. The application opens its canvas menus on release, and the hit-test order matters —
+// see canvas_right_click().
+bool g2_input_right_click(double x, double y) {
+    g2_input_set_mouse(x, y);
+
+    // An open menu takes the click, as it does for the left button.
+    if (handle_context_menu_click(gMouse) == true) {
+        return true;
+    }
+    return canvas_right_click(gMouse, gSlot, gLocation);
 }
 
 // Called by the canvas when a dial drag begins (moduleGraphics.c). In the application this ALSO

@@ -36,6 +36,9 @@
 #include "moduleResourcesAccess.h"
 #include "paramOverlay.h"
 #include "synthlibGlobals.h"
+#include "menus.h"
+#include "moduleGraphics.h"
+#include "cableChain.h"
 #include "canvasDrag.h"
 
 void canvas_drag_set_origin(double rawX, double rawY) {
@@ -112,6 +115,15 @@ bool canvas_drag_motion(tCoord coord) {
                 }
             }
         }
+        return true;
+    }
+
+    if (gCableDrag.active == true) {
+        // The loose end follows the pointer, offset by half a connector so the cable appears to be
+        // held by its middle rather than its corner.
+        convert_mouse_coord_to_module_area_coord(&gCableDrag.toConnector.coord,
+                                                 (tCoord){coord.x - scale_from_percent(CONNECTOR_SIZE / 2.0),
+                                                          coord.y - scale_from_percent(CONNECTOR_SIZE / 2.0)});
         return true;
     }
 
@@ -435,3 +447,214 @@ bool canvas_param_drag_release(void) {
     memset(&gParamDragging, 0, sizeof(gParamDragging));
     return true;
 }
+
+// ── Right-click menus ───────────────────────────────────────────────────────────────────────────
+//
+// The canvas half of mouseHandle.c's mouseButtonRightUp handler, lifted out so the plug-in gets the
+// same menus. Hit-tests in the application's order — connectors, then parameters, then the module
+// body, then the morph labels — which matters: a connector sits inside its module's rectangle, so
+// testing the body first would swallow every connector right-click.
+//
+// The application keeps its own topbar and module-area right-click handling after calling this.
+bool canvas_right_click(tCoord coord, uint32_t slot, uint32_t location) {
+    bool found = false;
+    int  i     = 0;
+
+    for (uint32_t idx = 0; idx < MAX_NUM_MODULES && !found; idx++) {
+        tModule * module = get_module_slot(slot, location, idx);
+
+        if (!module->active) {
+            continue;
+        }
+
+        for (i = 0; i < (int)module_connector_count(module->type); i++) {
+            if (within_rectangle(coord, module->connector[i].rectangle)) {
+                open_connector_context_menu(coord, module->key, i);
+                found = true;
+                break;
+            }
+        }
+
+        if (found == false) {
+            uint32_t paramCount = module_param_count(module->type);
+
+            for (uint32_t p = 0; p < paramCount && !found; p++) {
+                if (within_rectangle(coord, gParamRectangle[module->key.slot][module->key.location][module->key.index][p])) {
+                    open_param_context_menu(coord, module->key, p);
+                    found = true;
+                }
+            }
+        }
+
+        if (found == false) {
+            if (within_rectangle(coord, module->rectangle)) {
+                open_module_context_menu(coord, module->key);
+                found = true;
+            }
+        }
+    }
+
+    if (found == false) {
+        for (int mi = 0; mi < NUM_MORPHS && !found; mi++) {
+            if (within_rectangle(coord, gMorphLabelRect[mi])) {
+                open_morph_label_context_menu(coord, (uint32_t)mi);
+                found = true;
+            }
+        }
+    }
+    return found;
+}
+
+// ── Cable dragging ──────────────────────────────────────────────────────────────────────────────
+//
+// The press already lives in a click-region handler (connector_click_handler in moduleGraphics.c),
+// which the plug-in shares; what follows is the motion's destination and the connect on release,
+// moved out of mouseHandle.c so the plug-in can patch as well as look.
+//
+// msg_send() inside the connect tells the G2 about the new cable. In a plug-in that reaches a stub
+// and does nothing, which is right — the cable exists locally, the sound engine picks it up from the
+// database, and no hardware is written to.
+
+void set_up_cable_key(tCableKey * cableKey, tModule * fromModule, tModule * toModule, int toConnectorIndex) {
+    // This logic is pretty horrible - sorry
+    cableKey->slot                 = fromModule->key.slot;
+    cableKey->location             = fromModule->key.location;
+    cableKey->moduleFromIndex      = fromModule->key.index;
+    cableKey->connectorFromIoCount = find_io_count_from_index(fromModule, fromModule->connector[gCableDrag.fromConnectorIndex].dir, gCableDrag.fromConnectorIndex);
+    cableKey->moduleToIndex        = toModule->key.index;
+    cableKey->connectorToIoCount   = find_io_count_from_index(toModule, toModule->connector[toConnectorIndex].dir, toConnectorIndex);
+    cableKey->linkType             = fromModule->connector[gCableDrag.fromConnectorIndex].dir;
+}
+
+bool swap_cable_to_from_if_needed(tCableKey * cableKey, tModule * fromModule, tModule * toModule, int toConnectorIndex) {
+    if (  fromModule->connector[gCableDrag.fromConnectorIndex].dir == connectorDirIn
+       && toModule->connector[toConnectorIndex].dir == connectorDirOut) {
+        uint32_t tmpModuleIndex    = cableKey->moduleFromIndex;
+        uint32_t tmpConnectorIndex = cableKey->connectorFromIoCount;
+
+        cableKey->moduleFromIndex      = cableKey->moduleToIndex;
+        cableKey->connectorFromIoCount = cableKey->connectorToIoCount;
+        cableKey->moduleToIndex        = tmpModuleIndex;
+        cableKey->connectorToIoCount   = tmpConnectorIndex;
+        cableKey->linkType             = toModule->connector[toConnectorIndex].dir;
+
+        return true; // Indicates swap occurred
+    }
+    return false;
+}
+
+static bool input_connector_has_cable(uint32_t slot, uint32_t location,
+                                      uint32_t moduleIndex, uint32_t ioCount) {
+    for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+        tCable * cable = get_cable_slot(slot, location, i);
+
+        if (cable == NULL || !cable->active) {
+            continue;
+        }
+
+        if (cable->key.moduleToIndex == moduleIndex && cable->key.connectorToIoCount == ioCount) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool handle_cable_connect(tCoord coord, uint32_t slot, uint32_t location) {
+    bool       found         = false;
+    int32_t    i             = 0;
+    tCableKey  cableKey      = {0};
+    tCable     cable         = {0};
+    bool       connected     = false;
+    tCableNode connectedNode = {0};
+
+    tModule *  fromModule    = get_module(gCableDrag.fromModuleKey);
+
+    if (fromModule == NULL) {
+        return false;
+    }
+    // Bracketed as one cable edit: a connect can repaint the whole tree as well as add the
+    // cable, and undo has to put the old colours back along with the topology.
+    undo_begin_cable_edit(slot, location);
+
+    for (uint32_t idx = 0; idx < MAX_NUM_MODULES && !found; idx++) {
+        tModule * toModule = get_module_slot(slot, location, idx);
+
+        if (!toModule->active) {
+            continue;
+        }
+
+        for (i = 0; i < (int32_t)module_connector_count(toModule->type); i++) {
+            if (within_rectangle(coord, toModule->connector[i].rectangle) == true) {
+                found = true;
+                set_up_cable_key(&cableKey, fromModule, toModule, i);
+
+                swap_cable_to_from_if_needed(&cableKey, fromModule, toModule, i);
+
+                // Prevent self-connections and invalid connections
+                if (  (cableKey.moduleFromIndex == cableKey.moduleToIndex && gCableDrag.fromConnectorIndex == i)
+                   || (  fromModule->connector[gCableDrag.fromConnectorIndex].dir == connectorDirOut
+                      && toModule->connector[i].dir == connectorDirOut)) {
+                    break;
+                }
+
+                // Note that this call will walk the cables, which we can't nest
+                if (input_connector_has_cable(slot, location,
+                                              cableKey.moduleToIndex,
+                                              cableKey.connectorToIoCount)) {
+                    break;
+                }
+                // Inherits the FROM connector's CURRENT (upRate-promoted, if applicable) colour, not
+                // just its declared base type — matches the manual's "cables connected to this
+                // output will inherit this colour" (g2manual.txt p.71); see effective_connector_type()'s
+                // own comment (moduleResourcesAccess.h) for why the promotion itself lives there,
+                // not in the stored connector type.
+                tConnectorType  fromConnectorType = effective_connector_type(
+                    fromModule->connector[gCableDrag.fromConnectorIndex].type, fromModule->upRate);
+                cable.colour                                  = (uint32_t)cable_colour_for_connector_type(fromConnectorType);
+                write_cable(cableKey, &cable);
+
+                tMessageContent messageContent    = {0};
+
+                messageContent.cmd                            = eMsgCmdWriteCable;
+                messageContent.slot                           = slot;
+                messageContent.cableData.location             = location;
+                messageContent.cableData.moduleFromIndex      = cableKey.moduleFromIndex;
+                messageContent.cableData.connectorFromIoIndex = cableKey.connectorFromIoCount;
+                messageContent.cableData.moduleToIndex        = cableKey.moduleToIndex;
+                messageContent.cableData.connectorToIoIndex   = cableKey.connectorToIoCount;
+                messageContent.cableData.linkType             = cableKey.linkType;
+                messageContent.cableData.colour               = cable.colour;
+                msg_send(&gToUsbThread, &messageContent);
+
+                // The to-end is always an input, so this needs no database lookup — which also
+                // keeps it safe if write_cable() found no free slot
+                connected                                     = true;
+                connectedNode                                 = (tCableNode){
+                    cableKey.moduleToIndex, cableKey.connectorToIoCount, false
+                };
+
+                break;
+            }
+        }
+    }
+
+    // A connect is a topology change, so the chain's colour is re-derived across the WHOLE tree,
+    // exactly as GetConnectRecolorMolecules (G2Editor.c:159558) does with a CCompleteTreeIterator
+    // — note COMPLETE, where the branch-scoped commands use CCompleteBranchIterator.
+    //
+    // This is what maintains the invariant that the colour above only guesses at: every cable in
+    // a chain carries ONE colour, the source output's signal colour, or WHITE when the chain has
+    // no source at all. Joining two inputs together produces a sourceless chain and so comes out
+    // white, which is the manual's "non-functional input-to-input connections". Attaching a
+    // source later repaints the whole tree, discarding any colour the user had chosen — which is
+    // the original's behaviour, and the reason recolouring is tied to topology changes only.
+    if (connected) {
+        cable_chain_recolour(slot, location, connectedNode);
+    }
+    update_module_up_rates();
+    undo_commit_cable_edit();  // Pushes nothing if the drag landed somewhere that added no cable
+
+    return found;
+}
+
