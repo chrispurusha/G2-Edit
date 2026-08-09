@@ -58,6 +58,62 @@ bool canvas_module_drag_release(void);
 // against it; Alt-held morph dragging measures from it rather than from the previous event.
 void canvas_drag_set_origin(double rawX, double rawY);
 
+// ── The canvas gestures, declared as a set ──────────────────────────────────────────────────────
+//
+// A GESTURE HAS THREE PHASES AND NOTHING USED TO SAY SO. Press lives in a click-region handler, motion
+// and release live here, and each shell wired the phases up by hand — the application in
+// mouseHandle.c, the plug-in in g2Input.c. Two hand-maintained ladders for the same four gestures,
+// and the consequences were not theoretical (vst3/plugin-gui-notes.md, observation 1):
+//
+//   - The plug-in never reached the module drag's release, so a dropped module was never re-ordered.
+//   - It never reached the dial drag's release, so a dial stayed held after mouse-up and the next
+//     click anywhere carried on turning it.
+//   - The application grew its OWN copy of the module-drag release, inline in its mouse-up handler,
+//     while canvas_module_drag_release() sat here used only by the plug-in — two implementations of
+//     one phase, free to drift.
+//   - The two shells even ran their release phases in different orders, and only one order could have
+//     been the considered one.
+//
+// The table in canvasDrag.c now names all four gestures and their phases in one place, so a gesture
+// with a phase left unwired is a visible hole in a table row rather than a silence. A shell asks for
+// motion or release and the table decides who wants it.
+typedef enum {
+    canvasGestureNone       = 0,
+    canvasGestureParam      = 1u << 0,   // a dial or slider, including an Alt morph-offset drag
+    canvasGestureModule     = 1u << 1,   // moving one module or a whole selection
+    canvasGestureCable      = 1u << 2,   // dragging a cable end towards a connector
+    canvasGestureRubberBand = 1u << 3,   // sweeping out a selection over empty canvas
+    canvasGestureAll        = 0x0Fu
+} tCanvasGesture;
+
+// Everything a phase might need, so the table's rows can share one signature. A shell fills in what
+// it has: `additive` is Shift (add to the selection rather than replace it) and `altHeld` is Alt (drag
+// the morph offset rather than the value), both already answered by SynthLib's pushed modifier state.
+typedef struct {
+    tCoord   coord;      // pointer in canvas logical units
+    double   rawX;       // pointer in the space THIS shell reports motion in — see cursor_raw_coord()
+    double   rawY;
+    uint32_t slot;
+    uint32_t location;
+    bool     altHeld;
+    bool     additive;
+} tCanvasGestureEvent;
+
+// Offers the motion to each gesture in turn and returns the one that took it, or canvasGestureNone.
+// The identity is returned rather than a bool because a shell may have work of its own to add — the
+// application auto-scrolls the canvas for a module or cable drag, which belongs to whoever owns the
+// scrollbars.
+tCanvasGesture canvas_gesture_motion(const tCanvasGestureEvent * event);
+
+// Releases every gesture in `wanted` that is in progress, and returns the set that acted.
+//
+// WHY A MASK RATHER THAN A SWEEP OF ALL FOUR: the application interleaves dispatch_click_region() in
+// the middle of its release handling — module and cable first, then the click regions, then the rubber
+// band — and that ordering is load-bearing for press-captured widgets. Rather than quietly changing
+// it, a shell says which gestures it wants released at this point. Passing canvasGestureAll is the
+// simple case and is what the plug-in does.
+tCanvasGesture canvas_gesture_release(const tCanvasGestureEvent * event, tCanvasGesture wanted);
+
 // ── Starting a drag: the logic half is shared, the platform half is optional ─────────────────────
 //
 // CALL THIS TO BEGIN ANY CURSOR-CAPTURING DRAG. It records the origin — which every incremental dial

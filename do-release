@@ -1,6 +1,7 @@
 #!/bin/zsh
 
-# Builds a universal (arm64 + x86_64) Release binary and packages it as a .dmg
+# Builds a universal (arm64 + x86_64) Release binary of the editor AND the VST3
+# plug-in, and packages both as a .dmg
 # ready to attach to a GitHub release.
 #
 # Versions are semver: V<major>.<minor>.<patch>-beta.<n>. The .dmg is normally
@@ -223,6 +224,48 @@ xattr -cr "$APP"
 codesign --force --options runtime --sign - "$APP"
 codesign --verify --strict "$APP"
 
+# --- plug-in -------------------------------------------------------------
+
+# The VST3 ships in the same .dmg as the app. It is built by do-vst3 rather than
+# by Xcode - a .vst3 is a bundle wrapped around one dylib, and it needs no build
+# system to say so - so it is a separate invocation here.
+#
+# A MISSING SDK ABORTS THE RELEASE rather than quietly producing a .dmg with no
+# plug-in in it. The .dmg's own Read Me First.txt tells the user the plug-in is
+# there, so shipping one without it is worse than a build that stops and says so.
+# Set G2_RELEASE_SKIP_VST3=1 for the app on its own, deliberately.
+
+VST3_BUNDLE=""
+
+if [[ -n ${G2_RELEASE_SKIP_VST3:-} ]]; then
+    echo "==> skipping the VST3 (G2_RELEASE_SKIP_VST3 is set)"
+else
+    echo "==> building the VST3"
+
+    if ! ./do-vst3 >/dev/null; then
+        echo "error: the VST3 build failed - see ./do-vst3 for the reason" >&2
+        echo "       (needs the VST3 SDK; set VST3_SDK if it is not in ~/Documents/vst3sdk)" >&2
+        echo "       set G2_RELEASE_SKIP_VST3=1 to release the app without the plug-in" >&2
+        exit 1
+    fi
+    VST3_BUNDLE="build/G2 Alike.vst3"
+
+    if [[ ! -d $VST3_BUNDLE ]]; then
+        echo "error: do-vst3 reported success but $VST3_BUNDLE is not there" >&2
+        exit 1
+    fi
+    # Same universal check the app gets. A single-architecture plug-in would load
+    # for half the users and be invisible to the other half.
+    VST3_BINARY="$VST3_BUNDLE/Contents/MacOS/G2 Alike"
+    VST3_ARCHS=$(lipo -archs "$VST3_BINARY" 2>/dev/null || echo "")
+
+    if [[ $VST3_ARCHS != *arm64* || $VST3_ARCHS != *x86_64* ]]; then
+        echo "error: the VST3 is not universal, got '$VST3_ARCHS'" >&2
+        exit 1
+    fi
+    echo "==> VST3 built $VST3_ARCHS"
+fi
+
 # --- stage ---------------------------------------------------------------
 
 echo "==> staging disk image contents"
@@ -233,9 +276,23 @@ trap "rm -rf $STAGE" EXIT
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 
+# NO SYMLINK TO THE VST3 FOLDER beside the Applications one, deliberately: the
+# plug-in folder lives under the user's own home directory and a symlink baked
+# into a .dmg would point at the machine that built it. The Read Me First covers
+# it with a Terminal line and a Finder route instead.
+if [[ -n $VST3_BUNDLE ]]; then
+    cp -R "$VST3_BUNDLE" "$STAGE/"
+fi
+
 cat > "$STAGE/Read Me First.txt" <<EOF
 $VOL_NAME $VERSION_CLEAN
 ========================
+
+WHAT IS IN HERE
+
+  $APP_NAME     the editor
+  G2 Alike.vst3      an experimental VST3 instrument that plays a patch
+                     (see "THE PLUG-IN" below - install it only if you want it)
 
 STEP 1 - INSTALL
 
@@ -268,9 +325,36 @@ Alternative, if you would rather not use Terminal: double-click the app in
 Applications, dismiss the warning, then open System Settings > Privacy &
 Security, scroll down, and click "Open Anyway".
 
+THE PLUG-IN (OPTIONAL)
+
+"G2 Alike.vst3" is a VST3 instrument that PLAYS a patch rather than editing one,
+which is why it has its own name. It is experimental: it covers around 17 module
+types, so many patches will load without complaint and make no sound.
+
+The editor does not need it and it does not need the editor. Skip this section
+entirely if you only want the editor.
+
+To install it, copy it into your own VST3 folder. In Terminal:
+
+    mkdir -p ~/Library/Audio/Plug-Ins/VST3
+    cp -R "/Volumes/${${VOL_NAME}[1,15]} $VERSION_CLEAN/G2 Alike.vst3" ~/Library/Audio/Plug-Ins/VST3/
+    xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"G2 Alike.vst3"
+
+Or in Finder: choose Go > Go to Folder, enter
+
+    ~/Library/Audio/Plug-Ins/VST3
+
+and drag "G2 Alike.vst3" from this window into it. It is unsigned in the same way
+the app is, so still run the xattr line above afterwards, or your host will
+refuse to load it with no useful explanation.
+
+Then rescan plug-ins in your host - most do it at startup. It appears as
+"G2 Alike" by Chris Purusha, as an instrument.
+
 REQUIREMENTS
 
 macOS 11.5 or later, Apple Silicon or Intel.
+The plug-in needs a VST3 host; it does not work on its own.
 EOF
 
 # --- package -------------------------------------------------------------
@@ -293,6 +377,12 @@ hdiutil create \
 echo
 echo "done: $DMG ($(du -h "$DMG" | cut -f1))"
 echo "architectures: $ARCHS"
+
+if [[ -n $VST3_BUNDLE ]]; then
+    echo "contents: $APP_NAME + G2 Alike.vst3 ($VST3_ARCHS)"
+else
+    echo "contents: $APP_NAME ONLY - no plug-in (G2_RELEASE_SKIP_VST3 was set)"
+fi
 echo "signature: ad-hoc, NOT notarized - users must clear quarantine"
 
 if [[ -n $NEW_TAG ]]; then
