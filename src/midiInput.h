@@ -48,9 +48,17 @@ uint32_t midi_input_source_count(void);
 const char * midi_input_source_name(uint32_t index);
 bool midi_input_source_is_selected(uint32_t index);
 
-// Pass MIDI_INPUT_NONE to take no input at all.
+// Pass MIDI_INPUT_NONE to take no input at all, or MIDI_INPUT_ALL to take every source at once —
+// everything currently attached AND anything plugged in later, since the CoreMIDI setup-changed
+// notification reconnects. That state already existed as the startup default (no specific source
+// chosen); what was missing was any way back to it once a single source had been picked.
 #define MIDI_INPUT_NONE    (-1)
+#define MIDI_INPUT_ALL     (-2)
 void midi_input_select_source(int32_t index);
+
+// True when input is enabled with no single source chosen, i.e. everything is connected. The menu
+// needs to distinguish that from "this one source", which midi_input_source_is_selected() answers.
+bool midi_input_all_sources_selected(void);
 bool midi_input_is_enabled(void);
 
 // 0 listens on every channel; 1..16 selects one.

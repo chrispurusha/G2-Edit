@@ -41,6 +41,10 @@ void g2_input_set_mouse(double x, double y);
 // has travelled — see clickRegion.h.
 bool g2_input_mouse_event(double x, double y, eClickPhase phase);
 
+// A drag step expressed as MOVEMENT rather than a position, for when the pointer is confined and
+// therefore has no position to report. Same pixel space as g2_input_mouse_event()'s coordinates.
+bool g2_input_drag_by(double dxPixels, double dyPixels);
+
 // Pointer moved with no button down: updates position and advances menu hover/dwell state.
 void g2_input_hover(double x, double y);
 
