@@ -2176,9 +2176,31 @@ PARTIALLY DONE / STILL OPEN:
      THE SLOPE IS NOT PROPORTIONAL TO ROOM SIZE (Hall/Small 3.67 against a size ratio of 1.68), so Type
      sets the feedback GAIN as well as the lengths — hence a table rather than the size scale doing it.
 
-   * BRIGHTNESS IS LOOP DAMPING, and this is the one parameter whose existing model was already right
-     (damping = 1 - brightness, one-pole inside each comb). Hall at Time 127, tail measured 200 ms in,
-     band energies relative to the whole:
+   * BRIGHTNESS IS LOOP DAMPING — the structure was right, the amount was about twice too much. Now
+     REVERB_BRIGHT_MAX/CURVE = 1.0/0.15, fitted against nine measured points of the dial and verified:
+     the engine's low-band decay is 97-98% of the hardware's in ALL FOUR rooms, and the HF/LF decay-rate
+     ratio is 0.53/0.70/1.00 against the hardware's 0.54/0.75/0.95 at Brightness 16/64/127.
+
+     MEASURE THIS AGAINST THE RATIO OF PER-BAND DECAY RATES. Two other metrics actively mislead, and
+     both of them fooled me first:
+      - BROADBAND decay follows whichever band holds the energy. It made the engine look 40-60% short of
+        its own target when its low band was within a second of the hardware. There was no shortfall.
+      - ABSOLUTE tail colour at a fixed instant scores a linear dial BETTER than the correct curve,
+        because colour at an instant mixes loop damping with everything outside the loop.
+     Neither is a substitute for a rate.
+
+     TWO WRONG DIAGNOSES ON THE WAY, recorded so they are not made again. It is NOT a feedback-gain
+     error — the one-pole has unity DC gain, so fb sets the low-frequency decay exactly, and a render
+     hits the requested time to 0.01 s with the filter out of the loop. And the damping is NOT a fixed
+     loss outside the loop: the hardware's tail darkens as it decays, 14-16 dB over three seconds at mid
+     dial against 1-3 dB at the top, which only something inside the loop does.
+
+     STILL OPEN on brightness: the engine's tail is about 7 dB BRIGHTER in absolute terms than the
+     hardware's at the top of the dial, even though their decay rates now agree. A loop that damps
+     correctly but starts too bright means a fixed tilt somewhere outside the loop — one pass, not
+     compounded, so it colours without touching decay. Not implemented; measured at roughly 7 dB.
+
+     Hall at Time 127, tail measured 200 ms in, band energies relative to the whole:
 
          Bright   decay      100-500Hz   0.5-2k    2-6k   6-20k
               0   too damped to fit  -9.5    -24.6   -33.7   -30.9
