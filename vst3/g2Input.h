@@ -57,6 +57,11 @@ void g2_input_scroll(double x, double y, double deltaX, double deltaY);
 // pointer is held still past a pane edge. Returns true if anything moved.
 bool g2_input_drag_tick(void);
 
+// A key press from the host's view. `character` is the unshifted character (so '+' arrives as '=' on
+// most layouts, and both are accepted) and `cmdHeld` says whether Command was down. Returns true if it
+// was used — the view must pass anything else on, since the host owns its own shortcuts.
+bool g2_input_key(int character, bool cmdHeld);
+
 #ifdef __cplusplus
 }
 #endif

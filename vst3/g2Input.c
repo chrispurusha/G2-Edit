@@ -47,6 +47,7 @@
 #include "globalVars.h"
 #include "canvasDrag.h"
 #include "inputState.h"    // multi_select_modifier_held() — real modifiers now, see g2GlView.m
+#include "canvasCoords.h"  // canvas_zoom_step() — shared with the application's Cmd +/-
 #include "contextMenu.h"
 #include "menuBar.h"
 #include "utilsGraphics.h"
@@ -102,20 +103,28 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
         // Dials first: a parameter drag and a module drag can never both be active, but the
         // parameter one is the common case and reads an absolute angle, so it costs nothing to ask.
         //
-        // The raw coordinates are the canvas ones here. That is correct ONLY because the plug-in
-        // reports eDialModeRotary, which reads an absolute angle rather than differencing against
-        // the previous event. Vertical and horizontal dial modes would need genuine raw cursor
-        // deltas AND a real cursor_capture(), neither of which a host view gives us yet — see the
-        // no-op cursor_capture() below.
+        // The raw coordinates are the canvas ones, and that is SELF-CONSISTENT rather than a
+        // compromise: cursor_raw_coord() records the drag origin from this same gMouse, so the
+        // incremental dial modes difference two values in one space. All three dial modes therefore
+        // work here — the mode comes from this plug-in's own prefs and its own Controls menu, and
+        // eDialModeRotary is only the fallback default in g2Prefs.c when that pref is absent.
+        //
+        // What is missing without a real cursor_capture() is pointer HIDING and confinement, not the
+        // arithmetic: the pointer visibly travels away from the dial, and a long drag can run out of
+        // screen. An earlier comment here claimed the plug-in "reports eDialModeRotary" and that the
+        // other modes could not work at all, which was simply untrue.
         {
             // All four gestures through the shared table, in the one order that is written down —
-            // see canvasDrag.h. altHeld stays false: a morph drag needs Alt, and while this view now
-            // reports real modifiers, the incremental dial modes it would apply to still need a real
-            // cursor_capture().
+            // see canvasDrag.h.
+            //
+            // ALT IS REAL NOW, so an Alt-drag on a dial adjusts its MORPH OFFSET rather than its value,
+            // as it does in the application. It works in every dial mode: Alt only changes which field
+            // the resulting value is written to, and the incremental modes are sound here for the
+            // reason given above.
             tCanvasGesture took = canvas_gesture_motion(&(tCanvasGestureEvent){
                                                             .coord = gMouse, .rawX = gMouse.x, .rawY = gMouse.y,
                                                             .slot = gSlot, .location = gLocation,
-                                                            .altHeld = false, .additive = multi_select_modifier_held()
+                                                            .altHeld = alt_modifier_held(), .additive = multi_select_modifier_held()
                                                         });
 
             // Dragging a module or a cable past a pane's edge scrolls that pane to follow, at the
@@ -231,7 +240,7 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
     if (canvas_gesture_release(&(tCanvasGestureEvent){
                                    .coord = gMouse, .rawX = gMouse.x, .rawY = gMouse.y,
                                    .slot = gSlot, .location = gLocation,
-                                   .altHeld = false, .additive = multi_select_modifier_held()
+                                   .altHeld = alt_modifier_held(), .additive = multi_select_modifier_held()
                                }, canvasGestureAll) != canvasGestureNone) {
         handled = true;
     }
@@ -300,6 +309,23 @@ void g2_input_scroll(double x, double y, double deltaX, double deltaY) {
     pane = split_view_pane_at(gMouse);
 
     if (pane < 0) {
+        return;
+    }
+
+    // CMD + WHEEL ZOOMS, as it does in the application, around the pointer rather than the corner.
+    //
+    // ONE STEP PER EVENT rather than scaling by the delta: the deltas arriving here are PIXELS (see
+    // the caller in g2GlView.m, which multiplies by the backing scale), so feeding them to a zoom
+    // factor that moves in 0.1 steps would fling the canvas from one limit to the other on a single
+    // flick. A notch is a step, which is what Cmd +/- does too.
+    if (cmd_modifier_held() == true) {
+        if (deltaY != 0.0) {
+            uint32_t prevPane = module_pane();
+
+            set_module_pane((uint32_t)pane);
+            canvas_zoom_step_at((deltaY > 0.0) ? ZOOM_DELTA : -ZOOM_DELTA, gMouse);
+            set_module_pane(prevPane);
+        }
         return;
     }
     pane_scroll_by((uint32_t)pane, -deltaX, -deltaY);
@@ -373,9 +399,10 @@ void cursor_raw_coord(double * rawX, double * rawY) {
 // drag origin — vertical and horizontal dial drags collapsed to zero while rotary looked perfect,
 // because rotary reads an absolute angle and never touches the origin.
 //
-// Implementing them for real is what vertical/horizontal dial modes need here: NSCursor hide/unhide
-// plus CGAssociateMouseAndMouseCursorPosition, or CGDisplayHideCursor with warping. Until then the
-// plug-in reports eDialModeRotary and loses nothing but pointer hiding.
+// WHAT IS LOST IS HIDING, NOT FUNCTION. All three dial modes work — see g2_input_mouse_event() — and
+// what a real implementation would add is NSCursor hide/unhide plus
+// CGAssociateMouseAndMouseCursorPosition (or CGDisplayHideCursor with warping), so that the pointer
+// stays put on the dial instead of travelling away from it and eventually running out of screen.
 void cursor_capture(void) {
 }
 
@@ -388,4 +415,44 @@ void get_global_gui_scaled_mouse_coord(tCoord * coord) {
     if (coord != NULL) {
         *coord = gMouse;
     }
+}
+
+// ── Keyboard ────────────────────────────────────────────────────────────────────────────────────
+//
+// The shell decodes, the shared code acts — the same split as the modifier seam. g2GlView.m hands over
+// a character it took from -charactersIgnoringModifiers (so this sees the key's unshifted meaning, and
+// '+' and '=' are both worth accepting) plus whether Command was down.
+//
+// UNTIL NOW THIS VIEW RECEIVED NO KEY EVENTS AT ALL: NSView's -acceptsFirstResponder is NO by default
+// and nothing had overridden it, so neither -keyDown: nor -flagsChanged: was ever called. Both are
+// live now, which is also what makes a modifier pressed mid-drag — with no mouse movement to carry it
+// — register at all.
+//
+// Returns true if the key was used, so the view can leave it alone otherwise and let the host have it.
+// That matters: a host owns shortcuts like the space bar for transport, and a plug-in that swallowed
+// everything would be worse than one that swallowed nothing.
+bool g2_input_key(int character, bool cmdHeld) {
+    if (cmdHeld == true) {
+        // Cmd +/- is the canvas zoom, the same pair and the same step the application uses.
+        if ((character == '=') || (character == '+')) {
+            canvas_zoom_step(ZOOM_DELTA);
+            return true;
+        }
+
+        if (character == '-') {
+            canvas_zoom_step(-ZOOM_DELTA);
+            return true;
+        }
+        return false;
+    }
+
+    // Bare +/- steps the parameter under the pointer by one raw unit.
+    if ((character == '=') || (character == '+')) {
+        return canvas_nudge_param_under_cursor(1);
+    }
+
+    if (character == '-') {
+        return canvas_nudge_param_under_cursor(-1);
+    }
+    return false;
 }

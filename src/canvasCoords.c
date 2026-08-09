@@ -26,6 +26,7 @@
 #include "types.h"
 #include "geometry.h"
 #include "utilsGraphics.h"
+#include "misc.h"          // save_zoom_factor() — the prefs side of the zoom
 #include "canvasCoords.h"
 
 void convert_mouse_coord_to_module_area_coord(tCoord * targetCoord, tCoord coord) {
@@ -75,4 +76,24 @@ void convert_mouse_coord_to_module_column_row(uint32_t * column, uint32_t * row,
         }
         *row = floor(val);
     }
+}
+
+// ── Zoom, stepped ───────────────────────────────────────────────────────────────────────────────
+//
+// One Cmd +/- worth of canvas zoom, anchored at the module area's top-left and remembered in prefs.
+// Shared because both shells offer the same shortcut and neither should own the arithmetic: the
+// application had these four lines written out twice in its key handler (once per direction), and the
+// plug-in would have made a third and fourth copy.
+// The ANCHOR is what the two callers disagree about and nothing else: Cmd +/- has no meaningful
+// position so it uses the module area's corner, while Cmd + wheel zooms around the pointer, which is
+// what makes zooming feel like it is aimed at something.
+void canvas_zoom_step_at(double delta, tCoord anchor) {
+    set_zoom_factor(get_zoom_factor() + delta, anchor);
+    save_zoom_factor(get_zoom_factor());
+}
+
+void canvas_zoom_step(double delta) {
+    tRectangle area = module_area();
+
+    canvas_zoom_step_at(delta, (tCoord){area.coord.x, area.coord.y});
 }
