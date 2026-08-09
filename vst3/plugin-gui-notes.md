@@ -263,11 +263,15 @@ The drag reference points (`gDragStartX/Y`, `gDragPrevX/Y`) moved to `globalVars
 `canvasDrag.c`, because `cursor_pos()`'s remaining arms — tempo, vibrato, glide — difference against
 the same two points and stayed behind.
 
-**ROTARY DIAL MODE ONLY in the plug-in, and this is load-bearing.** Rotary reads an absolute angle
-each event, so passing the canvas coordinate as the "raw" one is harmless. Vertical and horizontal
-modes difference raw cursor deltas AND depend on `start_cursor_drag()` hiding and warping the
-cursor — a platform capability the plug-in does not have, which is why `synthlib_dial_mode()`
-reports rotary there. Wiring the other two modes means giving the plug-in real cursor control first.
+**~~ROTARY DIAL MODE ONLY in the plug-in~~ — WRONG, and superseded below.** The claim was that
+vertical and horizontal modes need real cursor deltas and `start_cursor_drag()`'s hiding and warping,
+so the plug-in had to report rotary. It does not: `cursor_raw_coord()` records the origin from the
+same `gMouse` the motion path differences against, so the incremental modes are self-consistent in
+canvas coordinates and work. All three modes are selectable from the plug-in's own Controls menu and
+persist in its own prefs; rotary is only the FALLBACK DEFAULT in `g2Prefs.c` when the pref is absent.
+What is actually missing without `cursor_capture()` is pointer hiding and confinement — see the
+`View` paragraph further down, which had this right all along. This note is left standing rather than
+deleted because the wrong version was quoted back at the owner more than once.
 
 A BUG WORTH REMEMBERING, found when module re-ordering silently did nothing: **a press CAPTURES its
 click region** (clickRegion.h), so `dispatch_click_region()` returns true on the matching RELEASE

@@ -174,111 +174,6 @@ void cursor_release(void) {
 // one - which is what identifying a parameter's real quantisation needs (where does the synth's own
 // display actually change?). The step is written to the device exactly as a drag's is, so the G2
 // reacts to each one. Pair it with View > Parameter Values to see the raw number being stepped.
-static bool nudge_param_for_module(tModule * module, tCoord coord, uint32_t variation, int delta) {
-    uint32_t paramCount = 0;
-
-    if (module->key.location == locationMorph) {
-        paramCount = (module->key.index == 1) ? (NUM_MORPHS * 2) : 1;
-    } else {
-        paramCount = module_param_count(module->type);
-    }
-
-    for (uint32_t i = 0; i < paramCount; i++) {
-        tParam *   param = &module->param[variation][i];
-        tParamType type  = paramTypeCommonDial;
-        uint32_t   range = 128;
-        int        newValue;
-
-        if (!within_rectangle(coord, gParamRectangle[module->key.slot][module->key.location][module->key.index][i])) {
-            continue;
-        }
-
-        if (module->key.location != locationMorph) {
-            type  = paramLocationList[param->paramRef].type;
-            range = paramLocationList[param->paramRef].range;
-        }
-
-        // Push is momentary and CustomData is not a scalar, so neither has a value to step. Return
-        // true regardless: the cursor IS over this parameter, and falling through to keep looking
-        // would let a widget behind it take the keypress instead.
-        if ((type == paramTypePush) || (type == paramTypeCustomData) || (range == 0)) {
-            return true;
-        }
-        newValue = (int)param->value + delta;
-
-        if (newValue < 0) {
-            newValue = 0;
-        } else if (newValue >= (int)range) {
-            newValue = (int)range - 1;
-        }
-
-        if ((uint32_t)newValue != param->value) {
-            param->value = (uint32_t)newValue;
-            send_param_value(module->key.slot, module->key, i, variation, (uint32_t)newValue);
-        }
-        return true;
-    }
-
-    // Mode selectors render as dials too, so hovering one and getting nothing would be the
-    // surprise. They carry their own range table and their own write command.
-    for (uint32_t i = 0; i < module->modeCount; i++) {
-        tMode *  mode  = &module->mode[i];
-        uint32_t range = modeLocationList[mode->modeRef].range;
-        int      newValue;
-
-        if (!within_rectangle(coord, mode->rectangle)) {
-            continue;
-        }
-
-        if (range == 0) {
-            return true;
-        }
-        newValue = (int)mode->value + delta;
-
-        if (newValue < 0) {
-            newValue = 0;
-        } else if (newValue >= (int)range) {
-            newValue = (int)range - 1;
-        }
-
-        if ((uint32_t)newValue != mode->value) {
-            mode->value = (uint32_t)newValue;
-            send_mode_value(module->key.slot, module->key, i, (uint32_t)newValue);
-        }
-        return true;
-    }
-
-    return false;
-}
-
-static bool nudge_param_under_cursor(int delta) {
-    tCoord   coord     = {0};
-    uint32_t slot      = gSlot;
-    uint32_t variation = gPatchDescr[slot].activeVariation;
-
-    get_global_gui_scaled_mouse_coord(&coord);
-
-    // Morph knobs are drawn on top of the canvas, so they have to win the hit test against a module
-    // param that happens to sit at the same place — hence the Morph location is walked first here.
-    // (The click path gets this ordering from the click-region layers instead; see the press handler.)
-    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-        tModule * module = get_module_slot(slot, (uint32_t)locationMorph, i);
-
-        if (module->active && nudge_param_for_module(module, coord, variation, delta)) {
-            return true;
-        }
-    }
-
-    for (uint32_t i = 0; i < MAX_NUM_MODULES; i++) {
-        tModule * module = get_module_slot(slot, gLocation, i);
-
-        if (module->active && nudge_param_for_module(module, coord, variation, delta)) {
-            return true;
-        }
-    }
-
-    return false;
-}
 
 void set_x_scroll_bar(double x) {
     gScrollState.xBar = clamp_scroll_bar(x, get_render_width());
@@ -951,8 +846,7 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
 }
 
 void scroll_event(GLFWwindow * window, double x, double y) {
-    tCoord  coord      = {0};
-    double  zoomFactor = 0.0;
+    tCoord  coord   = {0};
 
     if (file_browser_active()) {
         handle_file_browser_scroll(y);
@@ -966,7 +860,7 @@ void scroll_event(GLFWwindow * window, double x, double y) {
     // The wheel acts on the pane UNDER THE CURSOR, not the focused one — hovering the FX half and
     // scrolling should move the FX half, without first having to click into it.
     get_global_gui_scaled_mouse_coord(&coord);
-    int32_t hovered    = split_view_pane_at(coord);
+    int32_t hovered = split_view_pane_at(coord);
 
     if (hovered < 0) {
         hovered = (int32_t)split_view_focused_pane();
@@ -976,10 +870,7 @@ void scroll_event(GLFWwindow * window, double x, double y) {
         uint32_t prevPane = module_pane();
 
         set_module_pane((uint32_t)hovered);
-        zoomFactor  = get_zoom_factor();
-        zoomFactor += y * ZOOM_DELTA;
-        set_zoom_factor(zoomFactor, coord);
-        save_zoom_factor(get_zoom_factor());
+        canvas_zoom_step_at(y * ZOOM_DELTA, coord);
         set_module_pane(prevPane);
     } else {
         // Content pixels per notch, relative to THAT PANE's own position — see pane_scroll_by().
@@ -1078,8 +969,6 @@ void char_event(GLFWwindow * window, unsigned int value) {
 }
 
 void key_callback(GLFWwindow * window, int key, int scancode, int action, int mods) {
-    double zoomFactor = 0.0;
-
     set_modifier_state_from_glfw(mods);   // a modifier PRESS is a key event like any other
 
     LOG_DEBUG("key=%d scancode=%d action=%d mods=%d\n", key, scancode, action, mods);
@@ -1491,32 +1380,20 @@ void key_callback(GLFWwindow * window, int key, int scancode, int action, int mo
         // GLFW_REPEAT is honoured so holding a key walks the range instead of one press per unit.
         bool increment = (key == GLFW_KEY_EQUAL) || (key == GLFW_KEY_KP_ADD);
 
-        if (nudge_param_under_cursor(increment ? 1 : -1)) {
+        if (canvas_nudge_param_under_cursor(increment ? 1 : -1)) {
             synthlib_request_redraw();
         }
     } else if (action == GLFW_PRESS && gCommandKeyPressed == true) {
-        tRectangle area  = {0};
-        tCoord     coord = {0};
-
-        area    = module_area();
-        coord.x = area.coord.x;
-        coord.y = area.coord.y;
-
-        // React on command key with - + keys for zooming
+        // Cmd +/- is the canvas zoom, through canvas_zoom_step() so this shell and the plug-in cannot
+        // drift on the step size, the anchor or whether the choice is remembered.
         if (key == GLFW_KEY_MINUS) {
             LOG_DEBUG("ZOOM OUT\n");
-            zoomFactor  = get_zoom_factor();
-            zoomFactor -= ZOOM_DELTA;
-            set_zoom_factor(zoomFactor, coord);
-            save_zoom_factor(get_zoom_factor());
+            canvas_zoom_step(-ZOOM_DELTA);
         }
 
         if (key == GLFW_KEY_EQUAL) {
             LOG_DEBUG("ZOOM IN\n");
-            zoomFactor  = get_zoom_factor();
-            zoomFactor += ZOOM_DELTA;
-            set_zoom_factor(zoomFactor, coord);
-            save_zoom_factor(get_zoom_factor());
+            canvas_zoom_step(ZOOM_DELTA);
         }
 
         if (key == GLFW_KEY_C) {
