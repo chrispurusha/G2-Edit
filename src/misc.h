@@ -30,6 +30,10 @@ extern "C" {
 // two things left in this codebase that genuinely need Objective-C/Cocoa. Everything else
 // declared below is plain C: menu actions live in menuActions.c, settings persistence (backed by
 // SynthLib's cross-platform prefs.h rather than NSUserDefaults) lives in persistence.c.
+// True while any mouse button is physically down, read from the window server rather than from the
+// event stream. Used to recover a drag whose mouse-up never arrived — see the definition.
+bool platform_any_mouse_button_down(void);
+
 void register_sleep_wake_notifications(void);
 void setup_main_menu(void);
 

@@ -780,7 +780,15 @@ void render_connector_common(tRectangle rectangle, tModule * module, tConnectorD
                 textRectangle.coord.y -= STANDARD_TEXT_HEIGHT; // May need scaling
                 break;
             case labelLocDown:
-                textRectangle.coord.y += STANDARD_TEXT_HEIGHT;
+                // PAST THE CONNECTOR, not by a text height. This used to add STANDARD_TEXT_HEIGHT, which
+                // is a measurement of the LABEL and says nothing about how tall the thing it has to clear
+                // is — so the glyphs landed on the bottom of the connector circle. labelLocLeft and
+                // labelLocRight already step over the connector by its own size.w; this is the same rule
+                // on the other axis, and it stays correct whatever CONNECTOR_SIZE or the zoom become.
+                //
+                // labelLocUp is left as it is: going UP, the distance to clear is the label's own height,
+                // because coord.y is the top of the text box.
+                textRectangle.coord.y += (rectangle.size.h + 2);
                 break;
             case labelLocLeft:
                 textRectangle.coord.x -= (get_text_width((char *)connectorLocationList[connectorListIndex].label, textRectangle.size.h, eCache) + 2);

@@ -198,7 +198,33 @@ bool handle_scrollbar_click(tCoord coord) {
 // no restore, pointer gone. Polled from the render loop so that state cannot persist for more than a
 // frame, which is a better answer than debouncing the button — a debounce delays every real release
 // to guard against a rare bad one, and still loses if the event is dropped rather than repeated.
+//
+// THE FIRST HALF OF THIS WAS UNREACHABLE IN THE CASE IT WAS WRITTEN FOR, which is why the pointer
+// still went missing occasionally. It asked is_cursor_hidden_dragging(), i.e. our own drag flags — and
+// those are set by the press and cleared by the release. Lose the release and gParamDragging.active
+// stays set for ever, so the condition below is never true and the poll does nothing, every frame,
+// for as long as the application runs. A poll whose trigger depends on the event that went missing
+// cannot recover from the event going missing.
+//
+// So the hardware is asked instead. If no button is physically down while we still hold the pointer,
+// the release is synthesised through the ORDINARY path — mouse_button() with a GLFW_RELEASE, exactly
+// what the callback would have delivered — so the drag ends the way it should have, undo entry
+// included, rather than being torn down by hand here. Same authority and same approach as the
+// plug-in shell's recoverLostRelease (vst3/g2GlView.m).
 void recover_lost_cursor(void) {
+    if ((sCursorHidden == true) && (platform_any_mouse_button_down() == false)) {
+        // The modifier state is saved and put back around the synthetic release. mouse_button() begins by
+        // pushing set_modifier_state_from_glfw(mods) so its handlers can read the predicates, and there
+        // are no real mods to pass here — a literal 0 would report every modifier as released. Alt in
+        // particular is what tells a dial drag to move the morph offset rather than the value, so
+        // clearing it while still holding a key would leave the next gesture reading the wrong one until
+        // some real event happened to refresh it.
+        uint32_t modifiers = modifier_state();
+
+        mouse_button(synthlib_window(), GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE, 0);
+        set_modifier_state(modifiers);
+    }
+
     if (is_cursor_hidden_dragging() == false) {
         cursor_release();
     }
@@ -827,10 +853,19 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         // canvasDrag.c. These were four hand-maintained arms here and a differently-ordered ladder in
         // the plug-in; see canvasDrag.h for what that cost.
         //
-        // THE AUTO-SCROLL STAYS HERE, and only for the two gestures that travel: it belongs to whoever
-        // owns the scrollbars, which a plug-in canvas does not. A rubber band selects what is already
-        // visible and a dial drag is not going anywhere.
-        if ((gModuleDrag.active == true) || (gCableDrag.active == true)) {
+        // THE AUTO-SCROLL STAYS HERE, and only for the gestures that travel: it belongs to whoever owns
+        // the scrollbars, which a plug-in canvas does not. A dial drag is not going anywhere, so it is
+        // the one gesture left out.
+        //
+        // THE RUBBER BAND TRAVELS TOO. It was excluded on the grounds that it "selects what is already
+        // visible", which is only true of a selection that fits on screen — drag towards the edge to
+        // gather a whole column of modules and the band simply stopped at the boundary, with no way to
+        // reach the rest. Including it is safe because the band's anchor is stored in MODULE-AREA
+        // coordinates (convert_mouse_coord_to_module_area_coord adds the scroll offset and divides out
+        // the zoom), so it is absolute canvas space: scrolling moves the view underneath a fixed anchor
+        // rather than dragging the anchor along with it. Had the anchor been in window coordinates this
+        // would have skewed the rectangle instead, which is presumably why it was avoided.
+        if ((gModuleDrag.active == true) || (gCableDrag.active == true) || (gRubberBand.active == true)) {
             adjust_scroll_for_drag();
         }
     } else if (gContextMenu.active == true) {
