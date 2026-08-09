@@ -759,17 +759,28 @@ bool handle_module_area_click(tCoord coord) {
 // the hover state it was never given — every cable stayed lit.
 //
 // Clears gHoverConnector first, so "over nothing" is as much an answer as "over this one".
+//
+// The pane UNDER THE CURSOR decides which Location to search — NOT gLocation, which follows the
+// FOCUSED pane and so only changes on a click. Two things went wrong when this read gLocation:
+// hovering the unfocused half searched the other half's modules, and because a module scrolled past
+// its pane's foot still registers its connector rectangles (render_modules() needs them for cable
+// geometry even when the module itself is clipped away), those rectangles land on screen inside the
+// pane BELOW. Hovering the FX area therefore lit up Voice Area connectors sitting invisibly
+// underneath it. Matching the pane fixes both: a connector can only be hit in the pane it was drawn
+// in, where the scissor guarantees it is really visible.
+//
+// module_area_for_pane() is exactly the canvas, top bar and scrollbars already excluded, so the
+// pane lookup subsumes the bounds check this used to make by hand. Returns -1 on the split bar.
 void canvas_hover_update(tCoord coord) {
     gHoverConnector.active = false;
 
-    if (  (coord.x < 0.0)
-       || (coord.y < (TOP_BAR_HEIGHT + MENU_BAR_HEIGHT))
-       || (coord.x >= ((get_render_width() / gGlobalGuiScale) - MODULE_SCROLLBAR_WIDTH))
-       || (coord.y >= ((get_render_height() / gGlobalGuiScale) - MODULE_SCROLLBAR_WIDTH))) {
+    int32_t  hoverPane = split_view_pane_at(coord);
+
+    if (hoverPane < 0) {
         return;
     }
     uint32_t hoverSlot = gSlot;
-    uint32_t hoverLoc  = gLocation;
+    uint32_t hoverLoc  = split_view_location_for_pane((uint32_t)hoverPane);
 
     for (uint32_t idx = 0; idx < MAX_NUM_MODULES; idx++) {
         tModule * hoverModule = get_module_slot(hoverSlot, hoverLoc, idx);
