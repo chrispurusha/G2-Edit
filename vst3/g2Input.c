@@ -46,6 +46,7 @@
 #include "clickRegion.h"
 #include "globalVars.h"
 #include "canvasDrag.h"
+#include "inputState.h"    // multi_select_modifier_held() — real modifiers now, see g2GlView.m
 #include "contextMenu.h"
 #include "menuBar.h"
 #include "utilsGraphics.h"
@@ -106,20 +107,24 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
         // the previous event. Vertical and horizontal dial modes would need genuine raw cursor
         // deltas AND a real cursor_capture(), neither of which a host view gives us yet — see the
         // no-op cursor_capture() below.
-        if (canvas_param_drag_motion(gMouse, gMouse.x, gMouse.y, false) == true) {
-            return true;
-        }
-
         {
-            bool moved = canvas_drag_motion(gMouse);
+            // All four gestures through the shared table, in the one order that is written down —
+            // see canvasDrag.h. altHeld stays false: a morph drag needs Alt, and while this view now
+            // reports real modifiers, the incremental dial modes it would apply to still need a real
+            // cursor_capture().
+            tCanvasGesture took = canvas_gesture_motion(&(tCanvasGestureEvent){
+                                                            .coord = gMouse, .rawX = gMouse.x, .rawY = gMouse.y,
+                                                            .slot = gSlot, .location = gLocation,
+                                                            .altHeld = false, .additive = multi_select_modifier_held()
+                                                        });
 
             // Dragging a module or a cable past a pane's edge scrolls that pane to follow, at the
             // ramped rate the application uses. Only for those two: a rubber band selects what is
             // already visible, and a dial drag is not going anywhere.
-            if ((gModuleDrag.active == true) || (gCableDrag.active == true)) {
+            if ((took == canvasGestureModule) || (took == canvasGestureCable)) {
                 adjust_scroll_for_drag();
             }
-            return moved;
+            return took != canvasGestureNone;
         }
     }
 
@@ -215,30 +220,19 @@ bool g2_input_mouse_event(double x, double y, eClickPhase phase) {
 
     handled = dispatch_click_region(gMouse, phase);
 
-    if (canvas_rubber_band_release(gMouse, gSlot, gLocation, false) == true) {
-        handled = true;
-    }
-
-    // Ends the module drag and re-orders around it, as the application does. Undo is the one thing
-    // not carried over — a plug-in has no undo stack.
-    if (canvas_module_drag_release() == true) {
-        handled = true;
-    }
-
-    // Ends a dial drag. Without this gParamDragging stays set, the dial remains "held" after the
-    // button is up, and the next click anywhere carries on turning it.
-    if (canvas_param_drag_release() == true) {
-        handled = true;
-    }
-
-    // Completes a cable drag — creating the cable if the pointer came to rest on a connector, and
-    // clearing the drag either way so a released-into-nothing cable does not stay attached to the
-    // pointer.
-    if (gCableDrag.active == true) {
-        if (handle_cable_connect(gMouse, gSlot, gLocation) == true) {
-            handled = true;
-        }
-        memset(&gCableDrag, 0, sizeof(gCableDrag));
+    // EVERY GESTURE'S RELEASE, IN ONE CALL. This was four hand-written blocks in a different order
+    // from the application's four, which is the asymmetry that let this shell quietly miss phases: the
+    // module drag went un-re-ordered and dials stayed held after mouse-up, each until someone noticed.
+    // canvasGestureAll is the simple case — the application passes masks only because it interleaves
+    // dispatch_click_region() partway through. See canvasDrag.h.
+    //
+    // Undo is still the one thing not carried over here: a plug-in has no undo stack, which is exactly
+    // why the application wraps the param release in finish_param_drag() rather than the table doing it.
+    if (canvas_gesture_release(&(tCanvasGestureEvent){
+                                   .coord = gMouse, .rawX = gMouse.x, .rawY = gMouse.y,
+                                   .slot = gSlot, .location = gLocation,
+                                   .altHeld = false, .additive = multi_select_modifier_held()
+                               }, canvasGestureAll) != canvasGestureNone) {
         handled = true;
     }
     return handled;

@@ -320,7 +320,17 @@ bool is_cursor_hidden_dragging(void) {
 void finish_param_drag(void) {
     // Undo push and clear are shared with the plug-in — see canvasDrag.h. stop_dragging() below
     // still clears the other drag kinds and restores the cursor.
-    (void)canvas_param_drag_release();
+    // Through the table like the other three, so the param gesture is not the one exception that
+    // reaches its release by a private path. The undo push inside canvas_param_drag_release() and the
+    // cursor restore in stop_dragging() are what keep this wrapper application-side.
+    {
+        tCoord coord = {0};
+
+        get_global_gui_scaled_mouse_coord(&coord);
+        (void)canvas_gesture_release(&(tCanvasGestureEvent){
+            .coord = coord, .slot = gSlot, .location = gLocation
+        }, canvasGestureParam);
+    }
     stop_dragging();
 }
 
@@ -549,6 +559,18 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
 
         case mouseButtonLeftUp:
         {
+            // One event for every gesture release below. Raw coordinates are the canvas ones here: no
+            // release phase differences against them — only the incremental MOTION does that.
+            tCanvasGestureEvent releaseEvent = {
+                .coord    = coord,
+                .rawX     = coord.x,
+                .rawY     = coord.y,
+                .slot     = slot,
+                .location = location,
+                .altHeld  = false,
+                .additive = shift_modifier_held()
+            };
+
             for (i = 0; i < (int)topbarControlMax; i++) {
                 gTopbarControls[i].isPressed = false;
             }
@@ -585,12 +607,12 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                if (gModuleDrag.active == true) {
-                    if (gModuleDrag.isMulti) {
-                        shift_selection_down();
-                    } else {
-                        shift_modules_down(gModuleDrag.moduleKey);
-                    }
+                // THE RE-ORDER ITSELF IS canvas_module_drag_release() NOW — it was written out again
+                // here, in a second copy the plug-in never used and this shell never shared. The undo
+                // push below stays application-side (a plug-in has no undo stack) and still works
+                // because that function clears only gModuleDrag.active, leaving the drag's snapshot
+                // intact for exactly this comparison.
+                if (canvas_gesture_release(&releaseEvent, canvasGestureModule) != canvasGestureNone) {
                     // Push move undo: compare snapshot (before) with current (after)
                     tUndoMoveEntry entries[MAX_NUM_MODULES];
                     uint32_t       entryCount = 0;
@@ -624,10 +646,8 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
             }
 
             if (found == false) {
-                if (gCableDrag.active) {
-                    if (handle_cable_connect(coord, slot, location) == true) {
-                        found = true;
-                    }
+                if (canvas_gesture_release(&releaseEvent, canvasGestureCable) != canvasGestureNone) {
+                    found = true;
                 }
             }
 
@@ -638,10 +658,13 @@ void mouse_button(GLFWwindow * window, int button, int action, int mods) {
                 found = dispatch_click_region(coord, eClickRelease);
             }
 
-            if (canvas_rubber_band_release(coord, slot, location, shift_modifier_held())) {
+            // AFTER dispatch, exactly as before: a press-captured widget owns its own release, and
+            // the rubber band must not pre-empt it. That ordering is why canvas_gesture_release()
+            // takes a mask instead of always sweeping all four — see canvasDrag.h.
+            if (canvas_gesture_release(&releaseEvent, canvasGestureRubberBand) != canvasGestureNone) {
                 found = true;
             }
-            finish_param_drag();
+            finish_param_drag();   // the param gesture's release plus this shell's undo and cursor restore
         }
         break;
 
@@ -900,19 +923,21 @@ void cursor_pos(GLFWwindow * window, double xCoord, double yCoord) {
         // The tempo dial and the performance-settings tempo dial — see sTempoDragTargets.
     } else if (handle_patch_param_drag_motion(gSlot, xCoord, yCoord, x, y)) {
         // Vibrato amount, vibrato rate and glide time — see sPatchParamDragTargets.
-    } else if (canvas_param_drag_motion(coord, xCoord, yCoord, alt_modifier_held())) {
-        // Parameter dragging moved to canvasDrag.c so the plug-in shares it — see canvasDrag.h.
-    } else if (gModuleDrag.active == true) {
-        // Module drag motion moved to canvasDrag.c so the plug-in can share it — see canvasDrag.h.
-        // The auto-scroll stays here: it belongs to whoever owns the scrollbars, which a plug-in
-        // canvas does not yet.
-        (void)canvas_drag_motion(coord);
-        adjust_scroll_for_drag();
-    } else if (gCableDrag.active == true) {
-        cable_drag_set_end(coord);   // see canvasDrag.c: the offset has to come AFTER the conversion
-        adjust_scroll_for_drag();
-    } else if (gRubberBand.active == true) {
-        (void)canvas_drag_motion(coord);   // shared with the plug-in — see canvasDrag.h
+    } else if (canvas_gesture_motion(&(tCanvasGestureEvent){
+        .coord = coord, .rawX = xCoord, .rawY = yCoord,
+        .slot = gSlot, .location = gLocation,
+        .altHeld = alt_modifier_held(), .additive = shift_modifier_held()
+    }) != canvasGestureNone) {
+        // All four canvas gestures — dial, module, cable, rubber band — through the one table in
+        // canvasDrag.c. These were four hand-maintained arms here and a differently-ordered ladder in
+        // the plug-in; see canvasDrag.h for what that cost.
+        //
+        // THE AUTO-SCROLL STAYS HERE, and only for the two gestures that travel: it belongs to whoever
+        // owns the scrollbars, which a plug-in canvas does not. A rubber band selects what is already
+        // visible and a dial drag is not going anywhere.
+        if ((gModuleDrag.active == true) || (gCableDrag.active == true)) {
+            adjust_scroll_for_drag();
+        }
     } else if (gContextMenu.active == true) {
         // Dummy
     } else {
