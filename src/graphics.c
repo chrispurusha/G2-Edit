@@ -2065,7 +2065,16 @@ static void render_frame(void) {
 //   SELECT <VA|FX> <n> — select one module by index; SELECT NONE clears
 //   SNDSTATUS         — what the sound engine's status line currently reads
 //   SNDDUMP           — the resolved chain, the parameters read, and the peak level since last read
-//   NOTE <n>|OFF      — play/release a note on the sound engine
+//   NOTE <n>|OFF      — play/release a note on the sound engine (LOCAL engine, not the G2)
+//   DEVSET <VA|FX> <index> <param> <value> — as SET, but SENT TO THE G2. This is what lets the
+//                       measurement harness step one parameter on the hardware while its audio output
+//                       is recorded; SET stays local-only so a rendering test cannot write to a
+//                       connected synth by accident.
+//   DEVMODE <VA|FX> <index> <mode> <value> — a MODE write to the G2 (the drop-down selectors: the
+//                       Reverb's room size, a filter's slope, an oscillator's waveform). Modes travel
+//                       on their own wire command, so DEVSET cannot reach them.
+//   DEVNOTE <note> <vel> on|off — a Virtual Keyboard note to the G2, for a patch that needs a gate
+//                       rather than a free-running clock (envelope times, for instance)
 //   SAVEFILE <path>   — write the current slot to a path (no save panel)
 //   SCREENSHOT <path> — synchronous render_frame() then glReadPixels + PNG
 //   SCROLL <x> <y>    — scroll the canvas, each 0.0-1.0 of that axis's full travel
@@ -2197,6 +2206,82 @@ static void backdoor_dump_state(char * out, size_t outMax) {
     }
 }
 
+// A cable end is addressed by its I/O index — "output 2", "input 0" — counting only connectors of
+// that direction. That is how the protocol expresses it, how tCableKey stores it, and how the DUMP
+// command above prints it. A module's connector array is in declaration order with both directions
+// interleaved, so turning one into the other is a walk. -1 if the module has no such connector.
+static int32_t backdoor_connector_for_io_index(tModule * module, bool wantOutput, uint32_t ioIndex) {
+    uint32_t count = module_connector_count(module->type);
+    uint32_t seen  = 0;
+
+    for (uint32_t i = 0; i < count; i++) {
+        if ((module->connector[i].dir == connectorDirOut) == wantOutput) {
+            if (seen == ioIndex) {
+                return (int32_t)i;
+            }
+            seen++;
+        }
+    }
+
+    return -1;
+}
+
+// Shared argument parsing for CABLE and DELCABLE: "<VA|FX> <from>:<out> <to>:<in> [link=<0|1>]",
+// deliberately the same shape DUMP prints, so a dumped cable can be pasted straight back as a
+// command. link defaults to 1 (the from-end is an output); 0 is a fan-out from an input connector.
+static bool backdoor_parse_cable(const char * arg, tCableKey * key, char * err, size_t errMax) {
+    char         loc[8]    = {0};
+    uint32_t     fromIndex = 0;
+    uint32_t     fromIo    = 0;
+    uint32_t     toIndex   = 0;
+    uint32_t     toIo      = 0;
+    const char * linkText  = NULL;
+    uint32_t     link      = (uint32_t)cableLinkTypeFromOutput;
+
+    if (sscanf(arg, "%7s %u:%u %u:%u", loc, &fromIndex, &fromIo, &toIndex, &toIo) != 5) {
+        snprintf(err, errMax, "ERROR: expected '<VA|FX> <from>:<out> <to>:<in> [link=<0|1>]'\n");
+        return false;
+    }
+    linkText = strstr(arg, "link=");
+
+    if ((linkText != NULL) && (sscanf(linkText, "link=%u", &link) != 1)) {
+        snprintf(err, errMax, "ERROR: link must be 0 or 1\n");
+        return false;
+    }
+
+    if (link > (uint32_t)cableLinkTypeFromOutput) {
+        snprintf(err, errMax, "ERROR: link must be 0 or 1\n");
+        return false;
+    }
+    key->slot                 = gSlot;
+    key->location             = ((loc[0] == 'F') || (loc[0] == 'f')) ? (uint32_t)locationFx : (uint32_t)locationVa;
+    key->moduleFromIndex      = fromIndex;
+    key->connectorFromIoCount = fromIo;
+    key->linkType             = link;
+    key->moduleToIndex        = toIndex;
+    key->connectorToIoCount   = toIo;
+    return true;
+}
+
+// An input connector takes at most one incoming cable — the same invariant cable-drag creation
+// enforces before it commits. Checked here too, because the device silently keeps whichever it
+// likes when told otherwise.
+static bool backdoor_input_is_taken(const tCableKey * key) {
+    for (uint32_t i = 0; i < MAX_NUM_CABLES; i++) {
+        tCable * cable = get_cable_slot(key->slot, key->location, i);
+
+        if ((cable == NULL) || !cable->active) {
+            continue;
+        }
+
+        if ((cable->key.moduleToIndex == key->moduleToIndex) && (cable->key.connectorToIoCount == key->connectorToIoCount)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static void backdoor_dispatch(const char * cmd, const char * arg) {
     if (strcmp(cmd, "LOADFILE") == 0) {
         if (arg[0] == '\0') {
@@ -2262,6 +2347,69 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
 
         synthlib_request_redraw();
         backdoor_write_result((idx < 0) ? "ERROR: location full\n" : "OK\n");
+    } else if ((strcmp(cmd, "CABLE") == 0) || (strcmp(cmd, "DELCABLE") == 0)) {
+        // CABLE / DELCABLE <VA|FX> <from>:<out> <to>:<in> [link=<0|1>]
+        //
+        // LOCAL-ONLY, like ADDMODULE and SET: it edits the database and nothing else. Follow a run of
+        // these with PUSH to send the whole slot to the device as ONE versioned command. Sending each
+        // edit as it is made would race the G2's asynchronous patch-version notification and lose
+        // some of them silently — see the note above send_whole_patch() in menus.c.
+        bool        removing = (cmd[0] == 'D');
+        tCableKey   key      = {0};
+        char        msg[160] = {0};
+
+        if (!backdoor_parse_cable(arg, &key, msg, sizeof(msg))) {
+            backdoor_write_result(msg);
+            return;
+        }
+
+        if (removing) {
+            if (get_cable(key) == NULL) {
+                backdoor_write_result("ERROR: no such cable\n");
+                return;
+            }
+            delete_cable(key);
+            synthlib_request_redraw();
+            backdoor_write_result("OK\n");
+            return;
+        }
+        tModule *   fromModule = get_module_slot(key.slot, key.location, key.moduleFromIndex);
+        tModule *   toModule   = get_module_slot(key.slot, key.location, key.moduleToIndex);
+
+        if ((fromModule == NULL) || (fromModule->type == 0) || (toModule == NULL) || (toModule->type == 0)) {
+            backdoor_write_result("ERROR: no module at that loc/index\n");
+            return;
+        }
+        int32_t     fromConnector = backdoor_connector_for_io_index(fromModule, key.linkType == (uint32_t)cableLinkTypeFromOutput, key.connectorFromIoCount);
+        int32_t     toConnector   = backdoor_connector_for_io_index(toModule, false, key.connectorToIoCount);
+
+        if ((fromConnector < 0) || (toConnector < 0)) {
+            backdoor_write_result("ERROR: connector index out of range for that module type\n");
+            return;
+        }
+
+        if (backdoor_input_is_taken(&key)) {
+            backdoor_write_result("ERROR: that input already has a cable\n");
+            return;
+        }
+        tCable      cable         = {0};
+
+        // The cable inherits the from-connector's CURRENT colour, up-rate promotion included — the
+        // same rule cable-drag creation follows, so a scripted patch looks like a drawn one.
+        cable.colour = (uint32_t)cable_colour_for_connector_type(
+            effective_connector_type(fromModule->connector[fromConnector].type, fromModule->upRate));
+        write_cable(key, &cable);
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "PUSH") == 0) {
+        // Sends the current slot to the device as one whole-patch write, which is what makes a run of
+        // local CABLE/ADDMODULE/SET edits real. One command, one patch version, nothing to race.
+        tMessageContent msg = {0};
+
+        msg.cmd  = eMsgCmdWritePatch;
+        msg.slot = gSlot;
+        msg_send(&gToUsbThread, &msg);
+        backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "SET") == 0) {
         // SET <VA|FX> <index> <param> <value> — set a param's value in the
         // current slot, LOCAL-ONLY (no device write); for inspecting how a
@@ -2289,6 +2437,106 @@ static void backdoor_dispatch(const char * cmd, const char * arg) {
         }
         module->param[gPatchDescr[gSlot].activeVariation][param].value = value;
         synthlib_request_redraw();
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "DEVSET") == 0) {
+        // DEVSET <VA|FX> <index> <param> <value> — like SET, but SENDS THE CHANGE TO THE G2 as a dial
+        // drag would, instead of only touching the local copy.
+        //
+        // This exists for the measurement harness: characterising a module means stepping one of its
+        // parameters over its range while recording the device's audio output, and that only works if
+        // the hardware actually follows. SET stays local-only for its own purpose (seeing how a value
+        // RENDERS), and the two are deliberately separate commands so a rendering test can never
+        // write to a connected synth by accident.
+        //
+        // Nothing here is destructive: this is a live parameter edit, exactly what the canvas does on
+        // every drag, and it does not store to flash.
+        char      loc[8]    = {0};
+        uint32_t  index     = 0;
+        uint32_t  param     = 0;
+        uint32_t  value     = 0;
+
+        if (sscanf(arg, "%7s %u %u %u", loc, &index, &param, &value) != 4) {
+            backdoor_write_result("ERROR: expected 'DEVSET <VA|FX> <index> <param> <value>'\n");
+            return;
+        }
+        uint32_t  location  = ((loc[0] == 'F') || (loc[0] == 'f')) ? (uint32_t)locationFx : (uint32_t)locationVa;
+        tModule * module    = get_module_slot(gSlot, location, index);
+
+        if ((module == NULL) || (module->type == 0)) {
+            backdoor_write_result("ERROR: no module at that loc/index\n");
+            return;
+        }
+
+        if (param >= MAX_NUM_PARAMETERS) {
+            backdoor_write_result("ERROR: param index out of range\n");
+            return;
+        }
+        uint32_t  variation = gPatchDescr[gSlot].activeVariation;
+
+        module->param[variation][param].value = (uint8_t)value;
+        send_param_value(gSlot, module->key, param, variation, value);
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "DEVMODE") == 0) {
+        // DEVMODE <VA|FX> <index> <mode> <value> — a MODE write to the G2, the companion to DEVSET.
+        //
+        // Modes are the drop-down selectors, and they travel on their own wire command rather than as
+        // parameters: the Reverb's Small/Medium/Large/Hall is a mode, as are a filter's slope and an
+        // oscillator's waveform. Measuring across those settings is exactly what the harness is for, so
+        // without this the most valuable sweep of all — the four reverb room sizes, which are data that
+        // exists nowhere else — could not be driven at all.
+        char      loc[8]   = {0};
+        uint32_t  index    = 0;
+        uint32_t  mode     = 0;
+        uint32_t  value    = 0;
+
+        if (sscanf(arg, "%7s %u %u %u", loc, &index, &mode, &value) != 4) {
+            backdoor_write_result("ERROR: expected 'DEVMODE <VA|FX> <index> <mode> <value>'\n");
+            return;
+        }
+        uint32_t  location = ((loc[0] == 'F') || (loc[0] == 'f')) ? (uint32_t)locationFx : (uint32_t)locationVa;
+        tModule * module   = get_module_slot(gSlot, location, index);
+
+        if ((module == NULL) || (module->type == 0)) {
+            backdoor_write_result("ERROR: no module at that loc/index\n");
+            return;
+        }
+
+        if (mode >= module->modeCount) {
+            char msg[96];
+
+            snprintf(msg, sizeof(msg), "ERROR: mode %u out of range (module has %u)\n",
+                     (unsigned)mode, (unsigned)module->modeCount);
+            backdoor_write_result(msg);
+            return;
+        }
+        module->mode[mode].value = (uint8_t)value;
+        send_mode_value(gSlot, module->key, mode, value);
+        synthlib_request_redraw();
+        backdoor_write_result("OK\n");
+    } else if (strcmp(cmd, "DEVNOTE") == 0) {
+        // DEVNOTE <note> <velocity> on|off — a Virtual Keyboard note to the DEVICE, for exciting a
+        // patch that needs a gate rather than a free-running clock (envelope times, for instance).
+        char            state[8] = {0};
+        uint32_t        note     = 0;
+        uint32_t        velocity = 0;
+
+        if (sscanf(arg, "%u %u %7s", &note, &velocity, state) != 3) {
+            backdoor_write_result("ERROR: expected 'DEVNOTE <note> <velocity> on|off'\n");
+            return;
+        }
+
+        if ((note > 127) || (velocity > 127)) {
+            backdoor_write_result("ERROR: note and velocity are 0-127\n");
+            return;
+        }
+        tMessageContent msg      = {0};
+
+        msg.cmd                   = eMsgCmdPlayNote;
+        msg.playNoteData.note     = note;
+        msg.playNoteData.velocity = velocity;
+        msg.playNoteData.on       = (state[0] == 'o') && (state[1] == 'n');
+        msg_send(&gToUsbThread, &msg);
         backdoor_write_result("OK\n");
     } else if (strcmp(cmd, "DUMP") == 0) {
         char dump[16384];
