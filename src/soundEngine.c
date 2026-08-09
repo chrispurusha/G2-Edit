@@ -698,11 +698,28 @@ static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
 #define REVERB_MODE_TYPE     (0)
 #define REVERB_TYPE_COUNT    (4)
 
-// "Range: 1.1 ms to 17.58 s" (manual p.251), stated for the Time dial. The curve between those two
-// is not stated anywhere; see the derivation where they are used for why the exponent is 3.
-#define REVERB_TIME_MIN_S    (0.0011)
-#define REVERB_TIME_MAX_S    (17.58)
-#define REVERB_TIME_CURVE    (3.0)
+// Decay time against the Time dial, MEASURED per room type 2026-08-09: seconds = base + slope * value,
+// with value the raw 0..127. See the long note at the point of use for the measurements, for why the
+// slope is not simply proportional to room size, and for why these are early-decay figures rather than
+// true RT60.
+//
+// This replaced "Range: 1.1 ms to 17.58 s" (manual p.251) driven through a cubic whose exponent was
+// fitted by ear. The endpoints were the only documented part and the measurement does not reach them:
+// Large tops out at 8.11 s. The manual's figure is left recorded here because it is still unexplained,
+// not because it is unused — nothing reads it now.
+// The Brightness dial's two constants, both FITTED against nine measured points of the hardware's dial
+// (see the table where they are used). The comb's one-pole coefficient is REVERB_BRIGHT_MAX times
+// brightness raised to REVERB_BRIGHT_CURVE:
+//
+//   _MAX below 1 is what stops the filter leaving the loop at the top of the dial. The instrument still
+//        damps at Brightness 127, by about 7 dB of high-frequency tail relative to no filter at all.
+//   _CURVE crowds the travel towards the dark end, because the hardware's colour moves most in the
+//        bottom quarter of the dial and hardly at all above the middle.
+#define REVERB_BRIGHT_MAX      (0.5)
+#define REVERB_BRIGHT_CURVE    (0.5)
+
+static const double kReverbDecayBase[REVERB_TYPE_COUNT]  = {0.045, 0.29, 0.39, 0.32};
+static const double kReverbDecaySlope[REVERB_TYPE_COUNT] = {0.02238, 0.04094, 0.06082, 0.08212};
 
 // The allpass diffusion coefficient rises with the reverb time and is held between two limits. The
 // slope and the limits are the instrument's; what drives them is normalised Time here, which is the
@@ -718,18 +735,43 @@ static double   gCompEnv[MAX_VOICES][MAX_ENGINE_NODES];
 // instrument really does scale every one of its delay lines by a single factor per type, so one
 // number per room is the correct form rather than a convenience.
 //
-// THE FOUR NUMBERS ARE NOT. They are chosen to be musical and monotonic; the instrument's own table
-// is four floats that nothing available states. Replacing them is a small, self-contained change if
-// a measurement ever turns up — the ratio between the decay of, say, Small and Hall on the hardware
-// at one Time setting would pin all four.
-static const double   kReverbTypeScale[REVERB_TYPE_COUNT] = {0.5, 0.75, 1.0, 1.6};
-#define REVERB_SCALE_MAX    (1.6)
+// MEASURED ON THE HARDWARE, 2026-08-09, and the four numbers are no longer guesses. A click was fed
+// through the Reverb at 192 kHz with the dry impulse captured on a second output pair, and the tail's
+// autocorrelation gives the lengths the tank recirculates at (tools/measure.py, tools/analyse_ir.py).
+// Fitting ONE scale per room against every lag Small shows lands within 0.1% on the strong ones:
+//
+//     Small  2408 -> Large  3669  (predicted 3673.4, -0.12%)   -> Hall  4042  (4044.2, -0.06%)
+//     Small  2422 -> Large  3695  (predicted 3694.8, +0.01%)   -> Hall  4064  (4067.7, -0.09%)
+//     Small  4215 -> Large  6430  (predicted 6430.0, +0.00%)   -> Hall  7078  (7079.1, -0.02%)
+//     Small  4599 -> Large  7016  (predicted 7015.8, +0.00%)   -> Hall  7723  (7724.0, -0.01%)
+//
+// Four independent lengths agreeing with a ONE-parameter fit to a hundredth of a percent is not a
+// coincidence, and it settles the assumption as well as the numbers: the instrument does scale the
+// whole tank by a single factor. The short diffusion lags scale by the same factor (Small 216 ->
+// Large 329, exact; Small 576 -> Hall 965, -0.25%), so it is the room and not just the tail.
+//
+// SMALL IS THE REFERENCE (1.0), not Large, because Small is the room whose lengths were measured most
+// completely — the base table below is Small's. See [[project_g2_reverb_measurements]].
+static const double kReverbTypeScale[REVERB_TYPE_COUNT] = {1.0, 1.2690, 1.5255, 1.6795};
+#define REVERB_SCALE_MAX    (1.6795)
 
 // Mutually prime lengths, so the combs do not reinforce each other into a ringing tone. The buffers
 // are sized from the longest of each set rather than a hand-written number — getting those out of
 // step is a buffer overrun, and it is the kind that only shows up as a crash much later. The base
 // set is scaled with the rate (these are sample counts, so leaving them fixed would halve the room)
 // AND by the type, hence the extra headroom for the largest type in the two MAX figures.
+//
+// THE BASE SET IS STILL NOT THE INSTRUMENT'S, and now that the scale above is measured it is the only
+// part of the room that is not. Measured Small recirculates at 2376, 2408, 2422, 4215 and 4599 samples
+// at 96 kHz on Out 3 alone — a tight cluster of three plus two lines at roughly 1.8x — where this base
+// set is four lengths spread over 1.21:1 and nothing long. It is deliberately NOT swapped for the
+// measured numbers yet: three lengths within 2% of each other in a PARALLEL COMB BANK beat against
+// each other, so the measured set only makes sense in a network that feeds each line from the others,
+// and the measurement does not say which topology the instrument uses. Loading them into this
+// structure could easily sound worse while matching the numbers better.
+//
+// The scale fix stands on its own, though: it is a ratio, so it is right whatever the base set is, and
+// it moves Small from half the room to the whole of it.
 #define REVERB_COMB_BASE       (1356 * ENGINE_OVERSAMPLE)
 #define REVERB_ALLPASS_BASE    (225 * ENGINE_OVERSAMPLE)
 // INTEGER ARITHMETIC, NOT A CAST OF A FLOAT PRODUCT. These size static arrays, and an array bound has
@@ -737,16 +779,18 @@ static const double   kReverbTypeScale[REVERB_TYPE_COUNT] = {0.5, 0.75, 1.0, 1.6
 // as a GNU extension, "variable length array folded to constant array". A static VLA is not something
 // to leave resting on an extension.
 //
-// x16/10 is REVERB_SCALE_MAX (1.6) exactly, and the truncating division matches what the cast did:
-// comb 2712 -> 4340 and allpass 450 -> 721, both identical to the float form. Change the scale here and
-// in REVERB_SCALE_MAX together.
-#define REVERB_COMB_MAX       (((REVERB_COMB_BASE * 16) / 10) + 1)
-#define REVERB_ALLPASS_MAX    (((REVERB_ALLPASS_BASE * 16) / 10) + 1)
-static const uint32_t kCombLen[REVERB_COMBS]              = {
+// x18/10 COVERS REVERB_SCALE_MAX (1.6795) WITH ROOM TO SPARE, and it must: this pair and the scale
+// table are one decision in two places, so a scale raised without raising this writes past the end of
+// every delay line. It was 16/10 when the largest type was exactly 1.6, which the measured 1.6795 then
+// silently outgrew by 66 samples per comb. Rounding up rather than tracking the scale exactly costs a
+// few kilobytes and removes the trap.
+#define REVERB_COMB_MAX       (((REVERB_COMB_BASE * 18) / 10) + 1)
+#define REVERB_ALLPASS_MAX    (((REVERB_ALLPASS_BASE * 18) / 10) + 1)
+static const uint32_t kCombLen[REVERB_COMBS]      = {
     1116 * ENGINE_OVERSAMPLE, 1188 * ENGINE_OVERSAMPLE,
     1277 * ENGINE_OVERSAMPLE, REVERB_COMB_BASE
 };
-static const uint32_t kAllpassLen[REVERB_ALLPASS]         = {
+static const uint32_t kAllpassLen[REVERB_ALLPASS] = {
     REVERB_ALLPASS_BASE, 149 * ENGINE_OVERSAMPLE,
     97 * ENGINE_OVERSAMPLE
 };
@@ -2003,26 +2047,50 @@ static int32_t add_node(tSoundEngineParams * params, tModule * module, uint32_t 
         }
         case eNodeReverb:
         {
-            // The manual states the Time dial's endpoints outright — "Range: 1.1 ms to 17.58 s"
-            // (p.251) — where this had a linear 0.2..3.2 s, reaching neither. THE ENDPOINTS ARE
-            // DOCUMENTED, THE CURVE BETWEEN THEM IS NOT, and the two obvious readings are both
-            // clearly wrong: linear puts 8.8 s at the middle of the travel, geometric puts 0.14 s
-            // there, and a fresh Reverb module defaults to exactly that middle. Whatever the real
-            // curve is, it has to sound like a reverb at its default.
-            // So: the manual's endpoints, with an exponent chosen to land the midpoint at a bit over
-            // two seconds. CHOSEN, NOT MEASURED — worth replacing the moment the dial gains a value
-            // display to read the real curve off, as the envelope times did.
-            node->timeNorm    = param_value(module, variation, REVERB_PARAM_TIME) / 127.0;
-            node->timeSeconds = REVERB_TIME_MIN_S
-                                + ((REVERB_TIME_MAX_S - REVERB_TIME_MIN_S)
-                                   * pow(node->timeNorm, REVERB_TIME_CURVE));
+            // MEASURED ON THE HARDWARE 2026-08-09. The Time dial is LINEAR in decay time, with a
+            // slope per room type — not the cubic that used to be here, and not reaching anything like
+            // the 17.58 s the manual quotes:
+            //
+            //     room     Time 42   Time 85   Time 127    s per dial unit
+            //     Small          -    1.95 s    2.89 s     0.0224
+            //     Medium    2.01 s    3.72 s    5.49 s     0.0409
+            //     Large     2.94 s    5.49 s    8.11 s     0.0608
+            //     Hall      3.77 s    7.30 s   10.75 s     0.0821
+            //
+            // Straight lines (r2 0.996..0.998) whose slope agrees across both halves of the range to
+            // three digits, so the shape is not in doubt. The old cubic gave 17.58 s at Time 127 where
+            // Large measures 8.11 s — more than twice too long — and its exponent was openly a guess
+            // fitted to make the midpoint musical.
+            //
+            // THE SLOPE IS NOT PROPORTIONAL TO ROOM SIZE (Hall/Small is 3.67 against a size ratio of
+            // 1.68), so Type sets the feedback GAIN as well as the delay lengths. That is why this is a
+            // table rather than kReverbTypeScale doing the work.
+            //
+            // READ AS EARLY DECAY, EXTRAPOLATED. The G2's tail only clears the measurement noise floor
+            // by about 21 dB, so each figure is a straight-line fit over ~15 dB stretched to 60. If the
+            // instrument has a double-slope tail — a bright early decay over a longer low-frequency one,
+            // which reverbs often do — the late part is invisible here and the true RT60 is LONGER than
+            // these numbers. That would also explain the manual's 17.58 s, which is not reachable even
+            // at Brightness 127 (Hall measures 11.83 s there). Resolving it needs a quieter floor, not
+            // a different formula. See the REVERB entry in todo.txt.
+            node->timeNorm   = param_value(module, variation, REVERB_PARAM_TIME) / 127.0;
+            {
+                uint32_t reverbType = module->mode[REVERB_MODE_TYPE].value;
+
+                if (reverbType >= REVERB_TYPE_COUNT) {
+                    reverbType = 0;
+                }
+                node->timeSeconds = kReverbDecayBase[reverbType]
+                                    + (kReverbDecaySlope[reverbType]
+                                       * param_value(module, variation, REVERB_PARAM_TIME));
+            }
             // Named for the dial, not for the filter coefficient it used to be assigned straight to
             // — see reverb_step(), which now does the inversion itself.
-            node->brightness  = param_value(module, variation, REVERB_PARAM_BRIGHT) / 127.0;
-            node->amount      = param_value(module, variation, REVERB_PARAM_DRYWET) / 127.0;
-            node->active      = (param_value(module, variation, REVERB_PARAM_ACTIVE) != 0.0);
+            node->brightness = param_value(module, variation, REVERB_PARAM_BRIGHT) / 127.0;
+            node->amount     = param_value(module, variation, REVERB_PARAM_DRYWET) / 127.0;
+            node->active     = (param_value(module, variation, REVERB_PARAM_ACTIVE) != 0.0);
             // Raw, like every other drop-down: a mode cannot carry a morph (manual p.20).
-            node->reverbType  = module->mode[REVERB_MODE_TYPE].value;
+            node->reverbType = module->mode[REVERB_MODE_TYPE].value;
             break;
         }
         case eNodeLfo:
@@ -2700,7 +2768,39 @@ static double reverb_step(double input, double timeSeconds, double timeNorm, dou
     uint32_t        i         = 0;
     // A one-pole lowpass inside each comb, so every pass round the loop loses more high end — which
     // is what makes a tail decay into a thump rather than ringing on with the same tone.
-    double          damping   = 1.0 - brightness;
+    //
+    // THE DIAL DRIVES THE COEFFICIENT THROUGH A CURVE, and it has to. Taken linearly — which is what
+    // this was — the filter is savage over most of the travel: measured on an offline render of this
+    // very code (tools/render), the decay reached 25% of its requested length at Brightness 32, 41% at
+    // 64 and 53% at 96, only arriving at 100% when Brightness 127 switches the filter off altogether.
+    // The instrument does not behave remotely like that: at Brightness 64 it decays for 10.76 s against
+    // 11.83 s at 127, i.e. 91%, so most of the dial is nearly transparent to the DECAY while still
+    // moving the tail's colour (its 6-20 kHz band gains about 5 dB from 64 to 127).
+    //
+    // Note this was NOT a feedback-gain error, which is where I first looked: the one-pole has unity DC
+    // gain, so `fb` sets the low-frequency decay exactly right, and the render proves it by hitting the
+    // requested time to within 0.01 s once the filter is out of the loop. What was wrong is how much
+    // filter a given dial position asks for.
+    //
+    // MEASURED AGAINST NINE POINTS OF THE DIAL, and the shape that came back was not the one expected.
+    // Hardware Hall at Time 127, the tail's 3-16 kHz energy relative to its 100-1000 Hz:
+    //
+    //     Brightness    0     16     32     48     64     80     96    112    127
+    //     HF/LF     -21.9  -12.3   -4.5   -1.3   +2.2   +3.1   +3.8   +3.6   +4.5   dB
+    //
+    // Thirty-three decibels of colour across the dial, while the decay moves only from 77% to 100% of
+    // its longest — so COLOUR is what pins this filter and broadband decay barely constrains it at all.
+    // That is why the calibration scores colour: the decay measure follows whichever band happens to
+    // dominate, and it agreed with several quite different filters.
+    //
+    // THE INSTRUMENT'S DAMPING NEVER FULLY OPENS AND NEVER FULLY CLOSES. A plain 1 - brightness reaches
+    // a coefficient of exactly 1 at the top of the dial, which removes the filter from the loop
+    // altogether and left the engine's tail 7 dB brighter than the hardware's brightest setting; at the
+    // bottom it over-damped by 8 dB. Hence a maximum below unity and a curve, both fitted numerically
+    // against the nine points above rather than chosen. An earlier attempt used an exponent alone and
+    // made the colour match WORSE than the linear mapping it replaced, which is how the range rather
+    // than the shape turned out to be the problem.
+    double          damping   = 1.0 - (REVERB_BRIGHT_MAX * pow(brightness, REVERB_BRIGHT_CURVE));
     double          scale     = kReverbTypeScale[(type < REVERB_TYPE_COUNT) ? type : 0];
     double          diffusion = (REVERB_DIFFUSE_SLOPE * timeNorm) + REVERB_DIFFUSE_BASE;
     static uint32_t sLastType = REVERB_TYPE_COUNT;   // forces the reset below on the first call
@@ -2785,6 +2885,60 @@ static double reverb_step(double input, double timeSeconds, double timeNorm, dou
         double dryRamp = (mix <= 0.5) ? 1.0 : ((1.0 - mix) * 2.0);
 
         return (input * dryRamp * dryRamp * dryRamp) + (sum * wetRamp * wetRamp * wetRamp);
+    }
+}
+
+// Renders the Reverb's impulse response on its own — no patch, no voice, no audio device.
+//
+// WHY THE ENGINE HAS A MEASUREMENT ENTRY POINT. The room sizes and the decay law above came from
+// putting a click through the real instrument and measuring what came back. The same click can go
+// through this code, and then the two sit in the same units and the same analysis: lag sets, decay
+// time, and how alike the two output channels are. That turns "does it sound like the G2" into a diff,
+// which is the only way the remaining work — the delay lengths and the topology — can converge instead
+// of being tuned by ear against a memory of the hardware.
+//
+// The click is one sample at full scale, not the ~13-sample band-limited pulse the instrument's
+// converters produce. It does not need to match: the lengths are recovered from how the TAIL correlates
+// with itself, which the excitation's shape does not enter.
+//
+// `out` receives `frames` interleaved stereo pairs at the ENGINE's rate, which is
+// deviceRate * ENGINE_OVERSAMPLE — pass 48000 to get the 96 kHz the hardware measurements are
+// expressed in, so a lag is the same integer in both. THE REVERB IS MONO, so both channels come back
+// identical and their correlation reads 1.000 where the instrument reads +0.03. That is the harness
+// reporting what is missing, not a fault in it.
+void sound_engine_render_reverb_ir(double deviceRate, uint32_t type, uint32_t timeValue,
+                                   uint32_t brightValue, float * out, uint32_t frames) {
+    if ((out == NULL) || (frames == 0) || (deviceRate <= 0.0)) {
+        return;
+    }
+
+    if (type >= REVERB_TYPE_COUNT) {
+        type = 0;
+    }
+    gSampleRate = deviceRate * (double)ENGINE_OVERSAMPLE;
+
+    // Cleared explicitly rather than relying on reverb_step()'s own type-change reset: a second render
+    // at the SAME type in one process would otherwise start inside the first one's tail, and the
+    // resulting lag set would be a mixture of two rooms — the identical trap the hardware captures hit
+    // when settings were grouped by counting.
+    memset(gComb, 0, sizeof(gComb));
+    memset(gCombPos, 0, sizeof(gCombPos));
+    memset(gCombStore, 0, sizeof(gCombStore));
+    memset(gAllpass, 0, sizeof(gAllpass));
+    memset(gAllpassPos, 0, sizeof(gAllpassPos));
+
+    double timeSeconds = kReverbDecayBase[type] + (kReverbDecaySlope[type] * (double)timeValue);
+    double timeNorm    = (double)timeValue / 127.0;
+    double brightness  = (double)brightValue / 127.0;
+
+    for (uint32_t i = 0; i < frames; i++) {
+        double in  = (i == 0) ? 1.0 : 0.0;
+        // mix at 1.0 is fully wet, matching DryWet 127 on the hardware — and with the dry/wet law
+        // above that means the dry ramp is zero, so nothing of the click itself is in the output.
+        double wet = reverb_step(in, timeSeconds, timeNorm, brightness, 1.0, type);
+
+        out[(i * 2) + 0] = (float)wet;
+        out[(i * 2) + 1] = (float)wet;
     }
 }
 
